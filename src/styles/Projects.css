@@ -1,0 +1,75 @@
+@font-face {
+  font-family: "gothic";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Regular.ttf);
+}
+@font-face {
+  font-family: "gothic-bd";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Bold.ttf);
+}
+* {
+  font-family: "gothic";
+}
+
+.container {
+  display: flex;
+}
+
+.action-bar {
+  width: 100px;
+  height: calc(100vw - 70px);
+  background-color: #e1ccff;
+}
+.action-bar .action-btn {
+  width: 80px;
+  height: 80px;
+  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  background: rgba(106, 0, 255, 0.1);
+  transition: 0.2s ease;
+}
+.action-bar .action-btn .symbols span {
+  font-size: 40px;
+  font-variation-settings: "FILL" 0, "wght" 200, "GRAD" 200, "opsz" 40;
+}
+.action-bar .action-btn .desc {
+  font-size: x-small;
+}
+.action-bar .action-btn:hover {
+  background: rgba(106, 0, 255, 0.7);
+  color: white;
+}
+
+.projects {
+  justify-content: center;
+  width: calc(100vw - 100px);
+}
+.projects .projects-table {
+  padding: 0 10%;
+  width: 80%;
+  border: 2px black solid;
+}
+.projects .projects-table tr th,
+.projects .projects-table tr td {
+  text-align: center;
+  vertical-align: middle;
+}
+.projects .projects-table tr th {
+  background-color: lightseagreen;
+  height: 30px;
+}
+.projects .projects-table tr td {
+  background-color: pink;
+  height: 60px;
+}
+.projects .projects-table tr td.date {
+  padding: 15% 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: rgba(0, 0, 0, 0.7);
+  font-size: xx-small;
+}/*# sourceMappingURL=Projects.css.map */
