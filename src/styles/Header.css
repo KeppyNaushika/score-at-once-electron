@@ -1,0 +1,61 @@
+@font-face {
+  font-family: "gothic";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Regular.ttf);
+}
+@font-face {
+  font-family: "gothic-bd";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Bold.ttf);
+}
+* {
+  font-family: "gothic";
+}
+
+header {
+  display: flex;
+  align-items: center;
+  background-color: rgb(106, 0, 255);
+  height: 60px;
+  width: 100%;
+  padding: 12px;
+}
+header .app-icon {
+  height: 100%;
+  margin-right: 20px;
+}
+header .app-icon img {
+  width: 100%;
+}
+header .title {
+  color: white;
+  letter-spacing: 0.2em;
+}
+header .title h1 {
+  font-size: 18px;
+  display: flex;
+}
+header .help {
+  display: flex;
+  margin-left: auto;
+  height: 100%;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 8px;
+  background-color: #e1ccff;
+  font-weight: lighter;
+}
+header .help:hover, header .help:focus-within {
+  background-color: white;
+  transition: 0.3s ease;
+}
+header .help .gg-search {
+  align-items: center;
+  margin: auto 20px;
+  padding: 2px;
+  position: relative;
+}
+header .help input::-moz-placeholder {
+  color: #a666ff;
+}
+header .help input::placeholder {
+  color: #a666ff;
+}/*# sourceMappingURL=Header.css.map */

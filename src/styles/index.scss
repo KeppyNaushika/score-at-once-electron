@@ -1,0 +1,9 @@
+@use "variables" as *;
+
+body {
+  background-color: lighten($base-color, 40%);
+}
+
+.App-Ribbon {
+  margin: 5px 10px;
+}
