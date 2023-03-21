@@ -32,7 +32,7 @@
     align-items: center;
     border-radius: 10px;
     background: rgba($base-color, 0.1);
-    transition: .2s ease;
+    transition: 0.2s ease;
     .symbols {
       span {
         font-size: 40px;
@@ -52,33 +52,102 @@
 .projects {
   // display: flex;
   justify-content: center;
-  width: calc(100vw - 100px);
+  // width: calc(100vw - 100px);
+  .search-project {
+    margin: 10px 30px;
+    text-align: center;
+    input {
+      padding: 5px;
+      width: 90%;
+      text-align: left;
+      border: 1px solid rgba(0, 0, 0, 0.5);
+      border-radius: 4px;
+      &::placeholder {
+        color: rgba(0, 0, 0, 0.5);
+      }
+    }
+  }
 
   .projects-table {
-    padding: 0 10%;
-    width: 80%;
-    border: 2px black solid;
+    width: calc(100vw - 100px);
 
     tr {
+      &:hover td {
+        background-color: orangered;
+      }
       th,
       td {
+        transition: 0.1s ease;
         text-align: center;
         vertical-align: middle;
+        &.select-btn {
+          width: 100px;
+        }
+        &.exam {
+          text-align: left;
+          width: auto;
+        }
+        &.date {
+          width: 200px;
+        }
       }
       th {
-        background-color: lightseagreen;
         height: 30px;
+        color: white;
+        font-size: small;
+        background-color: rgb(109, 109, 109);
       }
       td {
-        background-color: pink;
-        height: 60px;
-        &.date {
-          padding: 15% 0;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-          color: rgba(0, 0, 0, 0.7);
-          font-size: xx-small;
+        background-color: rgb(255, 197, 176);
+        height: 100px;
+        font-size: small;
+        &.exam {
+          .name {
+            font-size: x-large;
+            max-width: calc(100vw - 450px);
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+          }
+          .desc {
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            margin-top: 5px;
+            color: rgba(0, 0, 0, 0.5);
+            .tags {
+              display: inline-block;
+              max-width: calc(100vw - 650px);
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              overflow: hidden;
+              .tag {
+                display: inline-block;
+                padding: 2px 8px;
+                margin-right: 5px;
+                border: 1px solid rgba(0, 0, 0, 0.5);
+                border-radius: 4px;
+              }
+            }
+            .examinee {
+              display: inline-block;
+              &::before {
+                content: "答案枚数 ： ";
+              }
+              &::after {
+                content: "　｜　";
+              }
+            }
+            .completion {
+              display: inline-block;
+              &::before {
+                content: "採点 ： ";
+              }
+              &::after {
+                content: "%";
+              }
+            }
+          }
         }
       }
     }

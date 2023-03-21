@@ -10,7 +10,7 @@ export default function Header() {
         <img src={logo} alt="一括採点" />
       </a>
       <div className="title">
-        <h1>第４回定着度確認テスト - 採点</h1>
+        <h1>試験一覧</h1>
       </div>
       <div className="help">
         <div className="gg-search"></div>
