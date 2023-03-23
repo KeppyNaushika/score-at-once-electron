@@ -1,0 +1,121 @@
+@font-face {
+  font-family: "gothic";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Regular.ttf);
+}
+@font-face {
+  font-family: "gothic-bd";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Bold.ttf);
+}
+* {
+  font-family: "gothic";
+}
+
+.project-add-container {
+  margin: 0 100px;
+}
+
+.project-input-container {
+  margin: 20px 0;
+}
+.project-input-container .project-input {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.project-input-container .project-input input {
+  padding: 10px 20px;
+  width: 100%;
+  border: 1px rgba(0, 0, 0, 0.3) solid;
+}
+.project-input-container .project-input input::-moz-placeholder {
+  color: gray;
+}
+.project-input-container .project-input input::placeholder {
+  color: gray;
+}
+
+.tags-container {
+  margin: 0 auto;
+  display: flex;
+  height: 300px;
+  border: 1px black solid;
+  overflow-y: scroll;
+  box-shadow: 0px 0px 8px 4px rgba(0, 0, 0, 0.2) inset;
+}
+.tags-container .tags {
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 250px;
+  margin: 10px 20px;
+}
+.tags-container .tags::-webkit-scrollbar {
+  height: 30px;
+  width: 30px;
+}
+.tags-container .tags::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+}
+.tags-container .tags .tag {
+  display: flex;
+  justify-content: space-between;
+  height: 40px;
+  align-items: center;
+  margin-top: 5px;
+  border: 1px black solid;
+  border-radius: 4px;
+}
+.tags-container .tags .tag input {
+  padding: 10px 10px;
+  width: 80%;
+}
+.tags-container .tags .tag input::-moz-placeholder {
+  color: rgba(0, 0, 0, 0.5);
+}
+.tags-container .tags .tag input::placeholder {
+  color: rgba(0, 0, 0, 0.5);
+}
+.tags-container .tags .tag .edit,
+.tags-container .tags .tag .delete {
+  opacity: 0;
+  cursor: pointer;
+}
+.tags-container .tags .tag .edit span,
+.tags-container .tags .tag .delete span {
+  font-size: 24px;
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+.tags-container .tags .tag:first-of-type {
+  border-bottom: 1px black solid;
+  margin-bottom: 2px;
+  color: white;
+  background-color: rgb(127, 127, 127);
+}
+.tags-container .tags .tag:first-of-type input {
+  padding: 5px 10px;
+}
+.tags-container .tags .tag:hover .edit,
+.tags-container .tags .tag:hover .delete {
+  opacity: 1;
+}
+
+.edit-tag-btn {
+  margin: 10px 20px;
+  padding: 10px 20px;
+  width: 200px;
+  border: 1px rgba(0, 0, 0, 0.3) solid;
+  text-align: center;
+}
+
+.save-cancel-container {
+  display: flex;
+  justify-content: center;
+}
+.save-cancel-container .save-cancel-btn {
+  margin: 10px 20px;
+  padding: 10px 20px;
+  width: 200px;
+  border: 1px rgba(0, 0, 0, 0.3) solid;
+  text-align: center;
+}/*# sourceMappingURL=ProjectAdd.css.map */

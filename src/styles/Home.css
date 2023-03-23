@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "gothic";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Regular.ttf);
+}
+@font-face {
+  font-family: "gothic-bd";
+  src: url(../fonts/BIZ_UDPGothic/BIZUDPGothic-Bold.ttf);
+}
+* {
+  font-family: "gothic";
+}
+
+.home-container {
+  display: flex;
+}/*# sourceMappingURL=Home.css.map */
