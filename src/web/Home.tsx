@@ -2,8 +2,6 @@ import { Link } from "react-router-dom"
 import "../styles/Home.css"
 
 import Header from "./Header"
-import HomeActionBar from "./HomeActionBar"
-import Projects from "./Projects"
 
 export default function Home() {
   let props = {
