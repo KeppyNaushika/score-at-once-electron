@@ -15,7 +15,6 @@ const tag_data = [
 
 let html_tags = ""
 
-
 export default function ProjectAdd() {
   let props = {
     title: "試験の新規追加 - 一括採点",
@@ -64,9 +63,7 @@ export default function ProjectAdd() {
           <Link to="/">
             <div className="save-cancel-btn cancel-btn">キャンセル</div>
           </Link>
-          <div onClick={} className="save-cancel-btn save-btn">
-            保存
-          </div>
+          <div className="save-cancel-btn save-btn">保存</div>
         </div>
       </div>
     </>

@@ -13,11 +13,12 @@
 
 .home-container {
   display: flex;
+  height: 100%;
 }
 
 .action-bar {
   width: 100px;
-  height: calc(100vw - 70px);
+  height: calc(100vh - 60px);
   background-color: #e1ccff;
 }
 .action-bar .action-btn {

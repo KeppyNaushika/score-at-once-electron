@@ -100,6 +100,55 @@ export default function Home() {
               </td>
               <td className="date">2023/1/1</td>
             </tr>
+            <tr>
+              <td className="select-btn">
+                <span className="material-symbols-rounded">
+                  radio_button_checked
+                </span>
+              </td>
+              <td className="exam">
+                <div className="name">
+                  第２回定着度確認テスト
+                </div>
+                <div className="desc">
+                  <div className="tags">
+                    <div className="tag">第１回定着度確認テスト</div>
+                    <div className="tag">数学</div>
+                    <div className="tag">数学</div>
+                    <div className="tag">数学</div>
+                  </div>
+                  <div className="examinee">120 / 150</div>
+                  <div className="completion">85</div>
+                </div>
+              </td>
+              <td className="border">
+                <span></span>
+              </td>
+              <td className="date">2023/1/1</td>
+            </tr>
+            <tr>
+              <td className="select-btn">
+                <span className="material-symbols-rounded">
+                  radio_button_checked
+                </span>
+              </td>
+              <td className="exam">
+                <div className="name">
+                  第２回定着度確認テスト
+                </div>
+                <div className="desc">
+                  <div className="tags">
+                  </div>
+                  <div className="examinee">120 / 150</div>
+                  <div className="completion">85</div>
+                </div>
+              </td>
+              <td className="border">
+                <span></span>
+              </td>
+              <td className="date">2023/1/1</td>
+            </tr>
+            
           </table>
         </div>
       </div>
