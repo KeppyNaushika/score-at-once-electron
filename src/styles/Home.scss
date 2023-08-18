@@ -15,12 +15,13 @@
 
 .home-container {
   display: flex;
-  // height: 100vh;
+  height: 100%;
 }
 
 .action-bar {
   width: 100px;
-  height: calc(100vw - 70px);
+  height: calc(100vh - 60px);
+  // height: 100%;
   background-color: lighten($base-color, 40%);
   .action-btn {
     width: 80px;
@@ -48,7 +49,6 @@
     }
   }
 }
-
 
 .projects {
   // display: flex;
