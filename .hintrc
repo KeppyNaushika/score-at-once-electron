@@ -3,13 +3,6 @@
     "development"
   ],
   "hints": {
-    "compat-api/css": [
-      "default",
-      {
-        "ignore": [
-          "-webkit-line-break"
-        ]
-      }
-    ]
+    "no-inline-styles": "off"
   }
 }

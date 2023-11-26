@@ -1,52 +1,62 @@
 {
-	"name": "score-at-once-electron",
-	"description": "score-at-once-electron",
-	"version": "0.1.0",
-	"license": "MIT",
-	"author": {
-		"name": "keppy"
-	},
-	"repository": {
-		"url": "https://github.com/keppy/score-at-once-electron.git"
-	},
-	"main": "dist/main.js",
-	"scripts": {
-		"dev": "rimraf dist && run-p dev:webpack dev:electron",
-		"build": "rimraf dist && cross-env NODE_ENV=\"production\" webpack --progress",
-		"dev:webpack": "cross-env NODE_ENV=\"development\" webpack --progress",
-		"dev:electron": "wait-on dist/main.js dist/index.html && electronmon ."
-	},
-	"electronmon": {
-		"patterns": [
-			"dist/**/*"
-		]
-	},
-	"dependencies": {
-		"material-symbols": "^0.5.0",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0",
-		"react-router-dom": "^6.9.0",
-		"sequelize": "^6.32.1"
-	},
-	"devDependencies": {
-		"@svgr/webpack": "^6.5.1",
-		"@types/node": "^18.14.6",
-		"@types/react": "^18.0.28",
-		"@types/react-dom": "^18.0.11",
-		"cross-env": "^7.0.3",
-		"css-loader": "^6.7.3",
-		"electron": "^23.1.2",
-		"electronmon": "^2.0.2",
-		"html-webpack-plugin": "^5.5.0",
-		"license-checker": "^25.0.1",
-		"mini-css-extract-plugin": "^2.7.2",
-		"npm-run-all": "^4.1.5",
-		"rimraf": "^4.3.0",
-		"ts-loader": "^9.4.2",
-		"ts-node": "^10.9.1",
-		"typescript": "^4.9.5",
-		"wait-on": "^7.0.1",
-		"webpack": "^5.75.0",
-		"webpack-cli": "^5.0.1"
-	}
+  "private": true,
+  "main": "main/index.js",
+  "productName": "ElectronTypescriptNext",
+  "version": "0.0.0",
+  "scripts": {
+    "clean": "rimraf dist main renderer/out renderer/.next",
+    "dev": "npm run build-electron && electron .",
+    "build-renderer": "next build renderer",
+    "build-electron": "tsc -p electron-src",
+    "build": "npm run build-renderer && npm run build-electron",
+    "pack-app": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder",
+    "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "dependencies": {
+    "@next/font": "^14.0.1",
+    "electron-is-dev": "^2.0.0",
+    "electron-next": "^3.1.5",
+    "electron-squirrel-startup": "^1.0.0",
+    "next": "^14.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-horizontal-scrolling-menu": "^4.1.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.1.0",
+    "@electron-forge/maker-deb": "^7.1.0",
+    "@electron-forge/maker-rpm": "^7.1.0",
+    "@electron-forge/maker-squirrel": "^7.1.0",
+    "@electron-forge/maker-zip": "^7.1.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.1.0",
+    "@types/node": "^20.8.10",
+    "@types/react": "^18.2.34",
+    "@types/react-dom": "^18.2.14",
+    "@typescript-eslint/eslint-plugin": "^6.9.1",
+    "electron": "^27.0.3",
+    "eslint": "^8.52.0",
+    "eslint-config-next": "^14.0.1",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-config-standard-with-typescript": "^40.0.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-n": "^16.2.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-tailwindcss": "^3.13.0",
+    "prettier": "^3.0.3",
+    "prettier-plugin-tailwindcss": "^0.5.6",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.2.2"
+  },
+  "build": {
+    "asar": true,
+    "files": [
+      "main",
+      "renderer/out"
+    ]
+  }
 }
