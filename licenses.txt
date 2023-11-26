@@ -1,7 +1,0 @@
-BIZ UDPGothic - Google Fonts
-  (c) Designed by Type Bank Co., Morisawa Inc.
-  Open Font License - https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL
-
-Google Material Symbols and Icons
-  (c) Google Inc. 
-  Apache License 2.0
