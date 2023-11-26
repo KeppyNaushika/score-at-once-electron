@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@next/font": "^14.0.1",
+    "autoprefixer": "^10.4.16",
     "electron-is-dev": "^2.0.0",
     "electron-next": "^3.1.5",
     "electron-squirrel-startup": "^1.0.0",
