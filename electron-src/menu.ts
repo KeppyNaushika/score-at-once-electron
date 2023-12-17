@@ -23,7 +23,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
       {
         label: "答案再読み込み",
         accelerator: "R",
-        click: () => {},
+        click: () => mainWindow.webContents.send("score-panel", "reload"),
       },
       {
         label: "採点",
