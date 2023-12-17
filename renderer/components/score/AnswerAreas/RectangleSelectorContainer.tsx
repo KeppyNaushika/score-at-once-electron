@@ -1,13 +1,13 @@
 import React, { type ReactNode, useRef, useState } from "react"
 import { type AnswerArea } from "../AnswerAreas"
-import { type DragAction } from "../../../pages/score"
+import { type DragAction } from "../..//Tabs/Score"
 
 const RectangleSelectorContainer = (props: {
   children: ReactNode
   dragAction: DragAction
   setAnswerAreas: React.Dispatch<React.SetStateAction<AnswerArea[]>>
 }): JSX.Element => {
-  const {children, dragAction, setAnswerAreas} = props
+  const { children, dragAction, setAnswerAreas } = props
 
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })

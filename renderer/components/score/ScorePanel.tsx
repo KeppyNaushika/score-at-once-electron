@@ -1,5 +1,5 @@
 import React from "react"
-import { type Show } from "../../pages/score"
+import { type Show } from "..//Tabs/Score"
 
 const ScorePanel = (props: {
   showAnswerArea: Record<Show, boolean>

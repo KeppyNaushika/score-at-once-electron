@@ -12,7 +12,7 @@ import {
   PARTIALPOINTS,
   type CropCoords,
   type StudentId,
-} from "../../pages/score"
+} from "..//Tabs/Score"
 import AnswerAreaComponent from "./AnswerAreas/AnswerArea"
 import RectangleSelectorContainer from "./AnswerAreas/RectangleSelectorContainer"
 

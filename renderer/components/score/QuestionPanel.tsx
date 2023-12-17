@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { dragActions, type DragAction, type Order } from "../../pages/score"
+import { dragActions, type DragAction, type Order } from "..//Tabs/Score"
 // import arrow0 from "../../../public/images/arrows/arrow0.png"
 // import arrow1 from "../../../public/images/arrows/arrow1.png"
 // import arrow2 from "../../../public/images/arrows/arrow2.png"
