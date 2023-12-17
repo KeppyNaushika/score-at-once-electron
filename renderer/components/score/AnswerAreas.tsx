@@ -53,8 +53,6 @@ const AnswerAreas = (props: {
     showAnswerArea,
     toggleShowAnswerArea,
   } = props
-  // const { answerAreas, setAnswerAreas, moveSelectedAnswerArea } = useAnswerAreaMovement();
-
 
   // 答案データ
   const numberOfAnswerAreas = 120
