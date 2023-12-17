@@ -25,8 +25,9 @@ const DIRECTION_TO_MOVE_ANSWER_AREA = [
   "prevColumn",
   "nextColumn",
 ] as const
-type Move = (typeof MOVES)[number]
-type DirectionToMoveAnswerArea = (typeof DIRECTION_TO_MOVE_ANSWER_AREA)[number]
+export type Move = (typeof MOVES)[number]
+export type DirectionToMoveAnswerArea =
+  (typeof DIRECTION_TO_MOVE_ANSWER_AREA)[number]
 
 export interface AnswerArea {
   isSelected: boolean
@@ -52,6 +53,8 @@ const AnswerAreas = (props: {
     showAnswerArea,
     toggleShowAnswerArea,
   } = props
+  // const { answerAreas, setAnswerAreas, moveSelectedAnswerArea } = useAnswerAreaMovement();
+
 
   // 答案データ
   const numberOfAnswerAreas = 120
@@ -134,7 +137,7 @@ const AnswerAreas = (props: {
     },
     [answerAreas, numberOfItemsInRow, numberOfItemsInColumn],
   )
-  const movePress = useCallback(
+  const handleMovePress = useCallback(
     (move: Move): void => {
       const setIndexInOrder: Record<
         number,
@@ -184,10 +187,11 @@ const AnswerAreas = (props: {
     [answerAreas, moveSelectedAnswerArea],
   )
 
-  useEffect(() => {
+  // Reload
+  const reload = useCallback(() => {
     setAnswerAreas((prevAnswerAreas) => {
       let index = 0
-      const newAnswerAreas = [...prevAnswerAreas].map((answerArea) => {
+      const newAnswerAreas = prevAnswerAreas.map((answerArea) => {
         const isShown = showAnswerArea[`toggle-show-${answerArea.score}`]
         answerArea.isShown = isShown
         answerArea.isSelected = false
@@ -204,6 +208,10 @@ const AnswerAreas = (props: {
       return newAnswerAreas
     })
   }, [showAnswerArea])
+
+  useEffect(() => {
+    reload()
+  }, [reload, showAnswerArea])
 
   // Show
   const showAnswerAreas = useCallback(
@@ -238,8 +246,8 @@ const AnswerAreas = (props: {
 
   // SelectAll
   const selectAll = useCallback(() => {
-    setAnswerAreas((prevAnswerArea) => {
-      const newAnswerArea = [...prevAnswerArea].map((answerArea) => {
+    setAnswerAreas((prevAnswerAreas) => {
+      const newAnswerArea = prevAnswerAreas.map((answerArea) => {
         answerArea.isSelected = answerArea.isShown
         return answerArea
       })
@@ -260,10 +268,14 @@ const AnswerAreas = (props: {
     }
   }
 
+  const setRef = (index: number) => (el: HTMLDivElement | null) => {
+    refs.current[index] = el
+  }
+
   useEffect(() => {
     const listener = (_event: IpcRendererEvent, value: string): void => {
       if (MOVES.includes(value as Move)) {
-        movePress(value as Move)
+        handleMovePress(value as Move)
       } else if (SCORES.includes(value as Score)) {
         scoreAnswerArea(value as Score)
       } else if (SHOWS.includes(value as Show)) {
@@ -272,6 +284,8 @@ const AnswerAreas = (props: {
         setPartialPoint(value as PartialPoint)
       } else if (value === "select-all") {
         selectAll()
+      } else if (value === "reload") {
+        reload()
       }
     }
 
@@ -281,16 +295,16 @@ const AnswerAreas = (props: {
     }
   }, [
     answerAreas,
-    movePress,
+    handleMovePress,
     moveSelectedAnswerArea,
     numberOfItemsInRow,
     orderOfAnswerArea,
+    reload,
     scoreAnswerArea,
     selectAll,
     setPartialPoint,
     showAnswerAreas,
   ])
-
   return (
     <RectangleSelectorContainer
       dragAction={dragAction}
@@ -301,18 +315,21 @@ const AnswerAreas = (props: {
         onItemsChange={handleItemsChange}
         orderOfAnswerArea={orderOfAnswerArea}
       >
-        {answerAreas.map((answerArea, index) => {
-          return answerArea.isShown ? (
-            <div
-              ref={(el) => (refs.current[index] = el)}
-              key={answerArea.studentId}
-            >
-              <AnswerAreaComponent answerArea={answerArea} />
-            </div>
-          ) : (
-            <></>
+        {answerAreas.some((answerArea) => answerArea.isShown) ? (
+          answerAreas.map(
+            (answerArea, index) =>
+              answerArea.isShown && (
+                <div ref={setRef(index)} key={answerArea.studentId}>
+                  <AnswerAreaComponent answerArea={answerArea} />
+                </div>
+              ),
           )
-        })}
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center">
+            <div>答案がありません</div>
+            <div>表示設定を変更して下さい</div>
+          </div>
+        )}
       </FlexboxContainer>
     </RectangleSelectorContainer>
   )

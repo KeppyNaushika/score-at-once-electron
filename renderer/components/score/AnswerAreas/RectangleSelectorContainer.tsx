@@ -95,7 +95,7 @@ const RectangleSelectorContainer = (props: {
   return (
     <div
       ref={containerRef} // 親要素に参照を設定
-      className="relative flex grow select-none pb-4 pr-4"
+      className="relative flex grow select-none"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
