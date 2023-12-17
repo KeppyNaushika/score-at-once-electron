@@ -1,6 +1,5 @@
 import React from "react"
 import { type AnswerArea } from "../AnswerAreas"
-import { SCORES } from "../../../pages/score"
 
 const AnswerAreaComponent = (props: {
   answerArea: AnswerArea

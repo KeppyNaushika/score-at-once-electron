@@ -1,9 +1,7 @@
 import React, { type ReactNode } from "react"
-import Link from "next/link"
 import Head from "next/head"
 
 // import { Koruri } from "@/fonts/Koruri"
-import { usePathname } from "next/navigation"
 import { type Tab } from "../pages"
 
 interface TabInfo {
