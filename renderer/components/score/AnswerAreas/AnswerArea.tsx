@@ -38,6 +38,9 @@ const AnswerAreaComponent = (props: {
         id={`answer-${answerArea.studentId}`}
       >
         <div className={`p-1 ${bgColor}`}>
+          <div className="mb-1  text-center text-xs">
+            {answerArea.studentName}
+          </div>
           <div className="h-24 w-24 bg-white">{answerArea.studentId}</div>
           <div className="flex justify-center pt-1">
             <div
