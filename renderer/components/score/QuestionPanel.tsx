@@ -11,7 +11,7 @@ const QuestionList = (): JSX.Element => {
   const QuestionChoice = (): JSX.Element => (
     <div className="absolute top-8 z-50 w-full animate-float-in px-2">
       <div className=" rounded-md border-2 border-black bg-white/90 shadow-md">
-        <div className="border-black px-10 py-1">設問１</div>
+        <div className="border-black px-10 py-1">設問1</div>
         {[...Array(10).keys()].map((v, index) => (
           <div key={index} className="border-t-2 border-black px-10 py-1">
             設問{index + 3}
@@ -88,14 +88,34 @@ const OrderOfAnswerArea = (props: {
   const handleOnClick = (): void => {
     props.switchOrderOfAnswerArea()
   }
-
+  const order = props.orderOfAnswerArea.findIndex((v) => v.isSelected)
+  const orderIcons = [
+    {
+      className: "",
+      text: "Z",
+    },
+    {
+      className: "scale-x-[-1]",
+      text: "Z",
+    },
+    {
+      className: "scale-x-[-1]",
+      text: "N",
+    },
+    {
+      className: "",
+      text: "N",
+    },
+  ]
   return (
     <div
       onClick={handleOnClick}
       className="flex h-8 w-8 items-center justify-center bg-primary/20 shadow-md"
     >
       {/* <Image src={orderImages[props.orderOfAnswerArea]} alt="" /> */}
-      {props.orderOfAnswerArea.findIndex((v) => v.isSelected)}
+      <div className={orderIcons[order].className}>
+        {orderIcons[order].text}
+      </div>
     </div>
   )
 }

@@ -324,8 +324,8 @@ const AnswerAreas = (props: {
           )
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
-            <div>答案がありません</div>
-            <div>表示設定を変更して下さい</div>
+            <div className="text-2xl pb-2">表示条件を満たす答案がありません</div>
+            <div>［採点パネル］→［表示］から表示条件を変更して下さい</div>
           </div>
         )}
       </FlexboxContainer>
