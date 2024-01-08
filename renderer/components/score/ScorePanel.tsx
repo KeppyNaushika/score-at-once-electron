@@ -9,6 +9,7 @@ import {
   ChangeHistory,
   CircleOutlined,
   Close,
+  Edit,
   HorizontalRule,
   QuestionMark,
 } from "@mui/icons-material"
@@ -16,8 +17,9 @@ import {
 const ScorePanel = (props: {
   showAnswerArea: Record<Show, boolean>
   toggleShowAnswerArea: (show: Show) => void
+  setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
 }): JSX.Element => {
-  const { showAnswerArea, toggleShowAnswerArea } = props
+  const { showAnswerArea, toggleShowAnswerArea, setIsShowCommentWindow } = props
   return (
     <div className="flex min-w-full select-none overflow-x-auto bg-slate-100 py-2 shadow-md">
       <div className="flex flex-col px-4">
@@ -79,6 +81,20 @@ const ScorePanel = (props: {
           </div>
         </div>
         <div className="mt-1 flex justify-center text-xs">再読込</div>
+      </div>
+      <div className="border-l-2 border-stone-200"></div>
+      <div className="mt-1 flex flex-col px-4">
+        <div className="flex">
+          <div
+            className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center"
+            onClick={() => {
+              setIsShowCommentWindow(true)
+            }}
+          >
+            <Edit />
+          </div>
+        </div>
+        <div className="mt-1 flex justify-center text-xs">コメント</div>
       </div>
       <div className="border-l-2 border-stone-200"></div>
       <div className="mt-1 flex flex-col px-4">

@@ -1,18 +1,80 @@
-import { BrowserWindow, Menu } from "electron"
+import { BrowserWindow, Menu, MenuItemConstructorOptions } from "electron"
 
 const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
-  const fileMenu = {
-    label: "一括採点",
-    submenu: [
-      {
-        label: "Quit",
-        accelerator: process.platform === "darwin" ? "Cmd+Q" : "Control+Q",
-        click() {
-          app.quit()
+  const mainMenus: MenuItemConstructorOptions[] = [
+    {
+      label: "一括採点",
+      submenu: [
+        {
+          label: "Quit",
+          accelerator: process.platform === "darwin" ? "Cmd+Q" : "Control+Q",
+          click() {
+            app.quit()
+          },
         },
-      },
-    ],
-  }
+        // {
+        //   label: "Reload",
+        //   accelerator: "Command+R",
+        //   click: function () {
+        //     app.relaunch()
+        //     app.quit()
+        //   },
+        // },
+        {
+          label: "Toggle Full Screen",
+          accelerator: "Ctrl+Command+F",
+          click: function () {
+            mainWindow.setFullScreen(!mainWindow.isFullScreen())
+          },
+        },
+        {
+          label: "Toggle Developer Tools",
+          accelerator: "Alt+Command+I",
+          click: function () {
+            mainWindow.webContents.toggleDevTools()
+          },
+        },
+      ],
+    },
+    {
+      label: "編集",
+      submenu: [
+        { label: "元に戻す", accelerator: "CmdOrCtrl+Z", role: "undo" },
+        { label: "やり直し", accelerator: "Shift+CmdOrCtrl+Z", role: "redo" },
+        { type: "separator" },
+        { label: "切り取り", accelerator: "CmdOrCtrl+X", role: "cut" },
+        { label: "コピー", accelerator: "CmdOrCtrl+C", role: "copy" },
+        { label: "貼り付け", accelerator: "CmdOrCtrl+V", role: "paste" },
+        {
+          label: "全選択",
+          accelerator: "CmdOrCtrl+A",
+          role: "selectAll",
+        },
+        { type: "separator" },
+        {
+          label: "再読込",
+          accelerator: "CmdOrCtrl+R",
+          role: "reload",
+        },
+        { type: "separator" },
+        {
+          label: "拡大",
+          accelerator: "CmdOrCtrl+=",
+          role: "zoomIn",
+        },
+        {
+          label: "縮小",
+          accelerator: "CmdOrCtrl+-",
+          role: "zoomOut",
+        },
+        {
+          label: "元の拡大率",
+          accelerator: "CmdOrCtrl+0",
+          role: "resetZoom",
+        },
+      ],
+    },
+  ]
   const scoreMenu = {
     label: "採点パネル",
     submenu: [
@@ -61,7 +123,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         submenu: [
           {
             label: "未採点を表示",
-            accelerator: "Ctrl+Q",
+            accelerator: "Alt+Q",
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
@@ -70,25 +132,25 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
           },
           {
             label: "正答を表示",
-            accelerator: "Ctrl+E",
+            accelerator: "Alt+E",
             click: () =>
               mainWindow.webContents.send("score-panel", "toggle-show-correct"),
           },
           {
             label: "部分点を表示",
-            accelerator: "Ctrl+F",
+            accelerator: "Alt+F",
             click: () =>
               mainWindow.webContents.send("score-panel", "toggle-show-partial"),
           },
           {
             label: "保留を表示",
-            accelerator: "Ctrl+J",
+            accelerator: "Alt+J",
             click: () =>
               mainWindow.webContents.send("score-panel", "toggle-show-pending"),
           },
           {
             label: "誤答を表示",
-            accelerator: "Ctrl+O",
+            accelerator: "Alt+O",
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
@@ -127,7 +189,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         submenu: [
           {
             label: "全選択",
-            accelerator: "CmdOrCtrl+A",
+            accelerator: "Alt+A",
             click: () =>
               mainWindow.webContents.send("score-panel", "select-all"),
           },
@@ -177,8 +239,8 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
     ],
   }
   if (page === "score") {
-    return Menu.buildFromTemplate([fileMenu, scoreMenu])
+    return Menu.buildFromTemplate([...mainMenus, scoreMenu])
   }
-  return Menu.buildFromTemplate([fileMenu])
+  return Menu.buildFromTemplate([...mainMenus])
 }
 export default menu

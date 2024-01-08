@@ -1,48 +1,34 @@
-# Electron with Typescript application example
+# 一括採点 on Electron
 
-This example show how you can use Next.js inside an Electron application to avoid a lot of configuration, use Next.js router as view and use server-render to speed up the initial render of the application. Both Next.js and Electron layers are written in TypeScript and compiled to JavaScript during the build process.
+開発中です
 
-| Part       | Source code (Typescript) | Builds (JavaScript) |
-| ---------- | ------------------------ | ------------------- |
-| Next.js    | `/renderer`              | `/renderer`         |
-| Electron   | `/electron-src`          | `/main`             |
-| Production |                          | `/dist`             |
+## 使い方
 
-For development it's going to run a HTTP server and let Next.js handle routing. In production it use `output: 'export'` to pre-generate HTML static files and use them in your app instead of running an HTTP server.
-
-## How to use
-
-Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [npm](https://docs.npmjs.com/cli/init), [Yarn](https://yarnpkg.com/lang/en/docs/cli/create/), or [pnpm](https://pnpm.io) to bootstrap the example:
+> [!NOTE]
+> Git と Node.js は各自でインストールしておいて下さい
 
 ```bash
-npx create-next-app --example with-electron-typescript with-electron-typescript-app
+git clone https://github.com/KeppyNaushika/score-at-once-electron.git
+cd score-at-once-electron
+npm i
+npm run dev
 ```
+
+利用可能なコマンド:
+
+> [!WARNING]
+> 意味はよく分かっていません
 
 ```bash
-yarn create next-app --example with-electron-typescript with-electron-typescript-app
+"clean": "rimraf dist main renderer/out renderer/.next",
+"dev": "npm run build-electron && electron .",
+"build-renderer": "next build renderer",
+"build-electron": "tsc -p electron-src",
+"build": "npm run build-renderer && npm run build-electron",
+"pack-app": "npm run build && electron-builder --dir",
+"dist": "npm run build && electron-builder",
+"type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
+"start": "electron-forge start",
+"package": "electron-forge package",
+"make": "electron-forge make"
 ```
-
-```bash
-pnpm create next-app --example with-electron-typescript with-electron-typescript-app
-```
-
-Available commands:
-
-```bash
-"build-renderer": build and transpile Next.js layer
-"build-electron": transpile electron layer
-"build": build both layers
-"dev": start dev version
-"dist": create production electron build
-"type-check": check TypeScript in project
-```
-
-## Notes
-
-You can create the production app using `npm run dist`.
-
-_note regarding types:_
-
-- Electron provides its own type definitions, so you don't need @types/electron installed!
-  source: https://www.npmjs.com/package/@types/electron
-- There were no types available for `electron-next` at the time of creating this example, so until they are available there is a file `electron-next.d.ts` in `electron-src` directory.

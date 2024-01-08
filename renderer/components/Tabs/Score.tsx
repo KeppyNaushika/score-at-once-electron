@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import ScorePanel from "../score/ScorePanel"
 import QuestionPanel from "../score/QuestionPanel"
 import AnswerAreas from "../score/AnswerAreas"
+import CommentWindow from "../score/CommentWindow"
 
 export type Id = string
 export type ExamId = Id
@@ -103,29 +104,37 @@ const ScoreTab = (): JSX.Element => {
     })
   }
 
+  const [isShowCommentWindow, setIsShowCommentWindow] = useState(false)
+
   useEffect(() => {
     window.electronAPI.setShortcut("score")
   }, [orderOfAnswerArea])
 
   return (
-    <div className="flex min-w-full grow flex-col">
-      <ScorePanel
-        showAnswerArea={showAnswerArea}
-        toggleShowAnswerArea={toggleShowAnswerArea}
-      />
-      <QuestionPanel
-        orderOfAnswerArea={orderOfAnswerArea}
-        switchOrderOfAnswerArea={switchOrderOfAnswerArea}
-        dragAction={dragAction}
-        switchDragAction={switchDragAction}
-      />
-      <AnswerAreas
-        orderOfAnswerArea={orderOfAnswerArea}
-        dragAction={dragAction}
-        showAnswerArea={showAnswerArea}
-        toggleShowAnswerArea={toggleShowAnswerArea}
-      />
-    </div>
+    <>
+      {isShowCommentWindow && (
+        <CommentWindow setIsShowCommentWindow={setIsShowCommentWindow} />
+      )}
+      <div className="flex min-w-full grow flex-col">
+        <ScorePanel
+          showAnswerArea={showAnswerArea}
+          toggleShowAnswerArea={toggleShowAnswerArea}
+          setIsShowCommentWindow={setIsShowCommentWindow}
+        />
+        <QuestionPanel
+          orderOfAnswerArea={orderOfAnswerArea}
+          switchOrderOfAnswerArea={switchOrderOfAnswerArea}
+          dragAction={dragAction}
+          switchDragAction={switchDragAction}
+        />
+        <AnswerAreas
+          orderOfAnswerArea={orderOfAnswerArea}
+          dragAction={dragAction}
+          showAnswerArea={showAnswerArea}
+          toggleShowAnswerArea={toggleShowAnswerArea}
+        />
+      </div>
+    </>
   )
 }
 
