@@ -32,6 +32,7 @@
     "next": "^14.0.1",
     "pdfjs-dist": "^4.0.379",
     "react": "^18.2.0",
+    "react-color": "^2.19.3",
     "react-dom": "^18.2.0",
     "react-horizontal-scrolling-menu": "^4.1.1",
     "react-pdf": "^7.6.0"
@@ -45,6 +46,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.1.0",
     "@types/node": "^20.8.10",
     "@types/react": "^18.2.34",
+    "@types/react-color": "^3.0.11",
     "@types/react-dom": "^18.2.14",
     "@typescript-eslint/eslint-plugin": "^6.9.1",
     "electron": "^28.0.0",
