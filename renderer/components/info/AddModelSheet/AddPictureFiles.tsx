@@ -1,5 +1,5 @@
-import { LibraryAddOutlined } from "@mui/icons-material"
 import React, { useRef, type ChangeEvent } from "react"
+import { MdOutlineLibraryAdd } from "react-icons/md"
 
 const AddPictureFiles = (props: {
   setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
@@ -48,7 +48,7 @@ const AddPictureFiles = (props: {
         className="flex h-1/2 cursor-pointer flex-col items-center justify-center"
         onClick={handleClick}
       >
-        <LibraryAddOutlined />
+        <MdOutlineLibraryAdd size={"1.5em"} />
         <div className="pt-2 text-xs">JPEG / PNG</div>
       </div>
     </>

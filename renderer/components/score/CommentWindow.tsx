@@ -2,20 +2,16 @@ import React, { useState } from "react"
 import { type ColorResult, SketchPicker } from "react-color"
 
 import {
-  Close,
-  ContentCopy,
-  ContentPaste,
-  CropSquare,
-  Delete,
-  DeleteForever,
-  DeleteForeverOutlined,
-  DeleteOutline,
-  DeleteOutlined,
-  EditOutlined,
-  PanToolOutlined,
-  Straighten,
-  TextFields,
-} from "@mui/icons-material"
+  MdClose,
+  MdContentCopy,
+  MdContentPaste,
+  MdCropSquare,
+  MdDelete,
+  MdOutlineEdit,
+  MdOutlinePanTool,
+  MdStraighten,
+  MdTextFields,
+} from "react-icons/md"
 
 const CommentWindow = (props: {
   setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
@@ -39,37 +35,37 @@ const CommentWindow = (props: {
               setIsShowCommentWindow(false)
             }}
           >
-            <Close />
+            <MdClose size={"1.5em"} />
           </div>
         </div>
         <div className="border-l-2 border-stone-200"></div>
         <div className="flex px-4">
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <PanToolOutlined />
+            <MdOutlinePanTool size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <ContentCopy />
+            <MdContentCopy size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <ContentPaste />
+            <MdContentPaste size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <Delete />
+            <MdDelete size={"1.5em"} />
           </div>
         </div>
         <div className="border-l-2 border-stone-200"></div>
         <div className="flex px-4">
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <EditOutlined />
+            <MdOutlineEdit size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <Straighten />
+            <MdStraighten size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <CropSquare />
+            <MdCropSquare size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-stone-200 shadow-md">
-            <TextFields />
+            <MdTextFields size={"1.5em"} />
           </div>
         </div>
         <div className="border-l-2 border-stone-200"></div>

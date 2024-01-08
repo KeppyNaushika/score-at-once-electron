@@ -1,18 +1,18 @@
 import React from "react"
 import { type Show } from "..//Tabs/Score"
-import RefreshIcon from "@mui/icons-material/Refresh"
 import {
-  ArrowBack,
-  ArrowDownward,
-  ArrowForward,
-  ArrowUpward,
-  ChangeHistory,
-  CircleOutlined,
-  Close,
-  Edit,
-  HorizontalRule,
-  QuestionMark,
-} from "@mui/icons-material"
+  MdArrowBack,
+  MdArrowDownward,
+  MdArrowForward,
+  MdArrowUpward,
+  MdChangeHistory,
+  MdClose,
+  MdEdit,
+  MdHorizontalRule,
+  MdOutlineCircle,
+  MdQuestionMark,
+  MdRefresh,
+} from "react-icons/md"
 
 const ScorePanel = (props: {
   showAnswerArea: Record<Show, boolean>
@@ -25,19 +25,19 @@ const ScorePanel = (props: {
       <div className="flex flex-col px-4">
         <div className="mt-1 flex">
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-unscored/50 shadow-md">
-            <HorizontalRule />
+            <MdHorizontalRule size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-correct/50 shadow-md">
-            <CircleOutlined />
+            <MdOutlineCircle size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-partial/50 shadow-md">
-            <ChangeHistory />
+            <MdChangeHistory size={"1.5em"} />
           </div>
           <div className="border-hold/50 mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 shadow-md">
-            <QuestionMark />
+            <MdQuestionMark size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center border-2 border-incorrect/50 shadow-md">
-            <Close />
+            <MdClose size={"1.5em"} />
           </div>
         </div>
         <div className="mt-1 flex justify-center text-xs">採点</div>
@@ -48,11 +48,11 @@ const ScorePanel = (props: {
           {Object.keys(showAnswerArea).map((showKey, index) => {
             const show = showKey as Show
             const symbols = [
-              <HorizontalRule key={0} />,
-              <CircleOutlined key={1} />,
-              <ChangeHistory key={2} />,
-              <QuestionMark key={3} />,
-              <Close key={4} />,
+              <MdHorizontalRule size={"1.5em"} key={0} />,
+              <MdOutlineCircle size={"1.5em"} key={1} />,
+              <MdChangeHistory size={"1.5em"} key={2} />,
+              <MdQuestionMark size={"1.5em"} key={3} />,
+              <MdClose size={"1.5em"} key={4} />,
             ]
             return (
               <div
@@ -77,7 +77,7 @@ const ScorePanel = (props: {
       <div className="mt-1 flex flex-col px-4">
         <div className="flex">
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
-            <RefreshIcon />
+            <MdRefresh size={"1.5em"} />
           </div>
         </div>
         <div className="mt-1 flex justify-center text-xs">再読込</div>
@@ -91,7 +91,7 @@ const ScorePanel = (props: {
               setIsShowCommentWindow(true)
             }}
           >
-            <Edit />
+            <MdEdit size={"1.5em"} />
           </div>
         </div>
         <div className="mt-1 flex justify-center text-xs">コメント</div>
@@ -100,16 +100,16 @@ const ScorePanel = (props: {
       <div className="mt-1 flex flex-col px-4">
         <div className="flex">
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
-            <ArrowBack />
+            <MdArrowBack size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
-            <ArrowDownward />
+            <MdArrowDownward size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
-            <ArrowUpward />
+            <MdArrowUpward size={"1.5em"} />
           </div>
           <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
-            <ArrowForward />
+            <MdArrowForward size={"1.5em"} />
           </div>
         </div>
         <div className="mt-1 flex justify-center text-xs">移動</div>

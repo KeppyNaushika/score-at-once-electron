@@ -1,6 +1,6 @@
-import { LibraryAddOutlined } from "@mui/icons-material"
 import { Document, Page, pdfjs } from "react-pdf"
 import React, { useRef, type ChangeEvent, useState } from "react"
+import { MdOutlineLibraryAdd } from "react-icons/md"
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`
 
 const AddPdfFile = (props: {
@@ -171,7 +171,7 @@ const AddPdfFile = (props: {
         className="flex h-1/2 cursor-pointer flex-col items-center justify-center"
         onClick={handleClick}
       >
-        <LibraryAddOutlined />
+        <MdOutlineLibraryAdd size={"1.5em"} />
         <div className="pt-2 text-xs">PDF</div>
       </div>
     </>
