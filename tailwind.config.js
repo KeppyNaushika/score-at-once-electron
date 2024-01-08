@@ -26,6 +26,7 @@ module.exports = {
       auto: "auto",
     },
     extend: {
+      userSelect: ["none"],
       colors: {
         primary: "#A0A0A0",
         unscored: "#BFB29E",

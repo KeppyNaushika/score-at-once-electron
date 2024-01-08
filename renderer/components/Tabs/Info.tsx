@@ -1,4 +1,4 @@
-import { DeleteOutline, Loop } from "@mui/icons-material"
+import { MdDeleteOutline, MdLoop } from "react-icons/md"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
 import DialogRemoveModelSheet from "../info/DialogRemoveModelSheet"
@@ -61,25 +61,19 @@ const Info = (): JSX.Element => {
       />
       <div className="min-w-full px-20 py-10">
         <div className="border-2 border-stone-200 px-20 py-10">
-          <div className="my-2 flex items-center border-b-2 border-black">
-            <div className="w-24">試験名</div>
-            <input
-              name="name"
-              type="text"
-              placeholder="試験名"
-              onChange={changeExamInfo}
-              className="w-full border-2 border-stone-200/0 px-4 py-2 transition-all duration-300 placeholder:text-white focus:outline-none"
-            />
-          </div>
-          <div className="my-2 flex items-center border-b-2 border-black">
-            <div className="w-24">試験日</div>
-            <input
-              name="date"
-              type="date"
-              placeholder="試験日"
-              onChange={changeExamInfo}
-              className="w-full border-2 border-stone-200/0 px-4 py-2 transition-all duration-300 placeholder:text-white focus:outline-none"
-            />
+          <div className="my-2 flex items-center">
+            <div className="flex w-full border-b-2 border-black">
+              <div className="flex w-24 items-center justify-center">
+                試験名
+              </div>
+              <input
+                name="name"
+                type="text"
+                placeholder="試験名"
+                onChange={changeExamInfo}
+                className="w-full border-2 border-stone-200/0 p-4 transition-all duration-300 placeholder:text-white focus:outline-none"
+              />
+            </div>
           </div>
           <div className="my-2">
             <div className="w-24 py-2">模範解答画像</div>
@@ -99,14 +93,14 @@ const Info = (): JSX.Element => {
                           setDialogReplaceModelSheet(index)
                         }}
                       >
-                        <Loop />
+                        <MdLoop size="1.5em" />
                       </div>
                       <div
                         onClick={() => {
                           setDialogRemoveModelSheet(index)
                         }}
                       >
-                        <DeleteOutline />
+                        <MdDeleteOutline size="1.5em" />
                       </div>
                     </div>
                   </div>
