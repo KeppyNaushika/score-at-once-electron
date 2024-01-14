@@ -3,8 +3,8 @@ import {
   type DirectionToMoveAnswerArea,
   type AnswerArea,
   type Move,
-} from "../AnswerAreas"
-import { type Order } from "../../Tabs/Score"
+} from "../index.type"
+import { type Order } from "../../index.type"
 
 // 答案データ
 const numberOfAnswerAreas = 120

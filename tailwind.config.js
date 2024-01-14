@@ -7,7 +7,8 @@ module.exports = {
   ],
   safelist: [
     {
-      pattern: /bg-(unscored|correct|partial|pending|incorrect)/,
+      pattern:
+        /(bg|border)-(unscored|correct|partial|pending|incorrect|noanswer)/,
     },
   ],
   theme: {
@@ -26,14 +27,15 @@ module.exports = {
       auto: "auto",
     },
     extend: {
-      userSelect: ["none"],
       colors: {
         primary: "#A0A0A0",
-        unscored: "#BFB29E",
-        correct: "#00d199",
-        partial: "#FFEA00",
-        pending: "#0079FF",
-        incorrect: "#FF0060",
+        unscored: "#D3D3D3",
+        correct: "#3CB371",
+        partial: "#FFBF00",
+        pending: "#00BFFF",
+        incorrect: "#FF6347",
+        noanswer: "#A232A2",
+        selectedAnswer: "#BFDEFF",
       },
       keyframes: {
         "expand-width": {

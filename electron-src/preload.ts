@@ -12,13 +12,18 @@ declare global {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
+  // rendere -> main
   setShortcut: (page: string) => ipcRenderer.send("set-shortcut", page),
+  sendScorePanel: (arg: string) => {
+    ipcRenderer.send("score-panel", arg)
+  },
+  // main -> renderer
   scorePanel: (listener: any) => {
     ipcRenderer.removeAllListeners("score-panel")
     ipcRenderer.on("score-panel", listener)
   },
   removeScorePanelListener: (listener: any) => {
-    ipcRenderer.removeListener("score-panel", listener);
+    ipcRenderer.removeListener("score-panel", listener)
   },
 })
 

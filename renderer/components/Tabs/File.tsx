@@ -26,6 +26,11 @@ const defaultExams = [
     name: "テスト２",
     date: "2024 / 7 / 28",
   },
+  {
+    selected: false,
+    name: "テスト３",
+    date: "2023 / 5 / 15",
+  },
 ]
 
 const File = (): JSX.Element => {
@@ -70,12 +75,18 @@ const File = (): JSX.Element => {
 
   return (
     <div className="flex min-w-full flex-col">
-      <div className="flex py-2">
-        <div className="mx-8 inline-block cursor-pointer rounded-lg bg-slate-200 px-8 py-2 shadow-md">
+      <div className="flex px-4 py-2">
+        <div className="mx-4 inline-block w-36 cursor-pointer rounded-lg px-8 py-2 text-center shadow-md">
+          新規作成
+        </div>
+        <div className="mx-4 inline-block w-36 cursor-pointer rounded-lg bg-slate-200 px-8 py-2 text-center shadow-md">
           試験一覧
         </div>
-        <div className="inline-block cursor-pointer rounded-lg px-8 py-2 shadow-md">
+        <div className="mx-4 inline-block w-36 cursor-pointer rounded-lg px-8 py-2 text-center shadow-md">
           生徒名簿
+        </div>
+        <div className="mx-4 inline-block w-36 cursor-pointer rounded-lg px-8 py-2 text-center shadow-md">
+          設定
         </div>
       </div>
       <div className="flex items-center border-b-2 border-slate-200 py-1">
@@ -115,22 +126,21 @@ const File = (): JSX.Element => {
       </div>
       {exams.map((exam, index) => {
         return (
-          <div
-            className="flex py-4"
-            key={index}
-            onClick={() => {
-              clickExam(index)
-            }}
-          >
-            <div className="flex w-20 items-center justify-center">
+          <div className="flex py-4" key={index}>
+            <div
+              className="flex w-20 cursor-pointer items-center justify-center"
+              onClick={() => {
+                clickExam(index)
+              }}
+            >
               {exam.selected ? (
                 <MdRadioButtonChecked size={"1.5em"} />
               ) : (
                 <MdRadioButtonUnchecked size={"1.5em"} />
               )}
             </div>
-            <div className="border-l-2 bg-slate-200 "></div>
-            <div className="w-full px-4">{exam.name}</div>
+            <div className="border-l-2 bg-slate-200"></div>
+            <div className="w-full select-text px-4">{exam.name}</div>
             <div className="border-l-2 bg-slate-200 "></div>
             <div className="w-80 px-4">{exam.date}</div>
           </div>

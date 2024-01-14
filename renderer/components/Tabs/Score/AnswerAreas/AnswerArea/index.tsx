@@ -1,12 +1,13 @@
 import React from "react"
-import { type AnswerArea } from "../AnswerAreas"
+import { type AnswerArea } from "../index.type"
 
 const AnswerAreaComponent = (props: {
   answerArea: AnswerArea
+  isShowStudentName: boolean
 }): JSX.Element => {
-  const { answerArea } = props
+  const { answerArea, isShowStudentName } = props
   const borderColor = `bg-${answerArea.score}`
-  const bgColor = answerArea.isSelected ? "bg-sky-200" : "bg-gray-300"
+  const bgColor = answerArea.isSelected ? "bg-selectedAnswer" : "bg-gray-100"
   const point = ((answerArea: AnswerArea) => {
     const point = {
       text: (answerArea.partialPoints ?? "-").toString(),
@@ -38,8 +39,8 @@ const AnswerAreaComponent = (props: {
         id={`answer-${answerArea.studentId}`}
       >
         <div className={`p-1 ${bgColor}`}>
-          <div className="mb-1  text-center text-xs">
-            {answerArea.studentName}
+          <div className="mb-1 text-center text-xs">
+            {isShowStudentName ? answerArea.studentName : " "}
           </div>
           <div className="h-24 w-24 bg-white">{answerArea.studentId}</div>
           <div className="flex justify-center pt-1">
