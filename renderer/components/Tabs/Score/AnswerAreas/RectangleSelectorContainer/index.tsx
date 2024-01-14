@@ -1,6 +1,6 @@
 import React, { type ReactNode, useRef, useState } from "react"
-import { type AnswerArea } from "../AnswerAreas"
-import { type DragAction } from "../..//Tabs/Score"
+import { type AnswerArea } from "../index.type"
+import { type DragAction } from "../../index.type"
 
 const RectangleSelectorContainer = (props: {
   children: ReactNode

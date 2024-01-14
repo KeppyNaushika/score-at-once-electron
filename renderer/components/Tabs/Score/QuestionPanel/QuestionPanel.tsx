@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { dragActions, type DragAction, type Order } from "..//Tabs/Score"
+import { type DragAction, dragActions, type Order } from "../index.type"
 
 const QuestionList = (): JSX.Element => {
   const [dragAction, setDragAction] = useState(false)

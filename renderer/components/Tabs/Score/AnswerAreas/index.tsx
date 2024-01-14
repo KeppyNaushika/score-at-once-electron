@@ -1,5 +1,5 @@
 import React, { useRef, useCallback, useEffect, useState } from "react"
-import FlexboxContainer from "./FlexboxContainer"
+import FlexboxContainer from "../FlexboxContainer/FlexboxContainer"
 import { type IpcRendererEvent } from "electron"
 import {
   type DragAction,
@@ -10,48 +10,29 @@ import {
   SCORES,
   SHOWS,
   PARTIALPOINTS,
-  type CropCoords,
-  type StudentId,
-} from "..//Tabs/Score"
-import AnswerAreaComponent from "./AnswerAreas/AnswerArea"
-import RectangleSelectorContainer from "./AnswerAreas/RectangleSelectorContainer"
-
-const MOVES = ["left", "right", "up", "down"] as const
-const DIRECTION_TO_MOVE_ANSWER_AREA = [
-  "prev",
-  "next",
-  "prevRow",
-  "nextRow",
-  "prevColumn",
-  "nextColumn",
-] as const
-export type Move = (typeof MOVES)[number]
-export type DirectionToMoveAnswerArea =
-  (typeof DIRECTION_TO_MOVE_ANSWER_AREA)[number]
-
-export interface AnswerArea {
-  isSelected: boolean
-  isShown: boolean
-  index: number | null
-  studentId: StudentId
-  studentName: string
-  maxPoints: number
-  score: Score
-  partialPoints: number | null
-  cropTmp: CropCoords
-}
+} from "../index.type"
+import AnswerAreaComponent from "./AnswerArea"
+import RectangleSelectorContainer from "./RectangleSelectorContainer"
+import {
+  type AnswerArea,
+  type DirectionToMoveAnswerArea,
+  type Move,
+  MOVES,
+} from "./index.type"
 
 const AnswerAreas = (props: {
   orderOfAnswerArea: Order[]
   dragAction: DragAction
   showAnswerArea: Record<Show, boolean>
   toggleShowAnswerArea: (show: Show) => void
+  setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
 }): JSX.Element => {
   const {
     orderOfAnswerArea,
     dragAction,
     showAnswerArea,
     toggleShowAnswerArea,
+    setIsShowCommentWindow,
   } = props
 
   // 答案データ
@@ -77,6 +58,7 @@ const AnswerAreas = (props: {
   const [numberOfItemsInColumn, setNumberOfItemsInColumn] = useState(0)
   const [answerAreas, setAnswerAreas] =
     useState<AnswerArea[]>(defaultAnswerAreas)
+  const [isShowStudentName, setIsShowStudentName] = useState(true)
 
   const handleItemsChange = (items: {
     numberOfItemsInRow: number
@@ -173,7 +155,9 @@ const AnswerAreas = (props: {
         const newAnswerArea = answerArea
         if (answerArea.isSelected) {
           newAnswerArea.score = score
-          if (["unscored", "correct", "incorrect"].includes(score)) {
+          if (
+            ["unscored", "correct", "incorrect", "noanswer"].includes(score)
+          ) {
             newAnswerArea.partialPoints = null
           }
         }
@@ -284,6 +268,10 @@ const AnswerAreas = (props: {
         selectAll()
       } else if (value === "reload") {
         reload()
+      } else if (value === "comment") {
+        setIsShowCommentWindow((prev) => !prev)
+      } else if (value === "studentName") {
+        setIsShowStudentName((prev) => !prev)
       }
     }
 
@@ -300,6 +288,7 @@ const AnswerAreas = (props: {
     reload,
     scoreAnswerArea,
     selectAll,
+    setIsShowCommentWindow,
     setPartialPoint,
     showAnswerAreas,
   ])
@@ -318,13 +307,18 @@ const AnswerAreas = (props: {
             (answerArea, index) =>
               answerArea.isShown && (
                 <div ref={setRef(index)} key={answerArea.studentId}>
-                  <AnswerAreaComponent answerArea={answerArea} />
+                  <AnswerAreaComponent
+                    answerArea={answerArea}
+                    isShowStudentName={isShowStudentName}
+                  />
                 </div>
               ),
           )
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="text-2xl pb-2">表示条件を満たす答案がありません</div>
+            <div className="pb-2 text-2xl">
+              表示条件を満たす答案がありません
+            </div>
             <div>［採点パネル］→［表示］から表示条件を変更して下さい</div>
           </div>
         )}

@@ -32,6 +32,9 @@ app.on("ready", async () => {
   ipcMain.on("set-shortcut", (_event, page: string) => {
     Menu.setApplicationMenu(menu(app, mainWindow, page))
   })
+  ipcMain.on("score-panel", (_event, arg: string) => {
+    mainWindow.webContents.send("score-panel", arg)
+  })
 
   mainWindow.webContents.openDevTools()
   mainWindow.loadURL(url)

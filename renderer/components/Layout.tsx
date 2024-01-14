@@ -47,7 +47,7 @@ const Layout = ({
   const title = "This is the default title"
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen select-none flex-col">
       <Head>
         <title>{title}</title>
         <meta charSet="utf-8" />
@@ -62,7 +62,7 @@ const Layout = ({
                 onClick={() => {
                   setActiveTab(tab.name)
                 }}
-                className="flex flex-col items-center px-4 py-2 text-center"
+                className="flex flex-col items-center px-4 py-2 text-center cursor-pointer"
               >
                 {tab.display}
                 {tab.name === activeTab ? (

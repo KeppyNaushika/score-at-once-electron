@@ -5,7 +5,10 @@ declare global {
 }
 
 export interface myAPI {
-  removeScorePanelListener: (listener: (_event: Electron.IpcRendererEvent, value: any) => void) => unknown
+  sendScorePanel: (arg: string) => unknown
+  removeScorePanelListener: (
+    listener: (_event: Electron.IpcRendererEvent, value: any) => void,
+  ) => unknown
   setShortcut: (page: string) => void
   scorePanel: (listener: (_event: any, value: any) => void) => () => void
   // sendMessage: (message: string) => void

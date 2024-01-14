@@ -79,13 +79,8 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
     label: "採点パネル",
     submenu: [
       {
-        label: "表示/非表示",
+        label: "採点パネルの表示/非表示",
         click: () => {},
-      },
-      {
-        label: "答案再読み込み",
-        accelerator: "R",
-        click: () => mainWindow.webContents.send("score-panel", "reload"),
       },
       {
         label: "採点",
@@ -115,6 +110,11 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             accelerator: "O",
             click: () =>
               mainWindow.webContents.send("score-panel", "incorrect"),
+          },
+          {
+            label: "無解答にする",
+            accelerator: "P",
+            click: () => mainWindow.webContents.send("score-panel", "noanswer"),
           },
         ],
       },
@@ -157,7 +157,31 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
                 "toggle-show-incorrect",
               ),
           },
+          {
+            label: "無解答を表示",
+            accelerator: "Alt+P",
+            click: () =>
+              mainWindow.webContents.send(
+                "score-panel",
+                "toggle-show-incorrect",
+              ),
+          },
         ],
+      },
+      {
+        label: "答案再読み込み",
+        accelerator: "R",
+        click: () => mainWindow.webContents.send("score-panel", "reload"),
+      },
+      {
+        label: "コメント",
+        accelerator: "R",
+        click: () => mainWindow.webContents.send("score-panel", "comment"),
+      },
+      {
+        label: "解答者名の表示/非表示",
+        accelerator: "R",
+        click: () => mainWindow.webContents.send("score-panel", "name"),
       },
       {
         label: "移動",

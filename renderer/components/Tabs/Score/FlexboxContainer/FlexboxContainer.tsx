@@ -1,5 +1,5 @@
 import React, { Component, type ReactNode, type RefObject } from "react"
-import { type Order } from "../Tabs/Score"
+import { type Order } from "../index.type"
 
 interface FlexboxContainerProps {
   orderOfAnswerArea: Order[]
