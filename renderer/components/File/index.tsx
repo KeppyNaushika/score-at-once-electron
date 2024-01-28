@@ -1,35 +1,23 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { MdRadioButtonChecked, MdRadioButtonUnchecked } from "react-icons/md"
 import { VscChevronDown, VscChevronUp, VscFile } from "react-icons/vsc"
+import { type Exam, type ExamSort, type Field, type Sorted } from "./index.type"
 
-type Field = "name" | "date"
-type Sorted = "ascending" | "descending"
-
-interface ExamSort {
-  field: null | Field
-  sorted: null | Sorted
-}
-
-interface Exam {
-  selected: boolean
-  name: string
-  date: string
-}
-const defaultExams = [
+const defaultExams: Exam[] = [
   {
     selected: true,
     name: "テスト１",
-    date: "2024 / 3 / 15",
+    date: ["2024 / 3 / 15"],
   },
   {
     selected: false,
     name: "テスト２",
-    date: "2024 / 7 / 28",
+    date: ["2024 / 7 / 28"],
   },
   {
     selected: false,
     name: "テスト３",
-    date: "2023 / 5 / 15",
+    date: ["2023 / 5 / 15"],
   },
 ]
 
@@ -72,6 +60,19 @@ const File = (): JSX.Element => {
       }
     })
   }
+
+  useEffect(() => {
+    const fetchData = async (): Promise<void> => {
+      try {
+        const data = await window.electronAPI.fetchProjects("")
+        setExams(data ?? []) // データが null の場合に空の配列として扱う
+      } catch (error) {
+        // エラーハンドリング
+        console.error("エラーが発生しました:", error)
+      }
+    }
+    void fetchData()
+  }, [])
 
   return (
     <div className="flex min-w-full flex-col">

@@ -1,9 +1,9 @@
 import { MdDeleteOutline, MdLoop } from "react-icons/md"
 import Image from "next/image"
 import React, { useRef, useState } from "react"
-import DialogRemoveModelSheet from "../info/DialogRemoveModelSheet"
-import DialogReplaceModelSheet from "../info/DialogReplaceModelSheet"
-import AddModelSheet from "../info/AddModelSheets"
+import DialogRemoveModelSheet from "./DialogRemoveModelSheet"
+import DialogReplaceModelSheet from "./DialogReplaceModelSheet"
+import AddModelSheet from "./AddModelSheets"
 
 interface ExamInfo {
   name: string
@@ -13,11 +13,10 @@ const saveStatus = ["　", "保存しています...", "保存されました"] 
 type SaveStatus = (typeof saveStatus)[number]
 
 const Info = (): JSX.Element => {
-  const [examInfo, setExamInfo] = useState<ExamInfo>({
+  const [, setExamInfo] = useState<ExamInfo>({
     name: "",
     date: "",
   })
-  console.log(examInfo)
   const [saveStatusState, setSaveStatusState] = useState<SaveStatus>(
     saveStatus[0],
   )
@@ -109,7 +108,7 @@ const Info = (): JSX.Element => {
               <AddModelSheet setModelSheets={setModelSheets} />
             </div>
           </div>
-          <div className="mt-4 text-center text-sm">{saveStatusState}</div>
+          <div className="mt-10 text-center text-sm">{saveStatusState}</div>
         </div>
       </div>
     </>
