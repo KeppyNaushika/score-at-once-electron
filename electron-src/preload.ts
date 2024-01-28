@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sendScorePanel: (arg: string) => {
     ipcRenderer.send("score-panel", arg)
   },
+  fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
   // main -> renderer
   scorePanel: (listener: any) => {
     ipcRenderer.removeAllListeners("score-panel")

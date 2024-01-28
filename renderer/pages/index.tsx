@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import Layout from "../components/Layout"
 import { type IpcRenderer } from "electron"
-import File from "../components/Tabs/File"
+import File from "../components/File"
 import Info from "../components/Tabs/Info"
 import Crop from "../components/Tabs/Crop"
 import Import from "../components/Tabs/Import"

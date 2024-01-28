@@ -5,6 +5,7 @@ declare global {
 }
 
 export interface myAPI {
+  fetchProjects: (arg: string) => Promise<Exam[] | null>
   sendScorePanel: (arg: string) => unknown
   removeScorePanelListener: (
     listener: (_event: Electron.IpcRendererEvent, value: any) => void,

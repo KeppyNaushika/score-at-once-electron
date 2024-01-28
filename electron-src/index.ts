@@ -7,6 +7,7 @@ import { BrowserWindow, app, ipcMain, type IpcMainEvent, Menu } from "electron"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
 import menu from "./menu"
+import { fetchProjects } from "./prisma"
 
 // Prepare the renderer once the app is ready
 app.on("ready", async () => {
@@ -34,6 +35,15 @@ app.on("ready", async () => {
   })
   ipcMain.on("score-panel", (_event, arg: string) => {
     mainWindow.webContents.send("score-panel", arg)
+  })
+  ipcMain.handle("fetch-projects", async () => {
+    try {
+      const projects = await fetchProjects()
+      return projects
+    } catch (err) {
+      console.log(`エラー: ${err}`)
+      return null
+    }
   })
 
   mainWindow.webContents.openDevTools()
