@@ -98,7 +98,7 @@ const ScorePanel = (props: {
       <div className="border-l-2 border-stone-200"></div>
       <div className="mt-1 flex flex-col px-4">
         <div className="flex">
-          <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
+          <div className="mx-1 flex size-10 cursor-pointer items-center justify-center">
             <MdRefresh size={"1.5em"} />
           </div>
         </div>
@@ -108,7 +108,7 @@ const ScorePanel = (props: {
       <div className="mt-1 flex flex-col px-4">
         <div className="flex">
           <div
-            className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center"
+            className="mx-1 flex size-10 cursor-pointer items-center justify-center"
             onClick={() => {
               setIsShowCommentWindow(true)
             }}
@@ -121,16 +121,16 @@ const ScorePanel = (props: {
       <div className="border-l-2 border-stone-200"></div>
       <div className="mt-1 flex flex-col px-4">
         <div className="flex">
-          <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
+          <div className="mx-1 flex size-10 cursor-pointer items-center justify-center">
             <MdArrowBack size={"1.5em"} />
           </div>
-          <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
+          <div className="mx-1 flex size-10 cursor-pointer items-center justify-center">
             <MdArrowDownward size={"1.5em"} />
           </div>
-          <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
+          <div className="mx-1 flex size-10 cursor-pointer items-center justify-center">
             <MdArrowUpward size={"1.5em"} />
           </div>
-          <div className="mx-1 flex h-10 w-10 cursor-pointer items-center justify-center">
+          <div className="mx-1 flex size-10 cursor-pointer items-center justify-center">
             <MdArrowForward size={"1.5em"} />
           </div>
         </div>

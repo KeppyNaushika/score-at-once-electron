@@ -7,7 +7,8 @@ import { BrowserWindow, app, ipcMain, type IpcMainEvent, Menu } from "electron"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
 import menu from "./menu"
-import { fetchProjects } from "./prisma"
+import { createProject, fetchProjects } from "./prisma"
+import { NewProject } from "./index.type"
 
 // Prepare the renderer once the app is ready
 app.on("ready", async () => {
@@ -40,6 +41,14 @@ app.on("ready", async () => {
     try {
       const projects = await fetchProjects()
       return projects
+    } catch (err) {
+      console.log(`エラー: ${err}`)
+      return null
+    }
+  })
+  ipcMain.handle("create-project", async (_event, newProject: NewProject) => {
+    try {
+      createProject(newProject)
     } catch (err) {
       console.log(`エラー: ${err}`)
       return null

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-namespace */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
+import { NewProject } from "./index.type"
 
 declare global {
   namespace NodeJS {
@@ -18,6 +19,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send("score-panel", arg)
   },
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
+  createProject: (newProject: NewProject) =>
+    ipcRenderer.invoke("create-project", newProject),
   // main -> renderer
   scorePanel: (listener: any) => {
     ipcRenderer.removeAllListeners("score-panel")

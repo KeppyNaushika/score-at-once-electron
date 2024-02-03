@@ -9,5 +9,5 @@ export interface ExamSort {
 export interface Exam {
   selected: boolean
   name: string
-  date: string[]
+  date: string
 }

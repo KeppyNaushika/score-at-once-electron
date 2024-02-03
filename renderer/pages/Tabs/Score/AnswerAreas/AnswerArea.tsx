@@ -1,5 +1,5 @@
 import React from "react"
-import { type AnswerArea } from "../AnswerAreas/index.type"
+import { type AnswerArea } from "./index.type"
 
 const AnswerAreaComponent = (props: {
   answerArea: AnswerArea
