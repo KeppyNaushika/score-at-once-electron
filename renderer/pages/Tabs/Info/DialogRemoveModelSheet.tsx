@@ -27,7 +27,7 @@ const DialogRemoveModelSheet = (props: {
       {dialogRemoveModelSheet !== null && (
         <div className="absolute inset-0 z-20 flex min-h-full min-w-full animate-float-in flex-col items-center justify-center border-2 bg-white/80">
           <div className="py-4 text-2xl">模範解答画像の削除</div>
-          <div className="relative h-1/2 w-1/2">
+          <div className="relative size-1/2">
             <Image
               className="absolute object-contain"
               src={modelSheets[dialogRemoveModelSheet]}
