@@ -58,10 +58,25 @@ module.exports = {
             opacity: "1",
           },
         },
+        "pop-in": {
+          "0%": {
+            transform: "translateY(100px)",
+            opacity: "0",
+          },
+          "70%": {
+            transform: "translateY(-10px)",
+            opacity: "1",
+          },
+          to: {
+            transform: "translateY(0px)",
+            opacity: "1",
+          },
+        },
       },
       animation: {
         "expand-width": "expand-width .15s ease",
         "float-in": "float-in .2s ease",
+        "pop-in": "pop-in .3s ease",
       },
     },
   },
