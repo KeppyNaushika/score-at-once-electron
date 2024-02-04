@@ -42,7 +42,7 @@ const AnswerAreaComponent = (props: {
           <div className="mb-1 text-center text-xs">
             {isShowStudentName ? answerArea.studentName : " "}
           </div>
-          <div className="h-24 w-24 bg-white">{answerArea.studentId}</div>
+          <div className="size-24 bg-white">{answerArea.studentId}</div>
           <div className="flex justify-center pt-1">
             <div
               className={`w-10 rounded-sm text-center text-xs ${point.color}`}

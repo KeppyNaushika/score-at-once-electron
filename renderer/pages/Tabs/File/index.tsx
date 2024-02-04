@@ -80,14 +80,6 @@ const File = (): JSX.Element => {
       )}
       <div className="flex min-w-full flex-col">
         <div className="flex px-4 py-2">
-          <div
-            className="mx-4 inline-block w-36 cursor-pointer rounded-lg px-8 py-2 text-center shadow-md"
-            onClick={() => {
-              setIsShowCreateProjectWindow(true)
-            }}
-          >
-            新規作成
-          </div>
           <div className="mx-4 inline-block w-36 cursor-pointer rounded-lg bg-slate-200 px-8 py-2 text-center shadow-md">
             試験一覧
           </div>
@@ -155,6 +147,26 @@ const File = (): JSX.Element => {
             </div>
           )
         })}
+      </div>
+      <div className="absolute bottom-0 flex min-w-full animate-pop-in justify-center px-32 py-16">
+        <div className="flex rounded-full bg-white shadow-md">
+          <div
+            className="flex w-36 cursor-pointer justify-center p-2"
+            onClick={() => {
+              setIsShowCreateProjectWindow(true)
+            }}
+          >
+            新規作成
+          </div>
+          <div className="border-l-2"></div>
+          <div className="flex w-36 cursor-pointer justify-center p-2">
+            編集
+          </div>
+          <div className="border-l-2"></div>
+          <div className="flex w-36 cursor-pointer justify-center p-2">
+            削除
+          </div>
+        </div>
       </div>
     </>
   )

@@ -28,7 +28,11 @@ export const createProject = async (props: NewProject) => {
   const prisma = new PrismaClient()
 
   try {
-    const projects = await prisma.project.findMany()
+    const projects = await prisma.project.findMany({
+      include: {
+        tags: true,
+      },
+    })
     projects.map(async (project) => {
       await prisma.project.update({
         where: { id: project.id },
