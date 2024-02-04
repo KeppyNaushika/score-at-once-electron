@@ -7,8 +7,13 @@ import { BrowserWindow, app, ipcMain, type IpcMainEvent, Menu } from "electron"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
 import menu from "./menu"
-import { createProject, fetchProjects } from "./prisma"
-import { NewProject } from "./index.type"
+import {
+  createProject,
+  deleteProject,
+  fetchProjects,
+  selectProject,
+} from "./prisma"
+import { Project } from "@prisma/client"
 
 // Prepare the renderer once the app is ready
 app.on("ready", async () => {
@@ -40,19 +45,26 @@ app.on("ready", async () => {
   ipcMain.handle("fetch-projects", async () => {
     try {
       const projects = await fetchProjects()
+      console.log(projects)
       return projects
     } catch (err) {
-      console.log(`エラー: ${err}`)
       return null
     }
   })
-  ipcMain.handle("create-project", async (_event, newProject: NewProject) => {
+  ipcMain.handle("create-project", async (_event, examName, examDate) => {
     try {
-      createProject(newProject)
-    } catch (err) {
-      console.log(`エラー: ${err}`)
-      return null
-    }
+      createProject(examName, examDate)
+    } catch (err) {}
+  })
+  ipcMain.handle("select-project", async (_event, project: Project) => {
+    try {
+      selectProject(project)
+    } catch (err) {}
+  })
+  ipcMain.handle("delete-project", async (_event, project) => {
+    try {
+      deleteProject(project)
+    } catch (err) {}
   })
 
   mainWindow.webContents.openDevTools()

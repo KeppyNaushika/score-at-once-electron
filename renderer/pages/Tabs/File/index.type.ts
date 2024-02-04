@@ -1,4 +1,4 @@
-export type Field = "name" | "date"
+export type Field = "examName" | "examDate"
 export type Sorted = "ascending" | "descending"
 
 export interface ExamSort {
@@ -7,13 +7,13 @@ export interface ExamSort {
 }
 
 export interface Project {
-  id: number;
-  projectId: string;
-  examName: string;
-  examDate: Date;
-  selected: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: number
+  projectId: string
+  examName: string
+  examDate: Date
+  selected: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Tag {

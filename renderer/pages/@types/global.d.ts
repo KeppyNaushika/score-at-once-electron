@@ -1,4 +1,4 @@
-import { type NewProject } from "../../../electron-src/index.type"
+import { type Project } from "@prisma/client"
 
 declare global {
   interface Window {
@@ -7,14 +7,16 @@ declare global {
 }
 
 export interface myAPI {
-  fetchProjects: (arg: string) => Promise<Exam[] | null>
-  createProject: (newProject: NewProject) => Promise<any>
+  fetchProjects: () => Promise<Project[] | null>
+  createProject: (props: {
+    examName: string
+    examDate: Date | null
+  }) => Promise<void>
+  deleteProject: (project: Project) => Promise<void>
   sendScorePanel: (arg: string) => unknown
   removeScorePanelListener: (
     listener: (_event: Electron.IpcRendererEvent, value: any) => void,
   ) => unknown
   setShortcut: (page: string) => void
   scorePanel: (listener: (_event: any, value: any) => void) => () => void
-  // sendMessage: (message: string) => void
-  // onReceiveMessage: (listener: (message: string) => void) => () => void
 }

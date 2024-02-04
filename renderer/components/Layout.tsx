@@ -62,7 +62,7 @@ const Layout = ({
                 onClick={() => {
                   setActiveTab(tab.name)
                 }}
-                className="flex flex-col items-center px-4 py-2 text-center cursor-pointer"
+                className="ov flex cursor-pointer flex-col items-center px-4 py-2 text-center"
               >
                 {tab.display}
                 {tab.name === activeTab ? (

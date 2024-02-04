@@ -1,7 +1,5 @@
-/* eslint-disable @typescript-eslint/no-namespace */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Project } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
-import { NewProject } from "./index.type"
 
 declare global {
   namespace NodeJS {
@@ -19,8 +17,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.send("score-panel", arg)
   },
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
-  createProject: (newProject: NewProject) =>
-    ipcRenderer.invoke("create-project", newProject),
+  createProject: (props: { examName: string; examDate: Date | null }) => {
+    const { examName, examDate } = props
+    return ipcRenderer.invoke("create-project", examName, examDate)
+  },
+  selectProject: (project: Project) =>
+    ipcRenderer.invoke("select-project", project),
+  deleteProject: (project: Project) =>
+    ipcRenderer.invoke("delete-project", project),
   // main -> renderer
   scorePanel: (listener: any) => {
     ipcRenderer.removeAllListeners("score-panel")

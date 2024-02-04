@@ -60,7 +60,7 @@ module.exports = {
         },
         "pop-in": {
           "0%": {
-            transform: "translateY(100px)",
+            transform: "translateY(10px)",
             opacity: "0",
           },
           "70%": {

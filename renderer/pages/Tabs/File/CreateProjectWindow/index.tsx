@@ -10,8 +10,9 @@ interface ReactTag {
 
 const CreateProjectWindow = (props: {
   setIsShowCreateProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
+  loadProjects: () => Promise<void>
 }): JSX.Element => {
-  const { setIsShowCreateProjectWindow } = props
+  const { setIsShowCreateProjectWindow, loadProjects } = props
   const [name, setName] = useState("")
   const [date, setDate] = useState<Date | null>(new Date())
 
@@ -44,6 +45,7 @@ const CreateProjectWindow = (props: {
               onChange={(e) => {
                 setName(e.target.value)
               }}
+              autoFocus
             />
           </div>
         </div>
@@ -60,6 +62,7 @@ const CreateProjectWindow = (props: {
               allowUnique
               allowDragDrop={false}
               allowDeleteFromEmptyInput={false}
+              autofocus={false}
               inputFieldPosition="top"
               placeholder="入力して Enter で追加"
               minQueryLength={0}
@@ -90,7 +93,8 @@ const CreateProjectWindow = (props: {
                 examName: name,
                 examDate: date,
               })
-              .then((res) => {
+              .then(async (res) => {
+                await loadProjects()
                 setIsShowCreateProjectWindow(false)
               })
               .catch((err): void => {
