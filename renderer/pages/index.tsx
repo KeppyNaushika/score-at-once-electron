@@ -6,6 +6,7 @@ import Info from "./Tabs/Info"
 import Crop from "./Tabs/Crop"
 import Import from "./Tabs/Import"
 import ScoreTab from "./Tabs/Score"
+import Export from "./Tabs/Export"
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -34,7 +35,7 @@ const IndexPage = (): JSX.Element => {
     crop: <Crop />,
     import: <Import />,
     score: <ScoreTab />,
-    export: <></>,
+    export: <Export />,
   }
   const ActiveTabs = pages[activeTab]
 
