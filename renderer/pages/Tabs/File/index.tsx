@@ -1,15 +1,22 @@
-import React, { useEffect, useState } from "react"
+import React, { useContext, useEffect, useState } from "react"
+
 import { MdRadioButtonChecked, MdRadioButtonUnchecked } from "react-icons/md"
 import { VscChevronDown, VscChevronUp, VscFile } from "react-icons/vsc"
+
 import { type ExamSort, type Field, type Sorted } from "./index.type"
 import CreateProjectWindow from "./CreateProjectWindow"
 import { type Project } from "@prisma/client"
+import { ProjectContext } from "../../../components/Context/ProjectContext"
 
 const File = (): JSX.Element => {
-  const [projects, setProjects] = useState<Project[]>([])
+  const projectContext = useContext(ProjectContext)
+  const [projects, setProjects] = [
+    projectContext.projects,
+    projectContext.setProjects,
+  ]
   const [projectSorted, setProjectSorted] = useState<ExamSort>({
-    field: null,
-    sorted: null,
+    field: "examName",
+    sorted: "ascending",
   })
   const [isShowCreateProjectWindow, setIsShowCreateProjectWindow] =
     useState(false)
@@ -17,19 +24,24 @@ const File = (): JSX.Element => {
   const loadProjects = async (): Promise<void> => {
     try {
       const projects = await window.electronAPI.fetchProjects()
+      console.log(projects)
       setProjects(() => projects ?? [])
     } catch (error) {
       console.error("エラーが発生しました:", error)
     }
   }
 
-  const clickExam = (clickIndex: number): void => {
-    setProjects((prev) =>
-      prev.map((project, index) => ({
-        ...project,
-        selected: index === clickIndex,
-      })),
-    )
+  const clickExam = async (clickIndex: number): Promise<void> => {
+    console.log(projects[clickIndex]["examName"])
+    const selectedProject = projects[clickIndex]
+    if (selectedProject !== null) {
+      try {
+        await window.electronAPI.selectProject(selectedProject)
+        await loadProjects()
+      } catch (error) {
+        console.error("エラーが発生しました:", error)
+      }
+    }
   }
   const clickToSort = (field: Field): void => {
     setProjectSorted((prev) => {
@@ -154,6 +166,10 @@ const File = (): JSX.Element => {
           </div>
           <div className="border-l-2"></div>
           <div className="flex w-36 cursor-pointer justify-center p-2">
+            読み込み
+          </div>
+          <div className="border-l-2"></div>
+          <div className="flex w-36 cursor-pointer justify-center p-2">
             編集
           </div>
           <div className="border-l-2"></div>
@@ -179,4 +195,5 @@ const File = (): JSX.Element => {
     </>
   )
 }
+
 export default File
