@@ -1,8 +1,8 @@
 import { PrismaClient, Project } from "@prisma/client"
 
-export const fetchProjects = async (): Promise<Project[]> => {
-  const prisma = new PrismaClient()
+const prisma = new PrismaClient()
 
+export const fetchProjects = async (): Promise<Project[]> => {
   try {
     const projects = await prisma.project.findMany({
       include: {
@@ -11,10 +11,8 @@ export const fetchProjects = async (): Promise<Project[]> => {
     })
     return projects
   } catch (error) {
-    console.error("データの取得中にエラーが発生しました:", error)
+    console.error("ProjectFetchError: ", error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
@@ -22,20 +20,20 @@ export const createProject = async (
   examName: string,
   examDate: Date | null,
 ) => {
-  const prisma = new PrismaClient()
-
   try {
     const projects = await prisma.project.findMany({
       include: {
         tags: true,
       },
     })
-    projects.map(async (project) => {
-      await prisma.project.update({
-        where: { id: project.id },
-        data: { selected: false },
-      })
-    })
+    await Promise.all(
+      projects.map((project) =>
+        prisma.project.update({
+          where: { id: project.id },
+          data: { selected: false },
+        }),
+      ),
+    )
     await prisma.project.create({
       data: {
         examName: examName,
@@ -44,15 +42,12 @@ export const createProject = async (
       },
     })
   } catch (error) {
-    console.error("プロジェクト作成中にエラーが発生しました:", error)
+    console.error("ProjectCreateError: ", error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export const selectProject = async (project: Project) => {
-  const prisma = new PrismaClient()
   try {
     await prisma.project.updateMany({
       where: { selected: true },
@@ -60,18 +55,15 @@ export const selectProject = async (project: Project) => {
     })
     await prisma.project.update({
       where: { id: project.id },
-      data: { selected: false },
+      data: { selected: true },
     })
   } catch (error) {
-    console.error("プロジェクト選択中にエラーが発生しました:", error)
+    console.error("ProjectSelectError: ", error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export const deleteProject = async (project: Project) => {
-  const prisma = new PrismaClient()
   try {
     await prisma.project.delete({
       where: { id: project.id },
@@ -84,9 +76,7 @@ export const deleteProject = async (project: Project) => {
       })
     }
   } catch (error) {
-    console.error("プロジェクト削除中にエラーが発生しました:", error)
+    console.error("ProjectDeleteError: ", error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
