@@ -12,6 +12,7 @@ export interface myAPI {
     examName: string
     examDate: Date | null
   }) => Promise<void>
+  selectProject: (project: Project) => Promise<void>
   deleteProject: (project: Project) => Promise<void>
   sendScorePanel: (arg: string) => unknown
   removeScorePanelListener: (

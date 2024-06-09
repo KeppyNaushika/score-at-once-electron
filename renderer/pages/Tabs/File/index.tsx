@@ -9,11 +9,7 @@ import { type Project } from "@prisma/client"
 import { ProjectContext } from "../../../components/Context/ProjectContext"
 
 const File = (): JSX.Element => {
-  const projectContext = useContext(ProjectContext)
-  const [projects, setProjects] = [
-    projectContext.projects,
-    projectContext.setProjects,
-  ]
+  const { projects, setProjects } = useContext(ProjectContext)
   const [projectSorted, setProjectSorted] = useState<ExamSort>({
     field: "examName",
     sorted: "ascending",
@@ -23,26 +19,33 @@ const File = (): JSX.Element => {
 
   const loadProjects = async (): Promise<void> => {
     try {
-      const projects = await window.electronAPI.fetchProjects()
-      console.log(projects)
-      setProjects(() => projects ?? [])
+      const fetchedProjects = await window.electronAPI.fetchProjects()
+      fetchedProjects?.map((project) => {
+        console.log(project)
+      })
+      setProjects(fetchedProjects ?? [])
     } catch (error) {
       console.error("エラーが発生しました:", error)
     }
   }
 
   const clickExam = async (clickIndex: number): Promise<void> => {
-    console.log(projects[clickIndex]["examName"])
+    console.log(projects[clickIndex].examName)
     const selectedProject = projects[clickIndex]
-    if (selectedProject !== null) {
+    if (selectedProject) {
       try {
+        console.log("Selected project:", selectedProject)
         await window.electronAPI.selectProject(selectedProject)
+        console.log("selectProject completed, loading projects")
         await loadProjects()
+        await loadProjects()
+        console.log("loadProjects completed")
       } catch (error) {
         console.error("エラーが発生しました:", error)
       }
     }
   }
+
   const clickToSort = (field: Field): void => {
     setProjectSorted((prev) => {
       const newSorted: Sorted =
@@ -51,21 +54,24 @@ const File = (): JSX.Element => {
           : "ascending"
       const newSortState = { field, sorted: newSorted }
 
-      setProjects((projects) => sortExams([...projects], newSortState))
+      setProjects((prevProjects) => sortExams([...prevProjects], newSortState))
       return newSortState
     })
   }
-  const sortExams = (projects: Project[], sortState: ExamSort): Project[] => {
-    const field = sortState.field
-    if (field === null) return projects
 
-    return [...projects].sort((a, b) => {
-      if (sortState.sorted === "ascending") {
-        return a[field] < b[field] ? -1 : 1
-      } else {
-        return a[field] > b[field] ? -1 : 1
-      }
-    })
+  const sortExams = (projects: Project[], sortState: ExamSort): Project[] => {
+    const { field, sorted } = sortState
+    if (!field) return projects
+
+    return [...projects].sort((a, b) =>
+      sorted === "ascending"
+        ? a[field] < b[field]
+          ? -1
+          : 1
+        : a[field] > b[field]
+          ? -1
+          : 1,
+    )
   }
 
   useEffect(() => {
@@ -101,66 +107,60 @@ const File = (): JSX.Element => {
           <div className="h-6 border-l-2 bg-slate-200"></div>
           <div
             className="flex w-full cursor-pointer justify-between px-4"
-            onClick={() => {
-              clickToSort("examName")
-            }}
+            onClick={() => clickToSort("examName")}
           >
             <div className="text-xs">名前</div>
             <div className="text-xs">
               {projectSorted.field === "examName" &&
-                projectSorted.sorted === "ascending" && <VscChevronUp />}
-              {projectSorted.field === "examName" &&
-                projectSorted.sorted === "descending" && <VscChevronDown />}
+                (projectSorted.sorted === "ascending" ? (
+                  <VscChevronUp />
+                ) : (
+                  <VscChevronDown />
+                ))}
             </div>
           </div>
           <div className="h-6 border-l-2 bg-slate-200"></div>
           <div
             className="flex w-80 cursor-pointer justify-between px-4"
-            onClick={() => {
-              clickToSort("examDate")
-            }}
+            onClick={() => clickToSort("examDate")}
           >
             <div className="text-xs">日時</div>
             <div className="text-xs">
               {projectSorted.field === "examDate" &&
-                projectSorted.sorted === "ascending" && <VscChevronUp />}
-              {projectSorted.field === "examDate" &&
-                projectSorted.sorted === "descending" && <VscChevronDown />}
+                (projectSorted.sorted === "ascending" ? (
+                  <VscChevronUp />
+                ) : (
+                  <VscChevronDown />
+                ))}
             </div>
           </div>
         </div>
-        {projects.map((project, index) => {
-          return (
-            <div className="flex py-4" key={index}>
-              <div
-                className="flex w-20 cursor-pointer items-center justify-center"
-                onClick={() => {
-                  clickExam(index)
-                }}
-              >
-                {project.selected ? (
-                  <MdRadioButtonChecked size={"1.5em"} />
-                ) : (
-                  <MdRadioButtonUnchecked size={"1.5em"} />
-                )}
-              </div>
-              <div className="border-l-2 bg-slate-200"></div>
-              <div className="w-full select-text px-4">{project.examName}</div>
-              <div className="border-l-2 bg-slate-200 "></div>
-              <div className="w-80 px-4">
-                {project.examDate.toLocaleDateString()}
-              </div>
+        {projects.map((project, index) => (
+          <div className="flex py-4" key={index}>
+            <div
+              className="flex w-20 cursor-pointer items-center justify-center"
+              onClick={() => clickExam(index)}
+            >
+              {project.selected ? (
+                <MdRadioButtonChecked size={"1.5em"} />
+              ) : (
+                <MdRadioButtonUnchecked size={"1.5em"} />
+              )}
             </div>
-          )
-        })}
+            <div className="border-l-2 bg-slate-200"></div>
+            <div className="w-full select-text px-4">{project.examName}</div>
+            <div className="border-l-2 bg-slate-200"></div>
+            <div className="w-80 px-4">
+              {project.examDate.toLocaleDateString()}
+            </div>
+          </div>
+        ))}
       </div>
       <div className="absolute bottom-0 flex min-w-full animate-float-in justify-center px-32 py-16">
         <div className="flex rounded-full bg-white shadow-md">
           <div
             className="flex w-36 cursor-pointer justify-center p-2"
-            onClick={() => {
-              setIsShowCreateProjectWindow(true)
-            }}
+            onClick={() => setIsShowCreateProjectWindow(true)}
           >
             新規作成
           </div>
@@ -176,13 +176,13 @@ const File = (): JSX.Element => {
           <div
             className="flex w-36 cursor-pointer justify-center p-2"
             onClick={() => {
-              const selectedProject = projects.filter(
+              const selectedProject = projects.find(
                 (project) => project.selected,
-              )[0]
-              if (selectedProject !== null) {
-                void window.electronAPI
+              )
+              if (selectedProject) {
+                window.electronAPI
                   .deleteProject(selectedProject)
-                  .then(async (v) => {
+                  .then(async () => {
                     await loadProjects()
                   })
               }

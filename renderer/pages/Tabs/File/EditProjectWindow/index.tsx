@@ -2,7 +2,11 @@ import React, { useState } from "react"
 import ProjectDate from "./ProjectDate"
 import "../CreateProjectWindow/reactTags.module.css"
 import { WithContext as ReactTags } from "react-tag-input"
-import { Tag } from "react-tag-input/types/components/SingleTag"
+
+interface ReactTag {
+  id: string
+  text: string
+}
 
 const CreateProjectWindow = (props: {
   setIsShowCreateProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
@@ -12,18 +16,18 @@ const CreateProjectWindow = (props: {
   const [name, setName] = useState("")
   const [date, setDate] = useState<Date | null>(new Date())
 
-  const [tags, setTags] = useState<Tag[]>([])
-  const suggestions: Tag[] = [
-    { id: "数学", text: "数学", className: "" },
-    { id: "India", text: "India", className: "" },
-    { id: "Vietnam", text: "Vietnam", className: "" },
-    { id: "Turkey", text: "Turkey", className: "" },
+  const [tags, setTags] = useState<ReactTag[]>([])
+  const suggestions: ReactTag[] = [
+    { id: "数学", text: "数学" },
+    { id: "India", text: "India" },
+    { id: "Vietnam", text: "Vietnam" },
+    { id: "Turkey", text: "Turkey" },
   ]
 
   const handleDelete = (i: number): void => {
     setTags(tags.filter((tag, index) => index !== i))
   }
-  const handleAddition = (tag: Tag): void => {
+  const handleAddition = (tag: { id: string; text: string }): void => {
     setTags([...tags, tag])
   }
 
