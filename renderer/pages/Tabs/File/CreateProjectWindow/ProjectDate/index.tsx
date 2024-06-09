@@ -1,6 +1,6 @@
 import React from "react"
 import DatePicker from "react-datepicker"
-import ja from "date-fns/locale/ja"
+import { ja } from "date-fns/locale"
 import dayjs from "dayjs"
 
 import "react-datepicker/dist/react-datepicker.css"
