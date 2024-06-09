@@ -49,14 +49,19 @@ export const createProject = async (
 
 export const selectProject = async (project: Project) => {
   try {
-    await prisma.project.updateMany({
-      where: { selected: true },
-      data: { selected: false },
+    console.log("Start selectProject for project:", project.id)
+    await prisma.$transaction(async (prisma) => {
+      await prisma.project.updateMany({
+        where: { selected: true },
+        data: { selected: false },
+      })
+      console.log("Setting selected project:", project.id)
+      await prisma.project.update({
+        where: { id: project.id },
+        data: { selected: true },
+      })
     })
-    await prisma.project.update({
-      where: { id: project.id },
-      data: { selected: true },
-    })
+    console.log("Completed selectProject for project:", project.id)
   } catch (error) {
     console.error("ProjectSelectError: ", error)
     throw error
