@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react"
+import React, { use, useContext, useEffect, useState } from "react"
 
 import { MdRadioButtonChecked, MdRadioButtonUnchecked } from "react-icons/md"
 import { VscChevronDown, VscChevronUp, VscFile } from "react-icons/vsc"
@@ -9,7 +9,9 @@ import { type Project } from "@prisma/client"
 import { ProjectContext } from "../../../components/Context/ProjectContext"
 
 const File = (): JSX.Element => {
-  const { projects, setProjects } = useContext(ProjectContext)
+  // useState
+  const { projects, setProjects, selectedProjectId, setSelectedProjectId } =
+    useContext(ProjectContext)
   const [projectSorted, setProjectSorted] = useState<ExamSort>({
     field: "examName",
     sorted: "ascending",
@@ -17,6 +19,7 @@ const File = (): JSX.Element => {
   const [isShowCreateProjectWindow, setIsShowCreateProjectWindow] =
     useState(false)
 
+  // load projects
   const loadProjects = async (): Promise<void> => {
     try {
       const fetchedProjects = await window.electronAPI.fetchProjects()
@@ -29,23 +32,20 @@ const File = (): JSX.Element => {
     }
   }
 
+  // click exam
   const clickExam = async (clickIndex: number): Promise<void> => {
-    console.log(projects[clickIndex].examName)
+    console.log(`========= ${projects[clickIndex].examName}`)
     const selectedProject = projects[clickIndex]
     if (selectedProject) {
-      try {
-        console.log("Selected project:", selectedProject)
-        await window.electronAPI.selectProject(selectedProject)
-        console.log("selectProject completed, loading projects")
-        await loadProjects()
-        await loadProjects()
-        console.log("loadProjects completed")
-      } catch (error) {
-        console.error("エラーが発生しました:", error)
-      }
+      localStorage.setItem("selectedProjectId", selectedProject.projectId)
+      console.log(`selectedProjectId: ${selectedProject.projectId}`)
+      setSelectedProjectId((prev) => selectedProject.projectId)
+      await loadProjects()
+      console.log(`selectedProjectId: ${selectedProjectId}`)
     }
   }
 
+  // click to sort
   const clickToSort = (field: Field): void => {
     setProjectSorted((prev) => {
       const newSorted: Sorted =
@@ -59,25 +59,24 @@ const File = (): JSX.Element => {
     })
   }
 
+  // sort exams
   const sortExams = (projects: Project[], sortState: ExamSort): Project[] => {
     const { field, sorted } = sortState
+
     if (!field) return projects
 
-    return [...projects].sort((a, b) =>
-      sorted === "ascending"
-        ? a[field] < b[field]
-          ? -1
-          : 1
-        : a[field] > b[field]
-          ? -1
-          : 1,
-    )
+    return [...projects].sort((a, b) => {
+      if (sorted === "ascending") {
+        return a[field] < b[field] ? -1 : 1
+      } else {
+        return a[field] > b[field] ? -1 : 1
+      }
+    })
   }
 
+  // useEffect
   useEffect(() => {
-    loadProjects().catch((err) => {
-      console.log(err)
-    })
+    loadProjects()
   }, [setProjects])
 
   return (
@@ -141,7 +140,8 @@ const File = (): JSX.Element => {
               className="flex w-20 cursor-pointer items-center justify-center"
               onClick={() => clickExam(index)}
             >
-              {project.selected ? (
+              {project.projectId ===
+              localStorage.getItem("selectedProjectId") ? (
                 <MdRadioButtonChecked size={"1.5em"} />
               ) : (
                 <MdRadioButtonUnchecked size={"1.5em"} />
@@ -177,7 +177,9 @@ const File = (): JSX.Element => {
             className="flex w-36 cursor-pointer justify-center p-2"
             onClick={() => {
               const selectedProject = projects.find(
-                (project) => project.selected,
+                (project) =>
+                  project.projectId ===
+                  localStorage.getItem("selectedProjectId"),
               )
               if (selectedProject) {
                 window.electronAPI

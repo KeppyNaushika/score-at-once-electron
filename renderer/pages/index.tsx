@@ -7,6 +7,7 @@ import Crop from "./Tabs/Crop"
 import Import from "./Tabs/Import"
 import ScoreTab from "./Tabs/Score"
 import Export from "./Tabs/Export"
+import ProjectProvider from "../components/Context/ProjectContext"
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -40,9 +41,11 @@ const IndexPage = (): JSX.Element => {
   const ActiveTabs = pages[activeTab]
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {ActiveTabs}
-    </Layout>
+    <ProjectProvider>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+        {ActiveTabs}
+      </Layout>
+    </ProjectProvider>
   )
 }
 
