@@ -84,7 +84,6 @@ const Layout = ({
   }
 
   useEffect(() => {
-    console.log(`loadProjects and selectedProjectId: ${selectedProjectId}`)
     if (projects?.find((project) => project.projectId === selectedProjectId)) {
       setTabs((prev) => prev.map((tab) => ({ ...tab, enable: true })))
     } else {
