@@ -23,9 +23,6 @@ const File = (): JSX.Element => {
   const loadProjects = async (): Promise<void> => {
     try {
       const fetchedProjects = await window.electronAPI.fetchProjects()
-      fetchedProjects?.map((project) => {
-        console.log(project)
-      })
       setProjects(fetchedProjects ?? [])
     } catch (error) {
       console.error("エラーが発生しました:", error)
@@ -34,14 +31,11 @@ const File = (): JSX.Element => {
 
   // click exam
   const clickExam = async (clickIndex: number): Promise<void> => {
-    console.log(`========= ${projects[clickIndex].examName}`)
     const selectedProject = projects[clickIndex]
     if (selectedProject) {
       localStorage.setItem("selectedProjectId", selectedProject.projectId)
-      console.log(`selectedProjectId: ${selectedProject.projectId}`)
       setSelectedProjectId((prev) => selectedProject.projectId)
       await loadProjects()
-      console.log(`selectedProjectId: ${selectedProjectId}`)
     }
   }
 

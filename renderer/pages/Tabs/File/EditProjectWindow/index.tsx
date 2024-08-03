@@ -98,7 +98,7 @@ const CreateProjectWindow = (props: {
                 setIsShowCreateProjectWindow(false)
               })
               .catch((err): void => {
-                console.log(err)
+                console.error(err)
               })
           }}
         >
