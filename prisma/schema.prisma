@@ -16,7 +16,6 @@ model Project {
   examName  String          @default("")
   examDate DateTime
   tags      ProjectTag[]
-  selected  Boolean
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 }

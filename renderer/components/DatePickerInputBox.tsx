@@ -5,9 +5,11 @@ import dayjs from "dayjs"
 
 import "react-datepicker/dist/react-datepicker.css"
 
-const ProjectDate = (props: {
+const DatePickerInputBox = (props: {
   date: Date | null
   setDate: React.Dispatch<React.SetStateAction<Date | null>>
+  defaultDate?: Date
+  enable: boolean
 }): JSX.Element => {
   const { date, setDate } = props
 
@@ -58,4 +60,4 @@ const ProjectDate = (props: {
   )
 }
 
-export default ProjectDate
+export default DatePickerInputBox

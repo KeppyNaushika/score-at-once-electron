@@ -14,9 +14,9 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": "./renderer",
+    "baseUrl": "./renderer/",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["./*"]
     }
   },
   "include": [

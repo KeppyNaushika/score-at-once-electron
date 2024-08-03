@@ -21,8 +21,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const { examName, examDate } = props
     return ipcRenderer.invoke("create-project", examName, examDate)
   },
-  selectProject: (project: Project) =>
-    ipcRenderer.invoke("select-project", project),
   deleteProject: (project: Project) =>
     ipcRenderer.invoke("delete-project", project),
   // main -> renderer

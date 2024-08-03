@@ -11,9 +11,9 @@ export interface myAPI {
   createProject: (props: {
     examName: string
     examDate: Date | null
-  }) => Promise<void>
-  selectProject: (project: Project) => Promise<void>
-  deleteProject: (project: Project) => Promise<void>
+  }) => Promise<Project[] | null>
+  deleteProject: (project: Project) => Promise<Project[] | null>
+
   sendScorePanel: (arg: string) => unknown
   removeScorePanelListener: (
     listener: (_event: Electron.IpcRendererEvent, value: any) => void,

@@ -1,17 +1,18 @@
 import React, { useContext, useState } from "react"
-import DatePickerInputBox from "../../../../components/DatePickerInputBox"
+import ProjectDate from "../../../../components/ProjectDate"
+import "../../../../components/reactTags.module.css"
 import { WithContext as ReactTags } from "react-tag-input"
 import { Tag } from "react-tag-input/types/components/SingleTag"
 import { ProjectContext } from "../../../../components/Context/ProjectContext"
 
-import "../../../../components/reactTags.module.css"
-
-const CreateProjectWindow = (props: {
-  setIsShowCreateProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
+const DeleteProjectWindow = (props: {
+  setIsShowDeleteProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
   loadProjects: () => Promise<void>
 }): JSX.Element => {
-  const { setProjects } = useContext(ProjectContext)
-  const { setIsShowCreateProjectWindow, loadProjects } = props
+  const { projects, setProjects, selectedProjectId, setSelectedProjectId } =
+    useContext(ProjectContext)
+
+  const { setIsShowDeleteProjectWindow, loadProjects } = props
   const [name, setName] = useState("")
   const [date, setDate] = useState<Date | null>(new Date())
 
@@ -32,7 +33,7 @@ const CreateProjectWindow = (props: {
 
   return (
     <div className="absolute inset-0 z-20 flex min-h-full min-w-full animate-float-in flex-col items-center justify-center border-2 bg-white/80">
-      <div className="text-2xl">新規作成</div>
+      <div className="text-2xl">本当に削除しますか？</div>
       <div className="py-10">
         <div className="flex">
           <div className="flex items-center">
@@ -48,7 +49,7 @@ const CreateProjectWindow = (props: {
             />
           </div>
         </div>
-        <DatePickerInputBox date={date} setDate={setDate} enable={true} />
+        <ProjectDate date={date} setDate={setDate} />
         <div className="flex">
           <div className="flex items-center">
             <div className="flex w-16 pr-4">タグ</div>
@@ -91,12 +92,13 @@ const CreateProjectWindow = (props: {
           className="flex h-16 w-40 cursor-pointer items-center justify-center rounded-md bg-emerald-500 text-white"
           onClick={async () => {
             try {
-              const projects = await window.electronAPI.createProject({
-                examName: name,
-                examDate: date,
-              })
-              setProjects(projects ?? [])
-              setIsShowCreateProjectWindow(false)
+              const deleteProject = projects.find(
+                (project) => project.projectId === selectedProjectId,
+              )
+              if (!deleteProject) return
+              await window.electronAPI.deleteProject(deleteProject)
+              await loadProjects()
+              setIsShowDeleteProjectWindow(false)
             } catch (error) {}
           }}
         >
@@ -106,7 +108,7 @@ const CreateProjectWindow = (props: {
         <div
           className="flex h-16 w-40 cursor-pointer items-center justify-center rounded-md bg-gray-300"
           onClick={() => {
-            setIsShowCreateProjectWindow(false)
+            setIsShowDeleteProjectWindow(false)
           }}
         >
           戻る
@@ -116,4 +118,4 @@ const CreateProjectWindow = (props: {
   )
 }
 
-export default CreateProjectWindow
+export default DeleteProjectWindow
