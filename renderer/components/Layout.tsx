@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState, type ReactNode } from "react"
 import Head from "next/head"
 
-import { TABS, type Tab } from "../pages"
+import { TABS, type Tab } from "../pages/_index"
 import { ProjectContext } from "./Context/ProjectContext"
 
 interface TabInfo {
@@ -54,34 +54,9 @@ const Layout = ({
 }): JSX.Element => {
   const title = "This is the default title"
 
-  const { projects, setProjects, selectedProjectId, setSelectedProjectId } =
-    useContext(ProjectContext)
+  const { projects, selectedProjectId } = useContext(ProjectContext)
 
   const [tabs, setTabs] = useState<TabInfo[]>(defaultTabs)
-
-  const loadProjects = async (): Promise<void> => {
-    try {
-      const projects = await window.electronAPI.fetchProjects()
-      setProjects(projects ?? [])
-      if (
-        projects?.find(
-          (project) =>
-            project.projectId === localStorage.getItem("selectedProjectId"),
-        )
-      ) {
-        setTabs((prev) => prev.map((tab) => ({ ...tab, enable: true })))
-      } else {
-        setTabs((prev) =>
-          prev.map((tab) => ({
-            ...tab,
-            enable: tab.name === "file" ? true : false,
-          })),
-        )
-      }
-    } catch (error) {
-      console.error("エラーが発生しました:", error)
-    }
-  }
 
   useEffect(() => {
     if (projects?.find((project) => project.projectId === selectedProjectId)) {

@@ -52,7 +52,7 @@
     "@types/react-color": "^3.0.11",
     "@types/react-datepicker": "^6.2.0",
     "@types/react-dom": "^18.2.14",
-    "electron": "^31.1.0",
+    "electron": "^32.0.2",
     "eslint": "^8.52.0",
     "eslint-config-next": "^14.0.1",
     "eslint-config-prettier": "^9.0.0",
