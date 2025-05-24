@@ -1,6 +1,6 @@
 import React, { useState } from "react"
-import { type ColorResult, SketchPicker } from "react-color"
 
+import { type ColorResult, SketchPicker } from "react-color"
 import {
   MdClose,
   MdContentCopy,
@@ -15,7 +15,7 @@ import {
 
 const CommentWindow = (props: {
   setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
-}): JSX.Element => {
+}) => {
   const { setIsShowCommentWindow } = props
 
   const [isShowColorPicker, setIsShowColorPicker] = useState(false)
@@ -86,7 +86,7 @@ const CommentWindow = (props: {
             ></div>
             {isShowColorPicker && (
               <div className="">
-                <div className=" absolute z-50 translate-y-10">
+                <div className="absolute z-50 translate-y-10">
                   <div className="animate-float-in">
                     <SketchPicker
                       color={textColor}

@@ -1,4 +1,5 @@
 import React, { Component, type ReactNode, type RefObject } from "react"
+
 import { type Order } from "../index.type"
 
 interface FlexboxContainerProps {
@@ -23,10 +24,7 @@ class FlexboxContainer extends Component<
 
   constructor(props: FlexboxContainerProps) {
     super(props)
-    this.state = {
-      numberOfItemsInRow: 0,
-      numberOfItemsInColumn: 0,
-    }
+    this.state = { numberOfItemsInRow: 0, numberOfItemsInColumn: 0 }
     this.containerRef = React.createRef()
   }
 
@@ -55,18 +53,15 @@ class FlexboxContainer extends Component<
       this.setState({ numberOfItemsInRow, numberOfItemsInColumn })
 
       if (this.props.onItemsChange != null) {
-        this.props.onItemsChange({
-          numberOfItemsInRow,
-          numberOfItemsInColumn,
-        })
+        this.props.onItemsChange({ numberOfItemsInRow, numberOfItemsInColumn })
       }
     }
   }
 
-  render(): JSX.Element {
+  render() {
     return (
       <div
-        className={`absolute mb-2 mr-2 flex h-full w-full content-start justify-start overflow-y-scroll  ${
+        className={`absolute mb-2 mr-2 flex h-full w-full content-start justify-start overflow-y-scroll ${
           this.props.orderOfAnswerArea.find((v) => v.isSelected)?.className ??
           ""
         }`}

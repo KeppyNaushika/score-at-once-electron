@@ -1,22 +1,44 @@
-import React, { useState } from "react"
+import React, { useContext, useEffect, useState } from "react"
+
+import { WithContext as ReactTags } from "react-tag-input"
+import { ProjectContext } from "../../../../components/Context/ProjectContext"
 import ProjectDate from "../../../../components/ProjectDate"
 import "../CreateProjectWindow/reactTags.module.css"
-import { WithContext as ReactTags } from "react-tag-input"
 
 interface ReactTag {
   id: string
   text: string
 }
 
-const CreateProjectWindow = (props: {
-  setIsShowCreateProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
+// コンポーネント名を EditProjectWindow に変更
+const EditProjectWindow = (props: {
+  // プロップ名を変更
+  setIsShowEditProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
   loadProjects: () => Promise<void>
-}): JSX.Element => {
-  const { setIsShowCreateProjectWindow, loadProjects } = props
+  projectIdToEdit: string | null
+}) => {
+  // プロップ名を変更
+  const { setIsShowEditProjectWindow, loadProjects, projectIdToEdit } = props
+  const { projects } = useContext(ProjectContext)
+
   const [name, setName] = useState("")
   const [date, setDate] = useState<Date | null>(new Date())
-
   const [tags, setTags] = useState<ReactTag[]>([])
+
+  useEffect(() => {
+    if (projectIdToEdit) {
+      const projectToEdit = projects.find(
+        (p) => p.projectId === projectIdToEdit,
+      )
+      if (projectToEdit) {
+        setName(projectToEdit.examName)
+        setDate(projectToEdit.examDate)
+        // TODO: タグの読み込みと設定 (現在のデータ構造に依存)
+        // setTags(projectToEdit.tags?.map(tag => ({ id: tag.name, text: tag.name })) || [])
+      }
+    }
+  }, [projectIdToEdit, projects])
+
   const suggestions: ReactTag[] = [
     { id: "数学", text: "数学" },
     { id: "India", text: "India" },
@@ -33,7 +55,8 @@ const CreateProjectWindow = (props: {
 
   return (
     <div className="absolute inset-0 z-20 flex min-h-full min-w-full animate-float-in flex-col items-center justify-center border-2 bg-white/80">
-      <div className="text-2xl">新規作成</div>
+      {/* タイトルを変更 */}
+      <div className="text-2xl">プロジェクト編集</div>
       <div className="py-10">
         <div className="flex">
           <div className="flex items-center">
@@ -42,6 +65,7 @@ const CreateProjectWindow = (props: {
               type="text"
               placeholder="試験名"
               className="w-96 border-b-2 p-4 outline-none placeholder:opacity-0"
+              value={name} // valueプロパティを追加
               onChange={(e) => {
                 setName(e.target.value)
               }}
@@ -88,27 +112,35 @@ const CreateProjectWindow = (props: {
         <div
           className="flex h-16 w-40 cursor-pointer items-center justify-center rounded-md bg-emerald-500 text-white"
           onClick={() => {
+            if (!projectIdToEdit) return
+            // updateProject APIを呼び出すように変更 (API側の実装が必要)
             window.electronAPI
-              .createProject({
+              .updateProject({
+                // 仮のAPI関数名
+                projectId: projectIdToEdit,
                 examName: name,
                 examDate: date,
+                // tags: tags.map(tag => tag.text) // タグの更新も考慮
               })
               .then(async (res) => {
                 await loadProjects()
-                setIsShowCreateProjectWindow(false)
+                // プロップ名を変更
+                setIsShowEditProjectWindow(false)
               })
               .catch((err): void => {
-                console.error(err)
+                console.error("プロジェクトの更新に失敗しました:", err)
               })
           }}
         >
-          作成する
+          {/* ボタンテキストを変更 */}
+          更新する
         </div>
         <div className="w-20"></div>
         <div
           className="flex h-16 w-40 cursor-pointer items-center justify-center rounded-md bg-gray-300"
           onClick={() => {
-            setIsShowCreateProjectWindow(false)
+            // プロップ名を変更
+            setIsShowEditProjectWindow(false)
           }}
         >
           戻る
@@ -118,4 +150,4 @@ const CreateProjectWindow = (props: {
   )
 }
 
-export default CreateProjectWindow
+export default EditProjectWindow // エクスポート名を変更

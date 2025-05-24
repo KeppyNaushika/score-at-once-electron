@@ -1,9 +1,10 @@
 import React, { useRef, type ChangeEvent } from "react"
+
 import { MdOutlineLibraryAdd } from "react-icons/md"
 
 const AddPictureFiles = (props: {
   setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
-}): JSX.Element => {
+}) => {
   const { setModelSheets } = props
 
   const fileInputRef = useRef<HTMLInputElement>(null)

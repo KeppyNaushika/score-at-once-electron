@@ -24,6 +24,7 @@
     "@npmcli/fs": "^4.0.0",
     "@prisma/client": "^6.1.0",
     "@react-pdf/renderer": "^4.1.6",
+    "@types/react-tag-input": "^6.6.6",
     "autoprefixer": "^10.4.16",
     "dayjs": "^1.11.10",
     "electron-is-dev": "^2.0.0",

@@ -1,7 +1,7 @@
 import React from "react"
 import { FaFileExcel, FaFileExport, FaFilePdf } from "react-icons/fa6"
 
-const Export = (): JSX.Element => (
+const Export = () => (
   <div className="flex h-full w-full items-center justify-center">
     <div className="flex w-[600px] justify-between">
       <div className="flex h-32 w-32 flex-col items-center justify-center rounded-md bg-pink-200">

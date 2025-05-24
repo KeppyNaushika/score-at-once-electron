@@ -1,14 +1,14 @@
-import React, { use, useContext, useEffect, useState } from "react"
+import { useContext, useEffect, useState } from "react"
 
 import { MdRadioButtonChecked, MdRadioButtonUnchecked } from "react-icons/md"
 import { VscChevronDown, VscChevronUp, VscFile } from "react-icons/vsc"
 
-import { type ExamSort, type Field, type Sorted } from "./index.type"
-import CreateProjectWindow from "./CreateProjectWindow"
 import { type Project } from "@prisma/client"
 import { ProjectContext } from "../../../components/Context/ProjectContext"
+import CreateProjectWindow from "./CreateProjectWindow"
+import { type ExamSort, type Field, type Sorted } from "./index.type"
 
-const File = (): JSX.Element => {
+const File = () => {
   // useState
   const { projects, setProjects, selectedProjectId, setSelectedProjectId } =
     useContext(ProjectContext)
@@ -170,17 +170,26 @@ const File = (): JSX.Element => {
           <div
             className="flex w-36 cursor-pointer justify-center p-2"
             onClick={() => {
-              const selectedProject = projects.find(
-                (project) =>
-                  project.projectId ===
-                  localStorage.getItem("selectedProjectId"),
-              )
-              if (selectedProject) {
-                window.electronAPI
-                  .deleteProject(selectedProject)
-                  .then(async () => {
-                    await loadProjects()
-                  })
+              if (selectedProjectId) {
+                const selectedProject = projects.find(
+                  (project) => project.projectId === selectedProjectId,
+                )
+                if (selectedProject) {
+                  window.electronAPI
+                    .deleteProject(selectedProject)
+                    .then(async () => {
+                      await loadProjects()
+                      // 選択が解除される場合、selectedProjectIdをnullに設定するなどの処理が必要な場合があります
+                      if (projects.length === 1) {
+                        // 最後のプロジェクトが削除された場合
+                        setSelectedProjectId(null)
+                        localStorage.removeItem("selectedProjectId")
+                      }
+                    })
+                    .catch((error) => {
+                      console.error("プロジェクトの削除に失敗しました:", error)
+                    })
+                }
               }
             }}
           >

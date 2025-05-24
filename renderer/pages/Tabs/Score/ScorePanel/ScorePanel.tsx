@@ -8,24 +8,20 @@ import {
   MdClose,
   MdCropSquare,
   MdEdit,
-  MdHorizontalRule,
   MdOutlineCircle,
   MdQuestionMark,
   MdRefresh,
 } from "react-icons/md"
+
 import { SCORES, SHOWS, type Show } from "../index.type"
 
 const ScorePanel = (props: {
   showAnswerArea: Record<Show, boolean>
   toggleShowAnswerArea: (show: Show) => void
   setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
-}): JSX.Element => {
+}) => {
   const { showAnswerArea, toggleShowAnswerArea, setIsShowCommentWindow } = props
   const labels = [
-    <>
-      <MdHorizontalRule size={"1em"} />
-      <div className="w-10 text-center">未採点</div>
-    </>,
     <>
       <MdOutlineCircle size={"1em"} />
       <div className="w-10 text-center">正答</div>
@@ -46,11 +42,6 @@ const ScorePanel = (props: {
       <MdCropSquare size={"1em"} />
       <div className="w-10 text-center">無答</div>
     </>,
-    "正答",
-    "部分点",
-    "保留",
-    "誤答",
-    "無答",
   ]
   return (
     <div className="flex min-w-full select-none overflow-x-auto bg-slate-100 py-2 shadow-md">

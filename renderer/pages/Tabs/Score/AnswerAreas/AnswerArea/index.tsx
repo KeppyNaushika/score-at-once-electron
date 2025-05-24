@@ -1,10 +1,9 @@
-import React from "react"
 import { type AnswerArea } from "../index.type"
 
 const AnswerAreaComponent = (props: {
   answerArea: AnswerArea
   isShowStudentName: boolean
-}): JSX.Element => {
+}) => {
   const { answerArea, isShowStudentName } = props
   const borderColor = `bg-${answerArea.score}`
   const bgColor = answerArea.isSelected ? "bg-selectedAnswer" : "bg-gray-100"

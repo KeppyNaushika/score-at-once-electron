@@ -1,12 +1,13 @@
-import Image from "next/image"
 import React from "react"
+
+import Image from "next/image"
 
 const DialogRemoveModelSheet = (props: {
   modelSheets: string[]
   setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
   dialogRemoveModelSheet: number | null
   setDialogRemoveModelSheet: React.Dispatch<React.SetStateAction<number | null>>
-}): JSX.Element => {
+}) => {
   const {
     modelSheets,
     setModelSheets,

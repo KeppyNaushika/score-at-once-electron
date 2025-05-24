@@ -1,11 +1,13 @@
-import { Document, Page, pdfjs } from "react-pdf"
 import React, { useRef, type ChangeEvent, useState } from "react"
+
+import { Document, Page, pdfjs } from "react-pdf"
 import { MdOutlineLibraryAdd } from "react-icons/md"
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`
 
 const AddPdfFile = (props: {
   setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
-}): JSX.Element => {
+}) => {
   const { setModelSheets } = props
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -27,8 +29,6 @@ const AddPdfFile = (props: {
     file: File // PDF ファイルへのパス
   }
 
-  const [numPages, setNumPages] = useState<number | null>(null)
-
   const [beginPage, setBeginPage] = useState<number | null>(null)
   const [endPage, setEndPage] = useState<number | null>(null)
   const [skipPage, setSkipPage] = useState<number | null>(null)
@@ -41,10 +41,9 @@ const AddPdfFile = (props: {
       setBeginPage(1)
       setEndPage(numPages)
       setSkipPage(1)
-      setNumPages(numPages)
     }
 
-    const pages: JSX.Element[] = []
+    const pages[] = []
     if (beginPage !== null && endPage !== null && skipPage !== null) {
       let index = beginPage
       for (let i = 0; i < 6; i++) {
@@ -96,7 +95,7 @@ const AddPdfFile = (props: {
                   }
                 }}
                 min={1}
-                max={numPages?.toString() ?? 0}
+                max={endPage?.toString() ?? 0}
               />
             </div>
             <div className="mx-10 my-2 border-l-2 border-gray-200"></div>
@@ -114,7 +113,7 @@ const AddPdfFile = (props: {
                   }
                 }}
                 min={1}
-                max={numPages?.toString() ?? 0}
+                max={endPage?.toString() ?? 0}
               />
             </div>
             <div className="mx-10 my-2 border-l-2 border-gray-200"></div>
@@ -126,7 +125,7 @@ const AddPdfFile = (props: {
                 placeholder="スキップ"
                 defaultValue={1}
                 min={1}
-                max={numPages?.toString() ?? 0}
+                max={endPage?.toString() ?? 0}
               />
             </div>
             <div className="mx-10 my-2 border-l-2 border-gray-200"></div>

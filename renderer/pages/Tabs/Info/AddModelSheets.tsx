@@ -1,10 +1,11 @@
 import React from "react"
-import AddPictureFiles from "./AddModelSheet/AddPictureFiles"
+
 import AddPdfFile from "./AddModelSheet/AddPdfFile"
+import AddPictureFiles from "./AddModelSheet/AddPictureFiles"
 
 const AddModelSheets = (props: {
   setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
-}): JSX.Element => {
+}) => {
   const { setModelSheets } = props
 
   return (
