@@ -1,13 +1,13 @@
-import React, { useState } from "react"
-import Layout from "../components/Layout"
 import { type IpcRenderer } from "electron"
-import File from "./Tabs/File"
-import Info from "./Tabs/Info"
-import Crop from "./Tabs/Crop"
-import Import from "./Tabs/Import"
-import ScoreTab from "./Tabs/Score"
-import Export from "./Tabs/Export"
+import { useState } from "react"
 import ProjectProvider from "../components/Context/ProjectContext"
+import Layout from "../components/Layout"
+import Crop from "./Tabs/Crop"
+import Export from "./Tabs/Export"
+import File from "./Tabs/File"
+import Import from "./Tabs/Import"
+import Info from "./Tabs/Info"
+import ScoreTab from "./Tabs/Score"
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

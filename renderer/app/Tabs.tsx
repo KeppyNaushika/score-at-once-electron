@@ -42,7 +42,7 @@ const Tabs = () => {
   console.log(path)
 
   return (
-    <nav className="flex items-center">
+    <div className="flex items-center">
       {TABS.map((tab, index) => {
         return (
           <div
@@ -50,7 +50,7 @@ const Tabs = () => {
             className={`${tab.enable ? "cursor-pointer" : "text-gray-300"} flex flex-col items-center px-4 py-2 text-center`}
           >
             {tab.display}
-            {path.includes(tab.name) ? (
+            {path?.includes(tab.name) ? (
               <div className="h-1 w-8 animate-expand-width rounded bg-black"></div>
             ) : (
               <div className="h-1 w-0 rounded bg-black"></div>
@@ -58,7 +58,7 @@ const Tabs = () => {
           </div>
         )
       })}
-    </nav>
+    </div>
   )
 }
 

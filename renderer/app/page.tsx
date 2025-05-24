@@ -1,15 +1,16 @@
 import React from "react"
 import ProjectProvider from "./context/ProjectContext"
 import RootLayout from "./layout"
+import Tabs from "./Tabs"
 
-const page = () => {
+const Page = (): JSX.Element => {
   return (
     <ProjectProvider>
       <RootLayout>
-        <div className="">a</div>
+        <Tabs />
       </RootLayout>
     </ProjectProvider>
   )
 }
 
-export default page
+export default Page
