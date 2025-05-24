@@ -1,12 +1,13 @@
-import React, { useState } from "react"
+import { useState } from "react"
+
 import { type DragAction, dragActions, type Order } from "../index.type"
 
-const QuestionList = (): JSX.Element => {
+const QuestionList = () => {
   const [dragAction, setDragAction] = useState(false)
 
-  const QuestionChoice = (): JSX.Element => (
+  const QuestionChoice = () => (
     <div className="absolute top-8 z-50 w-full animate-float-in px-2">
-      <div className=" rounded-md border-2 border-black bg-white/90 shadow-md">
+      <div className="rounded-md border-2 border-black bg-white/90 shadow-md">
         <div className="border-black px-10 py-1">設問1</div>
         {[...Array(10).keys()].map((v, index) => (
           <div key={index} className="border-t-2 border-black px-10 py-1">
@@ -44,7 +45,7 @@ const QuestionList = (): JSX.Element => {
 const DragActionSwitch = (props: {
   dragAction: DragAction
   switchDragAction: () => void
-}): JSX.Element => {
+}) => {
   const SelectedDragActionBg = {
     [dragActions[0]]: "-translate-x-16",
     [dragActions[1]]: "",
@@ -78,7 +79,7 @@ const DragActionSwitch = (props: {
 const OrderOfAnswerArea = (props: {
   orderOfAnswerArea: Order[]
   switchOrderOfAnswerArea: () => void
-}): JSX.Element => {
+}) => {
   // const orderImages = [arrow0, arrow1, arrow2, arrow3]
 
   const handleOnClick = (): void => {
@@ -86,22 +87,10 @@ const OrderOfAnswerArea = (props: {
   }
   const order = props.orderOfAnswerArea.findIndex((v) => v.isSelected)
   const orderIcons = [
-    {
-      className: "",
-      text: "Z",
-    },
-    {
-      className: "scale-x-[-1]",
-      text: "Z",
-    },
-    {
-      className: "scale-x-[-1]",
-      text: "N",
-    },
-    {
-      className: "",
-      text: "N",
-    },
+    { className: "", text: "Z" },
+    { className: "scale-x-[-1]", text: "Z" },
+    { className: "scale-x-[-1]", text: "N" },
+    { className: "", text: "N" },
   ]
   return (
     <div
@@ -121,7 +110,7 @@ const QuestionPanel = (props: {
   switchOrderOfAnswerArea: () => void
   dragAction: DragAction
   switchDragAction: () => void
-}): JSX.Element => {
+}) => {
   return (
     <div className="flex min-w-full select-none items-center justify-center bg-slate-100 py-2 shadow-md">
       <div className="flex items-center px-2">

@@ -1,4 +1,4 @@
 import React from "react"
 
-const Crop = (): JSX.Element => <>This is the crop page</>
+const Crop = () => <>This is the crop page</>
 export default Crop

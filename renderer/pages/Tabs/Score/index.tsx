@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from "react"
-import ScorePanel from "./ScorePanel/ScorePanel"
-import QuestionPanel from "./QuestionPanel/QuestionPanel"
+import { useEffect, useState } from "react"
+
 import AnswerAreas from "./AnswerAreas"
 import CommentWindow from "./CommentWindow"
 import {
   type DragAction,
+  type Order,
   SHOWS,
   type Show,
-  type Order,
   dragActions,
 } from "./index.type"
+import QuestionPanel from "./QuestionPanel/QuestionPanel"
+import ScorePanel from "./ScorePanel/ScorePanel"
 
 const orders: Order[] = [
   { id: 0, className: "flex-row flex-wrap", isSelected: true },
@@ -18,7 +19,7 @@ const orders: Order[] = [
   { id: 3, className: "flex-col flex-wrap-reverse", isSelected: false },
 ]
 
-const ScoreTab = (): JSX.Element => {
+const ScoreTab = () => {
   const [orderOfAnswerArea, setOrderOfAnswerArea] = useState(orders)
   const [dragAction, setDragAction] = useState<DragAction>("newAnswerArea")
 
@@ -31,10 +32,7 @@ const ScoreTab = (): JSX.Element => {
   const switchOrderOfAnswerArea = (): void => {
     setOrderOfAnswerArea((prev) => {
       const index = (prev.findIndex((v) => v.isSelected) + 1) % prev.length
-      return prev.map((v, i) => ({
-        ...v,
-        isSelected: i === index,
-      }))
+      return prev.map((v, i) => ({ ...v, isSelected: i === index }))
     })
   }
 

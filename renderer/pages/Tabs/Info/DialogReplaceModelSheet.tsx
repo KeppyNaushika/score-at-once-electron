@@ -1,5 +1,6 @@
-import Image from "next/image"
 import React from "react"
+
+import Image from "next/image"
 
 const DialogReplaceModelSheet = (props: {
   modelSheets: string[]
@@ -8,7 +9,7 @@ const DialogReplaceModelSheet = (props: {
   setDialogReplaceModelSheet: React.Dispatch<
     React.SetStateAction<number | null>
   >
-}): JSX.Element => {
+}) => {
   const {
     modelSheets,
     setModelSheets,
@@ -45,7 +46,7 @@ const DialogReplaceModelSheet = (props: {
             <div
               className="flex h-16 w-40 flex-col items-center justify-center rounded-md bg-emerald-500 text-white"
               onClick={() => {
-                clickConfirmReplaceModelSheet(dialogReplaceModelSheet)
+                /* TODO: JPEG/PNG置換処理を実装 */
               }}
             >
               <div className="">JPEG / PNG</div>

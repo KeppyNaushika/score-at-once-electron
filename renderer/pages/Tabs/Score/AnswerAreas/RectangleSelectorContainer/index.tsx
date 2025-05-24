@@ -1,12 +1,13 @@
 import React, { type ReactNode, useRef, useState } from "react"
-import { type AnswerArea } from "../index.type"
+
 import { type DragAction } from "../../index.type"
+import { type AnswerArea } from "../index.type"
 
 const RectangleSelectorContainer = (props: {
   children: ReactNode
   dragAction: DragAction
   setAnswerAreas: React.Dispatch<React.SetStateAction<AnswerArea[]>>
-}): JSX.Element => {
+}) => {
   const { children, dragAction, setAnswerAreas } = props
 
   const [isDragging, setIsDragging] = useState(false)
@@ -100,7 +101,7 @@ const RectangleSelectorContainer = (props: {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      {showRectangle && <div style={rectangleStyle}></div>}
+      {showRectangle && <div style={rectangleStyle} />}
       {children}
     </div>
   )

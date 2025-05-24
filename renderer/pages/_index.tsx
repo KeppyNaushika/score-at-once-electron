@@ -1,5 +1,7 @@
-import { type IpcRenderer } from "electron"
 import { useState } from "react"
+
+import { type IpcRenderer } from "electron"
+
 import ProjectProvider from "../components/Context/ProjectContext"
 import Layout from "../components/Layout"
 import Crop from "./Tabs/Crop"
@@ -28,7 +30,7 @@ export const TABS = [
 ] as const
 export type Tab = (typeof TABS)[number]
 
-const IndexPage = (): JSX.Element => {
+const IndexPage = () => {
   const [activeTab, setActiveTab] = useState<Tab>(TABS[0])
   const pages: Record<Tab, JSX.Element> = {
     file: <File />,

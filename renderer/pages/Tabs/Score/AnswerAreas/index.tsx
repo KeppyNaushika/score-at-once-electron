@@ -1,15 +1,16 @@
-import React, { useRef, useCallback, useEffect, useState } from "react"
-import FlexboxContainer from "../FlexboxContainer/FlexboxContainer"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+
 import { type IpcRendererEvent } from "electron"
+import FlexboxContainer from "../FlexboxContainer/FlexboxContainer"
 import {
   type DragAction,
   type Order,
-  type Score,
-  type Show,
   type PartialPoint,
-  SCORES,
-  SHOWS,
   PARTIALPOINTS,
+  type Score,
+  SCORES,
+  type Show,
+  SHOWS,
 } from "../index.type"
 import AnswerAreaComponent from "./AnswerArea"
 import RectangleSelectorContainer from "./RectangleSelectorContainer"
@@ -26,7 +27,7 @@ const AnswerAreas = (props: {
   showAnswerArea: Record<Show, boolean>
   toggleShowAnswerArea: (show: Show) => void
   setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
-}): JSX.Element => {
+}) => {
   const {
     orderOfAnswerArea,
     dragAction,

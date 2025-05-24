@@ -1,15 +1,16 @@
 import React, { useContext, useState } from "react"
-import DatePickerInputBox from "../../../../components/DatePickerInputBox"
+
 import { WithContext as ReactTags } from "react-tag-input"
 import { Tag } from "react-tag-input/types/components/SingleTag"
 import { ProjectContext } from "../../../../components/Context/ProjectContext"
+import DatePickerInputBox from "../../../../components/DatePickerInputBox"
 
 import "../../../../components/reactTags.module.css"
 
 const CreateProjectWindow = (props: {
   setIsShowCreateProjectWindow: React.Dispatch<React.SetStateAction<boolean>>
   loadProjects: () => Promise<void>
-}): JSX.Element => {
+}) => {
   const { setProjects } = useContext(ProjectContext)
   const { setIsShowCreateProjectWindow, loadProjects } = props
   const [name, setName] = useState("")
@@ -91,13 +92,17 @@ const CreateProjectWindow = (props: {
           className="flex h-16 w-40 cursor-pointer items-center justify-center rounded-md bg-emerald-500 text-white"
           onClick={async () => {
             try {
-              const projects = await window.electronAPI.createProject({
+              await window.electronAPI.createProject({
                 examName: name,
                 examDate: date,
+                // tags: tags.map(tag => tag.text) // タグも保存する場合
               })
-              setProjects(projects ?? [])
+              // setProjects(projects ?? []) // この行を削除
+              await loadProjects() // loadProjects を呼び出す
               setIsShowCreateProjectWindow(false)
-            } catch (error) {}
+            } catch (error) {
+              console.error("プロジェクトの作成に失敗しました:", error)
+            }
           }}
         >
           作成する

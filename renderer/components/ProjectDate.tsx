@@ -1,14 +1,15 @@
 import React from "react"
-import DatePicker from "react-datepicker"
+
 import ja from "date-fns/locale/ja"
 import dayjs from "dayjs"
+import DatePicker from "react-datepicker"
 
 import "react-datepicker/dist/react-datepicker.css"
 
 const ProjectDate = (props: {
   date: Date | null
   setDate: React.Dispatch<React.SetStateAction<Date | null>>
-}): JSX.Element => {
+}) => {
   const { date, setDate } = props
 
   return (

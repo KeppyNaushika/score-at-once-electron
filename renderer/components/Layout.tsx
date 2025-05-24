@@ -1,7 +1,8 @@
 import React, { useContext, useEffect, useState, type ReactNode } from "react"
+
 import Head from "next/head"
 
-import { TABS, type Tab } from "../pages/_index"
+import { type Tab } from "../pages/_index"
 import { ProjectContext } from "./Context/ProjectContext"
 
 interface TabInfo {
@@ -11,36 +12,12 @@ interface TabInfo {
 }
 
 const defaultTabs: TabInfo[] = [
-  {
-    name: "file",
-    display: "ファイル",
-    enable: true,
-  },
-  {
-    name: "info",
-    display: "情報",
-    enable: true,
-  },
-  {
-    name: "crop",
-    display: "枠指定",
-    enable: true,
-  },
-  {
-    name: "import",
-    display: "答案読込",
-    enable: true,
-  },
-  {
-    name: "score",
-    display: "一括採点",
-    enable: true,
-  },
-  {
-    name: "export",
-    display: "書き出し",
-    enable: true,
-  },
+  { name: "file", display: "ファイル", enable: true },
+  { name: "info", display: "情報", enable: true },
+  { name: "crop", display: "枠指定", enable: true },
+  { name: "import", display: "答案読込", enable: true },
+  { name: "score", display: "一括採点", enable: true },
+  { name: "export", display: "書き出し", enable: true },
 ]
 
 const Layout = ({
@@ -51,7 +28,7 @@ const Layout = ({
   children: ReactNode
   activeTab: Tab
   setActiveTab: React.Dispatch<React.SetStateAction<Tab>>
-}): JSX.Element => {
+}) => {
   const title = "This is the default title"
 
   const { projects, selectedProjectId } = useContext(ProjectContext)

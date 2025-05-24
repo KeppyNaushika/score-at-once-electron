@@ -1,9 +1,8 @@
-import React from "react"
 import ProjectProvider from "./context/ProjectContext"
 import RootLayout from "./layout"
 import Tabs from "./Tabs"
 
-const Page = (): JSX.Element => {
+const Page = () => {
   return (
     <ProjectProvider>
       <RootLayout>

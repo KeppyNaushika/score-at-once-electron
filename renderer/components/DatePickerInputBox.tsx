@@ -1,7 +1,8 @@
 import React from "react"
-import DatePicker from "react-datepicker"
+
 import { ja } from "date-fns/locale"
 import dayjs from "dayjs"
+import DatePicker from "react-datepicker"
 
 import "react-datepicker/dist/react-datepicker.css"
 
@@ -10,7 +11,7 @@ const DatePickerInputBox = (props: {
   setDate: React.Dispatch<React.SetStateAction<Date | null>>
   defaultDate?: Date
   enable: boolean
-}): JSX.Element => {
+}) => {
   const { date, setDate } = props
 
   return (
