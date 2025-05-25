@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
-import { CreateProjectProps } from "./lib/prisma/project"
+import {
+  CreateProjectArgs,
+  SaveProjectLayoutInput,
+  UpdateProjectArgs,
+  ProjectLayoutWithDetails,
+} from "../types/electron" // パスを修正
 
 declare global {
   namespace NodeJS {
@@ -19,17 +24,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
   fetchProjectById: (projectId: string) =>
     ipcRenderer.invoke("fetch-project-by-id", projectId),
-  createProject: (props: CreateProjectProps) => {
+  createProject: (props: CreateProjectArgs) => {
+    // CreateProjectProps を CreateProjectArgs に変更
     return ipcRenderer.invoke("create-project", props)
   },
   updateProject: (
-    projectPayload: Prisma.ProjectGetPayload<{ include: { tags: true } }>,
+    projectPayload: UpdateProjectArgs, // Prisma.ProjectGetPayload<{ include: { tags: true } }> を UpdateProjectArgs に変更
   ) => {
     return ipcRenderer.invoke("update-project", projectPayload)
   },
   deleteProject: (
-    project: Prisma.ProjectGetPayload<{ include: { tags: true } }>,
-  ) => ipcRenderer.invoke("delete-project", project),
+    projectId: string, // project オブジェクトではなく projectId を直接渡す
+  ) => ipcRenderer.invoke("delete-project", projectId),
   createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
   updateTag: (tagId: string, newText: string) =>
     ipcRenderer.invoke("update-tag", tagId, newText),
@@ -69,25 +75,38 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // New API to resolve file path for display
   resolveFileProtocolPath: (relativePath: string) =>
     ipcRenderer.invoke("resolve-file-protocol-path", relativePath),
+  saveProjectLayout: (
+    // saveExamTemplate を saveProjectLayout に変更
+    layoutData: SaveProjectLayoutInput, // 型名を変更
+  ): Promise<ProjectLayoutWithDetails> =>
+    ipcRenderer.invoke("save-project-layout", layoutData), // IPC名を変更、戻り値の型を追加
+  fetchProjectLayoutByProjectId: (
+    projectId: string,
+  ): Promise<ProjectLayoutWithDetails | null> => // fetchExamTemplate を fetchProjectLayoutByProjectId に変更
+    ipcRenderer.invoke("fetch-project-layout-by-project-id", projectId), // IPC名を変更、戻り値の型を追加
+  fetchProjectLayoutById: (
+    layoutId: string,
+  ): Promise<ProjectLayoutWithDetails | null> => // 新規追加
+    ipcRenderer.invoke("fetch-project-layout-by-id", layoutId),
+  deleteProjectLayout: (
+    layoutId: string,
+  ): Promise<Prisma.ProjectLayoutGetPayload<{}> | void> => // deleteExamTemplate を deleteProjectLayout に変更
+    ipcRenderer.invoke("delete-project-layout", layoutId), // IPC名を変更、戻り値の型を追加
+  duplicateProjectLayout: (
+    sourceProjectId: string,
+    targetProjectId: string,
+    createdById: string,
+  ): Promise<ProjectLayoutWithDetails | null> =>
+    ipcRenderer.invoke(
+      "duplicate-project-layout",
+      sourceProjectId,
+      targetProjectId,
+      createdById,
+    ),
 
-  // ExamTemplate related
-  saveExamTemplate: (
-    templateData:
-      | (Prisma.ExamTemplateCreateInput & { projectId?: string })
-      | (Prisma.ExamTemplateUpdateInput & { id?: string }),
-  ) => ipcRenderer.invoke("save-exam-template", templateData),
-  fetchExamTemplate: (templateId: string) =>
-    ipcRenderer.invoke("fetch-exam-template", templateId),
-  deleteExamTemplate: (templateId: string) =>
-    ipcRenderer.invoke("delete-exam-template", templateId),
-
-  scorePanel: (listener: any) => {
-    ipcRenderer.removeAllListeners("score-panel")
-    ipcRenderer.on("score-panel", listener)
-  },
-  removeScorePanelListener: (listener: any) => {
-    ipcRenderer.removeListener("score-panel", listener)
-  },
+  scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
+  removeScorePanelListener: (listener: any) =>
+    ipcRenderer.removeListener("score-panel", listener), // 修正: removeListener を使用
 })
 
 process.once("loaded", () => {

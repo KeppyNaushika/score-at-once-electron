@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { useProjects } from "../hooks/useProjects"
+import { useProjects } from "../hooks/useProjects" // useProjects が ProjectWithDetails を使う場合、その型変更の影響を受ける
 import { useFileActions } from "../hooks/useFileActions"
 import CreateProjectWindow from "./CreateProjectWindow"
 import DeleteProjectWindow from "./DeleteProjectWindow"
@@ -40,20 +40,25 @@ import {
 const File = () => {
   const {
     projects,
-    selectedProject,
+    selectedProject, // この型が ProjectWithDetails の場合、変更の影響を受ける
     setSelectedProject,
-    // createProject, // createProjectModal内で呼ばれるため直接は不要
+    // createProject,
     updateProject,
     deleteProject,
   } = useProjects()
 
   const { createProjectModal, editProjectModal, deleteProjectModal } =
     useFileActions()
-  const router = useRouter() // useRouterフックを使用
+  const router = useRouter()
 
   const handleStartScoring = () => {
     if (selectedProject) {
-      router.push(`/projects/${selectedProject.projectId}/score`) // ここが /projects/ になっているか
+      // selectedProject.layout が存在するかどうかで、レイアウト設定済みか判断できる
+      if (selectedProject.layout) {
+        router.push(`/projects/${selectedProject.projectId}/score/upload`) // レイアウト設定済みなら解答用紙アップロードへ
+      } else {
+        router.push(`/projects/${selectedProject.projectId}/score`) // 未設定なら模範解答設定から
+      }
     }
   }
 
@@ -81,12 +86,13 @@ const File = () => {
         <DeleteProjectWindow
           projectToDelete={
             deleteProjectModal.project as Prisma.ProjectGetPayload<{
-              include: { tags: true }
+              // この型も ProjectWithDetails に合わせる
+              include: { tags: true; layout?: { include: { areas: true } } } // layout をオプショナルで追加
             }>
           }
           onClose={deleteProjectModal.close}
           onDelete={async () => {
-            selectedProject && (await deleteProject(selectedProject))
+            selectedProject && (await deleteProject(selectedProject.projectId)) // projectId を渡すように変更
             deleteProjectModal.close()
           }}
         />
@@ -191,6 +197,14 @@ const File = () => {
                     ))
                   ) : (
                     <span className="text-sm text-gray-500">なし</span>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <span className="font-medium">レイアウト設定: </span>
+                  {selectedProject.layout ? (
+                    <Badge variant="success">設定済み</Badge>
+                  ) : (
+                    <Badge variant="outline">未設定</Badge>
                   )}
                 </div>
                 {/* ここに他の詳細情報や操作ボタンを追加可能 */}
