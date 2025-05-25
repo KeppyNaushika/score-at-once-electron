@@ -1,5 +1,5 @@
 export type Id = string
-export type ExamId = Id
+export type ProjectId = Id // Changed from ExamId
 export type SheetId = Id
 export type QuestionId = Id
 export type StudentId = Id
@@ -18,13 +18,13 @@ export interface QuestionTag {
 
 export interface GeneralQuestion {
   tags: [QuestionTag[]] // Consider if this nesting is intended: Tag[][]
-  examId: ExamId
+  projectId: ProjectId // Changed from examId
   questionId: QuestionId
   sheetId: SheetId
   crop: CropCoords
 }
 
-export type ProjectSortField = "examName" | "examDate"
+export type ProjectSortField = "examName" | "examDate" // These field names come from Project model in schema
 export type SortDirection = "ascending" | "descending" | "none" | null
 
 export interface ProjectSort {
@@ -37,11 +37,11 @@ export interface ClientTag {
   text: string
 }
 
-export interface ExamListItem {
-  // Renamed from Exam to avoid conflict and be more descriptive
+export interface ProjectListItem {
+  // Renamed from ExamListItem
   selected: boolean
-  name: string
-  date: string
+  name: string // Corresponds to Project.examName
+  date: string // Corresponds to Project.examDate
 }
 
 export const MOVES = ["left", "right", "up", "down"] as const
@@ -66,7 +66,7 @@ export interface AnswerArea {
   studentId: StudentId
   studentName: string
   maxPoints: number
-  score: Score
+  score: Score // Assuming Score type is defined elsewhere or intended to be
   partialPoints: number | null
   cropTmp: CropCoords
 }

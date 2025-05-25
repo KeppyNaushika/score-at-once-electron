@@ -1,14 +1,7 @@
-"use client"
-
-import File from "../components/File/File"
-import RootLayout from "./layout"
+import File from "../components/Project/Projects"
 
 const Page = () => {
-  return (
-    <RootLayout>
-      <File />
-    </RootLayout>
-  )
+  return <File />
 }
 
 export default Page
