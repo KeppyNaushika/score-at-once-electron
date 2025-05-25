@@ -8,7 +8,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         {
           label: "Quit",
           accelerator: process.platform === "darwin" ? "Cmd+Q" : "Control+Q",
-          click() {
+          click: () => {
             app.quit()
           },
         },
@@ -23,14 +23,14 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         {
           label: "Toggle Full Screen",
           accelerator: "Ctrl+Command+F",
-          click: function () {
+          click: () => {
             mainWindow.setFullScreen(!mainWindow.isFullScreen())
           },
         },
         {
           label: "Toggle Developer Tools",
           accelerator: "Alt+Command+I",
-          click: function () {
+          click: () => {
             mainWindow.webContents.toggleDevTools()
           },
         },
@@ -48,39 +48,30 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         {
           label: "全選択",
           accelerator: "CmdOrCtrl+A",
-          role: "selectAll",
+          role: "selectAll", // This might conflict with custom "select-all" if not careful
         },
         { type: "separator" },
         {
           label: "再読込",
           accelerator: "CmdOrCtrl+R",
-          role: "reload",
+          role: "reload", // This might conflict with custom "reload"
         },
         { type: "separator" },
-        {
-          label: "拡大",
-          accelerator: "CmdOrCtrl+=",
-          role: "zoomIn",
-        },
-        {
-          label: "縮小",
-          accelerator: "CmdOrCtrl+-",
-          role: "zoomOut",
-        },
-        {
-          label: "元の拡大率",
-          accelerator: "CmdOrCtrl+0",
-          role: "resetZoom",
-        },
+        { label: "拡大", accelerator: "CmdOrCtrl+=", role: "zoomIn" },
+        { label: "縮小", accelerator: "CmdOrCtrl+-", role: "zoomOut" },
+        { label: "元の拡大率", accelerator: "CmdOrCtrl+0", role: "resetZoom" },
       ],
     },
   ]
-  const scoreMenu = {
+  const scoreMenu: MenuItemConstructorOptions = {
+    // Added type
     label: "採点パネル",
     submenu: [
       {
-        label: "採点パネルの表示/非表示",
-        click: () => {},
+        label: "採点パネルの表示/非表示", // This needs an action
+        click: () => {
+          /* TODO: Implement logic to show/hide a score panel UI element */
+        },
       },
       {
         label: "採点",
@@ -101,8 +92,8 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             click: () => mainWindow.webContents.send("score-panel", "partial"),
           },
           {
-            label: "保留にする",
-            accelerator: "J",
+            label: "保留にする", // Added Pending
+            accelerator: "J", // Consider changing if 'J' is used
             click: () => mainWindow.webContents.send("score-panel", "pending"),
           },
           {
@@ -143,8 +134,8 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
               mainWindow.webContents.send("score-panel", "toggle-show-partial"),
           },
           {
-            label: "保留を表示",
-            accelerator: "Alt+J",
+            label: "保留を表示", // Added Pending
+            accelerator: "Alt+J", // Consider changing if 'Alt+J' is used
             click: () =>
               mainWindow.webContents.send("score-panel", "toggle-show-pending"),
           },
@@ -160,28 +151,35 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
           {
             label: "無解答を表示",
             accelerator: "Alt+P",
+            // Original had "toggle-show-incorrect", should be "toggle-show-noanswer"
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
-                "toggle-show-incorrect",
+                "toggle-show-noanswer", // Corrected
               ),
           },
         ],
       },
       {
         label: "答案再読み込み",
-        accelerator: "R",
+        accelerator: "R", // Role 'reload' also uses CmdOrCtrl+R. This is a custom 'reload'.
         click: () => mainWindow.webContents.send("score-panel", "reload"),
       },
       {
         label: "コメント",
-        accelerator: "R",
+        accelerator: "C", // Changed from R to avoid conflict, consider a better one
         click: () => mainWindow.webContents.send("score-panel", "comment"),
       },
       {
         label: "解答者名の表示/非表示",
-        accelerator: "R",
-        click: () => mainWindow.webContents.send("score-panel", "name"),
+        accelerator: "N", // Changed from R
+        click: () => mainWindow.webContents.send("score-panel", "studentName"), // Changed "name" to "studentName" to match IPC listener
+      },
+      {
+        label: "スコアシンボル表示切替", // Added for toggling overlay
+        accelerator: "Alt+S",
+        click: () =>
+          mainWindow.webContents.send("score-panel", "toggleScoreOverlay"),
       },
       {
         label: "移動",
@@ -213,7 +211,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         submenu: [
           {
             label: "全選択",
-            accelerator: "Alt+A",
+            accelerator: "Alt+A", // Role 'selectAll' uses CmdOrCtrl+A. This is custom.
             click: () =>
               mainWindow.webContents.send("score-panel", "select-all"),
           },
@@ -223,7 +221,8 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         label: "部分点",
         submenu: [
           ...[...Array(10).keys()].map((v) => {
-            const menu = {
+            const menuItem: MenuItemConstructorOptions = {
+              // Added type
               label: `部分点に ${v} を右追加`,
               accelerator: v.toString(),
               click: () =>
@@ -232,7 +231,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
                   `partial-point-${v}`,
                 ),
             }
-            return menu
+            return menuItem
           }),
           {
             label: "部分点を左削除",
@@ -250,13 +249,17 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
         submenu: [
           {
             label: "前",
-            accelerator: "Ctrl+A",
-            click: () => {},
+            accelerator: "Ctrl+A", // This might conflict with selectAll if not platform specific
+            click: () => {
+              /* TODO: Implement previous question logic */
+            },
           },
           {
             label: "次",
-            accelerator: "Ctrl+D",
-            click: () => {},
+            accelerator: "Ctrl+D", // This might conflict
+            click: () => {
+              /* TODO: Implement next question logic */
+            },
           },
         ],
       },

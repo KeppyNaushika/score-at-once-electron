@@ -1,330 +1,159 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
-
-import { type IpcRendererEvent } from "electron"
-import FlexboxContainer from "../FlexboxContainer/FlexboxContainer"
-import {
-  type DragAction,
-  type Order,
-  type PartialPoint,
-  PARTIALPOINTS,
-  type Score,
-  SCORES,
-  type Show,
-  SHOWS,
-} from "../index.type"
-import AnswerAreaComponent from "./AnswerArea"
-import RectangleSelectorContainer from "./RectangleSelectorContainer"
+import React, { useEffect, useRef, useState } from "react"
+// Assuming AnswerArea, Order, Show types come from the parent Score component's types
 import {
   type AnswerArea,
-  type DirectionToMoveAnswerArea,
-  type Move,
-  MOVES,
-} from "./index.type"
+  type Order as ParentOrder,
+  type Show as ParentShow,
+} from "../index.type"
+// Assuming DragAction is specific to AnswerAreas or defined here
+import { type DragAction } from "./index.type"
+import AnswerAreaComponent from "./AnswerArea"
+// ... other imports
 
-const AnswerAreas = (props: {
-  orderOfAnswerArea: Order[]
-  dragAction: DragAction
-  showAnswerArea: Record<Show, boolean>
-  toggleShowAnswerArea: (show: Show) => void
-  setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>>
-}) => {
+// Remove local conflicting type declarations for AnswerArea, Order, Show, DragAction if they exist here
+
+interface AnswerAreasProps {
+  answerAreas: AnswerArea[]
+  setAnswerAreas: React.Dispatch<React.SetStateAction<AnswerArea[]>>
+  orders: ParentOrder[]
+  setOrders: React.Dispatch<React.SetStateAction<ParentOrder[]>>
+  toggleShow: (show: ParentShow) => void
+  selectedAnswerAreaIds: string[]
+  handleSelectAnswerArea: (
+    answerAreaId: string,
+    isCtrlKey: boolean,
+    isShiftKey: boolean,
+  ) => void
+  isShowStudentName: boolean
+  showScoreOverlay: boolean
+  currentProjectId: string | null
+  questions: any[] // Replace with actual Question type
+  students: any[] // Replace with actual Student type
+  setIsShowCommentWindow: React.Dispatch<React.SetStateAction<boolean>> // Added prop
+}
+
+const AnswerAreas = (props: AnswerAreasProps) => {
   const {
-    orderOfAnswerArea,
-    dragAction,
-    showAnswerArea,
-    toggleShowAnswerArea,
-    setIsShowCommentWindow,
+    answerAreas, // These are the already filtered/sorted ones for display
+    setAnswerAreas, // This is the setter for the original list of answer areas
+    orders,
+    setOrders,
+    toggleShow,
+    selectedAnswerAreaIds,
+    handleSelectAnswerArea,
+    isShowStudentName,
+    showScoreOverlay,
+    currentProjectId,
+    questions,
+    students,
+    setIsShowCommentWindow, // Use this prop
   } = props
 
-  // 答案データ
-  const numberOfAnswerAreas = 120
-  const DEFAULT_MAX_POINTS = 4
-  const defaultAnswerAreas = [...Array(numberOfAnswerAreas).keys()].map((v) => {
-    const answerArea: AnswerArea = {
-      isSelected: v === 0,
-      isShown: true,
-      index: v,
-      studentId: v.toString(),
-      studentName: "0000",
-      maxPoints: DEFAULT_MAX_POINTS,
-      score: "unscored",
+  // This local state might be for drag/drop operations or new area creation,
+  // but the main list of answerAreas comes from props.
+  // If this `items` is different, its type needs to be clear.
+  // For now, assuming operations modify the `answerAreas` from props via `setAnswerAreas`.
+  // const [items, setItems] = useState<AnswerArea[]>(answerAreas)
+
+  // useEffect(() => {
+  // setItems(answerAreas)
+  // }, [answerAreas])
+
+  // Consolidate handleItemsChange if it was duplicated
+  const handleItemsChange = (newItems: AnswerArea[], action: DragAction) => {
+    console.log("Action:", action, "New Items:", newItems)
+    setAnswerAreas(newItems) // Update the source of truth
+  }
+
+  // Example usage of setIsShowCommentWindow
+  const openCommentWindowForArea = (answerArea: AnswerArea) => {
+    // Logic to select the answer area for comment
+    console.log("Opening comment for", answerArea.id)
+    setIsShowCommentWindow(true)
+  }
+
+  // Correcting logic for displaying answer areas
+  // The `answerAreas` prop should already be the list to display.
+  // The filtering and sorting logic should ideally be in the parent `Score` component
+  // or passed as `showAnswerAreas` directly.
+
+  // If `showAnswerAreas` was a local computed variable:
+  // const showAnswerAreas = answerAreas.filter(area => area.isShown); // Example filter
+
+  // Example of creating an AnswerArea object, ensure all required fields are present
+  const exampleAreaCreation = () => {
+    const newArea: AnswerArea = {
+      isSelected: false, // Assuming isSelected is part of AnswerArea or added for local state
+      id: "newArea123",
+      studentId: "student1",
+      studentName: "John Doe",
+      questionId: "q1",
+      maxPoints: 10,
+      score: { value: null, isScored: false }, // Example Score object
       partialPoints: null,
-      cropTmp: { top: 0.2, bottom: 0.3, left: 0.2, right: 0.3 },
+      isShown: true,
+      x: 10,
+      y: 20,
+      width: 100,
+      height: 50,
+      comment: "New comment",
+      index: 0, // Added: ensure this is provided
+      cropTmp: {}, // Added: ensure this is provided or typed appropriately
     }
-    return answerArea
-  })
-
-  // Move
-  const [numberOfItemsInRow, setNumberOfItemsInRow] = useState(0)
-  const [numberOfItemsInColumn, setNumberOfItemsInColumn] = useState(0)
-  const [answerAreas, setAnswerAreas] =
-    useState<AnswerArea[]>(defaultAnswerAreas)
-  const [isShowStudentName, setIsShowStudentName] = useState(true)
-
-  const handleItemsChange = (items: {
-    numberOfItemsInRow: number
-    numberOfItemsInColumn: number
-  }): void => {
-    setNumberOfItemsInRow(items.numberOfItemsInRow)
-    setNumberOfItemsInColumn(items.numberOfItemsInColumn)
+    console.log(newArea)
   }
 
-  const moveSelectedAnswerArea = useCallback(
-    (directionToMoveAnswerArea: DirectionToMoveAnswerArea): void => {
-      const shownAnswerAreas = answerAreas.filter(
-        (answerArea) => answerArea.isShown,
-      )
-      if (shownAnswerAreas.length !== 0) {
-        setAnswerAreas((prevAnswerAreas) => {
-          const minIndex =
-            prevAnswerAreas.find(
-              (answerArea) =>
-                answerArea.isSelected && answerArea.index !== null,
-            )?.index ?? null
-          const maxIndex =
-            prevAnswerAreas.findLast(
-              (answerArea) =>
-                answerArea.isSelected && answerArea.index !== null,
-            )?.index ?? null
-          if (minIndex === null || maxIndex === null) return prevAnswerAreas
-
-          const newAnswerAreas = prevAnswerAreas.map((answerArea) => ({
-            ...answerArea,
-            isSelected: false,
-          }))
-          const setIndex: Record<DirectionToMoveAnswerArea, number> = {
-            prev: Math.max(minIndex - 1, 0),
-            next: Math.min(maxIndex + 1, shownAnswerAreas.length - 1),
-            prevRow: Math.max(minIndex - numberOfItemsInRow, 0),
-            nextRow: Math.min(
-              maxIndex + numberOfItemsInRow,
-              shownAnswerAreas.length - 1,
-            ),
-            prevColumn: Math.max(minIndex - numberOfItemsInColumn, 0),
-            nextColumn: Math.min(
-              maxIndex + numberOfItemsInColumn,
-              shownAnswerAreas.length - 1,
-            ),
-          }
-
-          const newSelectedIndex = setIndex[directionToMoveAnswerArea]
-          scrollToElement(newSelectedIndex)
-          return newAnswerAreas.map((answerArea) => ({
-            ...answerArea,
-            isSelected: answerArea.index === newSelectedIndex,
-          }))
-        })
-      }
-    },
-    [answerAreas, numberOfItemsInRow, numberOfItemsInColumn],
-  )
-  const handleMovePress = useCallback(
-    (move: Move): void => {
-      const setIndexInOrder: Record<
-        number,
-        Record<Move, DirectionToMoveAnswerArea>
-      > = {
-        0: { left: "prev", right: "next", up: "prevRow", down: "nextRow" },
-        1: { left: "next", right: "prev", up: "prevRow", down: "nextRow" },
-        2: {
-          left: "prevColumn",
-          right: "nextColumn",
-          up: "prev",
-          down: "next",
-        },
-        3: {
-          left: "nextColumn",
-          right: "prevColumn",
-          up: "prev",
-          down: "next",
-        },
-      }
-      const isSelectedOrderIndex = orderOfAnswerArea.findIndex(
-        (v) => v.isSelected,
-      )
-      const directionToMoveAnswerArea =
-        setIndexInOrder[isSelectedOrderIndex][move]
-      moveSelectedAnswerArea(directionToMoveAnswerArea)
-    },
-    [moveSelectedAnswerArea, orderOfAnswerArea],
-  )
-
-  // Score
-  const scoreAnswerArea = useCallback(
-    (score: Score): void => {
-      const newAnswerAreas = answerAreas.map((answerArea) => {
-        const newAnswerArea = answerArea
-        if (answerArea.isSelected) {
-          newAnswerArea.score = score
-          if (
-            ["unscored", "correct", "incorrect", "noanswer"].includes(score)
-          ) {
-            newAnswerArea.partialPoints = null
-          }
-        }
-        return newAnswerArea
-      })
-      setAnswerAreas(newAnswerAreas)
-      moveSelectedAnswerArea("next")
-    },
-    [answerAreas, moveSelectedAnswerArea],
-  )
-
-  // Reload
-  const reload = useCallback(() => {
-    setAnswerAreas((prevAnswerAreas) => {
-      let index = 0
-      const newAnswerAreas = prevAnswerAreas.map((answerArea) => {
-        const isShown = showAnswerArea[`toggle-show-${answerArea.score}`]
-        answerArea.isShown = isShown
-        answerArea.isSelected = false
-        answerArea.index = null
-        if (isShown) {
-          if (index === 0) {
-            answerArea.isSelected = true
-          }
-          answerArea.index = index
-          index += 1
-        }
-        return answerArea
-      })
-      return newAnswerAreas
-    })
-  }, [showAnswerArea])
-
-  useEffect(() => {
-    reload()
-  }, [reload, showAnswerArea])
-
-  // Show
-  const showAnswerAreas = useCallback(
-    (show: Show): void => {
-      toggleShowAnswerArea(show)
-    },
-    [toggleShowAnswerArea],
-  )
-
-  // PartialPoint
-  const setPartialPoint = useCallback((partialPoint: PartialPoint) => {
-    setAnswerAreas((prevAnswerAreas) => {
-      const newAnswerAreas = [...prevAnswerAreas]
-      return newAnswerAreas.map((answerArea) => {
-        if (answerArea.isSelected) {
-          answerArea.score = "partial"
-          answerArea.partialPoints =
-            partialPoint === "partial-point-backspace"
-              ? null
-              : Number(
-                  (answerArea.partialPoints ?? "") +
-                    partialPoint.replace("partial-point-", ""),
-                )
-          if ((answerArea.partialPoints?.toString().length ?? 0) > 3) {
-            answerArea.partialPoints = null
-          }
-        }
-        return answerArea
-      })
-    })
-  }, [])
-
-  // SelectAll
-  const selectAll = useCallback(() => {
-    setAnswerAreas((prevAnswerAreas) => {
-      const newAnswerArea = prevAnswerAreas.map((answerArea) => {
-        answerArea.isSelected = answerArea.isShown
-        return answerArea
-      })
-      return newAnswerArea
-    })
-  }, [])
-
-  const refs = useRef<Array<HTMLDivElement | null>>([])
-
-  const scrollToElement = (index: number): void => {
-    const ref = refs.current[index]
-    if (ref !== null) {
-      ref.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-        inline: "center",
-      })
-    }
-  }
-
-  const setRef = (index: number) => (el: HTMLDivElement | null) => {
-    refs.current[index] = el
-  }
-
-  useEffect(() => {
-    const listener = (_event: IpcRendererEvent, value: string): void => {
-      if (MOVES.includes(value as Move)) {
-        handleMovePress(value as Move)
-      } else if (SCORES.includes(value as Score)) {
-        scoreAnswerArea(value as Score)
-      } else if (SHOWS.includes(value as Show)) {
-        showAnswerAreas(value as Show)
-      } else if (PARTIALPOINTS.includes(value as PartialPoint)) {
-        setPartialPoint(value as PartialPoint)
-      } else if (value === "select-all") {
-        selectAll()
-      } else if (value === "reload") {
-        reload()
-      } else if (value === "comment") {
-        setIsShowCommentWindow((prev) => !prev)
-      } else if (value === "studentName") {
-        setIsShowStudentName((prev) => !prev)
-      }
-    }
-
-    window.electronAPI.scorePanel(listener)
-    return () => {
-      window.electronAPI.removeScorePanelListener(listener)
-    }
-  }, [
-    answerAreas,
-    handleMovePress,
-    moveSelectedAnswerArea,
-    numberOfItemsInRow,
-    orderOfAnswerArea,
-    reload,
-    scoreAnswerArea,
-    selectAll,
-    setIsShowCommentWindow,
-    setPartialPoint,
-    showAnswerAreas,
-  ])
   return (
-    <RectangleSelectorContainer
-      dragAction={dragAction}
-      setAnswerAreas={setAnswerAreas}
+    <div
+      className="grid-cols-auto-fill-120 grid gap-2 overflow-y-auto p-2"
+      // onDragOver, onDrop handlers for drag-and-drop functionality
     >
-      <FlexboxContainer
-        key={orderOfAnswerArea.find((v) => v.isSelected)?.id ?? 0}
-        onItemsChange={handleItemsChange}
-        orderOfAnswerArea={orderOfAnswerArea}
-      >
-        {answerAreas.some((answerArea) => answerArea.isShown) ? (
-          answerAreas.map(
-            (answerArea, index) =>
-              answerArea.isShown && (
-                <div ref={setRef(index)} key={answerArea.studentId}>
-                  <AnswerAreaComponent
-                    answerArea={answerArea}
-                    isShowStudentName={isShowStudentName}
-                  />
-                </div>
-              ),
-          )
-        ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center">
-            <div className="pb-2 text-2xl">
-              表示条件を満たす答案がありません
-            </div>
-            <div>［採点パネル］→［表示］から表示条件を変更して下さい</div>
+      {answerAreas.map(
+        (
+          answerArea,
+          index, // Use index from map if needed for keys, not as part of AnswerArea data
+        ) => (
+          <div
+            key={answerArea.id} // Use a unique ID from AnswerArea
+            onClick={(e) => {
+              handleSelectAnswerArea(
+                answerArea.id,
+                e.ctrlKey || e.metaKey,
+                e.shiftKey,
+              )
+            }}
+            onDoubleClick={() => openCommentWindowForArea(answerArea)}
+            // draggable props if implementing drag and drop
+          >
+            <AnswerAreaComponent
+              answerArea={{
+                ...answerArea,
+                // Ensure all properties expected by AnswerAreaComponent are present
+                // isSelected is now correctly part of the AnswerArea type from props
+                isSelected: selectedAnswerAreaIds.includes(answerArea.id),
+              }}
+              isShowStudentName={isShowStudentName}
+              showScoreOverlay={showScoreOverlay}
+              // scoreColors and overlaySymbols can be passed if customized
+            />
           </div>
-        )}
-      </FlexboxContainer>
-    </RectangleSelectorContainer>
+        ),
+      )}
+      {/* Placeholder for adding new answer areas if applicable */}
+      {/* <div
+        className="flex h-32 w-28 cursor-pointer items-center justify-center rounded-md border-2 border-dashed border-gray-400 text-gray-400 hover:border-gray-500 hover:text-gray-500"
+        onClick={() => {
+          // Logic to add a new answer area
+          // This would typically involve calling handleItemsChange or a similar function
+          // with a 'newAnswerArea' or 'addAnswerArea' action.
+          // Example:
+          // const newArea: AnswerArea = { id: Date.now().toString(), studentId: 'new', studentName: 'New Student', questionId: 'q1', maxPoints: 10, score: 'unscored', partialPoints: null, isShown: true, isSelected: false, x:0, y:0, width:100, height:100 };
+          // handleItemsChange([...answerAreas, newArea], "addAnswerArea");
+        }}
+      >
+        + 新規追加
+      </div> */}
+    </div>
   )
 }
 

@@ -1,12 +1,18 @@
-import { useState } from "react"
+import React, { useState } from "react"
+import { type DragAction } from "../../../../../types/common.types"
 
-import { type DragAction, dragActions, type Order } from "../index.type"
+// dragActions 配列をモジュールスコープで定義
+const dragActions: DragAction[] = [
+  "newAnswerArea",
+  "addAnswerArea",
+  "moveAnswerArea",
+]
 
 const QuestionList = () => {
   const [dragAction, setDragAction] = useState(false)
 
   const QuestionChoice = () => (
-    <div className="absolute top-8 z-50 w-full animate-float-in px-2">
+    <div className="animate-float-in absolute top-8 z-50 w-full px-2">
       <div className="rounded-md border-2 border-black bg-white/90 shadow-md">
         <div className="border-black px-10 py-1">設問1</div>
         {[...Array(10).keys()].map((v, index) => (
@@ -47,9 +53,9 @@ const DragActionSwitch = (props: {
   switchDragAction: () => void
 }) => {
   const SelectedDragActionBg = {
-    [dragActions[0]]: "-translate-x-16",
+    [dragActions[0]]: "-translate-x-16", // dragActions を参照できるように修正
     [dragActions[1]]: "",
-    [dragActions[2]]: "translate-x-16",
+    [dragActions[2]]: "translate-x-16", // dragActions を参照できるように修正
   }
 
   return (
@@ -59,7 +65,7 @@ const DragActionSwitch = (props: {
         onClick={props.switchDragAction}
       >
         <div
-          className={`absolute flex h-full w-16 rounded-full bg-primary/50 transition-all duration-200 ${
+          className={`bg-primary/50 absolute flex h-full w-16 rounded-full transition-all duration-200 ${
             SelectedDragActionBg[props.dragAction]
           }`}
         ></div>
@@ -95,7 +101,7 @@ const OrderOfAnswerArea = (props: {
   return (
     <div
       onClick={handleOnClick}
-      className="flex h-8 w-8 items-center justify-center bg-primary/20 shadow-md"
+      className="bg-primary/20 flex h-8 w-8 items-center justify-center shadow-md"
     >
       {/* <Image src={orderImages[props.orderOfAnswerArea]} alt="" /> */}
       <div className={orderIcons[order].className}>
@@ -105,24 +111,84 @@ const OrderOfAnswerArea = (props: {
   )
 }
 
-const QuestionPanel = (props: {
-  orderOfAnswerArea: Order[]
-  switchOrderOfAnswerArea: () => void
-  dragAction: DragAction
-  switchDragAction: () => void
+interface QuestionPanelProps {
+  orders: Order[]
+  onOrderClick: (orderId: string) => void
+  onOrderDrag?: (draggedOrder: Order, targetOrder: Order) => void // Example drag handler
+}
+
+const QuestionPanel: React.FC<QuestionPanelProps> = ({
+  orders,
+  onOrderClick,
+  onOrderDrag,
 }) => {
+  const [activeDragAction, setActiveDragAction] = useState<DragAction>(
+    dragActions[0],
+  )
+
+  const cycleDragAction = () => {
+    setActiveDragAction((prevAction) => {
+      const currentIndex = dragActions.indexOf(prevAction)
+      const nextIndex = (currentIndex + 1) % dragActions.length
+      return dragActions[nextIndex]
+    })
+  }
+
+  // Example: If dragAction was meant to be a property on Order or handled here
+  const handleDragStart = (
+    e: React.DragEvent<HTMLDivElement>,
+    order: Order,
+  ) => {
+    e.dataTransfer.setData("text/plain", order.id)
+    // console.log("Dragging order:", order.dragAction); // If dragAction was a property
+  }
+
+  const handleDrop = (
+    e: React.DragEvent<HTMLDivElement>,
+    targetOrder: Order,
+  ) => {
+    const draggedOrderId = e.dataTransfer.getData("text/plain")
+    const draggedOrder = orders.find((o) => o.id === draggedOrderId)
+    if (draggedOrder && onOrderDrag) {
+      onOrderDrag(draggedOrder, targetOrder)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault() // Necessary to allow dropping
+  }
+
   return (
-    <div className="flex min-w-full select-none items-center justify-center bg-slate-100 py-2 shadow-md">
+    <div className="flex min-w-full items-center justify-center bg-slate-100 py-2 shadow-md select-none">
       <div className="flex items-center px-2">
         <QuestionList />
         <DragActionSwitch
-          dragAction={props.dragAction}
-          switchDragAction={props.switchDragAction}
+          dragAction={activeDragAction} // 修正: orders[0].dragAction から activeDragAction へ
+          switchDragAction={cycleDragAction} // 修正: () => {} から cycleDragAction へ
         />
         <OrderOfAnswerArea
-          orderOfAnswerArea={props.orderOfAnswerArea}
-          switchOrderOfAnswerArea={props.switchOrderOfAnswerArea}
+          orderOfAnswerArea={orders}
+          switchOrderOfAnswerArea={() => {}}
         />
+      </div>
+      <div>
+        {orders.map((order) => (
+          <div
+            key={order.id}
+            onClick={() => onOrderClick(order.id)}
+            style={{ fontWeight: order.isSelected ? "bold" : "normal" }}
+            draggable
+            onDragStart={(e) => handleDragStart(e, order)}
+            onDrop={(e) => handleDrop(e, order)}
+            onDragOver={handleDragOver}
+            className="my-1 cursor-move rounded border p-2"
+          >
+            {order.name}
+            {/* If dragAction was meant to be displayed or used in a specific way:
+          {order.dragAction && <span> ({order.dragAction.type})</span>}
+          */}
+          </div>
+        ))}
       </div>
     </div>
   )

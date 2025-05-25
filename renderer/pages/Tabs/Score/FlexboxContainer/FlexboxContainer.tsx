@@ -1,9 +1,8 @@
 import React, { Component, type ReactNode, type RefObject } from "react"
 
-import { type Order } from "../index.type"
-
 interface FlexboxContainerProps {
-  orderOfAnswerArea: Order[]
+  orders: SortOrder[] // Changed Order to SortOrder
+  onOrderClick: (orderId: string) => void
   children: ReactNode
   onItemsChange?: (items: {
     numberOfItemsInRow: number
@@ -20,12 +19,12 @@ class FlexboxContainer extends Component<
   FlexboxContainerProps,
   FlexboxContainerState
 > {
-  private readonly containerRef: RefObject<HTMLDivElement>
+  private readonly containerRef: RefObject<HTMLDivElement | null> // Changed HTMLDivElement to HTMLDivElement | null
 
   constructor(props: FlexboxContainerProps) {
     super(props)
     this.state = { numberOfItemsInRow: 0, numberOfItemsInColumn: 0 }
-    this.containerRef = React.createRef()
+    this.containerRef = React.createRef<HTMLDivElement>() // It's good practice to keep the generic here
   }
 
   componentDidMount(): void {
@@ -59,15 +58,26 @@ class FlexboxContainer extends Component<
   }
 
   render() {
+    const { orders, onOrderClick } = this.props
     return (
       <div
         className={`absolute mb-2 mr-2 flex h-full w-full content-start justify-start overflow-y-scroll ${
-          this.props.orderOfAnswerArea.find((v) => v.isSelected)?.className ??
-          ""
+          orders.find((v) => v.isSelected)?.className ?? ""
         }`}
         ref={this.containerRef}
       >
-        {this.props.children}
+        {orders.map((order) => (
+          <div
+            key={order.id}
+            onClick={() => onOrderClick(order.id)}
+            style={{
+              border: order.isSelected ? "2px solid blue" : "1px solid grey",
+            }} // Use isSelected
+          >
+            {/* {order.name} */}
+            {/* Error was on line 65, check the actual usage of isSelected */}
+          </div>
+        ))}
       </div>
     )
   }

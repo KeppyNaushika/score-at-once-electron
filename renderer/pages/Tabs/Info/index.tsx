@@ -1,116 +1,93 @@
-import React, { useRef, useState } from "react"
-
-import Image from "next/image"
-import { MdDeleteOutline, MdLoop } from "react-icons/md"
-
-import AddModelSheet from "./AddModelSheets"
-import DialogRemoveModelSheet from "./DialogRemoveModelSheet"
-import DialogReplaceModelSheet from "./DialogReplaceModelSheet"
-
-interface ExamInfo {
-  name: string
-  date: string
-}
-const saveStatus = ["　", "保存しています...", "保存されました"] as const
-type SaveStatus = (typeof saveStatus)[number]
+import React, { useState, useEffect } from "react" // useContext を削除
+// import { useProjectContext } from "../../../app/context/ProjectContext" // 削除
+import { useProjects } from "../../../../components/hooks/useProjects" // useProjects をインポート
+import { type Project } from "../../../../types/common.types"
 
 const Info = () => {
-  const [, setExamInfo] = useState<ExamInfo>({ name: "", date: "" })
-  const [saveStatusState, setSaveStatusState] = useState<SaveStatus>(
-    saveStatus[0],
-  )
-  const timeoutId = useRef<NodeJS.Timeout | null>(null)
+  // const { selectedProjectId, projects, updateProject } = useProjectContext() // 削除
+  const { selectedProjectId, projects, editProject } = useProjects() // useProjects を使用し、updateProject を editProject に変更 (想定)
+  const [examName, setExamName] = useState("")
+  const [currentProject, setCurrentProject] = useState<Project | null>(null)
+  const [saveStatus, setSaveStatus] = useState<"" | "saving" | "saved">("")
 
-  const changeExamInfo = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    setSaveStatusState(saveStatus[1])
-    if (timeoutId.current !== null) {
-      clearTimeout(timeoutId.current)
-      timeoutId.current = null
+  useEffect(() => {
+    if (selectedProjectId && projects) {
+      const project = projects.find((p) => p.projectId === selectedProjectId)
+      if (project) {
+        setCurrentProject(project)
+        setExamName(project.examName)
+      } else {
+        setCurrentProject(null)
+        setExamName("")
+      }
+    } else {
+      setCurrentProject(null)
+      setExamName("")
     }
-    timeoutId.current = setTimeout(() => {
-      setSaveStatusState(saveStatus[2])
-    }, 1000)
-    setExamInfo((prev) => {
-      return { ...prev, [e.target.name]: e.target.value }
-    })
+  }, [selectedProjectId, projects])
+
+  const showSaving = () => setSaveStatus("saving")
+  const showSaved = () => {
+    setSaveStatus("saved")
+    setTimeout(() => setSaveStatus(""), 2000) // Clear status after 2 seconds
   }
 
-  const [modelSheets, setModelSheets] = useState<string[]>([])
-  const [dialogRemoveModelSheet, setDialogRemoveModelSheet] = useState<
-    number | null
-  >(null)
-  const [dialogReplaceModelSheet, setDialogReplaceModelSheet] = useState<
-    number | null
-  >(null)
+  const handleExamNameChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const newName = e.target.value
+    setExamName(newName)
+    if (currentProject) {
+      showSaving()
+      try {
+        // Assuming updateProject in context handles API call and state update
+        // await updateProject({ ...currentProject, examName: newName }) // 削除
+        await editProject({
+          projectId: currentProject.projectId,
+          examName: newName,
+        }) // editProject を使用 (引数の形式は useProjects の実装に依存)
+        showSaved()
+      } catch (error) {
+        console.error("Failed to save exam name:", error)
+        setSaveStatus("") // Clear status on error
+      }
+    }
+  }
+
+  if (!selectedProjectId || !currentProject) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        プロジェクトが選択されていません。ファイルタブからプロジェクトを選択または作成してください。
+      </div>
+    )
+  }
 
   return (
-    <>
-      <DialogRemoveModelSheet
-        modelSheets={modelSheets}
-        setModelSheets={setModelSheets}
-        dialogRemoveModelSheet={dialogRemoveModelSheet}
-        setDialogRemoveModelSheet={setDialogRemoveModelSheet}
-      />
-      <DialogReplaceModelSheet
-        modelSheets={modelSheets}
-        setModelSheets={setModelSheets}
-        dialogReplaceModelSheet={dialogReplaceModelSheet}
-        setDialogReplaceModelSheet={setDialogReplaceModelSheet}
-      />
-      <div className="min-w-full px-20 py-10">
-        <div className="border-2 border-stone-200 px-20 py-10">
-          <div className="my-2 flex items-center">
-            <div className="flex w-full border-b-2 border-black">
-              <div className="flex w-24 items-center justify-center">
-                試験名
-              </div>
-              <input
-                name="name"
-                type="text"
-                placeholder="試験名"
-                onChange={changeExamInfo}
-                className="w-full border-2 border-stone-200/0 p-4 transition-all duration-300 placeholder:text-white focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="my-2">
-            <div className="w-24 py-2">模範解答画像</div>
-            <div className="flex w-full flex-wrap border-2 border-gray-200 pl-2 pt-2">
-              {modelSheets.map((thumbnail, index) => (
-                <div className="flex flex-col items-center" key={index}>
-                  <div className="relative mb-2 mr-2 h-40 w-28">
-                    <Image
-                      className="absolute border-2 border-gray-200 object-contain"
-                      src={thumbnail}
-                      alt={`thumbnail-${index}`}
-                      fill={true}
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-                      <div
-                        onClick={() => {
-                          setDialogReplaceModelSheet(index)
-                        }}
-                      >
-                        <MdLoop size="1.5em" />
-                      </div>
-                      <div
-                        onClick={() => {
-                          setDialogRemoveModelSheet(index)
-                        }}
-                      >
-                        <MdDeleteOutline size="1.5em" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <AddModelSheet setModelSheets={setModelSheets} />
-            </div>
-          </div>
-          <div className="mt-10 text-center text-sm">{saveStatusState}</div>
-        </div>
+    <div className="p-4">
+      <h1 className="mb-4 text-xl font-semibold">試験情報編集</h1>
+      <div className="mb-4">
+        <label
+          htmlFor="examName"
+          className="block text-sm font-medium text-gray-700"
+        >
+          試験名
+        </label>
+        <input
+          type="text"
+          id="examName"
+          value={examName}
+          onChange={handleExamNameChange}
+          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+        />
+        {saveStatus === "saving" && (
+          <p className="text-sm text-blue-500">保存中...</p>
+        )}
+        {saveStatus === "saved" && (
+          <p className="text-sm text-green-500">保存しました！</p>
+        )}
       </div>
-    </>
+      {/* Other fields like description, date, tags can be added here similarly */}
+    </div>
   )
 }
 

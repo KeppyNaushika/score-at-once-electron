@@ -1,5 +1,6 @@
-import { Project } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
+import type { CreateProjectProps } from "./prisma"
 
 declare global {
   namespace NodeJS {
@@ -11,19 +12,28 @@ declare global {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  // rendere -> main
   setShortcut: (page: string) => ipcRenderer.send("set-shortcut", page),
   sendScorePanel: (arg: string) => {
     ipcRenderer.send("score-panel", arg)
   },
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
-  createProject: (props: { examName: string; examDate: Date | null }) => {
-    const { examName, examDate } = props
-    return ipcRenderer.invoke("create-project", examName, examDate)
+  fetchProjectById: (projectId: string) =>
+    ipcRenderer.invoke("fetch-project-by-id", projectId),
+  createProject: (props: CreateProjectProps) => {
+    return ipcRenderer.invoke("create-project", props)
   },
-  deleteProject: (project: Project) =>
-    ipcRenderer.invoke("delete-project", project),
-  // main -> renderer
+  updateProject: (
+    projectPayload: Prisma.ProjectGetPayload<{ include: { tags: true } }>,
+  ) => {
+    return ipcRenderer.invoke("update-project", projectPayload)
+  },
+  deleteProject: (projectId: string) =>
+    ipcRenderer.invoke("delete-project", projectId),
+  createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
+  updateTag: (tagId: string, newText: string) =>
+    ipcRenderer.invoke("update-tag", tagId, newText),
+  deleteTag: (tagId: string) => ipcRenderer.invoke("delete-tag", tagId),
+
   scorePanel: (listener: any) => {
     ipcRenderer.removeAllListeners("score-panel")
     ipcRenderer.on("score-panel", listener)
@@ -33,8 +43,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 })
 
-// Since we disabled nodeIntegration we can reintroduce
-// needed node functionality here
 process.once("loaded", () => {
   global.ipcRenderer = ipcRenderer
 })

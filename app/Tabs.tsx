@@ -1,41 +1,7 @@
 "use client"
 import React from "react"
 import { usePathname } from "next/navigation"
-
-const TABS = [
-  {
-    name: "file",
-    display: "ファイル",
-    enable: true,
-  },
-  {
-    name: "student",
-    display: "生徒",
-    enable: true,
-  },
-  {
-    name: "crop",
-    display: "解答枠指定",
-    enable: true,
-  },
-  {
-    name: "import",
-    display: "答案読込",
-    enable: true,
-  },
-  {
-    name: "score",
-    display: "一括採点",
-    enable: true,
-  },
-  {
-    name: "export",
-    display: "書き出し",
-    enable: true,
-  },
-] as const
-
-type Tab = (typeof TABS)[number]["name"]
+import { TABS, type TabName } from "../renderer/constants/tabs" // Import from constants
 
 const Tabs = () => {
   const path = usePathname()
