@@ -202,10 +202,10 @@ export default function TemplateStepPage() {
           return rest
         }),
       )
-      toast.success(`レイアウトを保存しました。`)
+      toast.success(`採点枠を保存しました。`)
     } catch (error) {
       console.error("Failed to save layout:", error)
-      toast.error("レイアウトの保存に失敗しました。")
+      toast.error("採点枠の保存に失敗しました。")
     } finally {
       setIsSaving(false)
     }
@@ -273,7 +273,7 @@ export default function TemplateStepPage() {
     } catch (error) {
       console.error("Failed to detect layout regions:", error)
       toast.error(
-        `レイアウト領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+        `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
       )
     } finally {
       setIsDetecting(false)
@@ -282,9 +282,7 @@ export default function TemplateStepPage() {
 
   const goToNextStep = () => {
     if (!layoutId) {
-      toast.error(
-        "レイアウトが保存されていません。まずレイアウトを保存してください。",
-      )
+      toast.error("採点枠が保存されていません。まず採点枠を保存してください。")
       return
     }
     alert("次のステップ（解答用紙アップロード）へ進みます。 (未実装)")
@@ -296,7 +294,7 @@ export default function TemplateStepPage() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <p>テンプレート情報を読み込み中...</p>
+        <p>採点枠情報を読み込み中...</p>
       </div>
     )
   }
@@ -311,16 +309,14 @@ export default function TemplateStepPage() {
   return (
     <div className="container mx-auto p-4">
       <h2 className="mb-6 text-2xl font-semibold">
-        ステップ2: レイアウト領域の作成・編集
+        ステップ2: 採点枠領域の作成・編集
       </h2>
       <Card>
         <CardHeader>
-          <CardTitle>
-            {layoutId ? "レイアウト編集" : "新規レイアウト作成"}{" "}
-          </CardTitle>
+          <CardTitle>{layoutId ? "採点枠編集" : "新規採点枠作成"} </CardTitle>
           <CardDescription>
             プロジェクト「{project?.examName || projectId}
-            」のレイアウト領域を設定します。
+            」の採点枠領域を設定します。
             {masterImages.length > 0 && (
               <div className="mt-2">
                 <Label htmlFor="master-image-select">基準画像選択:</Label>
@@ -350,7 +346,7 @@ export default function TemplateStepPage() {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>レイアウト領域定義</Label>
+              <Label>採点枠領域定義</Label>
               {selectedMasterImage && (
                 <Button
                   onClick={handleDetectLayoutRegions}
@@ -395,8 +391,8 @@ export default function TemplateStepPage() {
               {isSaving
                 ? "保存中..."
                 : layoutId
-                  ? "レイアウトを更新"
-                  : "レイアウトを作成"}{" "}
+                  ? "採点枠を更新"
+                  : "採点枠を作成"}{" "}
             </Button>
             <Button
               onClick={goToNextStep}

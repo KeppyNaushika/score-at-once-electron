@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 // 採点ステップの定義
 const scoringSteps = [
   { id: "master-image", label: "1. 模範解答", hrefSuffix: "" }, // 初期ステップは /score 直下
-  { id: "template", label: "2. レイアウト領域", hrefSuffix: "/template" }, // ラベル変更
+  { id: "template", label: "2. 採点枠領域", hrefSuffix: "/template" }, // ラベル変更
   { id: "upload", label: "3. 解答用紙", hrefSuffix: "/upload" },
   { id: "scoring", label: "4. 採点", hrefSuffix: "/scoring" },
   { id: "results", label: "5. 結果", hrefSuffix: "/results" },

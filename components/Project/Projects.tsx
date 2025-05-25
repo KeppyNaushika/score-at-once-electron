@@ -53,9 +53,9 @@ const File = () => {
 
   const handleStartScoring = () => {
     if (selectedProject) {
-      // selectedProject.layout が存在するかどうかで、レイアウト設定済みか判断できる
+      // selectedProject.layout が存在するかどうかで、採点枠設定済みか判断できる
       if (selectedProject.layout) {
-        router.push(`/projects/${selectedProject.projectId}/score/upload`) // レイアウト設定済みなら解答用紙アップロードへ
+        router.push(`/projects/${selectedProject.projectId}/score/upload`) // 採点枠設定済みなら解答用紙アップロードへ
       } else {
         router.push(`/projects/${selectedProject.projectId}/score`) // 未設定なら模範解答設定から
       }
@@ -196,7 +196,7 @@ const File = () => {
                   )}
                 </div>
                 <div className="mb-4">
-                  <span className="font-medium">レイアウト設定: </span>
+                  <span className="font-medium">採点枠設定: </span>
                   {selectedProject.layout ? (
                     <Badge variant="success">設定済み</Badge>
                   ) : (
