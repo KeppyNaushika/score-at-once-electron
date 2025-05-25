@@ -4,9 +4,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Prisma } from "@prisma/client"
-import { ArrowLeft, ArrowRight, Trash2, UploadCloud } from "lucide-react"
+import {
+  ArrowLeft,
+  ArrowRight,
+  Trash2,
+  UploadCloud,
+  Loader2,
+} from "lucide-react" // Loader2 をインポート
 import { useCallback, useEffect, useState } from "react"
-import { useDropzone } from "react-dropzone" // useDropzoneをインポート
+import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 
 interface MasterImageManagerProps {
@@ -25,6 +31,8 @@ export default function MasterImageManager({
   const [imageDisplayUrls, setImageDisplayUrls] = useState<
     Record<string, string>
   >({})
+  const [isDeleting, setIsDeleting] = useState<Record<string, boolean>>({}) // 画像ごとの削除中状態
+  const [isMoving, setIsMoving] = useState<boolean>(false) // いずれかの画像が移動中か
 
   useEffect(() => {
     const sortedInitialImages = [...initialMasterImages].sort(
@@ -148,7 +156,6 @@ export default function MasterImageManager({
     [projectId, masterImages, onMasterImagesChange, imageDisplayUrls],
   )
 
-  // useDropzoneフックを呼び出し、必要なプロパティを分割代入
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"] },
@@ -163,18 +170,19 @@ export default function MasterImageManager({
     ) {
       return
     }
+    setIsDeleting((prev) => ({ ...prev, [imageId]: true }))
+    setIsMoving(true) // 他の操作を一時的にブロックする意図も込めて
     try {
-      await window.electronAPI.deleteMasterImage(imageId) // ファイルとDBレコード(単体)削除
+      await window.electronAPI.deleteMasterImage(imageId)
       const remainingImages = masterImages.filter((img) => img.id !== imageId)
       const reorderedImages = remainingImages.map((img, index) => ({
         ...img,
         pageNumber: index + 1,
       }))
 
-      setMasterImages(reorderedImages) // UI状態更新
-      onMasterImagesChange(reorderedImages) // 親コンポーネントに通知
+      setMasterImages(reorderedImages)
+      onMasterImagesChange(reorderedImages)
 
-      // ページ番号の変更をDBに保存
       if (reorderedImages.length > 0) {
         const orderUpdates = reorderedImages.map((img) => ({
           id: img.id,
@@ -193,6 +201,9 @@ export default function MasterImageManager({
       toast.error(
         `画像の削除または順序更新に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
       )
+    } finally {
+      setIsDeleting((prev) => ({ ...prev, [imageId]: false }))
+      setIsMoving(false)
     }
   }
 
@@ -200,11 +211,13 @@ export default function MasterImageManager({
     index: number,
     direction: "left" | "right",
   ) => {
+    setIsMoving(true)
     const newImages = [...masterImages]
     const imageToMove = newImages[index]
     const swapIndex = direction === "left" ? index - 1 : index + 1
 
     if (swapIndex < 0 || swapIndex >= newImages.length) {
+      setIsMoving(false)
       return
     }
 
@@ -216,11 +229,11 @@ export default function MasterImageManager({
       pageNumber: idx + 1,
     }))
 
-    try {
-      setMasterImages(updatedImagesWithPageNumbers) // UI状態更新
-      onMasterImagesChange(updatedImagesWithPageNumbers) // 親コンポーネントに通知
+    // UIを先に更新（オプティミスティックアップデートに近いが、API呼び出し前に状態変更）
+    setMasterImages(updatedImagesWithPageNumbers)
+    onMasterImagesChange(updatedImagesWithPageNumbers)
 
-      // API側でページ番号の一括更新
+    try {
       const orderUpdates = updatedImagesWithPageNumbers.map((img) => ({
         id: img.id,
         pageNumber: img.pageNumber,
@@ -233,9 +246,11 @@ export default function MasterImageManager({
       toast.error(
         `画像の並び替えと保存に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
       )
-      // エラーが発生した場合は、元の状態に戻すことを検討
+      // エラーが発生した場合は、元の状態に戻す
       setMasterImages(masterImages)
-      onMasterImagesChange(masterImages) // 親にも元の状態を通知
+      onMasterImagesChange(masterImages)
+    } finally {
+      setIsMoving(false)
     }
   }
 
@@ -246,10 +261,10 @@ export default function MasterImageManager({
       </CardHeader>
       <CardContent>
         <div
-          {...getRootProps()} // ここで getRootProps を使用
-          className={`mb-4 flex cursor-pointer justify-center rounded-md border-2 border-dashed px-6 pt-5 pb-6 ${isDragActive ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"} transition-colors hover:border-gray-400 dark:hover:border-gray-500`}
+          {...getRootProps()}
+          className={`mb-4 flex cursor-pointer justify-center rounded-md border-2 border-dashed px-6 pt-5 pb-6 ${isDragActive ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"} ${isMoving ? "cursor-not-allowed opacity-50" : ""} transition-colors hover:border-gray-400 dark:hover:border-gray-500`}
         >
-          <input {...getInputProps()} /> {/* ここで getInputProps を使用 */}
+          <input {...getInputProps()} disabled={isMoving} />
           <div className="space-y-1 text-center">
             <UploadCloud
               className={`mx-auto h-10 w-10 ${isDragActive ? "text-primary" : "text-gray-400"}`}
@@ -269,30 +284,37 @@ export default function MasterImageManager({
               {masterImages.map(
                 (image: Prisma.MasterImageGetPayload<{}>, index) => {
                   const imageUrl = imageDisplayUrls[image.id]
-                  // imageUrl が有効な場合のみ img タグをレンダリング
+                  const currentImageIsDeleting = isDeleting[image.id]
                   return imageUrl ? (
                     <div
                       key={image.id}
                       className="group relative w-40 shrink-0 overflow-hidden rounded-md"
                     >
                       <img
-                        src={imageUrl} // Use resolved URL from state
+                        src={imageUrl}
                         alt={`模範解答 ${image.pageNumber}`}
-                        className="h-48 w-full object-cover"
+                        className={`h-48 w-full object-cover ${currentImageIsDeleting || isMoving ? "opacity-50" : ""}`}
                         onError={(e) => {
-                          // 画像読み込みエラー時のフォールバック
                           e.currentTarget.src =
-                            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" // 1x1 透明GIF
+                            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                           e.currentTarget.alt = `画像読込エラー: ${image.path}`
                           console.error(
                             "Failed to load image:",
                             image.path,
                             "using URL:",
                             imageUrl,
-                          ) // エラー時のURLもログに出力
+                          )
                         }}
                       />
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                      {(currentImageIsDeleting ||
+                        (isMoving && !currentImageIsDeleting)) && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                          <Loader2 className="h-8 w-8 animate-spin text-white" />
+                        </div>
+                      )}
+                      <div
+                        className={`absolute inset-0 flex flex-col items-center justify-center bg-black/50 ${currentImageIsDeleting || isMoving ? "opacity-0" : "opacity-0 transition-opacity group-hover:opacity-100"}`}
+                      >
                         <p className="text-sm font-semibold text-white">
                           ページ {image.pageNumber}
                         </p>
@@ -302,7 +324,9 @@ export default function MasterImageManager({
                             variant="ghost"
                             className="h-7 w-7 text-white hover:bg-white/20"
                             onClick={() => handleMoveImage(index, "left")}
-                            disabled={index === 0}
+                            disabled={
+                              index === 0 || currentImageIsDeleting || isMoving
+                            }
                             title="左へ移動"
                           >
                             <ArrowLeft className="h-4 w-4" />
@@ -312,16 +336,25 @@ export default function MasterImageManager({
                             variant="destructive"
                             className="h-7 w-7"
                             onClick={() => handleDeleteImage(image.id)}
+                            disabled={currentImageIsDeleting || isMoving}
                             title="削除"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {currentImageIsDeleting ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7 text-white hover:bg-white/20"
                             onClick={() => handleMoveImage(index, "right")}
-                            disabled={index === masterImages.length - 1}
+                            disabled={
+                              index === masterImages.length - 1 ||
+                              currentImageIsDeleting ||
+                              isMoving
+                            }
                             title="右へ移動"
                           >
                             <ArrowRight className="h-4 w-4" />
@@ -330,7 +363,6 @@ export default function MasterImageManager({
                       </div>
                     </div>
                   ) : (
-                    // URLがまだないか、解決に失敗した場合はローディング表示やプレースホルダーを表示
                     <div
                       key={image.id}
                       className="group relative flex h-48 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border"
