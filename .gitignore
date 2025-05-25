@@ -42,4 +42,4 @@ main
 
 # data
 /data/*
-*.sqlite
+/prisma/data/score-at-once.sqlite
