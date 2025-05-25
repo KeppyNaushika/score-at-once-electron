@@ -72,3 +72,18 @@ export interface AnswerArea {
 }
 
 export type DragAction = "newAnswerArea" | "addAnswerArea" | "dragAnswerArea"
+
+// Score 型の定義 (仮の定義、必要に応じて調整してください)
+export type ScoreStatus =
+  | "unscored"
+  | "correct"
+  | "incorrect"
+  | "partial"
+  | "pending"
+  | "noanswer"
+
+export interface Score {
+  status: ScoreStatus
+  points: number | null
+  // 必要に応じて他のプロパティを追加
+}

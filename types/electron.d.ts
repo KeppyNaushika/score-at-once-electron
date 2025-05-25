@@ -157,6 +157,7 @@ export interface MyAPI {
     targetProjectId: string,
     createdById: string,
   ) => Promise<ProjectLayoutWithDetails | null>
+  detectLayoutRegions: (imagePath: string) => Promise<CropCoords[]> // 追加
 
   // IPC related (existing)
   sendScorePanel: (data: any) => Promise<void> // この重複は元のコードのまま残します
