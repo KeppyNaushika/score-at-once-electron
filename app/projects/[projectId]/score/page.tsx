@@ -75,10 +75,10 @@ export default function MasterImageStepPage() {
       })
       return
     }
-    // プロジェクトにレイアウトが既に存在するか確認
+    // プロジェクトに採点枠が既に存在するか確認
     if (project && project.layout) {
-      // レイアウトが存在する場合、次のステップは解答用紙アップロードの想定だが、
-      // このページは模範解答設定なので、常にレイアウト設定ページへ誘導する
+      // 採点枠が存在する場合、次のステップは解答用紙アップロードの想定だが、
+      // このページは模範解答設定なので、常に採点枠設定ページへ誘導する
       router.push(`/projects/${projectId}/score/template`)
     } else {
       router.push(`/projects/${projectId}/score/template`)
@@ -111,7 +111,7 @@ export default function MasterImageStepPage() {
       />
       <div className="mt-6 flex justify-end">
         <Button onClick={goToNextStep} disabled={isLoading}>
-          次へ: 採点テンプレート作成
+          次へ: 採点採点枠作成
         </Button>
       </div>
     </div>

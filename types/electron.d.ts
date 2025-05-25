@@ -148,7 +148,7 @@ export interface MyAPI {
     projectId: string,
   ) => Promise<ProjectLayoutWithDetails | null> // 型名を変更
   fetchProjectLayoutById: (
-    // 新規: IDでレイアウトを取得
+    // 新規: IDで採点枠を取得
     layoutId: string,
   ) => Promise<ProjectLayoutWithDetails | null>
   deleteProjectLayout: (layoutId: string) => Promise<ProjectLayout | void> // deleteExamTemplate を deleteProjectLayout に変更

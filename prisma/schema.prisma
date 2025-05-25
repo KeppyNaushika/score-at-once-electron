@@ -12,31 +12,30 @@ datasource db {
 // ---------------------------------------------------
 
 model User {
-  id                    String          @id @default(uuid())
-  username              String          @unique
-  passwordHash          String?
-  name                  String
-  role                  String          @default("teacher")
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  id               String              @id @default(uuid())
+  username         String              @unique
+  passwordHash     String?
+  name             String
+  role             String              @default("teacher")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
   // リレーション
-  classesTaught         Class[]         @relation("ClassTeachers")
-  scoreRecords          ScoreRecord[]
-  examSessions          ExamSession[]
-  questionScores        QuestionScore[]
-  createdProjectLayouts ProjectLayout[]
-  locks                 Lock[]
-  projects              Project[]       @relation("UserProjects")
+  classesTaught    Class[]             @relation("ClassTeachers")
+  scoreRecords     ScoreRecord[]
+  questionScores   QuestionScore[]
+  locks            Lock[]
+  createdProjects  Project[]           @relation("UserProjects")
+  assignedProjects GradingAssignment[]
+  examSessions     ProjectSession[]
 }
 
 model Class {
   id          String    @id @default(uuid())
   name        String    @unique
-  grade       Int? // 学年
+  grade       Int?
   description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  // リレーション
   students    Student[]
   teachers    User[]    @relation("ClassTeachers")
 
@@ -61,106 +60,160 @@ model Student {
 }
 
 // ---------------------------------------------------
-// 試験・設問・模範解答・テンプレート
+// 試験・設問・模範解答・採点枠
 // ---------------------------------------------------
 
 // 模範解答の画像パス (複数ページ対応)
 model MasterImage {
   id         String   @id @default(uuid())
   projectId  String
-  path       String // userDataからの相対パス
+  path       String
   pageNumber Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  project       Project        @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   layoutRegions LayoutRegion[]
 
   @@unique([projectId, pageNumber])
   @@index([projectId])
 }
 
-model Question {
-  id             String          @id @default(uuid())
-  projectId      String
-  project        Project         @relation(fields: [projectId], references: [projectId])
-  questionNumber Int
-  points         Float
-  questionType   String
-  correctAnswer  String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  questionScores QuestionScore[]
-  layoutRegions  LayoutRegion[]
-}
-
-// ---------------------------------------------------
-// Project (試験) 管理
-// ---------------------------------------------------
+// Projectモデル (旧Examモデル)
 model Project {
-  projectId   String    @id @default(uuid())
+  id          String    @id @default(cuid())
   examName    String
-  description String?
   examDate    DateTime?
-  userId      String?
+  subject     String?
+  description String?
+  userId      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // リレーション
-  user         User?          @relation("UserProjects", fields: [userId], references: [id], onDelete: Cascade)
-  tags         Tag[]          @relation("ProjectTags")
-  masterImages MasterImage[]
-  layout       ProjectLayout?
-  Question     Question[]
-  AnswerSheet  AnswerSheet[]
-  ScoreRecord  ScoreRecord[]
-  ExamSession  ExamSession[]
+  user               User                @relation("UserProjects", fields: [userId], references: [id])
+  masterImages       MasterImage[]
+  answerSheets       AnswerSheet[]
+  scoreRecords       ScoreRecord[]
+  projectSessions    ProjectSession[]
+  layoutRegions      LayoutRegion[]
+  gradingAssignments GradingAssignment[]
+  questionGroups     QuestionGroup[]
 
   @@index([userId])
 }
 
-// ---------------------------------------------------
-// ProjectLayout
-// ---------------------------------------------------
-model ProjectLayout {
-  id          String   @id @default(uuid())
-  projectId   String   @unique
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// プロジェクトと採点担当者の多対多リレーション
+model GradingAssignment {
+  projectId  String
+  userId     String
+  assignedAt DateTime @default(now())
 
-  project   Project        @relation(fields: [projectId], references: [projectId], onDelete: Cascade)
-  createdBy User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  areas     LayoutRegion[]
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([projectId])
-  @@index([createdById])
+  @@id([projectId, userId])
+  @@index([userId])
 }
 
 model LayoutRegion {
-  id                        String   @id @default(uuid())
-  projectLayoutId           String
-  masterImageId             String
-  type                      AreaType
-  x                         Float
-  y                         Float
-  width                     Float
-  height                    Float
-  label                     String?
-  points                    Float?
-  questionNumber            String?
-  sourceAreaIdsJson         String?
-  sourceQuestionNumbersJson String?
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  masterImageId String?
+  masterImage   MasterImage? @relation(fields: [masterImageId], references: [id])
 
-  projectLayout ProjectLayout @relation(fields: [projectLayoutId], references: [id], onDelete: Cascade)
-  masterImage   MasterImage   @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
-  Question      Question?     @relation(fields: [questionId], references: [id])
-  questionId    String?
+  label String
+  type  AreaType
 
-  @@index([projectLayoutId])
+  // 位置とサイズ (画像全体に対する割合, 0.0 ~ 1.0)
+  x      Float
+  y      Float
+  width  Float
+  height Float
+
+  // QUESTION_ANSWER の場合
+  questionNumber String? // 例: "1", "2a", "3"
+  points         Int? // 配点
+
+  // SUBTOTAL_SCORE または TOTAL_SCORE の場合
+  subtotalDefinitions SubtotalDefinition[]
+
+  // QUESTION_ANSWER の場合、どの QuestionGroupItem に属するか
+  questionSubtotalAssignments QuestionSubtotalAssignment[]
+  questionScores              QuestionScore[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
   @@index([masterImageId])
+}
+
+// New Model: 設問グループのカテゴリ (例: "大問", "観点別評価")
+model QuestionGroup {
+  id        String              @id @default(cuid())
+  name      String
+  projectId String
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items     QuestionGroupItem[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+// New Model: 設問グループの具体的な項目 (例: "大問1", "知識・技能")
+model QuestionGroupItem {
+  id              String        @id @default(cuid())
+  name            String
+  questionGroupId String
+  questionGroup   QuestionGroup @relation(fields: [questionGroupId], references: [id], onDelete: Cascade)
+
+  // この項目を集計対象とする小計/合計定義
+  subtotalDefinitions SubtotalDefinition[]
+
+  // この項目に割り当てられている設問
+  questionAssignments QuestionSubtotalAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([questionGroupId, name])
+  @@index([questionGroupId])
+}
+
+// New Model: 小計/合計表示エリアがどの QuestionGroupItem を集計するかを定義
+model SubtotalDefinition {
+  id                  String            @id @default(cuid())
+  layoutRegionId      String
+  layoutRegion        LayoutRegion      @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+  questionGroupItemId String
+  questionGroupItem   QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([layoutRegionId, questionGroupItemId])
+  @@index([layoutRegionId])
+  @@index([questionGroupItemId])
+}
+
+// New Model: 設問エリアがどの QuestionGroupItem に属するかを定義する中間テーブル
+model QuestionSubtotalAssignment {
+  id                     String            @id @default(cuid())
+  questionLayoutRegionId String
+  questionLayoutRegion   LayoutRegion      @relation(fields: [questionLayoutRegionId], references: [id], onDelete: Cascade)
+  questionGroupItemId    String
+  questionGroupItem      QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([questionLayoutRegionId, questionGroupItemId])
+  @@index([questionLayoutRegionId])
+  @@index([questionGroupItemId])
 }
 
 enum AreaType {
@@ -181,7 +234,7 @@ enum AreaType {
 model AnswerSheet {
   id                 String          @id @default(uuid())
   projectId          String
-  project            Project         @relation(fields: [projectId], references: [projectId])
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   studentId          String?
   student            Student?        @relation(fields: [studentId], references: [id])
   pageNumber         Int
@@ -197,15 +250,17 @@ model AnswerSheet {
   questionScores     QuestionScore[]
 
   @@unique([projectId, studentId, pageNumber])
+  @@index([projectId])
 }
 
 // 設問ごとの採点結果 (複数教員対応)
 model QuestionScore {
-  id             String      @id @default(uuid())
+  id             String       @id @default(uuid())
   answerSheetId  String
-  answerSheet    AnswerSheet @relation(fields: [answerSheetId], references: [id])
-  questionId     String
-  question       Question    @relation(fields: [questionId], references: [id])
+  answerSheet    AnswerSheet  @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
+  layoutRegionId String
+  layoutRegion   LayoutRegion @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+
   score          Float?
   detectedAnswer String?
   isCorrect      Boolean?
@@ -219,14 +274,9 @@ model QuestionScore {
   updatedAt    DateTime @updatedAt
   scoreVersion Int      @default(1)
 
-  // 各教員が同じ答案の同じ設問を複数回採点できないようにする（再採点時は更新）
-  @@unique([answerSheetId, questionId, scoredByUserId])
-  // 【重要】一つの答案の、ある設問に対して、"final"なスコアは厳密に一つしか存在できないようにする。
-  // statusが"final"のレコードに対してのみ適用され、scoredByUserIdに関わらずユニーク性を強制する。
-  // @@unique([answerSheetId, questionId, status], name: "unique_final_score", where: { status: "final" })
-  // Prismaのwhere句でのフィルタリングはプレビュー機能のため、コメントアウト。アプリケーション側で制御するか、DBレベルの制約を検討。
-  // 代わりに、複合インデックスを作成し、アプリケーションロジックで一意性を保証することを推奨します。
-  @@index([answerSheetId, questionId, status])
+  @@unique([answerSheetId, layoutRegionId, scoredByUserId])
+  @@index([answerSheetId, layoutRegionId, status])
+  @@index([layoutRegionId])
 }
 
 // 生徒ごとの最終的な試験スコアレコード (統合後の結果)
@@ -235,7 +285,7 @@ model ScoreRecord {
   studentId         String
   student           Student  @relation(fields: [studentId], references: [id])
   projectId         String
-  project           Project  @relation(fields: [projectId], references: [projectId])
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   totalScore        Float
   excelOutputPath   String?
   pdfOutputPath     String?
@@ -245,28 +295,25 @@ model ScoreRecord {
   updatedAt         DateTime @updatedAt
 
   @@unique([studentId, projectId])
+  @@index([projectId])
 }
 
-// ---------------------------------------------------
-// 複数教員での同時採点（簡易的な排他制御）
-// ---------------------------------------------------
-
-// 採点セッション管理（誰がいつ採点を開始したか、そのPCの識別子など）
-model ExamSession {
+// 採点セッション管理 (旧 ExamSession)
+model ProjectSession {
   id                String    @id @default(uuid())
   projectId         String
-  project           Project   @relation(fields: [projectId], references: [projectId])
+  project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId            String
   user              User      @relation(fields: [userId], references: [id])
   machineIdentifier String?
   sessionStartedAt  DateTime  @default(now())
   sessionEndedAt    DateTime?
+
+  @@index([projectId])
+  @@index([userId])
 }
 
 // 共有ロックテーブル（簡易的な排他制御のため）
-// 例えば、特定のAnswerSheetIdをロックしたい場合に利用
-// 主に、クリティカルなDB操作（マイグレーションなど）の排他制御に利用する可能性を考慮。
-// 採点ロジックの排他制御は楽観的ロックで行う。
 model Lock {
   id               String    @id @default(uuid())
   lockedResourceId String    @unique
@@ -278,12 +325,4 @@ model Lock {
 
   @@index([lockedResourceId, resourceType])
   @@map("locks")
-}
-
-model Tag {
-  id        String    @id @default(uuid())
-  text      String    @unique
-  projects  Project[] @relation("ProjectTags")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
 }
