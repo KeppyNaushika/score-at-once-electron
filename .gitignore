@@ -41,4 +41,5 @@ next-env.d.ts
 main
 
 # data
-/data*
+/data/*
+*.sqlite
