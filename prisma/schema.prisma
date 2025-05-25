@@ -16,22 +16,20 @@ datasource db {
 
 model User {
   id                String          @id @default(uuid())
-  username          String          @unique // 教員のログインIDなど
-  passwordHash      String?         // パスワードハッシュ（必要であれば）
+  username          String          @unique
+  passwordHash      String?
   name              String
-  role              String          @default("teacher") // "teacher", "admin" などのロールを想定
+  role              String          @default("teacher")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   // リレーション
-  classesTaught     Class[]         @relation("ClassTeachers") // Corrected: Added relation name
-  examsAdministered Exam[]          @relation("ExamScorers")
-  scoreRecords      ScoreRecord[]
-  examSessions      ExamSession[]
+  classesTaught     Class[]         @relation("ClassTeachers")
+  scoreRecords      ScoreRecord[]   // ScoreRecord が Project に関連するように変更するなら、ここも影響受ける可能性
+  examSessions      ExamSession[]   // ExamSession が Project に関連するように変更するなら、ここも影響受ける可能性
   questionScores    QuestionScore[] // Userが採点した設問スコア
-  createdExams      Exam[]          @relation("ExamCreator")
   createdTemplates  ExamTemplate[]
   locks             Lock[]
-  projects          Project[]       @relation("UserProjects") // If projects are linked to users
+  projects          Project[]       @relation("UserProjects")
 }
 
 model Class {
@@ -70,55 +68,38 @@ model Student {
 // 試験・設問・模範解答・テンプレート
 // ---------------------------------------------------
 
-model Exam {
-  id           String        @id @default(uuid())
-  title        String
-  description  String?
-  examDate     DateTime      @default(now())
-  masterImages MasterImage[] // 模範解答の画像パス（複数ページ対応）
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  // リレーション
-  questions    Question[]
-  answerSheets AnswerSheet[] // この試験の回答用紙
-  scores       ScoreRecord[]
-  createdBy    User          @relation("ExamCreator", fields: [createdById], references: [id])
-  createdById  String
-  templates    ExamTemplate[] // この試験のテンプレート
-  // 採点者とのリレーション（試験ごとに複数の採点者を設定可能）
-  scorers      User[]        @relation("ExamScorers") // Corrected: Removed fields and scorerIds, uses relation name
-  // scorerIds    String[] // Removed: SQLite does not support primitive lists this way for relations
-  examSessions ExamSession[]
-}
+// Exam モデルは Project に移行したため、完全に削除またはコメントアウト
+// model Exam { ... }
 
 // 模範解答の画像パス (複数ページ対応)
 model MasterImage {
   id         String   @id @default(uuid())
-  examId     String
-  exam       Exam     @relation(fields: [examId], references: [id])
-  path       String   // 模範解答画像の相対パス
-  pageNumber Int      // ページの順番 (例: 1, 2, 3)
+  // examId     String // 旧: Examへの関連
+  // exam       Exam     @relation(fields: [examId], references: [id]) // 旧: Examへの関連
+  projectId  String   // 新: Projectへの関連
+  project    Project  @relation(fields: [projectId], references: [projectId]) // 新: Projectへの関連
+  path       String
+  pageNumber Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([examId, pageNumber]) // 試験内でページ番号はユニーク
+  @@unique([projectId, pageNumber]) // Project内でページ番号はユニーク
 }
 
 model Question {
   id             String          @id @default(uuid())
-  examId         String
-  exam           Exam            @relation(fields: [examId], references: [id])
-  questionNumber Int             // 設問番号 (例: 1, 2, 3)
-  points         Float           // 配点
-  questionType   String          // "multiple_choice", "short_answer", "true_false" など
-  correctAnswer  String?         // 模範解答のテキストやマークパターン（JSON文字列など）
-  // 採点領域の座標情報 (JSON文字列で表現)
-  // 例: { "x": 100, "y": 200, "width": 50, "height": 30, "page": 1 }
+  // examId         String // 旧 Exam への参照
+  // exam           Exam            @relation(fields: [examId], references: [id]) // 旧 Exam への参照
+  projectId      String          // 新 Project への参照
+  project        Project         @relation(fields: [projectId], references: [projectId]) // 新 Project への参照
+  questionNumber Int
+  points         Float
+  questionType   String
+  correctAnswer  String?
   answerArea     String?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
-  // リレーション
-  questionScores QuestionScore[] // 各生徒のこの設問に対する採点結果
+  questionScores QuestionScore[]
 }
 
 // 試験のテンプレート (採点領域の定義セット)
@@ -127,15 +108,15 @@ model ExamTemplate {
   id                String   @id @default(uuid())
   name              String
   description       String?
-  examId            String?  // 特定の試験に関連付けられる場合
-  exam              Exam?    @relation(fields: [examId], references: [id])
-  templateData      Json     // 領域定義、採点基準、画像前処理設定など、JSON形式で保存
+  // examId            String?  // 旧: Examへの関連
+  // exam              Exam?    @relation(fields: [examId], references: [id]) // 旧: Examへの関連
+  projectId         String?  // 新: Projectへの関連
+  project           Project? @relation(fields: [projectId], references: [projectId]) // 新: Projectへの関連
+  templateData      Json
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   createdBy         User     @relation(fields: [createdById], references: [id])
   createdById       String
-  // 柔軟な小計点/合計点表示領域の定義（JSON形式で保存）
-  // 例: [ { "type": "page", "pageNumber": 1, "area": {...}, "scoreFor": "total" }, { "type": "section", "sectionName": "大問1", "area": {...}, "scoreFor": "subtotal" } ]
   scoreDisplayAreas Json?
 }
 
@@ -145,28 +126,27 @@ model ExamTemplate {
 
 model AnswerSheet {
   id                 String          @id @default(uuid())
-  examId             String
-  exam               Exam            @relation(fields: [examId], references: [id])
-  studentId          String?         // 欠席者対応のためNullable
+  // examId             String // 旧 Exam への参照
+  // exam               Exam            @relation(fields: [examId], references: [id]) // 旧 Exam への参照
+  projectId          String          // 新 Project への参照
+  project            Project         @relation(fields: [projectId], references: [projectId]) // 新 Project への参照
+  studentId          String?
   student            Student?        @relation(fields: [studentId], references: [id])
-  pageNumber         Int             // 複数ページ答案のページ番号
-  originalImagePath  String          // オリジナルスキャン画像の相対パス
-  processedImagePath String?         // 処理済み（傾き補正など）画像の相対パス
-  scoredPdfPath      String?         // 最終採点済みPDFの出力相対パス（統合後のPDF）
-  isScored           Boolean         @default(false) // 最終統合済みか
-  totalScore         Float?          // 最終統合スコア
-  isAbsent           Boolean         @default(false) // 欠席者フラグ
+  pageNumber         Int
+  originalImagePath  String
+  processedImagePath String?
+  scoredPdfPath      String?
+  isScored           Boolean         @default(false)
+  totalScore         Float?
+  isAbsent           Boolean         @default(false)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
-  version            Int             @default(1) // 楽観的ロック用バージョン
-  // リレーション
-  questionScores     QuestionScore[] // 複数の教員のスコアを保持
-  examSessionId      String?
-  examSession        ExamSession?    @relation(fields: [examSessionId], references: [id])
+  version            Int             @default(1)
+  questionScores     QuestionScore[]
+  // examSessionId      String? // ExamSession が Project に関連するなら、ここも影響
 
-  // 生徒とページ番号でユニークにする（複数ページ答案の管理）
-  @@unique([examId, studentId, pageNumber])
-  // 欠席者の場合、studentIdはNULLになるが、その場合のユニーク制約は別途ロジックで管理
+  // projectId と studentId と pageNumber でユニークにする
+  @@unique([projectId, studentId, pageNumber])
 }
 
 // 設問ごとの採点結果 (複数教員対応)
@@ -204,18 +184,19 @@ model ScoreRecord {
   id                String   @id @default(uuid())
   studentId         String
   student           Student  @relation(fields: [studentId], references: [id])
-  examId            String
-  exam              Exam     @relation(fields: [examId], references: [id])
+  // examId            String // 旧 Exam への参照
+  // exam              Exam     @relation(fields: [examId], references: [id]) // 旧 Exam への参照
+  projectId         String   // 新 Project への参照
+  project           Project  @relation(fields: [projectId], references: [projectId]) // 新 Project への参照
   totalScore        Float
-  // その他の集計データ
   excelOutputPath   String?
   pdfOutputPath     String?
-  finalizedByUserId String?  // 誰が最終集計を行ったか（統合操作を実行した教員）
+  finalizedByUserId String?
   finalizedByUser   User?    @relation(fields: [finalizedByUserId], references: [id])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@unique([studentId, examId])
+  @@unique([studentId, projectId]) // projectId に変更
 }
 
 // ---------------------------------------------------
@@ -225,15 +206,16 @@ model ScoreRecord {
 // 採点セッション管理（誰がいつ採点を開始したか、そのPCの識別子など）
 model ExamSession {
   id                    String        @id @default(uuid())
-  examId                String
-  exam                  Exam          @relation(fields: [examId], references: [id])
+  // examId                String // 旧 Exam への参照
+  // exam                  Exam          @relation(fields: [examId], references: [id]) // 旧 Exam への参照
+  projectId             String        // 新 Project への参照
+  project               Project       @relation(fields: [projectId], references: [projectId]) // 新 Project への参照
   userId                String
   user                  User          @relation(fields: [userId], references: [id])
-  machineIdentifier     String?       // 採点しているPCのユニークID（簡易的な識別用）
+  machineIdentifier     String?
   sessionStartedAt      DateTime      @default(now())
   sessionEndedAt        DateTime?
-  // リレーション
-  processedAnswerSheets AnswerSheet[] // このセッションで処理された答案
+  // processedAnswerSheets AnswerSheet[] // AnswerSheet.examSessionId があれば不要
 }
 
 // 共有ロックテーブル（簡易的な排他制御のため）
@@ -263,9 +245,18 @@ model Project {
   updatedAt   DateTime  @updatedAt
   tags        Tag[]     @relation("ProjectTags")
 
-  // Optional: If projects are created by users
   userId      String?
   user        User?     @relation("UserProjects", fields: [userId], references: [id])
+
+  masterImages MasterImage[]
+  templates    ExamTemplate[]
+
+  // Project に関連する他のモデル (旧 Exam から移行)
+  questions     Question[]
+  answerSheets  AnswerSheet[]
+  scoreRecords  ScoreRecord[]
+  examSessions  ExamSession[]
+  // scorers       User[]        @relation("ProjectScorers") // 必要であれば
 }
 
 model Tag {

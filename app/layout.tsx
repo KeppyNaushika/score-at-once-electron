@@ -1,6 +1,14 @@
-import React from "react"
-import Head from "next/head"
+import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 import "./globals.css"
+import AppShell from "@/components/AppShell" // AppShell をインポート
+
+const inter = Inter({ subsets: ["latin"] })
+
+export const metadata: Metadata = {
+  title: "一括採点システム",
+  description: "複数教員対応型採点アプリケーション",
+}
 
 export default function RootLayout({
   children,
@@ -9,8 +17,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
-      <body>
-        <div className="flex h-screen select-none flex-col">{children}</div>
+      <body className={inter.className}>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   )

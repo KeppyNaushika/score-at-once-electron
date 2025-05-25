@@ -1,4 +1,6 @@
-import { CreateProjectProps } from "@/electron-src/prisma"
+"use client"
+
+import { CreateProjectProps } from "@/electron-src/lib/prisma/project"
 import { Prisma, type Project } from "@prisma/client"
 import { useEffect, useState } from "react"
 
@@ -36,17 +38,20 @@ export const useProjects = () => {
     }
   }
 
-  const updateProject = async (project: Project) => {
+  const updateProject = async (
+    project: Prisma.ProjectGetPayload<{
+      include: {
+        tags: true
+      }
+    }>,
+  ) => {
     try {
       const updatedProject = await window.electronAPI.updateProject(project)
 
       updatedProject &&
         setProjects((prev) =>
-          prev.map(
-            (
-              p, // project 変数名を p に変更して、引数の project との衝突を回避
-            ) =>
-              p.projectId === updatedProject.projectId ? updatedProject : p,
+          prev.map((p) =>
+            p.projectId === updatedProject.projectId ? updatedProject : p,
           ),
         )
     } catch (error) {
@@ -54,7 +59,13 @@ export const useProjects = () => {
     }
   }
 
-  const deleteProject = async (projectToDelete: Project) => {
+  const deleteProject = async (
+    projectToDelete: Prisma.ProjectGetPayload<{
+      include: {
+        tags: true
+      }
+    }>,
+  ) => {
     if (!projectToDelete) return
     try {
       const deletedProject =
@@ -63,7 +74,7 @@ export const useProjects = () => {
         setProjects((prev) =>
           prev.filter((p) => p.projectId !== deletedProject.projectId),
         )
-        if (selectedProject === deletedProject.project) {
+        if (selectedProject === deletedProject) {
           setSelectedProject(null)
         }
       }
