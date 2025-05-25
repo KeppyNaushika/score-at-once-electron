@@ -1,10 +1,10 @@
 import { useCallback, useRef, useState } from "react"
 import {
   type DirectionToMoveAnswerArea,
-  type AnswerArea,
+  // type AnswerArea, // Will be imported from ../../index.type
   type Move,
-} from "../index.type"
-import { type Order } from "../../index.type"
+} from "../index.type" // Assuming AnswerArea is also defined here or needs to be moved
+import { type AnswerArea, type SortOrder } from "../../index.type" // Import AnswerArea and SortOrder
 
 // 答案データ
 const numberOfAnswerAreas = 120
@@ -17,7 +17,7 @@ const defaultAnswerAreas = [...Array(numberOfAnswerAreas).keys()].map((v) => {
     studentId: v.toString(),
     studentName: "0000",
     maxPoints: DEFAULT_MAX_POINTS,
-    score: "unscored",
+    score: "unscored", // This should align with ScoreValue or DetailedScore in AnswerArea type
     partialPoints: null,
     cropTmp: { top: 0.2, bottom: 0.3, left: 0.2, right: 0.3 },
   }
@@ -33,7 +33,7 @@ const useAnswerAreaMovement = (): {
   moveSelectedAnswerArea: (
     directionToMoveAnswerArea: DirectionToMoveAnswerArea,
   ) => void
-  handleMovePress: (move: Move, orderOfAnswerArea: Order[]) => void
+  handleMovePress: (move: Move, orderOfAnswerArea: SortOrder[]) => void // Changed Order to SortOrder
 } => {
   // Move
   const [numberOfItemsInRow, setNumberOfItemsInRow] = useState<number>(0)
@@ -99,7 +99,8 @@ const useAnswerAreaMovement = (): {
     [answerAreas, numberOfItemsInRow, numberOfItemsInColumn],
   )
   const handleMovePress = useCallback(
-    (move: Move, orderOfAnswerArea: Order[]): void => {
+    (move: Move, orderOfAnswerArea: SortOrder[]): void => {
+      // Changed Order to SortOrder
       const setIndexInOrder: Record<
         number,
         Record<Move, DirectionToMoveAnswerArea>

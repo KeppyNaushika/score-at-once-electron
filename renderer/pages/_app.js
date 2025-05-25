@@ -2,7 +2,6 @@ import React from "react"
 import PropTypes from "prop-types"
 
 import { M_PLUS_1p } from "next/font/google"
-import "tailwindcss/tailwind.css"
 
 const inter = M_PLUS_1p({ weight: "400", subsets: ["latin"] })
 

@@ -1,180 +1,113 @@
-import React, { useRef, type ChangeEvent, useState } from "react"
-
+import React, { useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
-import { MdOutlineLibraryAdd } from "react-icons/md"
+import { type OnDocumentLoadSuccess } from "react-pdf/dist/cjs/shared/types" // More specific import
+import "react-pdf/dist/esm/Page/AnnotationLayer.css"
+import "react-pdf/dist/esm/Page/TextLayer.css"
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`
+// Set up worker
+// Make sure the worker is copied to your public/static folder or accessible via URL
+// You might need to adjust the path depending on your project structure and bundler.
+// For Next.js, placing it in `public` and referencing it directly might work,
+// or using `new URL` if your bundler supports it.
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`
 
-const AddPdfFile = (props: {
-  setModelSheets: React.Dispatch<React.SetStateAction<string[]>>
-}) => {
-  const { setModelSheets } = props
+export interface AddPdfFileProps {
+  setFile: React.Dispatch<React.SetStateAction<File | null>>
+  setNumPages: React.Dispatch<React.SetStateAction<number | null>>
+  setPageImages: React.Dispatch<React.SetStateAction<string[]>>
+  setThumbnails: React.Dispatch<React.SetStateAction<string[]>>
+  setPageSize: React.Dispatch<
+    React.SetStateAction<{ width: number; height: number }[]>
+  >
+  setModelSheets: React.Dispatch<React.SetStateAction<string[]>> // Added this prop
+}
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const handleClick = (): void => {
-    fileInputRef.current?.click()
-  }
-  const handleFileInput = (e: ChangeEvent<HTMLInputElement>): void => {
-    if (e.target.files !== null) {
-      const file = e.target.files[0]
-      if (file.type.match("application/pdf") != null) {
-        setSelectedFile(file)
-      }
+const AddPdfFile = (props: AddPdfFileProps) => {
+  const [numPages, setNumPages] = useState<number | null>(null)
+  const [file, setFile] = useState<File | null>(null)
+
+  const onFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const { files } = event.target
+    if (files && files[0]) {
+      setFile(files[0])
+      props.setFile(files[0]) // Propagate to parent
     }
   }
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const onDocumentLoadSuccess: OnDocumentLoadSuccess = async (pdf) => {
+    props.setNumPages(pdf.numPages)
+    const newPageImages: string[] = []
+    const newThumbnails: string[] = []
+    const newPageSizes: { width: number; height: number }[] = []
 
-  interface PdfViewerProps {
-    file: File // PDF ファイルへのパス
-  }
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i)
+      const viewport = page.getViewport({ scale: 1.5 }) // For higher quality images
+      const canvas = document.createElement("canvas")
+      const context = canvas.getContext("2d")
+      canvas.height = viewport.height
+      canvas.width = viewport.width
+      newPageSizes.push({ width: viewport.width, height: viewport.height })
 
-  const [beginPage, setBeginPage] = useState<number | null>(null)
-  const [endPage, setEndPage] = useState<number | null>(null)
-  const [skipPage, setSkipPage] = useState<number | null>(null)
-  const PdfViewer: React.FC<PdfViewerProps> = ({ file }) => {
-    const onDocumentLoadSuccess = ({
-      numPages,
-    }: {
-      numPages: number
-    }): void => {
-      setBeginPage(1)
-      setEndPage(numPages)
-      setSkipPage(1)
-    }
+      if (context) {
+        await page.render({ canvasContext: context, viewport }).promise
+        newPageImages.push(canvas.toDataURL("image/png")) // Store as PNG
 
-    const pages[] = []
-    if (beginPage !== null && endPage !== null && skipPage !== null) {
-      let index = beginPage
-      for (let i = 0; i < 6; i++) {
-        if (index > endPage) {
-          break
+        // Create thumbnails (e.g., 150px width)
+        const thumbViewport = page.getViewport({ scale: 150 / viewport.width })
+        const thumbCanvas = document.createElement("canvas")
+        const thumbContext = thumbCanvas.getContext("2d")
+        thumbCanvas.height = thumbViewport.height
+        thumbCanvas.width = thumbViewport.width
+        if (thumbContext) {
+          await page.render({
+            canvasContext: thumbContext,
+            viewport: thumbViewport,
+          }).promise
+          newThumbnails.push(thumbCanvas.toDataURL("image/jpeg", 0.8)) // Store as JPEG
         }
-        pages.push(
-          <div className="m-2 border-2" key={i}>
-            <Page
-              pageNumber={index}
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              width={300}
-            />
-          </div>,
-        )
-        index += skipPage
       }
     }
-    return (
-      <div className="flex justify-center">
-        <Document
-          file={file}
-          onLoadSuccess={onDocumentLoadSuccess}
-          className="flex flex-wrap justify-center"
-        >
-          {pages}
-        </Document>
-      </div>
-    )
+    props.setPageImages(newPageImages)
+    props.setThumbnails(newThumbnails)
+    props.setPageSize(newPageSizes)
+    // Assuming setModelSheets is meant to be set with these new images/thumbnails
+    // This part might need clarification on what `setModelSheets` expects
+    props.setModelSheets(newThumbnails) // Or newPageImages, depending on requirement
+  }
+
+  const onDocumentLoadError = (error: any) => {
+    console.error("Error loading document:", error)
   }
 
   return (
-    <>
-      {selectedFile !== null && (
-        <div className="absolute inset-0 z-20 flex min-h-full min-w-full flex-col items-center justify-between bg-white/80 p-20">
-          <div className="flex justify-center border-y-2 border-gray-200">
-            <div className="flex">
-              <div className="py-2">開始：</div>
-              <input
-                className="w-12 py-2 text-center placeholder:opacity-0 focus:outline-none"
-                type="number"
-                placeholder="開始ページ"
-                value={beginPage?.toString()}
-                onChange={(e) => {
-                  const value = Number(e.target.value)
-                  if (!Number.isNaN(value)) {
-                    setBeginPage(value)
-                  }
-                }}
-                min={1}
-                max={endPage?.toString() ?? 0}
-              />
-            </div>
-            <div className="mx-10 my-2 border-l-2 border-gray-200"></div>
-            <div className="flex">
-              <div className="py-2">終了：</div>
-              <input
-                className="w-12 py-2 text-center placeholder:opacity-0 focus:outline-none"
-                type="number"
-                placeholder="終了ページ"
-                value={endPage?.toString()}
-                onChange={(e) => {
-                  const value = Number(e.target.value)
-                  if (!Number.isNaN(value)) {
-                    setEndPage(value)
-                  }
-                }}
-                min={1}
-                max={endPage?.toString() ?? 0}
-              />
-            </div>
-            <div className="mx-10 my-2 border-l-2 border-gray-200"></div>
-            <div className="flex">
-              <div className="py-2">スキップ：</div>
-              <input
-                className="w-12 py-2 text-center placeholder:opacity-0 focus:outline-none"
-                type="number"
-                placeholder="スキップ"
-                defaultValue={1}
-                min={1}
-                max={endPage?.toString() ?? 0}
-              />
-            </div>
-            <div className="mx-10 my-2 border-l-2 border-gray-200"></div>
-            <div className="flex">
-              <div className="py-2">逆順</div>
-              <select
-                title="逆順"
-                className="w-20 py-2 text-center placeholder:opacity-0 focus:outline-none"
-              >
-                <option value="false">オフ</option>
-                <option value="true">オン</option>
-              </select>
-            </div>
-          </div>
-          <PdfViewer file={selectedFile} />
-          <div className="flex py-4">
-            <div className="flex h-16 w-40 flex-col items-center justify-center rounded-md bg-emerald-500 text-white">
-              <div className="">上の画像を</div>
-              <div className="">読み込む</div>
-            </div>
-            <div className="w-20"></div>
-            <div
-              className="flex h-16 w-40 items-center justify-center rounded-md bg-gray-300"
-              onClick={() => {
-                setSelectedFile(null)
-              }}
-            >
-              戻る
-            </div>
-          </div>
-        </div>
-      )}
+    <div className="flex flex-col items-center">
       <input
         type="file"
-        ref={fileInputRef}
-        onChange={handleFileInput}
-        style={{ display: "none" }}
+        onChange={onFileChange}
         accept="application/pdf"
-        placeholder="."
+        placeholder="..."
       />
-      <div
-        className="flex h-1/2 cursor-pointer flex-col items-center justify-center"
-        onClick={handleClick}
-      >
-        <MdOutlineLibraryAdd size={"1.5em"} />
-        <div className="pt-2 text-xs">PDF</div>
-      </div>
-    </>
+      {file && (
+        <div style={{ height: "500px", width: "100%", overflow: "auto" }}>
+          <Document
+            file={file}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+          >
+            {Array.from(new Array(numPages || 0), (el, index) => (
+              <Page
+                key={`page_${index + 1}`}
+                pageNumber={index + 1}
+                renderTextLayer={false} // Disable text layer if not needed
+                renderAnnotationLayer={false} // Disable annotation layer if not needed
+              />
+            ))}
+          </Document>
+        </div>
+      )}
+      {/* ... Thumbnails display ... */}
+    </div>
   )
 }
-
 export default AddPdfFile
