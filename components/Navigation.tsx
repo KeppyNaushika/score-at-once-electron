@@ -27,7 +27,6 @@ const navItems = [
   { href: "/", label: "プロジェクト一覧", icon: Home }, // "プロジェクト" から "プロジェクト一覧" へ変更
   { href: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/students", label: "生徒管理", icon: Users },
-  { href: "/projects", label: "プロジェクト管理", icon: FileText }, // href を /projects に、label を "プロジェクト管理" に変更
   { href: "/settings", label: "設定", icon: Settings },
 ]
 
