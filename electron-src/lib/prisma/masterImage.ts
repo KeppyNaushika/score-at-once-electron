@@ -16,7 +16,7 @@ export const uploadMasterImages = async (
   // This function assumes that the MasterImage model in schema.prisma
   // is related to the Project model via a 'projectId' foreign key.
   const project = await prisma.project.findUnique({
-    where: { projectId: projectId },
+    where: { id: projectId },
     include: { masterImages: true }, // Assumes Project model has 'masterImages' relation
   })
 
@@ -61,7 +61,7 @@ export const uploadMasterImages = async (
         data: {
           // This assumes MasterImage model has a 'project' relation field
           // and connects to Project via 'projectId'.
-          project: { connect: { projectId: projectId } },
+          project: { connect: { id: projectId } },
           path: relativePath,
           pageNumber: highestPageNumber + 1 + index,
         },
@@ -164,4 +164,67 @@ export const updateMasterImagesOrder = async (
   }
 }
 
+export const getMasterImagesByProjectId = async (projectId: string) => {
+  return prisma.masterImage.findMany({
+    where: { projectId }, // schema.prisma の MasterImage.projectId を参照
+    orderBy: {
+      pageNumber: "asc",
+    },
+  })
+}
+
+export const createMasterImage = async (
+  // projectId, path, pageNumber を持つ想定
+  data: Prisma.MasterImageUncheckedCreateInput,
+) => {
+  return prisma.masterImage.create({
+    data,
+  })
+}
+
+export const createManyMasterImages = async (
+  // 各要素が projectId, path, pageNumber を持つ想定
+  data: Prisma.MasterImageCreateManyInput[],
+) => {
+  return prisma.masterImage.createMany({
+    data,
+    // skipDuplicates は createMany の引数として有効な場合があるが、
+    // Prismaのバージョンや設定による。エラーが出る場合は削除も検討。
+    // skipDuplicates: true,
+  })
+}
+
+export const updateMasterImage = async (
+  id: string,
+  data: Prisma.MasterImageUpdateInput,
+) => {
+  return prisma.masterImage.update({
+    where: { id },
+    data,
+  })
+}
+
+export const deleteMasterImagesByProjectId = async (projectId: string) => {
+  return prisma.masterImage.deleteMany({
+    where: { projectId }, // schema.prisma の MasterImage.projectId を参照
+  })
+}
+
+// 特定のプロジェクトの特定のページ番号のMasterImageを取得する関数 (例)
+export const getMasterImageByPage = async (
+  projectId: string,
+  pageNumber: number,
+) => {
+  return prisma.masterImage.findUnique({
+    where: {
+      // schema.prisma で @@unique([projectId, pageNumber]) が定義されている想定
+      projectId_pageNumber: {
+        projectId,
+        pageNumber,
+      },
+    },
+  })
+}
+
+export type MasterImagePayload = MasterImage
 // 他のMasterImage関連関数 (fetchなど) があればここに記述
