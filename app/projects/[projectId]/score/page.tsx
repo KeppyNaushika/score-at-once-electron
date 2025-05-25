@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Prisma } from "@prisma/client"
 import { toast } from "sonner" // sonnerのtoastを直接使用
-import MasterImageManager from "@/components/Project/MasterImageManager" // このパスが正しいか確認
+import MasterImageManager from "@/components/Project/MasterImageManager"
 
 export default function MasterImageStepPage() {
   const params = useParams()
@@ -23,8 +23,7 @@ export default function MasterImageStepPage() {
     if (!projectId) return
     setIsLoading(true)
     try {
-      // APIから試験情報を取得し、そこに含まれる模範解答画像を取得
-      const project = await window.electronAPI.fetchProjectById(projectId)
+      const project = await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
       if (project && project.masterImages) {
         // pageNumber でソートしてセット
         const sortedImages = [...project.masterImages].sort(
@@ -63,8 +62,9 @@ export default function MasterImageStepPage() {
   )
 
   const goToNextStep = async () => {
-    // ここで現在のステップが完了したことを示すフラグをDBに保存するなどの処理を検討
-    // 例: await window.electronAPI.updateExamStepProgress(projectId, 'master-image', 'completed');
+    if (!projectId) return
+    const project = await window.electronAPI.fetchProjectById(projectId) // 最新のプロジェクト情報を取得
+
     if (masterImages.length === 0) {
       toast("確認", {
         description: "模範解答が1枚も登録されていません。このまま進みますか？",
@@ -75,7 +75,14 @@ export default function MasterImageStepPage() {
       })
       return
     }
-    router.push(`/projects/${projectId}/score/template`) // パスを /projects/ に修正
+    // プロジェクトにレイアウトが既に存在するか確認
+    if (project && project.layout) {
+      // レイアウトが存在する場合、次のステップは解答用紙アップロードの想定だが、
+      // このページは模範解答設定なので、常にレイアウト設定ページへ誘導する
+      router.push(`/projects/${projectId}/score/template`)
+    } else {
+      router.push(`/projects/${projectId}/score/template`)
+    }
   }
 
   if (isLoading) {

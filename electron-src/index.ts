@@ -1,11 +1,13 @@
 import { join } from "path"
 import { format } from "url"
 
-import { app, BrowserWindow, ipcMain, Menu, protocol } from "electron" // Import 'protocol'
+import { app, BrowserWindow, ipcMain, Menu, net, protocol } from "electron"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
 import menu from "./menu"
 
+import { Prisma } from "@prisma/client"
+import path from "path"
 import {
   createClass,
   deleteClass,
@@ -13,40 +15,54 @@ import {
   updateClass,
 } from "./lib/prisma/class"
 import {
-  uploadMasterImages,
   deleteMasterImage,
-  updateMasterImagesOrder, // インポート追加
+  updateMasterImagesOrder,
+  uploadMasterImages,
 } from "./lib/prisma/masterImage"
 import {
   createProject,
   deleteProject,
+  deleteProjectLayout,
+  duplicateProjectLayout,
   fetchProjectById,
+  fetchProjectLayoutById,
+  fetchProjectLayoutByProjectId,
   fetchProjects,
+  saveProjectLayout,
   updateProject,
   type CreateProjectProps,
-  saveProjectTemplate,
-  fetchProjectTemplateById,
-  fetchProjectTemplatesByProjectId,
-  deleteProjectTemplate,
+  type SaveProjectLayoutInput,
 } from "./lib/prisma/project"
 import { fetchStudents, importStudentsFromFile } from "./lib/prisma/student"
 import { createTag, deleteTag, updateTag } from "./lib/prisma/tag"
 import { fetchUsers, getCurrentUser } from "./lib/prisma/user"
-import path from "path"
-import { Prisma } from "@prisma/client"
 
 app.on("ready", async () => {
   await prepareNext(".")
 
-  // Register custom protocol to serve images from userData
-  protocol.registerFileProtocol("appimg", (request, callback) => {
-    // request.url will be like 'appimg://masterImages/project_id/image.png'
-    // We need to strip 'appimg://' to get the relative path
-    const relativePathInUserData = request.url.substring("appimg://".length)
-    // It's good practice to decode the URI component in case of special characters
-    const decodedRelativePath = decodeURI(relativePathInUserData)
-    const absolutePath = path.join(app.getPath("userData"), decodedRelativePath)
-    callback({ path: absolutePath })
+  protocol.handle("appimg", async (request) => {
+    try {
+      const relativePathInUserData = request.url.substring("appimg://".length)
+      const decodedRelativePath = decodeURI(relativePathInUserData)
+      const absolutePath = path.join(
+        app.getPath("userData"),
+        decodedRelativePath,
+      )
+
+      const fileURL = format({
+        pathname: absolutePath,
+        protocol: "file:",
+        slashes: true,
+      })
+      return net.fetch(fileURL)
+    } catch (error) {
+      console.error(
+        `Failed to handle 'appimg' protocol request ${request.url}:`,
+        error,
+      )
+
+      return new Response("File not found", { status: 404 })
+    }
   })
 
   const mainWindow = new BrowserWindow({
@@ -75,7 +91,6 @@ app.on("ready", async () => {
     mainWindow.webContents.send("score-panel", arg)
   })
 
-  // Project Handlers
   ipcMain.handle("fetch-projects", async () => {
     try {
       return await fetchProjects()
@@ -110,7 +125,9 @@ app.on("ready", async () => {
     "update-project",
     async (
       _event,
-      projectPayload: Prisma.ProjectGetPayload<{ include: { tags: true } }>,
+      projectPayload: Prisma.ProjectGetPayload<{
+        include: { tags: true }
+      }>,
     ) => {
       try {
         return await updateProject(projectPayload)
@@ -136,7 +153,6 @@ app.on("ready", async () => {
     },
   )
 
-  // Tag Handlers
   ipcMain.handle("create-tag", async (_event, tagText: string) => {
     try {
       return await createTag(tagText)
@@ -167,7 +183,6 @@ app.on("ready", async () => {
     }
   })
 
-  // User Handlers
   ipcMain.handle("fetch-users", async () => {
     try {
       return await fetchUsers()
@@ -185,7 +200,6 @@ app.on("ready", async () => {
     }
   })
 
-  // Class Handlers
   ipcMain.handle("fetch-classes", async () => {
     try {
       return await fetchClasses()
@@ -225,7 +239,6 @@ app.on("ready", async () => {
     }
   })
 
-  // Student Handlers
   ipcMain.handle("fetch-students", async () => {
     try {
       return await fetchStudents()
@@ -250,21 +263,6 @@ app.on("ready", async () => {
     },
   )
 
-  // REMOVE OR REFACTOR OLD EXAM HANDLERS
-  // ipcMain.handle("fetch-exams", async () => {
-  //   try {
-  //     return await fetchExams() // This would call the old exam logic
-  //   } catch (err) {
-  //     console.error("Error fetching exams:", err)
-  //     throw err
-  //   }
-  // })
-  // ipcMain.handle("fetch-exam-by-id", async (_event, examId: string) => { ... })
-  // ipcMain.handle("create-exam", async (_event, examData: CreateExamArgs) => { ... })
-  // ipcMain.handle("update-exam", async (_event, examData: UpdateExamArgs) => { ... })
-  // ipcMain.handle("delete-exam", async (_event, examId: string) => { ... })
-
-  // MasterImage Handlers
   ipcMain.handle(
     "upload-master-images",
     async (
@@ -309,8 +307,6 @@ app.on("ready", async () => {
     "resolve-file-protocol-path",
     async (_event, relativePath: string) => {
       try {
-        // Return the path using the custom 'appimg' protocol
-        // relativePath is already like "masterImages/PROJECT_ID/FILENAME.png"
         return `appimg://${relativePath}`
       } catch (err) {
         console.error("Error in IPC resolve-file-protocol-path:", err)
@@ -319,62 +315,63 @@ app.on("ready", async () => {
     },
   )
 
-  // ExamTemplate Handlers
   ipcMain.handle(
-    "save-project-template", // IPC名を変更
+    "save-project-layout",
+    async (_event, layoutData: SaveProjectLayoutInput) => {
+      try {
+        return await saveProjectLayout(layoutData)
+      } catch (err) {
+        console.error("Error saving project layout:", err)
+        throw err
+      }
+    },
+  )
+  ipcMain.handle(
+    "fetch-project-layout-by-id",
+    async (_event, layoutId: string) => {
+      try {
+        return await fetchProjectLayoutById(layoutId)
+      } catch (err) {
+        console.error("Error fetching project layout by ID:", err)
+        throw err
+      }
+    },
+  )
+  ipcMain.handle(
+    "fetch-project-layout-by-project-id",
+    async (_event, projectId: string) => {
+      try {
+        return await fetchProjectLayoutByProjectId(projectId)
+      } catch (err) {
+        console.error("Error fetching project layout by project ID:", err)
+        throw err
+      }
+    },
+  )
+  ipcMain.handle("delete-project-layout", async (_event, layoutId: string) => {
+    try {
+      return await deleteProjectLayout(layoutId)
+    } catch (err) {
+      console.error("Error deleting project layout:", err)
+      throw err
+    }
+  })
+  ipcMain.handle(
+    "duplicate-project-layout",
     async (
       _event,
-      templateData: // 型を project.ts の saveProjectTemplate に合わせる
-      | (Omit<Prisma.ExamTemplateCreateInput, "project" | "createdBy"> & {
-            projectId: string
-            createdById: string
-          })
-        | (Prisma.ExamTemplateUpdateInput & {
-            id: string
-            projectId?: string
-            createdById?: string
-          }),
+      sourceProjectId: string,
+      targetProjectId: string,
+      createdById: string,
     ) => {
       try {
-        return await saveProjectTemplate(templateData)
+        return await duplicateProjectLayout(
+          sourceProjectId,
+          targetProjectId,
+          createdById,
+        )
       } catch (err) {
-        console.error("Error saving project template:", err)
-        throw err
-      }
-    },
-  )
-  ipcMain.handle(
-    "fetch-project-template-by-id",
-    async (_event, templateId: string) => {
-      // IPC名を変更
-      try {
-        return await fetchProjectTemplateById(templateId)
-      } catch (err) {
-        console.error("Error fetching project template by ID:", err)
-        throw err
-      }
-    },
-  )
-  ipcMain.handle(
-    "fetch-project-templates-by-project-id",
-    async (_event, projectId: string) => {
-      // 新規追加
-      try {
-        return await fetchProjectTemplatesByProjectId(projectId)
-      } catch (err) {
-        console.error("Error fetching project templates by project ID:", err)
-        throw err
-      }
-    },
-  )
-  ipcMain.handle(
-    "delete-project-template",
-    async (_event, templateId: string) => {
-      // IPC名を変更
-      try {
-        return await deleteProjectTemplate(templateId)
-      } catch (err) {
-        console.error("Error deleting project template:", err)
+        console.error("Error duplicating project layout:", err)
         throw err
       }
     },

@@ -1,13 +1,18 @@
-import type { CreateProjectProps as BackendCreateProjectProps } from "@/electron-src/lib/prisma/project"
+import type {
+  CreateProjectProps as BackendCreateProjectProps,
+  SaveProjectLayoutInput as BackendSaveProjectLayoutInput, // SaveProjectTemplateInput を SaveProjectLayoutInput に変更
+} from "@/electron-src/lib/prisma/project"
 import {
   Prisma,
   type Tag,
   type User,
   type Class,
   type Student,
-  type Project, // Changed from Exam
+  type Project,
   type MasterImage,
-  type ExamTemplate,
+  type ProjectLayout, // ExamTemplate を ProjectLayout に変更
+  type LayoutRegion, // TemplateArea を LayoutRegion に変更
+  type TemplateAreaType,
 } from "@prisma/client"
 
 // Prismaの型を拡張してリレーションを含む型を定義
@@ -18,7 +23,15 @@ type ProjectWithDetails = Prisma.ProjectGetPayload<{
     user: true
     tags: true
     masterImages: true
-    templates: true
+    layout: { include: { areas: true } } // templates を layout に変更し、型も ProjectLayout を参照するようにする
+  }
+}>
+type ProjectLayoutWithDetails = Prisma.ProjectLayoutGetPayload<{
+  // 新しい型を追加
+  include: {
+    project: true
+    createdBy: true
+    areas: true
   }
 }>
 
@@ -49,6 +62,22 @@ export interface UpdateProjectArgs {
   tagIdsOrTexts?: (string | { id?: string; text: string })[]
   // scorerIds は Project モデルに scorer リレーションがないため削除 (または追加)
 }
+
+// ProjectLayout (旧ExamTemplate) 関連の型
+export type SaveLayoutRegionInput = Omit<
+  // TemplateAreaCreateInput を LayoutRegionCreateInput に変更
+  Prisma.LayoutRegionCreateWithoutProjectLayoutInput, // ExamTemplate を ProjectLayout に変更
+  "masterImage" // masterImageリレーションはmasterImageId経由で設定
+> & { id?: string; masterImageId: string }
+
+export type SaveProjectLayoutInput =
+  // 新規作成または更新。projectId で既存のものを探すか、新規作成する。
+  {
+    projectId: string // 必須
+    createdById: string // 必須 (新規作成時または更新時の最終更新者として)
+    areas?: SaveLayoutRegionInput[]
+    id?: string // 既存の ProjectLayout の ID (更新の場合)
+  }
 
 export interface MyAPI {
   // Project related - ensure these match useProjects.ts and backend
@@ -109,37 +138,25 @@ export interface MyAPI {
   ) => Promise<Prisma.BatchPayload> // Prismaのバッチ更新結果の型
   resolveFileProtocolPath: (relativePath: string) => Promise<string> // Added for displaying local files
 
-  // ProjectTemplate related (旧 ExamTemplate)
-  saveProjectTemplate: (
-    // メソッド名を変更
-    templateData:
-      | (Omit<Prisma.ExamTemplateCreateInput, "project" | "createdBy"> & {
-          projectId: string
-          createdById: string
-        })
-      | (Prisma.ExamTemplateUpdateInput & {
-          id: string
-          projectId?: string
-          createdById?: string
-        }),
-  ) => Promise<
-    Prisma.ExamTemplateGetPayload<{
-      include: { project: true; createdBy: true }
-    }>
-  > // project.ts の戻り値型に合わせる
-  fetchProjectTemplateById: (
-    templateId: string,
-  ) => Promise<Prisma.ExamTemplateGetPayload<{
-    include: { project: true; createdBy: true }
-  }> | null> // メソッド名を変更
-  fetchProjectTemplatesByProjectId: (projectId: string) => Promise<
-    Prisma.ExamTemplateGetPayload<{
-      include: { project: true; createdBy: true }
-    }>[]
-  > // 新規追加
-  deleteProjectTemplate: (
-    templateId: string,
-  ) => Promise<Prisma.ExamTemplateGetPayload<{}> | void> // メソッド名を変更
+  // ProjectLayout (旧ExamTemplate) related
+  saveProjectLayout: (
+    // saveExamTemplate を saveProjectLayout に変更
+    layoutData: SaveProjectLayoutInput,
+  ) => Promise<ProjectLayoutWithDetails> // 型名を変更
+  fetchProjectLayoutByProjectId: (
+    // fetchExamTemplate を fetchProjectLayoutByProjectId に変更
+    projectId: string,
+  ) => Promise<ProjectLayoutWithDetails | null> // 型名を変更
+  fetchProjectLayoutById: (
+    // 新規: IDでレイアウトを取得
+    layoutId: string,
+  ) => Promise<ProjectLayoutWithDetails | null>
+  deleteProjectLayout: (layoutId: string) => Promise<ProjectLayout | void> // deleteExamTemplate を deleteProjectLayout に変更
+  duplicateProjectLayout: (
+    sourceProjectId: string,
+    targetProjectId: string,
+    createdById: string,
+  ) => Promise<ProjectLayoutWithDetails | null>
 
   // IPC related (existing)
   sendScorePanel: (data: any) => Promise<void> // この重複は元のコードのまま残します
