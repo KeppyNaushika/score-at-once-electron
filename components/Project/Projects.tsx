@@ -86,13 +86,12 @@ const File = () => {
         <DeleteProjectWindow
           projectToDelete={
             deleteProjectModal.project as Prisma.ProjectGetPayload<{
-              // この型も ProjectWithDetails に合わせる
-              include: { tags: true; layout?: { include: { areas: true } } } // layout をオプショナルで追加
+              include: { tags: true; layout?: { include: { areas: true } } }
             }>
           }
           onClose={deleteProjectModal.close}
           onDelete={async () => {
-            selectedProject && (await deleteProject(selectedProject.projectId)) // projectId を渡すように変更
+            selectedProject && (await deleteProject(selectedProject))
             deleteProjectModal.close()
           }}
         />
@@ -103,12 +102,9 @@ const File = () => {
             <PlusCircle className="mr-2 h-4 w-4" />
             新規試験作成
           </Button>
-          {/* 「生徒名簿」「設定」ボタンを削除 */}
         </div>
 
-        {/* shadcn/ui Table */}
         <div className="p-4">
-          {/* テーブル周りにパディングを追加 */}
           <Table>
             <TableHeader>
               <TableRow>
