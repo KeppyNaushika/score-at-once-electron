@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -18,31 +19,25 @@ export default function LoginForm() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
-    // TODO: Implement actual login logic with electronAPI
-    console.log("Login attempt:", { username, password })
-    // Example:
-    // try {
-    //   const user = await window.electronAPI.loginUser(username, password);
-    //   if (user) {
-    //     // Navigate to dashboard or home
-    //     // router.push('/dashboard');
-    //   } else {
-    //     setError("ユーザー名またはパスワードが正しくありません。");
-    //   }
-    // } catch (err) {
-    //   setError("ログイン中にエラーが発生しました。");
-    //   console.error(err);
-    // }
-    alert(
-      "ログイン処理は未実装です。\nユーザー名: " +
-        username +
-        "\nパスワード: " +
-        password,
-    )
+    setIsLoading(true)
+
+    try {
+      const success = await login(username, password)
+      if (!success) {
+        setError("ユーザー名またはパスワードが正しくありません。")
+      }
+    } catch (err) {
+      setError("ログイン中にエラーが発生しました。")
+      console.error(err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -79,8 +74,8 @@ export default function LoginForm() {
           {error && <p className="text-sm text-red-500">{error}</p>}
         </CardContent>
         <CardFooter className="flex flex-col">
-          <Button type="submit" className="w-full">
-            ログイン
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? "ログイン中..." : "ログイン"}
           </Button>
           <p className="text-muted-foreground mt-4 text-center text-sm">
             アカウントをお持ちでないですか？{" "}
