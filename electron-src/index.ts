@@ -71,8 +71,9 @@ import {
 } from "./lib/prisma/questionSubtotalAssignment"
 
 import { fetchStudents, importStudentsFromFile } from "./lib/prisma/student"
-import { createTag, deleteTag, updateTag } from "./lib/prisma/tag"
+// import { createTag, deleteTag, updateTag } from "./lib/prisma/tag" // Tagモデルが未実装のため一時的にコメントアウト
 import { fetchUsers, getCurrentUser } from "./lib/prisma/user"
+import { loginUser, createUser, getUserByToken, updateUserPassword } from "./lib/prisma/auth"
 
 app.on("ready", async () => {
   await prepareNext(".")
@@ -188,35 +189,36 @@ app.on("ready", async () => {
     }
   })
 
-  ipcMain.handle("create-tag", async (_event, tagText: string) => {
-    try {
-      return await createTag(tagText)
-    } catch (err) {
-      console.error("Error creating tag:", err)
-      throw err
-    }
-  })
+  // Tag handlers temporarily disabled - Tag model not implemented
+  // ipcMain.handle("create-tag", async (_event, tagText: string) => {
+  //   try {
+  //     return await createTag(tagText)
+  //   } catch (err) {
+  //     console.error("Error creating tag:", err)
+  //     throw err
+  //   }
+  // })
 
-  ipcMain.handle(
-    "update-tag",
-    async (_event, tagId: string, newText: string) => {
-      try {
-        return await updateTag(tagId, newText)
-      } catch (err) {
-        console.error("Error updating tag:", err)
-        throw err
-      }
-    },
-  )
+  // ipcMain.handle(
+  //   "update-tag",
+  //   async (_event, tagId: string, newText: string) => {
+  //     try {
+  //       return await updateTag(tagId, newText)
+  //     } catch (err) {
+  //       console.error("Error updating tag:", err)
+  //       throw err
+  //     }
+  //   },
+  // )
 
-  ipcMain.handle("delete-tag", async (_event, tagId: string) => {
-    try {
-      return await deleteTag(tagId)
-    } catch (err) {
-      console.error("Error deleting tag:", err)
-      throw err
-    }
-  })
+  // ipcMain.handle("delete-tag", async (_event, tagId: string) => {
+  //   try {
+  //     return await deleteTag(tagId)
+  //   } catch (err) {
+  //     console.error("Error deleting tag:", err)
+  //     throw err
+  //   }
+  // })
 
   ipcMain.handle("fetch-users", async () => {
     try {
@@ -231,6 +233,48 @@ app.on("ready", async () => {
       return await getCurrentUser()
     } catch (err) {
       console.error("Error getting current user:", err)
+      throw err
+    }
+  })
+
+  // Authentication handlers
+  ipcMain.handle("login-user", async (_event, username: string, password: string) => {
+    try {
+      return await loginUser(username, password)
+    } catch (err) {
+      console.error("Error logging in user:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("create-user", async (_event, userData: {
+    username: string
+    password: string
+    name: string
+    role?: string
+  }) => {
+    try {
+      return await createUser(userData)
+    } catch (err) {
+      console.error("Error creating user:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("get-user-by-token", async (_event, token: string) => {
+    try {
+      return await getUserByToken(token)
+    } catch (err) {
+      console.error("Error getting user by token:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("update-user-password", async (_event, userId: string, newPassword: string) => {
+    try {
+      return await updateUserPassword(userId, newPassword)
+    } catch (err) {
+      console.error("Error updating user password:", err)
       throw err
     }
   })

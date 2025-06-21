@@ -2,10 +2,8 @@ import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
 import {
   CreateProjectArgs,
-  SaveProjectLayoutInput,
   UpdateProjectArgs,
-  ProjectLayoutWithDetails,
-} from "../types/electron" // パスを修正
+} from "../src/types/electron" // パスを修正
 
 declare global {
   namespace NodeJS {
@@ -36,14 +34,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteProject: (
     projectId: string, // project オブジェクトではなく projectId を直接渡す
   ) => ipcRenderer.invoke("delete-project", projectId),
-  createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
-  updateTag: (tagId: string, newText: string) =>
-    ipcRenderer.invoke("update-tag", tagId, newText),
-  deleteTag: (tagId: string) => ipcRenderer.invoke("delete-tag", tagId),
+  // Tag functions temporarily disabled
+  // createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
+  // updateTag: (tagId: string, newText: string) =>
+  //   ipcRenderer.invoke("update-tag", tagId, newText),
+  // deleteTag: (tagId: string) => ipcRenderer.invoke("delete-tag", tagId),
 
   // User related
   fetchUsers: () => ipcRenderer.invoke("fetch-users"),
   getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
+  
+  // Authentication related
+  loginUser: (username: string, password: string) =>
+    ipcRenderer.invoke("login-user", username, password),
+  createUser: (userData: { username: string; password: string; name: string; role?: string }) =>
+    ipcRenderer.invoke("create-user", userData),
+  getUserByToken: (token: string) =>
+    ipcRenderer.invoke("get-user-by-token", token),
+  updateUserPassword: (userId: string, newPassword: string) =>
+    ipcRenderer.invoke("update-user-password", userId, newPassword),
 
   // Class related
   fetchClasses: () => ipcRenderer.invoke("fetch-classes"),
@@ -75,34 +84,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // New API to resolve file path for display
   resolveFileProtocolPath: (relativePath: string) =>
     ipcRenderer.invoke("resolve-file-protocol-path", relativePath),
-  saveProjectLayout: (
-    // saveExamTemplate を saveProjectLayout に変更
-    layoutData: SaveProjectLayoutInput, // 型名を変更
-  ): Promise<ProjectLayoutWithDetails> =>
-    ipcRenderer.invoke("save-project-layout", layoutData), // IPC名を変更、戻り値の型を追加
-  fetchProjectLayoutByProjectId: (
-    projectId: string,
-  ): Promise<ProjectLayoutWithDetails | null> => // fetchExamTemplate を fetchProjectLayoutByProjectId に変更
-    ipcRenderer.invoke("fetch-project-layout-by-project-id", projectId), // IPC名を変更、戻り値の型を追加
-  fetchProjectLayoutById: (
-    layoutId: string,
-  ): Promise<ProjectLayoutWithDetails | null> => // 新規追加
-    ipcRenderer.invoke("fetch-project-layout-by-id", layoutId),
-  deleteProjectLayout: (
-    layoutId: string,
-  ): Promise<Prisma.ProjectLayoutGetPayload<{}> | void> => // deleteExamTemplate を deleteProjectLayout に変更
-    ipcRenderer.invoke("delete-project-layout", layoutId), // IPC名を変更、戻り値の型を追加
-  duplicateProjectLayout: (
-    sourceProjectId: string,
-    targetProjectId: string,
-    createdById: string,
-  ): Promise<ProjectLayoutWithDetails | null> =>
-    ipcRenderer.invoke(
-      "duplicate-project-layout",
-      sourceProjectId,
-      targetProjectId,
-      createdById,
-    ),
+  // Layout region functions (moved to new API)
+  createLayoutRegion: (data: any) => ipcRenderer.invoke("create-layout-region", data),
+  updateLayoutRegion: (id: string, data: any) => ipcRenderer.invoke("update-layout-region", id, data),
+  deleteLayoutRegion: (id: string) => ipcRenderer.invoke("delete-layout-region", id),
+  getLayoutRegionsByProjectId: (projectId: string) => ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
 
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>

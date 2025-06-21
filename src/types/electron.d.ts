@@ -1,6 +1,6 @@
 import type {
   Prisma,
-  Tag,
+  // Tag, // Tag model not implemented yet
   User,
   Class,
   Student,
@@ -137,14 +137,42 @@ export interface MyAPI {
   ) => Promise<ProjectWithDetails>
   deleteProject: (projectId: string) => Promise<Project | void> // Prisma.Project or void
 
-  // Tag related (assuming these are still needed and correctly defined elsewhere)
-  createTag: (tagText: string) => Promise<Tag>
-  updateTag: (tagId: string, newText: string) => Promise<Tag>
-  deleteTag: (tagId: string) => Promise<Tag | void>
+  // Tag related - temporarily disabled
+  // createTag: (tagText: string) => Promise<Tag>
+  // updateTag: (tagId: string, newText: string) => Promise<Tag>
+  // deleteTag: (tagId: string) => Promise<Tag | void>
 
   // User related
   fetchUsers: () => Promise<User[]>
   getCurrentUser: () => Promise<User | null>
+  
+  // Authentication related
+  loginUser: (username: string, password: string) => Promise<{
+    success: boolean
+    user?: { id: string; username: string; name: string; role: string }
+    token?: string
+    error?: string
+  }>
+  createUser: (userData: {
+    username: string
+    password: string
+    name: string
+    role?: string
+  }) => Promise<{
+    success: boolean
+    user?: { id: string; username: string; name: string; role: string }
+    token?: string
+    error?: string
+  }>
+  getUserByToken: (token: string) => Promise<{
+    success: boolean
+    user?: { id: string; username: string; name: string; role: string }
+    error?: string
+  }>
+  updateUserPassword: (userId: string, newPassword: string) => Promise<{
+    success: boolean
+    error?: string
+  }>
 
   // Class related
   fetchClasses: () => Promise<ClassWithStudents[]>

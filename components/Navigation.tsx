@@ -2,15 +2,18 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 import {
   Home,
   LayoutDashboard,
   Settings,
   LogIn,
+  LogOut,
   Users,
   FileText,
   ChevronsLeft,
   ChevronsRight,
+  User,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -41,6 +44,7 @@ export default function Navigation({
   toggleSidebar,
 }: NavigationProps) {
   const pathname = usePathname()
+  const { user, logout } = useAuth()
 
   return (
     <aside
@@ -116,34 +120,89 @@ export default function Navigation({
       <div
         className={cn("mt-auto border-t p-2", isSidebarMinimized ? "" : "p-4")}
       >
-        {isSidebarMinimized ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
+        {user ? (
+          <>
+            {isSidebarMinimized ? (
+              <div className="space-y-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex justify-center">
+                      <User className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={5}>
+                    {user.name} ({user.username})
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="w-full justify-center"
+                      onClick={logout}
+                      aria-label="ログアウト"
+                    >
+                      <LogOut className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={5}>
+                    ログアウト
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-2 py-1">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <div className="flex-1 truncate text-sm">
+                    <p className="font-medium">{user.name}</p>
+                    <p className="text-xs text-muted-foreground">{user.username}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={logout}
+                >
+                  <LogOut className="mr-3 h-5 w-5" />
+                  ログアウト
+                </Button>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {isSidebarMinimized ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/login" passHref>
+                    <Button
+                      variant={pathname === "/login" ? "secondary" : "ghost"}
+                      size="icon"
+                      className="w-full justify-center"
+                      aria-label="ログイン"
+                    >
+                      <LogIn className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={5}>
+                  ログイン
+                </TooltipContent>
+              </Tooltip>
+            ) : (
               <Link href="/login" passHref>
                 <Button
                   variant={pathname === "/login" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="w-full justify-center"
-                  aria-label="ログイン"
+                  className="w-full justify-start"
                 >
-                  <LogIn className="h-5 w-5" />
+                  <LogIn className="mr-3 h-5 w-5" />
+                  ログイン
                 </Button>
               </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right" sideOffset={5}>
-              ログイン
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Link href="/login" passHref>
-            <Button
-              variant={pathname === "/login" ? "secondary" : "ghost"}
-              className="w-full justify-start"
-            >
-              <LogIn className="mr-3 h-5 w-5" />
-              ログイン
-            </Button>
-          </Link>
+            )}
+          </>
         )}
       </div>
     </aside>
