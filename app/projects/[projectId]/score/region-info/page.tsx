@@ -6,6 +6,7 @@ import { AreaType, MasterImage, Project, User } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+import PageHeader from "@/components/common/PageHeader"
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -241,31 +242,17 @@ export default function RegionInfoPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Header */}
-      <div className="bg-background border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">領域情報編集</h1>
-            <p className="text-muted-foreground text-sm">
-              {project?.examName} - 各領域の詳細情報を設定
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button 
-              onClick={() => router.push(`/projects/${projectId}/score/template`)} 
-              variant="outline"
-            >
-              戻る: 採点領域
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/projects/${projectId}`)}
-            >
-              完了
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="領域情報編集"
+        description="各領域の詳細情報を設定"
+        projectName={project?.examName}
+      >
+        <Button
+          onClick={() => router.push(`/projects/${projectId}`)}
+        >
+          次へ: 答案アップロード
+        </Button>
+      </PageHeader>
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">

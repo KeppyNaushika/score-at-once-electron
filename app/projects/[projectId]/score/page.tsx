@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Prisma } from "@prisma/client"
 import { toast } from "sonner" // sonnerのtoastを直接使用
 import MasterImageManager from "@/components/Project/MasterImageManager"
+import PageHeader from "@/components/common/PageHeader"
 
 export default function MasterImageStepPage() {
   const params = useParams()
@@ -18,19 +19,22 @@ export default function MasterImageStepPage() {
     Prisma.MasterImageGetPayload<{}>[]
   >([])
   const [isLoading, setIsLoading] = useState(true)
+  const [project, setProject] = useState<any>(null)
 
   const loadMasterImages = useCallback(async () => {
     if (!projectId) return
     setIsLoading(true)
     try {
-      const project = await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
-      if (project && project.masterImages) {
+      const fetchedProject = await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
+      if (fetchedProject && fetchedProject.masterImages) {
+        setProject(fetchedProject)
         // pageNumber でソートしてセット
-        const sortedImages = [...project.masterImages].sort(
+        const sortedImages = [...fetchedProject.masterImages].sort(
           (a, b) => a.pageNumber - b.pageNumber,
         )
         setMasterImages(sortedImages)
       } else {
+        setProject(fetchedProject)
         setMasterImages([])
       }
     } catch (error) {
@@ -97,24 +101,17 @@ export default function MasterImageStepPage() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="bg-background border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">模範解答の設定</h1>
-            <p className="text-muted-foreground text-sm">
-              PDFまたは画像ファイルをアップロードして模範解答を設定します
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {masterImages.length > 0 && (
-              <Button onClick={goToNextStep} disabled={isLoading}>
-                次へ: 採点領域作成
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="模範解答の設定"
+        description="PDFまたは画像ファイルをアップロードして模範解答を設定します"
+        projectName={project?.examName}
+      >
+        {masterImages.length > 0 && (
+          <Button onClick={goToNextStep} disabled={isLoading}>
+            次へ: 採点領域作成
+          </Button>
+        )}
+      </PageHeader>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden p-6">

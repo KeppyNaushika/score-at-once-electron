@@ -15,6 +15,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+import PageHeader from "@/components/common/PageHeader"
 
 export default function TemplateStepPage() {
   const params = useParams()
@@ -407,22 +408,17 @@ export default function TemplateStepPage() {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="bg-background border-b px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">採点領域の作成</h1>
-            <p className="text-muted-foreground text-sm">
-              {project?.examName} - ドラッグして採点領域を作成
-            </p>
-          </div>
-          {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
-            <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)}>
-              次へ: 領域情報を編集
-            </Button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="採点領域の作成"
+        description="ドラッグして採点領域を作成"
+        projectName={project?.examName}
+      >
+        {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
+          <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)}>
+            次へ: 領域情報を編集
+          </Button>
+        )}
+      </PageHeader>
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex flex-col">
