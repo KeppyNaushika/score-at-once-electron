@@ -341,7 +341,7 @@ const ImageCanvas = ({
                   <div
                     key={area.id || `area-${index}`}
                     onMouseDown={(e) => handleAreaMouseDown(e, index)}
-                    className="group absolute transition-all duration-200 hover:z-10"
+                    className="group absolute hover:z-10"
                     style={{
                       left: `${area.x * 100}%`,
                       top: `${area.y * 100}%`,

@@ -1,7 +1,7 @@
 "use client"
 
 import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
-import RegionDetailsEditor from "@/components/Project/RegionDetailsEditor"
+import RegionDetailsTable from "@/components/Project/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -25,6 +25,10 @@ export default function TemplateStepPage() {
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
   const [step, setStep] = useState<"create" | "edit">("create") // 2段階のステップ
+  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
+    null,
+  )
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
@@ -180,6 +184,86 @@ export default function TemplateStepPage() {
       }
     }
   }
+
+  const autoSaveRegions = useCallback(
+    async (regions: any[]) => {
+      if (!projectId || !currentUser) return
+
+      try {
+        const savePromises = regions.map(async (area) => {
+          if (!area.masterImageId) return null
+
+          const regionData = {
+            projectId,
+            masterImageId: area.masterImageId,
+            type: area.type,
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: area.height,
+            label: area.label,
+            points: area.points ? parseInt(area.points) : null,
+            questionNumber: area.questionNumber,
+            sourceAreaIdsJson: area.sourceAreaIdsJson,
+            sourceQuestionNumbersJson: area.sourceQuestionNumbersJson,
+          }
+
+          if (area.id) {
+            return await window.electronAPI.updateLayoutRegion(
+              area.id,
+              regionData,
+            )
+          } else {
+            return await window.electronAPI.createLayoutRegion(regionData)
+          }
+        })
+
+        const savedRegions = await Promise.all(savePromises.filter(Boolean))
+
+        if (savedRegions.length > 0) {
+          setLayoutRegions(
+            savedRegions.map((region) => ({
+              id: region.id,
+              type: region.type,
+              x: region.x,
+              y: region.y,
+              width: region.width,
+              height: region.height,
+              label: region.label || "",
+              points: region.points ? String(region.points) : null,
+              questionNumber: region.questionNumber || "",
+              sourceAreaIdsJson: null,
+              sourceQuestionNumbersJson: null,
+              masterImageId: region.masterImageId || "",
+            })),
+          )
+          setLayoutId("saved")
+        }
+      } catch (error) {
+        console.error("Auto-save failed:", error)
+      }
+    },
+    [projectId, currentUser],
+  )
+
+  const handleRegionsChange = useCallback(
+    (newRegions: any[]) => {
+      setLayoutRegions(newRegions)
+
+      // Clear existing timeout
+      if (saveTimeoutId) {
+        clearTimeout(saveTimeoutId)
+      }
+
+      // Set new timeout for auto-save
+      const timeoutId = setTimeout(() => {
+        autoSaveRegions(newRegions)
+      }, 1000) // Auto-save after 1 second of inactivity
+
+      setSaveTimeoutId(timeoutId)
+    },
+    [saveTimeoutId, autoSaveRegions],
+  )
 
   const handleSaveTemplate = async () => {
     if (!projectId || !currentUser || !selectedMasterImage) {
@@ -398,7 +482,7 @@ export default function TemplateStepPage() {
         <div className="flex-1 overflow-hidden">
           <LayoutRegionEditor
             areas={layoutRegions}
-            setAreas={setLayoutRegions}
+            setAreas={handleRegionsChange}
             disabled={isSaving}
             backgroundImageUrl={backgroundImageUrl}
             imageDimensions={imageDimensions}
@@ -455,28 +539,37 @@ export default function TemplateStepPage() {
                 className="w-full object-contain"
               />
               {/* Overlay regions */}
-              {layoutRegions.map((area, index) => (
-                <div
-                  key={area.id || `area-${index}`}
-                  className="absolute border-2 border-blue-500 bg-blue-500/20"
-                  style={{
-                    left: `${area.x * 100}%`,
-                    top: `${area.y * 100}%`,
-                    width: `${area.width * 100}%`,
-                    height: `${area.height * 100}%`,
-                  }}
-                />
-              ))}
+              {layoutRegions.map((area, index) => {
+                const isSelected = selectedRowIndex === index
+                return (
+                  <div
+                    key={area.id || `area-${index}`}
+                    className={`absolute border-2 ${
+                      isSelected 
+                        ? "border-orange-500 bg-orange-500/30"
+                        : "border-blue-500 bg-blue-500/20"
+                    }`}
+                    style={{
+                      left: `${area.x * 100}%`,
+                      top: `${area.y * 100}%`,
+                      width: `${area.width * 100}%`,
+                      height: `${area.height * 100}%`,
+                    }}
+                  />
+                )
+              })}
             </div>
           )}
         </div>
 
-        {/* Right: Region Details Form */}
+        {/* Right: Region Details Table */}
         <div className="flex-1 overflow-y-auto">
-          <RegionDetailsEditor
+          <RegionDetailsTable
             regions={layoutRegions}
-            setRegions={setLayoutRegions}
+            setRegions={handleRegionsChange}
             disabled={isSaving}
+            selectedRowIndex={selectedRowIndex}
+            setSelectedRowIndex={setSelectedRowIndex}
           />
         </div>
       </div>
