@@ -22,9 +22,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
   fetchProjectById: (projectId: string) =>
     ipcRenderer.invoke("fetch-project-by-id", projectId),
-  createProject: (props: CreateProjectArgs) => {
-    // CreateProjectProps を CreateProjectArgs に変更
-    return ipcRenderer.invoke("create-project", props)
+  createProject: (props: CreateProjectArgs, userId: string) => {
+    return ipcRenderer.invoke("create-project", props, userId)
   },
   updateProject: (
     projectPayload: UpdateProjectArgs, // Prisma.ProjectGetPayload<{ include: { tags: true } }> を UpdateProjectArgs に変更
@@ -53,6 +52,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-user-by-token", token),
   updateUserPassword: (userId: string, newPassword: string) =>
     ipcRenderer.invoke("update-user-password", userId, newPassword),
+
+  // Answer sheet related
+  uploadAnswerSheets: (
+    projectId: string,
+    filesData: {
+      name: string
+      type: string
+      buffer: ArrayBuffer
+      studentId?: string
+      pageNumber?: number
+    }[]
+  ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
+  getAnswerSheetsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
+  deleteAnswerSheet: (answerSheetId: string) =>
+    ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
+  associateAnswerSheetWithStudent: (answerSheetId: string, studentId: string) =>
+    ipcRenderer.invoke("associate-answer-sheet-with-student", answerSheetId, studentId),
+  setAnswerSheetAbsent: (answerSheetId: string, isAbsent: boolean) =>
+    ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
+  getAnswerSheetById: (answerSheetId: string) =>
+    ipcRenderer.invoke("get-answer-sheet-by-id", answerSheetId),
 
   // Class related
   fetchClasses: () => ipcRenderer.invoke("fetch-classes"),

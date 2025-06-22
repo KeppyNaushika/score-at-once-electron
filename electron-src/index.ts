@@ -74,9 +74,21 @@ import { fetchStudents, importStudentsFromFile } from "./lib/prisma/student"
 // import { createTag, deleteTag, updateTag } from "./lib/prisma/tag" // Tagモデルが未実装のため一時的にコメントアウト
 import { fetchUsers, getCurrentUser } from "./lib/prisma/user"
 import { loginUser, createUser, getUserByToken, updateUserPassword } from "./lib/prisma/auth"
+import {
+  uploadAnswerSheets,
+  getAnswerSheetsByProjectId,
+  deleteAnswerSheet,
+  associateAnswerSheetWithStudent,
+  setAnswerSheetAbsent,
+  getAnswerSheetById,
+} from "./lib/prisma/answerSheet"
 
 app.on("ready", async () => {
-  await prepareNext(".")
+  if (isDev) {
+    // 開発環境では electron-next は使わない
+  } else {
+    await prepareNext("./")
+  }
 
   protocol.handle("appimg", async (request) => {
     try {
@@ -110,13 +122,14 @@ app.on("ready", async () => {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false, // 開発環境でのみ使用
     },
   })
 
   const url = isDev
-    ? "http://localhost:8000/"
+    ? "http://localhost:3000"
     : format({
-        pathname: join(__dirname, "../out/index.html"),
+        pathname: join(__dirname, "../renderer/out/index.html"),
         protocol: "file:",
         slashes: true,
       })
@@ -149,16 +162,13 @@ app.on("ready", async () => {
 
   ipcMain.handle(
     "create-project",
-    // The type for projectData should come from electron.d.ts or be Prisma.ProjectCreateInput
-    // For now, assuming it aligns with what dbCreateProject expects after Omit.
     async (
       _event,
-      projectData: Omit<Prisma.ProjectCreateInput, "createdBy">,
+      projectData: Omit<Prisma.ProjectCreateInput, "user">,
       userId: string,
     ) => {
       try {
         if (!userId) throw new Error("User ID is required to create a project.")
-        // dbCreateProject now expects 2 arguments based on its definition in project.ts
         return await dbCreateProject(projectData, userId)
       } catch (err) {
         console.error("Error creating project:", err)
@@ -275,6 +285,83 @@ app.on("ready", async () => {
       return await updateUserPassword(userId, newPassword)
     } catch (err) {
       console.error("Error updating user password:", err)
+      throw err
+    }
+  })
+
+  // Answer sheet handlers
+  ipcMain.handle(
+    "upload-answer-sheets",
+    async (
+      _event,
+      projectId: string,
+      filesData: {
+        name: string
+        type: string
+        buffer: ArrayBuffer
+        studentId?: string
+        pageNumber?: number
+      }[]
+    ) => {
+      try {
+        return await uploadAnswerSheets(projectId, filesData)
+      } catch (err) {
+        console.error("Error uploading answer sheets:", err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle(
+    "get-answer-sheets-by-project-id",
+    async (_event, projectId: string) => {
+      try {
+        return await getAnswerSheetsByProjectId(projectId)
+      } catch (err) {
+        console.error("Error fetching answer sheets:", err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle("delete-answer-sheet", async (_event, answerSheetId: string) => {
+    try {
+      return await deleteAnswerSheet(answerSheetId)
+    } catch (err) {
+      console.error("Error deleting answer sheet:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle(
+    "associate-answer-sheet-with-student",
+    async (_event, answerSheetId: string, studentId: string) => {
+      try {
+        return await associateAnswerSheetWithStudent(answerSheetId, studentId)
+      } catch (err) {
+        console.error("Error associating answer sheet with student:", err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle(
+    "set-answer-sheet-absent",
+    async (_event, answerSheetId: string, isAbsent: boolean) => {
+      try {
+        return await setAnswerSheetAbsent(answerSheetId, isAbsent)
+      } catch (err) {
+        console.error("Error setting answer sheet absent status:", err)
+        throw err
+      }
+    }
+  )
+
+  ipcMain.handle("get-answer-sheet-by-id", async (_event, answerSheetId: string) => {
+    try {
+      return await getAnswerSheetById(answerSheetId)
+    } catch (err) {
+      console.error("Error fetching answer sheet by ID:", err)
       throw err
     }
   })

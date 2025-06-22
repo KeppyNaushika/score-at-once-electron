@@ -20,6 +20,28 @@ import type {
   AnswerSheet,
 } from "@prisma/client"
 
+// Answer sheet related types
+export type AnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
+  include: {
+    student: true
+    project: true
+    questionScores: {
+      include: {
+        layoutRegion: true
+        scoredByUser: true
+      }
+    }
+  }
+}>
+
+export interface UploadAnswerSheetFileData {
+  name: string
+  type: string
+  buffer: ArrayBuffer
+  studentId?: string
+  pageNumber?: number
+}
+
 // Prismaの型を拡張してリレーションを含む型を定義
 type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
 type StudentWithClass = Prisma.StudentGetPayload<{ include: { class: true } }>
@@ -45,11 +67,11 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
 
 // Replaced BackendCreateProjectProps with a more specific type based on Project model
 export interface CreateProjectArgs {
-  name: string
+  examName: string
   description?: string | null
-  projectDate?: Date | null
+  examDate?: Date | null
   subject?: string | null
-  // createdById is handled by the backend via userId argument
+  // userId is handled by the backend via userId argument
   // sessions (collaborators) can be added separately
   // questionGroups can be added separately
 }
@@ -171,6 +193,40 @@ export interface MyAPI {
   }>
   updateUserPassword: (userId: string, newPassword: string) => Promise<{
     success: boolean
+    error?: string
+  }>
+
+  // Answer sheet related
+  uploadAnswerSheets: (
+    projectId: string,
+    filesData: UploadAnswerSheetFileData[]
+  ) => Promise<{
+    success: boolean
+    answerSheets?: AnswerSheetWithDetails[]
+    error?: string
+  }>
+  getAnswerSheetsByProjectId: (projectId: string) => Promise<{
+    success: boolean
+    answerSheets?: AnswerSheetWithDetails[]
+    error?: string
+  }>
+  deleteAnswerSheet: (answerSheetId: string) => Promise<{
+    success: boolean
+    error?: string
+  }>
+  associateAnswerSheetWithStudent: (answerSheetId: string, studentId: string) => Promise<{
+    success: boolean
+    answerSheet?: AnswerSheetWithDetails
+    error?: string
+  }>
+  setAnswerSheetAbsent: (answerSheetId: string, isAbsent: boolean) => Promise<{
+    success: boolean
+    answerSheet?: AnswerSheetWithDetails
+    error?: string
+  }>
+  getAnswerSheetById: (answerSheetId: string) => Promise<{
+    success: boolean
+    answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
 

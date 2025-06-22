@@ -1,3 +1,4 @@
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,8 +9,9 @@ export default function SettingsPage() {
   // TODO: Load and save settings using electronAPI
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-semibold">設定</h1>
+    <ProtectedRoute>
+      <div className="container mx-auto p-4">
+        <h1 className="mb-6 text-2xl font-semibold">設定</h1>
 
       <div className="space-y-8">
         <Card>
@@ -81,6 +83,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }

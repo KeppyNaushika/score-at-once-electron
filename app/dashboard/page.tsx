@@ -1,35 +1,74 @@
+'use client'
+
+import { useRouter } from "next/navigation"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
+import Projects from "@/components/Project/Projects"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Plus, Upload, Users, BarChart3 } from "lucide-react"
+import { useFileActions } from "@/components/hooks/useFileActions"
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const { createProjectModal } = useFileActions()
+
+  const handleNewProject = () => {
+    createProjectModal.open()
+  }
+
+  const handleStudentManagement = () => {
+    router.push('/students')
+  }
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="mb-6 text-2xl font-semibold">ダッシュボード</h1>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+    <ProtectedRoute>
+      <div className="space-y-6">
+        {/* Quick Actions */}
+        <Card className="bg-gradient-to-r from-blue-500 to-purple-600 text-white">
           <CardHeader>
-            <CardTitle>あなたの採点状況</CardTitle>
+            <CardTitle className="text-white">クイックアクション</CardTitle>
           </CardHeader>
           <CardContent>
-            <p>ここに採点進捗などの情報を表示します。</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Button 
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={handleNewProject}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                新規試験
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                disabled
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                答案アップロード
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                onClick={handleStudentManagement}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                生徒管理
+              </Button>
+              <Button 
+                variant="outline" 
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                disabled
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                採点状況
+              </Button>
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>要対応タスク</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>保留中の答案やレビュー待ちの項目などを表示します。</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>最近の活動</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>最近の操作ログや通知などを表示します。</p>
-          </CardContent>
-        </Card>
+
+        {/* Projects List */}
+        <Projects />
       </div>
-    </div>
+    </ProtectedRoute>
   )
 }

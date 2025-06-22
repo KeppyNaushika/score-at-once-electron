@@ -2,13 +2,12 @@
 
 import React from "react"
 import {
-  Circle,
-  CircleDot,
-  Edit3,
-  FileText,
-  Trash2,
   PlusCircle,
-  PlayCircle, // PlayCircle アイコンを追加
+  PlayCircle,
+  FileImage,
+  Settings,
+  Upload,
+  Eye,
 } from "lucide-react"
 import { Prisma } from "@prisma/client"
 import { useRouter } from "next/navigation" // useRouter をインポート
@@ -22,11 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { useProjects } from "../hooks/useProjects" // useProjects が ProjectWithDetails を使う場合、その型変更の影響を受ける
+import { useProjects } from "../hooks/useProjects"
 import { useFileActions } from "../hooks/useFileActions"
 import CreateProjectWindow from "./CreateProjectWindow"
-import DeleteProjectWindow from "./DeleteProjectWindow"
-import EditProjectWindow from "./EditProjectWindow"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -40,60 +37,39 @@ import {
 const File = () => {
   const {
     projects,
-    selectedProject, // この型が ProjectWithDetails の場合、変更の影響を受ける
-    setSelectedProject,
-    // createProject,
-    updateProject,
-    deleteProject,
+    loadProjects,
   } = useProjects()
 
-  const { createProjectModal, editProjectModal, deleteProjectModal } =
-    useFileActions()
+  const { createProjectModal } = useFileActions()
   const router = useRouter()
 
-  const handleStartScoring = () => {
-    if (selectedProject) {
-      // selectedProject.layout が存在するかどうかで、採点枠設定済みか判断できる
-      if (selectedProject.layout) {
-        router.push(`/projects/${selectedProject.projectId}/score/upload`) // 採点枠設定済みなら解答用紙アップロードへ
-      } else {
-        router.push(`/projects/${selectedProject.projectId}/score`) // 未設定なら模範解答設定から
-      }
-    }
+  const handleStartScoring = (project: any) => {
+    // プロジェクト詳細ページに遷移
+    router.push(`/projects/${project.id}`)
+  }
+
+  const getProjectStatus = (project: any) => {
+    const hasImages = project.masterImages && project.masterImages.length > 0
+    const hasLayout = project.layout && project.layout.areas && project.layout.areas.length > 0
+    const hasAnswers = project.answerSheets && project.answerSheets.length > 0
+    
+    if (!hasImages) return { step: 1, action: 'upload-master', text: '模範解答をアップロード', url: `/projects/${project.id}/master-images` }
+    if (!hasLayout) return { step: 2, action: 'setup-regions', text: '採点領域を設定', url: `/projects/${project.id}/score/template` }
+    if (!hasAnswers) return { step: 3, action: 'upload-answers', text: '答案をアップロード', url: `/projects/${project.id}/answer-sheets` }
+    return { step: 4, action: 'start-grading', text: '採点を開始', url: `/projects/${project.id}/score` }
+  }
+
+  const handleNextStep = (project: any) => {
+    const status = getProjectStatus(project)
+    router.push(status.url)
   }
 
   return (
     <>
       {createProjectModal.isOpen && (
-        <CreateProjectWindow onClose={createProjectModal.close} />
-      )}
-      {editProjectModal.isOpen && selectedProject && (
-        <EditProjectWindow
-          projectToEdit={selectedProject}
-          setIsShowEditProjectWindow={editProjectModal.close}
-          onSave={async (updatedProjectPayload) => {
-            // Ensure updatedProjectPayload matches the type expected by updateProject
-            // The useProjects hook's updateProject expects Prisma.ProjectGetPayload<{ include: { tags: true } }>
-            // but your EditProjectWindow onSave provides a similar type.
-            // This might need alignment if types diverge significantly.
-            // For now, assuming they are compatible enough or onSave prepares the correct type.
-            await updateProject(updatedProjectPayload as any) // Cast if necessary, better to align types
-            editProjectModal.close()
-          }}
-        />
-      )}
-      {deleteProjectModal.isOpen && deleteProjectModal.project && (
-        <DeleteProjectWindow
-          projectToDelete={
-            deleteProjectModal.project as Prisma.ProjectGetPayload<{
-              include: { tags: true; layout?: { include: { areas: true } } }
-            }>
-          }
-          onClose={deleteProjectModal.close}
-          onDelete={async () => {
-            selectedProject && (await deleteProject(selectedProject))
-            deleteProjectModal.close()
-          }}
+        <CreateProjectWindow 
+          onClose={createProjectModal.close} 
+          onProjectCreated={loadProjects}
         />
       )}
       <div className="flex min-w-full flex-col">
@@ -108,112 +84,64 @@ const File = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-20 text-center">
-                  <FileText size={16} />
-                </TableHead>
-                <TableHead>名前</TableHead>
-                <TableHead className="w-80">日時</TableHead>
-                <TableHead className="w-32 text-center">アクション</TableHead>
+                <TableHead>プロジェクト名</TableHead>
+                <TableHead className="w-32 text-center">詳細</TableHead>
+                <TableHead className="w-40 text-center">次のステップ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projects.map((project) => (
-                <TableRow key={project.projectId}>
-                  <TableCell
-                    className="cursor-pointer text-center"
-                    onClick={() => setSelectedProject(project)} // 変更: clickExam を直接 setSelectedProjectId に
-                  >
-                    {project === selectedProject ? (
-                      <CircleDot
-                        size={24}
-                      /> /* MdRadioButtonChecked を CircleDot に置き換え */
-                    ) : (
-                      <Circle
-                        size={24}
-                      /> /* MdRadioButtonUnchecked を Circle に置き換え */
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {project.examName}
-                  </TableCell>
-                  <TableCell>
-                    {project.examDate
-                      ? new Date(project.examDate).toLocaleDateString()
-                      : "N/A"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center space-x-2">
-                      <Edit3 // MdEdit を Edit3 に置き換え
-                        size={24}
-                        className="cursor-pointer text-blue-500 hover:text-blue-700"
-                        onClick={() => editProjectModal.open(project.projectId)}
-                      />
-                      <Trash2 // MdDelete を Trash2 に置き換え
-                        size={24}
-                        className="cursor-pointer text-red-500 hover:text-red-700"
-                        onClick={() =>
-                          deleteProjectModal.open(
-                            project as Prisma.ProjectGetPayload<{
-                              include: { tags: true }
-                            }>,
-                          )
-                        }
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {projects.map((project) => {
+                const status = getProjectStatus(project)
+                
+                return (
+                  <TableRow key={project.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{project.examName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {project.examDate
+                            ? new Date(project.examDate).toLocaleDateString('ja-JP')
+                            : "実施日未設定"}
+                          {project.tags && project.tags.length > 0 && (
+                            <span className="ml-2">
+                              {project.tags.map(tag => tag.text).join(', ')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    
+                    <TableCell className="text-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStartScoring(project)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        詳細
+                      </Button>
+                    </TableCell>
+                    
+                    <TableCell className="text-center">
+                      <Button
+                        size="sm"
+                        onClick={() => handleNextStep(project)}
+                        className={status.step === 4 ? 'bg-green-600 hover:bg-green-700' : ''}
+                      >
+                        {status.step === 1 && <FileImage className="h-4 w-4 mr-1" />}
+                        {status.step === 2 && <Settings className="h-4 w-4 mr-1" />}
+                        {status.step === 3 && <Upload className="h-4 w-4 mr-1" />}
+                        {status.step === 4 && <PlayCircle className="h-4 w-4 mr-1" />}
+                        <span className="text-xs">{status.text}</span>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
 
-        {selectedProject && (
-          <div className="p-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  選択中のプロジェクト詳細: {selectedProject.examName}
-                </CardTitle>
-                {selectedProject.description && (
-                  <CardDescription>
-                    {selectedProject.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  {" "}
-                  {/* mb-2 から mb-4 に変更 */}
-                  <span className="font-medium">科目 (タグ): </span>
-                  {selectedProject.tags && selectedProject.tags.length > 0 ? (
-                    selectedProject.tags.map((tag) => (
-                      <Badge key={tag.id} variant="secondary" className="mr-1">
-                        {tag.text}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500">なし</span>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <span className="font-medium">採点枠設定: </span>
-                  {selectedProject.layout ? (
-                    <Badge variant="success">設定済み</Badge>
-                  ) : (
-                    <Badge variant="outline">未設定</Badge>
-                  )}
-                </div>
-                {/* ここに他の詳細情報や操作ボタンを追加可能 */}
-                <Button onClick={handleStartScoring}>
-                  <PlayCircle className="mr-2 h-4 w-4" />
-                  このプロジェクトの採点を開始する{" "}
-                  {/* Changed "試験" to "プロジェクト" */}
-                </Button>
-              </CardContent>
-              {/* 必要であれば CardFooter も追加 */}
-            </Card>
-          </div>
-        )}
       </div>
     </>
   )
