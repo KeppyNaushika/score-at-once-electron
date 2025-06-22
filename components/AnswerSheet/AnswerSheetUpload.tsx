@@ -38,9 +38,8 @@ export default function AnswerSheetUpload({
     const newFiles = acceptedFiles.map((file) => {
       const fileWithPreview = Object.assign(file, {
         preview: URL.createObjectURL(file),
-        studentId: undefined,
         pageNumber: 1,
-      })
+      }) as FileWithPreview
       return fileWithPreview
     })
 

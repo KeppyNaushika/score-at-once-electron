@@ -7,11 +7,8 @@ import { useAuth } from "@/contexts/AuthContext"
 
 export const useProjects = () => {
   const { user } = useAuth()
-  const [projects, setProjects] = useState<
-    Prisma.ProjectGetPayload<{ include: { tags: true } }>[]
-  >([])
-  const [selectedProject, setSelectedProject] =
-    useState<Prisma.ProjectGetPayload<{ include: { tags: true } }> | null>(null)
+  const [projects, setProjects] = useState<any[]>([])
+  const [selectedProject, setSelectedProject] = useState<any | null>(null)
 
   const loadProjects = async () => {
     try {
@@ -50,15 +47,9 @@ export const useProjects = () => {
     }
   }
 
-  const updateProject = async (
-    project: Prisma.ProjectGetPayload<{
-      include: {
-        tags: true
-      }
-    }>,
-  ) => {
+  const updateProject = async (project: any) => {
     try {
-      const updatedProject = await window.electronAPI.updateProject(project)
+      const updatedProject = await window.electronAPI.updateProject(project.id, project)
       if (updatedProject) {
         // プロジェクトリストを再読み込みして最新の状態を取得
         await loadProjects()
@@ -68,13 +59,7 @@ export const useProjects = () => {
     }
   }
 
-  const deleteProject = async (
-    projectToDelete: Prisma.ProjectGetPayload<{
-      include: {
-        tags: true
-      }
-    }>,
-  ) => {
+  const deleteProject = async (projectToDelete: any) => {
     if (!projectToDelete) return
     try {
       const deletedProject =

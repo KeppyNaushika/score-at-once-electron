@@ -23,11 +23,11 @@ import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 
 interface ProjectData {
   id: string
-  name: string
-  description?: string
-  projectDate?: string
-  subject?: string
-  createdAt: string
+  examName: string
+  description?: string | null
+  projectDate?: string | null
+  subject?: string | null
+  createdAt: string | Date
   masterImages?: any[]
   answerSheets?: any[]
   layoutRegions?: any[]
@@ -105,7 +105,7 @@ export default function ProjectDetailPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">{project.name}</h1>
+              <h1 className="text-3xl font-bold">{project.examName}</h1>
               {project.description && (
                 <p className="text-muted-foreground mt-2">{project.description}</p>
               )}

@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 interface DeleteProjectWindowProps {
-  projectToDelete: Prisma.ProjectGetPayload<{ include: { tags: true } }>
+  projectToDelete: any
   onClose: () => void
   onDelete: () => Promise<void>
 }
