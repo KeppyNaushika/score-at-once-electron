@@ -10,18 +10,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import ProtectedRoute from '@/components/Auth/ProtectedRoute'
 import { useDropzone } from 'react-dropzone'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
 interface MasterImage {
   id: string
   path: string
   pageNumber: number
-  createdAt: string
+  createdAt: string | Date
 }
 
 interface ProjectData {
   id: string
   examName: string
-  description?: string
+  description?: string | null
   masterImages?: MasterImage[]
 }
 
@@ -85,26 +89,82 @@ export default function MasterImagesPage() {
     }
   }, [selectedImage])
 
+  const convertPdfToImages = async (file: File): Promise<Array<{ name: string; type: string; buffer: ArrayBuffer }>> => {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
+    const images: Array<{ name: string; type: string; buffer: ArrayBuffer }> = []
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum)
+      const scale = 2.0 // Higher scale for better quality
+      const viewport = page.getViewport({ scale })
+
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')!
+      canvas.height = viewport.height
+      canvas.width = viewport.width
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise
+
+      // Convert canvas to blob with PNG for lossless quality (better for editing workflow)
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/png')
+      })
+
+      const buffer = await blob.arrayBuffer()
+      const baseName = file.name.replace(/\.pdf$/i, '')
+      
+      images.push({
+        name: `${baseName}_page_${pageNum}.png`,
+        type: 'image/png',
+        buffer: buffer
+      })
+    }
+
+    return images
+  }
+
   const onDrop = async (acceptedFiles: File[]) => {
     if (!projectId) return
 
     setIsUploading(true)
     try {
-      const filesData = await Promise.all(
-        acceptedFiles.map(async (file, index) => {
+      const allFilesData: Array<{ name: string; type: string; buffer: ArrayBuffer }> = []
+
+      for (const file of acceptedFiles) {
+        if (file.type === 'application/pdf') {
+          // Convert PDF to individual page images
+          const pdfImages = await convertPdfToImages(file)
+          allFilesData.push(...pdfImages)
+        } else {
+          // Handle regular image files
           const buffer = await file.arrayBuffer()
-          return {
+          allFilesData.push({
             name: file.name,
             type: file.type,
             buffer: buffer,
-          }
-        })
-      )
+          })
+        }
+      }
 
-      const result = await window.electronAPI.uploadMasterImages(projectId, filesData)
+      const result = await window.electronAPI.uploadMasterImages(projectId, allFilesData)
       
       if (result) {
-        toast.success(`${acceptedFiles.length}枚の模範解答をアップロードしました`)
+        const totalPages = allFilesData.length
+        const pdfCount = acceptedFiles.filter(f => f.type === 'application/pdf').length
+        const imageCount = acceptedFiles.length - pdfCount
+        
+        let message = `${totalPages}枚の模範解答をアップロードしました`
+        if (pdfCount > 0 && imageCount > 0) {
+          message += ` (PDF ${pdfCount}ファイル, 画像 ${imageCount}ファイル)`
+        } else if (pdfCount > 0) {
+          message += ` (PDF ${pdfCount}ファイル)`
+        }
+        
+        toast.success(message)
         await loadProject()
       }
     } catch (error) {
@@ -118,7 +178,8 @@ export default function MasterImagesPage() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff']
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff'],
+      'application/pdf': ['.pdf']
     },
     multiple: true,
     disabled: isUploading
@@ -212,7 +273,7 @@ export default function MasterImagesPage() {
                 ファイルアップロード
               </CardTitle>
               <CardDescription>
-                模範解答の画像ファイルをドラッグ&ドロップまたはクリックして選択してください
+                模範解答の画像ファイルまたはPDFをドラッグ&ドロップまたはクリックして選択してください
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,9 +298,9 @@ export default function MasterImagesPage() {
                   <p className="text-lg font-medium">ファイルをここにドロップしてください</p>
                 ) : (
                   <div>
-                    <p className="text-lg font-medium mb-2">画像ファイルをアップロード</p>
+                    <p className="text-lg font-medium mb-2">画像・PDFファイルをアップロード</p>
                     <p className="text-muted-foreground text-sm">
-                      PNG, JPG, JPEG, GIF, BMP, TIFF形式に対応
+                      PNG, JPG, JPEG, GIF, BMP, TIFF, PDF形式に対応
                     </p>
                     <p className="text-muted-foreground text-sm">
                       複数ファイルの同時アップロード可能

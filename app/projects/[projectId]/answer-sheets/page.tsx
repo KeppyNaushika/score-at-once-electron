@@ -46,7 +46,7 @@ export default function AnswerSheetsPage() {
       if (projectResult) {
         setProject({
           id: projectResult.id,
-          name: projectResult.name,
+          name: projectResult.examName,
           description: projectResult.description || undefined,
         })
       }
@@ -56,7 +56,7 @@ export default function AnswerSheetsPage() {
       setStudents(studentsResult.map((student: any) => ({
         id: student.id,
         name: student.name,
-        studentNumber: student.studentNumber,
+        studentNumber: student.studentId,
       })))
 
       // 答案情報を取得
@@ -221,7 +221,7 @@ export default function AnswerSheetsPage() {
                             </span>
                             {sheet.student && (
                               <Badge variant="secondary">
-                                {sheet.student.studentNumber}
+                                {sheet.student.studentId}
                               </Badge>
                             )}
                             <Badge variant="outline">

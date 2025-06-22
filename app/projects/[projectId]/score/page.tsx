@@ -75,14 +75,8 @@ export default function MasterImageStepPage() {
       })
       return
     }
-    // プロジェクトに採点枠が既に存在するか確認
-    if (project && project.layout) {
-      // 採点枠が存在する場合、次のステップは解答用紙アップロードの想定だが、
-      // このページは模範解答設定なので、常に採点枠設定ページへ誘導する
-      router.push(`/projects/${projectId}/score/template`)
-    } else {
-      router.push(`/projects/${projectId}/score/template`)
-    }
+    // 次のステップは採点領域設定ページ
+    router.push(`/projects/${projectId}/score/template`)
   }
 
   if (isLoading) {

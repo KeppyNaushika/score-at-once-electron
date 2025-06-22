@@ -17,10 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  SaveProjectLayoutInput,
-  ProjectWithDetails as GlobalProjectLayoutWithDetails,
-} from "@/electron-src/lib/prisma/project"
+// Remove unused import
 import { MasterImage, Prisma, User, Project, AreaType } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState, useRef } from "react"
@@ -28,7 +25,7 @@ import { toast } from "sonner"
 import { CropCoords } from "@/types/common.types"
 import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
 
-type ProjectLayoutWithRelations = GlobalProjectLayoutWithDetails
+// Remove unused type alias
 
 export default function TemplateStepPage() {
   const params = useParams()
@@ -42,10 +39,20 @@ export default function TemplateStepPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
   const [layoutRegions, setLayoutRegions] = useState<
-    (Omit<Prisma.LayoutRegionCreateWithoutProjectLayoutInput, "masterImage"> & {
+    {
       id?: string
+      type: AreaType
+      x: number
+      y: number
+      width: number
+      height: number
+      label: string
+      points: string | null
+      questionNumber: string
+      sourceAreaIdsJson: string | null
+      sourceQuestionNumbersJson: string | null
       masterImageId: string
-    })[]
+    }[]
   >([])
 
   const [masterImages, setMasterImages] = useState<MasterImage[]>([])
@@ -106,17 +113,33 @@ export default function TemplateStepPage() {
           setImageDimensions(null)
         }
 
-        const layout =
-          await window.electronAPI.fetchProjectLayoutByProjectId(projectId)
-        if (layout) {
-          setLayoutId(layout.id)
-          setLayoutRegions(
-            layout.areas.map((area) => {
-              const { projectLayoutId, createdAt, updatedAt, ...rest } = area
-              return rest
-            }),
-          )
-        } else {
+        // 既存のレイアウト領域を取得
+        try {
+          const existingRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          if (existingRegions && existingRegions.length > 0) {
+            setLayoutId("existing")
+            setLayoutRegions(
+              existingRegions.map((region) => ({
+                id: region.id,
+                type: region.type,
+                x: region.x,
+                y: region.y,
+                width: region.width,
+                height: region.height,
+                label: region.label || "",
+                points: region.points ? String(region.points) : null,
+                questionNumber: region.questionNumber || "",
+                sourceAreaIdsJson: null,
+                sourceQuestionNumbersJson: null,
+                masterImageId: region.masterImageId || "",
+              }))
+            )
+          } else {
+            setLayoutId(undefined)
+            setLayoutRegions([])
+          }
+        } catch (regionError) {
+          console.error("Failed to load layout regions:", regionError)
           setLayoutId(undefined)
           setLayoutRegions([])
         }
@@ -172,36 +195,63 @@ export default function TemplateStepPage() {
 
     setIsSaving(true)
 
-    const payload: SaveProjectLayoutInput = {
-      projectId: projectId,
-      createdById: currentUser.id,
-      areas: layoutRegions.map((area) => {
-        const { id, ...restOfArea } = area
+    try {
+      // 既存の領域を更新または新規作成
+      const savePromises = layoutRegions.map(async (area) => {
         if (!area.masterImageId) {
           throw new Error(
             `Layout region ${area.label || "Unnamed"} is missing masterImageId.`,
           )
         }
-        return {
-          id: id,
-          ...restOfArea,
+
+        const regionData = {
+          projectId,
+          masterImageId: area.masterImageId,
+          type: area.type,
+          x: area.x,
+          y: area.y,
+          width: area.width,
+          height: area.height,
+          label: area.label,
+          points: area.points ? parseInt(area.points) : null,
+          questionNumber: area.questionNumber,
+          sourceAreaIdsJson: area.sourceAreaIdsJson,
+          sourceQuestionNumbersJson: area.sourceQuestionNumbersJson,
         }
-      }),
-    }
 
-    if (layoutId) {
-      payload.id = layoutId
-    }
+        if (area.id) {
+          // 既存の領域を更新
+          return await window.electronAPI.updateLayoutRegion(area.id, regionData)
+        } else {
+          // 新しい領域を作成
+          return await window.electronAPI.createLayoutRegion(regionData)
+        }
+      })
 
-    try {
-      const savedLayout = await window.electronAPI.saveProjectLayout(payload)
-      setLayoutId(savedLayout.id)
+      const savedRegions = await Promise.all(savePromises)
+      
+      // 保存された領域でUIを更新
       setLayoutRegions(
-        savedLayout.areas.map((area) => {
-          const { projectLayoutId, createdAt, updatedAt, ...rest } = area
-          return rest
-        }),
+        savedRegions.map((region) => ({
+          id: region.id,
+          type: region.type,
+          x: region.x,
+          y: region.y,
+          width: region.width,
+          height: region.height,
+          label: region.label || "",
+          points: region.points ? String(region.points) : null,
+          questionNumber: region.questionNumber || "",
+          sourceAreaIdsJson: null,
+          sourceQuestionNumbersJson: null,
+          masterImageId: region.masterImageId || "",
+        }))
       )
+      
+      if (savedRegions.length > 0) {
+        setLayoutId("saved") // レイアウトが保存されたことを示すフラグ
+      }
+      
       toast.success(`採点枠を保存しました。`)
     } catch (error) {
       console.error("Failed to save layout:", error)
@@ -220,56 +270,8 @@ export default function TemplateStepPage() {
     }
     setIsDetecting(true)
     try {
-      const detectedRawAreas: CropCoords[] =
-        await window.electronAPI.detectLayoutRegions(selectedMasterImage.path)
-
-      if (detectedRawAreas && detectedRawAreas.length > 0) {
-        const newDetectedRegions = detectedRawAreas.map(
-          (
-            rawArea,
-            index,
-          ): Omit<
-            Prisma.LayoutRegionCreateWithoutProjectLayoutInput,
-            "masterImage"
-          > & { masterImageId: string } => {
-            if (!imageDimensions) {
-              throw new Error(
-                "画像寸法が不明なため、座標を割合に変換できません。",
-              )
-            }
-            const x = rawArea.left / imageDimensions.width
-            const y = rawArea.top / imageDimensions.height
-            const width = (rawArea.right - rawArea.left) / imageDimensions.width
-            const height =
-              (rawArea.bottom - rawArea.top) / imageDimensions.height
-
-            return {
-              type: AreaType.QUESTION_ANSWER,
-              x,
-              y,
-              width,
-              height,
-              label: `自動検出エリア ${layoutRegions.length + index + 1}`,
-              points: null,
-              questionNumber: (
-                layoutRegions.filter((a) => a.type === AreaType.QUESTION_ANSWER)
-                  .length +
-                index +
-                1
-              ).toString(),
-              sourceAreaIdsJson: null,
-              sourceQuestionNumbersJson: null,
-              masterImageId: selectedMasterImage.id,
-            }
-          },
-        )
-        setLayoutRegions((prev) => [...prev, ...newDetectedRegions])
-        toast.success(
-          `${newDetectedRegions.length}個のエリア候補を自動検出しました。確認・調整してください。`,
-        )
-      } else {
-        toast.info("自動検出でエリアが見つかりませんでした。")
-      }
+      // 自動検出機能は将来実装予定
+      toast.info("自動検出機能は現在開発中です。手動で領域を設定してください。")
     } catch (error) {
       console.error("Failed to detect layout regions:", error)
       toast.error(
