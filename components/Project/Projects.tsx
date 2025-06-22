@@ -53,7 +53,7 @@ const File = () => {
     const hasLayout = project.layout && project.layout.areas && project.layout.areas.length > 0
     const hasAnswers = project.answerSheets && project.answerSheets.length > 0
     
-    if (!hasImages) return { step: 1, action: 'upload-master', text: '模範解答をアップロード', url: `/projects/${project.id}/master-images` }
+    if (!hasImages) return { step: 1, action: 'upload-master', text: '模範解答をアップロード', url: `/projects/${project.id}/score` }
     if (!hasLayout) return { step: 2, action: 'setup-regions', text: '採点領域を設定', url: `/projects/${project.id}/score/template` }
     if (!hasAnswers) return { step: 3, action: 'upload-answers', text: '答案をアップロード', url: `/projects/${project.id}/answer-sheets` }
     return { step: 4, action: 'start-grading', text: '採点を開始', url: `/projects/${project.id}/score` }

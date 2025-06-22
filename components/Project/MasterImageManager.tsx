@@ -10,10 +10,14 @@ import {
   Trash2,
   UploadCloud,
   Loader2,
-} from "lucide-react" // Loader2 をインポート
+} from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Set up PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
 
 interface MasterImageManagerProps {
   projectId: string
@@ -31,8 +35,9 @@ export default function MasterImageManager({
   const [imageDisplayUrls, setImageDisplayUrls] = useState<
     Record<string, string>
   >({})
-  const [isDeleting, setIsDeleting] = useState<Record<string, boolean>>({}) // 画像ごとの削除中状態
-  const [isMoving, setIsMoving] = useState<boolean>(false) // いずれかの画像が移動中か
+  const [isDeleting, setIsDeleting] = useState<Record<string, boolean>>({})
+  const [isMoving, setIsMoving] = useState<boolean>(false)
+  const [isUploading, setIsUploading] = useState<boolean>(false)
 
   useEffect(() => {
     const sortedInitialImages = [...initialMasterImages].sort(
@@ -47,16 +52,13 @@ export default function MasterImageManager({
           const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(
             image.path,
           )
-          console.log(
-            `Resolved URL for ${image.id} (${image.path}): ${resolvedUrl}`,
-          ) // デバッグログ追加
           urls[image.id] = resolvedUrl
         } catch (error) {
           console.error(
             `Failed to resolve path for image ${image.id} (${image.path}):`,
             error,
           )
-          urls[image.id] = "" // エラー時は空文字列（またはnull/undefined）
+          urls[image.id] = ""
         }
       }
       setImageDisplayUrls(urls)
@@ -68,185 +70,181 @@ export default function MasterImageManager({
     }
   }, [initialMasterImages])
 
+  const convertPdfToImages = async (file: File): Promise<Array<{ name: string; type: string; buffer: ArrayBuffer }>> => {
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
+    const images: Array<{ name: string; type: string; buffer: ArrayBuffer }> = []
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum)
+      const scale = 2.0 // Higher scale for better quality
+      const viewport = page.getViewport({ scale })
+
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')!
+      canvas.height = viewport.height
+      canvas.width = viewport.width
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport
+      }).promise
+
+      // Convert canvas to blob with PNG for lossless quality (better for editing workflow)
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/png')
+      })
+
+      const buffer = await blob.arrayBuffer()
+      const baseName = file.name.replace(/\.pdf$/i, '')
+      
+      images.push({
+        name: `${baseName}_page_${pageNum}.png`,
+        type: 'image/png',
+        buffer: buffer
+      })
+    }
+
+    return images
+  }
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (!projectId) {
         toast.error("プロジェクトIDが指定されていません。")
         return
       }
-      if (acceptedFiles && acceptedFiles.length > 0) {
-        try {
-          const fileDataPromises = acceptedFiles.map((file) => {
-            return new Promise<{
-              name: string
-              type: string
-              buffer: ArrayBuffer
-              path?: string
-            }>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onload = () => {
-                resolve({
-                  name: file.name,
-                  type: file.type,
-                  buffer: reader.result as ArrayBuffer,
-                  path: (file as any).path,
-                })
-              }
-              reader.onerror = (error) => {
-                reject(error)
-              }
-              reader.readAsArrayBuffer(file)
+      
+      setIsUploading(true)
+      
+      try {
+        const allFilesData: Array<{ name: string; type: string; buffer: ArrayBuffer }> = []
+
+        for (const file of acceptedFiles) {
+          if (file.type === 'application/pdf') {
+            // Convert PDF to individual page images
+            const pdfImages = await convertPdfToImages(file)
+            allFilesData.push(...pdfImages)
+          } else {
+            // Handle regular image files
+            const buffer = await file.arrayBuffer()
+            allFilesData.push({
+              name: file.name,
+              type: file.type,
+              buffer: buffer,
             })
-          })
-
-          const filesToUpload = await Promise.all(fileDataPromises)
-
-          if (filesToUpload.some((f) => !f.buffer)) {
-            toast.error("ファイルの読み込みに失敗しました。")
-            return
           }
+        }
 
-          const newImageRecords = await window.electronAPI.uploadMasterImages(
-            projectId,
-            filesToUpload,
-          )
-
-          if (newImageRecords && newImageRecords.length > 0) {
-            const updatedImages = [...masterImages, ...newImageRecords].sort(
-              (a, b) => a.pageNumber - b.pageNumber,
-            )
-            setMasterImages(updatedImages)
-            onMasterImagesChange(updatedImages)
-
-            const newUrls: Record<string, string> = { ...imageDisplayUrls }
-            for (const image of newImageRecords) {
+        const result = await window.electronAPI.uploadMasterImages(
+          projectId,
+          allFilesData,
+        )
+        
+        if (result) {
+          const totalPages = allFilesData.length
+          const pdfCount = acceptedFiles.filter(f => f.type === 'application/pdf').length
+          const imageCount = acceptedFiles.length - pdfCount
+          
+          let message = `${totalPages}枚の模範解答をアップロードしました`
+          if (pdfCount > 0 && imageCount > 0) {
+            message += ` (PDF ${pdfCount}ファイル, 画像 ${imageCount}ファイル)`
+          } else if (pdfCount > 0) {
+            message += ` (PDF ${pdfCount}ファイル)`
+          }
+          
+          toast.success(message)
+          
+          // アップロード成功時に最新のマスター画像リストを取得してUIを更新
+          const updatedProject =
+            await window.electronAPI.fetchProjectById(projectId)
+          if (updatedProject && updatedProject.masterImages) {
+            const sortedUpdatedImages = [
+              ...updatedProject.masterImages,
+            ].sort((a, b) => a.pageNumber - b.pageNumber)
+            setMasterImages(sortedUpdatedImages)
+            onMasterImagesChange(sortedUpdatedImages)
+            
+            // Update image URLs
+            const newUrls: Record<string, string> = {}
+            for (const image of sortedUpdatedImages) {
               try {
                 const resolvedUrl =
                   await window.electronAPI.resolveFileProtocolPath(image.path)
-                console.log(
-                  `Resolved URL for new image ${image.id} (${image.path}): ${resolvedUrl}`,
-                ) // デバッグログ追加
                 newUrls[image.id] = resolvedUrl
               } catch (error) {
                 console.error(
-                  `Failed to resolve path for new image ${image.id} (${image.path}):`,
+                  `Failed to resolve path for image ${image.id} (${image.path}):`,
                   error,
                 )
-                newUrls[image.id] = "" // エラー時は空文字列（またはnull/undefined）
+                newUrls[image.id] = ""
               }
             }
             setImageDisplayUrls(newUrls)
-
-            toast.success(
-              `${newImageRecords.length}個の画像をアップロードしました。`,
-            )
-          } else {
-            toast.info(
-              "画像のアップロード処理後にレコードが返されませんでしたが、エラーはありませんでした。",
-            )
           }
-        } catch (error) {
-          console.error("Failed to upload master images:", error)
-          toast.error(
-            `画像のアップロードに失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-          )
         }
+      } catch (error) {
+        console.error("Upload failed:", error)
+        toast.error("ファイルのアップロードに失敗しました。")
+      } finally {
+        setIsUploading(false)
       }
     },
-    [projectId, masterImages, onMasterImagesChange, imageDisplayUrls],
+    [projectId, onMasterImagesChange],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"] },
+    accept: {
+      "image/*": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"],
+      "application/pdf": [".pdf"]
+    },
     multiple: true,
+    disabled: isUploading
   })
 
   const handleDeleteImage = async (imageId: string) => {
-    if (
-      !window.confirm(
-        "この模範解答画像を削除しますか？実ファイルも削除されます。",
-      )
-    ) {
-      return
-    }
     setIsDeleting((prev) => ({ ...prev, [imageId]: true }))
-    setIsMoving(true) // 他の操作を一時的にブロックする意図も込めて
+
     try {
       await window.electronAPI.deleteMasterImage(imageId)
-      const remainingImages = masterImages.filter((img) => img.id !== imageId)
-      const reorderedImages = remainingImages.map((img, index) => ({
-        ...img,
-        pageNumber: index + 1,
-      }))
+      const updatedImages = masterImages.filter((img) => img.id !== imageId)
+      setMasterImages(updatedImages)
+      onMasterImagesChange(updatedImages)
 
-      setMasterImages(reorderedImages)
-      onMasterImagesChange(reorderedImages)
+      const { [imageId]: deletedUrl, ...restUrls } = imageDisplayUrls
+      setImageDisplayUrls(restUrls)
 
-      if (reorderedImages.length > 0) {
-        const orderUpdates = reorderedImages.map((img) => ({
-          id: img.id,
-          pageNumber: img.pageNumber,
-        }))
-        await window.electronAPI.updateMasterImagesOrder(orderUpdates)
-      }
-
-      const newUrls = { ...imageDisplayUrls }
-      delete newUrls[imageId]
-      setImageDisplayUrls(newUrls)
-
-      toast.success("画像を削除し、順序を更新しました。")
+      toast.success("画像を削除しました。")
     } catch (error) {
-      console.error("Failed to delete master image or update order:", error)
-      toast.error(
-        `画像の削除または順序更新に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-      )
+      console.error("Failed to delete image:", error)
+      toast.error("画像の削除に失敗しました。")
     } finally {
       setIsDeleting((prev) => ({ ...prev, [imageId]: false }))
-      setIsMoving(false)
     }
   }
 
   const handleMoveImage = async (
-    index: number,
+    fromIndex: number,
     direction: "left" | "right",
   ) => {
+    const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
+    if (toIndex < 0 || toIndex >= masterImages.length) return
+
     setIsMoving(true)
-    const newImages = [...masterImages]
-    const imageToMove = newImages[index]
-    const swapIndex = direction === "left" ? index - 1 : index + 1
-
-    if (swapIndex < 0 || swapIndex >= newImages.length) {
-      setIsMoving(false)
-      return
-    }
-
-    newImages[index] = newImages[swapIndex]
-    newImages[swapIndex] = imageToMove
-
-    const updatedImagesWithPageNumbers = newImages.map((img, idx) => ({
-      ...img,
-      pageNumber: idx + 1,
-    }))
-
-    // UIを先に更新（オプティミスティックアップデートに近いが、API呼び出し前に状態変更）
-    setMasterImages(updatedImagesWithPageNumbers)
-    onMasterImagesChange(updatedImagesWithPageNumbers)
 
     try {
-      const orderUpdates = updatedImagesWithPageNumbers.map((img) => ({
-        id: img.id,
-        pageNumber: img.pageNumber,
-      }))
-      await window.electronAPI.updateMasterImagesOrder(orderUpdates)
+      const newMasterImages = [...masterImages]
+      const [movedImage] = newMasterImages.splice(fromIndex, 1)
+      newMasterImages.splice(toIndex, 0, movedImage)
 
-      toast.success("画像の表示順を変更し、保存しました。")
-    } catch (error) {
-      console.error("Failed to reorder master images:", error)
-      toast.error(
-        `画像の並び替えと保存に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-      )
-      // エラーが発生した場合は、元の状態に戻す
+      const updateRequests = newMasterImages.map((image, index) => ({
+        id: image.id,
+        pageNumber: index + 1,
+      }))
+
+      await window.electronAPI.updateMasterImagesOrder(updateRequests)
+
       setMasterImages(masterImages)
       onMasterImagesChange(masterImages)
     } finally {
@@ -263,20 +261,32 @@ export default function MasterImageManager({
           isDragActive
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-primary/50"
-        } ${isMoving ? "cursor-not-allowed opacity-50" : ""}`}
+        } ${isUploading ? "cursor-not-allowed opacity-50" : ""}`}
       >
-        <input {...getInputProps()} disabled={isMoving} />
+        <input {...getInputProps()} disabled={isUploading} />
         <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-          <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold">
-            ファイルをドロップまたはクリックして選択
-          </h3>
-          <p className="mb-4 mt-2 text-sm text-muted-foreground">
-            PDF または画像ファイル (PNG, JPG) をアップロードできます
-          </p>
-          <p className="text-xs text-muted-foreground">
-            PDF の場合、各ページが自動的に画像として分割されます
-          </p>
+          {isUploading ? (
+            <div>
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+              <h3 className="mt-4 text-lg font-semibold">アップロード中...</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                PDFの変換処理を含む場合、時間がかかることがあります
+              </p>
+            </div>
+          ) : (
+            <>
+              <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-4 text-lg font-semibold">
+                ファイルをドロップまたはクリックして選択
+              </h3>
+              <p className="mb-4 mt-2 text-sm text-muted-foreground">
+                PDF または画像ファイル (PNG, JPG) をアップロードできます
+              </p>
+              <p className="text-xs text-muted-foreground">
+                PDF の場合、各ページが自動的に画像として分割されます
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -295,18 +305,17 @@ export default function MasterImageManager({
                 (image: Prisma.MasterImageGetPayload<{}>, index) => {
                   const imageUrl = imageDisplayUrls[image.id]
                   const currentImageIsDeleting = isDeleting[image.id]
+
                   return imageUrl ? (
                     <div
                       key={image.id}
-                      className="group relative w-40 shrink-0 overflow-hidden rounded-md"
+                      className="group relative flex h-48 w-40 shrink-0 overflow-hidden rounded-md border"
                     >
                       <img
                         src={imageUrl}
-                        alt={`模範解答 ${image.pageNumber}`}
-                        className={`h-48 w-full object-cover ${currentImageIsDeleting || isMoving ? "opacity-50" : ""}`}
+                        alt={`ページ ${image.pageNumber}`}
+                        className="h-full w-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src =
-                            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                           e.currentTarget.alt = `画像読込エラー: ${image.path}`
                           console.error(
                             "Failed to load image:",
