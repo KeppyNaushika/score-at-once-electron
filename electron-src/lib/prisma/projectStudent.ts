@@ -1,5 +1,4 @@
 import prisma from './client'
-import type { StudentWithMemberships } from '../../../types/electron'
 
 // プロジェクトに参加する生徒の状態を管理するためのテーブル（メモリ上で管理）
 const projectStudentStatus = new Map<string, Map<string, 'participating' | 'absent' | 'unknown'>>()
@@ -36,11 +35,11 @@ export async function getStudentsForProject(projectId: string) {
     })
     const existingStudentIds = new Set(
       existingAnswerSheets
-        .map(sheet => sheet.studentId)
-        .filter((id): id is string => id !== null)
+        .map((sheet: any) => sheet.studentId)
+        .filter((id: any): id is string => id !== null)
     )
 
-    const studentsWithStatus = allStudents.map(student => ({
+    const studentsWithStatus = allStudents.map((student: any) => ({
       ...student,
       status: projectStatusMap.get(student.id) || 'unknown' as const,
       isInProject: existingStudentIds.has(student.id)
@@ -165,10 +164,10 @@ export async function getClassesNotInProject(projectId: string) {
 
     // プロジェクトに参加していない学級を抽出
     const availableClasses = allClasses
-      .map(cls => {
-        const activeStudents = cls.memberships.map(m => m.student)
+      .map((cls: any) => {
+        const activeStudents = cls.memberships.map((m: any) => m.student)
         const nonParticipatingStudents = activeStudents.filter(
-          student => !participatingStudentIds.has(student.id)
+          (student: any) => !participatingStudentIds.has(student.id)
         )
         
         return {
@@ -176,7 +175,7 @@ export async function getClassesNotInProject(projectId: string) {
           studentCount: nonParticipatingStudents.length
         }
       })
-      .filter(cls => cls.studentCount > 0)
+      .filter((cls: any) => cls.studentCount > 0)
 
     return {
       success: true,

@@ -308,6 +308,7 @@ export interface MyAPI {
     classId: string,
     startDate?: Date,
     membershipType?: string,
+    examStatus?: string,
     subject?: string,
     notes?: string,
   ) => Promise<StudentClassMembershipWithDetails>
@@ -444,6 +445,19 @@ export interface MyAPI {
   }>
   updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') => Promise<{
     success: boolean
+    error?: string
+  }>
+  checkGradingDataForStudents: (projectId: string, studentIds: string[]) => Promise<{
+    success: boolean
+    hasAnyData?: boolean
+    totalGradingItems?: number
+    studentData?: Record<string, {
+      hasData: boolean
+      answerSheetCount: number
+      questionScoreCount: number
+      scoreRecordCount: number
+      totalGradingItems: number
+    }>
     error?: string
   }>
 

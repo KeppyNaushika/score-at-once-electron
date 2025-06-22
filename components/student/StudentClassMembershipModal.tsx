@@ -28,7 +28,6 @@ interface StudentClassMembershipModalProps {
   onSave: (membershipData: {
     studentId: string
     classId: string
-    membershipType: string
     subject?: string
     notes?: string
   }) => void
@@ -47,17 +46,11 @@ interface StudentClassMembershipModalProps {
     id: string
     studentId: string
     classId: string
-    membershipType: string
     subject?: string
     notes?: string
   } | null
 }
 
-const membershipTypes = [
-  { value: "REGULAR", label: "通常所属" },
-  { value: "TRANSFER", label: "転入" },
-  { value: "TEMPORARY", label: "一時的所属" },
-]
 
 export default function StudentClassMembershipModal({
   isOpen,
@@ -71,7 +64,6 @@ export default function StudentClassMembershipModal({
 }: StudentClassMembershipModalProps) {
   const [studentId, setStudentId] = useState(initialStudentId || "")
   const [classId, setClassId] = useState(initialClassId || "")
-  const [membershipType, setMembershipType] = useState("REGULAR")
   const [subject, setSubject] = useState("")
   const [notes, setNotes] = useState("")
   const [studentSearchTerm, setStudentSearchTerm] = useState("")
@@ -81,13 +73,11 @@ export default function StudentClassMembershipModal({
     if (membershipToEdit) {
       setStudentId(membershipToEdit.studentId)
       setClassId(membershipToEdit.classId)
-      setMembershipType(membershipToEdit.membershipType)
       setSubject(membershipToEdit.subject || "")
       setNotes(membershipToEdit.notes || "")
     } else {
       setStudentId(initialStudentId || "")
       setClassId(initialClassId || "")
-      setMembershipType("REGULAR")
       setSubject("")
       setNotes("")
     }
@@ -122,7 +112,6 @@ export default function StudentClassMembershipModal({
     onSave({
       studentId,
       classId,
-      membershipType,
       subject: classSubject || subject || undefined,
       notes: notes || undefined,
     })
@@ -211,27 +200,6 @@ export default function StudentClassMembershipModal({
             </div>
           </div>
 
-
-          {/* 所属種別 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="membershipType" className="text-right">
-              所属種別
-            </Label>
-            <div className="col-span-3">
-              <Select value={membershipType} onValueChange={setMembershipType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {membershipTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
           {/* 教科（教科別クラスでない場合のみ表示） */}
           {!isSubjectClass && (

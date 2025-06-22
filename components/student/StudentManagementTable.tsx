@@ -62,7 +62,6 @@ interface StudentWithMemberships {
     id: string
     startDate: Date
     endDate?: Date | null
-    membershipType: string
     subject?: string | null
     notes?: string | null
     class: {
@@ -87,7 +86,6 @@ interface ClassWithMemberships {
     id: string
     startDate: Date
     endDate?: Date | null
-    membershipType: string
     subject?: string | null
     notes?: string | null
     student: {
@@ -107,7 +105,6 @@ interface Membership {
   classId: string
   startDate: Date
   endDate?: Date | null
-  membershipType: string
   subject?: string | null
   notes?: string | null
   student: {
@@ -286,7 +283,6 @@ export default function StudentManagementTable() {
           membershipData.studentId,
           membershipData.classId,
           new Date(),
-          membershipData.membershipType,
           membershipData.subject,
           membershipData.notes
         )

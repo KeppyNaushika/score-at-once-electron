@@ -116,7 +116,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     studentId: string,
     classId: string,
     startDate?: Date,
-    membershipType?: string,
     subject?: string,
     notes?: string,
   ) =>
@@ -125,7 +124,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
       studentId,
       classId,
       startDate,
-      membershipType,
       subject,
       notes,
     ),
@@ -169,6 +167,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("remove-students-from-project", projectId, studentIds),
   updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') =>
     ipcRenderer.invoke("update-student-project-status", projectId, studentId, status),
+  checkGradingDataForStudents: (projectId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("check-grading-data-for-students", projectId, studentIds),
   getClassesNotInProject: (projectId: string) =>
     ipcRenderer.invoke("get-classes-not-in-project", projectId),
 

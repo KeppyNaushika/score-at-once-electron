@@ -85,6 +85,9 @@ import {
   getClassesNotInProject,
 } from "./lib/prisma/projectStudent"
 import {
+  checkGradingDataForStudents,
+} from "./lib/prisma/gradingData"
+import {
   createStudentClassMembership,
   updateStudentClassMembership,
   deleteStudentClassMembership,
@@ -564,7 +567,6 @@ app.on("ready", async () => {
       studentId: string,
       classId: string,
       startDate?: Date,
-      membershipType?: string,
       subject?: string,
       notes?: string,
     ) => {
@@ -573,7 +575,6 @@ app.on("ready", async () => {
           studentId,
           classId,
           startDate,
-          membershipType as any,
           subject,
           notes,
         )
@@ -1117,6 +1118,19 @@ app.on("ready", async () => {
       } catch (err) {
         console.error("Error getting classes not in project:", err)
         throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "check-grading-data-for-students",
+    async (_event, projectId: string, studentIds: string[]) => {
+      try {
+        const result = await checkGradingDataForStudents(projectId, studentIds)
+        return { success: true, ...result }
+      } catch (err) {
+        console.error("Error checking grading data for students:", err)
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
       }
     },
   )

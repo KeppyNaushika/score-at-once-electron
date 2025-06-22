@@ -84,7 +84,6 @@ model StudentClassMembership {
   endDate   DateTime? // 所属終了日（null = 現在も所属中）
   
   // メタデータ
-  membershipType MembershipType @default(REGULAR) // 所属種別
   subject        String?         // 教科別クラスの場合の教科名
   notes          String?         // 備考（転校、編入、習熟度別など）
   
@@ -98,13 +97,6 @@ model StudentClassMembership {
 }
 
 // 学級種別の列挙型は削除 - isVisibleフィールドで管理
-
-// 所属種別の列挙型
-enum MembershipType {
-  REGULAR   // 通常所属
-  TRANSFER  // 転入
-  TEMPORARY // 一時的所属（体験入学など）
-}
 
 // ---------------------------------------------------
 // 試験・設問・模範解答・採点枠
