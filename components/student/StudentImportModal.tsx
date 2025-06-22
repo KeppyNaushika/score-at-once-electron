@@ -16,8 +16,8 @@ import { useDropzone } from "react-dropzone"
 import { Prisma } from "@prisma/client"
 import { UploadCloud } from "lucide-react"
 
-type StudentWithClass = Prisma.StudentGetPayload<{ include: { class: true } }>
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
+type StudentWithClass = Prisma.StudentGetPayload<{ include: { memberships: { include: { class: true } } } }>
+type ClassWithStudents = Prisma.ClassGetPayload<{ include: { memberships: true } }>
 
 interface StudentImportModalProps {
   isOpen: boolean

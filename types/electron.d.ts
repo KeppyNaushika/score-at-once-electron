@@ -43,8 +43,45 @@ export interface UploadAnswerSheetFileData {
 }
 
 // Prismaの型を拡張してリレーションを含む型を定義
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
-type StudentWithClass = Prisma.StudentGetPayload<{ include: { class: true } }>
+type ClassWithMemberships = Prisma.ClassGetPayload<{
+  include: {
+    memberships: {
+      include: {
+        student: true
+      }
+      where: {
+        endDate: null
+      }
+    }
+  }
+}>
+
+type StudentWithMemberships = Prisma.StudentGetPayload<{
+  include: {
+    memberships: {
+      include: {
+        class: true
+      }
+      where: {
+        endDate: null
+      }
+      orderBy: {
+        startDate: "desc"
+      }
+    }
+  }
+}>
+
+type StudentClassMembershipWithDetails = Prisma.StudentClassMembershipGetPayload<{
+  include: {
+    student: true
+    class: true
+  }
+}>
+
+// Legacy types for backward compatibility
+type ClassWithStudents = ClassWithMemberships
+type StudentWithClass = StudentWithMemberships
 
 // Project related types
 export type ProjectWithDetails = Prisma.ProjectGetPayload<{
@@ -241,15 +278,37 @@ export interface MyAPI {
   deleteClass: (classId: string) => Promise<Class | void>
 
   // Student related
-  fetchStudents: () => Promise<StudentWithClass[]>
+  fetchStudents: () => Promise<StudentWithMemberships[]>
+  createStudent: (studentData: Prisma.StudentCreateInput) => Promise<StudentWithMemberships>
+  updateStudent: (id: string, studentData: Prisma.StudentUpdateInput) => Promise<StudentWithMemberships>
+  deleteStudent: (id: string) => Promise<Student | void>
   importStudentsFromFile: (
     filePath: string,
     existingClasses: { id: string; name: string }[],
   ) => Promise<{
     success: boolean
-    importedStudents?: StudentWithClass[]
+    importedStudents?: StudentWithMemberships[]
     error?: string
   }>
+
+  // Student Class Membership related
+  createStudentClassMembership: (membershipData: Prisma.StudentClassMembershipCreateInput) => Promise<StudentClassMembershipWithDetails>
+  updateStudentClassMembership: (id: string, membershipData: Prisma.StudentClassMembershipUpdateInput) => Promise<StudentClassMembershipWithDetails>
+  deleteStudentClassMembership: (id: string) => Promise<void>
+  getCurrentMembershipsByStudentId: (studentId: string) => Promise<StudentClassMembershipWithDetails[]>
+  getAllMembershipsByStudentId: (studentId: string) => Promise<StudentClassMembershipWithDetails[]>
+  getCurrentMembershipsByClassId: (classId: string) => Promise<StudentClassMembershipWithDetails[]>
+  addStudentToClass: (
+    studentId: string,
+    classId: string,
+    startDate?: Date,
+    membershipType?: string,
+    subject?: string,
+    notes?: string,
+  ) => Promise<StudentClassMembershipWithDetails>
+  endStudentMembership: (membershipId: string, endDate?: Date) => Promise<StudentClassMembershipWithDetails>
+  getMembershipsByDateRange: (startDate: Date, endDate?: Date) => Promise<StudentClassMembershipWithDetails[]>
+  getMembershipsBySubject: (subject: string) => Promise<StudentClassMembershipWithDetails[]>
 
   // MasterImage related
   uploadMasterImages: (

@@ -70,7 +70,25 @@ import {
   deleteAssignmentsByQuestionGroupItemId as dbDeleteAssignsByQGItemId,
 } from "./lib/prisma/questionSubtotalAssignment"
 
-import { fetchStudents, importStudentsFromFile } from "./lib/prisma/student"
+import { 
+  fetchStudents, 
+  importStudentsFromFile, 
+  createStudent, 
+  updateStudent, 
+  deleteStudent 
+} from "./lib/prisma/student"
+import {
+  createStudentClassMembership,
+  updateStudentClassMembership,
+  deleteStudentClassMembership,
+  getCurrentMembershipsByStudentId,
+  getAllMembershipsByStudentId,
+  getCurrentMembershipsByClassId,
+  addStudentToClass,
+  endStudentMembership,
+  getMembershipsByDateRange,
+  getMembershipsBySubject,
+} from "./lib/prisma/studentClassMembership"
 // import { createTag, deleteTag, updateTag } from "./lib/prisma/tag" // Tagモデルが未実装のため一時的にコメントアウト
 import { fetchUsers, getCurrentUser } from "./lib/prisma/user"
 import { loginUser, createUser, getUserByToken, updateUserPassword } from "./lib/prisma/auth"
@@ -424,6 +442,172 @@ app.on("ready", async () => {
         return await importStudentsFromFile(filePath, existingClasses)
       } catch (err) {
         console.error("Error importing students from file:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "create-student",
+    async (_event, studentData: Prisma.StudentCreateInput) => {
+      try {
+        return await createStudent(studentData)
+      } catch (err) {
+        console.error("Error creating student:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "update-student",
+    async (_event, id: string, studentData: Prisma.StudentUpdateInput) => {
+      try {
+        return await updateStudent(id, studentData)
+      } catch (err) {
+        console.error("Error updating student:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle("delete-student", async (_event, id: string) => {
+    try {
+      return await deleteStudent(id)
+    } catch (err) {
+      console.error("Error deleting student:", err)
+      throw err
+    }
+  })
+
+  // Student Class Membership handlers
+  ipcMain.handle(
+    "create-student-class-membership",
+    async (_event, membershipData: Prisma.StudentClassMembershipCreateInput) => {
+      try {
+        return await createStudentClassMembership(membershipData)
+      } catch (err) {
+        console.error("Error creating student class membership:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "update-student-class-membership",
+    async (_event, id: string, membershipData: Prisma.StudentClassMembershipUpdateInput) => {
+      try {
+        return await updateStudentClassMembership(id, membershipData)
+      } catch (err) {
+        console.error("Error updating student class membership:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle("delete-student-class-membership", async (_event, id: string) => {
+    try {
+      return await deleteStudentClassMembership(id)
+    } catch (err) {
+      console.error("Error deleting student class membership:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle(
+    "get-current-memberships-by-student-id",
+    async (_event, studentId: string) => {
+      try {
+        return await getCurrentMembershipsByStudentId(studentId)
+      } catch (err) {
+        console.error("Error getting current memberships by student ID:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-all-memberships-by-student-id",
+    async (_event, studentId: string) => {
+      try {
+        return await getAllMembershipsByStudentId(studentId)
+      } catch (err) {
+        console.error("Error getting all memberships by student ID:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-current-memberships-by-class-id",
+    async (_event, classId: string) => {
+      try {
+        return await getCurrentMembershipsByClassId(classId)
+      } catch (err) {
+        console.error("Error getting current memberships by class ID:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "add-student-to-class",
+    async (
+      _event,
+      studentId: string,
+      classId: string,
+      startDate?: Date,
+      membershipType?: string,
+      subject?: string,
+      notes?: string,
+    ) => {
+      try {
+        return await addStudentToClass(
+          studentId,
+          classId,
+          startDate,
+          membershipType as any,
+          subject,
+          notes,
+        )
+      } catch (err) {
+        console.error("Error adding student to class:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "end-student-membership",
+    async (_event, membershipId: string, endDate?: Date) => {
+      try {
+        return await endStudentMembership(membershipId, endDate)
+      } catch (err) {
+        console.error("Error ending student membership:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-memberships-by-date-range",
+    async (_event, startDate: Date, endDate?: Date) => {
+      try {
+        return await getMembershipsByDateRange(startDate, endDate)
+      } catch (err) {
+        console.error("Error getting memberships by date range:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-memberships-by-subject",
+    async (_event, subject: string) => {
+      try {
+        return await getMembershipsBySubject(subject)
+      } catch (err) {
+        console.error("Error getting memberships by subject:", err)
         throw err
       }
     },

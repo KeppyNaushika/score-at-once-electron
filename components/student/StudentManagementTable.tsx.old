@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/table"
 import { PlusCircle, Edit, Trash2, Upload } from "lucide-react"
 import { Prisma } from "@prisma/client"
-import ClassModal from "./ClassModal" // Assuming ClassModal is in the same directory
-import StudentImportModal from "./StudentImportModal" // Assuming StudentImportModal is in the same directory
+import ClassModal from "./ClassModal"
+import StudentImportModal from "./StudentImportModal"
+import StudentModal from "./StudentModal"
 
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
-type StudentWithClass = Prisma.StudentGetPayload<{ include: { class: true } }>
+type ClassWithStudents = Prisma.ClassGetPayload<{ include: { memberships: true } }>
+type StudentWithClass = Prisma.StudentGetPayload<{ include: { memberships: { include: { class: true } } } }>
 
 export default function StudentManagementTable() {
   const [classes, setClasses] = useState<ClassWithStudents[]>([])
@@ -29,6 +30,10 @@ export default function StudentManagementTable() {
   const [classToEdit, setClassToEdit] = useState<ClassWithStudents | null>(null)
   const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
     useState(false)
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
+  const [studentToEdit, setStudentToEdit] = useState<StudentWithClass | null>(
+    null,
+  )
 
   // TODO: Implement data fetching for classes and students using window.electronAPI
   useEffect(() => {
@@ -106,9 +111,63 @@ export default function StudentManagementTable() {
     setIsStudentImportModalOpen(true)
   }
 
+  const handleAddNewStudent = () => {
+    setStudentToEdit(null)
+    setIsStudentModalOpen(true)
+  }
+
+  const handleEditStudent = (student: StudentWithClass) => {
+    setStudentToEdit(student)
+    setIsStudentModalOpen(true)
+  }
+
+  const handleDeleteStudent = async (studentId: string) => {
+    if (
+      window.confirm(
+        "本当にこの生徒を削除しますか？関連する答案データも削除される場合があります。",
+      )
+    ) {
+      try {
+        await window.electronAPI.deleteStudent(studentId)
+        setStudents(students.filter((s) => s.id !== studentId))
+      } catch (error) {
+        console.error("Failed to delete student:", error)
+        alert("生徒の削除に失敗しました。")
+      }
+    }
+  }
+
+  const handleSaveStudent = async (studentData: Prisma.StudentCreateInput) => {
+    try {
+      const newStudent = await window.electronAPI.createStudent(studentData)
+      setStudents([...students, newStudent])
+      setIsStudentModalOpen(false)
+    } catch (error) {
+      console.error("Failed to save student:", error)
+      alert("生徒の保存に失敗しました。")
+    }
+  }
+
+  const handleUpdateStudent = async (
+    id: string,
+    studentData: Prisma.StudentUpdateInput,
+  ) => {
+    try {
+      const updatedStudent = await window.electronAPI.updateStudent(
+        id,
+        studentData,
+      )
+      setStudents(
+        students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)),
+      )
+      setIsStudentModalOpen(false)
+    } catch (error) {
+      console.error("Failed to update student:", error)
+      alert("生徒の更新に失敗しました。")
+    }
+  }
+
   const onStudentsImported = (importedStudents: StudentWithClass[]) => {
-    // Potentially refresh all students or merge intelligently
-    // For simplicity, refetching all students or merging
     setStudents((prevStudents) => {
       const existingStudentIds = new Set(prevStudents.map((s) => s.id))
       const newStudents = importedStudents.filter(
@@ -116,8 +175,6 @@ export default function StudentManagementTable() {
       )
       return [...prevStudents, ...newStudents]
     })
-    // Also, potentially refresh classes if student counts are displayed
-    // This might require re-fetching classes or updating them based on imported student data
   }
 
   const filteredStudents = selectedClass
@@ -198,10 +255,16 @@ export default function StudentManagementTable() {
           <h2 className="text-xl font-semibold">
             生徒一覧 {selectedClass ? `(${selectedClass.name})` : "(全生徒)"}
           </h2>
-          <Button onClick={handleImportStudents} size="sm">
-            <Upload className="mr-2 h-4 w-4" />
-            生徒名簿インポート
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleAddNewStudent} size="sm" variant="outline">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              生徒追加
+            </Button>
+            <Button onClick={handleImportStudents} size="sm">
+              <Upload className="mr-2 h-4 w-4" />
+              生徒名簿インポート
+            </Button>
+          </div>
         </div>
         <div className="rounded-md border">
           <Table>
@@ -222,10 +285,19 @@ export default function StudentManagementTable() {
                     <TableCell>{student.class?.name || "未所属"}</TableCell>
                   )}
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="mr-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="mr-1"
+                      onClick={() => handleEditStudent(student)}
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteStudent(student.id)}
+                    >
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </Button>
                   </TableCell>
@@ -261,6 +333,17 @@ export default function StudentManagementTable() {
           onClose={() => setIsStudentImportModalOpen(false)}
           onImportSuccess={onStudentsImported}
           existingClasses={classes}
+        />
+      )}
+
+      {isStudentModalOpen && (
+        <StudentModal
+          isOpen={isStudentModalOpen}
+          onClose={() => setIsStudentModalOpen(false)}
+          onSave={handleSaveStudent}
+          onUpdate={handleUpdateStudent}
+          studentToEdit={studentToEdit}
+          availableClasses={classes}
         />
       )}
     </div>
