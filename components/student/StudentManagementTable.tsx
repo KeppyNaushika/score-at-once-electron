@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,9 +43,9 @@ import {
   Info
 } from "lucide-react"
 
-import ClassModalV2 from "./ClassModalV2"
+import ClassModal from "./ClassModal"
 import StudentImportModal from "./StudentImportModal"
-import SpreadsheetImportModalV2 from "./SpreadsheetImportModalV2"
+import SpreadsheetImportModal from "./SpreadsheetImportModal"
 import StudentModal from "./StudentModal"
 import StudentClassMembershipModal from "./StudentClassMembershipModal"
 import StudentMembershipTimeline from "./StudentMembershipTimeline"
@@ -126,11 +127,10 @@ interface Membership {
   }
 }
 
-export default function StudentManagementTableV2() {
+export default function StudentManagementTable() {
+  const router = useRouter()
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
-  const [selectedStudent, setSelectedStudent] = useState<StudentWithMemberships | null>(null)
-  const [selectedClass, setSelectedClass] = useState<ClassWithMemberships | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   // filterClassType は削除
   const [filterMembershipStatus, setFilterMembershipStatus] = useState<string>("current")
@@ -199,9 +199,6 @@ export default function StudentManagementTableV2() {
       try {
         await window.electronAPI.deleteClass(classId)
         setClasses(classes.filter((c) => c.id !== classId))
-        if (selectedClass?.id === classId) {
-          setSelectedClass(null)
-        }
       } catch (error) {
         console.error("Failed to delete class:", error)
         alert("学級の削除に失敗しました。")
@@ -243,9 +240,6 @@ export default function StudentManagementTableV2() {
       try {
         await window.electronAPI.deleteStudent(studentId)
         setStudents(students.filter((s) => s.id !== studentId))
-        if (selectedStudent?.id === studentId) {
-          setSelectedStudent(null)
-        }
       } catch (error) {
         console.error("Failed to delete student:", error)
         alert("生徒の削除に失敗しました。")
@@ -269,10 +263,6 @@ export default function StudentManagementTableV2() {
     }
   }
 
-  const handleAddMembership = (studentId?: string, classId?: string) => {
-    setMembershipToEdit(null)
-    setIsMembershipModalOpen(true)
-  }
 
   const handleEditMembership = (membership: Membership) => {
     setMembershipToEdit(membership)
@@ -383,6 +373,24 @@ export default function StudentManagementTableV2() {
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5" />
                       生徒一覧 ({filteredStudents.length}名)
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <div className="space-y-2">
+                            <p className="font-semibold">複数学級対応システム</p>
+                            <p>生徒は同時に複数のクラスに所属できます。</p>
+                            <p className="text-sm">例：</p>
+                            <ul className="text-sm list-disc list-inside">
+                              <li>ホームルーム：1年A組</li>
+                              <li>英語：E1クラス（習熟度別）</li>
+                              <li>数学：M2クラス（習熟度別）</li>
+                            </ul>
+                            <p className="text-sm mt-2">生徒の詳細画面で所属状況を確認できます。</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
                     </CardTitle>
                     <div className="flex gap-2">
                       <Button onClick={handleAddNewStudent} size="sm" variant="outline">
@@ -404,61 +412,19 @@ export default function StudentManagementTableV2() {
                           <TableHead>学籍番号</TableHead>
                           <TableHead>氏名</TableHead>
                           <TableHead>入学年度</TableHead>
-                          <TableHead>
-                            <div className="flex items-center gap-2">
-                              現在の所属
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Info className="h-4 w-4 text-muted-foreground" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  生徒は同時に複数のクラスに所属できます<br />
-                                  （例：1A組、英語E1クラス、数学M2クラス）
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          </TableHead>
                           <TableHead className="text-right">操作</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredStudents.map((student) => {
-                          const currentMemberships = student.memberships.filter(m => !m.endDate)
-                          return (
+                        {filteredStudents.map((student) => (
                             <TableRow
                               key={student.id}
-                              onClick={() => setSelectedStudent(student)}
-                              className={`cursor-pointer ${
-                                selectedStudent?.id === student.id ? "bg-muted/50" : ""
-                              }`}
+                              onClick={() => router.push(`/students/${student.id}`)}
+                              className="cursor-pointer hover:bg-muted/50"
                             >
                               <TableCell>{student.studentId}</TableCell>
                               <TableCell>{student.lastName} {student.firstName}</TableCell>
                               <TableCell>{student.enrollmentYear || "未設定"}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {currentMemberships.length > 0 ? (
-                                    currentMemberships.map((membership) => (
-                                      <Badge 
-                                        key={membership.id} 
-                                        variant={membership.class.subject ? "secondary" : "default"} 
-                                        className="text-xs px-2 py-1"
-                                      >
-                                        {membership.class.classCode || membership.class.name}
-                                        {membership.class.subject && (
-                                          <span className="ml-1 text-muted-foreground opacity-75">
-                                            ({membership.class.subject})
-                                          </span>
-                                        )}
-                                      </Badge>
-                                    ))
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs">
-                                      所属なし
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex gap-1">
                                   <Button
@@ -484,11 +450,10 @@ export default function StudentManagementTableV2() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          )
-                        })}
+                        ))}
                         {filteredStudents.length === 0 && (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center">
+                            <TableCell colSpan={4} className="text-center">
                               該当する生徒が見つかりません。
                             </TableCell>
                           </TableRow>
@@ -502,55 +467,13 @@ export default function StudentManagementTableV2() {
 
             {/* Student Detail Panel */}
             <div>
-              {selectedStudent ? (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">
-                        {selectedStudent.lastName} {selectedStudent.firstName}
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddMembership(selectedStudent.id)}
-                      >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        所属追加
-                      </Button>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      学籍番号: {selectedStudent.studentId}
-                      {selectedStudent.enrollmentYear && (
-                        <span className="ml-2">入学年度: {selectedStudent.enrollmentYear}年</span>
-                      )}
-                    </p>
-                  </CardHeader>
-                  <CardContent>
-                    <StudentMembershipTimeline
-                      memberships={selectedStudent.memberships.map(m => ({
-                        ...m,
-                        studentId: selectedStudent.id,
-                        classId: m.class.id,
-                        student: {
-                          id: selectedStudent.id,
-                          studentId: selectedStudent.studentId,
-                          lastName: selectedStudent.lastName,
-                          firstName: selectedStudent.firstName,
-                          lastNameKana: selectedStudent.lastNameKana,
-                          firstNameKana: selectedStudent.firstNameKana,
-                        },
-                      }))}
-                      onEditMembership={handleEditMembership}
-                      onEndMembership={handleEndMembership}
-                    />
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    生徒を選択して詳細を表示
-                  </CardContent>
-                </Card>
-              )}
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <Info className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-medium">生徒をクリックして詳細を表示</p>
+                  <p className="text-sm mt-1">各生徒の所属学級や履歴を確認できます</p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -589,10 +512,8 @@ export default function StudentManagementTableV2() {
                         {filteredClasses.map((classItem) => (
                           <TableRow
                             key={classItem.id}
-                            onClick={() => setSelectedClass(classItem)}
-                            className={`cursor-pointer ${
-                              selectedClass?.id === classItem.id ? "bg-muted/50" : ""
-                            }`}
+                            onClick={() => router.push(`/classes/${classItem.id}`)}
+                            className="cursor-pointer hover:bg-muted/50"
                           >
                             <TableCell>
                               <div className="flex items-center gap-2">
@@ -660,73 +581,13 @@ export default function StudentManagementTableV2() {
 
             {/* Class Detail Panel */}
             <div>
-              {selectedClass ? (
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">
-                        {selectedClass.name}
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddMembership(undefined, selectedClass.id)}
-                      >
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        生徒追加
-                      </Button>
-                    </div>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      {selectedClass.grade && <p>学年: {selectedClass.grade}年</p>}
-                      {selectedClass.subject && <p>教科: {selectedClass.subject}</p>}
-                      {selectedClass.description && <p>説明: {selectedClass.description}</p>}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <h4 className="font-medium">現在の所属生徒 ({selectedClass.memberships.length}名)</h4>
-                      {selectedClass.memberships.length > 0 ? (
-                        selectedClass.memberships.map((membership) => (
-                          <div
-                            key={membership.id}
-                            className="flex items-center justify-between p-2 border rounded"
-                          >
-                            <div>
-                              <span className="font-medium">{membership.student.lastName} {membership.student.firstName}</span>
-                              <span className="ml-2 text-sm text-muted-foreground">
-                                ({membership.student.studentId})
-                              </span>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEditMembership(membership as any)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEndMembership(membership.id)}
-                              >
-                                <Clock className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-muted-foreground text-sm">所属生徒がいません</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    学級を選択して詳細を表示
-                  </CardContent>
-                </Card>
-              )}
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  <BookOpen className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-medium">学級をクリックして詳細を表示</p>
+                  <p className="text-sm mt-1">所属生徒一覧や学級情報を確認できます</p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </TabsContent>
@@ -734,7 +595,7 @@ export default function StudentManagementTableV2() {
 
       {/* Modals */}
       {isClassModalOpen && (
-        <ClassModalV2
+        <ClassModal
           isOpen={isClassModalOpen}
           onClose={() => setIsClassModalOpen(false)}
           onSave={handleSaveClass}
@@ -763,7 +624,7 @@ export default function StudentManagementTableV2() {
       )}
 
       {isSpreadsheetImportModalOpen && (
-        <SpreadsheetImportModalV2
+        <SpreadsheetImportModal
           isOpen={isSpreadsheetImportModalOpen}
           onClose={() => setIsSpreadsheetImportModalOpen(false)}
           onImportSuccess={onStudentsImported}
@@ -776,8 +637,8 @@ export default function StudentManagementTableV2() {
           isOpen={isMembershipModalOpen}
           onClose={() => setIsMembershipModalOpen(false)}
           onSave={handleSaveMembership}
-          studentId={selectedStudent?.id}
-          classId={selectedClass?.id}
+          studentId={undefined}
+          classId={undefined}
           availableStudents={students.map(s => ({ 
             id: s.id, 
             studentId: s.studentId, 

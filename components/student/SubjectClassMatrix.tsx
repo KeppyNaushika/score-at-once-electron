@@ -47,7 +47,8 @@ interface StudentWithMemberships {
       name: string
       classCode?: string | null
       subject?: string | null
-      classType: string
+      grade?: number | null
+      isVisible?: boolean
     }
   }>
 }
@@ -59,7 +60,7 @@ interface ClassWithMemberships {
   grade?: number | null
   description?: string | null
   subject?: string | null
-  classType: string
+  isVisible?: boolean
   memberships: Array<{
     id: string
     startDate: Date
@@ -70,7 +71,10 @@ interface ClassWithMemberships {
     student: {
       id: string
       studentId: string
-      name: string
+      lastName: string
+      firstName: string
+      lastNameKana: string
+      firstNameKana: string
     }
   }>
 }
@@ -96,7 +100,7 @@ export default function SubjectClassMatrix({
   const subjects = Array.from(
     new Set(
       classes
-        .filter(c => c.subject && c.classType === "SUBJECT")
+        .filter(c => c.subject && c.isVisible !== false)
         .map(c => c.subject!)
     )
   ).sort()
@@ -105,15 +109,16 @@ export default function SubjectClassMatrix({
   const filteredClasses = classes.filter(c => {
     const matchesGrade = !selectedGrade || c.grade === selectedGrade
     const matchesSubject = selectedSubject === "all" || c.subject === selectedSubject
-    const isSubjectClass = c.classType === "SUBJECT"
-    return matchesGrade && matchesSubject && isSubjectClass
+    const isSubjectClass = !!c.subject // Classes with subjects are considered subject classes
+    const isVisible = c.isVisible !== false
+    return matchesGrade && matchesSubject && isSubjectClass && isVisible
   })
 
   const filteredStudents = students.filter(s => {
     if (!selectedGrade) return true
-    // 学年フィルタ: ホームルームクラスの学年でフィルタ
+    // 学年フィルタ: ホームルームクラス（教科がないクラス）の学年でフィルタ
     const homeroom = s.memberships.find(m => 
-      !m.endDate && m.class.classType === "HOMEROOM"
+      !m.endDate && !m.class.subject // Homeroom classes don't have subjects
     )
     return homeroom?.class.grade === selectedGrade
   })
@@ -132,7 +137,6 @@ export default function SubjectClassMatrix({
   const getStudentClassForSubject = (student: StudentWithMemberships, subject: string) => {
     return student.memberships.find(m => 
       !m.endDate && 
-      m.class.classType === "SUBJECT" && 
       m.class.subject === subject
     )
   }
@@ -211,7 +215,7 @@ export default function SubjectClassMatrix({
                         <div className="space-y-1">
                           {cls.memberships.slice(0, 3).map(membership => (
                             <div key={membership.id} className="text-xs flex items-center justify-between">
-                              <span>{membership.student.name}</span>
+                              <span>{membership.student.lastName} {membership.student.firstName}</span>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -263,7 +267,7 @@ export default function SubjectClassMatrix({
                     return (
                       <TableRow key={student.id}>
                         <TableCell className="font-medium">
-                          {student.name}
+                          {student.lastName} {student.firstName}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {student.studentId}

@@ -27,8 +27,11 @@ interface ProjectData {
 
 interface StudentData {
   id: string
-  name: string
-  studentNumber: string
+  lastName: string
+  firstName: string
+  lastNameKana: string
+  firstNameKana: string
+  studentId: string
 }
 
 export default function AnswerSheetsPage() {
@@ -62,8 +65,11 @@ export default function AnswerSheetsPage() {
       setStudents(
         studentsResult.map((student: any) => ({
           id: student.id,
-          name: student.name,
-          studentNumber: student.studentId,
+          lastName: student.lastName,
+          firstName: student.firstName,
+          lastNameKana: student.lastNameKana,
+          firstNameKana: student.firstNameKana,
+          studentId: student.studentId,
         })),
       )
 

@@ -42,18 +42,27 @@ export default function StudentModal({
   availableClasses,
 }: StudentModalProps) {
   const [studentId, setStudentId] = useState("")
-  const [name, setName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastNameKana, setLastNameKana] = useState("")
+  const [firstNameKana, setFirstNameKana] = useState("")
   const [enrollmentYear, setEnrollmentYear] = useState<number | undefined>(undefined)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     if (studentToEdit) {
       setStudentId(studentToEdit.studentId)
-      setName(studentToEdit.name)
+      setLastName(studentToEdit.lastName)
+      setFirstName(studentToEdit.firstName)
+      setLastNameKana(studentToEdit.lastNameKana)
+      setFirstNameKana(studentToEdit.firstNameKana)
       setEnrollmentYear(studentToEdit.enrollmentYear ?? undefined)
     } else {
       setStudentId("")
-      setName("")
+      setLastName("")
+      setFirstName("")
+      setLastNameKana("")
+      setFirstNameKana("")
       setEnrollmentYear(undefined)
     }
     setErrors({})
@@ -66,8 +75,12 @@ export default function StudentModal({
       newErrors.studentId = "学籍番号は必須です。"
     }
 
-    if (!name.trim()) {
-      newErrors.name = "氏名は必須です。"
+    if (!lastName.trim()) {
+      newErrors.lastName = "姓は必須です。"
+    }
+
+    if (!firstName.trim()) {
+      newErrors.firstName = "名は必須です。"
     }
 
     setErrors(newErrors)
@@ -81,7 +94,10 @@ export default function StudentModal({
 
     const studentData = {
       studentId: studentId.trim(),
-      name: name.trim(),
+      lastName: lastName.trim(),
+      firstName: firstName.trim(),
+      lastNameKana: lastNameKana.trim(),
+      firstNameKana: firstNameKana.trim(),
       enrollmentYear: enrollmentYear || undefined,
     }
 
@@ -122,18 +138,66 @@ export default function StudentModal({
             </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              氏名
+            <Label htmlFor="lastName" className="text-right">
+              姓
             </Label>
             <div className="col-span-3">
               <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="例: 山田太郎"
+                id="lastName"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="例: 山田"
               />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-500">{errors.name}</p>
+              {errors.lastName && (
+                <p className="mt-1 text-sm text-red-500">{errors.lastName}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="firstName" className="text-right">
+              名
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="firstName"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="例: 太郎"
+              />
+              {errors.firstName && (
+                <p className="mt-1 text-sm text-red-500">{errors.firstName}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="lastNameKana" className="text-right">
+              姓カナ
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="lastNameKana"
+                value={lastNameKana}
+                onChange={(e) => setLastNameKana(e.target.value)}
+                placeholder="例: ヤマダ"
+              />
+              {errors.lastNameKana && (
+                <p className="mt-1 text-sm text-red-500">{errors.lastNameKana}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="firstNameKana" className="text-right">
+              名カナ
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="firstNameKana"
+                value={firstNameKana}
+                onChange={(e) => setFirstNameKana(e.target.value)}
+                placeholder="例: タロウ"
+              />
+              {errors.firstNameKana && (
+                <p className="mt-1 text-sm text-red-500">{errors.firstNameKana}</p>
               )}
             </div>
           </div>

@@ -36,7 +36,14 @@ interface StudentClassMembershipModalProps {
   }) => void
   studentId?: string
   classId?: string
-  availableStudents: Array<{ id: string; studentId: string; name: string }>
+  availableStudents: Array<{ 
+    id: string
+    studentId: string
+    lastName: string
+    firstName: string
+    lastNameKana: string
+    firstNameKana: string
+  }>
   availableClasses: Array<{ id: string; name: string; subject?: string; classType: string }>
   membershipToEdit?: {
     id: string
@@ -166,7 +173,7 @@ export default function StudentClassMembershipModal({
                 <SelectContent>
                   {availableStudents.map((student) => (
                     <SelectItem key={student.id} value={student.id}>
-                      {student.name} ({student.studentId})
+                      {student.lastName} {student.firstName} ({student.studentId})
                     </SelectItem>
                   ))}
                 </SelectContent>
