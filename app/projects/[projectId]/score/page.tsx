@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Prisma } from "@prisma/client"
 import { toast } from "sonner" // sonnerのtoastを直接使用
-import MasterImageManager from "@/components/Project/MasterImageManager"
-import PageHeader from "@/components/common/PageHeader"
+import MasterImageManager from "@/components/project/images/MasterImageManager"
+import PageHeader from "@/components/layout/PageHeader"
 
 export default function MasterImageStepPage() {
   const params = useParams()

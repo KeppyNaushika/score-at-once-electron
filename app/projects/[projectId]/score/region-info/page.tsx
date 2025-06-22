@@ -1,12 +1,12 @@
 "use client"
 
-import RegionDetailsTable from "@/components/Project/RegionDetailsTable"
+import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import { AreaType, MasterImage, Project, User } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import PageHeader from "@/components/common/PageHeader"
+import PageHeader from "@/components/layout/PageHeader"
 
 export default function RegionInfoPage() {
   const params = useParams()
