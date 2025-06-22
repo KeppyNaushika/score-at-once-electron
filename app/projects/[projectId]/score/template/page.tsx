@@ -416,93 +416,98 @@ export default function TemplateStepPage() {
               {project?.examName} - ドラッグして採点領域を作成
             </p>
           </div>
-          <div className="flex items-center space-x-2">
-            {masterImages.length > 1 && (
-              <div className="flex items-center space-x-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentIndex = masterImages.findIndex(
-                      (img) => img.id === selectedMasterImage?.id,
-                    )
-                    if (currentIndex > 0) {
-                      handleMasterImageChange(
-                        masterImages[currentIndex - 1].id,
-                      )
-                    }
-                  }}
-                  disabled={
-                    isLoading ||
-                    isSaving ||
-                    masterImages.findIndex(
-                      (img) => img.id === selectedMasterImage?.id,
-                    ) === 0
-                  }
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Select
-                  value={selectedMasterImage?.id || ""}
-                  onValueChange={handleMasterImageChange}
-                  disabled={isLoading || isSaving}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="ページを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {masterImages.map((img) => (
-                      <SelectItem key={img.id} value={img.id}>
-                        ページ {img.pageNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentIndex = masterImages.findIndex(
-                      (img) => img.id === selectedMasterImage?.id,
-                    )
-                    if (currentIndex < masterImages.length - 1) {
-                      handleMasterImageChange(
-                        masterImages[currentIndex + 1].id,
-                      )
-                    }
-                  }}
-                  disabled={
-                    isLoading ||
-                    isSaving ||
-                    masterImages.findIndex(
-                      (img) => img.id === selectedMasterImage?.id,
-                    ) ===
-                      masterImages.length - 1
-                  }
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
-              <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)} variant="outline">
-                次へ: 領域情報を編集
-              </Button>
-            )}
-          </div>
+          {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
+            <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)}>
+              次へ: 領域情報を編集
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden p-4">
-        <LayoutRegionEditor
-          areas={layoutRegions}
-          setAreas={handleRegionsChange}
-          disabled={isSaving}
-          backgroundImageUrl={backgroundImageUrl}
-          imageDimensions={imageDimensions}
-          masterImageId={selectedMasterImage?.id || null}
-        />
+      <div className="flex-1 overflow-hidden flex flex-col">
+        {/* Page Navigation - moved to top center */}
+        {masterImages.length > 1 && (
+          <div className="flex justify-center items-center py-3 border-b">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentIndex = masterImages.findIndex(
+                    (img) => img.id === selectedMasterImage?.id,
+                  )
+                  if (currentIndex > 0) {
+                    handleMasterImageChange(
+                      masterImages[currentIndex - 1].id,
+                    )
+                  }
+                }}
+                disabled={
+                  isLoading ||
+                  isSaving ||
+                  masterImages.findIndex(
+                    (img) => img.id === selectedMasterImage?.id,
+                  ) === 0
+                }
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Select
+                value={selectedMasterImage?.id || ""}
+                onValueChange={handleMasterImageChange}
+                disabled={isLoading || isSaving}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="ページを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterImages.map((img) => (
+                    <SelectItem key={img.id} value={img.id}>
+                      ページ {img.pageNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentIndex = masterImages.findIndex(
+                    (img) => img.id === selectedMasterImage?.id,
+                  )
+                  if (currentIndex < masterImages.length - 1) {
+                    handleMasterImageChange(
+                      masterImages[currentIndex + 1].id,
+                    )
+                  }
+                }}
+                disabled={
+                  isLoading ||
+                  isSaving ||
+                  masterImages.findIndex(
+                    (img) => img.id === selectedMasterImage?.id,
+                  ) ===
+                    masterImages.length - 1
+                }
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Layout Editor */}
+        <div className="flex-1 overflow-hidden p-4">
+          <LayoutRegionEditor
+            areas={layoutRegions}
+            setAreas={handleRegionsChange}
+            disabled={isSaving}
+            backgroundImageUrl={backgroundImageUrl}
+            imageDimensions={imageDimensions}
+            masterImageId={selectedMasterImage?.id || null}
+          />
+        </div>
       </div>
     </div>
   )

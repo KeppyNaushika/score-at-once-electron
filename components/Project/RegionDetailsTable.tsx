@@ -3,8 +3,21 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Modal, ModalContent, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from "@/components/ui/modal"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalFooter,
+} from "@/components/ui/modal"
 import { AreaType } from "@prisma/client"
 import { AlertTriangle, Trash2, GripVertical } from "lucide-react"
 
@@ -70,6 +83,103 @@ const RegionDetailsTable = ({
     setRegions(newRegions)
   }
 
+  const handleKeyDown = (
+    e: React.KeyboardEvent,
+    rowIndex: number,
+    fieldName: string,
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      // Move to next row, same field
+      const nextRowIndex = rowIndex + 1
+      if (nextRowIndex < regions.length) {
+        const nextInput = document.querySelector(
+          `[data-row="${nextRowIndex}"][data-field="${fieldName}"]`,
+        ) as HTMLInputElement
+        if (nextInput) {
+          nextInput.focus()
+          nextInput.select()
+        }
+      }
+    } else if (e.key === "Enter" && e.shiftKey) {
+      e.preventDefault()
+      // Move to previous row, same field
+      const prevRowIndex = rowIndex - 1
+      if (prevRowIndex >= 0) {
+        const prevInput = document.querySelector(
+          `[data-row="${prevRowIndex}"][data-field="${fieldName}"]`,
+        ) as HTMLInputElement
+        if (prevInput) {
+          prevInput.focus()
+          prevInput.select()
+        }
+      }
+    } else if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault()
+      // Move to next field in same row
+      const fieldOrder = ["label", "points"]
+      const currentFieldIndex = fieldOrder.indexOf(fieldName)
+      if (currentFieldIndex < fieldOrder.length - 1) {
+        const nextField = fieldOrder[currentFieldIndex + 1]
+        const nextInput = document.querySelector(
+          `[data-row="${rowIndex}"][data-field="${nextField}"]`,
+        ) as HTMLInputElement
+        if (nextInput && !nextInput.disabled) {
+          nextInput.focus()
+          nextInput.select()
+        }
+      } else {
+        // Move to first field of next row
+        const nextRowIndex = rowIndex + 1
+        if (nextRowIndex < regions.length) {
+          const nextInput = document.querySelector(
+            `[data-row="${nextRowIndex}"][data-field="label"]`,
+          ) as HTMLInputElement
+          if (nextInput) {
+            nextInput.focus()
+            nextInput.select()
+          }
+        }
+      }
+    } else if (e.key === "Tab" && e.shiftKey) {
+      e.preventDefault()
+      // Move to previous field in same row
+      const fieldOrder = ["label", "points"]
+      const currentFieldIndex = fieldOrder.indexOf(fieldName)
+      if (currentFieldIndex > 0) {
+        const prevField = fieldOrder[currentFieldIndex - 1]
+        const prevInput = document.querySelector(
+          `[data-row="${rowIndex}"][data-field="${prevField}"]`,
+        ) as HTMLInputElement
+        if (prevInput) {
+          prevInput.focus()
+          prevInput.select()
+        }
+      } else {
+        // Move to last field of previous row
+        const prevRowIndex = rowIndex - 1
+        if (prevRowIndex >= 0) {
+          const prevInput = document.querySelector(
+            `[data-row="${prevRowIndex}"][data-field="points"]`,
+          ) as HTMLInputElement
+          if (prevInput && !prevInput.disabled) {
+            prevInput.focus()
+            prevInput.select()
+          } else {
+            // Fall back to label
+            const labelInput = document.querySelector(
+              `[data-row="${prevRowIndex}"][data-field="label"]`,
+            ) as HTMLInputElement
+            if (labelInput) {
+              labelInput.focus()
+              labelInput.select()
+            }
+          }
+        }
+      }
+    }
+  }
+
   const handleDeleteRegion = (index: number) => {
     setRegionToDelete(index)
     setDeleteModalOpen(true)
@@ -83,7 +193,10 @@ const RegionDetailsTable = ({
       setRegionToDelete(null)
       if (selectedRowIndex === regionToDelete) {
         setSelectedRowIndex(null)
-      } else if (selectedRowIndex !== null && selectedRowIndex > regionToDelete) {
+      } else if (
+        selectedRowIndex !== null &&
+        selectedRowIndex > regionToDelete
+      ) {
         setSelectedRowIndex(selectedRowIndex - 1)
       }
     }
@@ -96,42 +209,45 @@ const RegionDetailsTable = ({
   const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault()
     if (dragState.draggedIndex !== null && dragState.draggedIndex !== index) {
-      setDragState(prev => ({ ...prev, dragOverIndex: index }))
+      setDragState((prev) => ({ ...prev, dragOverIndex: index }))
     }
   }
 
   const handleDragLeave = () => {
-    setDragState(prev => ({ ...prev, dragOverIndex: null }))
+    setDragState((prev) => ({ ...prev, dragOverIndex: null }))
   }
 
   const handleDrop = (e: React.DragEvent, dropIndex: number) => {
     e.preventDefault()
     const { draggedIndex } = dragState
-    
+
     if (draggedIndex !== null && draggedIndex !== dropIndex) {
       const newRegions = [...regions]
       const draggedItem = newRegions[draggedIndex]
-      
+
       // Remove the dragged item
       newRegions.splice(draggedIndex, 1)
-      
+
       // Insert the dragged item at the new position
       newRegions.splice(dropIndex, 0, draggedItem)
-      
+
       setRegions(newRegions)
-      
+
       // Update selected row index if needed
       if (selectedRowIndex === draggedIndex) {
         setSelectedRowIndex(dropIndex)
       } else if (selectedRowIndex !== null) {
         if (draggedIndex < selectedRowIndex && dropIndex >= selectedRowIndex) {
           setSelectedRowIndex(selectedRowIndex - 1)
-        } else if (draggedIndex > selectedRowIndex && dropIndex <= selectedRowIndex) {
+        } else if (
+          draggedIndex > selectedRowIndex &&
+          dropIndex <= selectedRowIndex
+        ) {
           setSelectedRowIndex(selectedRowIndex + 1)
         }
       }
     }
-    
+
     setDragState({ draggedIndex: null, dragOverIndex: null })
   }
 
@@ -161,25 +277,35 @@ const RegionDetailsTable = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-border">
+        <table className="border-border w-full border-collapse border">
           <thead>
             <tr className="bg-muted/50">
-              <th className="border border-border p-3 text-left font-medium w-8"></th>
-              <th className="border border-border p-3 text-left font-medium w-16">#</th>
-              <th className="border border-border p-3 text-left font-medium w-36">種類</th>
-              <th className="border border-border p-3 text-left font-medium w-40">ラベル</th>
-              <th className="border border-border p-3 text-left font-medium w-24">配点</th>
-              <th className="border border-border p-3 text-left font-medium w-32">設問番号</th>
-              <th className="border border-border p-3 text-center font-medium w-20">操作</th>
+              <th className="border-border w-8 border px-2 py-1 text-left font-medium"></th>
+              <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+                #
+              </th>
+              <th className="border-border w-36 border px-2 py-1 text-left font-medium">
+                種類
+              </th>
+              <th className="border-border w-40 border px-2 py-1 text-left font-medium">
+                ラベル
+              </th>
+              <th className="border-border w-24 border px-2 py-1 text-left font-medium">
+                配点
+              </th>
+              <th className="border-border w-20 border px-2 py-1 text-center font-medium">
+                操作
+              </th>
             </tr>
           </thead>
           <tbody>
             {regions.map((region, index) => {
               const isSelected = selectedRowIndex === index
-              const icon = typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
+              const icon =
+                typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
               const isDragged = dragState.draggedIndex === index
               const isDraggedOver = dragState.dragOverIndex === index
-              
+
               return (
                 <tr
                   key={region.id || `region-${index}`}
@@ -189,28 +315,30 @@ const RegionDetailsTable = ({
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
-                  className={`cursor-pointer transition-colors hover:bg-accent/50 ${
+                  className={`hover:bg-accent/50 cursor-pointer transition-colors ${
                     isSelected ? "bg-primary/10 border-primary" : ""
                   } ${isDragged ? "opacity-50" : ""} ${
                     isDraggedOver ? "border-t-4 border-t-blue-500" : ""
                   }`}
                   onClick={() => setSelectedRowIndex(isSelected ? null : index)}
                 >
-                  <td className="border border-border p-3">
+                  <td className="border-border border px-2 py-1">
                     <div className="flex items-center justify-center">
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <GripVertical className="text-muted-foreground h-4 w-4 cursor-grab" />
                     </div>
                   </td>
-                  <td className="border border-border p-3">
+                  <td className="border-border border px-2 py-1">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">{icon}</span>
                       <span className="text-sm font-medium">{index + 1}</span>
                     </div>
                   </td>
-                  <td className="border border-border p-3">
+                  <td className="border-border border px-2 py-1">
                     <Select
                       value={region.type}
-                      onValueChange={(value) => handleRegionChange(index, "type", value)}
+                      onValueChange={(value) =>
+                        handleRegionChange(index, "type", value)
+                      }
                       disabled={disabled}
                     >
                       <SelectTrigger className="w-full">
@@ -225,43 +353,40 @@ const RegionDetailsTable = ({
                       </SelectContent>
                     </Select>
                   </td>
-                  <td className="border border-border p-3">
+                  <td className="border-border border px-2 py-1">
                     <Input
+                      data-row={index}
+                      data-field="label"
                       value={region.label || ""}
-                      onChange={(e) => handleRegionChange(index, "label", e.target.value)}
+                      onChange={(e) =>
+                        handleRegionChange(index, "label", e.target.value)
+                      }
+                      onKeyDown={(e) => handleKeyDown(e, index, "label")}
                       disabled={disabled}
                       placeholder="領域名を入力"
-                      className="w-full"
+                      className="h-8 w-full min-w-20"
                     />
                   </td>
-                  <td className="border border-border p-3">
+                  <td className="border-border border px-2 py-1">
                     {region.type === AreaType.QUESTION_ANSWER ? (
                       <Input
+                        data-row={index}
+                        data-field="points"
                         type="number"
                         value={region.points ?? ""}
-                        onChange={(e) => handleRegionChange(index, "points", e.target.value)}
+                        onChange={(e) =>
+                          handleRegionChange(index, "points", e.target.value)
+                        }
+                        onKeyDown={(e) => handleKeyDown(e, index, "points")}
                         disabled={disabled}
                         placeholder="10"
-                        className="w-full"
+                        className="h-8 w-full min-w-20"
                       />
                     ) : (
                       <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </td>
-                  <td className="border border-border p-3">
-                    {region.type === AreaType.QUESTION_ANSWER ? (
-                      <Input
-                        value={region.questionNumber || ""}
-                        onChange={(e) => handleRegionChange(index, "questionNumber", e.target.value)}
-                        disabled={disabled}
-                        placeholder="1, 2a, 3-1"
-                        className="w-full"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground text-sm">-</span>
-                    )}
-                  </td>
-                  <td className="border border-border p-3 text-center">
+                  <td className="border-border border px-2 py-1 text-center">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -281,7 +406,6 @@ const RegionDetailsTable = ({
         </table>
       </div>
 
-
       {/* Delete Confirmation Modal */}
       <Modal open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <ModalContent>
@@ -292,7 +416,7 @@ const RegionDetailsTable = ({
             </ModalTitle>
             <ModalDescription className="space-y-2">
               <p>この領域を削除しますか？</p>
-              <div className="rounded border border-orange-200 bg-orange-50 p-3">
+              <div className="rounded border border-orange-200 bg-orange-50 px-2 py-1">
                 <p className="text-sm font-medium text-orange-700">⚠️ 注意</p>
                 <p className="mt-1 text-sm text-orange-600">
                   この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。
