@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "sonner"
 
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
-const SonnerToaster = ({ ...props }: ToasterProps) => {
+const ToastProvider = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme="light" // デフォルトのテーマを指定 (必要に応じて変更)
@@ -25,4 +25,4 @@ const SonnerToaster = ({ ...props }: ToasterProps) => {
   )
 }
 
-export { SonnerToaster }
+export { ToastProvider }

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import Navigation from "@/components/Navigation"
-import { SonnerToaster } from "@/components/SonnerToaster"
+import Navigation from "./Navigation"
+import { ToastProvider } from "@/components/common/ToastProvider"
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)
@@ -37,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       >
         {children}
       </main>
-      <SonnerToaster />
+      <ToastProvider />
     </div>
   )
 }

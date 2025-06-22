@@ -1,7 +1,7 @@
 "use client"
 
-import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
-import RegionDetailsTable from "@/components/Project/RegionDetailsTable"
+import LayoutRegionEditor from "@/components/project/layout/LayoutRegionEditor"
+import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import PageHeader from "@/components/common/PageHeader"
+import PageHeader from "@/components/layout/PageHeader"
 
 export default function TemplateStepPage() {
   const params = useParams()

@@ -1,8 +1,8 @@
 'use client'
 
 import { useRouter } from "next/navigation"
-import ProtectedRoute from "@/components/Auth/ProtectedRoute"
-import Projects from "@/components/Project/Projects"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import Projects from "@/components/project/list/ProjectList"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, Upload, Users, BarChart3 } from "lucide-react"
