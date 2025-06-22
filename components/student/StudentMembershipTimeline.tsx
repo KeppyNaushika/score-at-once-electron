@@ -28,13 +28,17 @@ interface Membership {
   student: {
     id: string
     studentId: string
-    name: string
+    lastName: string
+    firstName: string
+    lastNameKana: string
+    firstNameKana: string
   }
   class: {
     id: string
     name: string
+    classCode?: string | null
     subject?: string | null
-    classType: string
+    isVisible?: boolean
   }
 }
 
@@ -51,13 +55,6 @@ const membershipTypeLabels = {
   TEMPORARY: "一時的所属",
 }
 
-const classTypeLabels = {
-  HOMEROOM: "ホームルーム",
-  SUBJECT: "教科別",
-  ABILITY_GROUPED: "習熟度別",
-  SPECIAL: "特別クラス",
-}
-
 const getTypeColor = (type: string) => {
   switch (type) {
     case "REGULAR":
@@ -66,21 +63,6 @@ const getTypeColor = (type: string) => {
       return "bg-green-100 text-green-800"
     case "TEMPORARY":
       return "bg-yellow-100 text-yellow-800"
-    default:
-      return "bg-gray-100 text-gray-800"
-  }
-}
-
-const getClassTypeColor = (type: string) => {
-  switch (type) {
-    case "HOMEROOM":
-      return "bg-purple-100 text-purple-800"
-    case "SUBJECT":
-      return "bg-orange-100 text-orange-800"
-    case "ABILITY_GROUPED":
-      return "bg-teal-100 text-teal-800"
-    case "SPECIAL":
-      return "bg-pink-100 text-pink-800"
     default:
       return "bg-gray-100 text-gray-800"
   }
@@ -170,10 +152,6 @@ export default function StudentMembershipTimeline({
                   {membershipTypeLabels[membership.membershipType as keyof typeof membershipTypeLabels] || membership.membershipType}
                 </Badge>
                 
-                <Badge className={getClassTypeColor(membership.class.classType)}>
-                  {classTypeLabels[membership.class.classType as keyof typeof classTypeLabels] || membership.class.classType}
-                </Badge>
-
                 {(membership.subject || membership.class.subject) && (
                   <Badge variant="outline" className="flex items-center gap-1">
                     <BookOpen className="h-3 w-3" />

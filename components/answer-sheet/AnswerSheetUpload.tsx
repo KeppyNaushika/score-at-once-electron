@@ -26,7 +26,14 @@ import type { UploadAnswerSheetFileData } from "@/types/electron"
 
 interface AnswerSheetUploadProps {
   projectId: string
-  students: Array<{ id: string; name: string; studentNumber: string }>
+  students: Array<{ 
+    id: string
+    lastName: string
+    firstName: string
+    lastNameKana: string
+    firstNameKana: string
+    studentId: string
+  }>
   onUploadComplete?: () => void
 }
 
@@ -60,10 +67,13 @@ export default function AnswerSheetUpload({
       const filesWithStudentGuess = newFiles.map((file) => {
         const fileName = file.name.toLowerCase()
         const matchedStudent = students.find((student) => {
-          const studentName = student.name.toLowerCase()
-          const studentNumber = student.studentNumber.toLowerCase()
+          const studentName = `${student.lastName}${student.firstName}`.toLowerCase()
+          const studentNameKana = `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
+          const studentId = student.studentId.toLowerCase()
           return (
-            fileName.includes(studentName) || fileName.includes(studentNumber)
+            fileName.includes(studentName) || 
+            fileName.includes(studentNameKana) || 
+            fileName.includes(studentId)
           )
         })
 
@@ -177,7 +187,7 @@ export default function AnswerSheetUpload({
   const getStudentName = (studentId?: string) => {
     if (!studentId) return "未設定"
     const student = students.find((s) => s.id === studentId)
-    return student ? `${student.name} (${student.studentNumber})` : "未設定"
+    return student ? `${student.lastName} ${student.firstName} (${student.studentId})` : "未設定"
   }
 
   return (
@@ -270,7 +280,7 @@ export default function AnswerSheetUpload({
                         <SelectContent>
                           {students.map((student) => (
                             <SelectItem key={student.id} value={student.id}>
-                              {student.name} ({student.studentNumber})
+                              {student.lastName} {student.firstName} ({student.studentId})
                             </SelectItem>
                           ))}
                         </SelectContent>
