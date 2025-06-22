@@ -104,7 +104,7 @@ const File = () => {
                             : "実施日未設定"}
                           {project.tags && project.tags.length > 0 && (
                             <span className="ml-2">
-                              {project.tags.map(tag => tag.text).join(', ')}
+                              {project.tags.map((tag: any) => tag.text).join(', ')}
                             </span>
                           )}
                         </div>

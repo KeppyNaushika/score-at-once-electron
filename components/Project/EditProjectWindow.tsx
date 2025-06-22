@@ -17,6 +17,11 @@ import { Badge } from "@/components/ui/badge"
 import { X as XIcon, Edit2Icon, CheckIcon, Trash2Icon } from "lucide-react"
 import { Prisma } from "@prisma/client"
 
+type Tag = {
+  id: string
+  text: string
+}
+
 interface EditProjectWindowProps {
   projectToEdit: any
   setIsShowEditProjectWindow: (isOpen: boolean) => void
@@ -86,8 +91,10 @@ const EditProjectWindow = ({
       )
     ) {
       try {
-        await window.electronAPI.deleteTag(tagIdToDelete)
-        setTags(tags.filter((tag) => tag.id !== tagIdToDelete))
+        // Tag deletion functionality is not implemented yet
+        alert("タグ削除機能は未実装です。")
+        // await window.electronAPI.deleteTag(tagIdToDelete)
+        // setTags(tags.filter((tag) => tag.id !== tagIdToDelete))
       } catch (error) {
         console.error("Failed to delete tag from DB:", error)
         alert("タグの削除に失敗しました。")
@@ -95,7 +102,7 @@ const EditProjectWindow = ({
     }
   }
 
-  const handleEditTag = (tag: Tag) => {
+  const handleEditTag = (tag: any) => {
     setEditingTagId(tag.id)
     setEditingTagText(tag.text)
   }
@@ -103,11 +110,13 @@ const EditProjectWindow = ({
   const handleSaveEditedTag = async () => {
     if (!editingTagId || !editingTagText.trim()) return
     try {
-      const updatedTag = await window.electronAPI.updateTag(
-        editingTagId,
-        editingTagText.trim(),
-      )
-      setTags(tags.map((tag) => (tag.id === editingTagId ? updatedTag : tag)))
+      // Tag update functionality is not implemented yet
+      alert("タグ更新機能は未実装です。")
+      // const updatedTag = await window.electronAPI.updateTag(
+      //   editingTagId,
+      //   editingTagText.trim(),
+      // )
+      // setTags(tags.map((tag) => (tag.id === editingTagId ? updatedTag : tag)))
       setEditingTagId(null)
       setEditingTagText("")
     } catch (error) {
@@ -252,19 +261,21 @@ const EditProjectWindow = ({
                         />
                       )}
                       {/* プロジェクトからタグを外すボタン (XIcon) を追加 */}
-                      <XIcon
-                        size={16} // サイズを少し大きく
-                        className="ml-1 cursor-pointer text-gray-500 hover:text-gray-700"
-                        onClick={() => handleRemoveTagFromProject(tag.id)}
-                        title="このプロジェクトから科目を削除"
-                      />
+                      <div title="このプロジェクトから科目を削除">
+                        <XIcon
+                          size={16}
+                          className="ml-1 cursor-pointer text-gray-500 hover:text-gray-700"
+                          onClick={() => handleRemoveTagFromProject(tag.id)}
+                        />
+                      </div>
                       {/* DBからタグ自体を削除するボタン (TrashIcon) はより危険な操作なので、アイコンを分けるか、別の場所に配置することを検討 */}
-                      <Trash2Icon
-                        size={16} // サイズを少し大きく
-                        className="ml-1 cursor-pointer text-red-600 hover:text-red-800"
-                        onClick={() => handleDeleteTagFromDb(tag.id)}
-                        title="データベースから科目を完全に削除"
-                      />
+                      <div title="データベースから科目を完全に削除">
+                        <Trash2Icon
+                          size={16}
+                          className="ml-1 cursor-pointer text-red-600 hover:text-red-800"
+                          onClick={() => handleDeleteTagFromDb(tag.id)}
+                        />
+                      </div>
                     </div>
                   </Badge>
                 ))}
