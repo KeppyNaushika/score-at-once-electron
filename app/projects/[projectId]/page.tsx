@@ -194,7 +194,7 @@ export default function ProjectDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link href={`/projects/${projectId}/master-images`}>
+              <Link href={`/projects/${projectId}/score`}>
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center">
                     <FileImage className="h-4 w-4 mr-2" />
