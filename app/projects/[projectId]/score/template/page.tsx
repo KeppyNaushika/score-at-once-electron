@@ -24,7 +24,6 @@ export default function TemplateStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [step, setStep] = useState<"create" | "edit">("create") // 2段階のステップ
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
     null,
   )
@@ -43,8 +42,6 @@ export default function TemplateStepPage() {
       label: string
       points: string | null
       questionNumber: string
-      sourceAreaIdsJson: string | null
-      sourceQuestionNumbersJson: string | null
       masterImageId: string
     }[]
   >([])
@@ -113,8 +110,15 @@ export default function TemplateStepPage() {
             await window.electronAPI.getLayoutRegionsByProjectId(projectId)
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
+            // 最初のマスター画像に対応する領域のみをフィルター（sortedMasterImagesが定義された後）
+            const firstMasterImageId = fetchedProject.masterImages && fetchedProject.masterImages.length > 0
+              ? [...fetchedProject.masterImages].sort((a, b) => a.pageNumber - b.pageNumber)[0].id
+              : null
+            const currentImageRegions = firstMasterImageId 
+              ? existingRegions.filter(region => region.masterImageId === firstMasterImageId)
+              : []
             setLayoutRegions(
-              existingRegions.map((region) => ({
+              currentImageRegions.map((region) => ({
                 id: region.id,
                 type: region.type,
                 x: region.x,
@@ -124,22 +128,17 @@ export default function TemplateStepPage() {
                 label: region.label || "",
                 points: region.points ? String(region.points) : null,
                 questionNumber: region.questionNumber || "",
-                sourceAreaIdsJson: null,
-                sourceQuestionNumbersJson: null,
                 masterImageId: region.masterImageId || "",
               })),
             )
-            setStep("edit") // 既存の領域がある場合は編集ステップへ
           } else {
             setLayoutId(undefined)
             setLayoutRegions([])
-            setStep("create") // 新規作成ステップ
           }
         } catch (regionError) {
           console.error("Failed to load layout regions:", regionError)
           setLayoutId(undefined)
           setLayoutRegions([])
-          setStep("create")
         }
       } else {
         toast.error("プロジェクトが見つかりません。")
@@ -165,6 +164,11 @@ export default function TemplateStepPage() {
   const handleMasterImageChange = async (imageId: string) => {
     const image = masterImages.find((img) => img.id === imageId)
     if (image) {
+      // 現在の領域を保存
+      if (layoutRegions.length > 0 && selectedMasterImage) {
+        await autoSaveRegions(layoutRegions)
+      }
+      
       setSelectedMasterImage(image)
       try {
         const url = await window.electronAPI.resolveFileProtocolPath(image.path)
@@ -177,6 +181,26 @@ export default function TemplateStepPage() {
           })
         }
         img.src = url
+        
+        // 新しいページの領域を読み込む
+        const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        const currentImageRegions = allRegions.filter(
+          region => region.masterImageId === image.id
+        )
+        setLayoutRegions(
+          currentImageRegions.map((region) => ({
+            id: region.id,
+            type: region.type,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            label: region.label || "",
+            points: region.points ? String(region.points) : null,
+            questionNumber: region.questionNumber || "",
+            masterImageId: region.masterImageId || "",
+          })),
+        )
       } catch (error) {
         toast.error("背景画像の読み込みに失敗しました。")
         setBackgroundImageUrl(null)
@@ -204,8 +228,6 @@ export default function TemplateStepPage() {
             label: area.label,
             points: area.points ? parseInt(area.points) : null,
             questionNumber: area.questionNumber,
-            sourceAreaIdsJson: area.sourceAreaIdsJson,
-            sourceQuestionNumbersJson: area.sourceQuestionNumbersJson,
           }
 
           if (area.id) {
@@ -222,19 +244,17 @@ export default function TemplateStepPage() {
 
         if (savedRegions.length > 0) {
           setLayoutRegions(
-            savedRegions.map((region) => ({
-              id: region.id,
-              type: region.type,
-              x: region.x,
-              y: region.y,
-              width: region.width,
-              height: region.height,
-              label: region.label || "",
-              points: region.points ? String(region.points) : null,
-              questionNumber: region.questionNumber || "",
-              sourceAreaIdsJson: null,
-              sourceQuestionNumbersJson: null,
-              masterImageId: region.masterImageId || "",
+            savedRegions.filter(region => region !== null).map((region) => ({
+              id: region!.id,
+              type: region!.type,
+              x: region!.x,
+              y: region!.y,
+              width: region!.width,
+              height: region!.height,
+              label: region!.label || "",
+              points: region!.points ? String(region!.points) : null,
+              questionNumber: region!.questionNumber || "",
+              masterImageId: region!.masterImageId || "",
             })),
           )
           setLayoutId("saved")
@@ -293,8 +313,6 @@ export default function TemplateStepPage() {
           label: area.label,
           points: area.points ? parseInt(area.points) : null,
           questionNumber: area.questionNumber,
-          sourceAreaIdsJson: area.sourceAreaIdsJson,
-          sourceQuestionNumbersJson: area.sourceQuestionNumbersJson,
         }
 
         if (area.id) {
@@ -313,19 +331,17 @@ export default function TemplateStepPage() {
 
       // 保存された領域でUIを更新
       setLayoutRegions(
-        savedRegions.map((region) => ({
-          id: region.id,
-          type: region.type,
-          x: region.x,
-          y: region.y,
-          width: region.width,
-          height: region.height,
-          label: region.label || "",
-          points: region.points ? String(region.points) : null,
-          questionNumber: region.questionNumber || "",
-          sourceAreaIdsJson: null,
-          sourceQuestionNumbersJson: null,
-          masterImageId: region.masterImageId || "",
+        savedRegions.filter(region => region !== null).map((region) => ({
+          id: region!.id,
+          type: region!.type,
+          x: region!.x,
+          y: region!.y,
+          width: region!.width,
+          height: region!.height,
+          label: region!.label || "",
+          points: region!.points ? String(region!.points) : null,
+          questionNumber: region!.questionNumber || "",
+          masterImageId: region!.masterImageId || "",
         })),
       )
 
@@ -389,189 +405,104 @@ export default function TemplateStepPage() {
     )
   }
 
-  if (step === "create") {
-    return (
-      <div className="flex h-screen flex-col">
-        {/* Header */}
-        <div className="bg-background border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-semibold">採点領域の作成</h1>
-              <p className="text-muted-foreground text-sm">
-                {project?.examName} - ドラッグして採点領域を作成
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              {masterImages.length > 1 && (
-                <div className="flex items-center space-x-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentIndex = masterImages.findIndex(
-                        (img) => img.id === selectedMasterImage?.id,
-                      )
-                      if (currentIndex > 0) {
-                        handleMasterImageChange(
-                          masterImages[currentIndex - 1].id,
-                        )
-                      }
-                    }}
-                    disabled={
-                      isLoading ||
-                      isSaving ||
-                      masterImages.findIndex(
-                        (img) => img.id === selectedMasterImage?.id,
-                      ) === 0
-                    }
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Select
-                    value={selectedMasterImage?.id || ""}
-                    onValueChange={handleMasterImageChange}
-                    disabled={isLoading || isSaving}
-                  >
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="ページを選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {masterImages.map((img) => (
-                        <SelectItem key={img.id} value={img.id}>
-                          ページ {img.pageNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentIndex = masterImages.findIndex(
-                        (img) => img.id === selectedMasterImage?.id,
-                      )
-                      if (currentIndex < masterImages.length - 1) {
-                        handleMasterImageChange(
-                          masterImages[currentIndex + 1].id,
-                        )
-                      }
-                    }}
-                    disabled={
-                      isLoading ||
-                      isSaving ||
-                      masterImages.findIndex(
-                        (img) => img.id === selectedMasterImage?.id,
-                      ) ===
-                        masterImages.length - 1
-                    }
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-              {layoutRegions.length > 0 && (
-                <Button onClick={() => setStep("edit")} variant="outline">
-                  次へ: 領域情報を編集
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
-          <LayoutRegionEditor
-            areas={layoutRegions}
-            setAreas={handleRegionsChange}
-            disabled={isSaving}
-            backgroundImageUrl={backgroundImageUrl}
-            imageDimensions={imageDimensions}
-            masterImageId={selectedMasterImage?.id || null}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // Edit step
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col">
       {/* Header */}
       <div className="bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-semibold">採点領域の編集</h1>
+            <h1 className="text-xl font-semibold">採点領域の作成</h1>
             <p className="text-muted-foreground text-sm">
-              {project?.examName} - 各領域の詳細情報を設定
+              {project?.examName} - ドラッグして採点領域を作成
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button onClick={() => setStep("create")} variant="outline">
-              戻る: 領域作成
-            </Button>
-            <Button
-              onClick={handleSaveTemplate}
-              disabled={isSaving || isLoading || !selectedMasterImage}
-              className="bg-primary"
-            >
-              {isSaving ? "保存中..." : "保存"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/projects/${projectId}`)}
-            >
-              完了
-            </Button>
+            {masterImages.length > 1 && (
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentIndex = masterImages.findIndex(
+                      (img) => img.id === selectedMasterImage?.id,
+                    )
+                    if (currentIndex > 0) {
+                      handleMasterImageChange(
+                        masterImages[currentIndex - 1].id,
+                      )
+                    }
+                  }}
+                  disabled={
+                    isLoading ||
+                    isSaving ||
+                    masterImages.findIndex(
+                      (img) => img.id === selectedMasterImage?.id,
+                    ) === 0
+                  }
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Select
+                  value={selectedMasterImage?.id || ""}
+                  onValueChange={handleMasterImageChange}
+                  disabled={isLoading || isSaving}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="ページを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {masterImages.map((img) => (
+                      <SelectItem key={img.id} value={img.id}>
+                        ページ {img.pageNumber}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentIndex = masterImages.findIndex(
+                      (img) => img.id === selectedMasterImage?.id,
+                    )
+                    if (currentIndex < masterImages.length - 1) {
+                      handleMasterImageChange(
+                        masterImages[currentIndex + 1].id,
+                      )
+                    }
+                  }}
+                  disabled={
+                    isLoading ||
+                    isSaving ||
+                    masterImages.findIndex(
+                      (img) => img.id === selectedMasterImage?.id,
+                    ) ===
+                      masterImages.length - 1
+                  }
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
+              <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)} variant="outline">
+                次へ: 領域情報を編集
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Compact Image Preview */}
-        <div className="w-1/3 border-r p-4">
-          <h3 className="mb-3 font-medium">模範解答</h3>
-          {backgroundImageUrl && (
-            <div className="relative overflow-hidden rounded-lg border">
-              <img
-                src={backgroundImageUrl}
-                alt="模範解答"
-                className="w-full object-contain"
-              />
-              {/* Overlay regions */}
-              {layoutRegions.map((area, index) => {
-                const isSelected = selectedRowIndex === index
-                return (
-                  <div
-                    key={area.id || `area-${index}`}
-                    className={`absolute border-2 ${
-                      isSelected 
-                        ? "border-orange-500 bg-orange-500/30"
-                        : "border-blue-500 bg-blue-500/20"
-                    }`}
-                    style={{
-                      left: `${area.x * 100}%`,
-                      top: `${area.y * 100}%`,
-                      width: `${area.width * 100}%`,
-                      height: `${area.height * 100}%`,
-                    }}
-                  />
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Right: Region Details Table */}
-        <div className="flex-1 overflow-y-auto">
-          <RegionDetailsTable
-            regions={layoutRegions}
-            setRegions={handleRegionsChange}
-            disabled={isSaving}
-            selectedRowIndex={selectedRowIndex}
-            setSelectedRowIndex={setSelectedRowIndex}
-          />
-        </div>
+      <div className="flex-1 overflow-hidden p-4">
+        <LayoutRegionEditor
+          areas={layoutRegions}
+          setAreas={handleRegionsChange}
+          disabled={isSaving}
+          backgroundImageUrl={backgroundImageUrl}
+          imageDimensions={imageDimensions}
+          masterImageId={selectedMasterImage?.id || null}
+        />
       </div>
     </div>
   )

@@ -69,12 +69,10 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
       },
       questionScores: true, // 関連する QuestionScore も取得
     },
-    orderBy: {
-      // 例: order フィールドや y 座標などでソート
-      // order: 'asc',
-      y: "asc",
-      x: "asc",
-    },
+    orderBy: [
+      { y: "asc" },
+      { x: "asc" }
+    ],
   })
 }
 

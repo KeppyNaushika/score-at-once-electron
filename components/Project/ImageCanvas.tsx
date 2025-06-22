@@ -254,27 +254,12 @@ const ImageCanvas = ({
   }
 
   return (
-    <div className="bg-background flex h-full flex-col">
-      {/* Instructions */}
-      <div className="border-b border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
-        <div className="text-center">
-          <h3 className="mb-2 text-lg font-semibold text-blue-900">
-            🎨 採点領域を作成
-          </h3>
-          <p className="text-sm text-blue-700">
-            模範解答上でマウスをドラッグして採点したい領域を囲んでください
-          </p>
-          <p className="mt-1 text-xs text-blue-600">
-            設問、氏名欄、学籍番号欄など、必要な領域をすべて作成してください
-          </p>
-        </div>
-      </div>
-
+    <div className="bg-background flex flex-col overflow-hidden h-full">
       {/* Main Image Area */}
       <div className="flex-1 overflow-auto p-4">
         <div
           ref={imageContainerRef}
-          className="border-muted-foreground/20 relative h-full min-h-[500px] w-full rounded-lg border-2 border-dashed bg-white shadow-sm"
+          className="border-muted-foreground/20 relative rounded-lg border-2 border-dashed bg-white shadow-sm"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -288,11 +273,11 @@ const ImageCanvas = ({
           }}
         >
           {backgroundImageUrl && imageDimensions ? (
-            <div className="relative h-full w-full">
+            <>
               <img
                 src={backgroundImageUrl}
                 alt="模範解答"
-                className="pointer-events-none h-full w-full object-contain select-none"
+                className="pointer-events-none block w-full select-none"
                 draggable={false}
               />
 
@@ -408,9 +393,9 @@ const ImageCanvas = ({
                   </div>
                 </div>
               )}
-            </div>
+            </>
           ) : (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex min-h-[500px] items-center justify-center">
               <div className="text-muted-foreground text-center">
                 <div className="mb-4 text-4xl">📄</div>
                 <p className="text-lg">模範解答画像を読み込んでください</p>

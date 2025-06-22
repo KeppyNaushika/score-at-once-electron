@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Modal, ModalContent, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from "@/components/ui/modal"
 import { AreaType } from "@prisma/client"
-import { AlertTriangle, Trash2 } from "lucide-react"
+import { AlertTriangle, Trash2, GripVertical } from "lucide-react"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<AreaType, string> = {
@@ -39,6 +39,11 @@ type RegionDetailsTableProps = {
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }
 
+type DragState = {
+  draggedIndex: number | null
+  dragOverIndex: number | null
+}
+
 const RegionDetailsTable = ({
   regions,
   setRegions,
@@ -48,6 +53,10 @@ const RegionDetailsTable = ({
 }: RegionDetailsTableProps) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
+  const [dragState, setDragState] = useState<DragState>({
+    draggedIndex: null,
+    dragOverIndex: null,
+  })
 
   const handleRegionChange = (index: number, field: string, value: any) => {
     const newRegions = [...regions]
@@ -80,6 +89,56 @@ const RegionDetailsTable = ({
     }
   }
 
+  const handleDragStart = (index: number) => {
+    setDragState({ draggedIndex: index, dragOverIndex: null })
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragState.draggedIndex !== null && dragState.draggedIndex !== index) {
+      setDragState(prev => ({ ...prev, dragOverIndex: index }))
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragState(prev => ({ ...prev, dragOverIndex: null }))
+  }
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault()
+    const { draggedIndex } = dragState
+    
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      const newRegions = [...regions]
+      const draggedItem = newRegions[draggedIndex]
+      
+      // Remove the dragged item
+      newRegions.splice(draggedIndex, 1)
+      
+      // Insert the dragged item at the new position
+      newRegions.splice(dropIndex, 0, draggedItem)
+      
+      setRegions(newRegions)
+      
+      // Update selected row index if needed
+      if (selectedRowIndex === draggedIndex) {
+        setSelectedRowIndex(dropIndex)
+      } else if (selectedRowIndex !== null) {
+        if (draggedIndex < selectedRowIndex && dropIndex >= selectedRowIndex) {
+          setSelectedRowIndex(selectedRowIndex - 1)
+        } else if (draggedIndex > selectedRowIndex && dropIndex <= selectedRowIndex) {
+          setSelectedRowIndex(selectedRowIndex + 1)
+        }
+      }
+    }
+    
+    setDragState({ draggedIndex: null, dragOverIndex: null })
+  }
+
+  const handleDragEnd = () => {
+    setDragState({ draggedIndex: null, dragOverIndex: null })
+  }
+
   if (regions.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -105,28 +164,43 @@ const RegionDetailsTable = ({
         <table className="w-full border-collapse border border-border">
           <thead>
             <tr className="bg-muted/50">
-              <th className="border border-border p-3 text-left font-medium">#</th>
-              <th className="border border-border p-3 text-left font-medium">種類</th>
-              <th className="border border-border p-3 text-left font-medium">ラベル</th>
-              <th className="border border-border p-3 text-left font-medium">配点</th>
-              <th className="border border-border p-3 text-left font-medium">設問番号</th>
-              <th className="border border-border p-3 text-left font-medium">位置・サイズ</th>
-              <th className="border border-border p-3 text-center font-medium">操作</th>
+              <th className="border border-border p-3 text-left font-medium w-8"></th>
+              <th className="border border-border p-3 text-left font-medium w-16">#</th>
+              <th className="border border-border p-3 text-left font-medium w-36">種類</th>
+              <th className="border border-border p-3 text-left font-medium w-40">ラベル</th>
+              <th className="border border-border p-3 text-left font-medium w-24">配点</th>
+              <th className="border border-border p-3 text-left font-medium w-32">設問番号</th>
+              <th className="border border-border p-3 text-center font-medium w-20">操作</th>
             </tr>
           </thead>
           <tbody>
             {regions.map((region, index) => {
               const isSelected = selectedRowIndex === index
               const icon = typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
+              const isDragged = dragState.draggedIndex === index
+              const isDraggedOver = dragState.dragOverIndex === index
               
               return (
                 <tr
                   key={region.id || `region-${index}`}
+                  draggable={!disabled}
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
                   className={`cursor-pointer transition-colors hover:bg-accent/50 ${
                     isSelected ? "bg-primary/10 border-primary" : ""
+                  } ${isDragged ? "opacity-50" : ""} ${
+                    isDraggedOver ? "border-t-4 border-t-blue-500" : ""
                   }`}
                   onClick={() => setSelectedRowIndex(isSelected ? null : index)}
                 >
+                  <td className="border border-border p-3">
+                    <div className="flex items-center justify-center">
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                    </div>
+                  </td>
                   <td className="border border-border p-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">{icon}</span>
@@ -187,12 +261,6 @@ const RegionDetailsTable = ({
                       <span className="text-muted-foreground text-sm">-</span>
                     )}
                   </td>
-                  <td className="border border-border p-3">
-                    <div className="text-xs text-muted-foreground">
-                      <div>({(region.x * 100).toFixed(1)}%, {(region.y * 100).toFixed(1)}%)</div>
-                      <div>{(region.width * 100).toFixed(1)}% × {(region.height * 100).toFixed(1)}%</div>
-                    </div>
-                  </td>
                   <td className="border border-border p-3 text-center">
                     <Button
                       variant="ghost"
@@ -213,15 +281,6 @@ const RegionDetailsTable = ({
         </table>
       </div>
 
-      <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <h4 className="mb-2 font-medium text-blue-900">💡 ヒント</h4>
-        <ul className="space-y-1 text-sm text-blue-700">
-          <li>• 設問領域には必ず設問番号と配点を設定してください</li>
-          <li>• 氏名・学籍番号領域は答案の識別に使用されます</li>
-          <li>• 変更は自動的に保存されます</li>
-          <li>• 行をクリックすると左のプレビューでその領域がハイライトされます</li>
-        </ul>
-      </div>
 
       {/* Delete Confirmation Modal */}
       <Modal open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
