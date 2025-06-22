@@ -1,7 +1,7 @@
 import prisma from './client'
 
 // プロジェクトに参加する生徒の状態を管理するためのテーブル（メモリ上で管理）
-const projectStudentStatus = new Map<string, Map<string, 'participating' | 'absent' | 'unknown'>>()
+const projectStudentStatus = new Map<string, Map<string, 'participating' | 'expected' | 'absent'>>()
 
 /**
  * プロジェクトに関連する生徒を取得
@@ -41,7 +41,7 @@ export async function getStudentsForProject(projectId: string) {
 
     const studentsWithStatus = allStudents.map((student: any) => ({
       ...student,
-      status: projectStatusMap.get(student.id) || 'unknown' as const,
+      status: projectStatusMap.get(student.id) || 'expected' as const,
       isInProject: existingStudentIds.has(student.id)
     }))
 
@@ -69,10 +69,10 @@ export async function addStudentsToProject(projectId: string, studentIds: string
     }
     const statusMap = projectStudentStatus.get(projectId)!
 
-    // 生徒をプロジェクトに追加（状態を'unknown'に設定）
+    // 生徒をプロジェクトに追加（状態を'expected'に設定）
     studentIds.forEach(studentId => {
       if (!statusMap.has(studentId)) {
-        statusMap.set(studentId, 'unknown')
+        statusMap.set(studentId, 'expected')
       }
     })
 
@@ -118,7 +118,7 @@ export async function removeStudentsFromProject(projectId: string, studentIds: s
 export async function updateStudentProjectStatus(
   projectId: string, 
   studentId: string, 
-  status: 'participating' | 'absent'
+  status: 'participating' | 'expected' | 'absent'
 ) {
   try {
     if (!projectStudentStatus.has(projectId)) {

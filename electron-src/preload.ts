@@ -165,7 +165,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("add-students-to-project", projectId, studentIds),
   removeStudentsFromProject: (projectId: string, studentIds: string[]) =>
     ipcRenderer.invoke("remove-students-from-project", projectId, studentIds),
-  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') =>
+  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'expected' | 'absent') =>
     ipcRenderer.invoke("update-student-project-status", projectId, studentId, status),
   checkGradingDataForStudents: (projectId: string, studentIds: string[]) =>
     ipcRenderer.invoke("check-grading-data-for-students", projectId, studentIds),

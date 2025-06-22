@@ -827,6 +827,13 @@ export default function StudentsPage() {
                           </Button>
                           <Button
                             size="sm"
+                            variant={student.status === "expected" ? "secondary" : "outline"}
+                            onClick={() => updateStudentStatus(student.id, "expected")}
+                          >
+                            見込
+                          </Button>
+                          <Button
+                            size="sm"
                             variant={student.status === "absent" ? "destructive" : "outline"}
                             onClick={() => updateStudentStatus(student.id, "absent")}
                           >
