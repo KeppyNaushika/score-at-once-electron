@@ -2,7 +2,6 @@ import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
 import {
   CreateProjectArgs,
-  UpdateProjectArgs,
 } from "../src/types/electron" // パスを修正
 
 declare global {
@@ -26,9 +25,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return ipcRenderer.invoke("create-project", props, userId)
   },
   updateProject: (
-    projectPayload: UpdateProjectArgs, // Prisma.ProjectGetPayload<{ include: { tags: true } }> を UpdateProjectArgs に変更
+    projectId: string,
+    data: Prisma.ProjectUpdateInput,
   ) => {
-    return ipcRenderer.invoke("update-project", projectPayload)
+    return ipcRenderer.invoke("update-project", projectId, data)
   },
   deleteProject: (
     projectId: string, // project オブジェクトではなく projectId を直接渡す

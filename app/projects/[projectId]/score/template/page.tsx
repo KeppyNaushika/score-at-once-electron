@@ -184,24 +184,26 @@ export default function TemplateStepPage() {
         img.src = url
         
         // 新しいページの領域を読み込む
-        const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
-        const currentImageRegions = allRegions.filter(
-          region => region.masterImageId === image.id
-        )
-        setLayoutRegions(
-          currentImageRegions.map((region) => ({
-            id: region.id,
-            type: region.type,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            label: region.label || "",
-            points: region.points ? String(region.points) : null,
-            questionNumber: region.questionNumber || "",
-            masterImageId: region.masterImageId || "",
-          })),
-        )
+        if (projectId) {
+          const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          const currentImageRegions = allRegions.filter(
+            region => region.masterImageId === image.id
+          )
+          setLayoutRegions(
+            currentImageRegions.map((region) => ({
+              id: region.id,
+              type: region.type,
+              x: region.x,
+              y: region.y,
+              width: region.width,
+              height: region.height,
+              label: region.label || "",
+              points: region.points ? String(region.points) : null,
+              questionNumber: region.questionNumber || "",
+              masterImageId: region.masterImageId || "",
+            })),
+          )
+        }
       } catch (error) {
         toast.error("背景画像の読み込みに失敗しました。")
         setBackgroundImageUrl(null)
@@ -268,8 +270,9 @@ export default function TemplateStepPage() {
   )
 
   const handleRegionsChange = useCallback(
-    (newRegions: any[]) => {
-      setLayoutRegions(newRegions)
+    (newRegions: any[] | ((prev: any[]) => any[])) => {
+      const regions = typeof newRegions === 'function' ? newRegions(layoutRegions) : newRegions
+      setLayoutRegions(regions)
 
       // Clear existing timeout
       if (saveTimeoutId) {
@@ -278,12 +281,12 @@ export default function TemplateStepPage() {
 
       // Set new timeout for auto-save
       const timeoutId = setTimeout(() => {
-        autoSaveRegions(newRegions)
+        autoSaveRegions(regions)
       }, 1000) // Auto-save after 1 second of inactivity
 
       setSaveTimeoutId(timeoutId)
     },
-    [saveTimeoutId, autoSaveRegions],
+    [saveTimeoutId, autoSaveRegions, layoutRegions],
   )
 
   const handleSaveTemplate = async () => {

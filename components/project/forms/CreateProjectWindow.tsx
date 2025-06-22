@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { useProjects } from "../hooks/useProjects"
+import { useProjects } from "@/components/hooks/useProjects"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

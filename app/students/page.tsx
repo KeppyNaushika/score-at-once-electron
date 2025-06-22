@@ -1,5 +1,5 @@
-import ProtectedRoute from "@/components/Auth/ProtectedRoute"
-import StudentManagementTable from "@/components/Students/StudentManagementTable"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import StudentManagementTable from "@/components/student/StudentManagementTable"
 
 export default function StudentsPage() {
   return (
