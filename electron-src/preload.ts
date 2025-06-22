@@ -1,8 +1,6 @@
 import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
-import {
-  CreateProjectArgs,
-} from "../src/types/electron" // パスを修正
+import { CreateProjectArgs } from "../types/electron" // パスを修正
 
 declare global {
   namespace NodeJS {
@@ -24,10 +22,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createProject: (props: CreateProjectArgs, userId: string) => {
     return ipcRenderer.invoke("create-project", props, userId)
   },
-  updateProject: (
-    projectId: string,
-    data: Prisma.ProjectUpdateInput,
-  ) => {
+  updateProject: (projectId: string, data: Prisma.ProjectUpdateInput) => {
     return ipcRenderer.invoke("update-project", projectId, data)
   },
   deleteProject: (
@@ -42,12 +37,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // User related
   fetchUsers: () => ipcRenderer.invoke("fetch-users"),
   getCurrentUser: () => ipcRenderer.invoke("get-current-user"),
-  
+
   // Authentication related
   loginUser: (username: string, password: string) =>
     ipcRenderer.invoke("login-user", username, password),
-  createUser: (userData: { username: string; password: string; name: string; role?: string }) =>
-    ipcRenderer.invoke("create-user", userData),
+  createUser: (userData: {
+    username: string
+    password: string
+    name: string
+    role?: string
+  }) => ipcRenderer.invoke("create-user", userData),
   getUserByToken: (token: string) =>
     ipcRenderer.invoke("get-user-by-token", token),
   updateUserPassword: (userId: string, newPassword: string) =>
@@ -62,14 +61,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
       buffer: ArrayBuffer
       studentId?: string
       pageNumber?: number
-    }[]
+    }[],
   ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
   getAnswerSheetsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
   deleteAnswerSheet: (answerSheetId: string) =>
     ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
   associateAnswerSheetWithStudent: (answerSheetId: string, studentId: string) =>
-    ipcRenderer.invoke("associate-answer-sheet-with-student", answerSheetId, studentId),
+    ipcRenderer.invoke(
+      "associate-answer-sheet-with-student",
+      answerSheetId,
+      studentId,
+    ),
   setAnswerSheetAbsent: (answerSheetId: string, isAbsent: boolean) =>
     ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
   getAnswerSheetById: (answerSheetId: string) =>
@@ -106,10 +109,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   resolveFileProtocolPath: (relativePath: string) =>
     ipcRenderer.invoke("resolve-file-protocol-path", relativePath),
   // Layout region functions (moved to new API)
-  createLayoutRegion: (data: any) => ipcRenderer.invoke("create-layout-region", data),
-  updateLayoutRegion: (id: string, data: any) => ipcRenderer.invoke("update-layout-region", id, data),
-  deleteLayoutRegion: (id: string) => ipcRenderer.invoke("delete-layout-region", id),
-  getLayoutRegionsByProjectId: (projectId: string) => ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
+  createLayoutRegion: (data: any) =>
+    ipcRenderer.invoke("create-layout-region", data),
+  updateLayoutRegion: (id: string, data: any) =>
+    ipcRenderer.invoke("update-layout-region", id, data),
+  deleteLayoutRegion: (id: string) =>
+    ipcRenderer.invoke("delete-layout-region", id),
+  getLayoutRegionsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
 
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>
