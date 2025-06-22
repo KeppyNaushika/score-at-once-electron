@@ -15,14 +15,14 @@ import React from "react"
 
 // 採点ステップの定義
 const scoringSteps = [
-  { id: "master-image", label: "1. 模範解答", hrefSuffix: "" }, // 初期ステップは /score 直下
-  { id: "template", label: "2. 採点領域", hrefSuffix: "/template" }, // ラベル変更
+  { id: "master-image", label: "1. 模範解答", hrefSuffix: "" },
+  { id: "template", label: "2. 採点領域", hrefSuffix: "/template" },
   {
     id: "region-editing",
     label: "3. 領域情報編集",
     hrefSuffix: "/template?step=edit",
-  }, // 新規追加
-  { id: "upload", label: "4. 生徒解答", hrefSuffix: "/upload" }, // ラベル変更
+  },
+  { id: "upload", label: "4. 生徒解答", hrefSuffix: "/upload" },
   { id: "scoring", label: "5. 採点", hrefSuffix: "/scoring" },
   { id: "results", label: "6. 結果", hrefSuffix: "/results" },
 ]
@@ -78,16 +78,16 @@ export default function ScoringLayout({
                 <React.Fragment key={step.id}>
                   <BreadcrumbItem>
                     {isCurrentPage ? (
-                      <BreadcrumbPage>{step.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="font-semibold text-green-600">
+                        {step.label}
+                      </BreadcrumbPage>
                     ) : (
                       <BreadcrumbLink
                         asChild={!isDisabled} // 無効でない場合のみ Link を使用
                         className={cn(
-                          isDisabled &&
-                            "text-muted-foreground cursor-not-allowed",
-                          isCompleted &&
-                            !isCurrentPage &&
-                            "text-green-600 hover:text-green-700",
+                          isDisabled
+                            ? "text-muted-foreground cursor-not-allowed"
+                            : "text-foreground hover:text-foreground/80",
                         )}
                       >
                         {isDisabled ? (
