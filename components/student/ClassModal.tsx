@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Prisma } from "@prisma/client"
 
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
+type ClassWithStudents = Prisma.ClassGetPayload<{ include: { memberships: true } }>
 
 interface ClassModalProps {
   isOpen: boolean

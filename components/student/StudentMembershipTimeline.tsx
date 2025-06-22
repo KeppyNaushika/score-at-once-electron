@@ -1,0 +1,201 @@
+"use client"
+
+import React from "react"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Edit, Calendar, Clock, BookOpen, Users } from "lucide-react"
+// import { format } from "date-fns"
+// import { ja } from "date-fns/locale"
+
+const formatDate = (date: Date) => {
+  return new Date(date).toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).replace(/\//g, '/')
+}
+
+interface Membership {
+  id: string
+  studentId: string
+  classId: string
+  startDate: Date
+  endDate?: Date | null
+  membershipType: string
+  subject?: string | null
+  notes?: string | null
+  student: {
+    id: string
+    studentId: string
+    name: string
+  }
+  class: {
+    id: string
+    name: string
+    subject?: string | null
+    classType: string
+  }
+}
+
+interface StudentMembershipTimelineProps {
+  memberships: Membership[]
+  onEditMembership: (membership: Membership) => void
+  onEndMembership: (membershipId: string) => void
+  showActions?: boolean
+}
+
+const membershipTypeLabels = {
+  REGULAR: "通常所属",
+  TRANSFER: "転入",
+  TEMPORARY: "一時的所属",
+}
+
+const classTypeLabels = {
+  HOMEROOM: "ホームルーム",
+  SUBJECT: "教科別",
+  ABILITY_GROUPED: "習熟度別",
+  SPECIAL: "特別クラス",
+}
+
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case "REGULAR":
+      return "bg-blue-100 text-blue-800"
+    case "TRANSFER":
+      return "bg-green-100 text-green-800"
+    case "TEMPORARY":
+      return "bg-yellow-100 text-yellow-800"
+    default:
+      return "bg-gray-100 text-gray-800"
+  }
+}
+
+const getClassTypeColor = (type: string) => {
+  switch (type) {
+    case "HOMEROOM":
+      return "bg-purple-100 text-purple-800"
+    case "SUBJECT":
+      return "bg-orange-100 text-orange-800"
+    case "ABILITY_GROUPED":
+      return "bg-teal-100 text-teal-800"
+    case "SPECIAL":
+      return "bg-pink-100 text-pink-800"
+    default:
+      return "bg-gray-100 text-gray-800"
+  }
+}
+
+export default function StudentMembershipTimeline({
+  memberships,
+  onEditMembership,
+  onEndMembership,
+  showActions = true,
+}: StudentMembershipTimelineProps) {
+  const sortedMemberships = [...memberships].sort((a, b) => 
+    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+  )
+
+  if (memberships.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center text-muted-foreground">
+          学級所属履歴がありません
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {sortedMemberships.map((membership, index) => {
+        const isActive = !membership.endDate
+        const duration = membership.endDate
+          ? `${formatDate(new Date(membership.startDate))} - ${formatDate(new Date(membership.endDate))}`
+          : `${formatDate(new Date(membership.startDate))} - 現在`
+
+        return (
+          <Card key={membership.id} className={`relative ${isActive ? "ring-2 ring-blue-500" : ""}`}>
+            {isActive && (
+              <div className="absolute -top-2 -right-2">
+                <Badge variant="default" className="bg-blue-500">
+                  所属中
+                </Badge>
+              </div>
+            )}
+            
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  {membership.class.name}
+                  {membership.class.subject && (
+                    <span className="text-sm text-muted-foreground">
+                      ({membership.class.subject})
+                    </span>
+                  )}
+                </CardTitle>
+                {showActions && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEditMembership(membership)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    {isActive && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onEndMembership(membership.id)}
+                      >
+                        <Clock className="h-4 w-4 mr-1" />
+                        所属終了
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4" />
+                {duration}
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-0">
+              <div className="flex flex-wrap gap-2 mb-3">
+                <Badge className={getTypeColor(membership.membershipType)}>
+                  {membershipTypeLabels[membership.membershipType as keyof typeof membershipTypeLabels] || membership.membershipType}
+                </Badge>
+                
+                <Badge className={getClassTypeColor(membership.class.classType)}>
+                  {classTypeLabels[membership.class.classType as keyof typeof classTypeLabels] || membership.class.classType}
+                </Badge>
+
+                {(membership.subject || membership.class.subject) && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <BookOpen className="h-3 w-3" />
+                    {membership.subject || membership.class.subject}
+                  </Badge>
+                )}
+              </div>
+
+              {membership.notes && (
+                <div className="text-sm text-muted-foreground bg-gray-50 p-2 rounded">
+                  {membership.notes}
+                </div>
+              )}
+            </CardContent>
+
+            {/* タイムライン接続線 */}
+            {index < sortedMemberships.length - 1 && (
+              <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-0.5 h-4 bg-gray-300"></div>
+            )}
+          </Card>
+        )
+      })}
+    </div>
+  )
+}

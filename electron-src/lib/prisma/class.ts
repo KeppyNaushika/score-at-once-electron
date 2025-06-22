@@ -1,11 +1,33 @@
 import { Prisma, Class } from "@prisma/client"
 import prisma from "./client"
 
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { students: true } }>
+type ClassWithStudents = Prisma.ClassGetPayload<{ 
+  include: { 
+    memberships: {
+      include: {
+        student: true
+      }
+      where: {
+        endDate: null
+      }
+    }
+  } 
+}>
 
 export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
   try {
-    return await prisma.class.findMany({ include: { students: true } })
+    return await prisma.class.findMany({ 
+      include: { 
+        memberships: {
+          include: {
+            student: true
+          },
+          where: {
+            endDate: null
+          }
+        }
+      } 
+    })
   } catch (error) {
     console.error("Failed to fetch classes:", error)
     throw error
@@ -18,7 +40,16 @@ export const createClass = async (
   try {
     return await prisma.class.create({
       data: classData,
-      include: { students: true },
+      include: { 
+        memberships: {
+          include: {
+            student: true
+          },
+          where: {
+            endDate: null
+          }
+        }
+      },
     })
   } catch (error) {
     console.error("Failed to create class:", error)
@@ -34,7 +65,16 @@ export const updateClass = async (
     return await prisma.class.update({
       where: { id },
       data,
-      include: { students: true },
+      include: { 
+        memberships: {
+          include: {
+            student: true
+          },
+          where: {
+            endDate: null
+          }
+        }
+      },
     })
   } catch (error) {
     console.error(`Failed to update class ${id}:`, error)
@@ -44,10 +84,16 @@ export const updateClass = async (
 
 export const deleteClass = async (classId: string): Promise<Class | void> => {
   try {
-    const studentCount = await prisma.student.count({ where: { classId } })
-    if (studentCount > 0) {
+    // Check for current memberships instead of students directly
+    const membershipCount = await prisma.studentClassMembership.count({ 
+      where: { 
+        classId,
+        endDate: null // current memberships only
+      } 
+    })
+    if (membershipCount > 0) {
       throw new Error(
-        `学級を削除できません: ${studentCount} 人の生徒がまだ所属しています。`,
+        `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`,
       )
     }
     return await prisma.class.delete({ where: { id: classId } })

@@ -32,11 +32,16 @@ model User {
 model Class {
   id          String    @id @default(uuid())
   name        String    @unique
+  classCode   String?   // クラスコード（E1、M2、1A、など）
   grade       Int?
   description String?
+  subject     String?   // 教科名（数学、英語、国語など）
+  isVisible   Boolean   @default(true) // 表示/非表示
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  students    Student[]
+  
+  // Many-to-many relationship through StudentClassMembership
+  memberships StudentClassMembership[]
   teachers    User[]    @relation("ClassTeachers")
 
   @@map("classes")
@@ -49,14 +54,56 @@ model Class {
 model Student {
   id        String   @id @default(uuid())
   studentId String   @unique
-  name      String
-  classId   String
-  class     Class    @relation(fields: [classId], references: [id])
+  lastName  String   // 姓
+  firstName String   // 名
+  lastNameKana  String   // 姓カナ
+  firstNameKana String   // 名カナ
+  enrollmentYear Int?  // 入学年度
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Many-to-many relationship through StudentClassMembership
+  memberships  StudentClassMembership[]
   answerSheets AnswerSheet[]
   scoreRecords ScoreRecord[]
+}
+
+// ---------------------------------------------------
+// 生徒-学級所属関係（多対多 + 履歴管理）
+// ---------------------------------------------------
+
+model StudentClassMembership {
+  id        String   @id @default(uuid())
+  studentId String
+  classId   String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  // 所属期間
+  startDate DateTime @default(now()) // 所属開始日
+  endDate   DateTime? // 所属終了日（null = 現在も所属中）
+  
+  // メタデータ
+  membershipType MembershipType @default(REGULAR) // 所属種別
+  subject        String?         // 教科別クラスの場合の教科名
+  notes          String?         // 備考（転校、編入、習熟度別など）
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, classId, startDate]) // 同じ生徒が同じクラスに同じ開始日で複数回所属することを防ぐ
+  @@index([studentId])
+  @@index([classId])
+  @@index([startDate, endDate]) // 期間での検索用
+}
+
+// 学級種別の列挙型は削除 - isVisibleフィールドで管理
+
+// 所属種別の列挙型
+enum MembershipType {
+  REGULAR   // 通常所属
+  TRANSFER  // 転入
+  TEMPORARY // 一時的所属（体験入学など）
 }
 
 // ---------------------------------------------------

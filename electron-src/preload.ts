@@ -88,11 +88,53 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Student related
   fetchStudents: () => ipcRenderer.invoke("fetch-students"),
+  createStudent: (studentData: Prisma.StudentCreateInput) =>
+    ipcRenderer.invoke("create-student", studentData),
+  updateStudent: (id: string, studentData: Prisma.StudentUpdateInput) =>
+    ipcRenderer.invoke("update-student", id, studentData),
+  deleteStudent: (id: string) => ipcRenderer.invoke("delete-student", id),
   importStudentsFromFile: (
     filePath: string,
     existingClasses: { id: string; name: string }[],
   ) =>
     ipcRenderer.invoke("import-students-from-file", filePath, existingClasses),
+
+  // Student Class Membership related
+  createStudentClassMembership: (membershipData: Prisma.StudentClassMembershipCreateInput) =>
+    ipcRenderer.invoke("create-student-class-membership", membershipData),
+  updateStudentClassMembership: (id: string, membershipData: Prisma.StudentClassMembershipUpdateInput) =>
+    ipcRenderer.invoke("update-student-class-membership", id, membershipData),
+  deleteStudentClassMembership: (id: string) =>
+    ipcRenderer.invoke("delete-student-class-membership", id),
+  getCurrentMembershipsByStudentId: (studentId: string) =>
+    ipcRenderer.invoke("get-current-memberships-by-student-id", studentId),
+  getAllMembershipsByStudentId: (studentId: string) =>
+    ipcRenderer.invoke("get-all-memberships-by-student-id", studentId),
+  getCurrentMembershipsByClassId: (classId: string) =>
+    ipcRenderer.invoke("get-current-memberships-by-class-id", classId),
+  addStudentToClass: (
+    studentId: string,
+    classId: string,
+    startDate?: Date,
+    membershipType?: string,
+    subject?: string,
+    notes?: string,
+  ) =>
+    ipcRenderer.invoke(
+      "add-student-to-class",
+      studentId,
+      classId,
+      startDate,
+      membershipType,
+      subject,
+      notes,
+    ),
+  endStudentMembership: (membershipId: string, endDate?: Date) =>
+    ipcRenderer.invoke("end-student-membership", membershipId, endDate),
+  getMembershipsByDateRange: (startDate: Date, endDate?: Date) =>
+    ipcRenderer.invoke("get-memberships-by-date-range", startDate, endDate),
+  getMembershipsBySubject: (subject: string) =>
+    ipcRenderer.invoke("get-memberships-by-subject", subject),
 
   // MasterImage related
   uploadMasterImages: (

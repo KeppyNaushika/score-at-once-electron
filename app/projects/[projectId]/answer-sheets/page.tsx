@@ -238,7 +238,7 @@ export default function AnswerSheetsPage() {
                           <div className="mb-1 flex items-center gap-2">
                             <span className="font-medium">
                               {sheet.student
-                                ? sheet.student.name
+                                ? `${sheet.student.lastName} ${sheet.student.firstName}`
                                 : "未関連付け"}
                             </span>
                             {sheet.student && (
