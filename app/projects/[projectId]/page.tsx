@@ -14,20 +14,34 @@ import {
   BarChart3,
   ChevronRight,
   Calendar,
-  Tag
+  Tag,
+  Trash2,
+  MoreVertical,
+  Info
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import EditProjectWindow from "@/components/project/forms/EditProjectWindow"
+import DeleteProjectModal from "@/components/project/DeleteProjectModal"
 
 interface ProjectData {
   id: string
   examName: string
-  description?: string | null
-  projectDate?: string | null
-  subject?: string | null
-  createdAt: string | Date
+  description: string | null
+  examDate: Date | null
+  subject: string | null
+  createdAt: Date
+  updatedAt: Date
+  userId: string
   masterImages?: any[]
   answerSheets?: any[]
   layoutRegions?: any[]
@@ -41,6 +55,8 @@ export default function ProjectDetailPage() {
 
   const [project, setProject] = useState<ProjectData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const loadProject = async () => {
     if (!projectId) return
@@ -66,6 +82,30 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     loadProject()
   }, [projectId])
+
+  const handleProjectUpdated = async (updatedProjectData: any) => {
+    try {
+      const updatedProject = await window.electronAPI.updateProject(
+        project!.id,
+        {
+          examName: updatedProjectData.examName,
+          description: updatedProjectData.description,
+          examDate: updatedProjectData.examDate,
+          subject: updatedProjectData.subject,
+        }
+      )
+      setProject(updatedProject)
+      setShowEditModal(false)
+      toast.success("プロジェクトを更新しました")
+    } catch (error) {
+      console.error("Failed to update project:", error)
+      toast.error("プロジェクトの更新に失敗しました")
+    }
+  }
+
+  const handleProjectDeleted = () => {
+    router.push('/projects')
+  }
 
   if (isLoading) {
     return (
@@ -104,7 +144,7 @@ export default function ProjectDetailPage() {
       <div className="container mx-auto p-6">
         <div className="mb-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex-1">
               <h1 className="text-3xl font-bold">{project.examName}</h1>
               {project.description && (
                 <p className="text-muted-foreground mt-2">{project.description}</p>
@@ -116,18 +156,54 @@ export default function ProjectDetailPage() {
                     {project.subject}
                   </Badge>
                 )}
-                {project.projectDate && (
+                {project.examDate && (
                   <Badge variant="outline">
                     <Calendar className="h-3 w-3 mr-1" />
-                    {new Date(project.projectDate).toLocaleDateString()}
+                    {new Date(project.examDate).toLocaleDateString()}
                   </Badge>
                 )}
+                <Badge variant="secondary">
+                  作成日: {new Date(project.createdAt).toLocaleDateString()}
+                </Badge>
               </div>
             </div>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              編集
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                編集
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowEditModal(true)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    プロジェクトを編集
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href={`/projects/${projectId}/score`}>
+                      <Info className="h-4 w-4 mr-2" />
+                      詳細設定
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteModal(true)}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    プロジェクトを削除
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -135,52 +211,60 @@ export default function ProjectDetailPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center">
-                <FileImage className="h-4 w-4 mr-2" />
+                <FileImage className="h-4 w-4 mr-2 text-blue-500" />
                 模範解答
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{masterImageCount}</div>
-              <p className="text-xs text-muted-foreground">ページ</p>
+              <p className="text-xs text-muted-foreground">
+                {masterImageCount > 0 ? "ページアップロード済み" : "未アップロード"}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center">
-                <Upload className="h-4 w-4 mr-2" />
-                答案
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{answerSheetCount}</div>
-              <p className="text-xs text-muted-foreground">アップロード済み</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center">
-                <Settings className="h-4 w-4 mr-2" />
+                <Settings className="h-4 w-4 mr-2 text-green-500" />
                 採点領域
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{layoutRegionCount}</div>
-              <p className="text-xs text-muted-foreground">定義済み</p>
+              <p className="text-xs text-muted-foreground">
+                {layoutRegionCount > 0 ? "領域定義済み" : "未設定"}
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm flex items-center">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                進捗
+                <Upload className="h-4 w-4 mr-2 text-orange-500" />
+                答案
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{answerSheetCount}</div>
+              <p className="text-xs text-muted-foreground">
+                {answerSheetCount > 0 ? "件アップロード済み" : "未アップロード"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2 text-purple-500" />
+                採点進捗
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0%</div>
-              <p className="text-xs text-muted-foreground">採点完了</p>
+              <p className="text-xs text-muted-foreground">
+                未実装（採点機能開発中）
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -332,6 +416,23 @@ export default function ProjectDetailPage() {
               </ol>
             </CardContent>
           </Card>
+        )}
+
+        {/* Modals */}
+        {project && showEditModal && (
+          <EditProjectWindow
+            projectToEdit={project}
+            setIsShowEditProjectWindow={setShowEditModal}
+            onSave={handleProjectUpdated}
+          />
+        )}
+        {project && (
+          <DeleteProjectModal
+            project={project}
+            open={showDeleteModal}
+            onOpenChange={setShowDeleteModal}
+            onProjectDeleted={handleProjectDeleted}
+          />
         )}
       </div>
     </ProtectedRoute>
