@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { CalendarIcon } from "lucide-react"
+import { Search } from "lucide-react"
 
 interface StudentClassMembershipModalProps {
   isOpen: boolean
@@ -28,8 +28,6 @@ interface StudentClassMembershipModalProps {
   onSave: (membershipData: {
     studentId: string
     classId: string
-    startDate: Date
-    endDate?: Date
     membershipType: string
     subject?: string
     notes?: string
@@ -49,8 +47,6 @@ interface StudentClassMembershipModalProps {
     id: string
     studentId: string
     classId: string
-    startDate: Date
-    endDate?: Date
     membershipType: string
     subject?: string
     notes?: string
@@ -75,31 +71,27 @@ export default function StudentClassMembershipModal({
 }: StudentClassMembershipModalProps) {
   const [studentId, setStudentId] = useState(initialStudentId || "")
   const [classId, setClassId] = useState(initialClassId || "")
-  const [startDate, setStartDate] = useState<Date>(new Date())
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [membershipType, setMembershipType] = useState("REGULAR")
   const [subject, setSubject] = useState("")
   const [notes, setNotes] = useState("")
+  const [studentSearchTerm, setStudentSearchTerm] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
     if (membershipToEdit) {
       setStudentId(membershipToEdit.studentId)
       setClassId(membershipToEdit.classId)
-      setStartDate(new Date(membershipToEdit.startDate))
-      setEndDate(membershipToEdit.endDate ? new Date(membershipToEdit.endDate) : undefined)
       setMembershipType(membershipToEdit.membershipType)
       setSubject(membershipToEdit.subject || "")
       setNotes(membershipToEdit.notes || "")
     } else {
       setStudentId(initialStudentId || "")
       setClassId(initialClassId || "")
-      setStartDate(new Date())
-      setEndDate(undefined)
       setMembershipType("REGULAR")
       setSubject("")
       setNotes("")
     }
+    setStudentSearchTerm("")
     setErrors({})
   }, [membershipToEdit, initialStudentId, initialClassId, isOpen])
 
@@ -114,13 +106,6 @@ export default function StudentClassMembershipModal({
       newErrors.classId = "学級を選択してください。"
     }
 
-    if (!startDate) {
-      newErrors.startDate = "開始日を選択してください。"
-    }
-
-    if (endDate && startDate && endDate <= startDate) {
-      newErrors.endDate = "終了日は開始日より後の日付を選択してください。"
-    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -137,8 +122,6 @@ export default function StudentClassMembershipModal({
     onSave({
       studentId,
       classId,
-      startDate,
-      endDate,
       membershipType,
       subject: classSubject || subject || undefined,
       notes: notes || undefined,
@@ -165,13 +148,32 @@ export default function StudentClassMembershipModal({
             <Label htmlFor="student" className="text-right">
               生徒
             </Label>
-            <div className="col-span-3">
+            <div className="col-span-3 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="生徒名または学籍番号で検索"
+                  value={studentSearchTerm}
+                  onChange={(e) => setStudentSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
               <Select value={studentId} onValueChange={setStudentId} disabled={!!initialStudentId}>
                 <SelectTrigger>
                   <SelectValue placeholder="生徒を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableStudents.map((student) => (
+                  {availableStudents
+                    .filter((student) => {
+                      if (!studentSearchTerm) return true;
+                      const searchTerm = studentSearchTerm.toLowerCase();
+                      const fullName = `${student.lastName} ${student.firstName}`.toLowerCase();
+                      const fullNameKana = `${student.lastNameKana} ${student.firstNameKana}`.toLowerCase();
+                      return fullName.includes(searchTerm) || 
+                             fullNameKana.includes(searchTerm) ||
+                             student.studentId.toLowerCase().includes(searchTerm);
+                    })
+                    .map((student) => (
                     <SelectItem key={student.id} value={student.id}>
                       {student.lastName} {student.firstName} ({student.studentId})
                     </SelectItem>
@@ -209,55 +211,6 @@ export default function StudentClassMembershipModal({
             </div>
           </div>
 
-          {/* 開始日 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="startDate" className="text-right">
-              開始日
-            </Label>
-            <div className="col-span-3">
-              <Input
-                id="startDate"
-                type="date"
-                value={startDate ? startDate.toISOString().split('T')[0] : ''}
-                onChange={(e) => setStartDate(e.target.value ? new Date(e.target.value) : new Date())}
-              />
-              {errors.startDate && (
-                <p className="mt-1 text-sm text-red-500">{errors.startDate}</p>
-              )}
-            </div>
-          </div>
-
-          {/* 終了日 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="endDate" className="text-right">
-              終了日
-            </Label>
-            <div className="col-span-3">
-              <div className="space-y-2">
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={endDate ? endDate.toISOString().split('T')[0] : ''}
-                  onChange={(e) => setEndDate(e.target.value ? new Date(e.target.value) : undefined)}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEndDate(undefined)}
-                  className="w-full"
-                  type="button"
-                >
-                  終了日をクリア（現在も所属中）
-                </Button>
-              </div>
-              {errors.endDate && (
-                <p className="mt-1 text-sm text-red-500">{errors.endDate}</p>
-              )}
-              <p className="mt-1 text-xs text-muted-foreground">
-                終了日が未設定の場合は現在も所属中とみなされます
-              </p>
-            </div>
-          </div>
 
           {/* 所属種別 */}
           <div className="grid grid-cols-4 items-center gap-4">

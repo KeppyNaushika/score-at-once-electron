@@ -190,7 +190,7 @@ export default function ProjectDetailPage() {
                   <DropdownMenuItem asChild>
                     <Link href={`/projects/${projectId}/score`}>
                       <Info className="h-4 w-4 mr-2" />
-                      詳細設定
+                      プロジェクト設定
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -302,11 +302,35 @@ export default function ProjectDetailPage() {
                 </Button>
               </Link>
               
-              <Link href={`/projects/${projectId}/answer-sheets`}>
+              <Link href={`/projects/${projectId}/score/region-info`}>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between"
+                  disabled={layoutRegionCount === 0}
+                >
+                  <span className="flex items-center">
+                    <Edit className="h-4 w-4 mr-2" />
+                    領域情報編集
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              
+              <Link href={`/projects/${projectId}/score/students`}>
+                <Button variant="outline" className="w-full justify-between">
+                  <span className="flex items-center">
+                    <Users className="h-4 w-4 mr-2" />
+                    受験生徒管理
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              
+              <Link href={`/projects/${projectId}/score/upload`}>
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center">
                     <Upload className="h-4 w-4 mr-2" />
-                    答案アップロード・管理
+                    生徒解答アップロード
                   </span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -322,7 +346,7 @@ export default function ProjectDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link href={`/projects/${projectId}/score`}>
+              <Link href={`/projects/${projectId}/score/scoring`}>
                 <Button 
                   variant="outline" 
                   className="w-full justify-between"
@@ -336,17 +360,19 @@ export default function ProjectDetailPage() {
                 </Button>
               </Link>
               
-              <Button 
-                variant="outline" 
-                className="w-full justify-between"
-                disabled={true}
-              >
-                <span className="flex items-center">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  結果分析・出力
-                </span>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+              <Link href={`/projects/${projectId}/score/results`}>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between"
+                  disabled={true}
+                >
+                  <span className="flex items-center">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    結果分析・出力
+                  </span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -383,7 +409,33 @@ export default function ProjectDetailPage() {
                   <div>
                     <p className="font-medium">採点領域の設定</p>
                     <p className="text-sm text-muted-foreground">
-                      各設問の採点範囲や配点を設定します
+                      各設問の採点範囲を設定します
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
+                    layoutRegionCount > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    3
+                  </span>
+                  <div>
+                    <p className="font-medium">領域情報の編集</p>
+                    <p className="text-sm text-muted-foreground">
+                      各領域の種類、配点、ラベルを設定します
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
+                    layoutRegionCount > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    4
+                  </span>
+                  <div>
+                    <p className="font-medium">受験生徒の確認</p>
+                    <p className="text-sm text-muted-foreground">
+                      プロジェクトに参加する生徒を管理します
                     </p>
                   </div>
                 </li>
@@ -391,10 +443,10 @@ export default function ProjectDetailPage() {
                   <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                     answerSheetCount > 0 ? 'bg-green-500 text-white' : layoutRegionCount > 0 ? 'bg-primary text-primary-foreground' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    3
+                    5
                   </span>
                   <div>
-                    <p className="font-medium">生徒答案のアップロード</p>
+                    <p className="font-medium">生徒解答のアップロード</p>
                     <p className="text-sm text-muted-foreground">
                       スキャンした生徒の答案画像をアップロードします
                     </p>
@@ -404,7 +456,7 @@ export default function ProjectDetailPage() {
                   <span className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                     answerSheetCount > 0 && layoutRegionCount > 0 ? 'bg-primary text-primary-foreground' : 'bg-gray-300 text-gray-600'
                   }`}>
-                    4
+                    6
                   </span>
                   <div>
                     <p className="font-medium">採点開始</p>

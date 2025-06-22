@@ -269,6 +269,11 @@ export interface MyAPI {
 
   // Class related
   fetchClasses: () => Promise<ClassWithStudents[]>
+  getClassesNotInProject: (projectId: string) => Promise<{
+    success: boolean
+    classes?: (ClassWithStudents & { studentCount: number })[]
+    error?: string
+  }>
   createClass: (
     classData: Prisma.ClassCreateWithoutTeachersInput,
   ) => Promise<ClassWithStudents>
@@ -419,6 +424,28 @@ export interface MyAPI {
   getAssignmentsByQuestionGroupItemId: (
     questionGroupItemId: string,
   ) => Promise<QuestionSubtotalAssignmentWithRelations[]>
+
+  // Project-Student relationship
+  getStudentsForProject: (projectId: string) => Promise<{
+    success: boolean
+    students?: (StudentWithMemberships & { 
+      status: 'participating' | 'absent' | 'unknown'
+      isInProject: boolean
+    })[]
+    error?: string
+  }>
+  addStudentsToProject: (projectId: string, studentIds: string[]) => Promise<{
+    success: boolean
+    error?: string
+  }>
+  removeStudentsFromProject: (projectId: string, studentIds: string[]) => Promise<{
+    success: boolean
+    error?: string
+  }>
+  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') => Promise<{
+    success: boolean
+    error?: string
+  }>
 
   // Obsolete ProjectLayout handlers removed
   // saveProjectLayout: ...

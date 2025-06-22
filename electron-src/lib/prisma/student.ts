@@ -8,9 +8,6 @@ type StudentWithMemberships = Prisma.StudentGetPayload<{
       include: {
         class: true
       }
-      where: {
-        endDate: null // 現在所属中のクラスのみ
-      }
       orderBy: {
         startDate: "desc"
       }
@@ -33,21 +30,21 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
 
 export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
   try {
-    return await prisma.student.findMany({
+    const students = await prisma.student.findMany({
       include: {
         memberships: {
           include: {
             class: true,
           },
-          where: {
-            endDate: null, // 現在所属中のクラスのみ
-          },
+          // すべてのメンバーシップを取得（現在・過去両方）
           orderBy: {
             startDate: "desc",
           },
         },
       },
     })
+    console.log(`Fetched ${students.length} students from database`)
+    return students
   } catch (error) {
     console.error("Failed to fetch students:", error)
     throw error

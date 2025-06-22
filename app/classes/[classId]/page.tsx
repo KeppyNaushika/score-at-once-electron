@@ -16,10 +16,12 @@ import {
   PlusCircle,
   UserCircle,
   Calendar,
-  Clock
+  Clock,
+  Upload
 } from "lucide-react"
 import ClassModal from "@/components/student/ClassModal"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
+import ClassStudentImportModal from "@/components/student/ClassStudentImportModal"
 
 interface StudentWithMemberships {
   id: string
@@ -92,6 +94,7 @@ export default function ClassDetailPage() {
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
+  const [isStudentImportModalOpen, setIsStudentImportModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -158,6 +161,16 @@ export default function ClassDetailPage() {
     setIsMembershipModalOpen(true)
   }
 
+  const handleStudentImportSuccess = async () => {
+    // Refresh class data
+    const classes = await window.electronAPI.fetchClasses()
+    const updatedClass = classes.find(c => c.id === classId)
+    if (updatedClass) {
+      setClassData(updatedClass)
+    }
+    setIsStudentImportModalOpen(false)
+  }
+
   const handleEditMembership = (membership: any) => {
     const membershipWithIds: Membership = {
       ...membership,
@@ -183,7 +196,7 @@ export default function ClassDetailPage() {
         await window.electronAPI.addStudentToClass(
           membershipData.studentId,
           classId,
-          membershipData.startDate,
+          new Date(),
           membershipData.membershipType,
           membershipData.subject || classData?.subject,
           membershipData.notes
@@ -337,10 +350,16 @@ export default function ClassDetailPage() {
               <Users className="h-5 w-5" />
               現在の所属生徒 ({currentMembers.length}名)
             </CardTitle>
-            <Button onClick={handleAddMembership} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              生徒追加
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={handleAddMembership} size="sm" variant="outline">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                生徒追加
+              </Button>
+              <Button onClick={() => setIsStudentImportModalOpen(true)} size="sm">
+                <Upload className="mr-2 h-4 w-4" />
+                表形式インポート
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -482,6 +501,16 @@ export default function ClassDetailPage() {
           }))}
           availableClasses={[classData] as any}
           membershipToEdit={membershipToEdit as any}
+        />
+      )}
+
+      {isStudentImportModalOpen && (
+        <ClassStudentImportModal
+          isOpen={isStudentImportModalOpen}
+          onClose={() => setIsStudentImportModalOpen(false)}
+          onImportSuccess={handleStudentImportSuccess}
+          classId={classId}
+          className={classData?.name || ""}
         />
       )}
     </div>

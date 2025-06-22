@@ -8,6 +8,8 @@ import {
   Settings,
   Upload,
   Eye,
+  Edit,
+  Users,
 } from "lucide-react"
 import { Prisma } from "@prisma/client"
 import { useRouter } from "next/navigation" // useRouter をインポート
@@ -50,13 +52,17 @@ const File = () => {
 
   const getProjectStatus = (project: any) => {
     const hasImages = project.masterImages && project.masterImages.length > 0
-    const hasLayout = project.layout && project.layout.areas && project.layout.areas.length > 0
+    const hasLayout = project.layoutRegions && project.layoutRegions.length > 0
+    const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
+    const hasStudents = true // 仮定：生徒データは常に存在
     const hasAnswers = project.answerSheets && project.answerSheets.length > 0
     
-    if (!hasImages) return { step: 1, action: 'upload-master', text: '模範解答をアップロード', url: `/projects/${project.id}/score` }
-    if (!hasLayout) return { step: 2, action: 'setup-regions', text: '採点領域を設定', url: `/projects/${project.id}/score/template` }
-    if (!hasAnswers) return { step: 3, action: 'upload-answers', text: '答案をアップロード', url: `/projects/${project.id}/answer-sheets` }
-    return { step: 4, action: 'start-grading', text: '採点を開始', url: `/projects/${project.id}/score` }
+    if (!hasImages) return { step: 1, action: 'upload-master', text: '1. 模範解答をアップロード', url: `/projects/${project.id}/score` }
+    if (!hasLayout) return { step: 2, action: 'setup-regions', text: '2. 採点領域を設定', url: `/projects/${project.id}/score/template` }
+    if (!hasRegionInfo) return { step: 3, action: 'edit-region-info', text: '3. 領域情報を編集', url: `/projects/${project.id}/score/region-info` }
+    if (!hasStudents) return { step: 4, action: 'manage-students', text: '4. 受験生徒を確認', url: `/projects/${project.id}/score/students` }
+    if (!hasAnswers) return { step: 5, action: 'upload-answers', text: '5. 生徒解答をアップロード', url: `/projects/${project.id}/score/upload` }
+    return { step: 6, action: 'start-grading', text: '6. 採点を開始', url: `/projects/${project.id}/score/scoring` }
   }
 
   const handleNextStep = (project: any) => {
@@ -126,12 +132,14 @@ const File = () => {
                       <Button
                         size="sm"
                         onClick={() => handleNextStep(project)}
-                        className={status.step === 4 ? 'bg-green-600 hover:bg-green-700' : ''}
+                        className={status.step === 6 ? 'bg-green-600 hover:bg-green-700' : ''}
                       >
                         {status.step === 1 && <FileImage className="h-4 w-4 mr-1" />}
                         {status.step === 2 && <Settings className="h-4 w-4 mr-1" />}
-                        {status.step === 3 && <Upload className="h-4 w-4 mr-1" />}
-                        {status.step === 4 && <PlayCircle className="h-4 w-4 mr-1" />}
+                        {status.step === 3 && <Edit className="h-4 w-4 mr-1" />}
+                        {status.step === 4 && <Users className="h-4 w-4 mr-1" />}
+                        {status.step === 5 && <Upload className="h-4 w-4 mr-1" />}
+                        {status.step === 6 && <PlayCircle className="h-4 w-4 mr-1" />}
                         <span className="text-xs">{status.text}</span>
                       </Button>
                     </TableCell>
