@@ -78,11 +78,22 @@ export const createProject = async (
 ) => {
   return prisma.project.create({
     data: {
-      ...data, // name, projectDate, description など
+      ...data,
       user: {
         // MODIFIED: was createdBy
         connect: { id: userId },
       },
+    },
+    include: {
+      user: true,
+      projectSessions: true,
+      masterImages: true,
+      questionGroups: {
+        include: {
+          items: true,
+        },
+      },
+      layoutRegions: true,
     },
   })
 }

@@ -19,10 +19,12 @@ import { X as XIcon } from "lucide-react"
 
 interface CreateProjectWindowProps {
   onClose: () => void
+  onProjectCreated?: () => void
 }
 
 const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
   onClose,
+  onProjectCreated,
 }) => {
   const [examName, setExamName] = useState("")
   const [examDate, setExamDate] = useState<Date | null>(null)
@@ -37,13 +39,14 @@ const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
       return
     }
     try {
-      // createProject の引数の型 CreateProjectProps に合わせる
+      // createProject の引数をPrismaの型に合わせる
       await createProject({
         examName: examName.trim(),
-        examDate,
-        description: description.trim(),
-        tagTexts: tagTexts, // subjects から tagTexts に変更
+        examDate: examDate,
+        description: description.trim() || undefined,
+        subject: tagTexts.length > 0 ? tagTexts.join(', ') : undefined,
       })
+      onProjectCreated?.() // プロジェクト作成成功時のコールバック
       onClose()
     } catch (error) {
       console.error("Failed to create project:", error)

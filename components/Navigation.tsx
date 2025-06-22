@@ -27,8 +27,7 @@ import {
 } from "@/components/ui/tooltip"
 
 const navItems = [
-  { href: "/", label: "プロジェクト一覧", icon: Home }, // "プロジェクト" から "プロジェクト一覧" へ変更
-  { href: "/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+  { href: "/dashboard", label: "プロジェクト", icon: Home },
   { href: "/students", label: "生徒管理", icon: Users },
   { href: "/settings", label: "設定", icon: Settings },
 ]
@@ -60,7 +59,7 @@ export default function Navigation({
         )}
       >
         {!isSidebarMinimized && (
-          <Link href="/" className="text-lg font-semibold">
+          <Link href="/dashboard" className="text-lg font-semibold">
             一括採点
           </Link>
         )}
