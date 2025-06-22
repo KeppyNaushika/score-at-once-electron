@@ -1,15 +1,8 @@
 "use client"
 
+import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
+import RegionDetailsEditor from "@/components/Project/RegionDetailsEditor"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -17,16 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-// Remove unused import
-import { MasterImage, Prisma, User, Project, AreaType } from "@prisma/client"
+import { AreaType, MasterImage, Project, User } from "@prisma/client"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CropCoords } from "@/types/common.types"
-import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
-import RegionDetailsEditor from "@/components/Project/RegionDetailsEditor"
-
-// Remove unused type alias
 
 export default function TemplateStepPage() {
   const params = useParams()
@@ -36,7 +24,7 @@ export default function TemplateStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [step, setStep] = useState<'create' | 'edit'>('create') // 2段階のステップ
+  const [step, setStep] = useState<"create" | "edit">("create") // 2段階のステップ
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
@@ -117,7 +105,8 @@ export default function TemplateStepPage() {
 
         // 既存のレイアウト領域を取得
         try {
-          const existingRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          const existingRegions =
+            await window.electronAPI.getLayoutRegionsByProjectId(projectId)
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
             setLayoutRegions(
@@ -134,19 +123,19 @@ export default function TemplateStepPage() {
                 sourceAreaIdsJson: null,
                 sourceQuestionNumbersJson: null,
                 masterImageId: region.masterImageId || "",
-              }))
+              })),
             )
-            setStep('edit') // 既存の領域がある場合は編集ステップへ
+            setStep("edit") // 既存の領域がある場合は編集ステップへ
           } else {
             setLayoutId(undefined)
             setLayoutRegions([])
-            setStep('create') // 新規作成ステップ
+            setStep("create") // 新規作成ステップ
           }
         } catch (regionError) {
           console.error("Failed to load layout regions:", regionError)
           setLayoutId(undefined)
           setLayoutRegions([])
-          setStep('create')
+          setStep("create")
         }
       } else {
         toast.error("プロジェクトが見つかりません。")
@@ -226,7 +215,10 @@ export default function TemplateStepPage() {
 
         if (area.id) {
           // 既存の領域を更新
-          return await window.electronAPI.updateLayoutRegion(area.id, regionData)
+          return await window.electronAPI.updateLayoutRegion(
+            area.id,
+            regionData,
+          )
         } else {
           // 新しい領域を作成
           return await window.electronAPI.createLayoutRegion(regionData)
@@ -234,7 +226,7 @@ export default function TemplateStepPage() {
       })
 
       const savedRegions = await Promise.all(savePromises)
-      
+
       // 保存された領域でUIを更新
       setLayoutRegions(
         savedRegions.map((region) => ({
@@ -250,13 +242,13 @@ export default function TemplateStepPage() {
           sourceAreaIdsJson: null,
           sourceQuestionNumbersJson: null,
           masterImageId: region.masterImageId || "",
-        }))
+        })),
       )
-      
+
       if (savedRegions.length > 0) {
         setLayoutId("saved") // レイアウトが保存されたことを示すフラグ
       }
-      
+
       toast.success(`採点枠を保存しました。`)
     } catch (error) {
       console.error("Failed to save layout:", error)
@@ -313,42 +305,88 @@ export default function TemplateStepPage() {
     )
   }
 
-  if (step === 'create') {
+  if (step === "create") {
     return (
-      <div className="h-screen flex flex-col">
+      <div className="flex h-screen flex-col">
         {/* Header */}
-        <div className="border-b bg-background px-6 py-4">
+        <div className="bg-background border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-semibold">採点領域の作成</h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {project?.examName} - ドラッグして採点領域を作成
               </p>
             </div>
             <div className="flex items-center space-x-2">
               {masterImages.length > 1 && (
-                <Select
-                  value={selectedMasterImage?.id || ""}
-                  onValueChange={handleMasterImageChange}
-                  disabled={isLoading || isSaving}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="ページを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {masterImages.map((img) => (
-                      <SelectItem key={img.id} value={img.id}>
-                        ページ {img.pageNumber}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentIndex = masterImages.findIndex(
+                        (img) => img.id === selectedMasterImage?.id,
+                      )
+                      if (currentIndex > 0) {
+                        handleMasterImageChange(
+                          masterImages[currentIndex - 1].id,
+                        )
+                      }
+                    }}
+                    disabled={
+                      isLoading ||
+                      isSaving ||
+                      masterImages.findIndex(
+                        (img) => img.id === selectedMasterImage?.id,
+                      ) === 0
+                    }
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Select
+                    value={selectedMasterImage?.id || ""}
+                    onValueChange={handleMasterImageChange}
+                    disabled={isLoading || isSaving}
+                  >
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="ページを選択" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {masterImages.map((img) => (
+                        <SelectItem key={img.id} value={img.id}>
+                          ページ {img.pageNumber}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const currentIndex = masterImages.findIndex(
+                        (img) => img.id === selectedMasterImage?.id,
+                      )
+                      if (currentIndex < masterImages.length - 1) {
+                        handleMasterImageChange(
+                          masterImages[currentIndex + 1].id,
+                        )
+                      }
+                    }}
+                    disabled={
+                      isLoading ||
+                      isSaving ||
+                      masterImages.findIndex(
+                        (img) => img.id === selectedMasterImage?.id,
+                      ) ===
+                        masterImages.length - 1
+                    }
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
               {layoutRegions.length > 0 && (
-                <Button
-                  onClick={() => setStep('edit')}
-                  variant="outline"
-                >
+                <Button onClick={() => setStep("edit")} variant="outline">
                   次へ: 領域情報を編集
                 </Button>
               )}
@@ -373,21 +411,18 @@ export default function TemplateStepPage() {
 
   // Edit step
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex h-screen flex-col">
       {/* Header */}
-      <div className="border-b bg-background px-6 py-4">
+      <div className="bg-background border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">採点領域の編集</h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {project?.examName} - 各領域の詳細情報を設定
             </p>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              onClick={() => setStep('create')}
-              variant="outline"
-            >
+            <Button onClick={() => setStep("create")} variant="outline">
               戻る: 領域作成
             </Button>
             <Button
@@ -408,12 +443,12 @@ export default function TemplateStepPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* Left: Compact Image Preview */}
         <div className="w-1/3 border-r p-4">
-          <h3 className="font-medium mb-3">模範解答</h3>
+          <h3 className="mb-3 font-medium">模範解答</h3>
           {backgroundImageUrl && (
-            <div className="relative border rounded-lg overflow-hidden">
+            <div className="relative overflow-hidden rounded-lg border">
               <img
                 src={backgroundImageUrl}
                 alt="模範解答"
@@ -435,7 +470,7 @@ export default function TemplateStepPage() {
             </div>
           )}
         </div>
-        
+
         {/* Right: Region Details Form */}
         <div className="flex-1 overflow-y-auto">
           <RegionDetailsEditor

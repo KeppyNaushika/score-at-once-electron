@@ -1,11 +1,10 @@
 "use client"
 
+import { AreaType } from "@prisma/client"
 import { useState } from "react"
-import { Prisma, AreaType } from "@prisma/client"
 import { toast } from "sonner"
-import LayoutRegionList from "./LayoutRegionList"
 import ImageCanvas from "./ImageCanvas"
-import LayoutRegionForm from "./LayoutRegionForm"
+import LayoutRegionList from "./LayoutRegionList"
 
 type LayoutRegionEditorProps = {
   areas: any[]
@@ -28,15 +27,12 @@ const LayoutRegionEditor = ({
     null,
   )
 
-  const handleAreaChange = (index: number, field: string, value: any) => {
+  const handleUpdateArea = (
+    index: number,
+    coords: { x: number; y: number; width: number; height: number },
+  ) => {
     const newAreas = [...areas]
-    if (field === "points" && value !== "") {
-      newAreas[index] = { ...newAreas[index], [field]: parseFloat(value) }
-    } else if (field === "points" && value === "") {
-      newAreas[index] = { ...newAreas[index], [field]: null }
-    } else {
-      newAreas[index] = { ...newAreas[index], [field]: value }
-    }
+    newAreas[index] = { ...newAreas[index], ...coords }
     setAreas(newAreas)
   }
 
@@ -107,18 +103,10 @@ const LayoutRegionEditor = ({
     setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
-  const removeArea = (index: number) => {
-    setAreas(areas.filter((_, i) => i !== index))
-    setSelectedAreaIndex(null)
-  }
-
-  const selectedArea =
-    selectedAreaIndex !== null ? areas[selectedAreaIndex] : null
-
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {/* Main Image Canvas */}
-      <div className="flex-1 relative">
+      <div className="relative flex-1">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
@@ -126,14 +114,15 @@ const LayoutRegionEditor = ({
           selectedAreaIndex={selectedAreaIndex}
           onSelectArea={setSelectedAreaIndex}
           onAddAreaByDrag={addArea}
+          onUpdateArea={handleUpdateArea}
           disabled={disabled}
           masterImageId={masterImageId}
         />
       </div>
-      
+
       {/* Bottom Panel - Region List */}
       {areas.length > 0 && (
-        <div className="border-t bg-background">
+        <div className="bg-background border-t">
           <LayoutRegionList
             areas={areas}
             selectedAreaIndex={selectedAreaIndex}

@@ -1,8 +1,5 @@
 "use client"
 
-import React from "react"
-import { useParams, usePathname } from "next/navigation"
-import Link from "next/link"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,14 +9,22 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
+import { useParams, usePathname } from "next/navigation"
+import React from "react"
 
 // 採点ステップの定義
 const scoringSteps = [
   { id: "master-image", label: "1. 模範解答", hrefSuffix: "" }, // 初期ステップは /score 直下
-  { id: "template", label: "2. 採点枠領域", hrefSuffix: "/template" }, // ラベル変更
-  { id: "upload", label: "3. 解答用紙", hrefSuffix: "/upload" },
-  { id: "scoring", label: "4. 採点", hrefSuffix: "/scoring" },
-  { id: "results", label: "5. 結果", hrefSuffix: "/results" },
+  { id: "template", label: "2. 採点領域", hrefSuffix: "/template" }, // ラベル変更
+  {
+    id: "region-editing",
+    label: "3. 領域情報編集",
+    hrefSuffix: "/template?step=edit",
+  }, // 新規追加
+  { id: "upload", label: "4. 生徒解答", hrefSuffix: "/upload" }, // ラベル変更
+  { id: "scoring", label: "5. 採点", hrefSuffix: "/scoring" },
+  { id: "results", label: "6. 結果", hrefSuffix: "/results" },
 ]
 
 export default function ScoringLayout({
