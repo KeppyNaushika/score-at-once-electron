@@ -6,11 +6,7 @@ import { AreaType, Prisma } from "@prisma/client" // Prismaをインポート
 type ImageCanvasProps = {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
-  areas: (Omit<
-    // any[] から具体的な型に変更
-    Prisma.LayoutRegionCreateWithoutProjectLayoutInput,
-    "masterImage"
-  > & { id?: string; masterImageId: string })[]
+  areas: any[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   onAddAreaByDrag: (
@@ -125,83 +121,125 @@ const ImageCanvas = ({
   }
 
   return (
-    <div
-      ref={imageContainerRef}
-      className="relative col-span-2 min-h-[400px] rounded-md border bg-gray-100 p-2"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp} // Container out also ends drag
-      style={{
-        cursor: dragging
-          ? "crosshair"
-          : backgroundImageUrl && masterImageId
-            ? "crosshair"
-            : "default",
-      }}
-    >
-      {backgroundImageUrl && imageDimensions ? (
+    <div className="h-full flex flex-col bg-background">
+      {/* Instructions */}
+      <div className="p-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">🎨 採点領域を作成</h3>
+          <p className="text-sm text-blue-700">
+            模範解答上でマウスをドラッグして採点したい領域を囲んでください
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            設問、氏名欄、学籍番号欄など、必要な領域をすべて作成してください
+          </p>
+        </div>
+      </div>
+      
+      {/* Main Image Area */}
+      <div className="flex-1 p-4 overflow-auto">
         <div
+          ref={imageContainerRef}
+          className="relative w-full h-full min-h-[500px] rounded-lg border-2 border-dashed border-muted-foreground/20 bg-white shadow-sm"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
           style={{
-            width: "100%",
-            height: "100%",
-            position: "relative",
-            overflow: "hidden",
+            cursor: dragging
+              ? "crosshair"
+              : backgroundImageUrl && masterImageId
+                ? "crosshair"
+                : "default",
           }}
         >
-          <img
-            src={backgroundImageUrl}
-            alt="Master Template"
-            style={{
-              display: "block",
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-              userSelect: "none",
-              pointerEvents: "none",
-            }}
-          />
-          {areas.map((area, index) => (
-            <div
-              key={area.id || `area-${index}`}
-              onClick={(e) => {
-                e.stopPropagation() // Prevent triggering onMouseDown on the parent
-                onSelectArea(index)
-              }}
-              style={{
-                position: "absolute",
-                left: `${area.x * 100}%`,
-                top: `${area.y * 100}%`,
-                width: `${area.width * 100}%`,
-                height: `${area.height * 100}%`,
-                border: `1px solid ${
-                  selectedAreaIndex === index ? "blue" : "rgba(255,0,0,0.7)"
-                }`,
-                backgroundColor: `${selectedAreaIndex === index ? "rgba(0, 0, 255, 0.2)" : "rgba(255, 0, 0, 0.1)"}`,
-                cursor: "pointer",
-              }}
-            />
-          ))}
-          {dragging && dragStartCoords && dragCurrentCoords && (
-            <div
-              style={{
-                position: "absolute",
-                left: `${Math.min(dragStartCoords.x, dragCurrentCoords.x) * 100}%`,
-                top: `${Math.min(dragStartCoords.y, dragCurrentCoords.y) * 100}%`,
-                width: `${Math.abs(dragStartCoords.x - dragCurrentCoords.x) * 100}%`,
-                height: `${Math.abs(dragStartCoords.y - dragCurrentCoords.y) * 100}%`,
-                border: "1px dashed blue",
-                backgroundColor: "rgba(0, 0, 255, 0.1)",
-                pointerEvents: "none",
-              }}
-            />
+          {backgroundImageUrl && imageDimensions ? (
+            <div className="relative w-full h-full">
+              <img
+                src={backgroundImageUrl}
+                alt="模範解答"
+                className="w-full h-full object-contain select-none pointer-events-none"
+                draggable={false}
+              />
+              
+              {/* Existing Areas */}
+              {areas.map((area, index) => {
+                const isSelected = selectedAreaIndex === index
+                const typeColors = {
+                  [AreaType.QUESTION_ANSWER]: { border: "#3b82f6", bg: "rgba(59, 130, 246, 0.1)" },
+                  [AreaType.STUDENT_NAME]: { border: "#10b981", bg: "rgba(16, 185, 129, 0.1)" },
+                  [AreaType.STUDENT_ID]: { border: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)" },
+                  [AreaType.TOTAL_SCORE]: { border: "#ef4444", bg: "rgba(239, 68, 68, 0.1)" },
+                  [AreaType.SUBTOTAL_SCORE]: { border: "#f59e0b", bg: "rgba(245, 158, 11, 0.1)" },
+                  [AreaType.MARK]: { border: "#8b5cf6", bg: "rgba(139, 92, 246, 0.1)" },
+                  [AreaType.COMMENT]: { border: "#06b6d4", bg: "rgba(6, 182, 212, 0.1)" },
+                  [AreaType.OTHER]: { border: "#6b7280", bg: "rgba(107, 114, 128, 0.1)" },
+                }
+                const colors = typeColors[area.type as AreaType] || typeColors[AreaType.OTHER]
+                
+                return (
+                  <div
+                    key={area.id || `area-${index}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onSelectArea(index)
+                    }}
+                    className="absolute group hover:z-10 transition-all duration-200"
+                    style={{
+                      left: `${area.x * 100}%`,
+                      top: `${area.y * 100}%`,
+                      width: `${area.width * 100}%`,
+                      height: `${area.height * 100}%`,
+                      border: `2px solid ${isSelected ? '#1d4ed8' : colors.border}`,
+                      backgroundColor: isSelected ? 'rgba(29, 78, 216, 0.2)' : colors.bg,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {/* Label */}
+                    <div className="absolute -top-6 left-0 px-2 py-1 bg-white border rounded text-xs font-medium shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      {area.label || '領域'}
+                    </div>
+                    
+                    {/* Resize handles for selected area */}
+                    {isSelected && (
+                      <>
+                        <div className="absolute -top-1 -left-1 w-2 h-2 bg-blue-600 border border-white rounded-full"></div>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-600 border border-white rounded-full"></div>
+                        <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-blue-600 border border-white rounded-full"></div>
+                        <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-blue-600 border border-white rounded-full"></div>
+                      </>
+                    )}
+                  </div>
+                )
+              })}
+              
+              {/* Drag Preview */}
+              {dragging && dragStartCoords && dragCurrentCoords && (
+                <div
+                  className="absolute border-2 border-dashed border-blue-500 bg-blue-500/10 pointer-events-none"
+                  style={{
+                    left: `${Math.min(dragStartCoords.x, dragCurrentCoords.x) * 100}%`,
+                    top: `${Math.min(dragStartCoords.y, dragCurrentCoords.y) * 100}%`,
+                    width: `${Math.abs(dragStartCoords.x - dragCurrentCoords.x) * 100}%`,
+                    height: `${Math.abs(dragStartCoords.y - dragCurrentCoords.y) * 100}%`,
+                  }}
+                >
+                  <div className="absolute -top-6 left-0 px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                    新しい領域
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center text-muted-foreground">
+                <div className="text-4xl mb-4">📄</div>
+                <p className="text-lg">模範解答画像を読み込んでください</p>
+                <p className="text-sm mt-2">プロジェクトの模範解答ページで画像をアップロードしてください</p>
+              </div>
+            </div>
           )}
         </div>
-      ) : (
-        <p className="text-muted-foreground flex h-full items-center justify-center text-center">
-          模範解答画像を読み込んでください。
-        </p>
-      )}
+      </div>
     </div>
   )
 }

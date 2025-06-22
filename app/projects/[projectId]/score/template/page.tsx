@@ -24,6 +24,7 @@ import { useCallback, useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
 import { CropCoords } from "@/types/common.types"
 import LayoutRegionEditor from "@/components/Project/LayoutRegionEditor"
+import RegionDetailsEditor from "@/components/Project/RegionDetailsEditor"
 
 // Remove unused type alias
 
@@ -35,6 +36,7 @@ export default function TemplateStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
+  const [step, setStep] = useState<'create' | 'edit'>('create') // 2段階のステップ
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
@@ -134,14 +136,17 @@ export default function TemplateStepPage() {
                 masterImageId: region.masterImageId || "",
               }))
             )
+            setStep('edit') // 既存の領域がある場合は編集ステップへ
           } else {
             setLayoutId(undefined)
             setLayoutRegions([])
+            setStep('create') // 新規作成ステップ
           }
         } catch (regionError) {
           console.error("Failed to load layout regions:", regionError)
           setLayoutId(undefined)
           setLayoutRegions([])
+          setStep('create')
         }
       } else {
         toast.error("プロジェクトが見つかりません。")
@@ -308,105 +313,138 @@ export default function TemplateStepPage() {
     )
   }
 
-  return (
-    <div className="container mx-auto p-4">
-      <h2 className="mb-6 text-2xl font-semibold">
-        ステップ2: 採点枠領域の作成・編集
-      </h2>
-      <Card>
-        <CardHeader>
-          <CardTitle>{layoutId ? "採点枠編集" : "新規採点枠作成"} </CardTitle>
-          <CardDescription>
-            プロジェクト「{project?.examName || projectId}
-            」の採点枠領域を設定します。
-            {masterImages.length > 0 && (
-              <div className="mt-2">
-                <Label htmlFor="master-image-select">基準画像選択:</Label>
+  if (step === 'create') {
+    return (
+      <div className="h-screen flex flex-col">
+        {/* Header */}
+        <div className="border-b bg-background px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-semibold">採点領域の作成</h1>
+              <p className="text-sm text-muted-foreground">
+                {project?.examName} - ドラッグして採点領域を作成
+              </p>
+            </div>
+            <div className="flex items-center space-x-2">
+              {masterImages.length > 1 && (
                 <Select
                   value={selectedMasterImage?.id || ""}
                   onValueChange={handleMasterImageChange}
                   disabled={isLoading || isSaving}
                 >
-                  <SelectTrigger
-                    id="master-image-select"
-                    className="mt-1 w-[280px]"
-                  >
-                    <SelectValue placeholder="模範解答画像を選択" />
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="ページを選択" />
                   </SelectTrigger>
                   <SelectContent>
                     {masterImages.map((img) => (
                       <SelectItem key={img.id} value={img.id}>
-                        {img.path.split("/").pop()} (ページ {img.pageNumber})
+                        ページ {img.pageNumber}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>採点枠領域定義</Label>
-              {selectedMasterImage && (
+              )}
+              {layoutRegions.length > 0 && (
                 <Button
-                  onClick={handleDetectLayoutRegions}
-                  disabled={
-                    isSaving || isLoading || isDetecting || !selectedMasterImage
-                  }
-                  size="sm"
+                  onClick={() => setStep('edit')}
                   variant="outline"
                 >
-                  {isDetecting ? "検出中..." : "解答枠を自動検出"}
+                  次へ: 領域情報を編集
                 </Button>
               )}
             </div>
-            <LayoutRegionEditor
-              areas={layoutRegions}
-              setAreas={setLayoutRegions}
-              disabled={isSaving}
-              backgroundImageUrl={backgroundImageUrl}
-              imageDimensions={imageDimensions}
-              masterImageId={selectedMasterImage?.id || null}
-            />
-            <p className="text-muted-foreground text-xs">
-              模範解答画像上で、採点対象となる各領域（設問、氏名など）を定義します。座標・サイズは画像に対する割合で保存されます。各領域は特定の模範解答画像ページに紐付きます。
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden">
+          <LayoutRegionEditor
+            areas={layoutRegions}
+            setAreas={setLayoutRegions}
+            disabled={isSaving}
+            backgroundImageUrl={backgroundImageUrl}
+            imageDimensions={imageDimensions}
+            masterImageId={selectedMasterImage?.id || null}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Edit step
+  return (
+    <div className="h-screen flex flex-col">
+      {/* Header */}
+      <div className="border-b bg-background px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">採点領域の編集</h1>
+            <p className="text-sm text-muted-foreground">
+              {project?.examName} - 各領域の詳細情報を設定
             </p>
           </div>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            onClick={goToPreviousStep}
-            disabled={isSaving}
-          >
-            前へ: 模範解答設定
-          </Button>
-          <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() => setStep('create')}
+              variant="outline"
+            >
+              戻る: 領域作成
+            </Button>
             <Button
               onClick={handleSaveTemplate}
-              disabled={
-                isSaving || isLoading || !selectedMasterImage || isDetecting
-              }
+              disabled={isSaving || isLoading || !selectedMasterImage}
+              className="bg-primary"
             >
-              {isSaving
-                ? "保存中..."
-                : layoutId
-                  ? "採点枠を更新"
-                  : "採点枠を作成"}{" "}
+              {isSaving ? "保存中..." : "保存"}
             </Button>
             <Button
-              onClick={goToNextStep}
-              disabled={
-                isSaving || !layoutId || !selectedMasterImage || isDetecting
-              }
+              variant="outline"
+              onClick={() => router.push(`/projects/${projectId}`)}
             >
-              次へ: 解答用紙アップロード
+              完了
             </Button>
           </div>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Compact Image Preview */}
+        <div className="w-1/3 border-r p-4">
+          <h3 className="font-medium mb-3">模範解答</h3>
+          {backgroundImageUrl && (
+            <div className="relative border rounded-lg overflow-hidden">
+              <img
+                src={backgroundImageUrl}
+                alt="模範解答"
+                className="w-full object-contain"
+              />
+              {/* Overlay regions */}
+              {layoutRegions.map((area, index) => (
+                <div
+                  key={area.id || `area-${index}`}
+                  className="absolute border-2 border-blue-500 bg-blue-500/20"
+                  style={{
+                    left: `${area.x * 100}%`,
+                    top: `${area.y * 100}%`,
+                    width: `${area.width * 100}%`,
+                    height: `${area.height * 100}%`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Right: Region Details Form */}
+        <div className="flex-1 overflow-y-auto">
+          <RegionDetailsEditor
+            regions={layoutRegions}
+            setRegions={setLayoutRegions}
+            disabled={isSaving}
+          />
+        </div>
+      </div>
     </div>
   )
 }

@@ -8,11 +8,8 @@ import ImageCanvas from "./ImageCanvas"
 import LayoutRegionForm from "./LayoutRegionForm"
 
 type LayoutRegionEditorProps = {
-  areas: (Omit<
-    Prisma.LayoutRegionCreateWithoutProjectLayoutInput,
-    "masterImage"
-  > & { id?: string; masterImageId: string })[]
-  setAreas: React.Dispatch<React.SetStateAction<any[]>> // より具体的な型に変更を検討
+  areas: any[]
+  setAreas: React.Dispatch<React.SetStateAction<any[]>>
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
@@ -119,36 +116,32 @@ const LayoutRegionEditor = ({
     selectedAreaIndex !== null ? areas[selectedAreaIndex] : null
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-      <div className="md:col-span-2">
-        <LayoutRegionList
-          areas={areas}
-          selectedAreaIndex={selectedAreaIndex}
-          onSelectArea={setSelectedAreaIndex}
-          disabled={disabled}
-        />
-      </div>
-      <div className="md:col-span-3">
+    <div className="h-full flex flex-col">
+      {/* Main Image Canvas */}
+      <div className="flex-1 relative">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
           areas={areas}
           selectedAreaIndex={selectedAreaIndex}
           onSelectArea={setSelectedAreaIndex}
-          onAddAreaByDrag={addArea} // Dragで追加する際も同じaddArea関数を使用
+          onAddAreaByDrag={addArea}
           disabled={disabled}
           masterImageId={masterImageId}
         />
       </div>
-      <div className="mt-4 md:col-span-5">
-        <LayoutRegionForm
-          selectedArea={selectedArea}
-          selectedAreaIndex={selectedAreaIndex}
-          onAreaChange={handleAreaChange}
-          onRemoveArea={removeArea}
-          disabled={disabled}
-        />
-      </div>
+      
+      {/* Bottom Panel - Region List */}
+      {areas.length > 0 && (
+        <div className="border-t bg-background">
+          <LayoutRegionList
+            areas={areas}
+            selectedAreaIndex={selectedAreaIndex}
+            onSelectArea={setSelectedAreaIndex}
+            disabled={disabled}
+          />
+        </div>
+      )}
     </div>
   )
 }
