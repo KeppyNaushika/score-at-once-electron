@@ -40,9 +40,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import StudentRemovalConfirmModal from "@/components/student/StudentRemovalConfirmModal"
 
 // 生徒の状態を表す型
-type StudentStatus = "participating" | "absent" | "unknown"
+type StudentStatus = "participating" | "expected" | "absent"
 
 // 生徒データの型（実際のデータベース構造に合わせて更新）
 interface Student {
@@ -105,6 +106,10 @@ export default function StudentsPage() {
     classId: ""
   })
   const [allClasses, setAllClasses] = useState<ClassGroup[]>([])
+  const [showRemovalConfirm, setShowRemovalConfirm] = useState(false)
+  const [studentsToRemove, setStudentsToRemove] = useState<string[]>([])
+  const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<Set<string>>(new Set())
+  const [gradingDataInfo, setGradingDataInfo] = useState({ hasData: false, totalItems: 0 })
 
   // 統計情報の計算
   const totalStudents = classes.reduce((sum, cls) => sum + cls.students.length, 0)
@@ -112,12 +117,12 @@ export default function StudentsPage() {
     (sum, cls) => sum + cls.students.filter(s => s.status === "participating").length,
     0
   )
-  const absentStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter(s => s.status === "absent").length,
+  const expectedStudents = classes.reduce(
+    (sum, cls) => sum + cls.students.filter(s => s.status === "expected").length,
     0
   )
-  const unknownStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter(s => s.status === "unknown").length,
+  const absentStudents = classes.reduce(
+    (sum, cls) => sum + cls.students.filter(s => s.status === "absent").length,
     0
   )
 
@@ -191,11 +196,9 @@ export default function StudentsPage() {
   // 生徒の状態を更新
   const updateStudentStatus = async (studentId: string, newStatus: StudentStatus) => {
     try {
-      if (newStatus !== 'unknown') {
-        const result = await window.electronAPI.updateStudentProjectStatus(projectId, studentId, newStatus)
-        if (!result.success) {
-          throw new Error(result.error || 'Failed to update student status')
-        }
+      const result = await window.electronAPI.updateStudentProjectStatus(projectId, studentId, newStatus)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update student status')
       }
       
       setClasses(prevClasses => 
@@ -284,6 +287,101 @@ export default function StudentsPage() {
       setShowAddDialog(false)
     } catch (error) {
       console.error('Failed to add selected classes:', error)
+    }
+  }
+
+  // 生徒選択のトグル
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudentsForRemoval(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(studentId)) {
+        newSet.delete(studentId)
+      } else {
+        newSet.add(studentId)
+      }
+      return newSet
+    })
+  }
+
+  // 選択した生徒の削除開始
+  const initiateStudentRemoval = async () => {
+    if (selectedStudentsForRemoval.size === 0) return
+
+    const studentIds = Array.from(selectedStudentsForRemoval)
+    setStudentsToRemove(studentIds)
+
+    // 採点データの存在を確認
+    try {
+      const gradingResult = await window.electronAPI.checkGradingDataForStudents(projectId, studentIds)
+      if (gradingResult.success) {
+        setGradingDataInfo({
+          hasData: gradingResult.hasAnyData || false,
+          totalItems: gradingResult.totalGradingItems || 0
+        })
+      } else {
+        setGradingDataInfo({ hasData: false, totalItems: 0 })
+      }
+    } catch (error) {
+      console.error('Failed to check grading data:', error)
+      setGradingDataInfo({ hasData: false, totalItems: 0 })
+    }
+
+    setShowRemovalConfirm(true)
+  }
+
+  // 生徒削除の確定実行
+  const confirmStudentRemoval = async () => {
+    try {
+      const result = await window.electronAPI.removeStudentsFromProject(projectId, studentsToRemove)
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to remove students from project')
+      }
+
+      // 画面を再読み込み
+      const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      if (studentsResult.success && studentsResult.students) {
+        // 学級ごとにグループ化
+        const classGroups = new Map<string, ClassGroup>()
+        
+        studentsResult.students.forEach(student => {
+          const currentMembership = student.memberships[0]
+          if (currentMembership) {
+            const classId = currentMembership.class.id
+            const className = currentMembership.class.name
+            
+            if (!classGroups.has(classId)) {
+              classGroups.set(classId, {
+                id: classId,
+                name: className,
+                students: []
+              })
+            }
+            
+            classGroups.get(classId)!.students.push(student)
+          }
+        })
+        
+        setClasses(Array.from(classGroups.values()))
+      }
+
+      // 利用可能な学級を更新
+      const classesResult = await window.electronAPI.getClassesNotInProject(projectId)
+      if (classesResult.success) {
+        const availableClasses = (classesResult.classes || []).map(cls => ({
+          id: cls.id,
+          name: cls.name,
+          studentCount: cls.studentCount,
+          isSelected: false
+        }))
+        setAvailableClasses(availableClasses)
+      }
+
+      // 状態をリセット
+      setSelectedStudentsForRemoval(new Set())
+      setStudentsToRemove([])
+      setShowRemovalConfirm(false)
+    } catch (error) {
+      console.error('Failed to remove students:', error)
     }
   }
 
@@ -382,10 +480,10 @@ export default function StudentsPage() {
     switch (status) {
       case "participating":
         return { label: "受験", variant: "default" as const, icon: UserCheck }
+      case "expected":
+        return { label: "見込", variant: "secondary" as const, icon: Users }
       case "absent":
         return { label: "欠席", variant: "destructive" as const, icon: UserX }
-      case "unknown":
-        return { label: "未設定", variant: "secondary" as const, icon: Users }
     }
   }
 
@@ -407,13 +505,23 @@ export default function StudentsPage() {
             このプロジェクトで採点する生徒を確認し、受験状態を設定してください。
           </p>
         </div>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              生徒を追加
+        <div className="flex gap-2">
+          {selectedStudentsForRemoval.size > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={initiateStudentRemoval}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              選択した生徒を削除 ({selectedStudentsForRemoval.size})
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                生徒を追加
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>受験生徒の追加</DialogTitle>
@@ -585,10 +693,10 @@ export default function StudentsPage() {
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">未設定</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">見込受験</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{unknownStudents}</div>
+            <div className="text-2xl font-bold text-blue-600">{expectedStudents}</div>
           </CardContent>
         </Card>
       </div>
@@ -640,8 +748,8 @@ export default function StudentsPage() {
                 <SelectContent>
                   <SelectItem value="all">すべて</SelectItem>
                   <SelectItem value="participating">受験</SelectItem>
+                  <SelectItem value="expected">見込</SelectItem>
                   <SelectItem value="absent">欠席</SelectItem>
-                  <SelectItem value="unknown">未設定</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -662,6 +770,21 @@ export default function StudentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[50px]">
+                    <Checkbox
+                      checked={
+                        filteredStudents.length > 0 &&
+                        filteredStudents.every(s => selectedStudentsForRemoval.has(s.id))
+                      }
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStudentsForRemoval(new Set(filteredStudents.map(s => s.id)))
+                        } else {
+                          setSelectedStudentsForRemoval(new Set())
+                        }
+                      }}
+                    />
+                  </TableHead>
                   <TableHead className="w-[100px]">学籍番号</TableHead>
                   <TableHead>氏名</TableHead>
                   <TableHead>ふりがな</TableHead>
@@ -677,6 +800,12 @@ export default function StudentsPage() {
                   
                   return (
                     <TableRow key={student.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStudentsForRemoval.has(student.id)}
+                          onCheckedChange={() => toggleStudentSelection(student.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono">{student.studentId}</TableCell>
                       <TableCell className="font-medium">{student.lastName} {student.firstName}</TableCell>
                       <TableCell className="text-muted-foreground">{student.lastNameKana} {student.firstNameKana}</TableCell>
@@ -713,6 +842,28 @@ export default function StudentsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 削除確認モーダル */}
+      <StudentRemovalConfirmModal
+        isOpen={showRemovalConfirm}
+        onClose={() => {
+          setShowRemovalConfirm(false)
+          setStudentsToRemove([])
+        }}
+        onConfirm={confirmStudentRemoval}
+        studentsToRemove={studentsToRemove.map(id => {
+          const student = classes.flatMap(c => c.students).find(s => s.id === id)
+          return {
+            id,
+            studentId: student?.studentId || '',
+            lastName: student?.lastName || '',
+            firstName: student?.firstName || '',
+            className: student?.memberships[0]?.class.name || '未所属'
+          }
+        })}
+        hasGradingData={gradingDataInfo.hasData}
+        gradingDataCount={gradingDataInfo.totalItems}
+      />
     </div>
   )
 }

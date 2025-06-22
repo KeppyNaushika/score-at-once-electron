@@ -1,4 +1,4 @@
-import { Prisma, MembershipType } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import prisma from "./client"
 
 type StudentClassMembershipWithDetails = Prisma.StudentClassMembershipGetPayload<{
@@ -155,7 +155,6 @@ export const addStudentToClass = async (
   studentId: string,
   classId: string,
   startDate: Date = new Date(),
-  membershipType: MembershipType = MembershipType.REGULAR,
   subject?: string,
   notes?: string,
 ): Promise<StudentClassMembershipWithDetails> => {
@@ -164,7 +163,6 @@ export const addStudentToClass = async (
       student: { connect: { id: studentId } },
       class: { connect: { id: classId } },
       startDate,
-      membershipType,
       subject,
       notes,
     })

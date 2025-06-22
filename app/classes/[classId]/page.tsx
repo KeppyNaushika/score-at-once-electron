@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { 
   ArrowLeft,
   Edit, 
@@ -17,7 +18,8 @@ import {
   UserCircle,
   Calendar,
   Clock,
-  Upload
+  Upload,
+  Minus
 } from "lucide-react"
 import ClassModal from "@/components/student/ClassModal"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
@@ -97,6 +99,7 @@ export default function ClassDetailPage() {
   const [isStudentImportModalOpen, setIsStudentImportModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedMembershipIds, setSelectedMembershipIds] = useState<string[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -234,6 +237,47 @@ export default function ClassDetailPage() {
     }
   }
 
+  const handleSelectAll = () => {
+    if (selectedMembershipIds.length === currentMembers.length) {
+      setSelectedMembershipIds([])
+    } else {
+      setSelectedMembershipIds(currentMembers.map(m => m.id))
+    }
+  }
+
+  const handleMembershipSelect = (membershipId: string) => {
+    setSelectedMembershipIds(prev => 
+      prev.includes(membershipId) 
+        ? prev.filter(id => id !== membershipId)
+        : [...prev, membershipId]
+    )
+  }
+
+  const handleBulkEndMemberships = async () => {
+    if (selectedMembershipIds.length === 0) return
+    
+    if (window.confirm(`選択した${selectedMembershipIds.length}名の生徒の所属を解除しますか？`)) {
+      try {
+        await Promise.all(
+          selectedMembershipIds.map(id => 
+            window.electronAPI.endStudentMembership(id)
+          )
+        )
+        
+        // Refresh class data
+        const classes = await window.electronAPI.fetchClasses()
+        const updatedClass = classes.find(c => c.id === classId)
+        if (updatedClass) {
+          setClassData(updatedClass)
+        }
+        setSelectedMembershipIds([])
+      } catch (error) {
+        console.error("Failed to end memberships:", error)
+        alert("一括所属解除に失敗しました。")
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -349,8 +393,34 @@ export default function ClassDetailPage() {
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               現在の所属生徒 ({currentMembers.length}名)
+              {selectedMembershipIds.length > 0 && (
+                <span className="text-sm font-normal text-muted-foreground">
+                  ({selectedMembershipIds.length}名選択中)
+                </span>
+              )}
             </CardTitle>
             <div className="flex gap-2">
+              {currentMembers.length > 0 && (
+                <>
+                  <Button 
+                    onClick={handleSelectAll} 
+                    size="sm" 
+                    variant="outline"
+                  >
+                    {selectedMembershipIds.length === currentMembers.length ? "全解除" : "全選択"}
+                  </Button>
+                  {selectedMembershipIds.length > 0 && (
+                    <Button 
+                      onClick={handleBulkEndMemberships}
+                      size="sm" 
+                      variant="destructive"
+                    >
+                      <Minus className="mr-2 h-4 w-4" />
+                      選択した生徒の所属を解除
+                    </Button>
+                  )}
+                </>
+              )}
               <Button onClick={handleAddMembership} size="sm" variant="outline">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 生徒追加
@@ -368,13 +438,21 @@ export default function ClassDetailPage() {
               {currentMembers.map((membership) => (
                 <div 
                   key={membership.id} 
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className={`flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors ${
+                    selectedMembershipIds.includes(membership.id) ? 'bg-muted/30 border-primary/50' : ''
+                  }`}
                 >
-                  <div 
-                    className="flex-1 cursor-pointer" 
-                    onClick={() => router.push(`/students/${membership.student.id}`)}
-                  >
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Checkbox 
+                      checked={selectedMembershipIds.includes(membership.id)}
+                      onCheckedChange={() => handleMembershipSelect(membership.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <div 
+                      className="flex-1 cursor-pointer" 
+                      onClick={() => router.push(`/students/${membership.student.id}`)}
+                    >
+                      <div className="flex items-center gap-3">
                       <UserCircle className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium">
@@ -391,6 +469,7 @@ export default function ClassDetailPage() {
                           {membership.notes && (
                             <span className="italic">{membership.notes}</span>
                           )}
+                        </div>
                         </div>
                       </div>
                     </div>
