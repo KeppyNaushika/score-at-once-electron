@@ -1,4 +1,4 @@
-import { Prisma, MembershipType } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import prisma from "./client"
 import * as XLSX from "xlsx"
 
@@ -303,7 +303,6 @@ export const importStudentsFromFile = async (
                 studentId: student.id,
                 classId: classRecord.id,
                 startDate: new Date(),
-                membershipType: MembershipType.REGULAR,
               },
             })
           }
