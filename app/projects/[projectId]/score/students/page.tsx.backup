@@ -522,145 +522,144 @@ export default function StudentsPage() {
                 生徒を追加
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>受験生徒の追加</DialogTitle>
-                <DialogDescription>
-                  学級単位での一括追加、または個別の生徒追加ができます。
-                </DialogDescription>
-              </DialogHeader>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>受験生徒の追加</DialogTitle>
+              <DialogDescription>
+                学級単位での一括追加、または個別の生徒追加ができます。
+              </DialogDescription>
+            </DialogHeader>
+            
+            <Tabs defaultValue="class" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="class">学級単位で追加</TabsTrigger>
+                <TabsTrigger value="individual">個別に追加</TabsTrigger>
+              </TabsList>
               
-              <Tabs defaultValue="class" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="class">学級単位で追加</TabsTrigger>
-                  <TabsTrigger value="individual">個別に追加</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="class" className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-3">追加可能な学級</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      チェックボックスで選択した学級の全生徒をプロジェクトに追加します。
+              <TabsContent value="class" className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-3">追加可能な学級</h4>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    チェックボックスで選択した学級の全生徒をプロジェクトに追加します。
+                  </p>
+                  
+                  {availableClasses.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-8">
+                      追加可能な学級がありません。
                     </p>
-                    
-                    {availableClasses.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">
-                        追加可能な学級がありません。
-                      </p>
-                    ) : (
-                      <div className="space-y-3">
-                        {availableClasses.map((cls) => (
-                          <Card key={cls.id} className="p-4">
-                            <div className="flex items-center space-x-3">
-                              <Checkbox
-                                id={`class-${cls.id}`}
-                                checked={cls.isSelected}
-                                onCheckedChange={() => toggleClassSelection(cls.id)}
-                              />
-                              <Label htmlFor={`class-${cls.id}`} className="flex-1 cursor-pointer">
-                                <div className="flex justify-between items-center">
-                                  <span className="font-medium">{cls.name}</span>
-                                  <Badge variant="outline">
-                                    {cls.studentCount}名
-                                  </Badge>
-                                </div>
-                              </Label>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowAddDialog(false)}
-                    >
-                      キャンセル
-                    </Button>
-                    <Button 
-                      onClick={addSelectedClasses}
-                      disabled={!availableClasses.some(c => c.isSelected)}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      選択した学級を追加
-                    </Button>
-                  </DialogFooter>
-                </TabsContent>
+                  ) : (
+                    <div className="space-y-3">
+                      {availableClasses.map((cls) => (
+                        <Card key={cls.id} className="p-4">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`class-${cls.id}`}
+                              checked={cls.isSelected}
+                              onCheckedChange={() => toggleClassSelection(cls.id)}
+                            />
+                            <Label htmlFor={`class-${cls.id}`} className="flex-1 cursor-pointer">
+                              <div className="flex justify-between items-center">
+                                <span className="font-medium">{cls.name}</span>
+                                <Badge variant="outline">
+                                  {cls.studentCount}名
+                                </Badge>
+                              </div>
+                            </Label>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 
-                <TabsContent value="individual" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="studentNumber">学籍番号</Label>
-                      <Input
-                        id="studentNumber"
-                        placeholder="001"
-                        value={newStudent.studentNumber}
-                        onChange={(e) => setNewStudent(prev => ({ ...prev, studentNumber: e.target.value }))}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="className">学級</Label>
-                      <Select 
-                        value={newStudent.classId} 
-                        onValueChange={(value) => setNewStudent(prev => ({ ...prev, classId: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="学級を選択" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allClasses.map((cls) => (
-                            <SelectItem key={cls.id} value={cls.id}>
-                              {cls.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="studentName">氏名</Label>
-                      <Input
-                        id="studentName"
-                        placeholder="田中太郎"
-                        value={newStudent.name}
-                        onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="furigana">ふりがな</Label>
-                      <Input
-                        id="furigana"
-                        placeholder="たなかたろう"
-                        value={newStudent.furigana}
-                        onChange={(e) => setNewStudent(prev => ({ ...prev, furigana: e.target.value }))}
-                      />
-                    </div>
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowAddDialog(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    onClick={addSelectedClasses}
+                    disabled={!availableClasses.some(c => c.isSelected)}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    選択した学級を追加
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+              
+              <TabsContent value="individual" className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="studentNumber">学籍番号</Label>
+                    <Input
+                      id="studentNumber"
+                      placeholder="001"
+                      value={newStudent.studentNumber}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, studentNumber: e.target.value }))}
+                    />
                   </div>
                   
-                  <DialogFooter>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowAddDialog(false)}
+                  <div className="space-y-2">
+                    <Label htmlFor="className">学級</Label>
+                    <Select 
+                      value={newStudent.classId} 
+                      onValueChange={(value) => setNewStudent(prev => ({ ...prev, classId: value }))}
                     >
-                      キャンセル
-                    </Button>
-                    <Button 
-                      onClick={addIndividualStudent}
-                      disabled={!newStudent.studentNumber || !newStudent.name || !newStudent.furigana || !newStudent.classId}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      生徒を追加
-                    </Button>
-                  </DialogFooter>
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
-        </div>
+                      <SelectTrigger>
+                        <SelectValue placeholder="学級を選択" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allClasses.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="studentName">氏名</Label>
+                    <Input
+                      id="studentName"
+                      placeholder="田中太郎"
+                      value={newStudent.name}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="furigana">ふりがな</Label>
+                    <Input
+                      id="furigana"
+                      placeholder="たなかたろう"
+                      value={newStudent.furigana}
+                      onChange={(e) => setNewStudent(prev => ({ ...prev, furigana: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowAddDialog(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button 
+                    onClick={addIndividualStudent}
+                    disabled={!newStudent.studentNumber || !newStudent.name || !newStudent.furigana || !newStudent.classId}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    生徒を追加
+                  </Button>
+                </DialogFooter>
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* 統計カード */}
