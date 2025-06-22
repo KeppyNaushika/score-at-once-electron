@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import AnswerSheetUpload from "@/components/AnswerSheet/AnswerSheetUpload"
-import ProtectedRoute from "@/components/Auth/ProtectedRoute"
+import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import type { AnswerSheetWithDetails } from "@/src/types/electron"
 
 interface ProjectData {

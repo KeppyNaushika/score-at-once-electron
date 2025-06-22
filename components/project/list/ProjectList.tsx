@@ -21,9 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { useProjects } from "../hooks/useProjects"
-import { useFileActions } from "../hooks/useFileActions"
-import CreateProjectWindow from "./CreateProjectWindow"
+import { useProjects } from "@/components/hooks/useProjects"
+import { useFileActions } from "@/components/hooks/useFileActions"
+import CreateProjectWindow from "../forms/CreateProjectWindow"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,

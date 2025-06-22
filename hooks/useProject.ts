@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Project, MasterImage, LayoutRegion } from "@prisma/client"
+import { Project, MasterImage, LayoutRegion, Prisma } from "@prisma/client"
 import { toast } from "sonner"
 
 export type ProjectWithDetails = Project & {
@@ -81,8 +81,8 @@ export function useProject(projectId?: string) {
     }
   }, [])
 
-  const updateProject = useCallback(async (updates: Partial<Project>) => {
-    if (!project) return
+  const updateProject = useCallback(async (updates: Prisma.ProjectUpdateInput) => {
+    if (!project?.id) return
 
     try {
       const updatedProject = await window.electronAPI.updateProject(project.id, updates)

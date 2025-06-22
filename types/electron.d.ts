@@ -125,7 +125,7 @@ export interface MyAPI {
   ) => Promise<ProjectWithDetails> // userId for createdBy
   updateProject: (
     projectId: string,
-    data: UpdateProjectArgs,
+    data: Prisma.ProjectUpdateInput,
   ) => Promise<ProjectWithDetails>
   deleteProject: (projectId: string) => Promise<Project | void> // Prisma.Project or void
 

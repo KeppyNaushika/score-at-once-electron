@@ -3,7 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
-import UserSelection from '@/components/Auth/UserSelection'
+import UserSelection from '@/components/auth/UserSelection'
 
 const Page = () => {
   const { user, isLoading } = useAuth()
