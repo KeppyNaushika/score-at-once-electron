@@ -63,9 +63,10 @@ model Student {
   updatedAt DateTime @updatedAt
 
   // Many-to-many relationship through StudentClassMembership
-  memberships  StudentClassMembership[]
-  answerSheets AnswerSheet[]
-  scoreRecords ScoreRecord[]
+  memberships    StudentClassMembership[]
+  answerSheets   AnswerSheet[]
+  scoreRecords   ScoreRecord[]
+  projectStudents ProjectStudent[]
 }
 
 // ---------------------------------------------------
@@ -138,8 +139,32 @@ model Project {
   layoutRegions      LayoutRegion[]
   gradingAssignments GradingAssignment[]
   questionGroups     QuestionGroup[]
+  projectStudents    ProjectStudent[]
 
   @@index([userId])
+}
+
+// プロジェクトと生徒の多対多リレーション（受験状態管理）
+model ProjectStudent {
+  id        String          @id @default(uuid())
+  projectId String
+  studentId String
+  status    ProjectStudentStatus @default(PARTICIPATING)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student   Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+  @@index([projectId])
+  @@index([studentId])
+}
+
+enum ProjectStudentStatus {
+  PARTICIPATING
+  EXPECTED
+  ABSENT
 }
 
 // プロジェクトと採点担当者の多対多リレーション

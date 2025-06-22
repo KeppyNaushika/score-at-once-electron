@@ -459,6 +459,17 @@ export interface MyAPI {
     error?: string
   }>
 
+  // QuestionScore関連のAPI
+  getQuestionScoresForProject: (projectId: string) => Promise<any>
+  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<any>
+  createQuestionScore: (data: any) => Promise<any>
+  updateQuestionScore: (id: string, data: any, expectedVersion?: number) => Promise<any>
+  deleteQuestionScore: (id: string) => Promise<any>
+  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) => Promise<any>
+  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: any) => Promise<any>
+  getAnswerSheetProgress: (answerSheetId: string) => Promise<any>
+  getProjectProgress: (projectId: string) => Promise<any>
+
   // Obsolete ProjectLayout handlers removed
   // saveProjectLayout: ...
   // fetchProjectLayoutByProjectId: ...

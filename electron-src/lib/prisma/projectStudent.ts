@@ -1,48 +1,37 @@
 import prisma from './client'
-
-// プロジェクトに参加する生徒の状態を管理するためのテーブル（メモリ上で管理）
-const projectStudentStatus = new Map<string, Map<string, 'participating' | 'expected' | 'absent'>>()
+import { ProjectStudentStatus } from '@prisma/client'
 
 /**
  * プロジェクトに関連する生徒を取得
  */
 export async function getStudentsForProject(projectId: string) {
   try {
-    // 全ての生徒を取得
-    const allStudents = await prisma.student.findMany({
+    // プロジェクトに参加している生徒を取得
+    const projectStudents = await prisma.projectStudent.findMany({
+      where: { projectId },
       include: {
-        memberships: {
+        student: {
           include: {
-            class: true
-          },
-          where: {
-            endDate: null
-          },
-          orderBy: {
-            startDate: 'desc'
+            memberships: {
+              include: {
+                class: true
+              },
+              where: {
+                endDate: null
+              },
+              orderBy: {
+                startDate: 'desc'
+              }
+            }
           }
         }
       }
     })
 
-    // プロジェクトの生徒状態を取得
-    const projectStatusMap = projectStudentStatus.get(projectId) || new Map()
-
-    // 既にプロジェクトに追加されている生徒IDを取得
-    const existingAnswerSheets = await prisma.answerSheet.findMany({
-      where: { projectId },
-      select: { studentId: true }
-    })
-    const existingStudentIds = new Set(
-      existingAnswerSheets
-        .map((sheet: any) => sheet.studentId)
-        .filter((id: any): id is string => id !== null)
-    )
-
-    const studentsWithStatus = allStudents.map((student: any) => ({
-      ...student,
-      status: projectStatusMap.get(student.id) || 'expected' as const,
-      isInProject: existingStudentIds.has(student.id)
+    const studentsWithStatus = projectStudents.map((projectStudent: any) => ({
+      ...projectStudent.student,
+      status: projectStudent.status.toLowerCase() as 'participating' | 'expected' | 'absent',
+      isInProject: true
     }))
 
     return {
@@ -63,18 +52,27 @@ export async function getStudentsForProject(projectId: string) {
  */
 export async function addStudentsToProject(projectId: string, studentIds: string[]) {
   try {
-    // プロジェクトの状態マップを初期化（存在しない場合）
-    if (!projectStudentStatus.has(projectId)) {
-      projectStudentStatus.set(projectId, new Map())
-    }
-    const statusMap = projectStudentStatus.get(projectId)!
-
-    // 生徒をプロジェクトに追加（状態を'expected'に設定）
-    studentIds.forEach(studentId => {
-      if (!statusMap.has(studentId)) {
-        statusMap.set(studentId, 'expected')
-      }
+    // 既に参加している生徒を除外
+    const existingProjectStudents = await prisma.projectStudent.findMany({
+      where: {
+        projectId,
+        studentId: { in: studentIds }
+      },
+      select: { studentId: true }
     })
+    const existingStudentIds = new Set(existingProjectStudents.map(ps => ps.studentId))
+    const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id))
+
+    // 新しい生徒をプロジェクトに追加
+    if (newStudentIds.length > 0) {
+      await prisma.projectStudent.createMany({
+        data: newStudentIds.map(studentId => ({
+          projectId,
+          studentId,
+          status: ProjectStudentStatus.PARTICIPATING
+        }))
+      })
+    }
 
     return {
       success: true
@@ -93,12 +91,23 @@ export async function addStudentsToProject(projectId: string, studentIds: string
  */
 export async function removeStudentsFromProject(projectId: string, studentIds: string[]) {
   try {
-    const statusMap = projectStudentStatus.get(projectId)
-    if (statusMap) {
-      studentIds.forEach(studentId => {
-        statusMap.delete(studentId)
-      })
-    }
+    // プロジェクトから生徒を削除
+    await prisma.projectStudent.deleteMany({
+      where: {
+        projectId,
+        studentId: { in: studentIds }
+      }
+    })
+
+    // 関連するAnswerSheetを削除
+    await prisma.answerSheet.deleteMany({
+      where: {
+        projectId: projectId,
+        studentId: {
+          in: studentIds
+        }
+      }
+    })
 
     return {
       success: true
@@ -121,11 +130,18 @@ export async function updateStudentProjectStatus(
   status: 'participating' | 'expected' | 'absent'
 ) {
   try {
-    if (!projectStudentStatus.has(projectId)) {
-      projectStudentStatus.set(projectId, new Map())
-    }
-    const statusMap = projectStudentStatus.get(projectId)!
-    statusMap.set(studentId, status)
+    // statusを大文字に変換してenumに合わせる
+    const enumStatus = status.toUpperCase() as ProjectStudentStatus
+
+    await prisma.projectStudent.updateMany({
+      where: {
+        projectId,
+        studentId
+      },
+      data: {
+        status: enumStatus
+      }
+    })
 
     return {
       success: true
@@ -159,8 +175,11 @@ export async function getClassesNotInProject(projectId: string) {
     })
 
     // プロジェクトに既に参加している生徒IDを取得
-    const projectStatusMap = projectStudentStatus.get(projectId) || new Map()
-    const participatingStudentIds = new Set(Array.from(projectStatusMap.keys()))
+    const projectStudents = await prisma.projectStudent.findMany({
+      where: { projectId },
+      select: { studentId: true }
+    })
+    const participatingStudentIds = new Set(projectStudents.map(ps => ps.studentId))
 
     // プロジェクトに参加していない学級を抽出
     const availableClasses = allClasses
