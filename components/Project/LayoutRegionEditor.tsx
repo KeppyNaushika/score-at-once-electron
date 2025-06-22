@@ -49,8 +49,6 @@ const LayoutRegionEditor = ({
       y: customCoords?.y ?? 0.05,
       width: customCoords?.width ?? 0.1,
       height: customCoords?.height ?? 0.05,
-      sourceAreaIdsJson: null,
-      sourceQuestionNumbersJson: null,
       points: null,
       questionNumber: null,
       label: "",

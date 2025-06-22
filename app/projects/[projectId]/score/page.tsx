@@ -96,17 +96,33 @@ export default function MasterImageStepPage() {
   }
 
   return (
-    <div>
-      <h2 className="mb-4 text-xl font-semibold">ステップ1: 模範解答の設定</h2>
-      <MasterImageManager
-        projectId={projectId}
-        initialMasterImages={masterImages}
-        onMasterImagesChange={handleImagesChange}
-      />
-      <div className="mt-6 flex justify-end">
-        <Button onClick={goToNextStep} disabled={isLoading}>
-          次へ: 採点採点枠作成
-        </Button>
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="bg-background border-b px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">模範解答の設定</h1>
+            <p className="text-muted-foreground text-sm">
+              PDFまたは画像ファイルをアップロードして模範解答を設定します
+            </p>
+          </div>
+          <div className="flex items-center space-x-2">
+            {masterImages.length > 0 && (
+              <Button onClick={goToNextStep} disabled={isLoading}>
+                次へ: 採点領域作成
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden p-6">
+        <MasterImageManager
+          projectId={projectId}
+          initialMasterImages={masterImages}
+          onMasterImagesChange={handleImagesChange}
+        />
       </div>
     </div>
   )

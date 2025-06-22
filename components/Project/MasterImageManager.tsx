@@ -255,32 +255,42 @@ export default function MasterImageManager({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>模範解答画像管理</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div
-          {...getRootProps()}
-          className={`mb-4 flex cursor-pointer justify-center rounded-md border-2 border-dashed px-6 pt-5 pb-6 ${isDragActive ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"} ${isMoving ? "cursor-not-allowed opacity-50" : ""} transition-colors hover:border-gray-400 dark:hover:border-gray-500`}
-        >
-          <input {...getInputProps()} disabled={isMoving} />
-          <div className="space-y-1 text-center">
-            <UploadCloud
-              className={`mx-auto h-10 w-10 ${isDragActive ? "text-primary" : "text-gray-400"}`}
-            />
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              PNG/JPGファイルをここにドラッグ＆ドロップ、またはクリックして選択
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
-              複数ページ対応
-            </p>
-          </div>
+    <div className="space-y-6">
+      {/* Upload Area */}
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
+          isDragActive
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/25 hover:border-primary/50"
+        } ${isMoving ? "cursor-not-allowed opacity-50" : ""}`}
+      >
+        <input {...getInputProps()} disabled={isMoving} />
+        <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+          <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-semibold">
+            ファイルをドロップまたはクリックして選択
+          </h3>
+          <p className="mb-4 mt-2 text-sm text-muted-foreground">
+            PDF または画像ファイル (PNG, JPG) をアップロードできます
+          </p>
+          <p className="text-xs text-muted-foreground">
+            PDF の場合、各ページが自動的に画像として分割されます
+          </p>
         </div>
+      </div>
 
-        {masterImages && masterImages.length > 0 ? (
-          <ScrollArea className="w-full rounded-md border whitespace-nowrap">
-            <div className="flex space-x-4 p-4">
+      {/* Image Gallery */}
+      {masterImages.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>模範解答 ({masterImages.length}ページ)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="w-full rounded-md border whitespace-nowrap">
+              <div className="flex space-x-4 p-4">
               {masterImages.map(
                 (image: Prisma.MasterImageGetPayload<{}>, index) => {
                   const imageUrl = imageDisplayUrls[image.id]
@@ -374,15 +384,12 @@ export default function MasterImageManager({
                   )
                 },
               )}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        ) : (
-          <p className="text-muted-foreground text-center text-sm">
-            模範解答画像がアップロードされていません。
-          </p>
-        )}
-      </CardContent>
-    </Card>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }
