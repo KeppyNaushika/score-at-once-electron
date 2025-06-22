@@ -307,8 +307,6 @@ export interface MyAPI {
     studentId: string,
     classId: string,
     startDate?: Date,
-    membershipType?: string,
-    examStatus?: string,
     subject?: string,
     notes?: string,
   ) => Promise<StudentClassMembershipWithDetails>
@@ -430,7 +428,7 @@ export interface MyAPI {
   getStudentsForProject: (projectId: string) => Promise<{
     success: boolean
     students?: (StudentWithMemberships & { 
-      status: 'participating' | 'absent' | 'unknown'
+      status: 'participating' | 'expected' | 'absent'
       isInProject: boolean
     })[]
     error?: string
@@ -443,7 +441,7 @@ export interface MyAPI {
     success: boolean
     error?: string
   }>
-  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') => Promise<{
+  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'expected' | 'absent') => Promise<{
     success: boolean
     error?: string
   }>

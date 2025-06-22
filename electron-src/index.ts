@@ -1100,7 +1100,7 @@ app.on("ready", async () => {
 
   ipcMain.handle(
     "update-student-project-status",
-    async (_event, projectId: string, studentId: string, status: 'participating' | 'absent') => {
+    async (_event, projectId: string, studentId: string, status: 'participating' | 'expected' | 'absent') => {
       try {
         return await updateStudentProjectStatus(projectId, studentId, status)
       } catch (err) {
