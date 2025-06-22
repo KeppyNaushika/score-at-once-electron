@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,11 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Upload, UserPlus, Settings } from "lucide-react"
-import { useSpreadsheetImport } from "@/hooks/useSpreadsheetImport"
-import StudentSpreadsheetPanel from "./StudentSpreadsheetPanel"
-import ClassAssignmentPanel from "./ClassAssignmentPanel"
+import { Upload, AlertCircle } from "lucide-react"
+import { useStudentImport } from "@/hooks/useStudentImport"
+import StudentImportTable from "./StudentImportTable"
 
 interface ClassWithMemberships {
   id: string
@@ -63,205 +61,105 @@ export default function SpreadsheetImportModal({
   onImportSuccess,
   existingClasses,
 }: SpreadsheetImportModalProps) {
-  const [activeTab, setActiveTab] = useState<"students" | "classes">("students")
-  
   const {
-    studentSpreadsheetRef,
-    classSpreadsheetRef,
     studentData,
-    classAssignmentData,
     studentValidation,
-    classValidation,
     isProcessing,
-    importedStudents,
-    initializeJSuites,
-    extractStudentData,
-    extractClassAssignmentData,
+    handleStudentDataChange,
     handleImportStudents,
-    handleImportClassAssignments,
-    setSpreadsheetInitialized,
-  } = useSpreadsheetImport(existingClasses)
-
-  useEffect(() => {
-    if (isOpen) {
-      initializeJSuites().then(() => {
-        initializeStudentSpreadsheet().then(() => {
-          setTimeout(() => {
-            initializeClassSpreadsheet()
-          }, 200)
-        })
-      })
-    }
-  }, [isOpen])
-
-  const initializeStudentSpreadsheet = async () => {
-    try {
-      const jspreadsheet = await import('jspreadsheet-ce')
-
-      if (studentSpreadsheetRef.current) {
-        studentSpreadsheetRef.current.innerHTML = ''
-
-        const columns = [
-          { title: '学籍番号', width: 100 },
-          { title: '姓', width: 100 },
-          { title: '名', width: 100 },
-          { title: '姓カナ', width: 120 },
-          { title: '名カナ', width: 120 },
-          { title: '入学年度', width: 80 },
-        ]
-        
-        const data = [
-          ['001', '田中', '太郎', 'タナカ', 'タロウ', '2024'],
-          ['002', '山田', '花子', 'ヤマダ', 'ハナコ', '2024'],
-        ]
-
-        const instance = (jspreadsheet.default || jspreadsheet)(studentSpreadsheetRef.current, {
-          data,
-          columns,
-          onchange: extractStudentData,
-          allowInsertRow: true,
-          allowDeleteRow: true,
-          allowRenameColumn: false,
-          columnSorting: false,
-          csvHeaders: true,
-          parseFormulas: false,
-          minDimensions: [6, 10],
-        } as any)
-        
-        setSpreadsheetInitialized(true)
-      }
-    } catch (error) {
-      console.error('Failed to initialize student spreadsheet:', error)
-    }
-  }
-
-  const initializeClassSpreadsheet = async () => {
-    try {
-      const jspreadsheet = await import('jspreadsheet-ce')
-
-      if (classSpreadsheetRef.current) {
-        classSpreadsheetRef.current.innerHTML = ''
-
-        const columns = [
-          { title: '学籍番号', width: 100 },
-          { title: 'クラスコード', width: 120 },
-        ]
-        
-        const data = [
-          ['001', '1A'],
-          ['001', 'E1'],
-          ['001', 'M2'],
-          ['002', '1A'],
-          ['002', 'E2'],
-          ['002', 'M1'],
-        ]
-
-        const instance = (jspreadsheet.default || jspreadsheet)(classSpreadsheetRef.current, {
-          data,
-          columns,
-          onchange: extractClassAssignmentData,
-          allowInsertRow: true,
-          allowDeleteRow: true,
-          allowRenameColumn: false,
-          columnSorting: false,
-          csvHeaders: true,
-          parseFormulas: false,
-          minDimensions: [2, 10],
-        } as any)
-      }
-    } catch (error) {
-      console.error('Failed to initialize class spreadsheet:', error)
-    }
-  }
+  } = useStudentImport(existingClasses)
 
   const handleStudentImport = async () => {
     try {
       const imported = await handleImportStudents()
       if (imported) {
-        setActiveTab("classes")
+        onImportSuccess(imported)
+        onClose()
       }
     } catch (error) {
       alert('生徒のインポートに失敗しました。')
     }
   }
 
-  const handleClassImport = async () => {
-    try {
-      const finalStudents = await handleImportClassAssignments()
-      if (finalStudents) {
-        onImportSuccess(finalStudents)
-        onClose()
-      }
-    } catch (error) {
-      alert('学級配置に失敗しました。')
-    }
-  }
+  const ValidationMessages = ({ validation }: { validation: { valid: number; errors: string[]; warnings: string[] } }) => (
+    <div className="space-y-2">
+      {validation.errors.length > 0 && (
+        <div className="rounded-md bg-red-50 p-3">
+          <div className="flex">
+            <AlertCircle className="h-5 w-5 text-red-400" />
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">エラー</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {validation.errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {validation.warnings.length > 0 && (
+        <div className="rounded-md bg-yellow-50 p-3">
+          <div className="flex">
+            <AlertCircle className="h-5 w-5 text-yellow-400" />
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-yellow-800">警告</h3>
+              <div className="mt-2 text-sm text-yellow-700">
+                <ul className="list-disc pl-5 space-y-1">
+                  {validation.warnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {validation.valid > 0 && (
+        <div className="rounded-md bg-green-50 p-3">
+          <div className="text-sm text-green-700">
+            ✅ {validation.valid}件のデータが有効です
+          </div>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-[95%] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
-            生徒データのインポート（2段階プロセス）
+            生徒データのインポート
           </DialogTitle>
           <DialogDescription>
-            ステップ1で生徒を登録し、ステップ2で学級に配置します。
-            各ステップでExcelやスプレッドシートからコピー&ペーストが可能です。
+            Excelやスプレッドシートからコピー&ペーストで生徒データを一括登録できます。
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(value: any) => setActiveTab(value)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="students" className="flex items-center gap-2">
-              <UserPlus className="h-4 w-4" />
-              ステップ1: 生徒登録
-            </TabsTrigger>
-            <TabsTrigger value="classes" className="flex items-center gap-2" disabled={importedStudents.length === 0}>
-              <Settings className="h-4 w-4" />
-              ステップ2: 学級配置
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="students">
-            <StudentSpreadsheetPanel
-              studentData={studentData}
-              studentValidation={studentValidation}
-              onDataChange={extractStudentData}
-              containerRef={studentSpreadsheetRef}
-            />
-          </TabsContent>
-
-          <TabsContent value="classes">
-            <ClassAssignmentPanel
-              classAssignmentData={classAssignmentData}
-              classValidation={classValidation}
-              existingClasses={existingClasses}
-              onDataChange={extractClassAssignmentData}
-              containerRef={classSpreadsheetRef}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+          <StudentImportTable
+            data={studentData}
+            onDataChange={handleStudentDataChange}
+          />
+          <ValidationMessages validation={studentValidation} />
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>
-          {activeTab === "students" ? (
-            <Button 
-              onClick={handleStudentImport}
-              disabled={studentValidation.errors.length > 0 || studentData.length === 0 || isProcessing}
-            >
-              {isProcessing ? "登録中..." : `${studentValidation.valid}名を登録してステップ2へ`}
-            </Button>
-          ) : (
-            <Button 
-              onClick={handleClassImport}
-              disabled={classValidation.errors.length > 0 || classAssignmentData.length === 0 || isProcessing}
-            >
-              {isProcessing ? "配置中..." : `${classValidation.valid}件の配置を完了`}
-            </Button>
-          )}
+          <Button
+            onClick={handleStudentImport}
+            disabled={studentValidation.errors.length > 0 || studentData.length === 0 || isProcessing}
+          >
+            {isProcessing ? "登録中..." : `${studentValidation.valid}名を登録`}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

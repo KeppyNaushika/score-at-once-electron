@@ -133,7 +133,7 @@ export default function StudentManagementTable() {
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   // filterClassType は削除
-  const [filterMembershipStatus, setFilterMembershipStatus] = useState<string>("current")
+  const [filterMembershipStatus, setFilterMembershipStatus] = useState<string>("all")
 
   // Modal states
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
@@ -151,6 +151,8 @@ export default function StudentManagementTable() {
       try {
         const fetchedStudents = await window.electronAPI.fetchStudents()
         const fetchedClasses = await window.electronAPI.fetchClasses()
+        console.log("Fetched students:", fetchedStudents)
+        console.log("Student count:", fetchedStudents?.length)
         setStudents(fetchedStudents || [])
         setClasses(fetchedClasses || [])
       } catch (error) {
@@ -172,10 +174,16 @@ export default function StudentManagementTable() {
     if (filterMembershipStatus === "current") {
       return matchesSearch && student.memberships.some(m => !m.endDate)
     } else if (filterMembershipStatus === "past") {
-      return matchesSearch && student.memberships.every(m => m.endDate)
+      return matchesSearch && student.memberships.length > 0 && student.memberships.every(m => m.endDate)
+    } else if (filterMembershipStatus === "unassigned") {
+      return matchesSearch && student.memberships.length === 0
     }
     return matchesSearch
   })
+  
+  console.log("All students:", students.length)
+  console.log("Filtered students:", filteredStudents.length)
+  console.log("Filter status:", filterMembershipStatus)
 
   const filteredClasses = classes.filter((classItem) => {
     const matchesSearch = classItem.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -277,7 +285,7 @@ export default function StudentManagementTable() {
         await window.electronAPI.addStudentToClass(
           membershipData.studentId,
           membershipData.classId,
-          membershipData.startDate,
+          new Date(),
           membershipData.membershipType,
           membershipData.subject,
           membershipData.notes
@@ -346,9 +354,10 @@ export default function StudentManagementTable() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">すべて</SelectItem>
                   <SelectItem value="current">現在所属中</SelectItem>
                   <SelectItem value="past">過去の所属</SelectItem>
-                  <SelectItem value="all">すべて</SelectItem>
+                  <SelectItem value="unassigned">未所属</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState } from "react"
 
 interface ClassWithMemberships {
   id: string
@@ -35,17 +35,18 @@ interface StudentWithMemberships {
 }
 
 interface StudentImportRow {
-  studentId?: string
-  lastName?: string
-  firstName?: string
-  lastNameKana?: string
-  firstNameKana?: string
-  enrollmentYear?: number
+  studentId: string
+  lastName: string
+  firstName: string
+  lastNameKana: string
+  firstNameKana: string
+  enrollmentYear: string
+  isDuplicate?: boolean
 }
 
 interface ClassAssignmentRow {
-  studentId?: string
-  classCode?: string
+  studentId: string
+  classCode: string
 }
 
 interface ValidationResult {
@@ -54,12 +55,15 @@ interface ValidationResult {
   warnings: string[]
 }
 
-export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
-  const studentSpreadsheetRef = useRef<HTMLDivElement>(null)
-  const classSpreadsheetRef = useRef<HTMLDivElement>(null)
+export function useStudentImport(existingClasses: ClassWithMemberships[]) {
+  const [studentData, setStudentData] = useState<StudentImportRow[]>([
+    { studentId: '', lastName: '', firstName: '', lastNameKana: '', firstNameKana: '', enrollmentYear: '' },
+  ])
   
-  const [studentData, setStudentData] = useState<StudentImportRow[]>([])
-  const [classAssignmentData, setClassAssignmentData] = useState<ClassAssignmentRow[]>([])
+  const [classAssignmentData, setClassAssignmentData] = useState<ClassAssignmentRow[]>([
+    { studentId: '', classCode: '' },
+  ])
+  
   const [studentValidation, setStudentValidation] = useState<ValidationResult>({ 
     valid: 0, errors: [], warnings: [] 
   })
@@ -68,7 +72,6 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
   })
   const [isProcessing, setIsProcessing] = useState(false)
   const [importedStudents, setImportedStudents] = useState<StudentWithMemberships[]>([])
-  const [spreadsheetInitialized, setSpreadsheetInitialized] = useState(false)
 
   // 学級コードと名前のマッピングを作成
   const classMap = new Map<string, ClassWithMemberships>()
@@ -79,88 +82,36 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
     }
   })
 
-  const initializeJSuites = async () => {
-    const jsuites = await import('jsuites')
-    
-    if (typeof window !== 'undefined') {
-      (window as any).jSuites = jsuites.default || jsuites;
-      (window as any).jsuites = jsuites.default || jsuites;
-    }
-    
-    // Load stylesheets
-    if (!document.querySelector('link[href*="jspreadsheet"]')) {
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = 'https://cdn.jsdelivr.net/npm/jspreadsheet-ce@4/dist/jspreadsheet.css'
-      document.head.appendChild(link)
-    }
-    
-    if (!document.querySelector('link[href*="jsuites"]')) {
-      const link = document.createElement('link')
-      link.rel = 'stylesheet' 
-      link.href = 'https://cdn.jsdelivr.net/npm/jsuites@4/dist/jsuites.css'
-      document.head.appendChild(link)
-    }
-
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-
-  const extractStudentData = () => {
-    if (!studentSpreadsheetRef.current) return
-
-    try {
-      const spreadsheet = (studentSpreadsheetRef.current as any).jspreadsheet
-      if (!spreadsheet) return
-
-      const data = spreadsheet.getData()
-      const rows: StudentImportRow[] = []
-
-      data.forEach((row: any[]) => {
-        if (!row[0] || !row[1] || !row[2]) return
-
-        rows.push({
-          studentId: row[0]?.toString().trim(),
-          lastName: row[1]?.toString().trim(),
-          firstName: row[2]?.toString().trim(),
-          lastNameKana: row[3]?.toString().trim() || '',
-          firstNameKana: row[4]?.toString().trim() || '',
-          enrollmentYear: row[5] ? parseInt(row[5].toString()) : undefined,
-        })
-      })
-
-      setStudentData(rows)
-      validateStudentData(rows).catch(error => {
+  const handleStudentDataChange = (data: StudentImportRow[]) => {
+    // 重複チェックとフラグ設定
+    markDuplicateStudents(data).then(updatedData => {
+      setStudentData(updatedData)
+      validateStudentData(updatedData).catch(error => {
         console.error('Validation failed:', error)
       })
-    } catch (error) {
-      console.error('Error extracting student data:', error)
-    }
+    })
   }
 
-  const extractClassAssignmentData = () => {
-    if (!classSpreadsheetRef.current) return
-
+  const markDuplicateStudents = async (data: StudentImportRow[]) => {
+    // 既存の生徒データを取得
+    let existingStudentIds: Set<string> = new Set()
     try {
-      const spreadsheet = (classSpreadsheetRef.current as any).jspreadsheet
-      if (!spreadsheet) return
-
-      const data = spreadsheet.getData()
-      const rows: ClassAssignmentRow[] = []
-
-      data.forEach((row: any[]) => {
-        if (!row[0] || !row[1]) return
-
-        rows.push({
-          studentId: row[0]?.toString().trim(),
-          classCode: row[1]?.toString().trim(),
-        })
-      })
-
-      setClassAssignmentData(rows)
-      validateClassAssignmentData(rows)
+      const existingStudents = await window.electronAPI.fetchStudents()
+      existingStudentIds = new Set(existingStudents.map((s: any) => s.studentId))
     } catch (error) {
-      console.error('Error extracting class assignment data:', error)
+      console.warn('既存生徒の取得に失敗しました:', error)
     }
+
+    // 重複フラグを設定
+    return data.map(row => ({
+      ...row,
+      isDuplicate: existingStudentIds.has(row.studentId?.trim() || '')
+    }))
+  }
+
+  const handleClassAssignmentDataChange = (data: ClassAssignmentRow[]) => {
+    setClassAssignmentData(data)
+    validateClassAssignmentData(data)
   }
 
   const validateStudentData = async (data: StudentImportRow[]) => {
@@ -178,37 +129,41 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
       console.warn('既存生徒の取得に失敗しました:', error)
     }
 
-    data.forEach((row, index) => {
+    const filteredData = data.filter(row => 
+      row.studentId?.trim() || row.lastName?.trim() || row.firstName?.trim()
+    )
+
+    filteredData.forEach((row, index) => {
       const rowNum = index + 1
 
-      if (!row.studentId) {
+      if (!row.studentId?.trim()) {
         errors.push(`行${rowNum}: 学籍番号が入力されていません`)
         return
       }
-      if (!row.lastName) {
+      if (!row.lastName?.trim()) {
         errors.push(`行${rowNum}: 姓が入力されていません`)
         return
       }
-      if (!row.firstName) {
+      if (!row.firstName?.trim()) {
         errors.push(`行${rowNum}: 名が入力されていません`)
         return
       }
 
-      if (seenStudentIds.has(row.studentId)) {
+      if (seenStudentIds.has(row.studentId.trim())) {
         errors.push(`行${rowNum}: 学籍番号「${row.studentId}」が重複しています`)
         return
       }
-      seenStudentIds.add(row.studentId)
+      seenStudentIds.add(row.studentId.trim())
 
       // 既存生徒チェック
-      if (existingStudentIds.has(row.studentId)) {
-        warnings.push(`行${rowNum}: 学籍番号「${row.studentId}」は既に登録済みです（スキップされます）`)
+      if (existingStudentIds.has(row.studentId.trim())) {
+        warnings.push(`行${rowNum}: 学籍番号「${row.studentId}」は既に登録済みです（上書きされます）`)
       }
 
-      if (!row.lastNameKana) {
+      if (!row.lastNameKana?.trim()) {
         warnings.push(`行${rowNum}: 姓カナが入力されていません`)
       }
-      if (!row.firstNameKana) {
+      if (!row.firstNameKana?.trim()) {
         warnings.push(`行${rowNum}: 名カナが入力されていません`)
       }
 
@@ -223,25 +178,33 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
     const warnings: string[] = []
     let validCount = 0
 
-    const availableStudentIds = new Set(studentData.map(s => s.studentId))
+    const availableStudentIds = new Set(
+      studentData
+        .filter(s => s.studentId?.trim())
+        .map(s => s.studentId.trim())
+    )
 
-    data.forEach((row, index) => {
+    const filteredData = data.filter(row => 
+      row.studentId?.trim() || row.classCode?.trim()
+    )
+
+    filteredData.forEach((row, index) => {
       const rowNum = index + 1
 
-      if (!row.studentId) {
+      if (!row.studentId?.trim()) {
         errors.push(`行${rowNum}: 学籍番号が入力されていません`)
         return
       }
-      if (!row.classCode) {
+      if (!row.classCode?.trim()) {
         errors.push(`行${rowNum}: クラスコードが入力されていません`)
         return
       }
 
-      if (!availableStudentIds.has(row.studentId)) {
+      if (!availableStudentIds.has(row.studentId.trim())) {
         warnings.push(`行${rowNum}: 学籍番号「${row.studentId}」の生徒が見つかりません`)
       }
 
-      if (!classMap.has(row.classCode)) {
+      if (!classMap.has(row.classCode.trim())) {
         warnings.push(`行${rowNum}: クラスコード「${row.classCode}」が見つかりません`)
       }
 
@@ -258,43 +221,43 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
 
     try {
       const imported: StudentWithMemberships[] = []
-      const skipped: string[] = []
 
       // 既存の生徒データを取得
       const existingStudents = await window.electronAPI.fetchStudents()
       const existingStudentIds = new Set(existingStudents.map((s: any) => s.studentId))
 
-      for (const row of studentData) {
-        // 既存チェック
-        if (existingStudentIds.has(row.studentId!)) {
-          skipped.push(row.studentId!)
-          // 既存の生徒を見つけて追加
-          const existingStudent = existingStudents.find((s: any) => s.studentId === row.studentId!)
-          if (existingStudent) {
-            imported.push(existingStudent)
-          }
-          continue
-        }
+      const validStudentData = studentData.filter(row => 
+        row.studentId?.trim() && row.lastName?.trim() && row.firstName?.trim()
+      )
 
+      for (const row of validStudentData) {
+        const studentId = row.studentId.trim()
+        
         const studentData = {
-          studentId: row.studentId!,
-          lastName: row.lastName!,
-          firstName: row.firstName!,
-          lastNameKana: row.lastNameKana || '',
-          firstNameKana: row.firstNameKana || '',
-          enrollmentYear: row.enrollmentYear,
+          studentId,
+          lastName: row.lastName.trim(),
+          firstName: row.firstName.trim(),
+          lastNameKana: row.lastNameKana?.trim() || '',
+          firstNameKana: row.firstNameKana?.trim() || '',
+          enrollmentYear: row.enrollmentYear ? parseInt(row.enrollmentYear) : undefined,
         }
 
-        const newStudent = await window.electronAPI.createStudent(studentData)
-        imported.push(newStudent)
+        // 既存チェック - 上書きまたは新規作成
+        if (existingStudentIds.has(studentId)) {
+          const existingStudent = existingStudents.find((s: any) => s.studentId === studentId)
+          if (existingStudent) {
+            // 既存生徒を更新
+            const updatedStudent = await window.electronAPI.updateStudent(existingStudent.id, studentData)
+            imported.push(updatedStudent)
+          }
+        } else {
+          // 新規生徒を作成
+          const newStudent = await window.electronAPI.createStudent(studentData)
+          imported.push(newStudent)
+        }
       }
 
       setImportedStudents(imported)
-      
-      // スキップされた生徒がいる場合は通知
-      if (skipped.length > 0) {
-        console.warn('既存の生徒をスキップしました:', skipped)
-      }
       
       return imported
     } catch (error) {
@@ -313,9 +276,13 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
     try {
       const studentMap = new Map(importedStudents.map(s => [s.studentId, s]))
 
-      for (const row of classAssignmentData) {
-        const student = studentMap.get(row.studentId!)
-        const classRecord = classMap.get(row.classCode!)
+      const validClassAssignmentData = classAssignmentData.filter(row => 
+        row.studentId?.trim() && row.classCode?.trim()
+      )
+
+      for (const row of validClassAssignmentData) {
+        const student = studentMap.get(row.studentId.trim())
+        const classRecord = classMap.get(row.classCode.trim())
         
         if (student && classRecord) {
           await window.electronAPI.addStudentToClass(
@@ -344,10 +311,6 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
   }
 
   return {
-    // Refs
-    studentSpreadsheetRef,
-    classSpreadsheetRef,
-    
     // State
     studentData,
     classAssignmentData,
@@ -355,21 +318,16 @@ export function useSpreadsheetImport(existingClasses: ClassWithMemberships[]) {
     classValidation,
     isProcessing,
     importedStudents,
-    spreadsheetInitialized,
     
     // Helpers
     classMap,
-    initializeJSuites,
     
     // Actions
-    extractStudentData,
-    extractClassAssignmentData,
+    handleStudentDataChange,
+    handleClassAssignmentDataChange,
     validateStudentData,
     validateClassAssignmentData,
     handleImportStudents,
     handleImportClassAssignments,
-    
-    // Setters
-    setSpreadsheetInitialized,
   }
 }

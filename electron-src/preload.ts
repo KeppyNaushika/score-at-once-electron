@@ -160,6 +160,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getLayoutRegionsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
 
+  // Project-Student relationship
+  getStudentsForProject: (projectId: string) =>
+    ipcRenderer.invoke("get-students-for-project", projectId),
+  addStudentsToProject: (projectId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("add-students-to-project", projectId, studentIds),
+  removeStudentsFromProject: (projectId: string, studentIds: string[]) =>
+    ipcRenderer.invoke("remove-students-from-project", projectId, studentIds),
+  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'absent') =>
+    ipcRenderer.invoke("update-student-project-status", projectId, studentId, status),
+  getClassesNotInProject: (projectId: string) =>
+    ipcRenderer.invoke("get-classes-not-in-project", projectId),
+
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>
     ipcRenderer.removeListener("score-panel", listener), // 修正: removeListener を使用

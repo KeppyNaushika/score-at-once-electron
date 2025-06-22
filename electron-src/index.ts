@@ -78,6 +78,13 @@ import {
   deleteStudent 
 } from "./lib/prisma/student"
 import {
+  getStudentsForProject,
+  addStudentsToProject,
+  removeStudentsFromProject,
+  updateStudentProjectStatus,
+  getClassesNotInProject,
+} from "./lib/prisma/projectStudent"
+import {
   createStudentClassMembership,
   updateStudentClassMembership,
   deleteStudentClassMembership,
@@ -1048,6 +1055,67 @@ app.on("ready", async () => {
           "Error fetching assignments by question group item ID:",
           err,
         )
+        throw err
+      }
+    },
+  )
+
+  // Project-Student relationship handlers
+  ipcMain.handle(
+    "get-students-for-project",
+    async (_event, projectId: string) => {
+      try {
+        return await getStudentsForProject(projectId)
+      } catch (err) {
+        console.error("Error getting students for project:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "add-students-to-project",
+    async (_event, projectId: string, studentIds: string[]) => {
+      try {
+        return await addStudentsToProject(projectId, studentIds)
+      } catch (err) {
+        console.error("Error adding students to project:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "remove-students-from-project",
+    async (_event, projectId: string, studentIds: string[]) => {
+      try {
+        return await removeStudentsFromProject(projectId, studentIds)
+      } catch (err) {
+        console.error("Error removing students from project:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "update-student-project-status",
+    async (_event, projectId: string, studentId: string, status: 'participating' | 'absent') => {
+      try {
+        return await updateStudentProjectStatus(projectId, studentId, status)
+      } catch (err) {
+        console.error("Error updating student project status:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-classes-not-in-project",
+    async (_event, projectId: string) => {
+      try {
+        return await getClassesNotInProject(projectId)
+      } catch (err) {
+        console.error("Error getting classes not in project:", err)
         throw err
       }
     },

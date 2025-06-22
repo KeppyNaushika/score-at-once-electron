@@ -29,9 +29,10 @@ const scoringSteps = [
     label: "3. 領域情報編集",
     hrefSuffix: "/region-info",
   },
-  { id: "upload", label: "4. 生徒解答", hrefSuffix: "/upload" },
-  { id: "scoring", label: "5. 採点", hrefSuffix: "/scoring" },
-  { id: "results", label: "6. 結果", hrefSuffix: "/results" },
+  { id: "students", label: "4. 受験生徒", hrefSuffix: "/students" },
+  { id: "upload", label: "5. 生徒解答", hrefSuffix: "/upload" },
+  { id: "scoring", label: "6. 採点", hrefSuffix: "/scoring" },
+  { id: "results", label: "7. 結果", hrefSuffix: "/results" },
 ]
 
 // ページごとのヒント情報
@@ -97,6 +98,22 @@ const pageHints: { [key: string]: {
       { key: "Tab", description: "次のフィールドに移動" },
       { key: "Shift + Tab", description: "前のフィールドに移動" },
       { key: "Enter", description: "編集を確定して次の行に移動" },
+    ],
+  },
+  "students": {
+    title: "受験生徒の確認・選択",
+    description: "このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。",
+    content: [
+      "プロジェクトに登録されている全ての生徒が一覧表示されます",
+      "受験する生徒と欠席者を明確に区別して管理できます",
+      "生徒情報の追加や編集が必要な場合は、生徒管理画面で行います",
+      "複数の学級が対象の場合、学級別に表示されます",
+      "受験者の選択により、答案アップロード時の照合精度が向上します",
+    ],
+    tips: [
+      "欠席が確定している生徒は事前に「欠席」に設定しておくと答案管理が効率的です",
+      "転校生や途中参加の生徒がいる場合は、事前に生徒管理で追加してください",
+      "学籍番号が正確に設定されていると、答案との自動照合がスムーズになります",
     ],
   },
   "upload": {
