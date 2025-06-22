@@ -6,11 +6,23 @@ import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 import { Upload, FileImage, X, UserCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import type { UploadAnswerSheetFileData } from "@/src/types/electron"
+import type { UploadAnswerSheetFileData } from "@/types/electron"
 
 interface AnswerSheetUploadProps {
   projectId: string
@@ -34,39 +46,44 @@ export default function AnswerSheetUpload({
   const [uploadProgress, setUploadProgress] = useState(0)
   const router = useRouter()
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newFiles = acceptedFiles.map((file) => {
-      const fileWithPreview = Object.assign(file, {
-        preview: URL.createObjectURL(file),
-        pageNumber: 1,
-      }) as FileWithPreview
-      return fileWithPreview
-    })
-
-    // ファイル名から生徒を自動推測
-    const filesWithStudentGuess = newFiles.map((file) => {
-      const fileName = file.name.toLowerCase()
-      const matchedStudent = students.find((student) => {
-        const studentName = student.name.toLowerCase()
-        const studentNumber = student.studentNumber.toLowerCase()
-        return fileName.includes(studentName) || fileName.includes(studentNumber)
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      const newFiles = acceptedFiles.map((file) => {
+        const fileWithPreview = Object.assign(file, {
+          preview: URL.createObjectURL(file),
+          pageNumber: 1,
+        }) as FileWithPreview
+        return fileWithPreview
       })
-      
-      if (matchedStudent) {
-        file.studentId = matchedStudent.id
-      }
-      
-      return file
-    })
 
-    setFiles((prev) => [...prev, ...filesWithStudentGuess])
-  }, [students])
+      // ファイル名から生徒を自動推測
+      const filesWithStudentGuess = newFiles.map((file) => {
+        const fileName = file.name.toLowerCase()
+        const matchedStudent = students.find((student) => {
+          const studentName = student.name.toLowerCase()
+          const studentNumber = student.studentNumber.toLowerCase()
+          return (
+            fileName.includes(studentName) || fileName.includes(studentNumber)
+          )
+        })
+
+        if (matchedStudent) {
+          file.studentId = matchedStudent.id
+        }
+
+        return file
+      })
+
+      setFiles((prev) => [...prev, ...filesWithStudentGuess])
+    },
+    [students],
+  )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.tiff', '.bmp'],
-      'application/pdf': ['.pdf'],
+      "image/*": [".png", ".jpg", ".jpeg", ".tiff", ".bmp"],
+      "application/pdf": [".pdf"],
     },
     multiple: true,
   })
@@ -118,18 +135,21 @@ export default function AnswerSheetUpload({
             studentId: file.studentId,
             pageNumber: file.pageNumber || 1,
           }
-        })
+        }),
       )
 
       // 進捗を更新
       setUploadProgress(50)
 
-      const result = await window.electronAPI.uploadAnswerSheets(projectId, filesData)
+      const result = await window.electronAPI.uploadAnswerSheets(
+        projectId,
+        filesData,
+      )
 
       if (result.success) {
         setUploadProgress(100)
         toast.success(`${files.length}件の答案をアップロードしました`)
-        
+
         // ファイルリストをクリア
         files.forEach((file) => {
           if (file.preview) {
@@ -137,15 +157,17 @@ export default function AnswerSheetUpload({
           }
         })
         setFiles([])
-        
+
         // コールバック実行
         onUploadComplete?.()
       } else {
-        throw new Error(result.error || 'アップロードに失敗しました')
+        throw new Error(result.error || "アップロードに失敗しました")
       }
     } catch (error) {
-      console.error('Upload error:', error)
-      toast.error(error instanceof Error ? error.message : 'アップロードに失敗しました')
+      console.error("Upload error:", error)
+      toast.error(
+        error instanceof Error ? error.message : "アップロードに失敗しました",
+      )
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -171,20 +193,22 @@ export default function AnswerSheetUpload({
         <CardContent>
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+            className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
               isDragActive
                 ? "border-primary bg-primary/5"
                 : "border-muted-foreground/25 hover:border-muted-foreground/50"
             }`}
           >
             <input {...getInputProps()} />
-            <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
             {isDragActive ? (
               <p className="text-lg">ファイルをドロップしてください...</p>
             ) : (
               <div>
-                <p className="text-lg mb-2">ファイルをドラッグ&ドロップするか、クリックして選択</p>
-                <p className="text-sm text-muted-foreground">
+                <p className="mb-2 text-lg">
+                  ファイルをドラッグ&ドロップするか、クリックして選択
+                </p>
+                <p className="text-muted-foreground text-sm">
                   PNG, JPEG, PDF ファイルに対応
                 </p>
               </div>
@@ -206,27 +230,27 @@ export default function AnswerSheetUpload({
               {files.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-4 p-4 border rounded-lg"
+                  className="flex items-center gap-4 rounded-lg border p-4"
                 >
                   <div className="flex-shrink-0">
                     {file.preview && (
                       <img
                         src={file.preview}
                         alt={file.name}
-                        className="h-16 w-16 object-cover rounded border"
+                        className="h-16 w-16 rounded border object-cover"
                         onLoad={() => URL.revokeObjectURL(file.preview!)}
                       />
                     )}
                     {!file.preview && (
-                      <div className="h-16 w-16 border rounded flex items-center justify-center">
-                        <FileImage className="h-8 w-8 text-muted-foreground" />
+                      <div className="flex h-16 w-16 items-center justify-center rounded border">
+                        <FileImage className="text-muted-foreground h-8 w-8" />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{file.name}</p>
+                    <p className="text-muted-foreground text-sm">
                       {(file.size / 1024 / 1024).toFixed(2)} MB
                     </p>
                   </div>
@@ -236,7 +260,9 @@ export default function AnswerSheetUpload({
                       <UserCircle className="h-4 w-4" />
                       <Select
                         value={file.studentId || ""}
-                        onValueChange={(value) => updateFileStudent(index, value)}
+                        onValueChange={(value) =>
+                          updateFileStudent(index, value)
+                        }
                       >
                         <SelectTrigger className="w-48">
                           <SelectValue placeholder="生徒を選択" />
@@ -255,7 +281,9 @@ export default function AnswerSheetUpload({
                       <span className="text-sm">P.</span>
                       <Select
                         value={file.pageNumber?.toString() || "1"}
-                        onValueChange={(value) => updateFilePageNumber(index, parseInt(value))}
+                        onValueChange={(value) =>
+                          updateFilePageNumber(index, parseInt(value))
+                        }
                       >
                         <SelectTrigger className="w-20">
                           <SelectValue />
@@ -285,16 +313,18 @@ export default function AnswerSheetUpload({
 
             {isUploading && (
               <div className="mt-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <span className="text-sm">アップロード中...</span>
-                  <span className="text-sm text-muted-foreground">{uploadProgress}%</span>
+                  <span className="text-muted-foreground text-sm">
+                    {uploadProgress}%
+                  </span>
                 </div>
                 <Progress value={uploadProgress} className="w-full" />
               </div>
             )}
 
-            <div className="flex justify-between items-center mt-6">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-muted-foreground flex items-center gap-2 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 生徒が未設定のファイルは後で関連付けできます
               </div>
