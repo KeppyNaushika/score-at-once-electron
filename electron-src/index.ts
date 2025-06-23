@@ -110,7 +110,6 @@ import {
   addStudentToClass,
   endStudentMembership,
   getMembershipsByDateRange,
-  getMembershipsBySubject,
 } from "./lib/prisma/studentClassMembership"
 // import { createTag, deleteTag, updateTag } from "./lib/prisma/tag" // Tagモデルが未実装のため一時的にコメントアウト
 import { fetchUsers, getCurrentUser } from "./lib/prisma/user"
@@ -580,7 +579,7 @@ app.on("ready", async () => {
       studentId: string,
       classId: string,
       startDate?: Date,
-      subject?: string,
+      attendanceNumber?: number,
       notes?: string,
     ) => {
       try {
@@ -588,7 +587,7 @@ app.on("ready", async () => {
           studentId,
           classId,
           startDate,
-          subject,
+          attendanceNumber,
           notes,
         )
       } catch (err) {
@@ -622,17 +621,6 @@ app.on("ready", async () => {
     },
   )
 
-  ipcMain.handle(
-    "get-memberships-by-subject",
-    async (_event, subject: string) => {
-      try {
-        return await getMembershipsBySubject(subject)
-      } catch (err) {
-        console.error("Error getting memberships by subject:", err)
-        throw err
-      }
-    },
-  )
 
   ipcMain.handle(
     "upload-master-images",

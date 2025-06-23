@@ -13,9 +13,11 @@ import { cn } from "@/lib/utils"
 import {
   ChevronsLeft,
   ChevronsRight,
+  GraduationCap,
   Home,
   LogIn,
   LogOut,
+  School,
   Settings,
   User,
   Users,
@@ -26,6 +28,7 @@ import { usePathname } from "next/navigation"
 const navItems = [
   { href: "/dashboard", label: "プロジェクト", icon: Home },
   { href: "/students", label: "生徒管理", icon: Users },
+  { href: "/classes", label: "学級管理", icon: School },
   { href: "/settings", label: "設定", icon: Settings },
 ]
 

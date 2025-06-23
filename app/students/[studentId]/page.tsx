@@ -31,8 +31,7 @@ interface StudentWithMemberships {
     id: string
     startDate: Date
     endDate?: Date | null
-    membershipType: string
-    subject?: string | null
+    attendanceNumber?: number | null
     notes?: string | null
     class: {
       id: string
@@ -60,8 +59,7 @@ interface Membership {
   classId: string
   startDate: Date
   endDate?: Date | null
-  membershipType: string
-  subject?: string | null
+  attendanceNumber?: number | null
   notes?: string | null
   student: {
     id: string
@@ -107,7 +105,6 @@ export default function StudentDetailPage() {
             ...targetStudent,
             memberships: targetStudent.memberships.map((membership: any) => ({
               ...membership,
-              membershipType: membership.membershipType || "regular",
               startDate: new Date(membership.startDate || membership.createdAt),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
             })),
@@ -159,7 +156,6 @@ export default function StudentDetailPage() {
         memberships:
           updatedStudent.memberships?.map((membership: any) => ({
             ...membership,
-            membershipType: membership.membershipType || "regular",
             startDate: new Date(membership.startDate || membership.createdAt),
             endDate: membership.endDate ? new Date(membership.endDate) : null,
           })) || [],
@@ -206,7 +202,6 @@ export default function StudentDetailPage() {
           memberships:
             updatedStudent.memberships?.map((membership: any) => ({
               ...membership,
-              membershipType: membership.membershipType || "regular",
               startDate: new Date(membership.startDate || membership.createdAt),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
             })) || [],
@@ -235,7 +230,6 @@ export default function StudentDetailPage() {
             memberships:
               updatedStudent.memberships?.map((membership: any) => ({
                 ...membership,
-                membershipType: membership.membershipType || "regular",
                 startDate: new Date(
                   membership.startDate || membership.createdAt,
                 ),
@@ -368,9 +362,9 @@ export default function StudentDetailPage() {
                             {membership.class.classCode}
                           </Badge>
                         )}
-                        {membership.class.subject && (
+                        {membership.attendanceNumber && (
                           <Badge variant="secondary">
-                            {membership.class.subject}
+                            出席番号: {membership.attendanceNumber}
                           </Badge>
                         )}
                       </div>

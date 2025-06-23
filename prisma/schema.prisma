@@ -32,10 +32,9 @@ model User {
 model Class {
   id          String    @id @default(uuid())
   name        String    @unique
-  classCode   String?   // クラスコード（E1、M2、1A、など）
-  grade       Int?
-  description String?
-  subject     String?   // 教科名（数学、英語、国語など）
+  classCode   String?   // クラスコード（1A、2B、など）
+  grade       Int?      // 学年
+  description String?   // 説明
   isVisible   Boolean   @default(true) // 表示/非表示
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -80,21 +79,25 @@ model StudentClassMembership {
   student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
   
-  // 所属期間
-  startDate DateTime @default(now()) // 所属開始日
-  endDate   DateTime? // 所属終了日（null = 現在も所属中）
+  // 所属期間（開始日と終了日を両方含む）
+  startDate DateTime @default(now()) // 所属開始日（この日を含む）
+  endDate   DateTime? // 所属終了日（この日を含む、null = 現在も所属中）
+  
+  // 出席番号（学級ごとに異なる）
+  attendanceNumber Int? // この学級での出席番号
   
   // メタデータ
-  subject        String?         // 教科別クラスの場合の教科名
-  notes          String?         // 備考（転校、編入、習熟度別など）
+  notes          String?         // 備考（転校、編入など）
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([studentId, classId, startDate]) // 同じ生徒が同じクラスに同じ開始日で複数回所属することを防ぐ
+  // 同じ生徒が同じクラスで期間が重複する複数の所属を防ぐ
+  // （複数学級への同時所属は可能）
   @@index([studentId])
   @@index([classId])
   @@index([startDate, endDate]) // 期間での検索用
+  @@index([classId, attendanceNumber]) // 学級内での出席番号検索用
 }
 
 // 学級種別の列挙型は削除 - isVisibleフィールドで管理

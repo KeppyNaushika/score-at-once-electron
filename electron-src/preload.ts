@@ -116,7 +116,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     studentId: string,
     classId: string,
     startDate?: Date,
-    subject?: string,
+    attendanceNumber?: number,
     notes?: string,
   ) =>
     ipcRenderer.invoke(
@@ -124,15 +124,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       studentId,
       classId,
       startDate,
-      subject,
+      attendanceNumber,
       notes,
     ),
   endStudentMembership: (membershipId: string, endDate?: Date) =>
     ipcRenderer.invoke("end-student-membership", membershipId, endDate),
   getMembershipsByDateRange: (startDate: Date, endDate?: Date) =>
     ipcRenderer.invoke("get-memberships-by-date-range", startDate, endDate),
-  getMembershipsBySubject: (subject: string) =>
-    ipcRenderer.invoke("get-memberships-by-subject", subject),
 
   // MasterImage related
   uploadMasterImages: (

@@ -18,14 +18,12 @@ interface ClassWithMemberships {
   classCode?: string | null
   grade?: number | null
   description?: string | null
-  subject?: string | null
   isVisible?: boolean
   memberships: Array<{
     id: string
     startDate: Date
     endDate?: Date | null
-    membershipType: string
-    subject?: string | null
+    attendanceNumber?: number | null
     notes?: string | null
     student: {
       id: string
@@ -41,8 +39,7 @@ interface Membership {
   id: string
   startDate: Date
   endDate?: Date | null
-  membershipType: string
-  subject?: string | null
+  attendanceNumber?: number | null
   notes?: string | null
   student: {
     id: string
@@ -70,7 +67,6 @@ export function useClassManagement(classId: string) {
     memberships:
       rawClassData.memberships?.map((membership: any) => ({
         ...membership,
-        membershipType: membership.membershipType || "regular",
         startDate: new Date(membership.startDate || membership.createdAt),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
       })) || [],
@@ -169,6 +165,25 @@ export function useClassManagement(classId: string) {
     }
   }
 
+  const handleBulkEndMemberships = async (membershipIds: string[]) => {
+    try {
+      // End each membership
+      for (const membershipId of membershipIds) {
+        await window.electronAPI.endStudentMembership(membershipId)
+      }
+
+      // Refresh class data
+      const classes = await window.electronAPI.fetchClasses()
+      const updatedClass = classes.find((c) => c.id === classId)
+      if (updatedClass) {
+        setClassData(transformClassData(updatedClass))
+      }
+    } catch (error) {
+      console.error("Failed to end memberships:", error)
+      alert("所属関係の終了に失敗しました。")
+    }
+  }
+
   const handleDeleteClass = async () => {
     if (window.confirm("この学級を削除しますか？")) {
       try {
@@ -197,6 +212,7 @@ export function useClassManagement(classId: string) {
     handleStudentImportSuccess,
     handleSaveMembership,
     handleEndMembership,
+    handleBulkEndMemberships,
     handleDeleteClass,
     fetchData,
   }

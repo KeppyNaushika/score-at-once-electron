@@ -7,7 +7,7 @@ export default function ExportPage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="結果"
-        description="採点結果の確認、分析、そして各種形式での出力を行います。"
+        description=""
       />
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="text-center">

@@ -124,7 +124,7 @@ export const getAllMembershipsByStudentId = async (
   }
 }
 
-// クラスの現在の所属学生一覧を取得
+// クラスの現在の所属学生一覧を取得（出席番号順）
 export const getCurrentMembershipsByClassId = async (
   classId: string,
 ): Promise<StudentClassMembershipWithDetails[]> => {
@@ -138,11 +138,10 @@ export const getCurrentMembershipsByClassId = async (
         student: true,
         class: true,
       },
-      orderBy: {
-        student: {
-          studentId: "asc",
-        },
-      },
+      orderBy: [
+        { attendanceNumber: "asc" },
+        { student: { studentId: "asc" } },
+      ],
     })
   } catch (error) {
     console.error("Failed to fetch current memberships by class ID:", error)
@@ -155,7 +154,7 @@ export const addStudentToClass = async (
   studentId: string,
   classId: string,
   startDate: Date = new Date(),
-  subject?: string,
+  attendanceNumber?: number,
   notes?: string,
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
@@ -163,7 +162,7 @@ export const addStudentToClass = async (
       student: { connect: { id: studentId } },
       class: { connect: { id: classId } },
       startDate,
-      subject,
+      attendanceNumber,
       notes,
     })
   } catch (error) {
@@ -226,31 +225,6 @@ export const getMembershipsByDateRange = async (
     })
   } catch (error) {
     console.error("Failed to fetch memberships by date range:", error)
-    throw error
-  }
-}
-
-// 教科別クラスの所属情報を取得
-export const getMembershipsBySubject = async (
-  subject: string,
-): Promise<StudentClassMembershipWithDetails[]> => {
-  try {
-    return await prisma.studentClassMembership.findMany({
-      where: {
-        subject,
-        endDate: null, // 現在所属中
-      },
-      include: {
-        student: true,
-        class: true,
-      },
-      orderBy: [
-        { class: { name: "asc" } },
-        { student: { studentId: "asc" } },
-      ],
-    })
-  } catch (error) {
-    console.error("Failed to fetch memberships by subject:", error)
     throw error
   }
 }

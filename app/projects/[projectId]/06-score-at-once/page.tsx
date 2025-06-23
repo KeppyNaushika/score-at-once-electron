@@ -2,6 +2,8 @@
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import AnswerDisplayViewer from "@/components/grading/AnswerDisplayViewer"
+import AnswerGridView from "@/components/grading/AnswerGridView"
+import GradingModeToggle, { GradingMode } from "@/components/grading/GradingModeToggle"
 import ProjectProgressCard from "@/components/grading/ProjectProgressCard"
 import ScoreComparisonModal from "@/components/grading/ScoreComparisonModal"
 import { Button } from "@/components/ui/button"
@@ -33,6 +35,7 @@ type ScoringStatus =
   | "incorrect"
   | "partial"
   | "pending"
+  | "no_answer"
   | "final"
 
 // 採点データの型定義
@@ -76,12 +79,14 @@ interface QuestionRegion {
   height: number
 }
 
-// キーボードショートカットの設定
+// キーボードショートカットの設定（Python版互換）
 const DEFAULT_SHORTCUTS = {
-  correct: "c",
-  incorrect: "x",
-  partial: "p",
-  pending: "h",
+  ungraded: "q",    // 未採点
+  correct: "e",     // 正答
+  partial: "f",     // 部分点
+  pending: "j",     // 保留
+  incorrect: "o",   // 誤答
+  no_answer: "p",   // 無答
   nextQuestion: "ArrowRight",
   prevQuestion: "ArrowLeft",
   nextStudent: "ArrowDown",
@@ -97,6 +102,12 @@ export default function GradingPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
+
+  // 採点モード状態
+  const [gradingMode, setGradingMode] = useState<GradingMode>("individual")
+  const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set())
+  const [gridSize, setGridSize] = useState({ columns: 4, rows: 3 })
+  const [layoutDirection, setLayoutDirection] = useState<"right-down" | "left-down" | "down-right" | "down-left">("right-down")
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -243,18 +254,25 @@ export default function GradingPage() {
         return
       }
 
-      switch (event.key) {
+      const key = event.key.toLowerCase()
+      switch (key) {
+        case DEFAULT_SHORTCUTS.ungraded:
+          handleSetScore("ungraded")
+          break
         case DEFAULT_SHORTCUTS.correct:
           handleSetScore("correct")
-          break
-        case DEFAULT_SHORTCUTS.incorrect:
-          handleSetScore("incorrect")
           break
         case DEFAULT_SHORTCUTS.partial:
           handleSetScore("partial")
           break
         case DEFAULT_SHORTCUTS.pending:
           handleSetScore("pending")
+          break
+        case DEFAULT_SHORTCUTS.incorrect:
+          handleSetScore("incorrect")
+          break
+        case DEFAULT_SHORTCUTS.no_answer:
+          handleSetScore("no_answer")
           break
         case "ArrowRight":
           handleNextQuestion()
@@ -334,6 +352,10 @@ export default function GradingPage() {
     let status: ScoringStatus = type
 
     switch (type) {
+      case "ungraded":
+        newScore = 0
+        status = "ungraded"
+        break
       case "correct":
         newScore = currentQuestion.points
         status = "correct"
@@ -341,6 +363,10 @@ export default function GradingPage() {
       case "incorrect":
         newScore = 0
         status = "incorrect"
+        break
+      case "no_answer":
+        newScore = 0
+        status = "no_answer" as ScoringStatus
         break
       case "partial":
         // 部分点の場合は入力ダイアログを表示（簡易実装）
@@ -402,6 +428,95 @@ export default function GradingPage() {
   const toggleViewMode = () => {
     setViewMode((prev) => (prev === "question" ? "full" : "question"))
     handleResetZoom()
+  }
+
+  // グリッドビュー用のヘルパー関数
+  const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
+    setSelectedAnswers(prev => {
+      const newSet = new Set(prev)
+      if (isSelected) {
+        newSet.add(answerId)
+      } else {
+        newSet.delete(answerId)
+      }
+      return newSet
+    })
+  }
+
+  const handleBatchScore = async (answerIds: string | string[], status: ScoringStatus) => {
+    const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
+    
+    for (const answerId of ids) {
+      const answerSheet = answerSheets.find(sheet => sheet.id === answerId)
+      if (!answerSheet || !currentQuestion) continue
+
+      const key = `${answerId}-${currentQuestion.id}`
+      const currentScore = scoringData[key]
+      
+      let newScore = 0
+      let scoringStatus: ScoringStatus = status as ScoringStatus
+
+      switch (status) {
+        case "ungraded":
+          newScore = 0
+          break
+        case "correct":
+          newScore = currentQuestion.points
+          break
+        case "incorrect":
+        case "no_answer":
+          newScore = 0
+          break
+        case "partial":
+          // 一括採点の場合は満点の半分を設定（後で個別に調整可能）
+          newScore = Math.floor(currentQuestion.points / 2)
+          break
+        case "pending":
+          newScore = currentScore?.score || 0
+          break
+      }
+
+      const newScoringData = {
+        ...currentScore,
+        questionId: currentQuestion.id,
+        score: newScore,
+        maxScore: currentQuestion.points,
+        status: scoringStatus,
+        comment: currentScore?.comment || "",
+        scoredByUserId: "current-user",
+        version: (currentScore?.version || 0) + 1,
+        updatedAt: new Date(),
+      }
+
+      setScoringData((prev) => ({
+        ...prev,
+        [key]: newScoringData,
+      }))
+    }
+
+    // 選択をクリア
+    setSelectedAnswers(new Set())
+  }
+
+  // グリッドビュー用のデータ変換
+  const getGridAnswerData = () => {
+    if (!currentQuestion) return []
+    
+    return answerSheets.map(sheet => {
+      const key = `${sheet.id}-${currentQuestion.id}`
+      const scoreData = scoringData[key]
+      
+      return {
+        id: sheet.id,
+        studentId: sheet.student.studentId,
+        studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
+        imageUrl: `/api/images/${sheet.imagePath}`, // TODO: 正しいパスに更新
+        currentScore: scoreData?.score,
+        maxScore: currentQuestion.points,
+        status: (scoreData?.status || "ungraded") as ScoringStatus,
+        isSelected: selectedAnswers.has(sheet.id)
+      }
+    })
   }
 
   // 採点データ保存
@@ -562,14 +677,19 @@ export default function GradingPage() {
             <div>
               <h1 className="text-lg font-semibold">採点</h1>
               <p className="text-muted-foreground text-sm">
-                {currentAnswerSheet?.student.lastName}{" "}
-                {currentAnswerSheet?.student.firstName} - 設問
-                {currentQuestion?.questionNumber} ({currentQuestion?.points}点)
+                {gradingMode === "individual" 
+                  ? `${currentAnswerSheet?.student.lastName} ${currentAnswerSheet?.student.firstName} - ` 
+                  : ""
+                }設問 {currentQuestion?.questionNumber} ({currentQuestion?.points}点)
               </p>
             </div>
           </div>
 
           <div className="flex items-center space-x-2">
+            <GradingModeToggle
+              mode={gradingMode}
+              onModeChange={setGradingMode}
+            />
             <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -588,10 +708,12 @@ export default function GradingPage() {
                   <div>
                     <h4 className="mb-2 font-medium">採点操作</h4>
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>C: 正答</div>
-                      <div>X: 誤答</div>
-                      <div>P: 部分点</div>
-                      <div>H: 保留</div>
+                      <div>Q: 未採点</div>
+                      <div>E: 正答</div>
+                      <div>F: 部分点</div>
+                      <div>J: 保留</div>
+                      <div>O: 誤答</div>
+                      <div>P: 無答</div>
                     </div>
                   </div>
                   <div>
@@ -632,33 +754,51 @@ export default function GradingPage() {
 
       {/* メインコンテンツエリア */}
       <div className="flex flex-1">
-        {/* 答案表示エリア */}
-        <div className="relative flex-1">
-          {currentAnswerSheet ? (
-            <AnswerDisplayViewer
-              answerSheet={currentAnswerSheet}
-              currentQuestion={currentQuestion}
-              viewMode={viewMode}
-              zoom={imageZoom}
-              position={imagePosition}
-              onZoomChange={setImageZoom}
-              onPositionChange={setImagePosition}
-              onViewModeChange={setViewMode}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <FileText className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
-                <p className="text-muted-foreground">
-                  答案が選択されていません
-                </p>
-              </div>
+        {gradingMode === "individual" ? (
+          <>
+            {/* 個別採点モード: 答案表示エリア */}
+            <div className="relative flex-1">
+              {currentAnswerSheet ? (
+                <AnswerDisplayViewer
+                  answerSheet={currentAnswerSheet}
+                  currentQuestion={currentQuestion}
+                  viewMode={viewMode}
+                  zoom={imageZoom}
+                  position={imagePosition}
+                  onZoomChange={setImageZoom}
+                  onPositionChange={setImagePosition}
+                  onViewModeChange={setViewMode}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <FileText className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                    <p className="text-muted-foreground">
+                      答案が選択されていません
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          /* 一覧採点モード: グリッド表示エリア */
+          <div className="flex-1 p-4 overflow-auto">
+            <AnswerGridView
+              answers={getGridAnswerData()}
+              currentQuestionIndex={currentQuestionIndex}
+              layoutDirection={layoutDirection}
+              gridSize={gridSize}
+              onAnswerSelect={handleAnswerSelect}
+              onAnswerScore={handleBatchScore}
+              selectedAnswers={selectedAnswers}
+            />
+          </div>
+        )}
 
-        {/* 採点パレット */}
-        <div className="bg-background w-80 border-l">
+        {/* 採点パレット（個別採点モードのみ） */}
+        {gradingMode === "individual" && (
+          <div className="bg-background w-80 border-l">
           <div className="space-y-4 p-4">
             {/* プロジェクト進捗表示 */}
             <ProjectProgressCard projectId={projectId} />
@@ -782,22 +922,20 @@ export default function GradingPage() {
                 <Button
                   className="w-full justify-start"
                   variant={
-                    currentScoring?.status === "correct" ? "default" : "outline"
+                    currentScoring?.status === "ungraded" ? "secondary" : "outline"
                   }
-                  onClick={() => handleSetScore("correct")}
+                  onClick={() => handleSetScore("ungraded")}
                 >
-                  ⭕ 正答 (C) - {currentQuestion?.points}点
+                  ⚪ 未採点 (Q)
                 </Button>
                 <Button
                   className="w-full justify-start"
                   variant={
-                    currentScoring?.status === "incorrect"
-                      ? "destructive"
-                      : "outline"
+                    currentScoring?.status === "correct" ? "default" : "outline"
                   }
-                  onClick={() => handleSetScore("incorrect")}
+                  onClick={() => handleSetScore("correct")}
                 >
-                  ❌ 誤答 (X) - 0点
+                  ⭕ 正答 (E) - {currentQuestion?.points}点
                 </Button>
                 <Button
                   className="w-full justify-start"
@@ -808,7 +946,7 @@ export default function GradingPage() {
                   }
                   onClick={() => handleSetScore("partial")}
                 >
-                  🔸 部分点 (P)
+                  🔸 部分点 (F)
                 </Button>
                 <Button
                   className="w-full justify-start"
@@ -819,7 +957,29 @@ export default function GradingPage() {
                   }
                   onClick={() => handleSetScore("pending")}
                 >
-                  ⏸️ 保留 (H)
+                  ⏸️ 保留 (J)
+                </Button>
+                <Button
+                  className="w-full justify-start"
+                  variant={
+                    currentScoring?.status === "incorrect"
+                      ? "destructive"
+                      : "outline"
+                  }
+                  onClick={() => handleSetScore("incorrect")}
+                >
+                  ❌ 誤答 (O) - 0点
+                </Button>
+                <Button
+                  className="w-full justify-start"
+                  variant={
+                    currentScoring?.status === "no_answer"
+                      ? "destructive"
+                      : "outline"
+                  }
+                  onClick={() => handleSetScore("no_answer")}
+                >
+                  ➖ 無答 (P) - 0点
                 </Button>
               </CardContent>
             </Card>
@@ -849,7 +1009,8 @@ export default function GradingPage() {
               </CardContent>
             </Card>
           </div>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* 採点結果比較モーダル */}

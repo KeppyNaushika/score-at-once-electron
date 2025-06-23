@@ -23,6 +23,9 @@ interface ClassStudentImportModalProps {
 
 interface ClassStudentImportRow {
   studentId: string
+  attendanceNumber: string
+  startDate: string
+  endDate: string
 }
 
 export default function ClassStudentImportModal({
@@ -33,7 +36,7 @@ export default function ClassStudentImportModal({
   className,
 }: ClassStudentImportModalProps) {
   const [studentData, setStudentData] = useState<ClassStudentImportRow[]>([
-    { studentId: "" },
+    { studentId: "", attendanceNumber: "", startDate: "", endDate: "" },
   ])
   const [isProcessing, setIsProcessing] = useState(false)
   const [validation, setValidation] = useState<{
@@ -42,12 +45,24 @@ export default function ClassStudentImportModal({
     warnings: string[]
   }>({ valid: 0, errors: [], warnings: [] })
 
+  const isValidDate = (dateStr: string): boolean => {
+    const regex = /^\d{4}\/\d{2}\/\d{2}$/
+    if (!regex.test(dateStr)) return false
+    const date = new Date(dateStr.replace(/\//g, '-'))
+    return date instanceof Date && !isNaN(date.getTime())
+  }
+
   const validateData = (data: ClassStudentImportRow[]) => {
     const errors: string[] = []
     const warnings: string[] = []
     let validCount = 0
 
-    const nonEmptyData = data.filter((row) => row.studentId.trim() !== "")
+    const nonEmptyData = data.filter((row) => 
+      row.studentId.trim() !== "" || 
+      row.attendanceNumber.trim() !== "" ||
+      row.startDate.trim() !== "" ||
+      row.endDate.trim() !== ""
+    )
 
     if (nonEmptyData.length === 0) {
       errors.push("学籍番号が入力されていません。")
@@ -58,8 +73,26 @@ export default function ClassStudentImportModal({
 
     nonEmptyData.forEach((row, index) => {
       const studentId = row.studentId.trim()
+      const attendanceNumber = row.attendanceNumber.trim()
 
       if (!studentId) {
+        errors.push(`行${index + 1}: 学籍番号が入力されていません。`)
+        return
+      }
+
+      if (attendanceNumber && isNaN(parseInt(attendanceNumber))) {
+        errors.push(`行${index + 1}: 出席番号は数値で入力してください。`)
+        return
+      }
+
+      // 日付のバリデーション
+      if (row.startDate.trim() && !isValidDate(row.startDate.trim())) {
+        errors.push(`行${index + 1}: 開始日の形式が不正です。YYYY/MM/DD形式で入力してください。`)
+        return
+      }
+
+      if (row.endDate.trim() && !isValidDate(row.endDate.trim())) {
+        errors.push(`行${index + 1}: 終了日の形式が不正です。YYYY/MM/DD形式で入力してください。`)
         return
       }
 
@@ -90,24 +123,62 @@ export default function ClassStudentImportModal({
 
     setIsProcessing(true)
     try {
-      const validStudentIds = studentData
-        .filter((row) => row.studentId.trim() !== "")
-        .map((row) => row.studentId.trim())
+      const validRows = studentData.filter((row) => row.studentId.trim() !== "")
 
       // Add each student to the class
-      for (const studentId of validStudentIds) {
+      for (const row of validRows) {
         try {
+          const studentId = row.studentId.trim()
+          const attendanceNumber = row.attendanceNumber.trim()
+          
           // First try to find the student by studentId
           const students = await window.electronAPI.fetchStudents()
           const student = students.find((s) => s.studentId === studentId)
 
           if (student) {
-            await window.electronAPI.addStudentToClass(student.id, classId)
+            // 既存のメンバーシップをチェック
+            const classes = await window.electronAPI.fetchClasses()
+            const targetClass = classes.find(c => c.id === classId)
+            const existingMembership = targetClass?.memberships.find(
+              m => m.student.id === student.id && !m.endDate
+            )
+
+            if (existingMembership) {
+              // 既存のメンバーシップがある場合は終了してから新規追加
+              await window.electronAPI.endStudentMembership(existingMembership.id)
+            }
+
+            const startDate = row.startDate.trim() 
+              ? new Date(row.startDate.trim().replace(/\//g, '-')) 
+              : new Date()
+            const endDateStr = row.endDate.trim()
+
+            await window.electronAPI.addStudentToClass(
+              student.id, 
+              classId,
+              startDate,
+              attendanceNumber ? parseInt(attendanceNumber) : undefined
+            )
+
+            // 終了日が指定されている場合は、追加後に終了処理
+            if (endDateStr) {
+              const newClasses = await window.electronAPI.fetchClasses()
+              const newTargetClass = newClasses.find(c => c.id === classId)
+              const newMembership = newTargetClass?.memberships.find(
+                m => m.student.id === student.id && !m.endDate
+              )
+              if (newMembership) {
+                await window.electronAPI.endStudentMembership(
+                  newMembership.id, 
+                  new Date(endDateStr.replace(/\//g, '-'))
+                )
+              }
+            }
           } else {
             console.warn(`学籍番号 ${studentId} の生徒が見つかりません`)
           }
         } catch (error) {
-          console.error(`学籍番号 ${studentId} の追加に失敗:`, error)
+          console.error(`学籍番号 ${row.studentId} の追加に失敗:`, error)
         }
       }
 
@@ -182,7 +253,8 @@ export default function ClassStudentImportModal({
             {className}への生徒一括追加
           </DialogTitle>
           <DialogDescription>
-            学籍番号を入力して、学級に生徒を一括で追加できます。
+            学籍番号、出席番号、所属期間を入力して、学級に生徒を一括で追加できます。
+            同じ学籍番号の生徒が既に在籍中の場合は上書きされます。
           </DialogDescription>
         </DialogHeader>
 

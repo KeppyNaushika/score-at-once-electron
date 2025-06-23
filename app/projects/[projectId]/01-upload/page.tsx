@@ -103,7 +103,7 @@ export default function MasterImageStepPage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="模範解答のアップロード"
-        description="試験問題の模範解答をアップロードして、採点の基準となる画像を準備します。"
+        description=""
       >
         {masterImages.length > 0 && (
           <Button onClick={goToNextStep} disabled={isLoading}>
