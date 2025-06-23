@@ -11,13 +11,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useEffect, useState } from "react"
@@ -30,7 +23,6 @@ interface ClassModalProps {
     classCode?: string
     grade?: number
     description?: string
-    subject?: string
     isVisible?: boolean
   }) => void
   classToEdit?: {
@@ -39,25 +31,11 @@ interface ClassModalProps {
     classCode?: string | null
     grade?: number | null
     description?: string | null
-    subject?: string | null
     isVisible?: boolean | null
   } | null
 }
 
-// 学級種別は削除し、表示/非表示のみで管理
-
-const commonSubjects = [
-  "国語",
-  "数学",
-  "英語",
-  "理科",
-  "社会",
-  "体育",
-  "音楽",
-  "美術",
-  "技術・家庭",
-  "道徳",
-]
+// 学級種別と教科フィールドは削除し、表示/非表示のみで管理
 
 export default function ClassModal({
   isOpen,
@@ -69,7 +47,6 @@ export default function ClassModal({
   const [classCode, setClassCode] = useState("")
   const [grade, setGrade] = useState<number | undefined>(undefined)
   const [description, setDescription] = useState("")
-  const [subject, setSubject] = useState("")
   const [isVisible, setIsVisible] = useState(true)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
@@ -79,14 +56,12 @@ export default function ClassModal({
       setClassCode(classToEdit.classCode ?? "")
       setGrade(classToEdit.grade ?? undefined)
       setDescription(classToEdit.description ?? "")
-      setSubject(classToEdit.subject ?? "")
       setIsVisible(classToEdit.isVisible ?? true)
     } else {
       setName("")
       setClassCode("")
       setGrade(undefined)
       setDescription("")
-      setSubject("")
       setIsVisible(true)
     }
     setErrors({})
@@ -98,8 +73,6 @@ export default function ClassModal({
     if (!name.trim()) {
       newErrors.name = "学級名は必須です。"
     }
-
-    // 教科名のバリデーションは任意とする
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -115,7 +88,6 @@ export default function ClassModal({
       classCode: classCode.trim() || undefined,
       grade: grade === undefined ? undefined : Number(grade),
       description: description.trim() || undefined,
-      subject: subject.trim() || undefined,
       isVisible,
     })
   }
@@ -217,39 +189,6 @@ export default function ClassModal({
             </div>
           </div>
 
-          {/* 教科名 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="subject" className="text-right">
-              教科名
-            </Label>
-            <div className="col-span-3">
-              <div className="space-y-2">
-                <Select value={subject} onValueChange={setSubject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="教科を選択または入力" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commonSubjects.map((subj) => (
-                      <SelectItem key={subj} value={subj}>
-                        {subj}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="教科名を入力（任意）"
-                />
-              </div>
-              {errors.subject && (
-                <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
-              )}
-              <p className="text-muted-foreground mt-1 text-xs">
-                教科を指定すると教科別クラスとして管理されます
-              </p>
-            </div>
-          </div>
 
           {/* 説明 */}
           <div className="grid grid-cols-4 items-start gap-4">

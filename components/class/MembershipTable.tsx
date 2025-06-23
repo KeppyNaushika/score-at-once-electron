@@ -13,27 +13,31 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Membership } from "@/hooks/useClassManagement"
-import { Calendar, Edit, Trash2, UserMinus } from "lucide-react"
+import { Calendar, Edit, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 interface MembershipTableProps {
   memberships: Membership[]
   onEdit: (membership: Membership) => void
-  onEnd: (membershipId: string) => void
-  onBulkEnd?: (membershipIds: string[]) => void
+  onDelete: (membershipId: string) => void
+  onBulkDelete?: (membershipIds: string[]) => void
 }
 
 export default function MembershipTable({
   memberships,
   onEdit,
-  onEnd,
-  onBulkEnd,
+  onDelete,
+  onBulkDelete,
 }: MembershipTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  // 現在の所属を出席番号順にソート
-  const activeMemberships = memberships
-    .filter((m) => !m.endDate)
+  // すべての所属を現在の所属を優先してソート
+  const sortedMemberships = memberships
     .sort((a, b) => {
+      // 現在の所属（endDateがnull）を先に表示
+      if (!a.endDate && b.endDate) return -1
+      if (a.endDate && !b.endDate) return 1
+      
+      // 両方とも現在の所属または両方とも終了した所属の場合、出席番号順
       if (a.attendanceNumber && b.attendanceNumber) {
         return a.attendanceNumber - b.attendanceNumber
       }
@@ -41,11 +45,10 @@ export default function MembershipTable({
       if (b.attendanceNumber) return 1
       return 0
     })
-  const endedMemberships = memberships.filter((m) => m.endDate)
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(activeMemberships.map(m => m.id)))
+      setSelectedIds(new Set(sortedMemberships.map(m => m.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -62,9 +65,9 @@ export default function MembershipTable({
   }
 
   const handleBulkDelete = () => {
-    if (selectedIds.size > 0 && onBulkEnd) {
-      if (window.confirm(`選択された${selectedIds.size}件の所属を終了しますか？`)) {
-        onBulkEnd(Array.from(selectedIds))
+    if (selectedIds.size > 0 && onBulkDelete) {
+      if (window.confirm(`選択された${selectedIds.size}件の所属を削除しますか？`)) {
+        onBulkDelete(Array.from(selectedIds))
         setSelectedIds(new Set())
       }
     }
@@ -72,13 +75,13 @@ export default function MembershipTable({
 
   return (
     <div className="space-y-6">
-      {/* 現在の所属 */}
+      {/* 全所属一覧 */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              現在の所属 ({activeMemberships.length}名)
+              所属一覧 ({sortedMemberships.length}名)
             </CardTitle>
             {selectedIds.size > 0 && (
               <Button
@@ -87,20 +90,20 @@ export default function MembershipTable({
                 onClick={handleBulkDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                選択した{selectedIds.size}件を終了
+                選択した{selectedIds.size}件を削除
               </Button>
             )}
           </div>
         </CardHeader>
         <CardContent>
-          {activeMemberships.length > 0 ? (
+          {sortedMemberships.length > 0 ? (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]">
                       <Checkbox
-                        checked={selectedIds.size === activeMemberships.length && activeMemberships.length > 0}
+                        checked={selectedIds.size === sortedMemberships.length && sortedMemberships.length > 0}
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -108,13 +111,17 @@ export default function MembershipTable({
                     <TableHead>出席番号</TableHead>
                     <TableHead>氏名</TableHead>
                     <TableHead>開始日</TableHead>
+                    <TableHead>終了日</TableHead>
                     <TableHead>備考</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {activeMemberships.map((membership) => (
-                    <TableRow key={membership.id}>
+                  {sortedMemberships.map((membership) => (
+                    <TableRow 
+                      key={membership.id}
+                      className={membership.endDate ? "opacity-60" : ""}
+                    >
                       <TableCell>
                         <Checkbox
                           checked={selectedIds.has(membership.id)}
@@ -128,11 +135,26 @@ export default function MembershipTable({
                         {membership.attendanceNumber || "-"}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {membership.student.lastName}{" "}
-                        {membership.student.firstName}
+                        <div className="flex items-center gap-2">
+                          {membership.student.lastName}{" "}
+                          {membership.student.firstName}
+                          {!membership.endDate && (
+                            <Badge variant="default" className="text-xs">
+                              在籍中
+                            </Badge>
+                          )}
+                          {membership.endDate && (
+                            <Badge variant="secondary" className="text-xs">
+                              終了
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {membership.startDate.toLocaleDateString("ja-JP")}
+                      </TableCell>
+                      <TableCell>
+                        {membership.endDate ? membership.endDate.toLocaleDateString("ja-JP") : "-"}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {membership.notes}
@@ -149,9 +171,9 @@ export default function MembershipTable({
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onEnd(membership.id)}
+                            onClick={() => onDelete(membership.id)}
                           >
-                            <UserMinus className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </TableCell>
@@ -162,61 +184,11 @@ export default function MembershipTable({
             </div>
           ) : (
             <div className="text-muted-foreground py-8 text-center">
-              現在所属している生徒はいません
+              所属している生徒はいません
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* 終了した所属 */}
-      {endedMemberships.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              終了した所属 ({endedMemberships.length}名)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>学籍番号</TableHead>
-                    <TableHead>出席番号</TableHead>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>期間</TableHead>
-                    <TableHead>備考</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {endedMemberships.map((membership) => (
-                    <TableRow key={membership.id} className="opacity-60">
-                      <TableCell className="font-mono">
-                        {membership.student.studentId}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {membership.attendanceNumber || "-"}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {membership.student.lastName}{" "}
-                        {membership.student.firstName}
-                      </TableCell>
-                      <TableCell>
-                        {membership.startDate.toLocaleDateString("ja-JP")} -
-                        {membership.endDate?.toLocaleDateString("ja-JP")}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {membership.notes}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

@@ -149,12 +149,13 @@ model Project {
 
 // プロジェクトと生徒の多対多リレーション（受験状態管理）
 model ProjectStudent {
-  id        String          @id @default(uuid())
-  projectId String
-  studentId String
-  status    ProjectStudentStatus @default(PARTICIPATING)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id          String          @id @default(uuid())
+  projectId   String
+  studentId   String
+  status      ProjectStudentStatus @default(PARTICIPATING)
+  customOrder Int?            // 独自の並び順序（nullの場合は学級・出席番号順）
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   student   Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -162,6 +163,7 @@ model ProjectStudent {
   @@unique([projectId, studentId])
   @@index([projectId])
   @@index([studentId])
+  @@index([projectId, customOrder])
 }
 
 enum ProjectStudentStatus {

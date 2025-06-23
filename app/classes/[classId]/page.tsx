@@ -30,14 +30,14 @@ export default function ClassDetailPage() {
     handleSaveClass,
     handleStudentImportSuccess,
     handleSaveMembership,
-    handleEndMembership,
-    handleBulkEndMemberships,
+    handleDeleteMembership,
+    handleBulkDeleteMemberships,
     handleDeleteClass,
   } = useClassManagement(classId)
 
   const handleEditMembership = (membership: Membership) => {
-    setMembershipToEdit(membership)
-    setIsMembershipModalOpen(true)
+    // 生徒の個人ページへ遷移
+    router.push(`/students/${membership.student.id}`)
   }
 
   const handleAddMembership = () => {
@@ -185,8 +185,8 @@ export default function ClassDetailPage() {
       <MembershipTable
         memberships={classData.memberships}
         onEdit={handleEditMembership}
-        onEnd={handleEndMembership}
-        onBulkEnd={handleBulkEndMemberships}
+        onDelete={handleDeleteMembership}
+        onBulkDelete={handleBulkDeleteMemberships}
       />
 
       {/* モーダル */}

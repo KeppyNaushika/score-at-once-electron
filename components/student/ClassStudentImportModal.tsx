@@ -46,7 +46,7 @@ export default function ClassStudentImportModal({
   }>({ valid: 0, errors: [], warnings: [] })
 
   const isValidDate = (dateStr: string): boolean => {
-    const regex = /^\d{4}\/\d{2}\/\d{2}$/
+    const regex = /^\d{4}\/\d{1,2}\/\d{1,2}$/
     if (!regex.test(dateStr)) return false
     const date = new Date(dateStr.replace(/\//g, '-'))
     return date instanceof Date && !isNaN(date.getTime())
@@ -87,12 +87,12 @@ export default function ClassStudentImportModal({
 
       // 日付のバリデーション
       if (row.startDate.trim() && !isValidDate(row.startDate.trim())) {
-        errors.push(`行${index + 1}: 開始日の形式が不正です。YYYY/MM/DD形式で入力してください。`)
+        errors.push(`行${index + 1}: 開始日の形式が不正です。YYYY/M/D形式で入力してください。`)
         return
       }
 
       if (row.endDate.trim() && !isValidDate(row.endDate.trim())) {
-        errors.push(`行${index + 1}: 終了日の形式が不正です。YYYY/MM/DD形式で入力してください。`)
+        errors.push(`行${index + 1}: 終了日の形式が不正です。YYYY/M/D形式で入力してください。`)
         return
       }
 
@@ -126,6 +126,9 @@ export default function ClassStudentImportModal({
       const validRows = studentData.filter((row) => row.studentId.trim() !== "")
 
       // Add each student to the class
+      let successCount = 0
+      let notFoundStudents: string[] = []
+      
       for (const row of validRows) {
         try {
           const studentId = row.studentId.trim()
@@ -133,14 +136,16 @@ export default function ClassStudentImportModal({
           
           // First try to find the student by studentId
           const students = await window.electronAPI.fetchStudents()
+          console.log('Fetched students:', students.length)
           const student = students.find((s) => s.studentId === studentId)
+          console.log(`Looking for student ${studentId}:`, student ? 'Found' : 'Not found')
 
           if (student) {
             // 既存のメンバーシップをチェック
             const classes = await window.electronAPI.fetchClasses()
             const targetClass = classes.find(c => c.id === classId)
             const existingMembership = targetClass?.memberships.find(
-              m => m.student.id === student.id && !m.endDate
+              m => m.student.id === student.id
             )
 
             if (existingMembership) {
@@ -153,6 +158,13 @@ export default function ClassStudentImportModal({
               : new Date()
             const endDateStr = row.endDate.trim()
 
+            console.log('追加前のデータ:', {
+              studentId: student.id,
+              classId,
+              startDate,
+              attendanceNumber: attendanceNumber ? parseInt(attendanceNumber) : undefined
+            })
+
             await window.electronAPI.addStudentToClass(
               student.id, 
               classId,
@@ -160,13 +172,34 @@ export default function ClassStudentImportModal({
               attendanceNumber ? parseInt(attendanceNumber) : undefined
             )
 
+            // 追加後の確認
+            const verifyClasses = await window.electronAPI.fetchClasses()
+            const verifyClass = verifyClasses.find(c => c.id === classId)
+            // 最新の追加されたメンバーシップを取得（開始日でソート）
+            const addedMembership = verifyClass?.memberships
+              .filter(m => m.student.id === student.id)
+              .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
+            
+            if (addedMembership) {
+              console.log('追加成功確認:', {
+                membershipId: addedMembership.id,
+                studentName: `${addedMembership.student.lastName} ${addedMembership.student.firstName}`,
+                attendanceNumber: addedMembership.attendanceNumber,
+                startDate: addedMembership.startDate
+              })
+            } else {
+              console.error('追加後のメンバーシップが見つかりません')
+              throw new Error('データベースへの保存に失敗しました')
+            }
+
             // 終了日が指定されている場合は、追加後に終了処理
             if (endDateStr) {
               const newClasses = await window.electronAPI.fetchClasses()
               const newTargetClass = newClasses.find(c => c.id === classId)
-              const newMembership = newTargetClass?.memberships.find(
-                m => m.student.id === student.id && !m.endDate
-              )
+              // 最新のメンバーシップを取得（開始日でソート）
+              const newMembership = newTargetClass?.memberships
+                .filter(m => m.student.id === student.id)
+                .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
               if (newMembership) {
                 await window.electronAPI.endStudentMembership(
                   newMembership.id, 
@@ -174,16 +207,39 @@ export default function ClassStudentImportModal({
                 )
               }
             }
+            successCount++
           } else {
             console.warn(`学籍番号 ${studentId} の生徒が見つかりません`)
+            notFoundStudents.push(studentId)
           }
         } catch (error) {
           console.error(`学籍番号 ${row.studentId} の追加に失敗:`, error)
+          alert(`学籍番号 ${row.studentId} の追加中にエラーが発生しました: ${error}`)
         }
       }
 
-      onImportSuccess()
-      onClose()
+      if (notFoundStudents.length > 0) {
+        alert(`次の学籍番号の生徒が見つかりませんでした:\n${notFoundStudents.join(', ')}\n\nまず生徒マスターに登録してください。`)
+      }
+
+      if (successCount > 0) {
+        alert(`${successCount}名の生徒を学級に追加しました。`)
+        
+        // 画面を更新
+        await onImportSuccess()
+        
+        // 最終確認（デバッグ用）
+        console.log(`処理完了: ${successCount}名追加成功`)
+        setTimeout(async () => {
+          const finalClasses = await window.electronAPI.fetchClasses()
+          const finalClass = finalClasses.find(c => c.id === classId)
+          console.log('最終的な学級メンバー総数:', finalClass?.memberships.length)
+        }, 1000)
+        
+        onClose()
+      } else if (notFoundStudents.length === 0) {
+        alert('追加する生徒がありません。')
+      }
     } catch (error) {
       console.error("学級への生徒追加に失敗:", error)
       alert("学級への生徒追加に失敗しました。")
@@ -246,8 +302,8 @@ export default function ClassStudentImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             {className}への生徒一括追加
@@ -258,15 +314,17 @@ export default function ClassStudentImportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <ClassStudentImportTable
-            data={studentData}
-            onDataChange={handleDataChange}
-          />
+        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+          <div className="overflow-x-auto">
+            <ClassStudentImportTable
+              data={studentData}
+              onDataChange={handleDataChange}
+            />
+          </div>
           <ValidationMessages validation={validation} />
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>

@@ -7,9 +7,6 @@ type ClassWithStudents = Prisma.ClassGetPayload<{
       include: {
         student: true
       }
-      where: {
-        endDate: null
-      }
     }
   } 
 }>
@@ -22,9 +19,11 @@ export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
           include: {
             student: true
           },
-          where: {
-            endDate: null
-          }
+          orderBy: [
+            { endDate: 'asc' }, // null values first (current memberships)
+            { attendanceNumber: 'asc' },
+            { student: { studentId: 'asc' } }
+          ]
         }
       } 
     })
@@ -45,9 +44,11 @@ export const createClass = async (
           include: {
             student: true
           },
-          where: {
-            endDate: null
-          }
+          orderBy: [
+            { endDate: 'asc' }, // null values first (current memberships)
+            { attendanceNumber: 'asc' },
+            { student: { studentId: 'asc' } }
+          ]
         }
       },
     })
@@ -70,9 +71,11 @@ export const updateClass = async (
           include: {
             student: true
           },
-          where: {
-            endDate: null
-          }
+          orderBy: [
+            { endDate: 'asc' }, // null values first (current memberships)
+            { attendanceNumber: 'asc' },
+            { student: { studentId: 'asc' } }
+          ]
         }
       },
     })

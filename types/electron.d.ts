@@ -444,6 +444,10 @@ export interface MyAPI {
     success: boolean
     error?: string
   }>
+  updateStudentOrders: (projectId: string, studentOrders: { studentId: string; customOrder: number }[]) => Promise<{
+    success: boolean
+    error?: string
+  }>
   checkGradingDataForStudents: (projectId: string, studentIds: string[]) => Promise<{
     success: boolean
     hasAnyData?: boolean

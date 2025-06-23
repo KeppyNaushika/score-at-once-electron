@@ -123,7 +123,6 @@ export default function ClassManagementTable() {
   // Sort students by attendance number within each class
   const getClassWithSortedStudents = (classItem: ClassWithMemberships) => {
     const sortedMemberships = [...classItem.memberships]
-      .filter(m => !m.endDate) // Only current memberships
       .sort((a, b) => {
         if (a.attendanceNumber && b.attendanceNumber) {
           return a.attendanceNumber - b.attendanceNumber

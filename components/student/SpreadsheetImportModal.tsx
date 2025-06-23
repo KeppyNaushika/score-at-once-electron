@@ -131,8 +131,8 @@ export default function SpreadsheetImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="min-w-[95%] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] min-w-[95%] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             生徒データのインポート
@@ -142,15 +142,17 @@ export default function SpreadsheetImportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <StudentImportTable
-            data={studentData}
-            onDataChange={handleStudentDataChange}
-          />
+        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+          <div className="overflow-x-auto">
+            <StudentImportTable
+              data={studentData}
+              onDataChange={handleStudentDataChange}
+            />
+          </div>
           <ValidationMessages validation={studentValidation} />
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>
