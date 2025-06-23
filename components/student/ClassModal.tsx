@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,8 +11,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -21,6 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { useEffect, useState } from "react"
 
 interface ClassModalProps {
   isOpen: boolean
@@ -47,7 +47,16 @@ interface ClassModalProps {
 // 学級種別は削除し、表示/非表示のみで管理
 
 const commonSubjects = [
-  "国語", "数学", "英語", "理科", "社会", "体育", "音楽", "美術", "技術・家庭", "道徳"
+  "国語",
+  "数学",
+  "英語",
+  "理科",
+  "社会",
+  "体育",
+  "音楽",
+  "美術",
+  "技術・家庭",
+  "道徳",
 ]
 
 export default function ClassModal({
@@ -156,7 +165,7 @@ export default function ClassModal({
                 onChange={(e) => setClassCode(e.target.value)}
                 placeholder="例: E1、M2、1A (任意)"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-xs">
                 生徒の所属表示で使用される短縮表記
               </p>
             </div>
@@ -177,7 +186,7 @@ export default function ClassModal({
                 {isVisible ? "表示" : "非表示"}
               </Label>
               {!isVisible && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   （非表示の学級は生徒一覧やインポートで使用されません）
                 </span>
               )}
@@ -196,7 +205,9 @@ export default function ClassModal({
                 value={grade === undefined ? "" : grade.toString()}
                 onChange={(e) =>
                   setGrade(
-                    e.target.value === "" ? undefined : parseInt(e.target.value),
+                    e.target.value === ""
+                      ? undefined
+                      : parseInt(e.target.value),
                   )
                 }
                 placeholder="例: 1 (任意)"
@@ -213,10 +224,7 @@ export default function ClassModal({
             </Label>
             <div className="col-span-3">
               <div className="space-y-2">
-                <Select 
-                  value={subject} 
-                  onValueChange={setSubject}
-                >
+                <Select value={subject} onValueChange={setSubject}>
                   <SelectTrigger>
                     <SelectValue placeholder="教科を選択または入力" />
                   </SelectTrigger>
@@ -237,7 +245,7 @@ export default function ClassModal({
               {errors.subject && (
                 <p className="mt-1 text-sm text-red-500">{errors.subject}</p>
               )}
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-xs">
                 教科を指定すると教科別クラスとして管理されます
               </p>
             </div>

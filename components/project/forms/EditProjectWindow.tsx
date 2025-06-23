@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,9 +13,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
-import { X as XIcon, Edit2Icon, CheckIcon, Trash2Icon } from "lucide-react"
-import { Prisma } from "@prisma/client"
+import { CheckIcon, Edit2Icon, Trash2Icon, X as XIcon } from "lucide-react"
+import React, { useState } from "react"
 
 type Tag = {
   id: string
@@ -68,7 +67,10 @@ const EditProjectWindow = ({
     ) {
       try {
         // Tag functionality is not implemented yet
-        const newTag = { id: Date.now().toString(), text: currentTagInput.trim() }
+        const newTag = {
+          id: Date.now().toString(),
+          text: currentTagInput.trim(),
+        }
         if (newTag) {
           setTags([...tags, newTag])
         }

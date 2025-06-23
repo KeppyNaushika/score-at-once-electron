@@ -1,9 +1,8 @@
 "use client"
 
 // CreateProjectArgs型をelectron.d.tsから使用
-import { Prisma, type Project } from "@prisma/client"
-import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
+import { useEffect, useState } from "react"
 
 export const useProjects = () => {
   const { user } = useAuth()
@@ -38,8 +37,10 @@ export const useProjects = () => {
     }
 
     try {
-      const createdProject =
-        await window.electronAPI.createProject(createProjectArgs, user.id)
+      const createdProject = await window.electronAPI.createProject(
+        createProjectArgs,
+        user.id,
+      )
       return createdProject
     } catch (error) {
       console.error("Failed to create project:", error)
@@ -49,7 +50,10 @@ export const useProjects = () => {
 
   const updateProject = async (project: any) => {
     try {
-      const updatedProject = await window.electronAPI.updateProject(project.id, project)
+      const updatedProject = await window.electronAPI.updateProject(
+        project.id,
+        project,
+      )
       if (updatedProject) {
         // プロジェクトリストを再読み込みして最新の状態を取得
         await loadProjects()
@@ -62,8 +66,9 @@ export const useProjects = () => {
   const deleteProject = async (projectToDelete: any) => {
     if (!projectToDelete) return
     try {
-      const deletedProject =
-        await window.electronAPI.deleteProject(projectToDelete.id)
+      const deletedProject = await window.electronAPI.deleteProject(
+        projectToDelete.id,
+      )
       if (deletedProject) {
         // プロジェクトリストを再読み込み
         await loadProjects()

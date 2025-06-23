@@ -1,12 +1,12 @@
 "use client"
 
+import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import { AreaType, MasterImage, Project, User } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import PageHeader from "@/components/layout/PageHeader"
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -180,18 +180,20 @@ export default function RegionInfoPage() {
 
         if (savedRegions.length > 0) {
           setLayoutRegions(
-            savedRegions.filter(region => region !== null).map((region) => ({
-              id: region!.id,
-              type: region!.type,
-              x: region!.x,
-              y: region!.y,
-              width: region!.width,
-              height: region!.height,
-              label: region!.label || "",
-              points: region!.points ? String(region!.points) : null,
-              questionNumber: region!.questionNumber || "",
-              masterImageId: region!.masterImageId || "",
-            })),
+            savedRegions
+              .filter((region) => region !== null)
+              .map((region) => ({
+                id: region!.id,
+                type: region!.type,
+                x: region!.x,
+                y: region!.y,
+                width: region!.width,
+                height: region!.height,
+                label: region!.label || "",
+                points: region!.points ? String(region!.points) : null,
+                questionNumber: region!.questionNumber || "",
+                masterImageId: region!.masterImageId || "",
+              })),
           )
           setLayoutId("saved")
         }
@@ -204,10 +206,11 @@ export default function RegionInfoPage() {
 
   const handleRegionsChange = useCallback(
     (newRegions: any[] | ((prev: any[]) => any[])) => {
-      const updatedRegions = typeof newRegions === 'function' 
-        ? newRegions(layoutRegions)
-        : newRegions;
-      
+      const updatedRegions =
+        typeof newRegions === "function"
+          ? newRegions(layoutRegions)
+          : newRegions
+
       setLayoutRegions(updatedRegions)
 
       // Clear existing timeout
@@ -257,7 +260,10 @@ export default function RegionInfoPage() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left: Compact Image Preview */}
-        <div className="border-r p-4" style={{ width: "400px", maxWidth: "33.333%" }}>
+        <div
+          className="border-r p-4"
+          style={{ width: "400px", maxWidth: "33.333%" }}
+        >
           <h3 className="mb-3 font-medium">模範解答</h3>
           {backgroundImageUrl && (
             <div className="relative overflow-hidden rounded-lg border">
@@ -273,7 +279,7 @@ export default function RegionInfoPage() {
                   <div
                     key={area.id || `area-${index}`}
                     className={`absolute border-2 ${
-                      isSelected 
+                      isSelected
                         ? "border-orange-500 bg-orange-500/30"
                         : "border-blue-500 bg-blue-500/20"
                     }`}

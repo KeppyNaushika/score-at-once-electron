@@ -1,26 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useDropzone } from "react-dropzone"
-import { toast } from "sonner"
-import { 
-  Upload, 
-  FileImage, 
-  X, 
-  UserCircle, 
-  AlertCircle, 
-  ChevronUp, 
-  ChevronDown, 
-  GripVertical,
-  Eye,
-  EyeOff,
-  FileText,
-  Image as ImageIcon,
-  RefreshCw,
-  CheckSquare,
-  Square
-} from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -29,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Progress } from "@/components/ui/progress"
 import {
   Select,
   SelectContent,
@@ -36,16 +18,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePdfConverter } from "@/hooks/usePdfConverter"
 import type { UploadAnswerSheetFileData } from "@/types/electron"
+import {
+  AlertCircle,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  FileImage,
+  FileText,
+  Image as ImageIcon,
+  RefreshCw,
+  Square,
+  Upload,
+  UserCircle,
+  X,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { useDropzone } from "react-dropzone"
+import { toast } from "sonner"
 
 interface AnswerSheetUploadProps {
   projectId: string
-  students: Array<{ 
+  students: Array<{
     id: string
     lastName: string
     firstName: string
@@ -88,7 +85,9 @@ export default function AnswerSheetUpload({
   onUploadComplete,
 }: AnswerSheetUploadProps) {
   const [files, setFiles] = useState<ConvertedFile[]>([])
-  const [studentsWithAnswers, setStudentsWithAnswers] = useState<StudentWithAnswers[]>([])
+  const [studentsWithAnswers, setStudentsWithAnswers] = useState<
+    StudentWithAnswers[]
+  >([])
   const [isUploading, setIsUploading] = useState(false)
   const [isConverting, setIsConverting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -101,49 +100,58 @@ export default function AnswerSheetUpload({
   useEffect(() => {
     const checkExistingAnswers = async () => {
       try {
-        const result = await window.electronAPI.getAnswerSheetsByProjectId(projectId)
+        const result =
+          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
         const existingAnswers = result.success ? result.answerSheets : []
-        
-        const studentsWithAnswerStatus = students.map(student => {
-          const hasExistingAnswers = existingAnswers.some((answer: any) => answer.studentId === student.id)
+
+        const studentsWithAnswerStatus = students.map((student) => {
+          const hasExistingAnswers = existingAnswers.some(
+            (answer: any) => answer.studentId === student.id,
+          )
           return {
             ...student,
             isSelected: !hasExistingAnswers, // 既存答案がない生徒を選択
             hasExistingAnswers,
-            overwrite: false
+            overwrite: false,
           }
         })
-        
+
         setStudentsWithAnswers(studentsWithAnswerStatus)
       } catch (error) {
-        console.error('Error checking existing answers:', error)
+        console.error("Error checking existing answers:", error)
         // エラーの場合は全生徒を選択状態に
-        setStudentsWithAnswers(students.map(student => ({
-          ...student,
-          isSelected: true,
-          hasExistingAnswers: false,
-          overwrite: false
-        })))
+        setStudentsWithAnswers(
+          students.map((student) => ({
+            ...student,
+            isSelected: true,
+            hasExistingAnswers: false,
+            overwrite: false,
+          })),
+        )
       }
     }
-    
+
     checkExistingAnswers()
   }, [students, projectId])
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       setIsConverting(true)
-      
+
       try {
         const allConvertedFiles: ConvertedFile[] = []
         let fileIndex = 0
-        
+
         for (const file of acceptedFiles) {
-          if (file.type === 'application/pdf') {
+          if (file.type === "application/pdf") {
             // PDF → PNG変換
             const convertedImages = await convertPdfToImages(file)
-            
-            for (let pageIndex = 0; pageIndex < convertedImages.length; pageIndex++) {
+
+            for (
+              let pageIndex = 0;
+              pageIndex < convertedImages.length;
+              pageIndex++
+            ) {
               const converted = convertedImages[pageIndex]
               const convertedFile: ConvertedFile = {
                 id: `${Date.now()}-${fileIndex}-${pageIndex}`,
@@ -151,17 +159,19 @@ export default function AnswerSheetUpload({
                 type: converted.type,
                 size: converted.buffer.byteLength,
                 buffer: converted.buffer,
-                preview: URL.createObjectURL(new Blob([converted.buffer], { type: converted.type })),
+                preview: URL.createObjectURL(
+                  new Blob([converted.buffer], { type: converted.type }),
+                ),
                 pageNumber: 1,
                 isSelected: true,
                 originalFileName: file.name,
-                pageLabel: `${file.name} - ページ ${pageIndex + 1}`
+                pageLabel: `${file.name} - ページ ${pageIndex + 1}`,
               }
-              
+
               allConvertedFiles.push(convertedFile)
             }
-            
-            setMaxPages(prev => Math.max(prev, convertedImages.length))
+
+            setMaxPages((prev) => Math.max(prev, convertedImages.length))
           } else {
             // 画像ファイル
             const buffer = await file.arrayBuffer()
@@ -175,25 +185,27 @@ export default function AnswerSheetUpload({
               pageNumber: 1,
               isSelected: true,
               originalFileName: file.name,
-              pageLabel: file.name
+              pageLabel: file.name,
             }
-            
+
             allConvertedFiles.push(convertedFile)
           }
-          
+
           fileIndex++
         }
-        
+
         // ファイル名から生徒を自動推測
         const filesWithStudentGuess = allConvertedFiles.map((file) => {
           const fileName = file.name.toLowerCase()
           const matchedStudent = studentsWithAnswers.find((student) => {
-            const studentName = `${student.lastName}${student.firstName}`.toLowerCase()
-            const studentNameKana = `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
+            const studentName =
+              `${student.lastName}${student.firstName}`.toLowerCase()
+            const studentNameKana =
+              `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
             const studentId = student.studentId.toLowerCase()
             return (
-              fileName.includes(studentName) || 
-              fileName.includes(studentNameKana) || 
+              fileName.includes(studentName) ||
+              fileName.includes(studentNameKana) ||
               fileName.includes(studentId)
             )
           })
@@ -206,13 +218,13 @@ export default function AnswerSheetUpload({
         })
 
         setFiles((prev) => [...prev, ...filesWithStudentGuess])
-        
+
         if (allConvertedFiles.length > 0) {
           setSelectedTab("manage")
         }
       } catch (error) {
-        console.error('Error converting files:', error)
-        toast.error('ファイルの変換に失敗しました')
+        console.error("Error converting files:", error)
+        toast.error("ファイルの変換に失敗しました")
       } finally {
         setIsConverting(false)
       }
@@ -231,104 +243,121 @@ export default function AnswerSheetUpload({
 
   const removeFile = (id: string) => {
     setFiles((prev) => {
-      const fileToRemove = prev.find(f => f.id === id)
+      const fileToRemove = prev.find((f) => f.id === id)
       if (fileToRemove?.preview) {
         URL.revokeObjectURL(fileToRemove.preview)
       }
-      return prev.filter(f => f.id !== id)
+      return prev.filter((f) => f.id !== id)
     })
   }
-  
+
   const toggleFileSelection = (id: string) => {
-    setFiles(prev => prev.map(file => 
-      file.id === id ? { ...file, isSelected: !file.isSelected } : file
-    ))
+    setFiles((prev) =>
+      prev.map((file) =>
+        file.id === id ? { ...file, isSelected: !file.isSelected } : file,
+      ),
+    )
   }
-  
-  const moveFile = (id: string, direction: 'up' | 'down') => {
-    setFiles(prev => {
-      const index = prev.findIndex(f => f.id === id)
+
+  const moveFile = (id: string, direction: "up" | "down") => {
+    setFiles((prev) => {
+      const index = prev.findIndex((f) => f.id === id)
       if (index === -1) return prev
-      
-      const newIndex = direction === 'up' ? index - 1 : index + 1
+
+      const newIndex = direction === "up" ? index - 1 : index + 1
       if (newIndex < 0 || newIndex >= prev.length) return prev
-      
+
       const newFiles = [...prev]
       const [moved] = newFiles.splice(index, 1)
       newFiles.splice(newIndex, 0, moved)
       return newFiles
     })
   }
-  
-  const shiftStudent = (id: string, direction: 'next' | 'prev') => {
-    setFiles(prev => {
-      const index = prev.findIndex(f => f.id === id)
+
+  const shiftStudent = (id: string, direction: "next" | "prev") => {
+    setFiles((prev) => {
+      const index = prev.findIndex((f) => f.id === id)
       if (index === -1) return prev
-      
-      const currentStudentIndex = studentsWithAnswers.findIndex(s => s.id === prev[index].studentId)
+
+      const currentStudentIndex = studentsWithAnswers.findIndex(
+        (s) => s.id === prev[index].studentId,
+      )
       if (currentStudentIndex === -1) return prev
-      
-      const nextIndex = direction === 'next' ? currentStudentIndex + 1 : currentStudentIndex - 1
+
+      const nextIndex =
+        direction === "next" ? currentStudentIndex + 1 : currentStudentIndex - 1
       if (nextIndex < 0 || nextIndex >= studentsWithAnswers.length) return prev
-      
+
       const nextStudent = studentsWithAnswers[nextIndex]
-      
-      return prev.map(file => 
-        file.id === id ? { ...file, studentId: nextStudent.id } : file
+
+      return prev.map((file) =>
+        file.id === id ? { ...file, studentId: nextStudent.id } : file,
       )
     })
   }
 
   const updateFileStudent = (id: string, studentId: string) => {
-    setFiles(prev => prev.map(file => 
-      file.id === id ? { ...file, studentId } : file
-    ))
+    setFiles((prev) =>
+      prev.map((file) => (file.id === id ? { ...file, studentId } : file)),
+    )
   }
 
   const updateFilePageNumber = (id: string, pageNumber: number) => {
-    setFiles(prev => prev.map(file => 
-      file.id === id ? { ...file, pageNumber } : file
-    ))
+    setFiles((prev) =>
+      prev.map((file) => (file.id === id ? { ...file, pageNumber } : file)),
+    )
   }
-  
+
   const toggleStudentSelection = (studentId: string) => {
-    setStudentsWithAnswers(prev => prev.map(student => 
-      student.id === studentId ? { ...student, isSelected: !student.isSelected } : student
-    ))
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) =>
+        student.id === studentId
+          ? { ...student, isSelected: !student.isSelected }
+          : student,
+      ),
+    )
   }
-  
+
   const toggleStudentOverwrite = (studentId: string) => {
-    setStudentsWithAnswers(prev => prev.map(student => 
-      student.id === studentId ? { ...student, overwrite: !student.overwrite } : student
-    ))
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) =>
+        student.id === studentId
+          ? { ...student, overwrite: !student.overwrite }
+          : student,
+      ),
+    )
   }
-  
+
   const selectAllStudents = () => {
-    setStudentsWithAnswers(prev => prev.map(student => ({ ...student, isSelected: true })))
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) => ({ ...student, isSelected: true })),
+    )
   }
-  
+
   const deselectAllStudents = () => {
-    setStudentsWithAnswers(prev => prev.map(student => ({ ...student, isSelected: false })))
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) => ({ ...student, isSelected: false })),
+    )
   }
 
   const handleUpload = async () => {
-    const selectedFiles = files.filter(f => f.isSelected)
-    const selectedStudents = studentsWithAnswers.filter(s => s.isSelected)
-    
+    const selectedFiles = files.filter((f) => f.isSelected)
+    const selectedStudents = studentsWithAnswers.filter((s) => s.isSelected)
+
     if (selectedFiles.length === 0) {
       toast.error("アップロードするファイルを選択してください")
       return
     }
 
     // 上書き確認
-    const filesToOverwrite = selectedFiles.filter(file => {
-      const student = studentsWithAnswers.find(s => s.id === file.studentId)
+    const filesToOverwrite = selectedFiles.filter((file) => {
+      const student = studentsWithAnswers.find((s) => s.id === file.studentId)
       return student?.hasExistingAnswers && !student?.overwrite
     })
-    
+
     if (filesToOverwrite.length > 0) {
       const confirm = window.confirm(
-        `${filesToOverwrite.length}件のファイルで既存答案が上書きされます。続行しますか？`
+        `${filesToOverwrite.length}件のファイルで既存答案が上書きされます。続行しますか？`,
       )
       if (!confirm) return
     }
@@ -338,12 +367,14 @@ export default function AnswerSheetUpload({
 
     try {
       const filesData: UploadAnswerSheetFileData[] = selectedFiles
-        .filter(file => {
+        .filter((file) => {
           // 選択された生徒に関連付けられたファイルのみ
-          const student = studentsWithAnswers.find(s => s.id === file.studentId)
+          const student = studentsWithAnswers.find(
+            (s) => s.id === file.studentId,
+          )
           return student?.isSelected
         })
-        .map(file => ({
+        .map((file) => ({
           name: file.name,
           type: file.type,
           buffer: file.buffer,
@@ -391,15 +422,23 @@ export default function AnswerSheetUpload({
   const getStudentName = (studentId?: string) => {
     if (!studentId) return "未設定"
     const student = studentsWithAnswers.find((s) => s.id === studentId)
-    return student ? `${student.lastName} ${student.firstName} (${student.studentId})` : "未設定"
+    return student
+      ? `${student.lastName} ${student.firstName} (${student.studentId})`
+      : "未設定"
   }
-  
-  const selectedFilesCount = files.filter(f => f.isSelected).length
-  const selectedStudentsCount = studentsWithAnswers.filter(s => s.isSelected).length
+
+  const selectedFilesCount = files.filter((f) => f.isSelected).length
+  const selectedStudentsCount = studentsWithAnswers.filter(
+    (s) => s.isSelected,
+  ).length
 
   return (
     <div className="space-y-6">
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
@@ -420,7 +459,8 @@ export default function AnswerSheetUpload({
             <CardHeader>
               <CardTitle>答案画像・PDFのアップロード</CardTitle>
               <CardDescription>
-                試験の答案画像ファイルをドラッグ&ドロップまたはクリックして選択してください。<br/>
+                試験の答案画像ファイルをドラッグ&ドロップまたはクリックして選択してください。
+                <br />
                 PDFは自動的にPNG画像に変換されます。
               </CardDescription>
             </CardHeader>
@@ -443,14 +483,17 @@ export default function AnswerSheetUpload({
                   <>
                     <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
                     {isDragActive ? (
-                      <p className="text-lg">ファイルをドロップしてください...</p>
+                      <p className="text-lg">
+                        ファイルをドロップしてください...
+                      </p>
                     ) : (
                       <div>
                         <p className="mb-2 text-lg">
                           ファイルをドラッグ&ドロップするか、クリックして選択
                         </p>
                         <p className="text-muted-foreground text-sm">
-                          PNG, JPEG, PDF ファイルに対応。PDFはページ別にPNG変換されます。
+                          PNG, JPEG, PDF
+                          ファイルに対応。PDFはページ別にPNG変換されます。
                         </p>
                       </div>
                     )}
@@ -476,7 +519,9 @@ export default function AnswerSheetUpload({
                 <CardTitle className="flex items-center justify-between">
                   <span>ファイル管理 ({files.length}件)</span>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">選択: {selectedFilesCount}件</Badge>
+                    <Badge variant="outline">
+                      選択: {selectedFilesCount}件
+                    </Badge>
                     {maxPages > 1 && (
                       <Badge variant="secondary">最大ページ: {maxPages}</Badge>
                     )}
@@ -492,7 +537,9 @@ export default function AnswerSheetUpload({
                     <div
                       key={file.id}
                       className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                        file.isSelected ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
+                        file.isSelected
+                          ? "bg-primary/5 border-primary/20"
+                          : "hover:bg-muted/50"
                       }`}
                     >
                       {/* 選択チェックボックス */}
@@ -501,7 +548,7 @@ export default function AnswerSheetUpload({
                         onCheckedChange={() => toggleFileSelection(file.id)}
                         disabled={isUploading}
                       />
-                      
+
                       {/* プレビュー画像 */}
                       <div className="flex-shrink-0">
                         {file.preview ? (
@@ -512,7 +559,7 @@ export default function AnswerSheetUpload({
                           />
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded border">
-                            {file.type.startsWith('image/') ? (
+                            {file.type.startsWith("image/") ? (
                               <ImageIcon className="text-muted-foreground h-6 w-6" />
                             ) : (
                               <FileText className="text-muted-foreground h-6 w-6" />
@@ -523,7 +570,9 @@ export default function AnswerSheetUpload({
 
                       {/* ファイル情報 */}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-sm">{file.pageLabel || file.name}</p>
+                        <p className="truncate text-sm font-medium">
+                          {file.pageLabel || file.name}
+                        </p>
                         <p className="text-muted-foreground text-xs">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
@@ -534,10 +583,12 @@ export default function AnswerSheetUpload({
                         <UserCircle className="h-3 w-3" />
                         <Select
                           value={file.studentId || ""}
-                          onValueChange={(value) => updateFileStudent(file.id, value)}
+                          onValueChange={(value) =>
+                            updateFileStudent(file.id, value)
+                          }
                           disabled={isUploading}
                         >
-                          <SelectTrigger className="w-40 h-8 text-xs">
+                          <SelectTrigger className="h-8 w-40 text-xs">
                             <SelectValue placeholder="生徒を選択" />
                           </SelectTrigger>
                           <SelectContent>
@@ -555,14 +606,19 @@ export default function AnswerSheetUpload({
                         <span className="text-xs">P.</span>
                         <Select
                           value={file.pageNumber.toString()}
-                          onValueChange={(value) => updateFilePageNumber(file.id, parseInt(value))}
+                          onValueChange={(value) =>
+                            updateFilePageNumber(file.id, parseInt(value))
+                          }
                           disabled={isUploading}
                         >
-                          <SelectTrigger className="w-16 h-8 text-xs">
+                          <SelectTrigger className="h-8 w-16 text-xs">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {Array.from({ length: Math.max(maxPages, 5) }, (_, i) => i + 1).map((page) => (
+                            {Array.from(
+                              { length: Math.max(maxPages, 5) },
+                              (_, i) => i + 1,
+                            ).map((page) => (
                               <SelectItem key={page} value={page.toString()}>
                                 {page}
                               </SelectItem>
@@ -577,7 +633,7 @@ export default function AnswerSheetUpload({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => shiftStudent(file.id, 'prev')}
+                          onClick={() => shiftStudent(file.id, "prev")}
                           disabled={isUploading}
                           title="前の生徒に移動"
                         >
@@ -587,7 +643,7 @@ export default function AnswerSheetUpload({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => shiftStudent(file.id, 'next')}
+                          onClick={() => shiftStudent(file.id, "next")}
                           disabled={isUploading}
                           title="次の生徒に移動"
                         >
@@ -601,7 +657,7 @@ export default function AnswerSheetUpload({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => moveFile(file.id, 'up')}
+                          onClick={() => moveFile(file.id, "up")}
                           disabled={isUploading || index === 0}
                           title="上に移動"
                         >
@@ -611,7 +667,7 @@ export default function AnswerSheetUpload({
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
-                          onClick={() => moveFile(file.id, 'down')}
+                          onClick={() => moveFile(file.id, "down")}
                           disabled={isUploading || index === files.length - 1}
                           title="下に移動"
                         >
@@ -650,7 +706,7 @@ export default function AnswerSheetUpload({
                     onClick={selectAllStudents}
                     disabled={isUploading}
                   >
-                    <CheckSquare className="h-4 w-4 mr-1" />
+                    <CheckSquare className="mr-1 h-4 w-4" />
                     全選択
                   </Button>
                   <Button
@@ -659,7 +715,7 @@ export default function AnswerSheetUpload({
                     onClick={deselectAllStudents}
                     disabled={isUploading}
                   >
-                    <Square className="h-4 w-4 mr-1" />
+                    <Square className="mr-1 h-4 w-4" />
                     全解除
                   </Button>
                 </div>
@@ -674,7 +730,9 @@ export default function AnswerSheetUpload({
                   <div
                     key={student.id}
                     className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                      student.isSelected ? "bg-primary/5 border-primary/20" : "hover:bg-muted/50"
+                      student.isSelected
+                        ? "bg-primary/5 border-primary/20"
+                        : "hover:bg-muted/50"
                     }`}
                   >
                     <Checkbox
@@ -682,34 +740,38 @@ export default function AnswerSheetUpload({
                       onCheckedChange={() => toggleStudentSelection(student.id)}
                       disabled={isUploading}
                     />
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">
                           {student.lastName} {student.firstName}
                         </span>
                         <Badge variant="outline">{student.studentId}</Badge>
-                        
+
                         {student.hasExistingAnswers && (
                           <Badge variant="destructive" className="text-xs">
                             既存答案あり
                           </Badge>
                         )}
                       </div>
-                      
-                      <p className="text-muted-foreground text-xs mt-1">
+
+                      <p className="text-muted-foreground mt-1 text-xs">
                         {student.lastNameKana} {student.firstNameKana}
                       </p>
                     </div>
-                    
+
                     {student.hasExistingAnswers && (
                       <div className="flex items-center gap-2">
                         <Checkbox
                           checked={student.overwrite}
-                          onCheckedChange={() => toggleStudentOverwrite(student.id)}
+                          onCheckedChange={() =>
+                            toggleStudentOverwrite(student.id)
+                          }
                           disabled={isUploading || !student.isSelected}
                         />
-                        <span className="text-sm text-muted-foreground">上書き</span>
+                        <span className="text-muted-foreground text-sm">
+                          上書き
+                        </span>
                       </div>
                     )}
                   </div>
@@ -739,14 +801,21 @@ export default function AnswerSheetUpload({
             <div className="flex items-center justify-between">
               <div className="text-muted-foreground flex items-center gap-2 text-sm">
                 <AlertCircle className="h-4 w-4" />
-                選択された {selectedFilesCount} 件のファイルを {selectedStudentsCount} 人の生徒にアップロードします
+                選択された {selectedFilesCount} 件のファイルを{" "}
+                {selectedStudentsCount} 人の生徒にアップロードします
               </div>
               <Button
                 onClick={handleUpload}
-                disabled={isUploading || selectedFilesCount === 0 || selectedStudentsCount === 0}
+                disabled={
+                  isUploading ||
+                  selectedFilesCount === 0 ||
+                  selectedStudentsCount === 0
+                }
                 className="min-w-32"
               >
-                {isUploading ? "アップロード中..." : `${selectedFilesCount}件をアップロード`}
+                {isUploading
+                  ? "アップロード中..."
+                  : `${selectedFilesCount}件をアップロード`}
               </Button>
             </div>
           </CardContent>

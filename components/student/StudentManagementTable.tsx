@@ -1,10 +1,17 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -13,15 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Tooltip,
@@ -29,26 +27,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { 
-  PlusCircle, 
-  Edit, 
-  Trash2, 
-  Upload, 
-  Users, 
-  Clock,
-  Search,
-  Filter,
-  Calendar,
+import {
   BookOpen,
-  Info
+  Edit,
+  Info,
+  PlusCircle,
+  Search,
+  Trash2,
+  Upload,
+  Users,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 import ClassModal from "./ClassModal"
-import StudentImportModal from "./StudentImportModal"
 import SpreadsheetImportModal from "./SpreadsheetImportModal"
-import StudentModal from "./StudentModal"
 import StudentClassMembershipModal from "./StudentClassMembershipModal"
-import StudentMembershipTimeline from "./StudentMembershipTimeline"
+import StudentImportModal from "./StudentImportModal"
+import StudentModal from "./StudentModal"
 
 interface StudentWithMemberships {
   id: string
@@ -130,17 +126,25 @@ export default function StudentManagementTable() {
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   // filterClassType は削除
-  const [filterMembershipStatus, setFilterMembershipStatus] = useState<string>("all")
+  const [filterMembershipStatus, setFilterMembershipStatus] =
+    useState<string>("all")
 
   // Modal states
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
-  const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(null)
+  const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(
+    null,
+  )
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
-  const [studentToEdit, setStudentToEdit] = useState<StudentWithMemberships | null>(null)
-  const [isStudentImportModalOpen, setIsStudentImportModalOpen] = useState(false)
-  const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] = useState(false)
+  const [studentToEdit, setStudentToEdit] =
+    useState<StudentWithMemberships | null>(null)
+  const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
+    useState(false)
+  const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
+    useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
-  const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(null)
+  const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(
+    null,
+  )
 
   // Data fetching
   useEffect(() => {
@@ -163,27 +167,33 @@ export default function StudentManagementTable() {
   const filteredStudents = students.filter((student) => {
     const fullName = `${student.lastName} ${student.firstName}`
     const fullNameKana = `${student.lastNameKana} ${student.firstNameKana}`
-    const matchesSearch = 
+    const matchesSearch =
       fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fullNameKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
-    
+
     if (filterMembershipStatus === "current") {
-      return matchesSearch && student.memberships.some(m => !m.endDate)
+      return matchesSearch && student.memberships.some((m) => !m.endDate)
     } else if (filterMembershipStatus === "past") {
-      return matchesSearch && student.memberships.length > 0 && student.memberships.every(m => m.endDate)
+      return (
+        matchesSearch &&
+        student.memberships.length > 0 &&
+        student.memberships.every((m) => m.endDate)
+      )
     } else if (filterMembershipStatus === "unassigned") {
       return matchesSearch && student.memberships.length === 0
     }
     return matchesSearch
   })
-  
+
   console.log("All students:", students.length)
   console.log("Filtered students:", filteredStudents.length)
   console.log("Filter status:", filterMembershipStatus)
 
   const filteredClasses = classes.filter((classItem) => {
-    const matchesSearch = classItem.name.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = classItem.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
     const isVisible = classItem.isVisible !== false // デフォルトは表示
     return matchesSearch && isVisible
   })
@@ -218,7 +228,9 @@ export default function StudentManagementTable() {
           id: classToEdit.id,
           ...classData,
         })
-        setClasses(classes.map((c) => (c.id === updatedClass.id ? updatedClass : c)))
+        setClasses(
+          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c)),
+        )
       } else {
         const newClass = await window.electronAPI.createClass(classData)
         setClasses([...classes, newClass])
@@ -255,8 +267,15 @@ export default function StudentManagementTable() {
   const handleSaveStudent = async (studentData: any) => {
     try {
       if (studentToEdit) {
-        const updatedStudent = await window.electronAPI.updateStudent(studentToEdit.id, studentData)
-        setStudents(students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s)))
+        const updatedStudent = await window.electronAPI.updateStudent(
+          studentToEdit.id,
+          studentData,
+        )
+        setStudents(
+          students.map((s) =>
+            s.id === updatedStudent.id ? updatedStudent : s,
+          ),
+        )
       } else {
         const newStudent = await window.electronAPI.createStudent(studentData)
         setStudents([...students, newStudent])
@@ -268,7 +287,6 @@ export default function StudentManagementTable() {
     }
   }
 
-
   const handleEditMembership = (membership: Membership) => {
     setMembershipToEdit(membership)
     setIsMembershipModalOpen(true)
@@ -277,17 +295,20 @@ export default function StudentManagementTable() {
   const handleSaveMembership = async (membershipData: any) => {
     try {
       if (membershipToEdit) {
-        await window.electronAPI.updateStudentClassMembership(membershipToEdit.id, membershipData)
+        await window.electronAPI.updateStudentClassMembership(
+          membershipToEdit.id,
+          membershipData,
+        )
       } else {
         await window.electronAPI.addStudentToClass(
           membershipData.studentId,
           membershipData.classId,
           new Date(),
           membershipData.subject,
-          membershipData.notes
+          membershipData.notes,
         )
       }
-      
+
       // Refresh data
       const fetchedStudents = await window.electronAPI.fetchStudents()
       setStudents(fetchedStudents || [])
@@ -302,7 +323,7 @@ export default function StudentManagementTable() {
     if (window.confirm("この所属関係を終了しますか？")) {
       try {
         await window.electronAPI.endStudentMembership(membershipId)
-        
+
         // Refresh data
         const fetchedStudents = await window.electronAPI.fetchStudents()
         setStudents(fetchedStudents || [])
@@ -316,7 +337,9 @@ export default function StudentManagementTable() {
   const onStudentsImported = (importedStudents: StudentWithMemberships[]) => {
     setStudents((prevStudents) => {
       const existingStudentIds = new Set(prevStudents.map((s) => s.id))
-      const newStudents = importedStudents.filter((s) => !existingStudentIds.has(s.id))
+      const newStudents = importedStudents.filter(
+        (s) => !existingStudentIds.has(s.id),
+      )
       return [...prevStudents, ...newStudents]
     })
   }
@@ -324,112 +347,132 @@ export default function StudentManagementTable() {
   return (
     <TooltipProvider>
       <div className="space-y-6">
-      {/* Search and Filter Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            検索・フィルタ
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="search">検索</Label>
-              <Input
-                id="search"
-                placeholder="生徒名・学籍番号・学級名で検索"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+        {/* Search and Filter Controls */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              検索・フィルタ
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <Label htmlFor="search">検索</Label>
+                <Input
+                  id="search"
+                  placeholder="生徒名・学籍番号・学級名で検索"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="membershipStatus">所属状況</Label>
+                <Select
+                  value={filterMembershipStatus}
+                  onValueChange={setFilterMembershipStatus}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">すべて</SelectItem>
+                    <SelectItem value="current">現在所属中</SelectItem>
+                    <SelectItem value="past">過去の所属</SelectItem>
+                    <SelectItem value="unassigned">未所属</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="membershipStatus">所属状況</Label>
-              <Select value={filterMembershipStatus} onValueChange={setFilterMembershipStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">すべて</SelectItem>
-                  <SelectItem value="current">現在所属中</SelectItem>
-                  <SelectItem value="past">過去の所属</SelectItem>
-                  <SelectItem value="unassigned">未所属</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Tabs defaultValue="students" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="students">生徒管理</TabsTrigger>
-          <TabsTrigger value="classes">学級管理</TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="students" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="students">生徒管理</TabsTrigger>
+            <TabsTrigger value="classes">学級管理</TabsTrigger>
+          </TabsList>
 
-        {/* Students Tab */}
-        <TabsContent value="students">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Students List */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
-                      生徒一覧 ({filteredStudents.length}名)
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-4 w-4 text-muted-foreground" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm">
-                          <div className="space-y-2">
-                            <p className="font-semibold">複数学級対応システム</p>
-                            <p>生徒は同時に複数のクラスに所属できます。</p>
-                            <p className="text-sm">例：</p>
-                            <ul className="text-sm list-disc list-inside">
-                              <li>ホームルーム：1年A組</li>
-                              <li>英語：E1クラス（習熟度別）</li>
-                              <li>数学：M2クラス（習熟度別）</li>
-                            </ul>
-                            <p className="text-sm mt-2">生徒の詳細画面で所属状況を確認できます。</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </CardTitle>
-                    <div className="flex gap-2">
-                      <Button onClick={handleAddNewStudent} size="sm" variant="outline">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        生徒追加
-                      </Button>
-                      <Button onClick={() => setIsSpreadsheetImportModalOpen(true)} size="sm">
-                        <Upload className="mr-2 h-4 w-4" />
-                        表形式インポート
-                      </Button>
+          {/* Students Tab */}
+          <TabsContent value="students">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Students List */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        生徒一覧 ({filteredStudents.length}名)
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="text-muted-foreground h-4 w-4" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <div className="space-y-2">
+                              <p className="font-semibold">
+                                複数学級対応システム
+                              </p>
+                              <p>生徒は同時に複数のクラスに所属できます。</p>
+                              <p className="text-sm">例：</p>
+                              <ul className="list-inside list-disc text-sm">
+                                <li>ホームルーム：1年A組</li>
+                                <li>英語：E1クラス（習熟度別）</li>
+                                <li>数学：M2クラス（習熟度別）</li>
+                              </ul>
+                              <p className="mt-2 text-sm">
+                                生徒の詳細画面で所属状況を確認できます。
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleAddNewStudent}
+                          size="sm"
+                          variant="outline"
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          生徒追加
+                        </Button>
+                        <Button
+                          onClick={() => setIsSpreadsheetImportModalOpen(true)}
+                          size="sm"
+                        >
+                          <Upload className="mr-2 h-4 w-4" />
+                          表形式インポート
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>学籍番号</TableHead>
-                          <TableHead>氏名</TableHead>
-                          <TableHead>入学年度</TableHead>
-                          <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredStudents.map((student) => (
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>学籍番号</TableHead>
+                            <TableHead>氏名</TableHead>
+                            <TableHead>入学年度</TableHead>
+                            <TableHead className="text-right">操作</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredStudents.map((student) => (
                             <TableRow
                               key={student.id}
-                              onClick={() => router.push(`/students/${student.id}`)}
-                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() =>
+                                router.push(`/students/${student.id}`)
+                              }
+                              className="hover:bg-muted/50 cursor-pointer"
                             >
                               <TableCell>{student.studentId}</TableCell>
-                              <TableCell>{student.lastName} {student.firstName}</TableCell>
-                              <TableCell>{student.enrollmentYear || "未設定"}</TableCell>
+                              <TableCell>
+                                {student.lastName} {student.firstName}
+                              </TableCell>
+                              <TableCell>
+                                {student.enrollmentYear || "未設定"}
+                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex gap-1">
                                   <Button
@@ -455,207 +498,224 @@ export default function StudentManagementTable() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                        ))}
-                        {filteredStudents.length === 0 && (
+                          ))}
+                          {filteredStudents.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4} className="text-center">
+                                該当する生徒が見つかりません。
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Student Detail Panel */}
+              <div>
+                <Card>
+                  <CardContent className="text-muted-foreground py-8 text-center">
+                    <Info className="mx-auto mb-2 h-8 w-8" />
+                    <p className="font-medium">生徒をクリックして詳細を表示</p>
+                    <p className="mt-1 text-sm">
+                      各生徒の所属学級や履歴を確認できます
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Classes Tab */}
+          <TabsContent value="classes">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              {/* Classes List */}
+              <div className="lg:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5" />
+                        学級一覧 ({filteredClasses.length}学級)
+                      </CardTitle>
+                      <Button onClick={handleAddNewClass} size="sm">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        学級追加
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
                           <TableRow>
-                            <TableCell colSpan={4} className="text-center">
-                              該当する生徒が見つかりません。
-                            </TableCell>
+                            <TableHead>学級名・コード</TableHead>
+                            <TableHead>学年</TableHead>
+                            <TableHead>教科</TableHead>
+                            <TableHead>現在の所属数</TableHead>
+                            <TableHead className="text-right">操作</TableHead>
                           </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Student Detail Panel */}
-            <div>
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  <Info className="h-8 w-8 mx-auto mb-2" />
-                  <p className="font-medium">生徒をクリックして詳細を表示</p>
-                  <p className="text-sm mt-1">各生徒の所属学級や履歴を確認できます</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Classes Tab */}
-        <TabsContent value="classes">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Classes List */}
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <BookOpen className="h-5 w-5" />
-                      学級一覧 ({filteredClasses.length}学級)
-                    </CardTitle>
-                    <Button onClick={handleAddNewClass} size="sm">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      学級追加
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>学級名・コード</TableHead>
-                          <TableHead>学年</TableHead>
-                          <TableHead>教科</TableHead>
-                          <TableHead>現在の所属数</TableHead>
-                          <TableHead className="text-right">操作</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredClasses.map((classItem) => (
-                          <TableRow
-                            key={classItem.id}
-                            onClick={() => router.push(`/classes/${classItem.id}`)}
-                            className="cursor-pointer hover:bg-muted/50"
-                          >
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{classItem.name}</span>
-                                {classItem.classCode && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {classItem.classCode}
-                                  </Badge>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredClasses.map((classItem) => (
+                            <TableRow
+                              key={classItem.id}
+                              onClick={() =>
+                                router.push(`/classes/${classItem.id}`)
+                              }
+                              className="hover:bg-muted/50 cursor-pointer"
+                            >
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span>{classItem.name}</span>
+                                  {classItem.classCode && (
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {classItem.classCode}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {classItem.subject && (
+                                  <span className="text-muted-foreground text-sm">
+                                    ({classItem.subject})
+                                  </span>
                                 )}
-                              </div>
-                              {classItem.subject && (
-                                <span className="text-sm text-muted-foreground">
-                                  ({classItem.subject})
-                                </span>
-                              )}
-                            </TableCell>
-                            <TableCell>{classItem.grade || "未設定"}</TableCell>
-                            <TableCell>
-                              {classItem.subject ? (
-                                <Badge variant="secondary">{classItem.subject}</Badge>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">なし</span>
-                              )}
-                            </TableCell>
-                            <TableCell>{classItem.memberships.length}名</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleEditClass(classItem)
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteClass(classItem.id)
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-500" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {filteredClasses.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center">
-                              該当する学級が見つかりません。
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                              </TableCell>
+                              <TableCell>
+                                {classItem.grade || "未設定"}
+                              </TableCell>
+                              <TableCell>
+                                {classItem.subject ? (
+                                  <Badge variant="secondary">
+                                    {classItem.subject}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">
+                                    なし
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {classItem.memberships.length}名
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleEditClass(classItem)
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteClass(classItem.id)
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {filteredClasses.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center">
+                                該当する学級が見つかりません。
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Class Detail Panel */}
+              <div>
+                <Card>
+                  <CardContent className="text-muted-foreground py-8 text-center">
+                    <BookOpen className="mx-auto mb-2 h-8 w-8" />
+                    <p className="font-medium">学級をクリックして詳細を表示</p>
+                    <p className="mt-1 text-sm">
+                      所属生徒一覧や学級情報を確認できます
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+          </TabsContent>
+        </Tabs>
 
-            {/* Class Detail Panel */}
-            <div>
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  <BookOpen className="h-8 w-8 mx-auto mb-2" />
-                  <p className="font-medium">学級をクリックして詳細を表示</p>
-                  <p className="text-sm mt-1">所属生徒一覧や学級情報を確認できます</p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
+        {/* Modals */}
+        {isClassModalOpen && (
+          <ClassModal
+            isOpen={isClassModalOpen}
+            onClose={() => setIsClassModalOpen(false)}
+            onSave={handleSaveClass}
+            classToEdit={classToEdit}
+          />
+        )}
 
-      {/* Modals */}
-      {isClassModalOpen && (
-        <ClassModal
-          isOpen={isClassModalOpen}
-          onClose={() => setIsClassModalOpen(false)}
-          onSave={handleSaveClass}
-          classToEdit={classToEdit}
-        />
-      )}
+        {isStudentModalOpen && (
+          <StudentModal
+            isOpen={isStudentModalOpen}
+            onClose={() => setIsStudentModalOpen(false)}
+            onSave={handleSaveStudent}
+            onUpdate={handleSaveStudent}
+            studentToEdit={studentToEdit as any}
+            availableClasses={classes as any}
+          />
+        )}
 
-      {isStudentModalOpen && (
-        <StudentModal
-          isOpen={isStudentModalOpen}
-          onClose={() => setIsStudentModalOpen(false)}
-          onSave={handleSaveStudent}
-          onUpdate={handleSaveStudent}
-          studentToEdit={studentToEdit as any}
-          availableClasses={classes as any}
-        />
-      )}
+        {isStudentImportModalOpen && (
+          <StudentImportModal
+            isOpen={isStudentImportModalOpen}
+            onClose={() => setIsStudentImportModalOpen(false)}
+            onImportSuccess={onStudentsImported as any}
+            existingClasses={classes as any}
+          />
+        )}
 
-      {isStudentImportModalOpen && (
-        <StudentImportModal
-          isOpen={isStudentImportModalOpen}
-          onClose={() => setIsStudentImportModalOpen(false)}
-          onImportSuccess={onStudentsImported as any}
-          existingClasses={classes as any}
-        />
-      )}
+        {isSpreadsheetImportModalOpen && (
+          <SpreadsheetImportModal
+            isOpen={isSpreadsheetImportModalOpen}
+            onClose={() => setIsSpreadsheetImportModalOpen(false)}
+            onImportSuccess={onStudentsImported}
+            existingClasses={classes}
+          />
+        )}
 
-      {isSpreadsheetImportModalOpen && (
-        <SpreadsheetImportModal
-          isOpen={isSpreadsheetImportModalOpen}
-          onClose={() => setIsSpreadsheetImportModalOpen(false)}
-          onImportSuccess={onStudentsImported}
-          existingClasses={classes}
-        />
-      )}
-
-      {isMembershipModalOpen && (
-        <StudentClassMembershipModal
-          isOpen={isMembershipModalOpen}
-          onClose={() => setIsMembershipModalOpen(false)}
-          onSave={handleSaveMembership}
-          studentId={undefined}
-          classId={undefined}
-          availableStudents={students.map(s => ({ 
-            id: s.id, 
-            studentId: s.studentId, 
-            lastName: s.lastName,
-            firstName: s.firstName,
-            lastNameKana: s.lastNameKana,
-            firstNameKana: s.firstNameKana
-          }))}
-          availableClasses={classes as any}
-          membershipToEdit={membershipToEdit as any}
-        />
-      )}
+        {isMembershipModalOpen && (
+          <StudentClassMembershipModal
+            isOpen={isMembershipModalOpen}
+            onClose={() => setIsMembershipModalOpen(false)}
+            onSave={handleSaveMembership}
+            studentId={undefined}
+            classId={undefined}
+            availableStudents={students.map((s) => ({
+              id: s.id,
+              studentId: s.studentId,
+              lastName: s.lastName,
+              firstName: s.firstName,
+              lastNameKana: s.lastNameKana,
+              firstNameKana: s.firstNameKana,
+            }))}
+            availableClasses={classes as any}
+            membershipToEdit={membershipToEdit as any}
+          />
+        )}
       </div>
     </TooltipProvider>
   )

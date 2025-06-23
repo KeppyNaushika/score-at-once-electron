@@ -1,30 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Users, UserCheck, UserX, Search, Filter, Plus, UserPlus } from "lucide-react"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
+import PageHeader from "@/components/layout/PageHeader"
+import StudentRemovalConfirmModal from "@/components/student/StudentRemovalConfirmModal"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -34,14 +22,27 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import StudentRemovalConfirmModal from "@/components/student/StudentRemovalConfirmModal"
-import PageHeader from "@/components/layout/PageHeader"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Plus, Search, UserCheck, UserPlus, Users, UserX } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 // 生徒の状態を表す型
 type StudentStatus = "participating" | "expected" | "absent"
@@ -93,7 +94,7 @@ export default function StudentsPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
-  
+
   const [loading, setLoading] = useState(true)
   const [classes, setClasses] = useState<ClassGroup[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -105,28 +106,39 @@ export default function StudentsPage() {
     studentNumber: "",
     name: "",
     furigana: "",
-    classId: ""
+    classId: "",
   })
   const [allClasses, setAllClasses] = useState<ClassGroup[]>([])
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false)
   const [studentsToRemove, setStudentsToRemove] = useState<string[]>([])
-  const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<Set<string>>(new Set())
-  const [gradingDataInfo, setGradingDataInfo] = useState({ hasData: false, totalItems: 0 })
+  const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<
+    Set<string>
+  >(new Set())
+  const [gradingDataInfo, setGradingDataInfo] = useState({
+    hasData: false,
+    totalItems: 0,
+  })
   const [project, setProject] = useState<any>(null)
 
   // 統計情報の計算
-  const totalStudents = classes.reduce((sum, cls) => sum + cls.students.length, 0)
+  const totalStudents = classes.reduce(
+    (sum, cls) => sum + cls.students.length,
+    0,
+  )
   const participatingStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter(s => s.status === "participating").length,
-    0
+    (sum, cls) =>
+      sum + cls.students.filter((s) => s.status === "participating").length,
+    0,
   )
   const expectedStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter(s => s.status === "expected").length,
-    0
+    (sum, cls) =>
+      sum + cls.students.filter((s) => s.status === "expected").length,
+    0,
   )
   const absentStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter(s => s.status === "absent").length,
-    0
+    (sum, cls) =>
+      sum + cls.students.filter((s) => s.status === "absent").length,
+    0,
   )
 
   // データの取得（実際のAPIから）
@@ -135,58 +147,63 @@ export default function StudentsPage() {
       setLoading(true)
       try {
         // プロジェクト情報を取得
-        const fetchedProject = await window.electronAPI.fetchProjectById(projectId)
+        const fetchedProject =
+          await window.electronAPI.fetchProjectById(projectId)
         setProject(fetchedProject)
-        
+
         // プロジェクトの生徒データを取得
-        const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+        const studentsResult =
+          await window.electronAPI.getStudentsForProject(projectId)
         if (!studentsResult.success) {
-          throw new Error(studentsResult.error || 'Failed to fetch students')
+          throw new Error(studentsResult.error || "Failed to fetch students")
         }
 
         // 利用可能な学級データを取得
-        const classesResult = await window.electronAPI.getClassesNotInProject(projectId)
+        const classesResult =
+          await window.electronAPI.getClassesNotInProject(projectId)
         if (!classesResult.success) {
-          throw new Error(classesResult.error || 'Failed to fetch available classes')
+          throw new Error(
+            classesResult.error || "Failed to fetch available classes",
+          )
         }
 
         // 全学級データを取得（新規生徒追加用）
         const allClassesResult = await window.electronAPI.fetchClasses()
-        
+
         const projectStudents = studentsResult.students || []
         const availableClassesData = classesResult.classes || []
-        
+
         // 学級ごとにグループ化
         const classGroups = new Map<string, ClassGroup>()
-        
-        projectStudents.forEach(student => {
+
+        projectStudents.forEach((student) => {
           const currentMembership = student.memberships[0] // 最新の所属
           if (currentMembership) {
             const classId = currentMembership.class.id
             const className = currentMembership.class.name
-            
+
             if (!classGroups.has(classId)) {
               classGroups.set(classId, {
                 id: classId,
                 name: className,
-                students: []
+                students: [],
               })
             }
-            
+
             classGroups.get(classId)!.students.push(student)
           }
         })
-        
+
         const classes = Array.from(classGroups.values())
-        
+
         // 利用可能な学級を設定
-        const availableClasses = availableClassesData.map(cls => ({
+        const availableClasses = availableClassesData.map((cls) => ({
           id: cls.id,
           name: cls.name,
           studentCount: cls.studentCount,
-          isSelected: false
+          isSelected: false,
         }))
-        
+
         setClasses(classes)
         setAllClasses(allClassesResult)
         setAvailableClasses(availableClasses)
@@ -201,105 +218,119 @@ export default function StudentsPage() {
   }, [projectId])
 
   // 生徒の状態を更新
-  const updateStudentStatus = async (studentId: string, newStatus: StudentStatus) => {
+  const updateStudentStatus = async (
+    studentId: string,
+    newStatus: StudentStatus,
+  ) => {
     try {
-      const result = await window.electronAPI.updateStudentProjectStatus(projectId, studentId, newStatus)
+      const result = await window.electronAPI.updateStudentProjectStatus(
+        projectId,
+        studentId,
+        newStatus,
+      )
       if (!result.success) {
-        throw new Error(result.error || 'Failed to update student status')
+        throw new Error(result.error || "Failed to update student status")
       }
-      
-      setClasses(prevClasses => 
-        prevClasses.map(cls => ({
+
+      setClasses((prevClasses) =>
+        prevClasses.map((cls) => ({
           ...cls,
-          students: cls.students.map(student => 
-            student.id === studentId 
+          students: cls.students.map((student) =>
+            student.id === studentId
               ? { ...student, status: newStatus }
-              : student
-          )
-        }))
+              : student,
+          ),
+        })),
       )
     } catch (error) {
-      console.error('Failed to update student status:', error)
+      console.error("Failed to update student status:", error)
     }
   }
 
   // 学級のチェック状態を更新
   const toggleClassSelection = (classId: string) => {
-    setAvailableClasses(prev => 
-      prev.map(cls => 
-        cls.id === classId ? { ...cls, isSelected: !cls.isSelected } : cls
-      )
+    setAvailableClasses((prev) =>
+      prev.map((cls) =>
+        cls.id === classId ? { ...cls, isSelected: !cls.isSelected } : cls,
+      ),
     )
   }
 
   // 選択された学級を追加
   const addSelectedClasses = async () => {
     try {
-      const selectedClasses = availableClasses.filter(cls => cls.isSelected)
-      const fullClasses = selectedClasses.map(cls => allClasses.find(c => c.id === cls.id)!)
-      
+      const selectedClasses = availableClasses.filter((cls) => cls.isSelected)
+      const fullClasses = selectedClasses.map(
+        (cls) => allClasses.find((c) => c.id === cls.id)!,
+      )
+
       // 選択された学級の全生徒IDを取得
       const studentIds: string[] = []
-      fullClasses.forEach(cls => {
-        cls.memberships.forEach(membership => {
+      fullClasses.forEach((cls) => {
+        cls.memberships.forEach((membership) => {
           studentIds.push(membership.student.id)
         })
       })
-      
+
       // プロジェクトに生徒を追加
-      const result = await window.electronAPI.addStudentsToProject(projectId, studentIds)
+      const result = await window.electronAPI.addStudentsToProject(
+        projectId,
+        studentIds,
+      )
       if (!result.success) {
-        throw new Error(result.error || 'Failed to add students to project')
+        throw new Error(result.error || "Failed to add students to project")
       }
-      
+
       // 画面を再読み込み
-      const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      const studentsResult =
+        await window.electronAPI.getStudentsForProject(projectId)
       if (studentsResult.success && studentsResult.students) {
         // 学級ごとにグループ化
         const classGroups = new Map<string, ClassGroup>()
-        
-        studentsResult.students.forEach(student => {
+
+        studentsResult.students.forEach((student) => {
           const currentMembership = student.memberships[0]
           if (currentMembership) {
             const classId = currentMembership.class.id
             const className = currentMembership.class.name
-            
+
             if (!classGroups.has(classId)) {
               classGroups.set(classId, {
                 id: classId,
                 name: className,
-                students: []
+                students: [],
               })
             }
-            
+
             classGroups.get(classId)!.students.push(student)
           }
         })
-        
+
         setClasses(Array.from(classGroups.values()))
       }
-      
+
       // 利用可能な学級を更新
-      const classesResult = await window.electronAPI.getClassesNotInProject(projectId)
+      const classesResult =
+        await window.electronAPI.getClassesNotInProject(projectId)
       if (classesResult.success) {
-        const availableClasses = (classesResult.classes || []).map(cls => ({
+        const availableClasses = (classesResult.classes || []).map((cls) => ({
           id: cls.id,
           name: cls.name,
           studentCount: cls.studentCount,
-          isSelected: false
+          isSelected: false,
         }))
         setAvailableClasses(availableClasses)
       }
-      
+
       setShowAddDialog(false)
     } catch (error) {
-      console.error('Failed to add selected classes:', error)
+      console.error("Failed to add selected classes:", error)
     }
   }
 
   // 生徒選択のトグル
   const toggleStudentSelection = (studentId: string) => {
-    setSelectedStudentsForRemoval(prev => {
+    setSelectedStudentsForRemoval((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(studentId)) {
         newSet.delete(studentId)
@@ -319,17 +350,21 @@ export default function StudentsPage() {
 
     // 採点データの存在を確認
     try {
-      const gradingResult = await window.electronAPI.checkGradingDataForStudents(projectId, studentIds)
+      const gradingResult =
+        await window.electronAPI.checkGradingDataForStudents(
+          projectId,
+          studentIds,
+        )
       if (gradingResult.success) {
         setGradingDataInfo({
           hasData: gradingResult.hasAnyData || false,
-          totalItems: gradingResult.totalGradingItems || 0
+          totalItems: gradingResult.totalGradingItems || 0,
         })
       } else {
         setGradingDataInfo({ hasData: false, totalItems: 0 })
       }
     } catch (error) {
-      console.error('Failed to check grading data:', error)
+      console.error("Failed to check grading data:", error)
       setGradingDataInfo({ hasData: false, totalItems: 0 })
     }
 
@@ -339,46 +374,53 @@ export default function StudentsPage() {
   // 生徒削除の確定実行
   const confirmStudentRemoval = async () => {
     try {
-      const result = await window.electronAPI.removeStudentsFromProject(projectId, studentsToRemove)
+      const result = await window.electronAPI.removeStudentsFromProject(
+        projectId,
+        studentsToRemove,
+      )
       if (!result.success) {
-        throw new Error(result.error || 'Failed to remove students from project')
+        throw new Error(
+          result.error || "Failed to remove students from project",
+        )
       }
 
       // 画面を再読み込み
-      const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      const studentsResult =
+        await window.electronAPI.getStudentsForProject(projectId)
       if (studentsResult.success && studentsResult.students) {
         // 学級ごとにグループ化
         const classGroups = new Map<string, ClassGroup>()
-        
-        studentsResult.students.forEach(student => {
+
+        studentsResult.students.forEach((student) => {
           const currentMembership = student.memberships[0]
           if (currentMembership) {
             const classId = currentMembership.class.id
             const className = currentMembership.class.name
-            
+
             if (!classGroups.has(classId)) {
               classGroups.set(classId, {
                 id: classId,
                 name: className,
-                students: []
+                students: [],
               })
             }
-            
+
             classGroups.get(classId)!.students.push(student)
           }
         })
-        
+
         setClasses(Array.from(classGroups.values()))
       }
 
       // 利用可能な学級を更新
-      const classesResult = await window.electronAPI.getClassesNotInProject(projectId)
+      const classesResult =
+        await window.electronAPI.getClassesNotInProject(projectId)
       if (classesResult.success) {
-        const availableClasses = (classesResult.classes || []).map(cls => ({
+        const availableClasses = (classesResult.classes || []).map((cls) => ({
           id: cls.id,
           name: cls.name,
           studentCount: cls.studentCount,
-          isSelected: false
+          isSelected: false,
         }))
         setAvailableClasses(availableClasses)
       }
@@ -388,26 +430,31 @@ export default function StudentsPage() {
       setStudentsToRemove([])
       setShowRemovalConfirm(false)
     } catch (error) {
-      console.error('Failed to remove students:', error)
+      console.error("Failed to remove students:", error)
     }
   }
 
   // 個別生徒を追加
   const addIndividualStudent = async () => {
-    if (!newStudent.studentNumber || !newStudent.name || !newStudent.furigana || !newStudent.classId) {
+    if (
+      !newStudent.studentNumber ||
+      !newStudent.name ||
+      !newStudent.furigana ||
+      !newStudent.classId
+    ) {
       return
     }
-    
+
     try {
       // 名前を姓名に分ける（簡単な実装）
-      const names = newStudent.name.split(' ')
+      const names = newStudent.name.split(" ")
       const lastName = names[0] || newStudent.name
-      const firstName = names[1] || ''
-      
-      const furiganaNames = newStudent.furigana.split(' ')
+      const firstName = names[1] || ""
+
+      const furiganaNames = newStudent.furigana.split(" ")
       const lastNameKana = furiganaNames[0] || newStudent.furigana
-      const firstNameKana = furiganaNames[1] || ''
-      
+      const firstNameKana = furiganaNames[1] || ""
+
       // 新しい生徒を作成
       const createResult = await window.electronAPI.createStudent({
         studentId: newStudent.studentNumber,
@@ -416,70 +463,76 @@ export default function StudentsPage() {
         lastNameKana,
         firstNameKana,
       })
-      
+
       // 学級に追加
       await window.electronAPI.addStudentToClass(
         createResult.id,
-        newStudent.classId
+        newStudent.classId,
       )
-      
+
       // プロジェクトに追加
-      const addResult = await window.electronAPI.addStudentsToProject(projectId, [createResult.id])
+      const addResult = await window.electronAPI.addStudentsToProject(
+        projectId,
+        [createResult.id],
+      )
       if (!addResult.success) {
-        throw new Error(addResult.error || 'Failed to add student to project')
+        throw new Error(addResult.error || "Failed to add student to project")
       }
-      
+
       // 画面を再読み込み
-      const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      const studentsResult =
+        await window.electronAPI.getStudentsForProject(projectId)
       if (studentsResult.success && studentsResult.students) {
         // 学級ごとにグループ化
         const classGroups = new Map<string, ClassGroup>()
-        
-        studentsResult.students.forEach(student => {
+
+        studentsResult.students.forEach((student) => {
           const currentMembership = student.memberships[0]
           if (currentMembership) {
             const classId = currentMembership.class.id
             const className = currentMembership.class.name
-            
+
             if (!classGroups.has(classId)) {
               classGroups.set(classId, {
                 id: classId,
                 name: className,
-                students: []
+                students: [],
               })
             }
-            
+
             classGroups.get(classId)!.students.push(student)
           }
         })
-        
+
         setClasses(Array.from(classGroups.values()))
       }
-      
+
       // フォームをリセット
       setNewStudent({ studentNumber: "", name: "", furigana: "", classId: "" })
       setShowAddDialog(false)
     } catch (error) {
-      console.error('Failed to add individual student:', error)
+      console.error("Failed to add individual student:", error)
     }
   }
 
   // フィルタリングされた生徒リスト
-  const filteredStudents = classes.flatMap(cls => 
-    cls.students.filter(student => {
+  const filteredStudents = classes.flatMap((cls) =>
+    cls.students.filter((student) => {
       const fullName = `${student.lastName} ${student.firstName}`
       const fullKana = `${student.lastNameKana} ${student.firstNameKana}`
-      const matchesSearch = 
+      const matchesSearch =
         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
         student.studentId.includes(searchTerm)
-      
-      const matchesStatus = statusFilter === "all" || student.status === statusFilter
+
+      const matchesStatus =
+        statusFilter === "all" || student.status === statusFilter
       const currentClassId = student.memberships[0]?.class.id
-      const matchesClass = selectedClassId === "all" || currentClassId === selectedClassId
-      
+      const matchesClass =
+        selectedClassId === "all" || currentClassId === selectedClassId
+
       return matchesSearch && matchesStatus && matchesClass
-    })
+    }),
   )
 
   // 状態のラベルとスタイル
@@ -496,14 +549,14 @@ export default function StudentsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex h-full items-center justify-center">
         <LoadingSpinner />
       </div>
     )
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       <PageHeader
         title="受験生徒"
         description="このプロジェクトで採点する生徒を確認し、受験状態を設定してください。"
@@ -516,49 +569,46 @@ export default function StudentsPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex-1 overflow-hidden p-6 space-y-6">
+      <div className="flex-1 space-y-6 overflow-hidden p-6">
         {/* ヘッダー */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <div className="flex gap-2">
             {selectedStudentsForRemoval.size > 0 && (
-              <Button 
-                variant="destructive" 
-                onClick={initiateStudentRemoval}
-              >
-                <Users className="h-4 w-4 mr-2" />
+              <Button variant="destructive" onClick={initiateStudentRemoval}>
+                <Users className="mr-2 h-4 w-4" />
                 選択した生徒を削除 ({selectedStudentsForRemoval.size})
               </Button>
             )}
             <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   生徒を追加
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>受験生徒の追加</DialogTitle>
                   <DialogDescription>
                     学級単位での一括追加、または個別の生徒追加ができます。
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <Tabs defaultValue="class" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="class">学級単位で追加</TabsTrigger>
                     <TabsTrigger value="individual">個別に追加</TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="class" className="space-y-4">
                     <div>
-                      <h4 className="font-medium mb-3">追加可能な学級</h4>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <h4 className="mb-3 font-medium">追加可能な学級</h4>
+                      <p className="text-muted-foreground mb-4 text-sm">
                         チェックボックスで選択した学級の全生徒をプロジェクトに追加します。
                       </p>
-                      
+
                       {availableClasses.length === 0 ? (
-                        <p className="text-center text-muted-foreground py-8">
+                        <p className="text-muted-foreground py-8 text-center">
                           追加可能な学級がありません。
                         </p>
                       ) : (
@@ -569,11 +619,18 @@ export default function StudentsPage() {
                                 <Checkbox
                                   id={`class-${cls.id}`}
                                   checked={cls.isSelected}
-                                  onCheckedChange={() => toggleClassSelection(cls.id)}
+                                  onCheckedChange={() =>
+                                    toggleClassSelection(cls.id)
+                                  }
                                 />
-                                <Label htmlFor={`class-${cls.id}`} className="flex-1 cursor-pointer">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium">{cls.name}</span>
+                                <Label
+                                  htmlFor={`class-${cls.id}`}
+                                  className="flex-1 cursor-pointer"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">
+                                      {cls.name}
+                                    </span>
                                     <Badge variant="outline">
                                       {cls.studentCount}名
                                     </Badge>
@@ -585,41 +642,51 @@ export default function StudentsPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     <DialogFooter>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setShowAddDialog(false)}
                       >
                         キャンセル
                       </Button>
-                      <Button 
+                      <Button
                         onClick={addSelectedClasses}
-                        disabled={!availableClasses.some(c => c.isSelected)}
+                        disabled={!availableClasses.some((c) => c.isSelected)}
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
+                        <UserPlus className="mr-2 h-4 w-4" />
                         選択した学級を追加
                       </Button>
                     </DialogFooter>
                   </TabsContent>
-                  
+
                   <TabsContent value="individual" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="studentNumber">学籍番号</Label>
                         <Input
                           id="studentNumber"
                           placeholder="001"
                           value={newStudent.studentNumber}
-                          onChange={(e) => setNewStudent(prev => ({ ...prev, studentNumber: e.target.value }))}
+                          onChange={(e) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              studentNumber: e.target.value,
+                            }))
+                          }
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="className">学級</Label>
-                        <Select 
-                          value={newStudent.classId} 
-                          onValueChange={(value) => setNewStudent(prev => ({ ...prev, classId: value }))}
+                        <Select
+                          value={newStudent.classId}
+                          onValueChange={(value) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              classId: value,
+                            }))
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="学級を選択" />
@@ -633,40 +700,55 @@ export default function StudentsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="studentName">氏名</Label>
                         <Input
                           id="studentName"
                           placeholder="田中太郎"
                           value={newStudent.name}
-                          onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
+                          onChange={(e) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              name: e.target.value,
+                            }))
+                          }
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="furigana">ふりがな</Label>
                         <Input
                           id="furigana"
                           placeholder="たなかたろう"
                           value={newStudent.furigana}
-                          onChange={(e) => setNewStudent(prev => ({ ...prev, furigana: e.target.value }))}
+                          onChange={(e) =>
+                            setNewStudent((prev) => ({
+                              ...prev,
+                              furigana: e.target.value,
+                            }))
+                          }
                         />
                       </div>
                     </div>
-                    
+
                     <DialogFooter>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         onClick={() => setShowAddDialog(false)}
                       >
                         キャンセル
                       </Button>
-                      <Button 
+                      <Button
                         onClick={addIndividualStudent}
-                        disabled={!newStudent.studentNumber || !newStudent.name || !newStudent.furigana || !newStudent.classId}
+                        disabled={
+                          !newStudent.studentNumber ||
+                          !newStudent.name ||
+                          !newStudent.furigana ||
+                          !newStudent.classId
+                        }
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
+                        <UserPlus className="mr-2 h-4 w-4" />
                         生徒を追加
                       </Button>
                     </DialogFooter>
@@ -678,40 +760,54 @@ export default function StudentsPage() {
         </div>
 
         {/* 統計カード */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">総生徒数</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                総生徒数
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{totalStudents}</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">受験者</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                受験者
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{participatingStudents}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {participatingStudents}
+              </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">欠席者</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                欠席者
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{absentStudents}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {absentStudents}
+              </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">見込受験</CardTitle>
+              <CardTitle className="text-muted-foreground text-sm font-medium">
+                見込受験
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{expectedStudents}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {expectedStudents}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -722,11 +818,11 @@ export default function StudentsPage() {
             <CardTitle className="text-lg">フィルター・検索</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="search">検索</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
                   <Input
                     id="search"
                     placeholder="名前、ふりがな、学籍番号で検索"
@@ -736,10 +832,13 @@ export default function StudentsPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>学級</Label>
-                <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                <Select
+                  value={selectedClassId}
+                  onValueChange={setSelectedClassId}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -753,10 +852,15 @@ export default function StudentsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>受験状態</Label>
-                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StudentStatus | "all")}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) =>
+                    setStatusFilter(value as StudentStatus | "all")
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -789,11 +893,15 @@ export default function StudentsPage() {
                       <Checkbox
                         checked={
                           filteredStudents.length > 0 &&
-                          filteredStudents.every(s => selectedStudentsForRemoval.has(s.id))
+                          filteredStudents.every((s) =>
+                            selectedStudentsForRemoval.has(s.id),
+                          )
                         }
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedStudentsForRemoval(new Set(filteredStudents.map(s => s.id)))
+                            setSelectedStudentsForRemoval(
+                              new Set(filteredStudents.map((s) => s.id)),
+                            )
                           } else {
                             setSelectedStudentsForRemoval(new Set())
                           }
@@ -812,45 +920,76 @@ export default function StudentsPage() {
                   {filteredStudents.map((student) => {
                     const statusConfig = getStatusConfig(student.status)
                     const StatusIcon = statusConfig.icon
-                    
+
                     return (
                       <TableRow key={student.id}>
                         <TableCell>
                           <Checkbox
                             checked={selectedStudentsForRemoval.has(student.id)}
-                            onCheckedChange={() => toggleStudentSelection(student.id)}
+                            onCheckedChange={() =>
+                              toggleStudentSelection(student.id)
+                            }
                           />
                         </TableCell>
-                        <TableCell className="font-mono">{student.studentId}</TableCell>
-                        <TableCell className="font-medium">{student.lastName} {student.firstName}</TableCell>
-                        <TableCell className="text-muted-foreground">{student.lastNameKana} {student.firstNameKana}</TableCell>
-                        <TableCell>{student.memberships[0]?.class.name || '未所属'}</TableCell>
+                        <TableCell className="font-mono">
+                          {student.studentId}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {student.lastName} {student.firstName}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {student.lastNameKana} {student.firstNameKana}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant={statusConfig.variant} className="gap-1">
+                          {student.memberships[0]?.class.name || "未所属"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={statusConfig.variant}
+                            className="gap-1"
+                          >
                             <StatusIcon className="h-3 w-3" />
                             {statusConfig.label}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
+                          <div className="flex justify-end gap-1">
                             <Button
                               size="sm"
-                              variant={student.status === "participating" ? "default" : "outline"}
-                              onClick={() => updateStudentStatus(student.id, "participating")}
+                              variant={
+                                student.status === "participating"
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                updateStudentStatus(student.id, "participating")
+                              }
                             >
                               受験
                             </Button>
                             <Button
                               size="sm"
-                              variant={student.status === "expected" ? "secondary" : "outline"}
-                              onClick={() => updateStudentStatus(student.id, "expected")}
+                              variant={
+                                student.status === "expected"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                updateStudentStatus(student.id, "expected")
+                              }
                             >
                               見込
                             </Button>
                             <Button
                               size="sm"
-                              variant={student.status === "absent" ? "destructive" : "outline"}
-                              onClick={() => updateStudentStatus(student.id, "absent")}
+                              variant={
+                                student.status === "absent"
+                                  ? "destructive"
+                                  : "outline"
+                              }
+                              onClick={() =>
+                                updateStudentStatus(student.id, "absent")
+                              }
                             >
                               欠席
                             </Button>
@@ -873,14 +1012,16 @@ export default function StudentsPage() {
             setStudentsToRemove([])
           }}
           onConfirm={confirmStudentRemoval}
-          studentsToRemove={studentsToRemove.map(id => {
-            const student = classes.flatMap(c => c.students).find(s => s.id === id)
+          studentsToRemove={studentsToRemove.map((id) => {
+            const student = classes
+              .flatMap((c) => c.students)
+              .find((s) => s.id === id)
             return {
               id,
-              studentId: student?.studentId || '',
-              lastName: student?.lastName || '',
-              firstName: student?.firstName || '',
-              className: student?.memberships[0]?.class.name || '未所属'
+              studentId: student?.studentId || "",
+              lastName: student?.lastName || "",
+              firstName: student?.firstName || "",
+              className: student?.memberships[0]?.class.name || "未所属",
             }
           })}
           hasGradingData={gradingDataInfo.hasData}

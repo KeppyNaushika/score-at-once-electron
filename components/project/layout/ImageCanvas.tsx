@@ -254,7 +254,7 @@ const ImageCanvas = ({
   }
 
   return (
-    <div className="bg-background flex flex-col overflow-hidden h-full">
+    <div className="bg-background flex h-full flex-col overflow-hidden">
       {/* Main Image Area */}
       <div className="flex-1 overflow-auto p-4">
         <div

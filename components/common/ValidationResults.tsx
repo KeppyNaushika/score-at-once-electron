@@ -1,10 +1,10 @@
 "use client"
 
-import React from "react"
 import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, AlertCircle, Info } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { AlertCircle, CheckCircle, Info } from "lucide-react"
+import React from "react"
 
 interface ValidationResult {
   valid: number
@@ -27,16 +27,20 @@ export default function ValidationResults({
   validation,
   validUnit = "件",
   maxErrorsShown = 5,
-  maxWarningsShown = 3
+  maxWarningsShown = 3,
 }: ValidationResultsProps) {
-  if (validation.valid === 0 && validation.errors.length === 0 && validation.warnings.length === 0) {
+  if (
+    validation.valid === 0 &&
+    validation.errors.length === 0 &&
+    validation.warnings.length === 0
+  ) {
     return null
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
           {icon}
           {title}
         </CardTitle>
@@ -46,7 +50,8 @@ export default function ValidationResults({
           <div className="flex items-center gap-4">
             <Badge variant="default" className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
-              有効: {validation.valid}{validUnit}
+              有効: {validation.valid}
+              {validUnit}
             </Badge>
             {validation.errors.length > 0 && (
               <Badge variant="destructive" className="flex items-center gap-1">
@@ -65,10 +70,12 @@ export default function ValidationResults({
           {validation.errors.length > 0 && (
             <div>
               <Label className="text-destructive font-medium">エラー</Label>
-              <ul className="text-sm text-destructive mt-1 space-y-1">
-                {validation.errors.slice(0, maxErrorsShown).map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
+              <ul className="text-destructive mt-1 space-y-1 text-sm">
+                {validation.errors
+                  .slice(0, maxErrorsShown)
+                  .map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
                 {validation.errors.length > maxErrorsShown && (
                   <li className="text-muted-foreground">
                     ... 他{validation.errors.length - maxErrorsShown}件
@@ -80,11 +87,13 @@ export default function ValidationResults({
 
           {validation.warnings.length > 0 && (
             <div>
-              <Label className="text-amber-600 font-medium">警告</Label>
-              <ul className="text-sm text-amber-600 mt-1 space-y-1">
-                {validation.warnings.slice(0, maxWarningsShown).map((warning, index) => (
-                  <li key={index}>• {warning}</li>
-                ))}
+              <Label className="font-medium text-amber-600">警告</Label>
+              <ul className="mt-1 space-y-1 text-sm text-amber-600">
+                {validation.warnings
+                  .slice(0, maxWarningsShown)
+                  .map((warning, index) => (
+                    <li key={index}>• {warning}</li>
+                  ))}
                 {validation.warnings.length > maxWarningsShown && (
                   <li className="text-muted-foreground">
                     ... 他{validation.warnings.length - maxWarningsShown}件

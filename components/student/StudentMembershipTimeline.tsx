@@ -1,19 +1,18 @@
 "use client"
 
-import React from "react"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Edit, Calendar, Clock, BookOpen, Users } from "lucide-react"
-// import { format } from "date-fns"
-// import { ja } from "date-fns/locale"
+import { BookOpen, Calendar, Clock, Edit, Users } from "lucide-react"
 
 const formatDate = (date: Date) => {
-  return new Date(date).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).replace(/\//g, '/')
+  return new Date(date)
+    .toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(/\//g, "/")
 }
 
 interface Membership {
@@ -74,14 +73,14 @@ export default function StudentMembershipTimeline({
   onEndMembership,
   showActions = true,
 }: StudentMembershipTimelineProps) {
-  const sortedMemberships = [...memberships].sort((a, b) => 
-    new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+  const sortedMemberships = [...memberships].sort(
+    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
   )
 
   if (memberships.length === 0) {
     return (
       <Card>
-        <CardContent className="py-8 text-center text-muted-foreground">
+        <CardContent className="text-muted-foreground py-8 text-center">
           学級所属履歴がありません
         </CardContent>
       </Card>
@@ -97,7 +96,10 @@ export default function StudentMembershipTimeline({
           : `${formatDate(new Date(membership.startDate))} - 現在`
 
         return (
-          <Card key={membership.id} className={`relative ${isActive ? "ring-2 ring-blue-500" : ""}`}>
+          <Card
+            key={membership.id}
+            className={`relative ${isActive ? "ring-2 ring-blue-500" : ""}`}
+          >
             {isActive && (
               <div className="absolute -top-2 -right-2">
                 <Badge variant="default" className="bg-blue-500">
@@ -105,14 +107,14 @@ export default function StudentMembershipTimeline({
                 </Badge>
               </div>
             )}
-            
+
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5" />
                   {membership.class.name}
                   {membership.class.subject && (
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       ({membership.class.subject})
                     </span>
                   )}
@@ -132,26 +134,28 @@ export default function StudentMembershipTimeline({
                         size="sm"
                         onClick={() => onEndMembership(membership.id)}
                       >
-                        <Clock className="h-4 w-4 mr-1" />
+                        <Clock className="mr-1 h-4 w-4" />
                         所属終了
                       </Button>
                     )}
                   </div>
                 )}
               </div>
-              
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+
+              <div className="text-muted-foreground flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4" />
                 {duration}
               </div>
             </CardHeader>
 
             <CardContent className="pt-0">
-              <div className="flex flex-wrap gap-2 mb-3">
+              <div className="mb-3 flex flex-wrap gap-2">
                 <Badge className={getTypeColor(membership.membershipType)}>
-                  {membershipTypeLabels[membership.membershipType as keyof typeof membershipTypeLabels] || membership.membershipType}
+                  {membershipTypeLabels[
+                    membership.membershipType as keyof typeof membershipTypeLabels
+                  ] || membership.membershipType}
                 </Badge>
-                
+
                 {(membership.subject || membership.class.subject) && (
                   <Badge variant="outline" className="flex items-center gap-1">
                     <BookOpen className="h-3 w-3" />
@@ -161,7 +165,7 @@ export default function StudentMembershipTimeline({
               </div>
 
               {membership.notes && (
-                <div className="text-sm text-muted-foreground bg-gray-50 p-2 rounded">
+                <div className="text-muted-foreground rounded bg-gray-50 p-2 text-sm">
                   {membership.notes}
                 </div>
               )}
@@ -169,7 +173,7 @@ export default function StudentMembershipTimeline({
 
             {/* タイムライン接続線 */}
             {index < sortedMemberships.length - 1 && (
-              <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-0.5 h-4 bg-gray-300"></div>
+              <div className="absolute -bottom-4 left-1/2 h-4 w-0.5 -translate-x-1/2 transform bg-gray-300"></div>
             )}
           </Card>
         )

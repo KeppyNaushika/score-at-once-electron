@@ -1,30 +1,27 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useAuth } from "@/contexts/AuthContext"
-import {
-  Home,
-  LayoutDashboard,
-  Settings,
-  LogIn,
-  LogOut,
-  Users,
-  FileText,
-  ChevronsLeft,
-  ChevronsRight,
-  User,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import React from "react"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from "@/contexts/AuthContext"
+import { cn } from "@/lib/utils"
+import {
+  ChevronsLeft,
+  ChevronsRight,
+  Home,
+  LogIn,
+  LogOut,
+  Settings,
+  User,
+  Users,
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 const navItems = [
   { href: "/dashboard", label: "プロジェクト", icon: Home },
@@ -126,7 +123,7 @@ export default function Navigation({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex justify-center">
-                      <User className="h-5 w-5 text-muted-foreground" />
+                      <User className="text-muted-foreground h-5 w-5" />
                     </div>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={5}>
@@ -153,10 +150,12 @@ export default function Navigation({
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center gap-2 px-2 py-1">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                  <User className="text-muted-foreground h-4 w-4" />
                   <div className="flex-1 truncate text-sm">
                     <p className="font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.username}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {user.username}
+                    </p>
                   </div>
                 </div>
                 <Button

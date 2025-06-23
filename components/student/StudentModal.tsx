@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,17 +11,15 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Prisma } from "@prisma/client"
+import { useEffect, useState } from "react"
 
-type StudentWithClass = Prisma.StudentGetPayload<{ include: { memberships: { include: { class: true } } } }>
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { memberships: true } }>
+type StudentWithClass = Prisma.StudentGetPayload<{
+  include: { memberships: { include: { class: true } } }
+}>
+type ClassWithStudents = Prisma.ClassGetPayload<{
+  include: { memberships: true }
+}>
 
 interface StudentModalProps {
   isOpen: boolean
@@ -46,7 +43,9 @@ export default function StudentModal({
   const [firstName, setFirstName] = useState("")
   const [lastNameKana, setLastNameKana] = useState("")
   const [firstNameKana, setFirstNameKana] = useState("")
-  const [enrollmentYear, setEnrollmentYear] = useState<number | undefined>(undefined)
+  const [enrollmentYear, setEnrollmentYear] = useState<number | undefined>(
+    undefined,
+  )
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
@@ -181,7 +180,9 @@ export default function StudentModal({
                 placeholder="例: ヤマダ"
               />
               {errors.lastNameKana && (
-                <p className="mt-1 text-sm text-red-500">{errors.lastNameKana}</p>
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.lastNameKana}
+                </p>
               )}
             </div>
           </div>
@@ -197,7 +198,9 @@ export default function StudentModal({
                 placeholder="例: タロウ"
               />
               {errors.firstNameKana && (
-                <p className="mt-1 text-sm text-red-500">{errors.firstNameKana}</p>
+                <p className="mt-1 text-sm text-red-500">
+                  {errors.firstNameKana}
+                </p>
               )}
             </div>
           </div>
@@ -209,17 +212,21 @@ export default function StudentModal({
               <Input
                 id="enrollmentYear"
                 type="number"
-                value={enrollmentYear === undefined ? "" : enrollmentYear.toString()}
+                value={
+                  enrollmentYear === undefined ? "" : enrollmentYear.toString()
+                }
                 onChange={(e) =>
                   setEnrollmentYear(
-                    e.target.value === "" ? undefined : parseInt(e.target.value),
+                    e.target.value === ""
+                      ? undefined
+                      : parseInt(e.target.value),
                   )
                 }
                 placeholder="例: 2024 (任意)"
                 min="2000"
                 max="2050"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="text-muted-foreground mt-1 text-xs">
                 学級所属は別途「所属追加」ボタンから設定してください
               </p>
             </div>

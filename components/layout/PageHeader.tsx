@@ -24,7 +24,9 @@ export default function PageHeader({
             {projectName ? `${projectName} - ${description}` : description}
           </p>
         </div>
-        {children && <div className="flex items-center space-x-2">{children}</div>}
+        {children && (
+          <div className="flex items-center space-x-2">{children}</div>
+        )}
       </div>
     </div>
   )

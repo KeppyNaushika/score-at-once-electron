@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
 import { type Project } from "@prisma/client"
+import { useState } from "react"
 
 type CreateProjectModal = {
   isOpen: boolean

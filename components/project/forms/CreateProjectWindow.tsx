@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState } from "react"
 import { useProjects } from "@/components/hooks/useProjects"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea" // Textarea をインポート
-import { Badge } from "@/components/ui/badge"
 import { X as XIcon } from "lucide-react"
+import React, { useState } from "react"
 
 interface CreateProjectWindowProps {
   onClose: () => void
@@ -44,7 +44,7 @@ const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
         examName: examName.trim(),
         examDate: examDate,
         description: description.trim() || undefined,
-        subject: tagTexts.length > 0 ? tagTexts.join(', ') : undefined,
+        subject: tagTexts.length > 0 ? tagTexts.join(", ") : undefined,
       })
       onProjectCreated?.() // プロジェクト作成成功時のコールバック
       onClose()
