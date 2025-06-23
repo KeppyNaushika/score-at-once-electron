@@ -31,6 +31,7 @@ export default function ClassDetailPage() {
     handleStudentImportSuccess,
     handleSaveMembership,
     handleEndMembership,
+    handleBulkEndMemberships,
     handleDeleteClass,
   } = useClassManagement(classId)
 
@@ -112,11 +113,6 @@ export default function ClassDetailPage() {
                 学年: {classData.grade}
               </span>
             )}
-            {classData.subject && (
-              <span className="bg-muted rounded px-2 py-1 text-sm">
-                教科: {classData.subject}
-              </span>
-            )}
           </div>
         </div>
 
@@ -190,6 +186,7 @@ export default function ClassDetailPage() {
         memberships={classData.memberships}
         onEdit={handleEditMembership}
         onEnd={handleEndMembership}
+        onBulkEnd={handleBulkEndMemberships}
       />
 
       {/* モーダル */}

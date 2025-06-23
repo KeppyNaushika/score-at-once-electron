@@ -247,7 +247,7 @@ export default function RegionInfoPage() {
     <div className="flex h-screen flex-col">
       <PageHeader
         title="領域情報の編集"
-        description="作成した採点領域に詳細な情報を設定します。各領域の種類、配点、ラベルなどを正確に入力してください。"
+        description=""
       >
         <Button
           onClick={() => router.push(`/projects/${projectId}/04-students`)}

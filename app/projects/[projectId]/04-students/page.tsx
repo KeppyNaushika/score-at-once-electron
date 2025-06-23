@@ -58,6 +58,7 @@ interface Student {
   enrollmentYear?: number | null
   memberships: {
     id: string
+    attendanceNumber?: number | null
     class: {
       id: string
       name: string
@@ -194,6 +195,25 @@ export default function StudentsPage() {
           }
         })
 
+        // Sort students within each class by attendance number
+        classGroups.forEach((group) => {
+          group.students.sort((a, b) => {
+            const aNumber = a.memberships[0]?.attendanceNumber
+            const bNumber = b.memberships[0]?.attendanceNumber
+            
+            if (aNumber && bNumber) {
+              return aNumber - bNumber
+            }
+            if (aNumber) return -1
+            if (bNumber) return 1
+            
+            // If no attendance numbers, sort by name
+            const aName = `${a.lastName}${a.firstName}`
+            const bName = `${b.lastName}${b.firstName}`
+            return aName.localeCompare(bName)
+          })
+        })
+        
         const classes = Array.from(classGroups.values())
 
         // 利用可能な学級を設定
@@ -566,7 +586,7 @@ export default function StudentsPage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="受験生徒の確認・選択"
-        description="このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。"
+        description=""
       >
         <Button
           onClick={() => router.push(`/projects/${projectId}/05-answer-sheets`)}
@@ -914,6 +934,7 @@ export default function StudentsPage() {
                         }}
                       />
                     </TableHead>
+                    <TableHead className="w-[80px]">出席番号</TableHead>
                     <TableHead className="w-[100px]">学籍番号</TableHead>
                     <TableHead>氏名</TableHead>
                     <TableHead>ふりがな</TableHead>
@@ -936,6 +957,9 @@ export default function StudentsPage() {
                               toggleStudentSelection(student.id)
                             }
                           />
+                        </TableCell>
+                        <TableCell className="font-medium text-center">
+                          {student.memberships[0]?.attendanceNumber || "-"}
                         </TableCell>
                         <TableCell className="font-mono">
                           {student.studentId}

@@ -28,7 +28,7 @@ interface StudentClassMembershipModalProps {
   onSave: (membershipData: {
     studentId: string
     classId: string
-    subject?: string
+    attendanceNumber?: number
     notes?: string
   }) => void
   studentId?: string
@@ -44,14 +44,13 @@ interface StudentClassMembershipModalProps {
   availableClasses: Array<{
     id: string
     name: string
-    subject?: string
-    classType: string
+    classCode?: string
   }>
   membershipToEdit?: {
     id: string
     studentId: string
     classId: string
-    subject?: string
+    attendanceNumber?: number
     notes?: string
   } | null
 }
@@ -68,7 +67,7 @@ export default function StudentClassMembershipModal({
 }: StudentClassMembershipModalProps) {
   const [studentId, setStudentId] = useState(initialStudentId || "")
   const [classId, setClassId] = useState(initialClassId || "")
-  const [subject, setSubject] = useState("")
+  const [attendanceNumber, setAttendanceNumber] = useState<string>("")
   const [notes, setNotes] = useState("")
   const [studentSearchTerm, setStudentSearchTerm] = useState("")
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -77,12 +76,12 @@ export default function StudentClassMembershipModal({
     if (membershipToEdit) {
       setStudentId(membershipToEdit.studentId)
       setClassId(membershipToEdit.classId)
-      setSubject(membershipToEdit.subject || "")
+      setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
       setNotes(membershipToEdit.notes || "")
     } else {
       setStudentId(initialStudentId || "")
       setClassId(initialClassId || "")
-      setSubject("")
+      setAttendanceNumber("")
       setNotes("")
     }
     setStudentSearchTerm("")
@@ -109,19 +108,14 @@ export default function StudentClassMembershipModal({
       return
     }
 
-    const selectedClass = availableClasses.find((c) => c.id === classId)
-    const classSubject = selectedClass?.subject
-
     onSave({
       studentId,
       classId,
-      subject: classSubject || subject || undefined,
+      attendanceNumber: attendanceNumber ? parseInt(attendanceNumber) : undefined,
       notes: notes || undefined,
     })
   }
 
-  const selectedClass = availableClasses.find((c) => c.id === classId)
-  const isSubjectClass = selectedClass?.classType === "SUBJECT"
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -205,7 +199,7 @@ export default function StudentClassMembershipModal({
                   {availableClasses.map((classItem) => (
                     <SelectItem key={classItem.id} value={classItem.id}>
                       {classItem.name}
-                      {classItem.subject && ` (${classItem.subject})`}
+                      {classItem.classCode && ` (${classItem.classCode})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -216,22 +210,22 @@ export default function StudentClassMembershipModal({
             </div>
           </div>
 
-          {/* 教科（教科別クラスでない場合のみ表示） */}
-          {!isSubjectClass && (
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="subject" className="text-right">
-                教科
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="教科別クラスの場合は教科名を入力"
-                />
-              </div>
+          {/* 出席番号 */}
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="attendanceNumber" className="text-right">
+              出席番号
+            </Label>
+            <div className="col-span-3">
+              <Input
+                id="attendanceNumber"
+                type="number"
+                value={attendanceNumber}
+                onChange={(e) => setAttendanceNumber(e.target.value)}
+                placeholder="この学級での出席番号"
+                min="1"
+              />
             </div>
-          )}
+          </div>
 
           {/* 備考 */}
           <div className="grid grid-cols-4 items-start gap-4">

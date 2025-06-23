@@ -33,6 +33,8 @@ interface StudentData {
   lastNameKana: string
   firstNameKana: string
   studentId: string
+  attendanceNumber?: number | null
+  status?: 'participating' | 'expected' | 'absent'
 }
 
 export default function AnswerSheetsPage() {
@@ -62,18 +64,40 @@ export default function AnswerSheetsPage() {
         })
       }
 
-      // 生徒情報を取得
-      const studentsResult = await window.electronAPI.fetchStudents()
-      setStudents(
-        studentsResult.map((student: any) => ({
-          id: student.id,
-          lastName: student.lastName,
-          firstName: student.firstName,
-          lastNameKana: student.lastNameKana,
-          firstNameKana: student.firstNameKana,
-          studentId: student.studentId,
-        })),
-      )
+      // プロジェクトの受験生徒情報を取得
+      const projectStudentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      if (projectStudentsResult.success && projectStudentsResult.students) {
+        // 出席番号順にソート
+        const sortedStudents = projectStudentsResult.students
+          .filter((s: any) => s.status === 'participating') // 受験する生徒のみ
+          .sort((a: any, b: any) => {
+            const aNumber = a.memberships?.[0]?.attendanceNumber
+            const bNumber = b.memberships?.[0]?.attendanceNumber
+            
+            if (aNumber && bNumber) {
+              return aNumber - bNumber
+            }
+            if (aNumber) return -1
+            if (bNumber) return 1
+            
+            // If no attendance numbers, sort by name
+            const aName = `${a.lastName}${a.firstName}`
+            const bName = `${b.lastName}${b.firstName}`
+            return aName.localeCompare(bName)
+          })
+          .map((student: any) => ({
+            id: student.id,
+            lastName: student.lastName,
+            firstName: student.firstName,
+            lastNameKana: student.lastNameKana,
+            firstNameKana: student.firstNameKana,
+            studentId: student.studentId,
+            attendanceNumber: student.memberships?.[0]?.attendanceNumber || null,
+            status: student.status
+          }))
+        
+        setStudents(sortedStudents)
+      }
 
       // 答案情報を取得
       const answerSheetsResult =
@@ -162,7 +186,7 @@ export default function AnswerSheetsPage() {
       <div className="flex h-full flex-col">
         <PageHeader
           title="生徒解答のアップロード"
-          description="スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを行います。"
+          description=""
         >
           <Button
             onClick={() =>

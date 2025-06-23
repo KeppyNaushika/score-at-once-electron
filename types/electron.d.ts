@@ -307,12 +307,11 @@ export interface MyAPI {
     studentId: string,
     classId: string,
     startDate?: Date,
-    subject?: string,
+    attendanceNumber?: number,
     notes?: string,
   ) => Promise<StudentClassMembershipWithDetails>
   endStudentMembership: (membershipId: string, endDate?: Date) => Promise<StudentClassMembershipWithDetails>
   getMembershipsByDateRange: (startDate: Date, endDate?: Date) => Promise<StudentClassMembershipWithDetails[]>
-  getMembershipsBySubject: (subject: string) => Promise<StudentClassMembershipWithDetails[]>
 
   // MasterImage related
   uploadMasterImages: (

@@ -21,8 +21,7 @@ interface Membership {
   classId: string
   startDate: Date
   endDate?: Date | null
-  membershipType: string
-  subject?: string | null
+  attendanceNumber?: number | null
   notes?: string | null
   student: {
     id: string
@@ -36,7 +35,6 @@ interface Membership {
     id: string
     name: string
     classCode?: string | null
-    subject?: string | null
     isVisible?: boolean
   }
 }
@@ -48,24 +46,6 @@ interface StudentMembershipTimelineProps {
   showActions?: boolean
 }
 
-const membershipTypeLabels = {
-  REGULAR: "通常所属",
-  TRANSFER: "転入",
-  TEMPORARY: "一時的所属",
-}
-
-const getTypeColor = (type: string) => {
-  switch (type) {
-    case "REGULAR":
-      return "bg-blue-100 text-blue-800"
-    case "TRANSFER":
-      return "bg-green-100 text-green-800"
-    case "TEMPORARY":
-      return "bg-yellow-100 text-yellow-800"
-    default:
-      return "bg-gray-100 text-gray-800"
-  }
-}
 
 export default function StudentMembershipTimeline({
   memberships,
@@ -113,11 +93,6 @@ export default function StudentMembershipTimeline({
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5" />
                   {membership.class.name}
-                  {membership.class.subject && (
-                    <span className="text-muted-foreground text-sm">
-                      ({membership.class.subject})
-                    </span>
-                  )}
                 </CardTitle>
                 {showActions && (
                   <div className="flex gap-2">
@@ -150,16 +125,9 @@ export default function StudentMembershipTimeline({
 
             <CardContent className="pt-0">
               <div className="mb-3 flex flex-wrap gap-2">
-                <Badge className={getTypeColor(membership.membershipType)}>
-                  {membershipTypeLabels[
-                    membership.membershipType as keyof typeof membershipTypeLabels
-                  ] || membership.membershipType}
-                </Badge>
-
-                {(membership.subject || membership.class.subject) && (
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <BookOpen className="h-3 w-3" />
-                    {membership.subject || membership.class.subject}
+                {membership.attendanceNumber && (
+                  <Badge variant="secondary">
+                    出席番号: {membership.attendanceNumber}
                   </Badge>
                 )}
               </div>

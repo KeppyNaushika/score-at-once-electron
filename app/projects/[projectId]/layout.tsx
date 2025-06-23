@@ -21,6 +21,15 @@ import { useParams, usePathname } from "next/navigation"
 import React, { useState, useEffect } from "react"
 import { toast } from "sonner"
 import Head from "next/head"
+import {
+  UploadHelpContent,
+  TemplateHelpContent,
+  RegionInfoHelpContent,
+  StudentsHelpContent,
+  AnswerSheetsHelpContent,
+  ScoringHelpContent,
+  ExportHelpContent,
+} from "@/components/help/PageHelpContent"
 
 // ワークフローステップの定義
 const workflowSteps = [
@@ -33,7 +42,20 @@ const workflowSteps = [
   { id: "07-export", label: "7. 結果", path: "07-export" },
 ]
 
-// ページごとのヒント情報
+// ページごとのヘルプコンポーネント
+const pageHelpComponents: {
+  [key: string]: React.ComponentType
+} = {
+  "01-upload": UploadHelpContent,
+  "02-template": TemplateHelpContent,
+  "03-region-info": RegionInfoHelpContent,
+  "04-students": StudentsHelpContent,
+  "05-answer-sheets": AnswerSheetsHelpContent,
+  "06-score-at-once": ScoringHelpContent,
+  "07-export": ExportHelpContent,
+}
+
+// 旧ページヒント情報（削除予定）
 const pageHints: {
   [key: string]: {
     title: string
@@ -209,6 +231,9 @@ export default function ProjectWorkflowLayout({
   // 現在のページを特定
   const currentStep = workflowSteps.find((step) => pathname.includes(step.path))
   const currentHint = currentStep ? pageHints[currentStep.id] : null
+  const CurrentHelpComponent = currentStep
+    ? pageHelpComponents[currentStep.id]
+    : null
 
   // 初回表示時のアニメーション
   useEffect(() => {
@@ -253,7 +278,7 @@ export default function ProjectWorkflowLayout({
             </BreadcrumbList>
           </Breadcrumb>
           {/* Help Icon */}
-          {currentHint && (
+          {CurrentHelpComponent && (
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -271,77 +296,12 @@ export default function ProjectWorkflowLayout({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="max-h-[80vh] w-96 overflow-y-auto"
-                align="end"
+                className="m-4 max-h-[90vh] w-[90vw] max-w-4xl overflow-y-auto"
+                align="center"
+                side="bottom"
               >
-                <div className="space-y-4">
-                  {/* Header */}
-                  <div>
-                    <h4 className="mb-1 text-lg font-semibold">
-                      {currentHint.title}
-                    </h4>
-                    <p className="text-muted-foreground text-sm">
-                      {currentHint.description}
-                    </p>
-                  </div>
-
-                  {/* Main Content */}
-                  <div>
-                    <h5 className="mb-2 text-sm font-medium text-blue-600">
-                      基本操作
-                    </h5>
-                    <ul className="space-y-1 text-sm">
-                      {currentHint.content.map((hint, index) => (
-                        <li key={index} className="flex items-start">
-                          <span className="mt-0.5 mr-2 text-blue-500">•</span>
-                          <span>{hint}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Tips Section */}
-                  {currentHint.tips && (
-                    <div>
-                      <h5 className="mb-2 text-sm font-medium text-green-600">
-                        💡 ヒント・推奨事項
-                      </h5>
-                      <ul className="space-y-1 text-sm">
-                        {currentHint.tips.map((tip, index) => (
-                          <li key={index} className="flex items-start">
-                            <span className="mt-0.5 mr-2 text-green-500">
-                              ▶
-                            </span>
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Shortcuts Section */}
-                  {currentHint.shortcuts && (
-                    <div>
-                      <h5 className="mb-2 text-sm font-medium text-purple-600">
-                        ⌨️ キーボードショートカット
-                      </h5>
-                      <div className="space-y-1">
-                        {currentHint.shortcuts.map((shortcut, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between"
-                          >
-                            <kbd className="rounded border bg-gray-100 px-2 py-1 font-mono text-xs">
-                              {shortcut.key}
-                            </kbd>
-                            <span className="text-muted-foreground ml-3 flex-1 text-sm">
-                              {shortcut.description}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="p-2">
+                  <CurrentHelpComponent />
                 </div>
               </PopoverContent>
             </Popover>

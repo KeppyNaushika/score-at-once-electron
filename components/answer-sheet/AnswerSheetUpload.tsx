@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
   Select,
@@ -49,6 +51,8 @@ interface AnswerSheetUploadProps {
     lastNameKana: string
     firstNameKana: string
     studentId: string
+    attendanceNumber?: number | null
+    status?: 'participating' | 'expected' | 'absent'
   }>
   onUploadComplete?: () => void
 }
@@ -93,6 +97,10 @@ export default function AnswerSheetUpload({
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedTab, setSelectedTab] = useState("upload")
   const [maxPages, setMaxPages] = useState(1)
+  const [pageRange, setPageRange] = useState<'all' | 'specific'>('all')
+  const [specificPages, setSpecificPages] = useState<string>('1')
+  const [fileOrder, setFileOrder] = useState<'page-then-student' | 'student-then-page'>('student-then-page')
+  const [assignmentMode, setAssignmentMode] = useState<'auto' | 'manual'>('auto')
   const router = useRouter()
   const { convertPdfToImages } = usePdfConverter()
 
@@ -195,28 +203,70 @@ export default function AnswerSheetUpload({
           fileIndex++
         }
 
-        // ファイル名から生徒を自動推測
-        const filesWithStudentGuess = allConvertedFiles.map((file) => {
-          const fileName = file.name.toLowerCase()
-          const matchedStudent = studentsWithAnswers.find((student) => {
-            const studentName =
-              `${student.lastName}${student.firstName}`.toLowerCase()
-            const studentNameKana =
-              `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
-            const studentId = student.studentId.toLowerCase()
-            return (
-              fileName.includes(studentName) ||
-              fileName.includes(studentNameKana) ||
-              fileName.includes(studentId)
-            )
+        // 自動割り当てモードの場合、ファイルを生徒に割り当て
+        let filesWithStudentGuess = allConvertedFiles
+        
+        if (assignmentMode === 'auto') {
+          // 出席番号順にソートされた生徒リスト
+          const sortedStudents = [...students]
+            .filter(s => s.status === 'participating') // 受験する生徒のみ
+            .sort((a, b) => {
+              if (a.attendanceNumber && b.attendanceNumber) {
+                return a.attendanceNumber - b.attendanceNumber
+              }
+              if (a.attendanceNumber) return -1
+              if (b.attendanceNumber) return 1
+              return 0
+            })
+          
+          // ファイル順序に応じて割り当て
+          filesWithStudentGuess = allConvertedFiles.map((file, index) => {
+            if (fileOrder === 'student-then-page') {
+              // 生徒ごと、ページ連番（デフォルト）
+              const studentIndex = Math.floor(index / maxPages)
+              const pageNumber = (index % maxPages) + 1
+              
+              if (studentIndex < sortedStudents.length) {
+                file.studentId = sortedStudents[studentIndex].id
+                file.pageNumber = pageNumber
+              }
+            } else {
+              // 各ページごと生徒連番
+              const pageNumber = Math.floor(index / sortedStudents.length) + 1
+              const studentIndex = index % sortedStudents.length
+              
+              if (pageNumber <= maxPages) {
+                file.studentId = sortedStudents[studentIndex].id
+                file.pageNumber = pageNumber
+              }
+            }
+            
+            return file
           })
+        } else {
+          // 手動モードの場合、ファイル名から生徒を推測
+          filesWithStudentGuess = allConvertedFiles.map((file) => {
+            const fileName = file.name.toLowerCase()
+            const matchedStudent = studentsWithAnswers.find((student) => {
+              const studentName =
+                `${student.lastName}${student.firstName}`.toLowerCase()
+              const studentNameKana =
+                `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
+              const studentId = student.studentId.toLowerCase()
+              return (
+                fileName.includes(studentName) ||
+                fileName.includes(studentNameKana) ||
+                fileName.includes(studentId)
+              )
+            })
 
-          if (matchedStudent) {
-            file.studentId = matchedStudent.id
-          }
+            if (matchedStudent) {
+              file.studentId = matchedStudent.id
+            }
 
-          return file
-        })
+            return file
+          })
+        }
 
         setFiles((prev) => [...prev, ...filesWithStudentGuess])
 
@@ -501,6 +551,109 @@ export default function AnswerSheetUpload({
                   </>
                 )}
               </div>
+            </CardContent>
+          </Card>
+          
+          {/* バッチ読み込み設定 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">バッチ読み込み設定</CardTitle>
+              <CardDescription>
+                複数ファイルの一括読み込み時の動作を設定します
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {/* 割り当てモード */}
+                <div className="space-y-2">
+                  <Label>生徒への割り当て方法</Label>
+                  <Select
+                    value={assignmentMode}
+                    onValueChange={(value: 'auto' | 'manual') => setAssignmentMode(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">自動割り当て（出席番号順）</SelectItem>
+                      <SelectItem value="manual">手動割り当て（ファイル名推測）</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* ファイル順序（自動割り当て時のみ） */}
+                {assignmentMode === 'auto' && (
+                  <div className="space-y-2">
+                    <Label>ファイルの並び順</Label>
+                    <Select
+                      value={fileOrder}
+                      onValueChange={(value: 'page-then-student' | 'student-then-page') => setFileOrder(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="student-then-page">
+                          生徒ごと→ページ順（推奨）
+                        </SelectItem>
+                        <SelectItem value="page-then-student">
+                          ページごと→生徒順
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {fileOrder === 'student-then-page' 
+                        ? '例: 田中p1, 田中p2, 山田p1, 山田p2...'
+                        : '例: 田中p1, 山田p1, 田中p2, 山田p2...'}
+                    </p>
+                  </div>
+                )}
+                
+                {/* ページ範囲 */}
+                <div className="space-y-2">
+                  <Label>読み込むページ</Label>
+                  <Select
+                    value={pageRange}
+                    onValueChange={(value: 'all' | 'specific') => setPageRange(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">すべてのページ</SelectItem>
+                      <SelectItem value="specific">特定のページのみ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* 特定ページ指定 */}
+                {pageRange === 'specific' && (
+                  <div className="space-y-2">
+                    <Label>ページ番号</Label>
+                    <Input
+                      type="text"
+                      value={specificPages}
+                      onChange={(e) => setSpecificPages(e.target.value)}
+                      placeholder="例: 1,3-5,7"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      カンマ区切りで指定。範囲指定も可能です
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {assignmentMode === 'auto' && (
+                <div className="rounded-lg bg-blue-50 p-3">
+                  <p className="text-sm">
+                    <strong className="text-blue-900">自動割り当てモード:</strong>{' '}
+                    <span className="text-blue-700">
+                      ファイルは出席番号順に自動的に生徒へ割り当てられます。
+                      受験する生徒のみが対象となり、欠席者はスキップされます。
+                    </span>
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

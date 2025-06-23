@@ -5,6 +5,9 @@ import { ColumnDef } from "@tanstack/react-table"
 
 interface ClassStudentImportRow {
   studentId: string
+  attendanceNumber: string
+  startDate: string
+  endDate: string
 }
 
 interface ClassStudentImportTableProps {
@@ -23,7 +26,34 @@ export default function ClassStudentImportTable({
       accessorKey: "studentId",
       size: 200,
       meta: {
-        placeholder: "例: 001",
+        placeholder: "例: 2024001",
+      },
+    },
+    {
+      id: "attendanceNumber",
+      header: "出席番号",
+      accessorKey: "attendanceNumber",
+      size: 150,
+      meta: {
+        placeholder: "例: 1",
+      },
+    },
+    {
+      id: "startDate",
+      header: "開始日",
+      accessorKey: "startDate",
+      size: 150,
+      meta: {
+        placeholder: "例: 2024/04/01",
+      },
+    },
+    {
+      id: "endDate",
+      header: "終了日",
+      accessorKey: "endDate",
+      size: 150,
+      meta: {
+        placeholder: "例: 2025/03/31",
       },
     },
   ]

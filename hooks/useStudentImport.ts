@@ -6,7 +6,6 @@ interface ClassWithMemberships {
   classCode?: string | null
   grade?: number | null
   description?: string | null
-  subject?: string | null
   isVisible?: boolean
 }
 
@@ -22,14 +21,12 @@ interface StudentWithMemberships {
     id: string
     startDate: Date
     endDate?: Date | null
-    membershipType: string
-    subject?: string | null
+    attendanceNumber?: number | null
     notes?: string | null
     class: {
       id: string
       name: string
       classCode?: string | null
-      subject?: string | null
     }
   }>
 }
@@ -289,9 +286,8 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
             student.id,
             classRecord.id,
             new Date(),
-            "REGULAR",
-            classRecord.subject || undefined,
-            undefined
+            undefined, // attendanceNumber
+            undefined  // notes
           )
         }
       }

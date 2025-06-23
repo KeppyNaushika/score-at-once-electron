@@ -304,7 +304,7 @@ export default function StudentManagementTable() {
           membershipData.studentId,
           membershipData.classId,
           new Date(),
-          membershipData.subject,
+          membershipData.attendanceNumber,
           membershipData.notes,
         )
       }
@@ -553,7 +553,7 @@ export default function StudentManagementTable() {
                           <TableRow>
                             <TableHead>学級名・コード</TableHead>
                             <TableHead>学年</TableHead>
-                            <TableHead>教科</TableHead>
+                            <TableHead>説明</TableHead>
                             <TableHead>現在の所属数</TableHead>
                             <TableHead className="text-right">操作</TableHead>
                           </TableRow>
@@ -579,20 +579,13 @@ export default function StudentManagementTable() {
                                     </Badge>
                                   )}
                                 </div>
-                                {classItem.subject && (
-                                  <span className="text-muted-foreground text-sm">
-                                    ({classItem.subject})
-                                  </span>
-                                )}
                               </TableCell>
                               <TableCell>
                                 {classItem.grade || "未設定"}
                               </TableCell>
                               <TableCell>
-                                {classItem.subject ? (
-                                  <Badge variant="secondary">
-                                    {classItem.subject}
-                                  </Badge>
+                                {classItem.description ? (
+                                  <span className="text-sm">{classItem.description}</span>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">
                                     なし
