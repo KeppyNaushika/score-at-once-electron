@@ -22,11 +22,10 @@ import {
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   BookOpen,
   Edit,
@@ -345,8 +344,79 @@ export default function StudentManagementTable() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="space-y-6">
+    <div className="space-y-6">
+        {/* Header with Help */}
+        <div className="mb-6 flex items-center gap-2">
+          <h1 className="text-3xl font-bold">生徒管理</h1>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+              >
+                <Info className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[450px]"
+              align="start"
+              side="bottom"
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <h3 className="font-semibold text-base">生徒管理について</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-7">
+                    生徒の基本情報と学級所属状況を一元管理できます。
+                  </p>
+                </div>
+
+                <div className="space-y-3 pl-7">
+                  <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+                    <strong>複数学級対応システム</strong><br />
+                    生徒は同時に複数のクラスに所属できます。
+                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                      <li>ホームルーム：1年A組</li>
+                      <li>英語：E1クラス（習熟度別）</li>
+                      <li>数学：M2クラス（習熟度別）</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="font-medium text-sm">主な機能：</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <PlusCircle className="h-4 w-4 text-green-600" />
+                        <span>個別追加</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-blue-600" />
+                        <span>一括インポート</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Edit className="h-4 w-4 text-orange-600" />
+                        <span>情報編集</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <span>削除</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-3 text-sm bg-orange-50 border-orange-200 text-orange-800">
+                    <strong>ヒント:</strong> 行をクリックすると生徒の詳細ページへ移動します。
+                    所属履歴の確認や編集が可能です。
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {/* Search and Filter Controls */}
         <Card>
           <CardHeader>
@@ -404,28 +474,6 @@ export default function StudentManagementTable() {
                       <CardTitle className="flex items-center gap-2">
                         <Users className="h-5 w-5" />
                         生徒一覧 ({filteredStudents.length}名)
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="text-muted-foreground h-4 w-4" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
-                            <div className="space-y-2">
-                              <p className="font-semibold">
-                                複数学級対応システム
-                              </p>
-                              <p>生徒は同時に複数のクラスに所属できます。</p>
-                              <p className="text-sm">例：</p>
-                              <ul className="list-inside list-disc text-sm">
-                                <li>ホームルーム：1年A組</li>
-                                <li>英語：E1クラス（習熟度別）</li>
-                                <li>数学：M2クラス（習熟度別）</li>
-                              </ul>
-                              <p className="mt-2 text-sm">
-                                生徒の詳細画面で所属状況を確認できます。
-                              </p>
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
                       </CardTitle>
                       <div className="flex gap-2">
                         <Button
@@ -585,7 +633,9 @@ export default function StudentManagementTable() {
                               </TableCell>
                               <TableCell>
                                 {classItem.description ? (
-                                  <span className="text-sm">{classItem.description}</span>
+                                  <span className="text-sm">
+                                    {classItem.description}
+                                  </span>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">
                                     なし
@@ -710,6 +760,5 @@ export default function StudentManagementTable() {
           />
         )}
       </div>
-    </TooltipProvider>
   )
 }

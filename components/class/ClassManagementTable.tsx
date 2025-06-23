@@ -13,7 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { BookOpen, Edit, PlusCircle, Search, Trash2 } from "lucide-react"
+import { BookOpen, Edit, Info, PlusCircle, Search, Trash2, Users, GraduationCap, Calendar } from "lucide-react"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -136,6 +141,79 @@ export default function ClassManagementTable() {
 
   return (
     <div className="space-y-6">
+      {/* Header with Help */}
+      <div className="mb-6 flex items-center gap-2">
+        <h1 className="text-3xl font-bold">学級管理</h1>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[450px]"
+            align="start"
+            side="bottom"
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="h-5 w-5 text-purple-600" />
+                  <h3 className="font-semibold text-base">学級管理について</h3>
+                </div>
+                <p className="text-sm text-muted-foreground pl-7">
+                  学級やクラスの情報を管理し、生徒を組織化します。
+                </p>
+              </div>
+
+              <div className="space-y-3 pl-7">
+                <div className="border rounded-lg p-3 text-sm bg-purple-50 border-purple-200 text-purple-800">
+                  <strong>柔軟な学級設計</strong><br />
+                  様々なタイプの学級を作成できます：
+                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li>ホームルーム（例：1年A組）</li>
+                    <li>習熟度別クラス（例：英語E1）</li>
+                    <li>特別活動クラブ（例：吹奏楽部）</li>
+                    <li>選択授業（例：物理選択）</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="font-medium text-sm">管理項目：</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-blue-600" />
+                      <span>所属生徒数</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-green-600" />
+                      <span>所属期間</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-orange-600" />
+                      <span>学級コード</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Edit className="h-4 w-4 text-purple-600" />
+                      <span>説明・備考</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+                  <strong>便利な機能:</strong> 生徒は複数の学級に所属可能で、
+                  所属期間も管理できるため、年度途中のクラス変更にも対応します。
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
       {/* Search Controls */}
       <Card>
         <CardHeader>

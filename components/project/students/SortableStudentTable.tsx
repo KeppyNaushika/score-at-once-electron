@@ -104,9 +104,9 @@ function SortableTableRow({
   const StatusIcon = statusConfig.icon
 
   return (
-    <TableRow 
-      ref={setNodeRef} 
-      style={style} 
+    <TableRow
+      ref={setNodeRef}
+      style={style}
       className={`${isSortableDragging ? "bg-muted/50" : ""} ${isDragging ? "shadow-lg" : ""} cursor-pointer`}
       onClick={(event) => {
         if (!event.defaultPrevented) {
@@ -223,18 +223,18 @@ export default function SortableStudentTable({
     // まず学級順→出席番号順でソート
     const classMap = new Map<string, ClassGroup>()
     classes.forEach(cls => classMap.set(cls.id, cls))
-    
+
     const defaultSorted = filteredStudents.slice().sort((a, b) => {
       const aClass = a.memberships[0]?.class.name || ""
       const bClass = b.memberships[0]?.class.name || ""
       const aAttendance = a.memberships[0]?.attendanceNumber || 99999
       const bAttendance = b.memberships[0]?.attendanceNumber || 99999
-      
+
       // 学級名でソート
       if (aClass !== bClass) {
         return aClass.localeCompare(bClass)
       }
-      
+
       // 同じ学級内では出席番号でソート
       return aAttendance - bAttendance
     })
@@ -242,21 +242,21 @@ export default function SortableStudentTable({
     // カスタムオーダーがある場合はそれを優先
     const withCustomOrder = defaultSorted.slice().sort((a, b) => {
       // カスタムオーダーが両方ある場合
-      if (a.customOrder !== null && a.customOrder !== undefined && 
+      if (a.customOrder !== null && a.customOrder !== undefined &&
           b.customOrder !== null && b.customOrder !== undefined) {
         return a.customOrder - b.customOrder
       }
-      
+
       // aにのみカスタムオーダーがある場合
       if (a.customOrder !== null && a.customOrder !== undefined) {
         return -1
       }
-      
+
       // bにのみカスタムオーダーがある場合
       if (b.customOrder !== null && b.customOrder !== undefined) {
         return 1
       }
-      
+
       // 両方カスタムオーダーがない場合はデフォルトの順序を維持
       return 0
     })
@@ -286,7 +286,7 @@ export default function SortableStudentTable({
     }
 
     // 選択されている生徒を取得
-    const selectedStudentsList = sortedStudents.filter(student => 
+    const selectedStudentsList = sortedStudents.filter(student =>
       selectedStudents.has(student.id)
     )
 
@@ -294,7 +294,7 @@ export default function SortableStudentTable({
     if (selectedStudents.has(active.id as string) && selectedStudentsList.length > 1) {
       // 複数選択の場合の処理
       const newSortedStudents = [...sortedStudents]
-      
+
       // 選択されている生徒を元の位置から削除
       const selectedStudentsData = selectedStudentsList.map(student => {
         const index = newSortedStudents.findIndex(s => s.id === student.id)
@@ -332,14 +332,14 @@ export default function SortableStudentTable({
   // チェックボックスのトグル（Shiftキー対応）
   const handleStudentToggle = useCallback((studentId: string, event?: React.MouseEvent) => {
     const currentIndex = sortedStudents.findIndex(s => s.id === studentId)
-    
+
     if (event?.shiftKey && lastSelectedIndex !== null && currentIndex !== -1) {
       // Shift+クリックの場合は範囲選択
       const start = Math.min(lastSelectedIndex, currentIndex)
       const end = Math.max(lastSelectedIndex, currentIndex)
-      
+
       const isCurrentSelected = selectedStudents.has(studentId)
-      
+
       for (let i = start; i <= end; i++) {
         const student = sortedStudents[i]
         if (student) {
@@ -370,13 +370,13 @@ export default function SortableStudentTable({
 
     // データベースを更新してからリロード
     await onStudentOrderUpdate(projectId, studentOrders)
-    
+
     // その後、customOrderをnullにするため、負の値で再更新
     const resetOrders = sortedStudents.map(student => ({
       studentId: student.id,
       customOrder: -1, // 負の値でリセットの合図
     }))
-    
+
     await onStudentOrderUpdate(projectId, resetOrders)
   }, [sortedStudents, onStudentOrderUpdate, projectId])
 
@@ -451,7 +451,7 @@ export default function SortableStudentTable({
                 </SortableContext>
               </TableBody>
             </Table>
-            
+
             <DragOverlay>
               {activeStudent ? (
                 <div className="bg-background rounded-md border p-2 shadow-lg">

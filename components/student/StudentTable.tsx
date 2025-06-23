@@ -26,12 +26,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Edit, Info, PlusCircle, Search, Trash2, Upload, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import SpreadsheetImportModal from "./SpreadsheetImportModal"
-import StudentImportModal from "./StudentImportModal"
+import SpreadsheetImportModal from "@/components/unused/SpreadsheetImportModal"
+import StudentImportModal from "@/components/unused/StudentImportModal"
 import StudentModal from "./StudentModal"
 
 interface StudentWithMemberships {
@@ -114,18 +119,6 @@ export default function StudentTable() {
     fetchData()
   }, [])
 
-  // Get current attendance number for a student in a specific class
-  const getAttendanceNumber = (student: StudentWithMemberships, classId?: string): number | null => {
-    if (!classId || classId === "all") {
-      // Get attendance number from the first current membership
-      const currentMembership = student.memberships.find(m => !m.endDate)
-      return currentMembership?.attendanceNumber || null
-    }
-    const membership = student.memberships.find(
-      m => m.class.id === classId && !m.endDate
-    )
-    return membership?.attendanceNumber || null
-  }
 
   // Filter and sort students
   const filteredStudents = students
@@ -158,17 +151,7 @@ export default function StudentTable() {
       return matchesSearch
     })
     .sort((a, b) => {
-      // Sort by attendance number first, then by name
-      const aNumber = getAttendanceNumber(a, filterClassId)
-      const bNumber = getAttendanceNumber(b, filterClassId)
-      
-      if (aNumber !== null && bNumber !== null) {
-        return aNumber - bNumber
-      }
-      if (aNumber !== null) return -1
-      if (bNumber !== null) return 1
-      
-      // If no attendance numbers, sort by name
+      // Sort by name
       return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
     })
 
@@ -233,14 +216,84 @@ export default function StudentTable() {
     return student.memberships
       .filter(m => !m.endDate)
       .map(m => ({
-        name: m.class.name,
-        attendanceNumber: m.attendanceNumber
+        name: m.class.name
       }))
   }
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
+        {/* Header with Help */}
+        <div className="mb-6 flex items-center gap-2">
+          <h1 className="text-3xl font-bold">生徒管理</h1>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+            >
+              <Info className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[450px]"
+            align="start"
+            side="bottom"
+          >
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold text-base">生徒管理について</h3>
+                </div>
+                <p className="text-sm text-muted-foreground pl-7">
+                  生徒の基本情報と学級所属状況を一元管理できます。
+                </p>
+              </div>
+
+              <div className="space-y-3 pl-7">
+                <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+                  <strong>複数学級対応システム</strong><br />
+                  生徒は同時に複数のクラスに所属できます。
+                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                    <li>ホームルーム：1年A組</li>
+                    <li>英語：E1クラス（習熟度別）</li>
+                    <li>数学：M2クラス（習熟度別）</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="font-medium text-sm">主な機能：</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <PlusCircle className="h-4 w-4 text-green-600" />
+                      <span>個別追加</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-4 w-4 text-blue-600" />
+                      <span>一括インポート</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Edit className="h-4 w-4 text-orange-600" />
+                      <span>情報編集</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                      <span>削除</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-3 text-sm bg-orange-50 border-orange-200 text-orange-800">
+                  <strong>ヒント:</strong> 行をクリックすると生徒の詳細ページへ移動します。
+                  所属履歴の確認や編集が可能です。
+                </div>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
         {/* Search and Filter Controls */}
         <Card>
           <CardHeader>
@@ -315,8 +368,8 @@ export default function StudentTable() {
                     <Info className="text-muted-foreground h-4 w-4" />
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm">
-                    <p>生徒は出席番号順に表示されます。</p>
-                    <p className="mt-1">特定の学級でフィルタすると、その学級での出席番号順になります。</p>
+                    <p>生徒は名前順に表示されます。</p>
+                    <p className="mt-1">特定の学級でフィルタすると、その学級での生徒のみが表示されます。</p>
                   </TooltipContent>
                 </Tooltip>
               </CardTitle>
@@ -344,7 +397,6 @@ export default function StudentTable() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-20">出席番号</TableHead>
                     <TableHead>学籍番号</TableHead>
                     <TableHead>氏名</TableHead>
                     <TableHead>入学年度</TableHead>
@@ -354,7 +406,6 @@ export default function StudentTable() {
                 </TableHeader>
                 <TableBody>
                   {filteredStudents.map((student) => {
-                    const attendanceNumber = getAttendanceNumber(student, filterClassId)
                     const currentClasses = getCurrentClasses(student)
                     
                     return (
@@ -363,9 +414,6 @@ export default function StudentTable() {
                         onClick={() => router.push(`/students/${student.id}`)}
                         className="hover:bg-muted/50 cursor-pointer"
                       >
-                        <TableCell className="font-medium">
-                          {attendanceNumber || "-"}
-                        </TableCell>
                         <TableCell>{student.studentId}</TableCell>
                         <TableCell>
                           {student.lastName} {student.firstName}
@@ -378,7 +426,6 @@ export default function StudentTable() {
                             {currentClasses.map((cls, idx) => (
                               <Badge key={idx} variant="secondary" className="text-xs">
                                 {cls.name}
-                                {cls.attendanceNumber && ` (${cls.attendanceNumber}番)`}
                               </Badge>
                             ))}
                             {currentClasses.length === 0 && (
@@ -417,7 +464,7 @@ export default function StudentTable() {
                   })}
                   {filteredStudents.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">
+                      <TableCell colSpan={5} className="text-center">
                         該当する生徒が見つかりません。
                       </TableCell>
                     </TableRow>

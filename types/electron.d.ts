@@ -274,6 +274,11 @@ export interface MyAPI {
     classes?: (ClassWithStudents & { studentCount: number })[]
     error?: string
   }>
+  getStudentsNotInProject: (projectId: string) => Promise<{
+    success: boolean
+    students?: StudentWithMemberships[]
+    error?: string
+  }>
   createClass: (
     classData: Prisma.ClassCreateWithoutTeachersInput,
   ) => Promise<ClassWithStudents>
