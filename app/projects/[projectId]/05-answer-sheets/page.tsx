@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { Upload, Eye, Trash2, UserX, User } from "lucide-react"
@@ -36,6 +36,7 @@ interface StudentData {
 
 export default function AnswerSheetsPage() {
   const params = useParams()
+  const router = useRouter()
   const { user } = useAuth()
   const projectId = params.projectId as string
 
@@ -158,13 +159,20 @@ export default function AnswerSheetsPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">
-            {project?.name || "プロジェクト"} - 答案管理
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            答案画像のアップロードと管理を行います
-          </p>
+        <div className="mb-6 flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold">
+              {project?.name || "プロジェクト"} - 答案管理
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              答案画像のアップロードと管理を行います
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push(`/projects/${projectId}/06-score-at-once`)}
+          >
+            次へ: 採点開始
+          </Button>
         </div>
 
         <Tabs defaultValue="upload" className="space-y-6">

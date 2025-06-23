@@ -57,12 +57,12 @@ const File = () => {
     const hasStudents = true // 仮定：生徒データは常に存在
     const hasAnswers = project.answerSheets && project.answerSheets.length > 0
     
-    if (!hasImages) return { step: 1, action: 'upload-master', text: '1. 模範解答をアップロード', url: `/projects/${project.id}/score` }
-    if (!hasLayout) return { step: 2, action: 'setup-regions', text: '2. 採点領域を設定', url: `/projects/${project.id}/score/template` }
-    if (!hasRegionInfo) return { step: 3, action: 'edit-region-info', text: '3. 領域情報を編集', url: `/projects/${project.id}/score/region-info` }
-    if (!hasStudents) return { step: 4, action: 'manage-students', text: '4. 受験生徒を確認', url: `/projects/${project.id}/score/students` }
-    if (!hasAnswers) return { step: 5, action: 'upload-answers', text: '5. 生徒解答をアップロード', url: `/projects/${project.id}/score/upload` }
-    return { step: 6, action: 'start-grading', text: '6. 採点を開始', url: `/projects/${project.id}/score/scoring` }
+    if (!hasImages) return { step: 1, action: 'upload-master', text: '1. 模範解答をアップロード', url: `/projects/${project.id}/01-upload` }
+    if (!hasLayout) return { step: 2, action: 'setup-regions', text: '2. 採点領域を設定', url: `/projects/${project.id}/02-template` }
+    if (!hasRegionInfo) return { step: 3, action: 'edit-region-info', text: '3. 領域情報を編集', url: `/projects/${project.id}/03-region-info` }
+    if (!hasStudents) return { step: 4, action: 'manage-students', text: '4. 受験生徒を確認', url: `/projects/${project.id}/04-students` }
+    if (!hasAnswers) return { step: 5, action: 'upload-answers', text: '5. 生徒解答をアップロード', url: `/projects/${project.id}/05-answer-sheets` }
+    return { step: 6, action: 'start-grading', text: '6. 採点を開始', url: `/projects/${project.id}/06-score-at-once` }
   }
 
   const handleNextStep = (project: any) => {

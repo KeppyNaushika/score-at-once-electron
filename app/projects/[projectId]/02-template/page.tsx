@@ -388,7 +388,7 @@ export default function TemplateStepPage() {
       toast.error("採点枠が保存されていません。まず採点枠を保存してください。")
       return
     }
-    alert("次のステップ（解答用紙アップロード）へ進みます。 (未実装)")
+    router.push(`/projects/${projectId}/03-region-info`)
   }
   const goToPreviousStep = () => {
     router.push(`/projects/${projectId}/score`)
@@ -417,7 +417,7 @@ export default function TemplateStepPage() {
         projectName={project?.examName}
       >
         {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
-          <Button onClick={() => router.push(`/projects/${projectId}/score/region-info`)}>
+          <Button onClick={() => router.push(`/projects/${projectId}/03-region-info`)}>
             次へ: 領域情報を編集
           </Button>
         )}

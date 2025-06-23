@@ -326,7 +326,7 @@ export default function ProjectDetailPage() {
                 </Button>
               </Link>
               
-              <Link href={`/projects/${projectId}/score/upload`}>
+              <Link href={`/projects/${projectId}/answer-sheets`}>
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center">
                     <Upload className="h-4 w-4 mr-2" />
@@ -346,7 +346,7 @@ export default function ProjectDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Link href={`/projects/${projectId}/score/scoring`}>
+              <Link href={`/projects/${projectId}/score/grading`}>
                 <Button 
                   variant="outline" 
                   className="w-full justify-between"
