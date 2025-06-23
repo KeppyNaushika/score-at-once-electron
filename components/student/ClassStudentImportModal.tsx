@@ -102,14 +102,7 @@ export default function ClassStudentImportModal({
           const student = students.find((s) => s.studentId === studentId)
 
           if (student) {
-            await window.electronAPI.addStudentToClass(
-              student.id,
-              classId,
-              new Date(),
-              "REGULAR",
-              undefined,
-              `表形式インポートにより追加 - ${new Date().toLocaleDateString("ja-JP")}`,
-            )
+            await window.electronAPI.addStudentToClass(student.id, classId)
           } else {
             console.warn(`学籍番号 ${studentId} の生徒が見つかりません`)
           }

@@ -8,7 +8,7 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  Refresh,
+  RefreshCw,
   TrendingUp,
   Users,
 } from "lucide-react"
@@ -155,7 +155,7 @@ export default function ProjectProgressCard({
             <AlertCircle className="mx-auto h-8 w-8 text-red-500" />
             <p className="text-sm text-red-600">{error}</p>
             <Button size="sm" variant="outline" onClick={fetchProgress}>
-              <Refresh className="mr-1 h-4 w-4" />
+              <RefreshCw className="mr-1 h-4 w-4" />
               再試行
             </Button>
           </div>
@@ -198,7 +198,7 @@ export default function ProjectProgressCard({
               onClick={fetchProgress}
               className="h-6 w-6 p-0"
             >
-              <Refresh className="h-3 w-3" />
+              <RefreshCw className="h-3 w-3" />
             </Button>
           </div>
         </div>

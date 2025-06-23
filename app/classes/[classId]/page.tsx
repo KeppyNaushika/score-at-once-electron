@@ -1,162 +1,42 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { 
-  ArrowLeft,
-  Edit, 
-  Trash2, 
-  BookOpen,
-  Users,
-  GraduationCap,
-  Info,
-  PlusCircle,
-  UserCircle,
-  Calendar,
-  Clock,
-  Upload,
-  Minus
-} from "lucide-react"
+import MembershipTable from "@/components/class/MembershipTable"
 import ClassModal from "@/components/student/ClassModal"
-import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import ClassStudentImportModal from "@/components/student/ClassStudentImportModal"
-
-interface StudentWithMemberships {
-  id: string
-  studentId: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  enrollmentYear?: number | null
-}
-
-interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode?: string | null
-  grade?: number | null
-  description?: string | null
-  subject?: string | null
-  isVisible?: boolean
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    membershipType: string
-    subject?: string | null
-    notes?: string | null
-    student: {
-      id: string
-      studentId: string
-      lastName: string
-      firstName: string
-      lastNameKana: string
-      firstNameKana: string
-    }
-  }>
-}
-
-interface Membership {
-  id: string
-  studentId: string
-  classId: string
-  startDate: Date
-  endDate?: Date | null
-  membershipType: string
-  subject?: string | null
-  notes?: string | null
-  student: {
-    id: string
-    studentId: string
-    lastName: string
-    firstName: string
-    lastNameKana: string
-    firstNameKana: string
-  }
-  class: {
-    id: string
-    name: string
-    classCode?: string | null
-    subject?: string | null
-    isVisible?: boolean
-  }
-}
+import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useClassManagement, type Membership } from "@/hooks/useClassManagement"
+import { ArrowLeft, Edit, Plus, Trash2, Upload } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
 export default function ClassDetailPage() {
   const params = useParams()
   const router = useRouter()
   const classId = params.classId as string
-  
-  const [classData, setClassData] = useState<ClassWithMemberships | null>(null)
-  const [students, setStudents] = useState<StudentWithMemberships[]>([])
-  const [isClassModalOpen, setIsClassModalOpen] = useState(false)
-  const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
-  const [isStudentImportModalOpen, setIsStudentImportModalOpen] = useState(false)
-  const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selectedMembershipIds, setSelectedMembershipIds] = useState<string[]>([])
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        // Fetch all classes and find the one we need
-        const classes = await window.electronAPI.fetchClasses()
-        const targetClass = classes.find(c => c.id === classId)
-        if (targetClass) {
-          setClassData(targetClass)
-        }
-        
-        // Fetch all students for membership management
-        const fetchedStudents = await window.electronAPI.fetchStudents()
-        setStudents(fetchedStudents || [])
-      } catch (error) {
-        console.error("Failed to fetch data:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
-  }, [classId])
+  const {
+    loading,
+    classData,
+    students,
+    isClassModalOpen,
+    setIsClassModalOpen,
+    isStudentImportModalOpen,
+    setIsStudentImportModalOpen,
+    isMembershipModalOpen,
+    setIsMembershipModalOpen,
+    membershipToEdit,
+    setMembershipToEdit,
+    handleSaveClass,
+    handleStudentImportSuccess,
+    handleSaveMembership,
+    handleEndMembership,
+    handleDeleteClass,
+  } = useClassManagement(classId)
 
-  const handleEditClass = () => {
-    setIsClassModalOpen(true)
-  }
-
-  const handleDeleteClass = async () => {
-    if (classData?.memberships.filter(m => !m.endDate).length) {
-      alert("現在所属している生徒がいるため、この学級を削除できません。\n先に生徒の所属を解除してください。")
-      return
-    }
-    
-    if (window.confirm("本当にこの学級を削除しますか？\nこの操作は取り消すことができません。")) {
-      try {
-        await window.electronAPI.deleteClass(classId)
-        router.push("/students")
-      } catch (error) {
-        console.error("Failed to delete class:", error)
-        alert("学級の削除に失敗しました。")
-      }
-    }
-  }
-
-  const handleSaveClass = async (classInfo: any) => {
-    try {
-      const updatedClass = await window.electronAPI.updateClass({
-        id: classId,
-        ...classInfo
-      })
-      setClassData(updatedClass)
-      setIsClassModalOpen(false)
-    } catch (error) {
-      console.error("Failed to update class:", error)
-      alert("学級情報の更新に失敗しました。")
-    }
+  const handleEditMembership = (membership: Membership) => {
+    setMembershipToEdit(membership)
+    setIsMembershipModalOpen(true)
   }
 
   const handleAddMembership = () => {
@@ -164,126 +44,17 @@ export default function ClassDetailPage() {
     setIsMembershipModalOpen(true)
   }
 
-  const handleStudentImportSuccess = async () => {
-    // Refresh class data
-    const classes = await window.electronAPI.fetchClasses()
-    const updatedClass = classes.find(c => c.id === classId)
-    if (updatedClass) {
-      setClassData(updatedClass)
-    }
-    setIsStudentImportModalOpen(false)
-  }
-
-  const handleEditMembership = (membership: any) => {
-    const membershipWithIds: Membership = {
-      ...membership,
-      studentId: membership.student.id,
-      classId: classId,
-      class: {
-        id: classId,
-        name: classData?.name || '',
-        classCode: classData?.classCode,
-        subject: classData?.subject,
-        isVisible: classData?.isVisible
-      }
-    }
-    setMembershipToEdit(membershipWithIds)
-    setIsMembershipModalOpen(true)
-  }
-
-  const handleSaveMembership = async (membershipData: any) => {
-    try {
-      if (membershipToEdit) {
-        await window.electronAPI.updateStudentClassMembership(membershipToEdit.id, membershipData)
-      } else {
-        await window.electronAPI.addStudentToClass(
-          membershipData.studentId,
-          classId,
-          new Date(),
-          membershipData.membershipType,
-          membershipData.subject || classData?.subject,
-          membershipData.notes
-        )
-      }
-      
-      // Refresh class data
-      const classes = await window.electronAPI.fetchClasses()
-      const updatedClass = classes.find(c => c.id === classId)
-      if (updatedClass) {
-        setClassData(updatedClass)
-      }
-      setIsMembershipModalOpen(false)
-    } catch (error) {
-      console.error("Failed to save membership:", error)
-      alert("所属関係の保存に失敗しました。")
-    }
-  }
-
-  const handleEndMembership = async (membershipId: string) => {
-    if (window.confirm("この生徒の所属を終了しますか？")) {
-      try {
-        await window.electronAPI.endStudentMembership(membershipId)
-        
-        // Refresh class data
-        const classes = await window.electronAPI.fetchClasses()
-        const updatedClass = classes.find(c => c.id === classId)
-        if (updatedClass) {
-          setClassData(updatedClass)
-        }
-      } catch (error) {
-        console.error("Failed to end membership:", error)
-        alert("所属関係の終了に失敗しました。")
-      }
-    }
-  }
-
-  const handleSelectAll = () => {
-    if (selectedMembershipIds.length === currentMembers.length) {
-      setSelectedMembershipIds([])
-    } else {
-      setSelectedMembershipIds(currentMembers.map(m => m.id))
-    }
-  }
-
-  const handleMembershipSelect = (membershipId: string) => {
-    setSelectedMembershipIds(prev => 
-      prev.includes(membershipId) 
-        ? prev.filter(id => id !== membershipId)
-        : [...prev, membershipId]
-    )
-  }
-
-  const handleBulkEndMemberships = async () => {
-    if (selectedMembershipIds.length === 0) return
-    
-    if (window.confirm(`選択した${selectedMembershipIds.length}名の生徒の所属を解除しますか？`)) {
-      try {
-        await Promise.all(
-          selectedMembershipIds.map(id => 
-            window.electronAPI.endStudentMembership(id)
-          )
-        )
-        
-        // Refresh class data
-        const classes = await window.electronAPI.fetchClasses()
-        const updatedClass = classes.find(c => c.id === classId)
-        if (updatedClass) {
-          setClassData(updatedClass)
-        }
-        setSelectedMembershipIds([])
-      } catch (error) {
-        console.error("Failed to end memberships:", error)
-        alert("一括所属解除に失敗しました。")
-      }
-    }
+  const handleDeleteWithNavigation = async () => {
+    await handleDeleteClass()
+    router.push("/classes")
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">読み込み中...</p>
+          <div className="border-primary mx-auto h-12 w-12 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground mt-4">読み込み中...</p>
         </div>
       </div>
     )
@@ -291,15 +62,19 @@ export default function ClassDetailPage() {
 
   if (!classData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="max-w-md">
-          <CardContent className="py-8 text-center">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">学級が見つかりません</p>
-            <p className="text-sm text-muted-foreground mb-4">指定された学級が存在しないか、削除されています。</p>
-            <Button onClick={() => router.push("/students")} variant="outline">
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <p className="text-muted-foreground text-lg">
+              学級が見つかりません
+            </p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => router.push("/classes")}
+            >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              生徒・学級管理に戻る
+              学級一覧に戻る
             </Button>
           </CardContent>
         </Card>
@@ -307,291 +82,140 @@ export default function ClassDetailPage() {
     )
   }
 
-  const currentMembers = classData.memberships.filter(m => !m.endDate)
-  const pastMembers = classData.memberships.filter(m => m.endDate)
-
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      {/* Header */}
-      <div className="mb-6">
-        <Button onClick={() => router.push("/students")} variant="ghost" size="sm">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          生徒・学級管理に戻る
-        </Button>
+    <div className="container mx-auto p-6">
+      {/* ヘッダー */}
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/classes")}
+            >
+              <ArrowLeft className="mr-1 h-4 w-4" />
+              戻る
+            </Button>
+            <h1 className="text-3xl font-bold">{classData.name}</h1>
+          </div>
+          {classData.description && (
+            <p className="text-muted-foreground">{classData.description}</p>
+          )}
+          <div className="mt-2 flex gap-2">
+            {classData.classCode && (
+              <span className="bg-muted rounded px-2 py-1 text-sm">
+                コード: {classData.classCode}
+              </span>
+            )}
+            {classData.grade && (
+              <span className="bg-muted rounded px-2 py-1 text-sm">
+                学年: {classData.grade}
+              </span>
+            )}
+            {classData.subject && (
+              <span className="bg-muted rounded px-2 py-1 text-sm">
+                教科: {classData.subject}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsStudentImportModalOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            生徒インポート
+          </Button>
+          <Button onClick={handleAddMembership}>
+            <Plus className="mr-2 h-4 w-4" />
+            生徒を追加
+          </Button>
+          <Button variant="outline" onClick={() => setIsClassModalOpen(true)}>
+            <Edit className="mr-2 h-4 w-4" />
+            編集
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteWithNavigation}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            削除
+          </Button>
+        </div>
       </div>
 
-      {/* Class Info Card */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <CardTitle className="text-2xl">{classData.name}</CardTitle>
-                {classData.classCode && (
-                  <Badge variant="outline" className="text-lg px-3">
-                    {classData.classCode}
-                  </Badge>
-                )}
-                {classData.subject && (
-                  <Badge variant="secondary" className="text-lg px-3">
-                    {classData.subject}
-                  </Badge>
-                )}
-                {!classData.isVisible && (
-                  <Badge variant="destructive">非表示</Badge>
-                )}
-              </div>
-              <div className="space-y-1">
-                {classData.grade && (
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    <GraduationCap className="h-4 w-4" />
-                    {classData.grade}年生
-                  </p>
-                )}
-                {classData.description && (
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    <Info className="h-4 w-4" />
-                    {classData.description}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={handleEditClass} variant="outline" size="sm">
-                <Edit className="mr-2 h-4 w-4" />
-                編集
-              </Button>
-              <Button onClick={handleDeleteClass} variant="outline" size="sm">
-                <Trash2 className="mr-2 h-4 w-4 text-red-500" />
-                削除
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-2xl font-bold">{currentMembers.length}</p>
-              <p className="text-sm text-muted-foreground">現在の生徒数</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{classData.memberships.length}</p>
-              <p className="text-sm text-muted-foreground">累計生徒数</p>
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{pastMembers.length}</p>
-              <p className="text-sm text-muted-foreground">過去の生徒数</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Current Members */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              現在の所属生徒 ({currentMembers.length}名)
-              {selectedMembershipIds.length > 0 && (
-                <span className="text-sm font-normal text-muted-foreground">
-                  ({selectedMembershipIds.length}名選択中)
-                </span>
-              )}
-            </CardTitle>
-            <div className="flex gap-2">
-              {currentMembers.length > 0 && (
-                <>
-                  <Button 
-                    onClick={handleSelectAll} 
-                    size="sm" 
-                    variant="outline"
-                  >
-                    {selectedMembershipIds.length === currentMembers.length ? "全解除" : "全選択"}
-                  </Button>
-                  {selectedMembershipIds.length > 0 && (
-                    <Button 
-                      onClick={handleBulkEndMemberships}
-                      size="sm" 
-                      variant="destructive"
-                    >
-                      <Minus className="mr-2 h-4 w-4" />
-                      選択した生徒の所属を解除
-                    </Button>
-                  )}
-                </>
-              )}
-              <Button onClick={handleAddMembership} size="sm" variant="outline">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                生徒追加
-              </Button>
-              <Button onClick={() => setIsStudentImportModalOpen(true)} size="sm">
-                <Upload className="mr-2 h-4 w-4" />
-                表形式インポート
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {currentMembers.length > 0 ? (
-            <div className="space-y-2">
-              {currentMembers.map((membership) => (
-                <div 
-                  key={membership.id} 
-                  className={`flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors ${
-                    selectedMembershipIds.includes(membership.id) ? 'bg-muted/30 border-primary/50' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <Checkbox 
-                      checked={selectedMembershipIds.includes(membership.id)}
-                      onCheckedChange={() => handleMembershipSelect(membership.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <div 
-                      className="flex-1 cursor-pointer" 
-                      onClick={() => router.push(`/students/${membership.student.id}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                      <UserCircle className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">
-                          {membership.student.lastName} {membership.student.firstName}
-                          <span className="ml-2 text-sm text-muted-foreground">
-                            ({membership.student.studentId})
-                          </span>
-                        </p>
-                        <div className="text-xs text-muted-foreground flex items-center gap-4 mt-1">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(membership.startDate).toLocaleDateString('ja-JP')}から
-                          </span>
-                          {membership.notes && (
-                            <span className="italic">{membership.notes}</span>
-                          )}
-                        </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEditMembership(membership)
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEndMembership(membership.id)
-                      }}
-                    >
-                      <Clock className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>現在所属している生徒はいません</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Past Members */}
-      {pastMembers.length > 0 && (
+      {/* 統計カード */}
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              過去の所属生徒 ({pastMembers.length}名)
+          <CardHeader className="pb-2">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              総生徒数
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {pastMembers.map((membership) => (
-                <div 
-                  key={membership.id} 
-                  className="flex items-center justify-between p-3 border rounded-lg opacity-75 hover:opacity-100 transition-opacity cursor-pointer"
-                  onClick={() => router.push(`/students/${membership.student.id}`)}
-                >
-                  <div className="flex items-center gap-3">
-                    <UserCircle className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">
-                        {membership.student.lastName} {membership.student.firstName}
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          ({membership.student.studentId})
-                        </span>
-                      </p>
-                      <div className="text-xs text-muted-foreground flex items-center gap-4 mt-1">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(membership.startDate).toLocaleDateString('ja-JP')} 〜 
-                          {membership.endDate && new Date(membership.endDate).toLocaleDateString('ja-JP')}
-                        </span>
-                        {membership.notes && (
-                          <span className="italic">{membership.notes}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="text-2xl font-bold">
+              {classData.memberships.length}
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {/* Modals */}
-      {isClassModalOpen && (
-        <ClassModal
-          isOpen={isClassModalOpen}
-          onClose={() => setIsClassModalOpen(false)}
-          onSave={handleSaveClass}
-          classToEdit={classData}
-        />
-      )}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              現在の所属
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {classData.memberships.filter((m) => !m.endDate).length}
+            </div>
+          </CardContent>
+        </Card>
 
-      {isMembershipModalOpen && (
-        <StudentClassMembershipModal
-          isOpen={isMembershipModalOpen}
-          onClose={() => setIsMembershipModalOpen(false)}
-          onSave={handleSaveMembership}
-          studentId={undefined}
-          classId={classId}
-          availableStudents={students.map(s => ({
-            id: s.id,
-            studentId: s.studentId,
-            lastName: s.lastName,
-            firstName: s.firstName,
-            lastNameKana: s.lastNameKana,
-            firstNameKana: s.firstNameKana
-          }))}
-          availableClasses={[classData] as any}
-          membershipToEdit={membershipToEdit as any}
-        />
-      )}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-muted-foreground text-sm font-medium">
+              終了した所属
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">
+              {classData.memberships.filter((m) => m.endDate).length}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {isStudentImportModalOpen && (
-        <ClassStudentImportModal
-          isOpen={isStudentImportModalOpen}
-          onClose={() => setIsStudentImportModalOpen(false)}
-          onImportSuccess={handleStudentImportSuccess}
-          classId={classId}
-          className={classData?.name || ""}
-        />
-      )}
+      {/* 所属一覧 */}
+      <MembershipTable
+        memberships={classData.memberships}
+        onEdit={handleEditMembership}
+        onEnd={handleEndMembership}
+      />
+
+      {/* モーダル */}
+      <ClassModal
+        isOpen={isClassModalOpen}
+        onClose={() => setIsClassModalOpen(false)}
+        onSave={handleSaveClass}
+        classToEdit={classData}
+      />
+
+      <ClassStudentImportModal
+        isOpen={isStudentImportModalOpen}
+        onClose={() => setIsStudentImportModalOpen(false)}
+        onImportSuccess={handleStudentImportSuccess}
+        classId={classId}
+        className={classData?.name || ""}
+      />
+
+      <StudentClassMembershipModal
+        isOpen={isMembershipModalOpen}
+        onClose={() => setIsMembershipModalOpen(false)}
+        onSave={handleSaveMembership}
+        classId={classId}
+        availableStudents={students}
+        availableClasses={[]}
+      />
     </div>
   )
 }
