@@ -112,11 +112,7 @@ export function useClassManagement(classId: string) {
 
   const handleStudentImportSuccess = async () => {
     // Refresh class data
-    const classes = await window.electronAPI.fetchClasses()
-    const updatedClass = classes.find((c) => c.id === classId)
-    if (updatedClass) {
-      setClassData(transformClassData(updatedClass))
-    }
+    await fetchData()
     setIsStudentImportModalOpen(false)
   }
 
@@ -147,10 +143,10 @@ export function useClassManagement(classId: string) {
     }
   }
 
-  const handleEndMembership = async (membershipId: string) => {
-    if (window.confirm("この所属関係を終了しますか？")) {
+  const handleDeleteMembership = async (membershipId: string) => {
+    if (window.confirm("この所属関係を削除しますか？")) {
       try {
-        await window.electronAPI.endStudentMembership(membershipId)
+        await window.electronAPI.deleteStudentClassMembership(membershipId)
 
         // Refresh class data
         const classes = await window.electronAPI.fetchClasses()
@@ -159,17 +155,17 @@ export function useClassManagement(classId: string) {
           setClassData(transformClassData(updatedClass))
         }
       } catch (error) {
-        console.error("Failed to end membership:", error)
-        alert("所属関係の終了に失敗しました。")
+        console.error("Failed to delete membership:", error)
+        alert("所属関係の削除に失敗しました。")
       }
     }
   }
 
-  const handleBulkEndMemberships = async (membershipIds: string[]) => {
+  const handleBulkDeleteMemberships = async (membershipIds: string[]) => {
     try {
-      // End each membership
+      // Delete each membership
       for (const membershipId of membershipIds) {
-        await window.electronAPI.endStudentMembership(membershipId)
+        await window.electronAPI.deleteStudentClassMembership(membershipId)
       }
 
       // Refresh class data
@@ -179,8 +175,8 @@ export function useClassManagement(classId: string) {
         setClassData(transformClassData(updatedClass))
       }
     } catch (error) {
-      console.error("Failed to end memberships:", error)
-      alert("所属関係の終了に失敗しました。")
+      console.error("Failed to delete memberships:", error)
+      alert("所属関係の削除に失敗しました。")
     }
   }
 
@@ -211,8 +207,8 @@ export function useClassManagement(classId: string) {
     handleSaveClass,
     handleStudentImportSuccess,
     handleSaveMembership,
-    handleEndMembership,
-    handleBulkEndMemberships,
+    handleDeleteMembership,
+    handleBulkDeleteMemberships,
     handleDeleteClass,
     fetchData,
   }

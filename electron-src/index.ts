@@ -83,6 +83,7 @@ import {
   removeStudentsFromProject,
   updateStudentProjectStatus,
   getClassesNotInProject,
+  updateStudentOrders,
 } from "./lib/prisma/projectStudent"
 import {
   checkGradingDataForStudents,
@@ -583,13 +584,27 @@ app.on("ready", async () => {
       notes?: string,
     ) => {
       try {
-        return await addStudentToClass(
+        console.log("IPC handler add-student-to-class received:", {
           studentId,
           classId,
           startDate,
+          startDateType: typeof startDate,
+          attendanceNumber,
+          notes
+        })
+        
+        // Ensure startDate is a Date object
+        const dateToUse = startDate ? new Date(startDate) : new Date()
+        
+        const result = await addStudentToClass(
+          studentId,
+          classId,
+          dateToUse,
           attendanceNumber,
           notes,
         )
+        console.log("IPC handler add-student-to-class success")
+        return result
       } catch (err) {
         console.error("Error adding student to class:", err)
         throw err
@@ -1244,6 +1259,18 @@ app.on("ready", async () => {
         return await getProjectProgress(projectId)
       } catch (err) {
         console.error("Error getting project progress:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "update-student-orders",
+    async (_event, projectId: string, studentOrders: { studentId: string; customOrder: number }[]) => {
+      try {
+        return await updateStudentOrders(projectId, studentOrders)
+      } catch (err) {
+        console.error("Error updating student orders:", err)
         throw err
       }
     },

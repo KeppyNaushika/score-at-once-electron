@@ -3,6 +3,7 @@
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentRemovalConfirmModal from "@/components/student/StudentRemovalConfirmModal"
+import SortableStudentTable from "@/components/student/SortableStudentTable"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -31,14 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, UserCheck, UserPlus, Users, UserX } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
@@ -66,6 +59,7 @@ interface Student {
   }[]
   status: StudentStatus
   isInProject: boolean
+  customOrder?: number | null
 }
 
 // クラスデータの型
@@ -274,6 +268,37 @@ export default function StudentsPage() {
     }
   }
 
+  // 生徒の並び順を更新
+  const updateStudentOrders = async (
+    projectId: string,
+    studentOrders: { studentId: string; customOrder: number }[]
+  ) => {
+    try {
+      const result = await window.electronAPI.updateStudentOrders(
+        projectId,
+        studentOrders
+      )
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update student orders")
+      }
+
+      // 成功した場合、ローカルの状態を更新
+      const orderMap = new Map(studentOrders.map(o => [o.studentId, o.customOrder]))
+      
+      setClasses((prevClasses) =>
+        prevClasses.map((cls) => ({
+          ...cls,
+          students: cls.students.map((student) => ({
+            ...student,
+            customOrder: orderMap.get(student.id) ?? student.customOrder,
+          })),
+        })),
+      )
+    } catch (error) {
+      console.error("Failed to update student orders:", error)
+    }
+  }
+
   // 学級のチェック状態を更新
   const toggleClassSelection = (classId: string) => {
     setAvailableClasses((prev) =>
@@ -366,6 +391,28 @@ export default function StudentsPage() {
       }
       return newSet
     })
+  }
+
+  // 生徒選択の変更（SortableStudentTable用）
+  const handleStudentSelectionChange = (studentId: string, isSelected: boolean) => {
+    setSelectedStudentsForRemoval((prev) => {
+      const newSet = new Set(prev)
+      if (isSelected) {
+        newSet.add(studentId)
+      } else {
+        newSet.delete(studentId)
+      }
+      return newSet
+    })
+  }
+
+  // 全選択の処理（SortableStudentTable用）
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedStudentsForRemoval(new Set(filteredStudents.map(s => s.id)))
+    } else {
+      setSelectedStudentsForRemoval(new Set())
+    }
   }
 
   // 選択した生徒の削除開始
@@ -562,17 +609,6 @@ export default function StudentsPage() {
     }),
   )
 
-  // 状態のラベルとスタイル
-  const getStatusConfig = (status: StudentStatus) => {
-    switch (status) {
-      case "participating":
-        return { label: "受験", variant: "default" as const, icon: UserCheck }
-      case "expected":
-        return { label: "見込", variant: "secondary" as const, icon: Users }
-      case "absent":
-        return { label: "欠席", variant: "destructive" as const, icon: UserX }
-    }
-  }
 
   if (loading) {
     return (
@@ -903,136 +939,16 @@ export default function StudentsPage() {
         </Card>
 
         {/* 生徒一覧テーブル */}
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle className="text-lg">生徒一覧</CardTitle>
-            <CardDescription>
-              {filteredStudents.length}名の生徒が表示されています
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={
-                          filteredStudents.length > 0 &&
-                          filteredStudents.every((s) =>
-                            selectedStudentsForRemoval.has(s.id),
-                          )
-                        }
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudentsForRemoval(
-                              new Set(filteredStudents.map((s) => s.id)),
-                            )
-                          } else {
-                            setSelectedStudentsForRemoval(new Set())
-                          }
-                        }}
-                      />
-                    </TableHead>
-                    <TableHead className="w-[80px]">出席番号</TableHead>
-                    <TableHead className="w-[100px]">学籍番号</TableHead>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>ふりがな</TableHead>
-                    <TableHead>学級</TableHead>
-                    <TableHead>受験状態</TableHead>
-                    <TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStudents.map((student) => {
-                    const statusConfig = getStatusConfig(student.status)
-                    const StatusIcon = statusConfig.icon
-
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedStudentsForRemoval.has(student.id)}
-                            onCheckedChange={() =>
-                              toggleStudentSelection(student.id)
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-center">
-                          {student.memberships[0]?.attendanceNumber || "-"}
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {student.studentId}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {student.lastName} {student.firstName}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {student.lastNameKana} {student.firstNameKana}
-                        </TableCell>
-                        <TableCell>
-                          {student.memberships[0]?.class.name || "未所属"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={statusConfig.variant}
-                            className="gap-1"
-                          >
-                            <StatusIcon className="h-3 w-3" />
-                            {statusConfig.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="sm"
-                              variant={
-                                student.status === "participating"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              onClick={() =>
-                                updateStudentStatus(student.id, "participating")
-                              }
-                            >
-                              受験
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={
-                                student.status === "expected"
-                                  ? "secondary"
-                                  : "outline"
-                              }
-                              onClick={() =>
-                                updateStudentStatus(student.id, "expected")
-                              }
-                            >
-                              見込
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant={
-                                student.status === "absent"
-                                  ? "destructive"
-                                  : "outline"
-                              }
-                              onClick={() =>
-                                updateStudentStatus(student.id, "absent")
-                              }
-                            >
-                              欠席
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+        <SortableStudentTable
+          classes={classes}
+          onStudentStatusUpdate={updateStudentStatus}
+          onStudentOrderUpdate={updateStudentOrders}
+          selectedStudents={selectedStudentsForRemoval}
+          onStudentSelectionChange={handleStudentSelectionChange}
+          onSelectAll={handleSelectAll}
+          filteredStudents={filteredStudents}
+          projectId={projectId}
+        />
 
         {/* 削除確認モーダル */}
         <StudentRemovalConfirmModal

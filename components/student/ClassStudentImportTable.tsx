@@ -44,7 +44,7 @@ export default function ClassStudentImportTable({
       accessorKey: "startDate",
       size: 150,
       meta: {
-        placeholder: "例: 2024/04/01",
+        placeholder: "例: 2024/4/1",
       },
     },
     {
@@ -53,7 +53,7 @@ export default function ClassStudentImportTable({
       accessorKey: "endDate",
       size: 150,
       meta: {
-        placeholder: "例: 2025/03/31",
+        placeholder: "例: 2025/3/31",
       },
     },
   ]
@@ -66,7 +66,7 @@ export default function ClassStudentImportTable({
       allowInsertRow={true}
       allowDeleteRow={true}
       minRows={10}
-      className="min-h-[400px] min-w-[300px]"
+      className="min-w-[650px]"
     />
   )
 }

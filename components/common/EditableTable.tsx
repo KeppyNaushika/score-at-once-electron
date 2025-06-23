@@ -136,7 +136,8 @@ export function EditableTable<T extends Record<string, any>>({
             }
             return row
           })
-          onDataChange(newData)
+          // Defer the onDataChange call to avoid state update during render
+          setTimeout(() => onDataChange(newData), 0)
           return newData
         })
       },
@@ -151,7 +152,7 @@ export function EditableTable<T extends Record<string, any>>({
 
     const newData = [...tableData, newRow]
     setTableData(newData)
-    onDataChange(newData)
+    setTimeout(() => onDataChange(newData), 0)
   }
 
   const deleteRow = (rowIndex: number) => {
@@ -159,7 +160,7 @@ export function EditableTable<T extends Record<string, any>>({
 
     const newData = tableData.filter((_, index) => index !== rowIndex)
     setTableData(newData)
-    onDataChange(newData)
+    setTimeout(() => onDataChange(newData), 0)
   }
 
   const handlePaste = (e: React.ClipboardEvent) => {

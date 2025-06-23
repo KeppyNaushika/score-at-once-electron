@@ -31,7 +31,8 @@ export async function getStudentsForProject(projectId: string) {
     const studentsWithStatus = projectStudents.map((projectStudent: any) => ({
       ...projectStudent.student,
       status: projectStudent.status.toLowerCase() as 'participating' | 'expected' | 'absent',
-      isInProject: true
+      isInProject: true,
+      customOrder: projectStudent.customOrder
     }))
 
     return {
@@ -151,6 +152,42 @@ export async function updateStudentProjectStatus(
     return {
       success: false,
       error: 'Failed to update student project status'
+    }
+  }
+}
+
+/**
+ * プロジェクト内での生徒の並び順を更新
+ */
+export async function updateStudentOrders(
+  projectId: string,
+  studentOrders: { studentId: string; customOrder: number }[]
+) {
+  try {
+    // 各生徒の並び順を更新
+    for (const { studentId, customOrder } of studentOrders) {
+      // customOrderが-1の場合はnullにリセット（デフォルト順序）
+      const orderValue = customOrder === -1 ? null : customOrder
+      
+      await prisma.projectStudent.updateMany({
+        where: {
+          projectId,
+          studentId
+        },
+        data: {
+          customOrder: orderValue
+        }
+      })
+    }
+
+    return {
+      success: true
+    }
+  } catch (error) {
+    console.error('Error updating student orders:', error)
+    return {
+      success: false,
+      error: 'Failed to update student orders'
     }
   }
 }

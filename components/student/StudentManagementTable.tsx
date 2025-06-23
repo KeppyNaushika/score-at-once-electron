@@ -480,7 +480,7 @@ export default function StudentManagementTable() {
                                     size="sm"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      handleEditStudent(student)
+                                      router.push(`/students/${student.id}`)
                                     }}
                                   >
                                     <Edit className="h-4 w-4" />
