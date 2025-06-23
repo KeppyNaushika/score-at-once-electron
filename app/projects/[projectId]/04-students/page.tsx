@@ -565,9 +565,8 @@ export default function StudentsPage() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader
-        title="受験生徒"
-        description="このプロジェクトで採点する生徒を確認し、受験状態を設定してください。"
-        projectName={project?.examName}
+        title="受験生徒の確認・選択"
+        description="このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。"
       >
         <Button
           onClick={() => router.push(`/projects/${projectId}/05-answer-sheets`)}

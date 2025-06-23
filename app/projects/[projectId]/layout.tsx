@@ -19,6 +19,8 @@ import { Info } from "lucide-react"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
 import React, { useState, useEffect } from "react"
+import { toast } from "sonner"
+import Head from "next/head"
 
 // ワークフローステップの定義
 const workflowSteps = [
@@ -32,16 +34,19 @@ const workflowSteps = [
 ]
 
 // ページごとのヒント情報
-const pageHints: { [key: string]: { 
-  title: string; 
-  description: string;
-  content: string[];
-  tips?: string[];
-  shortcuts?: { key: string; description: string }[];
-} } = {
+const pageHints: {
+  [key: string]: {
+    title: string
+    description: string
+    content: string[]
+    tips?: string[]
+    shortcuts?: { key: string; description: string }[]
+  }
+} = {
   "01-upload": {
     title: "模範解答のアップロード",
-    description: "試験問題の模範解答をアップロードして、採点の基準となる画像を準備します。",
+    description:
+      "試験問題の模範解答をアップロードして、採点の基準となる画像を準備します。",
     content: [
       "PDFまたは画像ファイル（PNG、JPEG、TIFF）をアップロードできます",
       "PDFファイルは自動的にページごとに分割され、高品質なPNG画像として変換されます",
@@ -56,7 +61,8 @@ const pageHints: { [key: string]: {
   },
   "02-template": {
     title: "採点領域の作成",
-    description: "模範解答上に採点対象となる領域を視覚的に定義します。各設問や記入欄に対応する矩形領域を作成してください。",
+    description:
+      "模範解答上に採点対象となる領域を視覚的に定義します。各設問や記入欄に対応する矩形領域を作成してください。",
     content: [
       "模範解答画像上でマウスをドラッグして採点領域を作成します",
       "設問領域、氏名欄、学籍番号欄、合計点欄など、すべての必要な領域を作成してください",
@@ -77,7 +83,8 @@ const pageHints: { [key: string]: {
   },
   "03-region-info": {
     title: "領域情報の編集",
-    description: "作成した採点領域に詳細な情報を設定します。各領域の種類、配点、ラベルなどを正確に入力してください。",
+    description:
+      "作成した採点領域に詳細な情報を設定します。各領域の種類、配点、ラベルなどを正確に入力してください。",
     content: [
       "各領域の種類（設問、氏名欄、学籍番号欄など）を選択します",
       "設問領域には必ず設問番号と配点を設定してください",
@@ -98,7 +105,8 @@ const pageHints: { [key: string]: {
   },
   "04-students": {
     title: "受験生徒の確認・選択",
-    description: "このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。",
+    description:
+      "このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。",
     content: [
       "プロジェクトに登録されている全ての生徒が一覧表示されます",
       "受験する生徒と欠席者を明確に区別して管理できます",
@@ -114,7 +122,8 @@ const pageHints: { [key: string]: {
   },
   "05-answer-sheets": {
     title: "生徒解答のアップロード",
-    description: "スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを行います。",
+    description:
+      "スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを行います。",
     content: [
       "生徒の答案画像をドラッグ&ドロップまたはファイル選択でアップロードします",
       "ファイル名に生徒名や学籍番号が含まれている場合、自動的に生徒を推測します",
@@ -130,7 +139,8 @@ const pageHints: { [key: string]: {
   },
   "06-score-at-once": {
     title: "採点",
-    description: "効率的な採点インターフェースで、キーボードショートカットを活用した高速採点が可能です。",
+    description:
+      "効率的な採点インターフェースで、キーボードショートカットを活用した高速採点が可能です。",
     content: [
       "キーボードショートカットで数値入力と画面遷移を効率的に行えます",
       "複数の教員が同時に異なる設問を採点できる協調採点機能",
@@ -179,9 +189,25 @@ export default function ProjectWorkflowLayout({
   const pathname = usePathname()
   const projectId = params.projectId as string
   const [showHintAnimation, setShowHintAnimation] = useState(false)
+  const [projectName, setProjectName] = useState<string>("")
+
+  // プロジェクト情報を取得
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        const project = await window.electronAPI.fetchProjectById(projectId)
+        if (project) {
+          setProjectName(project.examName)
+        }
+      } catch (error) {
+        console.error("Error loading project:", error)
+      }
+    }
+    loadProject()
+  }, [projectId])
 
   // 現在のページを特定
-  const currentStep = workflowSteps.find(step => pathname.includes(step.path))
+  const currentStep = workflowSteps.find((step) => pathname.includes(step.path))
   const currentHint = currentStep ? pageHints[currentStep.id] : null
 
   // 初回表示時のアニメーション
@@ -193,112 +219,136 @@ export default function ProjectWorkflowLayout({
   }, [pathname])
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="bg-background border-b p-4 flex items-center">
-        <Breadcrumb>
-          <BreadcrumbList>
-            {workflowSteps.map((step, index) => {
-              const isCurrentPage = pathname.includes(step.path)
-              const linkHref = `/projects/${projectId}/${step.path}`
+    <>
+      <Head>
+        <title>{projectName || "プロジェクト"} - 一括採点</title>
+      </Head>
+      <div className="flex h-full flex-col">
+        <header className="bg-background flex items-center justify-between border-b px-4 py-3">
+          <Breadcrumb>
+            <BreadcrumbList>
+              {workflowSteps.map((step, index) => {
+                const isCurrentPage = pathname.includes(step.path)
+                const linkHref = `/projects/${projectId}/${step.path}`
 
-              return (
-                <React.Fragment key={step.id}>
-                  <BreadcrumbItem>
-                    {isCurrentPage ? (
-                      <BreadcrumbPage className="font-semibold text-green-600">
-                        {step.label}
-                      </BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        <Link href={linkHref}>{step.label}</Link>
-                      </BreadcrumbLink>
+                return (
+                  <React.Fragment key={step.id}>
+                    <BreadcrumbItem>
+                      {isCurrentPage ? (
+                        <BreadcrumbPage className="font-semibold text-green-600">
+                          {step.label}
+                        </BreadcrumbPage>
+                      ) : (
+                        <BreadcrumbLink asChild>
+                          <Link href={linkHref}>{step.label}</Link>
+                        </BreadcrumbLink>
+                      )}
+                    </BreadcrumbItem>
+                    {index < workflowSteps.length - 1 && (
+                      <BreadcrumbSeparator />
                     )}
-                  </BreadcrumbItem>
-                  {index < workflowSteps.length - 1 && <BreadcrumbSeparator />}
-                </React.Fragment>
-              )
-            })}
-          </BreadcrumbList>
-        </Breadcrumb>
-        
-        {/* Help Icon */}
-        {currentHint && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "ml-auto relative",
-                  showHintAnimation && "animate-pulse"
-                )}
+                  </React.Fragment>
+                )
+              })}
+            </BreadcrumbList>
+          </Breadcrumb>
+          {/* Help Icon */}
+          {currentHint && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "relative ml-2",
+                    showHintAnimation && "animate-pulse",
+                  )}
+                >
+                  <Info className="h-5 w-5" />
+                  {showHintAnimation && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-blue-500" />
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="max-h-[80vh] w-96 overflow-y-auto"
+                align="end"
               >
-                <Info className="h-5 w-5" />
-                {showHintAnimation && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-blue-500 rounded-full animate-ping" />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-96 max-h-[80vh] overflow-y-auto" align="end">
-              <div className="space-y-4">
-                {/* Header */}
-                <div>
-                  <h4 className="font-semibold text-lg mb-1">{currentHint.title}</h4>
-                  <p className="text-sm text-muted-foreground">{currentHint.description}</p>
-                </div>
-
-                {/* Main Content */}
-                <div>
-                  <h5 className="font-medium text-sm mb-2 text-blue-600">基本操作</h5>
-                  <ul className="text-sm space-y-1">
-                    {currentHint.content.map((hint, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="text-blue-500 mr-2 mt-0.5">•</span>
-                        <span>{hint}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Tips Section */}
-                {currentHint.tips && (
+                <div className="space-y-4">
+                  {/* Header */}
                   <div>
-                    <h5 className="font-medium text-sm mb-2 text-green-600">💡 ヒント・推奨事項</h5>
-                    <ul className="text-sm space-y-1">
-                      {currentHint.tips.map((tip, index) => (
+                    <h4 className="mb-1 text-lg font-semibold">
+                      {currentHint.title}
+                    </h4>
+                    <p className="text-muted-foreground text-sm">
+                      {currentHint.description}
+                    </p>
+                  </div>
+
+                  {/* Main Content */}
+                  <div>
+                    <h5 className="mb-2 text-sm font-medium text-blue-600">
+                      基本操作
+                    </h5>
+                    <ul className="space-y-1 text-sm">
+                      {currentHint.content.map((hint, index) => (
                         <li key={index} className="flex items-start">
-                          <span className="text-green-500 mr-2 mt-0.5">▶</span>
-                          <span>{tip}</span>
+                          <span className="mt-0.5 mr-2 text-blue-500">•</span>
+                          <span>{hint}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
-                )}
 
-                {/* Shortcuts Section */}
-                {currentHint.shortcuts && (
-                  <div>
-                    <h5 className="font-medium text-sm mb-2 text-purple-600">⌨️ キーボードショートカット</h5>
-                    <div className="space-y-1">
-                      {currentHint.shortcuts.map((shortcut, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <kbd className="px-2 py-1 bg-gray-100 border rounded text-xs font-mono">
-                            {shortcut.key}
-                          </kbd>
-                          <span className="text-sm text-muted-foreground flex-1 ml-3">
-                            {shortcut.description}
-                          </span>
-                        </div>
-                      ))}
+                  {/* Tips Section */}
+                  {currentHint.tips && (
+                    <div>
+                      <h5 className="mb-2 text-sm font-medium text-green-600">
+                        💡 ヒント・推奨事項
+                      </h5>
+                      <ul className="space-y-1 text-sm">
+                        {currentHint.tips.map((tip, index) => (
+                          <li key={index} className="flex items-start">
+                            <span className="mt-0.5 mr-2 text-green-500">
+                              ▶
+                            </span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
-      </header>
-      <main className="flex-grow overflow-hidden">{children}</main>
-    </div>
+                  )}
+
+                  {/* Shortcuts Section */}
+                  {currentHint.shortcuts && (
+                    <div>
+                      <h5 className="mb-2 text-sm font-medium text-purple-600">
+                        ⌨️ キーボードショートカット
+                      </h5>
+                      <div className="space-y-1">
+                        {currentHint.shortcuts.map((shortcut, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between"
+                          >
+                            <kbd className="rounded border bg-gray-100 px-2 py-1 font-mono text-xs">
+                              {shortcut.key}
+                            </kbd>
+                            <span className="text-muted-foreground ml-3 flex-1 text-sm">
+                              {shortcut.description}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </header>
+        <main className="flex-grow overflow-hidden">{children}</main>
+      </div>
+    </>
   )
 }

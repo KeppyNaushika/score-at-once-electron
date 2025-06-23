@@ -23,6 +23,7 @@ import {
   Settings,
 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
+import Head from "next/head"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // 採点状態の型定義
@@ -99,6 +100,7 @@ export default function GradingPage() {
 
   // 状態管理
   const [loading, setLoading] = useState(true)
+  const [project, setProject] = useState<any>(null)
   const [answerSheets, setAnswerSheets] = useState<AnswerSheet[]>([])
   const [questionRegions, setQuestionRegions] = useState<QuestionRegion[]>([])
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
@@ -125,6 +127,12 @@ export default function GradingPage() {
     const initializeGradingData = async () => {
       setLoading(true)
       try {
+        // プロジェクト情報を取得
+        const projectData = await window.electronAPI.fetchProjectById(projectId)
+        if (projectData) {
+          setProject(projectData)
+        }
+        
         // 答案データを取得
         const answersResult =
           await window.electronAPI.getAnswerSheetsByProjectId(projectId)
@@ -530,7 +538,13 @@ export default function GradingPage() {
     : null
 
   return (
-    <div className="flex h-full flex-col">
+    <>
+      <Head>
+        <title>
+          {project?.examName || "プロジェクト"} - 一括採点
+        </title>
+      </Head>
+      <div className="flex h-full flex-col">
       {/* ヘッダー */}
       <div className="bg-background border-b p-4">
         <div className="flex items-center justify-between">
@@ -546,7 +560,7 @@ export default function GradingPage() {
               戻る
             </Button>
             <div>
-              <h1 className="text-lg font-semibold">採点画面</h1>
+              <h1 className="text-lg font-semibold">採点</h1>
               <p className="text-muted-foreground text-sm">
                 {currentAnswerSheet?.student.lastName}{" "}
                 {currentAnswerSheet?.student.firstName} - 設問
@@ -856,5 +870,6 @@ export default function GradingPage() {
         />
       )}
     </div>
+    </>
   )
 }
