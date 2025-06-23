@@ -1,8 +1,7 @@
+import { ja } from "date-fns/locale" // Ensure this import is correct
+import dayjs from "dayjs"
 import React from "react"
 import DatePicker from "react-datepicker"
-import { ja } from "date-fns/locale" // Ensure this import is correct
-import type { Locale } from "date-fns" // Import Locale type for clarity if needed
-import dayjs from "dayjs"
 
 import "react-datepicker/dist/react-datepicker.css"
 import "./ProjectDate.css" // Assuming custom styles

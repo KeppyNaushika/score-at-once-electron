@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client"
-import React from "react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -9,8 +7,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog" // AlertDialogコンポーネントをインポート
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import React from "react"
 
 interface DeleteProjectWindowProps {
   projectToDelete: any
@@ -26,10 +25,8 @@ const DeleteProjectWindow: React.FC<DeleteProjectWindowProps> = ({
   const handleDelete = async () => {
     try {
       await onDelete()
-      // onClose は AlertDialog の onOpenChange または AlertDialogCancel で処理される
     } catch (error) {
       console.error("Failed to delete project:", error)
-      // Optionally, display an error message to the user
     }
   }
 

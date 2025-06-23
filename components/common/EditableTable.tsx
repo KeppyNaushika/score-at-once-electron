@@ -1,15 +1,14 @@
 "use client"
 
-import React, { useState, useEffect, useRef, useMemo } from "react"
+import { Button } from "@/components/ui/button"
 import {
-  useReactTable,
-  getCoreRowModel,
   ColumnDef,
   flexRender,
-  Cell,
+  getCoreRowModel,
+  useReactTable,
 } from "@tanstack/react-table"
-import { Button } from "@/components/ui/button"
 import { Plus, Trash2 } from "lucide-react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 interface EditableTableProps<T> {
   data: T[]
@@ -43,16 +42,16 @@ function EditableCell({ getValue, row, column, table }: EditableCellProps) {
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       inputRef.current?.blur()
     }
-    if (e.key === 'Tab') {
+    if (e.key === "Tab") {
       e.preventDefault()
       const currentCell = inputRef.current
       if (currentCell) {
-        const table = currentCell.closest('table')
+        const table = currentCell.closest("table")
         if (table) {
-          const cells = Array.from(table.querySelectorAll('input'))
+          const cells = Array.from(table.querySelectorAll("input"))
           const currentIndex = cells.indexOf(currentCell)
           const nextIndex = e.shiftKey ? currentIndex - 1 : currentIndex + 1
           if (nextIndex >= 0 && nextIndex < cells.length) {
@@ -66,12 +65,12 @@ function EditableCell({ getValue, row, column, table }: EditableCellProps) {
   return (
     <input
       ref={inputRef}
-      value={value || ''}
-      onChange={e => setValue(e.target.value)}
+      value={value || ""}
+      onChange={(e) => setValue(e.target.value)}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
-      className="absolute inset-0 w-full h-full border-none bg-transparent px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
-      placeholder={column.columnDef.meta?.placeholder || ''}
+      className="absolute inset-0 h-full w-full border-none bg-transparent px-4 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+      placeholder={column.columnDef.meta?.placeholder || ""}
     />
   )
 }
@@ -94,27 +93,31 @@ export function EditableTable<T extends Record<string, any>>({
 
   const editableColumns = useMemo(
     () => [
-      ...columns.map(col => ({
+      ...columns.map((col) => ({
         ...col,
         cell: EditableCell,
       })),
-      ...(allowDeleteRow ? [{
-        id: 'actions',
-        header: '',
-        cell: ({ row }: { row: any }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => deleteRow(row.index)}
-            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        ),
-        size: 40,
-      }] : []),
+      ...(allowDeleteRow
+        ? [
+            {
+              id: "actions",
+              header: "",
+              cell: ({ row }: { row: any }) => (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteRow(row.index)}
+                  className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              ),
+              size: 40,
+            },
+          ]
+        : []),
     ],
-    [columns, allowDeleteRow]
+    [columns, allowDeleteRow],
   )
 
   const table = useReactTable({
@@ -123,7 +126,7 @@ export function EditableTable<T extends Record<string, any>>({
     getCoreRowModel: getCoreRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: any) => {
-        setTableData(old => {
+        setTableData((old) => {
           const newData = old.map((row, index) => {
             if (index === rowIndex) {
               return {
@@ -142,10 +145,10 @@ export function EditableTable<T extends Record<string, any>>({
 
   const addRow = () => {
     const newRow = columns.reduce((acc, col) => {
-      (acc as any)[col.id as string] = ''
+      ;(acc as any)[col.id as string] = ""
       return acc
     }, {} as T)
-    
+
     const newData = [...tableData, newRow]
     setTableData(newData)
     onDataChange(newData)
@@ -153,7 +156,7 @@ export function EditableTable<T extends Record<string, any>>({
 
   const deleteRow = (rowIndex: number) => {
     if (tableData.length <= minRows) return
-    
+
     const newData = tableData.filter((_, index) => index !== rowIndex)
     setTableData(newData)
     onDataChange(newData)
@@ -161,16 +164,16 @@ export function EditableTable<T extends Record<string, any>>({
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
-    
-    const paste = e.clipboardData.getData('text')
-    const rows = paste.split('\n').filter(row => row.trim() !== '')
-    
+
+    const paste = e.clipboardData.getData("text")
+    const rows = paste.split("\n").filter((row) => row.trim() !== "")
+
     if (rows.length === 0) return
 
-    const pastedData = rows.map(row => {
-      const cells = row.split('\t')
+    const pastedData = rows.map((row) => {
+      const cells = row.split("\t")
       return columns.reduce((acc, col, index) => {
-        (acc as any)[col.id as string] = cells[index] || ''
+        ;(acc as any)[col.id as string] = cells[index] || ""
         return acc
       }, {} as T)
     })
@@ -184,9 +187,9 @@ export function EditableTable<T extends Record<string, any>>({
     if (tableData.length < minRows) {
       const emptyRows = Array.from({ length: minRows - tableData.length }, () =>
         columns.reduce((acc, col) => {
-          (acc as any)[col.id as string] = ''
+          ;(acc as any)[col.id as string] = ""
           return acc
-        }, {} as T)
+        }, {} as T),
       )
       const newData = [...tableData, ...emptyRows]
       setTableData(newData)
@@ -199,45 +202,48 @@ export function EditableTable<T extends Record<string, any>>({
       <div className="rounded-md border">
         <table className="w-full" onPaste={handlePaste}>
           <thead>
-            <tr className="border-b bg-muted/50">
-              {table.getHeaderGroups().map(headerGroup =>
-                headerGroup.headers.map(header => (
+            <tr className="bg-muted/50 border-b">
+              {table.getHeaderGroups().map((headerGroup) =>
+                headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-sm font-medium text-muted-foreground"
+                    className="text-muted-foreground px-4 py-3 text-left text-sm font-medium"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </th>
-                ))
+                )),
               )}
             </tr>
           </thead>
           <tbody>
-            {table.getRowModel().rows.map(row => {
+            {table.getRowModel().rows.map((row) => {
               const rowProps = getRowProps?.(row) || {}
               const rowClassName = `border-b hover:bg-muted/50 ${rowProps.className || ""}`
               return (
-              <tr key={row.id} className={rowClassName}>
-                {row.getVisibleCells().map(cell => (
-                  <td key={cell.id} className="px-0 py-0 h-9 relative">
-                    <div className="px-4 py-2 h-full flex items-center">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </div>
-                  </td>
-                ))}
-              </tr>
+                <tr key={row.id} className={rowClassName}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="relative h-9 px-0 py-0">
+                      <div className="flex h-full items-center px-4 py-2">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
               )
             })}
           </tbody>
         </table>
       </div>
-      
+
       {allowInsertRow && (
         <div className="flex justify-start">
           <Button
@@ -251,9 +257,10 @@ export function EditableTable<T extends Record<string, any>>({
           </Button>
         </div>
       )}
-      
-      <div className="text-sm text-muted-foreground">
-        💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (Ctrl+V) できます
+
+      <div className="text-muted-foreground text-sm">
+        💡 ヒント: Excelからデータをコピーして、テーブル上で貼り付け (Ctrl+V)
+        できます
       </div>
     </div>
   )

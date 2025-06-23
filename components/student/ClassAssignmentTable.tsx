@@ -1,8 +1,7 @@
 "use client"
 
-import React from "react"
-import { ColumnDef } from "@tanstack/react-table"
 import { EditableTable } from "@/components/common/EditableTable"
+import { ColumnDef } from "@tanstack/react-table"
 
 interface ClassAssignmentRow {
   studentId: string
@@ -24,27 +23,27 @@ export default function ClassAssignmentTable({
   existingClasses,
 }: ClassAssignmentTableProps) {
   const availableClassCodes = existingClasses
-    .filter(cls => cls.classCode)
-    .map(cls => cls.classCode)
-    .join(', ')
+    .filter((cls) => cls.classCode)
+    .map((cls) => cls.classCode)
+    .join(", ")
 
   const columns: ColumnDef<ClassAssignmentRow>[] = [
     {
-      id: 'studentId',
-      header: '学籍番号',
-      accessorKey: 'studentId',
+      id: "studentId",
+      header: "学籍番号",
+      accessorKey: "studentId",
       size: 100,
       meta: {
-        placeholder: '例: 001',
+        placeholder: "例: 001",
       },
     },
     {
-      id: 'classCode',
-      header: 'クラスコード',
-      accessorKey: 'classCode',
+      id: "classCode",
+      header: "クラスコード",
+      accessorKey: "classCode",
       size: 120,
       meta: {
-        placeholder: '例: 1A',
+        placeholder: "例: 1A",
       },
     },
   ]
@@ -53,11 +52,11 @@ export default function ClassAssignmentTable({
     <div className="space-y-4">
       <div className="rounded-lg bg-blue-50 p-4">
         <h4 className="font-medium text-blue-900">利用可能なクラスコード</h4>
-        <p className="text-sm text-blue-700 mt-1">
-          {availableClassCodes || 'クラスが登録されていません'}
+        <p className="mt-1 text-sm text-blue-700">
+          {availableClassCodes || "クラスが登録されていません"}
         </p>
       </div>
-      
+
       <EditableTable
         data={data}
         columns={columns}

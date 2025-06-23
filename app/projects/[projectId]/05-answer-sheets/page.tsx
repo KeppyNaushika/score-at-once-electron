@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/AuthContext"
-import { toast } from "sonner"
-import { Upload, Eye, Trash2, UserX, User } from "lucide-react"
+import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,11 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
+import { Eye, Trash2, Upload, User, UserX } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 interface ProjectData {
   id: string
@@ -159,7 +159,7 @@ export default function AnswerSheetsPage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto p-6">
-        <div className="mb-6 flex justify-between items-start">
+        <div className="mb-6 flex items-start justify-between">
           <div>
             <h1 className="text-3xl font-bold">
               {project?.name || "プロジェクト"} - 答案管理
@@ -169,7 +169,9 @@ export default function AnswerSheetsPage() {
             </p>
           </div>
           <Button
-            onClick={() => router.push(`/projects/${projectId}/06-score-at-once`)}
+            onClick={() =>
+              router.push(`/projects/${projectId}/06-score-at-once`)
+            }
           >
             次へ: 採点開始
           </Button>

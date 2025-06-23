@@ -1,8 +1,7 @@
 "use client"
 
-import React from "react"
-import { ColumnDef } from "@tanstack/react-table"
 import { EditableTable } from "@/components/common/EditableTable"
+import { ColumnDef } from "@tanstack/react-table"
 
 interface StudentImportRow {
   studentId: string
@@ -25,57 +24,57 @@ export default function StudentImportTable({
 }: StudentImportTableProps) {
   const columns: ColumnDef<StudentImportRow>[] = [
     {
-      id: 'studentId',
-      header: '学籍番号',
-      accessorKey: 'studentId',
+      id: "studentId",
+      header: "学籍番号",
+      accessorKey: "studentId",
       size: 100,
       meta: {
-        placeholder: '例: 001',
+        placeholder: "例: 001",
       },
     },
     {
-      id: 'lastName',
-      header: '姓',
-      accessorKey: 'lastName',
+      id: "lastName",
+      header: "姓",
+      accessorKey: "lastName",
       size: 100,
       meta: {
-        placeholder: '例: 田中',
+        placeholder: "例: 田中",
       },
     },
     {
-      id: 'firstName',
-      header: '名',
-      accessorKey: 'firstName',
+      id: "firstName",
+      header: "名",
+      accessorKey: "firstName",
       size: 100,
       meta: {
-        placeholder: '例: 太郎',
+        placeholder: "例: 太郎",
       },
     },
     {
-      id: 'lastNameKana',
-      header: '姓カナ',
-      accessorKey: 'lastNameKana',
+      id: "lastNameKana",
+      header: "姓カナ",
+      accessorKey: "lastNameKana",
       size: 120,
       meta: {
-        placeholder: '例: タナカ',
+        placeholder: "例: タナカ",
       },
     },
     {
-      id: 'firstNameKana',
-      header: '名カナ',
-      accessorKey: 'firstNameKana',
+      id: "firstNameKana",
+      header: "名カナ",
+      accessorKey: "firstNameKana",
       size: 120,
       meta: {
-        placeholder: '例: タロウ',
+        placeholder: "例: タロウ",
       },
     },
     {
-      id: 'enrollmentYear',
-      header: '入学年度',
-      accessorKey: 'enrollmentYear',
+      id: "enrollmentYear",
+      header: "入学年度",
+      accessorKey: "enrollmentYear",
       size: 80,
       meta: {
-        placeholder: '例: 2024',
+        placeholder: "例: 2024",
       },
     },
   ]
@@ -90,7 +89,7 @@ export default function StudentImportTable({
       minRows={10}
       className="min-h-[400px] min-w-[800px]"
       getRowProps={(row) => ({
-        className: row.original.isDuplicate ? "bg-red-50" : ""
+        className: row.original.isDuplicate ? "bg-red-50" : "",
       })}
     />
   )

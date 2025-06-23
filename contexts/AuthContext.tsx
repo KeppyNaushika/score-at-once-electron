@@ -1,8 +1,14 @@
-'use client'
+"use client"
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'sonner'
+import { useRouter } from "next/navigation"
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react"
+import { toast } from "sonner"
 
 interface User {
   id: string
@@ -34,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const userId = localStorage.getItem('authToken')
+      const userId = localStorage.getItem("authToken")
       if (userId) {
         // userIdから直接ユーザー情報を取得
         const users = await window.electronAPI.fetchUsers()
@@ -42,36 +48,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (user) {
           setUser(user)
         } else {
-          localStorage.removeItem('authToken')
+          localStorage.removeItem("authToken")
           setUser(null)
         }
       }
     } catch (error) {
-      console.error('Auth check failed:', error)
-      localStorage.removeItem('authToken')
+      console.error("Auth check failed:", error)
+      localStorage.removeItem("authToken")
       setUser(null)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (
+    username: string,
+    password: string,
+  ): Promise<boolean> => {
     try {
       const result = await window.electronAPI.loginUser(username, password)
-      
+
       if (result.success && result.user && result.token) {
-        localStorage.setItem('authToken', result.token)
+        localStorage.setItem("authToken", result.token)
         setUser(result.user)
-        toast.success('ログインしました')
-        router.push('/dashboard')
+        toast.success("ログインしました")
+        router.push("/dashboard")
         return true
       } else {
-        toast.error(result.error || 'ログインに失敗しました')
+        toast.error(result.error || "ログインに失敗しました")
         return false
       }
     } catch (error) {
-      console.error('Login failed:', error)
-      toast.error('ログインに失敗しました')
+      console.error("Login failed:", error)
+      toast.error("ログインに失敗しました")
       return false
     }
   }
@@ -81,24 +90,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // パスワード不要のクイックログイン
       setUser(selectedUser)
       // 簡易トークンとして user.id を保存
-      localStorage.setItem('authToken', selectedUser.id)
+      localStorage.setItem("authToken", selectedUser.id)
       toast.success(`${selectedUser.name}さん、おかえりなさい！`)
-      router.push('/dashboard')
+      router.push("/dashboard")
     } catch (error) {
-      console.error('Quick login failed:', error)
-      toast.error('ログインに失敗しました')
+      console.error("Quick login failed:", error)
+      toast.error("ログインに失敗しました")
     }
   }
 
   const logout = () => {
-    localStorage.removeItem('authToken')
+    localStorage.removeItem("authToken")
     setUser(null)
-    toast.success('ログアウトしました')
-    router.push('/')
+    toast.success("ログアウトしました")
+    router.push("/")
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, quickLogin, logout, checkAuth }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, login, quickLogin, logout, checkAuth }}
+    >
       {children}
     </AuthContext.Provider>
   )
@@ -107,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

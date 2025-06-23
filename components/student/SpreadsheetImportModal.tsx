@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, AlertCircle } from "lucide-react"
 import { useStudentImport } from "@/hooks/useStudentImport"
+import { AlertCircle, Upload } from "lucide-react"
 import StudentImportTable from "./StudentImportTable"
 
 interface ClassWithMemberships {
@@ -77,11 +76,15 @@ export default function SpreadsheetImportModal({
         onClose()
       }
     } catch (error) {
-      alert('生徒のインポートに失敗しました。')
+      alert("生徒のインポートに失敗しました。")
     }
   }
 
-  const ValidationMessages = ({ validation }: { validation: { valid: number; errors: string[]; warnings: string[] } }) => (
+  const ValidationMessages = ({
+    validation,
+  }: {
+    validation: { valid: number; errors: string[]; warnings: string[] }
+  }) => (
     <div className="space-y-2">
       {validation.errors.length > 0 && (
         <div className="rounded-md bg-red-50 p-3">
@@ -90,7 +93,7 @@ export default function SpreadsheetImportModal({
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">エラー</h3>
               <div className="mt-2 text-sm text-red-700">
-                <ul className="list-disc pl-5 space-y-1">
+                <ul className="list-disc space-y-1 pl-5">
                   {validation.errors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
@@ -108,7 +111,7 @@ export default function SpreadsheetImportModal({
             <div className="ml-3">
               <h3 className="text-sm font-medium text-yellow-800">警告</h3>
               <div className="mt-2 text-sm text-yellow-700">
-                <ul className="list-disc pl-5 space-y-1">
+                <ul className="list-disc space-y-1 pl-5">
                   {validation.warnings.map((warning, index) => (
                     <li key={index}>{warning}</li>
                   ))}
@@ -156,7 +159,11 @@ export default function SpreadsheetImportModal({
           </Button>
           <Button
             onClick={handleStudentImport}
-            disabled={studentValidation.errors.length > 0 || studentData.length === 0 || isProcessing}
+            disabled={
+              studentValidation.errors.length > 0 ||
+              studentData.length === 0 ||
+              isProcessing
+            }
           >
             {isProcessing ? "登録中..." : `${studentValidation.valid}名を登録`}
           </Button>

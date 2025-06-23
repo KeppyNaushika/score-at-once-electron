@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,7 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, AlertCircle } from "lucide-react"
+import { AlertCircle, Upload } from "lucide-react"
+import { useState } from "react"
 import ClassStudentImportTable from "./ClassStudentImportTable"
 
 interface ClassStudentImportModalProps {
@@ -33,7 +33,7 @@ export default function ClassStudentImportModal({
   className,
 }: ClassStudentImportModalProps) {
   const [studentData, setStudentData] = useState<ClassStudentImportRow[]>([
-    { studentId: "" }
+    { studentId: "" },
   ])
   const [isProcessing, setIsProcessing] = useState(false)
   const [validation, setValidation] = useState<{
@@ -47,24 +47,26 @@ export default function ClassStudentImportModal({
     const warnings: string[] = []
     let validCount = 0
 
-    const nonEmptyData = data.filter(row => row.studentId.trim() !== "")
-    
+    const nonEmptyData = data.filter((row) => row.studentId.trim() !== "")
+
     if (nonEmptyData.length === 0) {
       errors.push("学籍番号が入力されていません。")
       return { valid: 0, errors, warnings }
     }
 
     const studentIds = new Set<string>()
-    
+
     nonEmptyData.forEach((row, index) => {
       const studentId = row.studentId.trim()
-      
+
       if (!studentId) {
         return
       }
 
       if (studentIds.has(studentId)) {
-        errors.push(`行${index + 1}: 学籍番号「${studentId}」が重複しています。`)
+        errors.push(
+          `行${index + 1}: 学籍番号「${studentId}」が重複しています。`,
+        )
         return
       }
 
@@ -89,16 +91,16 @@ export default function ClassStudentImportModal({
     setIsProcessing(true)
     try {
       const validStudentIds = studentData
-        .filter(row => row.studentId.trim() !== "")
-        .map(row => row.studentId.trim())
+        .filter((row) => row.studentId.trim() !== "")
+        .map((row) => row.studentId.trim())
 
       // Add each student to the class
       for (const studentId of validStudentIds) {
         try {
           // First try to find the student by studentId
           const students = await window.electronAPI.fetchStudents()
-          const student = students.find(s => s.studentId === studentId)
-          
+          const student = students.find((s) => s.studentId === studentId)
+
           if (student) {
             await window.electronAPI.addStudentToClass(
               student.id,
@@ -106,7 +108,7 @@ export default function ClassStudentImportModal({
               new Date(),
               "REGULAR",
               undefined,
-              `表形式インポートにより追加 - ${new Date().toLocaleDateString('ja-JP')}`
+              `表形式インポートにより追加 - ${new Date().toLocaleDateString("ja-JP")}`,
             )
           } else {
             console.warn(`学籍番号 ${studentId} の生徒が見つかりません`)
@@ -126,7 +128,11 @@ export default function ClassStudentImportModal({
     }
   }
 
-  const ValidationMessages = ({ validation }: { validation: { valid: number; errors: string[]; warnings: string[] } }) => (
+  const ValidationMessages = ({
+    validation,
+  }: {
+    validation: { valid: number; errors: string[]; warnings: string[] }
+  }) => (
     <div className="space-y-2">
       {validation.errors.length > 0 && (
         <div className="rounded-md bg-red-50 p-3">
@@ -135,7 +141,7 @@ export default function ClassStudentImportModal({
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">エラー</h3>
               <div className="mt-2 text-sm text-red-700">
-                <ul className="list-disc pl-5 space-y-1">
+                <ul className="list-disc space-y-1 pl-5">
                   {validation.errors.map((error, index) => (
                     <li key={index}>{error}</li>
                   ))}
@@ -145,7 +151,7 @@ export default function ClassStudentImportModal({
           </div>
         </div>
       )}
-      
+
       {validation.warnings.length > 0 && (
         <div className="rounded-md bg-yellow-50 p-3">
           <div className="flex">
@@ -153,7 +159,7 @@ export default function ClassStudentImportModal({
             <div className="ml-3">
               <h3 className="text-sm font-medium text-yellow-800">警告</h3>
               <div className="mt-2 text-sm text-yellow-700">
-                <ul className="list-disc pl-5 space-y-1">
+                <ul className="list-disc space-y-1 pl-5">
                   {validation.warnings.map((warning, index) => (
                     <li key={index}>{warning}</li>
                   ))}
@@ -163,7 +169,7 @@ export default function ClassStudentImportModal({
           </div>
         </div>
       )}
-      
+
       {validation.valid > 0 && (
         <div className="rounded-md bg-green-50 p-3">
           <div className="text-sm text-green-700">
@@ -176,7 +182,7 @@ export default function ClassStudentImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -199,9 +205,13 @@ export default function ClassStudentImportModal({
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>
-          <Button 
+          <Button
             onClick={handleImport}
-            disabled={validation.errors.length > 0 || validation.valid === 0 || isProcessing}
+            disabled={
+              validation.errors.length > 0 ||
+              validation.valid === 0 ||
+              isProcessing
+            }
           >
             {isProcessing ? "追加中..." : `${validation.valid}名を追加`}
           </Button>

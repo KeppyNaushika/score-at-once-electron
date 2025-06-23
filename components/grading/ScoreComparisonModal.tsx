@@ -1,12 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -15,22 +11,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   AlertTriangle,
   CheckCircle,
-  Users,
   Clock,
   MessageSquare,
   Save,
+  Users,
   X,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 // 採点結果の型定義
 interface QuestionScore {
   id: string
   score: number
   maxScore: number
-  status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "proposed" | "final"
+  status:
+    | "ungraded"
+    | "correct"
+    | "incorrect"
+    | "partial"
+    | "pending"
+    | "proposed"
+    | "final"
   comment: string
   scoredByUserId: string
   scoredByUser: {
@@ -85,12 +92,12 @@ export default function ScoreComparisonModal({
     try {
       const result = await window.electronAPI.getQuestionScoreComparison(
         answerSheetId,
-        layoutRegionId
+        layoutRegionId,
       )
 
       if (result.success) {
         setComparison(result)
-        
+
         // 既存の最終結果がある場合はフォームに設定
         if (result.finalScore) {
           setFinalScore(result.finalScore.score)
@@ -101,10 +108,10 @@ export default function ScoreComparisonModal({
           setFinalComment(result.proposedScores[0].comment || "")
         }
       } else {
-        console.error('Failed to fetch score comparison:', result.error)
+        console.error("Failed to fetch score comparison:", result.error)
       }
     } catch (error) {
-      console.error('Failed to fetch score comparison:', error)
+      console.error("Failed to fetch score comparison:", error)
     } finally {
       setLoading(false)
     }
@@ -126,22 +133,22 @@ export default function ScoreComparisonModal({
       const result = await window.electronAPI.finalizeQuestionScore(
         answerSheetId,
         layoutRegionId,
-        'current-user', // TODO: 認証システムと連携
+        "current-user", // TODO: 認証システムと連携
         {
           score: finalScore,
           maxScore: maxScore,
           comment: finalComment,
-        }
+        },
       )
 
       if (result.success) {
         onScoreFinalized?.()
         onClose()
       } else {
-        console.error('Failed to finalize score:', result.error)
+        console.error("Failed to finalize score:", result.error)
       }
     } catch (error) {
-      console.error('Failed to finalize score:', error)
+      console.error("Failed to finalize score:", error)
     } finally {
       setFinalizing(false)
     }
@@ -150,34 +157,39 @@ export default function ScoreComparisonModal({
   // 採点結果のスタイルを取得
   const getScoreStyle = (score: QuestionScore) => {
     switch (score.status) {
-      case 'correct':
-        return 'border-green-200 bg-green-50'
-      case 'incorrect':
-        return 'border-red-200 bg-red-50'
-      case 'partial':
-        return 'border-yellow-200 bg-yellow-50'
-      case 'pending':
-        return 'border-blue-200 bg-blue-50'
-      case 'final':
-        return 'border-purple-200 bg-purple-50'
+      case "correct":
+        return "border-green-200 bg-green-50"
+      case "incorrect":
+        return "border-red-200 bg-red-50"
+      case "partial":
+        return "border-yellow-200 bg-yellow-50"
+      case "pending":
+        return "border-blue-200 bg-blue-50"
+      case "final":
+        return "border-purple-200 bg-purple-50"
       default:
-        return 'border-gray-200 bg-gray-50'
+        return "border-gray-200 bg-gray-50"
     }
   }
 
   // ステータスバッジを取得
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'correct':
+      case "correct":
         return <Badge className="bg-green-600">🔵 正答</Badge>
-      case 'incorrect':
+      case "incorrect":
         return <Badge variant="destructive">❌ 誤答</Badge>
-      case 'partial':
+      case "partial":
         return <Badge variant="secondary">🔸 部分点</Badge>
-      case 'pending':
+      case "pending":
         return <Badge variant="outline">⏸️ 保留</Badge>
-      case 'final':
-        return <Badge className="bg-purple-600"><CheckCircle className="h-3 w-3 mr-1" />最終</Badge>
+      case "final":
+        return (
+          <Badge className="bg-purple-600">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            最終
+          </Badge>
+        )
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -185,10 +197,10 @@ export default function ScoreComparisonModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Users className="h-5 w-5 mr-2" />
+            <Users className="mr-2 h-5 w-5" />
             採点結果の比較・最終決定
           </DialogTitle>
           <DialogDescription>
@@ -198,7 +210,7 @@ export default function ScoreComparisonModal({
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
             <span className="ml-2">データを読み込み中...</span>
           </div>
         ) : (
@@ -207,8 +219,8 @@ export default function ScoreComparisonModal({
             {comparison?.finalScore && (
               <Card className="border-purple-200 bg-purple-50">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm flex items-center">
-                    <CheckCircle className="h-4 w-4 mr-2 text-purple-600" />
+                  <CardTitle className="flex items-center text-sm">
+                    <CheckCircle className="mr-2 h-4 w-4 text-purple-600" />
                     最終決定済み
                   </CardTitle>
                 </CardHeader>
@@ -216,21 +228,27 @@ export default function ScoreComparisonModal({
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-lg font-semibold">
-                        {comparison.finalScore.score} / {comparison.finalScore.maxScore} 点
+                        {comparison.finalScore.score} /{" "}
+                        {comparison.finalScore.maxScore} 点
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         決定者: {comparison.finalScore.scoredByUser.name}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        決定日時: {new Date(comparison.finalScore.updatedAt).toLocaleString()}
+                      <div className="text-muted-foreground text-sm">
+                        決定日時:{" "}
+                        {new Date(
+                          comparison.finalScore.updatedAt,
+                        ).toLocaleString()}
                       </div>
                     </div>
                     {getStatusBadge(comparison.finalScore.status)}
                   </div>
                   {comparison.finalScore.comment && (
-                    <div className="mt-3 p-3 bg-white rounded border">
-                      <div className="text-sm font-medium mb-1">コメント:</div>
-                      <div className="text-sm">{comparison.finalScore.comment}</div>
+                    <div className="mt-3 rounded border bg-white p-3">
+                      <div className="mb-1 text-sm font-medium">コメント:</div>
+                      <div className="text-sm">
+                        {comparison.finalScore.comment}
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -238,61 +256,68 @@ export default function ScoreComparisonModal({
             )}
 
             {/* 提案された採点結果一覧 */}
-            {comparison?.proposedScores && comparison.proposedScores.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  採点結果一覧 ({comparison.proposedScores.length}件)
-                </h3>
-                <div className="grid gap-3">
-                  {comparison.proposedScores.map((score, index) => (
-                    <Card key={score.id} className={getScoreStyle(score)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-3">
-                            <div className="text-lg font-semibold">
-                              {score.score} / {score.maxScore} 点
+            {comparison?.proposedScores &&
+              comparison.proposedScores.length > 0 && (
+                <div>
+                  <h3 className="mb-3 flex items-center text-lg font-semibold">
+                    <MessageSquare className="mr-2 h-5 w-5" />
+                    採点結果一覧 ({comparison.proposedScores.length}件)
+                  </h3>
+                  <div className="grid gap-3">
+                    {comparison.proposedScores.map((score, index) => (
+                      <Card key={score.id} className={getScoreStyle(score)}>
+                        <CardContent className="p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="text-lg font-semibold">
+                                {score.score} / {score.maxScore} 点
+                              </div>
+                              {getStatusBadge(score.status)}
                             </div>
-                            {getStatusBadge(score.status)}
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-medium">{score.scoredByUser.name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(score.updatedAt).toLocaleString()}
+                            <div className="text-right">
+                              <div className="text-sm font-medium">
+                                {score.scoredByUser.name}
+                              </div>
+                              <div className="text-muted-foreground text-xs">
+                                {new Date(score.updatedAt).toLocaleString()}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        {score.comment && (
-                          <div className="mt-2 p-2 bg-white rounded border">
-                            <div className="text-xs font-medium mb-1">コメント:</div>
-                            <div className="text-sm">{score.comment}</div>
+                          {score.comment && (
+                            <div className="mt-2 rounded border bg-white p-2">
+                              <div className="mb-1 text-xs font-medium">
+                                コメント:
+                              </div>
+                              <div className="text-sm">{score.comment}</div>
+                            </div>
+                          )}
+                          <div className="mt-2 flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setFinalScore(score.score)
+                                setFinalComment(score.comment || "")
+                              }}
+                            >
+                              この結果を採用
+                            </Button>
                           </div>
-                        )}
-                        <div className="mt-2 flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setFinalScore(score.score)
-                              setFinalComment(score.comment || "")
-                            }}
-                          >
-                            この結果を採用
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* 競合の警告 */}
             {comparison?.hasConflict && (
-              <div className="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3" />
+              <div className="flex items-center rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+                <AlertTriangle className="mr-3 h-5 w-5 text-yellow-600" />
                 <div>
-                  <div className="font-medium text-yellow-800">採点結果に相違があります</div>
+                  <div className="font-medium text-yellow-800">
+                    採点結果に相違があります
+                  </div>
                   <div className="text-sm text-yellow-700">
                     複数の教員が異なる採点結果を提案しています。最終結果を決定してください。
                   </div>
@@ -303,8 +328,8 @@ export default function ScoreComparisonModal({
             {/* 最終結果の入力 */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Save className="h-5 w-5 mr-2" />
+                <CardTitle className="flex items-center text-lg">
+                  <Save className="mr-2 h-5 w-5" />
                   最終結果の決定
                 </CardTitle>
               </CardHeader>
@@ -318,7 +343,9 @@ export default function ScoreComparisonModal({
                       min="0"
                       max={maxScore}
                       value={finalScore}
-                      onChange={(e) => setFinalScore(parseInt(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setFinalScore(parseInt(e.target.value) || 0)
+                      }
                     />
                   </div>
                   <div>
@@ -343,22 +370,22 @@ export default function ScoreComparisonModal({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={finalizing}>
-            <X className="h-4 w-4 mr-1" />
+            <X className="mr-1 h-4 w-4" />
             キャンセル
           </Button>
-          <Button 
-            onClick={handleFinalize} 
+          <Button
+            onClick={handleFinalize}
             disabled={finalizing || loading}
             className="bg-purple-600 hover:bg-purple-700"
           >
             {finalizing ? (
               <>
-                <Clock className="h-4 w-4 mr-1 animate-spin" />
+                <Clock className="mr-1 h-4 w-4 animate-spin" />
                 決定中...
               </>
             ) : (
               <>
-                <CheckCircle className="h-4 w-4 mr-1" />
+                <CheckCircle className="mr-1 h-4 w-4" />
                 最終決定
               </>
             )}

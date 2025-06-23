@@ -1,7 +1,7 @@
 "use client"
 
+import PageHeader from "@/components/layout/PageHeader"
 import LayoutRegionEditor from "@/components/project/layout/LayoutRegionEditor"
-import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -15,7 +15,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import PageHeader from "@/components/layout/PageHeader"
 
 export default function TemplateStepPage() {
   const params = useParams()
@@ -112,11 +111,17 @@ export default function TemplateStepPage() {
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
             // 最初のマスター画像に対応する領域のみをフィルター（sortedMasterImagesが定義された後）
-            const firstMasterImageId = fetchedProject.masterImages && fetchedProject.masterImages.length > 0
-              ? [...fetchedProject.masterImages].sort((a, b) => a.pageNumber - b.pageNumber)[0].id
-              : null
-            const currentImageRegions = firstMasterImageId 
-              ? existingRegions.filter(region => region.masterImageId === firstMasterImageId)
+            const firstMasterImageId =
+              fetchedProject.masterImages &&
+              fetchedProject.masterImages.length > 0
+                ? [...fetchedProject.masterImages].sort(
+                    (a, b) => a.pageNumber - b.pageNumber,
+                  )[0].id
+                : null
+            const currentImageRegions = firstMasterImageId
+              ? existingRegions.filter(
+                  (region) => region.masterImageId === firstMasterImageId,
+                )
               : []
             setLayoutRegions(
               currentImageRegions.map((region) => ({
@@ -169,7 +174,7 @@ export default function TemplateStepPage() {
       if (layoutRegions.length > 0 && selectedMasterImage) {
         await autoSaveRegions(layoutRegions)
       }
-      
+
       setSelectedMasterImage(image)
       try {
         const url = await window.electronAPI.resolveFileProtocolPath(image.path)
@@ -182,12 +187,13 @@ export default function TemplateStepPage() {
           })
         }
         img.src = url
-        
+
         // 新しいページの領域を読み込む
         if (projectId) {
-          const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          const allRegions =
+            await window.electronAPI.getLayoutRegionsByProjectId(projectId)
           const currentImageRegions = allRegions.filter(
-            region => region.masterImageId === image.id
+            (region) => region.masterImageId === image.id,
           )
           setLayoutRegions(
             currentImageRegions.map((region) => ({
@@ -247,18 +253,20 @@ export default function TemplateStepPage() {
 
         if (savedRegions.length > 0) {
           setLayoutRegions(
-            savedRegions.filter(region => region !== null).map((region) => ({
-              id: region!.id,
-              type: region!.type,
-              x: region!.x,
-              y: region!.y,
-              width: region!.width,
-              height: region!.height,
-              label: region!.label || "",
-              points: region!.points ? String(region!.points) : null,
-              questionNumber: region!.questionNumber || "",
-              masterImageId: region!.masterImageId || "",
-            })),
+            savedRegions
+              .filter((region) => region !== null)
+              .map((region) => ({
+                id: region!.id,
+                type: region!.type,
+                x: region!.x,
+                y: region!.y,
+                width: region!.width,
+                height: region!.height,
+                label: region!.label || "",
+                points: region!.points ? String(region!.points) : null,
+                questionNumber: region!.questionNumber || "",
+                masterImageId: region!.masterImageId || "",
+              })),
           )
           setLayoutId("saved")
         }
@@ -271,7 +279,10 @@ export default function TemplateStepPage() {
 
   const handleRegionsChange = useCallback(
     (newRegions: any[] | ((prev: any[]) => any[])) => {
-      const regions = typeof newRegions === 'function' ? newRegions(layoutRegions) : newRegions
+      const regions =
+        typeof newRegions === "function"
+          ? newRegions(layoutRegions)
+          : newRegions
       setLayoutRegions(regions)
 
       // Clear existing timeout
@@ -335,18 +346,20 @@ export default function TemplateStepPage() {
 
       // 保存された領域でUIを更新
       setLayoutRegions(
-        savedRegions.filter(region => region !== null).map((region) => ({
-          id: region!.id,
-          type: region!.type,
-          x: region!.x,
-          y: region!.y,
-          width: region!.width,
-          height: region!.height,
-          label: region!.label || "",
-          points: region!.points ? String(region!.points) : null,
-          questionNumber: region!.questionNumber || "",
-          masterImageId: region!.masterImageId || "",
-        })),
+        savedRegions
+          .filter((region) => region !== null)
+          .map((region) => ({
+            id: region!.id,
+            type: region!.type,
+            x: region!.x,
+            y: region!.y,
+            width: region!.width,
+            height: region!.height,
+            label: region!.label || "",
+            points: region!.points ? String(region!.points) : null,
+            questionNumber: region!.questionNumber || "",
+            masterImageId: region!.masterImageId || "",
+          })),
       )
 
       if (savedRegions.length > 0) {
@@ -416,18 +429,25 @@ export default function TemplateStepPage() {
         description="ドラッグして採点領域を作成"
         projectName={project?.examName}
       >
-        {selectedMasterImage && layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && (
-          <Button onClick={() => router.push(`/projects/${projectId}/03-region-info`)}>
-            次へ: 領域情報を編集
-          </Button>
-        )}
+        {selectedMasterImage &&
+          layoutRegions.filter(
+            (r) => r.masterImageId === selectedMasterImage.id,
+          ).length > 0 && (
+            <Button
+              onClick={() =>
+                router.push(`/projects/${projectId}/03-region-info`)
+              }
+            >
+              次へ: 領域情報を編集
+            </Button>
+          )}
       </PageHeader>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         {/* Page Navigation - moved to top center */}
         {masterImages.length > 1 && (
-          <div className="flex justify-center items-center py-3 border-b">
+          <div className="flex items-center justify-center border-b py-3">
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
@@ -437,9 +457,7 @@ export default function TemplateStepPage() {
                     (img) => img.id === selectedMasterImage?.id,
                   )
                   if (currentIndex > 0) {
-                    handleMasterImageChange(
-                      masterImages[currentIndex - 1].id,
-                    )
+                    handleMasterImageChange(masterImages[currentIndex - 1].id)
                   }
                 }}
                 disabled={
@@ -476,9 +494,7 @@ export default function TemplateStepPage() {
                     (img) => img.id === selectedMasterImage?.id,
                   )
                   if (currentIndex < masterImages.length - 1) {
-                    handleMasterImageChange(
-                      masterImages[currentIndex + 1].id,
-                    )
+                    handleMasterImageChange(masterImages[currentIndex + 1].id)
                   }
                 }}
                 disabled={
@@ -495,7 +511,7 @@ export default function TemplateStepPage() {
             </div>
           </div>
         )}
-        
+
         {/* Layout Editor */}
         <div className="flex-1 overflow-hidden p-4">
           <LayoutRegionEditor

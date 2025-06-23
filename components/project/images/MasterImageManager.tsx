@@ -1,9 +1,9 @@
 "use client"
 
-import { Prisma } from "@prisma/client"
 import FileUploadDropzone from "@/components/common/FileUploadDropzone"
-import MasterImageGallery from "./MasterImageGallery"
 import { useMasterImages } from "@/hooks/useMasterImages"
+import { Prisma } from "@prisma/client"
+import MasterImageGallery from "./MasterImageGallery"
 
 interface MasterImageManagerProps {
   projectId: string
@@ -24,7 +24,7 @@ export default function MasterImageManager({
     isMoving,
     uploadImages,
     deleteImage,
-    moveImage
+    moveImage,
   } = useMasterImages(projectId, initialMasterImages, onMasterImagesChange)
 
   return (
@@ -33,7 +33,7 @@ export default function MasterImageManager({
         onFilesSelected={uploadImages}
         accept={{
           "image/*": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"],
-          "application/pdf": [".pdf"]
+          "application/pdf": [".pdf"],
         }}
         multiple={true}
         isUploading={isUploading}

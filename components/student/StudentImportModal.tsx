@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -12,12 +11,17 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useDropzone } from "react-dropzone"
 import { Prisma } from "@prisma/client"
 import { UploadCloud } from "lucide-react"
+import { useCallback, useState } from "react"
+import { useDropzone } from "react-dropzone"
 
-type StudentWithClass = Prisma.StudentGetPayload<{ include: { memberships: { include: { class: true } } } }>
-type ClassWithStudents = Prisma.ClassGetPayload<{ include: { memberships: true } }>
+type StudentWithClass = Prisma.StudentGetPayload<{
+  include: { memberships: { include: { class: true } } }
+}>
+type ClassWithStudents = Prisma.ClassGetPayload<{
+  include: { memberships: true }
+}>
 
 interface StudentImportModalProps {
   isOpen: boolean

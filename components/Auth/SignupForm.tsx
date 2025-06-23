@@ -1,8 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,6 +12,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
 
 export default function SignupForm() {
   const [formData, setFormData] = useState({
@@ -78,9 +78,7 @@ export default function SignupForm() {
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle className="text-2xl">アカウント作成</CardTitle>
-        <CardDescription>
-          新しいアカウントを作成してください。
-        </CardDescription>
+        <CardDescription>新しいアカウントを作成してください。</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
@@ -116,7 +114,7 @@ export default function SignupForm() {
               value={formData.password}
               onChange={handleChange}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               6文字以上で入力してください
             </p>
           </div>

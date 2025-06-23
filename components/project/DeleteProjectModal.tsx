@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { toast } from "sonner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,10 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, FileImage, Upload, Settings, BarChart3 } from "lucide-react"
 import { Project } from "@prisma/client"
+import { AlertTriangle, FileImage, Settings, Upload } from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 interface DeleteProjectModalProps {
   project: Project & {
@@ -72,9 +72,10 @@ export default function DeleteProjectModal({
     }
   }
 
-  const hasData = projectData.masterImageCount > 0 || 
-                 projectData.answerSheetCount > 0 || 
-                 projectData.layoutRegionCount > 0
+  const hasData =
+    projectData.masterImageCount > 0 ||
+    projectData.answerSheetCount > 0 ||
+    projectData.layoutRegionCount > 0
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,10 +92,12 @@ export default function DeleteProjectModal({
 
         <div className="space-y-4">
           {/* Project Information */}
-          <div className="rounded-lg border p-3 space-y-2">
+          <div className="space-y-2 rounded-lg border p-3">
             <h4 className="font-medium">{project?.examName}</h4>
             {project?.description && (
-              <p className="text-sm text-muted-foreground">{project.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {project.description}
+              </p>
             )}
             <div className="flex items-center gap-2">
               {project?.subject && (
@@ -113,7 +116,7 @@ export default function DeleteProjectModal({
           {/* Data Summary */}
           {hasData && (
             <div className="space-y-3">
-              <h5 className="text-sm font-medium text-muted-foreground">
+              <h5 className="text-muted-foreground text-sm font-medium">
                 削除されるデータ
               </h5>
               <div className="grid grid-cols-2 gap-2 text-sm">

@@ -1,6 +1,5 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Search } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface StudentClassMembershipModalProps {
   isOpen: boolean
@@ -33,7 +33,7 @@ interface StudentClassMembershipModalProps {
   }) => void
   studentId?: string
   classId?: string
-  availableStudents: Array<{ 
+  availableStudents: Array<{
     id: string
     studentId: string
     lastName: string
@@ -41,7 +41,12 @@ interface StudentClassMembershipModalProps {
     lastNameKana: string
     firstNameKana: string
   }>
-  availableClasses: Array<{ id: string; name: string; subject?: string; classType: string }>
+  availableClasses: Array<{
+    id: string
+    name: string
+    subject?: string
+    classType: string
+  }>
   membershipToEdit?: {
     id: string
     studentId: string
@@ -50,7 +55,6 @@ interface StudentClassMembershipModalProps {
     notes?: string
   } | null
 }
-
 
 export default function StudentClassMembershipModal({
   isOpen,
@@ -96,7 +100,6 @@ export default function StudentClassMembershipModal({
       newErrors.classId = "学級を選択してください。"
     }
 
-
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -106,7 +109,7 @@ export default function StudentClassMembershipModal({
       return
     }
 
-    const selectedClass = availableClasses.find(c => c.id === classId)
+    const selectedClass = availableClasses.find((c) => c.id === classId)
     const classSubject = selectedClass?.subject
 
     onSave({
@@ -117,7 +120,7 @@ export default function StudentClassMembershipModal({
     })
   }
 
-  const selectedClass = availableClasses.find(c => c.id === classId)
+  const selectedClass = availableClasses.find((c) => c.id === classId)
   const isSubjectClass = selectedClass?.classType === "SUBJECT"
 
   return (
@@ -139,7 +142,7 @@ export default function StudentClassMembershipModal({
             </Label>
             <div className="col-span-3 space-y-2">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
                 <Input
                   placeholder="生徒名または学籍番号で検索"
                   value={studentSearchTerm}
@@ -147,26 +150,35 @@ export default function StudentClassMembershipModal({
                   className="pl-8"
                 />
               </div>
-              <Select value={studentId} onValueChange={setStudentId} disabled={!!initialStudentId}>
+              <Select
+                value={studentId}
+                onValueChange={setStudentId}
+                disabled={!!initialStudentId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="生徒を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStudents
                     .filter((student) => {
-                      if (!studentSearchTerm) return true;
-                      const searchTerm = studentSearchTerm.toLowerCase();
-                      const fullName = `${student.lastName} ${student.firstName}`.toLowerCase();
-                      const fullNameKana = `${student.lastNameKana} ${student.firstNameKana}`.toLowerCase();
-                      return fullName.includes(searchTerm) || 
-                             fullNameKana.includes(searchTerm) ||
-                             student.studentId.toLowerCase().includes(searchTerm);
+                      if (!studentSearchTerm) return true
+                      const searchTerm = studentSearchTerm.toLowerCase()
+                      const fullName =
+                        `${student.lastName} ${student.firstName}`.toLowerCase()
+                      const fullNameKana =
+                        `${student.lastNameKana} ${student.firstNameKana}`.toLowerCase()
+                      return (
+                        fullName.includes(searchTerm) ||
+                        fullNameKana.includes(searchTerm) ||
+                        student.studentId.toLowerCase().includes(searchTerm)
+                      )
                     })
                     .map((student) => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {student.lastName} {student.firstName} ({student.studentId})
-                    </SelectItem>
-                  ))}
+                      <SelectItem key={student.id} value={student.id}>
+                        {student.lastName} {student.firstName} (
+                        {student.studentId})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               {errors.studentId && (
@@ -181,7 +193,11 @@ export default function StudentClassMembershipModal({
               学級
             </Label>
             <div className="col-span-3">
-              <Select value={classId} onValueChange={setClassId} disabled={!!initialClassId}>
+              <Select
+                value={classId}
+                onValueChange={setClassId}
+                disabled={!!initialClassId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="学級を選択してください" />
                 </SelectTrigger>
@@ -199,7 +215,6 @@ export default function StudentClassMembershipModal({
               )}
             </div>
           </div>
-
 
           {/* 教科（教科別クラスでない場合のみ表示） */}
           {!isSubjectClass && (
