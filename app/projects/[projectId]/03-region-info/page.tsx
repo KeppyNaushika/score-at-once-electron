@@ -248,9 +248,9 @@ export default function RegionInfoPage() {
         projectName={project?.examName}
       >
         <Button
-          onClick={() => router.push(`/projects/${projectId}`)}
+          onClick={() => router.push(`/projects/${projectId}/04-students`)}
         >
-          次へ: 答案アップロード
+          次へ: 受験生徒管理
         </Button>
       </PageHeader>
 

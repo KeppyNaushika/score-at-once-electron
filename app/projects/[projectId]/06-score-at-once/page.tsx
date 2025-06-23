@@ -730,6 +730,12 @@ export default function GradingPage() {
                 >
                   👥 採点結果を比較・決定
                 </Button>
+                <Button
+                  variant="default"
+                  onClick={() => router.push(`/projects/${projectId}/07-export`)}
+                >
+                  次へ: 結果出力
+                </Button>
               </CardContent>
             </Card>
           </div>

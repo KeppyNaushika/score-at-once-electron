@@ -74,13 +74,13 @@ export default function MasterImageStepPage() {
         description: "模範解答が1枚も登録されていません。このまま進みますか？",
         action: {
           label: "はい",
-          onClick: () => router.push(`/projects/${projectId}/score/template`), // パスを /projects/ に修正
+          onClick: () => router.push(`/projects/${projectId}/02-template`), // パスを新しい構造に修正
         },
       })
       return
     }
     // 次のステップは採点領域設定ページ
-    router.push(`/projects/${projectId}/score/template`)
+    router.push(`/projects/${projectId}/02-template`)
   }
 
   if (isLoading) {
