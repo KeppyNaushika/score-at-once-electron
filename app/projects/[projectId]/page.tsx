@@ -35,6 +35,7 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -149,6 +150,11 @@ export default function ProjectDetailPage() {
 
   return (
     <ProtectedRoute>
+      <Head>
+        <title>
+          {project?.examName || "プロジェクト"} - 一括採点
+        </title>
+      </Head>
       <div className="container mx-auto p-6">
         <div className="mb-6">
           <div className="flex items-center justify-between">

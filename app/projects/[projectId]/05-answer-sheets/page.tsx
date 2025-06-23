@@ -2,6 +2,7 @@
 
 import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import PageHeader from "@/components/layout/PageHeader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -158,16 +159,11 @@ export default function AnswerSheetsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="container mx-auto p-6">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">
-              {project?.name || "プロジェクト"} - 答案管理
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              答案画像のアップロードと管理を行います
-            </p>
-          </div>
+      <div className="flex h-full flex-col">
+        <PageHeader
+          title="生徒解答のアップロード"
+          description="スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを行います。"
+        >
           <Button
             onClick={() =>
               router.push(`/projects/${projectId}/06-score-at-once`)
@@ -175,7 +171,9 @@ export default function AnswerSheetsPage() {
           >
             次へ: 採点開始
           </Button>
-        </div>
+        </PageHeader>
+        
+        <div className="flex-1 overflow-hidden p-6">
 
         <Tabs defaultValue="upload" className="space-y-6">
           <TabsList>
@@ -312,6 +310,7 @@ export default function AnswerSheetsPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </ProtectedRoute>
   )

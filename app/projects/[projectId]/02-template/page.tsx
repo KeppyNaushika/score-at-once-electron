@@ -426,8 +426,7 @@ export default function TemplateStepPage() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="採点領域の作成"
-        description="ドラッグして採点領域を作成"
-        projectName={project?.examName}
+        description="模範解答上に採点対象となる領域を視覚的に定義します。各設問や記入欄に対応する矩形領域を作成してください。"
       >
         {selectedMasterImage &&
           layoutRegions.filter(
