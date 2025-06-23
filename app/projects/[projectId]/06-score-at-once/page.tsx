@@ -127,7 +127,7 @@ export default function GradingPage() {
       try {
         // 答案データを取得
         const answersResult =
-          await window.electronAPI.getAnswerSheetsForProject(projectId)
+          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
         if (!answersResult.success) {
           throw new Error(
             answersResult.error || "Failed to fetch answer sheets",
@@ -136,15 +136,12 @@ export default function GradingPage() {
 
         // レイアウト領域（設問）データを取得
         const regionsResult =
-          await window.electronAPI.getLayoutRegions(projectId)
-        if (!regionsResult.success) {
-          throw new Error(
-            regionsResult.error || "Failed to fetch layout regions",
-          )
-        }
+          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
 
-        // 設問領域のみをフィルタリング
-        const questionRegions = regionsResult.regions
+        // 設問領域のみをフィルタリング - regionsResult is an array directly
+        const questionRegions = (
+          Array.isArray(regionsResult) ? regionsResult : []
+        )
           .filter(
             (region: any) =>
               region.type === "QUESTION_ANSWER" && region.questionNumber,
@@ -163,7 +160,19 @@ export default function GradingPage() {
         // 既存の採点データを取得
         const existingScores = await loadExistingScoringData(projectId)
 
-        setAnswerSheets(answersResult.answerSheets || [])
+        // Transform the data to match AnswerSheet interface
+        const transformedAnswerSheets = (answersResult.answerSheets || []).map(
+          (sheet: any) => ({
+            id: sheet.id,
+            studentId: sheet.studentId,
+            projectId: sheet.projectId,
+            imagePath: sheet.imagePath || "",
+            pageNumber: sheet.pageNumber || 1,
+            status: sheet.status || "uploaded",
+            student: sheet.student,
+          }),
+        )
+        setAnswerSheets(transformedAnswerSheets)
         setQuestionRegions(questionRegions)
         setScoringData(existingScores)
       } catch (error) {
@@ -480,7 +489,9 @@ export default function GradingPage() {
             採点を開始するには、まず答案をアップロードしてください。
           </p>
           <Button
-            onClick={() => router.push(`/projects/${projectId}/answer-sheets`)}
+            onClick={() =>
+              router.push(`/projects/${projectId}/05-answer-sheets`)
+            }
           >
             答案管理へ移動
           </Button>
@@ -501,7 +512,7 @@ export default function GradingPage() {
             採点を開始するには、まず採点領域を設定してください。
           </p>
           <Button
-            onClick={() => router.push(`/projects/${projectId}/score/template`)}
+            onClick={() => router.push(`/projects/${projectId}/02-template`)}
           >
             採点領域設定へ移動
           </Button>
@@ -527,7 +538,9 @@ export default function GradingPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => router.push(`/projects/${projectId}/score`)}
+              onClick={() =>
+                router.push(`/projects/${projectId}/05-answer-sheets`)
+              }
             >
               <ChevronLeft className="mr-1 h-4 w-4" />
               戻る

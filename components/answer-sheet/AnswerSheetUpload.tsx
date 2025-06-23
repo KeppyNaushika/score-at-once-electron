@@ -105,9 +105,10 @@ export default function AnswerSheetUpload({
         const existingAnswers = result.success ? result.answerSheets : []
 
         const studentsWithAnswerStatus = students.map((student) => {
-          const hasExistingAnswers = existingAnswers.some(
-            (answer: any) => answer.studentId === student.id,
-          )
+          const hasExistingAnswers =
+            existingAnswers?.some(
+              (answer: any) => answer.studentId === student.id,
+            ) ?? false
           return {
             ...student,
             isSelected: !hasExistingAnswers, // 既存答案がない生徒を選択

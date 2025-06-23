@@ -102,7 +102,17 @@ export default function StudentDetailPage() {
         const students = await window.electronAPI.fetchStudents()
         const targetStudent = students.find((s) => s.id === studentId)
         if (targetStudent) {
-          setStudent(targetStudent)
+          // Transform the student data to match the expected interface
+          const transformedStudent = {
+            ...targetStudent,
+            memberships: targetStudent.memberships.map((membership: any) => ({
+              ...membership,
+              membershipType: membership.membershipType || "regular",
+              startDate: new Date(membership.startDate || membership.createdAt),
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
+            })),
+          }
+          setStudent(transformedStudent)
         }
 
         // Fetch all classes for membership management
@@ -143,7 +153,18 @@ export default function StudentDetailPage() {
         studentId,
         studentData,
       )
-      setStudent(updatedStudent)
+      // Transform the updated student data to match the expected interface
+      const transformedStudent = {
+        ...updatedStudent,
+        memberships:
+          updatedStudent.memberships?.map((membership: any) => ({
+            ...membership,
+            membershipType: membership.membershipType || "regular",
+            startDate: new Date(membership.startDate || membership.createdAt),
+            endDate: membership.endDate ? new Date(membership.endDate) : null,
+          })) || [],
+      }
+      setStudent(transformedStudent)
       setIsStudentModalOpen(false)
     } catch (error) {
       console.error("Failed to update student:", error)
@@ -172,10 +193,6 @@ export default function StudentDetailPage() {
         await window.electronAPI.addStudentToClass(
           studentId,
           membershipData.classId,
-          membershipData.startDate,
-          membershipData.membershipType,
-          membershipData.subject,
-          membershipData.notes,
         )
       }
 
@@ -183,7 +200,18 @@ export default function StudentDetailPage() {
       const students = await window.electronAPI.fetchStudents()
       const updatedStudent = students.find((s) => s.id === studentId)
       if (updatedStudent) {
-        setStudent(updatedStudent)
+        // Transform the updated student data to match the expected interface
+        const transformedStudent = {
+          ...updatedStudent,
+          memberships:
+            updatedStudent.memberships?.map((membership: any) => ({
+              ...membership,
+              membershipType: membership.membershipType || "regular",
+              startDate: new Date(membership.startDate || membership.createdAt),
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
+            })) || [],
+        }
+        setStudent(transformedStudent)
       }
       setIsMembershipModalOpen(false)
     } catch (error) {
@@ -201,7 +229,22 @@ export default function StudentDetailPage() {
         const students = await window.electronAPI.fetchStudents()
         const updatedStudent = students.find((s) => s.id === studentId)
         if (updatedStudent) {
-          setStudent(updatedStudent)
+          // Transform the updated student data to match the expected interface
+          const transformedStudent = {
+            ...updatedStudent,
+            memberships:
+              updatedStudent.memberships?.map((membership: any) => ({
+                ...membership,
+                membershipType: membership.membershipType || "regular",
+                startDate: new Date(
+                  membership.startDate || membership.createdAt,
+                ),
+                endDate: membership.endDate
+                  ? new Date(membership.endDate)
+                  : null,
+              })) || [],
+          }
+          setStudent(transformedStudent)
         }
       } catch (error) {
         console.error("Failed to end membership:", error)

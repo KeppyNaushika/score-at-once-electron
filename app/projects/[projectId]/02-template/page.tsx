@@ -404,7 +404,7 @@ export default function TemplateStepPage() {
     router.push(`/projects/${projectId}/03-region-info`)
   }
   const goToPreviousStep = () => {
-    router.push(`/projects/${projectId}/score`)
+    router.push(`/projects/${projectId}/01-upload`)
   }
 
   if (isLoading) {

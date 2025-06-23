@@ -55,7 +55,7 @@ interface Student {
   firstName: string
   lastNameKana: string
   firstNameKana: string
-  enrollmentYear?: number
+  enrollmentYear?: number | null
   memberships: {
     id: string
     class: {
@@ -205,7 +205,14 @@ export default function StudentsPage() {
         }))
 
         setClasses(classes)
-        setAllClasses(allClassesResult)
+        setAllClasses(
+          allClassesResult.map((cls: any) => ({
+            ...cls,
+            students:
+              cls.memberships?.map((membership: any) => membership.student) ||
+              [],
+          })),
+        )
         setAvailableClasses(availableClasses)
       } catch (error) {
         console.error("生徒データの取得に失敗しました:", error)
@@ -267,8 +274,8 @@ export default function StudentsPage() {
       // 選択された学級の全生徒IDを取得
       const studentIds: string[] = []
       fullClasses.forEach((cls) => {
-        cls.memberships.forEach((membership) => {
-          studentIds.push(membership.student.id)
+        cls.students.forEach((student) => {
+          studentIds.push(student.id)
         })
       })
 
