@@ -169,6 +169,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("check-grading-data-for-students", projectId, studentIds),
   getClassesNotInProject: (projectId: string) =>
     ipcRenderer.invoke("get-classes-not-in-project", projectId),
+  getStudentsNotInProject: (projectId: string) =>
+    ipcRenderer.invoke("get-students-not-in-project", projectId),
+  updateStudentOrders: (projectId: string, studentOrders: { studentId: string; customOrder: number }[]) =>
+    ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
 
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>

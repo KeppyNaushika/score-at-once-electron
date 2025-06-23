@@ -3,7 +3,9 @@
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import AnswerDisplayViewer from "@/components/grading/AnswerDisplayViewer"
 import AnswerGridView from "@/components/grading/AnswerGridView"
-import GradingModeToggle, { GradingMode } from "@/components/grading/GradingModeToggle"
+import GradingModeToggle, {
+  GradingMode,
+} from "@/components/grading/GradingModeToggle"
 import ProjectProgressCard from "@/components/grading/ProjectProgressCard"
 import ScoreComparisonModal from "@/components/grading/ScoreComparisonModal"
 import { Button } from "@/components/ui/button"
@@ -36,7 +38,6 @@ type ScoringStatus =
   | "partial"
   | "pending"
   | "no_answer"
-  | "final"
 
 // 採点データの型定義
 interface ScoringData {
@@ -81,12 +82,12 @@ interface QuestionRegion {
 
 // キーボードショートカットの設定（Python版互換）
 const DEFAULT_SHORTCUTS = {
-  ungraded: "q",    // 未採点
-  correct: "e",     // 正答
-  partial: "f",     // 部分点
-  pending: "j",     // 保留
-  incorrect: "o",   // 誤答
-  no_answer: "p",   // 無答
+  ungraded: "q", // 未採点
+  correct: "e", // 正答
+  partial: "f", // 部分点
+  pending: "j", // 保留
+  incorrect: "o", // 誤答
+  no_answer: "p", // 無答
   nextQuestion: "ArrowRight",
   prevQuestion: "ArrowLeft",
   nextStudent: "ArrowDown",
@@ -107,7 +108,9 @@ export default function GradingPage() {
   const [gradingMode, setGradingMode] = useState<GradingMode>("individual")
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set())
   const [gridSize, setGridSize] = useState({ columns: 4, rows: 3 })
-  const [layoutDirection, setLayoutDirection] = useState<"right-down" | "left-down" | "down-right" | "down-left">("right-down")
+  const [layoutDirection, setLayoutDirection] = useState<
+    "right-down" | "left-down" | "down-right" | "down-left"
+  >("right-down")
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -143,7 +146,7 @@ export default function GradingPage() {
         if (projectData) {
           setProject(projectData)
         }
-        
+
         // 答案データを取得
         const answersResult =
           await window.electronAPI.getAnswerSheetsByProjectId(projectId)
@@ -341,7 +344,7 @@ export default function GradingPage() {
 
   // 採点処理関数
   const handleSetScore = (
-    type: "correct" | "incorrect" | "partial" | "pending",
+    type: ScoringStatus,
   ) => {
     if (!currentAnswerSheet || !currentQuestion) return
 
@@ -366,7 +369,7 @@ export default function GradingPage() {
         break
       case "no_answer":
         newScore = 0
-        status = "no_answer" as ScoringStatus
+        status = "no_answer"
         break
       case "partial":
         // 部分点の場合は入力ダイアログを表示（簡易実装）
@@ -432,7 +435,7 @@ export default function GradingPage() {
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
-    setSelectedAnswers(prev => {
+    setSelectedAnswers((prev) => {
       const newSet = new Set(prev)
       if (isSelected) {
         newSet.add(answerId)
@@ -443,16 +446,19 @@ export default function GradingPage() {
     })
   }
 
-  const handleBatchScore = async (answerIds: string | string[], status: ScoringStatus) => {
+  const handleBatchScore = async (
+    answerIds: string | string[],
+    status: ScoringStatus,
+  ) => {
     const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
-    
+
     for (const answerId of ids) {
-      const answerSheet = answerSheets.find(sheet => sheet.id === answerId)
+      const answerSheet = answerSheets.find((sheet) => sheet.id === answerId)
       if (!answerSheet || !currentQuestion) continue
 
       const key = `${answerId}-${currentQuestion.id}`
       const currentScore = scoringData[key]
-      
+
       let newScore = 0
       let scoringStatus: ScoringStatus = status as ScoringStatus
 
@@ -501,11 +507,11 @@ export default function GradingPage() {
   // グリッドビュー用のデータ変換
   const getGridAnswerData = () => {
     if (!currentQuestion) return []
-    
-    return answerSheets.map(sheet => {
+
+    return answerSheets.map((sheet) => {
       const key = `${sheet.id}-${currentQuestion.id}`
       const scoreData = scoringData[key]
-      
+
       return {
         id: sheet.id,
         studentId: sheet.student.studentId,
@@ -514,7 +520,7 @@ export default function GradingPage() {
         currentScore: scoreData?.score,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "ungraded") as ScoringStatus,
-        isSelected: selectedAnswers.has(sheet.id)
+        isSelected: selectedAnswers.has(sheet.id),
       }
     })
   }
@@ -655,382 +661,394 @@ export default function GradingPage() {
   return (
     <>
       <Head>
-        <title>
-          {project?.examName || "プロジェクト"} - 一括採点
-        </title>
+        <title>{project?.examName || "プロジェクト"} - 一括採点</title>
       </Head>
       <div className="flex h-full flex-col">
-      {/* ヘッダー */}
-      <div className="bg-background border-b p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                router.push(`/projects/${projectId}/05-answer-sheets`)
-              }
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              戻る
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">採点</h1>
-              <p className="text-muted-foreground text-sm">
-                {gradingMode === "individual" 
-                  ? `${currentAnswerSheet?.student.lastName} ${currentAnswerSheet?.student.firstName} - ` 
-                  : ""
-                }設問 {currentQuestion?.questionNumber} ({currentQuestion?.points}点)
-              </p>
+        {/* ヘッダー */}
+        <div className="bg-background border-b p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  router.push(`/projects/${projectId}/05-answer-sheets`)
+                }
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                戻る
+              </Button>
+              <div>
+                <h1 className="text-lg font-semibold">採点</h1>
+                <p className="text-muted-foreground text-sm">
+                  {gradingMode === "individual"
+                    ? `${currentAnswerSheet?.student.lastName} ${currentAnswerSheet?.student.firstName} - `
+                    : ""}
+                  設問 {currentQuestion?.questionNumber} (
+                  {currentQuestion?.points}点)
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-2">
-            <GradingModeToggle
-              mode={gradingMode}
-              onModeChange={setGradingMode}
-            />
-            <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <Keyboard className="mr-1 h-4 w-4" />
-                  ショートカット
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>キーボードショートカット</DialogTitle>
-                  <DialogDescription>
-                    効率的な採点のためのキーボード操作
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="mb-2 font-medium">採点操作</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>Q: 未採点</div>
-                      <div>E: 正答</div>
-                      <div>F: 部分点</div>
-                      <div>J: 保留</div>
-                      <div>O: 誤答</div>
-                      <div>P: 無答</div>
+            <div className="flex items-center space-x-2">
+              <GradingModeToggle
+                mode={gradingMode}
+                onModeChange={setGradingMode}
+              />
+              <Dialog
+                open={showKeyboardHelp}
+                onOpenChange={setShowKeyboardHelp}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Keyboard className="mr-1 h-4 w-4" />
+                    ショートカット
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>キーボードショートカット</DialogTitle>
+                    <DialogDescription>
+                      効率的な採点のためのキーボード操作
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="mb-2 font-medium">採点操作</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>Q: 未採点</div>
+                        <div>E: 正答</div>
+                        <div>F: 部分点</div>
+                        <div>J: 保留</div>
+                        <div>O: 誤答</div>
+                        <div>P: 無答</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="mb-2 font-medium">ナビゲーション</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>→: 次の設問</div>
+                        <div>←: 前の設問</div>
+                        <div>↓: 次の生徒</div>
+                        <div>↑: 前の生徒</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="mb-2 font-medium">表示操作</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>+/=: 拡大</div>
+                        <div>-: 縮小</div>
+                        <div>0: リセット</div>
+                        <div>F: 全体/部分切替</div>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="mb-2 font-medium">その他</h4>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>Ctrl+S: 保存</div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <h4 className="mb-2 font-medium">ナビゲーション</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>→: 次の設問</div>
-                      <div>←: 前の設問</div>
-                      <div>↓: 次の生徒</div>
-                      <div>↑: 前の生徒</div>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="mb-2 font-medium">表示操作</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>+/=: 拡大</div>
-                      <div>-: 縮小</div>
-                      <div>0: リセット</div>
-                      <div>F: 全体/部分切替</div>
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="mb-2 font-medium">その他</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>Ctrl+S: 保存</div>
-                    </div>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
 
-            <Button onClick={handleSaveScoring} size="sm" variant="default">
-              <Save className="mr-1 h-4 w-4" />
-              保存
-            </Button>
+              <Button onClick={handleSaveScoring} size="sm" variant="default">
+                <Save className="mr-1 h-4 w-4" />
+                保存
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* メインコンテンツエリア */}
-      <div className="flex flex-1">
-        {gradingMode === "individual" ? (
-          <>
-            {/* 個別採点モード: 答案表示エリア */}
-            <div className="relative flex-1">
-              {currentAnswerSheet ? (
-                <AnswerDisplayViewer
-                  answerSheet={currentAnswerSheet}
-                  currentQuestion={currentQuestion}
-                  viewMode={viewMode}
-                  zoom={imageZoom}
-                  position={imagePosition}
-                  onZoomChange={setImageZoom}
-                  onPositionChange={setImagePosition}
-                  onViewModeChange={setViewMode}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center bg-gray-50">
-                  <div className="text-center">
-                    <FileText className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
-                    <p className="text-muted-foreground">
-                      答案が選択されていません
-                    </p>
+        {/* メインコンテンツエリア */}
+        <div className="flex flex-1">
+          {gradingMode === "individual" ? (
+            <>
+              {/* 個別採点モード: 答案表示エリア */}
+              <div className="relative flex-1">
+                {currentAnswerSheet ? (
+                  <AnswerDisplayViewer
+                    answerSheet={currentAnswerSheet}
+                    currentQuestion={currentQuestion}
+                    viewMode={viewMode}
+                    zoom={imageZoom}
+                    position={imagePosition}
+                    onZoomChange={setImageZoom}
+                    onPositionChange={setImagePosition}
+                    onViewModeChange={setViewMode}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-gray-50">
+                    <div className="text-center">
+                      <FileText className="text-muted-foreground mx-auto mb-2 h-12 w-12" />
+                      <p className="text-muted-foreground">
+                        答案が選択されていません
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+            </>
+          ) : (
+            /* 一覧採点モード: グリッド表示エリア */
+            <div className="flex-1 overflow-auto p-4">
+              <AnswerGridView
+                answers={getGridAnswerData()}
+                currentQuestionIndex={currentQuestionIndex}
+                layoutDirection={layoutDirection}
+                gridSize={gridSize}
+                onAnswerSelect={handleAnswerSelect}
+                onAnswerScore={handleBatchScore}
+                selectedAnswers={selectedAnswers}
+              />
             </div>
-          </>
-        ) : (
-          /* 一覧採点モード: グリッド表示エリア */
-          <div className="flex-1 p-4 overflow-auto">
-            <AnswerGridView
-              answers={getGridAnswerData()}
-              currentQuestionIndex={currentQuestionIndex}
-              layoutDirection={layoutDirection}
-              gridSize={gridSize}
-              onAnswerSelect={handleAnswerSelect}
-              onAnswerScore={handleBatchScore}
-              selectedAnswers={selectedAnswers}
-            />
-          </div>
-        )}
+          )}
 
-        {/* 採点パレット（個別採点モードのみ） */}
-        {gradingMode === "individual" && (
-          <div className="bg-background w-80 border-l">
-          <div className="space-y-4 p-4">
-            {/* プロジェクト進捗表示 */}
-            <ProjectProgressCard projectId={projectId} />
-            {/* 生徒・設問ナビゲーション */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">ナビゲーション</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">生徒</span>
-                  <div className="flex items-center space-x-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handlePrevStudent}
-                      disabled={currentStudentIndex === 0}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="px-2 font-mono text-sm">
-                      {currentStudentIndex + 1} / {answerSheets.length}
-                    </span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleNextStudent}
-                      disabled={currentStudentIndex === answerSheets.length - 1}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+          {/* 採点パレット（個別採点モードのみ） */}
+          {gradingMode === "individual" && (
+            <div className="bg-background w-80 border-l">
+              <div className="space-y-4 p-4">
+                {/* プロジェクト進捗表示 */}
+                <ProjectProgressCard projectId={projectId} />
+                {/* 生徒・設問ナビゲーション */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">ナビゲーション</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">
+                        生徒
+                      </span>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handlePrevStudent}
+                          disabled={currentStudentIndex === 0}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="px-2 font-mono text-sm">
+                          {currentStudentIndex + 1} / {answerSheets.length}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleNextStudent}
+                          disabled={
+                            currentStudentIndex === answerSheets.length - 1
+                          }
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground text-sm">設問</span>
-                  <div className="flex items-center space-x-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">
+                        設問
+                      </span>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handlePrevQuestion}
+                          disabled={currentQuestionIndex === 0}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="px-2 font-mono text-sm">
+                          {currentQuestionIndex + 1} / {questionRegions.length}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleNextQuestion}
+                          disabled={
+                            currentQuestionIndex === questionRegions.length - 1
+                          }
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 現在の採点状況 */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">現在の採点</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {currentScoring ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-sm">
+                            得点
+                          </span>
+                          <span className="font-medium">
+                            {currentScoring.score} / {currentScoring.maxScore}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-sm">
+                            状態
+                          </span>
+                          <span
+                            className={`rounded px-2 py-1 text-sm ${
+                              currentScoring.status === "correct"
+                                ? "bg-green-100 text-green-800"
+                                : currentScoring.status === "incorrect"
+                                  ? "bg-red-100 text-red-800"
+                                  : currentScoring.status === "partial"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : currentScoring.status === "pending"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {currentScoring.status === "correct"
+                              ? "正答"
+                              : currentScoring.status === "incorrect"
+                                ? "誤答"
+                                : currentScoring.status === "partial"
+                                  ? "部分点"
+                                  : currentScoring.status === "pending"
+                                    ? "保留"
+                                    : "未採点"}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">未採点</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 採点ボタン */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">採点操作</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handlePrevQuestion}
-                      disabled={currentQuestionIndex === 0}
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "ungraded"
+                          ? "secondary"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("ungraded")}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      ⚪ 未採点 (Q)
                     </Button>
-                    <span className="px-2 font-mono text-sm">
-                      {currentQuestionIndex + 1} / {questionRegions.length}
-                    </span>
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={handleNextQuestion}
-                      disabled={
-                        currentQuestionIndex === questionRegions.length - 1
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "correct"
+                          ? "default"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("correct")}
+                    >
+                      ⭕ 正答 (E) - {currentQuestion?.points}点
+                    </Button>
+                    <Button
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "partial"
+                          ? "secondary"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("partial")}
+                    >
+                      🔸 部分点 (F)
+                    </Button>
+                    <Button
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "pending"
+                          ? "secondary"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("pending")}
+                    >
+                      ⏸️ 保留 (J)
+                    </Button>
+                    <Button
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "incorrect"
+                          ? "destructive"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("incorrect")}
+                    >
+                      ❌ 誤答 (O) - 0点
+                    </Button>
+                    <Button
+                      className="w-full justify-start"
+                      variant={
+                        currentScoring?.status === "no_answer"
+                          ? "destructive"
+                          : "outline"
+                      }
+                      onClick={() => handleSetScore("no_answer")}
+                    >
+                      ➖ 無答 (P) - 0点
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                {/* 複数教員比較ボタン */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm">複数教員採点</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setShowScoreComparison(true)}
+                      disabled={!currentAnswerSheet || !currentQuestion}
+                    >
+                      👥 採点結果を比較・決定
+                    </Button>
+                    <Button
+                      variant="default"
+                      onClick={() =>
+                        router.push(`/projects/${projectId}/07-export`)
                       }
                     >
-                      <ChevronRight className="h-4 w-4" />
+                      次へ: 結果出力
                     </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </div>
 
-            {/* 現在の採点状況 */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">現在の採点</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {currentScoring ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-sm">
-                        得点
-                      </span>
-                      <span className="font-medium">
-                        {currentScoring.score} / {currentScoring.maxScore}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground text-sm">
-                        状態
-                      </span>
-                      <span
-                        className={`rounded px-2 py-1 text-sm ${
-                          currentScoring.status === "correct"
-                            ? "bg-green-100 text-green-800"
-                            : currentScoring.status === "incorrect"
-                              ? "bg-red-100 text-red-800"
-                              : currentScoring.status === "partial"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : currentScoring.status === "pending"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {currentScoring.status === "correct"
-                          ? "正答"
-                          : currentScoring.status === "incorrect"
-                            ? "誤答"
-                            : currentScoring.status === "partial"
-                              ? "部分点"
-                              : currentScoring.status === "pending"
-                                ? "保留"
-                                : "未採点"}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm">未採点</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* 採点ボタン */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">採点操作</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "ungraded" ? "secondary" : "outline"
-                  }
-                  onClick={() => handleSetScore("ungraded")}
-                >
-                  ⚪ 未採点 (Q)
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "correct" ? "default" : "outline"
-                  }
-                  onClick={() => handleSetScore("correct")}
-                >
-                  ⭕ 正答 (E) - {currentQuestion?.points}点
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "partial"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  onClick={() => handleSetScore("partial")}
-                >
-                  🔸 部分点 (F)
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "pending"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  onClick={() => handleSetScore("pending")}
-                >
-                  ⏸️ 保留 (J)
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "incorrect"
-                      ? "destructive"
-                      : "outline"
-                  }
-                  onClick={() => handleSetScore("incorrect")}
-                >
-                  ❌ 誤答 (O) - 0点
-                </Button>
-                <Button
-                  className="w-full justify-start"
-                  variant={
-                    currentScoring?.status === "no_answer"
-                      ? "destructive"
-                      : "outline"
-                  }
-                  onClick={() => handleSetScore("no_answer")}
-                >
-                  ➖ 無答 (P) - 0点
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* 複数教員比較ボタン */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">複数教員採点</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => setShowScoreComparison(true)}
-                  disabled={!currentAnswerSheet || !currentQuestion}
-                >
-                  👥 採点結果を比較・決定
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={() =>
-                    router.push(`/projects/${projectId}/07-export`)
-                  }
-                >
-                  次へ: 結果出力
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-          </div>
+        {/* 採点結果比較モーダル */}
+        {currentAnswerSheet && currentQuestion && (
+          <ScoreComparisonModal
+            isOpen={showScoreComparison}
+            onClose={() => setShowScoreComparison(false)}
+            answerSheetId={currentAnswerSheet.id}
+            layoutRegionId={currentQuestion.id}
+            questionNumber={currentQuestion.questionNumber}
+            maxScore={currentQuestion.points}
+            studentName={`${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`}
+            onScoreFinalized={() => {
+              // 採点データを再読み込み
+              loadExistingScoringData(projectId).then(setScoringData)
+              setShowScoreComparison(false)
+            }}
+          />
         )}
       </div>
-
-      {/* 採点結果比較モーダル */}
-      {currentAnswerSheet && currentQuestion && (
-        <ScoreComparisonModal
-          isOpen={showScoreComparison}
-          onClose={() => setShowScoreComparison(false)}
-          answerSheetId={currentAnswerSheet.id}
-          layoutRegionId={currentQuestion.id}
-          questionNumber={currentQuestion.questionNumber}
-          maxScore={currentQuestion.points}
-          studentName={`${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`}
-          onScoreFinalized={() => {
-            // 採点データを再読み込み
-            loadExistingScoringData(projectId).then(setScoringData)
-            setShowScoreComparison(false)
-          }}
-        />
-      )}
-    </div>
     </>
   )
 }

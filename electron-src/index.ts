@@ -83,6 +83,7 @@ import {
   removeStudentsFromProject,
   updateStudentProjectStatus,
   getClassesNotInProject,
+  getStudentsNotInProject,
   updateStudentOrders,
 } from "./lib/prisma/projectStudent"
 import {
@@ -1133,6 +1134,18 @@ app.on("ready", async () => {
         return await getClassesNotInProject(projectId)
       } catch (err) {
         console.error("Error getting classes not in project:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-students-not-in-project",
+    async (_event, projectId: string) => {
+      try {
+        return await getStudentsNotInProject(projectId)
+      } catch (err) {
+        console.error("Error getting students not in project:", err)
         throw err
       }
     },

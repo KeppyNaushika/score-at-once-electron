@@ -197,16 +197,14 @@ export async function updateStudentOrders(
  */
 export async function getClassesNotInProject(projectId: string) {
   try {
-    // 全ての学級を取得
+    // 全ての学級を取得（所属期限を無視）
     const allClasses = await prisma.class.findMany({
       include: {
         memberships: {
           include: {
             student: true
-          },
-          where: {
-            endDate: null
           }
+          // endDate条件を削除 - 期限切れでも採点できるべき
         }
       }
     })
@@ -221,8 +219,8 @@ export async function getClassesNotInProject(projectId: string) {
     // プロジェクトに参加していない学級を抽出
     const availableClasses = allClasses
       .map((cls: any) => {
-        const activeStudents = cls.memberships.map((m: any) => m.student)
-        const nonParticipatingStudents = activeStudents.filter(
+        const allStudents = cls.memberships.map((m: any) => m.student)
+        const nonParticipatingStudents = allStudents.filter(
           (student: any) => !participatingStudentIds.has(student.id)
         )
         
@@ -242,6 +240,50 @@ export async function getClassesNotInProject(projectId: string) {
     return {
       success: false,
       error: 'Failed to fetch available classes'
+    }
+  }
+}
+
+/**
+ * プロジェクトに参加していない生徒を取得（検索・フィルタ機能付き）
+ */
+export async function getStudentsNotInProject(projectId: string) {
+  try {
+    // プロジェクトに既に参加している生徒IDを取得
+    const projectStudents = await prisma.projectStudent.findMany({
+      where: { projectId },
+      select: { studentId: true }
+    })
+    const participatingStudentIds = new Set(projectStudents.map(ps => ps.studentId))
+
+    // プロジェクトに参加していない生徒を取得
+    const availableStudents = await prisma.student.findMany({
+      where: {
+        id: {
+          notIn: Array.from(participatingStudentIds)
+        }
+      },
+      include: {
+        memberships: {
+          include: {
+            class: true
+          },
+          orderBy: {
+            startDate: 'desc'
+          }
+        }
+      }
+    })
+
+    return {
+      success: true,
+      students: availableStudents
+    }
+  } catch (error) {
+    console.error('Error fetching students not in project:', error)
+    return {
+      success: false,
+      error: 'Failed to fetch available students'
     }
   }
 }
