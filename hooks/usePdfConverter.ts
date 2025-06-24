@@ -12,10 +12,20 @@ export interface ConvertedImage {
   buffer: ArrayBuffer
 }
 
+export interface PdfConversionError {
+  type: 'password-required' | 'invalid-password' | 'general-error'
+  message: string
+}
+
 export function usePdfConverter() {
-  const convertPdfToImages = useCallback(async (file: File): Promise<ConvertedImage[]> => {
-    const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise
+  const convertPdfToImages = useCallback(async (file: File, password?: string): Promise<ConvertedImage[]> => {
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        password: password
+      })
+      const pdf = await loadingTask.promise
     const images: ConvertedImage[] = []
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -49,6 +59,16 @@ export function usePdfConverter() {
     }
 
     return images
+    } catch (error: any) {
+      // PDF.js エラーハンドリング
+      if (error.name === 'PasswordException') {
+        throw new Error('password-required')
+      } else if (error.name === 'InvalidPDFException' && password) {
+        throw new Error('invalid-password')
+      } else {
+        throw new Error(`PDF変換エラー: ${error.message || '不明なエラー'}`)
+      }
+    }
   }, [])
 
   return {

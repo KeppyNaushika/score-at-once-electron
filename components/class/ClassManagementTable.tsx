@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +14,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { BookOpen, Edit, Info, PlusCircle, Search, Trash2, Users, GraduationCap, Calendar } from "lucide-react"
+import {
+  BookOpen,
+  Edit,
+  Info,
+  PlusCircle,
+  Search,
+  Trash2,
+  Users,
+  GraduationCap,
+  Calendar,
+} from "lucide-react"
 import {
   Popover,
   PopoverContent,
@@ -22,7 +33,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import ClassModal from "../student/ClassModal"
+import ClassModal from "./ClassModal"
 
 interface ClassWithMemberships {
   id: string
@@ -55,7 +66,9 @@ export default function ClassManagementTable() {
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
-  const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(null)
+  const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(
+    null,
+  )
 
   // Data fetching
   useEffect(() => {
@@ -112,7 +125,7 @@ export default function ClassManagementTable() {
           ...classData,
         })
         setClasses(
-          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c))
+          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c)),
         )
       } else {
         const newClass = await window.electronAPI.createClass(classData)
@@ -127,15 +140,14 @@ export default function ClassManagementTable() {
 
   // Sort students by attendance number within each class
   const getClassWithSortedStudents = (classItem: ClassWithMemberships) => {
-    const sortedMemberships = [...classItem.memberships]
-      .sort((a, b) => {
-        if (a.attendanceNumber && b.attendanceNumber) {
-          return a.attendanceNumber - b.attendanceNumber
-        }
-        if (a.attendanceNumber) return -1
-        if (b.attendanceNumber) return 1
-        return 0
-      })
+    const sortedMemberships = [...classItem.memberships].sort((a, b) => {
+      if (a.attendanceNumber && b.attendanceNumber) {
+        return a.attendanceNumber - b.attendanceNumber
+      }
+      if (a.attendanceNumber) return -1
+      if (b.attendanceNumber) return 1
+      return 0
+    })
     return { ...classItem, memberships: sortedMemberships }
   }
 
@@ -146,35 +158,28 @@ export default function ClassManagementTable() {
         <h1 className="text-3xl font-bold">学級管理</h1>
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8">
               <Info className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent
-            className="w-[450px]"
-            align="start"
-            side="bottom"
-          >
+          <PopoverContent className="w-[450px]" align="start" side="bottom">
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <GraduationCap className="h-5 w-5 text-purple-600" />
-                  <h3 className="font-semibold text-base">学級管理について</h3>
+                  <h3 className="text-base font-semibold">学級管理について</h3>
                 </div>
-                <p className="text-sm text-muted-foreground pl-7">
+                <p className="text-muted-foreground pl-7 text-sm">
                   学級やクラスの情報を管理し、生徒を組織化します。
                 </p>
               </div>
 
               <div className="space-y-3 pl-7">
-                <div className="border rounded-lg p-3 text-sm bg-purple-50 border-purple-200 text-purple-800">
-                  <strong>柔軟な学級設計</strong><br />
+                <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-800">
+                  <strong>柔軟な学級設計</strong>
+                  <br />
                   様々なタイプの学級を作成できます：
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
                     <li>ホームルーム（例：1年A組）</li>
                     <li>習熟度別クラス（例：英語E1）</li>
                     <li>特別活動クラブ（例：吹奏楽部）</li>
@@ -183,7 +188,7 @@ export default function ClassManagementTable() {
                 </div>
 
                 <div className="space-y-2">
-                  <p className="font-medium text-sm">管理項目：</p>
+                  <p className="text-sm font-medium">管理項目：</p>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-blue-600" />
@@ -204,7 +209,7 @@ export default function ClassManagementTable() {
                   </div>
                 </div>
 
-                <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                   <strong>便利な機能:</strong> 生徒は複数の学級に所属可能で、
                   所属期間も管理できるため、年度途中のクラス変更にも対応します。
                 </div>
@@ -214,31 +219,10 @@ export default function ClassManagementTable() {
         </Popover>
       </div>
 
-      {/* Search Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            検索
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Label htmlFor="search">学級名で検索</Label>
-            <Input
-              id="search"
-              placeholder="学級名で検索"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Classes List */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="mb-3 flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5" />
               学級一覧 ({filteredClasses.length}学級)
@@ -248,9 +232,21 @@ export default function ClassManagementTable() {
               学級追加
             </Button>
           </div>
+          {/* Search Controls */}
+          <div className="bg-muted/30 flex items-center gap-3 rounded-lg p-3">
+            <div className="flex items-center gap-2">
+              <Search className="text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="学級名で検索"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-60"
+              />
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
+        <CardContent className="pt-0">
+          <div className="max-h-[500px] overflow-auto rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -283,7 +279,9 @@ export default function ClassManagementTable() {
                       <TableCell>{classItem.grade || "未設定"}</TableCell>
                       <TableCell>
                         {classItem.description ? (
-                          <span className="text-sm">{classItem.description}</span>
+                          <span className="text-sm">
+                            {classItem.description}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground text-sm">
                             なし

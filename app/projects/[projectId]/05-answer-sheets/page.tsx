@@ -67,10 +67,19 @@ export default function AnswerSheetsPage() {
       // プロジェクトの受験生徒情報を取得
       const projectStudentsResult = await window.electronAPI.getStudentsForProject(projectId)
       if (projectStudentsResult.success && projectStudentsResult.students) {
-        // 出席番号順にソート
+        // 受験生徒順序（customOrder）でソート
         const sortedStudents = projectStudentsResult.students
           .filter((s: any) => s.status === 'participating') // 受験する生徒のみ
           .sort((a: any, b: any) => {
+            // customOrderが設定されている場合はそれを優先
+            if (a.customOrder !== null && a.customOrder !== undefined && 
+                b.customOrder !== null && b.customOrder !== undefined) {
+              return a.customOrder - b.customOrder
+            }
+            if (a.customOrder !== null && a.customOrder !== undefined) return -1
+            if (b.customOrder !== null && b.customOrder !== undefined) return 1
+            
+            // customOrderが未設定の場合は出席番号順をフォールバック
             const aNumber = a.memberships?.[0]?.attendanceNumber
             const bNumber = b.memberships?.[0]?.attendanceNumber
             
@@ -80,7 +89,7 @@ export default function AnswerSheetsPage() {
             if (aNumber) return -1
             if (bNumber) return 1
             
-            // If no attendance numbers, sort by name
+            // 出席番号もない場合は名前順
             const aName = `${a.lastName}${a.firstName}`
             const bName = `${b.lastName}${b.firstName}`
             return aName.localeCompare(bName)
@@ -93,7 +102,8 @@ export default function AnswerSheetsPage() {
             firstNameKana: student.firstNameKana,
             studentId: student.studentId,
             attendanceNumber: student.memberships?.[0]?.attendanceNumber || null,
-            status: student.status
+            status: student.status,
+            customOrder: student.customOrder || null
           }))
         
         setStudents(sortedStudents)

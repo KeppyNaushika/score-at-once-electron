@@ -2,12 +2,30 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, UserPlus } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -57,7 +75,9 @@ export default function ProjectStudentAddModal({
 }: ProjectStudentAddModalProps) {
   const [activeTab, setActiveTab] = useState("classes")
   const [availableClasses, setAvailableClasses] = useState<AvailableClass[]>([])
-  const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([])
+  const [availableStudents, setAvailableStudents] = useState<
+    AvailableStudent[]
+  >([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterClassId, setFilterClassId] = useState<string>("all")
   const [loading, setLoading] = useState(false)
@@ -74,24 +94,26 @@ export default function ProjectStudentAddModal({
     setLoading(true)
     try {
       // 利用可能な学級を取得
-      const classesResult = await window.electronAPI.getClassesNotInProject(projectId)
+      const classesResult =
+        await window.electronAPI.getClassesNotInProject(projectId)
       if (classesResult.success && classesResult.classes) {
         setAvailableClasses(
           classesResult.classes.map((cls) => ({
             ...cls,
             isSelected: false,
-          }))
+          })),
         )
       }
 
       // 利用可能な生徒を取得
-      const studentsResult = await window.electronAPI.getStudentsNotInProject(projectId)
+      const studentsResult =
+        await window.electronAPI.getStudentsNotInProject(projectId)
       if (studentsResult.success && studentsResult.students) {
         setAvailableStudents(
           studentsResult.students.map((student) => ({
             ...student,
             isSelected: false,
-          }))
+          })),
         )
       }
     } catch (error) {
@@ -104,9 +126,7 @@ export default function ProjectStudentAddModal({
   // 学級選択の処理
   const handleClassSelection = (classId: string, isSelected: boolean) => {
     setAvailableClasses((prev) =>
-      prev.map((cls) =>
-        cls.id === classId ? { ...cls, isSelected } : cls
-      )
+      prev.map((cls) => (cls.id === classId ? { ...cls, isSelected } : cls)),
     )
   }
 
@@ -119,35 +139,41 @@ export default function ProjectStudentAddModal({
   const handleStudentSelection = (studentId: string, isSelected: boolean) => {
     setAvailableStudents((prev) =>
       prev.map((student) =>
-        student.id === studentId ? { ...student, isSelected } : student
-      )
+        student.id === studentId ? { ...student, isSelected } : student,
+      ),
     )
   }
 
   // 学級ごとの生徒追加
   const handleAddClassStudents = async () => {
+    console.log("=== handleAddClassStudents starting ===")
     setIsAdding(true)
     try {
       const selectedClasses = availableClasses.filter((cls) => cls.isSelected)
-      
+      console.log("Selected classes:", selectedClasses)
+
       // 選択された学級の順序で生徒を追加
       let currentOrder = 0
-      
+
       for (const classItem of selectedClasses) {
+        console.log(`Processing class: ${classItem.name} (${classItem.id})`)
+        
         // 学級の全生徒を取得
         const allClasses = await window.electronAPI.fetchClasses()
-        const fullClassData = allClasses.find(cls => cls.id === classItem.id)
-        
+        const fullClassData = allClasses.find((cls) => cls.id === classItem.id)
+        console.log("Full class data:", fullClassData)
+
         if (!fullClassData || !fullClassData.memberships) {
           console.warn(`Class ${classItem.name} has no students`)
           continue
         }
 
-        // 学級の生徒を出席番号順にソート（現在有効なメンバーシップのみ）
+        // 学級の生徒を出席番号順にソート（所属履歴のある全生徒）
         const sortedStudents = [...fullClassData.memberships]
-          .filter(membership => 
-            membership.student && // 生徒データが存在することを確認
-            !membership.endDate   // 現在有効なメンバーシップのみ
+          .filter(
+            (membership) =>
+              membership.student // 生徒データが存在することを確認
+              // endDateの有無は問わない - 過去の所属生徒も追加可能にする
           )
           .sort((a, b) => {
             const aNum = a.attendanceNumber || 9999
@@ -155,40 +181,66 @@ export default function ProjectStudentAddModal({
             return aNum - bNum
           })
 
+        console.log("Sorted students:", sortedStudents)
+
         // 生徒IDのリストを作成
         const studentIds = sortedStudents
-          .map(membership => membership.student?.id)
+          .map((membership) => membership.student?.id)
           .filter((id): id is string => !!id) // undefined を除外
-        
+
+        console.log("Student IDs to add:", studentIds)
+
         if (studentIds.length > 0) {
           // プロジェクトに生徒を追加
-          const result = await window.electronAPI.addStudentsToProject(projectId, studentIds)
+          console.log(`Adding students to project ${projectId}:`, studentIds)
+          const result = await window.electronAPI.addStudentsToProject(
+            projectId,
+            studentIds,
+          )
+          console.log("Add students result:", result)
+          
           if (!result.success) {
-            throw new Error(result.error || `Failed to add students from class ${classItem.name}`)
+            throw new Error(
+              result.error ||
+                `Failed to add students from class ${classItem.name}`,
+            )
           }
 
           // 生徒の順序を設定（学級順→出席番号順）
           const studentOrders = studentIds.map((studentId, index) => ({
             studentId,
-            customOrder: currentOrder + index + 1
+            customOrder: currentOrder + index + 1,
           }))
+
+          console.log("Setting student orders:", studentOrders)
+          const orderResult = await window.electronAPI.updateStudentOrders(
+            projectId,
+            studentOrders,
+          )
+          console.log("Order result:", orderResult)
           
-          const orderResult = await window.electronAPI.updateStudentOrders(projectId, studentOrders)
           if (!orderResult.success) {
-            console.warn(`Failed to update student orders for class ${classItem.name}:`, orderResult.error)
+            console.warn(
+              `Failed to update student orders for class ${classItem.name}:`,
+              orderResult.error,
+            )
           }
-          
+
           currentOrder += studentIds.length
+        } else {
+          console.log(`No students found for class ${classItem.name}`)
         }
       }
 
+      console.log("=== Calling onStudentsAdded ===")
       onStudentsAdded()
       handleClose()
     } catch (error) {
       console.error("Failed to add class students:", error)
-      alert("学級の追加に失敗しました。")
+      alert("学級の追加に失敗しました: " + (error instanceof Error ? error.message : "Unknown error"))
     } finally {
       setIsAdding(false)
+      console.log("=== handleAddClassStudents finished ===")
     }
   }
 
@@ -196,10 +248,15 @@ export default function ProjectStudentAddModal({
   const handleAddIndividualStudents = async () => {
     setIsAdding(true)
     try {
-      const selectedStudents = availableStudents.filter((student) => student.isSelected)
+      const selectedStudents = availableStudents.filter(
+        (student) => student.isSelected,
+      )
       const studentIds = selectedStudents.map((student) => student.id)
 
-      const result = await window.electronAPI.addStudentsToProject(projectId, studentIds)
+      const result = await window.electronAPI.addStudentsToProject(
+        projectId,
+        studentIds,
+      )
       if (!result.success) {
         throw new Error(result.error || "Failed to add students")
       }
@@ -233,18 +290,24 @@ export default function ProjectStudentAddModal({
       fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.includes(searchTerm)
 
-    const currentClassId = student.memberships?.[0]?.class.id
-    const matchesClass = filterClassId === "all" || currentClassId === filterClassId
+    // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック（endDate問わず）
+    const matchesClass =
+      filterClassId === "all" || 
+      student.memberships?.some(membership => membership.class.id === filterClassId)
 
     return matchesSearch && matchesClass
   })
 
-  const selectedClassCount = availableClasses.filter((cls) => cls.isSelected).length
-  const selectedStudentCount = availableStudents.filter((student) => student.isSelected).length
+  const selectedClassCount = availableClasses.filter(
+    (cls) => cls.isSelected,
+  ).length
+  const selectedStudentCount = availableStudents.filter(
+    (student) => student.isSelected,
+  ).length
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl overflow-hidden sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>受験生徒の追加</DialogTitle>
           <DialogDescription>
@@ -253,14 +316,21 @@ export default function ProjectStudentAddModal({
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="h-full"
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="classes">学級で追加</TabsTrigger>
               <TabsTrigger value="individuals">個別で追加</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="classes" className="mt-4 space-y-4 h-full overflow-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+            <TabsContent
+              value="classes"
+              className="mt-4 h-full space-y-4 overflow-auto"
+            >
+              <div className="grid h-full grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* 利用可能な学級一覧 */}
                 <Card>
                   <CardHeader>
@@ -269,11 +339,11 @@ export default function ProjectStudentAddModal({
                       追加したい学級を選択してください
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3 max-h-80 overflow-auto">
+                  <CardContent className="max-h-80 space-y-3 overflow-auto">
                     {loading ? (
-                      <div className="text-center py-4">読み込み中...</div>
+                      <div className="py-4 text-center">読み込み中...</div>
                     ) : availableClasses.length === 0 ? (
-                      <div className="text-center text-muted-foreground py-4">
+                      <div className="text-muted-foreground py-4 text-center">
                         追加可能な学級がありません
                       </div>
                     ) : (
@@ -284,18 +354,23 @@ export default function ProjectStudentAddModal({
                               id={`class-${classItem.id}`}
                               checked={classItem.isSelected}
                               onCheckedChange={(checked) =>
-                                handleClassSelection(classItem.id, checked as boolean)
+                                handleClassSelection(
+                                  classItem.id,
+                                  checked as boolean,
+                                )
                               }
                             />
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
                                 <label
                                   htmlFor={`class-${classItem.id}`}
-                                  className="font-medium cursor-pointer"
+                                  className="cursor-pointer font-medium"
                                 >
                                   {classItem.name}
                                 </label>
-                                <Badge variant="outline">{classItem.studentCount}名</Badge>
+                                <Badge variant="outline">
+                                  {classItem.studentCount}名
+                                </Badge>
                               </div>
                             </div>
                           </div>
@@ -315,7 +390,9 @@ export default function ProjectStudentAddModal({
                   </CardHeader>
                   <CardContent className="max-h-80 overflow-auto">
                     <SortableClassList
-                      selectedClasses={availableClasses.filter((cls) => cls.isSelected)}
+                      selectedClasses={availableClasses.filter(
+                        (cls) => cls.isSelected,
+                      )}
                       onReorder={handleClassReorder}
                     />
                   </CardContent>
@@ -323,60 +400,54 @@ export default function ProjectStudentAddModal({
               </div>
             </TabsContent>
 
-            <TabsContent value="individuals" className="mt-4 space-y-4 h-full overflow-auto">
-              {/* 検索・フィルタ */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">生徒検索・フィルタ</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="student-search">検索</Label>
-                      <div className="relative">
-                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
-                        <Input
-                          id="student-search"
-                          placeholder="名前、ふりがな、学籍番号で検索"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>学級フィルタ</Label>
-                      <Select value={filterClassId} onValueChange={setFilterClassId}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">すべての学級</SelectItem>
-                          {availableClasses.map((cls) => (
-                            <SelectItem key={cls.id} value={cls.id}>
-                              {cls.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            <TabsContent
+              value="individuals"
+              className="mt-4 h-full space-y-4 overflow-auto"
+            >
               {/* 生徒一覧 */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">
                     利用可能な生徒 ({filteredStudents.length}名)
                   </CardTitle>
+                  <CardDescription>
+                    追加したい生徒を検索・選択してください
+                  </CardDescription>
+                  {/* フィルター機能を統合 */}
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="relative">
+                      <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+                      <Input
+                        id="student-search"
+                        placeholder="名前、ふりがな、学籍番号で検索"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select
+                      value={filterClassId}
+                      onValueChange={setFilterClassId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="学級フィルタ" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">すべての学級</SelectItem>
+                        {availableClasses.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </CardHeader>
                 <CardContent className="max-h-96 overflow-auto">
                   {loading ? (
-                    <div className="text-center py-4">読み込み中...</div>
+                    <div className="py-4 text-center">読み込み中...</div>
                   ) : filteredStudents.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-4">
+                    <div className="text-muted-foreground py-4 text-center">
                       該当する生徒が見つかりません
                     </div>
                   ) : (
@@ -388,7 +459,10 @@ export default function ProjectStudentAddModal({
                               id={`student-${student.id}`}
                               checked={student.isSelected}
                               onCheckedChange={(checked) =>
-                                handleStudentSelection(student.id, checked as boolean)
+                                handleStudentSelection(
+                                  student.id,
+                                  checked as boolean,
+                                )
                               }
                             />
                             <div className="flex-1">
@@ -400,17 +474,23 @@ export default function ProjectStudentAddModal({
                                   <div className="font-medium">
                                     {student.lastName} {student.firstName}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
+                                  <div className="text-muted-foreground text-sm">
                                     {student.studentId}
                                   </div>
                                 </label>
                                 <div className="text-right">
                                   <div className="text-sm font-medium">
-                                    {student.memberships?.[0]?.class.name || "未所属"}
+                                    {student.memberships?.[0]?.class.name ||
+                                      "未所属"}
                                   </div>
-                                  {student.memberships?.[0]?.attendanceNumber && (
-                                    <div className="text-xs text-muted-foreground">
-                                      出席番号: {student.memberships?.[0]?.attendanceNumber}
+                                  {student.memberships?.[0]
+                                    ?.attendanceNumber && (
+                                    <div className="text-muted-foreground text-xs">
+                                      出席番号:{" "}
+                                      {
+                                        student.memberships?.[0]
+                                          ?.attendanceNumber
+                                      }
                                     </div>
                                   )}
                                 </div>
@@ -437,7 +517,9 @@ export default function ProjectStudentAddModal({
               disabled={selectedClassCount === 0 || isAdding}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {isAdding ? "追加中..." : `選択した学級を追加 (${selectedClassCount}学級)`}
+              {isAdding
+                ? "追加中..."
+                : `選択した学級を追加 (${selectedClassCount}学級)`}
             </Button>
           ) : (
             <Button
@@ -445,7 +527,9 @@ export default function ProjectStudentAddModal({
               disabled={selectedStudentCount === 0 || isAdding}
             >
               <UserPlus className="mr-2 h-4 w-4" />
-              {isAdding ? "追加中..." : `選択した生徒を追加 (${selectedStudentCount}名)`}
+              {isAdding
+                ? "追加中..."
+                : `選択した生徒を追加 (${selectedStudentCount}名)`}
             </Button>
           )}
         </DialogFooter>

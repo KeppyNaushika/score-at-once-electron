@@ -41,9 +41,7 @@ export default function RegionInfoPage() {
   const [masterImages, setMasterImages] = useState<MasterImage[]>([])
   const [selectedMasterImage, setSelectedMasterImage] =
     useState<MasterImage | null>(null)
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(
-    null,
-  )
+  const [backgroundImageUrls, setBackgroundImageUrls] = useState<{[key: string]: string}>({})
   const [imageDimensions, setImageDimensions] = useState<{
     width: number
     height: number
@@ -76,10 +74,17 @@ export default function RegionInfoPage() {
           )
           setMasterImages(sortedMasterImages)
           setSelectedMasterImage(sortedMasterImages[0])
-          const url = await window.electronAPI.resolveFileProtocolPath(
-            sortedMasterImages[0].path,
-          )
-          setBackgroundImageUrl(url)
+          
+          // 全ページの画像URLを取得
+          const urls: {[key: string]: string} = {}
+          for (const image of sortedMasterImages) {
+            const url = await window.electronAPI.resolveFileProtocolPath(image.path)
+            urls[image.id] = url
+          }
+          setBackgroundImageUrls(urls)
+          
+          // 最初のページの寸法を取得
+          const firstUrl = urls[sortedMasterImages[0].id]
           const img = new Image()
           img.onload = () => {
             setImageDimensions({
@@ -87,11 +92,11 @@ export default function RegionInfoPage() {
               height: img.naturalHeight,
             })
           }
-          img.src = url
+          img.src = firstUrl
         } else {
           setMasterImages([])
           setSelectedMasterImage(null)
-          setBackgroundImageUrl(null)
+          setBackgroundImageUrls({})
           setImageDimensions(null)
         }
 
@@ -129,7 +134,7 @@ export default function RegionInfoPage() {
         setProject(null)
         setMasterImages([])
         setSelectedMasterImage(null)
-        setBackgroundImageUrl(null)
+        setBackgroundImageUrls({})
         setImageDimensions(null)
         setLayoutRegions([])
       }
@@ -258,52 +263,106 @@ export default function RegionInfoPage() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: Compact Image Preview */}
+        {/* Left: All Pages Preview */}
         <div
-          className="border-r p-4"
+          className="border-r p-4 overflow-y-auto"
           style={{ width: "400px", maxWidth: "33.333%" }}
         >
-          <h3 className="mb-3 font-medium">模範解答</h3>
-          {backgroundImageUrl && (
-            <div className="relative overflow-hidden rounded-lg border">
-              <img
-                src={backgroundImageUrl}
-                alt="模範解答"
-                className="w-full object-contain"
-              />
-              {/* Overlay regions */}
-              {layoutRegions.map((area, index) => {
-                const isSelected = selectedRowIndex === index
-                return (
-                  <div
-                    key={area.id || `area-${index}`}
-                    className={`absolute border-2 ${
-                      isSelected
-                        ? "border-orange-500 bg-orange-500/30"
-                        : "border-blue-500 bg-blue-500/20"
-                    }`}
-                    style={{
-                      left: `${area.x * 100}%`,
-                      top: `${area.y * 100}%`,
-                      width: `${area.width * 100}%`,
-                      height: `${area.height * 100}%`,
-                    }}
-                  />
-                )
-              })}
-            </div>
-          )}
+          <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
+          <div className="space-y-4">
+            {masterImages.map((image, pageIndex) => {
+              const imageUrl = backgroundImageUrls[image.id]
+              const pageRegions = layoutRegions.filter(region => region.masterImageId === image.id)
+              
+              return (
+                <div key={image.id} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-medium">ページ {image.pageNumber}</h4>
+                    <div className="text-xs text-muted-foreground">
+                      ({pageRegions.length}個の領域)
+                    </div>
+                  </div>
+                  {imageUrl && (
+                    <div className="relative overflow-hidden rounded-lg border">
+                      <img
+                        src={imageUrl}
+                        alt={`模範解答 ページ ${image.pageNumber}`}
+                        className="w-full object-contain cursor-pointer hover:opacity-75 transition-opacity"
+                        onClick={() => {
+                          setSelectedMasterImage(image)
+                          // 画像寸法を更新
+                          const img = new Image()
+                          img.onload = () => {
+                            setImageDimensions({
+                              width: img.naturalWidth,
+                              height: img.naturalHeight,
+                            })
+                          }
+                          img.src = imageUrl
+                        }}
+                      />
+                      {/* Overlay regions for this page */}
+                      {pageRegions.map((area, index) => {
+                        const globalIndex = layoutRegions.findIndex(r => r.id === area.id)
+                        const isSelected = selectedRowIndex === globalIndex
+                        return (
+                          <div
+                            key={area.id || `area-${pageIndex}-${index}`}
+                            className={`absolute border-2 ${
+                              isSelected
+                                ? "border-orange-500 bg-orange-500/30"
+                                : "border-blue-500 bg-blue-500/20"
+                            }`}
+                            style={{
+                              left: `${area.x * 100}%`,
+                              top: `${area.y * 100}%`,
+                              width: `${area.width * 100}%`,
+                              height: `${area.height * 100}%`,
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedRowIndex(globalIndex)
+                            }}
+                          />
+                        )
+                      })}
+                      {/* Page indicator if this is selected */}
+                      {selectedMasterImage?.id === image.id && (
+                        <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                          編集中
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Right: Region Details Table */}
         <div className="flex-1 overflow-y-auto">
-          <RegionDetailsTable
-            regions={layoutRegions}
-            setRegions={handleRegionsChange}
-            disabled={isSaving}
-            selectedRowIndex={selectedRowIndex}
-            setSelectedRowIndex={setSelectedRowIndex}
-          />
+          <div className="p-4">
+            <div className="mb-4">
+              <h3 className="text-lg font-medium">領域情報テーブル</h3>
+              {selectedMasterImage && (
+                <p className="text-sm text-muted-foreground">
+                  編集中: ページ {selectedMasterImage.pageNumber}
+                  {layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && 
+                    ` (${layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length}個の領域)`
+                  }
+                </p>
+              )}
+            </div>
+            <RegionDetailsTable
+              regions={layoutRegions}
+              setRegions={handleRegionsChange}
+              disabled={isSaving}
+              selectedRowIndex={selectedRowIndex}
+              setSelectedRowIndex={setSelectedRowIndex}
+              selectedMasterImageId={selectedMasterImage?.id}
+            />
+          </div>
         </div>
       </div>
     </div>

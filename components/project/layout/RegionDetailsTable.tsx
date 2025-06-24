@@ -50,6 +50,7 @@ type RegionDetailsTableProps = {
   disabled: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
+  selectedMasterImageId?: string
 }
 
 type DragState = {
@@ -63,6 +64,7 @@ const RegionDetailsTable = ({
   disabled,
   selectedRowIndex,
   setSelectedRowIndex,
+  selectedMasterImageId,
 }: RegionDetailsTableProps) => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
@@ -71,14 +73,29 @@ const RegionDetailsTable = ({
     dragOverIndex: null,
   })
 
-  const handleRegionChange = (index: number, field: string, value: any) => {
+  // 選択されたページの領域のみをフィルタ
+  const filteredRegions = selectedMasterImageId 
+    ? regions.filter(region => region.masterImageId === selectedMasterImageId)
+    : regions
+
+  // フィルタされた領域のインデックスを全体領域での実際のインデックスにマッピング
+  const getGlobalIndex = (filteredIndex: number) => {
+    if (!selectedMasterImageId) return filteredIndex
+    const filteredRegion = filteredRegions[filteredIndex]
+    return regions.findIndex(region => region.id === filteredRegion.id || 
+      (region.masterImageId === filteredRegion.masterImageId && 
+       region.x === filteredRegion.x && region.y === filteredRegion.y))
+  }
+
+  const handleRegionChange = (filteredIndex: number, field: string, value: any) => {
+    const globalIndex = getGlobalIndex(filteredIndex)
     const newRegions = [...regions]
     if (field === "points" && value !== "") {
-      newRegions[index] = { ...newRegions[index], [field]: parseFloat(value) }
+      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: parseFloat(value) }
     } else if (field === "points" && value === "") {
-      newRegions[index] = { ...newRegions[index], [field]: null }
+      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: null }
     } else {
-      newRegions[index] = { ...newRegions[index], [field]: value }
+      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: value }
     }
     setRegions(newRegions)
   }
@@ -92,7 +109,7 @@ const RegionDetailsTable = ({
       e.preventDefault()
       // Move to next row, same field
       const nextRowIndex = rowIndex + 1
-      if (nextRowIndex < regions.length) {
+      if (nextRowIndex < filteredRegions.length) {
         const nextInput = document.querySelector(
           `[data-row="${nextRowIndex}"][data-field="${fieldName}"]`,
         ) as HTMLInputElement
@@ -255,13 +272,18 @@ const RegionDetailsTable = ({
     setDragState({ draggedIndex: null, dragOverIndex: null })
   }
 
-  if (regions.length === 0) {
+  if (filteredRegions.length === 0) {
     return (
       <div className="p-8 text-center">
         <div className="mb-4 text-4xl">🎨</div>
-        <h3 className="mb-2 text-lg font-medium">領域を作成してください</h3>
+        <h3 className="mb-2 text-lg font-medium">
+          {selectedMasterImageId ? "このページに領域がありません" : "領域を作成してください"}
+        </h3>
         <p className="text-muted-foreground">
-          前のステップに戻って、模範解答上で領域を作成してください。
+          {selectedMasterImageId 
+            ? "前のステップに戻って、このページに領域を作成してください。"
+            : "前のステップに戻って、模範解答上で領域を作成してください。"
+          }
         </p>
       </div>
     )
@@ -299,28 +321,29 @@ const RegionDetailsTable = ({
             </tr>
           </thead>
           <tbody>
-            {regions.map((region, index) => {
-              const isSelected = selectedRowIndex === index
+            {filteredRegions.map((region, filteredIndex) => {
+              const globalIndex = getGlobalIndex(filteredIndex)
+              const isSelected = selectedRowIndex === globalIndex
               const icon =
                 typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
-              const isDragged = dragState.draggedIndex === index
-              const isDraggedOver = dragState.dragOverIndex === index
+              const isDragged = dragState.draggedIndex === filteredIndex
+              const isDraggedOver = dragState.dragOverIndex === filteredIndex
 
               return (
                 <tr
-                  key={region.id || `region-${index}`}
+                  key={region.id || `region-${filteredIndex}`}
                   draggable={!disabled}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragStart={() => handleDragStart(filteredIndex)}
+                  onDragOver={(e) => handleDragOver(e, filteredIndex)}
                   onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
+                  onDrop={(e) => handleDrop(e, filteredIndex)}
                   onDragEnd={handleDragEnd}
                   className={`hover:bg-accent/50 cursor-pointer transition-colors ${
                     isSelected ? "bg-primary/10 border-primary" : ""
                   } ${isDragged ? "opacity-50" : ""} ${
                     isDraggedOver ? "border-t-4 border-t-blue-500" : ""
                   }`}
-                  onClick={() => setSelectedRowIndex(isSelected ? null : index)}
+                  onClick={() => setSelectedRowIndex(isSelected ? null : globalIndex)}
                 >
                   <td className="border-border border px-2 py-1">
                     <div className="flex items-center justify-center">
@@ -330,14 +353,14 @@ const RegionDetailsTable = ({
                   <td className="border-border border px-2 py-1">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">{icon}</span>
-                      <span className="text-sm font-medium">{index + 1}</span>
+                      <span className="text-sm font-medium">{filteredIndex + 1}</span>
                     </div>
                   </td>
                   <td className="border-border border px-2 py-1">
                     <Select
                       value={region.type}
                       onValueChange={(value) =>
-                        handleRegionChange(index, "type", value)
+                        handleRegionChange(filteredIndex, "type", value)
                       }
                       disabled={disabled}
                     >
@@ -355,13 +378,13 @@ const RegionDetailsTable = ({
                   </td>
                   <td className="border-border border px-2 py-1">
                     <Input
-                      data-row={index}
+                      data-row={filteredIndex}
                       data-field="label"
                       value={region.label || ""}
                       onChange={(e) =>
-                        handleRegionChange(index, "label", e.target.value)
+                        handleRegionChange(filteredIndex, "label", e.target.value)
                       }
-                      onKeyDown={(e) => handleKeyDown(e, index, "label")}
+                      onKeyDown={(e) => handleKeyDown(e, filteredIndex, "label")}
                       disabled={disabled}
                       placeholder="領域名を入力"
                       className="h-8 w-full min-w-20"
@@ -370,14 +393,14 @@ const RegionDetailsTable = ({
                   <td className="border-border border px-2 py-1">
                     {region.type === AreaType.QUESTION_ANSWER ? (
                       <Input
-                        data-row={index}
+                        data-row={filteredIndex}
                         data-field="points"
                         type="number"
                         value={region.points ?? ""}
                         onChange={(e) =>
-                          handleRegionChange(index, "points", e.target.value)
+                          handleRegionChange(filteredIndex, "points", e.target.value)
                         }
-                        onKeyDown={(e) => handleKeyDown(e, index, "points")}
+                        onKeyDown={(e) => handleKeyDown(e, filteredIndex, "points")}
                         disabled={disabled}
                         placeholder="10"
                         className="h-8 w-full min-w-20"
@@ -392,7 +415,7 @@ const RegionDetailsTable = ({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation()
-                        handleDeleteRegion(index)
+                        handleDeleteRegion(globalIndex)
                       }}
                       className="text-destructive hover:text-destructive"
                     >

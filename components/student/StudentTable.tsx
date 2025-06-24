@@ -4,7 +4,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -27,16 +31,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Edit, Info, PlusCircle, Search, Trash2, Upload, Users } from "lucide-react"
+  Edit,
+  Info,
+  PlusCircle,
+  Search,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import SpreadsheetImportModal from "@/components/unused/SpreadsheetImportModal"
-import StudentImportModal from "@/components/unused/StudentImportModal"
+import SpreadsheetImportModal from "./SpreadsheetImportModal"
+import StudentImportModal from "./StudentImportModal"
 import StudentModal from "./StudentModal"
 
 interface StudentWithMemberships {
@@ -95,14 +102,18 @@ export default function StudentTable() {
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterMembershipStatus, setFilterMembershipStatus] = useState<string>("all")
+  const [filterMembershipStatus, setFilterMembershipStatus] =
+    useState<string>("all")
   const [filterClassId, setFilterClassId] = useState<string>("all")
 
   // Modal states
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
-  const [studentToEdit, setStudentToEdit] = useState<StudentWithMemberships | null>(null)
-  const [isStudentImportModalOpen, setIsStudentImportModalOpen] = useState(false)
-  const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] = useState(false)
+  const [studentToEdit, setStudentToEdit] =
+    useState<StudentWithMemberships | null>(null)
+  const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
+    useState(false)
+  const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
+    useState(false)
 
   // Data fetching
   useEffect(() => {
@@ -119,7 +130,6 @@ export default function StudentTable() {
     fetchData()
   }, [])
 
-
   // Filter and sort students
   const filteredStudents = students
     .filter((student) => {
@@ -132,7 +142,7 @@ export default function StudentTable() {
 
       if (filterClassId !== "all") {
         const belongsToClass = student.memberships.some(
-          m => m.class.id === filterClassId && !m.endDate
+          (m) => m.class.id === filterClassId && !m.endDate,
         )
         if (!belongsToClass) return false
       }
@@ -152,7 +162,9 @@ export default function StudentTable() {
     })
     .sort((a, b) => {
       // Sort by name
-      return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
+      return `${a.lastName}${a.firstName}`.localeCompare(
+        `${b.lastName}${b.firstName}`,
+      )
     })
 
   // Event handlers
@@ -214,9 +226,9 @@ export default function StudentTable() {
   // Get current classes for display
   const getCurrentClasses = (student: StudentWithMemberships) => {
     return student.memberships
-      .filter(m => !m.endDate)
-      .map(m => ({
-        name: m.class.name
+      .filter((m) => !m.endDate)
+      .map((m) => ({
+        name: m.class.name,
       }))
   }
 
@@ -226,140 +238,74 @@ export default function StudentTable() {
         {/* Header with Help */}
         <div className="mb-6 flex items-center gap-2">
           <h1 className="text-3xl font-bold">生徒管理</h1>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-            >
-              <Info className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-[450px]"
-            align="start"
-            side="bottom"
-          >
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-semibold text-base">生徒管理について</h3>
-                </div>
-                <p className="text-sm text-muted-foreground pl-7">
-                  生徒の基本情報と学級所属状況を一元管理できます。
-                </p>
-              </div>
-
-              <div className="space-y-3 pl-7">
-                <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
-                  <strong>複数学級対応システム</strong><br />
-                  生徒は同時に複数のクラスに所属できます。
-                  <ul className="list-disc pl-5 mt-2 space-y-1">
-                    <li>ホームルーム：1年A組</li>
-                    <li>英語：E1クラス（習熟度別）</li>
-                    <li>数学：M2クラス（習熟度別）</li>
-                  </ul>
-                </div>
-
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Info className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[450px]" align="start" side="bottom">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="font-medium text-sm">主な機能：</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <PlusCircle className="h-4 w-4 text-green-600" />
-                      <span>個別追加</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Upload className="h-4 w-4 text-blue-600" />
-                      <span>一括インポート</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Edit className="h-4 w-4 text-orange-600" />
-                      <span>情報編集</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                      <span>削除</span>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-base font-semibold">
+                      生徒管理について
+                    </h3>
+                  </div>
+                  <p className="text-muted-foreground pl-7 text-sm">
+                    生徒の基本情報と学級所属状況を一元管理できます。
+                  </p>
+                </div>
+
+                <div className="space-y-3 pl-7">
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    <strong>複数学級対応システム</strong>
+                    <br />
+                    生徒は同時に複数のクラスに所属できます。
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      <li>ホームルーム：1年A組</li>
+                      <li>英語：E1クラス（習熟度別）</li>
+                      <li>数学：M2クラス（習熟度別）</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">主な機能：</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <PlusCircle className="h-4 w-4 text-green-600" />
+                        <span>個別追加</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-blue-600" />
+                        <span>一括インポート</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Edit className="h-4 w-4 text-orange-600" />
+                        <span>情報編集</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <span>削除</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="border rounded-lg p-3 text-sm bg-orange-50 border-orange-200 text-orange-800">
-                  <strong>ヒント:</strong> 行をクリックすると生徒の詳細ページへ移動します。
-                  所属履歴の確認や編集が可能です。
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+                    <strong>ヒント:</strong>{" "}
+                    行をクリックすると生徒の詳細ページへ移動します。
+                    所属履歴の確認や編集が可能です。
+                  </div>
                 </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-        {/* Search and Filter Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              検索・フィルタ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div>
-                <Label htmlFor="search">検索</Label>
-                <Input
-                  id="search"
-                  placeholder="生徒名・学籍番号で検索"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="filterClass">学級フィルタ</Label>
-                <Select
-                  value={filterClassId}
-                  onValueChange={setFilterClassId}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">すべての学級</SelectItem>
-                    {classes
-                      .filter(c => c.isVisible !== false)
-                      .sort((a, b) => a.name.localeCompare(b.name))
-                      .map(c => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="membershipStatus">所属状況</Label>
-                <Select
-                  value={filterMembershipStatus}
-                  onValueChange={setFilterMembershipStatus}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">すべて</SelectItem>
-                    <SelectItem value="current">現在所属中</SelectItem>
-                    <SelectItem value="past">過去の所属</SelectItem>
-                    <SelectItem value="unassigned">未所属</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
+            </PopoverContent>
+          </Popover>
+        </div>
         {/* Students List */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3">
+            <div className="mb-3 flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
                 生徒一覧 ({filteredStudents.length}名)
@@ -369,7 +315,9 @@ export default function StudentTable() {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-sm">
                     <p>生徒は名前順に表示されます。</p>
-                    <p className="mt-1">特定の学級でフィルタすると、その学級での生徒のみが表示されます。</p>
+                    <p className="mt-1">
+                      特定の学級でフィルタすると、その学級での生徒のみが表示されます。
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </CardTitle>
@@ -391,9 +339,51 @@ export default function StudentTable() {
                 </Button>
               </div>
             </div>
+            {/* Search and Filter Controls */}
+            <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Search className="text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="生徒名・学籍番号で検索"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-60"
+                />
+              </div>
+              <Select value={filterClassId} onValueChange={setFilterClassId}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="学級フィルタ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべての学級</SelectItem>
+                  {classes
+                    .filter((c) => c.isVisible !== false)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filterMembershipStatus}
+                onValueChange={setFilterMembershipStatus}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="所属状況" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">すべて</SelectItem>
+                  <SelectItem value="current">現在所属中</SelectItem>
+                  <SelectItem value="past">過去の所属</SelectItem>
+                  <SelectItem value="unassigned">未所属</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
+          <CardContent className="pt-0">
+            <div className="max-h-[500px] overflow-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -407,7 +397,7 @@ export default function StudentTable() {
                 <TableBody>
                   {filteredStudents.map((student) => {
                     const currentClasses = getCurrentClasses(student)
-                    
+
                     return (
                       <TableRow
                         key={student.id}
@@ -424,7 +414,11 @@ export default function StudentTable() {
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {currentClasses.map((cls, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="text-xs"
+                              >
                                 {cls.name}
                               </Badge>
                             ))}
@@ -436,7 +430,7 @@ export default function StudentTable() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex gap-1 justify-end">
+                          <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="sm"

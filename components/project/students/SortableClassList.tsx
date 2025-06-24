@@ -58,13 +58,13 @@ function SortableClassItem({ classItem }: { classItem: AvailableClass }) {
     <Card 
       ref={setNodeRef} 
       style={style} 
-      className={`p-3 ${isDragging ? "shadow-lg" : ""}`}
+      className={`p-3 w-full ${isDragging ? "shadow-lg rotate-2" : ""}`}
     >
       <div className="flex items-center space-x-3">
         <div
           {...attributes}
           {...listeners}
-          className="cursor-grab hover:cursor-grabbing p-1 rounded hover:bg-muted"
+          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted transition-colors"
         >
           <GripVertical className="h-4 w-4 text-muted-foreground" />
         </div>
@@ -88,7 +88,8 @@ export default function SortableClassList({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        delay: 100,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor)
@@ -142,11 +143,13 @@ export default function SortableClassList({
         >
           <div className="space-y-2">
             {selectedClasses.map((classItem, index) => (
-              <div key={classItem.id} className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
+              <div key={classItem.id} className="flex items-center gap-3">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600">
                   {index + 1}
                 </div>
-                <SortableClassItem classItem={classItem} />
+                <div className="flex-1 min-w-0">
+                  <SortableClassItem classItem={classItem} />
+                </div>
               </div>
             ))}
           </div>
@@ -155,9 +158,9 @@ export default function SortableClassList({
 
       <DragOverlay>
         {activeClass ? (
-          <Card className="p-3 shadow-lg bg-background border">
+          <Card className="p-3 shadow-xl bg-background border-2 border-blue-200 rotate-2 scale-105">
             <div className="flex items-center space-x-3">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <GripVertical className="h-4 w-4 text-blue-500" />
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{activeClass.name}</span>

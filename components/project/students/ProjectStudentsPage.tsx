@@ -53,7 +53,8 @@ export default function ProjectStudentsPage() {
   const projectId = params.projectId as string
 
   const [loading, setLoading] = useState(true)
-  const [classes, setClasses] = useState<ClassGroup[]>([])
+  const [students, setStudents] = useState<Student[]>([]) // 順序付き生徒リスト
+  const [classes, setClasses] = useState<ClassGroup[]>([]) // フィルタ用学級情報
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<StudentStatus | "all">("all")
   const [selectedClassId, setSelectedClassId] = useState<string>("all")
@@ -66,87 +67,16 @@ export default function ProjectStudentsPage() {
     totalItems: 0,
   })
 
-  // 統計情報の計算
-  const totalStudents = classes.reduce((sum, cls) => sum + cls.students.length, 0)
-  const participatingStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter((s) => s.status === "participating").length,
-    0,
-  )
-  const expectedStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter((s) => s.status === "expected").length,
-    0,
-  )
-  const absentStudents = classes.reduce(
-    (sum, cls) => sum + cls.students.filter((s) => s.status === "absent").length,
-    0,
-  )
+  // 統計情報の計算（順序付き生徒リストから）
+  const totalStudents = students.length
+  const participatingStudents = students.filter((s) => s.status === "participating").length
+  const expectedStudents = students.filter((s) => s.status === "expected").length
+  const absentStudents = students.filter((s) => s.status === "absent").length
 
   // データの取得（実際のAPIから）
   useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true)
-      try {
-        // プロジェクト情報を取得（必要に応じて後で使用）
-        await window.electronAPI.fetchProjectById(projectId)
-
-        // プロジェクトの生徒データを取得
-        const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
-        if (!studentsResult.success) {
-          throw new Error(studentsResult.error || "Failed to fetch students")
-        }
-
-        const projectStudents = studentsResult.students || []
-
-        // 学級ごとにグループ化
-        const classGroups = new Map<string, ClassGroup>()
-
-        projectStudents.forEach((student) => {
-          const currentMembership = student.memberships?.[0] // 最新の所属
-          if (currentMembership) {
-            const classId = currentMembership.class.id
-            const className = currentMembership.class.name
-
-            if (!classGroups.has(classId)) {
-              classGroups.set(classId, {
-                id: classId,
-                name: className,
-                students: [],
-              })
-            }
-
-            classGroups.get(classId)!.students.push(student)
-          }
-        })
-
-        // Sort students within each class by attendance number
-        classGroups.forEach((group) => {
-          group.students.sort((a, b) => {
-            const aNumber = a.memberships?.[0]?.attendanceNumber
-            const bNumber = b.memberships?.[0]?.attendanceNumber
-            
-            if (aNumber && bNumber) {
-              return aNumber - bNumber
-            }
-            if (aNumber) return -1
-            if (bNumber) return 1
-            
-            // If no attendance numbers, sort by name
-            const aName = `${a.lastName}${a.firstName}`
-            const bName = `${b.lastName}${b.firstName}`
-            return aName.localeCompare(bName)
-          })
-        })
-        
-        const classes = Array.from(classGroups.values())
-        setClasses(classes)
-      } catch (error) {
-        console.error("生徒データの取得に失敗しました:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStudents()
+    setLoading(true)
+    refreshStudentData().finally(() => setLoading(false))
   }, [projectId])
 
   // 生徒の状態を更新
@@ -161,13 +91,11 @@ export default function ProjectStudentsPage() {
         throw new Error(result.error || "Failed to update student status")
       }
 
-      setClasses((prevClasses) =>
-        prevClasses.map((cls) => ({
-          ...cls,
-          students: cls.students.map((student) =>
-            student.id === studentId ? { ...student, status: newStatus } : student,
-          ),
-        })),
+      // 受験生徒リストのステータスを更新
+      setStudents((prevStudents) =>
+        prevStudents.map((student) =>
+          student.id === studentId ? { ...student, status: newStatus } : student,
+        ),
       )
     } catch (error) {
       console.error("Failed to update student status:", error)
@@ -185,18 +113,26 @@ export default function ProjectStudentsPage() {
         throw new Error(result.error || "Failed to update student orders")
       }
 
-      // 成功した場合、ローカルの状態を更新
+      // 成功した場合、受験生徒リストのcustomOrderを更新し、再ソート
       const orderMap = new Map(studentOrders.map(o => [o.studentId, o.customOrder]))
       
-      setClasses((prevClasses) =>
-        prevClasses.map((cls) => ({
-          ...cls,
-          students: cls.students.map((student) => ({
-            ...student,
-            customOrder: orderMap.get(student.id) ?? student.customOrder,
-          })),
-        })),
-      )
+      setStudents((prevStudents) => {
+        const updatedStudents = prevStudents.map((student) => ({
+          ...student,
+          customOrder: orderMap.get(student.id) ?? student.customOrder,
+        }))
+        
+        // customOrder順で再ソート
+        return updatedStudents.sort((a, b) => {
+          if (a.customOrder !== null && a.customOrder !== undefined && 
+              b.customOrder !== null && b.customOrder !== undefined) {
+            return a.customOrder - b.customOrder
+          }
+          if (a.customOrder !== null && a.customOrder !== undefined) return -1
+          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+          return 0
+        })
+      })
     } catch (error) {
       console.error("Failed to update student orders:", error)
     }
@@ -264,32 +200,8 @@ export default function ProjectStudentsPage() {
         throw new Error(result.error || "Failed to remove students from project")
       }
 
-      // 画面を再読み込み
-      const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
-      if (studentsResult.success && studentsResult.students) {
-        // 学級ごとにグループ化
-        const classGroups = new Map<string, ClassGroup>()
-
-        studentsResult.students.forEach((student) => {
-          const currentMembership = student.memberships?.[0]
-          if (currentMembership) {
-            const classId = currentMembership.class.id
-            const className = currentMembership.class.name
-
-            if (!classGroups.has(classId)) {
-              classGroups.set(classId, {
-                id: classId,
-                name: className,
-                students: [],
-              })
-            }
-
-            classGroups.get(classId)!.students.push(student)
-          }
-        })
-
-        setClasses(Array.from(classGroups.values()))
-      }
+      // データを再読み込み（新しいアーキテクチャに対応）
+      await refreshStudentData()
 
       // 状態をリセット
       setSelectedStudentsForRemoval(new Set())
@@ -302,49 +214,73 @@ export default function ProjectStudentsPage() {
 
   // データの再読み込み
   const refreshStudentData = async () => {
+    console.log('=== refreshStudentData called ===')
     const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+    console.log('Students result:', studentsResult)
+    
     if (studentsResult.success && studentsResult.students) {
-      const classGroups = new Map<string, ClassGroup>()
-
-      studentsResult.students.forEach((student) => {
-        const currentMembership = student.memberships?.[0]
-        if (currentMembership) {
-          const classId = currentMembership.class.id
-          const className = currentMembership.class.name
-
-          if (!classGroups.has(classId)) {
-            classGroups.set(classId, {
-              id: classId,
-              name: className,
-              students: [],
+      // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
+      const sortedStudents = [...studentsResult.students].sort((a: any, b: any) => {
+        // customOrderが設定されている場合はそれを優先
+        if (a.customOrder !== null && a.customOrder !== undefined && 
+            b.customOrder !== null && b.customOrder !== undefined) {
+          return a.customOrder - b.customOrder
+        }
+        if (a.customOrder !== null && a.customOrder !== undefined) return -1
+        if (b.customOrder !== null && b.customOrder !== undefined) return 1
+        
+        // customOrderが未設定の場合はデフォルト順序（追加順など）
+        return 0
+      })
+      
+      console.log('Sorted students (customOrder-based):', sortedStudents)
+      setStudents(sortedStudents)
+      
+      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
+      const uniqueClasses = new Map<string, { id: string; name: string }>()
+      
+      sortedStudents.forEach((student) => {
+        // 各生徒の全所属履歴を確認
+        student.memberships?.forEach((membership) => {
+          if (!uniqueClasses.has(membership.class.id)) {
+            uniqueClasses.set(membership.class.id, {
+              id: membership.class.id,
+              name: membership.class.name
             })
           }
-
-          classGroups.get(classId)!.students.push(student)
-        }
+        })
       })
-
-      setClasses(Array.from(classGroups.values()))
+      
+      // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
+      const filterClasses: ClassGroup[] = Array.from(uniqueClasses.values()).map(cls => ({
+        ...cls,
+        students: [] // 空配列 - フィルタ用なので実際の生徒リストは不要
+      }))
+      
+      console.log('Filter classes (display only):', filterClasses)
+      setClasses(filterClasses)
+    } else {
+      console.error('Failed to refresh student data:', studentsResult.error)
     }
   }
 
-  // フィルタリングされた生徒リスト
-  const filteredStudents = classes.flatMap((cls) =>
-    cls.students.filter((student) => {
-      const fullName = `${student.lastName} ${student.firstName}`
-      const fullKana = `${student.lastNameKana} ${student.firstNameKana}`
-      const matchesSearch =
-        fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId.includes(searchTerm)
+  // フィルタリングされた生徒リスト（順序を維持したまま表示用フィルタを適用）
+  const filteredStudents = students.filter((student) => {
+    const fullName = `${student.lastName} ${student.firstName}`
+    const fullKana = `${student.lastNameKana} ${student.firstNameKana}`
+    const matchesSearch =
+      fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.studentId.includes(searchTerm)
 
-      const matchesStatus = statusFilter === "all" || student.status === statusFilter
-      const currentClassId = student.memberships?.[0]?.class.id
-      const matchesClass = selectedClassId === "all" || currentClassId === selectedClassId
+    const matchesStatus = statusFilter === "all" || student.status === statusFilter
+    
+    // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック
+    const matchesClass = selectedClassId === "all" || 
+      student.memberships?.some(membership => membership.class.id === selectedClassId)
 
-      return matchesSearch && matchesStatus && matchesClass
-    }),
-  )
+    return matchesSearch && matchesStatus && matchesClass
+  })
 
   if (loading) {
     return (
@@ -493,67 +429,6 @@ export default function ProjectStudentsPage() {
           </Card>
         </div>
 
-        {/* フィルター */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">フィルター・検索</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="search">検索</Label>
-                <div className="relative">
-                  <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
-                  <Input
-                    id="search"
-                    placeholder="名前、ふりがな、学籍番号で検索"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>学級</Label>
-                <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">すべての学級</SelectItem>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>受験状態</Label>
-                <Select
-                  value={statusFilter}
-                  onValueChange={(value) =>
-                    setStatusFilter(value as StudentStatus | "all")
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">すべて</SelectItem>
-                    <SelectItem value="participating">受験</SelectItem>
-                    <SelectItem value="expected">見込</SelectItem>
-                    <SelectItem value="absent">欠席</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* 生徒一覧テーブル */}
         <SortableStudentTable
           classes={classes}
@@ -564,6 +439,12 @@ export default function ProjectStudentsPage() {
           onSelectAll={handleSelectAll}
           filteredStudents={filteredStudents}
           projectId={projectId}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          selectedClassId={selectedClassId}
+          onClassChange={setSelectedClassId}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
         />
 
         {/* 追加モーダル */}
@@ -583,9 +464,7 @@ export default function ProjectStudentsPage() {
           }}
           onConfirm={confirmStudentRemoval}
           studentsToRemove={studentsToRemove.map((id) => {
-            const student = classes
-              .flatMap((c) => c.students)
-              .find((s) => s.id === id)
+            const student = students.find((s) => s.id === id)
             return {
               id,
               studentId: student?.studentId || "",
