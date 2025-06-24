@@ -437,15 +437,8 @@ const RegionDetailsTable = ({
               <AlertTriangle className="h-5 w-5 text-orange-500" />
               <span>領域の削除確認</span>
             </ModalTitle>
-            <ModalDescription className="space-y-2">
-              <p>この領域を削除しますか？</p>
-              <div className="rounded border border-orange-200 bg-orange-50 px-2 py-1">
-                <p className="text-sm font-medium text-orange-700">⚠️ 注意</p>
-                <p className="mt-1 text-sm text-orange-600">
-                  この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。
-                  この操作は元に戻すことができません。
-                </p>
-              </div>
+            <ModalDescription>
+              この領域を削除しますか？ ⚠️ 注意：この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
             </ModalDescription>
           </ModalHeader>
           <ModalFooter>

@@ -18,6 +18,7 @@ import {
   deleteMasterImage,
   uploadMasterImages,
   updateMasterImagesOrder,
+  getMasterImagesByProjectId,
 } from "./lib/prisma/masterImage"
 
 import {
@@ -685,6 +686,18 @@ app.on("ready", async () => {
         return `appimg://${relativePath}`
       } catch (err) {
         console.error("Error in IPC resolve-file-protocol-path:", err)
+        throw err
+      }
+    },
+  )
+  
+  ipcMain.handle(
+    "get-master-images-by-project-id",
+    async (_event, projectId: string) => {
+      try {
+        return await getMasterImagesByProjectId(projectId)
+      } catch (err) {
+        console.error("Error getting master images by project ID:", err)
         throw err
       }
     },
