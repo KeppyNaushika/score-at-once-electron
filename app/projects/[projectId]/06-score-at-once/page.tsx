@@ -188,7 +188,7 @@ export default function GradingPage() {
             id: sheet.id,
             studentId: sheet.studentId,
             projectId: sheet.projectId,
-            imagePath: sheet.imagePath || "",
+            imagePath: sheet.originalImagePath || "",
             pageNumber: sheet.pageNumber || 1,
             status: sheet.status || "uploaded",
             student: sheet.student,
@@ -223,7 +223,7 @@ export default function GradingPage() {
           id: score.id,
           questionId: score.layoutRegionId,
           score: score.score || 0,
-          maxScore: score.maxScore || 0,
+          maxScore: score.layoutRegion?.points || 0,
           status: score.status as ScoringStatus,
           comment: score.comment || "",
           scoredByUserId: score.scoredByUserId,
@@ -508,7 +508,18 @@ export default function GradingPage() {
   const getGridAnswerData = () => {
     if (!currentQuestion) return []
 
-    return answerSheets.map((sheet) => {
+    // 受験生徒順でソート（プロジェクトの生徒順序に従う）
+    const sortedAnswerSheets = [...answerSheets].sort((a, b) => {
+      // まず学生IDでソート、次に姓名でソート
+      if (a.student.studentId !== b.student.studentId) {
+        return a.student.studentId.localeCompare(b.student.studentId)
+      }
+      const aName = `${a.student.lastName}${a.student.firstName}`
+      const bName = `${b.student.lastName}${b.student.firstName}`
+      return aName.localeCompare(bName, 'ja')
+    })
+
+    return sortedAnswerSheets.map((sheet) => {
       const key = `${sheet.id}-${currentQuestion.id}`
       const scoreData = scoringData[key]
 
@@ -516,11 +527,12 @@ export default function GradingPage() {
         id: sheet.id,
         studentId: sheet.student.studentId,
         studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
-        imageUrl: `/api/images/${sheet.imagePath}`, // TODO: 正しいパスに更新
+        imageUrl: `appimg://${sheet.imagePath}`,
         currentScore: scoreData?.score,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "ungraded") as ScoringStatus,
         isSelected: selectedAnswers.has(sheet.id),
+        questionRegion: currentQuestion, // 採点領域情報を追加
       }
     })
   }

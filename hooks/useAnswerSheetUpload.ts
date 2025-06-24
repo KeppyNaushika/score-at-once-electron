@@ -449,23 +449,23 @@ export function useAnswerSheetUpload({
           filesWithStudentGuess = allConvertedFiles.map((file, index) => {
             if (fileOrder === 'student-then-page') {
               // 生徒ごと、ページ連番（デフォルト）
+              // 例: 田中p1, 田中p2, 田中p3, 山田p1, 山田p2, 山田p3...
               const studentIndex = Math.floor(index / maxPages)
-              // const pageNumber = (index % maxPages) + 1 // 未使用
+              const pageNumber = (index % maxPages) + 1
 
-              if (studentIndex < sortedStudents.length) {
+              if (studentIndex < sortedStudents.length && pageNumber <= maxPages) {
                 file.studentId = sortedStudents[studentIndex].id
-                // ページ番号は既に設定済みなので変更しない
-                // file.pageNumber = pageNumber
+                file.pageNumber = pageNumber
               }
             } else {
-              // 各ページごと生徒連番
+              // ページごと生徒連番（page-then-student）
+              // 例: 田中p1, 山田p1, 佐藤p1, 田中p2, 山田p2, 佐藤p2...
               const pageNumber = Math.floor(index / sortedStudents.length) + 1
               const studentIndex = index % sortedStudents.length
 
               if (pageNumber <= maxPages && studentIndex < sortedStudents.length) {
                 file.studentId = sortedStudents[studentIndex].id
-                // ページ番号は既に設定済みなので変更しない
-                // file.pageNumber = pageNumber
+                file.pageNumber = pageNumber
               }
             }
 

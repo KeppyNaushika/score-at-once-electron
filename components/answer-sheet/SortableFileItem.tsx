@@ -86,10 +86,57 @@ export default function SortableFileItem({
     img => img.pageNumber === file.pageNumber
   )
 
-  const nameRegionsForPage = layoutRegions.filter(region =>
-    region.type === 'STUDENT_NAME' &&
-    region.masterImageId === targetMasterImage?.id
-  )
+  // 氏名領域を検索する包括的なロジック
+  const findNameRegionsForPage = () => {
+    // まず、正確なマッチを試行
+    const exactMatch = layoutRegions.filter(region =>
+      region.type === 'STUDENT_NAME' &&
+      region.masterImageId === targetMasterImage?.id
+    )
+
+    if (exactMatch.length > 0) {
+      return exactMatch
+    }
+
+    // 次に、同じページ番号のマスター画像を持つ領域を検索
+    const pageMatch = layoutRegions.filter(region => {
+      if (region.type !== 'STUDENT_NAME') return false
+      if (!region.masterImageId) return false
+      
+      const regionMasterImage = masterImages.find(img => img.id === region.masterImageId)
+      return regionMasterImage?.pageNumber === file.pageNumber
+    })
+
+    if (pageMatch.length > 0) {
+      return pageMatch
+    }
+
+    // 最後に、ページ1の氏名領域をフォールバックとして使用（単ページの場合）
+    if (file.pageNumber === 1) {
+      const page1Fallback = layoutRegions.filter(region => {
+        if (region.type !== 'STUDENT_NAME') return false
+        const regionMasterImage = masterImages.find(img => img.id === region.masterImageId)
+        return regionMasterImage?.pageNumber === 1
+      })
+      return page1Fallback
+    }
+
+    return []
+  }
+
+  const nameRegionsForPage = findNameRegionsForPage()
+
+  // デバッグ用ログ（開発時のみ）
+  if (process.env.NODE_ENV === 'development') {
+    console.log('SortableFileItem Debug:', {
+      fileName: file.name,
+      filePageNumber: file.pageNumber,
+      targetMasterImage,
+      nameRegionsForPage,
+      totalLayoutRegions: layoutRegions.length,
+      totalMasterImages: masterImages.length
+    })
+  }
 
   return (
     <div

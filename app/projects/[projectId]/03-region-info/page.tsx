@@ -270,14 +270,34 @@ export default function RegionInfoPage() {
         >
           <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
           <div className="space-y-4">
-            {masterImages.map((image, pageIndex) => {
-              const imageUrl = backgroundImageUrls[image.id]
-              const pageRegions = layoutRegions.filter(region => region.masterImageId === image.id)
+            {masterImages.map((_, pageIndex) => {
+              // 順序は固定（1, 2, 3...）だが、対応する画像は実際のpageNumber順
+              const displayPageNumber = pageIndex + 1
+              const correspondingImage = masterImages.find(img => img.pageNumber === displayPageNumber)
+              
+              if (!correspondingImage) {
+                return (
+                  <div key={`page-${displayPageNumber}`} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-medium">ページ {displayPageNumber}</h4>
+                      <div className="text-xs text-muted-foreground">
+                        (画像なし)
+                      </div>
+                    </div>
+                    <div className="relative overflow-hidden rounded-lg border bg-gray-100 aspect-[3/4] flex items-center justify-center">
+                      <div className="text-muted-foreground text-sm">画像が見つかりません</div>
+                    </div>
+                  </div>
+                )
+              }
+
+              const imageUrl = backgroundImageUrls[correspondingImage.id]
+              const pageRegions = layoutRegions.filter(region => region.masterImageId === correspondingImage.id)
               
               return (
-                <div key={image.id} className="space-y-2">
+                <div key={`page-${displayPageNumber}`} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">ページ {image.pageNumber}</h4>
+                    <h4 className="text-sm font-medium">ページ {displayPageNumber}</h4>
                     <div className="text-xs text-muted-foreground">
                       ({pageRegions.length}個の領域)
                     </div>
@@ -286,10 +306,10 @@ export default function RegionInfoPage() {
                     <div className="relative overflow-hidden rounded-lg border">
                       <img
                         src={imageUrl}
-                        alt={`模範解答 ページ ${image.pageNumber}`}
+                        alt={`模範解答 ページ ${displayPageNumber}`}
                         className="w-full object-contain cursor-pointer hover:opacity-75 transition-opacity"
                         onClick={() => {
-                          setSelectedMasterImage(image)
+                          setSelectedMasterImage(correspondingImage)
                           // 画像寸法を更新
                           const img = new Image()
                           img.onload = () => {
@@ -327,7 +347,7 @@ export default function RegionInfoPage() {
                         )
                       })}
                       {/* Page indicator if this is selected */}
-                      {selectedMasterImage?.id === image.id && (
+                      {selectedMasterImage?.id === correspondingImage.id && (
                         <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
                           編集中
                         </div>

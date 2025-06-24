@@ -176,6 +176,26 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateStudentOrders: (projectId: string, studentOrders: { studentId: string; customOrder: number }[]) =>
     ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
 
+  // QuestionScore related functions
+  getQuestionScoresForProject: (projectId: string) =>
+    ipcRenderer.invoke("get-question-scores-for-project", projectId),
+  getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
+    ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
+  createQuestionScore: (data: any) =>
+    ipcRenderer.invoke("create-question-score", data),
+  updateQuestionScore: (id: string, data: any, expectedVersion: number) =>
+    ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
+  deleteQuestionScore: (id: string) =>
+    ipcRenderer.invoke("delete-question-score", id),
+  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) =>
+    ipcRenderer.invoke("get-question-score-comparison", answerSheetId, layoutRegionId),
+  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: any) =>
+    ipcRenderer.invoke("finalize-question-score", answerSheetId, layoutRegionId, scoredByUserId, scoreData),
+  getAnswerSheetProgress: (answerSheetId: string) =>
+    ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
+  getProjectProgress: (projectId: string) =>
+    ipcRenderer.invoke("get-project-progress", projectId),
+
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>
     ipcRenderer.removeListener("score-panel", listener), // 修正: removeListener を使用
