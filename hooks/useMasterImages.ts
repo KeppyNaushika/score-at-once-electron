@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from "react"
 import { Prisma } from "@prisma/client"
 import { toast } from "sonner"
-import { usePdfConverter, ConvertedImage } from "./usePdfConverter"
+import { convertPdfToImages, ConvertedImage } from "@/lib/pdfConverter"
 
 type MasterImage = Prisma.MasterImageGetPayload<{}>
 
@@ -28,7 +28,6 @@ export function useMasterImages(
     isMoving: false
   })
 
-  const { convertPdfToImages } = usePdfConverter()
 
   // Initialize images and fetch URLs
   useEffect(() => {
@@ -59,6 +58,12 @@ export function useMasterImages(
   const uploadImages = useCallback(async (files: File[]) => {
     if (!projectId) {
       toast.error("プロジェクトIDが指定されていません。")
+      return
+    }
+    
+    // クライアントサイドチェック
+    if (typeof window === 'undefined') {
+      toast.error("この機能はクライアントサイドでのみ利用可能です。")
       return
     }
     
