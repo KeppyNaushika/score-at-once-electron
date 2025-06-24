@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePdfConverter } from "@/hooks/usePdfConverter"
 import type { UploadAnswerSheetFileData } from "@/types/electron"
+import { PasswordDialog } from "@/components/ui/password-dialog"
 import {
   AlertCircle,
   CheckSquare,
@@ -30,6 +31,7 @@ import {
   ChevronUp,
   FileImage,
   FileText,
+  GripVertical,
   Image as ImageIcon,
   RefreshCw,
   Square,
@@ -41,6 +43,25 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface AnswerSheetUploadProps {
   projectId: string
@@ -53,6 +74,7 @@ interface AnswerSheetUploadProps {
     studentId: string
     attendanceNumber?: number | null
     status?: 'participating' | 'expected' | 'absent'
+    customOrder?: number | null
   }>
   onUploadComplete?: () => void
 }
@@ -69,6 +91,23 @@ interface ConvertedFile {
   isSelected: boolean
   originalFileName: string
   pageLabel?: string
+}
+
+interface LayoutRegion {
+  id: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+  masterImageId?: string
+}
+
+interface MasterImage {
+  id: string
+  pageNumber: number
+  path: string
 }
 
 interface StudentWithAnswers {
@@ -101,10 +140,21 @@ export default function AnswerSheetUpload({
   const [specificPages, setSpecificPages] = useState<string>('1')
   const [fileOrder, setFileOrder] = useState<'page-then-student' | 'student-then-page'>('student-then-page')
   const [assignmentMode, setAssignmentMode] = useState<'auto' | 'manual'>('auto')
+  const [sortMode, setSortMode] = useState<'natural' | 'alphabetical' | 'upload-order'>('natural')
+  
+  // パスワード関連の状態
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [currentPdfFile, setCurrentPdfFile] = useState<File | null>(null)
+  const [passwordError, setPasswordError] = useState<string>('')
+  const [isPasswordProcessing, setIsPasswordProcessing] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [layoutRegions, setLayoutRegions] = useState<LayoutRegion[]>([])
+  const [masterImages, setMasterImages] = useState<MasterImage[]>([])
+  
   const router = useRouter()
   const { convertPdfToImages } = usePdfConverter()
 
-  // 生徒の既存答案をチェック
+  // 生徒の既存答案をチェック & レイアウト領域を取得
   useEffect(() => {
     const checkExistingAnswers = async () => {
       try {
@@ -140,50 +190,189 @@ export default function AnswerSheetUpload({
       }
     }
 
+    const fetchLayoutRegions = async () => {
+      try {
+        const result = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        if (result.success) {
+          setLayoutRegions(result.layoutRegions || [])
+        }
+      } catch (error) {
+        console.error("Error fetching layout regions:", error)
+      }
+    }
+
+    const fetchMasterImages = async () => {
+      try {
+        const result = await window.electronAPI.getMasterImagesByProjectId(projectId)
+        if (result.success) {
+          setMasterImages(result.masterImages || [])
+        }
+      } catch (error) {
+        console.error("Error fetching master images:", error)
+      }
+    }
+
     checkExistingAnswers()
+    fetchLayoutRegions()
+    fetchMasterImages()
   }, [students, projectId])
+
+  // PDFのパスワード処理付き変換関数
+  const convertPdfWithPasswordHandling = async (file: File, password?: string) => {
+    try {
+      return await convertPdfToImages(file, password)
+    } catch (error: any) {
+      if (error.message === 'password-required') {
+        // パスワードが必要な場合、ダイアログを表示
+        setCurrentPdfFile(file)
+        setPasswordError('')
+        setShowPasswordDialog(true)
+        throw new Error('password-dialog-shown')
+      } else if (error.message === 'invalid-password') {
+        // パスワードが間違っている場合
+        setPasswordError('パスワードが正しくありません。再度入力してください。')
+        throw new Error('invalid-password')
+      } else {
+        throw error
+      }
+    }
+  }
+
+  // パスワードダイアログでのパスワード送信処理
+  const handlePasswordSubmit = async (password: string) => {
+    if (!currentPdfFile) return
+
+    setIsPasswordProcessing(true)
+    setPasswordError('')
+
+    try {
+      const convertedImages = await convertPdfToImages(currentPdfFile, password)
+      
+      // パスワード処理成功、ファイル処理を続行
+      setShowPasswordDialog(false)
+      setCurrentPdfFile(null)
+      
+      // PDFファイルをpendingFilesから取得して処理を継続
+      const filesWithPassword = pendingFiles.filter(f => f !== currentPdfFile)
+      setPendingFiles(filesWithPassword)
+      
+      // 変換されたファイルを処理
+      await processPdfConversion(currentPdfFile, convertedImages)
+      
+    } catch (error: any) {
+      if (error.message === 'invalid-password') {
+        setPasswordError('パスワードが正しくありません。再度入力してください。')
+      } else {
+        setPasswordError(`PDFの処理中にエラーが発生しました: ${error.message}`)
+      }
+    } finally {
+      setIsPasswordProcessing(false)
+    }
+  }
+
+  // PDF変換後の処理
+  const processPdfConversion = async (file: File, convertedImages: any[]) => {
+    const newFiles: ConvertedFile[] = []
+    
+    for (let pageIndex = 0; pageIndex < convertedImages.length; pageIndex++) {
+      const converted = convertedImages[pageIndex]
+      const convertedFile: ConvertedFile = {
+        id: `${Date.now()}-${Math.random()}-${pageIndex}`,
+        name: converted.name,
+        type: converted.type,
+        size: converted.buffer.byteLength,
+        buffer: converted.buffer,
+        preview: URL.createObjectURL(
+          new Blob([converted.buffer], { type: converted.type }),
+        ),
+        pageNumber: 1,
+        isSelected: true,
+        originalFileName: file.name,
+        pageLabel: `${file.name} - ページ ${pageIndex + 1}`,
+      }
+      newFiles.push(convertedFile)
+    }
+    
+    setFiles(prev => [...prev, ...newFiles])
+    setMaxPages(prev => Math.max(prev, convertedImages.length))
+  }
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       setIsConverting(true)
+      setPendingFiles(acceptedFiles)
 
       try {
-        const allConvertedFiles: ConvertedFile[] = []
+        let allConvertedFiles: ConvertedFile[] = []
         let fileIndex = 0
 
         for (const file of acceptedFiles) {
           if (file.type === "application/pdf") {
-            // PDF → PNG変換
-            const convertedImages = await convertPdfToImages(file)
+            try {
+              // PDF → PNG変換（パスワード処理を含む）
+              const convertedImages = await convertPdfWithPasswordHandling(file)
 
-            for (
-              let pageIndex = 0;
-              pageIndex < convertedImages.length;
-              pageIndex++
-            ) {
-              const converted = convertedImages[pageIndex]
-              const convertedFile: ConvertedFile = {
-                id: `${Date.now()}-${fileIndex}-${pageIndex}`,
-                name: converted.name,
-                type: converted.type,
-                size: converted.buffer.byteLength,
-                buffer: converted.buffer,
-                preview: URL.createObjectURL(
-                  new Blob([converted.buffer], { type: converted.type }),
-                ),
-                pageNumber: 1,
-                isSelected: true,
-                originalFileName: file.name,
-                pageLabel: `${file.name} - ページ ${pageIndex + 1}`,
+              for (
+                let pageIndex = 0;
+                pageIndex < convertedImages.length;
+                pageIndex++
+              ) {
+                const converted = convertedImages[pageIndex]
+                
+                // ページ範囲フィルタリング
+                const actualPageNumber = pageIndex + 1
+                if (pageRange === 'specific') {
+                  const allowedPages = parsePageRange(specificPages)
+                  if (!allowedPages.includes(actualPageNumber)) {
+                    continue // このページをスキップ
+                  }
+                }
+                
+                const convertedFile: ConvertedFile = {
+                  id: `${Date.now()}-${fileIndex}-${pageIndex}`,
+                  name: converted.name,
+                  type: converted.type,
+                  size: converted.buffer.byteLength,
+                  buffer: converted.buffer,
+                  preview: URL.createObjectURL(
+                    new Blob([converted.buffer], { type: converted.type }),
+                  ),
+                  pageNumber: actualPageNumber, // 実際のページ番号を設定
+                  isSelected: true,
+                  originalFileName: file.name,
+                  pageLabel: `${file.name} - ページ ${actualPageNumber}`,
+                }
+
+                allConvertedFiles.push(convertedFile)
               }
 
-              allConvertedFiles.push(convertedFile)
+              setMaxPages((prev) => Math.max(prev, convertedImages.length))
+            } catch (error: any) {
+              if (error.message === 'password-dialog-shown') {
+                // パスワードダイアログが表示された場合、処理を中断
+                setIsConverting(false)
+                return
+              } else {
+                // その他のエラーは通常通り処理
+                console.error(`PDF変換エラー (${file.name}):`, error)
+                toast.error(`PDF変換エラー: ${file.name} - ${error.message}`)
+                continue
+              }
             }
-
-            setMaxPages((prev) => Math.max(prev, convertedImages.length))
           } else {
-            // 画像ファイル
+            // 画像ファイル（ページ番号は1固定）
             const buffer = await file.arrayBuffer()
+            const actualPageNumber = 1 // 画像ファイルは1ページ扱い
+            
+            // ページ範囲フィルタリング（画像ファイルの場合）
+            if (pageRange === 'specific') {
+              const allowedPages = parsePageRange(specificPages)
+              if (!allowedPages.includes(actualPageNumber)) {
+                fileIndex++
+                continue // このファイルをスキップ
+              }
+            }
+            
             const convertedFile: ConvertedFile = {
               id: `${Date.now()}-${fileIndex}`,
               name: file.name,
@@ -191,7 +380,7 @@ export default function AnswerSheetUpload({
               size: file.size,
               buffer,
               preview: URL.createObjectURL(file),
-              pageNumber: 1,
+              pageNumber: actualPageNumber,
               isSelected: true,
               originalFileName: file.name,
               pageLabel: file.name,
@@ -203,14 +392,53 @@ export default function AnswerSheetUpload({
           fileIndex++
         }
 
-        // 自動割り当てモードの場合、ファイルを生徒に割り当て
+        // ファイルソート機能
+        const sortFiles = (files: ConvertedFile[], mode: string) => {
+          switch (mode) {
+            case 'natural': {
+              // 自然順ソート（スキャン連番を考慮：scan001.pdf < scan002.pdf < scan10.pdf）
+              const collator = new Intl.Collator(undefined, {
+                numeric: true,
+                sensitivity: 'base'
+              })
+              return files.sort((a, b) => 
+                collator.compare(a.originalFileName.toLowerCase(), b.originalFileName.toLowerCase())
+              )
+            }
+            case 'alphabetical': {
+              // アルファベット順ソート
+              return files.sort((a, b) => 
+                a.originalFileName.toLowerCase().localeCompare(b.originalFileName.toLowerCase())
+              )
+            }
+            case 'upload-order':
+            default: {
+              // アップロード順（元の順序）
+              return files
+            }
+          }
+        }
+
+        // ファイルをソート（スキャン連番対応）
+        allConvertedFiles = sortFiles(allConvertedFiles, sortMode)
+
+        // 自動・手動どちらの場合でも生徒を割り当て
         let filesWithStudentGuess = allConvertedFiles
         
         if (assignmentMode === 'auto') {
-          // 出席番号順にソートされた生徒リスト
+          // 受験生徒順序（customOrder）にソートされた生徒リスト
           const sortedStudents = [...students]
             .filter(s => s.status === 'participating') // 受験する生徒のみ
             .sort((a, b) => {
+              // customOrderが設定されている場合はそれを優先
+              if (a.customOrder !== null && a.customOrder !== undefined && 
+                  b.customOrder !== null && b.customOrder !== undefined) {
+                return a.customOrder - b.customOrder
+              }
+              if (a.customOrder !== null && a.customOrder !== undefined) return -1
+              if (b.customOrder !== null && b.customOrder !== undefined) return 1
+              
+              // customOrderが未設定の場合は出席番号順をフォールバック
               if (a.attendanceNumber && b.attendanceNumber) {
                 return a.attendanceNumber - b.attendanceNumber
               }
@@ -219,7 +447,7 @@ export default function AnswerSheetUpload({
               return 0
             })
           
-          // ファイル順序に応じて割り当て
+          // ファイル順序に応じて自動割り当て
           filesWithStudentGuess = allConvertedFiles.map((file, index) => {
             if (fileOrder === 'student-then-page') {
               // 生徒ごと、ページ連番（デフォルト）
@@ -228,45 +456,63 @@ export default function AnswerSheetUpload({
               
               if (studentIndex < sortedStudents.length) {
                 file.studentId = sortedStudents[studentIndex].id
-                file.pageNumber = pageNumber
+                // ページ番号は既に設定済みなので変更しない
+                // file.pageNumber = pageNumber
               }
             } else {
               // 各ページごと生徒連番
               const pageNumber = Math.floor(index / sortedStudents.length) + 1
               const studentIndex = index % sortedStudents.length
               
-              if (pageNumber <= maxPages) {
+              if (pageNumber <= maxPages && studentIndex < sortedStudents.length) {
                 file.studentId = sortedStudents[studentIndex].id
-                file.pageNumber = pageNumber
+                // ページ番号は既に設定済みなので変更しない
+                // file.pageNumber = pageNumber
               }
             }
             
             return file
           })
-        } else {
-          // 手動モードの場合、ファイル名から生徒を推測
-          filesWithStudentGuess = allConvertedFiles.map((file) => {
-            const fileName = file.name.toLowerCase()
-            const matchedStudent = studentsWithAnswers.find((student) => {
-              const studentName =
-                `${student.lastName}${student.firstName}`.toLowerCase()
-              const studentNameKana =
-                `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
-              const studentId = student.studentId.toLowerCase()
-              return (
-                fileName.includes(studentName) ||
-                fileName.includes(studentNameKana) ||
-                fileName.includes(studentId)
-              )
-            })
-
-            if (matchedStudent) {
-              file.studentId = matchedStudent.id
-            }
-
-            return file
-          })
         }
+        
+        // 手動モードの場合、または自動割り当てで未割り当てのファイルがある場合、
+        // ファイル名から生徒を推測（改善版）
+        filesWithStudentGuess = allConvertedFiles.map((file) => {
+          // 自動モードで既に割り当て済みの場合はスキップ
+          if (assignmentMode === 'auto' && file.studentId) {
+            return file
+          }
+          
+          const fileName = file.name.toLowerCase()
+          const matchedStudent = studentsWithAnswers.find((student) => {
+            const studentName = `${student.lastName}${student.firstName}`.toLowerCase()
+            const studentNameKana = `${student.lastNameKana}${student.firstNameKana}`.toLowerCase()
+            const studentId = student.studentId.toLowerCase()
+            
+            // より精密なマッチング：完全一致を優先
+            const exactMatches = [
+              fileName.includes(studentId),
+              fileName.includes(studentName),
+              fileName.includes(studentNameKana)
+            ]
+            
+            // 部分一致も考慮（姓のみ、名のみ）
+            const partialMatches = [
+              fileName.includes(student.lastName.toLowerCase()),
+              fileName.includes(student.firstName.toLowerCase()),
+              fileName.includes(student.lastNameKana.toLowerCase()),
+              fileName.includes(student.firstNameKana.toLowerCase())
+            ]
+            
+            return exactMatches.some(match => match) || partialMatches.filter(match => match).length >= 2
+          })
+
+          if (matchedStudent) {
+            file.studentId = matchedStudent.id
+          }
+
+          return file
+        })
 
         setFiles((prev) => [...prev, ...filesWithStudentGuess])
 
@@ -280,7 +526,7 @@ export default function AnswerSheetUpload({
         setIsConverting(false)
       }
     },
-    [studentsWithAnswers, convertPdfToImages],
+    [studentsWithAnswers, convertPdfToImages, assignmentMode, fileOrder, maxPages, sortMode, layoutRegions, masterImages],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -471,11 +717,38 @@ export default function AnswerSheetUpload({
   }
 
   const getStudentName = (studentId?: string) => {
-    if (!studentId) return "未設定"
+    if (!studentId) return "生徒を選択"
     const student = studentsWithAnswers.find((s) => s.id === studentId)
     return student
       ? `${student.lastName} ${student.firstName} (${student.studentId})`
-      : "未設定"
+      : "生徒を選択"
+  }
+  
+  // ページ範囲パース関数
+  const parsePageRange = (pageStr: string): number[] => {
+    const pages: number[] = []
+    const parts = pageStr.split(',')
+    
+    for (const part of parts) {
+      const trimmed = part.trim()
+      if (trimmed.includes('-')) {
+        // 範囲指定（例: 3-5）
+        const [start, end] = trimmed.split('-').map(n => parseInt(n.trim()))
+        if (!isNaN(start) && !isNaN(end) && start <= end) {
+          for (let i = start; i <= end; i++) {
+            pages.push(i)
+          }
+        }
+      } else {
+        // 単一ページ（例: 1）
+        const pageNum = parseInt(trimmed)
+        if (!isNaN(pageNum)) {
+          pages.push(pageNum)
+        }
+      }
+    }
+    
+    return [...new Set(pages)].sort((a, b) => a - b) // 重複除去＆ソート
   }
 
   const selectedFilesCount = files.filter((f) => f.isSelected).length
@@ -490,18 +763,14 @@ export default function AnswerSheetUpload({
         onValueChange={setSelectedTab}
         className="w-full"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="upload" className="flex items-center gap-2">
             <Upload className="h-4 w-4" />
             アップロード
           </TabsTrigger>
           <TabsTrigger value="manage" className="flex items-center gap-2">
             <FileImage className="h-4 w-4" />
-            ファイル管理 ({files.length})
-          </TabsTrigger>
-          <TabsTrigger value="students" className="flex items-center gap-2">
-            <UserCircle className="h-4 w-4" />
-            生徒選択 ({selectedStudentsCount})
+            ファイル・生徒管理 ({files.length}ファイル, {selectedStudentsCount}生徒)
           </TabsTrigger>
         </TabsList>
 
@@ -609,6 +878,31 @@ export default function AnswerSheetUpload({
                   </div>
                 )}
                 
+                {/* ファイル並び替え */}
+                <div className="space-y-2">
+                  <Label>ファイルの並び替え</Label>
+                  <Select
+                    value={sortMode}
+                    onValueChange={(value: 'natural' | 'alphabetical' | 'upload-order') => setSortMode(value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="natural">自然順（推奨）</SelectItem>
+                      <SelectItem value="alphabetical">アルファベット順</SelectItem>
+                      <SelectItem value="upload-order">アップロード順</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {sortMode === 'natural' 
+                      ? 'スキャン連番を考慮: scan001.pdf < scan002.pdf < scan10.pdf'
+                      : sortMode === 'alphabetical'
+                      ? '標準的なアルファベット順でソート'
+                      : 'ファイルを選択した順序で処理'}
+                  </p>
+                </div>
+                
                 {/* ページ範囲 */}
                 <div className="space-y-2">
                   <Label>読み込むページ</Label>
@@ -703,14 +997,70 @@ export default function AnswerSheetUpload({
                         disabled={isUploading}
                       />
 
-                      {/* プレビュー画像 */}
-                      <div className="flex-shrink-0">
+                      {/* プレビュー画像（氏名枠表示付き） */}
+                      <div className="flex-shrink-0 relative">
                         {file.preview ? (
-                          <img
-                            src={file.preview}
-                            alt={file.name}
-                            className="h-12 w-12 rounded border object-cover"
-                          />
+                          <div className="relative">
+                            <img
+                              src={file.preview}
+                              alt={file.name}
+                              className="h-12 w-12 rounded border object-cover"
+                            />
+                            {/* 氏名枠オーバーレイ（ページ対応 + 拡大表示） */}
+                            {(() => {
+                              // 現在のファイルのページ番号に対応するマスター画像を取得
+                              const targetMasterImage = masterImages.find(
+                                img => img.pageNumber === file.pageNumber
+                              )
+                              
+                              console.log('Debug - File:', file.name, 'Page:', file.pageNumber)
+                              console.log('Debug - Master Images:', masterImages.map(img => ({id: img.id, pageNumber: img.pageNumber})))
+                              console.log('Debug - Target Master Image:', targetMasterImage)
+                              console.log('Debug - All Layout Regions:', layoutRegions.map(r => ({id: r.id, type: r.type, masterImageId: r.masterImageId})))
+                              
+                              // ページ対応の氏名領域を取得
+                              const nameRegionsForPage = layoutRegions.filter(region => 
+                                region.type === 'STUDENT_NAME' && 
+                                region.masterImageId === targetMasterImage?.id
+                              )
+                              
+                              console.log('Debug - Name Regions for Page:', nameRegionsForPage)
+                              
+                              // 氏名領域がある場合は拡大表示、ない場合は全体表示
+                              if (nameRegionsForPage.length > 0) {
+                                // 氏名領域のみを拡大表示
+                                return nameRegionsForPage.map(region => (
+                                  <div
+                                    key={region.id}
+                                    className="absolute border-2 border-green-500 bg-green-500/20"
+                                    style={{
+                                      left: `${region.x * 100}%`,
+                                      top: `${region.y * 100}%`,
+                                      width: `${region.width * 100}%`,
+                                      height: `${region.height * 100}%`,
+                                    }}
+                                    title={`ページ${file.pageNumber}: ${region.label}`}
+                                  >
+                                    <div className="absolute -top-5 left-0 text-xs bg-green-500 text-white px-1 rounded">
+                                      {region.label}
+                                    </div>
+                                  </div>
+                                ))
+                              } else {
+                                // 氏名領域がない場合、全体を表示（フォールバック）
+                                return (
+                                  <div 
+                                    className="absolute inset-0 border border-gray-400 bg-gray-400/5"
+                                    title={`ページ${file.pageNumber}: 氏名領域未設定 (マスター画像: ${targetMasterImage?.id || '未登録'})`}
+                                  >
+                                    <div className="absolute -top-5 left-0 text-xs bg-gray-500 text-white px-1 rounded">
+                                      氏名枠なし (P{file.pageNumber})
+                                    </div>
+                                  </div>
+                                )
+                              }
+                            })()}
+                          </div>
                         ) : (
                           <div className="flex h-12 w-12 items-center justify-center rounded border">
                             {file.type.startsWith("image/") ? (
@@ -743,7 +1093,9 @@ export default function AnswerSheetUpload({
                           disabled={isUploading}
                         >
                           <SelectTrigger className="h-8 w-40 text-xs">
-                            <SelectValue placeholder="生徒を選択" />
+                            <SelectValue placeholder="生徒を選択">
+                              {file.studentId ? getStudentName(file.studentId) : "生徒を選択"}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
                             {studentsWithAnswers.map((student) => (
@@ -975,6 +1327,21 @@ export default function AnswerSheetUpload({
           </CardContent>
         </Card>
       )}
+
+      {/* パスワード入力ダイアログ */}
+      <PasswordDialog
+        isOpen={showPasswordDialog}
+        onClose={() => {
+          setShowPasswordDialog(false)
+          setCurrentPdfFile(null)
+          setPasswordError('')
+          setIsConverting(false)
+        }}
+        onSubmit={handlePasswordSubmit}
+        fileName={currentPdfFile?.name || ''}
+        error={passwordError}
+        isLoading={isPasswordProcessing}
+      />
     </div>
   )
 }

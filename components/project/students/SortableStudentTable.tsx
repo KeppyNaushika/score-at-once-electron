@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DndContext,
@@ -23,7 +26,7 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
+import { GripVertical, Search, UserCheck, Users, UserX } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 // 生徒の状態を表す型
@@ -67,6 +70,12 @@ interface SortableStudentTableProps {
   onSelectAll: (isSelected: boolean) => void
   filteredStudents: Student[]
   projectId: string
+  searchTerm: string
+  onSearchChange: (value: string) => void
+  selectedClassId: string
+  onClassChange: (value: string) => void
+  statusFilter: StudentStatus | "all"
+  onStatusChange: (value: StudentStatus | "all") => void
 }
 
 // ドラッグ可能な行コンポーネント
@@ -100,8 +109,6 @@ function SortableTableRow({
     opacity: isSortableDragging ? 0.5 : 1,
   }
 
-  const statusConfig = getStatusConfig(student.status)
-  const StatusIcon = statusConfig.icon
 
   return (
     <TableRow
@@ -125,8 +132,7 @@ function SortableTableRow({
           </div>
           <Checkbox
             checked={isSelected}
-            onCheckedChange={(checked, event) => {
-              event?.stopPropagation()
+            onCheckedChange={(checked) => {
               onToggleSelection(student.id)
             }}
           />
@@ -148,32 +154,32 @@ function SortableTableRow({
         {student.memberships[0]?.class.name || "未所属"}
       </TableCell>
       <TableCell>
-        <Badge variant={statusConfig.variant} className="gap-1">
-          <StatusIcon className="h-3 w-3" />
-          {statusConfig.label}
-        </Badge>
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <Button
             size="sm"
             variant={student.status === "participating" ? "default" : "outline"}
             onClick={() => onStatusUpdate(student.id, "participating")}
+            className="gap-1"
           >
+            <UserCheck className="h-3 w-3" />
             受験
           </Button>
           <Button
             size="sm"
             variant={student.status === "expected" ? "secondary" : "outline"}
             onClick={() => onStatusUpdate(student.id, "expected")}
+            className="gap-1"
           >
+            <Users className="h-3 w-3" />
             見込
           </Button>
           <Button
             size="sm"
             variant={student.status === "absent" ? "destructive" : "outline"}
             onClick={() => onStatusUpdate(student.id, "absent")}
+            className="gap-1"
           >
+            <UserX className="h-3 w-3" />
             欠席
           </Button>
         </div>
@@ -182,17 +188,6 @@ function SortableTableRow({
   )
 }
 
-// 状態のラベルとスタイル
-function getStatusConfig(status: StudentStatus) {
-  switch (status) {
-    case "participating":
-      return { label: "受験", variant: "default" as const, icon: UserCheck }
-    case "expected":
-      return { label: "見込", variant: "secondary" as const, icon: Users }
-    case "absent":
-      return { label: "欠席", variant: "destructive" as const, icon: UserX }
-  }
-}
 
 export default function SortableStudentTable({
   classes,
@@ -203,6 +198,12 @@ export default function SortableStudentTable({
   onSelectAll,
   filteredStudents,
   projectId,
+  searchTerm,
+  onSearchChange,
+  selectedClassId,
+  onClassChange,
+  statusFilter,
+  onStatusChange,
 }: SortableStudentTableProps) {
   const [sortedStudents, setSortedStudents] = useState<Student[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -401,6 +402,58 @@ export default function SortableStudentTable({
             並び順をリセット
           </Button>
         </div>
+        
+        {/* フィルター機能を統合 */}
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="space-y-2">
+            <Label htmlFor="search">検索</Label>
+            <div className="relative">
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform" />
+              <Input
+                id="search"
+                placeholder="名前、ふりがな、学籍番号で検索"
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>学級</Label>
+            <Select value={selectedClassId} onValueChange={onClassChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべての学級</SelectItem>
+                {classes.map((cls) => (
+                  <SelectItem key={cls.id} value={cls.id}>
+                    {cls.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>受験状態</Label>
+            <Select
+              value={statusFilter}
+              onValueChange={onStatusChange}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">すべて</SelectItem>
+                <SelectItem value="participating">受験</SelectItem>
+                <SelectItem value="expected">見込</SelectItem>
+                <SelectItem value="absent">欠席</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -431,7 +484,6 @@ export default function SortableStudentTable({
                   <TableHead>ふりがな</TableHead>
                   <TableHead>学級</TableHead>
                   <TableHead>受験状態</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

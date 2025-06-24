@@ -5,6 +5,9 @@ import { ProjectStudentStatus } from '@prisma/client'
  * プロジェクトに関連する生徒を取得
  */
 export async function getStudentsForProject(projectId: string) {
+  console.log('=== getStudentsForProject called ===')
+  console.log('Project ID:', projectId)
+  
   try {
     // プロジェクトに参加している生徒を取得
     const projectStudents = await prisma.projectStudent.findMany({
@@ -16,9 +19,7 @@ export async function getStudentsForProject(projectId: string) {
               include: {
                 class: true
               },
-              where: {
-                endDate: null
-              },
+              // endDate制限を削除 - 過去の所属も含めて取得
               orderBy: {
                 startDate: 'desc'
               }
@@ -27,6 +28,8 @@ export async function getStudentsForProject(projectId: string) {
         }
       }
     })
+    console.log('Project students found:', projectStudents.length)
+    console.log('Raw project students:', projectStudents)
 
     const studentsWithStatus = projectStudents.map((projectStudent: any) => ({
       ...projectStudent.student,
@@ -34,6 +37,7 @@ export async function getStudentsForProject(projectId: string) {
       isInProject: true,
       customOrder: projectStudent.customOrder
     }))
+    console.log('Students with status:', studentsWithStatus)
 
     return {
       success: true,
@@ -52,6 +56,10 @@ export async function getStudentsForProject(projectId: string) {
  * プロジェクトに生徒を追加
  */
 export async function addStudentsToProject(projectId: string, studentIds: string[]) {
+  console.log('=== addStudentsToProject called ===')
+  console.log('Project ID:', projectId)
+  console.log('Student IDs:', studentIds)
+  
   try {
     // 既に参加している生徒を除外
     const existingProjectStudents = await prisma.projectStudent.findMany({
@@ -61,28 +69,40 @@ export async function addStudentsToProject(projectId: string, studentIds: string
       },
       select: { studentId: true }
     })
+    console.log('Existing project students:', existingProjectStudents)
+    
     const existingStudentIds = new Set(existingProjectStudents.map(ps => ps.studentId))
     const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id))
+    console.log('New student IDs to add:', newStudentIds)
 
     // 新しい生徒をプロジェクトに追加
     if (newStudentIds.length > 0) {
-      await prisma.projectStudent.createMany({
-        data: newStudentIds.map(studentId => ({
-          projectId,
-          studentId,
-          status: ProjectStudentStatus.PARTICIPATING
-        }))
+      const createData = newStudentIds.map(studentId => ({
+        projectId,
+        studentId,
+        status: ProjectStudentStatus.PARTICIPATING
+      }))
+      console.log('Creating ProjectStudent records:', createData)
+      
+      const result = await prisma.projectStudent.createMany({
+        data: createData
       })
+      console.log('Create result:', result)
+    } else {
+      console.log('No new students to add (all already exist)')
     }
 
+    console.log('=== addStudentsToProject success ===')
     return {
-      success: true
+      success: true,
+      addedCount: newStudentIds.length,
+      skippedCount: studentIds.length - newStudentIds.length
     }
   } catch (error) {
     console.error('Error adding students to project:', error)
     return {
       success: false,
-      error: 'Failed to add students to project'
+      error: error instanceof Error ? error.message : 'Failed to add students to project'
     }
   }
 }

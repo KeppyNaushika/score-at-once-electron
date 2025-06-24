@@ -225,7 +225,7 @@ export default function AnswerGridView({
         {sortedAnswers().map((answer) => {
           if (!answer) return <div key="empty" />
           
-          const config = SCORE_STATUS_CONFIG[answer.status]
+          const config = SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG]
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
           
