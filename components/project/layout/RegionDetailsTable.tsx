@@ -202,19 +202,38 @@ const RegionDetailsTable = ({
     setDeleteModalOpen(true)
   }
 
-  const confirmDeleteRegion = () => {
+  const confirmDeleteRegion = async () => {
     if (regionToDelete !== null) {
-      const newRegions = regions.filter((_, i) => i !== regionToDelete)
-      setRegions(newRegions)
-      setDeleteModalOpen(false)
-      setRegionToDelete(null)
-      if (selectedRowIndex === regionToDelete) {
-        setSelectedRowIndex(null)
-      } else if (
-        selectedRowIndex !== null &&
-        selectedRowIndex > regionToDelete
-      ) {
-        setSelectedRowIndex(selectedRowIndex - 1)
+      const regionToDeleteData = regions[regionToDelete]
+      
+      try {
+        // データベースから削除（IDがある場合のみ）
+        if (regionToDeleteData?.id) {
+          await window.electronAPI.deleteLayoutRegion(regionToDeleteData.id)
+        }
+
+        // UI状態を更新
+        const newRegions = regions.filter((_, i) => i !== regionToDelete)
+        setRegions(newRegions)
+        setDeleteModalOpen(false)
+        setRegionToDelete(null)
+        
+        // 選択行インデックスを調整
+        if (selectedRowIndex === regionToDelete) {
+          setSelectedRowIndex(null)
+        } else if (
+          selectedRowIndex !== null &&
+          selectedRowIndex > regionToDelete
+        ) {
+          setSelectedRowIndex(selectedRowIndex - 1)
+        }
+      } catch (error) {
+        console.error("Error deleting layout region:", error)
+        // エラーが発生した場合はモーダルは閉じるが、データは削除しない
+        setDeleteModalOpen(false)
+        setRegionToDelete(null)
+        // TODO: エラートーストを表示する場合は以下のコメントアウトを外す
+        // toast.error("領域の削除に失敗しました")
       }
     }
   }

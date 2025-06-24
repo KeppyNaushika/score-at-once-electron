@@ -70,23 +70,37 @@ export default function AnswerDisplayViewer({
 
   // 画像の読み込み
   useEffect(() => {
-    if (!answerSheet?.imagePath) return
+    console.log("AnswerDisplayViewer: Loading image for answer sheet:", {
+      answerSheetId: answerSheet?.id,
+      imagePath: answerSheet?.imagePath,
+      studentName: `${answerSheet?.student?.lastName} ${answerSheet?.student?.firstName}`
+    })
+    
+    if (!answerSheet?.imagePath) {
+      console.warn("AnswerDisplayViewer: No image path provided")
+      return
+    }
 
     const img = new Image()
     img.onload = () => {
+      console.log("Image loaded successfully:", img.src)
       setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
       setImageLoaded(true)
       drawCanvas(img)
     }
-    img.onerror = () => {
-      console.error("Failed to load image:", answerSheet.imagePath)
+    img.onerror = (error) => {
+      console.error("Failed to load image:", {
+        originalPath: answerSheet.imagePath,
+        finalSrc: img.src,
+        error
+      })
       setImageLoaded(false)
     }
 
-    // Electronの場合、ファイルパスを適切に処理
-    img.src = answerSheet.imagePath.startsWith("file://")
+    // Electronの場合、appimg プロトコルを使用
+    img.src = answerSheet.imagePath.startsWith("appimg://")
       ? answerSheet.imagePath
-      : `file://${answerSheet.imagePath}`
+      : `appimg://${answerSheet.imagePath}`
 
     if (imageRef.current) {
       imageRef.current = img

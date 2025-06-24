@@ -12,7 +12,100 @@ type ScoringStatus =
   | "pending"
   | "no_answer"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
+
+// 採点領域をクロップして表示するコンポーネント
+const CroppedAnswerImage = ({ 
+  imageUrl, 
+  questionRegion, 
+  alt, 
+  className = "" 
+}: { 
+  imageUrl: string
+  questionRegion?: QuestionRegion
+  alt: string
+  className?: string
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const imageRef = useRef<HTMLImageElement>(null)
+  const [imageLoaded, setImageLoaded] = useState(false)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const imageElement = imageRef.current
+    if (!canvas || !imageElement || !imageLoaded) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // キャンバスサイズを設定
+    const containerWidth = canvas.offsetWidth
+    const containerHeight = canvas.offsetHeight
+    canvas.width = containerWidth
+    canvas.height = containerHeight
+
+    if (questionRegion) {
+      // 採点領域をクロップして描画
+      const sourceX = questionRegion.x * imageElement.naturalWidth
+      const sourceY = questionRegion.y * imageElement.naturalHeight  
+      const sourceWidth = questionRegion.width * imageElement.naturalWidth
+      const sourceHeight = questionRegion.height * imageElement.naturalHeight
+
+      // アスペクト比を維持してキャンバスにフィット
+      const aspectRatio = sourceWidth / sourceHeight
+      const canvasAspectRatio = containerWidth / containerHeight
+
+      let drawWidth = containerWidth
+      let drawHeight = containerHeight
+      let drawX = 0
+      let drawY = 0
+
+      if (aspectRatio > canvasAspectRatio) {
+        drawHeight = containerWidth / aspectRatio
+        drawY = (containerHeight - drawHeight) / 2
+      } else {
+        drawWidth = containerHeight * aspectRatio
+        drawX = (containerWidth - drawWidth) / 2
+      }
+
+      ctx.drawImage(
+        imageElement,
+        sourceX, sourceY, sourceWidth, sourceHeight,
+        drawX, drawY, drawWidth, drawHeight
+      )
+    } else {
+      // 全体画像を表示
+      ctx.drawImage(imageElement, 0, 0, containerWidth, containerHeight)
+    }
+  }, [imageLoaded, questionRegion])
+
+  const handleImageLoad = () => {
+    setImageLoaded(true)
+  }
+
+  return (
+    <div className={`relative w-full h-full ${className}`}>
+      <img 
+        ref={imageRef}
+        src={imageUrl}
+        alt={alt}
+        className="hidden"
+        onLoad={handleImageLoad}
+        draggable={false}
+      />
+      <canvas 
+        ref={canvasRef}
+        className="w-full h-full object-cover"
+        style={{ display: imageLoaded ? 'block' : 'none' }}
+      />
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="text-xs text-gray-500">読み込み中...</div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
@@ -56,6 +149,17 @@ const SCORE_STATUS_CONFIG = {
 
 export type GridLayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
 
+interface QuestionRegion {
+  id: string
+  label: string
+  questionNumber: string
+  points: number
+  x: number // 0.0 - 1.0 (画像全体に対する割合)
+  y: number // 0.0 - 1.0
+  width: number // 0.0 - 1.0
+  height: number // 0.0 - 1.0
+}
+
 interface AnswerItem {
   id: string
   studentId: string
@@ -65,6 +169,7 @@ interface AnswerItem {
   maxScore: number
   status: ScoringStatus
   isSelected?: boolean
+  questionRegion?: QuestionRegion
 }
 
 interface AnswerGridViewProps {
@@ -242,11 +347,11 @@ export default function AnswerGridView({
               <CardContent className="p-2">
                 {/* 答案画像 */}
                 <div className="aspect-[3/4] overflow-hidden rounded">
-                  <img
-                    src={answer.imageUrl}
+                  <CroppedAnswerImage
+                    imageUrl={answer.imageUrl}
+                    questionRegion={answer.questionRegion}
                     alt={`${answer.studentName}の答案`}
-                    className="h-full w-full object-cover"
-                    draggable={false}
+                    className="rounded"
                   />
                 </div>
                 
