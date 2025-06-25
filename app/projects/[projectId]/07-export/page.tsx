@@ -194,11 +194,6 @@ export default function ExportPage() {
         setExportOutputPath(result.outputPath)
         setExportProgress(100)
         setExportStep('完了しました')
-        
-        // 2秒後にモーダルを自動フェードアウト
-        setTimeout(() => {
-          setShowProgressModal(false)
-        }, 2000)
       } else {
         throw new Error(result.error || '出力に失敗しました')
       }
@@ -456,17 +451,10 @@ export default function ExportPage() {
                   disabled={selectedStudents.size === 0}
                   className="w-full"
                 >
-                  {isExporting ? (
-                    <>
-                      <LoadingSpinner className="mr-2" />
-                      出力中...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      採点済み答案PDFを出力
-                    </>
-                  )}
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    採点済み答案PDFを出力
+                  </>
                 </Button>
               </div>
 
@@ -509,17 +497,10 @@ export default function ExportPage() {
                   disabled={selectedStudents.size === 0}
                   className="w-full"
                 >
-                  {isExporting ? (
-                    <>
-                      <LoadingSpinner className="mr-2" />
-                      出力中...
-                    </>
-                  ) : (
-                    <>
-                      <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      採点データExcelを出力
-                    </>
-                  )}
+                  <>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    採点データExcelを出力
+                  </>
                 </Button>
               </div>
             </CardContent>

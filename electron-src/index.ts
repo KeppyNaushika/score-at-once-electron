@@ -128,8 +128,38 @@ import {
 } from "./lib/prisma/answerSheet"
 import { exportScoredAnswersPDF } from "./lib/prisma/pdfExport"
 import { exportGradingDataExcel } from "./lib/prisma/excelExport"
+import { 
+  initializeDataDirectory, 
+  migrateFromApplicationSupport, 
+  getAbsolutePathFromData 
+} from "./lib/dataManager"
+import { 
+  initializeDatabase, 
+  optimizeDatabaseForSharedDrive 
+} from "./lib/prisma/databaseInitializer"
 
 app.on("ready", async () => {
+  try {
+    // データディレクトリの初期化
+    await initializeDataDirectory()
+    
+    // ApplicationSupportからの移行処理
+    const migrated = await migrateFromApplicationSupport()
+    if (migrated) {
+      console.log('Data migration from ApplicationSupport completed')
+    }
+    
+    // データベースの初期化
+    await initializeDatabase()
+    
+    // 共有ドライブ用の最適化
+    await optimizeDatabaseForSharedDrive()
+    
+    console.log('Application initialization completed')
+  } catch (error) {
+    console.error('Failed to initialize application:', error)
+  }
+
   if (isDev) {
     // 開発環境では electron-next は使わない
   } else {
@@ -138,12 +168,9 @@ app.on("ready", async () => {
 
   protocol.handle("appimg", async (request) => {
     try {
-      const relativePathInUserData = request.url.substring("appimg://".length)
-      const decodedRelativePath = decodeURI(relativePathInUserData)
-      const absolutePath = path.join(
-        app.getPath("userData"),
-        decodedRelativePath,
-      )
+      const relativePathInData = request.url.substring("appimg://".length)
+      const decodedRelativePath = decodeURI(relativePathInData)
+      const absolutePath = getAbsolutePathFromData(decodedRelativePath)
 
       const fileURL = format({
         pathname: absolutePath,
@@ -1367,6 +1394,86 @@ app.on("ready", async () => {
         return {
           success: false,
           error: err instanceof Error ? err.message : 'Unknown error occurred'
+        }
+      }
+    },
+  )
+
+  // データ管理関連のハンドラー
+  ipcMain.handle(
+    "get-data-directory-info",
+    async (_event) => {
+      try {
+        const { 
+          getDataDirectory, 
+          calculateDataSize 
+        } = await import("./lib/dataManager")
+        
+        const dataDirectory = getDataDirectory()
+        const size = await calculateDataSize()
+        
+        // プロジェクト数を取得
+        const projects = await dbFetchProjects()
+        const projectCount = projects.success ? projects.projects.length : 0
+        
+        return {
+          success: true,
+          directory: dataDirectory,
+          size,
+          projectCount
+        }
+      } catch (err) {
+        console.error("Error getting data directory info:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "open-data-directory",
+    async (_event) => {
+      try {
+        const { shell } = await import("electron")
+        const { getDataDirectory } = await import("./lib/dataManager")
+        
+        const dataDirectory = getDataDirectory()
+        await shell.openPath(dataDirectory)
+        
+        return { success: true }
+      } catch (err) {
+        console.error("Error opening data directory:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "delete-all-data",
+    async (_event) => {
+      try {
+        const { getDataDirectory } = await import("./lib/dataManager")
+        const fs = await import("fs/promises")
+        
+        const dataDirectory = getDataDirectory()
+        
+        // データフォルダを完全削除
+        await fs.rm(dataDirectory, { recursive: true, force: true })
+        
+        // データディレクトリを再作成
+        await fs.mkdir(dataDirectory, { recursive: true })
+        
+        return { success: true }
+      } catch (err) {
+        console.error("Error deleting all data:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error'
         }
       }
     },

@@ -1,9 +1,8 @@
 import { PrismaClient } from '@prisma/client'
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import { app } from 'electron'
-
-const prisma = new PrismaClient()
+import { getAnswerSheetsDirectory, getRelativePathFromData } from '../dataManager'
+import prisma from './client'
 
 // 答案画像のアップロード
 export async function uploadAnswerSheets(
@@ -17,8 +16,7 @@ export async function uploadAnswerSheets(
   }[]
 ) {
   try {
-    const userDataPath = app.getPath('userData')
-    const projectDir = path.join(userDataPath, 'projects', projectId, 'answer-sheets')
+    const projectDir = getAnswerSheetsDirectory(projectId)
     
     // プロジェクトディレクトリを作成
     await fs.mkdir(projectDir, { recursive: true })
@@ -31,7 +29,7 @@ export async function uploadAnswerSheets(
       const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, '_')
       const fileName = `${timestamp}_${sanitizedName}`
       const filePath = path.join(projectDir, fileName)
-      const relativePath = path.relative(userDataPath, filePath)
+      const relativePath = getRelativePathFromData(filePath)
 
       // ファイルを保存
       const buffer = Buffer.from(fileData.buffer)
@@ -43,7 +41,7 @@ export async function uploadAnswerSheets(
           projectId,
           studentId: fileData.studentId || null,
           pageNumber: fileData.pageNumber || 1,
-          originalImagePath: relativePath.replace(/\\/g, '/'), // Windows対応
+          originalImagePath: relativePath, // 既にWindows対応済み
         },
         include: {
           student: true,
@@ -107,8 +105,8 @@ export async function deleteAnswerSheet(answerSheetId: string) {
     }
 
     // ファイルを削除
-    const userDataPath = app.getPath('userData')
-    const filePath = path.join(userDataPath, answerSheet.originalImagePath)
+    const { getAbsolutePathFromData } = await import('../dataManager')
+    const filePath = getAbsolutePathFromData(answerSheet.originalImagePath)
     
     try {
       await fs.unlink(filePath)

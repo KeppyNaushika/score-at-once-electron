@@ -187,6 +187,27 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
 
     reportProgress(30, 100, 'PDFドキュメントを初期化中...')
 
+    // 保存場所の決定（並行処理）
+    let outputPath = options.outputPath
+    const saveDialogPromise = !outputPath ? (async () => {
+      reportProgress(35, 100, '保存場所を選択してください...')
+      const defaultFileName = `採点済み答案_${new Date().toISOString().split('T')[0]}.pdf`
+      const result = await dialog.showSaveDialog({
+        title: '採点済み答案PDFの保存',
+        defaultPath: defaultFileName,
+        filters: [
+          { name: 'PDF Files', extensions: ['pdf'] }
+        ]
+      })
+      
+      if (result.canceled || !result.filePath) {
+        throw new Error('ユーザーによってキャンセルされました')
+      }
+      
+      reportProgress(38, 100, '保存場所が選択されました。PDFを処理中...')
+      return result.filePath
+    })() : Promise.resolve(outputPath)
+
     // PDFドキュメントの作成
     const pdfDoc = await PDFDocument.create()
     
@@ -243,26 +264,7 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       }
     }
 
-    reportProgress(90, 100, 'PDFファイルを保存中...')
-
-    // 出力パスの決定
-    let outputPath = options.outputPath
-    if (!outputPath) {
-      const defaultFileName = `採点済み答案_${new Date().toISOString().split('T')[0]}.pdf`
-      const result = await dialog.showSaveDialog({
-        title: '採点済み答案PDFの保存',
-        defaultPath: defaultFileName,
-        filters: [
-          { name: 'PDF Files', extensions: ['pdf'] }
-        ]
-      })
-      
-      if (result.canceled || !result.filePath) {
-        return { success: false, error: 'ユーザーによってキャンセルされました' }
-      }
-      
-      outputPath = result.filePath
-    }
+    reportProgress(90, 100, 'PDFファイルを生成中...')
 
     // PDFに追加されたページ数をチェック
     const pageCount = pdfDoc.getPageCount()
@@ -272,8 +274,16 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       throw new Error('答案データが見つからないか、画像ファイルが存在しません')
     }
 
-    // PDFファイルの保存
+    // PDF バイト生成（進捗表示）
+    reportProgress(92, 100, 'PDFドキュメントを最適化中...')
     const pdfBytes = await pdfDoc.save()
+
+    // 保存場所の確定を待つ
+    reportProgress(95, 100, '保存場所を確認中...')
+    outputPath = await saveDialogPromise
+
+    // PDFファイルの保存
+    reportProgress(98, 100, 'ファイルを保存中...')
     fs.writeFileSync(outputPath, pdfBytes)
 
     reportProgress(100, 100, '完了しました')
