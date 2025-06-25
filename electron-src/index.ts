@@ -103,6 +103,7 @@ import {
   CreateQuestionScoreData,
   UpdateQuestionScoreData,
 } from "./lib/prisma/questionScore"
+import { initializeScoringRecords } from "./lib/prisma/scoringInitializer"
 import {
   createStudentClassMembership,
   updateStudentClassMembership,
@@ -125,6 +126,8 @@ import {
   setAnswerSheetAbsent,
   getAnswerSheetById,
 } from "./lib/prisma/answerSheet"
+import { exportScoredAnswersPDF } from "./lib/prisma/pdfExport"
+import { exportGradingDataExcel } from "./lib/prisma/excelExport"
 
 app.on("ready", async () => {
   if (isDev) {
@@ -1290,6 +1293,19 @@ app.on("ready", async () => {
     },
   )
 
+  // Scoring initialization handler
+  ipcMain.handle(
+    "initialize-scoring-records",
+    async (_event, projectId: string) => {
+      try {
+        return await initializeScoringRecords(projectId)
+      } catch (err) {
+        console.error("Error initializing scoring records:", err)
+        throw err
+      }
+    },
+  )
+
   ipcMain.handle(
     "update-student-orders",
     async (_event, projectId: string, studentOrders: { studentId: string; customOrder: number }[]) => {
@@ -1298,6 +1314,60 @@ app.on("ready", async () => {
       } catch (err) {
         console.error("Error updating student orders:", err)
         throw err
+      }
+    },
+  )
+
+  // PDF Export handlers
+  ipcMain.handle(
+    "export-scored-answers-pdf",
+    async (event, options: {
+      projectId: string
+      selectedStudentIds: string[]
+      outputPath?: string
+      scoringMarkConfig?: any
+    }) => {
+      try {
+        // プログレスコールバックを設定
+        const progressCallback = (progress: {
+          current: number
+          total: number
+          step: string
+          percentage: number
+        }) => {
+          event.sender.send('export-progress', progress)
+        }
+
+        return await exportScoredAnswersPDF({
+          ...options,
+          progressCallback
+        })
+      } catch (err) {
+        console.error("Error exporting scored answers PDF:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error occurred'
+        }
+      }
+    },
+  )
+
+  // Excel Export handlers
+  ipcMain.handle(
+    "export-grading-data-excel",
+    async (_event, options: {
+      projectId: string
+      selectedStudentIds: string[]
+      outputPath?: string
+    }) => {
+      try {
+        return await exportGradingDataExcel(options)
+      } catch (err) {
+        console.error("Error exporting grading data Excel:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error occurred'
+        }
       }
     },
   )

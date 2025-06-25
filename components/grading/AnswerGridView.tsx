@@ -11,6 +11,8 @@ type ScoringStatus =
   | "partial"
   | "pending"
   | "no_answer"
+  | "proposed"
+  | "final"
 
 import { useState, useCallback, useEffect, useRef } from "react"
 
@@ -145,6 +147,18 @@ const SCORE_STATUS_CONFIG = {
     textColor: "text-gray-600",
     key: "p"
   },
+  proposed: {
+    icon: AlertTriangle,
+    color: "bg-orange-100 border-orange-400",
+    textColor: "text-orange-700",
+    key: ""
+  },
+  final: {
+    icon: CheckCircle,
+    color: "bg-green-200 border-green-500",
+    textColor: "text-green-800",
+    key: ""
+  },
 }
 
 export type GridLayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
@@ -180,6 +194,7 @@ interface AnswerGridViewProps {
   onAnswerSelect: (id: string, isSelected: boolean) => void
   onAnswerScore: (id: string | string[], status: ScoringStatus) => void
   selectedAnswers: Set<string>
+  currentAnswerId?: string // 現在採点中の答案ID
   className?: string
 }
 
@@ -191,40 +206,49 @@ export default function AnswerGridView({
   onAnswerSelect,
   onAnswerScore,
   selectedAnswers,
+  currentAnswerId,
   className = "",
 }: AnswerGridViewProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {
-    const total = gridSize.columns * gridSize.rows
-    const visibleAnswers = answers.slice(0, total)
-    
+    // 全ての答案を表示（グリッドサイズの制限を撤廃）
     if (layoutDirection === "right-down") {
-      return visibleAnswers // デフォルト順序
+      return answers // デフォルト順序
     }
     
-    const sorted = new Array(total)
-    visibleAnswers.forEach((answer, index) => {
-      const row = Math.floor(index / gridSize.columns)
-      const col = index % gridSize.columns
+    // グリッドサイズに基づくレイアウトは動的に計算
+    const totalAnswers = answers.length
+    const cols = gridSize.columns
+    const rows = Math.ceil(totalAnswers / cols)
+    
+    const sorted = new Array(totalAnswers)
+    answers.forEach((answer, index) => {
+      const row = Math.floor(index / cols)
+      const col = index % cols
       
       let newIndex: number
       switch (layoutDirection) {
         case "left-down":
-          newIndex = row * gridSize.columns + (gridSize.columns - 1 - col)
+          newIndex = row * cols + (cols - 1 - col)
           break
         case "down-right":
-          newIndex = col * gridSize.rows + row
+          newIndex = col * rows + row
+          if (newIndex >= totalAnswers) newIndex = index // フォールバック
           break
         case "down-left":
-          newIndex = (gridSize.columns - 1 - col) * gridSize.rows + row
+          newIndex = (cols - 1 - col) * rows + row
+          if (newIndex >= totalAnswers) newIndex = index // フォールバック
           break
         default:
           newIndex = index
       }
-      sorted[newIndex] = answer
+      if (newIndex < totalAnswers) {
+        sorted[newIndex] = answer
+      }
     })
     
     return sorted.filter(Boolean)
@@ -254,18 +278,97 @@ export default function AnswerGridView({
     return () => document.removeEventListener("keydown", handleKeyPress)
   }, [selectedAnswers, onAnswerScore])
 
+  // 選択された答案を画面中央にスクロール
+  useEffect(() => {
+    if (selectedAnswers.size === 1 && gridRef.current) {
+      const selectedId = Array.from(selectedAnswers)[0]
+      const selectedElement = gridRef.current.querySelector(`[data-answer-id="${selectedId}"]`) as HTMLElement
+      
+      if (selectedElement) {
+        const container = gridRef.current.parentElement
+        if (container) {
+          const containerRect = container.getBoundingClientRect()
+          const elementRect = selectedElement.getBoundingClientRect()
+          
+          // 縦方向と横方向両方に対応したスクロール計算
+          const isHorizontalLayout = layoutDirection === "down-right" || layoutDirection === "down-left"
+          
+          if (isHorizontalLayout) {
+            // 横スクロール（列ベースレイアウト）
+            const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft - container.clientWidth / 2 + elementRect.width / 2
+            container.scrollTo({
+              left: Math.max(0, scrollLeft),
+              behavior: 'smooth'
+            })
+          } else {
+            // 縦スクロール（行ベースレイアウト）
+            const scrollTop = elementRect.top - containerRect.top + container.scrollTop - container.clientHeight / 2 + elementRect.height / 2
+            container.scrollTo({
+              top: Math.max(0, scrollTop),
+              behavior: 'smooth'
+            })
+          }
+        }
+      }
+    }
+  }, [selectedAnswers, layoutDirection])
+
   // マウスドラッグ選択
   const handleMouseDown = (event: React.MouseEvent, answerId: string) => {
     setDragStart({ x: event.clientX, y: event.clientY })
     setIsDragging(false)
     
-    // Ctrlキーが押されている場合は複数選択
+    // Ctrlキーが押されている場合は複数選択（追加・削除切り替え）
     if (event.ctrlKey) {
+      event.preventDefault()
       onAnswerSelect(answerId, !selectedAnswers.has(answerId))
-    } else {
-      // 単一選択
+    } 
+    // Shiftキーが押されている場合は範囲選択
+    else if (event.shiftKey) {
+      event.preventDefault()
+      handleShiftSelect(answerId)
+    } 
+    // 通常クリック（単一選択または新規選択開始）
+    else {
       if (!selectedAnswers.has(answerId)) {
+        // 現在の選択をクリア
+        selectedAnswers.forEach(id => onAnswerSelect(id, false))
+        // 新しい選択を追加
         onAnswerSelect(answerId, true)
+      }
+    }
+  }
+
+  // Shift+クリックでの範囲選択処理
+  const handleShiftSelect = (endAnswerId: string) => {
+    const answers = sortedAnswers()
+    if (answers.length === 0) return
+
+    // 既に選択されている最初の答案を取得
+    let startIndex = -1
+    for (let i = 0; i < answers.length; i++) {
+      if (selectedAnswers.has(answers[i].id)) {
+        startIndex = i
+        break
+      }
+    }
+
+    // 終了位置を取得
+    const endIndex = answers.findIndex(answer => answer.id === endAnswerId)
+    
+    if (startIndex === -1 || endIndex === -1) {
+      // 範囲選択できない場合は単一選択
+      onAnswerSelect(endAnswerId, true)
+      return
+    }
+
+    // 範囲を選択
+    const minIndex = Math.min(startIndex, endIndex)
+    const maxIndex = Math.max(startIndex, endIndex)
+    
+    for (let i = minIndex; i <= maxIndex; i++) {
+      if (i < answers.length) {
+        onAnswerSelect(answers[i].id, true)
       }
     }
   }
@@ -282,46 +385,80 @@ export default function AnswerGridView({
     }
   }
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (event: React.MouseEvent) => {
+    if (isDragging) {
+      // ドラッグ選択を終了
+      handleDragSelection(event)
+    }
     setDragStart(null)
     setIsDragging(false)
   }
 
+  // ドラッグによる矩形選択処理
+  const handleDragSelection = (event: React.MouseEvent) => {
+    if (!dragStart) return
+
+    const gridElement = event.currentTarget as HTMLElement
+    const gridRect = gridElement.getBoundingClientRect()
+    
+    // 矩形選択範囲を計算
+    const startX = Math.min(dragStart.x, event.clientX) - gridRect.left
+    const endX = Math.max(dragStart.x, event.clientX) - gridRect.left
+    const startY = Math.min(dragStart.y, event.clientY) - gridRect.top
+    const endY = Math.max(dragStart.y, event.clientY) - gridRect.top
+
+    // グリッド内の答案カードをチェック
+    const cardElements = gridElement.querySelectorAll('[data-answer-id]')
+    const selectedIds: string[] = []
+
+    cardElements.forEach(cardElement => {
+      const rect = cardElement.getBoundingClientRect()
+      const relativeRect = {
+        left: rect.left - gridRect.left,
+        right: rect.right - gridRect.left,
+        top: rect.top - gridRect.top,
+        bottom: rect.bottom - gridRect.top
+      }
+
+      // 矩形と重なるかチェック
+      if (relativeRect.left < endX && relativeRect.right > startX &&
+          relativeRect.top < endY && relativeRect.bottom > startY) {
+        const answerId = cardElement.getAttribute('data-answer-id')
+        if (answerId) {
+          selectedIds.push(answerId)
+        }
+      }
+    })
+
+    // 選択状態を更新
+    if (selectedIds.length > 0) {
+      // 現在の選択をクリア
+      selectedAnswers.forEach(id => onAnswerSelect(id, false))
+      // 新しい選択を追加
+      selectedIds.forEach(id => onAnswerSelect(id, true))
+    }
+  }
+
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* ショートカットキー表示 */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="flex flex-wrap gap-2 text-xs">
-            {Object.entries(SCORE_STATUS_CONFIG).map(([status, config]) => {
-              const Icon = config.icon
-              return (
-                <div key={status} className="flex items-center gap-1">
-                  <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono font-semibold">
-                    {config.key.toUpperCase()}
-                  </kbd>
-                  <Icon className={`h-3 w-3 ${config.textColor}`} />
-                  <span className="text-muted-foreground">
-                    {status === "ungraded" && "未採点"}
-                    {status === "correct" && "正答"}
-                    {status === "partial" && "部分点"}
-                    {status === "pending" && "保留"}
-                    {status === "incorrect" && "誤答"}
-                    {status === "no_answer" && "無答"}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+    <div className={`space-y-2 ${className}`}>
 
       {/* 答案グリッド */}
       <div 
+        ref={gridRef}
         className="grid gap-2 select-none"
         style={{
-          gridTemplateColumns: `repeat(${gridSize.columns}, 1fr)`,
-          gridTemplateRows: `repeat(${gridSize.rows}, 1fr)`,
+          gridTemplateColumns: layoutDirection === "down-right" || layoutDirection === "down-left" 
+            ? `repeat(${Math.ceil(answers.length / gridSize.rows)}, 200px)` 
+            : `repeat(${gridSize.columns}, 1fr)`,
+          gridTemplateRows: layoutDirection === "down-right" || layoutDirection === "down-left"
+            ? `repeat(${Math.min(gridSize.rows, answers.length)}, minmax(200px, auto))`
+            : 'auto',
+          gridAutoRows: layoutDirection === "down-right" || layoutDirection === "down-left" 
+            ? undefined 
+            : 'minmax(200px, auto)',
+          width: layoutDirection === "down-right" || layoutDirection === "down-left" 
+            ? 'max-content' 
+            : '100%',
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -330,23 +467,36 @@ export default function AnswerGridView({
         {sortedAnswers().map((answer) => {
           if (!answer) return <div key="empty" />
           
-          const config = SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG]
+          const config = SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG] || SCORE_STATUS_CONFIG.ungraded
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
+          const isCurrentAnswer = currentAnswerId === answer.id
+          
+          // 採点領域に応じてサイズを動的調整
+          const aspectRatio = answer.questionRegion 
+            ? answer.questionRegion.width / answer.questionRegion.height 
+            : 3/4
+          const imageAspectClass = aspectRatio > 1.2 
+            ? "aspect-[4/2]" // 横長の採点領域
+            : aspectRatio < 0.8 
+            ? "aspect-[2/3]" // 縦長の採点領域  
+            : "aspect-[3/4]" // 標準比率
           
           return (
             <Card
               key={answer.id}
+              data-answer-id={answer.id}
               className={`
                 relative cursor-pointer transition-all duration-150 hover:shadow-md
                 ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
+                ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
                 ${config.color}
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
-              <CardContent className="p-2">
+              <CardContent className="p-0.5">
                 {/* 答案画像 */}
-                <div className="aspect-[3/4] overflow-hidden rounded">
+                <div className={`${imageAspectClass} overflow-hidden rounded`}>
                   <CroppedAnswerImage
                     imageUrl={answer.imageUrl}
                     questionRegion={answer.questionRegion}
@@ -356,20 +506,21 @@ export default function AnswerGridView({
                 </div>
                 
                 {/* 学生情報と採点状況 */}
-                <div className="mt-2 space-y-1">
+                <div className="mt-0.5 space-y-0">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium truncate">
                       {answer.studentName}
                     </span>
-                    <Icon className={`h-4 w-4 ${config.textColor}`} />
+                    <Icon className={`h-3 w-3 ${config.textColor}`} />
                   </div>
                   
                   {answer.status !== "ungraded" && (
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="text-xs h-4 px-1">
                       {answer.currentScore !== undefined 
-                        ? `${answer.currentScore}/${answer.maxScore}点`
-                        : answer.status === "correct" ? `${answer.maxScore}点`
-                        : answer.status === "incorrect" || answer.status === "no_answer" ? "0点"
+                        ? `${answer.currentScore}/${answer.maxScore}`
+                        : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
+                        : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
+                        : answer.status === "proposed" ? "提案中"
                         : "採点中"
                       }
                     </Badge>
@@ -384,13 +535,10 @@ export default function AnswerGridView({
       {/* 選択状況表示 */}
       {selectedAnswers.size > 0 && (
         <Card>
-          <CardContent className="p-3">
-            <div className="text-sm">
+          <CardContent className="p-2">
+            <div className="text-xs text-center">
               <span className="font-medium">{selectedAnswers.size}件</span>
-              <span className="text-muted-foreground">の答案を選択中</span>
-              <span className="ml-4 text-xs text-muted-foreground">
-                キーボードで一括採点: Q(未採点) E(正答) F(部分点) J(保留) O(誤答) P(無答)
-              </span>
+              <span className="text-muted-foreground">選択中 - キーボードで一括採点</span>
             </div>
           </CardContent>
         </Card>

@@ -1,5 +1,6 @@
 "use client"
 
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import LayoutRegionEditor from "@/components/project/layout/LayoutRegionEditor"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ import { toast } from "sonner"
 export default function TemplateStepPage() {
   const params = useParams()
   const router = useRouter()
+  const { helpButton } = usePageHelp()
 
   const paramsProjectId = params.projectId
   const projectId =
@@ -427,6 +429,7 @@ export default function TemplateStepPage() {
       <PageHeader
         title="採点領域の作成"
         description=""
+        helpButton={helpButton}
       >
         {selectedMasterImage &&
           layoutRegions.filter(

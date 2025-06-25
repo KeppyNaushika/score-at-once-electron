@@ -1,5 +1,6 @@
 "use client"
 
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import MasterImageManager from "@/components/project/images/MasterImageManager"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { toast } from "sonner"; // sonnerのtoastを直接使用
 export default function MasterImageStepPage() {
   const params = useParams()
   const router = useRouter()
+  const { helpButton } = usePageHelp()
   const paramsProjectId = params.projectId
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
@@ -104,6 +106,7 @@ export default function MasterImageStepPage() {
       <PageHeader
         title="模範解答のアップロード"
         description=""
+        helpButton={helpButton}
       >
         {masterImages.length > 0 && (
           <Button onClick={goToNextStep} disabled={isLoading}>

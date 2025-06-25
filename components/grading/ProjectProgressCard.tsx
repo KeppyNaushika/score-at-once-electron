@@ -1,15 +1,11 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import {
   AlertCircle,
-  CheckCircle,
-  Clock,
   RefreshCw,
-  TrendingUp,
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -84,42 +80,6 @@ export default function ProjectProgressCard({
     return "bg-red-500"
   }
 
-  // ステータスバッジの決定
-  const getStatusBadge = () => {
-    if (!progress) return null
-
-    const { finalizedPercentage, progressPercentage } = progress
-
-    if (finalizedPercentage === 100) {
-      return (
-        <Badge variant="default" className="bg-green-600">
-          <CheckCircle className="mr-1 h-3 w-3" />
-          完了
-        </Badge>
-      )
-    } else if (progressPercentage >= 80) {
-      return (
-        <Badge variant="default" className="bg-blue-600">
-          <TrendingUp className="mr-1 h-3 w-3" />
-          順調
-        </Badge>
-      )
-    } else if (progressPercentage >= 50) {
-      return (
-        <Badge variant="secondary">
-          <Clock className="mr-1 h-3 w-3" />
-          進行中
-        </Badge>
-      )
-    } else {
-      return (
-        <Badge variant="destructive">
-          <AlertCircle className="mr-1 h-3 w-3" />
-          開始前
-        </Badge>
-      )
-    }
-  }
 
   if (loading) {
     return (
@@ -184,55 +144,55 @@ export default function ProjectProgressCard({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center text-sm font-medium">
-            <Users className="mr-2 h-4 w-4" />
+          <CardTitle className="flex items-center text-xs font-medium">
+            <Users className="mr-1 h-3 w-3" />
             プロジェクト進捗
           </CardTitle>
-          <div className="flex items-center space-x-2">
-            {getStatusBadge()}
+          <div className="flex items-center space-x-1">
             <Button
               size="sm"
               variant="ghost"
               onClick={fetchProgress}
-              className="h-6 w-6 p-0"
+              className="h-4 w-4 p-0"
+              title="進捗を更新"
             >
-              <RefreshCw className="h-3 w-3" />
+              <RefreshCw className="h-2 w-2" />
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-2">
         {/* 基本統計 */}
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-lg font-semibold">
+            <div className="text-sm font-semibold">
               {progress.totalAnswerSheets}
             </div>
-            <div className="text-muted-foreground text-xs">答案数</div>
+            <div className="text-muted-foreground text-xs">答案</div>
           </div>
           <div>
-            <div className="text-lg font-semibold">
+            <div className="text-sm font-semibold">
               {progress.totalQuestions}
             </div>
-            <div className="text-muted-foreground text-xs">設問数</div>
+            <div className="text-muted-foreground text-xs">設問</div>
           </div>
           <div>
-            <div className="text-lg font-semibold">{progress.totalItems}</div>
-            <div className="text-muted-foreground text-xs">総採点項目</div>
+            <div className="text-sm font-semibold">{progress.totalItems}</div>
+            <div className="text-muted-foreground text-xs">採点項目</div>
           </div>
         </div>
 
         {/* 採点進捗 */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">採点進捗</span>
-            <span className="text-muted-foreground text-sm">
-              {progress.gradedItems} / {progress.totalItems}
+            <span className="text-xs font-medium">採点進捗</span>
+            <span className="text-muted-foreground text-xs">
+              {progress.gradedItems}/{progress.totalItems}
             </span>
           </div>
-          <Progress value={progress.progressPercentage} className="h-2" />
+          <Progress value={progress.progressPercentage} className="h-1.5" />
           <div className="text-right">
             <span className="text-muted-foreground text-xs">
               {Math.round(progress.progressPercentage)}%
@@ -241,27 +201,20 @@ export default function ProjectProgressCard({
         </div>
 
         {/* 最終確定進捗 */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">最終確定</span>
-            <span className="text-muted-foreground text-sm">
-              {progress.finalizedItems} / {progress.totalItems}
+            <span className="text-xs font-medium">最終確定</span>
+            <span className="text-muted-foreground text-xs">
+              {progress.finalizedItems}/{progress.totalItems}
             </span>
           </div>
-          <Progress value={progress.finalizedPercentage} className="h-2" />
+          <Progress value={progress.finalizedPercentage} className="h-1.5" />
           <div className="text-right">
             <span className="text-muted-foreground text-xs">
               {Math.round(progress.finalizedPercentage)}%
             </span>
           </div>
         </div>
-
-        {/* 最終更新時刻 */}
-        {lastUpdated && (
-          <div className="text-muted-foreground border-t pt-2 text-center text-xs">
-            最終更新: {lastUpdated.toLocaleTimeString()}
-          </div>
-        )}
       </CardContent>
     </Card>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import { usePageHelp } from "@/components/help/usePageHelp"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import PageHeader from "@/components/layout/PageHeader"
 import StudentRemovalConfirmModal from "./StudentRemovalConfirmModal"
@@ -50,6 +51,7 @@ interface ClassGroup {
 export default function ProjectStudentsPage() {
   const params = useParams()
   const router = useRouter()
+  const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
   const [loading, setLoading] = useState(true)
@@ -292,7 +294,7 @@ export default function ProjectStudentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="受験生徒の確認・選択" description="">
+      <PageHeader title="受験生徒の確認・選択" description="" helpButton={helpButton}>
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
