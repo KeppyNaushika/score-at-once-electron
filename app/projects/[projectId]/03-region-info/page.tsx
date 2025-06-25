@@ -1,5 +1,6 @@
 "use client"
 
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { toast } from "sonner"
 export default function RegionInfoPage() {
   const params = useParams()
   const router = useRouter()
+  const { helpButton } = usePageHelp()
 
   const paramsProjectId = params.projectId
   const projectId =
@@ -253,6 +255,7 @@ export default function RegionInfoPage() {
       <PageHeader
         title="領域情報の編集"
         description=""
+        helpButton={helpButton}
       >
         <Button
           onClick={() => router.push(`/projects/${projectId}/04-students`)}

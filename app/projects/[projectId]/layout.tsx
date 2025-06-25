@@ -9,27 +9,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { Info } from "lucide-react"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
 import React, { useState, useEffect } from "react"
 import { toast } from "sonner"
 import Head from "next/head"
-import {
-  UploadHelpContent,
-  TemplateHelpContent,
-  RegionInfoHelpContent,
-  StudentsHelpContent,
-  AnswerSheetsHelpContent,
-  ScoringHelpContent,
-  ExportHelpContent,
-} from "@/components/help/PageHelpContent"
 
 // ワークフローステップの定義
 const workflowSteps = [
@@ -42,18 +26,6 @@ const workflowSteps = [
   { id: "07-export", label: "7. 結果", path: "07-export" },
 ]
 
-// ページごとのヘルプコンポーネント
-const pageHelpComponents: {
-  [key: string]: React.ComponentType
-} = {
-  "01-upload": UploadHelpContent,
-  "02-template": TemplateHelpContent,
-  "03-region-info": RegionInfoHelpContent,
-  "04-students": StudentsHelpContent,
-  "05-answer-sheets": AnswerSheetsHelpContent,
-  "06-score-at-once": ScoringHelpContent,
-  "07-export": ExportHelpContent,
-}
 
 // 旧ページヒント情報（削除予定）
 const pageHints: {
@@ -210,7 +182,6 @@ export default function ProjectWorkflowLayout({
   const params = useParams()
   const pathname = usePathname()
   const projectId = params.projectId as string
-  const [showHintAnimation, setShowHintAnimation] = useState(false)
   const [projectName, setProjectName] = useState<string>("")
 
   // プロジェクト情報を取得
@@ -227,21 +198,6 @@ export default function ProjectWorkflowLayout({
     }
     loadProject()
   }, [projectId])
-
-  // 現在のページを特定
-  const currentStep = workflowSteps.find((step) => pathname.includes(step.path))
-  const currentHint = currentStep ? pageHints[currentStep.id] : null
-  const CurrentHelpComponent = currentStep
-    ? pageHelpComponents[currentStep.id]
-    : null
-
-  // 初回表示時のアニメーション
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowHintAnimation(true)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [pathname])
 
   return (
     <>
@@ -277,35 +233,22 @@ export default function ProjectWorkflowLayout({
               })}
             </BreadcrumbList>
           </Breadcrumb>
-          {/* Help Icon */}
-          {CurrentHelpComponent && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "relative ml-2",
-                    showHintAnimation && "animate-pulse",
-                  )}
-                >
-                  <Info className="h-5 w-5" />
-                  {showHintAnimation && (
-                    <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-blue-500" />
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="m-4 max-h-[90vh] w-[90vw] max-w-4xl overflow-y-auto"
-                align="center"
-                side="bottom"
+          
+          {/* 右側のナビゲーション要素 */}
+          <div className="flex items-center space-x-2">
+            {/* 戻るボタン（採点画面でのみ表示） */}
+            {pathname.includes('06-score-at-once') && (
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
               >
-                <div className="p-2">
-                  <CurrentHelpComponent />
-                </div>
-              </PopoverContent>
-            </Popover>
-          )}
+                <Link href={`/projects/${projectId}/05-answer-sheets`}>
+                  戻る
+                </Link>
+              </Button>
+            )}
+          </div>
         </header>
         <main className="flex-grow overflow-hidden">{children}</main>
       </div>

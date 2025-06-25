@@ -195,6 +195,34 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
   getProjectProgress: (projectId: string) =>
     ipcRenderer.invoke("get-project-progress", projectId),
+  initializeScoringRecords: (projectId: string) =>
+    ipcRenderer.invoke("initialize-scoring-records", projectId),
+
+  // PDF Export related
+  exportScoredAnswersPDF: (options: {
+    projectId: string
+    selectedStudentIds: string[]
+    outputPath?: string
+    scoringMarkConfig?: any
+  }) => ipcRenderer.invoke("export-scored-answers-pdf", options),
+
+  // Excel Export related
+  exportGradingDataExcel: (options: {
+    projectId: string
+    selectedStudentIds: string[]
+    outputPath?: string
+  }) => ipcRenderer.invoke("export-grading-data-excel", options),
+
+  // Progress listeners
+  onExportProgress: (callback: (progress: {
+    current: number
+    total: number
+    step: string
+    percentage: number
+  }) => void) => {
+    ipcRenderer.on('export-progress', (_event, progress) => callback(progress))
+    return () => ipcRenderer.removeAllListeners('export-progress')
+  },
 
   scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
   removeScorePanelListener: (listener: any) =>

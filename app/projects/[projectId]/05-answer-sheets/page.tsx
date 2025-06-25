@@ -2,6 +2,7 @@
 
 import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -41,6 +42,7 @@ export default function AnswerSheetsPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
+  const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
   const [project, setProject] = useState<ProjectData | null>(null)
@@ -197,6 +199,7 @@ export default function AnswerSheetsPage() {
         <PageHeader
           title="生徒解答のアップロード"
           description=""
+          helpButton={helpButton}
         >
           <Button
             onClick={() =>

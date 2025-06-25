@@ -477,6 +477,12 @@ export interface MyAPI {
   finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: any) => Promise<any>
   getAnswerSheetProgress: (answerSheetId: string) => Promise<any>
   getProjectProgress: (projectId: string) => Promise<any>
+  initializeScoringRecords: (projectId: string) => Promise<{
+    success: boolean
+    initialized?: number
+    message?: string
+    error?: string
+  }>
 
   // Obsolete ProjectLayout handlers removed
   // saveProjectLayout: ...
@@ -485,6 +491,37 @@ export interface MyAPI {
   // deleteProjectLayout: ...
   // duplicateProjectLayout: ...
   // detectLayoutRegions: ... // This might be a client-side utility or a different kind of backend call
+
+  // PDF Export related
+  exportScoredAnswersPDF: (options: {
+    projectId: string
+    selectedStudentIds: string[]
+    outputPath?: string
+    scoringMarkConfig?: any
+  }) => Promise<{
+    success: boolean
+    outputPath?: string
+    error?: string
+  }>
+
+  // Excel Export related
+  exportGradingDataExcel: (options: {
+    projectId: string
+    selectedStudentIds: string[]
+    outputPath?: string
+  }) => Promise<{
+    success: boolean
+    outputPath?: string
+    error?: string
+  }>
+
+  // Progress listeners
+  onExportProgress: (callback: (progress: {
+    current: number
+    total: number
+    step: string
+    percentage: number
+  }) => void) => () => void
 
   // IPC related (existing)
   sendScorePanel: (data: any) => Promise<void> // この重複は元のコードのまま残します
