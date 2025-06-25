@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface ExportProgressModalProps {
   isOpen: boolean
@@ -28,9 +29,49 @@ export default function ExportProgressModal({
   error,
   outputPath
 }: ExportProgressModalProps) {
+  const [isVisible, setIsVisible] = useState(isOpen)
+  const [isClosing, setIsClosing] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsVisible(true)
+      setIsClosing(false)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (status === 'completed' && progress === 100) {
+      // 完了時に2秒後にフェードアウト開始
+      const timer = setTimeout(() => {
+        setIsClosing(true)
+        // フェードアウトアニメーション完了後に閉じる
+        setTimeout(() => {
+          setIsVisible(false)
+          onClose()
+        }, 300)
+      }, 2000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [status, progress, onClose])
+
+  const handleClose = () => {
+    if (status !== 'processing') {
+      setIsClosing(true)
+      setTimeout(() => {
+        setIsVisible(false)
+        onClose()
+      }, 300)
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={isVisible} onOpenChange={handleClose}>
+      <DialogContent 
+        className={`sm:max-w-md transition-opacity duration-300 ${
+          isClosing ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {status === 'processing' && <Loader2 className="h-5 w-5 animate-spin" />}
@@ -88,7 +129,7 @@ export default function ExportProgressModal({
                 処理中...
               </Button>
             ) : (
-              <Button onClick={onClose}>
+              <Button onClick={handleClose}>
                 閉じる
               </Button>
             )}

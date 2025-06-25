@@ -69,6 +69,7 @@ interface AnswerSheet {
     studentId: string
     lastName: string
     firstName: string
+    customOrder?: number // 受験生徒の表示順序
   }
 }
 
@@ -234,15 +235,18 @@ export default function GradingPage() {
 
         // Transform the data to match AnswerSheet interface
         const transformedAnswerSheets = (answersResult.answerSheets || []).map(
-          (sheet: any) => ({
-            id: sheet.id,
-            studentId: sheet.studentId,
-            projectId: sheet.projectId,
-            imagePath: sheet.originalImagePath || "",
-            pageNumber: sheet.pageNumber || 1,
-            status: sheet.status || "uploaded",
-            student: sheet.student,
-          }),
+          (sheet: any) => {
+            console.log('Student data:', sheet.student) // デバッグログ
+            return {
+              id: sheet.id,
+              studentId: sheet.studentId,
+              projectId: sheet.projectId,
+              imagePath: sheet.originalImagePath || "",
+              pageNumber: sheet.pageNumber || 1,
+              status: sheet.status || "uploaded",
+              student: sheet.student,
+            }
+          }
         )
         setAnswerSheets(transformedAnswerSheets)
         setQuestionRegions(questionRegions)
@@ -257,6 +261,11 @@ export default function GradingPage() {
     initializeGradingData()
   }, [projectId])
 
+  // displayFilterとappliedFilterの初期同期
+  useEffect(() => {
+    setAppliedFilter(displayFilter)
+  }, [])
+
   // 最初の答案を初期選択状態にする（appliedFilterに基づく）
   useEffect(() => {
     if (gradingMode === "grid" && answerSheets.length > 0) {
@@ -265,18 +274,13 @@ export default function GradingPage() {
         setSelectedAnswers(new Set([filteredAnswers[0].id]))
       }
     }
-  }, [gradingMode, answerSheets.length, appliedFilter, currentQuestionIndex, filterUpdateKey])
+  }, [gradingMode, answerSheets.length, currentQuestionIndex, filterUpdateKey])
 
-  // 設問変更時に選択状態をリセット
+  // 設問変更時に選択状態をリセット（ナビゲーション再読み込みを避ける）
   useEffect(() => {
     if (gradingMode === "grid") {
       setSelectedAnswers(new Set())
-      const filteredAnswers = getGridAnswerData()
-      if (filteredAnswers.length > 0) {
-        setTimeout(() => {
-          setSelectedAnswers(new Set([filteredAnswers[0].id]))
-        }, 50)
-      }
+      // 設問変更時は自動選択しない（手動でWASD移動またはクリックで選択）
     }
   }, [currentQuestionIndex])
 
@@ -815,7 +819,7 @@ export default function GradingPage() {
     }
     
     // 採点後はフィルタ更新が必要であることを示すが、即座には更新しない
-    setNeedsFilterRefresh(true)
+    // setNeedsFilterRefresh(true) // コメントアウトして即時更新を防止
   }
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
@@ -876,7 +880,12 @@ export default function GradingPage() {
     return getFilteredGridAnswerData()
   }
 
-  // フィルタリング関連ハンドラー
+  // displayFilterとappliedFilterが同期しているかチェック
+  const isFilterSynced = () => {
+    return JSON.stringify(displayFilter) === JSON.stringify(appliedFilter)
+  }
+
+  // フィルタリング関連ハンドラー（手動リフレッシュ用、Rキー）
   const handleRefreshFilter = () => {
     const newAppliedFilter = {...displayFilter}
     setAppliedFilter(newAppliedFilter)
@@ -906,11 +915,28 @@ export default function GradingPage() {
     
     const filterKey = filterMap[key]
     if (filterKey) {
-      setDisplayFilter(prev => ({
-        ...prev,
-        [filterKey]: !prev[filterKey]
-      }))
-      setNeedsFilterRefresh(true)
+      const newDisplayFilter = {
+        ...displayFilter,
+        [filterKey]: !displayFilter[filterKey]
+      }
+      setDisplayFilter(newDisplayFilter)
+      
+      // 即座にappliedFilterも更新
+      setAppliedFilter(newDisplayFilter)
+      setFilterUpdateKey(prev => prev + 1) // 強制再レンダリング
+      setNeedsFilterRefresh(false) // リフレッシュが不要になったことを示す
+      
+      // 選択状態をリセット
+      setSelectedAnswers(new Set())
+      
+      // フィルタ適用後の最初の答案を選択
+      setTimeout(() => {
+        const allAnswers = getAllGridAnswerData()
+        const filteredAnswers = allAnswers.filter(answer => newDisplayFilter[answer.status as keyof typeof newDisplayFilter])
+        if (filteredAnswers.length > 0) {
+          setSelectedAnswers(new Set([filteredAnswers[0].id]))
+        }
+      }, 100)
     }
   }
 
@@ -1381,7 +1407,7 @@ export default function GradingPage() {
                       <div className="border-t pt-2">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-medium">表示フィルタ</span>
-                          {needsFilterRefresh && (
+                          {!isFilterSynced() && (
                             <Button
                               size="sm"
                               variant="outline"
