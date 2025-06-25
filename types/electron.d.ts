@@ -515,6 +515,23 @@ export interface MyAPI {
     error?: string
   }>
 
+  // データ管理関連
+  getDataDirectoryInfo: () => Promise<{
+    success: boolean
+    directory?: string
+    size?: number
+    projectCount?: number
+    error?: string
+  }>
+  openDataDirectory: () => Promise<{
+    success: boolean
+    error?: string
+  }>
+  deleteAllData: () => Promise<{
+    success: boolean
+    error?: string
+  }>
+
   // Progress listeners
   onExportProgress: (callback: (progress: {
     current: number

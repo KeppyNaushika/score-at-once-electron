@@ -40,6 +40,24 @@ next-env.d.ts
 # main
 main
 
-# data
-/data/*
-*.sqlite
+# Score at Once データフォルダ（共有ドライブ対応）
+/data/
+**/data/
+**/*.db
+**/*.db-journal
+**/*.sqlite
+**/*.sqlite3
+
+# プロジェクトデータ
+**/projects/
+**/master-images/
+**/answer-sheets/
+**/exports/
+
+# 出力ファイル
+**/*_scored.pdf
+**/*_results.xlsx
+**/*_backup.*
+
+# アプリケーション設定ファイル
+**/config.json

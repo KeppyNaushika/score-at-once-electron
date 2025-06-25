@@ -1,7 +1,7 @@
 import { MasterImage, Prisma } from "@prisma/client"
-import { app } from "electron"
 import fs from "fs/promises"
 import path from "path"
+import { getMasterImagesDirectory, getRelativePathFromData, getAbsolutePathFromData } from '../dataManager'
 import prisma from "./client"
 
 export const uploadMasterImages = async (
@@ -34,11 +34,7 @@ export const uploadMasterImages = async (
 
   const uploadedImages: MasterImage[] = []
 
-  const projectImageDir = path.join(
-    app.getPath("userData"),
-    "masterImages",
-    projectId,
-  )
+  const projectImageDir = getMasterImagesDirectory(projectId)
   await fs.mkdir(projectImageDir, { recursive: true })
 
   for (const [index, fileData] of filesData.entries()) {
@@ -49,10 +45,7 @@ export const uploadMasterImages = async (
       // ユニークなファイル名を生成 (タイムスタンプ + インデックス + 元のファイル名)
       const uniqueFileName = `${Date.now()}-${index}-${originalFileName}`
       const destinationPath = path.join(projectImageDir, uniqueFileName)
-      const relativePath = path.relative(
-        app.getPath("userData"),
-        destinationPath,
-      )
+      const relativePath = getRelativePathFromData(destinationPath)
 
       // ファイルを保存
       await fs.writeFile(destinationPath, fileBuffer)
@@ -85,8 +78,7 @@ export const deleteMasterImage = async (
       where: { id: imageId },
     })
     if (image) {
-      const userDataPath = app.getPath("userData")
-      const filePath = path.join(userDataPath, image.path)
+      const filePath = getAbsolutePathFromData(image.path)
       try {
         await fs.unlink(filePath)
       } catch (fileError: any) {
