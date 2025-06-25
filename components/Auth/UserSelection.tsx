@@ -59,9 +59,7 @@ export default function UserSelection() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full max-w-4xl">
         <div className="mb-8 text-center">
-          <h1 className="mb-4 text-4xl font-bold text-gray-900">
-            一括採点システム
-          </h1>
+          <h1 className="mb-4 text-4xl font-bold text-gray-900">一括採点</h1>
           <p className="text-xl text-gray-600">
             ユーザーを選択して開始してください
           </p>

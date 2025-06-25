@@ -7,7 +7,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "一括採点システム",
+  title: "一括採点",
   description: "複数教員対応型採点アプリケーション",
 }
 
