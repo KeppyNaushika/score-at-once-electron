@@ -451,11 +451,11 @@ export default function AnswerGridView({
             ? `repeat(${Math.ceil(answers.length / gridSize.rows)}, 200px)` 
             : `repeat(${gridSize.columns}, 1fr)`,
           gridTemplateRows: layoutDirection === "down-right" || layoutDirection === "down-left"
-            ? `repeat(${Math.min(gridSize.rows, answers.length)}, minmax(200px, auto))`
+            ? `repeat(${Math.min(gridSize.rows, answers.length)}, 200px)`
             : 'auto',
           gridAutoRows: layoutDirection === "down-right" || layoutDirection === "down-left" 
             ? undefined 
-            : 'minmax(200px, auto)',
+            : '200px', // 固定サイズにして一貫性を保つ
           width: layoutDirection === "down-right" || layoutDirection === "down-left" 
             ? 'max-content' 
             : '100%',

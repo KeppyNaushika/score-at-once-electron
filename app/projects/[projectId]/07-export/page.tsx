@@ -173,7 +173,7 @@ export default function ExportPage() {
     // プログレス状態をリセット
     setExportProgress(0)
     setExportStatus('processing')
-    setExportStep('準備中...')
+    setExportStep('保存場所を選択中...')
     setExportError('')
     setExportOutputPath('')
     setCurrentStepIndex(0)
@@ -182,6 +182,7 @@ export default function ExportPage() {
     setIsExporting(true)
 
     try {
+      // 保存場所選択と処理開始を並行実行
       const result = await window.electronAPI.exportScoredAnswersPDF({
         projectId,
         selectedStudentIds: Array.from(selectedStudents),
@@ -193,6 +194,11 @@ export default function ExportPage() {
         setExportOutputPath(result.outputPath)
         setExportProgress(100)
         setExportStep('完了しました')
+        
+        // 2秒後にモーダルを自動フェードアウト
+        setTimeout(() => {
+          setShowProgressModal(false)
+        }, 2000)
       } else {
         throw new Error(result.error || '出力に失敗しました')
       }
@@ -447,7 +453,7 @@ export default function ExportPage() {
                 </p>
                 <Button 
                   onClick={exportScoredAnswers}
-                  disabled={selectedStudents.size === 0 || isExporting}
+                  disabled={selectedStudents.size === 0}
                   className="w-full"
                 >
                   {isExporting ? (
@@ -500,7 +506,7 @@ export default function ExportPage() {
                 </p>
                 <Button 
                   onClick={exportGradingData}
-                  disabled={selectedStudents.size === 0 || isExporting}
+                  disabled={selectedStudents.size === 0}
                   className="w-full"
                 >
                   {isExporting ? (
