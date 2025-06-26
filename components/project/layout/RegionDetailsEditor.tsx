@@ -15,6 +15,7 @@ import {
 import { AreaType } from "@prisma/client"
 import { AlertTriangle, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { LayoutRegionArea } from "../../../types/common.types"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<AreaType, string> = {
@@ -40,8 +41,8 @@ const typeIcons = {
 }
 
 type RegionDetailsEditorProps = {
-  regions: any[]
-  setRegions: React.Dispatch<React.SetStateAction<any[]>>
+  regions: LayoutRegionArea[]
+  setRegions: React.Dispatch<React.SetStateAction<LayoutRegionArea[]>>
   disabled: boolean
 }
 
@@ -53,17 +54,16 @@ const RegionDetailsEditor = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
 
-  const handleRegionChange = (index: number, field: string, value: any) => {
+  const handleRegionChange = (index: number, field: keyof LayoutRegionArea, value: string | number | null) => {
     const newRegions = [...regions]
     if (field === "points" && value !== "") {
-      newRegions[index] = { ...newRegions[index], [field]: parseFloat(value) }
+      newRegions[index] = { ...newRegions[index], [field]: parseFloat(value as string) }
     } else if (field === "points" && value === "") {
       newRegions[index] = { ...newRegions[index], [field]: null }
     } else {
       newRegions[index] = { ...newRegions[index], [field]: value }
     }
     setRegions(newRegions)
-    // TODO: Auto-save implementation
   }
 
   const handleDeleteRegion = (index: number) => {

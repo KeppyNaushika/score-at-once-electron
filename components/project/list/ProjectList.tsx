@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import CreateProjectWindow from "../forms/CreateProjectWindow"
+import { ProjectWithDetails } from "../../../types/common.types"
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
@@ -31,12 +32,11 @@ const File = () => {
   const { createProjectModal } = useFileActions()
   const router = useRouter()
 
-  const handleStartScoring = (project: any) => {
-    // プロジェクト詳細ページに遷移
+  const handleStartScoring = (project: ProjectWithDetails) => {
     router.push(`/projects/${project.id}`)
   }
 
-  const getProjectStatus = (project: any) => {
+  const getProjectStatus = (project: ProjectWithDetails) => {
     const hasImages = project.masterImages && project.masterImages.length > 0
     const hasLayout = project.layoutRegions && project.layoutRegions.length > 0
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
@@ -86,7 +86,7 @@ const File = () => {
     }
   }
 
-  const handleNextStep = (project: any) => {
+  const handleNextStep = (project: ProjectWithDetails) => {
     const status = getProjectStatus(project)
     router.push(status.url)
   }

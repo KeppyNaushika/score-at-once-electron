@@ -44,9 +44,11 @@ const typeIcons = {
   [AreaType.OTHER]: "📎",
 }
 
+import type { LayoutRegionWithDetails } from "@/types/electron"
+
 type RegionDetailsTableProps = {
-  regions: any[]
-  setRegions: React.Dispatch<React.SetStateAction<any[]>>
+  regions: LayoutRegionWithDetails[]
+  setRegions: React.Dispatch<React.SetStateAction<LayoutRegionWithDetails[]>>
   disabled: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
@@ -232,8 +234,6 @@ const RegionDetailsTable = ({
         // エラーが発生した場合はモーダルは閉じるが、データは削除しない
         setDeleteModalOpen(false)
         setRegionToDelete(null)
-        // TODO: エラートーストを表示する場合は以下のコメントアウトを外す
-        // toast.error("領域の削除に失敗しました")
       }
     }
   }
@@ -261,15 +261,9 @@ const RegionDetailsTable = ({
       const newRegions = [...regions]
       const draggedItem = newRegions[draggedIndex]
 
-      // Remove the dragged item
       newRegions.splice(draggedIndex, 1)
-
-      // Insert the dragged item at the new position
       newRegions.splice(dropIndex, 0, draggedItem)
-
       setRegions(newRegions)
-
-      // Update selected row index if needed
       if (selectedRowIndex === draggedIndex) {
         setSelectedRowIndex(dropIndex)
       } else if (selectedRowIndex !== null) {

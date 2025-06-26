@@ -54,8 +54,6 @@ export default function AnswerSheetUpload({
     layoutRegions,
     masterImages,
     isClient,
-
-    // Setters
     setSelectedTab,
     setPageRange,
     setSpecificPages,

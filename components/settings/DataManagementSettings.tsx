@@ -37,9 +37,9 @@ export default function DataManagementSettings({ className = "" }: DataManagemen
       const dataInfo = await window.electronAPI.getDataDirectoryInfo()
       
       if (dataInfo.success) {
-        setDataDirectory(dataInfo.directory)
-        setDataSize(dataInfo.size)
-        setProjectCount(dataInfo.projectCount)
+        setDataDirectory(dataInfo.directory || '')
+        setDataSize(dataInfo.size || 0)
+        setProjectCount(dataInfo.projectCount || 0)
       }
     } catch (error) {
       console.error('Failed to load data info:', error)

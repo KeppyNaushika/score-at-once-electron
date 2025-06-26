@@ -22,6 +22,7 @@ export function useLayoutRegions(projectId?: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isSavingRef = useRef(false) // 重複保存防止
 
   const loadRegions = useCallback(async (masterImageId?: string) => {
     if (!projectId) return
@@ -58,8 +59,9 @@ export function useLayoutRegions(projectId?: string) {
   }, [projectId])
 
   const saveRegions = useCallback(async (regionsToSave: LayoutRegion[]) => {
-    if (!projectId) return
+    if (!projectId || isSavingRef.current) return
 
+    isSavingRef.current = true
     setIsSaving(true)
     try {
       const savePromises = regionsToSave.map(async (region) => {
@@ -112,6 +114,7 @@ export function useLayoutRegions(projectId?: string) {
       throw error
     } finally {
       setIsSaving(false)
+      isSavingRef.current = false
     }
   }, [projectId])
 

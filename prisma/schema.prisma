@@ -124,7 +124,7 @@ model MasterImage {
 
 // Projectモデル (旧Examモデル)
 model Project {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   examName    String
   examDate    DateTime?
   subject     String?
@@ -186,7 +186,7 @@ model GradingAssignment {
 }
 
 model LayoutRegion {
-  id            String       @id @default(cuid())
+  id            String       @id @default(uuid())
   projectId     String
   project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   masterImageId String?
@@ -221,7 +221,7 @@ model LayoutRegion {
 
 // New Model: 設問グループのカテゴリ (例: "大問", "観点別評価")
 model QuestionGroup {
-  id        String              @id @default(cuid())
+  id        String              @id @default(uuid())
   name      String
   projectId String
   project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
@@ -235,7 +235,7 @@ model QuestionGroup {
 
 // New Model: 設問グループの具体的な項目 (例: "大問1", "知識・技能")
 model QuestionGroupItem {
-  id              String        @id @default(cuid())
+  id              String        @id @default(uuid())
   name            String
   questionGroupId String
   questionGroup   QuestionGroup @relation(fields: [questionGroupId], references: [id], onDelete: Cascade)
@@ -255,7 +255,7 @@ model QuestionGroupItem {
 
 // New Model: 小計/合計表示エリアがどの QuestionGroupItem を集計するかを定義
 model SubtotalDefinition {
-  id                  String            @id @default(cuid())
+  id                  String            @id @default(uuid())
   layoutRegionId      String
   layoutRegion        LayoutRegion      @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
   questionGroupItemId String
@@ -271,7 +271,7 @@ model SubtotalDefinition {
 
 // New Model: 設問エリアがどの QuestionGroupItem に属するかを定義する中間テーブル
 model QuestionSubtotalAssignment {
-  id                     String            @id @default(cuid())
+  id                     String            @id @default(uuid())
   questionLayoutRegionId String
   questionLayoutRegion   LayoutRegion      @relation(fields: [questionLayoutRegionId], references: [id], onDelete: Cascade)
   questionGroupItemId    String

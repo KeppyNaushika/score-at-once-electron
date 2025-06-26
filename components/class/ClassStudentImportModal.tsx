@@ -125,7 +125,6 @@ export default function ClassStudentImportModal({
     try {
       const validRows = studentData.filter((row) => row.studentId.trim() !== "")
 
-      // Add each student to the class
       let successCount = 0
       let notFoundStudents: string[] = []
       
@@ -134,11 +133,8 @@ export default function ClassStudentImportModal({
           const studentId = row.studentId.trim()
           const attendanceNumber = row.attendanceNumber.trim()
           
-          // First try to find the student by studentId
           const students = await window.electronAPI.fetchStudents()
-          console.log('Fetched students:', students.length)
           const student = students.find((s) => s.studentId === studentId)
-          console.log(`Looking for student ${studentId}:`, student ? 'Found' : 'Not found')
 
           if (student) {
             // 既存のメンバーシップをチェック
@@ -172,10 +168,8 @@ export default function ClassStudentImportModal({
               attendanceNumber ? parseInt(attendanceNumber) : undefined
             )
 
-            // 追加後の確認
             const verifyClasses = await window.electronAPI.fetchClasses()
             const verifyClass = verifyClasses.find(c => c.id === classId)
-            // 最新の追加されたメンバーシップを取得（開始日でソート）
             const addedMembership = verifyClass?.memberships
               .filter(m => m.student.id === student.id)
               .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
@@ -224,18 +218,7 @@ export default function ClassStudentImportModal({
 
       if (successCount > 0) {
         alert(`${successCount}名の生徒を学級に追加しました。`)
-        
-        // 画面を更新
         await onImportSuccess()
-        
-        // 最終確認（デバッグ用）
-        console.log(`処理完了: ${successCount}名追加成功`)
-        setTimeout(async () => {
-          const finalClasses = await window.electronAPI.fetchClasses()
-          const finalClass = finalClasses.find(c => c.id === classId)
-          console.log('最終的な学級メンバー総数:', finalClass?.memberships.length)
-        }, 1000)
-        
         onClose()
       } else if (notFoundStudents.length === 0) {
         alert('追加する生徒がありません。')

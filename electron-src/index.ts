@@ -7,7 +7,6 @@ import prepareNext from "electron-next"
 import menu from "./menu"
 
 import { Prisma } from "@prisma/client"
-import path from "path"
 import {
   createClass,
   deleteClass,
@@ -1414,7 +1413,7 @@ app.on("ready", async () => {
         
         // プロジェクト数を取得
         const projects = await dbFetchProjects()
-        const projectCount = projects.success ? projects.projects.length : 0
+        const projectCount = Array.isArray(projects) ? projects.length : 0
         
         return {
           success: true,

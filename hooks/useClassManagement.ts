@@ -62,10 +62,10 @@ export function useClassManagement(classId: string) {
     null,
   )
 
-  const transformClassData = (rawClassData: any): ClassWithMemberships => ({
+  const transformClassData = (rawClassData: ClassWithMemberships & { memberships: any[] }): ClassWithMemberships => ({
     ...rawClassData,
     memberships:
-      rawClassData.memberships?.map((membership: any) => ({
+      rawClassData.memberships?.map((membership) => ({
         ...membership,
         startDate: new Date(membership.startDate || membership.createdAt),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
@@ -96,7 +96,7 @@ export function useClassManagement(classId: string) {
     fetchData()
   }, [classId])
 
-  const handleSaveClass = async (classInfo: any) => {
+  const handleSaveClass = async (classInfo: Partial<ClassWithMemberships>) => {
     try {
       const updatedClass = await window.electronAPI.updateClass({
         id: classId,
@@ -116,7 +116,7 @@ export function useClassManagement(classId: string) {
     setIsStudentImportModalOpen(false)
   }
 
-  const handleSaveMembership = async (membershipData: any) => {
+  const handleSaveMembership = async (membershipData: Partial<Membership>) => {
     try {
       if (membershipToEdit) {
         await window.electronAPI.updateStudentClassMembership(
