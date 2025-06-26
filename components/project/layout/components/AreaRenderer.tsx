@@ -19,7 +19,6 @@ interface AreaRendererProps {
   imageDimensions: { width: number; height: number } | null
   containerRef: RefObject<HTMLDivElement>
   zoom: number
-  pan: { x: number; y: number }
 }
 
 export function AreaRenderer({
@@ -31,7 +30,6 @@ export function AreaRenderer({
   imageDimensions,
   containerRef,
   zoom,
-  pan,
 }: AreaRendererProps) {
   
   // 全てのhooksを最初に定義（条件分岐の前に）
@@ -56,21 +54,17 @@ export function AreaRenderer({
       return { left: 0, top: 0, width: 0, height: 0 }
     }
 
-    // ズームとパンを考慮した絶対座標計算
+    // 標準スクロール方式：ズームのみ考慮した座標計算
     const scaledImageWidth = imageDimensions.width * zoom
     const scaledImageHeight = imageDimensions.height * zoom
-    
-    // 背景画像の開始位置（パンを適用）
-    const imageStartX = pan.x
-    const imageStartY = pan.y
 
     return {
-      left: imageStartX + area.x * scaledImageWidth,
-      top: imageStartY + area.y * scaledImageHeight,
+      left: area.x * scaledImageWidth,
+      top: area.y * scaledImageHeight,
       width: area.width * scaledImageWidth,
       height: area.height * scaledImageHeight,
     }
-  }, [imageDimensions, zoom, pan, forceUpdate])
+  }, [imageDimensions, zoom, forceUpdate])
   
   useEffect(() => {
     // refが設定されたら再レンダリングを促す

@@ -36,7 +36,6 @@ interface UseImageCanvasInteractionProps {
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   zoom: number
-  pan: { x: number; y: number }
 }
 
 export function useImageCanvasInteraction({
@@ -48,7 +47,6 @@ export function useImageCanvasInteraction({
   onAddAreaByDrag,
   onUpdateArea,
   zoom,
-  pan,
 }: UseImageCanvasInteractionProps) {
   const [dragging, setDragging] = useState(false)
   const [dragStartCoords, setDragStartCoords] = useState<DragState | null>(null)
@@ -61,25 +59,17 @@ export function useImageCanvasInteraction({
   const getImageBounds = useCallback(() => {
     if (!imageContainerRef.current || !imageDimensions) return null
 
-    // clientWidthを使用してより正確なサイズを取得
-    const containerWidth = imageContainerRef.current.clientWidth
-    const containerHeight = imageContainerRef.current.clientHeight
-
-    // ズームとパンを考慮した絶対座標計算
+    // 標準スクロール方式：画像コンテナのサイズがそのまま画像サイズ
     const scaledImageWidth = imageDimensions.width * zoom
     const scaledImageHeight = imageDimensions.height * zoom
-    
-    // 背景画像の開始位置（パンを適用）
-    const imageStartX = pan.x
-    const imageStartY = pan.y
 
     return {
-      left: imageStartX,
-      top: imageStartY,
+      left: 0,
+      top: 0,
       width: scaledImageWidth,
       height: scaledImageHeight,
     }
-  }, [imageDimensions, zoom, pan])
+  }, [imageDimensions, zoom])
 
   const getRelativeCoords = useCallback((clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return { x: 0, y: 0 }
@@ -89,9 +79,9 @@ export function useImageCanvasInteraction({
     
     if (!imageBounds) return { x: 0, y: 0 }
 
-    // ズームとパンを考慮した相対座標計算
-    const x = (clientX - containerRect.left - imageBounds.left) / imageBounds.width
-    const y = (clientY - containerRect.top - imageBounds.top) / imageBounds.height
+    // 標準スクロール方式：コンテナの左上角が画像の原点
+    const x = (clientX - containerRect.left) / imageBounds.width
+    const y = (clientY - containerRect.top) / imageBounds.height
 
     return {
       x: Math.max(0, Math.min(1, x)),
