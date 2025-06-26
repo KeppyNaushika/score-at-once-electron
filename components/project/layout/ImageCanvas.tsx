@@ -119,7 +119,7 @@ const ImageCanvas = ({
     const handleWheel = (e: WheelEvent) => {
       if (e.ctrlKey) {
         e.preventDefault()
-        const zoomSpeed = 0.001
+        const zoomSpeed = 0.005
         const newZoom = zoom - e.deltaY * zoomSpeed
         setZoom(Math.max(0.1, Math.min(5, newZoom)))
       }
