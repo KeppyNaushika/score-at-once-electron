@@ -24,13 +24,15 @@ export default function GridHeader({
   return (
     <TableRow>
       {/* 生徒列ヘッダー */}
-      <TableHead className="min-w-48 border-r border-border bg-muted/50">
-        <div className="flex items-center gap-2">
-          <User className="h-4 w-4" />
-          <span className="font-medium">生徒</span>
-        </div>
-        <div className="text-xs text-muted-foreground mt-1">
-          受験生徒順
+      <TableHead className="min-w-36 border-r border-border bg-muted/50 p-2">
+        <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center gap-1">
+            <User className="h-3 w-3" />
+            <span className="font-medium text-xs">生徒</span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            受験生徒順
+          </div>
         </div>
       </TableHead>
 
@@ -42,34 +44,26 @@ export default function GridHeader({
         return (
           <TableHead 
             key={pageNumber}
-            className={`text-center min-w-32 border-r border-border ${
+            className={`text-center min-w-28 border-r border-border p-1 ${
               pageState?.isEnabled ? 'bg-background' : 'bg-muted/80'
             }`}
           >
-            <div className="flex flex-col items-center gap-2">
-              {/* ページ番号とアイコン */}
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="font-medium">ページ {pageNumber}</span>
+            <div className="flex flex-col items-center gap-1">
+              {/* ページ番号 */}
+              <div className="flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                <span className="font-medium text-xs">{pageNumber}ページ</span>
               </div>
               
-              {/* ページ状態表示 */}
-              <div className="flex items-center gap-2">
-                <Checkbox
+              {/* ページ配置チェック */}
+              <div className="flex items-center gap-1">
+                <input
+                  type="checkbox"
                   checked={pageState?.isEnabled ?? true}
-                  onCheckedChange={() => onTogglePage(pageNumber)}
-                  className="data-[state=checked]:bg-primary"
+                  onChange={() => onTogglePage(pageNumber)}
+                  className="h-3 w-3"
                 />
-                {!pageState?.isEnabled && (
-                  <Badge variant="secondary" className="text-xs">
-                    スキップ
-                  </Badge>
-                )}
-              </div>
-              
-              {/* 説明テキスト */}
-              <div className="text-xs text-muted-foreground">
-                {pageState?.isEnabled ? '有効' : '無効'}
+                <span className="text-xs">配置</span>
               </div>
             </div>
           </TableHead>

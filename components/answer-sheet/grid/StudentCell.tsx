@@ -56,51 +56,44 @@ export default function StudentCell({
 
   return (
     <TableCell className={`
-      border-r border-border min-w-48 p-4
+      border-r border-border min-w-36 p-2
       ${!isEnabled || isSkipped ? 'bg-muted/80' : 'bg-background'}
     `}>
-      <div className="flex items-center gap-3">
-        {/* チェックボックス */}
-        <Checkbox
-          checked={isEnabled && !isSkipped}
-          onCheckedChange={onToggle}
-          disabled={student.status === 'absent'} // 欠席者は変更不可
-          className="data-[state=checked]:bg-primary"
-        />
+      <div className="flex flex-col gap-1">
+        {/* 配置チェックボックス */}
+        <div className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={isEnabled && !isSkipped}
+            onChange={onToggle}
+            disabled={student.status === 'absent'}
+            className="h-3 w-3"
+          />
+          <span className="text-xs">配置</span>
+        </div>
         
         {/* 生徒情報 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1 mb-1">
             {getStatusIcon()}
-            <span className={`font-medium text-sm truncate ${
+            <span className={`font-medium text-xs truncate ${
               !isEnabled || isSkipped ? 'text-muted-foreground' : 'text-foreground'
             }`}>
               {student.lastName} {student.firstName}
             </span>
           </div>
           
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="outline" className="text-xs">
-              {student.studentId}
-            </Badge>
-            {student.attendanceNumber && (
-              <Badge variant="secondary" className="text-xs">
-                {student.attendanceNumber}番
-              </Badge>
-            )}
+          <div className="text-xs text-muted-foreground mb-1">
+            {student.studentId}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {getStatusBadge()}
-            {(!isEnabled || isSkipped) && (
-              <Badge variant="secondary" className="text-xs">
-                スキップ
+            {student.attendanceNumber && (
+              <Badge variant="secondary" className="text-xs px-1 py-0">
+                {student.attendanceNumber}
               </Badge>
             )}
-          </div>
-          
-          <div className="text-xs text-muted-foreground mt-1 truncate">
-            {student.lastNameKana} {student.firstNameKana}
           </div>
         </div>
       </div>

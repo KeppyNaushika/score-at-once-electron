@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -93,7 +93,7 @@ export default function AnswerSheetGridManager({
     const loadMasterImages = async () => {
       try {
         setIsLoadingMasterImages(true)
-        const images = await window.electronAPI.getMasterImages(projectId)
+        const images = await window.electronAPI.getMasterImagesByProjectId(projectId)
         setMasterImages(images || [])
       } catch (error) {
         console.error('Failed to load master images:', error)
@@ -732,9 +732,9 @@ export default function AnswerSheetGridManager({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-96 border rounded">
             <Table>
-              <TableHeader>
+              <TableHeader className="sticky top-0 z-10">
                 <GridHeader
                   maxPages={gridState.maxPages}
                   pageStates={gridState.pages}

@@ -202,7 +202,10 @@ const ImageCanvas = ({
     
     // ホイールイベントハンドラーを別途追加（passive: falseで強制）
     const handleWheel = (e: WheelEvent) => {
-      console.log("ImageCanvas - wheel event detected:", e.deltaY, e.ctrlKey, e.shiftKey)
+      // デバッグ出力を抑制（必要時のみ）
+      if (Math.abs(e.deltaY) > 100) {
+        console.log("ImageCanvas - large wheel event detected:", e.deltaY, e.ctrlKey, e.shiftKey)
+      }
       e.preventDefault()
       e.stopPropagation()
       
@@ -244,7 +247,10 @@ const ImageCanvas = ({
         const zoomSpeed = 0.01 // ズーム速度をさらに緊密に調整
         const newZoom = zoom - normalizedDelta * zoomSpeed
         const clampedZoom = Math.max(0.1, Math.min(5, newZoom))
-        console.log("ImageCanvas - zoom change:", zoom, "->", clampedZoom)
+        // ズーム値のデバッグ出力を抑制
+        if (Math.abs(clampedZoom - zoom) > 0.05) {
+          console.log("ImageCanvas - zoom change:", zoom, "->", clampedZoom)
+        }
         setZoom(clampedZoom)
         
         // ズーム後のパン制限を再計算（画像がコンテナより小さい場合は制限しない）
@@ -292,24 +298,42 @@ const ImageCanvas = ({
           const imageWidth = imageDimensions.width * zoom
           const imageHeight = imageDimensions.height * zoom
           
-          console.log("ImageCanvas - pan limits calculation:", {
-            containerWidth, containerHeight, imageWidth, imageHeight, zoom
-          })
+          // パン制限計算の詳細ログ（必要時のみ）
+          if (Math.abs(newPan.x - pan.x) > 50 || Math.abs(newPan.y - pan.y) > 50) {
+            console.log("ImageCanvas - large pan detected:", {
+              containerWidth, containerHeight, imageWidth, imageHeight, zoom, 
+              panDelta: { x: newPan.x - pan.x, y: newPan.y - pan.y }
+            })
+          }
           
           // 画像がコンテナより大きい場合のみ制限を適用
+          // ただし、パンが意図的に大きく設定されている場合は維持
           if (imageWidth > containerWidth) {
             const maxPanX = (imageWidth - containerWidth) / 2
-            newPan.x = Math.max(-maxPanX, Math.min(maxPanX, newPan.x))
+            // 現在のパンが極端に大きい場合（リセット以外）は段階的に制限
+            if (Math.abs(newPan.x) <= maxPanX * 3) {
+              newPan.x = Math.max(-maxPanX, Math.min(maxPanX, newPan.x))
+            }
           }
           
           if (imageHeight > containerHeight) {
             const maxPanY = (imageHeight - containerHeight) / 2
-            newPan.y = Math.max(-maxPanY, Math.min(maxPanY, newPan.y))
+            // 現在のパンが極端に大きい場合（リセット以外）は段階的に制限
+            if (Math.abs(newPan.y) <= maxPanY * 3) {
+              newPan.y = Math.max(-maxPanY, Math.min(maxPanY, newPan.y))
+            }
           }
         }
         
-        console.log("ImageCanvas - pan change:", pan, "->", newPan)
-        setPan(newPan)
+        // パン変更のデバッグ出力を抑制（大きな変更のみ）
+        if (Math.abs(newPan.x - pan.x) > 10 || Math.abs(newPan.y - pan.y) > 10) {
+          console.log("ImageCanvas - significant pan change:", pan, "->", newPan)
+        }
+        
+        // パンが実際に変更された場合のみ更新（再レンダリング回避）
+        if (newPan.x !== pan.x || newPan.y !== pan.y) {
+          setPan(newPan)
+        }
       }
     }
     
@@ -339,7 +363,7 @@ const ImageCanvas = ({
         container.removeEventListener('wheel', handleWheel)
       }
     }
-  }, [zoom, pan, imageDimensions])
+  }, [imageDimensions]) // zoom, panを依存関係から除外してループを防ぐ
   
   // ウィンドウリサイズ対応（別のuseEffect）
   useEffect(() => {
