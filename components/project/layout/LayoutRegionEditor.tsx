@@ -24,6 +24,13 @@ const LayoutRegionEditor = ({
   imageDimensions,
   masterImageId,
 }: LayoutRegionEditorProps) => {
+  console.log("LayoutRegionEditor - props:", {
+    areas,
+    disabled,
+    backgroundImageUrl,
+    imageDimensions,
+    masterImageId
+  })
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null,
   )
@@ -37,7 +44,21 @@ const LayoutRegionEditor = ({
     setAreas(newAreas)
   }
 
-  const handleDeleteArea = (index: number) => {
+  const handleDeleteArea = async (index: number) => {
+    const areaToDelete = areas[index]
+    
+    // DBから削除（IDがある場合のみ）
+    if (areaToDelete.id) {
+      try {
+        await window.electronAPI.deleteLayoutRegion(areaToDelete.id)
+      } catch (error) {
+        console.error("Failed to delete area from database:", error)
+        toast.error("採点領域の削除に失敗しました")
+        return // エラーの場合は削除を中断
+      }
+    }
+    
+    // ローカルステートから削除
     const newAreas = areas.filter((_, i) => i !== index)
     setAreas(newAreas)
     setSelectedAreaIndex(null)
@@ -111,8 +132,8 @@ const LayoutRegionEditor = ({
 
   return (
     <div className="flex h-full">
-      {/* Left Side - Image Canvas */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      {/* Left Side - Image Canvas with independent scroll */}
+      <div className="flex-1 min-w-0 relative p-4">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
@@ -127,8 +148,8 @@ const LayoutRegionEditor = ({
         />
       </div>
 
-      {/* Right Side - Region List */}
-      <div className="w-80 border-l bg-background flex-shrink-0">
+      {/* Right Side - Region List with independent scroll */}
+      <div className="w-80 border-l bg-background flex-shrink-0 relative">
         <LayoutRegionList
           areas={areas}
           selectedAreaIndex={selectedAreaIndex}

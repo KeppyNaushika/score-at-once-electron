@@ -1,5 +1,23 @@
 "use client"
 
+// PDF.jsの動的インポートでSSRエラーを回避
+let pdfjsLib: any = null
+
+// PDF.js初期化（クライアントサイドのみ）
+const initializePdfjs = async () => {
+  if (typeof window === 'undefined') {
+    throw new Error('PDF変換はクライアントサイドでのみ利用可能です')
+  }
+  
+  if (!pdfjsLib) {
+    pdfjsLib = await import('pdfjs-dist')
+    // Set up PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+  }
+  
+  return pdfjsLib
+}
+
 export interface ConvertedImage {
   name: string
   type: string
@@ -11,29 +29,9 @@ export interface PdfConversionError {
   message: string
 }
 
-let pdfjsLib: any = null
-
-// PDF.js を動的にロード
-const loadPdfjs = async () => {
-  if (pdfjsLib) return pdfjsLib
-  
-  if (typeof window === 'undefined') {
-    throw new Error('PDF変換はクライアントサイドでのみ利用可能です')
-  }
-  
-  try {
-    pdfjsLib = await import('pdfjs-dist')
-    // Set up PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
-    return pdfjsLib
-  } catch (error) {
-    console.error('PDF.js のロードに失敗しました:', error)
-    throw error
-  }
-}
-
 export async function convertPdfToImages(file: File, password?: string): Promise<ConvertedImage[]> {
-  const pdfjs = await loadPdfjs()
+  // PDF.jsを初期化
+  const pdfjs = await initializePdfjs()
   
   try {
     const arrayBuffer = await file.arrayBuffer()
@@ -77,21 +75,13 @@ export async function convertPdfToImages(file: File, password?: string): Promise
     return images
   } catch (error: any) {
     // PDF.js エラーハンドリング
-    console.error('PDF変換エラー詳細:', error)
-    
     if (error.name === 'PasswordException') {
-      if (password) {
-        // パスワードが提供されているが間違っている場合
-        throw new Error('invalid-password')
-      } else {
-        // パスワードが必要な場合
-        throw new Error('password-required')
-      }
-    } else if (error.name === 'InvalidPDFException') {
-      throw new Error('PDF形式が無効です')
-    } else if (error.message && error.message.includes('Invalid PDF')) {
-      throw new Error('PDF形式が無効です')
+      throw new Error('password-required')
+    } else if (error.name === 'InvalidPDFException' && password) {
+      throw new Error('invalid-password')
     } else {
+      // パスワード関連以外のエラーのみログ出力
+      console.error('PDF変換エラー:', error)
       throw new Error(`PDF変換エラー: ${error.message || '不明なエラー'}`)
     }
   }

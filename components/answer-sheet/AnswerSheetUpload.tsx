@@ -5,12 +5,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import { AlertCircle, FileImage, Upload } from "lucide-react"
+import { AlertCircle, Upload, Grid3X3 } from "lucide-react"
 import { useAnswerSheetUpload } from "@/hooks/useAnswerSheetUpload"
 import FileUploadZone from "./FileUploadZone"
-import BatchSettings from "./BatchSettings"
-import StudentList from "./StudentList"
-import FileManagement from "./FileManagement"
+import AnswerSheetGridManager from "./grid/AnswerSheetGridManager"
 
 interface AnswerSheetUploadProps {
   projectId: string
@@ -36,47 +34,22 @@ export default function AnswerSheetUpload({
   const {
     // State
     files,
-    studentsWithAnswers,
     isUploading,
     isConverting,
     uploadProgress,
     selectedTab,
-    maxPages,
-    pageRange,
-    specificPages,
-    fileOrder,
-    assignmentMode,
-    sortMode,
     showPasswordDialog,
     currentPdfFile,
     passwordError,
     isPasswordProcessing,
-    layoutRegions,
-    masterImages,
     isClient,
     setSelectedTab,
-    setPageRange,
-    setSpecificPages,
-    setFileOrder,
-    setAssignmentMode,
-    setSortMode,
     setShowPasswordDialog,
     setCurrentPdfFile,
     setPasswordError,
-    // setIsConverting, // Removed as it's not available in the hook
 
     // Actions
     onDrop,
-    removeFile,
-    toggleFileSelection,
-    moveFile,
-    toggleStudentSelection,
-    toggleStudentOverwrite,
-    selectAllStudents,
-    deselectAllStudents,
-    getStudentName,
-    handleDragEnd,
-    handleUpload,
     handlePasswordSubmit,
 
     // Computed
@@ -100,10 +73,9 @@ export default function AnswerSheetUpload({
             <Upload className="h-4 w-4" />
             アップロード
           </TabsTrigger>
-          <TabsTrigger value="manage" className="flex items-center gap-2">
-            <FileImage className="h-4 w-4" />
-            ファイル・生徒管理 ({files.length}ファイル, {selectedStudentsCount}
-            生徒)
+          <TabsTrigger value="grid" className="flex items-center gap-2">
+            <Grid3X3 className="h-4 w-4" />
+            生徒と答案の対応
           </TabsTrigger>
         </TabsList>
 
@@ -115,109 +87,51 @@ export default function AnswerSheetUpload({
           />
         </TabsContent>
 
-        <TabsContent value="manage" className="space-y-6">
-          {files.length === 0 ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="text-muted-foreground py-8 text-center">
-                  ファイルをアップロードしてください
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {/* バッチ設定 */}
-              <BatchSettings
-                assignmentMode={assignmentMode}
-                setAssignmentMode={setAssignmentMode}
-                fileOrder={fileOrder}
-                setFileOrder={setFileOrder}
-                sortMode={sortMode}
-                setSortMode={setSortMode}
-                pageRange={pageRange}
-                setPageRange={setPageRange}
-                specificPages={specificPages}
-                setSpecificPages={setSpecificPages}
-              />
 
-              {/* ファイル・生徒管理 */}
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* 左列: 生徒一覧 */}
-                <StudentList
-                  studentsWithAnswers={studentsWithAnswers}
-                  files={files}
-                  selectedStudentsCount={selectedStudentsCount}
-                  isUploading={isUploading}
-                  onToggleStudentSelection={toggleStudentSelection}
-                  onToggleStudentOverwrite={toggleStudentOverwrite}
-                  onSelectAllStudents={selectAllStudents}
-                  onDeselectAllStudents={deselectAllStudents}
-                />
-
-                {/* 右列: ファイル一覧 */}
-                <FileManagement
-                  files={files}
-                  selectedFilesCount={selectedFilesCount}
-                  maxPages={maxPages}
-                  layoutRegions={layoutRegions}
-                  masterImages={masterImages}
-                  isUploading={isUploading}
-                  getStudentName={(studentId) =>
-                    getStudentName(studentId || "")
+        <TabsContent value="grid" className="space-y-6">
+          <AnswerSheetGridManager
+            projectId={projectId}
+            students={students}
+            files={files}
+            isUploading={isUploading}
+            onUpload={(uploadData) => {
+              // アップロードデータを既存のアップロード処理に変換
+              const formattedData = uploadData.map(item => ({
+                name: item.file.name,
+                fileName: item.file.name,
+                originalFileName: item.file.originalFileName,
+                type: item.file.type,
+                buffer: item.file.buffer,
+                studentId: item.studentId,
+                pageNumber: item.pageNumber,
+                overwrite: false, // グリッドでは上書き設定は個別に管理
+              }))
+              
+              // 既存のElectronAPIを呼び出し
+              window.electronAPI.uploadAnswerSheets(projectId, formattedData)
+                .then(result => {
+                  if (result.success) {
+                    onUploadComplete?.()
                   }
-                  onToggleFileSelection={toggleFileSelection}
-                  onMoveFile={(id, direction) => {
-                    const currentIndex = files.findIndex((f) => f.id === id)
-                    const targetIndex =
-                      direction === "up" ? currentIndex - 1 : currentIndex + 1
-                    if (targetIndex >= 0 && targetIndex < files.length) {
-                      moveFile(currentIndex, targetIndex)
-                    }
-                  }}
-                  onRemoveFile={removeFile}
-                  onDragEnd={handleDragEnd}
-                />
-              </div>
-            </div>
-          )}
+                })
+                .catch(console.error)
+            }}
+          />
         </TabsContent>
       </Tabs>
 
-      {/* アップロードバー */}
-      {files.length > 0 && (
+      {/* プログレスバー */}
+      {isUploading && (
         <Card>
           <CardContent className="pt-6">
-            {isUploading && (
-              <div className="mb-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="text-sm">アップロード中...</span>
-                  <span className="text-muted-foreground text-sm">
-                    {uploadProgress}%
-                  </span>
-                </div>
-                <Progress value={uploadProgress} className="w-full" />
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm">アップロード中...</span>
+                <span className="text-muted-foreground text-sm">
+                  {uploadProgress}%
+                </span>
               </div>
-            )}
-
-            <div className="flex items-center justify-between">
-              <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                <AlertCircle className="h-4 w-4" />
-                選択された {selectedFilesCount} 件のファイルを{" "}
-                {selectedStudentsCount} 人の生徒にアップロードします
-              </div>
-              <Button
-                onClick={handleUpload}
-                disabled={
-                  isUploading ||
-                  selectedFilesCount === 0 ||
-                  selectedStudentsCount === 0
-                }
-                className="min-w-32"
-              >
-                {isUploading
-                  ? "アップロード中..."
-                  : `${selectedFilesCount}件をアップロード`}
-              </Button>
+              <Progress value={uploadProgress} className="w-full" />
             </div>
           </CardContent>
         </Card>

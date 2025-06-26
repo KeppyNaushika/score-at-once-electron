@@ -23,7 +23,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname])
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen">
       <Navigation
         isSidebarMinimized={isSidebarMinimized}
         toggleSidebar={toggleSidebar}
