@@ -129,128 +129,78 @@ export default function AnswerCell({
 
   return (
     <TableCell className={`
-      text-center min-w-32 border-r border-border p-2
+      text-center min-w-28 border-r border-border p-1
       ${getCellStyle()}
       transition-colors
     `}>
-      <div className="flex flex-col items-center gap-2 min-h-24">
-        {/* 答案画像または状態表示 */}
-        {file ? (
-          <div className="flex flex-col items-center gap-2">
-            {/* 画像プレビューまたはファイル情報 */}
-            {file.preview ? (
-              <div className="relative">
-                <img 
-                  src={file.preview} 
-                  alt={`${pageNumber}ページ目`}
-                  className="w-16 h-20 object-cover rounded border"
-                />
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  className="absolute -top-1 -right-1 h-5 w-5"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRemoveFile()
-                  }}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <FileImage className="h-6 w-6 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground truncate max-w-20">
-                  {file.name}
-                </span>
-              </div>
-            )}
+      <div className="flex flex-col items-center gap-1 min-h-20">
+        {/* 配置チェックボックス */}
+        {!isStudentDisabled && !isPageDisabled && (
+          <div className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={isEnabled && !isSkipped}
+              onChange={onToggle}
+              className="h-3 w-3"
+            />
+            <span className="text-xs">配置</span>
+          </div>
+        )}
+        
+        {/* 答案画像表示 */}
+        {file && (
+          <div className="flex flex-col items-center gap-1">
+            {/* 画像プレビュー */}
+            <div className="relative">
+              <img 
+                src={file.preview || '/placeholder-image.png'} 
+                alt={`${pageNumber}ページ目`}
+                className="w-12 h-16 object-cover rounded border"
+              />
+              <Button
+                size="icon"
+                variant="secondary"
+                className="absolute -top-1 -right-1 h-4 w-4"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRemoveFile()
+                }}
+              >
+                <X className="h-2 w-2" />
+              </Button>
+            </div>
             
-            {/* ファイル情報 */}
-            <div className="text-xs text-center">
-              <div className="font-medium truncate max-w-24">
+            {/* ファイル名 */}
+            <div className="text-xs text-center max-w-20">
+              <div className="font-medium truncate">
                 {file.originalFileName}
               </div>
-              <div className="text-muted-foreground">
-                {Math.round(file.size / 1024)}KB
-              </div>
             </div>
+            
+            {/* ファイル無効化チェック */}
+            {!isStudentDisabled && !isPageDisabled && (
+              <div className="flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={!isFileDisabled}
+                  onChange={onToggleFileDisabled}
+                  className="h-3 w-3"
+                />
+                <span className="text-xs">有効</span>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
+        )}
+        
+        {/* ファイルがない場合の表示 */}
+        {!file && (
+          <div className="flex flex-col items-center gap-1">
             {getStatusIcon()}
             <span className="text-xs text-muted-foreground">
               {getStatusText()}
             </span>
           </div>
         )}
-        
-        {/* セル制御ボタン */}
-        <div className="flex flex-wrap items-center gap-1 justify-center">
-          {/* セル有効/無効切り替え */}
-          {!isStudentDisabled && !isPageDisabled && (
-            <Button
-              size="sm"
-              variant={isEnabled && !isSkipped ? "default" : "outline"}
-              onClick={onToggle}
-              className="h-6 px-2 text-xs"
-            >
-              {isEnabled && !isSkipped ? "有効" : "無効"}
-            </Button>
-          )}
-          
-          {/* ファイル無効化切り替え */}
-          {file && !isStudentDisabled && !isPageDisabled && (
-            <Button
-              size="sm"
-              variant={isFileDisabled ? "destructive" : "outline"}
-              onClick={onToggleFileDisabled}
-              className="h-6 px-2 text-xs"
-            >
-              {isFileDisabled ? "無効" : "有効"}
-            </Button>
-          )}
-          
-          {/* プレビューボタン */}
-          {file && (
-            <Button
-              size="icon"
-              variant="outline"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation()
-                // TODO: プレビュー表示
-                console.log('Preview file:', file.name)
-              }}
-            >
-              <Eye className="h-3 w-3" />
-            </Button>
-          )}
-        </div>
-        
-        {/* 状態バッジ */}
-        <div className="flex flex-wrap gap-1 justify-center">
-          {cellStatus === 'skipped' && (
-            <Badge variant="secondary" className="text-xs px-1 py-0">
-              スキップ
-            </Badge>
-          )}
-          {cellStatus === 'file-disabled' && (
-            <Badge variant="destructive" className="text-xs px-1 py-0">
-              ファイル無効
-            </Badge>
-          )}
-          {isStudentDisabled && (
-            <Badge variant="destructive" className="text-xs px-1 py-0">
-              生徒無効
-            </Badge>
-          )}
-          {isPageDisabled && (
-            <Badge variant="secondary" className="text-xs px-1 py-0">
-              ページ無効
-            </Badge>
-          )}
-        </div>
       </div>
     </TableCell>
   )
