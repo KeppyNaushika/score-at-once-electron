@@ -105,14 +105,14 @@ const LayoutRegionEditor = ({
         newAreaSpecifics = { label: "新規エリア", type: AreaType.OTHER }
     }
 
-    setAreas([...areas, { ...newAreaBase, ...newAreaSpecifics }])
+    setAreas([...areas, { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea])
     setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Main Image Canvas */}
-      <div className="relative flex-1">
+    <div className="flex h-full">
+      {/* Left Side - Image Canvas */}
+      <div className="flex-1 min-w-0 overflow-hidden">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
@@ -127,17 +127,15 @@ const LayoutRegionEditor = ({
         />
       </div>
 
-      {/* Bottom Panel - Region List */}
-      {areas.length > 0 && (
-        <div className="bg-background border-t">
-          <LayoutRegionList
-            areas={areas}
-            selectedAreaIndex={selectedAreaIndex}
-            onSelectArea={setSelectedAreaIndex}
-            disabled={disabled}
-          />
-        </div>
-      )}
+      {/* Right Side - Region List */}
+      <div className="w-80 border-l bg-background flex-shrink-0">
+        <LayoutRegionList
+          areas={areas}
+          selectedAreaIndex={selectedAreaIndex}
+          onSelectArea={setSelectedAreaIndex}
+          disabled={disabled}
+        />
+      </div>
     </div>
   )
 }

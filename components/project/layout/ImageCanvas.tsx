@@ -80,17 +80,12 @@ const ImageCanvas = ({
 
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-gray-100">
-      {/* 操作ヘルプ */}
-      <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs p-2 rounded z-10">
-        <div>ドラッグ: 採点領域作成</div>
-        <div>削除: BackSpace / Delete</div>
-      </div>
+    <div className="relative w-full h-full bg-gray-100 scrollbar-overlay">
 
       {/* 背景画像とインタラクション */}
       <div
         ref={imageContainerRef}
-        className="relative w-full h-full cursor-crosshair overflow-hidden"
+        className="relative w-full h-full cursor-crosshair overflow-auto scrollbar-overlay"
         onMouseDown={(e) => {
           if (e.button === 0) {
             handleMouseDown(e)
@@ -98,9 +93,10 @@ const ImageCanvas = ({
         }}
         style={{
           backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : "none",
-          backgroundSize: "contain",
+          backgroundSize: "100% auto",
           backgroundRepeat: "no-repeat", 
-          backgroundPosition: "center",
+          backgroundPosition: "top left",
+          minHeight: imageDimensions ? `${imageDimensions.height}px` : "100%",
         }}
       >
         <AreaRenderer
@@ -110,7 +106,7 @@ const ImageCanvas = ({
           onResizeMouseDown={handleResizeMouseDown}
           onMoveMouseDown={handleMoveMouseDown}
           imageDimensions={imageDimensions}
-          containerRef={imageContainerRef}
+          containerRef={imageContainerRef as any}
           zoom={zoom}
           pan={pan}
         />
@@ -120,7 +116,7 @@ const ImageCanvas = ({
           dragStartCoords={dragStartCoords}
           dragCurrentCoords={dragCurrentCoords}
           imageDimensions={imageDimensions}
-          containerRef={imageContainerRef}
+          containerRef={imageContainerRef as any}
           zoom={zoom}
           pan={pan}
         />

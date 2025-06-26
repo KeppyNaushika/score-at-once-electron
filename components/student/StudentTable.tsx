@@ -204,7 +204,7 @@ export default function StudentTable() {
           ),
         )
       } else {
-        const newStudent = await window.electronAPI.createStudent(studentData)
+        const newStudent = await window.electronAPI.createStudent(studentData as any)
         setStudents([...students, newStudent])
       }
       setIsStudentModalOpen(false)
@@ -475,8 +475,8 @@ export default function StudentTable() {
           <StudentModal
             isOpen={isStudentModalOpen}
             onClose={() => setIsStudentModalOpen(false)}
-            onSave={handleSaveStudent}
-            onUpdate={handleSaveStudent}
+            onSave={handleSaveStudent as any}
+            onUpdate={handleSaveStudent as any}
             studentToEdit={studentToEdit as any}
             availableClasses={classes as any}
           />

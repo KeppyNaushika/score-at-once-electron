@@ -39,67 +39,69 @@ const LayoutRegionList = ({
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-medium">作成した領域 ({areas.length})</h3>
+    <div className="h-full flex flex-col">
+      <div className="p-4 border-b bg-background flex-shrink-0">
+        <h3 className="font-medium text-lg">領域一覧 ({areas.length})</h3>
         {areas.length > 0 && (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-muted-foreground text-xs mt-1">
             領域をクリックして詳細情報を編集
           </p>
         )}
       </div>
 
-      {areas.length === 0 ? (
-        <div className="text-muted-foreground border-muted-foreground/25 rounded-lg border-2 border-dashed py-8 text-center">
-          <div className="mb-3 text-3xl">🎨</div>
-          <p className="text-base font-medium">領域を作成してください</p>
-          <p className="mt-2 text-sm">
-            上の模範解答上でマウスをドラッグして領域を作成できます
-          </p>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {areas.map((area, index) => {
-            const isSelected = selectedAreaIndex === index
-            const icon =
-              typeIcons[area.type as AreaType] || typeIcons[AreaType.OTHER]
-            const typeLabel =
-              typeLabels[area.type as AreaType] || typeLabels[AreaType.OTHER]
+      <div className="flex-1 overflow-auto scrollbar-overlay p-4">
+        {areas.length === 0 ? (
+          <div className="text-muted-foreground border-muted-foreground/25 rounded-lg border-2 border-dashed py-8 text-center">
+            <div className="mb-3 text-3xl">🎨</div>
+            <p className="text-base font-medium">領域を作成してください</p>
+            <p className="mt-2 text-sm">
+              左の模範解答上でマウスをドラッグして領域を作成できます
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {areas.map((area, index) => {
+              const isSelected = selectedAreaIndex === index
+              const icon =
+                typeIcons[area.type as AreaType] || typeIcons[AreaType.OTHER]
+              const typeLabel =
+                typeLabels[area.type as AreaType] || typeLabels[AreaType.OTHER]
 
-            return (
-              <button
-                key={area.id || `new-${index}`}
-                type="button"
-                onClick={() => onSelectArea(index)}
-                disabled={disabled}
-                className={`rounded-lg border p-3 text-left transition-all hover:shadow-md ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                    : "bg-background hover:bg-accent border-border"
-                }`}
-              >
-                <div className="mb-1 flex items-center space-x-2">
-                  <span className="text-lg">{icon}</span>
-                  <div>
-                    <div className="text-sm font-medium">
-                      {area.label || `領域 ${index + 1}`}
-                    </div>
-                    <div className="text-xs opacity-75">
-                      {typeLabel}
-                      {area.type === AreaType.QUESTION_ANSWER &&
-                        area.points &&
-                        ` (${area.points}点)`}
+              return (
+                <button
+                  key={area.id || `new-${index}`}
+                  type="button"
+                  onClick={() => onSelectArea(index)}
+                  disabled={disabled}
+                  className={`w-full rounded-lg border p-3 text-left transition-all hover:shadow-md ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg"
+                      : "bg-background hover:bg-accent border-border"
+                  }`}
+                >
+                  <div className="mb-1 flex items-center space-x-2">
+                    <span className="text-lg">{icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {area.label || `領域 ${index + 1}`}
+                      </div>
+                      <div className="text-xs opacity-75">
+                        {typeLabel}
+                        {area.type === AreaType.QUESTION_ANSWER &&
+                          area.points &&
+                          ` (${area.points}点)`}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-xs opacity-60">
-                  {(area.x * 100).toFixed(0)}%, {(area.y * 100).toFixed(0)}%
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+                  <div className="text-xs opacity-60">
+                    位置: {(area.x * 100).toFixed(0)}%, {(area.y * 100).toFixed(0)}%
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

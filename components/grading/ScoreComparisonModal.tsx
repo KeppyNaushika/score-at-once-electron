@@ -95,20 +95,20 @@ export default function ScoreComparisonModal({
         layoutRegionId,
       )
 
-      if (result.success) {
-        setComparison(result)
+      if (result && typeof result === 'object') {
+        setComparison(result as any)
 
         // 既存の最終結果がある場合はフォームに設定
-        if (result.finalScore) {
-          setFinalScore(result.finalScore.score)
-          setFinalComment(result.finalScore.comment || "")
-        } else if (result.proposedScores.length === 1) {
+        if ((result as any).finalScore) {
+          setFinalScore((result as any).finalScore.score)
+          setFinalComment((result as any).finalScore.comment || "")
+        } else if ((result as any).proposedScores?.length === 1) {
           // 採点結果が1つだけの場合は自動で設定
-          setFinalScore(result.proposedScores[0].score)
-          setFinalComment(result.proposedScores[0].comment || "")
+          setFinalScore((result as any).proposedScores[0].score)
+          setFinalComment((result as any).proposedScores[0].comment || "")
         }
       } else {
-        console.error("Failed to fetch score comparison:", result.error)
+        console.error("Failed to fetch score comparison:", result)
       }
     } catch (error) {
       console.error("Failed to fetch score comparison:", error)
@@ -136,16 +136,16 @@ export default function ScoreComparisonModal({
         "current-user", // TODO: 認証システムと連携
         {
           score: finalScore,
-          maxScore: maxScore,
-          comment: finalComment,
+          status: 'finalized',
+          comments: finalComment,
         },
       )
 
-      if (result.success) {
+      if (result && result.id) {
         onScoreFinalized?.()
         onClose()
       } else {
-        console.error("Failed to finalize score:", result.error)
+        console.error("Failed to finalize score:", result)
       }
     } catch (error) {
       console.error("Failed to finalize score:", error)

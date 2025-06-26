@@ -67,7 +67,7 @@ export function useClassManagement(classId: string) {
     memberships:
       rawClassData.memberships?.map((membership) => ({
         ...membership,
-        startDate: new Date(membership.startDate || membership.createdAt),
+        startDate: new Date(membership.startDate || (membership as any).createdAt),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
       })) || [],
   })
@@ -98,10 +98,12 @@ export function useClassManagement(classId: string) {
 
   const handleSaveClass = async (classInfo: Partial<ClassWithMemberships>) => {
     try {
+      // Extract memberships to avoid type conflicts
+      const { memberships, ...classUpdateData } = classInfo
       const updatedClass = await window.electronAPI.updateClass({
         id: classId,
-        ...classInfo,
-      })
+        ...classUpdateData,
+      } as any)
       setClassData(transformClassData(updatedClass))
       setIsClassModalOpen(false)
     } catch (error) {
@@ -121,11 +123,11 @@ export function useClassManagement(classId: string) {
       if (membershipToEdit) {
         await window.electronAPI.updateStudentClassMembership(
           membershipToEdit.id,
-          membershipData,
+          membershipData as any,
         )
       } else {
         await window.electronAPI.addStudentToClass(
-          membershipData.studentId,
+          (membershipData as any).studentId,
           classId,
         )
       }

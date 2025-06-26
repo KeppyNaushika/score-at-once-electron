@@ -14,7 +14,7 @@ import {
 import { AreaType, MasterImage, Project, User } from "@prisma/client"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 export default function TemplateStepPage() {
@@ -29,6 +29,7 @@ export default function TemplateStepPage() {
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
     null,
   )
+  const isSavingRef = useRef(false)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -222,8 +223,9 @@ export default function TemplateStepPage() {
 
   const autoSaveRegions = useCallback(
     async (regions: any[]) => {
-      if (!projectId || !currentUser) return
+      if (!projectId || !currentUser || isSavingRef.current) return
 
+      isSavingRef.current = true
       try {
         const savePromises = regions.map(async (area) => {
           if (!area.masterImageId) return null
@@ -258,6 +260,8 @@ export default function TemplateStepPage() {
         }
       } catch (error) {
         console.error("Auto-save failed:", error)
+      } finally {
+        isSavingRef.current = false
       }
     },
     [projectId, currentUser],

@@ -119,3 +119,46 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 透過スクロールバー設定 */
+.scrollbar-overlay {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.scrollbar-overlay::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ダークモード対応 */
+.dark .scrollbar-overlay {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.dark .scrollbar-overlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

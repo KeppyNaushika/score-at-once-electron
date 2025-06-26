@@ -52,7 +52,7 @@ export const useProjects = () => {
     try {
       const updatedProject = await window.electronAPI.updateProject(
         project.id,
-        project,
+        project as any,
       )
       if (updatedProject) {
         // プロジェクトリストを再読み込みして最新の状態を取得

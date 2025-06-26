@@ -238,15 +238,15 @@ export function useImageCanvasInteraction({
       const width = Math.abs(dragCurrentCoords.x - dragStartCoords.x)
       const height = Math.abs(dragCurrentCoords.y - dragStartCoords.y)
 
+      // 重複防止のため、先にstateをリセット
+      setDragging(false)
+      setDragStartCoords(null)
+      setDragCurrentCoords(null)
+
       // Only create area if drag is large enough
       if (width > 0.01 && height > 0.01) {
         // 重複防止フラグを設定
         isCreatingRef.current = true
-        
-        // 重複防止のため、先にstateをリセットしてから作成
-        setDragging(false)
-        setDragStartCoords(null)
-        setDragCurrentCoords(null)
         
         onAddAreaByDrag(AreaType.QUESTION_ANSWER, {
           x: startX,
@@ -259,11 +259,12 @@ export function useImageCanvasInteraction({
         setTimeout(() => {
           isCreatingRef.current = false
         }, 100)
-      } else {
-        setDragging(false)
-        setDragStartCoords(null)
-        setDragCurrentCoords(null)
       }
+    } else {
+      // draggingでない場合も確実にリセット
+      setDragging(false)
+      setDragStartCoords(null)
+      setDragCurrentCoords(null)
     }
 
     setResizing(null)
