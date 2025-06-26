@@ -103,16 +103,16 @@ export const optimizeDatabaseForSharedDrive = async (): Promise<void> => {
   
   try {
     // WALモードを有効にして同時読み取りを改善
-    await prisma.$executeRaw`PRAGMA journal_mode = WAL`
+    await prisma.$queryRaw`PRAGMA journal_mode = WAL`
     
     // 読み取り専用トランザクションのタイムアウトを短縮
-    await prisma.$executeRaw`PRAGMA busy_timeout = 30000`
+    await prisma.$queryRaw`PRAGMA busy_timeout = 30000`
     
     // 同期モードを調整（共有ドライブでのパフォーマンス向上）
-    await prisma.$executeRaw`PRAGMA synchronous = NORMAL`
+    await prisma.$queryRaw`PRAGMA synchronous = NORMAL`
     
     // キャッシュサイズを増加
-    await prisma.$executeRaw`PRAGMA cache_size = -64000`
+    await prisma.$queryRaw`PRAGMA cache_size = -64000`
     
     console.log('Database optimized for shared drive')
   } catch (error) {

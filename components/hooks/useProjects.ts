@@ -1,13 +1,13 @@
 "use client"
 
-// CreateProjectArgs型をelectron.d.tsから使用
 import { useAuth } from "@/contexts/AuthContext"
 import { useEffect, useState } from "react"
+import type { ProjectWithDetails } from "@/types/electron"
 
 export const useProjects = () => {
   const { user } = useAuth()
-  const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<any | null>(null)
+  const [projects, setProjects] = useState<ProjectWithDetails[]>([])
+  const [selectedProject, setSelectedProject] = useState<ProjectWithDetails | null>(null)
 
   const loadProjects = async () => {
     try {
@@ -48,7 +48,7 @@ export const useProjects = () => {
     }
   }
 
-  const updateProject = async (project: any) => {
+  const updateProject = async (project: ProjectWithDetails) => {
     try {
       const updatedProject = await window.electronAPI.updateProject(
         project.id,
@@ -63,7 +63,7 @@ export const useProjects = () => {
     }
   }
 
-  const deleteProject = async (projectToDelete: any) => {
+  const deleteProject = async (projectToDelete: ProjectWithDetails) => {
     if (!projectToDelete) return
     try {
       const deletedProject = await window.electronAPI.deleteProject(

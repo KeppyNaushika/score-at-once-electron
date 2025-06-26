@@ -85,5 +85,137 @@ export type ScoreStatus =
 export interface Score {
   status: ScoreStatus
   points: number | null
-  // 必要に応じて他のプロパティを追加
+}
+
+export interface LayoutRegionArea {
+  id?: string
+  projectId?: string
+  masterImageId?: string
+  label: string
+  type: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  x: number
+  y: number
+  width: number
+  height: number
+  questionNumber?: string | null
+  points?: number | string | null
+  createdAt?: Date
+  updatedAt?: Date
+}
+
+export type EditableTableRow = Record<string, any>
+
+export interface EditableTableColumn<T extends EditableTableRow> {
+  id: keyof T
+  header: string
+  getValue: () => any
+  row: any
+  column: any
+  table: any
+}
+
+export interface ProjectWithDetails {
+  id: string
+  examName: string
+  examDate: Date | null
+  subject?: string
+  description?: string
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  masterImages?: MasterImageData[]
+  layoutRegions?: LayoutRegionArea[]
+  answerSheets?: AnswerSheetData[]
+  tags?: TagData[]
+}
+
+export interface MasterImageData {
+  id: string
+  projectId: string
+  path: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AnswerSheetData {
+  id: string
+  projectId: string
+  studentId?: string
+  pageNumber: number
+  originalImagePath: string
+  processedImagePath?: string
+  scoredPdfPath?: string
+  isScored: boolean
+  totalScore?: number
+  isAbsent: boolean
+  createdAt: Date
+  updatedAt: Date
+  version: number
+}
+
+export interface TagData {
+  id: string
+  text: string
+}
+
+export interface StudentData {
+  id: string
+  studentId: string
+  name: string
+  furigana?: string
+  admissionYear?: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface LayoutRegionCreateData {
+  projectId: string
+  masterImageId?: string
+  label: string
+  type: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  x: number
+  y: number
+  width: number
+  height: number
+  questionNumber?: string
+  points?: number
+}
+
+export interface LayoutRegionUpdateData {
+  label?: string
+  type?: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  questionNumber?: string
+  points?: number
+}
+
+export interface QuestionScoreCreateData {
+  answerSheetId: string
+  layoutRegionId: string
+  score?: number
+  detectedAnswer?: string
+  isCorrect?: boolean
+  comment?: string
+  scoredByUserId: string
+  status?: string
+}
+
+export interface QuestionScoreUpdateData {
+  score?: number
+  detectedAnswer?: string
+  isCorrect?: boolean
+  comment?: string
+  status?: string
+}
+
+export interface ScoringMarkConfig {
+  position: "top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right"
+  size: number
+  showCorrect: boolean
+  showIncorrect: boolean
+  showPartial: boolean
 }

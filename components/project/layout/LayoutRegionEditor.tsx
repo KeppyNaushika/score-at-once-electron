@@ -5,10 +5,11 @@ import { useState } from "react"
 import { toast } from "sonner"
 import ImageCanvas from "./ImageCanvas"
 import LayoutRegionList from "./LayoutRegionList"
+import { LayoutRegionArea } from "../../../types/common.types"
 
 type LayoutRegionEditorProps = {
-  areas: any[]
-  setAreas: React.Dispatch<React.SetStateAction<any[]>>
+  areas: LayoutRegionArea[]
+  setAreas: React.Dispatch<React.SetStateAction<LayoutRegionArea[]>>
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
@@ -36,6 +37,12 @@ const LayoutRegionEditor = ({
     setAreas(newAreas)
   }
 
+  const handleDeleteArea = (index: number) => {
+    const newAreas = areas.filter((_, i) => i !== index)
+    setAreas(newAreas)
+    setSelectedAreaIndex(null)
+  }
+
   const addArea = (
     type: AreaType,
     customCoords?: { x: number; y: number; width: number; height: number },
@@ -44,6 +51,7 @@ const LayoutRegionEditor = ({
       toast.error("基準画像が選択されていません。エリアを追加できません。")
       return
     }
+
     const newAreaBase = {
       x: customCoords?.x ?? 0.05,
       y: customCoords?.y ?? 0.05,
@@ -113,6 +121,7 @@ const LayoutRegionEditor = ({
           onSelectArea={setSelectedAreaIndex}
           onAddAreaByDrag={addArea}
           onUpdateArea={handleUpdateArea}
+          onDeleteArea={handleDeleteArea}
           disabled={disabled}
           masterImageId={masterImageId}
         />

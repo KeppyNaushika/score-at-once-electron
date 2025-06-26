@@ -5,6 +5,7 @@ import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import { AreaType, MasterImage, Project, User } from "@prisma/client"
+import type { LayoutRegionWithDetails } from "@/types/electron"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -25,20 +26,7 @@ export default function RegionInfoPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
-  const [layoutRegions, setLayoutRegions] = useState<
-    {
-      id?: string
-      type: AreaType
-      x: number
-      y: number
-      width: number
-      height: number
-      label: string
-      points: string | null
-      questionNumber: string
-      masterImageId: string
-    }[]
-  >([])
+  const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>([])
 
   const [masterImages, setMasterImages] = useState<MasterImage[]>([])
   const [selectedMasterImage, setSelectedMasterImage] =
@@ -108,20 +96,7 @@ export default function RegionInfoPage() {
             await window.electronAPI.getLayoutRegionsByProjectId(projectId)
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
-            setLayoutRegions(
-              existingRegions.map((region) => ({
-                id: region.id,
-                type: region.type,
-                x: region.x,
-                y: region.y,
-                width: region.width,
-                height: region.height,
-                label: region.label || "",
-                points: region.points ? String(region.points) : null,
-                questionNumber: region.questionNumber || "",
-                masterImageId: region.masterImageId || "",
-              })),
-            )
+            setLayoutRegions(existingRegions)
           } else {
             setLayoutId(undefined)
             setLayoutRegions([])
@@ -153,7 +128,7 @@ export default function RegionInfoPage() {
   }, [loadInitialData])
 
   const autoSaveRegions = useCallback(
-    async (regions: any[]) => {
+    async (regions: LayoutRegionWithDetails[]) => {
       if (!projectId || !currentUser) return
 
       try {
@@ -169,7 +144,7 @@ export default function RegionInfoPage() {
             width: area.width,
             height: area.height,
             label: area.label,
-            points: area.points ? parseInt(area.points) : null,
+            points: area.points,
             questionNumber: area.questionNumber,
           }
 
@@ -187,20 +162,7 @@ export default function RegionInfoPage() {
 
         if (savedRegions.length > 0) {
           setLayoutRegions(
-            savedRegions
-              .filter((region) => region !== null)
-              .map((region) => ({
-                id: region!.id,
-                type: region!.type,
-                x: region!.x,
-                y: region!.y,
-                width: region!.width,
-                height: region!.height,
-                label: region!.label || "",
-                points: region!.points ? String(region!.points) : null,
-                questionNumber: region!.questionNumber || "",
-                masterImageId: region!.masterImageId || "",
-              })),
+            savedRegions.filter((region): region is LayoutRegionWithDetails => region !== null)
           )
           setLayoutId("saved")
         }
@@ -212,7 +174,7 @@ export default function RegionInfoPage() {
   )
 
   const handleRegionsChange = useCallback(
-    (newRegions: any[] | ((prev: any[]) => any[])) => {
+    (newRegions: LayoutRegionWithDetails[] | ((prev: LayoutRegionWithDetails[]) => LayoutRegionWithDetails[])) => {
       const updatedRegions =
         typeof newRegions === "function"
           ? newRegions(layoutRegions)

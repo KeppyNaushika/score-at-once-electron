@@ -1,9 +1,10 @@
 "use client"
 
 import { AreaType } from "@prisma/client"
+import { LayoutRegionArea } from "../../../types/common.types"
 
 type LayoutRegionListProps = {
-  areas: any[]
+  areas: LayoutRegionArea[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   disabled: boolean

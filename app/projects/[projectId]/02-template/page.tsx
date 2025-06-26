@@ -254,22 +254,6 @@ export default function TemplateStepPage() {
         const savedRegions = await Promise.all(savePromises.filter(Boolean))
 
         if (savedRegions.length > 0) {
-          setLayoutRegions(
-            savedRegions
-              .filter((region) => region !== null)
-              .map((region) => ({
-                id: region!.id,
-                type: region!.type,
-                x: region!.x,
-                y: region!.y,
-                width: region!.width,
-                height: region!.height,
-                label: region!.label || "",
-                points: region!.points ? String(region!.points) : null,
-                questionNumber: region!.questionNumber || "",
-                masterImageId: region!.masterImageId || "",
-              })),
-          )
           setLayoutId("saved")
         }
       } catch (error) {
@@ -281,25 +265,27 @@ export default function TemplateStepPage() {
 
   const handleRegionsChange = useCallback(
     (newRegions: any[] | ((prev: any[]) => any[])) => {
-      const regions =
-        typeof newRegions === "function"
-          ? newRegions(layoutRegions)
-          : newRegions
-      setLayoutRegions(regions)
-
-      // Clear existing timeout
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId)
-      }
-
-      // Set new timeout for auto-save
-      const timeoutId = setTimeout(() => {
-        autoSaveRegions(regions)
-      }, 1000) // Auto-save after 1 second of inactivity
-
-      setSaveTimeoutId(timeoutId)
+      setLayoutRegions((prevRegions) => {
+        const finalRegions =
+          typeof newRegions === "function"
+            ? newRegions(prevRegions)
+            : newRegions
+        
+        // Auto-save logic with timeout
+        setSaveTimeoutId((currentTimeoutId) => {
+          if (currentTimeoutId) {
+            clearTimeout(currentTimeoutId)
+          }
+          
+          return setTimeout(() => {
+            autoSaveRegions(finalRegions)
+          }, 1000)
+        })
+        
+        return finalRegions
+      })
     },
-    [saveTimeoutId, autoSaveRegions, layoutRegions],
+    [autoSaveRegions],
   )
 
   const handleSaveTemplate = async () => {
@@ -473,7 +459,7 @@ export default function TemplateStepPage() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Select
-                value={selectedMasterImage?.id || ""}
+                value={selectedMasterImage?.id ?? ""}
                 onValueChange={handleMasterImageChange}
                 disabled={isLoading || isSaving}
               >

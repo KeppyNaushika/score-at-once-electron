@@ -31,7 +31,7 @@ export async function getStudentsForProject(projectId: string) {
     console.log('Project students found:', projectStudents.length)
     console.log('Raw project students:', projectStudents)
 
-    const studentsWithStatus = projectStudents.map((projectStudent: any) => ({
+    const studentsWithStatus = projectStudents.map((projectStudent) => ({
       ...projectStudent.student,
       status: projectStudent.status.toLowerCase() as 'participating' | 'expected' | 'absent',
       isInProject: true,
@@ -238,10 +238,10 @@ export async function getClassesNotInProject(projectId: string) {
 
     // プロジェクトに参加していない学級を抽出
     const availableClasses = allClasses
-      .map((cls: any) => {
-        const allStudents = cls.memberships.map((m: any) => m.student)
+      .map((cls) => {
+        const allStudents = cls.memberships.map((m) => m.student)
         const nonParticipatingStudents = allStudents.filter(
-          (student: any) => !participatingStudentIds.has(student.id)
+          (student) => !participatingStudentIds.has(student.id)
         )
         
         return {
@@ -249,7 +249,7 @@ export async function getClassesNotInProject(projectId: string) {
           studentCount: nonParticipatingStudents.length
         }
       })
-      .filter((cls: any) => cls.studentCount > 0)
+      .filter((cls) => cls.studentCount > 0)
 
     return {
       success: true,

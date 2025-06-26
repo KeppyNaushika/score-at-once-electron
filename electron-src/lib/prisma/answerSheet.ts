@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client'
 import * as path from 'path'
 import * as fs from 'fs/promises'
 import { getAnswerSheetsDirectory, getRelativePathFromData } from '../dataManager'

@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CheckIcon, Edit2Icon, Trash2Icon, X as XIcon } from "lucide-react"
 import React, { useState } from "react"
+import type { ProjectWithDetails } from "@/types/electron"
 
 type Tag = {
   id: string
@@ -22,9 +23,9 @@ type Tag = {
 }
 
 interface EditProjectWindowProps {
-  projectToEdit: any
+  projectToEdit: ProjectWithDetails
   setIsShowEditProjectWindow: (isOpen: boolean) => void
-  onSave: (updatedProjectData: any) => Promise<void>
+  onSave: (updatedProjectData: ProjectWithDetails) => Promise<void>
 }
 
 const EditProjectWindow = ({
@@ -39,7 +40,7 @@ const EditProjectWindow = ({
   const [description, setDescription] = useState<string | null>(
     projectToEdit.description ?? null,
   )
-  const [tags, setTags] = useState<any[]>(projectToEdit.tags || [])
+  const [tags, setTags] = useState<Tag[]>(projectToEdit.tags || [])
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagText, setEditingTagText] = useState<string>("")
@@ -49,7 +50,7 @@ const EditProjectWindow = ({
       alert("試験名は必須です。")
       return
     }
-    const updatedProjectPayload: any = {
+    const updatedProjectPayload: ProjectWithDetails = {
       ...projectToEdit,
       examName: examName.trim(),
       examDate: examDate ?? null,
@@ -104,7 +105,7 @@ const EditProjectWindow = ({
     }
   }
 
-  const handleEditTag = (tag: any) => {
+  const handleEditTag = (tag: Tag) => {
     setEditingTagId(tag.id)
     setEditingTagText(tag.text)
   }

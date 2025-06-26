@@ -94,7 +94,7 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     let existingStudentIds: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map((s: any) => s.studentId))
+      existingStudentIds = new Set(existingStudents.map(s => s.studentId))
     } catch (error) {
       console.warn('既存生徒の取得に失敗しました:', error)
     }
@@ -121,7 +121,7 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     let existingStudentIds: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map((s: any) => s.studentId))
+      existingStudentIds = new Set(existingStudents.map(s => s.studentId))
     } catch (error) {
       console.warn('既存生徒の取得に失敗しました:', error)
     }
@@ -221,7 +221,7 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
 
       // 既存の生徒データを取得
       const existingStudents = await window.electronAPI.fetchStudents()
-      const existingStudentIds = new Set(existingStudents.map((s: any) => s.studentId))
+      const existingStudentIds = new Set(existingStudents.map(s => s.studentId))
 
       const validStudentData = studentData.filter(row => 
         row.studentId?.trim() && row.lastName?.trim() && row.firstName?.trim()
@@ -241,7 +241,7 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
 
         // 既存チェック - 上書きまたは新規作成
         if (existingStudentIds.has(studentId)) {
-          const existingStudent = existingStudents.find((s: any) => s.studentId === studentId)
+          const existingStudent = existingStudents.find(s => s.studentId === studentId)
           if (existingStudent) {
             // 既存生徒を更新
             const updatedStudent = await window.electronAPI.updateStudent(existingStudent.id, studentData)
@@ -293,7 +293,7 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
       }
 
       const updatedStudents = await window.electronAPI.fetchStudents()
-      const finalImportedStudents = updatedStudents.filter((s: any) =>
+      const finalImportedStudents = updatedStudents.filter(s =>
         importedStudents.some(imported => imported.id === s.id)
       )
 

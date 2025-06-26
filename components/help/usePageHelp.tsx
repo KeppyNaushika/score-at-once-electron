@@ -6,10 +6,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import { Info } from "lucide-react"
 import { usePathname } from "next/navigation"
-import React, { useState, useEffect } from "react"
+import React from "react"
 import {
   UploadHelpContent,
   TemplateHelpContent,
@@ -35,7 +34,6 @@ const pageHelpComponents: {
 
 export function usePageHelp() {
   const pathname = usePathname()
-  const [showHintAnimation, setShowHintAnimation] = useState(false)
 
   // 現在のページを特定
   const getCurrentPageId = () => {
@@ -47,14 +45,6 @@ export function usePageHelp() {
   const currentPageId = getCurrentPageId()
   const CurrentHelpComponent = currentPageId ? pageHelpComponents[currentPageId] : null
 
-  // 初回表示時のアニメーション
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowHintAnimation(true)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [pathname])
-
   const createHelpButton = () => {
     if (!CurrentHelpComponent) return null
 
@@ -64,15 +54,9 @@ export function usePageHelp() {
           <Button
             variant="ghost"
             size="sm"
-            className={cn(
-              "relative",
-              showHintAnimation && "animate-pulse",
-            )}
+            className="relative"
           >
             <Info className="h-4 w-4" />
-            {showHintAnimation && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 animate-ping rounded-full bg-blue-500" />
-            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent

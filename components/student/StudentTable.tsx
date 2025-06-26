@@ -1,6 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
+import { StudentData } from "../../types/common.types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -190,7 +191,7 @@ export default function StudentTable() {
     }
   }
 
-  const handleSaveStudent = async (studentData: any) => {
+  const handleSaveStudent = async (studentData: Partial<StudentData>) => {
     try {
       if (studentToEdit) {
         const updatedStudent = await window.electronAPI.updateStudent(

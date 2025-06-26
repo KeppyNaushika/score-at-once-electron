@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
 import { Eye, Trash2, Upload, User, UserX } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface ProjectData {
@@ -50,7 +50,7 @@ export default function AnswerSheetsPage() {
   const [answerSheets, setAnswerSheets] = useState<AnswerSheetWithDetails[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!projectId) return
 
     try {
@@ -123,11 +123,11 @@ export default function AnswerSheetsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
     loadData()
-  }, [projectId])
+  }, [projectId, loadData])
 
   const handleUploadComplete = () => {
     loadData() // データを再読み込み

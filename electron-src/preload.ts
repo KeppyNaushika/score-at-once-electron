@@ -1,6 +1,13 @@
 import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
-import { CreateProjectArgs } from "../types/electron" // パスを修正
+import { CreateProjectArgs } from "../types/electron"
+import { 
+  LayoutRegionCreateData, 
+  LayoutRegionUpdateData, 
+  QuestionScoreCreateData, 
+  QuestionScoreUpdateData, 
+  ScoringMarkConfig 
+} from "../types/common.types"
 
 declare global {
   namespace NodeJS {
@@ -149,9 +156,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getMasterImagesByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-master-images-by-project-id", projectId),
   // Layout region functions (moved to new API)
-  createLayoutRegion: (data: any) =>
+  createLayoutRegion: (data: LayoutRegionCreateData) =>
     ipcRenderer.invoke("create-layout-region", data),
-  updateLayoutRegion: (id: string, data: any) =>
+  updateLayoutRegion: (id: string, data: LayoutRegionUpdateData) =>
     ipcRenderer.invoke("update-layout-region", id, data),
   deleteLayoutRegion: (id: string) =>
     ipcRenderer.invoke("delete-layout-region", id),
@@ -181,15 +188,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-question-scores-for-project", projectId),
   getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
     ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
-  createQuestionScore: (data: any) =>
+  createQuestionScore: (data: QuestionScoreCreateData) =>
     ipcRenderer.invoke("create-question-score", data),
-  updateQuestionScore: (id: string, data: any, expectedVersion: number) =>
+  updateQuestionScore: (id: string, data: QuestionScoreUpdateData, expectedVersion: number) =>
     ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
   deleteQuestionScore: (id: string) =>
     ipcRenderer.invoke("delete-question-score", id),
   getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) =>
     ipcRenderer.invoke("get-question-score-comparison", answerSheetId, layoutRegionId),
-  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: any) =>
+  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: QuestionScoreUpdateData) =>
     ipcRenderer.invoke("finalize-question-score", answerSheetId, layoutRegionId, scoredByUserId, scoreData),
   getAnswerSheetProgress: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
@@ -203,7 +210,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     projectId: string
     selectedStudentIds: string[]
     outputPath?: string
-    scoringMarkConfig?: any
+    scoringMarkConfig?: ScoringMarkConfig
   }) => ipcRenderer.invoke("export-scored-answers-pdf", options),
 
   // Excel Export related

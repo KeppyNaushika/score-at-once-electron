@@ -36,10 +36,13 @@ export type AnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
 
 export interface UploadAnswerSheetFileData {
   name: string
+  fileName: string
+  originalFileName: string
   type: string
   buffer: ArrayBuffer
-  studentId?: string
-  pageNumber?: number
+  studentId: string
+  pageNumber: number
+  overwrite: boolean
 }
 
 // Prismaの型を拡張してリレーションを含む型を定義
@@ -468,15 +471,31 @@ export interface MyAPI {
   }>
 
   // QuestionScore関連のAPI
-  getQuestionScoresForProject: (projectId: string) => Promise<any>
-  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<any>
-  createQuestionScore: (data: any) => Promise<any>
-  updateQuestionScore: (id: string, data: any, expectedVersion?: number) => Promise<any>
-  deleteQuestionScore: (id: string) => Promise<any>
-  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) => Promise<any>
-  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: any) => Promise<any>
-  getAnswerSheetProgress: (answerSheetId: string) => Promise<any>
-  getProjectProgress: (projectId: string) => Promise<any>
+  getQuestionScoresForProject: (projectId: string) => Promise<QuestionScore[]>
+  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<QuestionScore[]>
+  createQuestionScore: (data: Prisma.QuestionScoreCreateInput) => Promise<QuestionScore>
+  updateQuestionScore: (id: string, data: Prisma.QuestionScoreUpdateInput, expectedVersion?: number) => Promise<QuestionScore>
+  deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
+  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) => Promise<{
+    current?: QuestionScore
+    competing?: QuestionScore[]
+    needsResolution: boolean
+  }>
+  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: {
+    score: number
+    status: string
+    comments?: string
+  }) => Promise<QuestionScore>
+  getAnswerSheetProgress: (answerSheetId: string) => Promise<{
+    totalQuestions: number
+    completedQuestions: number
+    percentage: number
+  }>
+  getProjectProgress: (projectId: string) => Promise<{
+    totalAnswerSheets: number
+    completedAnswerSheets: number
+    percentage: number
+  }>
   initializeScoringRecords: (projectId: string) => Promise<{
     success: boolean
     initialized?: number
@@ -497,7 +516,11 @@ export interface MyAPI {
     projectId: string
     selectedStudentIds: string[]
     outputPath?: string
-    scoringMarkConfig?: any
+    scoringMarkConfig?: {
+      position: string
+      size: number
+      showTransparent: boolean
+    }
   }) => Promise<{
     success: boolean
     outputPath?: string
@@ -541,13 +564,15 @@ export interface MyAPI {
   }) => void) => () => void
 
   // IPC related (existing)
-  sendScorePanel: (data: any) => Promise<void> // この重複は元のコードのまま残します
-  // sendScorePanel: (arg: string) => unknown // 上とシグネチャが異なるためコメントアウト、または修正が必要
+  sendScorePanel: (data: {
+    action: string
+    payload?: Record<string, unknown>
+  }) => Promise<void>
   removeScorePanelListener: (
-    listener: (_event: Electron.IpcRendererEvent, value: any) => void,
+    listener: (_event: Electron.IpcRendererEvent, value: Record<string, unknown>) => void,
   ) => unknown
   setShortcut: (page: string) => void
-  scorePanel: (listener: (_event: any, value: any) => void) => () => void
+  scorePanel: (listener: (_event: Electron.IpcRendererEvent, value: Record<string, unknown>) => void) => () => void
 }
 
 declare global {
