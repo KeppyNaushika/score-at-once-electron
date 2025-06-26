@@ -25,7 +25,7 @@ export function useAnswerSheetUploadMain({
   const [maxPages, setMaxPages] = useState(1)
   const [pageRange, setPageRange] = useState<'all' | 'specific'>('all')
   const [specificPages, setSpecificPages] = useState<string>('1')
-  const [fileOrder, setFileOrder] = useState<'page-then-student' | 'student-then-page'>('student-then-page')
+  const [fileOrder, setFileOrder] = useState<'page-then-student' | 'student-then-page'>('page-then-student')
   const [assignmentMode, setAssignmentMode] = useState<'auto' | 'manual'>('auto')
   const [sortMode, setSortMode] = useState<'natural' | 'alphabetical' | 'upload-order'>('natural')
 
