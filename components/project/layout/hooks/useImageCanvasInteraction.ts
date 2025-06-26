@@ -61,35 +61,25 @@ export function useImageCanvasInteraction({
   const getImageBounds = useCallback(() => {
     if (!imageContainerRef.current || !imageDimensions) return null
 
-    const containerRect = imageContainerRef.current.getBoundingClientRect()
-    const containerWidth = containerRect.width
-    const containerHeight = containerRect.height
-    const imageAspect = imageDimensions.width / imageDimensions.height
-    const containerAspect = containerWidth / containerHeight
+    // clientWidthを使用してより正確なサイズを取得
+    const containerWidth = imageContainerRef.current.clientWidth
+    const containerHeight = imageContainerRef.current.clientHeight
 
-    let actualImageWidth, actualImageHeight, offsetX, offsetY
-
-    if (imageAspect > containerAspect) {
-      // 画像が横長 - 幅がコンテナに合わせられる
-      actualImageWidth = containerWidth
-      actualImageHeight = containerWidth / imageAspect
-      offsetX = 0
-      offsetY = (containerHeight - actualImageHeight) / 2
-    } else {
-      // 画像が縦長 - 高さがコンテナに合わせられる
-      actualImageHeight = containerHeight
-      actualImageWidth = containerHeight * imageAspect
-      offsetX = (containerWidth - actualImageWidth) / 2
-      offsetY = 0
-    }
+    // ズームとパンを考慮した絶対座標計算
+    const scaledImageWidth = imageDimensions.width * zoom
+    const scaledImageHeight = imageDimensions.height * zoom
+    
+    // 背景画像の開始位置（パンを適用）
+    const imageStartX = pan.x
+    const imageStartY = pan.y
 
     return {
-      left: offsetX,
-      top: offsetY,
-      width: actualImageWidth,
-      height: actualImageHeight,
+      left: imageStartX,
+      top: imageStartY,
+      width: scaledImageWidth,
+      height: scaledImageHeight,
     }
-  }, [imageDimensions])
+  }, [imageDimensions, zoom, pan])
 
   const getRelativeCoords = useCallback((clientX: number, clientY: number) => {
     if (!imageContainerRef.current) return { x: 0, y: 0 }
@@ -99,6 +89,7 @@ export function useImageCanvasInteraction({
     
     if (!imageBounds) return { x: 0, y: 0 }
 
+    // ズームとパンを考慮した相対座標計算
     const x = (clientX - containerRect.left - imageBounds.left) / imageBounds.width
     const y = (clientY - containerRect.top - imageBounds.top) / imageBounds.height
 

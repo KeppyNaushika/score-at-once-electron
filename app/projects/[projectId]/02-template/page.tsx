@@ -111,35 +111,47 @@ export default function TemplateStepPage() {
         try {
           const existingRegions =
             await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          console.log("loadInitialData - existingRegions:", existingRegions)
+
+          const firstMasterImageId =
+            fetchedProject.masterImages &&
+            fetchedProject.masterImages.length > 0
+              ? [...fetchedProject.masterImages].sort(
+                  (a, b) => a.pageNumber - b.pageNumber,
+                )[0].id
+              : null
+          console.log(
+            "loadInitialData - firstMasterImageId:",
+            firstMasterImageId,
+          )
+
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
             // 最初のマスター画像に対応する領域のみをフィルター（sortedMasterImagesが定義された後）
-            const firstMasterImageId =
-              fetchedProject.masterImages &&
-              fetchedProject.masterImages.length > 0
-                ? [...fetchedProject.masterImages].sort(
-                    (a, b) => a.pageNumber - b.pageNumber,
-                  )[0].id
-                : null
             const currentImageRegions = firstMasterImageId
               ? existingRegions.filter(
                   (region) => region.masterImageId === firstMasterImageId,
                 )
               : []
-            setLayoutRegions(
-              currentImageRegions.map((region) => ({
-                id: region.id,
-                type: region.type,
-                x: region.x,
-                y: region.y,
-                width: region.width,
-                height: region.height,
-                label: region.label || "",
-                points: region.points ? String(region.points) : null,
-                questionNumber: region.questionNumber || "",
-                masterImageId: region.masterImageId || "",
-              })),
+            console.log(
+              "loadInitialData - currentImageRegions:",
+              currentImageRegions,
             )
+
+            const mappedRegions = currentImageRegions.map((region) => ({
+              id: region.id,
+              type: region.type,
+              x: region.x,
+              y: region.y,
+              width: region.width,
+              height: region.height,
+              label: region.label || "",
+              points: region.points ? String(region.points) : null,
+              questionNumber: region.questionNumber || "",
+              masterImageId: region.masterImageId || "",
+            }))
+            console.log("loadInitialData - mappedRegions:", mappedRegions)
+            setLayoutRegions(mappedRegions)
           } else {
             setLayoutId(undefined)
             setLayoutRegions([])
@@ -198,20 +210,25 @@ export default function TemplateStepPage() {
           const currentImageRegions = allRegions.filter(
             (region) => region.masterImageId === image.id,
           )
-          setLayoutRegions(
-            currentImageRegions.map((region) => ({
-              id: region.id,
-              type: region.type,
-              x: region.x,
-              y: region.y,
-              width: region.width,
-              height: region.height,
-              label: region.label || "",
-              points: region.points ? String(region.points) : null,
-              questionNumber: region.questionNumber || "",
-              masterImageId: region.masterImageId || "",
-            })),
-          )
+
+          if (currentImageRegions.length > 0) {
+            setLayoutRegions(
+              currentImageRegions.map((region) => ({
+                id: region.id,
+                type: region.type,
+                x: region.x,
+                y: region.y,
+                width: region.width,
+                height: region.height,
+                label: region.label || "",
+                points: region.points ? String(region.points) : null,
+                questionNumber: region.questionNumber || "",
+                masterImageId: region.masterImageId || "",
+              })),
+            )
+          } else {
+            setLayoutRegions([])
+          }
         }
       } catch (error) {
         toast.error("背景画像の読み込みに失敗しました。")
@@ -274,18 +291,18 @@ export default function TemplateStepPage() {
           typeof newRegions === "function"
             ? newRegions(prevRegions)
             : newRegions
-        
+
         // Auto-save logic with timeout
         setSaveTimeoutId((currentTimeoutId) => {
           if (currentTimeoutId) {
             clearTimeout(currentTimeoutId)
           }
-          
+
           return setTimeout(() => {
             autoSaveRegions(finalRegions)
           }, 1000)
         })
-        
+
         return finalRegions
       })
     },
@@ -416,11 +433,7 @@ export default function TemplateStepPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader
-        title="採点領域の作成"
-        description=""
-        helpButton={helpButton}
-      >
+      <PageHeader title="採点領域の作成" description="" helpButton={helpButton}>
         {selectedMasterImage &&
           layoutRegions.filter(
             (r) => r.masterImageId === selectedMasterImage.id,
@@ -504,8 +517,8 @@ export default function TemplateStepPage() {
           </div>
         )}
 
-        {/* Layout Editor */}
-        <div className="flex-1 overflow-hidden p-4">
+        {/* Layout Editor - full height without padding */}
+        <div className="min-h-0 flex-1">
           <LayoutRegionEditor
             areas={layoutRegions}
             setAreas={handleRegionsChange}

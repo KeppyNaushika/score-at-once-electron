@@ -49,9 +49,14 @@ export function useFileProcessing() {
               originalFileName: file.name,
             })
           }
-        } catch (error) {
+        } catch (error: any) {
+          // パスワード要求エラーは静かに再スロー
+          if (error.message === 'password-required' || error.message === 'invalid-password') {
+            throw error
+          }
+          // その他のエラーのみログ出力
           console.error(`ファイル変換エラー (${file.name}):`, error)
-          toast.error(`ファイル変換に失敗しました: ${file.name}`)
+          throw error
         }
       }
       
@@ -82,12 +87,11 @@ export function useFileProcessing() {
               processedFiles.push(...images)
             }
           } catch (error: any) {
-            console.error(`ファイル処理エラー (${file.name}):`, error)
-            
             // パスワード要求エラーの場合
             if (error.message === 'password-required') {
               passwordRequiredFiles.push(file)
             } else {
+              console.error(`ファイル処理エラー (${file.name}):`, error)
               toast.error(`ファイル処理に失敗しました: ${file.name}`)
             }
           }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { StudentWithAnswers } from "./types"
 
 interface UseStudentManagementProps {
@@ -30,6 +30,11 @@ export function useStudentManagement({ students }: UseStudentManagementProps) {
     }))
     setStudentsWithAnswers(updatedStudents)
   }, [students])
+
+  // studentsが変更されたときに自動更新
+  useEffect(() => {
+    updateStudentsWithAnswers()
+  }, [updateStudentsWithAnswers])
 
   // 学生選択状態の切り替え
   const toggleStudentSelection = useCallback((studentId: string) => {

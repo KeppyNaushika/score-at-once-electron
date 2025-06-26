@@ -147,13 +147,16 @@ npx prisma studio
    - チェックボックスによる一括削除機能
    - 生徒詳細ページでの所属履歴タイムライン表示
 
-6. **答案アップロード・管理**
+6. **答案アップロード・管理（基本機能）**
 
    - ドラッグ&ドロップファイルアップロード
    - ファイル名による生徒自動推測機能
    - 複数ファイル一括処理
    - 答案状態管理（関連付け済み・未関連付け・欠席）
    - 答案削除・欠席設定機能
+   - パスワード付きPDF対応（PDF.js使用）
+   
+   **注意**: 現在の実装は基本的なアップロード機能のみ。実際の教員ワークフローに対応した高度な管理システムは未実装（→「高度な答案アップロード・管理システム」参照）
 
 7. **プロジェクト一覧・ナビゲーション**
 
@@ -285,6 +288,39 @@ npx prisma studio
 3. **個人成績表出力** ※採点済み答案PDF・Excel出力は完全実装済み
    - 個人成績表PDF生成（現在開発中）
    - **重要**: 見込受験者（後日受験者）は統計計算から除外、個人記録のみ反映
+
+4. **高度な答案アップロード・管理システム（2025年6月26日要件追加）**
+
+   **現状の課題**: 現在のアップロードシステムは実際の教員のスキャンワークフローに対応できていない
+   
+   **スキャンワークフローの多様性への対応**:
+   - ページ別スキャン（1枚目・2枚目で分けてスキャン）
+   - 生徒別スキャン（生徒ごとに全ページをまとめてスキャン）
+   - 両面自動スキャン（全自動処理）
+   - 欠席者や順番入れ違いへの柔軟な対応
+
+   **ファイル配置戦略の事前選択UI**:
+   - 「ページごと並べる」「生徒ごと並べる」「ファイル名から自動対応」の3択ボタン
+   - 選択後にアップロード領域を有効化する段階的UI
+   - 選択した戦略に基づく自動配置アルゴリズム
+
+   **表形式答案管理インターフェース**:
+   - **最左列**: 生徒一覧（受験生徒順表示、個別オン・オフ切り替え）
+   - **2列目以降**: ページ順（1ページから順番、ページ単位でオン・オフ切り替え）
+   - **各セル**: 個別答案画像表示、セル単位でのスキップ機能
+   - **欠席生徒**: 既定でオフ・グレーアウト表示、自動スキップ処理
+
+   **詳細制御機能**:
+   - 生徒レベル制御（インポートスキップ、自動順延）
+   - ページレベル制御（ページ全体のスキップ）
+   - セルレベル制御（個別セルの無効化・スキップ）
+   - 答案画像無効化（答案無効化時の自動順延処理）
+
+   **自動配置・順延アルゴリズム**:
+   - スキップされた生徒・ページ・セルに対する自動的な順延
+   - 重送（同じ答案が複数回スキャンされた場合）への対応
+   - 欠損（特定の答案が抜けている場合）への対応
+   - リアルタイムな配置プレビュー機能
 
 ## 開発時の注意事項
 
@@ -558,14 +594,15 @@ npx prisma studio
 
 ### 🎯 次のマイルストーン
 
-1. ImageCanvasリファクタリング（高優先度）
+1. ~~ImageCanvasリファクタリング~~ ✅ 完了（ズーム・パン機能実装）
 2. ~~メイン採点インターフェース実装~~ ✅ 完了
 3. ~~一括採点実装~~ ✅ 完了
 4. ~~フィルタリング・操作性最終調整~~ ✅ 完了
 5. ~~出力機能の実装（PDF・Excel）~~ ✅ 完了
-6. 個人成績表PDF出力機能の追加
-7. ユーザー認証完全統合
-8. 画像前処理機能の追加
+6. ~~ImageCanvasズーム・パン機能~~ ✅ 完了（macOS対応含む）
+7. 個人成績表PDF出力機能の追加
+8. ユーザー認証完全統合
+9. 画像前処理機能の追加
 
 ### 💡 開発ベストプラクティス確立
 
@@ -616,3 +653,422 @@ npx prisma studio
 - パンくずリストによる現在位置の明確化
 - 進捗に応じた動的UI表示
 - 一貫したURL構造とルーティング
+
+## 🚨 重要な技術的課題と解決方法（2025年6月26日追記）
+
+### 1. 採点領域レイアウトエディタの大幅改善
+
+#### 🎯 **レイアウト構造の問題解決**
+
+**問題**: 採点領域追加時に不適切なレイアウトが発生し、領域一覧が動的に表示される設計だった
+
+**解決**: 固定的な左右分割レイアウトへの変更
+- **左側**: ImageCanvas（画像表示エリア）- 横幅めいっぱいに画像表示、縦スクロール対応
+- **右側**: 領域一覧（LayoutRegionList）- 固定幅320px（`w-80`）で常に表示
+
+**修正ファイル**:
+```typescript
+// LayoutRegionEditor.tsx - レイアウト構造の変更
+<div className="flex h-full">
+  {/* Left Side - Image Canvas */}
+  <div className="flex-1 min-w-0 overflow-hidden">
+    <ImageCanvas ... />
+  </div>
+  {/* Right Side - Region List */}
+  <div className="w-80 border-l bg-background flex-shrink-0">
+    <LayoutRegionList ... />
+  </div>
+</div>
+```
+
+#### 🎯 **透過スクロールバーの実装**
+
+**問題**: 標準スクロールバーがレイアウトのスペースを消費し、美観を損なう
+
+**解決**: カスタムCSSによる透過スクロールバー
+```css
+/* globals.css - 透過スクロールバー設定 */
+.scrollbar-overlay {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+```
+
+### 2. 画像表示方式の統一とバグ修正
+
+#### 🎯 **座標計算の不整合問題**
+
+**問題**: ImageCanvasの画像表示方式を`backgroundSize: "contain"`から`"100% auto"`に変更したが、座標計算が追従していなかった
+
+**解決**: 全コンポーネントで座標計算方式を統一
+
+**修正前**（contain方式）:
+```typescript
+// 画像のアスペクト比とコンテナのアスペクト比を比較して配置計算
+if (imageAspect > containerAspect) {
+  actualImageWidth = containerWidth
+  actualImageHeight = containerWidth / imageAspect
+  offsetX = 0
+  offsetY = (containerHeight - actualImageHeight) / 2
+} else {
+  actualImageHeight = containerHeight
+  actualImageWidth = containerHeight * imageAspect
+  offsetX = (containerWidth - actualImageWidth) / 2
+  offsetY = 0
+}
+```
+
+**修正後**（100% auto方式）:
+```typescript
+// ImageCanvasのbackgroundSize: "100% auto"に合わせた計算
+// 画像は横幅100%で表示され、縦は縦横比を保持して自動調整
+const actualImageWidth = containerWidth
+const actualImageHeight = (containerWidth / imageDimensions.width) * imageDimensions.height
+const offsetX = 0
+const offsetY = 0
+```
+
+**影響を受けたコンポーネント**:
+- `AreaRenderer.tsx` - 既存領域の描画（緑色の枠）
+- `DragPreview.tsx` - ドラッグ時のプレビュー（赤色の枠）
+- `useImageCanvasInteraction.ts` - ドラッグ・リサイズ・移動時の座標計算
+
+### 3. React refライフサイクルの問題と解決
+
+#### 🎯 **DOM ref未準備による描画失敗**
+
+**症状**: ページ読み込み時に採点領域が表示されない
+
+**原因分析**: 
+```
+AreaRenderer - containerRef.current: null
+convertAreaToDisplayCoords - missing imageDimensions or containerRef
+AreaRenderer - area 0 skipped (size 0): {left: 0, top: 0, width: 0, height: 0}
+```
+
+**問題**: AreaRendererが実行される時点で、ImageCanvasのDOM refがまだ設定されていない（Reactライフサイクルのタイミング問題）
+
+**解決**: ref待機ロジックの実装
+
+```typescript
+// AreaRenderer.tsx - ref待機ロジック
+const [containerReady, setContainerReady] = useState(false)
+
+useEffect(() => {
+  // refが設定されたら再レンダリングを促す
+  if (containerRef.current) {
+    console.log("AreaRenderer - containerRef is now ready!")
+    setContainerReady(true)
+  }
+}, [containerRef.current])
+
+// refが準備できていない場合は何も描画しない
+if (!containerRef.current) {
+  console.log("AreaRenderer - containerRef not ready, skipping render")
+  return null
+}
+```
+
+### 4. データベース削除処理の修正
+
+#### 🎯 **削除操作のDB反映問題**
+
+**問題**: 採点領域を削除してもローカルUIからのみ削除され、データベースに反映されていなかった
+
+**解決**: 明示的なDB削除処理の追加
+
+**修正前**:
+```typescript
+const handleDeleteArea = (index: number) => {
+  const newAreas = areas.filter((_, i) => i !== index)
+  setAreas(newAreas)  // ローカルステートのみ
+  setSelectedAreaIndex(null)
+}
+```
+
+**修正後**:
+```typescript
+const handleDeleteArea = async (index: number) => {
+  const areaToDelete = areas[index]
+  
+  // DBから削除（IDがある場合のみ）
+  if (areaToDelete.id) {
+    try {
+      await window.electronAPI.deleteLayoutRegion(areaToDelete.id)
+    } catch (error) {
+      console.error("Failed to delete area from database:", error)
+      toast.error("採点領域の削除に失敗しました")
+      return // エラーの場合は削除を中断
+    }
+  }
+  
+  // ローカルステートから削除
+  const newAreas = areas.filter((_, i) => i !== index)
+  setAreas(newAreas)
+  setSelectedAreaIndex(null)
+}
+```
+
+### 5. デバッグ基盤の構築
+
+#### 🎯 **包括的なデバッグログシステム**
+
+複雑な座標計算とReactライフサイクルの問題を効率的に診断するため、詳細なデバッグログを実装:
+
+**データ読み込み段階**:
+```typescript
+// page.tsx (02-template)
+console.log("loadInitialData - existingRegions:", existingRegions)
+console.log("loadInitialData - firstMasterImageId:", firstMasterImageId)
+console.log("loadInitialData - currentImageRegions:", currentImageRegions)
+console.log("loadInitialData - mappedRegions:", mappedRegions)
+```
+
+**レンダリング段階**:
+```typescript
+// LayoutRegionEditor.tsx
+console.log("LayoutRegionEditor - props:", { areas, backgroundImageUrl, imageDimensions, masterImageId })
+
+// ImageCanvas.tsx
+console.log("ImageCanvas - props:", { backgroundImageUrl, imageDimensions, areas, selectedAreaIndex, disabled })
+
+// AreaRenderer.tsx
+console.log("AreaRenderer - areas:", areas)
+console.log("AreaRenderer - imageDimensions:", imageDimensions)
+console.log("AreaRenderer - containerRef.current:", containerRef.current)
+```
+
+**座標計算段階**:
+```typescript
+// AreaRenderer.tsx - convertAreaToDisplayCoords
+console.log("convertAreaToDisplayCoords - area:", area)
+console.log("convertAreaToDisplayCoords - containerWidth:", containerWidth, "containerHeight:", containerHeight)
+console.log("convertAreaToDisplayCoords - result:", result)
+```
+
+### 6. 技術的学習と今後への活用
+
+#### 🎯 **React開発で学んだ重要な原則**
+
+1. **refのライフサイクル管理**
+   - DOM refが準備されるタイミングを正確に把握する重要性
+   - useEffectによるref監視とearly returnパターンの活用
+
+2. **座標計算の一貫性**
+   - 画像表示方式を変更する際は、全関連コンポーネントの座標計算を統一
+   - デバッグログによる座標計算プロセスの可視化
+
+3. **データベース操作の明示性**
+   - 自動保存に依存せず、削除などの重要操作は明示的にDB処理を実行
+   - エラーハンドリングによる処理の信頼性確保
+
+4. **レイアウト設計の原則**
+   - 動的レイアウトよりも固定レイアウトの方が予測可能で安定
+   - 透過スクロールバーなどの美観要素も機能性に重要な影響
+
+#### 🎯 **今後の開発指針**
+
+1. **デバッグファーストアプローチ**
+   - 複雑な機能実装時は最初からデバッグログを組み込む
+   - 問題発生時の診断効率を大幅に向上
+
+2. **コンポーネント間の依存関係管理**
+   - refの依存関係を明確にし、適切なライフサイクル管理を実装
+   - 座標計算などの共通ロジックは統一された方式で実装
+
+3. **ユーザビリティ重視の設計**
+   - 透過スクロールバーのような細部への配慮
+   - 固定レイアウトによる予測可能なUI動作
+
+### 🏆 実装成果サマリー
+
+- ✅ **レイアウト問題**: 完全解決（左右固定分割、透過スクロールバー）
+- ✅ **座標計算**: 統一完了（全コンポーネントで100% auto方式）
+- ✅ **React ref問題**: 解決（ref待機ロジック実装）
+- ✅ **DB削除処理**: 修正完了（明示的削除処理）
+- ✅ **デバッグ基盤**: 構築完了（包括的ログシステム）
+
+これらの改善により、採点領域エディタは安定した動作と優れたユーザビリティを実現。
+
+## 🚨 最新の技術的課題と解決方法（2025年6月26日 追記2）
+
+### 7. ImageCanvasズーム・パン機能の完全実装
+
+#### 🎯 **AppShell高さ問題の解決**
+
+**問題**: `min-h-screen`では採点領域エディタの高さ計算にパンくずリスト分が含まれていなかった
+
+**解決**: `h-screen`への変更と適切なFlexboxレイアウト
+```typescript
+// page.tsx - レイアウト構造の改善
+<div className="flex h-full flex-col">
+  <PageHeader />  
+  <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="min-h-0 flex-1">  // min-h-0でflex-1の縮小を許可
+      <LayoutRegionEditor />
+    </div>
+  </div>
+</div>
+```
+
+**修正ファイル**:
+- `app/projects/[projectId]/02-template/page.tsx`: `min-h-0 flex-1`による高さ計算修正
+- `components/project/layout/LayoutRegionEditor.tsx`: 左側に`p-4`追加で適切なスペーシング
+
+#### 🎯 **完全なズーム・パン機能の実装**
+
+**実装機能**:
+1. **ズーム機能**: 0.1倍〜5倍の範囲、Ctrl+ホイールで操作
+2. **パン機能**: 上下・左右・斜め移動、複数の操作方法対応
+3. **範囲制限**: 画像がコンテナ外に過度に移動しない制御
+4. **リアルタイム更新**: ズーム・パン操作に長方形が即座に追従
+
+**操作方法**:
+```typescript
+// ホイール操作
+- 通常のホイール: 上下パン
+- Shift + ホイール: 左右パン  
+- Ctrl + ホイール: ズーム
+
+// マウス操作
+- 中ボタンドラッグ: 自由パン
+
+// キーボード操作
+- 矢印キー: 方向パン
+- Page Up/Down: 大幅パン
+- Ctrl + Home: リセット
+- Ctrl + +/-: ズーム
+- Ctrl + 0: リセット
+```
+
+#### 🎯 **macOSトラックパッド加速度問題の解決**
+
+**問題**: macOSトラックパッドの加速度により`deltaY`値が著しく大きくなり、操作が困難
+
+**解決**: 段階的な非線形スケーリングとデバウンシング
+```typescript
+const normalizeWheelDelta = (delta: number) => {
+  const absDelta = Math.abs(delta)
+  
+  if (absDelta <= 10) {
+    // 小さな入力: 精密操作（そのまま）
+    normalizedAbs = absDelta * 0.8
+  } else if (absDelta <= 50) {
+    // 中程度の入力: 緩やかに抑制
+    normalizedAbs = 8 + (absDelta - 10) * 0.5
+  } else {
+    // 大きな入力: 強く抑制（加速度無効化）
+    normalizedAbs = 28 + (Math.min(absDelta, 200) - 50) * 0.2
+  }
+  
+  return Math.min(normalizedAbs, 50) // 最大値制限
+}
+
+// 時間ベースのデバウンシング
+const timeSinceLastWheel = now - lastWheelTimeRef.current
+const debounceMultiplier = timeSinceLastWheel < 50 ? 0.3 : 1
+```
+
+#### 🎯 **Passive Event Listener問題の解決**
+
+**問題**: Reactの`onWheel`は自動的に`passive: true`で登録され、`preventDefault()`が効かない
+
+**解決**: `useEffect`内で直接`addEventListener`を使用
+```typescript
+useEffect(() => {
+  const handleWheel = (e: WheelEvent) => {
+    e.preventDefault()  // 確実に動作
+    e.stopPropagation()
+    // ズーム・パン処理
+  }
+  
+  if (imageContainerRef.current) {
+    imageContainerRef.current.addEventListener('wheel', handleWheel, { 
+      passive: false  // 明示的にfalse
+    })
+  }
+  
+  return () => {
+    if (imageContainerRef.current) {
+      imageContainerRef.current.removeEventListener('wheel', handleWheel)
+    }
+  }
+}, [imageContainerRef.current, zoom, pan, imageDimensions])
+```
+
+#### 🎯 **座標計算の統一と精度向上**
+
+**問題**: `backgroundSize: "100%"`が画像の縦横比を無視し、100%位置が80%になる
+
+**解決**: 絶対サイズ指定と統一された座標計算
+```typescript
+// 背景画像の正確なサイズ指定
+backgroundSize: `${imageDimensions.width * zoom}px ${imageDimensions.height * zoom}px`
+backgroundPosition: `${pan.x}px ${pan.y}px`
+
+// 統一された座標計算（全コンポーネント共通）
+const scaledImageWidth = imageDimensions.width * zoom
+const scaledImageHeight = imageDimensions.height * zoom
+const imageStartX = pan.x
+const imageStartY = pan.y
+
+return {
+  left: imageStartX + area.x * scaledImageWidth,
+  top: imageStartY + area.y * scaledImageHeight,
+  width: area.width * scaledImageWidth,
+  height: area.height * scaledImageHeight,
+}
+```
+
+#### 🎯 **長方形リアルタイム描画の実装**
+
+**修正**: useCallback依存配列に`zoom`と`pan`を追加
+```typescript
+// AreaRenderer.tsx
+const convertAreaToDisplayCoords = useCallback((area) => {
+  // 座標計算
+}, [imageDimensions, zoom, pan, forceUpdate])
+
+// DragPreview.tsx
+const calculateDisplayCoords = useCallback(() => {
+  // プレビュー計算  
+}, [dragging, dragStartCoords, dragCurrentCoords, imageDimensions, containerRef, zoom, pan])
+
+// useImageCanvasInteraction.ts
+const getImageBounds = useCallback(() => {
+  // 範囲計算
+}, [imageDimensions, zoom, pan])
+```
+
+### 🏆 実装成果サマリー（追記2）
+
+- ✅ **AppShell高さ問題**: 完全解決（`h-screen` + `min-h-0`）
+- ✅ **ズーム・パン機能**: 完全実装（0.1-5倍、全方向パン、範囲制限）
+- ✅ **macOS加速度問題**: 解決（段階的スケーリング + デバウンシング）
+- ✅ **Passive Event問題**: 解決（明示的`addEventListener`）
+- ✅ **座標計算精度**: 修正（絶対サイズ指定、統一計算）
+- ✅ **リアルタイム描画**: 実装（依存配列最適化）
+- ✅ **操作性**: 大幅向上（キーボード・マウス・トラックパッド対応）
+
+### 🎮 操作性の達成レベル
+
+1. **精密操作**: 小さな入力での細かい調整が可能
+2. **通常操作**: 適度なスクロール速度、自然な操作感
+3. **高速操作**: 加速度が効きすぎることなく制御可能
+4. **クロスプラットフォーム**: macOS/Windows/Linuxで一貫した操作感
+5. **アクセシビリティ**: キーボードのみでも完全操作可能

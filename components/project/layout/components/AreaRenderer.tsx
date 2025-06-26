@@ -1,7 +1,7 @@
 "use client"
 
 import { AreaType } from "@prisma/client"
-import { MouseEvent as ReactMouseEvent, RefObject, useMemo } from "react"
+import { MouseEvent as ReactMouseEvent, RefObject, useCallback, useEffect, useState } from "react"
 
 interface AreaRendererProps {
   areas: any[]
@@ -33,6 +33,73 @@ export function AreaRenderer({
   zoom,
   pan,
 }: AreaRendererProps) {
+  
+  // 全てのhooksを最初に定義（条件分岐の前に）
+  const [containerReady, setContainerReady] = useState(false)
+  const [forceUpdate, setForceUpdate] = useState(0)
+  
+  // ウィンドウリサイズ時の再計算を強制
+  const triggerUpdate = useCallback(() => {
+    setForceUpdate(prev => prev + 1)
+  }, [])
+  
+  const convertAreaToDisplayCoords = useCallback((area: any) => {
+    if (!imageDimensions || !containerRef.current) {
+      return { left: 0, top: 0, width: 0, height: 0 }
+    }
+
+    const containerWidth = containerRef.current.clientWidth
+    const containerHeight = containerRef.current.clientHeight
+
+    // コンテナサイズが0の場合は描画しない（初期化中）
+    if (containerWidth === 0 || containerHeight === 0) {
+      return { left: 0, top: 0, width: 0, height: 0 }
+    }
+
+    // ズームとパンを考慮した絶対座標計算
+    const scaledImageWidth = imageDimensions.width * zoom
+    const scaledImageHeight = imageDimensions.height * zoom
+    
+    // 背景画像の開始位置（パンを適用）
+    const imageStartX = pan.x
+    const imageStartY = pan.y
+
+    return {
+      left: imageStartX + area.x * scaledImageWidth,
+      top: imageStartY + area.y * scaledImageHeight,
+      width: area.width * scaledImageWidth,
+      height: area.height * scaledImageHeight,
+    }
+  }, [imageDimensions, zoom, pan, forceUpdate])
+  
+  useEffect(() => {
+    // refが設定されたら再レンダリングを促す
+    if (containerRef.current) {
+      setContainerReady(true)
+    }
+    
+    // ResizeObserverでコンテナサイズの変更を監視
+    let resizeObserver: ResizeObserver | null = null
+    
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        triggerUpdate()
+      })
+      resizeObserver.observe(containerRef.current)
+    }
+    
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
+    }
+  }, [containerRef.current, triggerUpdate])
+  
+  // refが準備できていない場合は何も描画しない
+  if (!containerRef.current) {
+    return null
+  }
+  
   const getAreaTypeColor = (type: AreaType) => {
     switch (type) {
       case AreaType.QUESTION_ANSWER:
@@ -50,101 +117,23 @@ export function AreaRenderer({
     }
   }
 
-  // Calculate the actual image display bounds within the container
-  const imageBounds = useMemo(() => {
-    if (!imageDimensions || !containerRef.current) {
-      return { left: 0, top: 0, width: 100, height: 100 }
-    }
-
-    const containerRect = containerRef.current.getBoundingClientRect()
-    const containerWidth = containerRect.width
-    const containerHeight = containerRect.height
-    const containerAspect = containerWidth / containerHeight
-    const imageAspect = imageDimensions.width / imageDimensions.height
-
-    let imageWidth, imageHeight, imageLeft, imageTop
-
-    if (imageAspect > containerAspect) {
-      // Image is wider - constrained by container width
-      imageWidth = containerWidth
-      imageHeight = containerWidth / imageAspect
-      imageLeft = 0
-      imageTop = (containerHeight - imageHeight) / 2
-    } else {
-      // Image is taller - constrained by container height
-      imageHeight = containerHeight
-      imageWidth = containerHeight * imageAspect
-      imageLeft = (containerWidth - imageWidth) / 2
-      imageTop = 0
-    }
-
-    return {
-      left: imageLeft,
-      top: imageTop,
-      width: imageWidth,
-      height: imageHeight,
-    }
-  }, [imageDimensions, containerRef])
-
-  const convertAreaToDisplayCoords = (area: any) => {
-    if (!imageDimensions || !containerRef.current) {
-      return { left: 0, top: 0, width: 0, height: 0 }
-    }
-    
-    const containerRect = containerRef.current.getBoundingClientRect()
-    const containerWidth = containerRect.width
-    const containerHeight = containerRect.height
-    
-    // コンテナサイズが0の場合は描画しない（初期化中）
-    if (containerWidth === 0 || containerHeight === 0) {
-      return { left: 0, top: 0, width: 0, height: 0 }
-    }
-    
-    // 画像の実際の表示サイズを計算
-    const imageAspect = imageDimensions.width / imageDimensions.height
-    const containerAspect = containerWidth / containerHeight
-    
-    let actualImageWidth, actualImageHeight, offsetX, offsetY
-    
-    if (imageAspect > containerAspect) {
-      // 画像が横長 - 幅がコンテナに合わせられる
-      actualImageWidth = containerWidth
-      actualImageHeight = containerWidth / imageAspect
-      offsetX = 0
-      offsetY = (containerHeight - actualImageHeight) / 2
-    } else {
-      // 画像が縦長 - 高さがコンテナに合わせられる
-      actualImageHeight = containerHeight
-      actualImageWidth = containerHeight * imageAspect
-      offsetX = (containerWidth - actualImageWidth) / 2
-      offsetY = 0
-    }
-    
-    return {
-      left: offsetX + (area.x * actualImageWidth),
-      top: offsetY + (area.y * actualImageHeight),
-      width: area.width * actualImageWidth,
-      height: area.height * actualImageHeight,
-    }
-  }
-
   return (
     <>
       {areas.map((area, index) => {
         const displayCoords = convertAreaToDisplayCoords(area)
-        
+
         // サイズが0の場合は描画しない
         if (displayCoords.width === 0 || displayCoords.height === 0) {
           return null
         }
-        
+
         return (
           <div
             key={area.id || `area-${index}`}
-            className={`absolute border-2 cursor-pointer ${
+            className={`absolute cursor-pointer border-2 ${
               selectedAreaIndex === index
-                ? "border-blue-500 border-solid"
-                : "border-white border-dashed"
+                ? "border-solid border-blue-500"
+                : "border-dashed border-white"
             }`}
             style={{
               left: `${displayCoords.left}px`,
@@ -163,7 +152,7 @@ export function AreaRenderer({
             }}
           >
             {/* ラベル */}
-            <div className="absolute -top-6 left-0 text-xs bg-white px-1 rounded border text-black">
+            <div className="absolute -top-6 left-0 rounded border bg-white px-1 text-xs text-black">
               {area.label}
             </div>
 
@@ -172,22 +161,22 @@ export function AreaRenderer({
               <>
                 {/* 左上 */}
                 <div
-                  className="absolute -top-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-nw-resize"
+                  className="absolute -top-1 -left-1 h-3 w-3 cursor-nw-resize border border-white bg-blue-500"
                   onMouseDown={(e) => onResizeMouseDown(e, index, "nw")}
                 />
                 {/* 右上 */}
                 <div
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-ne-resize"
+                  className="absolute -top-1 -right-1 h-3 w-3 cursor-ne-resize border border-white bg-blue-500"
                   onMouseDown={(e) => onResizeMouseDown(e, index, "ne")}
                 />
                 {/* 左下 */}
                 <div
-                  className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-500 border border-white cursor-sw-resize"
+                  className="absolute -bottom-1 -left-1 h-3 w-3 cursor-sw-resize border border-white bg-blue-500"
                   onMouseDown={(e) => onResizeMouseDown(e, index, "sw")}
                 />
                 {/* 右下 */}
                 <div
-                  className="absolute -bottom-1 -right-1 w-3 h-3 bg-blue-500 border border-white cursor-se-resize"
+                  className="absolute -right-1 -bottom-1 h-3 w-3 cursor-se-resize border border-white bg-blue-500"
                   onMouseDown={(e) => onResizeMouseDown(e, index, "se")}
                 />
               </>

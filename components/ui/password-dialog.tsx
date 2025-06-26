@@ -53,14 +53,12 @@ export function PasswordDialog({
             <Lock className="h-5 w-5 text-amber-600" />
             PDFパスワード入力
           </DialogTitle>
-          <DialogDescription className="space-y-1">
-            <div>
-              <span className="font-medium">{fileName}</span> はパスワードで保護されています。
-            </div>
-            <div className="text-sm text-muted-foreground">
-              パスワードを入力してファイルを読み込んでください。
-            </div>
+          <DialogDescription>
+            <span className="font-medium">{fileName}</span> はパスワードで保護されています。
           </DialogDescription>
+          <p className="text-sm text-muted-foreground mt-1">
+            パスワードを入力してファイルを読み込んでください。
+          </p>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
