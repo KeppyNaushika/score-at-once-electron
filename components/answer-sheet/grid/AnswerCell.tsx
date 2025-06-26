@@ -129,7 +129,7 @@ export default function AnswerCell({
 
   return (
     <TableCell className={`
-      text-center min-w-28 border-r border-border p-1
+      text-center min-w-32 border-r border-border p-1
       ${getCellStyle()}
       transition-colors
     `}>
@@ -152,11 +152,17 @@ export default function AnswerCell({
           <div className="flex flex-col items-center gap-1">
             {/* 画像プレビュー */}
             <div className="relative">
-              <img 
-                src={file.preview || '/placeholder-image.png'} 
-                alt={`${pageNumber}ページ目`}
-                className="w-12 h-16 object-cover rounded border"
-              />
+              {file.preview ? (
+                <img 
+                  src={file.preview} 
+                  alt={`${pageNumber}ページ目`}
+                  className="w-16 h-20 object-cover rounded border"
+                />
+              ) : (
+                <div className="w-16 h-20 bg-gray-100 rounded border flex items-center justify-center">
+                  <FileImage className="h-6 w-6 text-gray-400" />
+                </div>
+              )}
               <Button
                 size="icon"
                 variant="secondary"

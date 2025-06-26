@@ -9,7 +9,6 @@ interface DragPreviewProps {
   imageDimensions: { width: number; height: number } | null
   containerRef: RefObject<HTMLDivElement>
   zoom: number
-  pan: { x: number; y: number }
 }
 
 export function DragPreview({
@@ -19,7 +18,6 @@ export function DragPreview({
   imageDimensions,
   containerRef,
   zoom,
-  pan,
 }: DragPreviewProps) {
   const calculateDisplayCoords = useCallback(() => {
     if (!dragging || !dragStartCoords || !dragCurrentCoords) {
@@ -34,24 +32,17 @@ export function DragPreview({
     // Convert relative coordinates to display coordinates
     if (!imageDimensions || !containerRef.current) return null
     
-    // clientWidthを使用してより正確なサイズを取得
-    const containerWidth = containerRef.current.clientWidth
-    
-    // ズームとパンを考慮した絶対座標計算
+    // 標準スクロール方式：ズームのみ考慮した座標計算
     const scaledImageWidth = imageDimensions.width * zoom
     const scaledImageHeight = imageDimensions.height * zoom
     
-    // 背景画像の開始位置（パンを適用）
-    const imageStartX = pan.x
-    const imageStartY = pan.y
-    
     return {
-      left: imageStartX + (x * scaledImageWidth),
-      top: imageStartY + (y * scaledImageHeight),
+      left: x * scaledImageWidth,
+      top: y * scaledImageHeight,
       width: width * scaledImageWidth,
       height: height * scaledImageHeight,
     }
-  }, [dragging, dragStartCoords, dragCurrentCoords, imageDimensions, containerRef, zoom, pan])
+  }, [dragging, dragStartCoords, dragCurrentCoords, imageDimensions, containerRef, zoom])
 
   const displayCoords = calculateDisplayCoords()
   

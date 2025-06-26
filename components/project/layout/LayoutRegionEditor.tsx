@@ -133,7 +133,7 @@ const LayoutRegionEditor = ({
   return (
     <div className="flex h-full">
       {/* Left Side - Image Canvas with independent scroll */}
-      <div className="flex-1 min-w-0 relative p-4">
+      <div className="flex-1 min-w-0 relative">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}

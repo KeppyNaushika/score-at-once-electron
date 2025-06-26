@@ -44,7 +44,7 @@ export default function GridHeader({
         return (
           <TableHead 
             key={pageNumber}
-            className={`text-center min-w-28 border-r border-border p-1 ${
+            className={`text-center min-w-32 border-r border-border p-1 ${
               pageState?.isEnabled ? 'bg-background' : 'bg-muted/80'
             }`}
           >
