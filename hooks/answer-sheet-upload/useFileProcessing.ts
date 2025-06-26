@@ -66,9 +66,46 @@ export function useFileProcessing() {
       setIsConverting(true)
       try {
         const fileArray = Array.from(fileList)
-        const newFiles = await convertFilesToImages(fileArray)
-        setFiles(prev => [...prev, ...newFiles])
-        toast.success(`${newFiles.length}個のファイルを処理しました`)
+        const processedFiles: ConvertedFile[] = []
+        const passwordRequiredFiles: File[] = []
+
+        // ファイルを個別に処理
+        for (const file of fileArray) {
+          try {
+            if (file.type === "application/pdf") {
+              // PDFファイルを試行（パスワードなし）
+              const images = await convertFilesToImages([file])
+              processedFiles.push(...images)
+            } else {
+              // 画像ファイルは直接処理
+              const images = await convertFilesToImages([file])
+              processedFiles.push(...images)
+            }
+          } catch (error: any) {
+            console.error(`ファイル処理エラー (${file.name}):`, error)
+            
+            // パスワード要求エラーの場合
+            if (error.message === 'password-required') {
+              passwordRequiredFiles.push(file)
+            } else {
+              toast.error(`ファイル処理に失敗しました: ${file.name}`)
+            }
+          }
+        }
+
+        // 正常に処理されたファイルを追加
+        if (processedFiles.length > 0) {
+          setFiles(prev => [...prev, ...processedFiles])
+          toast.success(`${processedFiles.length}個のファイルを処理しました`)
+        }
+
+        // パスワードが必要なファイルがある場合、最初のファイルのパスワード入力を促す
+        if (passwordRequiredFiles.length > 0) {
+          setPendingFiles(passwordRequiredFiles.slice(1)) // 2番目以降を保留
+          setCurrentPdfFile(passwordRequiredFiles[0]) // 最初のファイルを設定
+          setShowPasswordDialog(true)
+          setPasswordError('')
+        }
       } catch (error) {
         console.error("ファイル処理エラー:", error)
         toast.error("ファイル処理に失敗しました")

@@ -118,7 +118,7 @@ const File = () => {
             </TableHeader>
             <TableBody>
               {projects.map((project) => {
-                const status = getProjectStatus(project)
+                const status = getProjectStatus(project as any)
 
                 return (
                   <TableRow key={project.id}>
@@ -131,9 +131,9 @@ const File = () => {
                                 "ja-JP",
                               )
                             : "実施日未設定"}
-                          {project.tags && project.tags.length > 0 && (
+                          {(project as any).tags && (project as any).tags.length > 0 && (
                             <span className="ml-2">
-                              {project.tags
+                              {(project as any).tags
                                 .map((tag: any) => tag.text)
                                 .join(", ")}
                             </span>
@@ -146,7 +146,7 @@ const File = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleStartScoring(project)}
+                        onClick={() => handleStartScoring(project as any)}
                       >
                         <Eye className="mr-1 h-4 w-4" />
                         詳細
@@ -156,7 +156,7 @@ const File = () => {
                     <TableCell className="text-center">
                       <Button
                         size="sm"
-                        onClick={() => handleNextStep(project)}
+                        onClick={() => handleNextStep(project as any)}
                         className={
                           status.step === 6
                             ? "bg-green-600 hover:bg-green-700"

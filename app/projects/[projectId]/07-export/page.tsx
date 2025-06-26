@@ -54,12 +54,21 @@ export default function ExportPage() {
     try {
       const selectedStudentIds = Array.from(selectedStudents)
       
-      const result = await window.electronAPI.exportResults({
-        projectId: project.id,
-        studentIds: selectedStudentIds,
-        options: exportOptions,
-        markConfig: scoringMarkConfig,
-      })
+      // Choose the appropriate export method based on options
+      const result = exportOptions.format === 'pdf' 
+        ? await window.electronAPI.exportScoredAnswersPDF({
+            projectId: project.id,
+            selectedStudentIds,
+            scoringMarkConfig: {
+              position: scoringMarkConfig.position,
+              size: scoringMarkConfig.markSize,
+              showTransparent: scoringMarkConfig.useTransparent
+            }
+          })
+        : await window.electronAPI.exportGradingDataExcel({
+            projectId: project.id,
+            selectedStudentIds
+          })
 
       if (result.success) {
         setExportProgress(100)
@@ -92,7 +101,7 @@ export default function ExportPage() {
     <div className="container mx-auto px-4 py-6 space-y-6">
       <PageHeader
         title="結果出力"
-        subtitle="採点結果をPDFまたはExcelファイルとして出力します"
+        description="採点結果をPDFまたはExcelファイルとして出力します"
         helpButton={helpButton}
       />
 
@@ -153,7 +162,10 @@ export default function ExportPage() {
         isOpen={showProgressModal}
         onClose={() => setShowProgressModal(false)}
         progress={exportProgress}
-        isExporting={isExporting}
+        status={isExporting ? 'processing' : 'completed'}
+        currentStep="出力中..."
+        totalSteps={1}
+        currentStepIndex={0}
       />
     </div>
   )

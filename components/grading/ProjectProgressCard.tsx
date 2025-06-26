@@ -45,12 +45,28 @@ export default function ProjectProgressCard({
       setError(null)
       const result = await window.electronAPI.getProjectProgress(projectId)
 
-      if (result.success && result.progress) {
-        setProgress(result.progress)
+      if (result && typeof result.percentage === 'number') {
+        setProgress({
+          totalAnswerSheets: result.totalAnswerSheets,
+          totalQuestions: 0,
+          totalItems: result.totalAnswerSheets,
+          gradedItems: result.completedAnswerSheets,
+          finalizedItems: result.completedAnswerSheets,
+          progressPercentage: result.percentage,
+          finalizedPercentage: result.percentage
+        })
         setLastUpdated(new Date())
-        onProgressUpdate?.(result.progress)
+        onProgressUpdate?.({
+          totalAnswerSheets: result.totalAnswerSheets,
+          totalQuestions: 0,
+          totalItems: result.totalAnswerSheets,
+          gradedItems: result.completedAnswerSheets,
+          finalizedItems: result.completedAnswerSheets,
+          progressPercentage: result.percentage,
+          finalizedPercentage: result.percentage
+        })
       } else {
-        setError(result.error || "Failed to fetch progress")
+        setError("Failed to fetch progress")
       }
     } catch (err) {
       console.error("Failed to fetch project progress:", err)

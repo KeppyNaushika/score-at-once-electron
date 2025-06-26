@@ -770,7 +770,7 @@ export default function GradingPage() {
             scoredByUserId: currentUserId,
           } as any)
 
-          if (result.success) {
+          if (result && result.id) {
             setScoringData((prev) => ({
               ...prev,
               [key]: {
@@ -786,7 +786,7 @@ export default function GradingPage() {
               },
             }))
           } else {
-            console.error("Failed to create batch score:", result.error)
+            console.error("Failed to create batch score:", result)
           }
         }
       } catch (error) {

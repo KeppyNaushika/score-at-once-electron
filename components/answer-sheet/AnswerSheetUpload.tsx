@@ -22,7 +22,7 @@ interface AnswerSheetUploadProps {
     firstNameKana: string
     studentId: string
     attendanceNumber?: number | null
-    status?: 'participating' | 'expected' | 'absent'
+    status?: "participating" | "expected" | "absent"
     customOrder?: number | null
   }>
   onUploadComplete?: () => void
@@ -63,7 +63,7 @@ export default function AnswerSheetUpload({
     setShowPasswordDialog,
     setCurrentPdfFile,
     setPasswordError,
-    setIsConverting,
+    // setIsConverting, // Removed as it's not available in the hook
 
     // Actions
     onDrop,
@@ -102,7 +102,8 @@ export default function AnswerSheetUpload({
           </TabsTrigger>
           <TabsTrigger value="manage" className="flex items-center gap-2">
             <FileImage className="h-4 w-4" />
-            ファイル・生徒管理 ({files.length}ファイル, {selectedStudentsCount}生徒)
+            ファイル・生徒管理 ({files.length}ファイル, {selectedStudentsCount}
+            生徒)
           </TabsTrigger>
         </TabsList>
 
@@ -138,9 +139,9 @@ export default function AnswerSheetUpload({
                 specificPages={specificPages}
                 setSpecificPages={setSpecificPages}
               />
-              
+
               {/* ファイル・生徒管理 */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* 左列: 生徒一覧 */}
                 <StudentList
                   studentsWithAnswers={studentsWithAnswers}
@@ -161,9 +162,18 @@ export default function AnswerSheetUpload({
                   layoutRegions={layoutRegions}
                   masterImages={masterImages}
                   isUploading={isUploading}
-                  getStudentName={getStudentName}
+                  getStudentName={(studentId) =>
+                    getStudentName(studentId || "")
+                  }
                   onToggleFileSelection={toggleFileSelection}
-                  onMoveFile={moveFile}
+                  onMoveFile={(id, direction) => {
+                    const currentIndex = files.findIndex((f) => f.id === id)
+                    const targetIndex =
+                      direction === "up" ? currentIndex - 1 : currentIndex + 1
+                    if (targetIndex >= 0 && targetIndex < files.length) {
+                      moveFile(currentIndex, targetIndex)
+                    }
+                  }}
                   onRemoveFile={removeFile}
                   onDragEnd={handleDragEnd}
                 />
@@ -219,11 +229,11 @@ export default function AnswerSheetUpload({
         onClose={() => {
           setShowPasswordDialog(false)
           setCurrentPdfFile(null)
-          setPasswordError('')
-          setIsConverting(false)
+          setPasswordError("")
+          // setIsConverting(false) // Removed as function doesn't exist
         }}
         onSubmit={handlePasswordSubmit}
-        fileName={currentPdfFile?.name || ''}
+        fileName={currentPdfFile?.name || ""}
         error={passwordError}
         isLoading={isPasswordProcessing}
       />

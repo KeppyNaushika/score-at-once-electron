@@ -131,7 +131,7 @@ export default function ProjectDetailPage() {
         {/* Modals */}
         {project && showEditModal && (
           <EditProjectWindow
-            projectToEdit={project}
+            projectToEdit={project as any}
             setIsShowEditProjectWindow={setShowEditModal}
             onSave={handleProjectUpdated}
           />

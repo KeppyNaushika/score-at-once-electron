@@ -146,11 +146,29 @@ export function useAnswerSheetUploadMain({
     try {
       const newFiles = await fileProcessing.convertFilesToImages([fileProcessing.currentPdfFile], password)
       fileProcessing.setFiles(prev => [...prev, ...newFiles])
-      fileProcessing.setShowPasswordDialog(false)
-      fileProcessing.setCurrentPdfFile(null)
-      fileProcessing.setPasswordError('')
-    } catch (error) {
-      fileProcessing.setPasswordError('パスワードが正しくありません')
+      
+      // 現在のファイル処理完了、次のファイルがあるかチェック
+      const remainingFiles = fileProcessing.pendingFiles
+      if (remainingFiles.length > 0) {
+        // 次のパスワード保護ファイルを処理
+        fileProcessing.setCurrentPdfFile(remainingFiles[0])
+        fileProcessing.setPendingFiles(remainingFiles.slice(1))
+        fileProcessing.setPasswordError('')
+        // ダイアログは開いたまま
+      } else {
+        // すべて完了
+        fileProcessing.setShowPasswordDialog(false)
+        fileProcessing.setCurrentPdfFile(null)
+        fileProcessing.setPasswordError('')
+        toast.success('すべてのパスワード保護ファイルの処理が完了しました')
+      }
+    } catch (error: any) {
+      console.error('パスワード処理エラー:', error)
+      if (error.message === 'invalid-password') {
+        fileProcessing.setPasswordError('パスワードが正しくありません')
+      } else {
+        fileProcessing.setPasswordError('ファイル処理に失敗しました')
+      }
     } finally {
       fileProcessing.setIsPasswordProcessing(false)
     }

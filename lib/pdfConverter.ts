@@ -77,10 +77,20 @@ export async function convertPdfToImages(file: File, password?: string): Promise
     return images
   } catch (error: any) {
     // PDF.js エラーハンドリング
+    console.error('PDF変換エラー詳細:', error)
+    
     if (error.name === 'PasswordException') {
-      throw new Error('password-required')
-    } else if (error.name === 'InvalidPDFException' && password) {
-      throw new Error('invalid-password')
+      if (password) {
+        // パスワードが提供されているが間違っている場合
+        throw new Error('invalid-password')
+      } else {
+        // パスワードが必要な場合
+        throw new Error('password-required')
+      }
+    } else if (error.name === 'InvalidPDFException') {
+      throw new Error('PDF形式が無効です')
+    } else if (error.message && error.message.includes('Invalid PDF')) {
+      throw new Error('PDF形式が無効です')
     } else {
       throw new Error(`PDF変換エラー: ${error.message || '不明なエラー'}`)
     }
