@@ -73,6 +73,7 @@ interface AnswerSheetGridManagerProps {
   students: Student[]
   files: ConvertedFile[]
   isUploading: boolean
+  fileOrder?: 'page-then-student' | 'student-then-page'
   onUpload: (data: Array<{ file: ConvertedFile, studentId: string, pageNumber: number }>) => void
 }
 
@@ -81,6 +82,7 @@ export default function AnswerSheetGridManager({
   students,
   files,
   isUploading,
+  fileOrder = 'page-then-student',
   onUpload
 }: AnswerSheetGridManagerProps) {
   
@@ -190,6 +192,7 @@ export default function AnswerSheetGridManager({
       })
     }
   }, [isLoadingMasterImages, masterImages])
+
 
   // 配置戦略変更
   const handleStrategyChange = useCallback((strategy: PlacementStrategy) => {
@@ -404,82 +407,88 @@ export default function AnswerSheetGridManager({
 
   // 自動配置処理
   const autoPlaceFiles = useCallback(() => {
-    const enabledStudents = students
-      .filter(s => gridState.students[s.id]?.isEnabled && !gridState.students[s.id]?.isSkipped)
-      .sort((a, b) => {
-        // 受験生徒順でソート（customOrder優先、その後出席番号順）
-        if (a.customOrder !== null && a.customOrder !== undefined && 
-            b.customOrder !== null && b.customOrder !== undefined) {
-          return a.customOrder - b.customOrder
-        }
-        if (a.customOrder !== null && a.customOrder !== undefined) return -1
-        if (b.customOrder !== null && b.customOrder !== undefined) return 1
-        
-        const aNumber = a.attendanceNumber
-        const bNumber = b.attendanceNumber
-        if (aNumber && bNumber) return aNumber - bNumber
-        if (aNumber) return -1
-        if (bNumber) return 1
-        
-        return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
-      })
-    
-    const enabledPages = Array.from({length: gridState.maxPages}, (_, i) => i + 1)
-      .filter(p => gridState.pages[p]?.isEnabled && !gridState.pages[p]?.isSkipped)
-    
-    // 有効なセルのリストを生成（配置戦略に基づく順序）
-    const validCells: Array<{studentId: string, pageNumber: number}> = []
-    
-    if (gridState.placementStrategy === 'page-first') {
-      // ページ優先: 1ページ目全員 → 2ページ目全員
-      enabledPages.forEach(pageNumber => {
-        enabledStudents.forEach(student => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.isEnabled && !cellState.isSkipped) {
-            validCells.push({ studentId: student.id, pageNumber })
+    setGridState(currentGridState => {
+      const enabledStudents = students
+        .filter(s => currentGridState.students[s.id]?.isEnabled && !currentGridState.students[s.id]?.isSkipped)
+        .sort((a, b) => {
+          // 受験生徒順でソート（customOrder優先、その後出席番号順）
+          if (a.customOrder !== null && a.customOrder !== undefined && 
+              b.customOrder !== null && b.customOrder !== undefined) {
+            return a.customOrder - b.customOrder
           }
+          if (a.customOrder !== null && a.customOrder !== undefined) return -1
+          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+          
+          const aNumber = a.attendanceNumber
+          const bNumber = b.attendanceNumber
+          if (aNumber && bNumber) return aNumber - bNumber
+          if (aNumber) return -1
+          if (bNumber) return 1
+          
+          return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
         })
-      })
-    } else if (gridState.placementStrategy === 'student-first') {
-      // 生徒優先: 生徒A全ページ → 生徒B全ページ
-      enabledStudents.forEach(student => {
+      
+      const enabledPages = Array.from({length: currentGridState.maxPages}, (_, i) => i + 1)
+        .filter(p => currentGridState.pages[p]?.isEnabled && !currentGridState.pages[p]?.isSkipped)
+      
+      // 有効なセルのリストを生成（配置戦略に基づく順序）
+      const validCells: Array<{studentId: string, pageNumber: number}> = []
+      
+      if (fileOrder === 'page-then-student') {
+        // ページ優先: 1ページ目全員 → 2ページ目全員
         enabledPages.forEach(pageNumber => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.isEnabled && !cellState.isSkipped) {
-            validCells.push({ studentId: student.id, pageNumber })
+          enabledStudents.forEach(student => {
+            const cellState = currentGridState.students[student.id]?.cells[pageNumber]
+            if (cellState?.isEnabled && !cellState.isSkipped) {
+              validCells.push({ studentId: student.id, pageNumber })
+            }
+          })
+        })
+      } else if (fileOrder === 'student-then-page') {
+        // 生徒優先: 生徒A全ページ → 生徒B全ページ
+        enabledStudents.forEach(student => {
+          enabledPages.forEach(pageNumber => {
+            const cellState = currentGridState.students[student.id]?.cells[pageNumber]
+            if (cellState?.isEnabled && !cellState.isSkipped) {
+              validCells.push({ studentId: student.id, pageNumber })
+            }
+          })
+        })
+      }
+      
+      // ファイルを順次配置
+      const newGridState = { ...currentGridState }
+      
+      // 既存の配置をクリア
+      Object.keys(newGridState.students).forEach(studentId => {
+        Object.keys(newGridState.students[studentId].cells).forEach(pageStr => {
+          const pageNumber = parseInt(pageStr)
+          if (newGridState.students[studentId].cells[pageNumber]) {
+            newGridState.students[studentId].cells[pageNumber].file = undefined
           }
         })
       })
-    } else if (gridState.placementStrategy === 'filename-auto') {
-      // ファイル名から自動推測
-      return autoPlaceFilesByFilename()
-    }
-    
-    // ファイルを順次配置
-    const newGridState = { ...gridState }
-    
-    // 既存の配置をクリア
-    Object.keys(newGridState.students).forEach(studentId => {
-      Object.keys(newGridState.students[studentId].cells).forEach(pageStr => {
-        const pageNumber = parseInt(pageStr)
-        if (newGridState.students[studentId].cells[pageNumber]) {
-          newGridState.students[studentId].cells[pageNumber].file = undefined
+      
+      // ファイルを順次配置
+      files.forEach((file, index) => {
+        if (index < validCells.length) {
+          const cell = validCells[index]
+          if (newGridState.students[cell.studentId]?.cells[cell.pageNumber]) {
+            newGridState.students[cell.studentId].cells[cell.pageNumber].file = file
+          }
         }
       })
+      
+      return newGridState
     })
-    
-    // ファイルを順次配置
-    files.forEach((file, index) => {
-      if (index < validCells.length) {
-        const cell = validCells[index]
-        if (newGridState.students[cell.studentId]?.cells[cell.pageNumber]) {
-          newGridState.students[cell.studentId].cells[cell.pageNumber].file = file
-        }
-      }
-    })
-    
-    setGridState(newGridState)
-  }, [students, files, gridState])
+  }, [students, files, fileOrder])
+
+  // ファイルOrder変更時またはファイル追加時に自動配置を実行
+  useEffect(() => {
+    if (!isLoadingMasterImages && masterImages.length > 0 && files.length > 0) {
+      autoPlaceFiles()
+    }
+  }, [fileOrder, files, isLoadingMasterImages, masterImages, autoPlaceFiles])
 
   // ファイル名から生徒を推測
   const findStudentByFilename = useCallback((filename: string) => {
@@ -652,76 +661,20 @@ export default function AnswerSheetGridManager({
 
   return (
     <div className="space-y-6">
-      {/* 配置戦略選択 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Grid3X3 className="h-5 w-5" />
-            ファイル配置戦略を選択
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <Button
-              variant={gridState.placementStrategy === 'page-first' ? 'default' : 'outline'}
-              onClick={() => handleStrategyChange('page-first')}
-              className="h-auto p-4 flex flex-col items-start"
-            >
-              <div className="font-medium">ページごと並べる</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                1ページ目全員 → 2ページ目全員
-              </div>
-            </Button>
-            
-            <Button
-              variant={gridState.placementStrategy === 'student-first' ? 'default' : 'outline'}
-              onClick={() => handleStrategyChange('student-first')}
-              className="h-auto p-4 flex flex-col items-start"
-            >
-              <div className="font-medium">生徒ごと並べる</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                生徒A全ページ → 生徒B全ページ
-              </div>
-            </Button>
-            
-            <Button
-              variant={gridState.placementStrategy === 'filename-auto' ? 'default' : 'outline'}
-              onClick={() => handleStrategyChange('filename-auto')}
-              className="h-auto p-4 flex flex-col items-start"
-            >
-              <div className="font-medium">ファイル名から自動対応</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                ファイル名で生徒・ページを推測
-              </div>
-            </Button>
-          </div>
-          
-          <div className="mt-4 flex items-center gap-3">
-            <Button onClick={autoPlaceFiles} variant="secondary" className="flex items-center gap-2">
-              <RotateCcw className="h-4 w-4" />
-              自動配置を実行
-            </Button>
-            
-            <Button onClick={redistributeFiles} variant="outline" className="flex items-center gap-2">
-              <RotateCcw className="h-4 w-4" />
-              順延処理
-            </Button>
-            
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>生徒: {stats.enabledStudents}人</span>
-              <span>ページ: {stats.enabledPages}ページ</span>
-              <span>配置率: {stats.completionRate}%</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* 表形式グリッド */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>生徒と答案の対応</span>
+            <span className="flex items-center gap-2">
+              <Grid3X3 className="h-5 w-5" />
+              生徒と答案の対応
+            </span>
             <div className="flex items-center gap-2">
+              <Button onClick={redistributeFiles} variant="outline" size="sm" className="flex items-center gap-2">
+                <RotateCcw className="h-4 w-4" />
+                順延処理
+              </Button>
               <Badge variant="outline">
                 {stats.filledCells}/{stats.totalCells} セル
               </Badge>

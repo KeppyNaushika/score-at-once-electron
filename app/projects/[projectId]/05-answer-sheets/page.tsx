@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
 import { Eye, Trash2, Upload, User, UserX } from "lucide-react"
@@ -210,30 +209,27 @@ export default function AnswerSheetsPage() {
           </Button>
         </PageHeader>
         
-        <div className="flex-1 overflow-hidden p-6">
+        <div className="flex-1 overflow-hidden p-6 space-y-6">
 
-        <Tabs defaultValue="upload" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="upload">
-              <Upload className="mr-2 h-4 w-4" />
-              アップロード
-            </TabsTrigger>
-            <TabsTrigger value="manage">
-              <Eye className="mr-2 h-4 w-4" />
-              管理 ({answerSheets.length})
-            </TabsTrigger>
-          </TabsList>
+          <AnswerSheetUpload
+            projectId={projectId}
+            students={students}
+            onUploadComplete={handleUploadComplete}
+          />
 
-          <TabsContent value="upload">
-            <AnswerSheetUpload
-              projectId={projectId}
-              students={students}
-              onUploadComplete={handleUploadComplete}
-            />
-          </TabsContent>
-
-          <TabsContent value="manage" className="space-y-6">
-            <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                答案管理
+                <Badge variant="secondary">{answerSheets.length}件</Badge>
+              </CardTitle>
+              <CardDescription>
+                アップロードされた答案の管理を行います
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">生徒と関連付け済み</CardTitle>
@@ -264,16 +260,9 @@ export default function AnswerSheetsPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+              </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>答案一覧</CardTitle>
-                <CardDescription>
-                  アップロードされた答案の管理を行います
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <div>
                 {answerSheets.length === 0 ? (
                   <div className="text-muted-foreground py-8 text-center">
                     まだ答案がアップロードされていません
@@ -343,10 +332,9 @@ export default function AnswerSheetsPage() {
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </ProtectedRoute>
