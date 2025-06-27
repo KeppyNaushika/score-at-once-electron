@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -7,7 +8,6 @@ import {
   FileImage, 
   Upload, 
   X, 
-  Eye, 
   SkipForward,
   AlertTriangle,
   CheckCircle2
@@ -36,6 +36,8 @@ interface AnswerCellProps {
   isFileDisabled: boolean
   isStudentDisabled: boolean
   isPageDisabled: boolean
+  nameRegion?: { x: number, y: number, width: number, height: number } | null
+  globalPreviewMode?: 'full' | 'name'
   onToggle: () => void
   onToggleFileDisabled: () => void
   onRemoveFile: () => void
@@ -50,10 +52,63 @@ export default function AnswerCell({
   isFileDisabled,
   isStudentDisabled,
   isPageDisabled,
+  nameRegion,
+  globalPreviewMode = 'full',
   onToggle,
   onToggleFileDisabled,
   onRemoveFile
 }: AnswerCellProps) {
+  
+  // 氏名欄クロップ画像の生成
+  const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
+  
+  useEffect(() => {
+    if (!file?.preview || !nameRegion || globalPreviewMode !== 'name') {
+      setCroppedImageUrl(null)
+      return
+    }
+    
+    const createCroppedImage = async () => {
+      try {
+        const img = new Image()
+        img.crossOrigin = 'anonymous'
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve
+          img.onerror = reject
+          img.src = file.preview!
+        })
+        
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        
+        // クロップ領域のサイズ計算
+        const cropX = nameRegion.x * img.naturalWidth
+        const cropY = nameRegion.y * img.naturalHeight
+        const cropWidth = nameRegion.width * img.naturalWidth
+        const cropHeight = nameRegion.height * img.naturalHeight
+        
+        canvas.width = cropWidth
+        canvas.height = cropHeight
+        
+        // クロップ部分を描画
+        ctx.drawImage(
+          img,
+          cropX, cropY, cropWidth, cropHeight,  // ソース
+          0, 0, cropWidth, cropHeight           // ターゲット
+        )
+        
+        const croppedUrl = canvas.toDataURL('image/png')
+        setCroppedImageUrl(croppedUrl)
+      } catch (error) {
+        console.error('Failed to create cropped image:', error)
+        setCroppedImageUrl(null)
+      }
+    }
+    
+    createCroppedImage()
+  }, [file?.preview, nameRegion, globalPreviewMode])
   
   // セルの状態を判定
   const getCellStatus = () => {
@@ -127,23 +182,41 @@ export default function AnswerCell({
     }
   }
 
+  // オーバーレイメッセージを取得（セルのみ「答案を読み込みません」を表示）
+  const getOverlayMessage = () => {
+    if (isStudentDisabled || isPageDisabled) return null // 生徒・ページ無効時はオーバーレイなし
+    if (isSkipped || !isEnabled) return '答案を読み込みません'
+    return null
+  }
+
+  const overlayMessage = getOverlayMessage()
+
   return (
-    <TableCell className={`
-      text-center min-w-32 border-r border-border p-1
-      ${getCellStyle()}
-      transition-colors
-    `}>
+    <TableCell 
+      className={`
+        text-center min-w-32 border-r border-border p-1 relative
+        ${getCellStyle()}
+        transition-colors hover:bg-muted/50
+        ${!isStudentDisabled && !isPageDisabled ? 'cursor-pointer' : 'cursor-not-allowed'}
+      `}
+      onClick={!isStudentDisabled && !isPageDisabled ? onToggle : undefined}
+    >
       <div className="flex flex-col items-center gap-1 min-h-20">
-        {/* 配置チェックボックス */}
-        {!isStudentDisabled && !isPageDisabled && (
-          <div className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={isEnabled && !isSkipped}
-              onChange={onToggle}
-              className="h-3 w-3"
-            />
-            <span className="text-xs">配置</span>
+        {/* ホバー時のツールチップ */}
+        <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
+          <div className="text-slate-800 text-xs font-medium">
+            {isStudentDisabled ? '生徒が無効です' : 
+             isPageDisabled ? 'ページが無効です' : 
+             (overlayMessage ? 'クリックして表示' : 'クリックしてセルを除外')}
+          </div>
+        </div>
+
+        {/* オーバーレイ表示（セルのみ） */}
+        {overlayMessage && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+            <div className="text-slate-800 text-xs font-medium">
+              {overlayMessage}
+            </div>
           </div>
         )}
         
@@ -151,50 +224,57 @@ export default function AnswerCell({
         {file && (
           <div className="flex flex-col items-center gap-1">
             {/* 画像プレビュー */}
-            <div className="relative">
+            <div className="relative w-full">
               {file.preview ? (
-                <img 
-                  src={file.preview} 
-                  alt={`${pageNumber}ページ目`}
-                  className="w-16 h-20 object-cover rounded border"
-                />
+                <div className="relative w-full h-24 rounded border overflow-hidden bg-gray-50">
+                  {globalPreviewMode === 'name' && nameRegion && croppedImageUrl ? (
+                    <img 
+                      src={croppedImageUrl} 
+                      alt="氏名欄"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <img 
+                      src={file.preview} 
+                      alt={`${pageNumber}ページ目`}
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+                  {globalPreviewMode === 'name' && !nameRegion && (
+                    <div className="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+                      <div className="text-white text-center">
+                        <AlertTriangle className="h-4 w-4 mx-auto mb-1" />
+                        <p className="text-xs">氏名欄なし</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
-                <div className="w-16 h-20 bg-gray-100 rounded border flex items-center justify-center">
+                <div className="w-full h-24 bg-gray-100 rounded border flex items-center justify-center">
                   <FileImage className="h-6 w-6 text-gray-400" />
                 </div>
               )}
-              <Button
-                size="icon"
-                variant="secondary"
-                className="absolute -top-1 -right-1 h-4 w-4"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onRemoveFile()
-                }}
-              >
-                <X className="h-2 w-2" />
-              </Button>
+              {file.preview && (
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute top-1 right-1 h-4 w-4 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onRemoveFile()
+                  }}
+                >
+                  <X className="h-2 w-2" />
+                </Button>
+              )}
             </div>
             
             {/* ファイル名 */}
-            <div className="text-xs text-center max-w-20">
+            <div className="text-xs text-center w-full px-1">
               <div className="font-medium truncate">
                 {file.originalFileName}
               </div>
             </div>
-            
-            {/* ファイル無効化チェック */}
-            {!isStudentDisabled && !isPageDisabled && (
-              <div className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={!isFileDisabled}
-                  onChange={onToggleFileDisabled}
-                  className="h-3 w-3"
-                />
-                <span className="text-xs">有効</span>
-              </div>
-            )}
           </div>
         )}
         

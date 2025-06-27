@@ -45,33 +45,32 @@ export default function StudentCell({
   const getStatusBadge = () => {
     switch (student.status) {
       case 'absent':
-        return <Badge variant="destructive" className="text-xs">欠席</Badge>
+        return <Badge variant="destructive" className="text-xs bg-transparent border-none text-red-600">欠席</Badge>
       case 'expected':
-        return <Badge variant="secondary" className="text-xs">見込</Badge>
+        return <Badge variant="secondary" className="text-xs bg-transparent border-none text-orange-600">見込</Badge>
       case 'participating':
       default:
-        return <Badge variant="outline" className="text-xs">受験</Badge>
+        return <Badge variant="outline" className="text-xs bg-transparent border-none text-green-600">受験</Badge>
     }
   }
 
   return (
-    <TableCell className={`
-      border-r border-border min-w-36 p-2
-      ${!isEnabled || isSkipped ? 'bg-muted/80' : 'bg-background'}
-    `}>
+    <TableCell 
+      className={`
+        border-r border-border min-w-36 p-2 cursor-pointer relative
+        ${!isEnabled || isSkipped ? 'bg-muted/80' : 'bg-background'}
+        hover:bg-muted/50
+      `}
+      onClick={onToggle}
+    >
       <div className="flex flex-col gap-1">
-        {/* 配置チェックボックス */}
-        <div className="flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={isEnabled && !isSkipped}
-            onChange={onToggle}
-            disabled={student.status === 'absent'}
-            className="h-3 w-3"
-          />
-          <span className="text-xs">配置</span>
+        {/* ホバー時のツールチップ */}
+        <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
+          <div className="text-slate-800 text-xs font-medium">
+            {(!isEnabled || isSkipped) ? 'クリックして生徒を表示' : 'クリックして生徒を除外'}
+          </div>
         </div>
-        
+
         {/* 生徒情報 */}
         <div className="min-w-0">
           <div className="flex items-center gap-1 mb-1">
@@ -90,10 +89,15 @@ export default function StudentCell({
           <div className="flex items-center gap-1">
             {getStatusBadge()}
             {student.attendanceNumber && (
-              <Badge variant="secondary" className="text-xs px-1 py-0">
+              <Badge variant="secondary" className="text-xs px-1 py-0 bg-transparent border-none text-slate-600">
                 {student.attendanceNumber}
               </Badge>
             )}
+          </div>
+          
+          {/* 生徒状態表示 */}
+          <div className="text-xs text-muted-foreground mt-1">
+            {(!isEnabled || isSkipped) ? 'クリックして生徒を表示' : 'クリックして生徒を除外'}
           </div>
         </div>
       </div>

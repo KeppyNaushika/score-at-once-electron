@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect } from "react"
+import { AreaType } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Grid3X3, RotateCcw, Upload } from "lucide-react"
+import { Table, TableBody, TableHeader } from "@/components/ui/table"
+import { Grid3X3, Upload, FileImage, Users, Monitor, User } from "lucide-react"
 import GridHeader from "./GridHeader"
 import StudentGridRow from "./StudentGridRow"
 
@@ -74,6 +75,7 @@ interface AnswerSheetGridManagerProps {
   files: ConvertedFile[]
   isUploading: boolean
   fileOrder?: 'page-then-student' | 'student-then-page'
+  onFileOrderChange?: (order: 'page-then-student' | 'student-then-page') => void
   onUpload: (data: Array<{ file: ConvertedFile, studentId: string, pageNumber: number }>) => void
 }
 
@@ -83,12 +85,20 @@ export default function AnswerSheetGridManager({
   files,
   isUploading,
   fileOrder = 'page-then-student',
+  onFileOrderChange,
   onUpload
 }: AnswerSheetGridManagerProps) {
   
   // マスター画像の管理
   const [masterImages, setMasterImages] = useState<Array<{id: string, pageNumber: number}>>([])
   const [isLoadingMasterImages, setIsLoadingMasterImages] = useState(true)
+  
+  // レイアウト領域管理
+  const [layoutRegions, setLayoutRegions] = useState<Array<{id: string, regionType: string, x: number, y: number, width: number, height: number, pageNumber: number}>>([])
+  const [isLoadingRegions, setIsLoadingRegions] = useState(true)
+  
+  // 一括プレビューモード管理
+  const [globalPreviewMode, setGlobalPreviewMode] = useState<'full' | 'name'>('full')
   
   // マスター画像を取得
   useEffect(() => {
@@ -193,14 +203,31 @@ export default function AnswerSheetGridManager({
     }
   }, [isLoadingMasterImages, masterImages])
 
+  // レイアウト領域を取得
+  useEffect(() => {
+    const loadLayoutRegions = async () => {
+      if (!projectId) return
+      
+      try {
+        setIsLoadingRegions(true)
+        const regions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        if (regions && Array.isArray(regions)) {
+          setLayoutRegions(regions)
+        } else {
+          setLayoutRegions([])
+        }
+      } catch (error) {
+        console.error("Failed to load layout regions:", error)
+        setLayoutRegions([])
+      } finally {
+        setIsLoadingRegions(false)
+      }
+    }
+    
+    loadLayoutRegions()
+  }, [projectId])
 
-  // 配置戦略変更
-  const handleStrategyChange = useCallback((strategy: PlacementStrategy) => {
-    setGridState(prev => ({
-      ...prev,
-      placementStrategy: strategy
-    }))
-  }, [])
+
 
   // 生徒の有効/無効切り替え
   const toggleStudentEnabled = useCallback((studentId: string) => {
@@ -318,93 +345,6 @@ export default function AnswerSheetGridManager({
     })
   }, [])
 
-  // 順延処理の実行
-  const redistributeFiles = useCallback(() => {
-    // 無効化されたファイルや削除されたファイルがある場合、
-    // 残りのファイルを有効なセルに再配置
-    const enabledStudents = students
-      .filter(s => gridState.students[s.id]?.isEnabled && !gridState.students[s.id]?.isSkipped)
-      .sort((a, b) => {
-        // 受験生徒順でソート
-        if (a.customOrder !== null && a.customOrder !== undefined && 
-            b.customOrder !== null && b.customOrder !== undefined) {
-          return a.customOrder - b.customOrder
-        }
-        if (a.customOrder !== null && a.customOrder !== undefined) return -1
-        if (b.customOrder !== null && b.customOrder !== undefined) return 1
-        
-        const aNumber = a.attendanceNumber
-        const bNumber = b.attendanceNumber
-        if (aNumber && bNumber) return aNumber - bNumber
-        if (aNumber) return -1
-        if (bNumber) return 1
-        
-        return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
-      })
-    
-    const enabledPages = Array.from({length: gridState.maxPages}, (_, i) => i + 1)
-      .filter(p => gridState.pages[p]?.isEnabled && !gridState.pages[p]?.isSkipped)
-    
-    // 有効なファイルを取得
-    const availableFiles: ConvertedFile[] = []
-    Object.values(gridState.students).forEach(student => {
-      Object.values(student.cells).forEach(cell => {
-        if (cell.file && !cell.isFileDisabled) {
-          availableFiles.push(cell.file)
-        }
-      })
-    })
-    
-    // 有効なセルのリストを生成
-    const validCells: Array<{studentId: string, pageNumber: number}> = []
-    
-    if (gridState.placementStrategy === 'page-first') {
-      enabledPages.forEach(pageNumber => {
-        enabledStudents.forEach(student => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.isEnabled && !cellState.isSkipped) {
-            validCells.push({ studentId: student.id, pageNumber })
-          }
-        })
-      })
-    } else {
-      enabledStudents.forEach(student => {
-        enabledPages.forEach(pageNumber => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.isEnabled && !cellState.isSkipped) {
-            validCells.push({ studentId: student.id, pageNumber })
-          }
-        })
-      })
-    }
-    
-    // 再配置
-    const newGridState = { ...gridState }
-    
-    // すべてのセルをクリア
-    Object.keys(newGridState.students).forEach(studentId => {
-      Object.keys(newGridState.students[studentId].cells).forEach(pageStr => {
-        const pageNumber = parseInt(pageStr)
-        if (newGridState.students[studentId].cells[pageNumber]) {
-          newGridState.students[studentId].cells[pageNumber].file = undefined
-          newGridState.students[studentId].cells[pageNumber].isFileDisabled = false
-        }
-      })
-    })
-    
-    // ファイルを再配置
-    availableFiles.forEach((file, index) => {
-      if (index < validCells.length) {
-        const cell = validCells[index]
-        if (newGridState.students[cell.studentId]?.cells[cell.pageNumber]) {
-          newGridState.students[cell.studentId].cells[cell.pageNumber].file = file
-        }
-      }
-    })
-    
-    setGridState(newGridState)
-  }, [students, gridState])
-
   // 自動配置処理
   const autoPlaceFiles = useCallback(() => {
     setGridState(currentGridState => {
@@ -490,6 +430,13 @@ export default function AnswerSheetGridManager({
     }
   }, [fileOrder, files, isLoadingMasterImages, masterImages, autoPlaceFiles])
 
+  // グリッド状態変更時に自動配置を実行（オンオフ切り替え時の順延処理）
+  useEffect(() => {
+    if (!isLoadingMasterImages && masterImages.length > 0 && files.length > 0) {
+      autoPlaceFiles()
+    }
+  }, [gridState.students, gridState.pages, isLoadingMasterImages, masterImages, files, autoPlaceFiles])
+
   // ファイル名から生徒を推測
   const findStudentByFilename = useCallback((filename: string) => {
     // 学籍番号での一致を試行
@@ -517,63 +464,27 @@ export default function AnswerSheetGridManager({
     return null
   }, [students])
 
-  // ファイル名からページ番号を抽出
-  const extractPageFromFilename = useCallback((filename: string): number | null => {
-    // ページ番号パターンを検索
-    const pagePatterns = [
-      /page(\d+)/i,
-      /p(\d+)/i,
-      /_(\d+)\./,
-      /(\d+)\.pdf$/i,
-      /(\d+)\.png$/i,
-      /(\d+)\.jpg$/i,
-      /(\d+)\.jpeg$/i,
-    ]
+  // 氏名欄領域をページ別に整理
+  const nameRegions = useMemo(() => {
+    const regions: Record<number, { x: number, y: number, width: number, height: number } | null> = {}
     
-    for (const pattern of pagePatterns) {
-      const match = filename.match(pattern)
-      if (match && match[1]) {
-        const pageNum = parseInt(match[1])
-        if (pageNum > 0 && pageNum <= 50) { // 合理的な範囲内
-          return pageNum
-        }
-      }
-    }
-    
-    return null
-  }, [])
-
-  // ファイル名からの自動配置
-  const autoPlaceFilesByFilename = useCallback(() => {
-    const newGridState = { ...gridState }
-    
-    // 既存の配置をクリア
-    Object.keys(newGridState.students).forEach(studentId => {
-      Object.keys(newGridState.students[studentId].cells).forEach(pageStr => {
-        const pageNumber = parseInt(pageStr)
-        if (newGridState.students[studentId].cells[pageNumber]) {
-          newGridState.students[studentId].cells[pageNumber].file = undefined
-        }
-      })
-    })
-    
-    files.forEach(file => {
-      const matchedStudent = findStudentByFilename(file.name)
-      const pageNumber = extractPageFromFilename(file.name) || file.pageNumber
+    for (let page = 1; page <= gridState.maxPages; page++) {
+      // 該当ページのmasterImageIdを取得
+      const masterImageForPage = masterImages.find(img => img.pageNumber === page)
       
-      if (matchedStudent && pageNumber <= gridState.maxPages) {
-        const studentState = newGridState.students[matchedStudent.id]
-        const cellState = studentState?.cells[pageNumber]
-        
-        if (studentState?.isEnabled && !studentState.isSkipped &&
-            cellState?.isEnabled && !cellState.isSkipped) {
-          cellState.file = file
-        }
-      }
-    })
-    
-    setGridState(newGridState)
-  }, [files, students, gridState, findStudentByFilename, extractPageFromFilename])
+      const nameRegionsForPage = layoutRegions.filter(region => 
+        region.type === AreaType.STUDENT_NAME && region.masterImageId === masterImageForPage?.id
+      )
+      
+      regions[page] = nameRegionsForPage.length > 0 ? {
+        x: nameRegionsForPage[0].x,
+        y: nameRegionsForPage[0].y,
+        width: nameRegionsForPage[0].width,
+        height: nameRegionsForPage[0].height
+      } : null
+    }
+    return regions
+  }, [layoutRegions, gridState.maxPages, masterImages])
 
   // アップロード実行
   const handleUpload = useCallback(() => {
@@ -659,6 +570,7 @@ export default function AnswerSheetGridManager({
     )
   }
 
+
   return (
     <div className="space-y-6">
 
@@ -671,20 +583,61 @@ export default function AnswerSheetGridManager({
               生徒と答案の対応
             </span>
             <div className="flex items-center gap-2">
-              <Button onClick={redistributeFiles} variant="outline" size="sm" className="flex items-center gap-2">
-                <RotateCcw className="h-4 w-4" />
-                順延処理
-              </Button>
-              <Badge variant="outline">
+              <Badge variant="outline" className="bg-transparent border-none text-slate-600">
                 {stats.filledCells}/{stats.totalCells} セル
               </Badge>
-              <Badge variant={stats.completionRate === 100 ? "default" : "secondary"}>
+              <Badge variant={stats.completionRate === 100 ? "default" : "secondary"} className="bg-transparent border-none text-slate-600">
                 {stats.completionRate}% 完了
               </Badge>
             </div>
           </CardTitle>
+          {onFileOrderChange && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                variant={fileOrder === 'page-then-student' ? 'default' : 'outline'}
+                onClick={() => onFileOrderChange('page-then-student')}
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <FileImage className="h-4 w-4" />
+                ページごと並べる
+              </Button>
+              <Button
+                variant={fileOrder === 'student-then-page' ? 'default' : 'outline'}
+                onClick={() => onFileOrderChange('student-then-page')}
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Users className="h-4 w-4" />
+                生徒ごと並べる
+              </Button>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
+          {/* 一括操作ボタン */}
+          <div className="flex justify-end items-center gap-2 p-4 border-b">
+            <span className="text-sm text-muted-foreground mr-2">一括プレビュー:</span>
+            <Button
+              size="sm"
+              variant={globalPreviewMode === 'full' ? 'default' : 'outline'}
+              onClick={() => setGlobalPreviewMode('full')}
+              className="flex items-center gap-1"
+            >
+              <Monitor className="h-4 w-4" />
+              全体
+            </Button>
+            <Button
+              size="sm"
+              variant={globalPreviewMode === 'name' ? 'default' : 'outline'}
+              onClick={() => setGlobalPreviewMode('name')}
+              className="flex items-center gap-1"
+            >
+              <User className="h-4 w-4" />
+              氏名欄
+            </Button>
+          </div>
+          
           <div className="overflow-auto max-h-96 border rounded">
             <Table>
               <TableHeader className="sticky top-0 z-10">
@@ -702,6 +655,8 @@ export default function AnswerSheetGridManager({
                     maxPages={gridState.maxPages}
                     studentState={gridState.students[student.id]}
                     pageStates={gridState.pages}
+                    nameRegions={nameRegions}
+                    globalPreviewMode={globalPreviewMode}
                     onToggleStudent={() => toggleStudentEnabled(student.id)}
                     onToggleCell={(pageNumber) => toggleCellEnabled(student.id, pageNumber)}
                     onToggleFileDisabled={(pageNumber) => toggleFileDisabled(student.id, pageNumber)}

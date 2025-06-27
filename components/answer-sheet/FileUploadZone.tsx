@@ -24,11 +24,6 @@ export default function FileUploadZone({ onDrop, isConverting, isClient }: FileU
     <Card>
       <CardHeader>
         <CardTitle>答案画像・PDFのアップロード</CardTitle>
-        <CardDescription>
-          試験の答案画像ファイルをドラッグ&ドロップまたはクリックして選択してください。
-          <br />
-          PDFは自動的にPNG画像に変換されます。
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <div
@@ -53,20 +48,9 @@ export default function FileUploadZone({ onDrop, isConverting, isClient }: FileU
                   ファイルをドロップしてください...
                 </p>
               ) : (
-                <div>
-                  <p className="mb-2 text-lg">
-                    ファイルをドラッグ&ドロップするか、クリックして選択
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    PNG, JPEG{isClient ? ', PDF' : ''}
-                    ファイルに対応{isClient ? '。PDFはページ別にPNG変換されます' : ''}。
-                  </p>
-                  {!isClient && (
-                    <p className="text-yellow-600 text-xs mt-2">
-                      PDF変換機能を読み込み中...
-                    </p>
-                  )}
-                </div>
+                <p className="text-lg">
+                  ファイルをドラッグ&ドロップするか、クリックして選択
+                </p>
               )}
             </>
           )}

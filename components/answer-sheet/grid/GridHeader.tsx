@@ -1,8 +1,6 @@
 "use client"
 
 import { TableHead, TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import { FileText, User } from "lucide-react"
 
 interface PageState {
@@ -44,26 +42,28 @@ export default function GridHeader({
         return (
           <TableHead 
             key={pageNumber}
-            className={`text-center min-w-32 border-r border-border p-1 ${
+            className={`text-center min-w-32 border-r border-border p-1 cursor-pointer relative transition-colors hover:bg-muted/50 ${
               pageState?.isEnabled ? 'bg-background' : 'bg-muted/80'
             }`}
+            onClick={() => onTogglePage(pageNumber)}
           >
             <div className="flex flex-col items-center gap-1">
+              {/* ホバー時のツールチップ */}
+              <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
+                <div className="text-slate-800 text-xs font-medium">
+                  {pageState?.isEnabled ? 'クリックしてページを除外' : 'クリックしてページを表示'}
+                </div>
+              </div>
+
               {/* ページ番号 */}
               <div className="flex items-center gap-1">
                 <FileText className="h-3 w-3" />
                 <span className="font-medium text-xs">{pageNumber}ページ</span>
               </div>
               
-              {/* ページ配置チェック */}
-              <div className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={pageState?.isEnabled ?? true}
-                  onChange={() => onTogglePage(pageNumber)}
-                  className="h-3 w-3"
-                />
-                <span className="text-xs">配置</span>
+              {/* ページ状態表示 */}
+              <div className="text-xs text-muted-foreground">
+                {pageState?.isEnabled ? 'クリックしてページを除外' : 'クリックしてページを表示'}
               </div>
             </div>
           </TableHead>
