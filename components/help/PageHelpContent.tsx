@@ -558,7 +558,7 @@ export function AnswerSheetsHelpContent() {
           生徒解答アップロード - 完全ガイド
         </h2>
         <p className="text-muted-foreground">
-          スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを正確に行います。自動照合機能で効率的な処理が可能です。
+          答案画像をアップロードし、生徒と答案の対応付けを行います。グリッド形式で効率的な管理が可能です。
         </p>
       </div>
 
@@ -569,24 +569,24 @@ export function AnswerSheetsHelpContent() {
         <div className="space-y-3">
           <StepItem
             number={1}
-            title="ファイル準備"
-            description="答案画像ファイル（PNG、JPEG、PDF）を準備します"
+            title="ファイルアップロード"
+            description="答案画像ファイル（PNG、JPEG、PDF）をドラッグ&ドロップまたはクリックして選択します"
           />
           <StepItem
             number={2}
-            title="ファイル名設定"
-            description="「学籍番号_氏名.jpg」形式で命名すると自動認識精度が向上します"
+            title="配置戦略選択"
+            description="「ページごと並べる」または「生徒ごと並べる」を選択します"
             isImportant
           />
           <StepItem
             number={3}
-            title="一括アップロード"
-            description="複数ファイルをドラッグ&ドロップで一度に処理できます"
+            title="グリッドで対応付け"
+            description="生徒×ページのグリッドで答案ファイルと生徒の対応を確認・調整します"
           />
           <StepItem
             number={4}
-            title="生徒情報の確認・修正"
-            description="自動認識結果を確認し、必要に応じて手動で修正します"
+            title="一括アップロード"
+            description="配置完了後、「アップロード」ボタンで一括処理します"
           />
         </div>
       </HelpSection>
@@ -595,58 +595,54 @@ export function AnswerSheetsHelpContent() {
 
       <HelpSection
         icon={<Info className="h-5 w-5 text-indigo-600" />}
-        title="ファイル命名規則と自動認識"
+        title="配置戦略と自動配置"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <h4 className="mb-3 font-medium text-green-700">
-              推奨ファイル名形式
+              配置戦略の種類
             </h4>
             <div className="space-y-2 text-sm">
               <div className="rounded border border-green-200 bg-green-50 p-2">
-                <p className="font-mono text-green-800">
-                  20240001_田中太郎.jpg
+                <p className="font-medium text-green-800">
+                  ページごと並べる
                 </p>
-                <p className="text-xs text-green-600">学籍番号_氏名.拡張子</p>
+                <p className="text-xs text-green-600">1ページ目全員 → 2ページ目全員の順で配置</p>
               </div>
               <div className="rounded border border-blue-200 bg-blue-50 p-2">
-                <p className="font-mono text-blue-800">田中太郎_数学.pdf</p>
-                <p className="text-xs text-blue-600">氏名_教科名.拡張子</p>
-              </div>
-              <div className="rounded border border-purple-200 bg-purple-50 p-2">
-                <p className="font-mono text-purple-800">1_田中太郎.jpg</p>
-                <p className="text-xs text-purple-600">出席番号_氏名.拡張子</p>
+                <p className="font-medium text-blue-800">生徒ごと並べる</p>
+                <p className="text-xs text-blue-600">生徒A全ページ → 生徒B全ページの順で配置</p>
               </div>
             </div>
           </div>
 
           <div>
             <h4 className="mb-3 font-medium text-orange-700">
-              自動認識の仕組み
+              グリッド操作機能
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-green-500"></div>
                 <span>
-                  <strong>学籍番号による照合:</strong> 最も確実な識別方法
+                  <strong>自動配置:</strong> 選択した戦略に基づいて自動配置
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
                 <span>
-                  <strong>氏名による照合:</strong> 漢字・ひらがな両方対応
+                  <strong>手動調整:</strong> ドラッグ&ドロップで個別調整可能
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-purple-500"></div>
                 <span>
-                  <strong>出席番号による照合:</strong> 数字からの識別
+                  <strong>有効/無効切り替え:</strong> 生徒・ページ・セル単位で制御
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-yellow-500"></div>
                 <span>
-                  <strong>部分一致:</strong> 姓または名の一部でも認識
+                  <strong>自動順延:</strong> 無効化時に自動的にファイルを再配置
                 </span>
               </div>
             </div>
@@ -658,42 +654,54 @@ export function AnswerSheetsHelpContent() {
 
       <HelpSection
         icon={<FileImage className="h-5 w-5 text-purple-600" />}
-        title="答案状態の管理"
+        title="グリッド管理の詳細"
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="border-l-4 border-green-500 pl-4">
-            <h4 className="mb-2 font-medium text-green-700">関連付け済み</h4>
-            <p className="text-muted-foreground mb-2 text-sm">
-              生徒情報と正しく関連付けられた答案です。
-            </p>
-            <div className="text-xs text-green-600">
-              <p>• 採点作業の準備完了</p>
-              <p>• 生徒名が表示される</p>
-              <p>• 出席番号順で整理</p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="mb-3 font-medium text-green-700">セル状態の管理</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-green-500"></div>
+                <span>
+                  <strong>有効セル:</strong> ファイル配置可能な状態
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-gray-500"></div>
+                <span>
+                  <strong>無効セル:</strong> 配置対象外（自動順延）
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
+                <span>
+                  <strong>配置済み:</strong> ファイルが配置されたセル
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="border-l-4 border-yellow-500 pl-4">
-            <h4 className="mb-2 font-medium text-yellow-700">未関連付け</h4>
-            <p className="text-muted-foreground mb-2 text-sm">
-              自動認識できず、手動での関連付けが必要です。
-            </p>
-            <div className="text-xs text-yellow-600">
-              <p>• 手動で生徒を選択</p>
-              <p>• ファイル名を確認</p>
-              <p>• 重複チェックあり</p>
-            </div>
-          </div>
-
-          <div className="border-l-4 border-red-500 pl-4">
-            <h4 className="mb-2 font-medium text-red-700">欠席扱い</h4>
-            <p className="text-muted-foreground mb-2 text-sm">
-              答案が提出されていない生徒の状態です。
-            </p>
-            <div className="text-xs text-red-600">
-              <p>• 欠席として記録</p>
-              <p>• 採点対象外</p>
-              <p>• 後から変更可能</p>
+          <div>
+            <h4 className="mb-3 font-medium text-orange-700">操作のポイント</h4>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-purple-500"></div>
+                <span>
+                  <strong>行・列単位:</strong> 生徒またはページ全体を一括制御
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-yellow-500"></div>
+                <span>
+                  <strong>個別制御:</strong> 特定のセルのみ無効化
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="mt-2 h-2 w-2 rounded-full bg-red-500"></div>
+                <span>
+                  <strong>リアルタイム:</strong> 変更時に即座に再配置実行
+                </span>
+              </div>
             </div>
           </div>
         </div>

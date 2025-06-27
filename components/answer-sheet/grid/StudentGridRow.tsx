@@ -53,10 +53,13 @@ interface StudentGridRowProps {
   maxPages: number
   studentState?: StudentState
   pageStates: Record<number, PageState>
+  nameRegions?: Record<number, { x: number, y: number, width: number, height: number } | null>
+  globalPreviewMode?: 'full' | 'name'
   onToggleStudent: () => void
   onToggleCell: (pageNumber: number) => void
   onToggleFileDisabled: (pageNumber: number) => void
   onRemoveFile: (pageNumber: number) => void
+  onFileClick?: (file: ConvertedFile) => void
 }
 
 export default function StudentGridRow({
@@ -64,6 +67,8 @@ export default function StudentGridRow({
   maxPages,
   studentState,
   pageStates,
+  nameRegions,
+  globalPreviewMode,
   onToggleStudent,
   onToggleCell,
   onToggleFileDisabled,
@@ -114,6 +119,8 @@ export default function StudentGridRow({
             isFileDisabled={cellState?.isFileDisabled ?? false}
             isStudentDisabled={!isStudentEnabled || isStudentSkipped}
             isPageDisabled={!pageState?.isEnabled || pageState?.isSkipped}
+            nameRegion={nameRegions?.[pageNumber]}
+            globalPreviewMode={globalPreviewMode}
             onToggle={() => onToggleCell(pageNumber)}
             onToggleFileDisabled={() => onToggleFileDisabled(pageNumber)}
             onRemoveFile={() => onRemoveFile(pageNumber)}

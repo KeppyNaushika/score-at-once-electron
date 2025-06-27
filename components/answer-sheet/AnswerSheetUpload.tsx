@@ -65,42 +65,6 @@ export default function AnswerSheetUpload({
 
   return (
     <div className="space-y-6">
-      {/* ファイル配置戦略選択 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileImage className="h-5 w-5" />
-            ファイル配置戦略
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={fileOrder === 'page-then-student' ? 'default' : 'outline'}
-              onClick={() => setFileOrder('page-then-student')}
-              className="flex items-center gap-2"
-            >
-              <FileImage className="h-4 w-4" />
-              ページごと並べる
-              <Badge variant="secondary" className="ml-1">推奨</Badge>
-            </Button>
-            <Button
-              variant={fileOrder === 'student-then-page' ? 'default' : 'outline'}
-              onClick={() => setFileOrder('student-then-page')}
-              className="flex items-center gap-2"
-            >
-              <Users className="h-4 w-4" />
-              生徒ごと並べる
-            </Button>
-          </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            {fileOrder === 'page-then-student' 
-              ? 'ページ順でファイルを並べます（1ページ目全員 → 2ページ目全員）'
-              : '生徒順でファイルを並べます（生徒1の全ページ → 生徒2の全ページ）'
-            }
-          </p>
-        </CardContent>
-      </Card>
 
       {/* ファイルアップロード */}
       <FileUploadZone
@@ -116,6 +80,7 @@ export default function AnswerSheetUpload({
         files={files}
         isUploading={isUploading}
         fileOrder={fileOrder}
+        onFileOrderChange={setFileOrder}
         onUpload={(uploadData) => {
           // アップロードデータを既存のアップロード処理に変換
           const formattedData = uploadData.map(item => ({

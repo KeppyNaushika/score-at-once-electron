@@ -24,12 +24,17 @@ export function useFileProcessing() {
           if (file.type === "application/pdf") {
             const images = await convertPdfToImages(file, password)
             for (let i = 0; i < images.length; i++) {
+              // プレビューURL作成
+              const blob = new Blob([images[i].buffer], { type: "image/png" })
+              const preview = URL.createObjectURL(blob)
+              
               convertedFiles.push({
                 id: `${file.name}-page-${i + 1}-${Date.now()}`,
                 name: `${file.name} - ページ ${i + 1}`,
                 type: "image/png",
                 size: file.size,
                 buffer: images[i].buffer,
+                preview,
                 pageNumber: i + 1,
                 isSelected: true,
                 originalFileName: file.name,
@@ -38,12 +43,17 @@ export function useFileProcessing() {
             }
           } else if (file.type.startsWith("image/")) {
             const buffer = await file.arrayBuffer()
+            // プレビューURL作成
+            const blob = new Blob([buffer], { type: file.type })
+            const preview = URL.createObjectURL(blob)
+            
             convertedFiles.push({
               id: `${file.name}-${Date.now()}`,
               name: file.name,
               type: file.type,
               size: file.size,
               buffer,
+              preview,
               pageNumber: 1,
               isSelected: true,
               originalFileName: file.name,
