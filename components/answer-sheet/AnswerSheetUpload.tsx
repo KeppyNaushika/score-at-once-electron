@@ -34,6 +34,7 @@ export default function AnswerSheetUpload({
   const {
     // State
     files,
+    setFiles,
     isUploading,
     isConverting,
     uploadProgress,
@@ -64,7 +65,7 @@ export default function AnswerSheetUpload({
   })
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6 h-full">
 
       {/* ファイルアップロード */}
       <FileUploadZone
@@ -74,13 +75,15 @@ export default function AnswerSheetUpload({
       />
 
       {/* 生徒と答案の対応管理 */}
-      <AnswerSheetGridManager
+      <div className="flex-1 min-h-0">
+        <AnswerSheetGridManager
         projectId={projectId}
         students={students}
         files={files}
         isUploading={isUploading}
         fileOrder={fileOrder}
         onFileOrderChange={setFileOrder}
+        onFilesReorder={setFiles}
         onUpload={(uploadData) => {
           // アップロードデータを既存のアップロード処理に変換
           const formattedData = uploadData.map(item => ({
@@ -93,7 +96,7 @@ export default function AnswerSheetUpload({
             pageNumber: item.pageNumber,
             overwrite: false, // グリッドでは上書き設定は個別に管理
           }))
-          
+
           // 既存のElectronAPIを呼び出し
           window.electronAPI.uploadAnswerSheets(projectId, formattedData)
             .then(result => {
@@ -104,6 +107,7 @@ export default function AnswerSheetUpload({
             .catch(console.error)
         }}
       />
+      </div>
 
       {/* プログレスバー */}
       {isUploading && (

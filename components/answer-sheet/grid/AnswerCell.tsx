@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { TableCell } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { 
   FileImage, 
   Upload, 
@@ -28,6 +30,7 @@ interface ConvertedFile {
 }
 
 interface AnswerCellProps {
+  cellId: string
   pageNumber: number
   studentId: string
   file?: ConvertedFile
@@ -44,6 +47,7 @@ interface AnswerCellProps {
 }
 
 export default function AnswerCell({
+  cellId,
   pageNumber,
   studentId,
   file,
@@ -58,6 +62,25 @@ export default function AnswerCell({
   onToggleFileDisabled,
   onRemoveFile
 }: AnswerCellProps) {
+  
+  // useSortable フック
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: cellId,
+    disabled: isStudentDisabled || isPageDisabled || isSkipped || !isEnabled || !file // ファイルがない場合や無効な場合はドラッグ無効
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
   
   // 氏名欄クロップ画像の生成
   const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
@@ -191,23 +214,33 @@ export default function AnswerCell({
 
   const overlayMessage = getOverlayMessage()
 
+  // Alt+クリック処理
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.altKey && !isStudentDisabled && !isPageDisabled) {
+      onToggle()
+    }
+  }
+
   return (
     <TableCell 
+      ref={setNodeRef}
+      style={style}
       className={`
         text-center min-w-32 border-r border-border p-1 relative
         ${getCellStyle()}
         transition-colors hover:bg-muted/50
-        ${!isStudentDisabled && !isPageDisabled ? 'cursor-pointer' : 'cursor-not-allowed'}
+        ${file && !isStudentDisabled && !isPageDisabled ? 'cursor-grab' : 'cursor-default'}
       `}
-      onClick={!isStudentDisabled && !isPageDisabled ? onToggle : undefined}
+      onClick={handleClick}
+      {...attributes}
     >
       <div className="flex flex-col items-center gap-1 min-h-20">
         {/* ホバー時のツールチップ */}
-        <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
-          <div className="text-slate-800 text-xs font-medium">
+        <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center pointer-events-none">
+          <div className="text-slate-800 text-xs font-medium text-center">
             {isStudentDisabled ? '生徒が無効です' : 
              isPageDisabled ? 'ページが無効です' : 
-             (overlayMessage ? 'クリックして表示' : 'クリックしてセルを除外')}
+             (overlayMessage ? 'Alt+クリックして表示' : 'ドラッグして移動、Alt+クリックで除外')}
           </div>
         </div>
 
@@ -223,10 +256,18 @@ export default function AnswerCell({
         {/* 答案画像表示 */}
         {file && (
           <div className="flex flex-col items-center gap-1">
+            {/* デバッグ: ファイルID表示 */}
+            <div className="text-xs font-mono text-blue-600 bg-blue-50 px-1 rounded">
+              {file.id.split('-')[0].slice(0, 8)}
+            </div>
+            
             {/* 画像プレビュー */}
             <div className="relative w-full">
               {file.preview ? (
-                <div className="relative w-full h-24 rounded border overflow-hidden bg-gray-50">
+                <div 
+                  className="relative w-full h-24 rounded border overflow-hidden bg-gray-50 z-30"
+                  {...listeners}
+                >
                   {globalPreviewMode === 'name' && nameRegion && croppedImageUrl ? (
                     <img 
                       src={croppedImageUrl} 

@@ -233,7 +233,7 @@ export default function ProjectWorkflowLayout({
               })}
             </BreadcrumbList>
           </Breadcrumb>
-          
+
           {/* 右側のナビゲーション要素 */}
           <div className="flex items-center space-x-2">
             {/* プロジェクト詳細に戻るボタン */}
@@ -246,7 +246,7 @@ export default function ProjectWorkflowLayout({
                 プロジェクト詳細
               </Link>
             </Button>
-            
+
             {/* 戻るボタン（採点画面でのみ表示） */}
             {pathname.includes('06-score-at-once') && (
               <Button

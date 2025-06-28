@@ -74,6 +74,7 @@ export default function StudentGridRow({
   onToggleFileDisabled,
   onRemoveFile
 }: StudentGridRowProps) {
+  console.log(`🔄 StudentGridRow re-rendered for ${student.id.slice(-4)}`)
   
   const isStudentEnabled = studentState?.isEnabled ?? true
   const isStudentSkipped = studentState?.isSkipped ?? false
@@ -108,9 +109,12 @@ export default function StudentGridRow({
           (cellState?.isEnabled ?? true) &&
           !cellState?.isSkipped
         
+        const cellId = `${student.id}-${pageNumber}`
+        
         return (
           <AnswerCell
             key={pageNumber}
+            cellId={cellId}
             pageNumber={pageNumber}
             studentId={student.id}
             file={cellState?.file}

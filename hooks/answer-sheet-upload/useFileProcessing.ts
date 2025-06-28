@@ -29,7 +29,7 @@ export function useFileProcessing() {
               const preview = URL.createObjectURL(blob)
               
               convertedFiles.push({
-                id: `${file.name}-page-${i + 1}-${Date.now()}`,
+                id: crypto.randomUUID(),
                 name: `${file.name} - ページ ${i + 1}`,
                 type: "image/png",
                 size: file.size,
@@ -48,7 +48,7 @@ export function useFileProcessing() {
             const preview = URL.createObjectURL(blob)
             
             convertedFiles.push({
-              id: `${file.name}-${Date.now()}`,
+              id: crypto.randomUUID(),
               name: file.name,
               type: file.type,
               size: file.size,

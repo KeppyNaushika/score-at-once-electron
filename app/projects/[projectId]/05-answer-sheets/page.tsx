@@ -13,9 +13,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import { Eye, Trash2, Upload, User, UserX } from "lucide-react"
+import { Eye, Trash2, Upload, User, UserX, Grid3X3 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -34,7 +35,7 @@ interface StudentData {
   firstNameKana: string
   studentId: string
   attendanceNumber?: number | null
-  status?: 'participating' | 'expected' | 'absent'
+  status?: "participating" | "expected" | "absent"
 }
 
 export default function AnswerSheetsPage() {
@@ -66,30 +67,35 @@ export default function AnswerSheetsPage() {
       }
 
       // プロジェクトの受験生徒情報を取得
-      const projectStudentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      const projectStudentsResult =
+        await window.electronAPI.getStudentsForProject(projectId)
       if (projectStudentsResult.success && projectStudentsResult.students) {
         // 受験生徒順序（customOrder）でソート
         const sortedStudents = projectStudentsResult.students
-          .filter((s: any) => s.status === 'participating') // 受験する生徒のみ
+          .filter((s: any) => s.status === "participating") // 受験する生徒のみ
           .sort((a: any, b: any) => {
             // customOrderが設定されている場合はそれを優先
-            if (a.customOrder !== null && a.customOrder !== undefined && 
-                b.customOrder !== null && b.customOrder !== undefined) {
+            if (
+              a.customOrder !== null &&
+              a.customOrder !== undefined &&
+              b.customOrder !== null &&
+              b.customOrder !== undefined
+            ) {
               return a.customOrder - b.customOrder
             }
             if (a.customOrder !== null && a.customOrder !== undefined) return -1
             if (b.customOrder !== null && b.customOrder !== undefined) return 1
-            
+
             // customOrderが未設定の場合は出席番号順をフォールバック
             const aNumber = a.memberships?.[0]?.attendanceNumber
             const bNumber = b.memberships?.[0]?.attendanceNumber
-            
+
             if (aNumber && bNumber) {
               return aNumber - bNumber
             }
             if (aNumber) return -1
             if (bNumber) return 1
-            
+
             // 出席番号もない場合は名前順
             const aName = `${a.lastName}${a.firstName}`
             const bName = `${b.lastName}${b.firstName}`
@@ -102,11 +108,12 @@ export default function AnswerSheetsPage() {
             lastNameKana: student.lastNameKana,
             firstNameKana: student.firstNameKana,
             studentId: student.studentId,
-            attendanceNumber: student.memberships?.[0]?.attendanceNumber || null,
+            attendanceNumber:
+              student.memberships?.[0]?.attendanceNumber || null,
             status: student.status,
-            customOrder: student.customOrder || null
+            customOrder: student.customOrder || null,
           }))
-        
+
         setStudents(sortedStudents)
       }
 
@@ -194,7 +201,7 @@ export default function AnswerSheetsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-y-auto">
         <PageHeader
           title="生徒解答のアップロード"
           description=""
@@ -208,133 +215,149 @@ export default function AnswerSheetsPage() {
             次へ: 採点開始
           </Button>
         </PageHeader>
-        
-        <div className="flex-1 overflow-hidden p-6 space-y-6">
 
-          <AnswerSheetUpload
-            projectId={projectId}
-            students={students}
-            onUploadComplete={handleUploadComplete}
-          />
+        <div className="min-h-0 flex-1 overflow-hidden p-3">
+          <Tabs defaultValue="new" className="flex h-full flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="new" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                新規追加
+              </TabsTrigger>
+              <TabsTrigger value="current" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                現在の対応状況
+              </TabsTrigger>
+            </TabsList>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                答案管理
-                <Badge variant="secondary">{answerSheets.length}件</Badge>
-              </CardTitle>
-              <CardDescription>
-                アップロードされた答案の管理を行います
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">生徒と関連付け済み</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{withStudent.length}</div>
-                </CardContent>
-              </Card>
+            <TabsContent value="new" className="mt-3 min-h-0 flex-1 p-3">
+              <AnswerSheetUpload
+                projectId={projectId}
+                students={students}
+                onUploadComplete={handleUploadComplete}
+              />
+            </TabsContent>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">未関連付け</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-600">
-                    {withoutStudent.length}
-                  </div>
-                </CardContent>
-              </Card>
+            <TabsContent
+              value="current"
+              className="mt-3 flex min-h-0 flex-1 flex-col gap-3 p-3"
+            >
+              {/* 対応状況 */}
+              <div className="grid grid-cols-3 gap-2">
+                <Card className="border-l-4 border-l-green-500">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-xs">関連付け済み</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="text-lg font-bold">
+                      {withStudent.length}
+                    </div>
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">欠席</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {absent.length}
-                  </div>
-                </CardContent>
-              </Card>
+                <Card className="border-l-4 border-l-orange-500">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-xs">未関連付け</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="text-lg font-bold text-orange-600">
+                      {withoutStudent.length}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-red-500">
+                  <CardHeader className="pb-1">
+                    <CardTitle className="text-xs">欠席</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="text-lg font-bold text-red-600">
+                      {absent.length}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div>
-                {answerSheets.length === 0 ? (
-                  <div className="text-muted-foreground py-8 text-center">
-                    まだ答案がアップロードされていません
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {answerSheets.map((sheet) => (
-                      <div
-                        key={sheet.id}
-                        className="flex items-center gap-4 rounded-lg border p-4"
-                      >
-                        <div className="flex-1">
-                          <div className="mb-1 flex items-center gap-2">
-                            <span className="font-medium">
-                              {sheet.student
-                                ? `${sheet.student.lastName} ${sheet.student.firstName}`
-                                : "未関連付け"}
-                            </span>
-                            {sheet.student && (
-                              <Badge variant="secondary">
-                                {sheet.student.studentId}
+              {/* 生徒と答案の対応 */}
+              <div className="min-h-0 flex-1 rounded-lg border p-2">
+                <div className="h-full overflow-auto">
+                  {answerSheets.length === 0 ? (
+                    <div className="text-muted-foreground py-4 text-center text-sm">
+                      まだ答案がアップロードされていません
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      {answerSheets.map((sheet) => (
+                        <div
+                          key={sheet.id}
+                          className="flex items-center gap-3 rounded-lg border p-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {sheet.student
+                                  ? `${sheet.student.lastName} ${sheet.student.firstName}`
+                                  : "未関連付け"}
+                              </span>
+                              {sheet.student && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {sheet.student.studentId}
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                ページ {sheet.pageNumber}
                               </Badge>
-                            )}
-                            <Badge variant="outline">
-                              ページ {sheet.pageNumber}
-                            </Badge>
-                            {sheet.isAbsent && (
-                              <Badge variant="destructive">欠席</Badge>
-                            )}
+                              {sheet.isAbsent && (
+                                <Badge
+                                  variant="destructive"
+                                  className="text-xs"
+                                >
+                                  欠席
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              {new Date(sheet.createdAt).toLocaleString()}
+                            </p>
                           </div>
-                          <p className="text-muted-foreground text-sm">
-                            アップロード:{" "}
-                            {new Date(sheet.createdAt).toLocaleString()}
-                          </p>
-                        </div>
 
-                        <div className="flex items-center gap-2">
-                          {!sheet.isAbsent ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetAbsent(sheet.id, true)}
-                            >
-                              <UserX className="mr-1 h-4 w-4" />
-                              欠席
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSetAbsent(sheet.id, false)}
-                            >
-                              <User className="mr-1 h-4 w-4" />
-                              出席
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {!sheet.isAbsent ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={() => handleSetAbsent(sheet.id, true)}
+                              >
+                                <UserX className="h-3 w-3" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={() => handleSetAbsent(sheet.id, false)}
+                              >
+                                <User className="h-3 w-3" />
+                              </Button>
+                            )}
 
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteAnswerSheet(sheet.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => handleDeleteAnswerSheet(sheet.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </ProtectedRoute>
