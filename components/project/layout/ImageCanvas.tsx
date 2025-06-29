@@ -1,6 +1,6 @@
 "use client"
 
-import { AreaType } from "@prisma/client"
+import { LayoutRegionAreaType } from "@/types/common.types"
 import { useImageCanvasInteraction } from "./hooks/useImageCanvasInteraction"
 import { AreaRenderer } from "./components/AreaRenderer"
 import { DragPreview } from "./components/DragPreview"
@@ -14,7 +14,7 @@ type ImageCanvasProps = {
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   onAddAreaByDrag: (
-    type: AreaType,
+    type: LayoutRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   onUpdateArea: (

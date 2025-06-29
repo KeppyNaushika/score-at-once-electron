@@ -12,13 +12,13 @@ import {
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal"
-import { AreaType } from "@prisma/client"
+import { LayoutRegionAreaType, LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 import { AlertTriangle, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { LayoutRegionArea } from "../../../types/common.types"
 
 // AreaTypeの日本語表示マッピング
-const areaTypeToJapanese: Record<AreaType, string> = {
+const areaTypeToJapanese: Record<LayoutRegionAreaType, string> = {
   STUDENT_NAME: "氏名",
   STUDENT_ID: "生徒番号",
   QUESTION_ANSWER: "設問解答",
@@ -29,15 +29,15 @@ const areaTypeToJapanese: Record<AreaType, string> = {
   OTHER: "その他",
 }
 
-const typeIcons = {
-  [AreaType.QUESTION_ANSWER]: "📋",
-  [AreaType.STUDENT_NAME]: "📄",
-  [AreaType.STUDENT_ID]: "🔢",
-  [AreaType.TOTAL_SCORE]: "🏆",
-  [AreaType.SUBTOTAL_SCORE]: "🔢",
-  [AreaType.MARK]: "✏️",
-  [AreaType.COMMENT]: "💬",
-  [AreaType.OTHER]: "📎",
+const typeIcons: Record<LayoutRegionAreaType, string> = {
+  ["QUESTION_ANSWER"]: "📋",
+  ["STUDENT_NAME"]: "📄",
+  ["STUDENT_ID"]: "🔢",
+  ["TOTAL_SCORE"]: "🏆",
+  ["SUBTOTAL_SCORE"]: "🔢",
+  ["MARK"]: "✏️",
+  ["COMMENT"]: "💬",
+  ["OTHER"]: "📎",
 }
 
 type RegionDetailsEditorProps = {
@@ -104,7 +104,7 @@ const RegionDetailsEditor = ({
       <div className="space-y-4">
         {regions.map((region, index) => {
           const icon =
-            typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
+            typeIcons[region.type as keyof typeof typeIcons] || typeIcons["OTHER"]
 
           return (
             <Card
@@ -119,7 +119,7 @@ const RegionDetailsEditor = ({
                       {region.label || `領域 ${index + 1}`}
                     </span>
                     <span className="text-muted-foreground text-sm">
-                      ({areaTypeToJapanese[region.type as AreaType] || "その他"}
+                      ({areaTypeToJapanese[region.type as keyof typeof areaTypeToJapanese] || "その他"}
                       )
                     </span>
                   </div>
@@ -153,7 +153,7 @@ const RegionDetailsEditor = ({
                   <div>
                     <Label className="text-sm font-medium">種類</Label>
                     <div className="mt-1 grid grid-cols-3 gap-1">
-                      {Object.values(AreaType).map((type) => (
+                      {LAYOUT_REAGION_AREA_TYPES.map((type) => (
                         <button
                           key={type}
                           type="button"
@@ -174,7 +174,7 @@ const RegionDetailsEditor = ({
                   </div>
                 </div>
 
-                {region.type === AreaType.QUESTION_ANSWER && (
+                {region.type === "QUESTION_ANSWER" && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">設問番号</Label>

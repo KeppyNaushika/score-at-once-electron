@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect } from "react"
-import { AreaType } from "@prisma/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -393,7 +392,7 @@ export default function AnswerSheetGridManager({
 
       const nameRegionsForPage = layoutRegions.filter(
         (region) =>
-          region.type === AreaType.STUDENT_NAME &&
+          region.type === "STUDENT_NAME" &&
           region.masterImageId === masterImageForPage?.id,
       )
 

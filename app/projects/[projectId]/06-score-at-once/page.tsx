@@ -291,7 +291,7 @@ export default function GradingPage() {
   ): Promise<Record<string, ScoringData>> => {
     try {
       const scores = await window.electronAPI.getQuestionScoresForProject(projectId)
-      if (!scores) return {}
+      if (!scores || !Array.isArray(scores)) return {}
 
       const scoringData: Record<string, ScoringData> = {}
       scores.forEach((score: QuestionScore) => {

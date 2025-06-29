@@ -9,8 +9,18 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Plus, Search, UserCheck, Users, UserX, Info } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -63,7 +73,9 @@ export default function ProjectStudentsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showRemovalConfirm, setShowRemovalConfirm] = useState(false)
   const [studentsToRemove, setStudentsToRemove] = useState<string[]>([])
-  const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<Set<string>>(new Set())
+  const [selectedStudentsForRemoval, setSelectedStudentsForRemoval] = useState<
+    Set<string>
+  >(new Set())
   const [gradingDataInfo, setGradingDataInfo] = useState({
     hasData: false,
     totalItems: 0,
@@ -71,8 +83,12 @@ export default function ProjectStudentsPage() {
 
   // 統計情報の計算（順序付き生徒リストから）
   const totalStudents = students.length
-  const participatingStudents = students.filter((s) => s.status === "participating").length
-  const expectedStudents = students.filter((s) => s.status === "expected").length
+  const participatingStudents = students.filter(
+    (s) => s.status === "participating",
+  ).length
+  const expectedStudents = students.filter(
+    (s) => s.status === "expected",
+  ).length
   const absentStudents = students.filter((s) => s.status === "absent").length
 
   // データの取得（実際のAPIから）
@@ -82,7 +98,10 @@ export default function ProjectStudentsPage() {
   }, [projectId])
 
   // 生徒の状態を更新
-  const updateStudentStatus = async (studentId: string, newStatus: StudentStatus) => {
+  const updateStudentStatus = async (
+    studentId: string,
+    newStatus: StudentStatus,
+  ) => {
     try {
       const result = await window.electronAPI.updateStudentProjectStatus(
         projectId,
@@ -96,7 +115,9 @@ export default function ProjectStudentsPage() {
       // 受験生徒リストのステータスを更新
       setStudents((prevStudents) =>
         prevStudents.map((student) =>
-          student.id === studentId ? { ...student, status: newStatus } : student,
+          student.id === studentId
+            ? { ...student, status: newStatus }
+            : student,
         ),
       )
     } catch (error) {
@@ -107,27 +128,36 @@ export default function ProjectStudentsPage() {
   // 生徒の並び順を更新
   const updateStudentOrders = async (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[]
+    studentOrders: { studentId: string; customOrder: number }[],
   ) => {
     try {
-      const result = await window.electronAPI.updateStudentOrders(projectId, studentOrders)
+      const result = await window.electronAPI.updateStudentOrders(
+        projectId,
+        studentOrders,
+      )
       if (!result.success) {
         throw new Error(result.error || "Failed to update student orders")
       }
 
       // 成功した場合、受験生徒リストのcustomOrderを更新し、再ソート
-      const orderMap = new Map(studentOrders.map(o => [o.studentId, o.customOrder]))
-      
+      const orderMap = new Map(
+        studentOrders.map((o) => [o.studentId, o.customOrder]),
+      )
+
       setStudents((prevStudents) => {
         const updatedStudents = prevStudents.map((student) => ({
           ...student,
           customOrder: orderMap.get(student.id) ?? student.customOrder,
         }))
-        
+
         // customOrder順で再ソート
         return updatedStudents.sort((a, b) => {
-          if (a.customOrder !== null && a.customOrder !== undefined && 
-              b.customOrder !== null && b.customOrder !== undefined) {
+          if (
+            a.customOrder !== null &&
+            a.customOrder !== undefined &&
+            b.customOrder !== null &&
+            b.customOrder !== undefined
+          ) {
             return a.customOrder - b.customOrder
           }
           if (a.customOrder !== null && a.customOrder !== undefined) return -1
@@ -141,7 +171,10 @@ export default function ProjectStudentsPage() {
   }
 
   // 生徒選択の変更（SortableStudentTable用）
-  const handleStudentSelectionChange = (studentId: string, isSelected: boolean) => {
+  const handleStudentSelectionChange = (
+    studentId: string,
+    isSelected: boolean,
+  ) => {
     setSelectedStudentsForRemoval((prev) => {
       const newSet = new Set(prev)
       if (isSelected) {
@@ -156,7 +189,7 @@ export default function ProjectStudentsPage() {
   // 全選択の処理（SortableStudentTable用）
   const handleSelectAll = (isSelected: boolean) => {
     if (isSelected) {
-      setSelectedStudentsForRemoval(new Set(filteredStudents.map(s => s.id)))
+      setSelectedStudentsForRemoval(new Set(filteredStudents.map((s) => s.id)))
     } else {
       setSelectedStudentsForRemoval(new Set())
     }
@@ -171,10 +204,11 @@ export default function ProjectStudentsPage() {
 
     // 採点データの存在を確認
     try {
-      const gradingResult = await window.electronAPI.checkGradingDataForStudents(
-        projectId,
-        studentIds,
-      )
+      const gradingResult =
+        await window.electronAPI.checkGradingDataForStudents(
+          projectId,
+          studentIds,
+        )
       if (gradingResult.success) {
         setGradingDataInfo({
           hasData: gradingResult.hasAnyData || false,
@@ -199,7 +233,9 @@ export default function ProjectStudentsPage() {
         studentsToRemove,
       )
       if (!result.success) {
-        throw new Error(result.error || "Failed to remove students from project")
+        throw new Error(
+          result.error || "Failed to remove students from project",
+        )
       }
 
       // データを再読み込み（新しいアーキテクチャに対応）
@@ -216,53 +252,62 @@ export default function ProjectStudentsPage() {
 
   // データの再読み込み
   const refreshStudentData = async () => {
-    console.log('=== refreshStudentData called ===')
-    const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
-    console.log('Students result:', studentsResult)
-    
+    console.log("=== refreshStudentData called ===")
+    const studentsResult =
+      await window.electronAPI.getStudentsForProject(projectId)
+    console.log("Students result:", studentsResult)
+
     if (studentsResult.success && studentsResult.students) {
       // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
-      const sortedStudents = [...studentsResult.students].sort((a: any, b: any) => {
-        // customOrderが設定されている場合はそれを優先
-        if (a.customOrder !== null && a.customOrder !== undefined && 
-            b.customOrder !== null && b.customOrder !== undefined) {
-          return a.customOrder - b.customOrder
-        }
-        if (a.customOrder !== null && a.customOrder !== undefined) return -1
-        if (b.customOrder !== null && b.customOrder !== undefined) return 1
-        
-        // customOrderが未設定の場合はデフォルト順序（追加順など）
-        return 0
-      })
-      
-      console.log('Sorted students (customOrder-based):', sortedStudents)
+      const sortedStudents = [...studentsResult.students].sort(
+        (a: any, b: any) => {
+          // customOrderが設定されている場合はそれを優先
+          if (
+            a.customOrder !== null &&
+            a.customOrder !== undefined &&
+            b.customOrder !== null &&
+            b.customOrder !== undefined
+          ) {
+            return a.customOrder - b.customOrder
+          }
+          if (a.customOrder !== null && a.customOrder !== undefined) return -1
+          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+
+          // customOrderが未設定の場合はデフォルト順序（追加順など）
+          return 0
+        },
+      )
+
+      console.log("Sorted students (customOrder-based):", sortedStudents)
       setStudents(sortedStudents)
-      
+
       // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
       const uniqueClasses = new Map<string, { id: string; name: string }>()
-      
+
       sortedStudents.forEach((student) => {
         // 各生徒の全所属履歴を確認
         student.memberships?.forEach((membership) => {
           if (!uniqueClasses.has(membership.class.id)) {
             uniqueClasses.set(membership.class.id, {
               id: membership.class.id,
-              name: membership.class.name
+              name: membership.class.name,
             })
           }
         })
       })
-      
+
       // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
-      const filterClasses: ClassGroup[] = Array.from(uniqueClasses.values()).map(cls => ({
+      const filterClasses: ClassGroup[] = Array.from(
+        uniqueClasses.values(),
+      ).map((cls) => ({
         ...cls,
-        students: [] // 空配列 - フィルタ用なので実際の生徒リストは不要
+        students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
       }))
-      
-      console.log('Filter classes (display only):', filterClasses)
+
+      console.log("Filter classes (display only):", filterClasses)
       setClasses(filterClasses)
     } else {
-      console.error('Failed to refresh student data:', studentsResult.error)
+      console.error("Failed to refresh student data:", studentsResult.error)
     }
   }
 
@@ -275,11 +320,15 @@ export default function ProjectStudentsPage() {
       fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.studentId.includes(searchTerm)
 
-    const matchesStatus = statusFilter === "all" || student.status === statusFilter
-    
+    const matchesStatus =
+      statusFilter === "all" || student.status === statusFilter
+
     // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック
-    const matchesClass = selectedClassId === "all" || 
-      student.memberships?.some(membership => membership.class.id === selectedClassId)
+    const matchesClass =
+      selectedClassId === "all" ||
+      student.memberships?.some(
+        (membership) => membership.class.id === selectedClassId,
+      )
 
     return matchesSearch && matchesStatus && matchesClass
   })
@@ -294,7 +343,11 @@ export default function ProjectStudentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="受験生徒の確認・選択" description="" helpButton={helpButton}>
+      <PageHeader
+        title="受験生徒の確認・選択"
+        description=""
+        helpButton={helpButton}
+      >
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -307,47 +360,65 @@ export default function ProjectStudentsPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-blue-600" />
-                    <h3 className="font-semibold text-base">受験生徒の管理</h3>
+                    <h3 className="text-base font-semibold">受験生徒の管理</h3>
                   </div>
-                  <p className="text-sm text-muted-foreground pl-7">
+                  <p className="text-muted-foreground pl-7 text-sm">
                     採点対象となる生徒を選択・管理します。学級単位での一括追加や、個別の生徒追加が可能です。
                   </p>
                 </div>
 
                 <div className="space-y-3 pl-7">
-                  <div className="border rounded-lg p-3 text-sm bg-blue-50 border-blue-200 text-blue-800">
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     <strong>基本操作</strong>
-                    <ul className="list-disc pl-5 mt-2 space-y-1">
-                      <li><strong>学級単位で追加</strong>: 学級の全生徒を一括追加</li>
-                      <li><strong>個別追加</strong>: 特定の生徒のみを選択して追加</li>
-                      <li><strong>受験状態管理</strong>: 受験・見込・欠席の状態を設定</li>
-                      <li><strong>並び替え</strong>: ドラッグ&ドロップで生徒の表示順を変更</li>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      <li>
+                        <strong>学級単位で追加</strong>: 学級の全生徒を一括追加
+                      </li>
+                      <li>
+                        <strong>個別追加</strong>: 特定の生徒のみを選択して追加
+                      </li>
+                      <li>
+                        <strong>受験状態管理</strong>:
+                        受験・見込・欠席の状態を設定
+                      </li>
+                      <li>
+                        <strong>並び替え</strong>:
+                        ドラッグ&ドロップで生徒の表示順を変更
+                      </li>
                     </ul>
                   </div>
 
                   <div className="space-y-2">
-                    <p className="font-medium text-sm">受験状態の種類：</p>
+                    <p className="text-sm font-medium">受験状態の種類：</p>
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2">
                         <UserCheck className="h-4 w-4 text-green-600" />
-                        <span><strong>受験</strong>: 答案の採点対象</span>
+                        <span>
+                          <strong>受験</strong>: 答案の採点対象
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <UserX className="h-4 w-4 text-red-600" />
-                        <span><strong>欠席</strong>: 答案なし（0点として集計）</span>
+                        <span>
+                          <strong>欠席</strong>: 答案なし（0点として集計）
+                        </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-blue-600" />
-                        <span><strong>見込</strong>: 暫定的な登録</span>
+                        <span>
+                          <strong>見込</strong>: 暫定的な登録
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="border rounded-lg p-3 text-sm bg-orange-50 border-orange-200 text-orange-800">
+                  <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
                     <strong>ヒント:</strong>
-                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                    <ul className="mt-1 list-disc space-y-1 pl-5">
                       <li>生徒の並び順は採点画面での表示順に影響します</li>
-                      <li>欠席者も集計には含まれるため、正確に設定してください</li>
+                      <li>
+                        欠席者も集計には含まれるため、正確に設定してください
+                      </li>
                       <li>削除時に採点データがある場合は警告が表示されます</li>
                     </ul>
                   </div>
@@ -355,15 +426,19 @@ export default function ProjectStudentsPage() {
               </div>
             </PopoverContent>
           </Popover>
-          <Button onClick={() => router.push(`/projects/${projectId}/05-answer-sheets`)}>
+          <Button
+            onClick={() =>
+              router.push(`/projects/${projectId}/05-answer-sheets`)
+            }
+          >
             次へ: 答案アップロード
           </Button>
         </div>
       </PageHeader>
 
-      <div className="flex-1 space-y-6 overflow-hidden p-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
         {/* ヘッダー */}
-        <div className="flex items-start justify-between">
+        <div className="mb-6 flex flex-shrink-0 items-start justify-between">
           <div className="flex gap-2">
             {selectedStudentsForRemoval.size > 0 && (
               <Button variant="destructive" onClick={initiateStudentRemoval}>
@@ -379,7 +454,7 @@ export default function ProjectStudentsPage() {
         </div>
 
         {/* 統計カード */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <div className="mb-6 grid flex-shrink-0 grid-cols-2 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-muted-foreground text-sm font-medium">
@@ -432,22 +507,24 @@ export default function ProjectStudentsPage() {
         </div>
 
         {/* 生徒一覧テーブル */}
-        <SortableStudentTable
-          classes={classes}
-          onStudentStatusUpdate={updateStudentStatus}
-          onStudentOrderUpdate={updateStudentOrders}
-          selectedStudents={selectedStudentsForRemoval}
-          onStudentSelectionChange={handleStudentSelectionChange}
-          onSelectAll={handleSelectAll}
-          filteredStudents={filteredStudents}
-          projectId={projectId}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          selectedClassId={selectedClassId}
-          onClassChange={setSelectedClassId}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-        />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <SortableStudentTable
+            classes={classes}
+            onStudentStatusUpdate={updateStudentStatus}
+            onStudentOrderUpdate={updateStudentOrders}
+            selectedStudents={selectedStudentsForRemoval}
+            onStudentSelectionChange={handleStudentSelectionChange}
+            onSelectAll={handleSelectAll}
+            filteredStudents={filteredStudents}
+            projectId={projectId}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            selectedClassId={selectedClassId}
+            onClassChange={setSelectedClassId}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
+        </div>
 
         {/* 追加モーダル */}
         <ProjectStudentAddModal
