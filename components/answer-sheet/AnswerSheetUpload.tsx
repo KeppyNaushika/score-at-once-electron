@@ -3,7 +3,7 @@
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import { Progress } from "@/components/ui/progress"
 import { convertPdfToImages, getPdfPageCount } from "@/lib/pdfConverter"
-import { useCallback, useState } from "react"
+import { useCallback, useState, useEffect } from "react"
 import { toast } from "sonner"
 
 // table-dnd-kit-test準拠のコンポーネント
@@ -39,6 +39,20 @@ interface AnswerSheetUploadNewProps {
   }>
   masterImageCount: number // 模範解答のページ数
   onUploadComplete?: () => void
+  existingAnswerSheets?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+    originalImagePath: string | null
+    isAbsent: boolean
+    student: {
+      id: string
+      lastName: string
+      firstName: string
+      studentId: string
+    } | null
+  }>
+  mode?: "upload" | "view" // 新規アップロード or 既存データ表示
 }
 
 // ============================================================================
@@ -50,6 +64,8 @@ export default function AnswerSheetUploadNew({
   students,
   masterImageCount,
   onUploadComplete,
+  existingAnswerSheets,
+  mode = "upload",
 }: AnswerSheetUploadNewProps) {
   // ============================================================================
   // State管理（table-dnd-kit-test準拠のシンプル構造）
@@ -83,6 +99,53 @@ export default function AnswerSheetUploadNew({
     status: s.status,
     customOrder: s.customOrder,
   }))
+
+  // 既存答案データの初期化
+  useEffect(() => {
+    const loadExistingFiles = async () => {
+      if (mode === "view" && existingAnswerSheets) {
+        const convertedFiles: UnifiedFile[] = []
+        
+        for (const sheet of existingAnswerSheets) {
+          let previewUrl: string | undefined = undefined
+          
+          // ファイルパスが存在する場合、Base64として読み込み
+          if (sheet.originalImagePath) {
+            try {
+              const result = await window.electronAPI.readFileAsBase64(sheet.originalImagePath)
+              if (result.success && result.data) {
+                previewUrl = result.data
+              } else {
+                console.warn(`Failed to load image: ${sheet.originalImagePath}`, result.error)
+              }
+            } catch (error) {
+              console.error(`Error loading image: ${sheet.originalImagePath}`, error)
+            }
+          }
+          
+          convertedFiles.push({
+            id: sheet.id,
+            name: `ページ ${sheet.pageNumber}`,
+            type: "image/png",
+            size: 0,
+            preview: previewUrl,
+            studentId: sheet.studentId || undefined,
+            pageNumber: sheet.pageNumber,
+            isSelected: false,
+            pageLabel: `ページ ${sheet.pageNumber}`,
+            buffer: new ArrayBuffer(0),
+            originalFileName: `ページ ${sheet.pageNumber}`,
+            position: (sheet.pageNumber - 1), // customOrderは別の仕組みで管理される
+            // isDisabled: sheet.isAbsent, // UnifiedFileにはisDisabledプロパティが存在しない
+          })
+        }
+        
+        setFiles(convertedFiles)
+      }
+    }
+    
+    loadExistingFiles()
+  }, [mode, existingAnswerSheets, masterImageCount])
 
   // ============================================================================
   // ファイル変換処理（シンプル化）
@@ -543,18 +606,20 @@ export default function AnswerSheetUploadNew({
 
   return (
     <div className="flex h-full flex-col space-y-4">
-      {/* ファイルアップロードゾーン */}
-      <div className="space-y-4">
-        <FileUploadZone
-          onDrop={handleFilesDrop}
-          isConverting={isConverting}
-          disabled={isConverting || isUploading}
-          masterImageCount={masterImageCount}
-          pdfProcessingProgress={pdfProcessingProgress}
-        />
+      {/* ファイルアップロードゾーン（uploadモードのみ表示） */}
+      {mode === "upload" && (
+        <div className="space-y-4">
+          <FileUploadZone
+            onDrop={handleFilesDrop}
+            isConverting={isConverting}
+            disabled={isConverting || isUploading}
+            masterImageCount={masterImageCount}
+            pdfProcessingProgress={pdfProcessingProgress}
+          />
 
-        {/* 処理中プログレス */}
-      </div>
+          {/* 処理中プログレス */}
+        </div>
+      )}
 
       {/* 統計情報 */}
       {files.length > 0 && (
