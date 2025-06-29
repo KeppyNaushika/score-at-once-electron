@@ -87,12 +87,25 @@ export interface Score {
   points: number | null
 }
 
+export const LAYOUT_REAGION_AREA_TYPES = [
+  "QUESTION_ANSWER",
+  "STUDENT_NAME",
+  "STUDENT_ID",
+  "TOTAL_SCORE",
+  "SUBTOTAL_SCORE",
+  "MARK",
+  "COMMENT",
+  "OTHER",
+] as const
+
+export type LayoutRegionAreaType = (typeof LAYOUT_REAGION_AREA_TYPES)[number]
+
 export interface LayoutRegionArea {
   id?: string
   projectId?: string
   masterImageId?: string
   label: string
-  type: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  type: LayoutRegionAreaType
   x: number
   y: number
   width: number
@@ -173,7 +186,15 @@ export interface LayoutRegionCreateData {
   projectId: string
   masterImageId?: string
   label: string
-  type: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  type:
+    | "QUESTION_ANSWER"
+    | "STUDENT_NAME"
+    | "STUDENT_ID"
+    | "TOTAL_SCORE"
+    | "SUBTOTAL_SCORE"
+    | "MARK"
+    | "COMMENT"
+    | "OTHER"
   x: number
   y: number
   width: number
@@ -184,7 +205,15 @@ export interface LayoutRegionCreateData {
 
 export interface LayoutRegionUpdateData {
   label?: string
-  type?: "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+  type?:
+    | "QUESTION_ANSWER"
+    | "STUDENT_NAME"
+    | "STUDENT_ID"
+    | "TOTAL_SCORE"
+    | "SUBTOTAL_SCORE"
+    | "MARK"
+    | "COMMENT"
+    | "OTHER"
   x?: number
   y?: number
   width?: number
@@ -213,7 +242,16 @@ export interface QuestionScoreUpdateData {
 }
 
 export interface ScoringMarkConfig {
-  position: "top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right"
+  position:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "center-left"
+    | "center"
+    | "center-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right"
   size: number
   showCorrect: boolean
   showIncorrect: boolean

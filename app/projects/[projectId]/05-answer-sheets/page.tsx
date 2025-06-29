@@ -14,9 +14,17 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import { Eye, Trash2, Upload, User, UserX, Grid3X3 } from "lucide-react"
+import { Eye, Trash2, Upload, User, UserX, Grid3X3, FileImage } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -292,82 +300,112 @@ export default function AnswerSheetsPage() {
                 </Card>
               </div>
 
-              {/* 生徒と答案の対応 */}
-              <div className="min-h-0 flex-1 rounded-lg border p-2">
+              {/* 生徒と答案の対応表 */}
+              <div className="min-h-0 flex-1 rounded-lg border">
                 <div className="h-full overflow-auto">
                   {answerSheets.length === 0 ? (
-                    <div className="text-muted-foreground py-4 text-center text-sm">
+                    <div className="text-muted-foreground py-8 text-center text-sm">
                       まだ答案がアップロードされていません
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2">
-                      {answerSheets.map((sheet) => (
-                        <div
-                          key={sheet.id}
-                          className="flex items-center gap-3 rounded-lg border p-3"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-medium">
-                                {sheet.student
-                                  ? `${sheet.student.lastName} ${sheet.student.firstName}`
-                                  : "未関連付け"}
-                              </span>
-                              {sheet.student && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {sheet.student.studentId}
-                                </Badge>
-                              )}
+                    <Table>
+                      <TableHeader className="bg-background sticky top-0 z-10">
+                        <TableRow>
+                          <TableHead className="w-[120px]">プレビュー</TableHead>
+                          <TableHead>生徒情報</TableHead>
+                          <TableHead className="w-[100px]">ページ</TableHead>
+                          <TableHead className="w-[80px]">状態</TableHead>
+                          <TableHead className="w-[150px]">アップロード日時</TableHead>
+                          <TableHead className="w-[100px]">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {answerSheets.map((sheet) => (
+                          <TableRow key={sheet.id}>
+                            <TableCell>
+                              <div className="h-16 w-24 rounded border bg-gray-50 overflow-hidden">
+                                {sheet.originalImagePath ? (
+                                  <img
+                                    src={sheet.originalImagePath}
+                                    alt={`ページ ${sheet.pageNumber}`}
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center">
+                                    <FileImage className="h-6 w-6 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="space-y-1">
+                                <div className="font-medium text-sm">
+                                  {sheet.student
+                                    ? `${sheet.student.lastName} ${sheet.student.firstName}`
+                                    : "未関連付け"}
+                                </div>
+                                {sheet.student && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {sheet.student.studentId}
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
                               <Badge variant="outline" className="text-xs">
-                                ページ {sheet.pageNumber}
+                                {sheet.pageNumber}
                               </Badge>
-                              {sheet.isAbsent && (
-                                <Badge
-                                  variant="destructive"
-                                  className="text-xs"
-                                >
+                            </TableCell>
+                            <TableCell>
+                              {sheet.isAbsent ? (
+                                <Badge variant="destructive" className="text-xs">
                                   欠席
                                 </Badge>
+                              ) : (
+                                <Badge variant="default" className="text-xs">
+                                  有効
+                                </Badge>
                               )}
-                            </div>
-                            <p className="text-muted-foreground text-xs">
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
                               {new Date(sheet.createdAt).toLocaleString()}
-                            </p>
-                          </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {!sheet.isAbsent ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSetAbsent(sheet.id, true)}
+                                  >
+                                    <UserX className="h-3 w-3" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleSetAbsent(sheet.id, false)}
+                                  >
+                                    <User className="h-3 w-3" />
+                                  </Button>
+                                )}
 
-                          <div className="flex items-center gap-1">
-                            {!sheet.isAbsent ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => handleSetAbsent(sheet.id, true)}
-                              >
-                                <UserX className="h-3 w-3" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => handleSetAbsent(sheet.id, false)}
-                              >
-                                <User className="h-3 w-3" />
-                              </Button>
-                            )}
-
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-8 px-2"
-                              onClick={() => handleDeleteAnswerSheet(sheet.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleDeleteAnswerSheet(sheet.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   )}
                 </div>
               </div>

@@ -1,7 +1,13 @@
 "use client"
 
-import { AreaType } from "@prisma/client"
-import { MouseEvent as ReactMouseEvent, RefObject, useCallback, useEffect, useState } from "react"
+import { LayoutRegionArea } from "@/types/common.types"
+import {
+  MouseEvent as ReactMouseEvent,
+  RefObject,
+  useCallback,
+  useEffect,
+  useState,
+} from "react"
 
 interface AreaRendererProps {
   areas: any[]
@@ -31,80 +37,82 @@ export function AreaRenderer({
   containerRef,
   zoom,
 }: AreaRendererProps) {
-  
   // 全てのhooksを最初に定義（条件分岐の前に）
   const [containerReady, setContainerReady] = useState(false)
   const [forceUpdate, setForceUpdate] = useState(0)
-  
+
   // ウィンドウリサイズ時の再計算を強制
   const triggerUpdate = useCallback(() => {
-    setForceUpdate(prev => prev + 1)
+    setForceUpdate((prev) => prev + 1)
   }, [])
-  
-  const convertAreaToDisplayCoords = useCallback((area: any) => {
-    if (!imageDimensions || !containerRef.current) {
-      return { left: 0, top: 0, width: 0, height: 0 }
-    }
 
-    const containerWidth = containerRef.current.clientWidth
-    const containerHeight = containerRef.current.clientHeight
+  const convertAreaToDisplayCoords = useCallback(
+    (area: any) => {
+      if (!imageDimensions || !containerRef.current) {
+        return { left: 0, top: 0, width: 0, height: 0 }
+      }
 
-    // コンテナサイズが0の場合は描画しない（初期化中）
-    if (containerWidth === 0 || containerHeight === 0) {
-      return { left: 0, top: 0, width: 0, height: 0 }
-    }
+      const containerWidth = containerRef.current.clientWidth
+      const containerHeight = containerRef.current.clientHeight
 
-    // 標準スクロール方式：ズームのみ考慮した座標計算
-    const scaledImageWidth = imageDimensions.width * zoom
-    const scaledImageHeight = imageDimensions.height * zoom
+      // コンテナサイズが0の場合は描画しない（初期化中）
+      if (containerWidth === 0 || containerHeight === 0) {
+        return { left: 0, top: 0, width: 0, height: 0 }
+      }
 
-    return {
-      left: area.x * scaledImageWidth,
-      top: area.y * scaledImageHeight,
-      width: area.width * scaledImageWidth,
-      height: area.height * scaledImageHeight,
-    }
-  }, [imageDimensions, zoom, forceUpdate])
-  
+      // 標準スクロール方式：ズームのみ考慮した座標計算
+      const scaledImageWidth = imageDimensions.width * zoom
+      const scaledImageHeight = imageDimensions.height * zoom
+
+      return {
+        left: area.x * scaledImageWidth,
+        top: area.y * scaledImageHeight,
+        width: area.width * scaledImageWidth,
+        height: area.height * scaledImageHeight,
+      }
+    },
+    [imageDimensions, zoom, forceUpdate],
+  )
+
   useEffect(() => {
     // refが設定されたら再レンダリングを促す
     if (containerRef.current) {
       setContainerReady(true)
     }
-    
+
     // ResizeObserverでコンテナサイズの変更を監視
     let resizeObserver: ResizeObserver | null = null
-    
+
     if (containerRef.current) {
       resizeObserver = new ResizeObserver(() => {
         triggerUpdate()
       })
       resizeObserver.observe(containerRef.current)
     }
-    
+
     return () => {
       if (resizeObserver) {
         resizeObserver.disconnect()
       }
     }
   }, [containerRef.current, triggerUpdate])
-  
+
   // refが準備できていない場合は何も描画しない
   if (!containerRef.current) {
     return null
   }
-  
-  const getAreaTypeColor = (type: AreaType) => {
+
+  const getAreaTypeColor = (type: LayoutRegionArea["type"]) => {
     switch (type) {
-      case AreaType.QUESTION_ANSWER:
+      case "QUESTION_ANSWER":
         return "rgba(0, 255, 0, 0.3)"
-      case AreaType.STUDENT_NAME:
+      case "STUDENT_NAME":
         return "rgba(0, 0, 255, 0.3)"
-      case AreaType.STUDENT_ID:
+      case "STUDENT_ID":
         return "rgba(255, 0, 255, 0.3)"
-      case AreaType.TOTAL_SCORE:
+      case "TOTAL_SCORE":
         return "rgba(255, 255, 0, 0.3)"
-      case AreaType.SUBTOTAL_SCORE:
+      case "SUBTOTAL_SCORE":
         return "rgba(255, 165, 0, 0.3)"
       default:
         return "rgba(128, 128, 128, 0.3)"

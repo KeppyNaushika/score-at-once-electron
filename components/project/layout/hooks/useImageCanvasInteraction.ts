@@ -1,6 +1,6 @@
 "use client"
 
-import { AreaType } from "@prisma/client"
+import { LayoutRegionAreaType } from "@/types/common.types"
 import { MouseEvent as ReactMouseEvent, useCallback, useEffect, useRef, useState } from "react"
 
 interface DragState {
@@ -28,7 +28,7 @@ interface UseImageCanvasInteractionProps {
   masterImageId: string | null
   areas: any[]
   onAddAreaByDrag: (
-    type: AreaType,
+    type: LayoutRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   onUpdateArea: (
@@ -229,7 +229,7 @@ export function useImageCanvasInteraction({
         // 重複防止フラグを設定
         isCreatingRef.current = true
         
-        onAddAreaByDrag(AreaType.QUESTION_ANSWER, {
+        onAddAreaByDrag("QUESTION_ANSWER", {
           x: startX,
           y: startY,
           width,

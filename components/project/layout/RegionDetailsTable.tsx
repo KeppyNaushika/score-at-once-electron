@@ -17,12 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AreaType } from "@prisma/client"
 import { AlertTriangle, GripVertical, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 // AreaTypeの日本語表示マッピング
-const areaTypeToJapanese: Record<AreaType, string> = {
+const areaTypeToJapanese: Record<LayoutRegionArea["type"], string> = {
   STUDENT_NAME: "氏名",
   STUDENT_ID: "生徒番号",
   QUESTION_ANSWER: "設問解答",
@@ -33,18 +32,23 @@ const areaTypeToJapanese: Record<AreaType, string> = {
   OTHER: "その他",
 }
 
-const typeIcons = {
-  [AreaType.QUESTION_ANSWER]: "📋",
-  [AreaType.STUDENT_NAME]: "📄",
-  [AreaType.STUDENT_ID]: "🔢",
-  [AreaType.TOTAL_SCORE]: "🏆",
-  [AreaType.SUBTOTAL_SCORE]: "🔢",
-  [AreaType.MARK]: "✏️",
-  [AreaType.COMMENT]: "💬",
-  [AreaType.OTHER]: "📎",
+const typeIcons: Record<LayoutRegionAreaType, string> = {
+  ["QUESTION_ANSWER"]: "📋",
+  ["STUDENT_NAME"]: "📄",
+  ["STUDENT_ID"]: "🔢",
+  ["TOTAL_SCORE"]: "🏆",
+  ["SUBTOTAL_SCORE"]: "🔢",
+  ["MARK"]: "✏️",
+  ["COMMENT"]: "💬",
+  ["OTHER"]: "📎",
 }
 
 import type { LayoutRegionWithDetails } from "@/types/electron"
+import {
+  LAYOUT_REAGION_AREA_TYPES,
+  LayoutRegionArea,
+  LayoutRegionAreaType,
+} from "@/types/common.types"
 
 type RegionDetailsTableProps = {
   regions: LayoutRegionWithDetails[]
@@ -76,24 +80,35 @@ const RegionDetailsTable = ({
   })
 
   // 選択されたページの領域のみをフィルタ
-  const filteredRegions = selectedMasterImageId 
-    ? regions.filter(region => region.masterImageId === selectedMasterImageId)
+  const filteredRegions = selectedMasterImageId
+    ? regions.filter((region) => region.masterImageId === selectedMasterImageId)
     : regions
 
   // フィルタされた領域のインデックスを全体領域での実際のインデックスにマッピング
   const getGlobalIndex = (filteredIndex: number) => {
     if (!selectedMasterImageId) return filteredIndex
     const filteredRegion = filteredRegions[filteredIndex]
-    return regions.findIndex(region => region.id === filteredRegion.id || 
-      (region.masterImageId === filteredRegion.masterImageId && 
-       region.x === filteredRegion.x && region.y === filteredRegion.y))
+    return regions.findIndex(
+      (region) =>
+        region.id === filteredRegion.id ||
+        (region.masterImageId === filteredRegion.masterImageId &&
+          region.x === filteredRegion.x &&
+          region.y === filteredRegion.y),
+    )
   }
 
-  const handleRegionChange = (filteredIndex: number, field: string, value: any) => {
+  const handleRegionChange = (
+    filteredIndex: number,
+    field: string,
+    value: any,
+  ) => {
     const globalIndex = getGlobalIndex(filteredIndex)
     const newRegions = [...regions]
     if (field === "points" && value !== "") {
-      newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: parseFloat(value) }
+      newRegions[globalIndex] = {
+        ...newRegions[globalIndex],
+        [field]: parseFloat(value),
+      }
     } else if (field === "points" && value === "") {
       newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: null }
     } else {
@@ -207,7 +222,7 @@ const RegionDetailsTable = ({
   const confirmDeleteRegion = async () => {
     if (regionToDelete !== null) {
       const regionToDeleteData = regions[regionToDelete]
-      
+
       try {
         // データベースから削除（IDがある場合のみ）
         if (regionToDeleteData?.id) {
@@ -219,7 +234,7 @@ const RegionDetailsTable = ({
         setRegions(newRegions)
         setDeleteModalOpen(false)
         setRegionToDelete(null)
-        
+
         // 選択行インデックスを調整
         if (selectedRowIndex === regionToDelete) {
           setSelectedRowIndex(null)
@@ -290,13 +305,14 @@ const RegionDetailsTable = ({
       <div className="p-8 text-center">
         <div className="mb-4 text-4xl">🎨</div>
         <h3 className="mb-2 text-lg font-medium">
-          {selectedMasterImageId ? "このページに領域がありません" : "領域を作成してください"}
+          {selectedMasterImageId
+            ? "このページに領域がありません"
+            : "領域を作成してください"}
         </h3>
         <p className="text-muted-foreground">
-          {selectedMasterImageId 
+          {selectedMasterImageId
             ? "前のステップに戻って、このページに領域を作成してください。"
-            : "前のステップに戻って、模範解答上で領域を作成してください。"
-          }
+            : "前のステップに戻って、模範解答上で領域を作成してください。"}
         </p>
       </div>
     )
@@ -335,10 +351,16 @@ const RegionDetailsTable = ({
           </thead>
           <tbody>
             {filteredRegions.map((region, filteredIndex) => {
+              const regionType = region.type
               const globalIndex = getGlobalIndex(filteredIndex)
               const isSelected = selectedRowIndex === globalIndex
-              const icon =
-                typeIcons[region.type as AreaType] || typeIcons[AreaType.OTHER]
+
+              const isValidType = (type: string): type is LayoutRegionAreaType => 
+                LAYOUT_REAGION_AREA_TYPES.includes(type as LayoutRegionAreaType)
+              
+              const icon = isValidType(regionType)
+                ? typeIcons[regionType]
+                : typeIcons["OTHER"]
               const isDragged = dragState.draggedIndex === filteredIndex
               const isDraggedOver = dragState.dragOverIndex === filteredIndex
 
@@ -356,7 +378,9 @@ const RegionDetailsTable = ({
                   } ${isDragged ? "opacity-50" : ""} ${
                     isDraggedOver ? "border-t-4 border-t-blue-500" : ""
                   }`}
-                  onClick={() => setSelectedRowIndex(isSelected ? null : globalIndex)}
+                  onClick={() =>
+                    setSelectedRowIndex(isSelected ? null : globalIndex)
+                  }
                 >
                   <td className="border-border border px-2 py-1">
                     <div className="flex items-center justify-center">
@@ -366,7 +390,9 @@ const RegionDetailsTable = ({
                   <td className="border-border border px-2 py-1">
                     <div className="flex items-center space-x-2">
                       <span className="text-lg">{icon}</span>
-                      <span className="text-sm font-medium">{filteredIndex + 1}</span>
+                      <span className="text-sm font-medium">
+                        {filteredIndex + 1}
+                      </span>
                     </div>
                   </td>
                   <td className="border-border border px-2 py-1">
@@ -381,11 +407,13 @@ const RegionDetailsTable = ({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.values(AreaType).map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {areaTypeToJapanese[type]}
-                          </SelectItem>
-                        ))}
+                        {Object.values(LAYOUT_REAGION_AREA_TYPES).map(
+                          (type) => (
+                            <SelectItem key={type} value={type}>
+                              {areaTypeToJapanese[type]}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </td>
@@ -395,25 +423,37 @@ const RegionDetailsTable = ({
                       data-field="label"
                       value={region.label || ""}
                       onChange={(e) =>
-                        handleRegionChange(filteredIndex, "label", e.target.value)
+                        handleRegionChange(
+                          filteredIndex,
+                          "label",
+                          e.target.value,
+                        )
                       }
-                      onKeyDown={(e) => handleKeyDown(e, filteredIndex, "label")}
+                      onKeyDown={(e) =>
+                        handleKeyDown(e, filteredIndex, "label")
+                      }
                       disabled={disabled}
                       placeholder="領域名を入力"
                       className="h-8 w-full min-w-20"
                     />
                   </td>
                   <td className="border-border border px-2 py-1">
-                    {region.type === AreaType.QUESTION_ANSWER ? (
+                    {region.type === "QUESTION_ANSWER" ? (
                       <Input
                         data-row={filteredIndex}
                         data-field="points"
                         type="number"
                         value={region.points ?? ""}
                         onChange={(e) =>
-                          handleRegionChange(filteredIndex, "points", e.target.value)
+                          handleRegionChange(
+                            filteredIndex,
+                            "points",
+                            e.target.value,
+                          )
                         }
-                        onKeyDown={(e) => handleKeyDown(e, filteredIndex, "points")}
+                        onKeyDown={(e) =>
+                          handleKeyDown(e, filteredIndex, "points")
+                        }
                         disabled={disabled}
                         placeholder="10"
                         className="h-8 w-full min-w-20"
@@ -451,7 +491,8 @@ const RegionDetailsTable = ({
               <span>領域の削除確認</span>
             </ModalTitle>
             <ModalDescription>
-              この領域を削除しますか？ ⚠️ 注意：この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
+              この領域を削除しますか？ ⚠️
+              注意：この領域に関連付けられた採点データがある場合、それらも一緒に削除されます。この操作は元に戻すことができません。
             </ModalDescription>
           </ModalHeader>
           <ModalFooter>

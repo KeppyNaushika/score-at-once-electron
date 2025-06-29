@@ -1,6 +1,5 @@
 "use client"
 
-import { AreaType } from "@prisma/client"
 import { LayoutRegionArea } from "../../../types/common.types"
 
 type LayoutRegionListProps = {
@@ -17,25 +16,25 @@ const LayoutRegionList = ({
   disabled,
 }: LayoutRegionListProps) => {
   const typeIcons = {
-    [AreaType.QUESTION_ANSWER]: "📋",
-    [AreaType.STUDENT_NAME]: "📄",
-    [AreaType.STUDENT_ID]: "🔢",
-    [AreaType.TOTAL_SCORE]: "🏆",
-    [AreaType.SUBTOTAL_SCORE]: "🔢",
-    [AreaType.MARK]: "✏️",
-    [AreaType.COMMENT]: "💬",
-    [AreaType.OTHER]: "📎",
+    "QUESTION_ANSWER": "📋",
+    "STUDENT_NAME": "📄",
+    "STUDENT_ID": "🔢",
+    "TOTAL_SCORE": "🏆",
+    "SUBTOTAL_SCORE": "🔢",
+    "MARK": "✏️",
+    "COMMENT": "💬",
+    "OTHER": "📎",
   }
 
   const typeLabels = {
-    [AreaType.QUESTION_ANSWER]: "設問",
-    [AreaType.STUDENT_NAME]: "氏名",
-    [AreaType.STUDENT_ID]: "番号",
-    [AreaType.TOTAL_SCORE]: "合計",
-    [AreaType.SUBTOTAL_SCORE]: "小計",
-    [AreaType.MARK]: "マーク",
-    [AreaType.COMMENT]: "コメント",
-    [AreaType.OTHER]: "その他",
+    "QUESTION_ANSWER": "設問",
+    "STUDENT_NAME": "氏名",
+    "STUDENT_ID": "番号",
+    "TOTAL_SCORE": "合計",
+    "SUBTOTAL_SCORE": "小計",
+    "MARK": "マーク",
+    "COMMENT": "コメント",
+    "OTHER": "その他",
   }
 
   return (
@@ -63,9 +62,9 @@ const LayoutRegionList = ({
             {areas.map((area, index) => {
               const isSelected = selectedAreaIndex === index
               const icon =
-                typeIcons[area.type as AreaType] || typeIcons[AreaType.OTHER]
+                typeIcons[area.type as keyof typeof typeIcons] || typeIcons["OTHER"]
               const typeLabel =
-                typeLabels[area.type as AreaType] || typeLabels[AreaType.OTHER]
+                typeLabels[area.type as keyof typeof typeLabels] || typeLabels["OTHER"]
 
               return (
                 <button
@@ -87,7 +86,7 @@ const LayoutRegionList = ({
                       </div>
                       <div className="text-xs opacity-75">
                         {typeLabel}
-                        {area.type === AreaType.QUESTION_ANSWER &&
+                        {area.type === "QUESTION_ANSWER" &&
                           area.points &&
                           ` (${area.points}点)`}
                       </div>

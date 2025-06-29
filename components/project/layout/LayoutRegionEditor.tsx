@@ -1,7 +1,6 @@
 "use client"
 
-// AreaType enum は削除されたため、文字列型として定義
-type AreaType = "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
+import { LayoutRegionAreaType } from "@/types/common.types"
 import { useState } from "react"
 import { toast } from "sonner"
 import ImageCanvas from "./ImageCanvas"
@@ -30,7 +29,7 @@ const LayoutRegionEditor = ({
     disabled,
     backgroundImageUrl,
     imageDimensions,
-    masterImageId
+    masterImageId,
   })
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null,
@@ -47,7 +46,7 @@ const LayoutRegionEditor = ({
 
   const handleDeleteArea = async (index: number) => {
     const areaToDelete = areas[index]
-    
+
     // DBから削除（IDがある場合のみ）
     if (areaToDelete.id) {
       try {
@@ -58,7 +57,7 @@ const LayoutRegionEditor = ({
         return // エラーの場合は削除を中断
       }
     }
-    
+
     // ローカルステートから削除
     const newAreas = areas.filter((_, i) => i !== index)
     setAreas(newAreas)
@@ -66,7 +65,7 @@ const LayoutRegionEditor = ({
   }
 
   const addArea = (
-    type: AreaType,
+    type: LayoutRegionAreaType,
     customCoords?: { x: number; y: number; width: number; height: number },
   ) => {
     if (!masterImageId) {
@@ -87,54 +86,57 @@ const LayoutRegionEditor = ({
 
     let newAreaSpecifics = {}
     switch (type) {
-      case AreaType.STUDENT_NAME:
+      case "STUDENT_NAME":
         newAreaSpecifics = {
           label: "氏名",
-          type: AreaType.STUDENT_NAME,
+          type: "STUDENT_NAME",
         }
         break
-      case AreaType.STUDENT_ID:
+      case "STUDENT_ID":
         newAreaSpecifics = {
           label: "生徒番号",
-          type: AreaType.STUDENT_ID,
+          type: "STUDENT_ID",
         }
         break
-      case AreaType.QUESTION_ANSWER:
+      case "QUESTION_ANSWER":
         newAreaSpecifics = {
           label: `設問 ${
-            areas.filter((a) => a.type === AreaType.QUESTION_ANSWER).length + 1
+            areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
           }`,
-          type: AreaType.QUESTION_ANSWER,
+          type: "QUESTION_ANSWER",
           questionNumber: (
-            areas.filter((a) => a.type === AreaType.QUESTION_ANSWER).length + 1
+            areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
           ).toString(),
           points: 10, // デフォルトポイント
         }
         break
-      case AreaType.TOTAL_SCORE:
+      case "TOTAL_SCORE":
         newAreaSpecifics = {
           label: "合計点",
-          type: AreaType.TOTAL_SCORE,
+          type: "TOTAL_SCORE",
         }
         break
-      case AreaType.SUBTOTAL_SCORE:
+      case "SUBTOTAL_SCORE":
         newAreaSpecifics = {
           label: "小計",
-          type: AreaType.SUBTOTAL_SCORE,
+          type: "SUBTOTAL_SCORE",
         }
         break
       default:
-        newAreaSpecifics = { label: "新規エリア", type: AreaType.OTHER }
+        newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
     }
 
-    setAreas([...areas, { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea])
+    setAreas([
+      ...areas,
+      { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea,
+    ])
     setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
   return (
     <div className="flex h-full">
       {/* Left Side - Image Canvas with independent scroll */}
-      <div className="flex-1 min-w-0 relative">
+      <div className="relative min-w-0 flex-1">
         <ImageCanvas
           backgroundImageUrl={backgroundImageUrl}
           imageDimensions={imageDimensions}
@@ -150,7 +152,7 @@ const LayoutRegionEditor = ({
       </div>
 
       {/* Right Side - Region List with independent scroll */}
-      <div className="w-80 border-l bg-background flex-shrink-0 relative">
+      <div className="bg-background relative w-80 flex-shrink-0 border-l">
         <LayoutRegionList
           areas={areas}
           selectedAreaIndex={selectedAreaIndex}
