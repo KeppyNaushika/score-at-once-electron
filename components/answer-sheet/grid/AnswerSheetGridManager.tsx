@@ -110,8 +110,6 @@ export default function AnswerSheetGridManager({
   onFilesReorder,
   onUpload,
 }: AnswerSheetGridManagerProps) {
-  console.log("🔄 AnswerSheetGridManager re-rendered")
-  
   // マスター画像の管理
   const [masterImages, setMasterImages] = useState<
     Array<{ id: string; pageNumber: number }>
