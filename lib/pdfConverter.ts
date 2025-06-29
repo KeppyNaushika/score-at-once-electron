@@ -29,7 +29,33 @@ export interface PdfConversionError {
   message: string
 }
 
-export async function convertPdfToImages(file: File, password?: string): Promise<ConvertedImage[]> {
+export async function getPdfPageCount(file: File, password?: string): Promise<number> {
+  const pdfjs = await initializePdfjs()
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer()
+    const loadingTask = pdfjs.getDocument({
+      data: arrayBuffer,
+      password: password
+    })
+    const pdf = await loadingTask.promise
+    return pdf.numPages
+  } catch (error: any) {
+    if (error.name === 'PasswordException') {
+      throw new Error('password-required')
+    } else if (error.name === 'InvalidPDFException' && password) {
+      throw new Error('invalid-password')
+    } else {
+      throw new Error(`PDF読み込みエラー: ${error.message || '不明なエラー'}`)
+    }
+  }
+}
+
+export async function convertPdfToImages(
+  file: File, 
+  password?: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<ConvertedImage[]> {
   // PDF.jsを初期化
   const pdfjs = await initializePdfjs()
   
@@ -70,6 +96,11 @@ export async function convertPdfToImages(file: File, password?: string): Promise
         type: 'image/png',
         buffer: buffer
       })
+
+      // プログレスコールバック呼び出し
+      if (onProgress) {
+        onProgress(pageNum, pdf.numPages)
+      }
     }
 
     return images

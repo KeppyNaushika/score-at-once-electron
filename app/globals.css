@@ -150,6 +150,13 @@
   background: transparent;
 }
 
+/* 振動アニメーション */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 /* ダークモード対応 */
 .dark .scrollbar-overlay {
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
