@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Lock, AlertCircle } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface PasswordDialogProps {
   isOpen: boolean
@@ -21,6 +21,7 @@ interface PasswordDialogProps {
   fileName: string
   error?: string
   isLoading?: boolean
+  isFirstAttempt?: boolean
 }
 
 export function PasswordDialog({
@@ -30,8 +31,11 @@ export function PasswordDialog({
   fileName,
   error,
   isLoading = false,
+  isFirstAttempt = true,
 }: PasswordDialogProps) {
   const [password, setPassword] = useState("")
+  const [isShaking, setIsShaking] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,6 +43,26 @@ export function PasswordDialog({
       onSubmit(password)
     }
   }
+
+  // エラー時の振動効果
+  useEffect(() => {
+    if (error && !isFirstAttempt) {
+      setIsShaking(true)
+      // 振動効果のリセット
+      const timer = setTimeout(() => {
+        setIsShaking(false)
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [error, isFirstAttempt])
+
+  // ダイアログが開かれた時にパスワードをクリア
+  useEffect(() => {
+    if (isOpen) {
+      setPassword("")
+      setIsShaking(false)
+    }
+  }, [isOpen])
 
   const handleClose = () => {
     setPassword("")
@@ -65,6 +89,7 @@ export function PasswordDialog({
           <div className="space-y-2">
             <Label htmlFor="pdf-password">パスワード</Label>
             <Input
+              ref={inputRef}
               id="pdf-password"
               type="password"
               value={password}
@@ -72,13 +97,17 @@ export function PasswordDialog({
               placeholder="PDFのパスワードを入力"
               autoFocus
               disabled={isLoading}
+              className={isShaking ? "animate-pulse border-red-500" : ""}
+              style={{
+                animation: isShaking ? "shake 0.6s ease-in-out" : "none",
+              }}
             />
           </div>
 
-          {error && (
+          {error && !isFirstAttempt && (
             <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md">
               <AlertCircle className="h-4 w-4" />
-              {error}
+              パスワードが間違っている可能性があります
             </div>
           )}
 

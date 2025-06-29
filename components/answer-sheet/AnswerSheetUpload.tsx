@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import { Button } from "@/components/ui/button"
-import { convertPdfToImages } from "@/lib/pdfConverter"
+import { convertPdfToImages, getPdfPageCount } from "@/lib/pdfConverter"
 import { toast } from "sonner"
 import { Upload } from "lucide-react"
 
@@ -76,6 +76,10 @@ export default function AnswerSheetUpload({
   const [passwordError, setPasswordError] = useState<string>("")
   const [isPasswordProcessing, setIsPasswordProcessing] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [passwordAttempts, setPasswordAttempts] = useState(0)
+  const [pdfProcessingProgress, setPdfProcessingProgress] = useState(0)
+  const [isPdfProcessing, setIsPdfProcessing] = useState(false)
+  const [currentProcessingFile, setCurrentProcessingFile] = useState<string>("")
   const [isClient, setIsClient] = useState(false)
 
   // ============================================================================
@@ -105,59 +109,58 @@ export default function AnswerSheetUpload({
   // ファイル変換処理
   // ============================================================================
 
-  const convertFilesToImages = useCallback(
-    async (fileList: File[], password?: string): Promise<ConvertedFileTemp[]> => {
+  const convertSingleFileToImages = useCallback(
+    async (file: File, password?: string, onProgress?: (current: number, total: number) => void): Promise<ConvertedFileTemp[]> => {
       const convertedFiles: ConvertedFileTemp[] = []
       
-      for (const file of fileList) {
-        try {
-          if (file.type === "application/pdf") {
-            const images = await convertPdfToImages(file, password)
-            for (let i = 0; i < images.length; i++) {
-              // プレビューURL作成
-              const blob = new Blob([images[i].buffer], { type: "image/png" })
-              const preview = URL.createObjectURL(blob)
-              
-              convertedFiles.push({
-                id: crypto.randomUUID(),
-                name: `${file.name} - ページ ${i + 1}`,
-                type: "image/png",
-                size: file.size,
-                buffer: images[i].buffer,
-                preview,
-                pageNumber: i + 1,
-                isSelected: true,
-                originalFileName: file.name,
-                pageLabel: `ページ ${i + 1}`,
-              })
-            }
-          } else if (file.type.startsWith("image/")) {
-            const buffer = await file.arrayBuffer()
+      try {
+        if (file.type === "application/pdf") {
+          const images = await convertPdfToImages(file, password, onProgress)
+          for (let i = 0; i < images.length; i++) {
             // プレビューURL作成
-            const blob = new Blob([buffer], { type: file.type })
+            const blob = new Blob([images[i].buffer], { type: "image/png" })
             const preview = URL.createObjectURL(blob)
             
             convertedFiles.push({
               id: crypto.randomUUID(),
-              name: file.name,
-              type: file.type,
+              name: `${file.name} - ページ ${i + 1}`,
+              type: "image/png",
               size: file.size,
-              buffer,
+              buffer: images[i].buffer,
               preview,
-              pageNumber: 1, // 画像は1ページとして扱う
+              pageNumber: i + 1,
               isSelected: true,
               originalFileName: file.name,
-              pageLabel: "ページ 1",
+              pageLabel: `ページ ${i + 1}`,
             })
           }
-        } catch (error) {
+        } else if (file.type.startsWith("image/")) {
+          const buffer = await file.arrayBuffer()
+          // プレビューURL作成
+          const blob = new Blob([buffer], { type: file.type })
+          const preview = URL.createObjectURL(blob)
+          
+          convertedFiles.push({
+            id: crypto.randomUUID(),
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            buffer,
+            preview,
+            pageNumber: 1, // 画像は1ページとして扱う
+            isSelected: true,
+            originalFileName: file.name,
+            pageLabel: "ページ 1",
+          })
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("password")) {
+          // パスワードエラーの場合は静かに再スロー（ログ出力なし）
+          throw error
+        } else {
+          // パスワード関連以外のエラーのみログ出力
           console.error(`Failed to convert file ${file.name}:`, error)
-          if (error instanceof Error && error.message.includes("password")) {
-            // パスワードエラーの場合
-            throw error
-          } else {
-            toast.error(`ファイル ${file.name} の変換に失敗しました`)
-          }
+          toast.error(`ファイル ${file.name} の変換に失敗しました`)
         }
       }
       
@@ -172,48 +175,120 @@ export default function AnswerSheetUpload({
 
   const processFiles = useCallback(
     async (fileList: File[], password?: string) => {
+      console.log("🔄 processFiles: 開始", { fileCount: fileList.length, hasPassword: !!password })
       setIsConverting(true)
       setPasswordError("")
 
       try {
-        const convertedFiles = await convertFilesToImages(fileList, password)
+        // 各ファイルのページ数を事前取得
+        console.log("📊 ページ数計算中...")
+        let totalPages = 0
+        const filePageCounts: number[] = []
         
-        // ConvertedFileTemp → UnifiedFile に変換
-        const unifiedFiles: UnifiedFile[] = convertedFiles.map(f => ({
-          id: f.id,
-          name: f.name,
-          type: f.type,
-          size: f.size,
-          buffer: f.buffer,
-          preview: f.preview,
-          studentId: undefined, // 未配置
-          pageNumber: f.pageNumber,
-          isSelected: f.isSelected,
-          originalFileName: f.originalFileName,
-          pageLabel: f.pageLabel,
-        }))
+        for (const file of fileList) {
+          try {
+            if (file.type === "application/pdf") {
+              const pageCount = await getPdfPageCount(file, password)
+              filePageCounts.push(pageCount)
+              totalPages += pageCount
+            } else {
+              filePageCounts.push(1) // 画像は1ページ
+              totalPages += 1
+            }
+          } catch (error) {
+            if (error instanceof Error && error.message.includes("password")) {
+              throw error
+            } else {
+              filePageCounts.push(1) // エラー時は1ページとして扱う
+              totalPages += 1
+            }
+          }
+        }
+        
+        console.log(`📊 総ページ数: ${totalPages}ページ`)
+        
+        const allConvertedFiles: ConvertedFileTemp[] = []
+        let processedPages = 0
 
-        // ファイルを追加
+        // ファイル順次処理（ページ単位プログレス更新）
+        for (let i = 0; i < fileList.length; i++) {
+          const file = fileList[i]
+          const expectedPages = filePageCounts[i]
+          
+          try {
+            console.log(`🔄 処理開始: ${file.name} (${expectedPages}ページ)`)
+            setCurrentProcessingFile(file.name)
+
+            // ページ単位プログレス更新コールバック
+            const onProgress = (currentPage: number, totalPagesInFile: number) => {
+              const currentFileProgress = processedPages + currentPage
+              const progress = Math.round((currentFileProgress / totalPages) * 100)
+              setPdfProcessingProgress(progress)
+              console.log(`📄 ページ ${currentPage}/${totalPagesInFile} 完了 (全体進捗: ${currentFileProgress}/${totalPages} = ${progress}%)`)
+            }
+
+            const convertedFiles = await convertSingleFileToImages(file, password, onProgress)
+            allConvertedFiles.push(...convertedFiles)
+            
+            processedPages += convertedFiles.length
+            console.log(`✅ ファイル完了: ${file.name} - ${convertedFiles.length}ページ`)
+            
+          } catch (error) {
+            if (error instanceof Error && error.message.includes("password")) {
+              // パスワード必要エラーの場合は静かに再スロー
+              throw error
+            } else {
+              console.error(`❌ エラー: ${file.name}`, error)
+              toast.error(`ファイル ${file.name} の処理に失敗しました`)
+              processedPages += expectedPages // エラー時も予想ページ数分進める
+              setPdfProcessingProgress(Math.round((processedPages / totalPages) * 100))
+            }
+          }
+        }
+        
+        // ConvertedFileTemp → UnifiedFile に変換（直接配置対応）
+        const unifiedFiles: UnifiedFile[] = allConvertedFiles.map((f, index) => {
+          // 自動配置ロジック: 生徒順→ページ順で配置
+          const studentIndex = Math.floor(index / masterImageCount)
+          const pageIndex = index % masterImageCount
+          const targetStudent = students[studentIndex % students.length]
+          
+          return {
+            id: f.id,
+            name: f.name,
+            type: f.type,
+            size: f.size,
+            buffer: f.buffer,
+            preview: f.preview,
+            studentId: targetStudent?.id, // 直接配置
+            pageNumber: pageIndex + 1, // 1ベースのページ番号
+            isSelected: f.isSelected,
+            originalFileName: f.originalFileName,
+            pageLabel: f.pageLabel,
+          }
+        })
+
+        // ファイルを追加（直接配置済み）
         addFiles(unifiedFiles)
         
         // 成功メッセージ
-        toast.success(`${convertedFiles.length}件のファイルを追加しました`)
+        if (allConvertedFiles.length > 0) {
+          toast.success(`${allConvertedFiles.length}件のファイルを直接配置しました`)
+        }
         
-        // パスワードダイアログを閉じる
-        setShowPasswordDialog(false)
-        setCurrentPdfFile(null)
-        setPendingFiles([])
+        console.log(`完了: ${allConvertedFiles.length}個の画像を直接配置`)
         
       } catch (error) {
-        console.error("File processing error:", error)
-        
         if (error instanceof Error && error.message.includes("password")) {
-          // パスワードが必要な場合
-          setPasswordError("パスワードが間違っているか、必要です")
+          // パスワードが必要な場合はログ出力せず、パスワード入力画面を表示
+          setPasswordError("")
+          setPasswordAttempts(0) // 初回試行
           setShowPasswordDialog(true)
           setCurrentPdfFile(fileList[0]) // 最初のファイルを設定
           setPendingFiles(fileList)
         } else {
+          // パスワード関連以外のエラーのみログ出力
+          console.error("File processing error:", error)
           toast.error("ファイル処理に失敗しました")
         }
       } finally {
@@ -221,7 +296,7 @@ export default function AnswerSheetUpload({
         setIsPasswordProcessing(false)
       }
     },
-    [addFiles, convertFilesToImages]
+    [addFiles, convertSingleFileToImages, students, masterImageCount]
   )
 
   // ============================================================================
@@ -245,6 +320,7 @@ export default function AnswerSheetUpload({
     [processFiles]
   )
 
+
   // ============================================================================
   // パスワード送信
   // ============================================================================
@@ -252,17 +328,60 @@ export default function AnswerSheetUpload({
   const handlePasswordSubmit = useCallback(
     async (password: string) => {
       if (!currentPdfFile || pendingFiles.length === 0) {
+        console.log("❌ handlePasswordSubmit: 条件チェック失敗", { currentPdfFile, pendingFilesLength: pendingFiles.length })
         return
       }
 
+      console.log("🔐 handlePasswordSubmit: 開始", { fileName: currentPdfFile.name, pendingFilesCount: pendingFiles.length })
+      
       setIsPasswordProcessing(true)
       setPasswordError("")
+      setPasswordAttempts(prev => prev + 1)
+
+      const fileName = currentPdfFile.name // ファイル名を保存
 
       try {
+        console.log("🔐 handlePasswordSubmit: 直接処理開始")
+        
+        // 認証成功 - ダイアログを閉じてプログレス表示開始
+        setShowPasswordDialog(false)
+        setCurrentPdfFile(null)
+        setPasswordError("")
+        setPasswordAttempts(0)
+        setIsPasswordProcessing(false)
+        
+        console.log("📊 handlePasswordSubmit: PDF処理開始設定")
+        // PDF処理開始
+        setIsPdfProcessing(true)
+        setCurrentProcessingFile(fileName)
+        setPdfProcessingProgress(0)
+        
+        // 短い遅延を追加してUIを更新
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        console.log("🔄 handlePasswordSubmit: processFiles呼び出し開始")
+        // すべてのファイルを統一システムで処理
         await processFiles(pendingFiles, password)
+        
+        console.log("✅ handlePasswordSubmit: processFiles完了")
+        // 処理完了
+        setPendingFiles([])
+        setIsPdfProcessing(false)
+        setPdfProcessingProgress(0)
+        setCurrentProcessingFile("")
+        
       } catch (error) {
-        console.error("Password processing error:", error)
-        setPasswordError("パスワードが間違っています")
+        console.error("❌ handlePasswordSubmit: エラー", error)
+        if (error instanceof Error && error.message.includes("password")) {
+          setPasswordError("invalid-password")
+        } else {
+          setPasswordError("処理中にエラーが発生しました")
+        }
+        setIsPasswordProcessing(false)
+        // エラー時もPDF処理状態をリセット
+        setIsPdfProcessing(false)
+        setPdfProcessingProgress(0)
+        setCurrentProcessingFile("")
       }
     },
     [currentPdfFile, pendingFiles, processFiles]
@@ -345,6 +464,28 @@ export default function AnswerSheetUpload({
         </Card>
       )}
 
+      {/* PDF処理プログレス */}
+      {isPdfProcessing && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-4">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm">PDF処理中...</span>
+                <span className="text-muted-foreground text-sm">
+                  {Math.round(pdfProcessingProgress)}%
+                </span>
+              </div>
+              <Progress value={pdfProcessingProgress} className="w-full" />
+              {currentProcessingFile && (
+                <p className="text-muted-foreground mt-2 text-xs">
+                  現在処理中: {currentProcessingFile}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* パスワード入力ダイアログ */}
       <PasswordDialog
         isOpen={showPasswordDialog}
@@ -353,11 +494,13 @@ export default function AnswerSheetUpload({
           setCurrentPdfFile(null)
           setPasswordError("")
           setPendingFiles([])
+          setPasswordAttempts(0)
         }}
         onSubmit={handlePasswordSubmit}
         fileName={currentPdfFile?.name || ""}
         error={passwordError}
         isLoading={isPasswordProcessing}
+        isFirstAttempt={passwordAttempts === 0}
       />
 
       {/* デバッグ情報（開発時のみ） */}

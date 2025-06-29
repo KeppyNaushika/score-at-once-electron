@@ -163,10 +163,11 @@ export function useAnswerSheetUploadMain({
         toast.success('すべてのパスワード保護ファイルの処理が完了しました')
       }
     } catch (error: any) {
-      console.error('パスワード処理エラー:', error)
       if (error.message === 'invalid-password') {
         fileProcessing.setPasswordError('パスワードが正しくありません')
       } else {
+        // パスワード関連以外の予期しないエラーのみログ出力
+        console.error('パスワード処理エラー:', error)
         fileProcessing.setPasswordError('ファイル処理に失敗しました')
       }
     } finally {
