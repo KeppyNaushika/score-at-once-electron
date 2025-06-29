@@ -22,6 +22,12 @@ import {
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Trash2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 // アイテム型（recursive-dnd-kanban-board準拠）
 interface SimpleItem {
@@ -168,6 +174,50 @@ function TrashArea({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ドロップ可能なPopoverトリガーボタン
+function DroppableTrashButton({ 
+  children, 
+  trashCount,
+  onClick 
+}: { 
+  children: React.ReactNode;
+  trashCount: number;
+  onClick?: () => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'trash-popover-trigger',
+    data: { type: 'trash' },
+  })
+
+  const handleClick = (e: React.MouseEvent) => {
+    // ドラッグ中でない場合のみクリックイベントを実行
+    if (!isOver && onClick) {
+      onClick()
+    }
+  }
+
+  return (
+    <Button
+      ref={setNodeRef}
+      variant="outline"
+      className={`w-48 h-12 transition-all duration-300 ease-in-out cursor-pointer ${
+        isOver 
+          ? 'shadow-lg ring-2 ring-blue-200 ring-opacity-50 scale-105 border-blue-400' 
+          : 'hover:bg-gray-50'
+      }`}
+      onClick={handleClick}
+    >
+      <div className="flex items-center gap-2 text-xs">
+        <Trash2 className="h-4 w-4" />
+        <span className="leading-tight text-center">
+          ここにドラッグして<br />答案を無効化
+        </span>
+        <span className="text-xs text-gray-500">({trashCount}件)</span>
+      </div>
+    </Button>
+  )
+}
+
 // ドロップ可能なグリッド用ゴミ箱エリア
 function GridTrashArea({ children }: { children: React.ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -205,6 +255,7 @@ function KanbanLists({
   findContainer: (id: string) => string | null
   sensors: any
 }) {
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const getItemsInContainer = (containerId: string) => {
     return items.filter(item => item.columnId === containerId)
   }
@@ -216,6 +267,12 @@ function KanbanLists({
     const activeId = event.active.id as string
     const foundItem = items.find(item => item.id === activeId) || null
     setActiveItem(foundItem)
+    
+    // メインリストからのドラッグの場合、Popoverを開く
+    const activeContainer = findContainer(activeId)
+    if (activeContainer === 'main') {
+      setIsPopoverOpen(true)
+    }
   }
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -266,6 +323,11 @@ function KanbanLists({
     }
 
     setActiveItem(null)
+    
+    // ドラッグ終了後、少し遅れてPopoverを閉じる
+    setTimeout(() => {
+      setIsPopoverOpen(false)
+    }, 500)
   }
 
   return (
@@ -282,74 +344,83 @@ function KanbanLists({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-6">
-          {/* メインリスト */}
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-3 text-blue-800 flex items-center gap-2">
-              📝 メインリスト 
+        <div className="flex flex-col">
+          {/* ヘッダー部分 */}
+          <div className="flex justify-between items-center mb-3 h-20">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-blue-800">📝 メインリスト</h3>
               <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm">{listItems.length}件</span>
-            </h3>
-            <MainListArea>
-              <div className="min-h-96">
-                <SortableContext 
-                  items={listItems.map(item => item.id)} 
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {listItems.map((item) => (
-                      <SortableListItem key={item.id} id={item.id}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium">{item.content}</span>
-                          <span className="text-sm text-gray-500">ID: {item.id}</span>
-                        </div>
-                      </SortableListItem>
-                    ))}
-                    
-                    {listItems.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <div className="text-sm">リストが空です</div>
+            </div>
+            
+            {/* ゴミ箱ボタン（Popover） */}
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+              <PopoverTrigger asChild>
+                <div>
+                  <DroppableTrashButton 
+                    trashCount={trashItems.length}
+                    onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                  >
+                    <div>ゴミ箱を開く</div>
+                  </DroppableTrashButton>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-96 p-4" side="bottom" align="end">
+                <TrashArea>
+                  <div className="min-h-48 max-h-64 overflow-y-auto">
+                    <SortableContext 
+                      items={trashItems.map(item => item.id)} 
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {trashItems.map((item) => (
+                          <SortableListItem key={item.id} id={item.id}>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-red-600 line-through">{item.content}</span>
+                              <span className="text-sm text-red-400">ID: {item.id}</span>
+                            </div>
+                          </SortableListItem>
+                        ))}
+                        
+                        {trashItems.length === 0 && (
+                          <div className="text-center py-6 text-gray-500">
+                            <Trash2 className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                            <div className="text-sm">アイテムをここにドラッグ</div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </SortableContext>
                   </div>
-                </SortableContext>
-              </div>
-            </MainListArea>
+                </TrashArea>
+              </PopoverContent>
+            </Popover>
           </div>
-
-          {/* ゴミ箱リスト */}
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold mb-3 text-red-800 flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              ゴミ箱リスト 
-              <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm">{trashItems.length}件</span>
-            </h3>
-            <TrashArea>
-              <div className="min-h-96">
-                <SortableContext 
-                  items={trashItems.map(item => item.id)} 
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-2">
-                    {trashItems.map((item) => (
-                      <SortableListItem key={item.id} id={item.id}>
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-red-600 line-through">{item.content}</span>
-                          <span className="text-sm text-red-400">ID: {item.id}</span>
-                        </div>
-                      </SortableListItem>
-                    ))}
-                    
-                    {trashItems.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <Trash2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <div className="text-sm">アイテムをここにドラッグ</div>
+          
+          {/* メインリストコンテンツ */}
+          <MainListArea>
+            <div className="min-h-96">
+              <SortableContext 
+                items={listItems.map(item => item.id)} 
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {listItems.map((item) => (
+                    <SortableListItem key={item.id} id={item.id}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{item.content}</span>
+                        <span className="text-sm text-gray-500">ID: {item.id}</span>
                       </div>
-                    )}
-                  </div>
-                </SortableContext>
-              </div>
-            </TrashArea>
-          </div>
+                    </SortableListItem>
+                  ))}
+                  
+                  {listItems.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-sm">リストが空です</div>
+                    </div>
+                  )}
+                </div>
+              </SortableContext>
+            </div>
+          </MainListArea>
         </div>
         
         <DragOverlay dropAnimation={null}>
@@ -650,7 +721,7 @@ export default function SimpleDndKitTestPage() {
   const findContainer = (id: string) => {
     // コンテナ自体の場合
     if (id === 'main-area') return 'main'
-    if (id === 'trash-area') return 'trash'
+    if (id === 'trash-area' || id === 'trash-popover-trigger') return 'trash'
     if (id === 'grid-area') return 'grid'
     if (id === 'grid-trash-area') return 'grid-trash'
     
