@@ -21,6 +21,7 @@ import {
   Settings,
   User,
   Users,
+  TestTube2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -29,6 +30,9 @@ const navItems = [
   { href: "/dashboard", label: "プロジェクト", icon: Home },
   { href: "/students", label: "生徒管理", icon: Users },
   { href: "/classes", label: "学級管理", icon: School },
+  { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
+  { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
+  { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
   { href: "/settings", label: "設定", icon: Settings },
 ]
 
