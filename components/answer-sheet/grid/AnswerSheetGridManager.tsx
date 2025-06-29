@@ -16,6 +16,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragOverEvent,
   DragStartEvent,
   DragOverlay,
 } from "@dnd-kit/core"
@@ -55,36 +56,20 @@ interface ConvertedFile {
   originalFileName: string
 }
 
-// 配置戦略
-type PlacementStrategy = "page-first" | "student-first" | "filename-auto"
 
-// セル状態
-interface CellState {
-  isEnabled: boolean
-  isSkipped: boolean
+// 無効化状態管理（table-dnd-kit-test準拠のflat構造）
+interface DisabledState {
+  rows: Set<number>      // 生徒行の無効化
+  cols: Set<number>      // ページ列の無効化
+  positions: Set<number> // 個別セル位置の無効化
+  files: Set<string>     // ファイル無効化（ゴミ箱用）
+}
+
+// セルデータ型（table-dnd-kit-test準拠）
+interface CellData {
+  type: "disabled" | "file" | "empty"
+  position: number
   file?: ConvertedFile
-  isFileDisabled?: boolean // 答案画像の無効化フラグ
-}
-
-// 生徒状態
-interface StudentState {
-  isEnabled: boolean
-  isSkipped: boolean
-  cells: Record<number, CellState>
-}
-
-// ページ状態
-interface PageState {
-  isEnabled: boolean
-  isSkipped: boolean
-}
-
-// グリッド状態
-interface GridState {
-  students: Record<string, StudentState>
-  pages: Record<number, PageState>
-  placementStrategy: PlacementStrategy
-  maxPages: number
 }
 
 interface AnswerSheetGridManagerProps {
@@ -92,8 +77,8 @@ interface AnswerSheetGridManagerProps {
   students: Student[]
   files: ConvertedFile[]
   isUploading: boolean
-  fileOrder?: "page-then-student" | "student-then-page"
-  onFileOrderChange?: (order: "page-then-student" | "student-then-page") => void
+  fileOrder?: "row-first" | "col-first"  // table-dnd-kit-test準拠
+  onFileOrderChange?: (order: "row-first" | "col-first") => void
   onFilesReorder?: (reorderedFiles: ConvertedFile[]) => void
   onUpload: (
     data: Array<{ file: ConvertedFile; studentId: string; pageNumber: number }>,
@@ -105,7 +90,7 @@ export default function AnswerSheetGridManager({
   students,
   files,
   isUploading,
-  fileOrder = "page-then-student",
+  fileOrder = "row-first",
   onFileOrderChange,
   onFilesReorder,
   onUpload,
@@ -128,7 +113,6 @@ export default function AnswerSheetGridManager({
       masterImageId: string | null
     }>
   >([])
-  const [isLoadingRegions, setIsLoadingRegions] = useState(true)
 
   // 一括プレビューモード管理
   const [globalPreviewMode, setGlobalPreviewMode] = useState<"full" | "name">(
@@ -138,7 +122,6 @@ export default function AnswerSheetGridManager({
   // ドラッグ&ドロップ状態管理
   const [activeId, setActiveId] = useState<string | null>(null)
   const [draggedFile, setDraggedFile] = useState<ConvertedFile | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
 
   // dnd-kit センサー設定
   const sensors = useSensors(
@@ -175,98 +158,35 @@ export default function AnswerSheetGridManager({
     }
   }, [projectId])
 
-  // グリッド状態管理
-  const [gridState, setGridState] = useState<GridState>(() => {
-    // マスター画像のページ数を使用（初期化時は1、後でuseEffectで更新）
-    const maxPages = 1
-
-    // 初期状態: 全生徒・全ページ有効
-    const initialStudents: Record<string, StudentState> = {}
-    students.forEach((student) => {
-      const cells: Record<number, CellState> = {}
-      for (let page = 1; page <= maxPages; page++) {
-        cells[page] = {
-          isEnabled: true,
-          isSkipped: false,
-        }
+  // 無効化状態管理（table-dnd-kit-test準拠のflat構造）
+  const [disabledState, setDisabledState] = useState<DisabledState>(() => {
+    const initialState: DisabledState = {
+      rows: new Set<number>(),
+      cols: new Set<number>(),
+      positions: new Set<number>(),
+      files: new Set<string>(),
+    }
+    
+    // 欠席生徒の行を初期無効化
+    students.forEach((student, index) => {
+      if (student.status === "absent") {
+        initialState.rows.add(index)
       }
-
-      initialStudents[student.id] = {
-        isEnabled: student.status !== "absent", // 欠席生徒は既定でオフ
-        isSkipped: student.status === "absent",
-        cells,
-      }
-
-      // Debug log removed for cleaner output
     })
-
-    const initialPages: Record<number, PageState> = {}
-    for (let page = 1; page <= maxPages; page++) {
-      initialPages[page] = {
-        isEnabled: true,
-        isSkipped: false,
-      }
-    }
-
-    if (process.env.NODE_ENV === "development") {
-      console.log("Pages initialized:", initialPages)
-    }
-
-    return {
-      students: initialStudents,
-      pages: initialPages,
-      placementStrategy: "filename-auto",
-      maxPages,
-    }
+    
+    return initialState
   })
+  
+  // 最大ページ数管理
+  const [maxPages, setMaxPages] = useState(1)
 
-  // マスター画像が読み込まれたらグリッド状態を更新
+  // マスター画像が読み込まれたら最大ページ数を更新
   useEffect(() => {
     if (!isLoadingMasterImages && masterImages.length > 0) {
       const actualMaxPages = Math.max(
         ...masterImages.map((img) => img.pageNumber),
       )
-
-      setGridState((prevState) => {
-        // 新しいページ状態を作成
-        const newPages: Record<number, PageState> = {}
-        for (let page = 1; page <= actualMaxPages; page++) {
-          newPages[page] = prevState.pages[page] || {
-            isEnabled: true,
-            isSkipped: false,
-          }
-        }
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("Pages updated after master image load:", newPages)
-        }
-
-        // 各生徒のセル状態も更新
-        const newStudents: Record<string, StudentState> = {}
-        Object.keys(prevState.students).forEach((studentId) => {
-          const studentState = prevState.students[studentId]
-          const newCells: Record<number, CellState> = {}
-
-          for (let page = 1; page <= actualMaxPages; page++) {
-            newCells[page] = studentState.cells[page] || {
-              isEnabled: true,
-              isSkipped: false,
-            }
-          }
-
-          newStudents[studentId] = {
-            ...studentState,
-            cells: newCells,
-          }
-        })
-
-        return {
-          ...prevState,
-          students: newStudents,
-          pages: newPages,
-          maxPages: actualMaxPages,
-        }
-      })
+      setMaxPages(actualMaxPages)
     }
   }, [isLoadingMasterImages, masterImages])
 
@@ -276,7 +196,6 @@ export default function AnswerSheetGridManager({
       if (!projectId) return
 
       try {
-        setIsLoadingRegions(true)
         const regions =
           await window.electronAPI.getLayoutRegionsByProjectId(projectId)
         if (regions && Array.isArray(regions)) {
@@ -289,376 +208,175 @@ export default function AnswerSheetGridManager({
           console.error("Failed to load layout regions:", error)
         }
         setLayoutRegions([])
-      } finally {
-        setIsLoadingRegions(false)
       }
     }
 
     loadLayoutRegions()
   }, [projectId])
 
-  // 生徒の有効/無効切り替え
-  const toggleStudentEnabled = useCallback((studentId: string) => {
-    setGridState((prev) => ({
-      ...prev,
-      students: {
-        ...prev.students,
-        [studentId]: {
-          ...prev.students[studentId],
-          isEnabled: !prev.students[studentId]?.isEnabled,
-          isSkipped: prev.students[studentId]?.isEnabled, // 有効→無効の場合はスキップ
-        },
-      },
-    }))
-    // 手動切り替え後の自動配置を要求
-    setShouldAutoPlace(true)
+  // セル位置が無効化されているかチェック（table-dnd-kit-test準拠）
+  const isPositionDisabled = useCallback((position: number) => {
+    const row = Math.floor(position / maxPages)
+    const col = position % maxPages
+
+    return (
+      disabledState.rows.has(row) ||
+      disabledState.cols.has(col) ||
+      disabledState.positions.has(position)
+    )
+  }, [disabledState, maxPages])
+
+  // 有効なファイルのみ取得（table-dnd-kit-test準拠）
+  const getEnabledFiles = useCallback(() => {
+    return files.filter(file => !disabledState.files.has(file.id))
+  }, [files, disabledState])
+
+  // 無効化されたファイルのみ取得（table-dnd-kit-test準拠）
+  const getDisabledFiles = useCallback(() => {
+    return files.filter(file => disabledState.files.has(file.id))
+  }, [files, disabledState])
+
+  // 生徒行の有効/無効切り替え（table-dnd-kit-test準拠）
+  const toggleStudentEnabled = useCallback((rowIndex: number) => {
+    setDisabledState((prev) => {
+      const newRows = new Set(prev.rows)
+      if (newRows.has(rowIndex)) {
+        newRows.delete(rowIndex)
+      } else {
+        newRows.add(rowIndex)
+      }
+      return { ...prev, rows: newRows }
+    })
   }, [])
 
-  // ページの有効/無効切り替え
-  const togglePageEnabled = useCallback((pageNumber: number) => {
-    setGridState((prev) => ({
-      ...prev,
-      pages: {
-        ...prev.pages,
-        [pageNumber]: {
-          ...prev.pages[pageNumber],
-          isEnabled: !prev.pages[pageNumber]?.isEnabled,
-          isSkipped: prev.pages[pageNumber]?.isEnabled,
-        },
-      },
-    }))
-    // 手動切り替え後の自動配置を要求
-    setShouldAutoPlace(true)
+  // ページ列の有効/無効切り替え（table-dnd-kit-test準拠）
+  const togglePageEnabled = useCallback((colIndex: number) => {
+    setDisabledState((prev) => {
+      const newCols = new Set(prev.cols)
+      if (newCols.has(colIndex)) {
+        newCols.delete(colIndex)
+      } else {
+        newCols.add(colIndex)
+      }
+      return { ...prev, cols: newCols }
+    })
   }, [])
 
-  // セルの有効/無効切り替え
+  // セル位置の有効/無効切り替え（table-dnd-kit-test準拠）
   const toggleCellEnabled = useCallback(
-    (studentId: string, pageNumber: number) => {
-      setGridState((prev) => {
-        const student = prev.students[studentId]
-        if (!student) return prev
-
-        const cell = student.cells[pageNumber]
-        if (!cell) return prev
-
-        return {
-          ...prev,
-          students: {
-            ...prev.students,
-            [studentId]: {
-              ...student,
-              cells: {
-                ...student.cells,
-                [pageNumber]: {
-                  ...cell,
-                  isEnabled: !cell.isEnabled,
-                  isSkipped: cell.isEnabled,
-                },
-              },
-            },
-          },
+    (studentIndex: number, pageIndex: number) => {
+      const position = studentIndex * maxPages + pageIndex
+      setDisabledState((prev) => {
+        const newPositions = new Set(prev.positions)
+        if (newPositions.has(position)) {
+          newPositions.delete(position)
+        } else {
+          newPositions.add(position)
         }
+        return { ...prev, positions: newPositions }
       })
-      // 手動切り替え後の自動配置を要求
-      setShouldAutoPlace(true)
     },
-    [],
+    [maxPages],
   )
 
-  // ファイルの無効化切り替え（セルは有効のまま）
+  // ファイルの無効化切り替え（table-dnd-kit-test準拠）
   const toggleFileDisabled = useCallback(
-    (studentId: string, pageNumber: number) => {
-      setGridState((prev) => {
-        const student = prev.students[studentId]
-        if (!student) return prev
-
-        const cell = student.cells[pageNumber]
-        if (!cell) return prev
-
-        return {
-          ...prev,
-          students: {
-            ...prev.students,
-            [studentId]: {
-              ...student,
-              cells: {
-                ...student.cells,
-                [pageNumber]: {
-                  ...cell,
-                  isFileDisabled: !cell.isFileDisabled,
-                },
-              },
-            },
-          },
+    (fileId: string) => {
+      setDisabledState((prev) => {
+        const newFiles = new Set(prev.files)
+        if (newFiles.has(fileId)) {
+          newFiles.delete(fileId)
+        } else {
+          newFiles.add(fileId)
         }
+        return { ...prev, files: newFiles }
       })
     },
     [],
   )
 
-  // ファイルの削除
+  // ファイルの削除（ゴミ箱に移動、table-dnd-kit-test準拠）
   const removeFileFromCell = useCallback(
-    (studentId: string, pageNumber: number) => {
-      setGridState((prev) => {
-        const student = prev.students[studentId]
-        if (!student) return prev
-
-        const cell = student.cells[pageNumber]
-        if (!cell) return prev
-
-        return {
-          ...prev,
-          students: {
-            ...prev.students,
-            [studentId]: {
-              ...student,
-              cells: {
-                ...student.cells,
-                [pageNumber]: {
-                  ...cell,
-                  file: undefined,
-                  isFileDisabled: false,
-                },
-              },
-            },
-          },
-        }
+    (fileId: string) => {
+      setDisabledState((prev) => {
+        const newFiles = new Set(prev.files)
+        newFiles.add(fileId)
+        return { ...prev, files: newFiles }
       })
     },
     [],
   )
 
-  // 自動配置処理
-  const autoPlaceFiles = useCallback(() => {
-    setGridState((currentGridState) => {
-      const enabledStudents = students
-        .filter(
-          (s) =>
-            currentGridState.students[s.id]?.isEnabled &&
-            !currentGridState.students[s.id]?.isSkipped,
-        )
-        .sort((a, b) => {
-          // 受験生徒順でソート（customOrder優先、その後出席番号順）
-          if (
-            a.customOrder !== null &&
-            a.customOrder !== undefined &&
-            b.customOrder !== null &&
-            b.customOrder !== undefined
-          ) {
-            return a.customOrder - b.customOrder
-          }
-          if (a.customOrder !== null && a.customOrder !== undefined) return -1
-          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+  // テーブルデータを配置戦略に応じて再構成（table-dnd-kit-test準拠）
+  const getTableData = useCallback((): CellData[][] => {
+    const enabledFiles = getEnabledFiles()
+    let enabledFileIndex = 0
 
-          const aNumber = a.attendanceNumber
-          const bNumber = b.attendanceNumber
-          if (aNumber && bNumber) return aNumber - bNumber
-          if (aNumber) return -1
-          if (bNumber) return 1
-
-          return `${a.lastName}${a.firstName}`.localeCompare(
-            `${b.lastName}${b.firstName}`,
-          )
-        })
-
-      const enabledPages = Array.from(
-        { length: currentGridState.maxPages },
-        (_, i) => i + 1,
-      ).filter(
-        (p) =>
-          currentGridState.pages[p]?.isEnabled &&
-          !currentGridState.pages[p]?.isSkipped,
-      )
-
-      // 有効なセルのリストを生成（配置戦略に基づく順序）
-      const validCells: Array<{ studentId: string; pageNumber: number }> = []
-
-      if (fileOrder === "page-then-student") {
-        // ページ優先: 1ページ目全員 → 2ページ目全員
-        enabledPages.forEach((pageNumber) => {
-          enabledStudents.forEach((student) => {
-            const cellState =
-              currentGridState.students[student.id]?.cells[pageNumber]
-            if (cellState?.isEnabled && !cellState.isSkipped) {
-              validCells.push({ studentId: student.id, pageNumber })
-            }
-          })
-        })
-      } else if (fileOrder === "student-then-page") {
-        // 生徒優先: 生徒A全ページ → 生徒B全ページ
-        enabledStudents.forEach((student) => {
-          enabledPages.forEach((pageNumber) => {
-            const cellState =
-              currentGridState.students[student.id]?.cells[pageNumber]
-            if (cellState?.isEnabled && !cellState.isSkipped) {
-              validCells.push({ studentId: student.id, pageNumber })
-            }
-          })
-        })
+    const getNextFile = () => {
+      if (enabledFileIndex < enabledFiles.length) {
+        return enabledFiles[enabledFileIndex++]
       }
-
-      // ファイルを順次配置
-      const newGridState = { ...currentGridState }
-
-      // 既存の配置をクリア
-      Object.keys(newGridState.students).forEach((studentId) => {
-        Object.keys(newGridState.students[studentId].cells).forEach(
-          (pageStr) => {
-            const pageNumber = parseInt(pageStr)
-            if (newGridState.students[studentId].cells[pageNumber]) {
-              newGridState.students[studentId].cells[pageNumber].file =
-                undefined
-            }
-          },
-        )
-      })
-
-      // ファイルを順次配置
-      files.forEach((file, index) => {
-        if (index < validCells.length) {
-          const cell = validCells[index]
-          if (newGridState.students[cell.studentId]?.cells[cell.pageNumber]) {
-            newGridState.students[cell.studentId].cells[cell.pageNumber].file =
-              file
-          }
-        }
-      })
-
-      return newGridState
-    })
-  }, [students, files, fileOrder])
-
-  // ファイルOrder変更時またはファイル追加時に自動配置を実行
-  useEffect(() => {
-    if (!isLoadingMasterImages && masterImages.length > 0 && files.length > 0) {
-      autoPlaceFiles()
-    }
-  }, [fileOrder, files, isLoadingMasterImages, masterImages, autoPlaceFiles])
-
-  // グリッド状態変更時に自動配置を実行（オンオフ切り替え時の順延処理）
-  // 注意: isDragginの依存関係を削除してドラッグ終了後の自動実行を防ぐ
-  const [shouldAutoPlace, setShouldAutoPlace] = useState(false)
-  
-  useEffect(() => {
-    if (
-      !isLoadingMasterImages &&
-      masterImages.length > 0 &&
-      files.length > 0 &&
-      shouldAutoPlace
-    ) {
-      autoPlaceFiles()
-      setShouldAutoPlace(false)
-    }
-  }, [
-    shouldAutoPlace,
-    isLoadingMasterImages,
-    masterImages,
-    files,
-    autoPlaceFiles,
-  ])
-
-  // gridStateの変更を検知して親のfiles配列を更新
-  useEffect(() => {
-    if (!onFilesReorder || isDragging) return // ドラッグ中は更新しない
-    
-    // gridState内のファイル配置から新しい順序を抽出
-    const newFileOrder: ConvertedFile[] = []
-    
-    // 有効セルの順序でファイルを並べ直す
-    const enabledStudents = students
-      .filter(s => 
-        gridState.students[s.id]?.isEnabled && 
-        !gridState.students[s.id]?.isSkipped
-      )
-      .sort((a, b) => {
-        if (a.customOrder !== null && a.customOrder !== undefined && 
-            b.customOrder !== null && b.customOrder !== undefined) {
-          return a.customOrder - b.customOrder
-        }
-        if (a.customOrder !== null && a.customOrder !== undefined) return -1
-        if (b.customOrder !== null && b.customOrder !== undefined) return 1
-        
-        const aNumber = a.attendanceNumber
-        const bNumber = b.attendanceNumber
-        if (aNumber && bNumber) return aNumber - bNumber
-        if (aNumber) return -1
-        if (bNumber) return 1
-        
-        return `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`)
-      })
-      
-    const enabledPages = Array.from({ length: gridState.maxPages }, (_, i) => i + 1)
-      .filter(p => gridState.pages[p]?.isEnabled && !gridState.pages[p]?.isSkipped)
-    
-    if (fileOrder === "page-then-student") {
-      enabledPages.forEach(pageNumber => {
-        enabledStudents.forEach(student => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.file && cellState?.isEnabled && !cellState?.isSkipped) {
-            newFileOrder.push(cellState.file)
-          }
-        })
-      })
-    } else {
-      enabledStudents.forEach(student => {
-        enabledPages.forEach(pageNumber => {
-          const cellState = gridState.students[student.id]?.cells[pageNumber]
-          if (cellState?.file && cellState?.isEnabled && !cellState?.isSkipped) {
-            newFileOrder.push(cellState.file)
-          }
-        })
-      })
-    }
-    
-    // 配置されていないファイルも追加
-    const placedFileIds = new Set(newFileOrder.map(f => f.id))
-    files.forEach(file => {
-      if (!placedFileIds.has(file.id)) {
-        newFileOrder.push(file)
-      }
-    })
-    
-    // 順序が実際に変わった場合のみ更新
-    const currentOrder = files.map(f => f.id).join(',')
-    const newOrder = newFileOrder.map(f => f.id).join(',')
-    
-    if (currentOrder !== newOrder) {
-      if (process.env.NODE_ENV === "development") {
-        console.log("📤 Updating parent files order via useEffect:", newFileOrder.map(f => f.id.slice(0, 8)))
-      }
-      onFilesReorder(newFileOrder)
-    }
-  }, [gridState, isDragging, onFilesReorder, students, fileOrder, files])
-
-  // ファイル名から生徒を推測
-  const findStudentByFilename = useCallback(
-    (filename: string) => {
-      // 学籍番号での一致を試行
-      for (const student of students) {
-        if (filename.includes(student.studentId)) {
-          return student
-        }
-      }
-
-      // 姓名での一致を試行（ひらがな・カタカナ・漢字）
-      for (const student of students) {
-        const patterns = [
-          student.lastName + student.firstName,
-          student.lastNameKana + student.firstNameKana,
-          // その他のパターンも追加可能
-        ]
-
-        for (const pattern of patterns) {
-          if (filename.includes(pattern)) {
-            return student
-          }
-        }
-      }
-
       return null
-    },
-    [students],
-  )
+    }
+
+    if (fileOrder === "row-first") {
+      // 行優先配置（ページ優先）
+      const result: CellData[][] = []
+      for (let row = 0; row < students.length; row++) {
+        const rowFiles: CellData[] = []
+        for (let col = 0; col < maxPages; col++) {
+          const position = row * maxPages + col
+
+          if (isPositionDisabled(position)) {
+            // 無効セル：赤い背景で表示、配置はスキップ
+            rowFiles.push({ type: "disabled", position })
+          } else {
+            const nextFile = getNextFile()
+            if (nextFile) {
+              // 有効セル：次のファイルを配置
+              rowFiles.push({ type: "file", file: nextFile, position })
+            } else {
+              // ファイル不足：空きとして表示
+              rowFiles.push({ type: "empty", position })
+            }
+          }
+        }
+        result.push(rowFiles)
+      }
+      return result
+    } else {
+      // 列優先配置（生徒優先）
+      const result: CellData[][] = Array.from({ length: students.length }, (_, row) =>
+        Array.from({ length: maxPages }, (_, col) => {
+          const position = row * maxPages + col
+          if (isPositionDisabled(position)) {
+            return { type: "disabled", position }
+          } else {
+            return { type: "empty", position }
+          }
+        }),
+      )
+
+      // 列優先でファイルを配置
+      for (let col = 0; col < maxPages; col++) {
+        for (let row = 0; row < students.length; row++) {
+          const position = row * maxPages + col
+          if (!isPositionDisabled(position)) {
+            const nextFile = getNextFile()
+            if (nextFile) {
+              result[row][col] = { type: "file", file: nextFile, position }
+            }
+          }
+        }
+      }
+
+      return result
+    }
+  }, [students, maxPages, fileOrder, isPositionDisabled, getEnabledFiles])
+
+  // getTableDataは動的計算なので自動配置useEffectは不要
+
+  // table-dnd-kit-test準拠：親のfiles配列更新は不要（動的計算のため）
 
   // 氏名欄領域をページ別に整理
   const nameRegions = useMemo(() => {
@@ -667,7 +385,7 @@ export default function AnswerSheetGridManager({
       { x: number; y: number; width: number; height: number } | null
     > = {}
 
-    for (let page = 1; page <= gridState.maxPages; page++) {
+    for (let page = 1; page <= maxPages; page++) {
       // 該当ページのmasterImageIdを取得
       const masterImageForPage = masterImages.find(
         (img) => img.pageNumber === page,
@@ -690,320 +408,110 @@ export default function AnswerSheetGridManager({
           : null
     }
     return regions
-  }, [layoutRegions, gridState.maxPages, masterImages])
+  }, [layoutRegions, maxPages, masterImages])
 
   // 全セルのIDリストを生成（SortableContext用）
   const allCellIds = useMemo(() => {
     const ids: string[] = []
-    students.forEach((student) => {
-      for (let page = 1; page <= gridState.maxPages; page++) {
-        ids.push(`${student.id}-${page}`)
-      }
+    // 有効なファイルのIDを追加
+    getEnabledFiles().forEach(file => {
+      ids.push(file.id)
     })
     return ids
-  }, [students, gridState.maxPages])
+  }, [getEnabledFiles])
 
-  // ドラッグ開始処理
+  // コンテナ判定関数（table-dnd-kit-test準拠）
+  const findContainer = useCallback((id: string) => {
+    // コンテナ自体の場合
+    if (id === "trash-area" || id === "trash-popover-trigger") return "trash"
+
+    // テーブルファイルの場合
+    const enabledFile = getEnabledFiles().find((file) => file.id === id)
+    if (enabledFile) {
+      return "main"
+    }
+
+    // ゴミ箱ファイルの場合
+    const disabledFile = getDisabledFiles().find((file) => file.id === id)
+    if (disabledFile) {
+      return "trash"
+    }
+
+    return null
+  }, [getEnabledFiles, getDisabledFiles])
+
+  // ドラッグ開始処理（table-dnd-kit-test準拠）
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
       const { active } = event
       setActiveId(active.id as string)
-      setIsDragging(true)
 
-      // ドラッグされているファイルを特定（UUIDにハイフンが含まれるため最後のハイフンで分割）
-      const idParts = active.id as string
-      const lastHyphenIndex = idParts.lastIndexOf("-")
-      const studentId = idParts.substring(0, lastHyphenIndex)
-      const pageNumberStr = idParts.substring(lastHyphenIndex + 1)
-      const pageNumber = parseInt(pageNumberStr)
-      const studentState = gridState.students[studentId]
-      const cellState = studentState?.cells[pageNumber]
-
-      if (cellState?.file) {
-        setDraggedFile(cellState.file)
-      }
+      // ドラッグされているファイルを特定
+      const activeId = active.id as string
+      const foundFile = files.find((file) => file.id === activeId) || null
+      setDraggedFile(foundFile)
     },
-    [gridState],
+    [files],
   )
 
-  // ドラッグ終了処理
-  const handleDragEnd = (event: DragEndEvent) => {
-      if (process.env.NODE_ENV === "development") {
-        console.log("🔄 Drag operation starting")
-      }
+  // ドラッグオーバー処理（table-dnd-kit-test準拠）
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event
+    if (!over) return
 
-      const { active, over } = event
+    const activeId = active.id.toString()
+    const overId = over.id.toString()
 
-      setActiveId(null)
-      setDraggedFile(null)
-      setIsDragging(false)
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
 
-      if (!over) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("❌ No drop target")
+    if (activeContainer !== overContainer && overContainer && activeContainer) {
+      // コンテナ間移動：即座にdisabledStateを更新
+      setDisabledState((prev) => {
+        const newFiles = new Set(prev.files)
+        if (activeContainer === "main" && overContainer === "trash") {
+          newFiles.add(activeId)
+        } else if (activeContainer === "trash" && overContainer === "main") {
+          newFiles.delete(activeId)
         }
-        return
-      }
-      
-      if (active.id === over.id) {
-        if (process.env.NODE_ENV === "development") {
-          console.log("❌ Same cell, no move needed")
-        }
-        return
-      }
-      
-      if (process.env.NODE_ENV === "development") {
-        console.log("✅ Valid drop target detected")
-      }
-
-      // ドラッグ元とドラッグ先のセル情報を取得（UUIDにハイフンが含まれるため最後のハイフンで分割）
-      const activeIdParts = active.id as string
-      const activeLastHyphenIndex = activeIdParts.lastIndexOf("-")
-      const activeStudentId = activeIdParts.substring(0, activeLastHyphenIndex)
-      const activePageStr = activeIdParts.substring(activeLastHyphenIndex + 1)
-
-      const overIdParts = over.id as string
-      const overLastHyphenIndex = overIdParts.lastIndexOf("-")
-      const overStudentId = overIdParts.substring(0, overLastHyphenIndex)
-      const overPageStr = overIdParts.substring(overLastHyphenIndex + 1)
-
-      const activePageNumber = parseInt(activePageStr)
-      const overPageNumber = parseInt(overPageStr)
-
-
-      // 戦略別のドラッグ制約チェック
-      // ページごと並べる戦略：ページ間移動も許可（横方向移動）
-
-      if (
-        fileOrder === "student-then-page" &&
-        activeStudentId !== overStudentId
-      ) {
-        // 生徒ごと並べる戦略：同じ生徒内でのみ移動可能
-        toast.info("生徒ごと並べる戦略では、同じ生徒内でのみ移動できます")
-        return
-      }
-
-      // 正しい順番の入れ替えロジックを実装
-      if (process.env.NODE_ENV === "development") {
-        console.log("📍 About to call setGridState")
-      }
-      setGridState((prev) => {
-        if (process.env.NODE_ENV === "development") {
-          console.log("📍 Inside setGridState callback")
-        }
-        // 完全に新しいオブジェクトを作成
-        const newState = {
-          ...prev,
-          students: { ...prev.students },
-          pages: { ...prev.pages }
-        }
-
-        // 現在のファイル配置を順序付きで取得
-        const currentFileOrder: Array<{
-          file: ConvertedFile
-          studentId: string
-          pageNumber: number
-          cellIndex: number
-        }> = []
-
-        // 有効セルのリストを戦略に応じて生成
-        const validCells: Array<{ studentId: string; pageNumber: number }> = []
-        const enabledStudents = students
-          .filter(
-            (s) =>
-              newState.students[s.id]?.isEnabled &&
-              !newState.students[s.id]?.isSkipped,
-          )
-          .sort((a, b) => {
-            if (
-              a.customOrder !== null &&
-              a.customOrder !== undefined &&
-              b.customOrder !== null &&
-              b.customOrder !== undefined
-            ) {
-              return a.customOrder - b.customOrder
-            }
-            if (a.customOrder !== null && a.customOrder !== undefined) return -1
-            if (b.customOrder !== null && b.customOrder !== undefined) return 1
-
-            const aNumber = a.attendanceNumber
-            const bNumber = b.attendanceNumber
-            if (aNumber && bNumber) return aNumber - bNumber
-            if (aNumber) return -1
-            if (bNumber) return 1
-
-            return `${a.lastName}${a.firstName}`.localeCompare(
-              `${b.lastName}${b.firstName}`,
-            )
-          })
-
-        const enabledPages = Array.from(
-          { length: newState.maxPages },
-          (_, i) => i + 1,
-        ).filter(
-          (p) => newState.pages[p]?.isEnabled && !newState.pages[p]?.isSkipped,
-        )
-
-        if (fileOrder === "page-then-student") {
-          // ページ優先: 1ページ目全員 → 2ページ目全員
-          enabledPages.forEach((pageNumber) => {
-            enabledStudents.forEach((student) => {
-              const cellState = newState.students[student.id]?.cells[pageNumber]
-              if (cellState?.isEnabled && !cellState.isSkipped) {
-                validCells.push({ studentId: student.id, pageNumber })
-              }
-            })
-          })
-        } else {
-          // 生徒優先: 生徒A全ページ → 生徒B全ページ
-          enabledStudents.forEach((student) => {
-            enabledPages.forEach((pageNumber) => {
-              const cellState = newState.students[student.id]?.cells[pageNumber]
-              if (cellState?.isEnabled && !cellState.isSkipped) {
-                validCells.push({ studentId: student.id, pageNumber })
-              }
-            })
-          })
-        }
-
-        // 現在の配置から順序付きファイルリストを作成
-        validCells.forEach((cell, cellIndex) => {
-          const cellState =
-            newState.students[cell.studentId]?.cells[cell.pageNumber]
-          if (cellState?.file) {
-            currentFileOrder.push({
-              file: cellState.file,
-              studentId: cell.studentId,
-              pageNumber: cell.pageNumber,
-              cellIndex,
-            })
-          }
-        })
-
-        // ドラッグ元とドラッグ先のインデックスを取得
-        const fromIndex = currentFileOrder.findIndex(
-          (item) =>
-            item.studentId === activeStudentId &&
-            item.pageNumber === activePageNumber,
-        )
-
-        // ドラッグ先のセルが有効かチェック
-        const overStudentState = newState.students[overStudentId]
-        const overCellState = overStudentState?.cells[overPageNumber]
-        const overPageState = newState.pages[overPageNumber]
-
-        // Drop target validation removed for cleaner output
-
-        const isOverCellValid =
-          overStudentState?.isEnabled &&
-          !overStudentState?.isSkipped &&
-          overCellState?.isEnabled &&
-          !overCellState?.isSkipped &&
-          overPageState?.isEnabled &&
-          !overPageState?.isSkipped
-
-        if (!isOverCellValid) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("❌ Invalid drop target")
-          }
-          return prev
-        }
-
-        // 有効なセルの中でのドラッグ先インデックスを計算
-        const targetCellIndex = validCells.findIndex(
-          (cell) =>
-            cell.studentId === overStudentId &&
-            cell.pageNumber === overPageNumber,
-        )
-
-        // ドラッグ先のセルにすでにファイルがある場合、そのファイルのインデックスを取得
-        const existingFileAtTarget = currentFileOrder.findIndex(
-          (item) =>
-            item.studentId === overStudentId &&
-            item.pageNumber === overPageNumber,
-        )
-
-        let toIndex: number
-        if (existingFileAtTarget !== -1) {
-          // 既存ファイルがある場合は、そのファイルと入れ替え
-          toIndex = existingFileAtTarget
-        } else {
-          // ファイルがない場合は、そのセル位置に対応するインデックスを計算
-          // validCells配列内でより前にあるファイルの数を数える
-          let filesBefore = 0
-          for (let i = 0; i < targetCellIndex; i++) {
-            const cell = validCells[i]
-            const cellState = newState.students[cell.studentId]?.cells[cell.pageNumber]
-            if (cellState?.file) {
-              filesBefore++
-            }
-          }
-          toIndex = filesBefore
-        }
-
-        if (fromIndex === -1 || toIndex === -1) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("❌ Invalid indices:", { fromIndex, toIndex })
-          }
-          return prev
-        }
-
-        if (fromIndex === toIndex) {
-          if (process.env.NODE_ENV === "development") {
-            console.log("❌ Same indices, no move needed:", { fromIndex, toIndex })
-          }
-          return prev
-        }
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("🔀 Performing array move:", { fromIndex, toIndex })
-        }
-        
-        // arrayMoveを使用して順序を変更
-        const reorderedFiles = arrayMove(currentFileOrder, fromIndex, toIndex)
-
-        // 全セルをクリア - ディープコピーで新しいオブジェクト作成
-        Object.keys(newState.students).forEach((studentId) => {
-          newState.students[studentId] = {
-            ...newState.students[studentId],
-            cells: { ...newState.students[studentId].cells }
-          }
-          
-          Object.keys(newState.students[studentId].cells).forEach((pageStr) => {
-            const pageNumber = parseInt(pageStr)
-            if (newState.students[studentId].cells[pageNumber]) {
-              newState.students[studentId].cells[pageNumber] = {
-                ...newState.students[studentId].cells[pageNumber],
-                file: undefined,
-              }
-            }
-          })
-        })
-
-        // 新しい順序でファイルを配置（fileDataに含まれる位置情報を使用）
-        reorderedFiles.forEach((fileData) => {
-          if (newState.students[fileData.studentId]?.cells[fileData.pageNumber]) {
-            // ファイルオブジェクトのコピーを作成して参照を変更
-            const fileCopy = { ...fileData.file }
-            
-            newState.students[fileData.studentId].cells[fileData.pageNumber] = {
-              ...newState.students[fileData.studentId].cells[fileData.pageNumber],
-              file: fileCopy,
-            }
-          }
-        })
-        
-        if (process.env.NODE_ENV === "development") {
-          console.log("🎯 State update completed")
-        }
-        return newState
+        return { ...prev, files: newFiles }
       })
+    }
+  }, [findContainer])
+
+  // ドラッグ終了処理（table-dnd-kit-test準拠）
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event
+    
+    setActiveId(null)
+    setDraggedFile(null)
+    
+    if (!over) {
+      return
+    }
+
+    const activeId = active.id.toString()
+    const overId = over.id.toString()
+
+    if (activeId === overId) {
+      return
+    }
+
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    // コンテナ間移動はすでにhandleDragOverで処理済み
+    // 同一コンテナ内での並び替えのみここで処理
+    if (activeContainer === overContainer && activeContainer === "main" && onFilesReorder) {
+      const oldIndex = files.findIndex((file) => file.id === activeId)
+      const newIndex = files.findIndex((file) => file.id === overId)
       
-      
-      if (process.env.NODE_ENV === "development") {
-        console.log("✅ Drag operation completed successfully")
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedFiles = arrayMove(files, oldIndex, newIndex)
+        onFilesReorder(reorderedFiles)
       }
     }
+  }, [files, onFilesReorder, findContainer])
 
   // アップロード実行
   const handleUpload = useCallback(() => {
@@ -1014,41 +522,41 @@ export default function AnswerSheetGridManager({
     }> = []
 
     // 有効なセルからアップロードデータを生成
-    students.forEach((student) => {
-      const studentState = gridState.students[student.id]
-      if (!studentState?.isEnabled || studentState.isSkipped) return
+    students.forEach((student, studentIndex) => {
+      // 生徒行が無効化されている場合はスキップ
+      if (disabledState.rows.has(studentIndex)) return
 
-      Object.entries(studentState.cells).forEach(([pageStr, cellState]) => {
-        const pageNumber = parseInt(pageStr)
-        if (!cellState.isEnabled || cellState.isSkipped || !cellState.file)
-          return
+      for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+        const position = studentIndex * maxPages + pageIndex
+        if (isPositionDisabled(position)) continue
 
-        uploadData.push({
-          file: cellState.file,
-          studentId: student.id,
-          pageNumber,
-        })
-      })
+        const tableData = getTableData()
+        const cellData = tableData[studentIndex]?.[pageIndex]
+        if (cellData?.type === "file" && cellData.file) {
+          uploadData.push({
+            file: cellData.file,
+            studentId: student.id,
+            pageNumber: pageIndex + 1,
+          })
+        }
+      }
     })
 
     onUpload(uploadData)
-  }, [students, gridState, onUpload])
+  }, [students, maxPages, disabledState, isPositionDisabled, getTableData, onUpload])
 
   // 統計計算
   const stats = useMemo(() => {
-    const enabledStudents = Object.values(gridState.students).filter(
-      (s) => s.isEnabled && !s.isSkipped,
-    ).length
-    const enabledPages = Object.values(gridState.pages).filter(
-      (p) => p.isEnabled && !p.isSkipped,
-    ).length
+    const enabledStudents = students.filter((_, index) => !disabledState.rows.has(index)).length
+    const enabledPages = Array.from({length: maxPages}, (_, index) => index)
+      .filter(pageIndex => !disabledState.cols.has(pageIndex)).length
     const totalCells = enabledStudents * enabledPages
 
     let filledCells = 0
-    Object.values(gridState.students).forEach((student) => {
-      if (!student.isEnabled || student.isSkipped) return
-      Object.values(student.cells).forEach((cell) => {
-        if (cell.isEnabled && !cell.isSkipped && cell.file) {
+    const tableData = getTableData()
+    tableData.forEach(row => {
+      row.forEach(cellData => {
+        if (cellData.type === "file") {
           filledCells++
         }
       })
@@ -1062,7 +570,7 @@ export default function AnswerSheetGridManager({
       completionRate:
         totalCells > 0 ? Math.round((filledCells / totalCells) * 100) : 0,
     }
-  }, [gridState])
+  }, [students, maxPages, disabledState, getTableData])
 
   // ローディング中の表示
   if (isLoadingMasterImages) {
@@ -1102,6 +610,7 @@ export default function AnswerSheetGridManager({
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <SortableContext
@@ -1138,9 +647,9 @@ export default function AnswerSheetGridManager({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant={
-                      fileOrder === "page-then-student" ? "default" : "outline"
+                      fileOrder === "col-first" ? "default" : "outline"
                     }
-                    onClick={() => onFileOrderChange("page-then-student")}
+                    onClick={() => onFileOrderChange("col-first")}
                     className="flex items-center gap-2"
                     size="sm"
                   >
@@ -1149,9 +658,9 @@ export default function AnswerSheetGridManager({
                   </Button>
                   <Button
                     variant={
-                      fileOrder === "student-then-page" ? "default" : "outline"
+                      fileOrder === "row-first" ? "default" : "outline"
                     }
-                    onClick={() => onFileOrderChange("student-then-page")}
+                    onClick={() => onFileOrderChange("row-first")}
                     className="flex items-center gap-2"
                     size="sm"
                   >
@@ -1209,31 +718,38 @@ export default function AnswerSheetGridManager({
               <Table className="select-none">
                 <TableHeader className="sticky top-0 z-10">
                   <GridHeader
-                    maxPages={gridState.maxPages}
-                    pageStates={gridState.pages}
+                    maxPages={maxPages}
+                    pageStates={disabledState.cols}
                     onTogglePage={togglePageEnabled}
                   />
                 </TableHeader>
                 <TableBody>
-                  {students.map((student) => (
+                  {students.map((student, studentIndex) => (
                     <StudentGridRow
                       key={student.id}
                       student={student}
-                      maxPages={gridState.maxPages}
-                      studentState={gridState.students[student.id]}
-                      pageStates={gridState.pages}
+                      studentIndex={studentIndex}
+                      maxPages={maxPages}
+                      isStudentDisabled={disabledState.rows.has(studentIndex)}
+                      tableData={getTableData()[studentIndex]}
                       nameRegions={nameRegions}
                       globalPreviewMode={globalPreviewMode}
-                      onToggleStudent={() => toggleStudentEnabled(student.id)}
+                      onToggleStudent={() => toggleStudentEnabled(studentIndex)}
                       onToggleCell={(pageNumber) =>
-                        toggleCellEnabled(student.id, pageNumber)
+                        toggleCellEnabled(studentIndex, pageNumber - 1)
                       }
-                      onToggleFileDisabled={(pageNumber) =>
-                        toggleFileDisabled(student.id, pageNumber)
-                      }
-                      onRemoveFile={(pageNumber) =>
-                        removeFileFromCell(student.id, pageNumber)
-                      }
+                      onToggleFileDisabled={(pageNumber) => {
+                        const cellData = getTableData()[studentIndex][pageNumber - 1]
+                        if (cellData?.file) {
+                          toggleFileDisabled(cellData.file.id)
+                        }
+                      }}
+                      onRemoveFile={(pageNumber) => {
+                        const cellData = getTableData()[studentIndex][pageNumber - 1]
+                        if (cellData?.file) {
+                          removeFileFromCell(cellData.file.id)
+                        }
+                      }}
                     />
                   ))}
                 </TableBody>
