@@ -38,6 +38,7 @@ import {
 } from "@dnd-kit/core"
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -56,6 +57,12 @@ import type {
   TableCell as TableCellData,
 } from "@/types/answer-sheet.types"
 
+// table-dnd-kit-test準拠の拡張型定義
+interface ExtendedDisabledState extends DisabledState {
+  cells: Set<string>  // ファイルID単位の無効化
+  files: Set<string>  // ファイル答案無効化（コンテキストメニュー用）
+}
+
 // ============================================================================
 // ソート可能なテーブルセル（table-dnd-kit-test準拠）
 // ============================================================================
@@ -65,6 +72,7 @@ function SortableTableCell({
   children,
   onTogglePosition,
   onToggleFileDisabled,
+  onUploadToCell,
   position,
   hasFile,
   isPositionDisabled,
@@ -74,6 +82,7 @@ function SortableTableCell({
   children: React.ReactNode
   onTogglePosition: () => void
   onToggleFileDisabled: () => void
+  onUploadToCell: () => void
   position: number
   hasFile: boolean
   isPositionDisabled: boolean
@@ -115,40 +124,72 @@ function SortableTableCell({
   }
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <TableCell
-          ref={setNodeRef}
-          style={style}
-          className={`
-            relative h-24 w-32 border-2 transition-all duration-200
-            ${isOver ? "border-blue-400 bg-blue-50" : "border-gray-200"}
-            ${isPositionDisabled ? "bg-gray-100 opacity-50" : "bg-white hover:bg-gray-50"}
-            ${hasFile && !isFileDisabled ? "bg-green-50 border-green-200" : ""}
-            ${hasFile && isFileDisabled ? "bg-red-50 border-red-200" : ""}
-          `}
-          {...attributes}
-          {...listeners}
-        >
-          {children}
-        </TableCell>
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={onTogglePosition}>
-          <Ban className="mr-2 h-4 w-4" />
-          {isPositionDisabled ? "有効化" : "無効化"}
-        </ContextMenuItem>
-        {hasFile && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem onClick={onToggleFileDisabled}>
-              <X className="mr-2 h-4 w-4" />
-              {isFileDisabled ? "ファイル有効化" : "ファイル無効化"}
+    <TableCell
+      ref={setNodeRef}
+      style={style}
+      className={`h-16 w-32 cursor-grab border p-2 text-center transition-all duration-200 active:cursor-grabbing ${
+        isOver ? "scale-105 border-2 border-green-400 bg-green-100" : ""
+      }`}
+      {...attributes}
+      {...listeners}
+    >
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="flex h-full w-full items-center justify-center">
+            {children}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem
+            onClick={onTogglePosition}
+            className="flex items-center gap-2"
+          >
+            {isPositionDisabled ? (
+              <>
+                <X className="h-4 w-4" />
+                セルを有効化
+              </>
+            ) : (
+              <>
+                <Ban className="h-4 w-4" />
+                セルを無効化
+              </>
+            )}
+          </ContextMenuItem>
+
+          {hasFile && (
+            <ContextMenuItem
+              onClick={onToggleFileDisabled}
+              className="flex items-center gap-2"
+              disabled={isPositionDisabled}
+            >
+              {isFileDisabled ? (
+                <>
+                  <X className="h-4 w-4" />
+                  答案画像を有効化
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4" />
+                  答案画像を無効化
+                </>
+              )}
             </ContextMenuItem>
-          </>
-        )}
-      </ContextMenuContent>
-    </ContextMenu>
+          )}
+
+          <ContextMenuSeparator />
+
+          <ContextMenuItem
+            onClick={onUploadToCell}
+            className="flex items-center gap-2"
+            disabled={isPositionDisabled}
+          >
+            <Upload className="h-4 w-4" />
+            このセルに答案画像をアップロード
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    </TableCell>
   )
 }
 
@@ -283,10 +324,12 @@ export default function TableDndKitAnswerGrid({
   // State管理（table-dnd-kit-test準拠のシンプル構造）
   // ============================================================================
 
-  const [disabledState, setDisabledState] = useState<DisabledState>({
+  const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
     rows: new Set<number>(),
     cols: new Set<number>(),
     positions: new Set<number>(),
+    cells: new Set<string>(),  // ファイルID単位の無効化（既存、現在未使用）
+    files: new Set<string>(),  // ファイル答案無効化（コンテキストメニュー用）
   })
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
@@ -362,7 +405,20 @@ export default function TableDndKitAnswerGrid({
     return result
   }, [sortedStudents, maxPages, files, disabledState])
 
-  const trashFiles = useMemo(() => files.filter(f => !f.studentId), [files])
+  // table-dnd-kit-test準拠のファイル分類
+  const getEnabledFiles = useCallback(() => {
+    return files.filter(
+      (file) => file && file.id && !disabledState.files.has(file.id)
+    )
+  }, [files, disabledState.files])
+
+  const getDisabledFiles = useCallback(() => {
+    return files.filter(
+      (file) => file && file.id && disabledState.files.has(file.id)
+    )
+  }, [files, disabledState.files])
+
+  const trashFiles = useMemo(() => getDisabledFiles(), [getDisabledFiles])
 
   // ============================================================================
   // dnd-kit設定
@@ -416,6 +472,41 @@ export default function TableDndKitAnswerGrid({
     })
   }
 
+  // table-dnd-kit-test準拠のファイル無効化制御
+  const toggleFileDisabled = (fileId: string) => {
+    setDisabledState(prev => {
+      const newFiles = new Set(prev.files)
+      if (newFiles.has(fileId)) {
+        // 復活：ゴミ箱から戻す
+        newFiles.delete(fileId)
+      } else {
+        // 無効化：ゴミ箱に移動
+        newFiles.add(fileId)
+      }
+      return { ...prev, files: newFiles }
+    })
+  }
+
+  // セル位置が無効化されているかチェック（table-dnd-kit-test準拠）
+  const isPositionDisabled = (position: number, maxPages: number) => {
+    const row = Math.floor(position / maxPages)
+    const col = position % maxPages
+
+    return (
+      disabledState.rows.has(row) ||
+      disabledState.cols.has(col) ||
+      disabledState.positions.has(position)
+    )
+  }
+
+  // アップロード機能（table-dnd-kit-test準拠のプレースホルダー）
+  const handleUploadToCell = (position: number) => {
+    const row = Math.floor(position / maxPages)
+    const col = position % maxPages
+    const cellName = `${String.fromCharCode(65 + col)}${row + 1}`
+    alert(`${cellName}セルへのアップロード機能は後日実装予定です`)
+  }
+
   // ============================================================================
   // dnd-kitイベントハンドラー（table-dnd-kit-test準拠）
   // ============================================================================
@@ -430,11 +521,41 @@ export default function TableDndKitAnswerGrid({
     const { active, over } = event
     if (!over) return
 
+    const activeId = active.id.toString()
     const overId = over.id.toString()
 
     // ゴミ箱ボタンにhoverした時にpopoverを開く
     if (overId === "trash-popover-trigger") {
       setIsPopoverOpen(true)
+    }
+
+    // table-dnd-kit-test準拠のコンテナ間移動処理
+    const findContainer = (id: string) => {
+      if (id === "trash-area" || id === "trash-popover-trigger") return "trash"
+      
+      const enabledFile = getEnabledFiles().find((file) => file.id === id)
+      if (enabledFile) return "main"
+      
+      const disabledFile = getDisabledFiles().find((file) => file.id === id)
+      if (disabledFile) return "trash"
+      
+      return null
+    }
+
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    if (activeContainer !== overContainer && overContainer && activeContainer) {
+      // コンテナ間移動：即座にdisabledStateを更新
+      setDisabledState((prev) => {
+        const newFiles = new Set(prev.files)
+        if (activeContainer === "main" && overContainer === "trash") {
+          newFiles.add(activeId)
+        } else if (activeContainer === "trash" && overContainer === "main") {
+          newFiles.delete(activeId)
+        }
+        return { ...prev, files: newFiles }
+      })
     }
   }
 
@@ -453,6 +574,34 @@ export default function TableDndKitAnswerGrid({
       return
     }
 
+    // table-dnd-kit-test準拠のコンテナ判定関数
+    const findContainer = (id: string) => {
+      if (id === "trash-area" || id === "trash-popover-trigger") return "trash"
+      
+      const enabledFile = getEnabledFiles().find((file) => file.id === id)
+      if (enabledFile) return "main"
+      
+      const disabledFile = getDisabledFiles().find((file) => file.id === id)
+      if (disabledFile) return "trash"
+      
+      return null
+    }
+
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    if (activeContainer === overContainer && activeId !== overId) {
+      // 同一コンテナ内での並び替え（table-dnd-kit-testと同じロジック）
+      const newFiles = [...files]
+      const oldIndex = newFiles.findIndex((file) => file.id === activeId)
+      const newIndex = newFiles.findIndex((file) => file.id === overId)
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedFiles = arrayMove(newFiles, oldIndex, newIndex)
+        onFilesChange(reorderedFiles)
+      }
+    }
+
     // セルドロップの処理
     if (overId.startsWith('cell-')) {
       const position = parseInt(overId.replace('cell-', ''))
@@ -461,10 +610,7 @@ export default function TableDndKitAnswerGrid({
       const student = sortedStudents[studentIndex]
 
       // 無効化チェック
-      const isDisabled = 
-        disabledState.rows.has(studentIndex) ||
-        disabledState.cols.has(pageNumber - 1) ||
-        disabledState.positions.has(position)
+      const isDisabled = isPositionDisabled(position, maxPages)
 
       if (student && !isDisabled) {
         const newFiles = files.map(f => 
@@ -474,16 +620,6 @@ export default function TableDndKitAnswerGrid({
         )
         onFilesChange(newFiles)
       }
-    }
-
-    // ゴミ箱ドロップの処理
-    if (overId === 'trash-area' || overId === 'trash-popover-trigger') {
-      const newFiles = files.map(f => 
-        f.id === activeId 
-          ? { ...f, studentId: undefined, pageNumber: f.pageNumber, position: undefined }
-          : f
-      )
-      onFilesChange(newFiles)
     }
 
     setActiveFile(null)
@@ -551,9 +687,9 @@ export default function TableDndKitAnswerGrid({
               <div className="flex items-center gap-2">
                 <span>答案配置テーブル</span>
                 <Badge variant="outline">{maxPages}ページ</Badge>
-                <Badge variant="secondary">
-                  {files.filter(f => f.studentId).length}/{sortedStudents.length * maxPages}
-                </Badge>
+                <span className="rounded-full bg-green-100 px-2 py-1 text-sm text-green-700">
+                  {getEnabledFiles().length}件
+                </span>
               </div>
               <div className="flex gap-2">
                 {/* 配置戦略選択 */}
@@ -600,10 +736,23 @@ export default function TableDndKitAnswerGrid({
                           <div className="space-y-2">
                             {trashFiles.map((file) => (
                               <SortableFileItem key={file.id} id={file.id}>
-                                <div className="flex items-center justify-between">
-                                  <span className="font-medium text-red-600 line-through">{file.name}</span>
-                                  <span className="text-sm text-red-400">ID: {file.id.slice(0, 8)}</span>
-                                </div>
+                                <ContextMenu>
+                                  <ContextMenuTrigger asChild>
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-medium text-red-600 line-through">{file.name}</span>
+                                      <span className="text-sm text-red-400">ID: {file.id.slice(0, 8)}</span>
+                                    </div>
+                                  </ContextMenuTrigger>
+                                  <ContextMenuContent>
+                                    <ContextMenuItem
+                                      onClick={() => toggleFileDisabled(file.id)}
+                                      className="flex items-center gap-2"
+                                    >
+                                      <X className="h-4 w-4" />
+                                      答案画像を有効化
+                                    </ContextMenuItem>
+                                  </ContextMenuContent>
+                                </ContextMenu>
                               </SortableFileItem>
                             ))}
 
@@ -633,23 +782,30 @@ export default function TableDndKitAnswerGrid({
           </CardHeader>
 
           <CardContent className="flex-1 overflow-auto">
+            {/* 全ファイル用のSortableContext（テーブル + ゴミ箱） */}
             <SortableContext
-              items={files.map(f => f.id)}
-              strategy={verticalListSortingStrategy}
+              items={[
+                ...getEnabledFiles().map((file) => file.id),
+                ...getDisabledFiles().map((file) => file.id),
+              ]}
+              strategy={rectSortingStrategy}
             >
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-48">生徒</TableHead>
-                    {Array.from({ length: maxPages }, (_, i) => (
+                    {Array.from({ length: maxPages }, (_, colIndex) => (
                       <TableHead 
-                        key={i}
-                        className={`text-center cursor-pointer transition-colors ${
-                          disabledState.cols.has(i) ? 'bg-gray-100 text-gray-500' : 'hover:bg-gray-50'
+                        key={colIndex}
+                        className={`w-32 cursor-pointer text-center hover:bg-gray-100 ${
+                          disabledState.cols.has(colIndex)
+                            ? "bg-red-100 text-red-600"
+                            : ""
                         }`}
-                        onClick={() => toggleColDisabled(i)}
+                        onClick={() => toggleColDisabled(colIndex)}
                       >
-                        ページ {i + 1}
+                        {colIndex + 1}ページ目
+                        {disabledState.cols.has(colIndex) && " (無効)"}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -658,56 +814,134 @@ export default function TableDndKitAnswerGrid({
                   {tableData.map((row, rowIndex) => (
                     <TableRow key={sortedStudents[rowIndex]?.id || rowIndex}>
                       <TableCell 
-                        className={`font-medium cursor-pointer transition-colors ${
-                          disabledState.rows.has(rowIndex) ? 'bg-gray-100 text-gray-500' : 'hover:bg-gray-50'
+                        className={`cursor-pointer text-center font-medium hover:bg-gray-100 ${
+                          disabledState.rows.has(rowIndex)
+                            ? "bg-red-100 text-red-600"
+                            : ""
                         }`}
                         onClick={() => toggleRowDisabled(rowIndex)}
                       >
-                        <div>
-                          <div className="font-semibold">
-                            {row[0].student.lastName} {row[0].student.firstName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {row[0].student.studentId}
-                          </div>
-                        </div>
+                        生徒 {rowIndex + 1}
+                        {disabledState.rows.has(rowIndex) && " (無効)"}
                       </TableCell>
-                      {row.map((cell) => (
-                        <SortableTableCell
-                          key={cell.position}
-                          id={cell.file?.id || `empty-${cell.position}`}
-                          position={cell.position}
-                          hasFile={!!cell.file}
-                          isPositionDisabled={cell.isDisabled}
-                          isFileDisabled={cell.file ? !cell.file.studentId : false}
-                          onTogglePosition={() => togglePositionDisabled(cell.position)}
-                          onToggleFileDisabled={() => {
-                            if (cell.file) {
-                              const newFiles = files.map(f => 
-                                f.id === cell.file!.id
-                                  ? { ...f, studentId: f.studentId ? undefined : cell.student.id }
-                                  : f
-                              )
-                              onFilesChange(newFiles)
-                            }
-                          }}
-                        >
-                          {cell.file ? (
-                            <div className="text-center">
-                              <div className="text-xs font-medium truncate">
-                                {cell.file.name}
+                      {row.map((cell) => {
+                        if (cell.isDisabled) {
+                          // 無効化セル（table-dnd-kit-test準拠）
+                          return (
+                            <TableCell
+                              key={`disabled-${cell.position}`}
+                              className="h-16 w-32 border bg-red-100 p-2 text-center transition-colors"
+                            >
+                              <ContextMenu>
+                                <ContextMenuTrigger asChild>
+                                  <div className="flex h-full w-full cursor-pointer items-center justify-center">
+                                    <div className="text-xs text-red-600">無効</div>
+                                  </div>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                  <ContextMenuItem
+                                    onClick={() => togglePositionDisabled(cell.position)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <X className="h-4 w-4" />
+                                    セルを有効化
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem
+                                    onClick={() => handleUploadToCell(cell.position)}
+                                    className="flex items-center gap-2"
+                                    disabled={true}
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                    このセルに答案画像をアップロード
+                                  </ContextMenuItem>
+                                </ContextMenuContent>
+                              </ContextMenu>
+                            </TableCell>
+                          )
+                        }
+
+                        if (!cell.file) {
+                          // 空きセル（table-dnd-kit-test準拠）
+                          return (
+                            <TableCell
+                              key={`empty-${cell.position}`}
+                              className="h-16 w-32 border bg-gray-50 p-2 text-center transition-colors"
+                            >
+                              <ContextMenu>
+                                <ContextMenuTrigger asChild>
+                                  <div className="flex h-full w-full cursor-pointer items-center justify-center">
+                                    <div className="text-xs text-gray-400">空き</div>
+                                  </div>
+                                </ContextMenuTrigger>
+                                <ContextMenuContent>
+                                  <ContextMenuItem
+                                    onClick={() => togglePositionDisabled(cell.position)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    セルを無効化
+                                  </ContextMenuItem>
+                                  <ContextMenuSeparator />
+                                  <ContextMenuItem
+                                    onClick={() => handleUploadToCell(cell.position)}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Upload className="h-4 w-4" />
+                                    このセルに答案画像をアップロード
+                                  </ContextMenuItem>
+                                </ContextMenuContent>
+                              </ContextMenu>
+                            </TableCell>
+                          )
+                        }
+
+                        // ファイルセル（table-dnd-kit-test準拠）
+                        const file = cell.file!
+                        const isFileDisabled = disabledState.files.has(file.id)
+
+                        return (
+                          <SortableTableCell
+                            key={file.id}
+                            id={file.id}
+                            position={cell.position}
+                            hasFile={true}
+                            isPositionDisabled={cell.isDisabled}
+                            isFileDisabled={isFileDisabled}
+                            onTogglePosition={() => togglePositionDisabled(cell.position)}
+                            onToggleFileDisabled={() => toggleFileDisabled(file.id)}
+                            onUploadToCell={() => handleUploadToCell(cell.position)}
+                          >
+                            <div
+                              className={`flex h-full flex-col items-center justify-center ${
+                                cell.isDisabled
+                                  ? "opacity-50"
+                                  : isFileDisabled
+                                    ? "opacity-30"
+                                    : ""
+                              }`}
+                            >
+                              <div
+                                className={`mb-1 h-8 w-8 rounded ${file.color || "bg-blue-200"} ${
+                                  isFileDisabled ? "ring-2 ring-red-300" : ""
+                                }`}
+                              />
+                              <div
+                                className={`text-sm font-medium ${
+                                  isFileDisabled
+                                    ? "text-red-500 line-through"
+                                    : ""
+                                }`}
+                              >
+                                {file.name.split(' - ページ')[0] || file.name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                {(cell.file.size / 1024).toFixed(1)}KB
+                                {file.id.slice(0, 8)}
                               </div>
                             </div>
-                          ) : (
-                            <div className="text-center text-gray-400 text-xs">
-                              空
-                            </div>
-                          )}
-                        </SortableTableCell>
-                      ))}
+                          </SortableTableCell>
+                        )
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
