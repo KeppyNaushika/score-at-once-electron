@@ -13,7 +13,7 @@ export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
   const databaseUrl = `file:${databasePath}`
   
-  console.log('Database URL:', databaseUrl)
+  // console.log('Database URL:', databaseUrl)
   
   return new PrismaClient({
     datasources: {
@@ -22,7 +22,7 @@ export const createSharedPrismaClient = (): PrismaClient => {
       }
     },
     // 共有ドライブでの競合を避けるための設定
-    log: ['error', 'warn'],
+    log: [],
   })
 }
 

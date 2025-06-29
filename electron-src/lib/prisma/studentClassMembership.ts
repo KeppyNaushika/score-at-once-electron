@@ -158,27 +158,12 @@ export const addStudentToClass = async (
   notes?: string,
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
-    console.log("addStudentToClass called with:", {
-      studentId,
-      classId,
-      startDate,
-      attendanceNumber,
-      notes,
-    })
-
     const result = await createStudentClassMembership({
       student: { connect: { id: studentId } },
       class: { connect: { id: classId } },
       startDate,
       attendanceNumber,
       notes,
-    })
-
-    console.log("addStudentToClass success:", {
-      membershipId: result.id,
-      studentName: `${result.student.lastName} ${result.student.firstName}`,
-      className: result.class.name,
-      attendanceNumber: result.attendanceNumber,
     })
 
     return result

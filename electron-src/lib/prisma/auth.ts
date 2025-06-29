@@ -2,7 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: [], // すべてのログを無効化
+});
 
 // JWT secret - in production, this should be in environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';

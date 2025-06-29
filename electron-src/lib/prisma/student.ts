@@ -43,7 +43,6 @@ export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
         },
       },
     })
-    console.log(`Fetched ${students.length} students from database`)
     return students
   } catch (error) {
     console.error("Failed to fetch students:", error)
