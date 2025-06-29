@@ -168,7 +168,9 @@ export default function AnswerSheetUpload({
           throw error
         } else {
           // パスワード関連以外のエラーのみログ出力
-          console.error(`Failed to convert file ${file.name}:`, error)
+          if (process.env.NODE_ENV === "development") {
+            console.error(`Failed to convert file ${file.name}:`, error)
+          }
           toast.error(`ファイル ${file.name} の変換に失敗しました`)
         }
       }
@@ -184,13 +186,17 @@ export default function AnswerSheetUpload({
 
   const processFiles = useCallback(
     async (fileList: File[], password?: string) => {
-      console.log("🔄 processFiles: 開始", { fileCount: fileList.length, hasPassword: !!password })
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔄 processFiles: 開始", { fileCount: fileList.length, hasPassword: !!password })
+      }
       setIsConverting(true)
       setPasswordError("")
 
       try {
         // 各ファイルのページ数を事前取得
-        console.log("📊 ページ数計算中...")
+        if (process.env.NODE_ENV === "development") {
+          console.log("📊 ページ数計算中...")
+        }
         let totalPages = 0
         const filePageCounts: number[] = []
         
@@ -214,7 +220,9 @@ export default function AnswerSheetUpload({
           }
         }
         
-        console.log(`📊 総ページ数: ${totalPages}ページ`)
+        if (process.env.NODE_ENV === "development") {
+          console.log(`📊 総ページ数: ${totalPages}ページ`)
+        }
         
         const allConvertedFiles: ConvertedFileTemp[] = []
         let processedPages = 0
@@ -225,7 +233,9 @@ export default function AnswerSheetUpload({
           const expectedPages = filePageCounts[i]
           
           try {
-            console.log(`🔄 処理開始: ${file.name} (${expectedPages}ページ)`)
+            if (process.env.NODE_ENV === "development") {
+              console.log(`🔄 処理開始: ${file.name} (${expectedPages}ページ)`)
+            }
             setCurrentProcessingFile(file.name)
 
             // ページ単位プログレス更新コールバック
@@ -233,21 +243,27 @@ export default function AnswerSheetUpload({
               const currentFileProgress = processedPages + currentPage
               const progress = Math.round((currentFileProgress / totalPages) * 100)
               setPdfProcessingProgress(progress)
-              console.log(`📄 ページ ${currentPage}/${totalPagesInFile} 完了 (全体進捗: ${currentFileProgress}/${totalPages} = ${progress}%)`)
+              if (process.env.NODE_ENV === "development") {
+                console.log(`📄 ページ ${currentPage}/${totalPagesInFile} 完了 (全体進捗: ${currentFileProgress}/${totalPages} = ${progress}%)`)
+              }
             }
 
             const convertedFiles = await convertSingleFileToImages(file, password, onProgress)
             allConvertedFiles.push(...convertedFiles)
             
             processedPages += convertedFiles.length
-            console.log(`✅ ファイル完了: ${file.name} - ${convertedFiles.length}ページ`)
+            if (process.env.NODE_ENV === "development") {
+              console.log(`✅ ファイル完了: ${file.name} - ${convertedFiles.length}ページ`)
+            }
             
           } catch (error) {
             if (error instanceof Error && error.message.includes("password")) {
               // パスワード必要エラーの場合は静かに再スロー
               throw error
             } else {
-              console.error(`❌ エラー: ${file.name}`, error)
+              if (process.env.NODE_ENV === "development") {
+                console.error(`❌ エラー: ${file.name}`, error)
+              }
               toast.error(`ファイル ${file.name} の処理に失敗しました`)
               processedPages += expectedPages // エラー時も予想ページ数分進める
               setPdfProcessingProgress(Math.round((processedPages / totalPages) * 100))
@@ -256,7 +272,9 @@ export default function AnswerSheetUpload({
         }
         
         // ConvertedFileTemp → UnifiedFile に変換（直接配置対応）
-        console.log(`🎯 自動配置開始: masterImageCount=${masterImageCount}, 生徒数=${students.length}, ファイル数=${allConvertedFiles.length}`)
+        if (process.env.NODE_ENV === "development") {
+          console.log(`🎯 自動配置開始: masterImageCount=${masterImageCount}, 生徒数=${students.length}, ファイル数=${allConvertedFiles.length}`)
+        }
         
         const unifiedFiles: UnifiedFile[] = allConvertedFiles.map((f, index) => {
           // 自動配置ロジック: 生徒順→ページ順で配置
@@ -264,7 +282,9 @@ export default function AnswerSheetUpload({
           const pageIndex = index % masterImageCount
           const targetStudent = students[studentIndex % students.length]
           
-          console.log(`📄 ファイル${index}: studentIndex=${studentIndex}, pageIndex=${pageIndex}, 生徒=${targetStudent?.lastName} ${targetStudent?.firstName}`)
+          if (process.env.NODE_ENV === "development") {
+            console.log(`📄 ファイル${index}: studentIndex=${studentIndex}, pageIndex=${pageIndex}, 生徒=${targetStudent?.lastName} ${targetStudent?.firstName}`)
+          }
           
           return {
             id: f.id,
@@ -289,7 +309,9 @@ export default function AnswerSheetUpload({
           toast.success(`${allConvertedFiles.length}件のファイルを直接配置しました`)
         }
         
-        console.log(`完了: ${allConvertedFiles.length}個の画像を直接配置`)
+        if (process.env.NODE_ENV === "development") {
+          console.log(`完了: ${allConvertedFiles.length}個の画像を直接配置`)
+        }
         
       } catch (error) {
         if (error instanceof Error && error.message.includes("password")) {
@@ -301,7 +323,9 @@ export default function AnswerSheetUpload({
           setPendingFiles(fileList)
         } else {
           // パスワード関連以外のエラーのみログ出力
-          console.error("File processing error:", error)
+          if (process.env.NODE_ENV === "development") {
+            console.error("File processing error:", error)
+          }
           toast.error("ファイル処理に失敗しました")
         }
       } finally {
@@ -323,10 +347,12 @@ export default function AnswerSheetUpload({
         return
       }
 
-      console.log("📁 ファイルドロップ:", {
-        count: acceptedFiles.length,
-        files: acceptedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }))
-      })
+      if (process.env.NODE_ENV === "development") {
+        console.log("📁 ファイルドロップ:", {
+          count: acceptedFiles.length,
+          files: acceptedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }))
+        })
+      }
 
       processFiles(acceptedFiles)
     },
@@ -341,11 +367,15 @@ export default function AnswerSheetUpload({
   const handlePasswordSubmit = useCallback(
     async (password: string) => {
       if (!currentPdfFile || pendingFiles.length === 0) {
-        console.log("❌ handlePasswordSubmit: 条件チェック失敗", { currentPdfFile, pendingFilesLength: pendingFiles.length })
+        if (process.env.NODE_ENV === "development") {
+          console.log("❌ handlePasswordSubmit: 条件チェック失敗", { currentPdfFile, pendingFilesLength: pendingFiles.length })
+        }
         return
       }
 
-      console.log("🔐 handlePasswordSubmit: 開始", { fileName: currentPdfFile.name, pendingFilesCount: pendingFiles.length })
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔐 handlePasswordSubmit: 開始", { fileName: currentPdfFile.name, pendingFilesCount: pendingFiles.length })
+      }
       
       setIsPasswordProcessing(true)
       setPasswordError("")
@@ -354,7 +384,9 @@ export default function AnswerSheetUpload({
       const fileName = currentPdfFile.name // ファイル名を保存
 
       try {
-        console.log("🔐 handlePasswordSubmit: 直接処理開始")
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔐 handlePasswordSubmit: 直接処理開始")
+        }
         
         // 認証成功 - ダイアログを閉じてプログレス表示開始
         setShowPasswordDialog(false)
@@ -363,7 +395,9 @@ export default function AnswerSheetUpload({
         setPasswordAttempts(0)
         setIsPasswordProcessing(false)
         
-        console.log("📊 handlePasswordSubmit: PDF処理開始設定")
+        if (process.env.NODE_ENV === "development") {
+          console.log("📊 handlePasswordSubmit: PDF処理開始設定")
+        }
         // PDF処理開始
         setIsPdfProcessing(true)
         setCurrentProcessingFile(fileName)
@@ -372,11 +406,15 @@ export default function AnswerSheetUpload({
         // 短い遅延を追加してUIを更新
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        console.log("🔄 handlePasswordSubmit: processFiles呼び出し開始")
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔄 handlePasswordSubmit: processFiles呼び出し開始")
+        }
         // すべてのファイルを統一システムで処理
         await processFiles(pendingFiles, password)
         
-        console.log("✅ handlePasswordSubmit: processFiles完了")
+        if (process.env.NODE_ENV === "development") {
+          console.log("✅ handlePasswordSubmit: processFiles完了")
+        }
         // 処理完了
         setPendingFiles([])
         setIsPdfProcessing(false)
@@ -384,7 +422,9 @@ export default function AnswerSheetUpload({
         setCurrentProcessingFile("")
         
       } catch (error) {
-        console.error("❌ handlePasswordSubmit: エラー", error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("❌ handlePasswordSubmit: エラー", error)
+        }
         if (error instanceof Error && error.message.includes("password")) {
           setPasswordError("invalid-password")
         } else {

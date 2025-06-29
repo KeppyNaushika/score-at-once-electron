@@ -161,7 +161,9 @@ export default function AnswerSheetGridManager({
           await window.electronAPI.getMasterImagesByProjectId(projectId)
         setMasterImages(images || [])
       } catch (error) {
-        console.error("Failed to load master images:", error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load master images:", error)
+        }
         setMasterImages([])
       } finally {
         setIsLoadingMasterImages(false)
@@ -206,7 +208,9 @@ export default function AnswerSheetGridManager({
       }
     }
 
-    console.log("Pages initialized:", initialPages)
+    if (process.env.NODE_ENV === "development") {
+      console.log("Pages initialized:", initialPages)
+    }
 
     return {
       students: initialStudents,
@@ -233,7 +237,9 @@ export default function AnswerSheetGridManager({
           }
         }
 
-        console.log("Pages updated after master image load:", newPages)
+        if (process.env.NODE_ENV === "development") {
+          console.log("Pages updated after master image load:", newPages)
+        }
 
         // 各生徒のセル状態も更新
         const newStudents: Record<string, StudentState> = {}
@@ -279,7 +285,9 @@ export default function AnswerSheetGridManager({
           setLayoutRegions([])
         }
       } catch (error) {
-        console.error("Failed to load layout regions:", error)
+        if (process.env.NODE_ENV === "development") {
+          console.error("Failed to load layout regions:", error)
+        }
         setLayoutRegions([])
       } finally {
         setIsLoadingRegions(false)
@@ -615,7 +623,9 @@ export default function AnswerSheetGridManager({
     const newOrder = newFileOrder.map(f => f.id).join(',')
     
     if (currentOrder !== newOrder) {
-      console.log("📤 Updating parent files order via useEffect:", newFileOrder.map(f => f.id.slice(0, 8)))
+      if (process.env.NODE_ENV === "development") {
+        console.log("📤 Updating parent files order via useEffect:", newFileOrder.map(f => f.id.slice(0, 8)))
+      }
       onFilesReorder(newFileOrder)
     }
   }, [gridState, isDragging, onFilesReorder, students, fileOrder, files])
@@ -718,7 +728,9 @@ export default function AnswerSheetGridManager({
 
   // ドラッグ終了処理
   const handleDragEnd = (event: DragEndEvent) => {
-      console.log("🔄 Drag operation starting")
+      if (process.env.NODE_ENV === "development") {
+        console.log("🔄 Drag operation starting")
+      }
 
       const { active, over } = event
 
@@ -727,16 +739,22 @@ export default function AnswerSheetGridManager({
       setIsDragging(false)
 
       if (!over) {
-        console.log("❌ No drop target")
+        if (process.env.NODE_ENV === "development") {
+          console.log("❌ No drop target")
+        }
         return
       }
       
       if (active.id === over.id) {
-        console.log("❌ Same cell, no move needed")
+        if (process.env.NODE_ENV === "development") {
+          console.log("❌ Same cell, no move needed")
+        }
         return
       }
       
-      console.log("✅ Valid drop target detected")
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Valid drop target detected")
+      }
 
       // ドラッグ元とドラッグ先のセル情報を取得（UUIDにハイフンが含まれるため最後のハイフンで分割）
       const activeIdParts = active.id as string
@@ -766,9 +784,13 @@ export default function AnswerSheetGridManager({
       }
 
       // 正しい順番の入れ替えロジックを実装
-      console.log("📍 About to call setGridState")
+      if (process.env.NODE_ENV === "development") {
+        console.log("📍 About to call setGridState")
+      }
       setGridState((prev) => {
-        console.log("📍 Inside setGridState callback")
+        if (process.env.NODE_ENV === "development") {
+          console.log("📍 Inside setGridState callback")
+        }
         // 完全に新しいオブジェクトを作成
         const newState = {
           ...prev,
@@ -881,7 +903,9 @@ export default function AnswerSheetGridManager({
           !overPageState?.isSkipped
 
         if (!isOverCellValid) {
-          console.log("❌ Invalid drop target")
+          if (process.env.NODE_ENV === "development") {
+            console.log("❌ Invalid drop target")
+          }
           return prev
         }
 
@@ -918,16 +942,22 @@ export default function AnswerSheetGridManager({
         }
 
         if (fromIndex === -1 || toIndex === -1) {
-          console.log("❌ Invalid indices:", { fromIndex, toIndex })
+          if (process.env.NODE_ENV === "development") {
+            console.log("❌ Invalid indices:", { fromIndex, toIndex })
+          }
           return prev
         }
 
         if (fromIndex === toIndex) {
-          console.log("❌ Same indices, no move needed:", { fromIndex, toIndex })
+          if (process.env.NODE_ENV === "development") {
+            console.log("❌ Same indices, no move needed:", { fromIndex, toIndex })
+          }
           return prev
         }
 
-        console.log("🔀 Performing array move:", { fromIndex, toIndex })
+        if (process.env.NODE_ENV === "development") {
+          console.log("🔀 Performing array move:", { fromIndex, toIndex })
+        }
         
         // arrayMoveを使用して順序を変更
         const reorderedFiles = arrayMove(currentFileOrder, fromIndex, toIndex)
@@ -963,12 +993,16 @@ export default function AnswerSheetGridManager({
           }
         })
         
-        console.log("🎯 State update completed")
+        if (process.env.NODE_ENV === "development") {
+          console.log("🎯 State update completed")
+        }
         return newState
       })
       
       
-      console.log("✅ Drag operation completed successfully")
+      if (process.env.NODE_ENV === "development") {
+        console.log("✅ Drag operation completed successfully")
+      }
     }
 
   // アップロード実行
