@@ -57,10 +57,24 @@ import type {
   TableCell as TableCellData,
 } from "@/types/answer-sheet.types"
 
+// table-dnd-kit-test準拠のファイル拡張
+interface EnhancedUnifiedFile extends UnifiedFile {
+  column?: string  // dnd-kitのコンテナ管理用
+}
+
 // table-dnd-kit-test準拠の拡張型定義
 interface ExtendedDisabledState extends DisabledState {
   cells: Set<string>  // ファイルID単位の無効化
   files: Set<string>  // ファイル答案無効化（コンテキストメニュー用）
+}
+
+// テーブルセルのデータ型定義（table-dnd-kit-test準拠）
+interface CellData {
+  type: "disabled" | "file" | "empty"
+  position: number
+  file?: UnifiedFile
+  student?: UnifiedStudent
+  pageNumber?: number
 }
 
 // ============================================================================
@@ -333,6 +347,7 @@ export default function TableDndKitAnswerGrid({
   })
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
+  const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
 
   // ============================================================================
   // 計算済みプロパティ（table-dnd-kit-test準拠）
@@ -365,45 +380,124 @@ export default function TableDndKitAnswerGrid({
     })
   }, [students])
 
-  // テーブルデータ生成（table-dnd-kit-test準拠の動的計算）
-  const tableData = useMemo((): TableData => {
-    const result: TableData = []
-    
-    for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
-      const student = sortedStudents[studentIndex]
-      const row: TableCellData[] = []
-      
-      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
-        const position = studentIndex * maxPages + (pageNumber - 1)
-        
-        // この位置に配置されているファイルを検索
-        const file = files.find(
-          (f) => f.studentId === student.id && f.pageNumber === pageNumber
-        ) || null
+  // セル位置が無効化されているかチェック（table-dnd-kit-test準拠）
+  const isPositionDisabled = useCallback((position: number, maxPages: number) => {
+    const row = Math.floor(position / maxPages)
+    const col = position % maxPages
 
-        // 無効化判定
-        const isDisabled = 
-          disabledState.rows.has(studentIndex) ||
-          disabledState.cols.has(pageNumber - 1) ||
-          disabledState.positions.has(position)
+    return (
+      disabledState.rows.has(row) ||
+      disabledState.cols.has(col) ||
+      disabledState.positions.has(position)
+    )
+  }, [disabledState])
 
-        const cell: TableCellData = {
-          studentIndex,
-          pageNumber,
-          position,
-          file,
-          student,
-          isDisabled,
-        }
+  // table-dnd-kit-test準拠の動的テーブルデータ生成
+  const getTableData = useCallback((): CellData[][] => {
+    // 次の有効ファイルを取得する関数（無効化されていないファイルのみ）
+    const enabledFiles = files.filter(
+      (file) => file && file.id && !disabledState.files.has(file.id)
+    )
+    let enabledFileIndex = 0
 
-        row.push(cell)
+    const getNextFile = () => {
+      if (enabledFileIndex < enabledFiles.length) {
+        return enabledFiles[enabledFileIndex++]
       }
-      
-      result.push(row)
+      return null
     }
-    
-    return result
-  }, [sortedStudents, maxPages, files, disabledState])
+
+    if (fileOrder === "page-first") {
+      // ページ優先配置（列優先と同等）- ページ毎にファイルを配置: A→D→G / B→E→H
+      const result: CellData[][] = Array.from({ length: sortedStudents.length }, (_, studentIndex) =>
+        Array.from({ length: maxPages }, (_, pageIndex) => {
+          const position = studentIndex * maxPages + pageIndex
+          const student = sortedStudents[studentIndex]
+          if (isPositionDisabled(position, maxPages)) {
+            return { 
+              type: "disabled" as const, 
+              position,
+              student,
+              pageNumber: pageIndex + 1
+            }
+          } else {
+            return { 
+              type: "empty" as const, 
+              position,
+              student,
+              pageNumber: pageIndex + 1
+            }
+          }
+        }),
+      )
+
+      // ページ優先（列優先）でファイルを配置
+      for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+        for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+          const position = studentIndex * maxPages + pageIndex
+          if (!isPositionDisabled(position, maxPages)) {
+            const nextFile = getNextFile()
+            if (nextFile) {
+              result[studentIndex][pageIndex] = { 
+                type: "file", 
+                file: nextFile, 
+                position,
+                student: sortedStudents[studentIndex],
+                pageNumber: pageIndex + 1
+              }
+            }
+          }
+        }
+      }
+
+      return result
+    } else {
+      // 生徒優先配置（行優先と同等）- 生徒毎にファイルを配置: A→B→C / D→E→F
+      const result: CellData[][] = []
+      for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+        const student = sortedStudents[studentIndex]
+        const rowFiles: CellData[] = []
+        for (let pageIndex = 0; pageIndex < maxPages; pageIndex++) {
+          const position = studentIndex * maxPages + pageIndex
+
+          if (isPositionDisabled(position, maxPages)) {
+            // 無効セル：赤い背景で表示、配置はスキップ
+            rowFiles.push({ 
+              type: "disabled", 
+              position,
+              student,
+              pageNumber: pageIndex + 1
+            })
+          } else {
+            const nextFile = getNextFile()
+            if (nextFile) {
+              // 有効セル：次のファイルを配置
+              rowFiles.push({ 
+                type: "file", 
+                file: nextFile, 
+                position,
+                student,
+                pageNumber: pageIndex + 1
+              })
+            } else {
+              // ファイル不足：空きとして表示
+              rowFiles.push({ 
+                type: "empty", 
+                position,
+                student,
+                pageNumber: pageIndex + 1
+              })
+            }
+          }
+        }
+        result.push(rowFiles)
+      }
+      return result
+    }
+  }, [sortedStudents, maxPages, fileOrder, disabledState, files, isPositionDisabled])
+
+  // メモ化されたテーブルデータ
+  const tableData = useMemo(() => getTableData(), [getTableData])
 
   // table-dnd-kit-test準拠のファイル分類
   const getEnabledFiles = useCallback(() => {
@@ -417,6 +511,24 @@ export default function TableDndKitAnswerGrid({
       (file) => file && file.id && disabledState.files.has(file.id)
     )
   }, [files, disabledState.files])
+
+  // ファイルの色を自動生成
+  const getFileColor = useCallback((file: UnifiedFile) => {
+    if (file.color) return file.color
+    
+    const colors = [
+      "bg-red-200", "bg-blue-200", "bg-green-200", "bg-yellow-200", "bg-purple-200",
+      "bg-pink-200", "bg-indigo-200", "bg-orange-200", "bg-gray-200", "bg-teal-200"
+    ]
+    
+    // ファイルIDからハッシュを生成して色を決定
+    const hash = file.id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0)
+      return a & a
+    }, 0)
+    
+    return colors[Math.abs(hash) % colors.length]
+  }, [])
 
   const trashFiles = useMemo(() => getDisabledFiles(), [getDisabledFiles])
 
@@ -487,17 +599,6 @@ export default function TableDndKitAnswerGrid({
     })
   }
 
-  // セル位置が無効化されているかチェック（table-dnd-kit-test準拠）
-  const isPositionDisabled = (position: number, maxPages: number) => {
-    const row = Math.floor(position / maxPages)
-    const col = position % maxPages
-
-    return (
-      disabledState.rows.has(row) ||
-      disabledState.cols.has(col) ||
-      disabledState.positions.has(position)
-    )
-  }
 
   // アップロード機能（table-dnd-kit-test準拠のプレースホルダー）
   const handleUploadToCell = (position: number) => {
@@ -515,6 +616,10 @@ export default function TableDndKitAnswerGrid({
     const activeId = event.active.id as string
     const foundFile = files.find((file) => file.id === activeId) || null
     setActiveFile(foundFile)
+    
+    // ゴミ箱からのドラッグかどうかを判定
+    const isFromTrash = getDisabledFiles().some(file => file.id === activeId)
+    setIsDraggingFromTrash(isFromTrash)
   }
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -563,6 +668,7 @@ export default function TableDndKitAnswerGrid({
     const { active, over } = event
     if (!over) {
       setActiveFile(null)
+      setIsDraggingFromTrash(false)
       return
     }
 
@@ -571,6 +677,7 @@ export default function TableDndKitAnswerGrid({
 
     if (activeId === overId) {
       setActiveFile(null)
+      setIsDraggingFromTrash(false)
       return
     }
 
@@ -602,27 +709,11 @@ export default function TableDndKitAnswerGrid({
       }
     }
 
-    // セルドロップの処理
-    if (overId.startsWith('cell-')) {
-      const position = parseInt(overId.replace('cell-', ''))
-      const studentIndex = Math.floor(position / maxPages)
-      const pageNumber = (position % maxPages) + 1
-      const student = sortedStudents[studentIndex]
-
-      // 無効化チェック
-      const isDisabled = isPositionDisabled(position, maxPages)
-
-      if (student && !isDisabled) {
-        const newFiles = files.map(f => 
-          f.id === activeId 
-            ? { ...f, studentId: student.id, pageNumber, position }
-            : f
-        )
-        onFilesChange(newFiles)
-      }
-    }
+    // セルドロップの処理は動的再配置により自動処理されるため削除
+    // ファイルの順序変更のみでテーブルが再構成される
 
     setActiveFile(null)
+    setIsDraggingFromTrash(false)
   }
 
   // ============================================================================
@@ -632,17 +723,17 @@ export default function TableDndKitAnswerGrid({
   const handleUpload = () => {
     const uploadData: UploadData[] = []
 
-    // 配置済みファイルからアップロードデータを生成
+    // 動的テーブルデータから配置済みファイルのアップロードデータを生成
     tableData.forEach(row => {
       row.forEach(cell => {
-        if (cell.file && cell.file.studentId && !cell.isDisabled) {
+        if (cell.type === "file" && cell.file && cell.student && cell.pageNumber) {
           uploadData.push({
             name: cell.file.name,
             fileName: cell.file.name,
             originalFileName: cell.file.originalFileName,
             type: cell.file.type,
             buffer: cell.file.buffer,
-            studentId: cell.file.studentId,
+            studentId: cell.student.id,
             pageNumber: cell.pageNumber,
             overwrite: false,
           })
@@ -701,7 +792,7 @@ export default function TableDndKitAnswerGrid({
                       size="sm"
                     >
                       <FileImage className="h-4 w-4 mr-2" />
-                      ページ優先
+                      ページ優先 (A→D→G / B→E→H)
                     </Button>
                     <Button
                       onClick={() => onFileOrderChange("student-first")}
@@ -709,7 +800,7 @@ export default function TableDndKitAnswerGrid({
                       size="sm"
                     >
                       <Users className="h-4 w-4 mr-2" />
-                      生徒優先
+                      生徒優先 (A→B→C / D→E→F)
                     </Button>
                   </>
                 )}
@@ -772,7 +863,7 @@ export default function TableDndKitAnswerGrid({
                 {/* アップロードボタン */}
                 <Button 
                   onClick={handleUpload} 
-                  disabled={isUploading || files.filter(f => f.studentId).length === 0}
+                  disabled={isUploading || getEnabledFiles().length === 0}
                   className="ml-4"
                 >
                   {isUploading ? "アップロード中..." : "アップロード実行"}
@@ -811,7 +902,8 @@ export default function TableDndKitAnswerGrid({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tableData.map((row, rowIndex) => (
+                  {/* 配置戦略に応じて動的にデータを再構成 */}
+                  {tableData.map((rowFiles, rowIndex) => (
                     <TableRow key={sortedStudents[rowIndex]?.id || rowIndex}>
                       <TableCell 
                         className={`cursor-pointer text-center font-medium hover:bg-gray-100 ${
@@ -821,16 +913,20 @@ export default function TableDndKitAnswerGrid({
                         }`}
                         onClick={() => toggleRowDisabled(rowIndex)}
                       >
-                        生徒 {rowIndex + 1}
+                        {sortedStudents[rowIndex]?.lastName} {sortedStudents[rowIndex]?.firstName}
                         {disabledState.rows.has(rowIndex) && " (無効)"}
                       </TableCell>
-                      {row.map((cell) => {
-                        if (cell.isDisabled) {
-                          // 無効化セル（table-dnd-kit-test準拠）
+                      {rowFiles.map((cellData, colIndex) => {
+                        if (cellData.type === "disabled") {
+                          // 無効化セル（赤い背景）
                           return (
                             <TableCell
-                              key={`disabled-${cell.position}`}
-                              className="h-16 w-32 border bg-red-100 p-2 text-center transition-colors"
+                              key={`disabled-${rowIndex}-${colIndex}`}
+                              className={`h-16 w-32 border bg-red-100 p-2 text-center transition-colors ${
+                                isDraggingFromTrash
+                                  ? "border-blue-300 bg-blue-50"
+                                  : ""
+                              }`}
                             >
                               <ContextMenu>
                                 <ContextMenuTrigger asChild>
@@ -840,7 +936,7 @@ export default function TableDndKitAnswerGrid({
                                 </ContextMenuTrigger>
                                 <ContextMenuContent>
                                   <ContextMenuItem
-                                    onClick={() => togglePositionDisabled(cell.position)}
+                                    onClick={() => togglePositionDisabled(cellData.position)}
                                     className="flex items-center gap-2"
                                   >
                                     <X className="h-4 w-4" />
@@ -848,7 +944,7 @@ export default function TableDndKitAnswerGrid({
                                   </ContextMenuItem>
                                   <ContextMenuSeparator />
                                   <ContextMenuItem
-                                    onClick={() => handleUploadToCell(cell.position)}
+                                    onClick={() => handleUploadToCell(cellData.position)}
                                     className="flex items-center gap-2"
                                     disabled={true}
                                   >
@@ -861,12 +957,16 @@ export default function TableDndKitAnswerGrid({
                           )
                         }
 
-                        if (!cell.file) {
-                          // 空きセル（table-dnd-kit-test準拠）
+                        if (cellData.type === "empty") {
+                          // 空きセル
                           return (
                             <TableCell
-                              key={`empty-${cell.position}`}
-                              className="h-16 w-32 border bg-gray-50 p-2 text-center transition-colors"
+                              key={`empty-${rowIndex}-${colIndex}`}
+                              className={`h-16 w-32 border bg-gray-50 p-2 text-center transition-colors ${
+                                isDraggingFromTrash
+                                  ? "border-blue-300 bg-blue-50"
+                                  : ""
+                              }`}
                             >
                               <ContextMenu>
                                 <ContextMenuTrigger asChild>
@@ -876,7 +976,7 @@ export default function TableDndKitAnswerGrid({
                                 </ContextMenuTrigger>
                                 <ContextMenuContent>
                                   <ContextMenuItem
-                                    onClick={() => togglePositionDisabled(cell.position)}
+                                    onClick={() => togglePositionDisabled(cellData.position)}
                                     className="flex items-center gap-2"
                                   >
                                     <Ban className="h-4 w-4" />
@@ -884,7 +984,7 @@ export default function TableDndKitAnswerGrid({
                                   </ContextMenuItem>
                                   <ContextMenuSeparator />
                                   <ContextMenuItem
-                                    onClick={() => handleUploadToCell(cell.position)}
+                                    onClick={() => handleUploadToCell(cellData.position)}
                                     className="flex items-center gap-2"
                                   >
                                     <Upload className="h-4 w-4" />
@@ -897,32 +997,28 @@ export default function TableDndKitAnswerGrid({
                         }
 
                         // ファイルセル（table-dnd-kit-test準拠）
-                        const file = cell.file!
+                        const file = cellData.file!
                         const isFileDisabled = disabledState.files.has(file.id)
 
                         return (
                           <SortableTableCell
                             key={file.id}
                             id={file.id}
-                            position={cell.position}
+                            position={cellData.position}
                             hasFile={true}
-                            isPositionDisabled={cell.isDisabled}
+                            isPositionDisabled={false} // 動的配置では無効セルにファイルは配置されない
                             isFileDisabled={isFileDisabled}
-                            onTogglePosition={() => togglePositionDisabled(cell.position)}
+                            onTogglePosition={() => togglePositionDisabled(cellData.position)}
                             onToggleFileDisabled={() => toggleFileDisabled(file.id)}
-                            onUploadToCell={() => handleUploadToCell(cell.position)}
+                            onUploadToCell={() => handleUploadToCell(cellData.position)}
                           >
                             <div
                               className={`flex h-full flex-col items-center justify-center ${
-                                cell.isDisabled
-                                  ? "opacity-50"
-                                  : isFileDisabled
-                                    ? "opacity-30"
-                                    : ""
+                                isFileDisabled ? "opacity-30" : ""
                               }`}
                             >
                               <div
-                                className={`mb-1 h-8 w-8 rounded ${file.color || "bg-blue-200"} ${
+                                className={`mb-1 h-8 w-8 rounded ${getFileColor(file)} ${
                                   isFileDisabled ? "ring-2 ring-red-300" : ""
                                 }`}
                               />
@@ -953,11 +1049,18 @@ export default function TableDndKitAnswerGrid({
         <DragOverlay dropAnimation={null}>
           {activeFile ? (
             <div className="bg-white border-2 border-blue-400 rounded-lg p-4 shadow-2xl transform rotate-3 scale-110 ring-4 ring-blue-200 ring-opacity-30 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-gray-800">{activeFile.name}</span>
-                <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full">
-                  {(activeFile.size / 1024).toFixed(1)}KB
-                </span>
+              <div className="flex items-center gap-3">
+                <div
+                  className={`h-8 w-8 rounded ${getFileColor(activeFile)} flex-shrink-0`}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-800 truncate">
+                    {activeFile.name.split(' - ページ')[0] || activeFile.name}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {(activeFile.size / 1024).toFixed(1)}KB
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
