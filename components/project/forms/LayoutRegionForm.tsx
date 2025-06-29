@@ -3,10 +3,10 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AreaType } from "@prisma/client"
+import { LayoutRegionAreaType } from "@/types/common.types"
 
 // AreaTypeの日本語表示マッピング
-const areaTypeToJapanese: Record<AreaType, string> = {
+const areaTypeToJapanese: Record<LayoutRegionAreaType, string> = {
   STUDENT_NAME: "氏名",
   STUDENT_ID: "生徒番号",
   QUESTION_ANSWER: "設問解答",
@@ -67,10 +67,10 @@ const LayoutRegionForm = ({
           <Label className="text-xs font-medium">種類</Label>
           <div className="mt-1 grid grid-cols-2 gap-1">
             {[
-              AreaType.QUESTION_ANSWER,
-              AreaType.STUDENT_NAME,
-              AreaType.STUDENT_ID,
-              AreaType.TOTAL_SCORE,
+              "QUESTION_ANSWER",
+              "STUDENT_NAME",
+              "STUDENT_ID", 
+              "TOTAL_SCORE",
             ].map((type) => (
               <button
                 key={type}
@@ -82,13 +82,13 @@ const LayoutRegionForm = ({
                     : "hover:bg-accent border-border"
                 }`}
               >
-                {areaTypeToJapanese[type]}
+                {areaTypeToJapanese[type as LayoutRegionAreaType]}
               </button>
             ))}
           </div>
         </div>
 
-        {selectedArea.type === AreaType.QUESTION_ANSWER && (
+        {selectedArea.type === "QUESTION_ANSWER" && (
           <>
             <div>
               <Label className="text-xs font-medium">設問番号</Label>

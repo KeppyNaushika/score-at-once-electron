@@ -336,6 +336,12 @@ export interface MyAPI {
     imageOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
+  readFileAsBase64: (filePath: string) => Promise<{
+    success: boolean
+    data?: string
+    mimeType?: string
+    error?: string
+  }>
   getMasterImagesByProjectId: (
     projectId: string,
   ) => Promise<MasterImagePayload[]> // Added

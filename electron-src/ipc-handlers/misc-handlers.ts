@@ -259,6 +259,56 @@ export function setupMiscHandlers(): void {
       }
     },
   )
+
+  ipcMain.handle(
+    "read-file-as-base64",
+    async (_event, filePath: string) => {
+      try {
+        const fs = await import("fs/promises")
+        const path = await import("path")
+        const { getDataDirectory } = await import("../lib/dataManager")
+        
+        // 相対パスの場合はdataディレクトリからの相対パスとして解決
+        const resolvedPath = path.isAbsolute(filePath) 
+          ? filePath 
+          : path.join(getDataDirectory(), filePath)
+        
+        // ファイルの存在確認
+        try {
+          await fs.access(resolvedPath)
+        } catch {
+          return {
+            success: false,
+            error: "File not found"
+          }
+        }
+        
+        // ファイルを読み込んでBase64に変換
+        const buffer = await fs.readFile(resolvedPath)
+        const base64Data = buffer.toString('base64')
+        
+        // MIMEタイプを推定
+        const ext = path.extname(resolvedPath).toLowerCase()
+        const mimeType = ext === '.png' ? 'image/png' 
+                      : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
+                      : ext === '.gif' ? 'image/gif'
+                      : ext === '.webp' ? 'image/webp'
+                      : 'application/octet-stream'
+        
+        return {
+          success: true,
+          data: `data:${mimeType};base64,${base64Data}`,
+          mimeType
+        }
+      } catch (err) {
+        console.error("Error reading file as base64:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : 'Unknown error'
+        }
+      }
+    },
+  )
   
   ipcMain.handle(
     "get-master-images-by-project-id",
