@@ -32,6 +32,7 @@ import { useParams, useRouter } from "next/navigation"
 import Head from "next/head"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { QuestionScore } from "@prisma/client"
+import { toast } from "sonner"
 
 // 採点状態の型定義
 type ScoringStatus =
@@ -877,7 +878,7 @@ export default function GradingPage() {
     if (!currentQuestion) return []
 
     // masterImageIdに基づいてmasterImageのpageNumberを取得
-    const masterImage = project?.masterImages?.find(img => img.id === currentQuestion.masterImageId)
+    const masterImage = project?.masterImages?.find((img: any) => img.id === currentQuestion.masterImageId)
     const targetPageNumber = masterImage?.pageNumber || 1
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
