@@ -1,6 +1,7 @@
 /**
- * 05-answer-sheets統合用の統一型定義
- * table-dnd-kit-testとの互換性を確保
+ * table-dnd-kit-test準拠の型定義
+ * 05-answer-sheetsページ専用の統一型定義
+ * レポート分析に基づき6つのStudent型と4つのAnswerSheet型を1つに統合
  */
 
 // ============================================================================
@@ -157,4 +158,42 @@ export interface DragData {
   type: "file" | "trash"
   file?: UnifiedFile
   sourcePosition?: number
+}
+
+// ============================================================================
+// ファイル変換用の型定義
+// ============================================================================
+
+/**
+ * 一時的な変換ファイル（中間データ）
+ */
+export interface ConvertedFileTemp {
+  id: string
+  name: string
+  type: string
+  size: number
+  buffer: ArrayBuffer
+  preview: string
+  originalFileName: string
+  pageNumber: number
+  pageLabel?: string
+}
+
+/**
+ * ファイル処理の進捗状態
+ */
+export interface FileProcessingProgress {
+  current: number
+  total: number
+  fileName?: string
+}
+
+/**
+ * PDFパスワード処理状態
+ */
+export interface PasswordDialogState {
+  isOpen: boolean
+  fileName?: string
+  attempts: number
+  hasError: boolean
 }

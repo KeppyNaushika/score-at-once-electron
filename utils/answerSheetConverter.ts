@@ -1,6 +1,7 @@
 /**
- * データ変換レイヤー
- * 既存データ ⟷ table-dnd-kit-test形式の相互変換
+ * table-dnd-kit-test準拠のデータ変換レイヤー
+ * 既存データ ⟷ table-dnd-kit-test形式の完全互換変換
+ * レポート分析に基づき複雑なstate管理を簡素化
  */
 
 import type {
@@ -166,81 +167,84 @@ export function isPositionDisabled(
 }
 
 /**
- * ファイル配置の自動処理
- * table-dnd-kit-testのautoPlaceFiles相当
- * 🚨 修正: maxPagesを外部から受け取る（模範解答のページ数）
+ * table-dnd-kit-test準拠の自動配置アルゴリズム
+ * 複雑なGridStateを廃止し、シンプルなfiles配列操作に統一
  */
 export function autoPlaceFiles(
   files: UnifiedFile[],
   students: UnifiedStudent[],
   disabledState: DisabledState,
   strategy: PlacementStrategy,
-  maxPages?: number
+  maxPages: number
 ): UnifiedFile[] {
   const sortedStudents = sortStudentsForTable(students)
-  const unplacedFiles = files.filter((f) => !f.studentId)
-  const placedFiles = files.filter((f) => f.studentId)
-
-  if (unplacedFiles.length === 0) {
-    return files
-  }
-
-  // 🚨 修正: 模範解答のページ数を優先使用
-  const actualMaxPages = maxPages || Math.max(...files.map((f) => f.pageNumber), 1)
-  const newPlacedFiles: UnifiedFile[] = [...placedFiles]
   let fileIndex = 0
-
-  // 配置戦略に基づいて順序を決定
-  const positions = generatePlacementOrder(
-    sortedStudents.length,
-    actualMaxPages,
-    strategy
-  )
-
-  for (const position of positions) {
-    if (fileIndex >= unplacedFiles.length) break
-
-    const { studentIndex, pageNumber } = parsePosition(position, actualMaxPages)
-    
-    // 無効化チェック
-    if (
-      isPositionDisabled(
-        position,
-        studentIndex,
-        pageNumber - 1,
-        disabledState
-      )
-    ) {
-      continue
+  
+  // 有効なファイル（未配置）のみ取得
+  const enabledFiles = files.filter(f => !f.studentId)
+  
+  const getNextFile = () => {
+    if (fileIndex < enabledFiles.length) {
+      return enabledFiles[fileIndex++]
     }
-
-    // 既に配置済みかチェック
-    const isOccupied = newPlacedFiles.some(
-      (f) =>
-        f.studentId === sortedStudents[studentIndex]?.id &&
-        f.pageNumber === pageNumber
-    )
-
-    if (isOccupied) {
-      continue
-    }
-
-    // ファイルを配置
-    const file = unplacedFiles[fileIndex]
-    const student = sortedStudents[studentIndex]
-    
-    if (student) {
-      newPlacedFiles.push({
-        ...file,
-        studentId: student.id,
-        pageNumber,
-        position,
-      })
-      fileIndex++
-    }
+    return null
   }
 
-  return newPlacedFiles
+  // table-dnd-kit-test準拠の配置ロジック
+  if (strategy === "page-first") {
+    // ページ優先配置（行優先と同じ）
+    const result: UnifiedFile[] = []
+    
+    for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+        const position = studentIndex * maxPages + (pageNumber - 1)
+        
+        if (!isPositionDisabled(position, studentIndex, pageNumber - 1, disabledState)) {
+          const nextFile = getNextFile()
+          if (nextFile) {
+            result.push({
+              ...nextFile,
+              studentId: sortedStudents[studentIndex].id,
+              pageNumber,
+              position,
+            })
+          }
+        }
+      }
+    }
+    
+    return [...files.filter(f => f.studentId), ...result]
+    
+  } else if (strategy === "student-first") {
+    // 生徒優先配置（列優先と同じ）
+    const result: UnifiedFile[] = []
+    
+    // 列優先でファイルを配置
+    for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+      for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+        const position = studentIndex * maxPages + (pageNumber - 1)
+        
+        if (!isPositionDisabled(position, studentIndex, pageNumber - 1, disabledState)) {
+          const nextFile = getNextFile()
+          if (nextFile) {
+            result.push({
+              ...nextFile,
+              studentId: sortedStudents[studentIndex].id,
+              pageNumber,
+              position,
+            })
+          }
+        }
+      }
+    }
+    
+    return [...files.filter(f => f.studentId), ...result]
+    
+  } else {
+    // filename-auto: ファイル名から自動判定（将来的な拡張）
+    // とりあえずpage-firstと同じ動作
+    return autoPlaceFiles(files, students, disabledState, "page-first", maxPages)
+  }
 }
 
 /**
