@@ -193,7 +193,7 @@ function DroppableTrashButton({
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId,
-    data: { type: "trash-area" },
+    data: { type: "trash" },
   })
 
   const handleClick = (e: React.MouseEvent) => {
@@ -576,12 +576,6 @@ export default function TableDndKitTestPage() {
     const activeId = event.active.id as string
     const foundFile = files.find((file) => file.id === activeId) || null
     setActiveFile(foundFile)
-
-    // メインリスト（有効ファイル）からのドラッグの場合、Popoverを開く
-    const activeContainer = findContainer(activeId)
-    if (activeContainer === "main") {
-      setIsPopoverOpen(true)
-    }
   }
 
   // ドラッグオーバー処理（simple-dnd-kit-test完全準拠）
@@ -591,6 +585,11 @@ export default function TableDndKitTestPage() {
 
     const activeId = active.id.toString()
     const overId = over.id.toString()
+
+    // ボタンにhoverした時にpopoverを開く
+    if (overId === "trash-popover-trigger") {
+      setIsPopoverOpen(true)
+    }
 
     const activeContainer = findContainer(activeId)
     const overContainer = findContainer(overId)
