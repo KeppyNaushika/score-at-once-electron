@@ -11,6 +11,7 @@ import {
   DragStartEvent,
   DragOverEvent,
   DragOverlay,
+  useDroppable,
 } from "@dnd-kit/core"
 import {
   arrayMove,
@@ -20,11 +21,19 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { Trash2 } from "lucide-react"
 
-// シンプルなアイテム型
+// アイテム型（recursive-dnd-kanban-board準拠）
 interface SimpleItem {
   id: string
+  columnId: string  // 所属コンテナID
   content: string
+}
+
+// コンテナ型（定義のみ、データは持たない）
+interface Container {
+  id: string
+  title: string
 }
 
 // ソート可能なアイテムコンポーネント（リスト用）
@@ -40,7 +49,7 @@ function SortableListItem({ id, children }: { id: string; children: React.ReactN
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: transition || 'transform 150ms ease', // 滑らかな移動アニメーション
     opacity: isDragging ? 0.5 : 1, // ドラッグ中は薄く表示（完全に消さない）
   }
 
@@ -48,7 +57,7 @@ function SortableListItem({ id, children }: { id: string; children: React.ReactN
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-white border border-gray-300 rounded p-4 mb-2 cursor-grab active:cursor-grabbing"
+      className="bg-white border border-gray-200 rounded-lg p-4 mb-2 cursor-grab active:cursor-grabbing transition-all duration-300 ease-in-out hover:shadow-md hover:border-gray-300 hover:scale-[1.01] active:scale-[0.98] group"
       {...attributes}
       {...listeners}
     >
@@ -96,34 +105,124 @@ function SortableGridCell({
   )
 }
 
+// ドロップ可能なメインリストエリア
+function MainListArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'main-area',
+    data: { type: 'main' },
+  })
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`border-2 border-dashed rounded-lg p-4 transition-all duration-300 ease-in-out ${
+        isOver 
+          ? 'border-blue-400 bg-blue-50 shadow-lg ring-2 ring-blue-200 ring-opacity-50 scale-[1.02]' 
+          : 'border-gray-300 bg-gray-50/50 hover:bg-gray-100/50'
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ドロップ可能なゴミ箱エリア
+function TrashArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'trash-area',
+    data: { type: 'trash' },
+  })
+
+  return (
+    <div 
+      ref={setNodeRef}
+      className={`border-2 border-dashed rounded-lg p-4 transition-all duration-300 ease-in-out ${
+        isOver 
+          ? 'border-red-400 bg-red-50 shadow-lg ring-2 ring-red-200 ring-opacity-50 scale-[1.02]' 
+          : 'border-red-300 bg-red-50/50 hover:bg-red-100/50'
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ゴミ箱のアイテム（ドラッグ可能）
+function TrashItem({ item }: { item: SimpleItem }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: `trash-${item.id}`,
+    data: { type: 'trash-item', originalItem: item }
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-white border-2 border-red-200 rounded p-2 h-16 w-24 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing opacity-70"
+      {...attributes}
+      {...listeners}
+    >
+      <div className="text-sm font-medium text-red-600 line-through">{item.content}</div>
+      <div className="text-xs text-red-400">{item.id}</div>
+    </div>
+  )
+}
+
 export default function SimpleDndKitTestPage() {
   // 配置戦略
   const [placementStrategy, setPlacementStrategy] = useState<"row-first" | "col-first">("row-first")
 
-  // リスト用アイテム配列
-  const [listItems, setListItems] = useState<SimpleItem[]>([
-    { id: "list-1", content: "Item 1" },
-    { id: "list-2", content: "Item 2" },
-    { id: "list-3", content: "Item 3" },
-    { id: "list-4", content: "Item 4" },
-    { id: "list-5", content: "Item 5" },
+  // コンテナ定義（recursive-dnd-kanban-board準拠）
+  const [containers] = useState<Container[]>([
+    { id: "main", title: "メインリスト" },
+    { id: "trash", title: "ゴミ箱リスト" }
+  ])
+
+  // 全アイテム配列（recursive-dnd-kanban-board準拠）
+  const [items, setItems] = useState<SimpleItem[]>([
+    { id: "item-1", columnId: "main", content: "Item 1" },
+    { id: "item-2", columnId: "main", content: "Item 2" },
+    { id: "item-3", columnId: "main", content: "Item 3" },
+    { id: "item-4", columnId: "main", content: "Item 4" },
+    { id: "item-5", columnId: "main", content: "Item 5" },
   ])
 
   // グリッド用アイテム配列（3x3で9個）
   const [gridItems, setGridItems] = useState<SimpleItem[]>([
-    { id: "grid-1", content: "A" },
-    { id: "grid-2", content: "B" },
-    { id: "grid-3", content: "C" },
-    { id: "grid-4", content: "D" },
-    { id: "grid-5", content: "E" },
-    { id: "grid-6", content: "F" },
-    { id: "grid-7", content: "G" },
-    { id: "grid-8", content: "H" },
-    { id: "grid-9", content: "I" },
+    { id: "grid-1", columnId: "grid", content: "A" },
+    { id: "grid-2", columnId: "grid", content: "B" },
+    { id: "grid-3", columnId: "grid", content: "C" },
+    { id: "grid-4", columnId: "grid", content: "D" },
+    { id: "grid-5", columnId: "grid", content: "E" },
+    { id: "grid-6", columnId: "grid", content: "F" },
+    { id: "grid-7", columnId: "grid", content: "G" },
+    { id: "grid-8", columnId: "grid", content: "H" },
+    { id: "grid-9", columnId: "grid", content: "I" },
   ])
 
   // ドラッグ状態管理
   const [activeItem, setActiveItem] = useState<SimpleItem | null>(null)
+  
+  // convenience getters（recursive-dnd-kanban-board準拠）
+  const getItemsInContainer = (containerId: string) => {
+    return items.filter(item => item.columnId === containerId)
+  }
+  
+  const listItems = getItemsInContainer("main")
+  const trashItems = getItemsInContainer("trash")
 
   // グリッド表示順序を計算する関数
   const getGridOrder = (index: number) => {
@@ -152,24 +251,97 @@ export default function SimpleDndKitTestPage() {
     })
   )
 
-  // ドラッグ開始処理
+  // ドラッグ開始処理（recursive-dnd-kanban-board準拠）
   const handleDragStart = (event: DragStartEvent) => {
     const activeId = event.active.id as string
-    const item = [...listItems, ...gridItems].find((item) => item.id === activeId)
-    setActiveItem(item || null)
+    
+    // 全アイテムから検索
+    let foundItem = items.find(item => item.id === activeId) || null
+    
+    // グリッドからも検索
+    if (!foundItem) {
+      foundItem = gridItems.find(item => item.id === activeId) || null
+    }
+    
+    setActiveItem(foundItem)
   }
 
-  // ドラッグ終了処理
-  const handleDragEnd = (event: DragEndEvent, isGrid = false) => {
+  // アイテムがどのコンテナにあるかを見つける関数（recursive-dnd-kanban-board準拠）
+  const findContainer = (id: string) => {
+    // コンテナ自体の場合
+    if (id === 'main-area') return 'main'
+    if (id === 'trash-area') return 'trash'
+    
+    // アイテムの場合、columnIdから取得
+    const item = items.find(item => item.id === id)
+    if (item) {
+      return item.columnId
+    }
+    
+    // グリッドアイテムの場合
+    const gridItem = gridItems.find(item => item.id === id)
+    if (gridItem) {
+      return gridItem.columnId
+    }
+    
+    return null
+  }
+
+  // ドラッグオーバー処理（リアルタイムでcolumnIdを更新してplaceholder表示を制御）
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event
 
-    if (over && active.id !== over.id) {
-      const setItems = isGrid ? setGridItems : setListItems
-      
-      setItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id)
-        const newIndex = items.findIndex((item) => item.id === over.id)
-        return arrayMove(items, oldIndex, newIndex)
+    if (!over) return
+
+    const activeId = active.id.toString()
+    const overId = over.id.toString()
+    
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    // 異なるコンテナ間での移動の場合、リアルタイムでcolumnIdを更新
+    if (activeContainer !== overContainer && overContainer && activeContainer) {
+      setItems(prevItems => {
+        return prevItems.map(item => 
+          item.id === activeId 
+            ? { ...item, columnId: overContainer }
+            : item
+        )
+      })
+    }
+  }
+
+  // ドラッグ終了処理（同じコンテナ内の並び替えのみ処理）
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    console.log('DragEnd:', { activeId: active.id, overId: over?.id })
+
+    if (!over) {
+      setActiveItem(null)
+      return
+    }
+
+    const activeId = active.id.toString()
+    const overId = over.id.toString()
+    
+    if (activeId === overId) {
+      setActiveItem(null)
+      return
+    }
+
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    console.log('DragEnd containers:', { activeContainer, overContainer })
+
+    // 同じコンテナ内での並び替えのみ処理
+    // 異なるコンテナ間の移動は既にhandleDragOverで処理済み
+    if (activeContainer === overContainer && activeId !== overId) {
+      setItems(prevItems => {
+        const oldIndex = prevItems.findIndex(item => item.id === activeId)
+        const newIndex = prevItems.findIndex(item => item.id === overId)
+        return arrayMove(prevItems, oldIndex, newIndex)
       })
     }
 
@@ -178,38 +350,104 @@ export default function SimpleDndKitTestPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Simple DnD Kit Test</h1>
-      
-      {/* リスト版 */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold mb-2">シンプルな縦並びリスト:</h2>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">🚀 Perfect DnD Kit Implementation</h1>
+        <p className="text-gray-600 mb-6">Inspired by recursive-dnd-kanban-board with seamless cross-container drag & drop</p>
+      </div>
+      
+      {/* リスト版（kanban風） */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
+          📋 Kanban風リスト
+          <span className="text-sm font-normal text-gray-500">- 完璧なクロスコンテナドラッグ&ドロップ</span>
+        </h2>
         
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
-          onDragEnd={(e) => handleDragEnd(e, false)}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
         >
-          <SortableContext items={listItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
-            <div className="max-w-md">
-              {listItems.map((item) => (
-                <SortableListItem key={item.id} id={item.id}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{item.content}</span>
-                    <span className="text-sm text-gray-500">ID: {item.id}</span>
-                  </div>
-                </SortableListItem>
-              ))}
+          <div className="flex gap-6">
+            {/* メインリスト */}
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-3 text-blue-800 flex items-center gap-2">
+                📝 メインリスト 
+                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-sm">{listItems.length}件</span>
+              </h3>
+              <MainListArea>
+                <div className="min-h-96">
+                  {/* メインリスト専用のSortableContext */}
+                  <SortableContext 
+                    items={listItems.map(item => item.id)} 
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {listItems.map((item) => (
+                        <SortableListItem key={item.id} id={item.id}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">{item.content}</span>
+                            <span className="text-sm text-gray-500">ID: {item.id}</span>
+                          </div>
+                        </SortableListItem>
+                      ))}
+                      
+                      {listItems.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <div className="text-sm">リストが空です</div>
+                        </div>
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              </MainListArea>
             </div>
-          </SortableContext>
+
+            {/* ゴミ箱リスト */}
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold mb-3 text-red-800 flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                ゴミ箱リスト 
+                <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full text-sm">{trashItems.length}件</span>
+              </h3>
+              <TrashArea>
+                <div className="min-h-96">
+                  {/* ゴミ箱リスト専用のSortableContext */}
+                  <SortableContext 
+                    items={trashItems.map(item => item.id)} 
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {trashItems.map((item) => (
+                        <SortableListItem key={item.id} id={item.id}>
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-red-600 line-through">{item.content}</span>
+                            <span className="text-sm text-red-400">ID: {item.id}</span>
+                          </div>
+                        </SortableListItem>
+                      ))}
+                      
+                      {trashItems.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <Trash2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <div className="text-sm">アイテムをここにドラッグ</div>
+                        </div>
+                      )}
+                    </div>
+                  </SortableContext>
+                </div>
+              </TrashArea>
+            </div>
+          </div>
           
           {/* ドラッグ中のプレビュー表示 */}
-          <DragOverlay>
-            {activeItem && activeItem.id.startsWith('list-') ? (
-              <div className="bg-white border border-gray-300 rounded p-4 shadow-lg transform rotate-2 scale-105">
+          <DragOverlay dropAnimation={null}>
+            {activeItem ? (
+              <div className="bg-white border-2 border-blue-400 rounded-lg p-4 shadow-2xl transform rotate-3 scale-110 ring-4 ring-blue-200 ring-opacity-30 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{activeItem.content}</span>
-                  <span className="text-sm text-gray-500">ID: {activeItem.id}</span>
+                  <span className="font-semibold text-gray-800">{activeItem.content}</span>
+                  <span className="text-sm text-blue-600 bg-blue-100 px-2 py-1 rounded-full">ID: {activeItem.id}</span>
                 </div>
               </div>
             ) : null}
@@ -256,7 +494,8 @@ export default function SimpleDndKitTestPage() {
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
-          onDragEnd={(e) => handleDragEnd(e, true)}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
         >
           <SortableContext items={gridItems.map(item => item.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-3 gap-2 w-fit">
@@ -275,9 +514,33 @@ export default function SimpleDndKitTestPage() {
             </div>
           </SortableContext>
           
+          {/* ゴミ箱エリア */}
+          <SortableContext items={trashItems.map(item => `trash-${item.id}`)} strategy={rectSortingStrategy}>
+            <div className="mt-6">
+              <h3 className="text-md font-semibold mb-2 text-red-600 flex items-center gap-2">
+                <Trash2 className="h-4 w-4" />
+                ゴミ箱 ({trashItems.length}件)
+              </h3>
+              <TrashArea>
+                {trashItems.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {trashItems.map((item) => (
+                      <TrashItem key={item.id} item={item} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-500">
+                    <Trash2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <div className="text-sm">アイテムをここにドラッグしてゴミ箱に移動</div>
+                  </div>
+                )}
+              </TrashArea>
+            </div>
+          </SortableContext>
+          
           {/* ドラッグ中のプレビュー表示 */}
           <DragOverlay>
-            {activeItem && activeItem.id.startsWith('grid-') ? (
+            {activeItem ? (
               <div className="bg-white border border-gray-300 rounded p-2 h-24 w-32 flex flex-col items-center justify-center shadow-lg transform rotate-3 scale-105">
                 <div className="text-center">
                   <div className="text-lg font-bold">{activeItem.content}</div>
@@ -293,12 +556,15 @@ export default function SimpleDndKitTestPage() {
       {/* 現在の順序表示 */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-2">データ順序:</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <h3 className="text-md font-medium mb-2">リスト: {listItems.map(i => i.content).join(' → ')}</h3>
+            <h3 className="text-md font-medium mb-2">メインリスト: {listItems.map(i => i.content).join(' → ')}</h3>
           </div>
           <div>
             <h3 className="text-md font-medium mb-2">グリッド: {gridItems.map(i => i.content).join(' → ')}</h3>
+          </div>
+          <div>
+            <h3 className="text-md font-medium mb-2 text-red-600">ゴミ箱リスト: {trashItems.map(i => i.content).join(' → ')}</h3>
           </div>
         </div>
       </div>
