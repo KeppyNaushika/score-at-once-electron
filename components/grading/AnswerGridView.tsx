@@ -113,49 +113,65 @@ const CroppedAnswerImage = ({
 const SCORE_STATUS_CONFIG = {
   ungraded: { 
     icon: Circle, 
-    color: "bg-gray-100 border-gray-300", 
+    borderColor: "border-gray-400", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-gray-50",
     textColor: "text-gray-600",
     key: "q"
   },
   correct: { 
     icon: CheckCircle, 
-    color: "bg-green-100 border-green-400", 
+    borderColor: "border-green-500", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-green-50",
     textColor: "text-green-700",
     key: "e"
   },
   partial: { 
     icon: AlertTriangle, 
-    color: "bg-yellow-100 border-yellow-400", 
+    borderColor: "border-yellow-500", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-yellow-50",
     textColor: "text-yellow-700",
     key: "f"
   },
   pending: { 
     icon: Clock, 
-    color: "bg-blue-100 border-blue-400", 
+    borderColor: "border-blue-500", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-blue-50",
     textColor: "text-blue-700",
     key: "j"
   },
   incorrect: { 
     icon: X, 
-    color: "bg-red-100 border-red-400", 
+    borderColor: "border-red-500", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-red-50",
     textColor: "text-red-700",
     key: "o"
   },
   no_answer: { 
     icon: Minus, 
-    color: "bg-gray-100 border-gray-400", 
-    textColor: "text-gray-600",
+    borderColor: "border-purple-500", 
+    bgColor: "bg-white",
+    selectedBgColor: "bg-purple-50",
+    textColor: "text-purple-600",
     key: "p"
   },
   proposed: {
     icon: AlertTriangle,
-    color: "bg-orange-100 border-orange-400",
+    borderColor: "border-orange-500",
+    bgColor: "bg-white",
+    selectedBgColor: "bg-orange-50",
     textColor: "text-orange-700",
     key: ""
   },
   final: {
     icon: CheckCircle,
-    color: "bg-green-200 border-green-500",
+    borderColor: "border-green-600",
+    bgColor: "bg-white",
+    selectedBgColor: "bg-green-100",
     textColor: "text-green-800",
     key: ""
   },
@@ -487,10 +503,11 @@ export default function AnswerGridView({
               key={answer.id}
               data-answer-id={answer.id}
               className={`
-                relative cursor-pointer transition-all duration-150 hover:shadow-md
+                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2
                 ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
                 ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
-                ${config.color}
+                ${config.borderColor}
+                ${isSelected ? config.selectedBgColor : config.bgColor}
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >

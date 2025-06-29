@@ -558,7 +558,7 @@ export function AnswerSheetsHelpContent() {
           生徒解答アップロード - 完全ガイド
         </h2>
         <p className="text-muted-foreground">
-          答案画像をアップロードし、生徒と答案の対応付けを行います。グリッド形式で効率的な管理が可能です。
+          答案画像をアップロードし、高度なグリッド管理機能で効率的に生徒と答案の対応付けを行います。「新規追加」と「現在の対応状況」の2つのタブで統一された高機能インターフェースを提供します。
         </p>
       </div>
 
@@ -570,23 +570,23 @@ export function AnswerSheetsHelpContent() {
           <StepItem
             number={1}
             title="ファイルアップロード"
-            description="答案画像ファイル（PNG、JPEG、PDF）をドラッグ&ドロップまたはクリックして選択します"
+            description="「新規追加」タブで答案画像ファイル（PNG、JPEG、PDF）をドラッグ&ドロップまたはクリックして選択します"
           />
           <StepItem
             number={2}
             title="配置戦略選択"
-            description="「ページごと並べる」または「生徒ごと並べる」を選択します"
+            description="「ページ優先」または「生徒優先」から適切な自動配置戦略を選択します"
             isImportant
           />
           <StepItem
             number={3}
             title="グリッドで対応付け"
-            description="生徒×ページのグリッドで答案ファイルと生徒の対応を確認・調整します"
+            description="生徒×ページのグリッドテーブルで答案ファイルと生徒の対応を確認・手動調整します"
           />
           <StepItem
             number={4}
             title="一括アップロード"
-            description="配置完了後、「アップロード」ボタンで一括処理します"
+            description="配置完了後、「アップロード」ボタンで一括処理し、データベースに保存します"
           />
         </div>
       </HelpSection>
@@ -595,6 +595,59 @@ export function AnswerSheetsHelpContent() {
 
       <HelpSection
         icon={<Info className="h-5 w-5 text-indigo-600" />}
+        title="統一されたタブインターフェース"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <h4 className="mb-3 font-medium text-green-700">
+              新規追加タブ
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="rounded border border-green-200 bg-green-50 p-2">
+                <p className="font-medium text-green-800">
+                  ファイルアップロード
+                </p>
+                <p className="text-xs text-green-600">ドラッグ&ドロップまたはクリックでファイル選択</p>
+              </div>
+              <div className="rounded border border-blue-200 bg-blue-50 p-2">
+                <p className="font-medium text-blue-800">自動配置処理</p>
+                <p className="text-xs text-blue-600">ページ優先/生徒優先戦略での配置</p>
+              </div>
+              <div className="rounded border border-purple-200 bg-purple-50 p-2">
+                <p className="font-medium text-purple-800">グリッド管理</p>
+                <p className="text-xs text-purple-600">高機能テーブルでの配置調整</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 font-medium text-orange-700">
+              現在の対応状況タブ
+            </h4>
+            <div className="space-y-2 text-sm">
+              <div className="rounded border border-orange-200 bg-orange-50 p-2">
+                <p className="font-medium text-orange-800">
+                  既存答案表示
+                </p>
+                <p className="text-xs text-orange-600">アップロード済み答案の表示・管理</p>
+              </div>
+              <div className="rounded border border-red-200 bg-red-50 p-2">
+                <p className="font-medium text-red-800">同一グリッド機能</p>
+                <p className="text-xs text-red-600">新規追加と同じ高機能インターフェース</p>
+              </div>
+              <div className="rounded border border-cyan-200 bg-cyan-50 p-2">
+                <p className="font-medium text-cyan-800">画像プレビュー</p>
+                <p className="text-xs text-cyan-600">答案画像の氏名欄・全体表示切り替え</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </HelpSection>
+
+      <div className="my-4 border-t border-gray-200" />
+
+      <HelpSection
+        icon={<Settings className="h-5 w-5 text-purple-600" />}
         title="配置戦略と自動配置"
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -605,12 +658,12 @@ export function AnswerSheetsHelpContent() {
             <div className="space-y-2 text-sm">
               <div className="rounded border border-green-200 bg-green-50 p-2">
                 <p className="font-medium text-green-800">
-                  ページごと並べる
+                  ページ優先配置
                 </p>
                 <p className="text-xs text-green-600">1ページ目全員 → 2ページ目全員の順で配置</p>
               </div>
               <div className="rounded border border-blue-200 bg-blue-50 p-2">
-                <p className="font-medium text-blue-800">生徒ごと並べる</p>
+                <p className="font-medium text-blue-800">生徒優先配置</p>
                 <p className="text-xs text-blue-600">生徒A全ページ → 生徒B全ページの順で配置</p>
               </div>
             </div>
@@ -618,31 +671,31 @@ export function AnswerSheetsHelpContent() {
 
           <div>
             <h4 className="mb-3 font-medium text-orange-700">
-              グリッド操作機能
+              高度なグリッド操作
             </h4>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-green-500"></div>
                 <span>
-                  <strong>自動配置:</strong> 選択した戦略に基づいて自動配置
+                  <strong>自動配置:</strong> 選択戦略に基づく最適配置
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
                 <span>
-                  <strong>手動調整:</strong> ドラッグ&ドロップで個別調整可能
+                  <strong>ドラッグ&ドロップ:</strong> 直感的な手動調整
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-purple-500"></div>
                 <span>
-                  <strong>有効/無効切り替え:</strong> 生徒・ページ・セル単位で制御
+                  <strong>無効化制御:</strong> 生徒・ページ・セル単位の制御
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-yellow-500"></div>
                 <span>
-                  <strong>自動順延:</strong> 無効化時に自動的にファイルを再配置
+                  <strong>自動順延:</strong> 無効化時の自動ファイル再配置
                 </span>
               </div>
             </div>
@@ -711,25 +764,26 @@ export function AnswerSheetsHelpContent() {
 
       <HelpSection
         icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
-        title="効率的なアップロードのコツ"
+        title="効率的な答案管理のコツ"
       >
         <div className="space-y-3">
           <TipItem type="success">
-            <strong>事前準備が重要:</strong>
-            スキャン時にファイル名を「学籍番号_氏名」形式にしておくと、
-            アップロード時の自動認識率が大幅に向上し、手作業が削減されます。
+            <strong>統一インターフェースの活用:</strong>
+            新規追加と現在の対応状況で同じグリッド機能を使用できるため、
+            一度操作を覚えれば両方のタブで効率的に作業できます。
+            ドラッグ&ドロップ、無効化制御、配置戦略など全機能が共通です。
           </TipItem>
 
           <TipItem type="info">
-            <strong>画質とファイルサイズ:</strong>
-            200DPI以上、ファイルサイズは1枚あたり2-5MB程度が最適です。
-            高すぎると処理が重くなり、低すぎると文字が読みにくくなります。
+            <strong>Base64セキュア表示:</strong>
+            個人情報を含む答案画像は、publicフォルダではなくElectron APIを通じて
+            Base64形式で安全に表示されます。プライバシー保護と高いセキュリティを両立しています。
           </TipItem>
 
           <TipItem type="warning">
-            <strong>重複チェック機能:</strong>
-            同じ生徒の答案を複数回アップロードした場合、システムが自動検出して警告を表示します。
-            最新のファイルで上書きするか、別の生徒として処理するかを選択できます。
+            <strong>プレビュー機能の活用:</strong>
+            グリッド内で氏名欄表示と全体表示を切り替えできます。
+            生徒の特定には氏名欄表示、答案内容の確認には全体表示を使い分けると効率的です。
           </TipItem>
         </div>
       </HelpSection>
@@ -738,48 +792,48 @@ export function AnswerSheetsHelpContent() {
 
       <HelpSection
         icon={<Settings className="h-5 w-5 text-orange-600" />}
-        title="手動関連付けと修正操作"
+        title="高度なグリッド管理機能"
       >
         <div className="space-y-4">
           <div>
-            <h4 className="mb-2 font-medium">未関連付け答案の処理</h4>
+            <h4 className="mb-2 font-medium">配置制御の詳細機能</h4>
             <div className="space-y-3">
-              <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                <p className="mb-2 text-sm text-yellow-800">
-                  <strong>手動関連付け手順:</strong>
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+                <p className="mb-2 text-sm text-green-800">
+                  <strong>3層制御システム:</strong>
                 </p>
-                <ol className="space-y-1 text-xs text-yellow-700">
-                  <li>1. 「未関連付け」タブで対象ファイルを確認</li>
-                  <li>2. ファイル名や画像内容から生徒を特定</li>
-                  <li>3. 「生徒を選択」ドロップダウンから該当者を選択</li>
-                  <li>4. 「関連付け」ボタンで確定</li>
+                <ol className="space-y-1 text-xs text-green-700">
+                  <li>1. <strong>生徒レベル:</strong> 行全体の有効/無効切り替え</li>
+                  <li>2. <strong>ページレベル:</strong> 列全体の有効/無効切り替え</li>
+                  <li>3. <strong>セルレベル:</strong> 個別セルの有効/無効切り替え</li>
+                  <li>4. <strong>自動順延:</strong> 無効化されたセルをスキップして自動配置</li>
                 </ol>
               </div>
             </div>
           </div>
 
           <div>
-            <h4 className="mb-2 font-medium">関連付け済み答案の修正</h4>
+            <h4 className="mb-2 font-medium">ドラッグ&ドロップ操作</h4>
             <p className="text-muted-foreground mb-2 text-sm">
-              誤って関連付けられた答案は、「関連付け済み」タブで修正できます。
+              グリッド内でファイルを直感的に移動・配置できます。
             </p>
             <div className="space-y-2 text-sm">
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
                 <span>
-                  <strong>生徒変更:</strong> 異なる生徒に再関連付け
+                  <strong>セル間移動:</strong> ファイルを異なるセルに直接移動
                 </span>
               </div>
               <div className="flex items-start gap-2">
-                <div className="mt-2 h-2 w-2 rounded-full bg-red-500"></div>
+                <div className="mt-2 h-2 w-2 rounded-full bg-purple-500"></div>
                 <span>
-                  <strong>答案削除:</strong> 不要な答案ファイルを削除
+                  <strong>配置制約:</strong> 無効化されたセルには配置不可
                 </span>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-2 h-2 w-2 rounded-full bg-green-500"></div>
                 <span>
-                  <strong>欠席設定:</strong> 答案なしの場合は欠席に変更
+                  <strong>リアルタイム反映:</strong> 変更は即座にプレビューに反映
                 </span>
               </div>
             </div>
@@ -796,33 +850,33 @@ export function AnswerSheetsHelpContent() {
         <div className="space-y-3">
           <div className="rounded-lg border border-red-200 bg-red-50 p-4">
             <h4 className="mb-2 font-medium text-red-800">
-              ❌ 自動認識に失敗する場合
+              ❌ グリッド表示の問題
             </h4>
             <ul className="space-y-1 text-sm text-red-700">
-              <li>• ファイル名に余分な文字や記号が含まれている</li>
-              <li>• 生徒情報（氏名・学籍番号）が登録されていない</li>
-              <li>• ファイル名の文字化けや特殊文字の使用</li>
-              <li>• 同姓同名の生徒が複数存在する</li>
+              <li>• 「現在の対応状況」タブで画像が表示されない → ファイルパスの確認が必要</li>
+              <li>• Base64変換に失敗している → 元ファイルの存在・権限を確認</li>
+              <li>• ドラッグ&ドロップが機能しない → 対象セルが無効化されている可能性</li>
+              <li>• 自動配置が期待通りにならない → 配置戦略の選択を確認</li>
             </ul>
           </div>
 
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
             <h4 className="mb-2 font-medium text-orange-800">
-              ⚠️ ファイルサイズが大きすぎる場合
+              ⚠️ パフォーマンスの最適化
             </h4>
             <p className="text-sm text-orange-700">
-              1ファイルが10MBを超える場合、アップロードが失敗する可能性があります。
-              画像編集ソフトでファイルサイズを削減するか、JPEG品質を調整してください。
+              大量の答案（100枚超）を扱う場合は、グリッドの表示が重くなることがあります。
+              その場合は段階的にアップロードするか、不要な生徒・ページを無効化して表示を軽量化してください。
             </p>
           </div>
 
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
             <h4 className="mb-2 font-medium text-blue-800">
-              💡 処理速度を向上させるコツ
+              💡 効率的な運用のコツ
             </h4>
             <p className="text-sm text-blue-700">
-              大量の答案を処理する場合は、50枚程度ずつに分割してアップロードすると、
-              システムの負荷が軽減され、より安定した処理が可能になります。
+              新規追加で基本的な配置を完了してから、現在の対応状況タブで細かい調整を行うと効率的です。
+              両タブで同じグリッド機能が使えるため、作業を分割して進められます。
             </p>
           </div>
         </div>
@@ -837,28 +891,28 @@ export function AnswerSheetsHelpContent() {
         <div className="space-y-3">
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
             <h4 className="mb-3 font-medium">
-              ✅ アップロード完了チェックリスト
+              ✅ 答案管理完了チェックリスト
             </h4>
             <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
               <div className="space-y-1">
-                <div>□ 全ての受験者の答案をアップロード</div>
-                <div>□ 未関連付けファイルがゼロ</div>
-                <div>□ 重複した答案がない</div>
-                <div>□ ファイル形式が適切</div>
+                <div>□ 全ての受験者の答案を配置</div>
+                <div>□ グリッド表示で画像が正常に表示</div>
+                <div>□ 欠席者のセルが適切に無効化</div>
+                <div>□ ドラッグ&ドロップ調整が完了</div>
               </div>
               <div className="space-y-1">
-                <div>□ 欠席者を「欠席」に設定</div>
-                <div>□ 画像品質を目視確認</div>
-                <div>□ 生徒名の表記が正確</div>
-                <div>□ 答案の向きが統一</div>
+                <div>□ 現在の対応状況タブで最終確認</div>
+                <div>□ プレビューモードで画像品質確認</div>
+                <div>□ 統計情報（配置済み/未配置）が適切</div>
+                <div>□ アップロード処理が完了</div>
               </div>
             </div>
           </div>
 
           <TipItem type="success">
-            全ての答案アップロードが完了したら、「次へ:
-            採点開始」ボタンで採点作業に進みます。
-            答案は後からでも追加・修正できるので、まずは主要な答案から処理を開始できます。
+            統一されたグリッド管理システムにより、新規追加から最終確認まで
+            一貫したインターフェースで効率的に作業できます。「次へ: 採点開始」ボタンで
+            採点作業に進み、高度な採点機能をご活用ください。
           </TipItem>
         </div>
       </HelpSection>

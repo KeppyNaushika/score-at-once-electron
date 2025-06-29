@@ -237,7 +237,7 @@ export default function AnswerCell({
       onClick={handleClick}
       {...attributes}
     >
-      <div className={`flex flex-col items-center ${globalPreviewMode === "name" ? "h-full p-0" : "min-h-20 gap-1"}`}>
+      <div className={`flex flex-col items-center ${globalPreviewMode === "name" ? "h-full p-0" : "h-32 gap-1"}`}>
         {/* ホバー時のツールチップ */}
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-transparent opacity-0 transition-opacity hover:opacity-100">
           <div className="text-center text-xs font-medium text-slate-800">
