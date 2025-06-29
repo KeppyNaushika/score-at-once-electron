@@ -166,7 +166,7 @@ export default function AnswerSheetGridManager({
       files: new Set<string>(),
     }
     
-    // 欠席生徒の行を初期無効化
+    // 欠席生徒の行を初期無効化（ソート前のインデックスで設定）
     students.forEach((student, index) => {
       if (student.status === "absent") {
         initialState.rows.add(index)
@@ -306,6 +306,25 @@ export default function AnswerSheetGridManager({
     [],
   )
 
+  // customOrder順にソートされた生徒リスト
+  const sortedStudents = useMemo(() => {
+    return [...students].sort((a, b) => {
+      // customOrderで並び替え（小さい値が先）
+      // customOrderが未定義またはnullの場合は、学籍番号の数値として比較
+      const aOrder = a.customOrder !== undefined && a.customOrder !== null ? a.customOrder : 999999
+      const bOrder = b.customOrder !== undefined && b.customOrder !== null ? b.customOrder : 999999
+      
+      // customOrderが同じ場合は姓名でソート
+      if (aOrder === bOrder) {
+        const aName = `${a.lastName}${a.firstName}`
+        const bName = `${b.lastName}${b.firstName}`
+        return aName.localeCompare(bName, 'ja')
+      }
+      
+      return aOrder - bOrder
+    })
+  }, [students])
+
   // テーブルデータを配置戦略に応じて再構成（table-dnd-kit-test準拠）
   const getTableData = useCallback((): CellData[][] => {
     const enabledFiles = getEnabledFiles()
@@ -321,7 +340,7 @@ export default function AnswerSheetGridManager({
     if (fileOrder === "row-first") {
       // 行優先配置（ページ優先）
       const result: CellData[][] = []
-      for (let row = 0; row < students.length; row++) {
+      for (let row = 0; row < sortedStudents.length; row++) {
         const rowFiles: CellData[] = []
         for (let col = 0; col < maxPages; col++) {
           const position = row * maxPages + col
@@ -345,7 +364,7 @@ export default function AnswerSheetGridManager({
       return result
     } else {
       // 列優先配置（生徒優先）
-      const result: CellData[][] = Array.from({ length: students.length }, (_, row) =>
+      const result: CellData[][] = Array.from({ length: sortedStudents.length }, (_, row) =>
         Array.from({ length: maxPages }, (_, col) => {
           const position = row * maxPages + col
           if (isPositionDisabled(position)) {
@@ -358,7 +377,7 @@ export default function AnswerSheetGridManager({
 
       // 列優先でファイルを配置
       for (let col = 0; col < maxPages; col++) {
-        for (let row = 0; row < students.length; row++) {
+        for (let row = 0; row < sortedStudents.length; row++) {
           const position = row * maxPages + col
           if (!isPositionDisabled(position)) {
             const nextFile = getNextFile()
@@ -371,7 +390,7 @@ export default function AnswerSheetGridManager({
 
       return result
     }
-  }, [students, maxPages, fileOrder, isPositionDisabled, getEnabledFiles])
+  }, [sortedStudents, maxPages, fileOrder, isPositionDisabled, getEnabledFiles])
 
   // getTableDataは動的計算なので自動配置useEffectは不要
 
@@ -723,7 +742,7 @@ export default function AnswerSheetGridManager({
                   />
                 </TableHeader>
                 <TableBody>
-                  {students.map((student, studentIndex) => (
+                  {sortedStudents.map((student, studentIndex) => (
                     <StudentGridRow
                       key={student.id}
                       student={student}
