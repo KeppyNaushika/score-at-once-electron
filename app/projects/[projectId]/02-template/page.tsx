@@ -11,7 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { AreaType, MasterImage, Project, User } from "@prisma/client"
+import { MasterImage, Project, User } from "@prisma/client"
+
+// AreaType enum は削除されたため、文字列型として定義
+type AreaType = "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -140,7 +143,7 @@ export default function TemplateStepPage() {
 
             const mappedRegions = currentImageRegions.map((region) => ({
               id: region.id,
-              type: region.type,
+              type: region.type as AreaType,
               x: region.x,
               y: region.y,
               width: region.width,
@@ -215,7 +218,7 @@ export default function TemplateStepPage() {
             setLayoutRegions(
               currentImageRegions.map((region) => ({
                 id: region.id,
-                type: region.type,
+                type: region.type as AreaType,
                 x: region.x,
                 y: region.y,
                 width: region.width,

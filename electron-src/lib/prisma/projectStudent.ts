@@ -69,7 +69,7 @@ export async function addStudentsToProject(projectId: string, studentIds: string
       const createData = newStudentIds.map(studentId => ({
         projectId,
         studentId,
-        status: ProjectStudentStatus.PARTICIPATING
+        status: "PARTICIPATING"
       }))
 
       await prisma.projectStudent.createMany({

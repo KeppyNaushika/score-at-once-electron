@@ -1,6 +1,7 @@
 "use client"
 
-import { AreaType } from "@prisma/client"
+// AreaType enum は削除されたため、文字列型として定義
+type AreaType = "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
 import { useState } from "react"
 import { toast } from "sonner"
 import ImageCanvas from "./ImageCanvas"
