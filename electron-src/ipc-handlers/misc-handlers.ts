@@ -174,7 +174,7 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle(
     "create-class",
-    async (_event, classData: Prisma.ClassCreateWithoutTeachersInput) => {
+    async (_event, classData: Prisma.ClassCreateWithoutClassTeachersInput) => {
       try {
         return await createClass(classData)
       } catch (err) {

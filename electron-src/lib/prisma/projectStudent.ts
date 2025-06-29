@@ -1,5 +1,6 @@
 import prisma from './client'
-import { ProjectStudentStatus } from '@prisma/client'
+// ProjectStudentStatus enum は削除されたため、文字列として定義
+type ProjectStudentStatus = "PARTICIPATING" | "EXPECTED" | "ABSENT"
 
 /**
  * プロジェクトに関連する生徒を取得

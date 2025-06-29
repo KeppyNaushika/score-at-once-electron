@@ -87,7 +87,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Class related
   fetchClasses: () => ipcRenderer.invoke("fetch-classes"),
-  createClass: (classData: Prisma.ClassCreateWithoutTeachersInput) =>
+  createClass: (classData: Prisma.ClassCreateWithoutClassTeachersInput) =>
     ipcRenderer.invoke("create-class", classData),
   updateClass: (classData: Prisma.ClassUpdateInput & { id: string }) =>
     ipcRenderer.invoke("update-class", classData),
