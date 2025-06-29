@@ -1,12 +1,13 @@
 import { Prisma } from "@prisma/client"
 import prisma from "./client"
 
-type StudentClassMembershipWithDetails = Prisma.StudentClassMembershipGetPayload<{
-  include: {
-    student: true
-    class: true
-  }
-}>
+type StudentClassMembershipWithDetails =
+  Prisma.StudentClassMembershipGetPayload<{
+    include: {
+      student: true
+      class: true
+    }
+  }>
 
 type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
@@ -70,7 +71,9 @@ export const updateStudentClassMembership = async (
   }
 }
 
-export const deleteStudentClassMembership = async (id: string): Promise<void> => {
+export const deleteStudentClassMembership = async (
+  id: string,
+): Promise<void> => {
   try {
     await prisma.studentClassMembership.delete({ where: { id } })
   } catch (error) {
@@ -138,10 +141,7 @@ export const getCurrentMembershipsByClassId = async (
         student: true,
         class: true,
       },
-      orderBy: [
-        { attendanceNumber: "asc" },
-        { student: { studentId: "asc" } },
-      ],
+      orderBy: [{ attendanceNumber: "asc" }, { student: { studentId: "asc" } }],
     })
   } catch (error) {
     console.error("Failed to fetch current memberships by class ID:", error)
@@ -163,9 +163,9 @@ export const addStudentToClass = async (
       classId,
       startDate,
       attendanceNumber,
-      notes
+      notes,
     })
-    
+
     const result = await createStudentClassMembership({
       student: { connect: { id: studentId } },
       class: { connect: { id: classId } },
@@ -173,14 +173,14 @@ export const addStudentToClass = async (
       attendanceNumber,
       notes,
     })
-    
+
     console.log("addStudentToClass success:", {
       membershipId: result.id,
       studentName: `${result.student.lastName} ${result.student.firstName}`,
       className: result.class.name,
-      attendanceNumber: result.attendanceNumber
+      attendanceNumber: result.attendanceNumber,
     })
-    
+
     return result
   } catch (error) {
     console.error("Failed to add student to class:", error)
@@ -221,10 +221,7 @@ export const getMembershipsByDateRange = async (
         {
           // 期間をまたいで継続中のもの
           startDate: { lte: startDate },
-          OR: [
-            { endDate: null },
-            { endDate: { gte: startDate } },
-          ],
+          OR: [{ endDate: null }, { endDate: { gte: startDate } }],
         },
       ],
     }
@@ -235,10 +232,7 @@ export const getMembershipsByDateRange = async (
         student: true,
         class: true,
       },
-      orderBy: [
-        { student: { studentId: "asc" } },
-        { startDate: "desc" },
-      ],
+      orderBy: [{ student: { studentId: "asc" } }, { startDate: "desc" }],
     })
   } catch (error) {
     console.error("Failed to fetch memberships by date range:", error)
