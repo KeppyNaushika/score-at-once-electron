@@ -1,6 +1,5 @@
 "use client"
 
-import AnswerSheetUpload from "@/components/answer-sheet/AnswerSheetUpload"
 import AnswerSheetUploadNew from "@/components/answer-sheet/AnswerSheetUploadNew"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
@@ -233,29 +232,16 @@ export default function AnswerSheetsPage() {
 
         <div className="min-h-0 flex-1 overflow-hidden p-3">
           <Tabs defaultValue="new-grid" className="flex h-full flex-col">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="new" className="flex items-center gap-2">
-                <Upload className="h-4 w-4" />
-                新規追加（従来）
-              </TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="new-grid" className="flex items-center gap-2">
                 <Grid3X3 className="h-4 w-4" />
-                新規追加（新方式）
+                新規追加
               </TabsTrigger>
               <TabsTrigger value="current" className="flex items-center gap-2">
                 <Eye className="h-4 w-4" />
                 現在の対応状況
               </TabsTrigger>
             </TabsList>
-
-            <TabsContent value="new" className="mt-3 min-h-0 flex-1 p-3">
-              <AnswerSheetUpload
-                projectId={projectId}
-                students={students}
-                masterImageCount={masterImageCount}
-                onUploadComplete={handleUploadComplete}
-              />
-            </TabsContent>
 
             <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
               <AnswerSheetUploadNew
