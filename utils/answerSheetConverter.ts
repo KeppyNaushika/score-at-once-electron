@@ -39,7 +39,7 @@ export function convertToUnifiedStudent(studentData: any): UnifiedStudent {
     studentId: studentData.studentId,
     attendanceNumber: studentData.attendanceNumber || null,
     status: studentData.status || "participating",
-    customOrder: studentData.customOrder || null,
+    customOrder: studentData.customOrder,
   }
 }
 
@@ -99,12 +99,11 @@ export function convertToUnifiedFile(convertedFile: any): UnifiedFile {
  */
 export function getTableData(
   files: UnifiedFile[],
-  students: UnifiedStudent[],
+  sortedStudents: UnifiedStudent[], // 既にソート済みの生徒データを受け取る
   disabledState: DisabledState,
   placementStrategy: PlacementStrategy = "page-first",
   maxPages?: number
 ): TableData {
-  const sortedStudents = sortStudentsForTable(students)
   // 🚨 修正: 模範解答のページ数を優先使用
   const actualMaxPages = maxPages || Math.max(...files.map((f) => f.pageNumber), 1)
 
@@ -298,7 +297,9 @@ export function convertToUploadData(
 
     const student = sortedStudents.find((s) => s.id === file.studentId)
     if (!student) {
-      console.warn(`Student not found for file: ${file.name}`)
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`Student not found for file: ${file.name}`)
+      }
       continue
     }
 
@@ -332,27 +333,20 @@ export function createInitialDisabledState(): DisabledState {
   }
 }
 
-/**
- * 最大ページ数を計算（廃止予定）
- * 🚨 注意: 模範解答のページ数を使用することを推奨
- */
-export function calculateMaxPages(files: UnifiedFile[]): number {
-  console.warn("calculateMaxPages: この関数は廃止予定です。模範解答のページ数を使用してください。")
-  if (files.length === 0) return 1
-  return Math.max(...files.map((f) => f.pageNumber))
-}
 
 /**
  * デバッグ用: table構造の確認
  */
 export function debugTableData(tableData: TableData): void {
-  console.log("🔍 Table構造（デバッグ）:")
-  tableData.forEach((row, rowIndex) => {
-    console.log(`  行 ${rowIndex} (${row[0]?.student.lastName} ${row[0]?.student.firstName}):`)
-    row.forEach((cell, colIndex) => {
-      const status = cell.file ? `📄 ${cell.file.name}` : "⬜ 空"
-      const disabled = cell.isDisabled ? " [無効]" : ""
-      console.log(`    列 ${colIndex} (ページ${cell.pageNumber}): ${status}${disabled}`)
+  if (process.env.NODE_ENV === "development") {
+    console.log("🔍 Table構造（デバッグ）:")
+    tableData.forEach((row, rowIndex) => {
+      console.log(`  行 ${rowIndex} (${row[0]?.student.lastName} ${row[0]?.student.firstName}):`)
+      row.forEach((cell, colIndex) => {
+        const status = cell.file ? `📄 ${cell.file.name}` : "⬜ 空"
+        const disabled = cell.isDisabled ? " [無効]" : ""
+        console.log(`    列 ${colIndex} (ページ${cell.pageNumber}): ${status}${disabled}`)
+      })
     })
-  })
+  }
 }

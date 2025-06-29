@@ -66,6 +66,15 @@ export default function AnswerSheetUpload({
   masterImageCount,
   onUploadComplete,
 }: AnswerSheetUploadProps) {
+  // 開発時のみデバッグ情報を出力
+  if (process.env.NODE_ENV === "development") {
+    console.log("👥 受け取った生徒データ（順序確認）:", students.map((s, i) => ({
+      index: i,
+      name: `${s.lastName} ${s.firstName}`,
+      customOrder: s.customOrder,
+      attendanceNumber: s.attendanceNumber
+    })))
+  }
   // ============================================================================
   // State管理（ファイル処理用）
   // ============================================================================
@@ -247,11 +256,15 @@ export default function AnswerSheetUpload({
         }
         
         // ConvertedFileTemp → UnifiedFile に変換（直接配置対応）
+        console.log(`🎯 自動配置開始: masterImageCount=${masterImageCount}, 生徒数=${students.length}, ファイル数=${allConvertedFiles.length}`)
+        
         const unifiedFiles: UnifiedFile[] = allConvertedFiles.map((f, index) => {
           // 自動配置ロジック: 生徒順→ページ順で配置
           const studentIndex = Math.floor(index / masterImageCount)
           const pageIndex = index % masterImageCount
           const targetStudent = students[studentIndex % students.length]
+          
+          console.log(`📄 ファイル${index}: studentIndex=${studentIndex}, pageIndex=${pageIndex}, 生徒=${targetStudent?.lastName} ${targetStudent?.firstName}`)
           
           return {
             id: f.id,
