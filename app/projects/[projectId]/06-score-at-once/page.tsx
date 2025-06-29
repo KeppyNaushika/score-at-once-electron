@@ -84,6 +84,7 @@ interface QuestionRegion {
   y: number
   width: number
   height: number
+  masterImageId: string // masterImageIdを追加
 }
 
 // キーボードショートカットの設定（Python版互換）
@@ -152,6 +153,10 @@ export default function GradingPage() {
   })
   const [needsFilterRefresh, setNeedsFilterRefresh] = useState(false)
   const [filterUpdateKey, setFilterUpdateKey] = useState(0)
+  
+  // 部分点入力用状態
+  const [partialScoreInput, setPartialScoreInput] = useState('')
+  const [partialScoreInputTimer, setPartialScoreInputTimer] = useState<NodeJS.Timeout | null>(null)
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -229,6 +234,7 @@ export default function GradingPage() {
             y: region.y,
             width: region.width,
             height: region.height,
+            masterImageId: region.masterImageId, // masterImageIdを追加
           }))
 
         // 既存の採点データを取得
@@ -327,27 +333,52 @@ export default function GradingPage() {
         return
       }
 
-      // グリッドモードでのWASD移動を処理
+      // グリッドモードでの特殊キーハンドリング
       if (gradingMode === "grid") {
         const key = event.key.toLowerCase()
+        
+        // Alt+採点キーでフィルタ切り替え
+        if (event.altKey && [DEFAULT_SHORTCUTS.ungraded, DEFAULT_SHORTCUTS.correct, DEFAULT_SHORTCUTS.incorrect, DEFAULT_SHORTCUTS.partial, DEFAULT_SHORTCUTS.pending, DEFAULT_SHORTCUTS.no_answer].includes(key)) {
+          event.preventDefault()
+          handleToggleFilterByScoreKey(key)
+          return
+        }
+        
         // WASD移動の処理
         if (['w', 'a', 's', 'd'].includes(key)) {
           event.preventDefault()
           handleGridNavigation(key)
           return
         }
+        
         // Rキーでフィルタを更新
         if (key === 'r') {
           event.preventDefault()
           handleRefreshFilter()
           return
         }
-        // 数字キーでフィルタ切り替え
-        if (['1', '2', '3', '4', '5', '6'].includes(key)) {
+        
+        // 数字キーで部分点入力（選択されている答案がある場合）
+        if (['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key) && selectedAnswers.size > 0) {
           event.preventDefault()
-          handleToggleFilter(key)
+          handlePartialScoreInput(key)
           return
         }
+        
+        // Backspaceで部分点をnullに設定
+        if (key === 'backspace' && selectedAnswers.size > 0) {
+          event.preventDefault()
+          handlePartialScoreReset()
+          return
+        }
+        
+        // 採点キー（Alt無し）で通常の採点
+        if ([DEFAULT_SHORTCUTS.ungraded, DEFAULT_SHORTCUTS.correct, DEFAULT_SHORTCUTS.incorrect, DEFAULT_SHORTCUTS.partial, DEFAULT_SHORTCUTS.pending, DEFAULT_SHORTCUTS.no_answer].includes(key) && selectedAnswers.size > 0) {
+          event.preventDefault()
+          handleBatchScore(key as ScoringStatus)
+          return
+        }
+        
         // グリッドモードではその他のキーはグリッドコンポーネントに委譲
         return
       }
@@ -688,10 +719,28 @@ export default function GradingPage() {
     })
   }
 
+  // オーバーロード用のhandleBatchScore関数（部分点指定可能）
   const handleBatchScore = async (
-    answerIds: string | string[],
-    status: ScoringStatus,
+    statusOrAnswerIds: ScoringStatus | string | string[],
+    statusOrPartialScore?: ScoringStatus | number | null,
+    partialScore?: number | null
   ) => {
+    // 引数の解析
+    let answerIds: string | string[]
+    let status: ScoringStatus
+    let scoreValue: number | null = null
+
+    if (typeof statusOrAnswerIds === 'string' && !Array.isArray(statusOrAnswerIds) && ['ungraded', 'correct', 'incorrect', 'partial', 'pending', 'no_answer'].includes(statusOrAnswerIds)) {
+      // 新形式: handleBatchScore(status, partialScore?)
+      status = statusOrAnswerIds as ScoringStatus
+      answerIds = Array.from(selectedAnswers)
+      scoreValue = typeof statusOrPartialScore === 'number' ? statusOrPartialScore : null
+    } else {
+      // 旧形式: handleBatchScore(answerIds, status)
+      answerIds = statusOrAnswerIds as string | string[]
+      status = statusOrPartialScore as ScoringStatus
+      scoreValue = partialScore || null
+    }
     if (!currentUserId) {
       alert("ユーザー情報の取得中です。しばらくお待ちください。")
       return
@@ -723,8 +772,12 @@ export default function GradingPage() {
           newScore = 0
           break
         case "partial":
-          // 一括採点の場合は満点の半分を設定（後で個別に調整可能）
-          newScore = Math.floor(currentQuestion.points / 2)
+          // 指定された部分点を使用、なければ満点の半分を設定
+          if (scoreValue !== null && scoreValue !== undefined) {
+            newScore = scoreValue
+          } else {
+            newScore = Math.floor(currentQuestion.points / 2)
+          }
           break
         case "pending":
           newScore = currentScore?.score || 0
@@ -758,6 +811,7 @@ export default function GradingPage() {
             }))
           } else {
             console.error("Failed to update batch score:", (result as any).error)
+            toast.error(`採点データの更新に失敗しました: ${(result as any).error || JSON.stringify(result)}`)
           }
         } else {
           // Create new score
@@ -787,6 +841,7 @@ export default function GradingPage() {
             }))
           } else {
             console.error("Failed to create batch score:", result)
+            toast.error(`採点データの作成に失敗しました: ${JSON.stringify(result)}`)
           }
         }
       } catch (error) {
@@ -821,9 +876,14 @@ export default function GradingPage() {
   const getAllGridAnswerData = () => {
     if (!currentQuestion) return []
 
-    // 受験生徒順でソート（ProjectStudentのcustomOrder順序に従う）
-    // 注意: AnswerSheetに含まれているstudentは、実際にはProjectStudentテーブルの情報
-    const sortedAnswerSheets = [...answerSheets].sort((a, b) => {
+    // masterImageIdに基づいてmasterImageのpageNumberを取得
+    const masterImage = project?.masterImages?.find(img => img.id === currentQuestion.masterImageId)
+    const targetPageNumber = masterImage?.pageNumber || 1
+
+    // pageNumberでフィルタリングしてから受験生徒順でソート
+    const pageFilteredSheets = answerSheets.filter(sheet => sheet.pageNumber === targetPageNumber)
+    
+    const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
       const aOrder = a.student.customOrder !== undefined ? a.student.customOrder : 999999
@@ -935,6 +995,87 @@ export default function GradingPage() {
     }
   }
 
+  // Alt+採点キーでフィルタ切り替え
+  const handleToggleFilterByScoreKey = (scoreKey: string) => {
+    const scoreToFilterMap: { [key: string]: keyof typeof displayFilter } = {
+      [DEFAULT_SHORTCUTS.ungraded]: 'ungraded',
+      [DEFAULT_SHORTCUTS.correct]: 'correct',
+      [DEFAULT_SHORTCUTS.incorrect]: 'incorrect', 
+      [DEFAULT_SHORTCUTS.partial]: 'partial',
+      [DEFAULT_SHORTCUTS.pending]: 'pending',
+      [DEFAULT_SHORTCUTS.no_answer]: 'no_answer'
+    }
+    
+    const filterKey = scoreToFilterMap[scoreKey]
+    if (filterKey) {
+      const newDisplayFilter = {
+        ...displayFilter,
+        [filterKey]: !displayFilter[filterKey]
+      }
+      setDisplayFilter(newDisplayFilter)
+      
+      // 即座にappliedFilterも更新
+      setAppliedFilter(newDisplayFilter)
+      setFilterUpdateKey(prev => prev + 1) // 強制再レンダリング
+      setNeedsFilterRefresh(false) // リフレッシュが不要になったことを示す
+      
+      // 選択状態をリセット
+      setSelectedAnswers(new Set())
+      // フィルタ適用後の最初の答案を選択
+      setTimeout(() => {
+        const allAnswers = getAllGridAnswerData()
+        const filteredAnswers = allAnswers.filter(answer => newDisplayFilter[answer.status as keyof typeof newDisplayFilter])
+        if (filteredAnswers.length > 0) {
+          setSelectedAnswers(new Set([filteredAnswers[0].id]))
+        }
+      }, 100)
+    }
+  }
+
+  // 部分点入力処理
+  const handlePartialScoreInput = async (digit: string) => {
+    if (selectedAnswers.size === 0 || !currentQuestion) return
+    
+    // 現在の部分点入力状態を管理
+    const currentPartialInput = partialScoreInput || ''
+    const newPartialInput = currentPartialInput + digit
+    
+    // 数値として有効かチェック（最大点数以下）
+    const numericValue = parseFloat(newPartialInput)
+    const maxPoints = currentQuestion.points || 10
+    if (isNaN(numericValue) || numericValue > maxPoints) {
+      return // 無効な入力は無視
+    }
+    
+    setPartialScoreInput(newPartialInput)
+    
+    // 一定時間後に自動的に採点を実行
+    if (partialScoreInputTimer) {
+      clearTimeout(partialScoreInputTimer)
+    }
+    
+    const timer = setTimeout(() => {
+      if (partialScoreInput === newPartialInput) { // 入力が変更されていない場合のみ
+        handleBatchScore('partial' as ScoringStatus, numericValue)
+        setPartialScoreInput('')
+      }
+    }, 1500) // 1.5秒待機
+    
+    setPartialScoreInputTimer(timer)
+  }
+
+  // 部分点リセット処理
+  const handlePartialScoreReset = () => {
+    if (selectedAnswers.size === 0) return
+    
+    setPartialScoreInput('')
+    if (partialScoreInputTimer) {
+      clearTimeout(partialScoreInputTimer)
+      setPartialScoreInputTimer(null)
+    }
+    handleBatchScore('partial' as ScoringStatus, null)
+  }
+
   // WASD移動ハンドラー（レイアウト方向とフィルタリングに対応）
   const handleGridNavigation = (key: string) => {
     if (answerSheets.length === 0) return
@@ -944,7 +1085,7 @@ export default function GradingPage() {
     
     if (totalAnswers === 0) return
     
-    const cols = gridSize.columns
+    const cols = Math.max(1, gridSize.columns) // 最低1列は確保
     const rows = Math.ceil(totalAnswers / cols)
     
     // 現在選択されている答案のインデックスを取得
@@ -964,9 +1105,20 @@ export default function GradingPage() {
     
     let newIndex = currentIndex
     
-    // レイアウト方向に応じて移動ロジックを変える
+    // デバッグ情報（開発時のみ）
+    console.log('WASD Navigation:', {
+      key,
+      currentIndex,
+      totalAnswers,
+      cols,
+      rows,
+      layoutDirection,
+      selectedAnswerIds: Array.from(selectedAnswers)
+    })
+    
+    // レイアウト方向に応じて移動ロジックを分ける
     if (layoutDirection === "down-right" || layoutDirection === "down-left") {
-      // 列ベースレイアウト（縦に並ぶ）
+      // 縦方向優先レイアウト（縦に並んでから横に進む）
       const actualCols = Math.ceil(totalAnswers / rows)
       const currentCol = Math.floor(currentIndex / rows)
       const currentRow = currentIndex % rows
@@ -975,33 +1127,69 @@ export default function GradingPage() {
         case 'w': // 上
           if (currentRow > 0) {
             newIndex = currentCol * rows + (currentRow - 1)
+          } else if (currentCol > 0) {
+            // 上端の場合、前の列の最下行に移動
+            const prevColLastIndex = (currentCol - 1) * rows + Math.min(rows - 1, totalAnswers - (currentCol - 1) * rows - 1)
+            if (prevColLastIndex >= 0 && prevColLastIndex < totalAnswers) {
+              newIndex = prevColLastIndex
+            }
           }
           break
         case 's': // 下
-          const newRowIndex = currentCol * rows + (currentRow + 1)
-          if (newRowIndex < totalAnswers && currentRow < rows - 1) {
-            newIndex = newRowIndex
+          if (currentRow < rows - 1) {
+            const nextRowIndex = currentCol * rows + (currentRow + 1)
+            if (nextRowIndex < totalAnswers) {
+              newIndex = nextRowIndex
+            }
+          } else if (currentCol < actualCols - 1) {
+            // 下端の場合、次の列の最上行に移動
+            const nextColFirstIndex = (currentCol + 1) * rows
+            if (nextColFirstIndex < totalAnswers) {
+              newIndex = nextColFirstIndex
+            }
           }
           break
         case 'a': // 左
-          if (currentCol > 0) {
-            const newColIndex = (currentCol - 1) * rows + currentRow
-            if (newColIndex < totalAnswers) {
-              newIndex = newColIndex
+          if (layoutDirection === "down-right") {
+            // down-rightでは左に移動
+            if (currentCol > 0) {
+              const leftIndex = (currentCol - 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol - 1) * rows - 1))
+              if (leftIndex >= 0 && leftIndex < totalAnswers) {
+                newIndex = leftIndex
+              }
+            }
+          } else {
+            // down-leftでは右に移動（逆方向）
+            if (currentCol < actualCols - 1) {
+              const rightIndex = (currentCol + 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol + 1) * rows - 1))
+              if (rightIndex >= 0 && rightIndex < totalAnswers) {
+                newIndex = rightIndex
+              }
             }
           }
           break
         case 'd': // 右
-          if (currentCol < actualCols - 1) {
-            const newColIndex = (currentCol + 1) * rows + currentRow
-            if (newColIndex < totalAnswers) {
-              newIndex = newColIndex
+          if (layoutDirection === "down-right") {
+            // down-rightでは右に移動
+            if (currentCol < actualCols - 1) {
+              const rightIndex = (currentCol + 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol + 1) * rows - 1))
+              if (rightIndex >= 0 && rightIndex < totalAnswers) {
+                newIndex = rightIndex
+              }
+            }
+          } else {
+            // down-leftでは左に移動（逆方向）
+            if (currentCol > 0) {
+              const leftIndex = (currentCol - 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol - 1) * rows - 1))
+              if (leftIndex >= 0 && leftIndex < totalAnswers) {
+                newIndex = leftIndex
+              }
             }
           }
           break
       }
     } else {
-      // 行ベースレイアウト（横に並ぶ）
+      // 横方向優先レイアウト（横に並んでから縦に進む）
       const currentRow = Math.floor(currentIndex / cols)
       const currentCol = currentIndex % cols
       
@@ -1013,27 +1201,86 @@ export default function GradingPage() {
           break
         case 's': // 下
           if (currentRow < rows - 1) {
-            const newRowIndex = (currentRow + 1) * cols + currentCol
-            if (newRowIndex < totalAnswers) {
-              newIndex = newRowIndex
+            const nextRowIndex = (currentRow + 1) * cols + currentCol
+            if (nextRowIndex < totalAnswers) {
+              newIndex = nextRowIndex
             }
           }
           break
         case 'a': // 左
-          if (currentCol > 0) {
-            newIndex = currentIndex - 1
+          if (layoutDirection === "right-down") {
+            // right-downでは左に移動
+            if (currentCol > 0) {
+              newIndex = currentIndex - 1
+            } else if (currentRow > 0) {
+              // 左端の場合、前の行の最右端に移動
+              const prevRowLastIndex = (currentRow - 1) * cols + Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
+              if (prevRowLastIndex >= 0 && prevRowLastIndex < totalAnswers) {
+                newIndex = prevRowLastIndex
+              }
+            }
+          } else {
+            // left-downでは右に移動（逆方向）
+            if (currentCol < cols - 1 && currentIndex + 1 < totalAnswers) {
+              newIndex = currentIndex + 1
+            } else if (currentRow < rows - 1) {
+              // 右端の場合、次の行の最左端に移動
+              const nextRowFirstIndex = (currentRow + 1) * cols
+              if (nextRowFirstIndex < totalAnswers) {
+                newIndex = nextRowFirstIndex
+              }
+            }
           }
           break
         case 'd': // 右
-          if (currentCol < cols - 1 && currentIndex + 1 < totalAnswers) {
-            newIndex = currentIndex + 1
+          if (layoutDirection === "right-down") {
+            // right-downでは右に移動
+            if (currentCol < cols - 1 && currentIndex + 1 < totalAnswers) {
+              newIndex = currentIndex + 1
+            } else if (currentRow < rows - 1) {
+              // 右端の場合、次の行の最左端に移動
+              const nextRowFirstIndex = (currentRow + 1) * cols
+              if (nextRowFirstIndex < totalAnswers) {
+                newIndex = nextRowFirstIndex
+              }
+            }
+          } else {
+            // left-downでは左に移動（逆方向）
+            if (currentCol > 0) {
+              newIndex = currentIndex - 1
+            } else if (currentRow > 0) {
+              // 左端の場合、前の行の最右端に移動
+              const prevRowLastIndex = (currentRow - 1) * cols + Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
+              if (prevRowLastIndex >= 0 && prevRowLastIndex < totalAnswers) {
+                newIndex = prevRowLastIndex
+              }
+            }
           }
           break
       }
     }
     
+    // 新しいインデックスが有効な場合のみ選択を更新
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalAnswers) {
-      setSelectedAnswers(new Set([gridAnswers[newIndex].id]))
+      const newSelectedId = gridAnswers[newIndex].id
+      setSelectedAnswers(new Set([newSelectedId]))
+      
+      // デバッグ情報（開発時のみ）
+      console.log('WASD Navigation Result:', {
+        oldIndex: currentIndex,
+        newIndex,
+        oldId: gridAnswers[currentIndex]?.id,
+        newId: newSelectedId,
+        success: true
+      })
+    } else {
+      // 移動できなかった場合のデバッグ情報
+      console.log('WASD Navigation Failed:', {
+        currentIndex,
+        attemptedNewIndex: newIndex,
+        totalAnswers,
+        reason: newIndex === currentIndex ? 'Same index' : 'Out of bounds'
+      })
     }
   }
 
@@ -1349,6 +1596,19 @@ export default function GradingPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
+                    {/* 部分点入力表示 */}
+                    {partialScoreInput && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
+                        <div className="font-medium text-yellow-800">部分点入力中</div>
+                        <div className="text-yellow-700">
+                          {partialScoreInput} / {currentQuestion?.points || 10} 点
+                        </div>
+                        <div className="text-yellow-600 text-xs mt-1">
+                          1.5秒後に自動採点されます...
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* 採点ボタン（一覧採点モード用） */}
                     {gradingMode === "grid" && selectedAnswers.size > 0 && (
                       <div className="space-y-1">
@@ -1421,7 +1681,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('1')}
                               className="rounded"
                             />
-                            <span className="text-xs">1: 未採点</span>
+                            <span className="text-xs">Alt+Q: 未採点</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -1430,7 +1690,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('2')}
                               className="rounded"
                             />
-                            <span className="text-xs">2: 正答</span>
+                            <span className="text-xs">Alt+E: 正答</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -1439,7 +1699,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('3')}
                               className="rounded"
                             />
-                            <span className="text-xs">3: 誤答</span>
+                            <span className="text-xs">Alt+O: 誤答</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -1448,7 +1708,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('4')}
                               className="rounded"
                             />
-                            <span className="text-xs">4: 部分点</span>
+                            <span className="text-xs">Alt+F: 部分点</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -1457,7 +1717,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('5')}
                               className="rounded"
                             />
-                            <span className="text-xs">5: 保留</span>
+                            <span className="text-xs">Alt+J: 保留</span>
                           </label>
                           <label className="flex items-center space-x-2 cursor-pointer">
                             <input
@@ -1466,7 +1726,7 @@ export default function GradingPage() {
                               onChange={() => handleToggleFilter('6')}
                               className="rounded"
                             />
-                            <span className="text-xs">6: 無答</span>
+                            <span className="text-xs">Alt+P: 無答</span>
                           </label>
                         </div>
                       </div>
@@ -1475,22 +1735,45 @@ export default function GradingPage() {
                     {/* ショートカット一覧 */}
                     <div className="border-t pt-2">
                       <div className="text-xs font-medium mb-1">ショートカット</div>
-                      <div className="grid grid-cols-2 gap-1 text-xs">
-                        <div className="flex items-center gap-1">
-                          <kbd className="bg-muted px-1 py-0.5 rounded text-xs">W</kbd>
-                          <span className="text-muted-foreground">上</span>
+                      <div className="space-y-1 text-xs">
+                        <div className="grid grid-cols-2 gap-1">
+                          <div className="flex items-center gap-1">
+                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">W</kbd>
+                            <span className="text-muted-foreground">上</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">S</kbd>
+                            <span className="text-muted-foreground">下</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">A</kbd>
+                            <span className="text-muted-foreground">左</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">D</kbd>
+                            <span className="text-muted-foreground">右</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <kbd className="bg-muted px-1 py-0.5 rounded text-xs">S</kbd>
-                          <span className="text-muted-foreground">下</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <kbd className="bg-muted px-1 py-0.5 rounded text-xs">A</kbd>
-                          <span className="text-muted-foreground">左</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <kbd className="bg-muted px-1 py-0.5 rounded text-xs">D</kbd>
-                          <span className="text-muted-foreground">右</span>
+                        <div className="border-t pt-1 mt-1">
+                          <div className="text-xs font-medium mb-1">採点・入力</div>
+                          <div className="grid grid-cols-1 gap-1">
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">Q/E/F/J/O/P</kbd>
+                              <span className="text-muted-foreground">採点</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">0-9</kbd>
+                              <span className="text-muted-foreground">部分点</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">⌫</kbd>
+                              <span className="text-muted-foreground">部分点リセット</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">Alt+採点キー</kbd>
+                              <span className="text-muted-foreground">フィルタ切替</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

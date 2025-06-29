@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { AreaType } from "@prisma/client"
+import { LayoutRegionAreaType } from "@/types/common.types"
 import { toast } from "sonner"
 
 export interface LayoutRegion {
   id?: string
-  type: AreaType
+  type: LayoutRegionAreaType
   x: number
   y: number
   width: number
@@ -37,7 +37,7 @@ export function useLayoutRegions(projectId?: string) {
 
       const formattedRegions: LayoutRegion[] = filteredRegions.map(region => ({
         id: region.id,
-        type: region.type,
+        type: region.type as LayoutRegionAreaType,
         x: region.x,
         y: region.y,
         width: region.width,
@@ -70,7 +70,7 @@ export function useLayoutRegions(projectId?: string) {
         const regionData = {
           projectId,
           masterImageId: region.masterImageId,
-          type: region.type,
+          type: region.type as LayoutRegionAreaType,
           x: region.x,
           y: region.y,
           width: region.width,
@@ -94,7 +94,7 @@ export function useLayoutRegions(projectId?: string) {
           .filter(region => region !== null)
           .map((region) => ({
             id: region!.id,
-            type: region!.type,
+            type: region!.type as LayoutRegionAreaType,
             x: region!.x,
             y: region!.y,
             width: region!.width,
