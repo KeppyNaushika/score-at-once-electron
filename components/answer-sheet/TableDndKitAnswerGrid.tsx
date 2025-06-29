@@ -357,6 +357,83 @@ export default function TableDndKitAnswerGrid({
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
+  
+  // 画像プレビューの状態管理
+  const [imagePreview, setImagePreview] = useState<ImagePreviewModal>({
+    isOpen: false,
+    type: null
+  })
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // 氏名欄クリッピング用のcanvas描画
+  const drawNameRegionCanvas = useCallback(async (file: UnifiedFile, pageNumber: number) => {
+    const canvas = canvasRef.current
+    if (!canvas) return null
+
+    try {
+      // LayoutRegionからSTUDENT_NAME領域を取得
+      const layoutRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      
+      // ページ番号に基づいてmasterImageIdを取得
+      const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
+      const masterImage = masterImages.find(img => img.pageNumber === pageNumber)
+      
+      if (!masterImage) {
+        console.warn(`ページ${pageNumber}のマスター画像が見つかりません`)
+        return null
+      }
+
+      const nameRegion = layoutRegions.find(
+        region => region.type === "STUDENT_NAME" && region.masterImageId === masterImage.id
+      )
+
+      if (!nameRegion) {
+        console.warn(`ページ${pageNumber}の氏名欄領域が見つかりません`)
+        return null
+      }
+
+      // 画像を読み込み
+      const img = new window.Image()
+      img.crossOrigin = "anonymous"
+      
+      return new Promise<string | null>((resolve) => {
+        img.onload = () => {
+          // キャンバスサイズを設定
+          const clipWidth = img.width * nameRegion.width
+          const clipHeight = img.height * nameRegion.height
+          canvas.width = clipWidth
+          canvas.height = clipHeight
+
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(null)
+            return
+          }
+
+          // 氏名欄をクリッピングして描画
+          ctx.drawImage(
+            img,
+            img.width * nameRegion.x,  // sx
+            img.height * nameRegion.y, // sy
+            clipWidth,                 // sWidth
+            clipHeight,                // sHeight
+            0, 0,                      // dx, dy
+            clipWidth,                 // dWidth
+            clipHeight                 // dHeight
+          )
+
+          // Canvas内容をDataURLとして返す
+          resolve(canvas.toDataURL('image/png'))
+        }
+        
+        img.onerror = () => resolve(null)
+        img.src = file.preview
+      })
+    } catch (error) {
+      console.error("氏名欄クリッピングエラー:", error)
+      return null
+    }
+  }, [projectId])
 
   // ============================================================================
   // 計算済みプロパティ（table-dnd-kit-test準拠）
@@ -1050,7 +1127,7 @@ export default function TableDndKitAnswerGrid({
                                   className="h-5 w-5 p-0"
                                   onClick={async (e) => {
                                     e.stopPropagation()
-                                    const nameClipUrl = await drawNameRegionCanvas(file, cellData.student?.id || "")
+                                    const nameClipUrl = await drawNameRegionCanvas(file, cellData.pageNumber || 1)
                                     if (nameClipUrl) {
                                       setImagePreview({
                                         isOpen: true,
@@ -1114,6 +1191,43 @@ export default function TableDndKitAnswerGrid({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {/* 画像プレビューモーダル */}
+      {imagePreview.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="relative max-h-[90vh] max-w-[90vw] bg-white rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
+              <h3 className="text-lg font-semibold">{imagePreview.title}</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setImagePreview({ isOpen: false, type: null })}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              {imagePreview.imageUrl && (
+                <Image
+                  src={imagePreview.imageUrl}
+                  alt={imagePreview.title || "プレビュー"}
+                  width={800}
+                  height={600}
+                  className="max-w-full max-h-[70vh] object-contain"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 氏名欄クリッピング用の隠しcanvas */}
+      <canvas
+        ref={canvasRef}
+        className="hidden"
+        width={0}
+        height={0}
+      />
     </div>
   )
 }

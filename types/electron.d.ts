@@ -9,7 +9,7 @@ import type {
   // ProjectLayout, // Obsolete: remove
   LayoutRegion,
   // TemplateAreaType, // This might be equivalent to LayoutRegionType, check schema
-  LayoutRegionType, // Assuming LayoutRegionType is the correct enum/type
+  // LayoutRegionType, // Removed from Prisma schema
   QuestionGroup,
   QuestionGroupItem,
   SubtotalDefinition,
