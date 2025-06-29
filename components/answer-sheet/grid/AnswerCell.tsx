@@ -237,7 +237,7 @@ export default function AnswerCell({
       onClick={handleClick}
       {...attributes}
     >
-      <div className="flex min-h-20 flex-col items-center gap-1">
+      <div className={`flex flex-col items-center ${globalPreviewMode === "name" ? "h-full p-0" : "min-h-20 gap-1"}`}>
         {/* ホバー時のツールチップ */}
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-transparent opacity-0 transition-opacity hover:opacity-100">
           <div className="text-center text-xs font-medium text-slate-800">
@@ -264,15 +264,19 @@ export default function AnswerCell({
         {file && (
           <div className="flex flex-col items-center gap-1">
             {/* デバッグ: ファイルID表示 */}
-            <div className="rounded bg-blue-50 px-1 font-mono text-xs text-blue-600">
-              {file.id.split("-")[0].slice(0, 8)}
-            </div>
+            {globalPreviewMode !== "name" && (
+              <div className="rounded bg-blue-50 px-1 font-mono text-xs text-blue-600">
+                {file.id.split("-")[0].slice(0, 8)}
+              </div>
+            )}
 
             {/* 画像プレビュー */}
-            <div className="relative w-full">
+            <div className="relative w-full h-full">
               {file.preview ? (
                 <div
-                  className="relative z-30 h-24 w-full overflow-hidden rounded border bg-gray-50"
+                  className={`relative z-30 w-full overflow-hidden bg-gray-50 ${
+                    globalPreviewMode === "name" ? "h-full rounded-none border-0" : "h-24 rounded border"
+                  }`}
                   {...listeners}
                 >
                   {globalPreviewMode === "name" &&
@@ -281,7 +285,7 @@ export default function AnswerCell({
                     <img
                       src={croppedImageUrl}
                       alt="氏名欄"
-                      className="h-full w-full object-contain"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     <img
@@ -320,11 +324,13 @@ export default function AnswerCell({
             </div>
 
             {/* ファイル名 */}
-            <div className="w-full px-1 text-center text-xs">
-              <div className="truncate font-medium">
-                {file.originalFileName}
+            {globalPreviewMode !== "name" && (
+              <div className="w-full px-1 text-center text-xs">
+                <div className="truncate font-medium">
+                  {file.originalFileName}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
