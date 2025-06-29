@@ -113,7 +113,7 @@ export default function AnswerSheetsPage() {
             attendanceNumber:
               student.memberships?.[0]?.attendanceNumber || null,
             status: student.status,
-            customOrder: student.customOrder || null,
+            customOrder: student.customOrder ?? null,
           }))
 
         setStudents(sortedStudents)
@@ -133,7 +133,6 @@ export default function AnswerSheetsPage() {
           ? Math.max(...masterImages.map((img: any) => img.pageNumber))
           : 0
         setMasterImageCount(maxPages)
-        console.log("📄 模範解答ページ数:", maxPages)
       } catch (error) {
         console.error("Failed to load master image count:", error)
         setMasterImageCount(0)

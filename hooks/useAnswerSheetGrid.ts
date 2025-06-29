@@ -15,7 +15,7 @@ import {
   convertToUnifiedFile,
   convertToUploadData,
 } from "@/utils/answerSheetConverter"
-import { sortStudentsForTable } from "@/utils/studentOrderUtils"
+import { sortStudentsForTable, debugStudentOrder } from "@/utils/studentOrderUtils"
 
 // ============================================================================
 // フックのProps
@@ -74,6 +74,11 @@ export function useAnswerSheetGrid({
 
   const unifiedStudents = students.map(convertToUnifiedStudent)
   const sortedStudents = sortStudentsForTable(unifiedStudents)
+  
+  // デバッグ情報（開発環境のみ）
+  if (process.env.NODE_ENV === "development") {
+    debugStudentOrder(unifiedStudents)
+  }
 
   // ============================================================================
   // 計算済みプロパティ
@@ -109,11 +114,13 @@ export function useAnswerSheetGrid({
       // UploadData形式に変換
       const uploadData = convertToUploadData(filesToUpload, unifiedStudents)
 
-      console.log("🚀 アップロード開始:", {
-        fileCount: filesToUpload.length,
-        uploadDataCount: uploadData.length,
-        projectId,
-      })
+      if (process.env.NODE_ENV === "development") {
+        console.log("🚀 アップロード開始:", {
+          fileCount: filesToUpload.length,
+          uploadDataCount: uploadData.length,
+          projectId,
+        })
+      }
 
       // プログレス更新（簡易版）
       const progressInterval = setInterval(() => {

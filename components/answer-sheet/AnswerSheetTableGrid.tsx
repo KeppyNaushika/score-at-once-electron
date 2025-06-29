@@ -57,10 +57,8 @@ import type {
 // ユーティリティのインポート
 import {
   getTableData,
-  autoPlaceFiles,
   convertToUploadData,
   createInitialDisabledState,
-  calculateMaxPages,
   isPositionDisabled,
 } from "@/utils/answerSheetConverter"
 import {
@@ -325,8 +323,8 @@ export default function AnswerSheetTableGrid({
     return Math.max(masterImageCount, 1)
   }, [masterImageCount])
   const tableData = useMemo(
-    () => getTableData(files, students, disabledState, placementStrategy, maxPages),
-    [files, students, disabledState, placementStrategy, maxPages]
+    () => getTableData(files, sortedStudents, disabledState, placementStrategy, maxPages),
+    [files, sortedStudents, disabledState, placementStrategy, maxPages]
   )
 
   const trashFiles = useMemo(() => files.filter(f => !f.studentId), [files])
@@ -453,14 +451,6 @@ export default function AnswerSheetTableGrid({
     })
   }
 
-  // ============================================================================
-  // 自動配置
-  // ============================================================================
-
-  const handleAutoPlace = () => {
-    const newFiles = autoPlaceFiles(files, students, disabledState, placementStrategy, maxPages)
-    onFilesChange(newFiles)
-  }
 
   // ============================================================================
   // アップロード
@@ -506,9 +496,6 @@ export default function AnswerSheetTableGrid({
             size="sm"
           >
             生徒優先
-          </Button>
-          <Button onClick={handleAutoPlace} variant="outline" size="sm">
-            自動配置
           </Button>
         </div>
 
@@ -632,7 +619,9 @@ export default function AnswerSheetTableGrid({
                       }}
                       onUploadToCell={() => {
                         // セル指定アップロードの実装（将来的な拡張）
-                        console.log(`Upload to position ${cell.position}`)
+                        if (process.env.NODE_ENV === "development") {
+                          console.log(`Upload to position ${cell.position}`)
+                        }
                       }}
                     >
                       {cell.file ? (
