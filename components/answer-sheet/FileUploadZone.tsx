@@ -1,17 +1,26 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
 import { RefreshCw, Upload } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
 interface FileUploadZoneProps {
   onDrop: (files: File[]) => void
   isConverting: boolean
-  isClient: boolean
   disabled?: boolean
+  masterImageCount: number
+  pdfProcessingProgress: number
 }
 
-export default function FileUploadZone({ onDrop, isConverting, isClient, disabled = false }: FileUploadZoneProps) {
+export default function FileUploadZone({
+  onDrop,
+  isConverting,
+  disabled = false,
+  masterImageCount,
+  pdfProcessingProgress,
+}: FileUploadZoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
@@ -25,7 +34,13 @@ export default function FileUploadZone({ onDrop, isConverting, isClient, disable
   return (
     <Card>
       <CardHeader>
-        <CardTitle>答案画像・PDFのアップロード</CardTitle>
+        <CardTitle>
+          <div className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            <span className="font-semibold">ファイルアップロード</span>
+            <Badge variant="outline">{masterImageCount}ページ</Badge>
+          </div>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div
@@ -34,8 +49,8 @@ export default function FileUploadZone({ onDrop, isConverting, isClient, disable
             disabled
               ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-50"
               : isDragActive
-              ? "cursor-pointer border-primary bg-primary/5"
-              : "cursor-pointer border-muted-foreground/25 hover:border-muted-foreground/50"
+                ? "border-primary bg-primary/5 cursor-pointer"
+                : "border-muted-foreground/25 hover:border-muted-foreground/50 cursor-pointer"
           }`}
         >
           <input {...getInputProps()} />
@@ -46,7 +61,7 @@ export default function FileUploadZone({ onDrop, isConverting, isClient, disable
             </div>
           ) : disabled ? (
             <div className="space-y-4">
-              <Upload className="text-gray-400 mx-auto mb-4 h-12 w-12" />
+              <Upload className="mx-auto mb-4 h-12 w-12 text-gray-400" />
               <p className="text-lg text-gray-500">
                 模範解答が登録されていないため、アップロードは無効です
               </p>
@@ -55,9 +70,7 @@ export default function FileUploadZone({ onDrop, isConverting, isClient, disable
             <>
               <Upload className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
               {isDragActive ? (
-                <p className="text-lg">
-                  ファイルをドロップしてください...
-                </p>
+                <p className="text-lg">ファイルをドロップしてください...</p>
               ) : (
                 <p className="text-lg">
                   ファイルをドラッグ&ドロップするか、クリックして選択
@@ -66,6 +79,17 @@ export default function FileUploadZone({ onDrop, isConverting, isClient, disable
             </>
           )}
         </div>
+
+        {/* 処理中プログレス */}
+        {isConverting && (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>ファイル処理中...</span>
+              <span>{pdfProcessingProgress}%</span>
+            </div>
+            <Progress value={pdfProcessingProgress} className="w-full" />
+          </div>
+        )}
       </CardContent>
     </Card>
   )

@@ -1,10 +1,8 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import { Progress } from "@/components/ui/progress"
 import { convertPdfToImages, getPdfPageCount } from "@/lib/pdfConverter"
-import { Upload } from "lucide-react"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
@@ -547,29 +545,15 @@ export default function AnswerSheetUploadNew({
     <div className="flex h-full flex-col space-y-4">
       {/* ファイルアップロードゾーン */}
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Upload className="h-5 w-5" />
-          <span className="font-semibold">ファイルアップロード</span>
-          <Badge variant="outline">{masterImageCount}ページ</Badge>
-        </div>
-
         <FileUploadZone
           onDrop={handleFilesDrop}
           isConverting={isConverting}
-          isClient={true}
           disabled={isConverting || isUploading}
+          masterImageCount={masterImageCount}
+          pdfProcessingProgress={pdfProcessingProgress}
         />
 
         {/* 処理中プログレス */}
-        {isConverting && (
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>ファイル処理中...</span>
-              <span>{pdfProcessingProgress}%</span>
-            </div>
-            <Progress value={pdfProcessingProgress} className="w-full" />
-          </div>
-        )}
       </div>
 
       {/* 統計情報 */}
