@@ -1,6 +1,6 @@
 "use client"
 
-import AnswerSheetUploadNew from "@/components/answer-sheet/AnswerSheetUploadNew"
+import AnswerSheetUploadNew from "@/components/answer-sheet/AnswerSheetUpload"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
@@ -129,7 +129,7 @@ export default function AnswerSheetsPage() {
       // 模範解答のページ数を取得
       try {
         const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
-        const maxPages = masterImages && masterImages.length > 0 
+        const maxPages = masterImages && masterImages.length > 0
           ? Math.max(...masterImages.map((img: any) => img.pageNumber))
           : 0
         setMasterImageCount(maxPages)
