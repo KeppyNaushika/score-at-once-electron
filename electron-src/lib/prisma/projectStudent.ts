@@ -59,7 +59,7 @@ export async function addStudentsToProject(projectId: string, studentIds: string
       },
       select: { studentId: true }
     })
-    
+
     const existingStudentIds = new Set(existingProjectStudents.map(ps => ps.studentId))
     const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id))
 
@@ -70,7 +70,7 @@ export async function addStudentsToProject(projectId: string, studentIds: string
         studentId,
         status: ProjectStudentStatus.PARTICIPATING
       }))
-      
+
       await prisma.projectStudent.createMany({
         data: createData
       })
@@ -128,8 +128,8 @@ export async function removeStudentsFromProject(projectId: string, studentIds: s
  * プロジェクト内での生徒の状態を更新
  */
 export async function updateStudentProjectStatus(
-  projectId: string, 
-  studentId: string, 
+  projectId: string,
+  studentId: string,
   status: 'participating' | 'expected' | 'absent'
 ) {
   try {
@@ -170,7 +170,7 @@ export async function updateStudentOrders(
     for (const { studentId, customOrder } of studentOrders) {
       // customOrderが-1の場合はnullにリセット（デフォルト順序）
       const orderValue = customOrder === -1 ? null : customOrder
-      
+
       await prisma.projectStudent.updateMany({
         where: {
           projectId,
@@ -225,7 +225,7 @@ export async function getClassesNotInProject(projectId: string) {
         const nonParticipatingStudents = allStudents.filter(
           (student) => !participatingStudentIds.has(student.id)
         )
-        
+
         return {
           ...cls,
           studentCount: nonParticipatingStudents.length

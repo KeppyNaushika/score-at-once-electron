@@ -1,6 +1,6 @@
 {
   "private": true,
-  "main": "main/index.js",
+  "main": "main/electron-src/index.js",
   "productName": "ElectronTypescriptNext",
   "version": "0.0.0",
   "scripts": {

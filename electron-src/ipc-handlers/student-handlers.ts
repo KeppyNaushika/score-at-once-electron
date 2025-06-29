@@ -189,7 +189,7 @@ export function setupStudentHandlers(): void {
           attendanceNumber,
           notes,
         )
-        console.log("IPC handler add-student-to-class success")
+        // console.log("IPC handler add-student-to-class success")
         return result
       } catch (err) {
         console.error("Error adding student to class:", err)
