@@ -132,7 +132,7 @@ export default function AnswerSheetUploadNew({
           }]
         }
       } catch (error) {
-        if (error instanceof Error && error.message.includes("password")) {
+        if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
           // パスワードエラーの場合は静かに再スロー（ログ出力なし）
           throw error
         } else {
@@ -174,6 +174,10 @@ export default function AnswerSheetUploadNew({
               const pageCount = await getPdfPageCount(file, password)
               totalPages += pageCount
             } catch (error) {
+              if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
+                // パスワードが必要な場合は即座にダイアログを表示
+                throw error
+              }
               totalPages += 1 // エラー時は1ページと仮定
             }
           } else {
@@ -190,7 +194,12 @@ export default function AnswerSheetUploadNew({
 
         // ファイル変換処理
         for (const file of fileList) {
-          const expectedPages = file.type === "application/pdf" ? await getPdfPageCount(file, password).catch(() => 1) : 1
+          const expectedPages = file.type === "application/pdf" ? await getPdfPageCount(file, password).catch((error) => {
+            if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
+              throw error
+            }
+            return 1
+          }) : 1
 
           try {
             if (process.env.NODE_ENV === "development") {
@@ -214,7 +223,7 @@ export default function AnswerSheetUploadNew({
               console.log(`✅ ファイル完了: ${file.name} - ${convertedFiles.length}ページ`)
             }
           } catch (error) {
-            if (error instanceof Error && error.message.includes("password")) {
+            if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
               // パスワード必要エラーの場合は静かに再スロー
               throw error
             } else {
@@ -269,10 +278,18 @@ export default function AnswerSheetUploadNew({
         toast.success(`${allConvertedFiles.length}個のページを処理しました`)
 
       } catch (error) {
-        if (error instanceof Error && error.message.includes("password")) {
+        if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
           // パスワードが必要な場合
+          if (process.env.NODE_ENV === "development") {
+            console.log("🔐 パスワードが必要です - ダイアログを表示", error.message)
+          }
           setCurrentPdfFile(fileList[0]) // 最初のファイルを設定
           setPendingFiles(fileList)
+          setPasswordDialog({
+            isOpen: true,
+            attempts: 0,
+            hasError: false
+          })
         } else {
           // パスワード関連以外のエラーのみログ出力
           if (process.env.NODE_ENV === "development") {
@@ -372,7 +389,7 @@ export default function AnswerSheetUploadNew({
           isOpen: true,
         }))
         
-        if (error instanceof Error && error.message.includes("password")) {
+        if (error instanceof Error && (error.message.includes("password") || error.message === "password-required" || error.message === "invalid-password")) {
           toast.error("パスワードが正しくありません")
         } else {
           toast.error("ファイル処理に失敗しました")
