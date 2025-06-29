@@ -33,6 +33,7 @@ import Head from "next/head"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { QuestionScore } from "@prisma/client"
 import { toast } from "sonner"
+import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 
 // 採点状態の型定義
 type ScoringStatus =
@@ -224,7 +225,9 @@ export default function GradingPage() {
         )
           .filter(
             (region: any) =>
-              region.type === "QUESTION_ANSWER" && region.questionNumber,
+              LAYOUT_REAGION_AREA_TYPES.includes(region.type) && 
+              region.type === "QUESTION_ANSWER" && 
+              region.questionNumber,
           )
           .map((region: any) => ({
             id: region.id,
@@ -244,7 +247,6 @@ export default function GradingPage() {
         // Transform the data to match AnswerSheet interface
         const transformedAnswerSheets = (answersResult.answerSheets || []).map(
           (sheet: any) => {
-            console.log('Student data:', sheet.student) // デバッグログ
             return {
               id: sheet.id,
               studentId: sheet.studentId,
@@ -377,6 +379,20 @@ export default function GradingPage() {
         if ([DEFAULT_SHORTCUTS.ungraded, DEFAULT_SHORTCUTS.correct, DEFAULT_SHORTCUTS.incorrect, DEFAULT_SHORTCUTS.partial, DEFAULT_SHORTCUTS.pending, DEFAULT_SHORTCUTS.no_answer].includes(key) && selectedAnswers.size > 0) {
           event.preventDefault()
           handleBatchScore(key as ScoringStatus)
+          return
+        }
+        
+        // WASD移動キー
+        if (['w', 'a', 's', 'd'].includes(key)) {
+          event.preventDefault()
+          handleGridNavigation(key)
+          return
+        }
+        
+        // Rキーでフィルタリフレッシュ
+        if (key === 'r') {
+          event.preventDefault()
+          handleRefreshFilter()
           return
         }
         
@@ -922,12 +938,14 @@ export default function GradingPage() {
   const getFilteredGridAnswerData = () => {
     const allAnswers = getAllGridAnswerData()
     const filteredAnswers = allAnswers.filter(answer => appliedFilter[answer.status as keyof typeof appliedFilter])
-    console.log('Filter Debug:', {
-      allAnswersCount: allAnswers.length,
-      filteredCount: filteredAnswers.length,
-      appliedFilter,
-      statuses: allAnswers.map(a => a.status)
-    })
+    if (process.env.NODE_ENV === "development") {
+      console.log('Filter Debug:', {
+        allAnswersCount: allAnswers.length,
+        filteredCount: filteredAnswers.length,
+        appliedFilter,
+        statuses: allAnswers.map(a => a.status)
+      })
+    }
     return filteredAnswers
   }
 
@@ -977,22 +995,8 @@ export default function GradingPage() {
       }
       setDisplayFilter(newDisplayFilter)
       
-      // 即座にappliedFilterも更新
-      setAppliedFilter(newDisplayFilter)
-      setFilterUpdateKey(prev => prev + 1) // 強制再レンダリング
-      setNeedsFilterRefresh(false) // リフレッシュが不要になったことを示す
-      
-      // 選択状態をリセット
-      setSelectedAnswers(new Set())
-      
-      // フィルタ適用後の最初の答案を選択
-      setTimeout(() => {
-        const allAnswers = getAllGridAnswerData()
-        const filteredAnswers = allAnswers.filter(answer => newDisplayFilter[answer.status as keyof typeof newDisplayFilter])
-        if (filteredAnswers.length > 0) {
-          setSelectedAnswers(new Set([filteredAnswers[0].id]))
-        }
-      }, 100)
+      // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
+      setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
     }
   }
 
@@ -1015,21 +1019,8 @@ export default function GradingPage() {
       }
       setDisplayFilter(newDisplayFilter)
       
-      // 即座にappliedFilterも更新
-      setAppliedFilter(newDisplayFilter)
-      setFilterUpdateKey(prev => prev + 1) // 強制再レンダリング
-      setNeedsFilterRefresh(false) // リフレッシュが不要になったことを示す
-      
-      // 選択状態をリセット
-      setSelectedAnswers(new Set())
-      // フィルタ適用後の最初の答案を選択
-      setTimeout(() => {
-        const allAnswers = getAllGridAnswerData()
-        const filteredAnswers = allAnswers.filter(answer => newDisplayFilter[answer.status as keyof typeof newDisplayFilter])
-        if (filteredAnswers.length > 0) {
-          setSelectedAnswers(new Set([filteredAnswers[0].id]))
-        }
-      }, 100)
+      // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
+      setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
     }
   }
 
@@ -1107,15 +1098,17 @@ export default function GradingPage() {
     let newIndex = currentIndex
     
     // デバッグ情報（開発時のみ）
-    console.log('WASD Navigation:', {
-      key,
-      currentIndex,
-      totalAnswers,
-      cols,
-      rows,
-      layoutDirection,
-      selectedAnswerIds: Array.from(selectedAnswers)
-    })
+    if (process.env.NODE_ENV === "development") {
+      console.log('WASD Navigation:', {
+        key,
+        currentIndex,
+        totalAnswers,
+        cols,
+        rows,
+        layoutDirection,
+        selectedAnswerIds: Array.from(selectedAnswers)
+      })
+    }
     
     // レイアウト方向に応じて移動ロジックを分ける
     if (layoutDirection === "down-right" || layoutDirection === "down-left") {
