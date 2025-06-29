@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -44,7 +45,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Ban, Trash2, Upload, X, FileImage, Users } from "lucide-react"
+import { Ban, Trash2, Upload, X, FileImage, Users, Eye, User } from "lucide-react"
 
 // 統一型定義
 import type {
@@ -56,6 +57,14 @@ import type {
   TableData,
   TableCell as TableCellData,
 } from "@/types/answer-sheet.types"
+
+// 画像プレビュー用の型定義
+interface ImagePreviewModal {
+  isOpen: boolean
+  type: "full" | "name" | null
+  imageUrl?: string
+  title?: string
+}
 
 // table-dnd-kit-test準拠のファイル拡張
 interface EnhancedUnifiedFile extends UnifiedFile {
@@ -1013,10 +1022,49 @@ export default function TableDndKitAnswerGrid({
                             onUploadToCell={() => handleUploadToCell(cellData.position)}
                           >
                             <div
-                              className={`flex h-full flex-col items-center justify-center ${
+                              className={`relative flex h-full flex-col items-center justify-center ${
                                 isFileDisabled ? "opacity-30" : ""
                               }`}
                             >
+                              {/* 画像プレビューボタン */}
+                              <div className="absolute top-1 right-1 flex gap-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setImagePreview({
+                                      isOpen: true,
+                                      type: "full",
+                                      imageUrl: file.preview,
+                                      title: `全体画像 - ${file.name}`
+                                    })
+                                  }}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-5 w-5 p-0"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    const nameClipUrl = await drawNameRegionCanvas(file, cellData.student?.id || "")
+                                    if (nameClipUrl) {
+                                      setImagePreview({
+                                        isOpen: true,
+                                        type: "name",
+                                        imageUrl: nameClipUrl,
+                                        title: `氏名欄 - ${file.name}`
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <User className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              
                               <div
                                 className={`mb-1 h-8 w-8 rounded ${getFileColor(file)} ${
                                   isFileDisabled ? "ring-2 ring-red-300" : ""

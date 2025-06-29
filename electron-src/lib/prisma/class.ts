@@ -34,7 +34,7 @@ export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
 }
 
 export const createClass = async (
-  classData: Prisma.ClassCreateWithoutTeachersInput,
+  classData: Prisma.ClassCreateWithoutClassTeachersInput,
 ): Promise<ClassWithStudents> => {
   try {
     return await prisma.class.create({
