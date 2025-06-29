@@ -48,11 +48,18 @@ interface PageState {
   isSkipped: boolean
 }
 
+interface CellData {
+  type: "disabled" | "file" | "empty"
+  position: number
+  file?: ConvertedFile
+}
+
 interface StudentGridRowProps {
   student: Student
+  studentIndex: number
   maxPages: number
-  studentState?: StudentState
-  pageStates: Record<number, PageState>
+  isStudentDisabled: boolean
+  tableData: CellData[]
   nameRegions?: Record<number, { x: number, y: number, width: number, height: number } | null>
   globalPreviewMode?: 'full' | 'name'
   onToggleStudent: () => void
@@ -64,9 +71,10 @@ interface StudentGridRowProps {
 
 export default function StudentGridRow({
   student,
+  studentIndex,
   maxPages,
-  studentState,
-  pageStates,
+  isStudentDisabled,
+  tableData,
   nameRegions,
   globalPreviewMode,
   onToggleStudent,
@@ -74,8 +82,8 @@ export default function StudentGridRow({
   onToggleFileDisabled,
   onRemoveFile
 }: StudentGridRowProps) {
-  const isStudentEnabled = studentState?.isEnabled ?? true
-  const isStudentSkipped = studentState?.isSkipped ?? false
+  const isStudentEnabled = !isStudentDisabled
+  const isStudentSkipped = false
   
   return (
     <TableRow 
@@ -95,19 +103,14 @@ export default function StudentGridRow({
       {/* 答案セル（各ページ） */}
       {Array.from({ length: maxPages }, (_, i) => {
         const pageNumber = i + 1
-        const cellState = studentState?.cells[pageNumber]
-        const pageState = pageStates[pageNumber]
+        const cellData = tableData[i]
         
         // セルが有効かどうかの判定
         const isCellEnabled = 
           isStudentEnabled && 
-          !isStudentSkipped && 
-          (pageState?.isEnabled ?? true) && 
-          !pageState?.isSkipped &&
-          (cellState?.isEnabled ?? true) &&
-          !cellState?.isSkipped
+          cellData?.type !== "disabled"
         
-        const cellId = `${student.id}-${pageNumber}`
+        const cellId = `${studentIndex}-${pageNumber}`
         
         return (
           <AnswerCell
@@ -115,12 +118,12 @@ export default function StudentGridRow({
             cellId={cellId}
             pageNumber={pageNumber}
             studentId={student.id}
-            file={cellState?.file}
+            file={cellData?.file}
             isEnabled={isCellEnabled}
-            isSkipped={cellState?.isSkipped ?? false}
-            isFileDisabled={cellState?.isFileDisabled ?? false}
-            isStudentDisabled={!isStudentEnabled || isStudentSkipped}
-            isPageDisabled={!pageState?.isEnabled || pageState?.isSkipped}
+            isSkipped={false}
+            isFileDisabled={false}
+            isStudentDisabled={!isStudentEnabled}
+            isPageDisabled={false}
             nameRegion={nameRegions?.[pageNumber]}
             globalPreviewMode={globalPreviewMode}
             onToggle={() => onToggleCell(pageNumber)}
