@@ -59,12 +59,7 @@ import type {
 } from "@/types/answer-sheet.types"
 
 // 画像プレビュー用の型定義
-interface ImagePreviewModal {
-  isOpen: boolean
-  type: "full" | "name" | null
-  imageUrl?: string
-  title?: string
-}
+type PreviewMode = "full" | "name"
 
 // table-dnd-kit-test準拠のファイル拡張
 interface EnhancedUnifiedFile extends UnifiedFile {
@@ -84,6 +79,127 @@ interface CellData {
   file?: UnifiedFile
   student?: UnifiedStudent
   pageNumber?: number
+}
+
+// ============================================================================
+// ファイルプレビューセルコンポーネント
+// ============================================================================
+
+function FilePreviewCell({
+  file,
+  pageNumber,
+  previewMode,
+  isFileDisabled,
+  nameRegionAvailable,
+  getFileColor,
+  drawNameRegionCanvas,
+}: {
+  file: UnifiedFile
+  pageNumber: number
+  previewMode: PreviewMode
+  isFileDisabled: boolean
+  nameRegionAvailable?: boolean
+  getFileColor: (file: UnifiedFile) => string
+  drawNameRegionCanvas: (file: UnifiedFile, pageNumber: number) => Promise<string | null>
+}) {
+  const [nameClipUrl, setNameClipUrl] = useState<string | null>(null)
+
+  // 氏名欄モードの場合、氏名欄画像を生成
+  useEffect(() => {
+    if (previewMode === "name") {
+      if (nameRegionAvailable) {
+        drawNameRegionCanvas(file, pageNumber).then(setNameClipUrl)
+      } else {
+        setNameClipUrl(null)
+      }
+    }
+  }, [previewMode, nameRegionAvailable, file, pageNumber, drawNameRegionCanvas])
+
+  if (previewMode === "full") {
+    // 全体画像モード
+    return (
+      <div
+        className={`relative flex h-full w-full items-center justify-center ${
+          isFileDisabled ? "opacity-30" : ""
+        }`}
+      >
+        <Image
+          src={file.preview || ''}
+          alt={file.name}
+          width={100}
+          height={60}
+          className="object-contain max-w-full max-h-full"
+        />
+        {isFileDisabled && (
+          <div className="absolute inset-0 bg-red-100 bg-opacity-50 flex items-center justify-center">
+            <span className="text-red-600 text-xs font-bold">無効</span>
+          </div>
+        )}
+      </div>
+    )
+  } else {
+    // 氏名欄モード
+    if (!nameRegionAvailable) {
+      // 氏名欄が存在しない場合
+      return (
+        <div
+          className={`relative flex h-full w-full items-center justify-center bg-gray-100 ${
+            isFileDisabled ? "opacity-30" : ""
+          }`}
+        >
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">氏名欄なし</div>
+            <div
+              className={`h-6 w-6 mx-auto rounded ${getFileColor(file)}`}
+            />
+          </div>
+          {isFileDisabled && (
+            <div className="absolute inset-0 bg-red-100 bg-opacity-50 flex items-center justify-center">
+              <span className="text-red-600 text-xs font-bold">無効</span>
+            </div>
+          )}
+        </div>
+      )
+    } else if (nameClipUrl) {
+      // 氏名欄画像を表示
+      return (
+        <div
+          className={`relative flex h-full w-full items-center justify-center ${
+            isFileDisabled ? "opacity-30" : ""
+          }`}
+        >
+          <Image
+            src={nameClipUrl}
+            alt={`氏名欄 - ${file.name}`}
+            width={100}
+            height={60}
+            className="object-contain max-w-full max-h-full"
+          />
+          {isFileDisabled && (
+            <div className="absolute inset-0 bg-red-100 bg-opacity-50 flex items-center justify-center">
+              <span className="text-red-600 text-xs font-bold">無効</span>
+            </div>
+          )}
+        </div>
+      )
+    } else {
+      // 読み込み中
+      return (
+        <div
+          className={`relative flex h-full w-full items-center justify-center ${
+            isFileDisabled ? "opacity-30" : ""
+          }`}
+        >
+          <div className="text-center">
+            <div className="text-xs text-gray-500">読み込み中...</div>
+            <div
+              className={`h-6 w-6 mx-auto rounded ${getFileColor(file)} animate-pulse`}
+            />
+          </div>
+        </div>
+      )
+    }
+  }
 }
 
 // ============================================================================
@@ -150,7 +266,7 @@ function SortableTableCell({
     <TableCell
       ref={setNodeRef}
       style={style}
-      className={`h-16 w-32 cursor-grab border p-2 text-center transition-all duration-200 active:cursor-grabbing ${
+      className={`h-16 w-32 cursor-grab border text-center transition-all duration-200 active:cursor-grabbing ${
         isOver ? "scale-105 border-2 border-green-400 bg-green-100" : ""
       }`}
       {...attributes}
@@ -359,11 +475,30 @@ export default function TableDndKitAnswerGrid({
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
   
   // 画像プレビューの状態管理
-  const [imagePreview, setImagePreview] = useState<ImagePreviewModal>({
-    isOpen: false,
-    type: null
-  })
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
+  const [nameRegionAvailable, setNameRegionAvailable] = useState<Record<number, boolean>>({})
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // 氏名欄領域の存在確認
+  const checkNameRegionAvailability = useCallback(async () => {
+    try {
+      const layoutRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
+      
+      const availability: Record<number, boolean> = {}
+      
+      for (const masterImage of masterImages) {
+        const nameRegion = layoutRegions.find(
+          region => region.type === "STUDENT_NAME" && region.masterImageId === masterImage.id
+        )
+        availability[masterImage.pageNumber] = !!nameRegion
+      }
+      
+      setNameRegionAvailable(availability)
+    } catch (error) {
+      console.error("氏名欄領域確認エラー:", error)
+    }
+  }, [projectId])
 
   // 氏名欄クリッピング用のcanvas描画
   const drawNameRegionCanvas = useCallback(async (file: UnifiedFile, pageNumber: number) => {
@@ -379,7 +514,6 @@ export default function TableDndKitAnswerGrid({
       const masterImage = masterImages.find(img => img.pageNumber === pageNumber)
       
       if (!masterImage) {
-        console.warn(`ページ${pageNumber}のマスター画像が見つかりません`)
         return null
       }
 
@@ -388,7 +522,6 @@ export default function TableDndKitAnswerGrid({
       )
 
       if (!nameRegion) {
-        console.warn(`ページ${pageNumber}の氏名欄領域が見つかりません`)
         return null
       }
 
@@ -427,13 +560,20 @@ export default function TableDndKitAnswerGrid({
         }
         
         img.onerror = () => resolve(null)
-        img.src = file.preview
+        img.src = file.preview || ''
       })
     } catch (error) {
       console.error("氏名欄クリッピングエラー:", error)
       return null
     }
   }, [projectId])
+
+  // プレビューモード変更時に氏名欄領域の存在確認
+  useEffect(() => {
+    if (previewMode === "name") {
+      checkNameRegionAvailability()
+    }
+  }, [previewMode, checkNameRegionAvailability])
 
   // ============================================================================
   // 計算済みプロパティ（table-dnd-kit-test準拠）
@@ -891,6 +1031,27 @@ export default function TableDndKitAnswerGrid({
                   </>
                 )}
 
+                {/* プレビューモード切り替え */}
+                <div className="flex items-center gap-2 border-l pl-2">
+                  <span className="text-sm font-medium">プレビュー:</span>
+                  <Button
+                    onClick={() => setPreviewMode("full")}
+                    variant={previewMode === "full" ? "default" : "outline"}
+                    size="sm"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    全体画像
+                  </Button>
+                  <Button
+                    onClick={() => setPreviewMode("name")}
+                    variant={previewMode === "name" ? "default" : "outline"}
+                    size="sm"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    氏名欄
+                  </Button>
+                </div>
+
                 {/* ゴミ箱 */}
                 <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                   <PopoverTrigger asChild>
@@ -1098,68 +1259,15 @@ export default function TableDndKitAnswerGrid({
                             onToggleFileDisabled={() => toggleFileDisabled(file.id)}
                             onUploadToCell={() => handleUploadToCell(cellData.position)}
                           >
-                            <div
-                              className={`relative flex h-full flex-col items-center justify-center ${
-                                isFileDisabled ? "opacity-30" : ""
-                              }`}
-                            >
-                              {/* 画像プレビューボタン */}
-                              <div className="absolute top-1 right-1 flex gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-5 w-5 p-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setImagePreview({
-                                      isOpen: true,
-                                      type: "full",
-                                      imageUrl: file.preview,
-                                      title: `全体画像 - ${file.name}`
-                                    })
-                                  }}
-                                >
-                                  <Eye className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-5 w-5 p-0"
-                                  onClick={async (e) => {
-                                    e.stopPropagation()
-                                    const nameClipUrl = await drawNameRegionCanvas(file, cellData.pageNumber || 1)
-                                    if (nameClipUrl) {
-                                      setImagePreview({
-                                        isOpen: true,
-                                        type: "name",
-                                        imageUrl: nameClipUrl,
-                                        title: `氏名欄 - ${file.name}`
-                                      })
-                                    }
-                                  }}
-                                >
-                                  <User className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              
-                              <div
-                                className={`mb-1 h-8 w-8 rounded ${getFileColor(file)} ${
-                                  isFileDisabled ? "ring-2 ring-red-300" : ""
-                                }`}
-                              />
-                              <div
-                                className={`text-sm font-medium ${
-                                  isFileDisabled
-                                    ? "text-red-500 line-through"
-                                    : ""
-                                }`}
-                              >
-                                {file.name.split(' - ページ')[0] || file.name}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {file.id.slice(0, 8)}
-                              </div>
-                            </div>
+                            <FilePreviewCell 
+                              file={file}
+                              pageNumber={cellData.pageNumber || 1}
+                              previewMode={previewMode}
+                              isFileDisabled={isFileDisabled}
+                              nameRegionAvailable={nameRegionAvailable[cellData.pageNumber || 1]}
+                              getFileColor={getFileColor}
+                              drawNameRegionCanvas={drawNameRegionCanvas}
+                            />
                           </SortableTableCell>
                         )
                       })}
@@ -1191,35 +1299,6 @@ export default function TableDndKitAnswerGrid({
           ) : null}
         </DragOverlay>
       </DndContext>
-
-      {/* 画像プレビューモーダル */}
-      {imagePreview.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="relative max-h-[90vh] max-w-[90vw] bg-white rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between p-4 bg-gray-50 border-b">
-              <h3 className="text-lg font-semibold">{imagePreview.title}</h3>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setImagePreview({ isOpen: false, type: null })}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="p-4">
-              {imagePreview.imageUrl && (
-                <Image
-                  src={imagePreview.imageUrl}
-                  alt={imagePreview.title || "プレビュー"}
-                  width={800}
-                  height={600}
-                  className="max-w-full max-h-[70vh] object-contain"
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 氏名欄クリッピング用の隠しcanvas */}
       <canvas

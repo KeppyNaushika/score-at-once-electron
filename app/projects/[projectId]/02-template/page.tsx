@@ -362,7 +362,7 @@ export default function TemplateStepPage() {
           .filter((region) => region !== null)
           .map((region) => ({
             id: region!.id,
-            type: region!.type,
+            type: region!.type as AreaType,
             x: region!.x,
             y: region!.y,
             width: region!.width,
