@@ -465,7 +465,7 @@ export default function AnswerGridView({
         style={{
           gridTemplateColumns: layoutDirection === "down-right" || layoutDirection === "down-left" 
             ? `repeat(${Math.ceil(answers.length / gridSize.rows)}, 200px)` 
-            : `repeat(${gridSize.columns}, 1fr)`,
+            : `repeat(${gridSize.columns}, minmax(200px, 1fr))`,
           gridTemplateRows: layoutDirection === "down-right" || layoutDirection === "down-left"
             ? `repeat(${Math.min(gridSize.rows, answers.length)}, 200px)`
             : 'auto',
@@ -503,7 +503,7 @@ export default function AnswerGridView({
               key={answer.id}
               data-answer-id={answer.id}
               className={`
-                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2
+                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2 flex-shrink-0
                 ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
                 ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
                 ${config.borderColor}
