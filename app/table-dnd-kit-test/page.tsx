@@ -1,27 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { Button } from "@/components/ui/button"
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
-  useDroppable,
-  DragOverEvent,
-} from "@dnd-kit/core"
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
 import {
-  arrayMove,
-  SortableContext,
-  rectSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Ban, Upload, X, Trash2 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Table,
   TableBody,
@@ -31,12 +22,27 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu"
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { Ban, Trash2, Upload, X } from "lucide-react"
+import { useState } from "react"
 
 // テスト用のファイル型
 interface TestFile {
@@ -47,8 +53,8 @@ interface TestFile {
 }
 
 // ソート可能かつドロップ可能なテーブルセルコンポーネント
-function SortableTableCell({ 
-  id, 
+function SortableTableCell({
+  id,
   children,
   onTogglePosition,
   onToggleFileDisabled,
@@ -57,16 +63,16 @@ function SortableTableCell({
   hasFile,
   isPositionDisabled,
   isFileDisabled,
-}: { 
-  id: string; 
-  children: React.ReactNode;
-  onTogglePosition: () => void;
-  onToggleFileDisabled: () => void;
-  onUploadToCell: () => void;
-  position: number;
-  hasFile: boolean;
-  isPositionDisabled: boolean;
-  isFileDisabled?: boolean;
+}: {
+  id: string
+  children: React.ReactNode
+  onTogglePosition: () => void
+  onToggleFileDisabled: () => void
+  onUploadToCell: () => void
+  position: number
+  hasFile: boolean
+  isPositionDisabled: boolean
+  isFileDisabled?: boolean
 }) {
   const {
     attributes,
@@ -75,18 +81,18 @@ function SortableTableCell({
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id,
     data: {
-      type: 'table-cell',
+      type: "table-cell",
       position: position,
-    }
+    },
   })
 
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: `cell-${position}`,
     data: {
-      type: 'table-cell',
+      type: "table-cell",
       position: position,
     },
   })
@@ -107,20 +113,20 @@ function SortableTableCell({
     <TableCell
       ref={setNodeRef}
       style={style}
-      className={`border p-2 h-16 w-32 text-center cursor-grab active:cursor-grabbing transition-all duration-200 ${
-        isOver ? 'bg-green-100 border-green-400 border-2 scale-105' : ''
+      className={`h-16 w-32 cursor-grab border p-2 text-center transition-all duration-200 active:cursor-grabbing ${
+        isOver ? "scale-105 border-2 border-green-400 bg-green-100" : ""
       }`}
       {...attributes}
       {...listeners}
     >
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             {children}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem 
+          <ContextMenuItem
             onClick={onTogglePosition}
             className="flex items-center gap-2"
           >
@@ -136,9 +142,9 @@ function SortableTableCell({
               </>
             )}
           </ContextMenuItem>
-          
+
           {hasFile && (
-            <ContextMenuItem 
+            <ContextMenuItem
               onClick={onToggleFileDisabled}
               className="flex items-center gap-2"
               disabled={isPositionDisabled}
@@ -156,10 +162,10 @@ function SortableTableCell({
               )}
             </ContextMenuItem>
           )}
-          
+
           <ContextMenuSeparator />
-          
-          <ContextMenuItem 
+
+          <ContextMenuItem
             onClick={onUploadToCell}
             className="flex items-center gap-2"
             disabled={isPositionDisabled}
@@ -173,63 +179,139 @@ function SortableTableCell({
   )
 }
 
-// ドロップ可能なゴミ箱エリア
-function DroppableTrashArea({ children }: { children: React.ReactNode }) {
+// ドロップ可能なPopoverトリガーボタン
+function DroppableTrashButton({
+  children,
+  trashCount,
+  onClick,
+  droppableId = "trash-popover-trigger",
+}: {
+  children: React.ReactNode
+  trashCount: number
+  onClick?: () => void
+  droppableId?: string
+}) {
   const { setNodeRef, isOver } = useDroppable({
-    id: 'trash-area',
-    data: {
-      type: 'trash-area',
-    },
+    id: droppableId,
+    data: { type: "trash-area" },
+  })
+
+  const handleClick = (e: React.MouseEvent) => {
+    // ドラッグ中でない場合のみクリックイベントを実行
+    if (!isOver && onClick) {
+      onClick()
+    }
+  }
+
+  return (
+    <Button
+      ref={setNodeRef}
+      variant="outline"
+      className={`h-12 w-48 cursor-pointer transition-all duration-300 ease-in-out ${
+        isOver
+          ? "ring-opacity-50 scale-105 border-blue-400 shadow-lg ring-2 ring-blue-200"
+          : "hover:bg-gray-50"
+      }`}
+      onClick={handleClick}
+    >
+      <div className="flex items-center gap-2 text-xs">
+        <Trash2 className="h-4 w-4" />
+        <span className="text-center leading-tight">
+          ここにドラッグして
+          <br />
+          答案を無効化
+        </span>
+        <span className="text-xs text-gray-500">({trashCount}件)</span>
+      </div>
+    </Button>
+  )
+}
+
+// ドロップ可能なゴミ箱エリア（simple-dnd-kit-test準拠）
+function TrashArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "trash-area",
+    data: { type: "trash" },
   })
 
   return (
-    <div ref={setNodeRef} className={`mb-6 transition-all duration-200 ${
-      isOver ? 'scale-105 ring-4 ring-red-300 ring-opacity-50' : ''
-    }`}>
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg border-2 border-dashed p-4 transition-all duration-300 ease-in-out ${
+        isOver
+          ? "ring-opacity-50 scale-[1.02] border-red-400 bg-red-50 shadow-lg ring-2 ring-red-200"
+          : "border-red-300 bg-red-50/50 hover:bg-red-100/50"
+      }`}
+    >
       {children}
     </div>
   )
 }
 
-// ゴミ箱からドラッグ可能なファイルアイテム（表のセルと同じ構造）
-function DraggableTrashFile({ file }: { file: TestFile }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `trash-${file.id}`,
+// ドロップ可能なゴミ箱エリア（旧版）
+function DroppableTrashArea({ children }: { children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: "trash-area",
     data: {
-      type: 'trash-file',
-      file: file,
+      type: "trash-area",
     },
   })
 
+  return (
+    <div
+      ref={setNodeRef}
+      className={`transition-all duration-200 ${
+        isOver ? "ring-opacity-50 scale-105 ring-4 ring-red-300" : ""
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ソート可能なアイテムコンポーネント（simple-dnd-kit-test完全準拠）
+function SortableListItem({
+  id,
+  children,
+  data,
+}: {
+  id: string
+  children: React.ReactNode
+  data?: any
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, data })
+
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || "transform 150ms ease", // 滑らかな移動アニメーション
+    opacity: isDragging ? 0.5 : 1, // ドラッグ中は薄く表示（完全に消さない）
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`border p-2 h-16 w-32 text-center cursor-grab active:cursor-grabbing transition-all duration-200 bg-red-50 border-red-300 ${
-        isDragging ? 'shadow-lg scale-105' : ''
-      }`}
-      {...listeners}
+      className="group mb-2 cursor-grab rounded-lg border border-gray-200 bg-white p-4 transition-all duration-300 ease-in-out hover:scale-[1.01] hover:border-gray-300 hover:shadow-md active:scale-[0.98] active:cursor-grabbing"
       {...attributes}
+      {...listeners}
     >
-      <div className="flex flex-col items-center justify-center h-full">
-        <div className={`w-8 h-8 rounded mb-1 ${file.color} ring-2 ring-red-300 opacity-70`} />
-        <div className="text-sm font-medium text-red-500 line-through">{file.name}</div>
-        <div className="text-xs text-gray-500">{file.id}</div>
-      </div>
+      {children}
     </div>
   )
 }
 
-
 export default function TableDndKitTestPage() {
   // 配置戦略
-  const [placementStrategy, setPlacementStrategy] = useState<"row-first" | "col-first">("row-first")
+  const [placementStrategy, setPlacementStrategy] = useState<
+    "row-first" | "col-first"
+  >("row-first")
 
   // テスト用ファイル配列（5x5で10個）
   const [files, setFiles] = useState<TestFile[]>([
@@ -258,14 +340,19 @@ export default function TableDndKitTestPage() {
   const [activeFile, setActiveFile] = useState<TestFile | null>(null)
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
 
+  // Popover状態管理
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+
   // セル位置が無効化されているかチェック
   const isPositionDisabled = (position: number) => {
     const row = Math.floor(position / 5)
     const col = position % 5
 
-    return disabledState.rows.has(row) || 
-           disabledState.cols.has(col) ||
-           disabledState.positions.has(position)
+    return (
+      disabledState.rows.has(row) ||
+      disabledState.cols.has(col) ||
+      disabledState.positions.has(position)
+    )
   }
 
   // ファイルが無効化されているかチェック
@@ -276,19 +363,23 @@ export default function TableDndKitTestPage() {
   // ファイルインデックスが無効化されているかチェック（dnd-kit用のみ）
   const isDisabled = (fileIndex: number) => {
     if (fileIndex >= files.length) return false // ファイルが存在しない場合は無効ではない
-    
+
     const fileId = files[fileIndex]?.id
     return disabledState.cells.has(fileId) // 個別セル無効化のみチェック
   }
 
   // 有効なファイルのみ取得（dnd-kit用）
   const getEnabledFiles = () => {
-    return files.filter((file) => file && file.id && !disabledState.files.has(file.id))
+    return files.filter(
+      (file) => file && file.id && !disabledState.files.has(file.id),
+    )
   }
 
   // 無効化されたファイルのみ取得
   const getDisabledFiles = () => {
-    return files.filter((file) => file && file.id && disabledState.files.has(file.id))
+    return files.filter(
+      (file) => file && file.id && disabledState.files.has(file.id),
+    )
   }
 
   // 仮想インデックス → 実インデックスのマッピング
@@ -302,40 +393,47 @@ export default function TableDndKitTestPage() {
     return mapping
   }
 
+  // テーブルセルのデータ型定義
+  interface CellData {
+    type: "disabled" | "file" | "empty"
+    position: number
+    file?: TestFile
+  }
+
   // テーブルデータを配置戦略に応じて再構成（5x5）
-  const getTableData = () => {
+  const getTableData = (): CellData[][] => {
     let nextFileIndex = 0 // 次に配置するファイルの実インデックス
-    
+
     // 次の有効ファイルを取得する関数（無効化されていないファイルのみ）
     const enabledFiles = getEnabledFiles()
     let enabledFileIndex = 0
-    
+
     const getNextFile = () => {
       if (enabledFileIndex < enabledFiles.length) {
         return enabledFiles[enabledFileIndex++]
       }
       return null
     }
-    
+
     if (placementStrategy === "row-first") {
       // 行優先配置
-      const result = []
+      const result: CellData[][] = []
       for (let row = 0; row < 5; row++) {
-        const rowFiles = []
+        const rowFiles: CellData[] = []
         for (let col = 0; col < 5; col++) {
           const position = row * 5 + col
-          
+
           if (isPositionDisabled(position)) {
             // 無効セル：赤い背景で表示、配置はスキップ
-            rowFiles.push({ type: 'disabled', position })
+            rowFiles.push({ type: "disabled", position })
           } else {
             const nextFile = getNextFile()
             if (nextFile) {
               // 有効セル：次のファイルを配置
-              rowFiles.push({ type: 'file', file: nextFile, position })
+              rowFiles.push({ type: "file", file: nextFile, position })
             } else {
               // ファイル不足：空きとして表示
-              rowFiles.push({ type: 'empty', position })
+              rowFiles.push({ type: "empty", position })
             }
           }
         }
@@ -344,17 +442,17 @@ export default function TableDndKitTestPage() {
       return result
     } else {
       // 列優先配置
-      const result = Array.from({ length: 5 }, (_, row) => 
+      const result: CellData[][] = Array.from({ length: 5 }, (_, row) =>
         Array.from({ length: 5 }, (_, col) => {
           const position = row * 5 + col
           if (isPositionDisabled(position)) {
-            return { type: 'disabled', position }
+            return { type: "disabled", position }
           } else {
-            return { type: 'empty', position }
+            return { type: "empty", position }
           }
-        })
+        }),
       )
-      
+
       // 列優先でファイルを配置
       for (let col = 0; col < 5; col++) {
         for (let row = 0; row < 5; row++) {
@@ -362,19 +460,19 @@ export default function TableDndKitTestPage() {
           if (!isPositionDisabled(position)) {
             const nextFile = getNextFile()
             if (nextFile) {
-              result[row][col] = { type: 'file', file: nextFile, position }
+              result[row][col] = { type: "file", file: nextFile, position }
             }
           }
         }
       }
-      
+
       return result
     }
   }
 
   // 無効化トグル関数
   const toggleRowDisabled = (row: number) => {
-    setDisabledState(prev => {
+    setDisabledState((prev) => {
       const newRows = new Set(prev.rows)
       if (newRows.has(row)) {
         newRows.delete(row)
@@ -386,7 +484,7 @@ export default function TableDndKitTestPage() {
   }
 
   const toggleColDisabled = (col: number) => {
-    setDisabledState(prev => {
+    setDisabledState((prev) => {
       const newCols = new Set(prev.cols)
       if (newCols.has(col)) {
         newCols.delete(col)
@@ -398,7 +496,7 @@ export default function TableDndKitTestPage() {
   }
 
   const togglePositionDisabled = (position: number) => {
-    setDisabledState(prev => {
+    setDisabledState((prev) => {
       const newPositions = new Set(prev.positions)
       if (newPositions.has(position)) {
         newPositions.delete(position)
@@ -410,7 +508,7 @@ export default function TableDndKitTestPage() {
   }
 
   const toggleFileDisabled = (fileId: string) => {
-    setDisabledState(prev => {
+    setDisabledState((prev) => {
       const newFiles = new Set(prev.files)
       if (newFiles.has(fileId)) {
         // 復活：最後尾に追加
@@ -424,7 +522,7 @@ export default function TableDndKitTestPage() {
   }
 
   const restoreFileFromTrash = (fileId: string) => {
-    setDisabledState(prev => {
+    setDisabledState((prev) => {
       const newFiles = new Set(prev.files)
       newFiles.delete(fileId)
       return { ...prev, files: newFiles }
@@ -444,204 +542,147 @@ export default function TableDndKitTestPage() {
     setPlacementStrategy(newStrategy)
   }
 
+  // アイテムがどのコンテナにあるかを見つける関数（simple-dnd-kit-test準拠）
+  const findContainer = (id: string) => {
+    // コンテナ自体の場合
+    if (id === "trash-area" || id === "trash-popover-trigger") return "trash"
+
+    // テーブルファイルの場合
+    const enabledFile = getEnabledFiles().find((file) => file.id === id)
+    if (enabledFile) {
+      return "main"
+    }
+
+    // ゴミ箱ファイルの場合
+    const disabledFile = getDisabledFiles().find((file) => file.id === id)
+    if (disabledFile) {
+      return "trash"
+    }
+
+    return null
+  }
+
   // センサー設定
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
       },
-    })
+    }),
   )
 
-  // ドラッグ開始処理
+  // ドラッグ開始処理（simple-dnd-kit-test完全準拠）
   const handleDragStart = (event: DragStartEvent) => {
     const activeId = event.active.id as string
-    const activeData = event.active.data.current
+    const foundFile = files.find((file) => file.id === activeId) || null
+    setActiveFile(foundFile)
 
-    console.log('🔄 Drag Start:', {
-      activeId,
-      activeData,
-      type: activeData?.type,
-      file: activeData?.file,
-    })
-
-    if (activeData?.type === 'trash-file') {
-      // ゴミ箱からのドラッグ
-      console.log('✅ Detected trash file drag:', activeData.file.name)
-      setIsDraggingFromTrash(true)
-      setActiveFile(activeData.file)
-    } else {
-      // テーブル内でのドラッグ
-      const file = files.find((file) => file.id === activeId)
-      console.log('✅ Detected table file drag:', file?.name || 'not found')
-      setActiveFile(file || null)
+    // メインリスト（有効ファイル）からのドラッグの場合、Popoverを開く
+    const activeContainer = findContainer(activeId)
+    if (activeContainer === "main") {
+      setIsPopoverOpen(true)
     }
   }
 
-  // ドラッグオーバー処理（kanban風 - コンテナ間移動）
+  // ドラッグオーバー処理（simple-dnd-kit-test完全準拠）
   const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event
-    const activeData = active.data.current
-    const overData = over?.data.current
-
     if (!over) return
 
     const activeId = active.id.toString()
     const overId = over.id.toString()
 
-    // アクティブとオーバーが異なるコンテナにある場合のみ処理
-    const activeIsTrash = activeId.startsWith('trash-')
-    const overIsTrash = overId.startsWith('trash-') || overId === 'trash-area'
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
 
-    // ゴミ箱からテーブルへ
-    if (activeIsTrash && !overIsTrash) {
-      const file = activeData?.file
-      
-      if (!file) return // ファイルが存在しない場合は処理しない
-      
-      setFiles(prevFiles => {
-        // 既に移動済みかチェック（undefinedファイルをフィルタ）
-        const validFiles = prevFiles.filter(f => f && f.id)
-        if (validFiles.some(f => f.id === file.id)) {
-          return prevFiles
+    if (activeContainer !== overContainer && overContainer && activeContainer) {
+      // コンテナ間移動：即座にdisabledStateを更新（simple-dnd-kit-testのcolumnId変更と同等）
+      setDisabledState((prev) => {
+        const newFiles = new Set(prev.files)
+        if (activeContainer === "main" && overContainer === "trash") {
+          newFiles.add(activeId)
+        } else if (activeContainer === "trash" && overContainer === "main") {
+          newFiles.delete(activeId)
         }
-        return [...prevFiles, file]
-      })
-      
-      setDisabledState(prev => {
-        const newFiles = new Set(prev.files)
-        newFiles.delete(file.id)
-        return { ...prev, files: newFiles }
-      })
-    }
-
-    // テーブルからゴミ箱へ
-    else if (!activeIsTrash && overIsTrash) {
-      const fileId = active.id as string
-      
-      setDisabledState(prev => {
-        const newFiles = new Set(prev.files)
-        newFiles.add(fileId)
         return { ...prev, files: newFiles }
       })
     }
   }
 
-  // ドラッグ終了処理（kanban風）
+  // ドラッグ終了処理（simple-dnd-kit-test完全準拠）
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-
-    console.log('🔚 Drag End:', {
-      activeId: active.id,
-      overId: over?.id,
-    })
-
     if (!over) {
-      // ドラッグキャンセル - 状態を元に戻す
-      console.log('🚫 Drag cancelled - reverting state')
-      const activeData = active.data.current
-      
-      setDisabledState(prev => {
-        const newFiles = new Set(prev.files)
-        if (activeData?.type === 'trash-file') {
-          newFiles.add(activeData.file.id)
-        } else {
-          newFiles.delete(active.id as string)
-        }
-        return { ...prev, files: newFiles }
-      })
-      
-      // ゴミ箱からの一時的な追加をクリーンアップ
-      if (activeData?.type === 'trash-file' && activeData?.file?.id) {
-        setFiles(prevFiles => prevFiles.filter(f => f && f.id && f.id !== activeData.file.id))
-      }
-    } else {
-      const activeId = active.id.toString()
-      const overId = over.id.toString()
-
-      const activeIsTrash = activeId.startsWith('trash-')
-      const overIsTrash = overId.startsWith('trash-') || overId === 'trash-area'
-
-      // 同じコンテナ内での移動
-      if ((activeIsTrash && overIsTrash) || (!activeIsTrash && !overIsTrash)) {
-        // テーブル内での並び替え
-        if (!activeIsTrash && !overIsTrash && active.id !== over.id) {
-          console.log('🔄 Table internal reorder')
-          setFiles((files) => {
-            const enabledFiles = getEnabledFiles()
-            const mapping = getVirtualToRealMapping()
-            
-            const virtualOldIndex = enabledFiles.findIndex((file) => file && file.id === active.id)
-            const virtualNewIndex = enabledFiles.findIndex((file) => file && file.id === over.id)
-            
-            if (virtualOldIndex === -1 || virtualNewIndex === -1) {
-              console.warn('Invalid file indices for reorder')
-              return files
-            }
-            
-            const realOldIndex = mapping[virtualOldIndex]
-            const realNewIndex = mapping[virtualNewIndex]
-            
-            if (realOldIndex === undefined || realNewIndex === undefined) {
-              console.warn('Invalid real indices for reorder')
-              return files
-            }
-            
-            return arrayMove(files, realOldIndex, realNewIndex)
-          })
-        }
-        // ゴミ箱内での移動は何もしない
-      }
-      // 異なるコンテナ間の移動は既にhandleDragOverで処理済み
-      else {
-        console.log('✅ Cross-container move confirmed')
-      }
+      setActiveFile(null)
+      setIsDraggingFromTrash(false)
+      return
     }
 
-    // 状態をリセット
+    const activeId = active.id.toString()
+    const overId = over.id.toString()
+
+    if (activeId === overId) {
+      setActiveFile(null)
+      setIsDraggingFromTrash(false)
+      return
+    }
+
+    const activeContainer = findContainer(activeId)
+    const overContainer = findContainer(overId)
+
+    if (activeContainer === overContainer && activeId !== overId) {
+      // 同一コンテナ内での並び替え（simple-dnd-kit-testと同じロジック）
+      setFiles((prevFiles) => {
+        const oldIndex = prevFiles.findIndex((file) => file.id === activeId)
+        const newIndex = prevFiles.findIndex((file) => file.id === overId)
+        return arrayMove(prevFiles, oldIndex, newIndex)
+      })
+    }
+
     setActiveFile(null)
     setIsDraggingFromTrash(false)
   }
 
   return (
     <div className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Table DnD Kit Test</h1>
-      
+      <h1 className="mb-6 text-2xl font-bold">Table DnD Kit Test</h1>
+
       {/* 配置戦略選択 */}
       <div className="mb-6">
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
             <button
               onClick={() => handleStrategyChange("row-first")}
-              className={`px-3 py-1 rounded border text-sm ${
+              className={`rounded border px-3 py-1 text-sm ${
                 placementStrategy === "row-first"
-                  ? "bg-blue-500 text-white border-blue-500"
-                  : "bg-white border-gray-300 hover:bg-gray-50"
+                  ? "border-blue-500 bg-blue-500 text-white"
+                  : "border-gray-300 bg-white hover:bg-gray-50"
               }`}
             >
               行優先 (A→B→C / D→E→F / ...)
             </button>
             <button
               onClick={() => handleStrategyChange("col-first")}
-              className={`px-3 py-1 rounded border text-sm ${
+              className={`rounded border px-3 py-1 text-sm ${
                 placementStrategy === "col-first"
-                  ? "bg-blue-500 text-white border-blue-500"
-                  : "bg-white border-gray-300 hover:bg-gray-50"
+                  ? "border-blue-500 bg-blue-500 text-white"
+                  : "border-gray-300 bg-white hover:bg-gray-50"
               }`}
             >
               列優先 (A→D→G / B→E→H / ...)
             </button>
           </div>
           <span className="text-sm text-gray-600">
-            現在: <strong>{placementStrategy === "row-first" ? "行優先" : "列優先"}</strong>
+            現在:{" "}
+            <strong>
+              {placementStrategy === "row-first" ? "行優先" : "列優先"}
+            </strong>
           </span>
         </div>
       </div>
 
       {/* shadcn/ui テーブル */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">答案シートテーブル (5x5):</h2>
-        
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -649,9 +690,83 @@ export default function TableDndKitTestPage() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          {/* テーブル用のSortableContext */}
-          <SortableContext 
-            items={getEnabledFiles().map(file => file.id)} 
+          <div className="mb-3 flex h-20 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-green-800">
+                答案シートテーブル (5x5)
+              </h2>
+              <span className="rounded-full bg-green-100 px-2 py-1 text-sm text-green-700">
+                {getEnabledFiles().length}件
+              </span>
+            </div>
+
+            {/* ゴミ箱ボタン（Popover） */}
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+              <PopoverTrigger asChild>
+                <div>
+                  <DroppableTrashButton
+                    trashCount={getDisabledFiles().length}
+                    onClick={() => setIsPopoverOpen(!isPopoverOpen)}
+                  >
+                    <div>ゴミ箱を開く</div>
+                  </DroppableTrashButton>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="w-96 p-4" side="bottom" align="end">
+                <TrashArea>
+                  <div className="max-h-64 min-h-48 overflow-y-auto">
+                    <SortableContext
+                      items={getDisabledFiles().map((file) => file.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-2">
+                        {getDisabledFiles().map((file) => (
+                          <SortableListItem key={file.id} id={file.id}>
+                            <ContextMenu>
+                              <ContextMenuTrigger asChild>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-red-600 line-through">
+                                    {file.name}
+                                  </span>
+                                  <span className="text-sm text-red-400">
+                                    ID: {file.id}
+                                  </span>
+                                </div>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent>
+                                <ContextMenuItem
+                                  onClick={() => toggleFileDisabled(file.id)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <X className="h-4 w-4" />
+                                  答案画像を有効化
+                                </ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          </SortableListItem>
+                        ))}
+
+                        {getDisabledFiles().length === 0 && (
+                          <div className="py-6 text-center text-gray-500">
+                            <Trash2 className="mx-auto mb-2 h-6 w-6 opacity-50" />
+                            <div className="text-sm">
+                              アイテムをここにドラッグ
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </SortableContext>
+                  </div>
+                </TrashArea>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {/* 全ファイル用のSortableContext（テーブル + ゴミ箱） */}
+          <SortableContext
+            items={[
+              ...getEnabledFiles().map((file) => file.id),
+              ...getDisabledFiles().map((file) => file.id),
+            ]}
             strategy={rectSortingStrategy}
           >
             <Table className="w-fit">
@@ -659,15 +774,17 @@ export default function TableDndKitTestPage() {
                 <TableRow>
                   <TableHead className="w-24 text-center">生徒</TableHead>
                   {Array.from({ length: 5 }, (_, colIndex) => (
-                    <TableHead 
-                      key={colIndex} 
-                      className={`w-32 text-center cursor-pointer hover:bg-gray-100 ${
-                        disabledState.cols.has(colIndex) ? 'bg-red-100 text-red-600' : ''
+                    <TableHead
+                      key={colIndex}
+                      className={`w-32 cursor-pointer text-center hover:bg-gray-100 ${
+                        disabledState.cols.has(colIndex)
+                          ? "bg-red-100 text-red-600"
+                          : ""
                       }`}
                       onClick={() => toggleColDisabled(colIndex)}
                     >
                       {colIndex + 1}ページ目
-                      {disabledState.cols.has(colIndex) && ' (無効)'}
+                      {disabledState.cols.has(colIndex) && " (無効)"}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -676,42 +793,52 @@ export default function TableDndKitTestPage() {
                 {/* 配置戦略に応じてデータを再構成 */}
                 {getTableData().map((rowFiles, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    <TableCell 
-                      className={`font-medium text-center cursor-pointer hover:bg-gray-100 ${
-                        disabledState.rows.has(rowIndex) ? 'bg-red-100 text-red-600' : ''
+                    <TableCell
+                      className={`cursor-pointer text-center font-medium hover:bg-gray-100 ${
+                        disabledState.rows.has(rowIndex)
+                          ? "bg-red-100 text-red-600"
+                          : ""
                       }`}
                       onClick={() => toggleRowDisabled(rowIndex)}
                     >
                       生徒 {rowIndex + 1}
-                      {disabledState.rows.has(rowIndex) && ' (無効)'}
+                      {disabledState.rows.has(rowIndex) && " (無効)"}
                     </TableCell>
                     {rowFiles.map((cellData, colIndex) => {
-                      if (cellData.type === 'disabled') {
+                      if (cellData.type === "disabled") {
                         // 無効化セル（赤い背景）
                         return (
                           <TableCell
                             key={`disabled-${rowIndex}-${colIndex}`}
-                            className={`border p-2 h-16 w-32 text-center bg-red-100 transition-colors ${
-                              isDraggingFromTrash ? 'bg-blue-50 border-blue-300' : ''
+                            className={`h-16 w-32 border bg-red-100 p-2 text-center transition-colors ${
+                              isDraggingFromTrash
+                                ? "border-blue-300 bg-blue-50"
+                                : ""
                             }`}
                           >
                             <ContextMenu>
                               <ContextMenuTrigger asChild>
-                                <div className="w-full h-full flex items-center justify-center cursor-pointer">
-                                  <div className="text-xs text-red-600">無効</div>
+                                <div className="flex h-full w-full cursor-pointer items-center justify-center">
+                                  <div className="text-xs text-red-600">
+                                    無効
+                                  </div>
                                 </div>
                               </ContextMenuTrigger>
                               <ContextMenuContent>
-                                <ContextMenuItem 
-                                  onClick={() => togglePositionDisabled(cellData.position)}
+                                <ContextMenuItem
+                                  onClick={() =>
+                                    togglePositionDisabled(cellData.position)
+                                  }
                                   className="flex items-center gap-2"
                                 >
                                   <X className="h-4 w-4" />
                                   セルを有効化
                                 </ContextMenuItem>
                                 <ContextMenuSeparator />
-                                <ContextMenuItem 
-                                  onClick={() => handleUploadToCell(cellData.position)}
+                                <ContextMenuItem
+                                  onClick={() =>
+                                    handleUploadToCell(cellData.position)
+                                  }
                                   className="flex items-center gap-2"
                                   disabled={true}
                                 >
@@ -723,33 +850,41 @@ export default function TableDndKitTestPage() {
                           </TableCell>
                         )
                       }
-                      
-                      if (cellData.type === 'empty') {
+
+                      if (cellData.type === "empty") {
                         // 空きセル
                         return (
                           <TableCell
                             key={`empty-${rowIndex}-${colIndex}`}
-                            className={`border p-2 h-16 w-32 text-center bg-gray-50 transition-colors ${
-                              isDraggingFromTrash ? 'bg-blue-50 border-blue-300' : ''
+                            className={`h-16 w-32 border bg-gray-50 p-2 text-center transition-colors ${
+                              isDraggingFromTrash
+                                ? "border-blue-300 bg-blue-50"
+                                : ""
                             }`}
                           >
                             <ContextMenu>
                               <ContextMenuTrigger asChild>
-                                <div className="w-full h-full flex items-center justify-center cursor-pointer">
-                                  <div className="text-xs text-gray-400">空き</div>
+                                <div className="flex h-full w-full cursor-pointer items-center justify-center">
+                                  <div className="text-xs text-gray-400">
+                                    空き
+                                  </div>
                                 </div>
                               </ContextMenuTrigger>
                               <ContextMenuContent>
-                                <ContextMenuItem 
-                                  onClick={() => togglePositionDisabled(cellData.position)}
+                                <ContextMenuItem
+                                  onClick={() =>
+                                    togglePositionDisabled(cellData.position)
+                                  }
                                   className="flex items-center gap-2"
                                 >
                                   <Ban className="h-4 w-4" />
                                   セルを無効化
                                 </ContextMenuItem>
                                 <ContextMenuSeparator />
-                                <ContextMenuItem 
-                                  onClick={() => handleUploadToCell(cellData.position)}
+                                <ContextMenuItem
+                                  onClick={() =>
+                                    handleUploadToCell(cellData.position)
+                                  }
                                   className="flex items-center gap-2"
                                 >
                                   <Upload className="h-4 w-4" />
@@ -760,42 +895,56 @@ export default function TableDndKitTestPage() {
                           </TableCell>
                         )
                       }
-                      
+
                       // ファイルセル - ドロップも可能にする（シンプル）
                       const file = cellData.file!
                       const position = cellData.position
-                      const isDisabledPosition = disabledState.positions.has(position)
+                      const isDisabledPosition =
+                        disabledState.positions.has(position)
                       const isFileDisabled = disabledState.files.has(file.id)
-                      
+
                       return (
                         <SortableTableCell
                           key={file.id}
                           id={file.id}
-                          onTogglePosition={() => togglePositionDisabled(position)}
-                          onToggleFileDisabled={() => toggleFileDisabled(file.id)}
+                          onTogglePosition={() =>
+                            togglePositionDisabled(position)
+                          }
+                          onToggleFileDisabled={() =>
+                            toggleFileDisabled(file.id)
+                          }
                           onUploadToCell={() => handleUploadToCell(position)}
                           position={position}
                           hasFile={true}
                           isPositionDisabled={isDisabledPosition}
                           isFileDisabled={isFileDisabled}
                         >
-                          <div className={`flex flex-col items-center justify-center h-full ${
-                            isDisabledPosition ? 'opacity-50' : isFileDisabled ? 'opacity-30' : ''
-                          }`}>
-                            <input
-                              type="checkbox"
-                              className="mb-1 cursor-pointer"
-                              checked={isDisabledPosition}
-                              onChange={() => togglePositionDisabled(position)}
-                              onClick={(e) => e.stopPropagation()}
+                          <div
+                            className={`flex h-full flex-col items-center justify-center ${
+                              isDisabledPosition
+                                ? "opacity-50"
+                                : isFileDisabled
+                                  ? "opacity-30"
+                                  : ""
+                            }`}
+                          >
+                            <div
+                              className={`mb-1 h-8 w-8 rounded ${file.color} ${
+                                isFileDisabled ? "ring-2 ring-red-300" : ""
+                              }`}
                             />
-                            <div className={`w-8 h-8 rounded mb-1 ${file.color} ${
-                              isFileDisabled ? 'ring-2 ring-red-300' : ''
-                            }`} />
-                            <div className={`text-sm font-medium ${
-                              isFileDisabled ? 'text-red-500 line-through' : ''
-                            }`}>{file.name}</div>
-                            <div className="text-xs text-gray-500">{file.id}</div>
+                            <div
+                              className={`text-sm font-medium ${
+                                isFileDisabled
+                                  ? "text-red-500 line-through"
+                                  : ""
+                              }`}
+                            >
+                              {file.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {file.id}
+                            </div>
                           </div>
                         </SortableTableCell>
                       )
@@ -806,48 +955,11 @@ export default function TableDndKitTestPage() {
             </Table>
           </SortableContext>
 
-          {/* 無効化された答案画像（ゴミ箱） - ドロップ可能エリア */}
-          <SortableContext 
-            items={getDisabledFiles().map(file => `trash-${file.id}`)}
-            strategy={rectSortingStrategy}
-          >
-            <DroppableTrashArea>
-              <Card className="border-2 border-dashed border-red-300 bg-red-50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-red-700">
-                    <Trash2 className="h-5 w-5" />
-                    無効化した答案画像 ({getDisabledFiles().length}件)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {getDisabledFiles().length > 0 ? (
-                    <>
-                      <div className="flex flex-wrap gap-1">
-                        {getDisabledFiles().map((file) => (
-                          <DraggableTrashFile key={file.id} file={file} />
-                        ))}
-                      </div>
-                      <div className="mt-3 text-xs text-red-600">
-                        💡 双方向ドラッグ可能: 表 ⇄ ゴミ箱
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 h-16 flex items-center justify-center">
-                        <div className="text-sm">表からファイルをドラッグしてここにドロップ</div>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </DroppableTrashArea>
-          </SortableContext>
-          
           {/* ドラッグ中のプレビュー表示 */}
           <DragOverlay>
             {activeFile ? (
-              <div className="border-2 border-blue-400 p-2 h-16 w-32 flex flex-col items-center justify-center bg-white shadow-2xl transform rotate-3 scale-110 ring-4 ring-blue-200 ring-opacity-50">
-                <div className={`w-8 h-8 rounded mb-1 ${activeFile.color}`} />
+              <div className="ring-opacity-50 flex h-16 w-32 scale-110 rotate-3 transform flex-col items-center justify-center border-2 border-blue-400 bg-white p-2 shadow-2xl ring-4 ring-blue-200">
+                <div className={`mb-1 h-8 w-8 rounded ${activeFile.color}`} />
                 <div className="text-sm font-medium">{activeFile.name}</div>
                 <div className="text-xs text-gray-500">{activeFile.id}</div>
               </div>
@@ -858,39 +970,55 @@ export default function TableDndKitTestPage() {
 
       {/* 現在の順序表示 */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">状態情報:</h2>
+        <h2 className="mb-2 text-lg font-semibold">状態情報:</h2>
         <div className="space-y-2">
           <div>
             <h3 className="text-md font-medium">
-              全ファイル: {files.map(f => f.name).join(' → ')}
+              全ファイル: {files.map((f) => f.name).join(" → ")}
             </h3>
           </div>
           <div>
             <h3 className="text-md font-medium">
-              有効ファイル: {getEnabledFiles().map(f => f.name).join(' → ')}
+              有効ファイル:{" "}
+              {getEnabledFiles()
+                .map((f) => f.name)
+                .join(" → ")}
             </h3>
           </div>
           <div className="text-sm text-gray-600">
-            無効化された行: {Array.from(disabledState.rows).map(r => `生徒${r+1}`).join(', ') || 'なし'}
+            無効化された行:{" "}
+            {Array.from(disabledState.rows)
+              .map((r) => `生徒${r + 1}`)
+              .join(", ") || "なし"}
           </div>
           <div className="text-sm text-gray-600">
-            無効化された列: {Array.from(disabledState.cols).map(c => `${c+1}ページ`).join(', ') || 'なし'}
+            無効化された列:{" "}
+            {Array.from(disabledState.cols)
+              .map((c) => `${c + 1}ページ`)
+              .join(", ") || "なし"}
           </div>
           <div className="text-sm text-gray-600">
-            無効化されたセル: {Array.from(disabledState.cells).join(', ') || 'なし'}
+            無効化されたセル:{" "}
+            {Array.from(disabledState.cells).join(", ") || "なし"}
           </div>
           <div className="text-sm text-gray-600">
-            無効化された位置: {Array.from(disabledState.positions).map(p => {
-              const row = Math.floor(p / 5)
-              const col = p % 5
-              return `${String.fromCharCode(65 + col)}${row + 1}`
-            }).join(', ') || 'なし'}
+            無効化された位置:{" "}
+            {Array.from(disabledState.positions)
+              .map((p) => {
+                const row = Math.floor(p / 5)
+                const col = p % 5
+                return `${String.fromCharCode(65 + col)}${row + 1}`
+              })
+              .join(", ") || "なし"}
           </div>
           <div className="text-sm text-gray-600">
-            無効化されたファイル: {Array.from(disabledState.files).map(fileId => {
-              const file = files.find(f => f.id === fileId)
-              return file ? file.name : fileId
-            }).join(', ') || 'なし'}
+            無効化されたファイル:{" "}
+            {Array.from(disabledState.files)
+              .map((fileId) => {
+                const file = files.find((f) => f.id === fileId)
+                return file ? file.name : fileId
+              })
+              .join(", ") || "なし"}
           </div>
         </div>
       </div>
