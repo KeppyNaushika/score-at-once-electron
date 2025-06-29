@@ -36,6 +36,7 @@ interface StudentData {
   studentId: string
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
+  customOrder?: number | null  // 🚨 必須: 受験生徒順序
 }
 
 export default function AnswerSheetsPage() {
@@ -48,6 +49,7 @@ export default function AnswerSheetsPage() {
   const [project, setProject] = useState<ProjectData | null>(null)
   const [students, setStudents] = useState<StudentData[]>([])
   const [answerSheets, setAnswerSheets] = useState<AnswerSheetWithDetails[]>([])
+  const [masterImageCount, setMasterImageCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadData = useCallback(async () => {
@@ -122,6 +124,19 @@ export default function AnswerSheetsPage() {
         await window.electronAPI.getAnswerSheetsByProjectId(projectId)
       if (answerSheetsResult.success && answerSheetsResult.answerSheets) {
         setAnswerSheets(answerSheetsResult.answerSheets)
+      }
+
+      // 模範解答のページ数を取得
+      try {
+        const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
+        const maxPages = masterImages && masterImages.length > 0 
+          ? Math.max(...masterImages.map((img: any) => img.pageNumber))
+          : 0
+        setMasterImageCount(maxPages)
+        console.log("📄 模範解答ページ数:", maxPages)
+      } catch (error) {
+        console.error("Failed to load master image count:", error)
+        setMasterImageCount(0)
       }
     } catch (error) {
       console.error("Error loading data:", error)
@@ -233,6 +248,7 @@ export default function AnswerSheetsPage() {
               <AnswerSheetUpload
                 projectId={projectId}
                 students={students}
+                masterImageCount={masterImageCount}
                 onUploadComplete={handleUploadComplete}
               />
             </TabsContent>

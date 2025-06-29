@@ -8,9 +8,10 @@ interface FileUploadZoneProps {
   onDrop: (files: File[]) => void
   isConverting: boolean
   isClient: boolean
+  disabled?: boolean
 }
 
-export default function FileUploadZone({ onDrop, isConverting, isClient }: FileUploadZoneProps) {
+export default function FileUploadZone({ onDrop, isConverting, isClient, disabled = false }: FileUploadZoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
@@ -18,6 +19,7 @@ export default function FileUploadZone({ onDrop, isConverting, isClient }: FileU
       "application/pdf": [".pdf"],
     },
     multiple: true,
+    disabled: disabled || isConverting,
   })
 
   return (
@@ -28,10 +30,12 @@ export default function FileUploadZone({ onDrop, isConverting, isClient }: FileU
       <CardContent>
         <div
           {...getRootProps()}
-          className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-            isDragActive
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-muted-foreground/50"
+          className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+            disabled
+              ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-50"
+              : isDragActive
+              ? "cursor-pointer border-primary bg-primary/5"
+              : "cursor-pointer border-muted-foreground/25 hover:border-muted-foreground/50"
           }`}
         >
           <input {...getInputProps()} />
@@ -39,6 +43,13 @@ export default function FileUploadZone({ onDrop, isConverting, isClient }: FileU
             <div className="space-y-4">
               <RefreshCw className="text-primary mx-auto h-12 w-12 animate-spin" />
               <p className="text-lg">ファイルを変換中...</p>
+            </div>
+          ) : disabled ? (
+            <div className="space-y-4">
+              <Upload className="text-gray-400 mx-auto mb-4 h-12 w-12" />
+              <p className="text-lg text-gray-500">
+                模範解答が登録されていないため、アップロードは無効です
+              </p>
             </div>
           ) : (
             <>
