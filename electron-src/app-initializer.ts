@@ -1,4 +1,4 @@
-import { app, protocol, net } from "electron"
+import { protocol, net } from "electron"
 import { format } from "url"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
