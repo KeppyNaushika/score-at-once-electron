@@ -49,10 +49,10 @@ main
 **/*.sqlite3
 
 # プロジェクトデータ
-**/projects/
-**/master-images/
-**/answer-sheets/
-**/exports/
+# **/projects/
+# **/master-images/
+# **/answer-sheets/
+# **/exports/
 
 # 出力ファイル
 **/*_scored.pdf
