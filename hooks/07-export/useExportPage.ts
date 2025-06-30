@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useParams } from "next/navigation"
-import { Student, ExportOptions } from "../types"
-import { ScoringMarkConfig, defaultScoringMarkConfig } from "@/components/export/ScoringMarkSettings"
+import {
+  Student,
+  ExportOptions,
+} from "../../app/projects/[projectId]/07-export/types"
+import {
+  ScoringMarkConfig,
+  defaultScoringMarkConfig,
+} from "../../components/projects/07-export/ScoringMarkSettings"
 
 export function useExportPage() {
   const params = useParams()
@@ -13,28 +19,34 @@ export function useExportPage() {
   const [project, setProject] = useState<any>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
-  
+
   // フィルタ・検索状態
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClasses, setSelectedClasses] = useState<string[]>([])
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(["participating"])
-  
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([
+    "participating",
+  ])
+
   // 選択状態
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set())
-  
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
+    new Set(),
+  )
+
   // 出力設定
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     includeScoredAnswers: true,
     includeIndividualReports: false,
     includeGradingData: true,
-    format: 'pdf',
-    markPosition: 'bottom-right',
+    format: "pdf",
+    markPosition: "bottom-right",
     markSize: 50,
     showMarks: true,
   })
-  
-  const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(defaultScoringMarkConfig)
-  
+
+  const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
+    defaultScoringMarkConfig,
+  )
+
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
@@ -48,11 +60,11 @@ export function useExportPage() {
         window.electronAPI.fetchProjectById(projectId),
         window.electronAPI.getStudentsForProject(projectId),
       ])
-      
+
       if (projectResponse) {
         setProject(projectResponse)
       }
-      
+
       if (studentsResponse && studentsResponse.success) {
         setStudents(studentsResponse.students || [])
         // デフォルトで参加中の学生を選択
@@ -74,24 +86,26 @@ export function useExportPage() {
   }, [loadStudentData])
 
   // フィルタリング
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = searchTerm === "" || 
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
+      searchTerm === "" ||
       student.lastName.includes(searchTerm) ||
       student.firstName.includes(searchTerm) ||
       student.studentId.includes(searchTerm)
-    
-    const matchesClass = selectedClasses.length === 0 ||
-      student.memberships.some(m => selectedClasses.includes(m.class.id))
-    
-    const matchesStatus = selectedStatuses.length === 0 ||
-      selectedStatuses.includes(student.status)
-    
+
+    const matchesClass =
+      selectedClasses.length === 0 ||
+      student.memberships.some((m) => selectedClasses.includes(m.class.id))
+
+    const matchesStatus =
+      selectedStatuses.length === 0 || selectedStatuses.includes(student.status)
+
     return matchesSearch && matchesClass && matchesStatus
   })
 
   // 学級一覧取得
   const availableClasses = Array.from(
-    new Set(students.flatMap(s => s.memberships.map(m => m.class)))
+    new Set(students.flatMap((s) => s.memberships.map((m) => m.class))),
   )
 
   return {
@@ -100,7 +114,7 @@ export function useExportPage() {
     students: filteredStudents,
     availableClasses,
     loading,
-    
+
     // フィルタ・検索
     searchTerm,
     setSearchTerm,
@@ -108,17 +122,17 @@ export function useExportPage() {
     setSelectedClasses,
     selectedStatuses,
     setSelectedStatuses,
-    
+
     // 選択
     selectedStudents,
     setSelectedStudents,
-    
+
     // 出力設定
     exportOptions,
     setExportOptions,
     scoringMarkConfig,
     setScoringMarkConfig,
-    
+
     // プログレス
     showProgressModal,
     setShowProgressModal,
@@ -126,7 +140,7 @@ export function useExportPage() {
     setExportProgress,
     isExporting,
     setIsExporting,
-    
+
     // アクション
     loadStudentData,
   }

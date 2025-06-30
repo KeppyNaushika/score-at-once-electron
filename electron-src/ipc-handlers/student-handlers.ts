@@ -171,14 +171,6 @@ export function setupStudentHandlers(): void {
       notes?: string,
     ) => {
       try {
-        console.log("IPC handler add-student-to-class received:", {
-          studentId,
-          classId,
-          startDate,
-          startDateType: typeof startDate,
-          attendanceNumber,
-          notes
-        })
         
         const dateToUse = startDate ? new Date(startDate) : new Date()
         
@@ -189,7 +181,6 @@ export function setupStudentHandlers(): void {
           attendanceNumber,
           notes,
         )
-        // console.log("IPC handler add-student-to-class success")
         return result
       } catch (err) {
         console.error("Error adding student to class:", err)

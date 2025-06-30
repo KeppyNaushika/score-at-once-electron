@@ -1,9 +1,9 @@
 "use client"
 
 import { LayoutRegionAreaType } from "@/types/common.types"
-import { useImageCanvasInteraction } from "./hooks/useImageCanvasInteraction"
-import { AreaRenderer } from "./components/AreaRenderer"
-import { DragPreview } from "./components/DragPreview"
+import { useImageCanvasInteraction } from "../../../hooks/02-template/useImageCanvasInteraction"
+import { AreaRenderer } from "./AreaRenderer"
+import { DragPreview } from "./DragPreview"
 import { LayoutRegionArea } from "../../../types/common.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
@@ -72,7 +72,7 @@ const ImageCanvas = ({
           return
         }
       }
-      
+
       // ズーム機能（ImageCanvasがフォーカスされているとき）
       if (imageContainerRef.current && imageContainerRef.current.contains(document.activeElement)) {
         switch(e.key) {
@@ -116,12 +116,12 @@ const ImageCanvas = ({
         setZoom(Math.max(0.1, Math.min(5, newZoom)))
       }
     }
-    
+
     const container = imageContainerRef.current
     if (container) {
       container.addEventListener('wheel', handleWheel, { passive: false })
     }
-    
+
     return () => {
       if (container) {
         container.removeEventListener('wheel', handleWheel)
@@ -141,7 +141,7 @@ const ImageCanvas = ({
         <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs p-2 rounded z-20 max-w-xs">
           <div className="flex justify-between items-center mb-1">
             <span className="font-semibold">操作:</span>
-            <button 
+            <button
               onClick={() => setShowZoomHelp(false)}
               className="text-white hover:text-gray-300 ml-2"
               aria-label="ヘルプを閉じる"
@@ -156,7 +156,7 @@ const ImageCanvas = ({
           <div>ズーム: {Math.round(zoom * 100)}%</div>
         </div>
       )}
-      
+
       {/* ヘルプ再表示ボタン */}
       {!showZoomHelp && (
         <button
@@ -167,7 +167,7 @@ const ImageCanvas = ({
           ?
         </button>
       )}
-      
+
       {/* 標準HTMLスクロール可能なコンテナ */}
       <div className="w-full h-full overflow-auto scrollbar-overlay" tabIndex={0}>
         <div

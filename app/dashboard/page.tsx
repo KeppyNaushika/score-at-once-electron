@@ -2,7 +2,7 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { useFileActions } from "@/components/hooks/useFileActions"
-import Projects from "@/components/project/list/ProjectList"
+import Projects from "@/components/projects/list/ProjectList"
 import { useRouter } from "next/navigation"
 
 export default function DashboardPage() {

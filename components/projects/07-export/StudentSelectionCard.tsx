@@ -5,9 +5,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Search, Users, CheckSquare, Square } from "lucide-react"
-import { Student } from "../types"
+import { Student } from "../../../app/projects/[projectId]/07-export/types"
 
 interface StudentSelectionCardProps {
   students: Student[]
@@ -45,19 +49,21 @@ export function StudentSelectionCard({
   }
 
   const selectAllFiltered = () => {
-    const allFilteredIds = students.map(s => s.id)
+    const allFilteredIds = students.map((s) => s.id)
     setSelectedStudents(new Set([...selectedStudents, ...allFilteredIds]))
   }
 
   const deselectAllFiltered = () => {
-    const filteredIds = new Set(students.map(s => s.id))
-    const newSelection = new Set([...selectedStudents].filter(id => !filteredIds.has(id)))
+    const filteredIds = new Set(students.map((s) => s.id))
+    const newSelection = new Set(
+      [...selectedStudents].filter((id) => !filteredIds.has(id)),
+    )
     setSelectedStudents(newSelection)
   }
 
   const toggleClassFilter = (classId: string) => {
     if (selectedClasses.includes(classId)) {
-      setSelectedClasses(selectedClasses.filter(id => id !== classId))
+      setSelectedClasses(selectedClasses.filter((id) => id !== classId))
     } else {
       setSelectedClasses([...selectedClasses, classId])
     }
@@ -65,7 +71,7 @@ export function StudentSelectionCard({
 
   const toggleStatusFilter = (status: string) => {
     if (selectedStatuses.includes(status)) {
-      setSelectedStatuses(selectedStatuses.filter(s => s !== status))
+      setSelectedStatuses(selectedStatuses.filter((s) => s !== status))
     } else {
       setSelectedStatuses([...selectedStatuses, status])
     }
@@ -84,7 +90,7 @@ export function StudentSelectionCard({
         <div className="space-y-2">
           <Label htmlFor="search">検索</Label>
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
             <Input
               id="search"
               placeholder="名前または学籍番号で検索"
@@ -138,13 +144,19 @@ export function StudentSelectionCard({
                   { value: "expected", label: "見込" },
                   { value: "absent", label: "欠席" },
                 ].map((status) => (
-                  <div key={status.value} className="flex items-center space-x-2">
+                  <div
+                    key={status.value}
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       id={`status-${status.value}`}
                       checked={selectedStatuses.includes(status.value)}
                       onCheckedChange={() => toggleStatusFilter(status.value)}
                     />
-                    <Label htmlFor={`status-${status.value}`} className="text-sm">
+                    <Label
+                      htmlFor={`status-${status.value}`}
+                      className="text-sm"
+                    >
                       {status.label}
                     </Label>
                   </div>
@@ -157,30 +169,36 @@ export function StudentSelectionCard({
         {/* 一括選択 */}
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={selectAllFiltered}>
-            <CheckSquare className="h-4 w-4 mr-1" />
+            <CheckSquare className="mr-1 h-4 w-4" />
             表示中を全選択
           </Button>
           <Button variant="outline" size="sm" onClick={deselectAllFiltered}>
-            <Square className="h-4 w-4 mr-1" />
+            <Square className="mr-1 h-4 w-4" />
             表示中を全解除
           </Button>
         </div>
 
         {/* 生徒リスト */}
-        <div className="max-h-96 overflow-y-auto space-y-2 border rounded-md p-2">
+        <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2">
           {students.map((student) => (
-            <div key={student.id} className="flex items-center space-x-2 p-2 hover:bg-muted rounded">
+            <div
+              key={student.id}
+              className="hover:bg-muted flex items-center space-x-2 rounded p-2"
+            >
               <Checkbox
                 id={`student-${student.id}`}
                 checked={selectedStudents.has(student.id)}
                 onCheckedChange={() => toggleStudentSelection(student.id)}
               />
-              <Label htmlFor={`student-${student.id}`} className="flex-1 cursor-pointer">
+              <Label
+                htmlFor={`student-${student.id}`}
+                className="flex-1 cursor-pointer"
+              >
                 <div className="flex items-center justify-between">
                   <span>
                     {student.lastName} {student.firstName}
                   </span>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     {student.studentId}
                   </span>
                 </div>
@@ -189,7 +207,7 @@ export function StudentSelectionCard({
           ))}
         </div>
 
-        <div className="text-sm text-muted-foreground">
+        <div className="text-muted-foreground text-sm">
           {selectedStudents.size}人選択中 / {students.length}人表示中
         </div>
       </CardContent>

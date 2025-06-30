@@ -3,11 +3,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { FileText } from "lucide-react"
-import { ExportOptions } from "../types"
-import ScoringMarkSettings, { ScoringMarkConfig } from "@/components/export/ScoringMarkSettings"
+import { ExportOptions } from "../../../app/projects/[projectId]/07-export/types"
+import ScoringMarkSettings, { ScoringMarkConfig } from "./ScoringMarkSettings"
 
 interface ExportOptionsCardProps {
   exportOptions: ExportOptions
@@ -40,7 +46,9 @@ export function ExportOptionsCard({
           <Label>出力形式</Label>
           <Select
             value={exportOptions.format}
-            onValueChange={(value: 'pdf' | 'excel') => updateExportOption('format', value)}
+            onValueChange={(value: "pdf" | "excel") =>
+              updateExportOption("format", value)
+            }
           >
             <SelectTrigger>
               <SelectValue />
@@ -57,40 +65,36 @@ export function ExportOptionsCard({
         {/* 出力内容 */}
         <div className="space-y-3">
           <Label className="text-base font-medium">出力内容</Label>
-          
+
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="includeScoredAnswers"
                 checked={exportOptions.includeScoredAnswers}
-                onCheckedChange={(checked) => 
-                  updateExportOption('includeScoredAnswers', checked)
+                onCheckedChange={(checked) =>
+                  updateExportOption("includeScoredAnswers", checked)
                 }
               />
-              <Label htmlFor="includeScoredAnswers">
-                採点済み答案（PDF）
-              </Label>
+              <Label htmlFor="includeScoredAnswers">採点済み答案（PDF）</Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="includeGradingData"
                 checked={exportOptions.includeGradingData}
-                onCheckedChange={(checked) => 
-                  updateExportOption('includeGradingData', checked)
+                onCheckedChange={(checked) =>
+                  updateExportOption("includeGradingData", checked)
                 }
               />
-              <Label htmlFor="includeGradingData">
-                採点データ（Excel）
-              </Label>
+              <Label htmlFor="includeGradingData">採点データ（Excel）</Label>
             </div>
 
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="includeIndividualReports"
                 checked={exportOptions.includeIndividualReports}
-                onCheckedChange={(checked) => 
-                  updateExportOption('includeIndividualReports', checked)
+                onCheckedChange={(checked) =>
+                  updateExportOption("includeIndividualReports", checked)
                 }
               />
               <Label htmlFor="includeIndividualReports">

@@ -1,6 +1,6 @@
 "use client"
 
-import AnswerSheetUploadNew from "@/components/answer-sheet/AnswerSheetUpload"
+import AnswerSheetUploadNew from "../../../../components/projects/05-answer-sheets/AnswerSheetUpload"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"

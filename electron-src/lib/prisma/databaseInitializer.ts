@@ -13,7 +13,6 @@ export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
   const databaseUrl = `file:${databasePath}`
   
-  // console.log('Database URL:', databaseUrl)
   
   return new PrismaClient({
     datasources: {

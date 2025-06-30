@@ -1,30 +1,21 @@
 "use client"
 
-import { usePageHelp } from "@/components/help/usePageHelp"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import StudentRemovalConfirmModal from "./StudentRemovalConfirmModal"
-import SortableStudentTable from "./SortableStudentTable"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Plus, Search, UserCheck, Users, UserX, Info } from "lucide-react"
+import { Info, Plus, UserCheck, Users, UserX } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import ProjectStudentAddModal from "./ProjectStudentAddModal"
+import SortableStudentTable from "./SortableStudentTable"
+import StudentRemovalConfirmModal from "./StudentRemovalConfirmModal"
 
 // 生徒の状態を表す型
 type StudentStatus = "participating" | "expected" | "absent"
@@ -252,10 +243,8 @@ export default function ProjectStudentsPage() {
 
   // データの再読み込み
   const refreshStudentData = async () => {
-    console.log("=== refreshStudentData called ===")
     const studentsResult =
       await window.electronAPI.getStudentsForProject(projectId)
-    console.log("Students result:", studentsResult)
 
     if (studentsResult.success && studentsResult.students) {
       // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
@@ -278,7 +267,6 @@ export default function ProjectStudentsPage() {
         },
       )
 
-      console.log("Sorted students (customOrder-based):", sortedStudents)
       setStudents(sortedStudents)
 
       // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
@@ -304,7 +292,6 @@ export default function ProjectStudentsPage() {
         students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
       }))
 
-      console.log("Filter classes (display only):", filterClasses)
       setClasses(filterClasses)
     } else {
       console.error("Failed to refresh student data:", studentsResult.error)

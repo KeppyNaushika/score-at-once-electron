@@ -146,22 +146,17 @@ export default function ProjectStudentAddModal({
 
   // 学級ごとの生徒追加
   const handleAddClassStudents = async () => {
-    console.log("=== handleAddClassStudents starting ===")
     setIsAdding(true)
     try {
       const selectedClasses = availableClasses.filter((cls) => cls.isSelected)
-      console.log("Selected classes:", selectedClasses)
 
       // 選択された学級の順序で生徒を追加
       let currentOrder = 0
 
       for (const classItem of selectedClasses) {
-        console.log(`Processing class: ${classItem.name} (${classItem.id})`)
-        
         // 学級の全生徒を取得
         const allClasses = await window.electronAPI.fetchClasses()
         const fullClassData = allClasses.find((cls) => cls.id === classItem.id)
-        console.log("Full class data:", fullClassData)
 
         if (!fullClassData || !fullClassData.memberships) {
           console.warn(`Class ${classItem.name} has no students`)
@@ -171,9 +166,8 @@ export default function ProjectStudentAddModal({
         // 学級の生徒を出席番号順にソート（所属履歴のある全生徒）
         const sortedStudents = [...fullClassData.memberships]
           .filter(
-            (membership) =>
-              membership.student // 生徒データが存在することを確認
-              // endDateの有無は問わない - 過去の所属生徒も追加可能にする
+            (membership) => membership.student, // 生徒データが存在することを確認
+            // endDateの有無は問わない - 過去の所属生徒も追加可能にする
           )
           .sort((a, b) => {
             const aNum = a.attendanceNumber || 9999
@@ -181,24 +175,18 @@ export default function ProjectStudentAddModal({
             return aNum - bNum
           })
 
-        console.log("Sorted students:", sortedStudents)
-
         // 生徒IDのリストを作成
         const studentIds = sortedStudents
           .map((membership) => membership.student?.id)
           .filter((id): id is string => !!id) // undefined を除外
 
-        console.log("Student IDs to add:", studentIds)
-
         if (studentIds.length > 0) {
           // プロジェクトに生徒を追加
-          console.log(`Adding students to project ${projectId}:`, studentIds)
           const result = await window.electronAPI.addStudentsToProject(
             projectId,
             studentIds,
           )
-          console.log("Add students result:", result)
-          
+
           if (!result.success) {
             throw new Error(
               result.error ||
@@ -212,13 +200,11 @@ export default function ProjectStudentAddModal({
             customOrder: currentOrder + index + 1,
           }))
 
-          console.log("Setting student orders:", studentOrders)
           const orderResult = await window.electronAPI.updateStudentOrders(
             projectId,
             studentOrders,
           )
-          console.log("Order result:", orderResult)
-          
+
           if (!orderResult.success) {
             console.warn(
               `Failed to update student orders for class ${classItem.name}:`,
@@ -227,20 +213,19 @@ export default function ProjectStudentAddModal({
           }
 
           currentOrder += studentIds.length
-        } else {
-          console.log(`No students found for class ${classItem.name}`)
         }
       }
 
-      console.log("=== Calling onStudentsAdded ===")
       onStudentsAdded()
       handleClose()
     } catch (error) {
       console.error("Failed to add class students:", error)
-      alert("学級の追加に失敗しました: " + (error instanceof Error ? error.message : "Unknown error"))
+      alert(
+        "学級の追加に失敗しました: " +
+          (error instanceof Error ? error.message : "Unknown error"),
+      )
     } finally {
       setIsAdding(false)
-      console.log("=== handleAddClassStudents finished ===")
     }
   }
 
@@ -292,8 +277,10 @@ export default function ProjectStudentAddModal({
 
     // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック（endDate問わず）
     const matchesClass =
-      filterClassId === "all" || 
-      student.memberships?.some(membership => membership.class.id === filterClassId)
+      filterClassId === "all" ||
+      student.memberships?.some(
+        (membership) => membership.class.id === filterClassId,
+      )
 
     return matchesSearch && matchesClass
   })

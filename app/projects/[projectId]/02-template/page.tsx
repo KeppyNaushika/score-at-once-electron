@@ -2,7 +2,7 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import LayoutRegionEditor from "@/components/project/layout/LayoutRegionEditor"
+import LayoutRegionEditor from "@/components/projects/02-template/LayoutRegionEditor"
 import { Button } from "@/components/ui/button"
 import {
   Select,
