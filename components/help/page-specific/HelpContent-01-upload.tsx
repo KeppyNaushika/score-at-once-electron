@@ -3,7 +3,7 @@
 import { FileImage, Upload, Settings, Mouse, CheckCircle, Lightbulb } from "lucide-react"
 import { HelpSection, StepItem, TipItem, Badge } from "../common/HelpComponents"
 
-export function UploadHelpContent() {
+export function HelpContent01Upload() {
   return (
     <div className="space-y-6">
       <div>

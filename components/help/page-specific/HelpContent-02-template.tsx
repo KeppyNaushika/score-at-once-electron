@@ -3,7 +3,7 @@
 import { Settings, Mouse, Lightbulb, Keyboard, Info, CheckCircle } from "lucide-react"
 import { HelpSection, StepItem, TipItem, ShortcutItem } from "../common/HelpComponents"
 
-export function TemplateHelpContent() {
+export function HelpContent02Template() {
   return (
     <div className="space-y-6">
       <div>
