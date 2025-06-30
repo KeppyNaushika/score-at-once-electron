@@ -1,37 +1,30 @@
-import { protocol, net } from "electron"
-import { format } from "url"
+import { net, protocol } from "electron"
 import isDev from "electron-is-dev"
 import prepareNext from "electron-next"
-import { 
-  initializeDataDirectory, 
-  migrateFromApplicationSupport, 
-  getAbsolutePathFromData 
+import { format } from "url"
+import {
+  getAbsolutePathFromData,
+  initializeDataDirectory,
 } from "./lib/dataManager"
-import { 
-  initializeDatabase, 
-  optimizeDatabaseForSharedDrive 
+import {
+  initializeDatabase,
+  optimizeDatabaseForSharedDrive,
 } from "./lib/prisma/databaseInitializer"
 
 export async function initializeApp(): Promise<void> {
   try {
     // データディレクトリの初期化
     await initializeDataDirectory()
-    
-    // ApplicationSupportからの移行処理
-    const migrated = await migrateFromApplicationSupport()
-    if (migrated) {
-      console.log('Data migration from ApplicationSupport completed')
-    }
-    
+
     // データベースの初期化
     await initializeDatabase()
-    
+
     // 共有ドライブ用の最適化
     await optimizeDatabaseForSharedDrive()
-    
-    console.log('Application initialization completed')
+
+    console.log("Application initialization completed")
   } catch (error) {
-    console.error('Failed to initialize application:', error)
+    console.error("Failed to initialize application:", error)
   }
 
   if (isDev) {

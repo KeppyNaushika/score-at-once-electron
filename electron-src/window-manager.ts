@@ -39,11 +39,10 @@ export function createMainWindow(): BrowserWindow {
 export function setupWindowEvents(mainWindow: BrowserWindow): void {
   // アプリケーションフォーカス監視でバックグラウンド処理対策
   app.on('browser-window-focus', () => {
-    console.log('アプリがアクティブになりました')
+    // アプリがアクティブになった時の処理
   })
 
   app.on('browser-window-blur', () => {
-    console.log('アプリが非アクティブになりました - 重要な処理の完了を確認')
     // 重要な保存処理を強制実行
     mainWindow.webContents.send('force-save')
   })

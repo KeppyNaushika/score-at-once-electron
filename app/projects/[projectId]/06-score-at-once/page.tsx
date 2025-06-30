@@ -1,13 +1,13 @@
 "use client"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
-import AnswerDisplayViewer from "@/components/grading/AnswerDisplayViewer"
-import AnswerGridView from "@/components/grading/AnswerGridView"
+import AnswerDisplayViewer from "../../../../components/projects/06-score-at-once/AnswerDisplayViewer"
+import AnswerGridView from "../../../../components/projects/06-score-at-once/AnswerGridView"
 import GradingModeToggle, {
   GradingMode,
-} from "@/components/grading/GradingModeToggle"
-import ProjectProgressCard from "@/components/grading/ProjectProgressCard"
-import ScoreComparisonModal from "@/components/grading/ScoreComparisonModal"
+} from "../../../../components/projects/06-score-at-once/GradingModeToggle"
+import ProjectProgressCard from "../../../../components/projects/06-score-at-once/ProjectProgressCard"
+import ScoreComparisonModal from "../../../../components/projects/06-score-at-once/ScoreComparisonModal"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -121,7 +121,7 @@ export default function GradingPage() {
   const [layoutDirection, setLayoutDirection] = useState<
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
-  
+
   // 表示フィルタリング状態
   const [displayFilter, setDisplayFilter] = useState<{
     ungraded: boolean
@@ -136,7 +136,7 @@ export default function GradingPage() {
     incorrect: false,
     partial: false,
     pending: false,
-    no_answer: false
+    no_answer: false,
   })
   const [appliedFilter, setAppliedFilter] = useState<{
     ungraded: boolean
@@ -151,14 +151,15 @@ export default function GradingPage() {
     incorrect: false,
     partial: false,
     pending: false,
-    no_answer: false
+    no_answer: false,
   })
   const [needsFilterRefresh, setNeedsFilterRefresh] = useState(false)
   const [filterUpdateKey, setFilterUpdateKey] = useState(0)
-  
+
   // 部分点入力用状態
-  const [partialScoreInput, setPartialScoreInput] = useState('')
-  const [partialScoreInputTimer, setPartialScoreInputTimer] = useState<NodeJS.Timeout | null>(null)
+  const [partialScoreInput, setPartialScoreInput] = useState("")
+  const [partialScoreInputTimer, setPartialScoreInputTimer] =
+    useState<NodeJS.Timeout | null>(null)
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -225,8 +226,8 @@ export default function GradingPage() {
         )
           .filter(
             (region: any) =>
-              LAYOUT_REAGION_AREA_TYPES.includes(region.type) && 
-              region.type === "QUESTION_ANSWER" && 
+              LAYOUT_REAGION_AREA_TYPES.includes(region.type) &&
+              region.type === "QUESTION_ANSWER" &&
               region.questionNumber,
           )
           .map((region: any) => ({
@@ -256,7 +257,7 @@ export default function GradingPage() {
               status: sheet.status || "uploaded",
               student: sheet.student,
             }
-          }
+          },
         )
         setAnswerSheets(transformedAnswerSheets)
         setQuestionRegions(questionRegions)
@@ -299,7 +300,8 @@ export default function GradingPage() {
     projectId: string,
   ): Promise<Record<string, ScoringData>> => {
     try {
-      const scores = await window.electronAPI.getQuestionScoresForProject(projectId)
+      const scores =
+        await window.electronAPI.getQuestionScoresForProject(projectId)
       if (!scores || !Array.isArray(scores)) return {}
 
       const scoringData: Record<string, ScoringData> = {}
@@ -339,63 +341,86 @@ export default function GradingPage() {
       // グリッドモードでの特殊キーハンドリング
       if (gradingMode === "grid") {
         const key = event.key.toLowerCase()
-        
+
         // Alt+採点キーでフィルタ切り替え
-        if (event.altKey && [DEFAULT_SHORTCUTS.ungraded, DEFAULT_SHORTCUTS.correct, DEFAULT_SHORTCUTS.incorrect, DEFAULT_SHORTCUTS.partial, DEFAULT_SHORTCUTS.pending, DEFAULT_SHORTCUTS.no_answer].includes(key)) {
+        if (
+          event.altKey &&
+          [
+            DEFAULT_SHORTCUTS.ungraded,
+            DEFAULT_SHORTCUTS.correct,
+            DEFAULT_SHORTCUTS.incorrect,
+            DEFAULT_SHORTCUTS.partial,
+            DEFAULT_SHORTCUTS.pending,
+            DEFAULT_SHORTCUTS.no_answer,
+          ].includes(key)
+        ) {
           event.preventDefault()
           handleToggleFilterByScoreKey(key)
           return
         }
-        
+
         // WASD移動の処理
-        if (['w', 'a', 's', 'd'].includes(key)) {
+        if (["w", "a", "s", "d"].includes(key)) {
           event.preventDefault()
           handleGridNavigation(key)
           return
         }
-        
+
         // Rキーでフィルタを更新
-        if (key === 'r') {
+        if (key === "r") {
           event.preventDefault()
           handleRefreshFilter()
           return
         }
-        
+
         // 数字キーで部分点入力（選択されている答案がある場合）
-        if (['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(key) && selectedAnswers.size > 0) {
+        if (
+          ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(key) &&
+          selectedAnswers.size > 0
+        ) {
           event.preventDefault()
           handlePartialScoreInput(key)
           return
         }
-        
+
         // Backspaceで部分点をnullに設定
-        if (key === 'backspace' && selectedAnswers.size > 0) {
+        if (key === "backspace" && selectedAnswers.size > 0) {
           event.preventDefault()
           handlePartialScoreReset()
           return
         }
-        
+
         // 採点キー（Alt無し）で通常の採点
-        if ([DEFAULT_SHORTCUTS.ungraded, DEFAULT_SHORTCUTS.correct, DEFAULT_SHORTCUTS.incorrect, DEFAULT_SHORTCUTS.partial, DEFAULT_SHORTCUTS.pending, DEFAULT_SHORTCUTS.no_answer].includes(key) && selectedAnswers.size > 0) {
+        if (
+          [
+            DEFAULT_SHORTCUTS.ungraded,
+            DEFAULT_SHORTCUTS.correct,
+            DEFAULT_SHORTCUTS.incorrect,
+            DEFAULT_SHORTCUTS.partial,
+            DEFAULT_SHORTCUTS.pending,
+            DEFAULT_SHORTCUTS.no_answer,
+          ].includes(key) &&
+          selectedAnswers.size > 0
+        ) {
           event.preventDefault()
           handleBatchScore(key as ScoringStatus)
           return
         }
-        
+
         // WASD移動キー
-        if (['w', 'a', 's', 'd'].includes(key)) {
+        if (["w", "a", "s", "d"].includes(key)) {
           event.preventDefault()
           handleGridNavigation(key)
           return
         }
-        
+
         // Rキーでフィルタリフレッシュ
-        if (key === 'r') {
+        if (key === "r") {
           event.preventDefault()
           handleRefreshFilter()
           return
         }
-        
+
         // グリッドモードではその他のキーはグリッドコンポーネントに委譲
         return
       }
@@ -502,9 +527,7 @@ export default function GradingPage() {
   }
 
   // 採点処理関数
-  const handleSetScore = async (
-    type: ScoringStatus,
-  ) => {
+  const handleSetScore = async (type: ScoringStatus) => {
     if (!currentAnswerSheet || !currentQuestion || !currentUserId) {
       if (!currentUserId) {
         alert("ユーザー情報の取得中です。しばらくお待ちください。")
@@ -577,11 +600,14 @@ export default function GradingPage() {
               ...currentScore,
               score: newScore,
               status,
-              version: (result as any).score?.scoreVersion || result.scoreVersion,
-              updatedAt: new Date((result as any).score?.updatedAt || result.updatedAt),
+              version:
+                (result as any).score?.scoreVersion || result.scoreVersion,
+              updatedAt: new Date(
+                (result as any).score?.updatedAt || result.updatedAt,
+              ),
             },
           }))
-          
+
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -622,11 +648,14 @@ export default function GradingPage() {
               status,
               comment: "",
               scoredByUserId: currentUserId,
-              version: (result as any).score?.scoreVersion || result.scoreVersion,
-              updatedAt: new Date((result as any).score?.updatedAt || result.updatedAt),
+              version:
+                (result as any).score?.scoreVersion || result.scoreVersion,
+              updatedAt: new Date(
+                (result as any).score?.updatedAt || result.updatedAt,
+              ),
             },
           }))
-          
+
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -643,13 +672,19 @@ export default function GradingPage() {
           }
         } else {
           console.error("Failed to create score:", (result as any).error)
-          alert("採点の保存に失敗しました: " + ((result as any).error || "不明なエラー"))
+          alert(
+            "採点の保存に失敗しました: " +
+              ((result as any).error || "不明なエラー"),
+          )
         }
       }
 
       // Check for auto-finalization in collaborative mode
       if (status === "proposed") {
-        await checkForAutoFinalization(currentAnswerSheet.id, currentQuestion.id)
+        await checkForAutoFinalization(
+          currentAnswerSheet.id,
+          currentQuestion.id,
+        )
       }
     } catch (error) {
       console.error("Error in scoring:", error)
@@ -658,32 +693,43 @@ export default function GradingPage() {
   }
 
   // Auto-finalization logic for collaborative grading
-  const checkForAutoFinalization = async (answerSheetId: string, layoutRegionId: string) => {
+  const checkForAutoFinalization = async (
+    answerSheetId: string,
+    layoutRegionId: string,
+  ) => {
     if (!currentUserId) return
 
     try {
-      const comparison = await window.electronAPI.getQuestionScoreComparison(answerSheetId, layoutRegionId)
-      
-      if ((comparison as any).success && (comparison as any).proposedScores && (comparison as any).proposedScores.length > 1) {
+      const comparison = await window.electronAPI.getQuestionScoreComparison(
+        answerSheetId,
+        layoutRegionId,
+      )
+
+      if (
+        (comparison as any).success &&
+        (comparison as any).proposedScores &&
+        (comparison as any).proposedScores.length > 1
+      ) {
         // Check if all proposed scores are identical
         const firstScore = (comparison as any).proposedScores[0]
-        const allMatch = (comparison as any).proposedScores.every((score: any) => 
-          score.score === firstScore.score && 
-          score.status === firstScore.status
+        const allMatch = (comparison as any).proposedScores.every(
+          (score: any) =>
+            score.score === firstScore.score &&
+            score.status === firstScore.status,
         )
-        
+
         if (allMatch) {
           // Auto-finalize if all scores match
           const result = await window.electronAPI.finalizeQuestionScore(
-            answerSheetId, 
-            layoutRegionId, 
+            answerSheetId,
+            layoutRegionId,
             currentUserId,
-            { 
-              score: firstScore.score, 
-              comment: firstScore.comment || "" 
-            } as any
+            {
+              score: firstScore.score,
+              comment: firstScore.comment || "",
+            } as any,
           )
-          
+
           if ((result as any).success) {
             // Update local scoring data to reflect finalization
             const key = `${answerSheetId}-${layoutRegionId}`
@@ -692,8 +738,12 @@ export default function GradingPage() {
               [key]: {
                 ...prev[key],
                 status: "final",
-                version: (result as any).score?.scoreVersion || (result as any).scoreVersion,
-                updatedAt: new Date((result as any).score?.updatedAt || (result as any).updatedAt),
+                version:
+                  (result as any).score?.scoreVersion ||
+                  (result as any).scoreVersion,
+                updatedAt: new Date(
+                  (result as any).score?.updatedAt || (result as any).updatedAt,
+                ),
               },
             }))
           }
@@ -740,18 +790,30 @@ export default function GradingPage() {
   const handleBatchScore = async (
     statusOrAnswerIds: ScoringStatus | string | string[],
     statusOrPartialScore?: ScoringStatus | number | null,
-    partialScore?: number | null
+    partialScore?: number | null,
   ) => {
     // 引数の解析
     let answerIds: string | string[]
     let status: ScoringStatus
     let scoreValue: number | null = null
 
-    if (typeof statusOrAnswerIds === 'string' && !Array.isArray(statusOrAnswerIds) && ['ungraded', 'correct', 'incorrect', 'partial', 'pending', 'no_answer'].includes(statusOrAnswerIds)) {
+    if (
+      typeof statusOrAnswerIds === "string" &&
+      !Array.isArray(statusOrAnswerIds) &&
+      [
+        "ungraded",
+        "correct",
+        "incorrect",
+        "partial",
+        "pending",
+        "no_answer",
+      ].includes(statusOrAnswerIds)
+    ) {
       // 新形式: handleBatchScore(status, partialScore?)
       status = statusOrAnswerIds as ScoringStatus
       answerIds = Array.from(selectedAnswers)
-      scoreValue = typeof statusOrPartialScore === 'number' ? statusOrPartialScore : null
+      scoreValue =
+        typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
     } else {
       // 旧形式: handleBatchScore(answerIds, status)
       answerIds = statusOrAnswerIds as string | string[]
@@ -764,7 +826,7 @@ export default function GradingPage() {
       // デフォルトユーザーIDを設定（実際の実装では適切なユーザー管理が必要）
       const defaultUserId = "default-user-id"
       setCurrentUserId(defaultUserId)
-      
+
       // 一時的にdefaultUserIdを使用
       effectiveUserId = defaultUserId
     } else {
@@ -782,7 +844,8 @@ export default function GradingPage() {
 
       let newScore = 0
       // In collaborative mode, new scores should be "proposed"
-      let scoringStatus: ScoringStatus = status === "ungraded" ? "ungraded" : "proposed"
+      let scoringStatus: ScoringStatus =
+        status === "ungraded" ? "ungraded" : "proposed"
 
       switch (status) {
         case "ungraded":
@@ -824,24 +887,32 @@ export default function GradingPage() {
             currentScore.version,
           )
 
-          if (process.env.NODE_ENV === "development") {
-            console.log('Update score result:', result)
-          }
-          
-          if ((result as any).success || result.id || (result as any).questionScore) {
+          if (
+            (result as any).success ||
+            result.id ||
+            (result as any).questionScore
+          ) {
             setScoringData((prev) => ({
               ...prev,
               [key]: {
                 ...currentScore,
                 score: newScore,
                 status: scoringStatus,
-                version: (result as any).version || (result as any).questionScore?.version || (currentScore.version + 1),
+                version:
+                  (result as any).version ||
+                  (result as any).questionScore?.version ||
+                  currentScore.version + 1,
                 updatedAt: new Date(),
               },
             }))
           } else {
-            console.error("Failed to update batch score:", (result as any).error)
-            toast.error(`採点データの更新に失敗しました: ${(result as any).error || JSON.stringify(result)}`)
+            console.error(
+              "Failed to update batch score:",
+              (result as any).error,
+            )
+            toast.error(
+              `採点データの更新に失敗しました: ${(result as any).error || JSON.stringify(result)}`,
+            )
           }
         } else {
           // Create new score
@@ -854,32 +925,26 @@ export default function GradingPage() {
             comment: "",
             scoredByUserId: effectiveUserId,
           }
-          
-          if (process.env.NODE_ENV === "development") {
-            console.log('Creating new score with data:', createData)
-          }
-          
-          const result = await window.electronAPI.createQuestionScore(createData)
-          
-          if (process.env.NODE_ENV === "development") {
-            console.log('Create score result:', result)
-          }
+
+          const result =
+            await window.electronAPI.createQuestionScore(createData)
 
           // APIレスポンスの様々な形式に対応
-          const isSuccess = result && (
-            result.id || 
-            (result as any).success || 
-            (result as any).questionScore ||
-            Object.keys(result).length > 0
-          )
-          
+          const isSuccess =
+            result &&
+            (result.id ||
+              (result as any).success ||
+              (result as any).questionScore ||
+              Object.keys(result).length > 0)
+
           if (isSuccess) {
             // IDを取得（様々な形式に対応）
-            const scoreId = result.id || 
-                           (result as any).questionScore?.id || 
-                           (result as any).id ||
-                           `temp-${Date.now()}-${Math.random()}`
-            
+            const scoreId =
+              result.id ||
+              (result as any).questionScore?.id ||
+              (result as any).id ||
+              `temp-${Date.now()}-${Math.random()}`
+
             setScoringData((prev) => ({
               ...prev,
               [key]: {
@@ -890,17 +955,18 @@ export default function GradingPage() {
                 status: scoringStatus,
                 comment: "",
                 scoredByUserId: effectiveUserId,
-                version: (result as any).version || (result as any).questionScore?.version || 1,
+                version:
+                  (result as any).version ||
+                  (result as any).questionScore?.version ||
+                  1,
                 updatedAt: new Date(),
               },
             }))
-            
-            if (process.env.NODE_ENV === "development") {
-              console.log('Successfully created score with ID:', scoreId)
-            }
           } else {
             console.error("Failed to create batch score:", result)
-            toast.error(`採点データの作成に失敗しました: ${typeof result === 'object' ? JSON.stringify(result) : result}`)
+            toast.error(
+              `採点データの作成に失敗しました: ${typeof result === "object" ? JSON.stringify(result) : result}`,
+            )
           }
         }
       } catch (error) {
@@ -912,8 +978,10 @@ export default function GradingPage() {
     if (gradingMode === "grid" && selectedAnswers.size === 1) {
       const currentSelectedId = Array.from(selectedAnswers)[0]
       const gridAnswers = getGridAnswerData()
-      const currentIndex = gridAnswers.findIndex(answer => answer.id === currentSelectedId)
-      
+      const currentIndex = gridAnswers.findIndex(
+        (answer) => answer.id === currentSelectedId,
+      )
+
       if (currentIndex >= 0 && currentIndex < gridAnswers.length - 1) {
         // 次の答案を選択
         const nextAnswerId = gridAnswers[currentIndex + 1].id
@@ -926,7 +994,7 @@ export default function GradingPage() {
       // 選択をクリア
       setSelectedAnswers(new Set())
     }
-    
+
     // 採点後はフィルタ更新が必要であることを示すが、即座には更新しない
     // setNeedsFilterRefresh(true) // コメントアウトして即時更新を防止
   }
@@ -936,25 +1004,31 @@ export default function GradingPage() {
     if (!currentQuestion) return []
 
     // masterImageIdに基づいてmasterImageのpageNumberを取得
-    const masterImage = project?.masterImages?.find((img: any) => img.id === currentQuestion.masterImageId)
+    const masterImage = project?.masterImages?.find(
+      (img: any) => img.id === currentQuestion.masterImageId,
+    )
     const targetPageNumber = masterImage?.pageNumber || 1
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
-    const pageFilteredSheets = answerSheets.filter(sheet => sheet.pageNumber === targetPageNumber)
-    
+    const pageFilteredSheets = answerSheets.filter(
+      (sheet) => sheet.pageNumber === targetPageNumber,
+    )
+
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
-      const aOrder = a.student.customOrder !== undefined ? a.student.customOrder : 999999
-      const bOrder = b.student.customOrder !== undefined ? b.student.customOrder : 999999
-      
+      const aOrder =
+        a.student.customOrder !== undefined ? a.student.customOrder : 999999
+      const bOrder =
+        b.student.customOrder !== undefined ? b.student.customOrder : 999999
+
       // customOrderが同じ場合は姓名でソート
       if (aOrder === bOrder) {
         const aName = `${a.student.lastName}${a.student.firstName}`
         const bName = `${b.student.lastName}${b.student.firstName}`
-        return aName.localeCompare(bName, 'ja')
+        return aName.localeCompare(bName, "ja")
       }
-      
+
       return aOrder - bOrder
     })
 
@@ -979,15 +1053,9 @@ export default function GradingPage() {
   // フィルタリングされたグリッドデータ取得（appliedFilterを使用）
   const getFilteredGridAnswerData = () => {
     const allAnswers = getAllGridAnswerData()
-    const filteredAnswers = allAnswers.filter(answer => appliedFilter[answer.status as keyof typeof appliedFilter])
-    if (process.env.NODE_ENV === "development") {
-      console.log('Filter Debug:', {
-        allAnswersCount: allAnswers.length,
-        filteredCount: filteredAnswers.length,
-        appliedFilter,
-        statuses: allAnswers.map(a => a.status)
-      })
-    }
+    const filteredAnswers = allAnswers.filter(
+      (answer) => appliedFilter[answer.status as keyof typeof appliedFilter],
+    )
     return filteredAnswers
   }
 
@@ -1003,16 +1071,19 @@ export default function GradingPage() {
 
   // フィルタリング関連ハンドラー（手動リフレッシュ用、Rキー）
   const handleRefreshFilter = () => {
-    const newAppliedFilter = {...displayFilter}
+    const newAppliedFilter = { ...displayFilter }
     setAppliedFilter(newAppliedFilter)
     setNeedsFilterRefresh(false)
-    setFilterUpdateKey(prev => prev + 1) // 強制的に再レンダリング
+    setFilterUpdateKey((prev) => prev + 1) // 強制的に再レンダリング
     // 選択状態をリセット
     setSelectedAnswers(new Set())
     // フィルタ適用後の最初の答案を選択
     setTimeout(() => {
       const allAnswers = getAllGridAnswerData()
-      const filteredAnswers = allAnswers.filter(answer => newAppliedFilter[answer.status as keyof typeof newAppliedFilter])
+      const filteredAnswers = allAnswers.filter(
+        (answer) =>
+          newAppliedFilter[answer.status as keyof typeof newAppliedFilter],
+      )
       if (filteredAnswers.length > 0) {
         setSelectedAnswers(new Set([filteredAnswers[0].id]))
       }
@@ -1021,22 +1092,22 @@ export default function GradingPage() {
 
   const handleToggleFilter = (key: string) => {
     const filterMap: { [key: string]: keyof typeof displayFilter } = {
-      '1': 'ungraded',
-      '2': 'correct', 
-      '3': 'incorrect',
-      '4': 'partial',
-      '5': 'pending',
-      '6': 'no_answer'
+      "1": "ungraded",
+      "2": "correct",
+      "3": "incorrect",
+      "4": "partial",
+      "5": "pending",
+      "6": "no_answer",
     }
-    
+
     const filterKey = filterMap[key]
     if (filterKey) {
       const newDisplayFilter = {
         ...displayFilter,
-        [filterKey]: !displayFilter[filterKey]
+        [filterKey]: !displayFilter[filterKey],
       }
       setDisplayFilter(newDisplayFilter)
-      
+
       // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
       setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
     }
@@ -1045,22 +1116,22 @@ export default function GradingPage() {
   // Alt+採点キーでフィルタ切り替え
   const handleToggleFilterByScoreKey = (scoreKey: string) => {
     const scoreToFilterMap: { [key: string]: keyof typeof displayFilter } = {
-      [DEFAULT_SHORTCUTS.ungraded]: 'ungraded',
-      [DEFAULT_SHORTCUTS.correct]: 'correct',
-      [DEFAULT_SHORTCUTS.incorrect]: 'incorrect', 
-      [DEFAULT_SHORTCUTS.partial]: 'partial',
-      [DEFAULT_SHORTCUTS.pending]: 'pending',
-      [DEFAULT_SHORTCUTS.no_answer]: 'no_answer'
+      [DEFAULT_SHORTCUTS.ungraded]: "ungraded",
+      [DEFAULT_SHORTCUTS.correct]: "correct",
+      [DEFAULT_SHORTCUTS.incorrect]: "incorrect",
+      [DEFAULT_SHORTCUTS.partial]: "partial",
+      [DEFAULT_SHORTCUTS.pending]: "pending",
+      [DEFAULT_SHORTCUTS.no_answer]: "no_answer",
     }
-    
+
     const filterKey = scoreToFilterMap[scoreKey]
     if (filterKey) {
       const newDisplayFilter = {
         ...displayFilter,
-        [filterKey]: !displayFilter[filterKey]
+        [filterKey]: !displayFilter[filterKey],
       }
       setDisplayFilter(newDisplayFilter)
-      
+
       // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
       setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
     }
@@ -1069,66 +1140,67 @@ export default function GradingPage() {
   // 部分点入力処理
   const handlePartialScoreInput = async (digit: string) => {
     if (selectedAnswers.size === 0 || !currentQuestion) return
-    
+
     // 現在の部分点入力状態を管理
-    const currentPartialInput = partialScoreInput || ''
+    const currentPartialInput = partialScoreInput || ""
     const newPartialInput = currentPartialInput + digit
-    
+
     // 数値として有効かチェック（最大点数以下）
     const numericValue = parseFloat(newPartialInput)
     const maxPoints = currentQuestion.points || 10
     if (isNaN(numericValue) || numericValue > maxPoints) {
       return // 無効な入力は無視
     }
-    
+
     setPartialScoreInput(newPartialInput)
-    
+
     // 一定時間後に自動的に採点を実行
     if (partialScoreInputTimer) {
       clearTimeout(partialScoreInputTimer)
     }
-    
+
     const timer = setTimeout(() => {
-      if (partialScoreInput === newPartialInput) { // 入力が変更されていない場合のみ
-        handleBatchScore('partial' as ScoringStatus, numericValue)
-        setPartialScoreInput('')
+      if (partialScoreInput === newPartialInput) {
+        // 入力が変更されていない場合のみ
+        handleBatchScore("partial" as ScoringStatus, numericValue)
+        setPartialScoreInput("")
       }
     }, 1500) // 1.5秒待機
-    
+
     setPartialScoreInputTimer(timer)
   }
 
   // 部分点リセット処理
   const handlePartialScoreReset = () => {
     if (selectedAnswers.size === 0) return
-    
-    setPartialScoreInput('')
+
+    setPartialScoreInput("")
     if (partialScoreInputTimer) {
       clearTimeout(partialScoreInputTimer)
       setPartialScoreInputTimer(null)
     }
-    handleBatchScore('partial' as ScoringStatus, null)
+    handleBatchScore("partial" as ScoringStatus, null)
   }
 
   // WASD移動ハンドラー（レイアウト方向とフィルタリングに対応）
   const handleGridNavigation = (key: string) => {
     if (answerSheets.length === 0) return
-    
+
     const gridAnswers = getGridAnswerData()
     const totalAnswers = gridAnswers.length
-    
+
     if (totalAnswers === 0) return
-    
+
     const cols = Math.max(1, gridSize.columns) // 最低1列は確保
     const rows = Math.ceil(totalAnswers / cols)
-    
+
     // 現在選択されている答案のインデックスを取得
     let currentIndex = -1
     if (selectedAnswers.size >= 1) {
       const selectedId = Array.from(selectedAnswers)[0]
-      currentIndex = gridAnswers.findIndex(answer => answer.id === selectedId)
+      currentIndex = gridAnswers.findIndex((answer) => answer.id === selectedId)
     }
-    
+
     // 何も選択されていない場合は最初の答案を選択
     if (currentIndex === -1) {
       if (totalAnswers > 0) {
@@ -1136,42 +1208,44 @@ export default function GradingPage() {
       }
       return
     }
-    
+
     let newIndex = currentIndex
-    
+
     // デバッグ情報（開発時のみ）
     if (process.env.NODE_ENV === "development") {
-      console.log('WASD Navigation:', {
+      console.log("WASD Navigation:", {
         key,
         currentIndex,
         totalAnswers,
         cols,
         rows,
         layoutDirection,
-        selectedAnswerIds: Array.from(selectedAnswers)
+        selectedAnswerIds: Array.from(selectedAnswers),
       })
     }
-    
+
     // レイアウト方向に応じて移動ロジックを分ける
     if (layoutDirection === "down-right" || layoutDirection === "down-left") {
       // 縦方向優先レイアウト（縦に並んでから横に進む）
       const actualCols = Math.ceil(totalAnswers / rows)
       const currentCol = Math.floor(currentIndex / rows)
       const currentRow = currentIndex % rows
-      
+
       switch (key) {
-        case 'w': // 上
+        case "w": // 上
           if (currentRow > 0) {
             newIndex = currentCol * rows + (currentRow - 1)
           } else if (currentCol > 0) {
             // 上端の場合、前の列の最下行に移動
-            const prevColLastIndex = (currentCol - 1) * rows + Math.min(rows - 1, totalAnswers - (currentCol - 1) * rows - 1)
+            const prevColLastIndex =
+              (currentCol - 1) * rows +
+              Math.min(rows - 1, totalAnswers - (currentCol - 1) * rows - 1)
             if (prevColLastIndex >= 0 && prevColLastIndex < totalAnswers) {
               newIndex = prevColLastIndex
             }
           }
           break
-        case 's': // 下
+        case "s": // 下
           if (currentRow < rows - 1) {
             const nextRowIndex = currentCol * rows + (currentRow + 1)
             if (nextRowIndex < totalAnswers) {
@@ -1185,11 +1259,16 @@ export default function GradingPage() {
             }
           }
           break
-        case 'a': // 左
+        case "a": // 左
           if (layoutDirection === "down-right") {
             // down-rightでは左に移動
             if (currentCol > 0) {
-              const leftIndex = (currentCol - 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol - 1) * rows - 1))
+              const leftIndex =
+                (currentCol - 1) * rows +
+                Math.min(
+                  currentRow,
+                  Math.max(0, totalAnswers - (currentCol - 1) * rows - 1),
+                )
               if (leftIndex >= 0 && leftIndex < totalAnswers) {
                 newIndex = leftIndex
               }
@@ -1197,18 +1276,28 @@ export default function GradingPage() {
           } else {
             // down-leftでは右に移動（逆方向）
             if (currentCol < actualCols - 1) {
-              const rightIndex = (currentCol + 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol + 1) * rows - 1))
+              const rightIndex =
+                (currentCol + 1) * rows +
+                Math.min(
+                  currentRow,
+                  Math.max(0, totalAnswers - (currentCol + 1) * rows - 1),
+                )
               if (rightIndex >= 0 && rightIndex < totalAnswers) {
                 newIndex = rightIndex
               }
             }
           }
           break
-        case 'd': // 右
+        case "d": // 右
           if (layoutDirection === "down-right") {
             // down-rightでは右に移動
             if (currentCol < actualCols - 1) {
-              const rightIndex = (currentCol + 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol + 1) * rows - 1))
+              const rightIndex =
+                (currentCol + 1) * rows +
+                Math.min(
+                  currentRow,
+                  Math.max(0, totalAnswers - (currentCol + 1) * rows - 1),
+                )
               if (rightIndex >= 0 && rightIndex < totalAnswers) {
                 newIndex = rightIndex
               }
@@ -1216,7 +1305,12 @@ export default function GradingPage() {
           } else {
             // down-leftでは左に移動（逆方向）
             if (currentCol > 0) {
-              const leftIndex = (currentCol - 1) * rows + Math.min(currentRow, Math.max(0, totalAnswers - (currentCol - 1) * rows - 1))
+              const leftIndex =
+                (currentCol - 1) * rows +
+                Math.min(
+                  currentRow,
+                  Math.max(0, totalAnswers - (currentCol - 1) * rows - 1),
+                )
               if (leftIndex >= 0 && leftIndex < totalAnswers) {
                 newIndex = leftIndex
               }
@@ -1228,14 +1322,14 @@ export default function GradingPage() {
       // 横方向優先レイアウト（横に並んでから縦に進む）
       const currentRow = Math.floor(currentIndex / cols)
       const currentCol = currentIndex % cols
-      
+
       switch (key) {
-        case 'w': // 上
+        case "w": // 上
           if (currentRow > 0) {
             newIndex = (currentRow - 1) * cols + currentCol
           }
           break
-        case 's': // 下
+        case "s": // 下
           if (currentRow < rows - 1) {
             const nextRowIndex = (currentRow + 1) * cols + currentCol
             if (nextRowIndex < totalAnswers) {
@@ -1243,14 +1337,16 @@ export default function GradingPage() {
             }
           }
           break
-        case 'a': // 左
+        case "a": // 左
           if (layoutDirection === "right-down") {
             // right-downでは左に移動
             if (currentCol > 0) {
               newIndex = currentIndex - 1
             } else if (currentRow > 0) {
               // 左端の場合、前の行の最右端に移動
-              const prevRowLastIndex = (currentRow - 1) * cols + Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
+              const prevRowLastIndex =
+                (currentRow - 1) * cols +
+                Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
               if (prevRowLastIndex >= 0 && prevRowLastIndex < totalAnswers) {
                 newIndex = prevRowLastIndex
               }
@@ -1268,7 +1364,7 @@ export default function GradingPage() {
             }
           }
           break
-        case 'd': // 右
+        case "d": // 右
           if (layoutDirection === "right-down") {
             // right-downでは右に移動
             if (currentCol < cols - 1 && currentIndex + 1 < totalAnswers) {
@@ -1286,7 +1382,9 @@ export default function GradingPage() {
               newIndex = currentIndex - 1
             } else if (currentRow > 0) {
               // 左端の場合、前の行の最右端に移動
-              const prevRowLastIndex = (currentRow - 1) * cols + Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
+              const prevRowLastIndex =
+                (currentRow - 1) * cols +
+                Math.min(cols - 1, totalAnswers - (currentRow - 1) * cols - 1)
               if (prevRowLastIndex >= 0 && prevRowLastIndex < totalAnswers) {
                 newIndex = prevRowLastIndex
               }
@@ -1295,42 +1393,42 @@ export default function GradingPage() {
           break
       }
     }
-    
+
     // 新しいインデックスが有効な場合のみ選択を更新
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalAnswers) {
       const newSelectedId = gridAnswers[newIndex].id
       setSelectedAnswers(new Set([newSelectedId]))
-      
+
       // デバッグ情報（開発時のみ）
-      console.log('WASD Navigation Result:', {
+      console.log("WASD Navigation Result:", {
         oldIndex: currentIndex,
         newIndex,
         oldId: gridAnswers[currentIndex]?.id,
         newId: newSelectedId,
-        success: true
+        success: true,
       })
     } else {
       // 移動できなかった場合のデバッグ情報
-      console.log('WASD Navigation Failed:', {
+      console.log("WASD Navigation Failed:", {
         currentIndex,
         attemptedNewIndex: newIndex,
         totalAnswers,
-        reason: newIndex === currentIndex ? 'Same index' : 'Out of bounds'
+        reason: newIndex === currentIndex ? "Same index" : "Out of bounds",
       })
     }
   }
-
 
   // 採点データ保存
   // 採点レコード初期化
   const handleInitializeScoringRecords = async () => {
     const confirmed = confirm(
-      "すべての採点データを初期化します。\n既存の採点結果は失われますが、よろしいですか？"
+      "すべての採点データを初期化します。\n既存の採点結果は失われますが、よろしいですか？",
     )
     if (!confirmed) return
 
     try {
-      const result = await window.electronAPI.initializeScoringRecords(projectId)
+      const result =
+        await window.electronAPI.initializeScoringRecords(projectId)
       if (result.success) {
         alert(`採点レコードを初期化しました（${result.initialized}件）`)
         // 採点データを再読み込み
@@ -1344,7 +1442,6 @@ export default function GradingPage() {
       alert("採点レコードの初期化中にエラーが発生しました")
     }
   }
-
 
   if (loading) {
     return (
@@ -1411,7 +1508,7 @@ export default function GradingPage() {
       </Head>
       <div className="flex h-screen flex-col overflow-hidden">
         {/* ヘッダー */}
-        <div className="bg-background border-b p-4 flex-shrink-0">
+        <div className="bg-background flex-shrink-0 border-b p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-4">
@@ -1420,7 +1517,8 @@ export default function GradingPage() {
                   {gradingMode === "individual"
                     ? `${currentAnswerSheet?.student.lastName} ${currentAnswerSheet?.student.firstName} - `
                     : ""}
-                  設問 {currentQuestion?.questionNumber} ({currentQuestion?.points}点)
+                  設問 {currentQuestion?.questionNumber} (
+                  {currentQuestion?.points}点)
                 </p>
               </div>
               {helpButton}
@@ -1431,9 +1529,9 @@ export default function GradingPage() {
                 mode={gradingMode}
                 onModeChange={setGradingMode}
               />
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={() => setShowSidePanel(!showSidePanel)}
               >
@@ -1444,9 +1542,9 @@ export default function GradingPage() {
                 )}
               </Button>
 
-              <Button 
-                onClick={handleInitializeScoringRecords} 
-                size="sm" 
+              <Button
+                onClick={handleInitializeScoringRecords}
+                size="sm"
                 variant="outline"
                 title="採点レコードを未採点状態に初期化します"
               >
@@ -1457,7 +1555,7 @@ export default function GradingPage() {
         </div>
 
         {/* メインコンテンツエリア */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex min-h-0 flex-1">
           {gradingMode === "individual" ? (
             /* 個別採点モード: 答案表示エリア */
             <div className="relative flex-1">
@@ -1485,11 +1583,14 @@ export default function GradingPage() {
             </div>
           ) : (
             /* 一覧採点モード: グリッド表示エリア */
-            <div className={`flex-1 p-4 ${
-              layoutDirection === "down-right" || layoutDirection === "down-left" 
-                ? "overflow-x-auto overflow-y-hidden" 
-                : "overflow-y-auto overflow-x-hidden"
-            }`}>
+            <div
+              className={`flex-1 p-4 ${
+                layoutDirection === "down-right" ||
+                layoutDirection === "down-left"
+                  ? "overflow-x-auto overflow-y-hidden"
+                  : "overflow-x-hidden overflow-y-auto"
+              }`}
+            >
               <AnswerGridView
                 key={`grid-${filterUpdateKey}`}
                 answers={getGridAnswerData()}
@@ -1506,477 +1607,563 @@ export default function GradingPage() {
 
           {/* 共通サイドパネル */}
           {showSidePanel && (
-            <div className="bg-background w-64 border-l flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="bg-background flex min-h-0 w-64 flex-col border-l">
+              <div className="min-h-0 flex-1 overflow-y-auto">
                 <div className="space-y-2 p-2">
-                {/* プロジェクト進捗表示 */}
-                <ProjectProgressCard projectId={projectId} />
-                
-                {/* ナビゲーション - 横並びで高さ圧縮 */}
-                <Card>
-                  <CardHeader className="pb-1">
-                    <CardTitle className="text-xs">ナビゲーション</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {/* 設問選択 - 横並びボタン */}
-                    <div>
-                      <div className="text-muted-foreground text-xs mb-1">設問</div>
-                      <div className="grid grid-cols-3 gap-1">
-                        {questionRegions.map((question, index) => (
-                          <Button
-                            key={question.id}
-                            size="sm"
-                            variant={index === currentQuestionIndex ? "default" : "outline"}
-                            onClick={() => setCurrentQuestionIndex(index)}
-                            className="h-6 text-xs p-1"
-                            title={`${question.questionNumber} (${question.points}点)`}
-                          >
-                            {question.questionNumber}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* プロジェクト進捗表示 */}
+                  <ProjectProgressCard projectId={projectId} />
 
-                    {/* 個別採点モード用の生徒ナビゲーション */}
-                    {gradingMode === "individual" && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-xs">
-                          生徒
-                        </span>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handlePrevStudent}
-                            disabled={currentStudentIndex === 0}
-                            className="h-5 w-5 p-0"
-                          >
-                            <ChevronLeft className="h-3 w-3" />
-                          </Button>
-                          <span className="px-1 font-mono text-xs min-w-[3rem] text-center">
-                            {currentStudentIndex + 1}/{answerSheets.length}
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={handleNextStudent}
-                            disabled={
-                              currentStudentIndex === answerSheets.length - 1
-                            }
-                            className="h-5 w-5 p-0"
-                          >
-                            <ChevronRight className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* レイアウト方向切り替え（一覧採点モード用） */}
-                {gradingMode === "grid" && (
+                  {/* ナビゲーション - 横並びで高さ圧縮 */}
                   <Card>
                     <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">表示順序</CardTitle>
+                      <CardTitle className="text-xs">ナビゲーション</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-1">
-                        <Button
-                          size="sm"
-                          variant={layoutDirection === "right-down" ? "default" : "outline"}
-                          onClick={() => setLayoutDirection("right-down")}
-                          className="h-6 text-xs p-1"
-                          title="右下順（左上から右に進んで次の行）"
-                        >
-                          →↓
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={layoutDirection === "left-down" ? "default" : "outline"}
-                          onClick={() => setLayoutDirection("left-down")}
-                          className="h-6 text-xs p-1"
-                          title="左下順（右上から左に進んで次の行）"
-                        >
-                          ←↓
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={layoutDirection === "down-right" ? "default" : "outline"}
-                          onClick={() => setLayoutDirection("down-right")}
-                          className="h-6 text-xs p-1"
-                          title="下右順（左上から下に進んで次の列）"
-                        >
-                          ↓→
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={layoutDirection === "down-left" ? "default" : "outline"}
-                          onClick={() => setLayoutDirection("down-left")}
-                          className="h-6 text-xs p-1"
-                          title="下左順（右上から下に進んで次の列）"
-                        >
-                          ↓←
-                        </Button>
+                    <CardContent className="space-y-2">
+                      {/* 設問選択 - 横並びボタン */}
+                      <div>
+                        <div className="text-muted-foreground mb-1 text-xs">
+                          設問
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {questionRegions.map((question, index) => (
+                            <Button
+                              key={question.id}
+                              size="sm"
+                              variant={
+                                index === currentQuestionIndex
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() => setCurrentQuestionIndex(index)}
+                              className="h-6 p-1 text-xs"
+                              title={`${question.questionNumber} (${question.points}点)`}
+                            >
+                              {question.questionNumber}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
 
-                {/* 採点操作・フィルタ・ショートカット */}
-                <Card>
-                  <CardHeader className="pb-1">
-                    <CardTitle className="text-xs">
-                      {gradingMode === "grid" && selectedAnswers.size > 0 
-                        ? `${selectedAnswers.size}件を採点` 
-                        : "採点操作"}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {/* 部分点入力表示 */}
-                    {partialScoreInput && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded p-2 text-xs">
-                        <div className="font-medium text-yellow-800">部分点入力中</div>
-                        <div className="text-yellow-700">
-                          {partialScoreInput} / {currentQuestion?.points || 10} 点
-                        </div>
-                        <div className="text-yellow-600 text-xs mt-1">
-                          1.5秒後に自動採点されます...
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* 採点ボタン（一覧採点モード用） */}
-                    {gradingMode === "grid" && selectedAnswers.size > 0 && (
-                      <div className="space-y-1">
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="outline"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "ungraded")}
-                        >
-                          Q: ⚪ 未採点
-                        </Button>
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="default"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "correct")}
-                        >
-                          E: ⭕ 正答
-                        </Button>
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="secondary"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "partial")}
-                        >
-                          F: 🔸 部分点
-                        </Button>
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="destructive"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "incorrect")}
-                        >
-                          O: ❌ 誤答
-                        </Button>
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="secondary"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "pending")}
-                        >
-                          J: ⏸️ 保留
-                        </Button>
-                        <Button
-                          className="w-full h-6 text-xs justify-start"
-                          variant="destructive"
-                          onClick={() => handleBatchScore(Array.from(selectedAnswers), "no_answer")}
-                        >
-                          P: ➖ 無答
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {/* フィルタ設定 */}
-                    {gradingMode === "grid" && (
-                      <div className="border-t pt-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium">表示フィルタ</span>
-                          {!isFilterSynced() && (
+                      {/* 個別採点モード用の生徒ナビゲーション */}
+                      {gradingMode === "individual" && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground text-xs">
+                            生徒
+                          </span>
+                          <div className="flex items-center space-x-1">
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={handleRefreshFilter}
-                              className="h-4 text-xs px-1"
+                              variant="ghost"
+                              onClick={handlePrevStudent}
+                              disabled={currentStudentIndex === 0}
+                              className="h-5 w-5 p-0"
                             >
-                              R: 更新
+                              <ChevronLeft className="h-3 w-3" />
                             </Button>
-                          )}
+                            <span className="min-w-[3rem] px-1 text-center font-mono text-xs">
+                              {currentStudentIndex + 1}/{answerSheets.length}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={handleNextStudent}
+                              disabled={
+                                currentStudentIndex === answerSheets.length - 1
+                              }
+                              className="h-5 w-5 p-0"
+                            >
+                              <ChevronRight className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="space-y-1">
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.ungraded}
-                              onChange={() => handleToggleFilter('1')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+Q: 未採点</span>
-                          </label>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.correct}
-                              onChange={() => handleToggleFilter('2')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+E: 正答</span>
-                          </label>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.incorrect}
-                              onChange={() => handleToggleFilter('3')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+O: 誤答</span>
-                          </label>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.partial}
-                              onChange={() => handleToggleFilter('4')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+F: 部分点</span>
-                          </label>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.pending}
-                              onChange={() => handleToggleFilter('5')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+J: 保留</span>
-                          </label>
-                          <label className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={displayFilter.no_answer}
-                              onChange={() => handleToggleFilter('6')}
-                              className="rounded"
-                            />
-                            <span className="text-xs">Alt+P: 無答</span>
-                          </label>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* ショートカット一覧 */}
-                    <div className="border-t pt-2">
-                      <div className="text-xs font-medium mb-1">ショートカット</div>
-                      <div className="space-y-1 text-xs">
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* レイアウト方向切り替え（一覧採点モード用） */}
+                  {gradingMode === "grid" && (
+                    <Card>
+                      <CardHeader className="pb-1">
+                        <CardTitle className="text-xs">表示順序</CardTitle>
+                      </CardHeader>
+                      <CardContent>
                         <div className="grid grid-cols-2 gap-1">
-                          <div className="flex items-center gap-1">
-                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">W</kbd>
-                            <span className="text-muted-foreground">上</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">S</kbd>
-                            <span className="text-muted-foreground">下</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">A</kbd>
-                            <span className="text-muted-foreground">左</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <kbd className="bg-muted px-1 py-0.5 rounded text-xs">D</kbd>
-                            <span className="text-muted-foreground">右</span>
-                          </div>
-                        </div>
-                        <div className="border-t pt-1 mt-1">
-                          <div className="text-xs font-medium mb-1">採点・入力</div>
-                          <div className="grid grid-cols-1 gap-1">
-                            <div className="flex items-center gap-1">
-                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">Q/E/F/J/O/P</kbd>
-                              <span className="text-muted-foreground">採点</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">0-9</kbd>
-                              <span className="text-muted-foreground">部分点</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">⌫</kbd>
-                              <span className="text-muted-foreground">部分点リセット</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <kbd className="bg-muted px-1 py-0.5 rounded text-xs">Alt+採点キー</kbd>
-                              <span className="text-muted-foreground">フィルタ切替</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 現在の採点状況 */}
-                <Card>
-                  <CardHeader className="pb-1">
-                    <CardTitle className="text-xs">現在の採点</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    {currentScoring ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-xs">
-                            得点
-                          </span>
-                          <span className="font-medium text-xs">
-                            {currentScoring.score}/{currentScoring.maxScore}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-xs">
-                            状態
-                          </span>
-                          <span
-                            className={`rounded px-1 py-0.5 text-xs ${
-                              currentScoring.status === "correct" || currentScoring.status === "final"
-                                ? "bg-green-100 text-green-800"
-                                : currentScoring.status === "incorrect"
-                                  ? "bg-red-100 text-red-800"
-                                  : currentScoring.status === "partial"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : currentScoring.status === "pending"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : currentScoring.status === "proposed"
-                                        ? "bg-orange-100 text-orange-800"
-                                        : "bg-gray-100 text-gray-800"
-                            }`}
+                          <Button
+                            size="sm"
+                            variant={
+                              layoutDirection === "right-down"
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => setLayoutDirection("right-down")}
+                            className="h-6 p-1 text-xs"
+                            title="右下順（左上から右に進んで次の行）"
                           >
-                            {currentScoring.status === "correct"
-                              ? "正答"
-                              : currentScoring.status === "incorrect"
-                                ? "誤答"
-                                : currentScoring.status === "partial"
-                                  ? "部分点"
-                                  : currentScoring.status === "pending"
-                                    ? "保留"
-                                    : currentScoring.status === "proposed"
-                                      ? "提案済み"
-                                      : currentScoring.status === "final"
-                                        ? "確定"
-                                        : "未採点"}
-                          </span>
+                            →↓
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={
+                              layoutDirection === "left-down"
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => setLayoutDirection("left-down")}
+                            className="h-6 p-1 text-xs"
+                            title="左下順（右上から左に進んで次の行）"
+                          >
+                            ←↓
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={
+                              layoutDirection === "down-right"
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => setLayoutDirection("down-right")}
+                            className="h-6 p-1 text-xs"
+                            title="下右順（左上から下に進んで次の列）"
+                          >
+                            ↓→
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={
+                              layoutDirection === "down-left"
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => setLayoutDirection("down-left")}
+                            className="h-6 p-1 text-xs"
+                            title="下左順（右上から下に進んで次の列）"
+                          >
+                            ↓←
+                          </Button>
                         </div>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">未採点</p>
-                    )}
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {/* 採点ボタン（個別採点モードのみ） */}
-                {gradingMode === "individual" && (
+                  {/* 採点操作・フィルタ・ショートカット */}
                   <Card>
                     <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">採点操作</CardTitle>
+                      <CardTitle className="text-xs">
+                        {gradingMode === "grid" && selectedAnswers.size > 0
+                          ? `${selectedAnswers.size}件を採点`
+                          : "採点操作"}
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-1">
-                      <div className="grid grid-cols-2 gap-1">
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "ungraded"
-                              ? "secondary"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("ungraded")}
-                        >
-                          ⚪ 未採点
-                        </Button>
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "correct"
-                              ? "default"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("correct")}
-                        >
-                          ⭕ 正答
-                        </Button>
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "partial"
-                              ? "secondary"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("partial")}
-                        >
-                          🔸 部分点
-                        </Button>
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "pending"
-                              ? "secondary"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("pending")}
-                        >
-                          ⏸️ 保留
-                        </Button>
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "incorrect"
-                              ? "destructive"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("incorrect")}
-                        >
-                          ❌ 誤答
-                        </Button>
-                        <Button
-                          className="justify-start h-6 text-xs p-1"
-                          variant={
-                            currentScoring?.status === "no_answer"
-                              ? "destructive"
-                              : "outline"
-                          }
-                          onClick={() => handleSetScore("no_answer")}
-                        >
-                          ➖ 無答
-                        </Button>
+                    <CardContent className="space-y-2">
+                      {/* 部分点入力表示 */}
+                      {partialScoreInput && (
+                        <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
+                          <div className="font-medium text-yellow-800">
+                            部分点入力中
+                          </div>
+                          <div className="text-yellow-700">
+                            {partialScoreInput} /{" "}
+                            {currentQuestion?.points || 10} 点
+                          </div>
+                          <div className="mt-1 text-xs text-yellow-600">
+                            1.5秒後に自動採点されます...
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 採点ボタン（一覧採点モード用） */}
+                      {gradingMode === "grid" && selectedAnswers.size > 0 && (
+                        <div className="space-y-1">
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="outline"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "ungraded",
+                              )
+                            }
+                          >
+                            Q: ⚪ 未採点
+                          </Button>
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="default"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "correct",
+                              )
+                            }
+                          >
+                            E: ⭕ 正答
+                          </Button>
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="secondary"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "partial",
+                              )
+                            }
+                          >
+                            F: 🔸 部分点
+                          </Button>
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="destructive"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "incorrect",
+                              )
+                            }
+                          >
+                            O: ❌ 誤答
+                          </Button>
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="secondary"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "pending",
+                              )
+                            }
+                          >
+                            J: ⏸️ 保留
+                          </Button>
+                          <Button
+                            className="h-6 w-full justify-start text-xs"
+                            variant="destructive"
+                            onClick={() =>
+                              handleBatchScore(
+                                Array.from(selectedAnswers),
+                                "no_answer",
+                              )
+                            }
+                          >
+                            P: ➖ 無答
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* フィルタ設定 */}
+                      {gradingMode === "grid" && (
+                        <div className="border-t pt-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="text-xs font-medium">
+                              表示フィルタ
+                            </span>
+                            {!isFilterSynced() && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={handleRefreshFilter}
+                                className="h-4 px-1 text-xs"
+                              >
+                                R: 更新
+                              </Button>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.ungraded}
+                                onChange={() => handleToggleFilter("1")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+Q: 未採点</span>
+                            </label>
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.correct}
+                                onChange={() => handleToggleFilter("2")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+E: 正答</span>
+                            </label>
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.incorrect}
+                                onChange={() => handleToggleFilter("3")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+O: 誤答</span>
+                            </label>
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.partial}
+                                onChange={() => handleToggleFilter("4")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+F: 部分点</span>
+                            </label>
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.pending}
+                                onChange={() => handleToggleFilter("5")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+J: 保留</span>
+                            </label>
+                            <label className="flex cursor-pointer items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={displayFilter.no_answer}
+                                onChange={() => handleToggleFilter("6")}
+                                className="rounded"
+                              />
+                              <span className="text-xs">Alt+P: 無答</span>
+                            </label>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ショートカット一覧 */}
+                      <div className="border-t pt-2">
+                        <div className="mb-1 text-xs font-medium">
+                          ショートカット
+                        </div>
+                        <div className="space-y-1 text-xs">
+                          <div className="grid grid-cols-2 gap-1">
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                W
+                              </kbd>
+                              <span className="text-muted-foreground">上</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                S
+                              </kbd>
+                              <span className="text-muted-foreground">下</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                A
+                              </kbd>
+                              <span className="text-muted-foreground">左</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                D
+                              </kbd>
+                              <span className="text-muted-foreground">右</span>
+                            </div>
+                          </div>
+                          <div className="mt-1 border-t pt-1">
+                            <div className="mb-1 text-xs font-medium">
+                              採点・入力
+                            </div>
+                            <div className="grid grid-cols-1 gap-1">
+                              <div className="flex items-center gap-1">
+                                <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                  Q/E/F/J/O/P
+                                </kbd>
+                                <span className="text-muted-foreground">
+                                  採点
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                  0-9
+                                </kbd>
+                                <span className="text-muted-foreground">
+                                  部分点
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                  ⌫
+                                </kbd>
+                                <span className="text-muted-foreground">
+                                  部分点リセット
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
+                                  Alt+採点キー
+                                </kbd>
+                                <span className="text-muted-foreground">
+                                  フィルタ切替
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
-                )}
 
-                {/* 複数教員比較・次へボタン */}
-                <Card>
-                  <CardHeader className="pb-1">
-                    <CardTitle className="text-xs">操作</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    <Button
-                      className="w-full text-xs h-6"
-                      variant="outline"
-                      onClick={() => setShowScoreComparison(true)}
-                      disabled={!currentAnswerSheet || !currentQuestion}
-                    >
-                      👥 採点結果比較
-                    </Button>
-                    <Button
-                      className="w-full text-xs h-6"
-                      variant="default"
-                      onClick={() =>
-                        router.push(`/projects/${projectId}/07-export`)
-                      }
-                    >
-                      次へ: 結果出力
-                    </Button>
-                  </CardContent>
-                </Card>
+                  {/* 現在の採点状況 */}
+                  <Card>
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-xs">現在の採点</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                      {currentScoring ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground text-xs">
+                              得点
+                            </span>
+                            <span className="text-xs font-medium">
+                              {currentScoring.score}/{currentScoring.maxScore}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground text-xs">
+                              状態
+                            </span>
+                            <span
+                              className={`rounded px-1 py-0.5 text-xs ${
+                                currentScoring.status === "correct" ||
+                                currentScoring.status === "final"
+                                  ? "bg-green-100 text-green-800"
+                                  : currentScoring.status === "incorrect"
+                                    ? "bg-red-100 text-red-800"
+                                    : currentScoring.status === "partial"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : currentScoring.status === "pending"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : currentScoring.status === "proposed"
+                                          ? "bg-orange-100 text-orange-800"
+                                          : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {currentScoring.status === "correct"
+                                ? "正答"
+                                : currentScoring.status === "incorrect"
+                                  ? "誤答"
+                                  : currentScoring.status === "partial"
+                                    ? "部分点"
+                                    : currentScoring.status === "pending"
+                                      ? "保留"
+                                      : currentScoring.status === "proposed"
+                                        ? "提案済み"
+                                        : currentScoring.status === "final"
+                                          ? "確定"
+                                          : "未採点"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">未採点</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* 採点ボタン（個別採点モードのみ） */}
+                  {gradingMode === "individual" && (
+                    <Card>
+                      <CardHeader className="pb-1">
+                        <CardTitle className="text-xs">採点操作</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1">
+                        <div className="grid grid-cols-2 gap-1">
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "ungraded"
+                                ? "secondary"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("ungraded")}
+                          >
+                            ⚪ 未採点
+                          </Button>
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "correct"
+                                ? "default"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("correct")}
+                          >
+                            ⭕ 正答
+                          </Button>
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "partial"
+                                ? "secondary"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("partial")}
+                          >
+                            🔸 部分点
+                          </Button>
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "pending"
+                                ? "secondary"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("pending")}
+                          >
+                            ⏸️ 保留
+                          </Button>
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "incorrect"
+                                ? "destructive"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("incorrect")}
+                          >
+                            ❌ 誤答
+                          </Button>
+                          <Button
+                            className="h-6 justify-start p-1 text-xs"
+                            variant={
+                              currentScoring?.status === "no_answer"
+                                ? "destructive"
+                                : "outline"
+                            }
+                            onClick={() => handleSetScore("no_answer")}
+                          >
+                            ➖ 無答
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* 複数教員比較・次へボタン */}
+                  <Card>
+                    <CardHeader className="pb-1">
+                      <CardTitle className="text-xs">操作</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
+                      <Button
+                        className="h-6 w-full text-xs"
+                        variant="outline"
+                        onClick={() => setShowScoreComparison(true)}
+                        disabled={!currentAnswerSheet || !currentQuestion}
+                      >
+                        👥 採点結果比較
+                      </Button>
+                      <Button
+                        className="h-6 w-full text-xs"
+                        variant="default"
+                        onClick={() =>
+                          router.push(`/projects/${projectId}/07-export`)
+                        }
+                      >
+                        次へ: 結果出力
+                      </Button>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
