@@ -70,11 +70,6 @@ export default function AnswerDisplayViewer({
 
   // 画像の読み込み
   useEffect(() => {
-    console.log("AnswerDisplayViewer: Loading image for answer sheet:", {
-      answerSheetId: answerSheet?.id,
-      imagePath: answerSheet?.imagePath,
-      studentName: `${answerSheet?.student?.lastName} ${answerSheet?.student?.firstName}`
-    })
     
     if (!answerSheet?.imagePath) {
       console.warn("AnswerDisplayViewer: No image path provided")
@@ -83,7 +78,6 @@ export default function AnswerDisplayViewer({
 
     const img = new Image()
     img.onload = () => {
-      console.log("Image loaded successfully:", img.src)
       setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
       setImageLoaded(true)
       drawCanvas(img)

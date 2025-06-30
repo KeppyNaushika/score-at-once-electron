@@ -223,7 +223,6 @@ export default function DndKitTestPage() {
       return
     }
 
-    console.log(`🔄 Moving from ${active.id} to ${over.id}`)
 
     // ファイル配列を更新（DragOverlay完了後）
     setFiles((prevFiles) => {
@@ -232,7 +231,6 @@ export default function DndKitTestPage() {
 
       if (activeIndex === -1 || overIndex === -1) return prevFiles
 
-      console.log(`📊 Moving file from index ${activeIndex} to ${overIndex}`)
 
       return arrayMove(prevFiles, activeIndex, overIndex)
     })

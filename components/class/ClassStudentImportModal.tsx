@@ -154,12 +154,6 @@ export default function ClassStudentImportModal({
               : new Date()
             const endDateStr = row.endDate.trim()
 
-            console.log('追加前のデータ:', {
-              studentId: student.id,
-              classId,
-              startDate,
-              attendanceNumber: attendanceNumber ? parseInt(attendanceNumber) : undefined
-            })
 
             await window.electronAPI.addStudentToClass(
               student.id, 
@@ -174,15 +168,7 @@ export default function ClassStudentImportModal({
               .filter(m => m.student.id === student.id)
               .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0]
             
-            if (addedMembership) {
-              console.log('追加成功確認:', {
-                membershipId: addedMembership.id,
-                studentName: `${addedMembership.student.lastName} ${addedMembership.student.firstName}`,
-                attendanceNumber: addedMembership.attendanceNumber,
-                startDate: addedMembership.startDate
-              })
-            } else {
-              console.error('追加後のメンバーシップが見つかりません')
+            if (!addedMembership) {
               throw new Error('データベースへの保存に失敗しました')
             }
 

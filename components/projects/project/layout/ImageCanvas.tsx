@@ -38,14 +38,6 @@ const ImageCanvas = ({
   disabled,
   masterImageId,
 }: ImageCanvasProps) => {
-  console.log("ImageCanvas - props:", {
-    backgroundImageUrl,
-    imageDimensions,
-    areas,
-    selectedAreaIndex,
-    disabled,
-    masterImageId
-  })
   // ズーム機能のみ実装（パンはブラウザ標準スクロール）
   const [zoom, setZoom] = useState(1)
   const [showZoomHelp, setShowZoomHelp] = useState(true)
