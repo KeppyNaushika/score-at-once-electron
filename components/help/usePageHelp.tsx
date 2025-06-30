@@ -2,13 +2,16 @@
 
 import { Button } from "@/components/ui/button"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import { Info } from "lucide-react"
 import { usePathname } from "next/navigation"
-import React from "react"
+import React, { useState } from "react"
 import {
   UploadHelpContent,
   TemplateHelpContent,
@@ -34,6 +37,7 @@ const pageHelpComponents: {
 
 export function usePageHelp() {
   const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false)
 
   // 現在のページを特定
   const getCurrentPageId = () => {
@@ -45,12 +49,26 @@ export function usePageHelp() {
   const currentPageId = getCurrentPageId()
   const CurrentHelpComponent = currentPageId ? pageHelpComponents[currentPageId] : null
 
+  // ページタイトルを取得
+  const getPageTitle = () => {
+    const titles: { [key: string]: string } = {
+      "01-upload": "模範解答アップロード",
+      "02-template": "採点領域作成",
+      "03-region-info": "領域情報編集", 
+      "04-students": "受験生徒管理",
+      "05-answer-sheets": "答案アップロード",
+      "06-score-at-once": "一括採点",
+      "07-export": "結果出力",
+    }
+    return currentPageId ? titles[currentPageId] : "ヘルプ"
+  }
+
   const createHelpButton = () => {
     if (!CurrentHelpComponent) return null
 
     return (
-      <Popover>
-        <PopoverTrigger asChild>
+      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+        <DrawerTrigger asChild>
           <Button
             variant="ghost"
             size="sm"
@@ -58,17 +76,19 @@ export function usePageHelp() {
           >
             <Info className="h-4 w-4" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="m-4 max-h-[90vh] w-[90vw] max-w-4xl overflow-y-auto"
-          align="center"
-          side="bottom"
-        >
-          <div className="p-2">
+        </DrawerTrigger>
+        <DrawerContent className="h-[80vh]">
+          <DrawerHeader>
+            <DrawerTitle>{getPageTitle()}の使い方</DrawerTitle>
+            <DrawerDescription>
+              このページの操作方法とヒントを確認できます
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
             <CurrentHelpComponent />
           </div>
-        </PopoverContent>
-      </Popover>
+        </DrawerContent>
+      </Drawer>
     )
   }
 
