@@ -131,9 +131,6 @@ export default function AnswerCell({
         const croppedUrl = canvas.toDataURL("image/png")
         setCroppedImageUrl(croppedUrl)
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to create cropped image:", error)
-        }
         setCroppedImageUrl(null)
       }
     }

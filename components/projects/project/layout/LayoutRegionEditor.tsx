@@ -24,13 +24,6 @@ const LayoutRegionEditor = ({
   imageDimensions,
   masterImageId,
 }: LayoutRegionEditorProps) => {
-  console.log("LayoutRegionEditor - props:", {
-    areas,
-    disabled,
-    backgroundImageUrl,
-    imageDimensions,
-    masterImageId,
-  })
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null,
   )

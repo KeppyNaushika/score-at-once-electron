@@ -2,7 +2,7 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import RegionDetailsTable from "@/components/project/layout/RegionDetailsTable"
+import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 // AreaType enum は削除されたため、文字列型として定義
 type AreaType = "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"

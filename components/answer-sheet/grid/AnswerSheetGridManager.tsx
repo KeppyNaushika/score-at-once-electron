@@ -143,9 +143,6 @@ export default function AnswerSheetGridManager({
           await window.electronAPI.getMasterImagesByProjectId(projectId)
         setMasterImages(images || [])
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to load master images:", error)
-        }
         setMasterImages([])
       } finally {
         setIsLoadingMasterImages(false)
@@ -203,9 +200,6 @@ export default function AnswerSheetGridManager({
           setLayoutRegions([])
         }
       } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Failed to load layout regions:", error)
-        }
         setLayoutRegions([])
       }
     }

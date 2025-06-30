@@ -301,9 +301,6 @@ export function convertToUploadData(
 
     const student = sortedStudents.find((s) => s.id === file.studentId)
     if (!student) {
-      if (process.env.NODE_ENV === "development") {
-        console.warn(`Student not found for file: ${file.name}`)
-      }
       continue
     }
 
@@ -342,15 +339,15 @@ export function createInitialDisabledState(): DisabledState {
  * デバッグ用: table構造の確認
  */
 export function debugTableData(tableData: TableData): void {
-  if (process.env.NODE_ENV === "development") {
-    console.log("🔍 Table構造（デバッグ）:")
-    tableData.forEach((row, rowIndex) => {
-      console.log(`  行 ${rowIndex} (${row[0]?.student.lastName} ${row[0]?.student.firstName}):`)
-      row.forEach((cell, colIndex) => {
-        const status = cell.file ? `📄 ${cell.file.name}` : "⬜ 空"
-        const disabled = cell.isDisabled ? " [無効]" : ""
-        console.log(`    列 ${colIndex} (ページ${cell.pageNumber}): ${status}${disabled}`)
-      })
+  if (process.env.NODE_ENV !== "development") return
+  
+  console.log("🔍 Table構造（デバッグ）:")
+  tableData.forEach((row, rowIndex) => {
+    console.log(`  行 ${rowIndex} (${row[0]?.student.lastName} ${row[0]?.student.firstName}):`)
+    row.forEach((cell, colIndex) => {
+      const status = cell.file ? `📄 ${cell.file.name}` : "⬜ 空"
+      const disabled = cell.isDisabled ? " [無効]" : ""
+      console.log(`    列 ${colIndex} (ページ${cell.pageNumber}): ${status}${disabled}`)
     })
-  }
+  })
 }

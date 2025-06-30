@@ -211,8 +211,6 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     // PDFドキュメントの作成
     const pdfDoc = await PDFDocument.create()
     
-    console.log('Selected students count:', selectedStudents.length)
-    console.log('Total answer sheets:', answerSheetsResult.answerSheets.length)
 
     // 全体の答案枚数を計算
     let totalAnswerSheets = 0
@@ -232,24 +230,19 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     for (const student of selectedStudents) {
       const studentAnswerSheets = studentAnswerSheetMap.get(student.id) || []
 
-      console.log(`Student ${student.studentId}: ${studentAnswerSheets.length} answer sheets found`)
 
       for (const answerSheet of studentAnswerSheets) {
         const progressStep = `${student.lastName} ${student.firstName}の答案を処理中... (${processedSheets + 1}/${totalAnswerSheets})`
         reportProgress(40 + (processedSheets / totalAnswerSheets) * 50, 100, progressStep)
         // 答案画像の取得と処理
-        console.log('Answer sheet:', JSON.stringify(answerSheet, null, 2))
         if ((answerSheet as any).originalImagePath) {
           try {
             const answerImagePath = path.join(app.getPath("userData"), (answerSheet as any).originalImagePath)
-            console.log('Looking for answer image at:', answerImagePath)
             
             // 画像が存在するかチェック
             if (fs.existsSync(answerImagePath)) {
-              console.log('Answer image found, adding to PDF')
               // 画像をPDFに追加
               await addAnswerSheetToPDF(pdfDoc, answerImagePath, answerSheet, questionScores, layoutRegions, scoringMarkConfig)
-              console.log('Successfully added answer sheet to PDF')
             } else {
               console.warn('Answer image not found at:', answerImagePath)
             }
@@ -268,7 +261,6 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
 
     // PDFに追加されたページ数をチェック
     const pageCount = pdfDoc.getPageCount()
-    console.log(`PDF created with ${pageCount} pages`)
 
     if (pageCount === 0) {
       throw new Error('答案データが見つからないか、画像ファイルが存在しません')

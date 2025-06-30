@@ -114,13 +114,6 @@ export function useAnswerSheetGrid({
       // UploadData形式に変換
       const uploadData = convertToUploadData(filesToUpload, unifiedStudents)
 
-      if (process.env.NODE_ENV === "development") {
-        console.log("🚀 アップロード開始:", {
-          fileCount: filesToUpload.length,
-          uploadDataCount: uploadData.length,
-          projectId,
-        })
-      }
 
       // プログレス更新（簡易版）
       const progressInterval = setInterval(() => {
@@ -167,17 +160,6 @@ export function useAnswerSheetGrid({
   // デバッグログ
   // ============================================================================
 
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("📊 useAnswerSheetGrid状態:", {
-        totalFiles,
-        placedCount,
-        unplacedCount: unplacedFiles.length,
-        studentCount: sortedStudents.length,
-        isUploading,
-      })
-    }
-  }, [totalFiles, placedCount, unplacedFiles.length, sortedStudents.length, isUploading])
 
   // ============================================================================
   // 戻り値
