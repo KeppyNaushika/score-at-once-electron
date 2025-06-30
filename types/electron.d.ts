@@ -479,8 +479,22 @@ export interface MyAPI {
   // QuestionScore関連のAPI
   getQuestionScoresForProject: (projectId: string) => Promise<QuestionScore[]>
   getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<QuestionScore[]>
-  createQuestionScore: (data: Prisma.QuestionScoreCreateInput) => Promise<QuestionScore>
-  updateQuestionScore: (id: string, data: Prisma.QuestionScoreUpdateInput, expectedVersion?: number) => Promise<QuestionScore>
+  createQuestionScore: (data: {
+    answerSheetId: string
+    layoutRegionId: string
+    score: number
+    maxScore: number
+    status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "proposed" | "final"
+    comment?: string
+    scoredByUserId: string
+  }) => Promise<QuestionScore>
+  updateQuestionScore: (id: string, data: {
+    score?: number
+    maxScore?: number
+    status?: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "proposed" | "final"
+    comment?: string
+    version?: number
+  }, expectedVersion?: number) => Promise<QuestionScore>
   deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
   getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) => Promise<{
     current?: QuestionScore
