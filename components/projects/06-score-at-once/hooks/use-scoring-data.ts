@@ -78,12 +78,25 @@ export function useScoringData({
     projectId: string,
   ): Promise<Record<string, ScoringData>> => {
     try {
+      console.log("🔄 Loading existing scoring data for project:", projectId)
       const scores = await window.electronAPI.getQuestionScoresForProject(projectId)
-      if (!scores || !Array.isArray(scores)) return {}
+      console.log("📊 Raw scores from DB:", scores?.length || 0, scores)
+      
+      if (!scores || !Array.isArray(scores)) {
+        console.log("❌ No scores found or invalid format")
+        return {}
+      }
 
       const scoringData: Record<string, ScoringData> = {}
       scores.forEach((score: QuestionScore) => {
         const key = `${score.answerSheetId}-${score.layoutRegionId}`
+        console.log("🔧 Processing score:", {
+          key,
+          status: score.status,
+          partialScore: score.partialScore,
+          answerSheetId: score.answerSheetId,
+          layoutRegionId: score.layoutRegionId
+        })
         scoringData[key] = {
           id: score.id,
           questionId: score.layoutRegionId,
@@ -97,6 +110,7 @@ export function useScoringData({
         }
       })
 
+      console.log("✅ Final scoring data:", Object.keys(scoringData).length, scoringData)
       return scoringData
     } catch (error) {
       console.error("Failed to load existing scoring data:", error)
