@@ -514,14 +514,14 @@ export interface MyAPI {
     layoutRegionId: string
     score: number
     maxScore: number
-    status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "proposed" | "final"
+    status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     scoredByUserId: string
   }) => Promise<QuestionScore>
   updateQuestionScore: (id: string, data: {
     score?: number
     maxScore?: number
-    status?: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "proposed" | "final"
+    status?: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     version?: number
   }, expectedVersion?: number) => Promise<QuestionScore>
