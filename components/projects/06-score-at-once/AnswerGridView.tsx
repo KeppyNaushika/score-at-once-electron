@@ -1,9 +1,14 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Slider } from "@/components/ui/slider"
-import { CheckCircle, Circle, Clock, AlertTriangle, X, Minus } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle,
+  Circle,
+  Clock,
+  Minus,
+  X,
+} from "lucide-react"
 
 type ScoringStatus =
   | "ungraded"
@@ -15,15 +20,15 @@ type ScoringStatus =
   | "proposed"
   | "final"
 
-import { useState, useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 // 採点領域をクロップして表示するコンポーネント
-const CroppedAnswerImage = ({ 
-  imageUrl, 
-  questionRegion, 
-  alt, 
-  className = "" 
-}: { 
+const CroppedAnswerImage = ({
+  imageUrl,
+  questionRegion,
+  alt,
+  className = "",
+}: {
   imageUrl: string
   questionRegion?: QuestionRegion
   alt: string
@@ -38,7 +43,7 @@ const CroppedAnswerImage = ({
     const imageElement = imageRef.current
     if (!canvas || !imageElement || !imageLoaded) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext("2d")
     if (!ctx) return
 
     // キャンバスサイズを設定
@@ -50,7 +55,7 @@ const CroppedAnswerImage = ({
     if (questionRegion) {
       // 採点領域をクロップして描画
       const sourceX = questionRegion.x * imageElement.naturalWidth
-      const sourceY = questionRegion.y * imageElement.naturalHeight  
+      const sourceY = questionRegion.y * imageElement.naturalHeight
       const sourceWidth = questionRegion.width * imageElement.naturalWidth
       const sourceHeight = questionRegion.height * imageElement.naturalHeight
 
@@ -73,8 +78,14 @@ const CroppedAnswerImage = ({
 
       ctx.drawImage(
         imageElement,
-        sourceX, sourceY, sourceWidth, sourceHeight,
-        drawX, drawY, drawWidth, drawHeight
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        drawX,
+        drawY,
+        drawWidth,
+        drawHeight,
       )
     } else {
       // 全体画像を表示
@@ -87,8 +98,8 @@ const CroppedAnswerImage = ({
   }
 
   return (
-    <div className={`relative w-full ${className}`} style={{ aspectRatio: questionRegion ? `${questionRegion.width}/${questionRegion.height}` : '3/4' }}>
-      <img 
+    <div className={`relative w-full ${className}`}>
+      <img
         ref={imageRef}
         src={imageUrl}
         alt={alt}
@@ -96,10 +107,10 @@ const CroppedAnswerImage = ({
         onLoad={handleImageLoad}
         draggable={false}
       />
-      <canvas 
+      <canvas
         ref={canvasRef}
-        className="w-full h-full object-cover"
-        style={{ display: imageLoaded ? 'block' : 'none' }}
+        className="h-auto w-full"
+        style={{ display: imageLoaded ? "block" : "none" }}
       />
       {!imageLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -112,53 +123,53 @@ const CroppedAnswerImage = ({
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
-  ungraded: { 
-    icon: Circle, 
-    borderColor: "border-gray-400", 
+  ungraded: {
+    icon: Circle,
+    borderColor: "border-gray-400",
     bgColor: "bg-white",
     selectedBgColor: "bg-gray-50",
     textColor: "text-gray-600",
-    key: "q"
+    key: "q",
   },
-  correct: { 
-    icon: CheckCircle, 
-    borderColor: "border-green-500", 
+  correct: {
+    icon: CheckCircle,
+    borderColor: "border-green-500",
     bgColor: "bg-white",
     selectedBgColor: "bg-green-50",
     textColor: "text-green-700",
-    key: "e"
+    key: "e",
   },
-  partial: { 
-    icon: AlertTriangle, 
-    borderColor: "border-yellow-500", 
+  partial: {
+    icon: AlertTriangle,
+    borderColor: "border-yellow-500",
     bgColor: "bg-white",
     selectedBgColor: "bg-yellow-50",
     textColor: "text-yellow-700",
-    key: "f"
+    key: "f",
   },
-  pending: { 
-    icon: Clock, 
-    borderColor: "border-blue-500", 
+  pending: {
+    icon: Clock,
+    borderColor: "border-blue-500",
     bgColor: "bg-white",
     selectedBgColor: "bg-blue-50",
     textColor: "text-blue-700",
-    key: "j"
+    key: "j",
   },
-  incorrect: { 
-    icon: X, 
-    borderColor: "border-red-500", 
+  incorrect: {
+    icon: X,
+    borderColor: "border-red-500",
     bgColor: "bg-white",
     selectedBgColor: "bg-red-50",
     textColor: "text-red-700",
-    key: "o"
+    key: "o",
   },
-  no_answer: { 
-    icon: Minus, 
-    borderColor: "border-purple-500", 
+  no_answer: {
+    icon: Minus,
+    borderColor: "border-purple-500",
     bgColor: "bg-white",
     selectedBgColor: "bg-purple-50",
     textColor: "text-purple-600",
-    key: "p"
+    key: "p",
   },
   proposed: {
     icon: AlertTriangle,
@@ -166,7 +177,7 @@ const SCORE_STATUS_CONFIG = {
     bgColor: "bg-white",
     selectedBgColor: "bg-orange-50",
     textColor: "text-orange-700",
-    key: ""
+    key: "",
   },
   final: {
     icon: CheckCircle,
@@ -174,7 +185,7 @@ const SCORE_STATUS_CONFIG = {
     bgColor: "bg-white",
     selectedBgColor: "bg-green-100",
     textColor: "text-green-800",
-    key: ""
+    key: "",
   },
   master: {
     icon: CheckCircle,
@@ -182,11 +193,15 @@ const SCORE_STATUS_CONFIG = {
     bgColor: "bg-blue-50",
     selectedBgColor: "bg-blue-100",
     textColor: "text-blue-800",
-    key: ""
+    key: "",
   },
 }
 
-export type GridLayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
+export type GridLayoutDirection =
+  | "right-down"
+  | "left-down"
+  | "down-right"
+  | "down-left"
 
 interface QuestionRegion {
   id: string
@@ -223,6 +238,7 @@ interface AnswerGridViewProps {
   currentAnswerId?: string // 現在採点中の答案ID
   className?: string
   onEffectiveColumnsChange?: (columns: number) => void // 実際の列数変更を親に通知
+  itemsPerRow?: number[] // 外部からの1行あたり表示件数
 }
 
 export default function AnswerGridView({
@@ -236,37 +252,53 @@ export default function AnswerGridView({
   currentAnswerId,
   className = "",
   onEffectiveColumnsChange,
+  itemsPerRow: externalItemsPerRow,
 }: AnswerGridViewProps) {
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
+    null,
+  )
   const [isDragging, setIsDragging] = useState(false)
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数 (0-10)
   const gridRef = useRef<HTMLDivElement>(null)
-  
-  // localStorageから初期値を読み込み
+
+  // 外部からのitemsPerRowを優先し、ない場合はlocalStorageから読み込み
   useEffect(() => {
-    const stored = localStorage.getItem('answerGridView-itemsPerRow')
-    let initialValue = [5] // デフォルト値
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
-          initialValue = parsed
-          setItemsPerRow(parsed)
+    if (externalItemsPerRow) {
+      setItemsPerRow(externalItemsPerRow)
+      if (onEffectiveColumnsChange) {
+        onEffectiveColumnsChange(externalItemsPerRow[0])
+      }
+    } else {
+      const stored = localStorage.getItem("answerGridView-itemsPerRow")
+      let initialValue = [5] // デフォルト値
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored)
+          if (
+            Array.isArray(parsed) &&
+            parsed.length === 1 &&
+            typeof parsed[0] === "number" &&
+            parsed[0] >= 1 &&
+            parsed[0] <= 10
+          ) {
+            initialValue = parsed
+            setItemsPerRow(parsed)
+          }
+        } catch (error) {
+          console.warn("Failed to parse stored itemsPerRow:", error)
         }
-      } catch (error) {
-        console.warn('Failed to parse stored itemsPerRow:', error)
+      }
+      // 親コンポーネントに初期値を通知
+      if (onEffectiveColumnsChange) {
+        onEffectiveColumnsChange(initialValue[0])
       }
     }
-    // 親コンポーネントに初期値を通知
-    if (onEffectiveColumnsChange) {
-      onEffectiveColumnsChange(initialValue[0])
-    }
-  }, [onEffectiveColumnsChange])
-  
+  }, [externalItemsPerRow, onEffectiveColumnsChange])
+
   // itemsPerRowの変更をlocalStorageに保存
   const handleItemsPerRowChange = (value: number[]) => {
     setItemsPerRow(value)
-    localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
+    localStorage.setItem("answerGridView-itemsPerRow", JSON.stringify(value))
     // 親コンポーネントに実際の列数を通知
     if (onEffectiveColumnsChange) {
       onEffectiveColumnsChange(value[0])
@@ -290,26 +322,28 @@ export default function AnswerGridView({
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Option/Alt + Minus で減少
-      if (event.altKey && (event.key === '-' || event.key === '_')) {
+      if (event.altKey && (event.key === "-" || event.key === "_")) {
         event.preventDefault()
         decrementItemsPerRow()
       }
       // Option/Alt + Plus で増加
-      else if (event.altKey && (event.key === '+' || event.key === '=' || event.key === 'Equal')) {
+      else if (
+        event.altKey &&
+        (event.key === "+" || event.key === "=" || event.key === "Equal")
+      ) {
         event.preventDefault()
         incrementItemsPerRow()
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
   }, [incrementItemsPerRow, decrementItemsPerRow])
-  
-  
+
   // 実際に使用するgridSizeを計算
   const effectiveGridSize = {
     columns: itemsPerRow[0] === 0 ? gridSize.columns : itemsPerRow[0], // 0の場合は元のgridSizeを使用
-    rows: gridSize.rows
+    rows: gridSize.rows,
   }
 
   // レイアウト方向に応じて答案を並び替え
@@ -318,17 +352,17 @@ export default function AnswerGridView({
     if (layoutDirection === "right-down") {
       return answers // デフォルト順序
     }
-    
+
     // グリッドサイズに基づくレイアウトは動的に計算
     const totalAnswers = answers.length
     const cols = effectiveGridSize.columns
     const rows = Math.ceil(totalAnswers / cols)
-    
+
     const sorted = new Array(totalAnswers)
     answers.forEach((answer, index) => {
       const row = Math.floor(index / cols)
       const col = index % cols
-      
+
       let newIndex: number
       switch (layoutDirection) {
         case "left-down":
@@ -349,7 +383,7 @@ export default function AnswerGridView({
         sorted[newIndex] = answer
       }
     })
-    
+
     return sorted.filter(Boolean)
   }, [answers, layoutDirection, effectiveGridSize])
 
@@ -357,15 +391,18 @@ export default function AnswerGridView({
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       // 入力フィールドにフォーカスがある場合はスキップ
-      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement
+      ) {
         return
       }
 
       const key = event.key.toLowerCase()
       const statusEntry = Object.entries(SCORE_STATUS_CONFIG).find(
-        ([_, config]) => config.key === key
+        ([_, config]) => config.key === key,
       )
-      
+
       if (statusEntry && selectedAnswers.size > 0) {
         event.preventDefault()
         const [status] = statusEntry
@@ -381,30 +418,43 @@ export default function AnswerGridView({
   useEffect(() => {
     if (selectedAnswers.size === 1 && gridRef.current) {
       const selectedId = Array.from(selectedAnswers)[0]
-      const selectedElement = gridRef.current.querySelector(`[data-answer-id="${selectedId}"]`) as HTMLElement
-      
+      const selectedElement = gridRef.current.querySelector(
+        `[data-answer-id="${selectedId}"]`,
+      ) as HTMLElement
+
       if (selectedElement) {
         const container = gridRef.current.parentElement
         if (container) {
           const containerRect = container.getBoundingClientRect()
           const elementRect = selectedElement.getBoundingClientRect()
-          
+
           // 縦方向と横方向両方に対応したスクロール計算
-          const isHorizontalLayout = layoutDirection === "down-right" || layoutDirection === "down-left"
-          
+          const isHorizontalLayout =
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+
           if (isHorizontalLayout) {
             // 横スクロール（列ベースレイアウト）
-            const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft - container.clientWidth / 2 + elementRect.width / 2
+            const scrollLeft =
+              elementRect.left -
+              containerRect.left +
+              container.scrollLeft -
+              container.clientWidth / 2 +
+              elementRect.width / 2
             container.scrollTo({
               left: Math.max(0, scrollLeft),
-              behavior: 'smooth'
+              behavior: "smooth",
             })
           } else {
             // 縦スクロール（行ベースレイアウト）
-            const scrollTop = elementRect.top - containerRect.top + container.scrollTop - container.clientHeight / 2 + elementRect.height / 2
+            const scrollTop =
+              elementRect.top -
+              containerRect.top +
+              container.scrollTop -
+              container.clientHeight / 2 +
+              elementRect.height / 2
             container.scrollTo({
               top: Math.max(0, scrollTop),
-              behavior: 'smooth'
+              behavior: "smooth",
             })
           }
         }
@@ -415,29 +465,29 @@ export default function AnswerGridView({
   // マウスドラッグ選択
   const handleMouseDown = (event: React.MouseEvent, answerId: string) => {
     // 模範解答の場合は選択処理をスキップ
-    if (answerId.startsWith('master-')) {
+    if (answerId.startsWith("master-")) {
       event.preventDefault()
       return
     }
-    
+
     setDragStart({ x: event.clientX, y: event.clientY })
     setIsDragging(false)
-    
+
     // Ctrlキーが押されている場合は複数選択（追加・削除切り替え）
     if (event.ctrlKey) {
       event.preventDefault()
       onAnswerSelect(answerId, !selectedAnswers.has(answerId))
-    } 
+    }
     // Shiftキーが押されている場合は範囲選択
     else if (event.shiftKey) {
       event.preventDefault()
       handleShiftSelect(answerId)
-    } 
+    }
     // 通常クリック（単一選択または新規選択開始）
     else {
       if (!selectedAnswers.has(answerId)) {
         // 現在の選択をクリア
-        selectedAnswers.forEach(id => onAnswerSelect(id, false))
+        selectedAnswers.forEach((id) => onAnswerSelect(id, false))
         // 新しい選択を追加
         onAnswerSelect(answerId, true)
       }
@@ -459,8 +509,8 @@ export default function AnswerGridView({
     }
 
     // 終了位置を取得
-    const endIndex = answers.findIndex(answer => answer.id === endAnswerId)
-    
+    const endIndex = answers.findIndex((answer) => answer.id === endAnswerId)
+
     if (startIndex === -1 || endIndex === -1) {
       // 範囲選択できない場合は単一選択
       onAnswerSelect(endAnswerId, true)
@@ -470,7 +520,7 @@ export default function AnswerGridView({
     // 範囲を選択
     const minIndex = Math.min(startIndex, endIndex)
     const maxIndex = Math.max(startIndex, endIndex)
-    
+
     for (let i = minIndex; i <= maxIndex; i++) {
       if (i < answers.length) {
         onAnswerSelect(answers[i].id, true)
@@ -481,8 +531,8 @@ export default function AnswerGridView({
   const handleMouseMove = (event: React.MouseEvent) => {
     if (dragStart && !isDragging) {
       const distance = Math.sqrt(
-        Math.pow(event.clientX - dragStart.x, 2) + 
-        Math.pow(event.clientY - dragStart.y, 2)
+        Math.pow(event.clientX - dragStart.x, 2) +
+          Math.pow(event.clientY - dragStart.y, 2),
       )
       if (distance > 5) {
         setIsDragging(true)
@@ -505,7 +555,7 @@ export default function AnswerGridView({
 
     const gridElement = event.currentTarget as HTMLElement
     const gridRect = gridElement.getBoundingClientRect()
-    
+
     // 矩形選択範囲を計算
     const startX = Math.min(dragStart.x, event.clientX) - gridRect.left
     const endX = Math.max(dragStart.x, event.clientX) - gridRect.left
@@ -513,22 +563,26 @@ export default function AnswerGridView({
     const endY = Math.max(dragStart.y, event.clientY) - gridRect.top
 
     // グリッド内の答案カードをチェック
-    const cardElements = gridElement.querySelectorAll('[data-answer-id]')
+    const cardElements = gridElement.querySelectorAll("[data-answer-id]")
     const selectedIds: string[] = []
 
-    cardElements.forEach(cardElement => {
+    cardElements.forEach((cardElement) => {
       const rect = cardElement.getBoundingClientRect()
       const relativeRect = {
         left: rect.left - gridRect.left,
         right: rect.right - gridRect.left,
         top: rect.top - gridRect.top,
-        bottom: rect.bottom - gridRect.top
+        bottom: rect.bottom - gridRect.top,
       }
 
       // 矩形と重なるかチェック
-      if (relativeRect.left < endX && relativeRect.right > startX &&
-          relativeRect.top < endY && relativeRect.bottom > startY) {
-        const answerId = cardElement.getAttribute('data-answer-id')
+      if (
+        relativeRect.left < endX &&
+        relativeRect.right > startX &&
+        relativeRect.top < endY &&
+        relativeRect.bottom > startY
+      ) {
+        const answerId = cardElement.getAttribute("data-answer-id")
         if (answerId) {
           selectedIds.push(answerId)
         }
@@ -538,45 +592,37 @@ export default function AnswerGridView({
     // 選択状態を更新
     if (selectedIds.length > 0) {
       // 現在の選択をクリア
-      selectedAnswers.forEach(id => onAnswerSelect(id, false))
+      selectedAnswers.forEach((id) => onAnswerSelect(id, false))
       // 新しい選択を追加
-      selectedIds.forEach(id => onAnswerSelect(id, true))
+      selectedIds.forEach((id) => onAnswerSelect(id, true))
     }
   }
 
-  return (
-    <div className={`h-full flex flex-col ${className}`}>
-      {/* 1行あたりの表示件数調整スライダー */}
-      <div className="flex items-center space-x-4 px-2 py-1 bg-muted/50 rounded-md">
-        <span className="text-sm font-medium min-w-[80px]">1行あたり:</span>
-        <Slider
-          value={itemsPerRow}
-          onValueChange={handleItemsPerRowChange}
-          max={10}
-          min={1}
-          step={1}
-          className="flex-1 max-w-[200px]"
-        />
-        <span className="text-sm text-muted-foreground min-w-[20px]">
-          {itemsPerRow[0]}件
-        </span>
-      </div>
+  // 選択された答案のログ出力
+  useEffect(() => {
+    console.log('選択された答案:', Array.from(selectedAnswers))
+  }, [selectedAnswers])
 
+  return (
+    <div className={`flex h-full flex-col ${className}`}>
       {/* 答案グリッド */}
-      <div 
+      <div
         ref={gridRef}
-        className="grid gap-2 select-none flex-1 overflow-y-auto"
+        className="grid min-h-0 flex-1 gap-2 overflow-y-auto select-none"
         style={{
-          gridTemplateColumns: layoutDirection === "down-right" || layoutDirection === "down-left" 
-            ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)` 
-            : `repeat(${effectiveGridSize.columns}, minmax(200px, 1fr))`,
-          gridTemplateRows: layoutDirection === "down-right" || layoutDirection === "down-left"
-            ? `repeat(${Math.min(effectiveGridSize.rows, answers.length)}, minmax(150px, auto))`
-            : 'none', // gridAutoRowsに統一
-          gridAutoRows: 'minmax(150px, auto)', // 最低150px、内容に応じて拡張
-          width: layoutDirection === "down-right" || layoutDirection === "down-left" 
-            ? 'max-content' 
-            : '100%',
+          gridTemplateColumns:
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)`
+              : `repeat(${effectiveGridSize.columns}, 1fr)`,
+          gridTemplateRows:
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? `repeat(${Math.min(effectiveGridSize.rows, answers.length)}, auto)`
+              : "none",
+          gridAutoRows: "auto", // 内容に応じて自動調整
+          width:
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? "max-content"
+              : "100%",
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -584,77 +630,88 @@ export default function AnswerGridView({
       >
         {sortedAnswers().map((answer) => {
           if (!answer) return <div key="empty" />
-          
-          const config = SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG] || SCORE_STATUS_CONFIG.ungraded
+
+          const config =
+            SCORE_STATUS_CONFIG[
+              answer.status as keyof typeof SCORE_STATUS_CONFIG
+            ] || SCORE_STATUS_CONFIG.ungraded
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
           const isCurrentAnswer = currentAnswerId === answer.id
           const isMaster = answer.isMaster
-          
-          
+
           return (
             <div
               key={answer.id}
               data-answer-id={answer.id}
-              className={`
-                relative transition-all duration-150 flex-shrink-0 p-2
-                ${isMaster ? "cursor-default bg-gray-900 text-white border-gray-600" : "cursor-pointer hover:shadow-md bg-white"}
-                ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""}
-                ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-1 shadow-lg" : ""}
-                ${isMaster ? "ring-2 ring-blue-400 ring-offset-1 shadow-sm" : ""}
-                ${!isMaster ? config.borderColor : ""}
-                ${!isMaster && isSelected ? config.selectedBgColor : ""}
-              `}
+              className={`relative flex-shrink-0 p-2 transition-all duration-150 ${isMaster ? "cursor-default bg-white border-2 border-black" : "cursor-pointer bg-white hover:shadow-md"} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
-              <div className="overflow-hidden mb-1">
+              <div className="mb-1 overflow-hidden">
                 <CroppedAnswerImage
                   imageUrl={answer.imageUrl}
                   questionRegion={answer.questionRegion}
                   alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
-                  className="w-full h-auto"
+                  className="h-auto w-full"
                 />
               </div>
-              
+
               {/* 学生情報と採点状況 */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-1 flex-1 min-w-0">
-                  <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
+                <div className="flex min-w-0 flex-1 items-center space-x-1">
+                  <span
+                    className={`truncate text-xs ${isMaster ? "font-bold text-black" : "font-medium"}`}
+                  >
                     {answer.studentName}
                   </span>
-                  
+
                   {!isMaster && answer.status !== "ungraded" && (
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {answer.currentScore !== undefined 
+                    <Badge variant="outline" className="h-4 px-1 text-xs">
+                      {answer.currentScore !== undefined
                         ? `${answer.currentScore}/${answer.maxScore}`
-                        : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
-                        : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
-                        : answer.status === "proposed" ? "提案中"
-                        : "採点中"
-                      }
+                        : answer.status === "correct" ||
+                            answer.status === "final"
+                          ? `${answer.maxScore}pt`
+                          : answer.status === "incorrect" ||
+                              answer.status === "no_answer"
+                            ? "0pt"
+                            : answer.status === "proposed"
+                              ? "提案中"
+                              : "採点中"}
                     </Badge>
                   )}
-                  
+
                   {isMaster && (
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
+                    <Badge
+                      variant="outline"
+                      className="h-4 border-black bg-white px-1 text-xs text-black"
+                    >
                       {answer.maxScore}点満点
                     </Badge>
                   )}
                 </div>
-                
-                {!isMaster && <Icon className={`h-3 w-3 ${config.textColor} flex-shrink-0`} />}
+
+                {!isMaster && (
+                  <Icon
+                    className={`h-3 w-3 ${config.textColor} flex-shrink-0`}
+                  />
+                )}
               </div>
             </div>
           )
         })}
       </div>
-      
+
       {/* 選択状況表示 */}
       {selectedAnswers.size > 0 && (
-        <div className="bg-blue-50 p-2 text-xs text-center">
-          <span className="font-medium text-blue-800">{selectedAnswers.size}件</span>
-          <span className="text-blue-600 ml-1">選択中 - キーボードで一括採点</span>
+        <div className="flex-shrink-0 bg-blue-50 p-2 text-center text-xs">
+          <span className="font-medium text-blue-800">
+            {selectedAnswers.size}件
+          </span>
+          <span className="ml-1 text-blue-600">
+            選択中 - キーボードで一括採点
+          </span>
         </div>
       )}
     </div>
