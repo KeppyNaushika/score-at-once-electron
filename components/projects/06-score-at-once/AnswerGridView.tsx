@@ -599,17 +599,13 @@ export default function AnswerGridView({
   }
 
 
-  // 選択された答案のログ出力
-  useEffect(() => {
-    console.log('選択された答案ID:', Array.from(selectedAnswers))
-  }, [selectedAnswers])
 
   return (
     <div className={`flex h-full flex-col ${className}`}>
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className="grid min-h-0 flex-1 gap-2 overflow-y-auto select-none"
+        className="grid min-h-0 flex-1 gap-2 overflow-y-auto select-none p-1"
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
