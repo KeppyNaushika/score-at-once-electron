@@ -1,17 +1,7 @@
 import { useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import type { GradingMode } from "../GradingModeToggle"
-
-// 採点状態の型定義
-export type ScoringStatus =
-  | "ungraded"
-  | "correct"
-  | "incorrect"
-  | "partial"
-  | "pending"
-  | "no_answer"
-  | "proposed"
-  | "final"
+import type { ScoringStatus } from "../types"
 
 // キーボードショートカットの設定（Python版互換）
 export const DEFAULT_SHORTCUTS = {
@@ -66,7 +56,10 @@ interface UseScoringKeyboardProps {
   onToggleFilterByScoreKey: (key: string) => void
   onRefreshFilter: () => void
   onPartialScoreInput: (key: string) => void
-  onPartialScoreReset: () => void
+  onPartialScoreConfirm: (confirmType: "partial" | "pending") => void
+  onPartialScoreCancel: () => void
+  onPartialScoreBackspace: () => void
+  showPartialScoreModal: boolean
   onToggleFilter: (key: string) => void
 }
 
@@ -91,7 +84,10 @@ export function useScoringKeyboard({
   onToggleFilterByScoreKey,
   onRefreshFilter,
   onPartialScoreInput,
-  onPartialScoreReset,
+  onPartialScoreConfirm,
+  onPartialScoreCancel,
+  onPartialScoreBackspace,
+  showPartialScoreModal,
   onToggleFilter,
 }: UseScoringKeyboardProps) {
   
@@ -109,6 +105,42 @@ export function useScoringKeyboard({
       // グリッドモードでの特殊キーハンドリング
       if (gradingMode === "grid") {
         const key = event.key.toLowerCase()
+
+        // 部分点入力モーダルが開いている場合の処理
+        if (showPartialScoreModal) {
+          // F/Jキーで確定
+          if (key === "f") {
+            event.preventDefault()
+            onPartialScoreConfirm("partial")
+            return
+          }
+          if (key === "j") {
+            event.preventDefault()
+            onPartialScoreConfirm("pending")
+            return
+          }
+          // Escapeでキャンセル
+          if (key === "escape") {
+            event.preventDefault()
+            onPartialScoreCancel()
+            return
+          }
+          // Backspaceで文字削除
+          if (key === "backspace") {
+            event.preventDefault()
+            onPartialScoreBackspace()
+            return
+          }
+          // 数字・小数点入力
+          if (["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "."].includes(key)) {
+            event.preventDefault()
+            onPartialScoreInput(key)
+            return
+          }
+          // モーダル中はその他のキーを無視
+          event.preventDefault()
+          return
+        }
 
         // Alt+採点キーでフィルタ切り替え (macOSではOption+採点キー、WindowsではAlt+採点キー)
         if (
@@ -141,9 +173,9 @@ export function useScoringKeyboard({
           return
         }
 
-        // 数字キーで部分点入力（選択されている答案がある場合）
+        // 数字キー・小数点・Backspaceで部分点入力（選択されている答案がある場合）
         if (
-          ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].includes(key) &&
+          ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "."].includes(key) &&
           selectedAnswers.size > 0
         ) {
           event.preventDefault()
@@ -151,12 +183,6 @@ export function useScoringKeyboard({
           return
         }
 
-        // Backspaceで部分点をnullに設定
-        if (key === "backspace" && selectedAnswers.size > 0) {
-          event.preventDefault()
-          onPartialScoreReset()
-          return
-        }
 
         // 採点キー（Alt無し）で通常の採点
         if (
@@ -175,8 +201,8 @@ export function useScoringKeyboard({
           return
         }
 
-        // 数字キー (1-6) でフィルタ切り替え
-        if (["1", "2", "3", "4", "5", "6"].includes(key)) {
+        // Ctrl+数字キー (1-6) でフィルタ切り替え（部分点入力と競合回避）
+        if (["1", "2", "3", "4", "5", "6"].includes(key) && event.ctrlKey) {
           event.preventDefault()
           onToggleFilter(key)
           return
@@ -268,7 +294,7 @@ export function useScoringKeyboard({
       onToggleFilterByScoreKey,
       onRefreshFilter,
       onPartialScoreInput,
-      onPartialScoreReset,
+      onPartialScoreBackspace,
       onToggleFilter,
     ],
   )

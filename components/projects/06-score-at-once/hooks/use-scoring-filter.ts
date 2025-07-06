@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
-import { ScoringStatus, DEFAULT_SHORTCUTS } from "./use-scoring-keyboard"
-import { QuestionRegion, AnswerSheet, ScoringData } from "./use-scoring-data"
+import { DEFAULT_SHORTCUTS } from "./use-scoring-keyboard"
+import type { ScoringStatus, QuestionRegion, AnswerSheet, ScoringData } from "../types"
 
 interface FilterSettings {
   ungraded: boolean
@@ -69,14 +69,18 @@ export function useScoringFilter({
     setVisibleAnswers(newVisibleAnswers)
   }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, scoringData])
 
-  // 初期化時に表示対象を設定
+  // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
   useEffect(() => {
     if (answerSheets.length > 0 && questionRegions.length > 0) {
+      // まず選択をクリア
+      setSelectedAnswers(new Set())
+      
+      // 表示対象を更新
       updateVisibleAnswers()
     }
   }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
 
-  // 最初の生徒答案を初期選択状態にする（模範解答をスキップ）
+  // visibleAnswersが更新されたら最初の生徒答案を選択（模範解答をスキップ）
   useEffect(() => {
     if (visibleAnswers.size > 0 && selectedAnswers.size === 0) {
       // 模範解答をスキップして最初の生徒答案を選択
@@ -87,11 +91,6 @@ export function useScoringFilter({
       }
     }
   }, [visibleAnswers, selectedAnswers.size, setSelectedAnswers])
-
-  // 設問変更時に選択状態をリセット
-  useEffect(() => {
-    setSelectedAnswers(new Set())
-  }, [currentQuestionIndex, setSelectedAnswers])
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
   const getAllGridAnswerData = useCallback(() => {

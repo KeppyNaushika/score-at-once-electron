@@ -171,8 +171,8 @@ export default function ScoringToolbar({
                 </Badge>
               )}
               {partialScoreInput && (
-                <Badge variant="outline" className="text-xs bg-yellow-50">
-                  {partialScoreInput}
+                <Badge variant="outline" className="text-xs bg-yellow-50 border-yellow-300">
+                  入力中: {partialScoreInput}{partialScoreInput.endsWith(".") ? "●" : ""}
                 </Badge>
               )}
             </div>
