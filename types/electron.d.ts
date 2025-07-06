@@ -513,8 +513,16 @@ export interface MyAPI {
   }>
 
   // QuestionScore関連のAPI
-  getQuestionScoresForProject: (projectId: string) => Promise<QuestionScore[]>
-  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<QuestionScore[]>
+  getQuestionScoresForProject: (projectId: string) => Promise<{
+    success: boolean
+    scores?: QuestionScore[]
+    error?: string
+  }>
+  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<{
+    success: boolean
+    scores?: QuestionScore[]
+    error?: string
+  }>
   createQuestionScore: (data: {
     answerSheetId: string
     layoutRegionId: string
