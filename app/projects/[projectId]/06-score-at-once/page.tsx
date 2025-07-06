@@ -539,8 +539,8 @@ export default function GradingPage() {
     const currentScore = scoringData[key]
 
     let newScore = 0
-    // In collaborative mode, new scores should be "proposed"
-    let status: ScoringStatus = type === "ungraded" ? "ungraded" : "proposed"
+    // Use the actual status type from the scoring action
+    let status: ScoringStatus = type
 
     switch (type) {
       case "ungraded":
@@ -608,6 +608,9 @@ export default function GradingPage() {
             },
           }))
 
+          // 表示フィルタの更新を強制実行
+          updateDisplayFilters()
+          
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -624,7 +627,7 @@ export default function GradingPage() {
           }
         } else {
           console.error("Failed to update score:", (result as any).error)
-          alert("採点の保存に失敗しました: " + (result as any).error)
+          toast.error("採点の保存に失敗しました: " + (result as any).error)
         }
       } else {
         // Create new score
@@ -656,6 +659,9 @@ export default function GradingPage() {
             },
           }))
 
+          // 表示フィルタの更新を強制実行
+          updateDisplayFilters()
+          
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -672,7 +678,7 @@ export default function GradingPage() {
           }
         } else {
           console.error("Failed to create score:", (result as any).error)
-          alert(
+          toast.error(
             "採点の保存に失敗しました: " +
               ((result as any).error || "不明なエラー"),
           )
@@ -843,9 +849,8 @@ export default function GradingPage() {
       const currentScore = scoringData[key]
 
       let newScore = 0
-      // In collaborative mode, new scores should be "proposed"
-      let scoringStatus: ScoringStatus =
-        status === "ungraded" ? "ungraded" : "proposed"
+      // Use the actual status type from the scoring action
+      let scoringStatus: ScoringStatus = status
 
       switch (status) {
         case "ungraded":
@@ -905,6 +910,9 @@ export default function GradingPage() {
                 updatedAt: new Date(),
               },
             }))
+            
+            // 表示フィルタの更新を強制実行
+            updateDisplayFilters()
           } else {
             console.error(
               "Failed to update batch score:",
@@ -962,6 +970,9 @@ export default function GradingPage() {
                 updatedAt: new Date(),
               },
             }))
+            
+            // 表示フィルタの更新を強制実行
+            updateDisplayFilters()
           } else {
             console.error("Failed to create batch score:", result)
             toast.error(
@@ -1018,9 +1029,9 @@ export default function GradingPage() {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
       const aOrder =
-        a.student.customOrder !== undefined ? a.student.customOrder : 999999
+        a.student.projectStudents?.[0]?.customOrder !== undefined ? a.student.projectStudents[0].customOrder : 999999
       const bOrder =
-        b.student.customOrder !== undefined ? b.student.customOrder : 999999
+        b.student.projectStudents?.[0]?.customOrder !== undefined ? b.student.projectStudents[0].customOrder : 999999
 
       // customOrderが同じ場合は姓名でソート
       if (aOrder === bOrder) {

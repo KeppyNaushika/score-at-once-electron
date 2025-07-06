@@ -67,7 +67,14 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
     const answerSheets = await prisma.answerSheet.findMany({
       where: { projectId },
       include: {
-        student: true,
+        student: {
+          include: {
+            projectStudents: {
+              where: { projectId },
+              select: { customOrder: true }
+            }
+          }
+        },
         project: true,
         questionScores: {
           include: {
@@ -206,6 +213,58 @@ export async function getAnswerSheetById(answerSheetId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : '答案の取得に失敗しました',
+    }
+  }
+}
+
+// 答案の配置情報を更新（生徒ID・ページ番号）
+export async function updateAnswerSheetPlacement(
+  answerSheetId: string,
+  studentId: string | null,
+  pageNumber: number
+) {
+  try {
+    // まず現在の答案情報を取得してprojectIdを確認
+    const currentAnswerSheet = await prisma.answerSheet.findUnique({
+      where: { id: answerSheetId },
+      select: { projectId: true }
+    })
+
+    if (!currentAnswerSheet) {
+      throw new Error('答案が見つかりません')
+    }
+
+    const answerSheet = await prisma.answerSheet.update({
+      where: { id: answerSheetId },
+      data: {
+        studentId,
+        pageNumber,
+      },
+      include: {
+        student: {
+          include: {
+            projectStudents: {
+              where: { projectId: currentAnswerSheet.projectId },
+              select: { customOrder: true }
+            }
+          }
+        },
+        project: true,
+        questionScores: {
+          include: {
+            layoutRegion: true,
+            scoredByUser: true,
+          }
+        }
+      }
+    })
+
+    return { success: true, answerSheet }
+  } catch (error) {
+    console.error('Error updating answer sheet placement:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '答案の配置更新に失敗しました',
     }
   }
 }

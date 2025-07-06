@@ -84,6 +84,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
   getAnswerSheetById: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-by-id", answerSheetId),
+  updateAnswerSheetPlacement: (answerSheetId: string, studentId: string | null, pageNumber: number) =>
+    ipcRenderer.invoke("update-answer-sheet-placement", answerSheetId, studentId, pageNumber),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
 

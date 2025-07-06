@@ -55,6 +55,7 @@ export function AnswerSheetUpload({
         imageLoadStates={imageLoadStates}
         observerRef={observerRef}
         mode="view"
+        onReloadData={onUploadComplete}
       />
     )
   }
@@ -85,6 +86,7 @@ export function AnswerSheetUpload({
           imageLoadStates={imageLoadStates}
           observerRef={observerRef}
           mode={mode}
+          onReloadData={onUploadComplete}
         />
       </div>
 
