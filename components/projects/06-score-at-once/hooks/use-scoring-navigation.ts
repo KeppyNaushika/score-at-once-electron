@@ -12,6 +12,7 @@ interface UseScoringNavigationProps {
   gridSize: { columns: number; rows: number }
   layoutDirection: "right-down" | "left-down" | "down-right" | "down-left"
   getGridAnswerData: () => any[]
+  effectiveColumns?: number // 実際の表示列数
 }
 
 export function useScoringNavigation({
@@ -26,6 +27,7 @@ export function useScoringNavigation({
   gridSize,
   layoutDirection,
   getGridAnswerData,
+  effectiveColumns,
 }: UseScoringNavigationProps) {
   // 画像表示関連の状態
   const [imageZoom, setImageZoom] = useState(1.0)
@@ -96,7 +98,21 @@ export function useScoringNavigation({
 
     if (totalAnswers === 0) return
 
-    const cols = Math.max(1, gridSize.columns) // 最低1列は確保
+    // localStorageから実際の1行あたりの表示件数を取得
+    let actualColumns = effectiveColumns || gridSize.columns
+    try {
+      const stored = localStorage.getItem('answerGridView-itemsPerRow')
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+          actualColumns = parsed[0]
+        }
+      }
+    } catch (error) {
+      // localStorageエラーの場合はfallback値を使用
+    }
+
+    const cols = Math.max(1, actualColumns) // 実際の表示列数を使用、最低1列は確保
     const rows = Math.ceil(totalAnswers / cols)
 
     // 現在選択されている答案のインデックスを取得
