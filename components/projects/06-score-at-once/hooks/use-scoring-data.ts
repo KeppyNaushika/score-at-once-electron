@@ -78,9 +78,7 @@ export function useScoringData({
     projectId: string,
   ): Promise<Record<string, ScoringData>> => {
     try {
-      console.log("🔄 Loading scoring data:", projectId)
       const result = await window.electronAPI.getQuestionScoresForProject(projectId)
-      console.log("📊 API result:", result)
       
       // Handle both direct array and { success, scores } format
       let scores
@@ -89,11 +87,8 @@ export function useScoringData({
       } else if (result?.success && Array.isArray(result.scores)) {
         scores = result.scores
       } else {
-        console.log("❌ No scores found or invalid format")
         return {}
       }
-
-      console.log("✅ Scores count:", scores.length)
 
       const scoringData: Record<string, ScoringData> = {}
       scores.forEach((score: any) => {

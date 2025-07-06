@@ -252,8 +252,7 @@ export default function ScoringToolbar({
                           {button.label}を{isActive ? '非表示' : '表示'}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">{button.key}</kbd> または
-                          <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs ml-1">{modifierKeyLabel}+採点キー</kbd>
+                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">{modifierKeyLabel}+採点キー</kbd>
                         </div>
                       </div>
                     </TooltipContent>

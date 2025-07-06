@@ -57,8 +57,6 @@ export function useScoringFilter({
 
   // 表示対象答案の更新（初期化時とRキー押下時のみ）
   const updateVisibleAnswers = useCallback(() => {
-    console.log("🔄 Filter update - Q:", currentQuestion?.id, "Scoring keys:", Object.keys(scoringData).length)
-    
     const newVisibleAnswers = new Set<string>()
     
     answerSheets.forEach(sheet => {
@@ -68,7 +66,6 @@ export function useScoringFilter({
       }
     })
     
-    console.log("✅ Visible:", newVisibleAnswers.size, "/", answerSheets.length)
     setVisibleAnswers(newVisibleAnswers)
   }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, scoringData])
 
@@ -188,8 +185,15 @@ export function useScoringFilter({
   }, [updateVisibleAnswers])
 
   const handleToggleFilter = useCallback((key: string) => {
-    // 数字キーによるフィルター切り替えは削除（部分点入力と競合するため）
-    // フィルター切り替えはAlt+採点キーのみ対応
+    // ボタン操作によるフィルター切り替え
+    if (key in filterSettings) {
+      const newFilterSettings = {
+        ...filterSettings,
+        [key]: !filterSettings[key as keyof typeof filterSettings],
+      }
+      setFilterSettings(newFilterSettings)
+      // 注意: 表示更新は手動（Rキー）でのみ実行
+    }
   }, [filterSettings])
 
   // Alt+採点キーでフィルタ切り替え
@@ -221,8 +225,9 @@ export function useScoringFilter({
 
     // score-panel IPCイベントリスナーを追加
     const handleScorePanelEvent = (_event: any, value: Record<string, unknown>) => {
-      const action = value.action as string
-      console.log("Received score-panel IPC event:", action)
+      const action = value?.action as string
+      
+      if (!action) return
       
       switch (action) {
         case "toggle-show-unscored":
@@ -243,8 +248,6 @@ export function useScoringFilter({
         case "toggle-show-noanswer":
           handleToggleFilterByScoreKey("p")
           break
-        default:
-          console.log("Unhandled score-panel action:", action)
       }
     }
 
