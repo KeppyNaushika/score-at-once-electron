@@ -48,6 +48,7 @@ export interface SortableTableCellProps {
   onTogglePosition: () => void
   onToggleFileDisabled: () => void
   onUploadToCell: () => void
+  mode?: "upload" | "view"
   fileId?: string
   observerRef?: React.RefObject<IntersectionObserver | null>
   children: React.ReactNode

@@ -324,6 +324,7 @@ export function AnswerSheetTable({
                             }
                             fileId={file.id}
                             observerRef={observerRef}
+                            mode={mode}
                           >
                             <FilePreviewCell
                               file={file}

@@ -22,6 +22,8 @@ import {
 } from "../lib/prisma/answerSheet"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import { loginUser, createUser, getUserByToken, updateUserPassword } from "../lib/prisma/auth"
+import { getAbsolutePathFromData } from "../lib/dataManager"
+import * as fs from "fs/promises"
 
 export function setupMiscHandlers(): void {
   // User handlers
@@ -402,4 +404,35 @@ export function setupMiscHandlers(): void {
       }
     },
   )
+
+  // 画像ファイル読み込みハンドラー
+  ipcMain.handle("get-image-data", async (_event, relativePath: string) => {
+    try {
+      const absolutePath = getAbsolutePathFromData(relativePath)
+      const imageBuffer = await fs.readFile(absolutePath)
+      const base64 = imageBuffer.toString('base64')
+      
+      // MIMEタイプを推定
+      const ext = relativePath.split('.').pop()?.toLowerCase()
+      let mimeType = 'image/png' // デフォルト
+      if (ext === 'jpg' || ext === 'jpeg') {
+        mimeType = 'image/jpeg'
+      } else if (ext === 'gif') {
+        mimeType = 'image/gif'
+      } else if (ext === 'webp') {
+        mimeType = 'image/webp'
+      }
+      
+      return {
+        success: true,
+        data: `data:${mimeType};base64,${base64}`
+      }
+    } catch (err) {
+      console.error("Error reading image file:", err)
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }
+    }
+  })
 }
