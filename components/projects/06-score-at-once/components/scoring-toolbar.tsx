@@ -50,7 +50,7 @@ const SCORING_BUTTONS = [
     icon: Circle,
     color: "bg-gray-100 text-gray-700 hover:bg-gray-200",
     shortcut: "Q",
-    description: "採点を取り消し"
+    description: "未採点にする"
   },
   {
     status: "correct" as ScoringStatus,
@@ -58,7 +58,7 @@ const SCORING_BUTTONS = [
     icon: CheckCircle,
     color: "bg-green-100 text-green-700 hover:bg-green-200",
     shortcut: "E",
-    description: "満点を付与"
+    description: "正答にする"
   },
   {
     status: "partial" as ScoringStatus,
@@ -66,7 +66,7 @@ const SCORING_BUTTONS = [
     icon: AlertTriangle,
     color: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
     shortcut: "F",
-    description: "部分点を付与"
+    description: "部分点にする"
   },
   {
     status: "pending" as ScoringStatus,
@@ -74,7 +74,7 @@ const SCORING_BUTTONS = [
     icon: Clock,
     color: "bg-blue-100 text-blue-700 hover:bg-blue-200",
     shortcut: "J",
-    description: "採点を保留"
+    description: "保留にする"
   },
   {
     status: "incorrect" as ScoringStatus,
@@ -82,7 +82,7 @@ const SCORING_BUTTONS = [
     icon: X,
     color: "bg-red-100 text-red-700 hover:bg-red-200",
     shortcut: "O",
-    description: "0点を付与"
+    description: "誤答にする"
   },
   {
     status: "no_answer" as ScoringStatus,
@@ -90,7 +90,7 @@ const SCORING_BUTTONS = [
     icon: Minus,
     color: "bg-purple-100 text-purple-700 hover:bg-purple-200",
     shortcut: "P",
-    description: "無答として記録"
+    description: "無答にする"
   },
 ]
 
@@ -158,8 +158,7 @@ export default function ScoringToolbar({
 }: ScoringToolbarProps) {
   return (
     <TooltipProvider delayDuration={300}>
-      <Card className="mb-4">
-        <CardContent className="p-4 space-y-4">
+      <div className="mb-4 bg-white p-4 space-y-4">
           
           {/* 採点ボタン群 */}
           <div>
@@ -263,8 +262,7 @@ export default function ScoringToolbar({
           </div>
 
 
-        </CardContent>
-      </Card>
+      </div>
     </TooltipProvider>
   )
 }

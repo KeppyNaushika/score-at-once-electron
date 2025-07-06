@@ -517,9 +517,9 @@ export default function ScoringMainView() {
           </div>
 
           {/* メインコンテンツ */}
-          <div className="flex-1 flex">
+          <div className="flex-1 flex overflow-hidden">
             {/* 採点エリア */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-6 overflow-hidden">
               {gradingMode === "individual" ? (
                 <AnswerDisplayViewer
                   answerSheet={currentAnswerSheet}
@@ -572,12 +572,10 @@ export default function ScoringMainView() {
 
                 {/* ナビゲーション制御 */}
                 <NavigationControls
-                  gridSize={gridSize}
                   layoutDirection={layoutDirection}
                   selectedAnswersCount={selectedAnswers.size}
                   visibleAnswersCount={visibleAnswers.size}
                   totalAnswersCount={answerSheets.length}
-                  onGridSizeChange={setGridSize}
                   onLayoutDirectionChange={setLayoutDirection}
                   onGridNavigation={handleGridNavigation}
                   onRefreshView={handleRefreshFilter}

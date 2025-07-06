@@ -60,8 +60,7 @@ export default function QuestionNavigator({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <Card className="mb-4">
-        <CardContent className="p-4">
+      <div className="mb-4 bg-white p-4">
           
           {/* 設問選択ドロップダウン */}
           <div className="flex items-center gap-4 mb-4">
@@ -232,8 +231,7 @@ export default function QuestionNavigator({
             </div>
           </div>
 
-        </CardContent>
-      </Card>
+      </div>
     </TooltipProvider>
   )
 }
