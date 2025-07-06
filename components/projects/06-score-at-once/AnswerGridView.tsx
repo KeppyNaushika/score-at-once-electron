@@ -563,16 +563,7 @@ export default function AnswerGridView({
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
-              <CardContent className="p-2 px-2">
-                {/* 模範解答ラベル */}
-                {isMaster && (
-                  <div className="mb-1 text-center">
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-blue-100 text-blue-800 border-blue-300">
-                      模範解答
-                    </Badge>
-                  </div>
-                )}
-                
+              <CardContent className={`p-2 px-2 ${isMaster ? "bg-black text-white" : ""}`}>
                 {/* 答案画像 */}
                 <div className="overflow-hidden rounded">
                   <CroppedAnswerImage
@@ -586,7 +577,7 @@ export default function AnswerGridView({
                 {/* 学生情報と採点状況 */}
                 <div className="mt-0.5 space-y-0">
                   <div className="flex items-center justify-between">
-                    <span className={`text-xs truncate ${isMaster ? "font-bold text-blue-800" : "font-medium"}`}>
+                    <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
                       {answer.studentName}
                     </span>
                     {!isMaster && <Icon className={`h-3 w-3 ${config.textColor}`} />}
@@ -605,7 +596,7 @@ export default function AnswerGridView({
                   )}
                   
                   {isMaster && (
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-blue-50 text-blue-700 border-blue-200">
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
                       {answer.maxScore}点満点
                     </Badge>
                   )}
