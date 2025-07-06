@@ -59,6 +59,7 @@ export default function ScoringMainView() {
   >("right-down")
   const [effectiveColumns, setEffectiveColumns] = useState<number>(5) // 実際の表示列数
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数
+  const [autoScroll, setAutoScroll] = useState(true) // 自動スクロール設定
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -282,11 +283,12 @@ export default function ScoringMainView() {
 
   // localStorageから初期値を読み込み
   useEffect(() => {
-    const stored = localStorage.getItem('answerGridView-itemsPerRow')
+    // 1行あたりの表示件数
+    const storedItemsPerRow = localStorage.getItem('answerGridView-itemsPerRow')
     let initialValue = [5] // デフォルト値
-    if (stored) {
+    if (storedItemsPerRow) {
       try {
-        const parsed = JSON.parse(stored)
+        const parsed = JSON.parse(storedItemsPerRow)
         if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
           initialValue = parsed
           setItemsPerRow(parsed)
@@ -297,6 +299,19 @@ export default function ScoringMainView() {
     }
     // 実際の列数を更新
     setEffectiveColumns(initialValue[0])
+
+    // 自動スクロール設定
+    const storedAutoScroll = localStorage.getItem('answerGridView-autoScroll')
+    if (storedAutoScroll !== null) {
+      try {
+        const parsed = JSON.parse(storedAutoScroll)
+        if (typeof parsed === 'boolean') {
+          setAutoScroll(parsed)
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored autoScroll:', error)
+      }
+    }
   }, [])
   
   // itemsPerRowの変更をlocalStorageに保存
@@ -305,6 +320,12 @@ export default function ScoringMainView() {
     localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
     // 実際の列数を更新
     setEffectiveColumns(value[0])
+  }
+
+  // 自動スクロール設定の変更をlocalStorageに保存
+  const handleAutoScrollChange = (enabled: boolean) => {
+    setAutoScroll(enabled)
+    localStorage.setItem('answerGridView-autoScroll', JSON.stringify(enabled))
   }
 
   // グリッドビュー用のヘルパー関数
@@ -577,6 +598,7 @@ export default function ScoringMainView() {
                   currentAnswerId={currentAnswerSheet?.id}
                   onEffectiveColumnsChange={setEffectiveColumns}
                   itemsPerRow={itemsPerRow}
+                  autoScroll={autoScroll}
                 />
               )}
             </div>
@@ -616,6 +638,8 @@ export default function ScoringMainView() {
                   onRefreshView={handleRefreshFilter}
                   itemsPerRow={itemsPerRow}
                   onItemsPerRowChange={handleItemsPerRowChange}
+                  autoScroll={autoScroll}
+                  onAutoScrollChange={handleAutoScrollChange}
                 />
 
                 {/* プロジェクト進捗 */}

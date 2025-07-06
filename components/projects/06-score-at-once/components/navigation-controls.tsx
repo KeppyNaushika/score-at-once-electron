@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
+import { Switch } from "@/components/ui/switch"
 import {
   Tooltip,
   TooltipContent,
@@ -45,6 +46,8 @@ interface NavigationControlsProps {
   currentPosition?: { row: number; col: number }
   itemsPerRow?: number[]
   onItemsPerRowChange?: (value: number[]) => void
+  autoScroll?: boolean
+  onAutoScrollChange?: (enabled: boolean) => void
 }
 
 const LAYOUT_OPTIONS = [
@@ -65,6 +68,8 @@ export default function NavigationControls({
   currentPosition,
   itemsPerRow,
   onItemsPerRowChange,
+  autoScroll = true,
+  onAutoScrollChange,
 }: NavigationControlsProps) {
   return (
     <TooltipProvider delayDuration={300}>
@@ -112,6 +117,25 @@ export default function NavigationControls({
                   </span>
                 </div>
               </div>
+              <Separator />
+            </>
+          )}
+
+          {/* 自動スクロール設定 */}
+          {onAutoScrollChange && (
+            <>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  自動スクロール
+                </label>
+                <Switch
+                  checked={autoScroll}
+                  onCheckedChange={onAutoScrollChange}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                WASD移動時に選択答案を画面中央に表示
+              </p>
               <Separator />
             </>
           )}
