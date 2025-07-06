@@ -49,6 +49,7 @@ interface AnswerSheetTableProps {
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   observerRef?: React.RefObject<IntersectionObserver | null>
   mode?: "upload" | "view"
+  onReloadData?: () => void
 }
 
 // ============================================================================
@@ -68,6 +69,7 @@ export function AnswerSheetTable({
   imageLoadStates = {},
   observerRef,
   mode = "upload",
+  onReloadData,
 }: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
@@ -118,6 +120,10 @@ export function AnswerSheetTable({
     getDisabledFiles,
     disabledState,
     setDisabledState,
+    students,
+    masterImageCount,
+    mode,
+    onReloadData,
   )
 
   // ============================================================================
@@ -351,20 +357,17 @@ export function AnswerSheetTable({
 
         <DragOverlay dropAnimation={null}>
           {activeFile ? (
-            <div className="ring-opacity-30 scale-110 rotate-3 transform rounded-lg border-2 border-blue-400 bg-white p-4 shadow-2xl ring-4 ring-blue-200 backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`h-8 w-8 rounded ${getFileColor(activeFile)} flex-shrink-0`}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate font-semibold text-gray-800">
-                    {activeFile.name.split(" - ページ")[0] || activeFile.name}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {(activeFile.size / 1024).toFixed(1)}KB
-                  </div>
-                </div>
-              </div>
+            <div className="h-32 w-32 scale-110 rotate-3 transform rounded border-2 border-blue-400 bg-white shadow-2xl">
+              <FilePreviewCell
+                file={activeFile}
+                pageNumber={1}
+                previewMode={previewMode}
+                isFileDisabled={false}
+                nameRegionAvailable={false}
+                getFileColor={getFileColor}
+                drawNameRegionCanvas={drawNameRegionCanvas}
+                imageLoadState="loaded"
+              />
             </div>
           ) : null}
         </DragOverlay>

@@ -37,7 +37,7 @@ export function SortableTableCell({
     isDragging,
   } = useSortable({
     id,
-    disabled: mode === "view" || !hasFile || isFileDisabled || isPositionDisabled,
+    disabled: !hasFile || isFileDisabled || isPositionDisabled,
   })
 
   const style = {
@@ -61,15 +61,15 @@ export function SortableTableCell({
       ref={setNodeRef}
       style={style}
       className={`relative h-32 w-32 border p-1 transition-all ${
-        mode === "upload" && hasFile && !isFileDisabled && !isPositionDisabled
+        hasFile && !isFileDisabled && !isPositionDisabled
           ? "cursor-grab active:cursor-grabbing"
           : ""
       } ${isPositionDisabled ? "bg-gray-100" : "bg-white"} ${
         isFileDisabled ? "bg-red-50" : ""
       }`}
       data-file-id={fileId}
-      {...(mode === "upload" ? attributes : {})}
-      {...(mode === "upload" ? listeners : {})}
+      {...attributes}
+      {...listeners}
     >
       {mode === "upload" ? (
         <ContextMenu>

@@ -19,6 +19,7 @@ import {
   associateAnswerSheetWithStudent,
   setAnswerSheetAbsent,
   getAnswerSheetById,
+  updateAnswerSheetPlacement,
 } from "../lib/prisma/answerSheet"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import { loginUser, createUser, getUserByToken, updateUserPassword } from "../lib/prisma/auth"
@@ -160,6 +161,15 @@ export function setupMiscHandlers(): void {
       return await getAnswerSheetById(answerSheetId)
     } catch (err) {
       console.error("Error fetching answer sheet by ID:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("update-answer-sheet-placement", async (_event, answerSheetId: string, studentId: string | null, pageNumber: number) => {
+    try {
+      return await updateAnswerSheetPlacement(answerSheetId, studentId, pageNumber)
+    } catch (err) {
+      console.error("Error updating answer sheet placement:", err)
       throw err
     }
   })

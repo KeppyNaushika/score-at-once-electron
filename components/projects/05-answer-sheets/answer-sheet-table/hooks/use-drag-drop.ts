@@ -1,9 +1,10 @@
 import type { ExtendedDisabledState } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
-import type { UnifiedFile } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useState } from "react"
+import { toast } from "sonner"
 
 export function useDragDrop(
   files: UnifiedFile[],
@@ -16,9 +17,49 @@ export function useDragDrop(
       | ExtendedDisabledState
       | ((prev: ExtendedDisabledState) => ExtendedDisabledState),
   ) => void,
+  students?: UnifiedStudent[],
+  masterImageCount?: number,
+  mode?: "upload" | "view",
+  onReloadData?: () => void,
 ) {
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
+
+  // テーブル位置から生徒IDとページ番号を計算する関数
+  const getStudentAndPageFromPosition = useCallback((position: number) => {
+    if (!students || !masterImageCount) return { student: null, pageNumber: 1 }
+    
+    const studentIndex = Math.floor(position / masterImageCount)
+    const pageIndex = position % masterImageCount
+    
+    const student = students[studentIndex] || null
+    const pageNumber = pageIndex + 1
+    
+    return { student, pageNumber }
+  }, [students, masterImageCount])
+
+  // 確認モードでの答案配置更新
+  const updateAnswerSheetInDatabase = useCallback(async (file: UnifiedFile, targetPosition: number) => {
+    const { student, pageNumber } = getStudentAndPageFromPosition(targetPosition)
+    
+    try {
+      const result = await window.electronAPI.updateAnswerSheetPlacement(
+        file.id,
+        student?.id || null,
+        pageNumber
+      )
+      
+      if (result.success) {
+        toast.success(`答案の配置を更新しました`)
+        onReloadData?.()
+      } else {
+        toast.error(`配置更新に失敗しました: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error updating answer sheet placement:', error)
+      toast.error('配置更新中にエラーが発生しました')
+    }
+  }, [getStudentAndPageFromPosition, onReloadData])
 
   // ドラッグ&ドロップセンサー設定
   const sensors = useSensors(
@@ -129,21 +170,41 @@ export function useDragDrop(
       const overContainer = findContainer(overId)
 
       if (activeContainer === overContainer && activeId !== overId) {
-        // 同一コンテナ内での並び替え
-        const newFiles = [...files]
-        const oldIndex = newFiles.findIndex((file) => file.id === activeId)
-        const newIndex = newFiles.findIndex((file) => file.id === overId)
+        if (mode === "view" && students && masterImageCount) {
+          // 確認モード: テーブル位置ベースでの配置交換
+          const activeFile = getEnabledFiles().find(f => f.id === activeId)
+          const overFile = getEnabledFiles().find(f => f.id === overId)
+          
+          if (activeFile && overFile) {
+            // 2つのファイルの配置を交換
+            const { student: activeStudent, pageNumber: activePageNumber } = 
+              getStudentAndPageFromPosition(activeFile.position || 0)
+            const { student: overStudent, pageNumber: overPageNumber } = 
+              getStudentAndPageFromPosition(overFile.position || 0)
+            
+            // データベースで交換
+            Promise.all([
+              updateAnswerSheetInDatabase(activeFile, overFile.position || 0),
+              updateAnswerSheetInDatabase(overFile, activeFile.position || 0)
+            ])
+          }
+        } else {
+          // アップロードモード: 従来の配列並び替え
+          const newFiles = [...files]
+          const oldIndex = newFiles.findIndex((file) => file.id === activeId)
+          const newIndex = newFiles.findIndex((file) => file.id === overId)
 
-        if (oldIndex !== -1 && newIndex !== -1) {
-          const reorderedFiles = arrayMove(newFiles, oldIndex, newIndex)
-          onFilesChange(reorderedFiles)
+          if (oldIndex !== -1 && newIndex !== -1) {
+            const reorderedFiles = arrayMove(newFiles, oldIndex, newIndex)
+            onFilesChange(reorderedFiles)
+          }
         }
       }
 
       setActiveFile(null)
       setIsDraggingFromTrash(false)
     },
-    [files, onFilesChange, getEnabledFiles, getDisabledFiles],
+    [files, onFilesChange, getEnabledFiles, getDisabledFiles, mode, students, masterImageCount, getStudentAndPageFromPosition, updateAnswerSheetInDatabase],
   )
 
   return {
