@@ -57,24 +57,18 @@ export function useScoringFilter({
 
   // 表示対象答案の更新（初期化時とRキー押下時のみ）
   const updateVisibleAnswers = useCallback(() => {
-    console.log("🔄 updateVisibleAnswers called")
-    console.log("📋 Current question:", currentQuestion?.id)
-    console.log("🎛️ Filter settings:", filterSettings)
-    console.log("📊 Scoring data keys:", Object.keys(scoringData))
+    console.log("🔄 Filter update - Q:", currentQuestion?.id, "Scoring keys:", Object.keys(scoringData).length)
     
     const newVisibleAnswers = new Set<string>()
     
     answerSheets.forEach(sheet => {
       const status = getScoringStatus(sheet.id, currentQuestion?.id)
-      const shouldShow = filterSettings[status as keyof typeof filterSettings]
-      console.log(`🎯 Sheet ${sheet.id}: status=${status}, shouldShow=${shouldShow}`)
-      
-      if (shouldShow) {
+      if (filterSettings[status as keyof typeof filterSettings]) {
         newVisibleAnswers.add(sheet.id)
       }
     })
     
-    console.log("✅ New visible answers:", newVisibleAnswers.size, Array.from(newVisibleAnswers))
+    console.log("✅ Visible:", newVisibleAnswers.size, "/", answerSheets.length)
     setVisibleAnswers(newVisibleAnswers)
   }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, scoringData])
 
