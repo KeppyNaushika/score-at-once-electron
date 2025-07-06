@@ -15,6 +15,9 @@ export function AnswerSheetUpload({
   onUploadComplete,
   existingAnswerSheets,
   mode = "upload",
+  pendingChanges,
+  affectedCells,
+  onAddPendingChange,
 }: AnswerSheetUploadProps) {
   const {
     // State
@@ -56,6 +59,9 @@ export function AnswerSheetUpload({
         observerRef={observerRef}
         mode="view"
         onReloadData={onUploadComplete}
+        pendingChanges={pendingChanges}
+        affectedCells={affectedCells}
+        onAddPendingChange={onAddPendingChange}
       />
     )
   }

@@ -198,3 +198,35 @@ export interface PasswordDialogState {
   attempts: number
   hasError: boolean
 }
+
+// ============================================================================
+// 変更状態管理用の型定義
+// ============================================================================
+
+/**
+ * 保留中の変更データ
+ */
+export interface PendingChange {
+  id: string                    // ユニークID
+  answerSheetId1: string       // 交換対象1のID
+  answerSheetId2: string       // 交換対象2のID
+  timestamp: Date              // 変更時刻
+  position1: {                 // 交換前の位置1
+    studentId: string | null
+    pageNumber: number
+    studentName?: string       // 表示用
+  }
+  position2: {                 // 交換前の位置2
+    studentId: string | null
+    pageNumber: number
+    studentName?: string       // 表示用
+  }
+}
+
+/**
+ * 採点データ処理オプション
+ */
+export type ScoringDataOption = 
+  | "image-only"        // 答案画像のみ入れ替え
+  | "with-scoring"      // 採点情報も一緒に入れ替え
+  | "cancel"           // キャンセル

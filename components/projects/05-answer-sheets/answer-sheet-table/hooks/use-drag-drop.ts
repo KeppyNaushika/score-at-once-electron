@@ -1,5 +1,5 @@
 import type { ExtendedDisabledState } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
-import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent, PendingChange } from "@/types/answer-sheet.types"
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
@@ -21,6 +21,7 @@ export function useDragDrop(
   masterImageCount?: number,
   mode?: "upload" | "view",
   onReloadData?: () => void,
+  onAddPendingChange?: (change: PendingChange) => void,
 ) {
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
@@ -171,14 +172,57 @@ export function useDragDrop(
       const overContainer = findContainer(overId)
 
       if (activeContainer === overContainer && activeId !== overId) {
-        if (mode === "view" && students && masterImageCount) {
-          // 確認モード: 安全な答案配置交換
+        if (mode === "view" && students && masterImageCount && onAddPendingChange) {
+          // 確認モード: 楽観的更新 + 変更追加
           const activeFile = getEnabledFiles().find(f => f.id === activeId)
           const overFile = getEnabledFiles().find(f => f.id === overId)
           
           if (activeFile && overFile) {
-            // 新しいスワップAPIを使用してユニーク制約エラーを回避
-            swapAnswerSheetInDatabase(activeFile, overFile)
+            // 生徒名を取得
+            const getStudentName = (studentId: string | null) => {
+              if (!studentId) return null
+              const student = students.find(s => s.id === studentId)
+              return student ? `${student.lastName} ${student.firstName}` : null
+            }
+
+            // PendingChange作成
+            const newChange: PendingChange = {
+              id: `${activeFile.id}-${overFile.id}-${Date.now()}`,
+              answerSheetId1: activeFile.id,
+              answerSheetId2: overFile.id,
+              timestamp: new Date(),
+              position1: {
+                studentId: activeFile.studentId || null,
+                pageNumber: activeFile.pageNumber,
+                studentName: getStudentName(activeFile.studentId || null) || undefined
+              },
+              position2: {
+                studentId: overFile.studentId || null,
+                pageNumber: overFile.pageNumber,
+                studentName: getStudentName(overFile.studentId || null) || undefined
+              }
+            }
+            
+            // 変更を保留状態に追加
+            onAddPendingChange(newChange)
+            
+            // 楽観的更新: ファイルの位置情報を入れ替え
+            const newFiles = [...files]
+            const oldIndex = newFiles.findIndex((file) => file.id === activeId)
+            const newIndex = newFiles.findIndex((file) => file.id === overId)
+            
+            if (oldIndex !== -1 && newIndex !== -1) {
+              // ファイルの studentId と pageNumber を入れ替え
+              const tempStudentId = newFiles[oldIndex].studentId
+              const tempPageNumber = newFiles[oldIndex].pageNumber
+              
+              newFiles[oldIndex].studentId = newFiles[newIndex].studentId
+              newFiles[oldIndex].pageNumber = newFiles[newIndex].pageNumber
+              newFiles[newIndex].studentId = tempStudentId
+              newFiles[newIndex].pageNumber = tempPageNumber
+              
+              onFilesChange(newFiles)
+            }
           }
         } else {
           // アップロードモード: 従来の配列並び替え
@@ -196,7 +240,7 @@ export function useDragDrop(
       setActiveFile(null)
       setIsDraggingFromTrash(false)
     },
-    [files, onFilesChange, getEnabledFiles, getDisabledFiles, mode, students, masterImageCount, swapAnswerSheetInDatabase],
+    [files, onFilesChange, getEnabledFiles, getDisabledFiles, mode, students, masterImageCount, swapAnswerSheetInDatabase, onAddPendingChange],
   )
 
   return {

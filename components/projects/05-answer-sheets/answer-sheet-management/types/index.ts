@@ -4,6 +4,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
+  PendingChange,
 } from "@/types/answer-sheet.types"
 
 export type {
@@ -11,6 +12,7 @@ export type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
+  PendingChange,
 }
 
 // Local component-specific types
@@ -35,6 +37,11 @@ export interface AnswerSheetUploadProps {
     } | null
   }>
   mode?: "upload" | "view"
+  
+  // 変更状態管理用（確認モードのみ）
+  pendingChanges?: PendingChange[]
+  affectedCells?: Set<string>
+  onAddPendingChange?: (change: PendingChange) => void
 }
 
 export interface FileUploadZoneProps {

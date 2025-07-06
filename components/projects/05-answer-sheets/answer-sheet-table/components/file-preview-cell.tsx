@@ -14,7 +14,10 @@ export function FilePreviewCell({
   getFileColor,
   drawNameRegionCanvas,
   imageLoadState = "pending",
-}: FilePreviewCellProps) {
+  isPendingChange = false,
+}: FilePreviewCellProps & {
+  isPendingChange?: boolean
+}) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null,
   )
@@ -151,6 +154,11 @@ export function FilePreviewCell({
       >
         {renderImagePreview()}
       </div>
+
+      {/* 変更予定オーバーレイ */}
+      {isPendingChange && (
+        <div className="absolute inset-0 bg-red-500 opacity-10 pointer-events-none" />
+      )}
 
       {/* 読み込み状態表示 */}
       {renderLoadingState()}

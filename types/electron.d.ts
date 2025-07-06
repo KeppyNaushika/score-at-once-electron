@@ -286,6 +286,14 @@ export interface MyAPI {
     answerSheets?: AnswerSheetWithDetails[]
     error?: string
   }>
+  swapAnswerSheetPlacementsWithScoring: (
+    answerSheetId1: string,
+    answerSheetId2: string
+  ) => Promise<{
+    success: boolean
+    answerSheets?: AnswerSheetWithDetails[]
+    error?: string
+  }>
   getImageData: (relativePath: string) => Promise<{
     success: boolean
     data?: string
