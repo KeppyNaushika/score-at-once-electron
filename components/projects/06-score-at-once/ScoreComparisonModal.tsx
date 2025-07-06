@@ -135,7 +135,7 @@ export default function ScoreComparisonModal({
         layoutRegionId,
         "current-user", // TODO: 認証システムと連携
         {
-          score: finalScore,
+          partialScore: finalScore,
           status: 'finalized',
           comments: finalComment,
         },

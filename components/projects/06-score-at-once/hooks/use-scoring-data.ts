@@ -240,7 +240,7 @@ export function useScoringData({
         const result = await window.electronAPI.updateQuestionScore(
           currentScore.id,
           {
-            score: newScore,
+            partialScore: newScore,
             status,
             comment: currentScore.comment || "",
           },
@@ -285,7 +285,7 @@ export function useScoringData({
         const result = await window.electronAPI.createQuestionScore({
           answerSheetId: currentAnswerSheet.id,
           layoutRegionId: currentQuestion.id,
-          score: newScore,
+          partialScore: newScore,
           status,
           comment: "",
           scoredByUserId: currentUserId,
@@ -454,7 +454,7 @@ export function useScoringData({
           const result = await window.electronAPI.updateQuestionScore(
             currentScore.id,
             {
-              score: newScore,
+              partialScore: newScore,
               status: scoringStatus,
               comment: currentScore.comment || "",
             },
@@ -481,7 +481,7 @@ export function useScoringData({
           const result = await window.electronAPI.createQuestionScore({
             answerSheetId: answerId,
             layoutRegionId: currentQuestion.id,
-            score: newScore,
+            partialScore: newScore,
             status: scoringStatus,
             comment: "",
             scoredByUserId: effectiveUserId,

@@ -13,5 +13,14 @@ export * from './types'
 // Components
 export * from './components'
 
-// Hooks
-export * from './hooks'
+// Hooks (specific exports to avoid conflicts)
+export {
+  useScoringKeyboard,
+  useScoringData,
+  useScoringFilter,
+  useScoringNavigation,
+  usePartialScore,
+  isMacOS,
+  getModifierKeyLabel,
+} from './hooks'
+export type { ScoringStatus } from './hooks'
