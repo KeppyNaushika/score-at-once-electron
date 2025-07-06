@@ -97,7 +97,7 @@ const SCORING_BUTTONS = [
 // フィルターボタン設定
 const FILTER_BUTTONS = [
   {
-    key: "1",
+    key: "ungraded",
     filterKey: "ungraded",
     label: "未採点",
     icon: Circle,
@@ -105,7 +105,7 @@ const FILTER_BUTTONS = [
     activeColor: "bg-gray-100 border-gray-600 text-gray-800"
   },
   {
-    key: "2", 
+    key: "correct", 
     filterKey: "correct",
     label: "正答",
     icon: CheckCircle,
@@ -113,7 +113,7 @@ const FILTER_BUTTONS = [
     activeColor: "bg-green-100 border-green-600 text-green-800"
   },
   {
-    key: "3",
+    key: "incorrect",
     filterKey: "incorrect", 
     label: "誤答",
     icon: X,
@@ -121,7 +121,7 @@ const FILTER_BUTTONS = [
     activeColor: "bg-red-100 border-red-600 text-red-800"
   },
   {
-    key: "4",
+    key: "partial",
     filterKey: "partial",
     label: "部分点",
     icon: AlertTriangle,
@@ -129,7 +129,7 @@ const FILTER_BUTTONS = [
     activeColor: "bg-yellow-100 border-yellow-600 text-yellow-800"
   },
   {
-    key: "5",
+    key: "pending",
     filterKey: "pending",
     label: "保留",
     icon: Clock,
@@ -137,7 +137,7 @@ const FILTER_BUTTONS = [
     activeColor: "bg-blue-100 border-blue-600 text-blue-800"
   },
   {
-    key: "6",
+    key: "no_answer",
     filterKey: "no_answer",
     label: "無答", 
     icon: Minus,
