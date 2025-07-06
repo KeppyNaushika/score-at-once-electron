@@ -1,13 +1,30 @@
 import type { AnswerSheetWithDetails } from "@/types/electron"
 import type { UnifiedFile } from "@/types/answer-sheet.types"
 
+// Temporary interface to handle serialized answer sheets
+interface SerializedAnswerSheet {
+  id: string
+  studentId: string | null
+  pageNumber: number
+  originalImagePath: string | null
+  isAbsent?: boolean
+  student: {
+    id: string
+    lastName: string
+    firstName: string
+    lastNameKana: string
+    firstNameKana: string
+    studentId: string
+  } | null
+}
+
 /**
  * データベースから取得した答案データを、テーブル表示用のUnifiedFile形式に変換する
  * @param answerSheets データベースから取得した答案データ
  * @returns UnifiedFile配列
  */
 export function convertAnswerSheetsToFiles(
-  answerSheets: AnswerSheetWithDetails[]
+  answerSheets: AnswerSheetWithDetails[] | SerializedAnswerSheet[]
 ): UnifiedFile[] {
   return answerSheets.map((answerSheet) => {
     // 正しいプロパティ名を使用（originalImagePath）

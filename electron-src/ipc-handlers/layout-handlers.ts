@@ -80,7 +80,38 @@ export function setupLayoutHandlers(): void {
     "get-layout-regions-by-project-id",
     async (_event, projectId: string) => {
       try {
-        return await dbGetLayoutRegionsByProjectId(projectId)
+        const layoutRegions = await dbGetLayoutRegionsByProjectId(projectId)
+        return layoutRegions.map(region => ({
+          ...region,
+          createdAt: region.createdAt.toISOString(),
+          updatedAt: region.updatedAt.toISOString(),
+          subtotalDefinitions: region.subtotalDefinitions?.map(def => ({
+            ...def,
+            createdAt: def.createdAt.toISOString(),
+            updatedAt: def.updatedAt.toISOString(),
+            questionGroupItem: def.questionGroupItem ? {
+              ...def.questionGroupItem,
+              createdAt: def.questionGroupItem.createdAt.toISOString(),
+              updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+            } : null
+          })) || [],
+          questionSubtotalAssignments: region.questionSubtotalAssignments?.map(assignment => ({
+            ...assignment,
+            createdAt: assignment.createdAt.toISOString(),
+            updatedAt: assignment.updatedAt.toISOString(),
+            questionGroupItem: assignment.questionGroupItem ? {
+              ...assignment.questionGroupItem,
+              createdAt: assignment.questionGroupItem.createdAt.toISOString(),
+              updatedAt: assignment.questionGroupItem.updatedAt.toISOString(),
+            } : null
+          })) || [],
+          questionScores: region.questionScores?.map(score => ({
+            ...score,
+            partialScore: score.partialScore ? score.partialScore.toString() : null,
+            createdAt: score.createdAt.toISOString(),
+            updatedAt: score.updatedAt.toISOString(),
+          })) || []
+        }))
       } catch (err) {
         console.error("Error fetching layout regions by project ID:", err)
         throw err
@@ -90,7 +121,39 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle("get-layout-region-by-id", async (_event, id: string) => {
     try {
-      return await dbGetLayoutRegionById(id)
+      const region = await dbGetLayoutRegionById(id)
+      if (!region) return null
+      return {
+        ...region,
+        createdAt: region.createdAt.toISOString(),
+        updatedAt: region.updatedAt.toISOString(),
+        subtotalDefinitions: region.subtotalDefinitions?.map(def => ({
+          ...def,
+          createdAt: def.createdAt.toISOString(),
+          updatedAt: def.updatedAt.toISOString(),
+          questionGroupItem: def.questionGroupItem ? {
+            ...def.questionGroupItem,
+            createdAt: def.questionGroupItem.createdAt.toISOString(),
+            updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+          } : null
+        })) || [],
+        questionSubtotalAssignments: region.questionSubtotalAssignments?.map(assignment => ({
+          ...assignment,
+          createdAt: assignment.createdAt.toISOString(),
+          updatedAt: assignment.updatedAt.toISOString(),
+          questionGroupItem: assignment.questionGroupItem ? {
+            ...assignment.questionGroupItem,
+            createdAt: assignment.questionGroupItem.createdAt.toISOString(),
+            updatedAt: assignment.questionGroupItem.updatedAt.toISOString(),
+          } : null
+        })) || [],
+        questionScores: region.questionScores?.map(score => ({
+          ...score,
+          partialScore: score.partialScore ? score.partialScore.toString() : null,
+          createdAt: score.createdAt.toISOString(),
+          updatedAt: score.updatedAt.toISOString(),
+        })) || []
+      }
     } catch (err) {
       console.error("Error fetching layout region by ID:", err)
       throw err

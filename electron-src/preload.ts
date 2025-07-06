@@ -163,6 +163,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("resolve-file-protocol-path", relativePath),
   readFileAsBase64: (filePath: string) =>
     ipcRenderer.invoke("read-file-as-base64", filePath),
+  checkFileExists: (relativePath: string) =>
+    ipcRenderer.invoke("check-file-exists", relativePath),
   getMasterImagesByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-master-images-by-project-id", projectId),
   // Layout region functions (moved to new API)
@@ -229,6 +231,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectedStudentIds: string[]
     outputPath?: string
   }) => ipcRenderer.invoke("export-grading-data-excel", options),
+
+  // Data management related
+  getDataDirectoryInfo: () =>
+    ipcRenderer.invoke("get-data-directory-info"),
+  openDataDirectory: () =>
+    ipcRenderer.invoke("open-data-directory"),
+  deleteAllData: () =>
+    ipcRenderer.invoke("delete-all-data"),
 
   // Progress listeners
   onExportProgress: (callback: (progress: {

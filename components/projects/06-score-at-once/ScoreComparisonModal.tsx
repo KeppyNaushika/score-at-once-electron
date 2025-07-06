@@ -130,15 +130,16 @@ export default function ScoreComparisonModal({
 
     setFinalizing(true)
     try {
+      const finalizeData = {
+        partialScore: finalScore,
+        status: 'finalized',
+        comments: finalComment,
+      }
       const result = await window.electronAPI.finalizeQuestionScore(
         answerSheetId,
         layoutRegionId,
         "current-user", // TODO: 認証システムと連携
-        {
-          partialScore: finalScore,
-          status: 'finalized',
-          comments: finalComment,
-        },
+        finalizeData,
       )
 
       if (result && result.id) {

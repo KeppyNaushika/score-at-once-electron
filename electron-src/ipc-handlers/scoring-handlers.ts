@@ -20,7 +20,27 @@ export function setupScoringHandlers(): void {
     "get-question-scores-for-project",
     async (_event, projectId: string) => {
       try {
-        return await getQuestionScoresForProject(projectId)
+        const result = await getQuestionScoresForProject(projectId)
+        
+        if (!result.success) {
+          return result
+        }
+        
+        // Create plain serializable objects
+        const serializedScores = result.scores?.map(score => ({
+          id: score.id,
+          answerSheetId: score.answerSheetId,
+          layoutRegionId: score.layoutRegionId,
+          partialScore: score.partialScore ? score.partialScore.toString() : null,
+          status: score.status,
+          comment: score.comment,
+          scoredByUserId: score.scoredByUserId,
+          scoreVersion: score.scoreVersion,
+          createdAt: score.createdAt.toISOString(),
+          updatedAt: score.updatedAt.toISOString(),
+        })) || []
+        
+        return { success: true, scores: serializedScores }
       } catch (err) {
         console.error("Error getting question scores for project:", err)
         throw err
@@ -32,7 +52,27 @@ export function setupScoringHandlers(): void {
     "get-question-scores-for-answer-sheet",
     async (_event, answerSheetId: string) => {
       try {
-        return await getQuestionScoresForAnswerSheet(answerSheetId)
+        const result = await getQuestionScoresForAnswerSheet(answerSheetId)
+        
+        if (!result.success) {
+          return result
+        }
+        
+        // Create plain serializable objects
+        const serializedScores = result.scores?.map(score => ({
+          id: score.id,
+          answerSheetId: score.answerSheetId,
+          layoutRegionId: score.layoutRegionId,
+          partialScore: score.partialScore ? score.partialScore.toString() : null,
+          status: score.status,
+          comment: score.comment,
+          scoredByUserId: score.scoredByUserId,
+          scoreVersion: score.scoreVersion,
+          createdAt: score.createdAt.toISOString(),
+          updatedAt: score.updatedAt.toISOString(),
+        })) || []
+        
+        return { success: true, scores: serializedScores }
       } catch (err) {
         console.error("Error getting question scores for answer sheet:", err)
         throw err
@@ -44,7 +84,27 @@ export function setupScoringHandlers(): void {
     "create-question-score",
     async (_event, data: CreateQuestionScoreData) => {
       try {
-        return await createQuestionScore(data)
+        const result = await createQuestionScore(data)
+        
+        if (!result.success || !result.score) {
+          return result
+        }
+        
+        // Create plain serializable object
+        const serializedScore = {
+          id: result.score.id,
+          answerSheetId: result.score.answerSheetId,
+          layoutRegionId: result.score.layoutRegionId,
+          partialScore: result.score.partialScore ? result.score.partialScore.toString() : null,
+          status: result.score.status,
+          comment: result.score.comment,
+          scoredByUserId: result.score.scoredByUserId,
+          scoreVersion: result.score.scoreVersion,
+          createdAt: result.score.createdAt.toISOString(),
+          updatedAt: result.score.updatedAt.toISOString(),
+        }
+        
+        return { success: true, score: serializedScore }
       } catch (err) {
         console.error("Error creating question score:", err)
         throw err
@@ -56,7 +116,27 @@ export function setupScoringHandlers(): void {
     "update-question-score",
     async (_event, id: string, data: UpdateQuestionScoreData, expectedVersion?: number) => {
       try {
-        return await updateQuestionScore(id, data, expectedVersion)
+        const result = await updateQuestionScore(id, data, expectedVersion)
+        
+        if (!result.success || !result.score) {
+          return result
+        }
+        
+        // Create plain serializable object
+        const serializedScore = {
+          id: result.score.id,
+          answerSheetId: result.score.answerSheetId,
+          layoutRegionId: result.score.layoutRegionId,
+          partialScore: result.score.partialScore ? result.score.partialScore.toString() : null,
+          status: result.score.status,
+          comment: result.score.comment,
+          scoredByUserId: result.score.scoredByUserId,
+          scoreVersion: result.score.scoreVersion,
+          createdAt: result.score.createdAt.toISOString(),
+          updatedAt: result.score.updatedAt.toISOString(),
+        }
+        
+        return { success: true, score: serializedScore }
       } catch (err) {
         console.error("Error updating question score:", err)
         throw err
@@ -96,7 +176,27 @@ export function setupScoringHandlers(): void {
       comment?: string
     }) => {
       try {
-        return await finalizeQuestionScore(answerSheetId, layoutRegionId, scoredByUserId, scoreData)
+        const result = await finalizeQuestionScore(answerSheetId, layoutRegionId, scoredByUserId, scoreData)
+        
+        if (!result.success || !('score' in result)) {
+          return result
+        }
+        
+        // Create plain serializable object
+        const serializedScore = {
+          id: result.score.id,
+          answerSheetId: result.score.answerSheetId,
+          layoutRegionId: result.score.layoutRegionId,
+          partialScore: result.score.partialScore ? result.score.partialScore.toString() : null,
+          status: result.score.status,
+          comment: result.score.comment,
+          scoredByUserId: result.score.scoredByUserId,
+          scoreVersion: result.score.scoreVersion,
+          createdAt: result.score.createdAt.toISOString(),
+          updatedAt: result.score.updatedAt.toISOString(),
+        }
+        
+        return { success: true, score: serializedScore }
       } catch (err) {
         console.error("Error finalizing question score:", err)
         throw err

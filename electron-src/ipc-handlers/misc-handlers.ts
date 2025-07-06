@@ -117,10 +117,21 @@ export function setupMiscHandlers(): void {
     "get-answer-sheets-by-project-id",
     async (_event, projectId: string) => {
       try {
-        return await getAnswerSheetsByProjectId(projectId)
+        const result = await getAnswerSheetsByProjectId(projectId)
+        if (!result.success) {
+          return { success: false, error: result.error }
+        }
+        const serializedAnswerSheets = (result.answerSheets || []).map(sheet => ({
+          ...sheet,
+          questionScores: sheet.questionScores?.map(score => ({
+            ...score,
+            partialScore: score.partialScore ? score.partialScore.toString() : null
+          })) || []
+        }))
+        return { success: true, answerSheets: serializedAnswerSheets }
       } catch (err) {
         console.error("Error fetching answer sheets:", err)
-        throw err
+        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
       }
     }
   )
@@ -160,7 +171,18 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("get-answer-sheet-by-id", async (_event, answerSheetId: string) => {
     try {
-      return await getAnswerSheetById(answerSheetId)
+      const result = await getAnswerSheetById(answerSheetId)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      if (!result.answerSheet) return null
+      return {
+        ...result.answerSheet,
+        questionScores: result.answerSheet.questionScores?.map(score => ({
+          ...score,
+          partialScore: score.partialScore ? score.partialScore.toString() : null
+        })) || []
+      }
     } catch (err) {
       console.error("Error fetching answer sheet by ID:", err)
       throw err
@@ -169,7 +191,17 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("update-answer-sheet-placement", async (_event, answerSheetId: string, studentId: string | null, pageNumber: number) => {
     try {
-      return await updateAnswerSheetPlacement(answerSheetId, studentId, pageNumber)
+      const result = await updateAnswerSheetPlacement(answerSheetId, studentId, pageNumber)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      return {
+        ...result.answerSheet,
+        questionScores: result.answerSheet?.questionScores?.map(score => ({
+          ...score,
+          partialScore: score.partialScore ? score.partialScore.toString() : null
+        })) || []
+      }
     } catch (err) {
       console.error("Error updating answer sheet placement:", err)
       throw err
@@ -178,7 +210,17 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("swap-answer-sheet-placements", async (_event, answerSheetId1: string, answerSheetId2: string) => {
     try {
-      return await swapAnswerSheetPlacements(answerSheetId1, answerSheetId2)
+      const result = await swapAnswerSheetPlacements(answerSheetId1, answerSheetId2)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      return (result.answerSheets || []).filter(sheet => sheet !== null).map(sheet => ({
+        ...sheet,
+        questionScores: sheet.questionScores?.map(score => ({
+          ...score,
+          partialScore: score.partialScore ? score.partialScore.toString() : null
+        })) || []
+      }))
     } catch (err) {
       console.error("Error swapping answer sheet placements:", err)
       throw err
@@ -187,7 +229,17 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("swap-answer-sheet-placements-with-scoring", async (_event, answerSheetId1: string, answerSheetId2: string) => {
     try {
-      return await swapAnswerSheetPlacementsWithScoring(answerSheetId1, answerSheetId2)
+      const result = await swapAnswerSheetPlacementsWithScoring(answerSheetId1, answerSheetId2)
+      if (!result.success) {
+        throw new Error(result.error)
+      }
+      return (result.answerSheets || []).filter(sheet => sheet !== null).map(sheet => ({
+        ...sheet,
+        questionScores: sheet.questionScores?.map(score => ({
+          ...score,
+          partialScore: score.partialScore ? score.partialScore.toString() : null
+        })) || []
+      }))
     } catch (err) {
       console.error("Error swapping answer sheet placements with scoring:", err)
       throw err
@@ -346,7 +398,12 @@ export function setupMiscHandlers(): void {
     "get-master-images-by-project-id",
     async (_event, projectId: string) => {
       try {
-        return await getMasterImagesByProjectId(projectId)
+        const masterImages = await getMasterImagesByProjectId(projectId)
+        return masterImages.map(image => ({
+          ...image,
+          createdAt: image.createdAt.toISOString(),
+          updatedAt: image.updatedAt.toISOString()
+        }))
       } catch (err) {
         console.error("Error getting master images by project ID:", err)
         throw err
@@ -461,6 +518,22 @@ export function setupMiscHandlers(): void {
       console.error("Error reading image file:", err)
       return {
         success: false,
+        error: err instanceof Error ? err.message : 'Unknown error'
+      }
+    }
+  })
+
+  // ファイル存在確認ハンドラー
+  ipcMain.handle("check-file-exists", async (_event, relativePath: string) => {
+    try {
+      const absolutePath = getAbsolutePathFromData(relativePath)
+      await fs.access(absolutePath)
+      return { success: true, exists: true, path: absolutePath }
+    } catch (err) {
+      return { 
+        success: true, 
+        exists: false, 
+        path: getAbsolutePathFromData(relativePath),
         error: err instanceof Error ? err.message : 'Unknown error'
       }
     }
