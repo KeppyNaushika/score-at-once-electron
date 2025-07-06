@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
 import Head from "next/head"
@@ -60,6 +60,7 @@ export default function ScoringMainView() {
   const [effectiveColumns, setEffectiveColumns] = useState<number>(5) // 実際の表示列数
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数
   const [autoScroll, setAutoScroll] = useState(true) // 自動スクロール設定
+  const [showStudentNames, setShowStudentNames] = useState(true) // 生徒名表示設定
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -175,6 +176,15 @@ export default function ScoringMainView() {
     onBatchScore: handleBatchScore,
   })
 
+  // 生徒名表示設定の変更をlocalStorageに保存
+  const handleToggleStudentNames = useCallback(() => {
+    setShowStudentNames(prev => {
+      const newValue = !prev
+      localStorage.setItem('answerGridView-showStudentNames', JSON.stringify(newValue))
+      return newValue
+    })
+  }, [])
+
   // キーボードハンドリングhook
   useScoringKeyboard({
     gradingMode,
@@ -202,6 +212,7 @@ export default function ScoringMainView() {
     onPartialScoreBackspace: handlePartialScoreBackspace,
     showPartialScoreModal,
     onToggleFilter: handleToggleFilter,
+    onToggleStudentNames: handleToggleStudentNames,
   })
 
   // データの初期読み込み
@@ -310,6 +321,19 @@ export default function ScoringMainView() {
         }
       } catch (error) {
         console.warn('Failed to parse stored autoScroll:', error)
+      }
+    }
+
+    // 生徒名表示設定
+    const storedShowNames = localStorage.getItem('answerGridView-showStudentNames')
+    if (storedShowNames !== null) {
+      try {
+        const parsed = JSON.parse(storedShowNames)
+        if (typeof parsed === 'boolean') {
+          setShowStudentNames(parsed)
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored showStudentNames:', error)
       }
     }
   }, [])
@@ -599,6 +623,7 @@ export default function ScoringMainView() {
                   onEffectiveColumnsChange={setEffectiveColumns}
                   itemsPerRow={itemsPerRow}
                   autoScroll={autoScroll}
+                  showStudentNames={showStudentNames}
                 />
               )}
             </div>

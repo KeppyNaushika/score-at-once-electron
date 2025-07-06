@@ -20,6 +20,7 @@ import {
   RefreshCw,
 } from "lucide-react"
 import { ScoringStatus } from "../hooks"
+import { getKeyboardShortcuts } from "../hooks/use-scoring-keyboard"
 
 interface ScoringToolbarProps {
   selectedAnswersCount: number
@@ -46,59 +47,60 @@ interface ScoringToolbarProps {
 const SCORING_BUTTONS = [
   {
     status: "ungraded" as ScoringStatus,
+    shortcutKey: "ungraded",
     label: "未採点",
     icon: Circle,
     color: "bg-gray-100 text-gray-700 hover:bg-gray-200",
-    shortcut: "Q",
     description: "未採点にする"
   },
   {
     status: "correct" as ScoringStatus,
+    shortcutKey: "correct",
     label: "正答",
     icon: CheckCircle,
     color: "bg-green-100 text-green-700 hover:bg-green-200",
-    shortcut: "E",
     description: "正答にする"
   },
   {
     status: "partial" as ScoringStatus,
+    shortcutKey: "partial",
     label: "部分点",
     icon: AlertTriangle,
     color: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
-    shortcut: "F",
     description: "部分点にする"
   },
   {
     status: "pending" as ScoringStatus,
+    shortcutKey: "pending",
     label: "保留",
     icon: Clock,
     color: "bg-blue-100 text-blue-700 hover:bg-blue-200",
-    shortcut: "J",
     description: "保留にする"
   },
   {
     status: "incorrect" as ScoringStatus,
+    shortcutKey: "incorrect",
     label: "誤答",
     icon: X,
     color: "bg-red-100 text-red-700 hover:bg-red-200",
-    shortcut: "O",
     description: "誤答にする"
   },
   {
     status: "no_answer" as ScoringStatus,
+    shortcutKey: "no_answer",
     label: "無答",
     icon: Minus,
     color: "bg-purple-100 text-purple-700 hover:bg-purple-200",
-    shortcut: "P",
     description: "無答にする"
   },
-]
+] as const
 
 // フィルターボタン設定
 const FILTER_BUTTONS = [
   {
     key: "ungraded",
     filterKey: "ungraded",
+    shortcutKey: "ungraded",
     label: "未採点",
     icon: Circle,
     color: "border-gray-400 text-gray-600",
@@ -107,6 +109,7 @@ const FILTER_BUTTONS = [
   {
     key: "correct", 
     filterKey: "correct",
+    shortcutKey: "correct",
     label: "正答",
     icon: CheckCircle,
     color: "border-green-400 text-green-600",
@@ -114,7 +117,8 @@ const FILTER_BUTTONS = [
   },
   {
     key: "incorrect",
-    filterKey: "incorrect", 
+    filterKey: "incorrect",
+    shortcutKey: "incorrect",
     label: "誤答",
     icon: X,
     color: "border-red-400 text-red-600",
@@ -123,6 +127,7 @@ const FILTER_BUTTONS = [
   {
     key: "partial",
     filterKey: "partial",
+    shortcutKey: "partial",
     label: "部分点",
     icon: AlertTriangle,
     color: "border-yellow-400 text-yellow-600", 
@@ -131,6 +136,7 @@ const FILTER_BUTTONS = [
   {
     key: "pending",
     filterKey: "pending",
+    shortcutKey: "pending",
     label: "保留",
     icon: Clock,
     color: "border-blue-400 text-blue-600",
@@ -139,12 +145,13 @@ const FILTER_BUTTONS = [
   {
     key: "no_answer",
     filterKey: "no_answer",
+    shortcutKey: "no_answer",
     label: "無答", 
     icon: Minus,
     color: "border-purple-400 text-purple-600",
     activeColor: "bg-purple-100 border-purple-600 text-purple-800"
   },
-]
+] as const
 
 export default function ScoringToolbar({
   selectedAnswersCount,
@@ -179,6 +186,7 @@ export default function ScoringToolbar({
             <div className="grid grid-cols-3 gap-2">
               {SCORING_BUTTONS.map((button) => {
                 const Icon = button.icon
+                const shortcuts = getKeyboardShortcuts() // 動的に取得
                 return (
                   <Tooltip key={button.status}>
                     <TooltipTrigger asChild>
@@ -199,7 +207,9 @@ export default function ScoringToolbar({
                       <div className="text-center">
                         <div className="font-medium">{button.description}</div>
                         <div className="text-xs text-gray-400 mt-1">
-                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">{button.shortcut}</kbd>
+                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">
+                            {shortcuts[button.shortcutKey as keyof typeof shortcuts]?.toUpperCase() || 'キー'}
+                          </kbd>
                         </div>
                       </div>
                     </TooltipContent>
@@ -230,6 +240,7 @@ export default function ScoringToolbar({
               {FILTER_BUTTONS.map((button) => {
                 const Icon = button.icon
                 const isActive = filterSettings[button.filterKey as keyof typeof filterSettings]
+                const shortcuts = getKeyboardShortcuts() // 動的に取得
                 return (
                   <Tooltip key={button.key}>
                     <TooltipTrigger asChild>
@@ -251,7 +262,9 @@ export default function ScoringToolbar({
                           {button.label}を{isActive ? '非表示' : '表示'}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">
-                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">{modifierKeyLabel}+採点キー</kbd>
+                          キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">
+                            {modifierKeyLabel}+{shortcuts[button.shortcutKey as keyof typeof shortcuts]?.toUpperCase() || 'キー'}
+                          </kbd>
                         </div>
                       </div>
                     </TooltipContent>

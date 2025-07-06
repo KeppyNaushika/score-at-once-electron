@@ -240,6 +240,7 @@ interface AnswerGridViewProps {
   onEffectiveColumnsChange?: (columns: number) => void // 実際の列数変更を親に通知
   itemsPerRow?: number[] // 外部からの1行あたり表示件数
   autoScroll?: boolean // 自動スクロール設定
+  showStudentNames?: boolean // 生徒名表示設定
 }
 
 export default function AnswerGridView({
@@ -255,6 +256,7 @@ export default function AnswerGridView({
   onEffectiveColumnsChange,
   itemsPerRow: externalItemsPerRow,
   autoScroll = true,
+  showStudentNames = true,
 }: AnswerGridViewProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
     null,
@@ -653,7 +655,13 @@ export default function AnswerGridView({
                   <span
                     className={`truncate text-xs ${isMaster ? "font-bold text-black" : "font-medium"}`}
                   >
-                    {answer.studentName}
+                    {(() => {
+                      const displayName = isMaster ? answer.studentName : (showStudentNames ? answer.studentName : "")
+                      if (!isMaster) {
+                        console.log(`Student name display: showStudentNames=${showStudentNames}, displayName="${displayName}"`)
+                      }
+                      return displayName
+                    })()}
                   </span>
 
                   {!isMaster && answer.status !== "ungraded" && (
