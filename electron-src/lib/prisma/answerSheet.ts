@@ -458,9 +458,6 @@ export async function swapAnswerSheetPlacementsWithScoring(
           data: questionScores1.map(score => ({
             answerSheetId: answerSheetId2,
             layoutRegionId: score.layoutRegionId,
-            score: score.score,
-            detectedAnswer: score.detectedAnswer,
-            isCorrect: score.isCorrect,
             status: score.status,
             comment: score.comment,
             scoredByUserId: score.scoredByUserId,
@@ -475,9 +472,6 @@ export async function swapAnswerSheetPlacementsWithScoring(
           data: questionScores2.map(score => ({
             answerSheetId: answerSheetId1,
             layoutRegionId: score.layoutRegionId,
-            score: score.score,
-            detectedAnswer: score.detectedAnswer,
-            isCorrect: score.isCorrect,
             status: score.status,
             comment: score.comment,
             scoredByUserId: score.scoredByUserId,

@@ -1,11 +1,37 @@
 import prisma from "./client"
 
+/**
+ * 実際の得点を計算する関数
+ * @param questionScore 採点データ
+ * @param maxScore 配点
+ * @returns 実際の得点
+ */
+export const calculateActualScore = (
+  questionScore: { status: string; partialScore?: number | null },
+  maxScore: number
+): number => {
+  switch (questionScore.status) {
+    case "correct":
+    case "final":
+      return maxScore
+    case "incorrect":
+    case "no_answer":
+    case "ungraded":
+      return 0
+    case "partial":
+    case "pending":
+    case "proposed":
+      return questionScore.partialScore ? Number(questionScore.partialScore) : 0
+    default:
+      return 0
+  }
+}
+
 // 採点データの型定義
 export interface CreateQuestionScoreData {
   answerSheetId: string
   layoutRegionId: string
-  score: number
-  maxScore: number
+  partialScore?: number  // 部分点・保留時のみ使用
   status:
     | "ungraded"
     | "correct"
@@ -20,8 +46,7 @@ export interface CreateQuestionScoreData {
 }
 
 export interface UpdateQuestionScoreData {
-  score?: number
-  maxScore?: number
+  partialScore?: number  // 部分点・保留時のみ使用
   status?:
     | "ungraded"
     | "correct"
@@ -121,7 +146,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       const updated = await prisma.questionScore.update({
         where: { id: existing.id },
         data: {
-          score: data.score,
+          partialScore: data.partialScore,
           status: data.status,
           comment: data.comment,
           scoreVersion: existing.scoreVersion + 1,
@@ -143,7 +168,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         data: {
           answerSheetId: data.answerSheetId,
           layoutRegionId: data.layoutRegionId,
-          score: data.score,
+          partialScore: data.partialScore,
           status: data.status,
           comment: data.comment,
           scoredByUserId: data.scoredByUserId,
@@ -202,7 +227,7 @@ export const updateQuestionScore = async (
     const updated = await prisma.questionScore.update({
       where: { id },
       data: {
-        score: data.score,
+        partialScore: data.partialScore,
         status: data.status,
         comment: data.comment,
         scoreVersion: data.version !== undefined ? data.version : { increment: 1 },
@@ -296,8 +321,8 @@ export const finalizeQuestionScore = async (
   layoutRegionId: string,
   scoredByUserId: string,
   scoreData: {
-    score: number
-    maxScore: number
+    partialScore?: number  // 部分点・保留の場合のみ
+    status: string
     comment?: string
   },
 ) => {
@@ -317,8 +342,8 @@ export const finalizeQuestionScore = async (
         data: {
           answerSheetId,
           layoutRegionId,
-          score: scoreData.score,
-          status: "final",
+          partialScore: scoreData.partialScore,
+          status: scoreData.status,
           comment: scoreData.comment,
           scoredByUserId,
           scoreVersion: 1,

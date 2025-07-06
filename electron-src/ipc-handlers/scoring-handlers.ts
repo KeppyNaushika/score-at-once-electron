@@ -91,8 +91,8 @@ export function setupScoringHandlers(): void {
   ipcMain.handle(
     "finalize-question-score",
     async (_event, answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: {
-      score: number
-      maxScore: number
+      partialScore?: number
+      status: string
       comment?: string
     }) => {
       try {
