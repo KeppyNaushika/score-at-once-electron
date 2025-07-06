@@ -168,7 +168,17 @@ export function useScoringFilter({
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
     const allAnswers = getAllGridAnswerData()
-    const filteredAnswers = allAnswers.filter(answer => visibleAnswers.has(answer.id))
+    console.log("🔍 getGridAnswerData called")
+    console.log("📊 allAnswers count:", allAnswers.length)
+    console.log("📋 visibleAnswers:", Array.from(visibleAnswers))
+    
+    const filteredAnswers = allAnswers.filter(answer => {
+      const isVisible = visibleAnswers.has(answer.id)
+      console.log(`🎯 Answer ${answer.id} (${answer.status}): visible=${isVisible}`)
+      return isVisible
+    })
+    
+    console.log("✅ filteredAnswers count:", filteredAnswers.length)
     
     // 模範解答を最初に追加
     const masterAnswer = getMasterAnswerData()
