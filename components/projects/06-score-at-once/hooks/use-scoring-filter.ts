@@ -74,7 +74,7 @@ export function useScoringFilter({
     if (answerSheets.length > 0 && questionRegions.length > 0) {
       updateVisibleAnswers()
     }
-  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, updateVisibleAnswers])
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
 
   // 最初の答案を初期選択状態にする
   useEffect(() => {
@@ -168,17 +168,7 @@ export function useScoringFilter({
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
     const allAnswers = getAllGridAnswerData()
-    console.log("🔍 getGridAnswerData called")
-    console.log("📊 allAnswers count:", allAnswers.length)
-    console.log("📋 visibleAnswers:", Array.from(visibleAnswers))
-    
-    const filteredAnswers = allAnswers.filter(answer => {
-      const isVisible = visibleAnswers.has(answer.id)
-      console.log(`🎯 Answer ${answer.id} (${answer.status}): visible=${isVisible}`)
-      return isVisible
-    })
-    
-    console.log("✅ filteredAnswers count:", filteredAnswers.length)
+    const filteredAnswers = allAnswers.filter(answer => visibleAnswers.has(answer.id))
     
     // 模範解答を最初に追加
     const masterAnswer = getMasterAnswerData()
@@ -195,24 +185,8 @@ export function useScoringFilter({
   }, [updateVisibleAnswers])
 
   const handleToggleFilter = useCallback((key: string) => {
-    const filterMap: { [key: string]: keyof typeof filterSettings } = {
-      "1": "ungraded",
-      "2": "correct",
-      "3": "incorrect",
-      "4": "partial",
-      "5": "pending",
-      "6": "no_answer",
-    }
-
-    const filterKey = filterMap[key]
-    if (filterKey) {
-      const newFilterSettings = {
-        ...filterSettings,
-        [filterKey]: !filterSettings[filterKey],
-      }
-      setFilterSettings(newFilterSettings)
-      // 注意: 表示更新は手動（Rキー）でのみ実行
-    }
+    // 数字キーによるフィルター切り替えは削除（部分点入力と競合するため）
+    // フィルター切り替えはAlt+採点キーのみ対応
   }, [filterSettings])
 
   // Alt+採点キーでフィルタ切り替え

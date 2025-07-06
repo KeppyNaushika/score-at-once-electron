@@ -251,12 +251,6 @@ export function useScoringData({
         )
 
         if ((result as any).success || result.scoreVersion) {
-          console.log("🎯 setScoringData called - UPDATE", {
-            key,
-            oldStatus: currentScore?.status,
-            newStatus: status,
-            score: newScore
-          })
           setScoringData((prev) => ({
             ...prev,
             [key]: {
@@ -302,11 +296,6 @@ export function useScoringData({
         const result = await window.electronAPI.createQuestionScore(scoreData)
 
         if ((result as any).success || result.id) {
-          console.log("🎯 setScoringData called - CREATE", {
-            key,
-            newStatus: status,
-            score: newScore
-          })
           setScoringData((prev) => ({
             ...prev,
             [key]: {
