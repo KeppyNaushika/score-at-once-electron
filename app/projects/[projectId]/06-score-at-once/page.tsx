@@ -85,7 +85,7 @@ interface AnswerSheet {
     studentId: string
     lastName: string
     firstName: string
-    customOrder?: number // 受験生徒の表示順序
+    projectStudents?: { customOrder: number }[] // ProjectStudentデータ
   }
 }
 
@@ -135,15 +135,8 @@ export default function GradingPage() {
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
 
-  // 表示フィルタリング状態
-  const [displayFilter, setDisplayFilter] = useState<{
-    ungraded: boolean
-    correct: boolean
-    incorrect: boolean
-    partial: boolean
-    pending: boolean
-    no_answer: boolean
-  }>({
+  // シンプルなフィルタ設計
+  const [filterSettings, setFilterSettings] = useState({
     ungraded: true,
     correct: false,
     incorrect: false,
@@ -151,23 +144,7 @@ export default function GradingPage() {
     pending: false,
     no_answer: false,
   })
-  const [appliedFilter, setAppliedFilter] = useState<{
-    ungraded: boolean
-    correct: boolean
-    incorrect: boolean
-    partial: boolean
-    pending: boolean
-    no_answer: boolean
-  }>({
-    ungraded: true,
-    correct: false,
-    incorrect: false,
-    partial: false,
-    pending: false,
-    no_answer: false,
-  })
-  const [needsFilterRefresh, setNeedsFilterRefresh] = useState(false)
-  const [filterUpdateKey, setFilterUpdateKey] = useState(0)
+  const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
 
   // 部分点入力用状態
   const [partialScoreInput, setPartialScoreInput] = useState("")
@@ -296,26 +273,50 @@ export default function GradingPage() {
     setModifierKeyLabel(isMacOS() ? 'Option' : 'Alt')
   }, [])
 
-  // displayFilterとappliedFilterの初期同期
-  useEffect(() => {
-    setAppliedFilter(displayFilter)
-  }, [])
+  // 採点状況を取得する関数
+  const getScoringStatus = (answerSheetId: string, questionId?: string): ScoringStatus => {
+    if (!questionId) return "ungraded"
+    
+    const key = `${answerSheetId}-${questionId}`
+    const scoreData = scoringData[key]
+    
+    if (!scoreData) return "ungraded"
+    return scoreData.status
+  }
 
-  // 最初の答案を初期選択状態にする（appliedFilterに基づく）
-  useEffect(() => {
-    if (gradingMode === "grid" && answerSheets.length > 0) {
-      const filteredAnswers = getGridAnswerData()
-      if (filteredAnswers.length > 0 && selectedAnswers.size === 0) {
-        setSelectedAnswers(new Set([filteredAnswers[0].id]))
+  // 表示対象答案の更新（初期化時とRキー押下時のみ）
+  const updateVisibleAnswers = () => {
+    const newVisibleAnswers = new Set<string>()
+    
+    answerSheets.forEach(sheet => {
+      const status = getScoringStatus(sheet.id, currentQuestion?.id)
+      if (filterSettings[status as keyof typeof filterSettings]) {
+        newVisibleAnswers.add(sheet.id)
       }
-    }
-  }, [gradingMode, answerSheets.length, currentQuestionIndex, filterUpdateKey])
+    })
+    
+    setVisibleAnswers(newVisibleAnswers)
+  }
 
-  // 設問変更時に選択状態をリセット（ナビゲーション再読み込みを避ける）
+  // 初期化時に表示対象を設定
+  useEffect(() => {
+    if (answerSheets.length > 0 && questionRegions.length > 0) {
+      updateVisibleAnswers()
+    }
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
+
+  // 最初の答案を初期選択状態にする
+  useEffect(() => {
+    if (gradingMode === "grid" && visibleAnswers.size > 0 && selectedAnswers.size === 0) {
+      const firstVisible = Array.from(visibleAnswers)[0]
+      setSelectedAnswers(new Set([firstVisible]))
+    }
+  }, [gradingMode, visibleAnswers, selectedAnswers.size])
+
+  // 設問変更時に選択状態をリセット
   useEffect(() => {
     if (gradingMode === "grid") {
       setSelectedAnswers(new Set())
-      // 設問変更時は自動選択しない（手動でWASD移動またはクリックで選択）
     }
   }, [currentQuestionIndex])
 
@@ -432,17 +433,11 @@ export default function GradingPage() {
           return
         }
 
-        // WASD移動キー
-        if (["w", "a", "s", "d"].includes(key)) {
-          event.preventDefault()
-          handleGridNavigation(key)
-          return
-        }
 
-        // Rキーでフィルタリフレッシュ（Ctrl+Rは除外してページリロードを許可）
-        if (key === "r" && !event.ctrlKey && !event.metaKey) {
+        // 数字キー (1-6) でフィルタ切り替え
+        if (["1", "2", "3", "4", "5", "6"].includes(key)) {
           event.preventDefault()
-          handleRefreshFilter()
+          handleToggleFilter(key)
           return
         }
 
@@ -633,9 +628,6 @@ export default function GradingPage() {
             },
           }))
 
-          // 表示フィルタの更新を強制実行
-          updateDisplayFilters()
-          
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -684,9 +676,6 @@ export default function GradingPage() {
             },
           }))
 
-          // 表示フィルタの更新を強制実行
-          updateDisplayFilters()
-          
           // 個別採点モードの場合、採点後に自動的に次の答案に移動
           if (gradingMode === "individual" && type !== "ungraded") {
             setTimeout(() => {
@@ -817,26 +806,6 @@ export default function GradingPage() {
     })
   }
 
-  // 表示フィルタを即座に更新（採点後などに使用）
-  const updateDisplayFilters = () => {
-    const newAppliedFilter = { ...displayFilter }
-    setAppliedFilter(newAppliedFilter)
-    setNeedsFilterRefresh(false)
-    setFilterUpdateKey((prev) => prev + 1) // 強制的に再レンダリング
-    // 選択状態をリセット
-    setSelectedAnswers(new Set())
-    // フィルタ適用後の最初の答案を選択
-    setTimeout(() => {
-      const allAnswers = getAllGridAnswerData()
-      const filteredAnswers = allAnswers.filter(
-        (answer) =>
-          newAppliedFilter[answer.status as keyof typeof newAppliedFilter],
-      )
-      if (filteredAnswers.length > 0) {
-        setSelectedAnswers(new Set([filteredAnswers[0].id]))
-      }
-    }, 100)
-  }
 
   // オーバーロード用のhandleBatchScore関数（部分点指定可能）
   const handleBatchScore = async (
@@ -957,8 +926,6 @@ export default function GradingPage() {
               },
             }))
             
-            // 表示フィルタの更新を強制実行
-            updateDisplayFilters()
           } else {
             console.error(
               "Failed to update batch score:",
@@ -1017,8 +984,6 @@ export default function GradingPage() {
               },
             }))
             
-            // 表示フィルタの更新を強制実行
-            updateDisplayFilters()
           } else {
             console.error("Failed to create batch score:", result)
             toast.error(
@@ -1052,8 +1017,7 @@ export default function GradingPage() {
       setSelectedAnswers(new Set())
     }
 
-    // 採点後はフィルタ更新が必要であることを示すが、即座には更新しない
-    // setNeedsFilterRefresh(true) // コメントアウトして即時更新を防止
+    // 簡単なフィルタリングシステム: 採点後は表示更新しない（予測可能性のため）
   }
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
@@ -1107,48 +1071,19 @@ export default function GradingPage() {
     })
   }
 
-  // フィルタリングされたグリッドデータ取得（appliedFilterを使用）
-  const getFilteredGridAnswerData = () => {
-    const allAnswers = getAllGridAnswerData()
-    const filteredAnswers = allAnswers.filter(
-      (answer) => appliedFilter[answer.status as keyof typeof appliedFilter],
-    )
-    return filteredAnswers
-  }
-
-  // 表示用のグリッドデータ（フィルタリング適用）
+  // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = () => {
-    return getFilteredGridAnswerData()
+    const allAnswers = getAllGridAnswerData()
+    return allAnswers.filter(answer => visibleAnswers.has(answer.id))
   }
 
-  // displayFilterとappliedFilterが同期しているかチェック
-  const isFilterSynced = () => {
-    return JSON.stringify(displayFilter) === JSON.stringify(appliedFilter)
-  }
-
-  // フィルタリング関連ハンドラー（手動リフレッシュ用、Rキー）
+  // フィルタリング関連ハンドラー（Rキー押下時のみ）
   const handleRefreshFilter = () => {
-    const newAppliedFilter = { ...displayFilter }
-    setAppliedFilter(newAppliedFilter)
-    setNeedsFilterRefresh(false)
-    setFilterUpdateKey((prev) => prev + 1) // 強制的に再レンダリング
-    // 選択状態をリセット
-    setSelectedAnswers(new Set())
-    // フィルタ適用後の最初の答案を選択
-    setTimeout(() => {
-      const allAnswers = getAllGridAnswerData()
-      const filteredAnswers = allAnswers.filter(
-        (answer) =>
-          newAppliedFilter[answer.status as keyof typeof newAppliedFilter],
-      )
-      if (filteredAnswers.length > 0) {
-        setSelectedAnswers(new Set([filteredAnswers[0].id]))
-      }
-    }, 100)
+    updateVisibleAnswers()
   }
 
   const handleToggleFilter = (key: string) => {
-    const filterMap: { [key: string]: keyof typeof displayFilter } = {
+    const filterMap: { [key: string]: keyof typeof filterSettings } = {
       "1": "ungraded",
       "2": "correct",
       "3": "incorrect",
@@ -1159,20 +1094,18 @@ export default function GradingPage() {
 
     const filterKey = filterMap[key]
     if (filterKey) {
-      const newDisplayFilter = {
-        ...displayFilter,
-        [filterKey]: !displayFilter[filterKey],
+      const newFilterSettings = {
+        ...filterSettings,
+        [filterKey]: !filterSettings[filterKey],
       }
-      setDisplayFilter(newDisplayFilter)
-
-      // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
-      setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
+      setFilterSettings(newFilterSettings)
+      // 注意: 表示更新は手動（Rキー）でのみ実行
     }
   }
 
   // Alt+採点キーでフィルタ切り替え
   const handleToggleFilterByScoreKey = useCallback((scoreKey: string) => {
-    const scoreToFilterMap: { [key: string]: keyof typeof displayFilter } = {
+    const scoreToFilterMap: { [key: string]: keyof typeof filterSettings } = {
       [DEFAULT_SHORTCUTS.ungraded]: "ungraded",
       [DEFAULT_SHORTCUTS.correct]: "correct",
       [DEFAULT_SHORTCUTS.incorrect]: "incorrect",
@@ -1183,16 +1116,14 @@ export default function GradingPage() {
 
     const filterKey = scoreToFilterMap[scoreKey]
     if (filterKey) {
-      const newDisplayFilter = {
-        ...displayFilter,
-        [filterKey]: !displayFilter[filterKey],
+      const newFilterSettings = {
+        ...filterSettings,
+        [filterKey]: !filterSettings[filterKey],
       }
-      setDisplayFilter(newDisplayFilter)
-
-      // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
-      setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
+      setFilterSettings(newFilterSettings)
+      // 注意: 表示更新は手動（Rキー）でのみ実行
     }
-  }, [displayFilter])
+  }, [filterSettings])
 
   // メニューショートカットを設定し、IPCイベントリスナーを追加（handleToggleFilterByScoreKeyの後に配置）
   useEffect(() => {
@@ -1200,7 +1131,8 @@ export default function GradingPage() {
     window.electronAPI.setShortcut("score")
 
     // score-panel IPCイベントリスナーを追加
-    const handleScorePanelEvent = (_event: any, action: string) => {
+    const handleScorePanelEvent = (_event: any, value: Record<string, unknown>) => {
+      const action = value.action as string
       console.log("Received score-panel IPC event:", action)
       
       switch (action) {
@@ -1954,71 +1886,69 @@ export default function GradingPage() {
                             <span className="text-xs font-medium">
                               表示フィルタ
                             </span>
-                            {!isFilterSynced() && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={handleRefreshFilter}
-                                className="h-4 px-1 text-xs"
-                              >
-                                R: 更新
-                              </Button>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleRefreshFilter}
+                              className="h-4 px-1 text-xs"
+                            >
+                              R: 更新
+                            </Button>
                           </div>
                           <div className="space-y-1">
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.ungraded}
+                                checked={filterSettings.ungraded}
                                 onChange={() => handleToggleFilter("1")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+Q: 未採点</span>
+                              <span className="text-xs">1/{modifierKeyLabel}+Q: 未採点</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.correct}
+                                checked={filterSettings.correct}
                                 onChange={() => handleToggleFilter("2")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+E: 正答</span>
+                              <span className="text-xs">2/{modifierKeyLabel}+E: 正答</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.incorrect}
+                                checked={filterSettings.incorrect}
                                 onChange={() => handleToggleFilter("3")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+O: 誤答</span>
+                              <span className="text-xs">3/{modifierKeyLabel}+O: 誤答</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.partial}
+                                checked={filterSettings.partial}
                                 onChange={() => handleToggleFilter("4")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+F: 部分点</span>
+                              <span className="text-xs">4/{modifierKeyLabel}+F: 部分点</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.pending}
+                                checked={filterSettings.pending}
                                 onChange={() => handleToggleFilter("5")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+J: 保留</span>
+                              <span className="text-xs">5/{modifierKeyLabel}+J: 保留</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
                                 type="checkbox"
-                                checked={displayFilter.no_answer}
+                                checked={filterSettings.no_answer}
                                 onChange={() => handleToggleFilter("6")}
                                 className="rounded"
                               />
-                              <span className="text-xs">{modifierKeyLabel}+P: 無答</span>
+                              <span className="text-xs">6/{modifierKeyLabel}+P: 無答</span>
                             </label>
                           </div>
                         </div>

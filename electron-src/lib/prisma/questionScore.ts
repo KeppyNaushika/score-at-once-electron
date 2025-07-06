@@ -12,6 +12,7 @@ export interface CreateQuestionScoreData {
     | "incorrect"
     | "partial"
     | "pending"
+    | "no_answer"
     | "proposed"
     | "final"
   comment?: string
@@ -27,6 +28,7 @@ export interface UpdateQuestionScoreData {
     | "incorrect"
     | "partial"
     | "pending"
+    | "no_answer"
     | "proposed"
     | "final"
   comment?: string
