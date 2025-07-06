@@ -1,50 +1,7 @@
 import { useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { QuestionScore } from "@prisma/client"
-import { ScoringStatus } from "./use-scoring-keyboard"
-
-// 採点データの型定義
-export interface ScoringData {
-  id?: string
-  questionId: string
-  score: number
-  maxScore: number
-  status: ScoringStatus
-  comment: string
-  scoredByUserId: string
-  version: number
-  updatedAt: Date
-}
-
-// 答案の型定義
-export interface AnswerSheet {
-  id: string
-  studentId: string
-  projectId: string
-  imagePath: string
-  pageNumber: number
-  status: "uploaded" | "processing" | "ready" | "graded"
-  student: {
-    id: string
-    studentId: string
-    lastName: string
-    firstName: string
-    projectStudents?: { customOrder: number }[] // ProjectStudentデータ
-  }
-}
-
-// 設問領域の型定義
-export interface QuestionRegion {
-  id: string
-  label: string
-  questionNumber: string
-  points: number
-  x: number
-  y: number
-  width: number
-  height: number
-  masterImageId: string // masterImageIdを追加
-}
+import type { ScoringStatus, ScoringData, AnswerSheet, QuestionRegion } from "../types"
 
 interface UseScoringDataProps {
   projectId: string

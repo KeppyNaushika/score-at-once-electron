@@ -1,4 +1,5 @@
 import prisma from "./client"
+import { Decimal } from "@prisma/client/runtime/library"
 
 /**
  * 実際の得点を計算する関数
@@ -146,7 +147,9 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       const updated = await prisma.questionScore.update({
         where: { id: existing.id },
         data: {
-          partialScore: data.partialScore,
+          partialScore: data.partialScore !== null && data.partialScore !== undefined 
+            ? new Decimal(data.partialScore) 
+            : null,
           status: data.status,
           comment: data.comment,
           scoreVersion: existing.scoreVersion + 1,
@@ -168,7 +171,9 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         data: {
           answerSheetId: data.answerSheetId,
           layoutRegionId: data.layoutRegionId,
-          partialScore: data.partialScore,
+          partialScore: data.partialScore !== null && data.partialScore !== undefined 
+            ? new Decimal(data.partialScore) 
+            : null,
           status: data.status,
           comment: data.comment,
           scoredByUserId: data.scoredByUserId,
@@ -227,10 +232,12 @@ export const updateQuestionScore = async (
     const updated = await prisma.questionScore.update({
       where: { id },
       data: {
-        partialScore: data.partialScore,
+        partialScore: data.partialScore !== null && data.partialScore !== undefined 
+          ? new Decimal(data.partialScore) 
+          : null,
         status: data.status,
         comment: data.comment,
-        scoreVersion: data.version !== undefined ? data.version : { increment: 1 },
+        scoreVersion: { increment: 1 },
       },
       include: {
         answerSheet: {
@@ -342,7 +349,9 @@ export const finalizeQuestionScore = async (
         data: {
           answerSheetId,
           layoutRegionId,
-          partialScore: scoreData.partialScore,
+          partialScore: scoreData.partialScore !== null && scoreData.partialScore !== undefined 
+            ? new Decimal(scoreData.partialScore) 
+            : null,
           status: scoreData.status,
           comment: scoreData.comment,
           scoredByUserId,

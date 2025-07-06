@@ -31,6 +31,7 @@ import ScoreComparisonModal from "../ScoreComparisonModal"
 import ScoringToolbar from "./scoring-toolbar"
 import QuestionNavigator from "./question-navigator"
 import NavigationControls from "./navigation-controls"
+import PartialScoreModal from "./PartialScoreModal"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 import {
@@ -161,9 +162,11 @@ export default function ScoringMainView() {
   // 部分点入力管理hook
   const {
     partialScoreInput,
-    setPartialScoreInput,
+    showPartialScoreModal,
     handlePartialScoreInput,
-    handlePartialScoreReset,
+    handlePartialScoreConfirm,
+    handlePartialScoreCancel,
+    handlePartialScoreBackspace,
   } = usePartialScore({
     selectedAnswers,
     currentQuestion,
@@ -192,7 +195,10 @@ export default function ScoringMainView() {
     onToggleFilterByScoreKey: handleToggleFilterByScoreKey,
     onRefreshFilter: handleRefreshFilter,
     onPartialScoreInput: handlePartialScoreInput,
-    onPartialScoreReset: handlePartialScoreReset,
+    onPartialScoreConfirm: handlePartialScoreConfirm,
+    onPartialScoreCancel: handlePartialScoreCancel,
+    onPartialScoreBackspace: handlePartialScoreBackspace,
+    showPartialScoreModal,
     onToggleFilter: handleToggleFilter,
   })
 
@@ -461,6 +467,18 @@ export default function ScoringMainView() {
                             <span>フィルタ切替</span>
                             <code className="bg-gray-100 px-2 py-1 rounded">{modifierKeyLabel}+採点キー</code>
                           </div>
+                          <div className="flex justify-between">
+                            <span>部分点入力</span>
+                            <code className="bg-gray-100 px-2 py-1 rounded">0-9,.</code>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>部分点リセット</span>
+                            <code className="bg-gray-100 px-2 py-1 rounded">Backspace</code>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>フィルタ切替(数字)</span>
+                            <code className="bg-gray-100 px-2 py-1 rounded">Ctrl+1-6</code>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -573,6 +591,15 @@ export default function ScoringMainView() {
             )}
           </div>
         </div>
+
+        {/* 部分点入力モーダル */}
+        <PartialScoreModal
+          isOpen={showPartialScoreModal}
+          value={partialScoreInput}
+          maxPoints={currentQuestion?.points || 0}
+          questionNumber={currentQuestion?.questionNumber || ""}
+          onClose={handlePartialScoreCancel}
+        />
 
         {/* 採点比較モーダル */}
         <ScoreComparisonModal

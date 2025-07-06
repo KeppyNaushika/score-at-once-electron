@@ -225,18 +225,14 @@ export interface LayoutRegionUpdateData {
 export interface QuestionScoreCreateData {
   answerSheetId: string
   layoutRegionId: string
-  score?: number
-  detectedAnswer?: string
-  isCorrect?: boolean
+  partialScore?: number | null  // Decimal型をnumberとして扱う
   comment?: string
   scoredByUserId: string
   status?: string
 }
 
 export interface QuestionScoreUpdateData {
-  score?: number
-  detectedAnswer?: string
-  isCorrect?: boolean
+  partialScore?: number | null  // Decimal型をnumberとして扱う
   comment?: string
   status?: string
 }

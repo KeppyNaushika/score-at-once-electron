@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react"
-import { ScoringStatus } from "./use-scoring-keyboard"
-import { QuestionRegion } from "./use-scoring-data"
+import type { ScoringStatus, QuestionRegion } from "../types"
 
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>
@@ -13,65 +12,114 @@ export function usePartialScore({
   currentQuestion,
   onBatchScore,
 }: UsePartialScoreProps) {
-  // 部分点入力用状態
+  // 部分点入力モーダル用状態
   const [partialScoreInput, setPartialScoreInput] = useState("")
-  const [partialScoreInputTimer, setPartialScoreInputTimer] = useState<NodeJS.Timeout | null>(null)
+  const [showPartialScoreModal, setShowPartialScoreModal] = useState(false)
 
-  // 部分点入力処理
-  const handlePartialScoreInput = useCallback(async (digit: string) => {
+  // 部分点入力開始（数字キー・小数点対応）
+  const handlePartialScoreInput = useCallback((key: string) => {
     if (selectedAnswers.size === 0 || !currentQuestion) return
 
-    // 現在の部分点入力状態を管理
-    const currentPartialInput = partialScoreInput || ""
-    const newPartialInput = currentPartialInput + digit
-
-    // 数値として有効かチェック（最大点数以下）
-    const numericValue = parseFloat(newPartialInput)
-    const maxPoints = currentQuestion.points || 10
-    if (isNaN(numericValue) || numericValue > maxPoints) {
-      return // 無効な入力は無視
+    // モーダルが表示されていない場合は開く
+    if (!showPartialScoreModal) {
+      setPartialScoreInput("")
+      setShowPartialScoreModal(true)
     }
 
-    setPartialScoreInput(newPartialInput)
+    const currentInput = partialScoreInput || ""
+    let newInput = ""
 
-    // 一定時間後に自動的に採点を実行
-    if (partialScoreInputTimer) {
-      clearTimeout(partialScoreInputTimer)
+    // 小数点の処理
+    if (key === ".") {
+      // 既に小数点が含まれている場合は無視
+      if (currentInput.includes(".")) return
+      // 空の場合は "0." から開始
+      newInput = currentInput === "" ? "0." : currentInput + "."
+    } else {
+      // 数字キーの処理（左追加）
+      newInput = currentInput + key
     }
 
-    const timer = setTimeout(() => {
-      if (partialScoreInput === newPartialInput) {
-        // 入力が変更されていない場合のみ
-        onBatchScore("partial", numericValue)
-        setPartialScoreInput("")
+    // 小数点以下の桁数制限（2桁まで）
+    const decimalPart = newInput.split(".")[1]
+    if (decimalPart && decimalPart.length > 2) {
+      return
+    }
+
+    // 数値の妥当性チェック（小数点のみの場合は一旦スキップ）
+    if (!newInput.endsWith(".")) {
+      const numericValue = parseFloat(newInput)
+      const maxPoints = currentQuestion.points || 10
+      
+      // 不正な値や最大点数超過の場合は無視
+      if (isNaN(numericValue) || numericValue > maxPoints) {
+        return
       }
-    }, 1500) // 1.5秒待機
+    }
 
-    setPartialScoreInputTimer(timer)
+    setPartialScoreInput(newInput)
   }, [
     selectedAnswers.size,
     currentQuestion,
     partialScoreInput,
-    partialScoreInputTimer,
+    showPartialScoreModal,
+  ])
+
+  // F/Jキーで部分点確定
+  const handlePartialScoreConfirm = useCallback((confirmType: "partial" | "pending") => {
+    if (!showPartialScoreModal || selectedAnswers.size === 0) return
+
+    let finalInput = partialScoreInput
+    if (finalInput.endsWith(".")) {
+      finalInput = finalInput + "0"
+    }
+
+    const finalValue = parseFloat(finalInput)
+    const maxPoints = currentQuestion?.points || 10
+
+    // 値の妥当性チェック
+    if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
+      const roundedValue = Math.round(finalValue * 100) / 100
+      onBatchScore(confirmType, roundedValue)
+    } else if (finalInput === "" || finalInput === "0.") {
+      // 空の場合は0点として処理
+      onBatchScore(confirmType, 0)
+    }
+
+    // モーダルを閉じる
+    setPartialScoreInput("")
+    setShowPartialScoreModal(false)
+  }, [
+    showPartialScoreModal,
+    selectedAnswers.size,
+    partialScoreInput,
+    currentQuestion,
     onBatchScore,
   ])
 
-  // 部分点リセット処理
-  const handlePartialScoreReset = useCallback(() => {
-    if (selectedAnswers.size === 0) return
-
+  // モーダルキャンセル（Escape等）
+  const handlePartialScoreCancel = useCallback(() => {
     setPartialScoreInput("")
-    if (partialScoreInputTimer) {
-      clearTimeout(partialScoreInputTimer)
-      setPartialScoreInputTimer(null)
+    setShowPartialScoreModal(false)
+  }, [])
+
+  // Backspaceで文字削除
+  const handlePartialScoreBackspace = useCallback(() => {
+    if (!showPartialScoreModal) return
+    
+    const currentInput = partialScoreInput || ""
+    if (currentInput.length > 0) {
+      setPartialScoreInput(currentInput.slice(0, -1))
     }
-    onBatchScore("partial", null)
-  }, [selectedAnswers.size, partialScoreInputTimer, onBatchScore])
+  }, [showPartialScoreModal, partialScoreInput])
 
   return {
     partialScoreInput,
+    showPartialScoreModal,
     setPartialScoreInput,
     handlePartialScoreInput,
-    handlePartialScoreReset,
+    handlePartialScoreConfirm,
+    handlePartialScoreCancel,
+    handlePartialScoreBackspace,
   }
 }

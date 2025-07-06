@@ -588,11 +588,11 @@ export default function AnswerGridView({
                 
                 {/* 学生情報と採点状況 */}
                 <div className="mt-0.5 flex items-center justify-between">
-                  <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
-                    {answer.studentName}
-                  </span>
-                  
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-1 flex-1 min-w-0">
+                    <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
+                      {answer.studentName}
+                    </span>
+                    
                     {!isMaster && answer.status !== "ungraded" && (
                       <Badge variant="outline" className="text-xs h-4 px-1">
                         {answer.currentScore !== undefined 
@@ -610,9 +610,9 @@ export default function AnswerGridView({
                         {answer.maxScore}点満点
                       </Badge>
                     )}
-                    
-                    {!isMaster && <Icon className={`h-3 w-3 ${config.textColor}`} />}
                   </div>
+                  
+                  {!isMaster && <Icon className={`h-3 w-3 ${config.textColor} flex-shrink-0`} />}
                 </div>
               </CardContent>
             </Card>

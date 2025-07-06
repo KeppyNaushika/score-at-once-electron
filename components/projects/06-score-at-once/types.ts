@@ -1,4 +1,4 @@
-// 採点状態の型定義
+// 採点状態の型定義（hooks/use-scoring-keyboard.tsから移動）
 export type ScoringStatus =
   | "ungraded"
   | "correct"
@@ -35,7 +35,7 @@ export interface AnswerSheet {
     studentId: string
     lastName: string
     firstName: string
-    customOrder?: number | null // 受験生徒の表示順序
+    projectStudents?: { customOrder: number }[] // ProjectStudentデータ
   }
 }
 
@@ -49,6 +49,7 @@ export interface QuestionRegion {
   y: number
   width: number
   height: number
+  masterImageId: string // masterImageIdを追加
 }
 
 // キーボードショートカットの設定（Python版互換）

@@ -8,12 +8,14 @@ export { default as ScoreComparisonModal } from './ScoreComparisonModal'
 export { StatusIcon } from './StatusIcon'
 
 export type { GradingMode } from './GradingModeToggle'
+
+// 型定義エクスポート
 export * from './types'
 
 // Components
 export * from './components'
 
-// Hooks (specific exports to avoid conflicts)
+// Hooks
 export {
   useScoringKeyboard,
   useScoringData,
@@ -22,5 +24,5 @@ export {
   usePartialScore,
   isMacOS,
   getModifierKeyLabel,
+  DEFAULT_SHORTCUTS,
 } from './hooks'
-export type { ScoringStatus } from './hooks'
