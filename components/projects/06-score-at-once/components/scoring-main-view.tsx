@@ -248,41 +248,15 @@ export default function ScoringMainView() {
         const existingScores = await loadExistingScoringData(projectId)
 
         // Transform the data to match AnswerSheet interface
-        const transformedAnswerSheets = await Promise.all(
-          (answersResult.answerSheets || []).map(async (sheet: any) => {
-            console.log("Answer sheet data:", {
-              id: sheet.id,
-              originalImagePath: sheet.originalImagePath,
-              studentId: sheet.studentId,
-              pageNumber: sheet.pageNumber
-            })
-            
-            // ファイル存在確認
-            if (sheet.originalImagePath) {
-              try {
-                const fileCheck = await window.electronAPI.checkFileExists(sheet.originalImagePath)
-                console.log("File existence check:", {
-                  path: sheet.originalImagePath,
-                  exists: fileCheck.exists,
-                  absolutePath: fileCheck.path,
-                  error: fileCheck.error
-                })
-              } catch (err) {
-                console.error("Error checking file existence:", err)
-              }
-            }
-            
-            return {
-              id: sheet.id,
-              studentId: sheet.studentId,
-              projectId: sheet.projectId,
-              imagePath: sheet.originalImagePath || "",
-              pageNumber: sheet.pageNumber || 1,
-              status: sheet.status || "uploaded",
-              student: sheet.student,
-            }
-          }),
-        )
+        const transformedAnswerSheets = (answersResult.answerSheets || []).map((sheet: any) => ({
+          id: sheet.id,
+          studentId: sheet.studentId,
+          projectId: sheet.projectId,
+          imagePath: sheet.originalImagePath || "",
+          pageNumber: sheet.pageNumber || 1,
+          status: sheet.status || "uploaded",
+          student: sheet.student,
+        }))
         
         setAnswerSheets(transformedAnswerSheets)
         setQuestionRegions(questionRegions)
