@@ -239,6 +239,7 @@ interface AnswerGridViewProps {
   className?: string
   onEffectiveColumnsChange?: (columns: number) => void // 実際の列数変更を親に通知
   itemsPerRow?: number[] // 外部からの1行あたり表示件数
+  autoScroll?: boolean // 自動スクロール設定
 }
 
 export default function AnswerGridView({
@@ -253,6 +254,7 @@ export default function AnswerGridView({
   className = "",
   onEffectiveColumnsChange,
   itemsPerRow: externalItemsPerRow,
+  autoScroll = true,
 }: AnswerGridViewProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
     null,
@@ -414,53 +416,44 @@ export default function AnswerGridView({
     return () => document.removeEventListener("keydown", handleKeyPress)
   }, [selectedAnswers, onAnswerScore])
 
-  // 選択された答案を画面中央にスクロール
+  // 選択された答案を画面中央にスクロール（自動スクロール設定に基づく）
   useEffect(() => {
-    if (selectedAnswers.size === 1 && gridRef.current) {
+    if (autoScroll && selectedAnswers.size === 1 && gridRef.current) {
       const selectedId = Array.from(selectedAnswers)[0]
       const selectedElement = gridRef.current.querySelector(
         `[data-answer-id="${selectedId}"]`,
       ) as HTMLElement
 
       if (selectedElement) {
-        const container = gridRef.current.parentElement
-        if (container) {
-          const containerRect = container.getBoundingClientRect()
-          const elementRect = selectedElement.getBoundingClientRect()
+        // gridRef.current自体がスクロールコンテナ（overflow-auto）
+        const container = gridRef.current
+        const containerRect = container.getBoundingClientRect()
+        const elementRect = selectedElement.getBoundingClientRect()
 
-          // 縦方向と横方向両方に対応したスクロール計算
-          const isHorizontalLayout =
-            layoutDirection === "down-right" || layoutDirection === "down-left"
+        // 縦・横両方向のスクロール計算（すべてのレイアウトに対応）
+        const scrollLeft =
+          elementRect.left -
+          containerRect.left +
+          container.scrollLeft -
+          container.clientWidth / 2 +
+          elementRect.width / 2
 
-          if (isHorizontalLayout) {
-            // 横スクロール（列ベースレイアウト）
-            const scrollLeft =
-              elementRect.left -
-              containerRect.left +
-              container.scrollLeft -
-              container.clientWidth / 2 +
-              elementRect.width / 2
-            container.scrollTo({
-              left: Math.max(0, scrollLeft),
-              behavior: "smooth",
-            })
-          } else {
-            // 縦スクロール（行ベースレイアウト）
-            const scrollTop =
-              elementRect.top -
-              containerRect.top +
-              container.scrollTop -
-              container.clientHeight / 2 +
-              elementRect.height / 2
-            container.scrollTo({
-              top: Math.max(0, scrollTop),
-              behavior: "smooth",
-            })
-          }
-        }
+        const scrollTop =
+          elementRect.top -
+          containerRect.top +
+          container.scrollTop -
+          container.clientHeight / 2 +
+          elementRect.height / 2
+
+        // 両方向に同時にスクロール
+        container.scrollTo({
+          left: Math.max(0, scrollLeft),
+          top: Math.max(0, scrollTop),
+          behavior: "smooth",
+        })
       }
     }
-  }, [selectedAnswers, layoutDirection])
+  }, [selectedAnswers, layoutDirection, autoScroll])
 
   // マウスドラッグ選択
   const handleMouseDown = (event: React.MouseEvent, answerId: string) => {
@@ -605,7 +598,7 @@ export default function AnswerGridView({
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className="grid min-h-0 flex-1 gap-2 overflow-y-auto select-none p-1"
+        className="grid min-h-0 flex-1 gap-2 overflow-auto select-none p-1"
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"

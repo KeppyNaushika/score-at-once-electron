@@ -111,7 +111,7 @@ export function useScoringFilter({
       // 表示対象を更新
       updateVisibleAnswers()
     }
-  }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, updateVisibleAnswers])
 
   // visibleAnswersが更新されたら最初の生徒答案を選択（模範解答をスキップ）
   useEffect(() => {
@@ -222,8 +222,11 @@ export function useScoringFilter({
 
   // フィルタリング関連ハンドラー（Rキー押下時のみ）
   const handleRefreshFilter = useCallback(() => {
+    // 選択をクリア
+    setSelectedAnswers(new Set())
+    // 表示対象を更新
     updateVisibleAnswers()
-  }, [updateVisibleAnswers])
+  }, [updateVisibleAnswers, setSelectedAnswers])
 
   const handleToggleFilter = useCallback((key: string) => {
     // ボタン操作によるフィルター切り替え
