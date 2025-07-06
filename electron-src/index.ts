@@ -14,7 +14,7 @@ app.on("ready", async () => {
   setupWindowEvents(mainWindow)
 
   // IPCハンドラーの設定
-  setupAllIPCHandlers(mainWindow)
+  setupAllIPCHandlers()
 })
 
 app.on("window-all-closed", app.quit)

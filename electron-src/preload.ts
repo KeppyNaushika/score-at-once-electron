@@ -19,10 +19,6 @@ declare global {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  setShortcut: (page: string) => ipcRenderer.send("set-shortcut", page),
-  sendScorePanel: (arg: string) => {
-    ipcRenderer.send("score-panel", arg)
-  },
   fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
   fetchProjectById: (projectId: string) =>
     ipcRenderer.invoke("fetch-project-by-id", projectId),
@@ -251,9 +247,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeAllListeners('export-progress')
   },
 
-  scorePanel: (listener: any) => ipcRenderer.on("score-panel", listener), // 修正: on を使用
-  removeScorePanelListener: (listener: any) =>
-    ipcRenderer.removeListener("score-panel", listener), // 修正: removeListener を使用
 })
 
 process.once("loaded", () => {
