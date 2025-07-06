@@ -309,19 +309,14 @@ export default function ScoringMainView() {
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
-    console.log(`🔍 handleAnswerSelect 呼び出し: ID=${answerId}, isSelected=${isSelected}`)
-    
     // 模範解答は選択対象外
     if (answerId.startsWith('master-')) {
-      console.log('⛔ 模範解答の選択をブロック')
       return
     }
     
     // 答案が実際に存在するかチェック
     const answerExists = answerSheets.some(sheet => sheet.id === answerId)
     if (!answerExists) {
-      console.error('🚨 存在しない答案IDが選択されようとしています:', answerId)
-      console.log('📋 現在の答案シート一覧:', answerSheets.map(s => ({ id: s.id, student: s.student?.lastName + ' ' + s.student?.firstName })))
       return
     }
     
@@ -329,10 +324,8 @@ export default function ScoringMainView() {
       const newSet = new Set(prev)
       if (isSelected) {
         newSet.add(answerId)
-        console.log(`✅ 答案選択: ${answerId}`)
       } else {
         newSet.delete(answerId)
-        console.log(`❌ 答案選択解除: ${answerId}`)
       }
       return newSet
     })
