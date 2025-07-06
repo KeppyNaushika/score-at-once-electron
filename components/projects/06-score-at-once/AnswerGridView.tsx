@@ -222,6 +222,7 @@ interface AnswerGridViewProps {
   selectedAnswers: Set<string>
   currentAnswerId?: string // 現在採点中の答案ID
   className?: string
+  onEffectiveColumnsChange?: (columns: number) => void // 実際の列数変更を親に通知
 }
 
 export default function AnswerGridView({
@@ -234,6 +235,7 @@ export default function AnswerGridView({
   selectedAnswers,
   currentAnswerId,
   className = "",
+  onEffectiveColumnsChange,
 }: AnswerGridViewProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -243,22 +245,32 @@ export default function AnswerGridView({
   // localStorageから初期値を読み込み
   useEffect(() => {
     const stored = localStorage.getItem('answerGridView-itemsPerRow')
+    let initialValue = [5] // デフォルト値
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
         if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+          initialValue = parsed
           setItemsPerRow(parsed)
         }
       } catch (error) {
         console.warn('Failed to parse stored itemsPerRow:', error)
       }
     }
-  }, [])
+    // 親コンポーネントに初期値を通知
+    if (onEffectiveColumnsChange) {
+      onEffectiveColumnsChange(initialValue[0])
+    }
+  }, [onEffectiveColumnsChange])
   
   // itemsPerRowの変更をlocalStorageに保存
   const handleItemsPerRowChange = (value: number[]) => {
     setItemsPerRow(value)
     localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
+    // 親コンポーネントに実際の列数を通知
+    if (onEffectiveColumnsChange) {
+      onEffectiveColumnsChange(value[0])
+    }
   }
   
   

@@ -56,6 +56,7 @@ export default function ScoringMainView() {
   const [layoutDirection, setLayoutDirection] = useState<
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
+  const [effectiveColumns, setEffectiveColumns] = useState<number>(5) // 実際の表示列数
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -154,6 +155,7 @@ export default function ScoringMainView() {
     gridSize,
     layoutDirection,
     getGridAnswerData,
+    effectiveColumns,
   })
 
   // 部分点入力管理hook
@@ -521,6 +523,7 @@ export default function ScoringMainView() {
                   onAnswerScore={handleBatchScoreWithProgress}
                   selectedAnswers={selectedAnswers}
                   currentAnswerId={currentAnswerSheet?.id}
+                  onEffectiveColumnsChange={setEffectiveColumns}
                 />
               )}
             </div>
