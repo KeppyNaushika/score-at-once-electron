@@ -587,31 +587,32 @@ export default function AnswerGridView({
                 </div>
                 
                 {/* 学生情報と採点状況 */}
-                <div className="mt-0.5 space-y-0">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
-                      {answer.studentName}
-                    </span>
+                <div className="mt-0.5 flex items-center justify-between">
+                  <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
+                    {answer.studentName}
+                  </span>
+                  
+                  <div className="flex items-center space-x-1">
+                    {!isMaster && answer.status !== "ungraded" && (
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        {answer.currentScore !== undefined 
+                          ? `${answer.currentScore}/${answer.maxScore}`
+                          : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
+                          : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
+                          : answer.status === "proposed" ? "提案中"
+                          : "採点中"
+                        }
+                      </Badge>
+                    )}
+                    
+                    {isMaster && (
+                      <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
+                        {answer.maxScore}点満点
+                      </Badge>
+                    )}
+                    
                     {!isMaster && <Icon className={`h-3 w-3 ${config.textColor}`} />}
                   </div>
-                  
-                  {!isMaster && answer.status !== "ungraded" && (
-                    <Badge variant="outline" className="text-xs h-4 px-1">
-                      {answer.currentScore !== undefined 
-                        ? `${answer.currentScore}/${answer.maxScore}`
-                        : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
-                        : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
-                        : answer.status === "proposed" ? "提案中"
-                        : "採点中"
-                      }
-                    </Badge>
-                  )}
-                  
-                  {isMaster && (
-                    <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
-                      {answer.maxScore}点満点
-                    </Badge>
-                  )}
                 </div>
               </CardContent>
             </Card>
