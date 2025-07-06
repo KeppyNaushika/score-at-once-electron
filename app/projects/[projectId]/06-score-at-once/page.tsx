@@ -35,6 +35,19 @@ import type { QuestionScore } from "@prisma/client"
 import { toast } from "sonner"
 import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 
+// macOS detection utility
+const isMacOS = () => {
+  if (typeof window !== 'undefined') {
+    return window.navigator.platform.toUpperCase().indexOf('MAC') >= 0
+  }
+  return false
+}
+
+// Get the appropriate modifier key label for the current platform
+const getModifierKeyLabel = () => {
+  return isMacOS() ? 'Option' : 'Alt'
+}
+
 // 採点状態の型定義
 type ScoringStatus =
   | "ungraded"
@@ -178,6 +191,7 @@ export default function GradingPage() {
   const [viewMode, setViewMode] = useState<"question" | "full">("question") // 設問拡大 or 全体表示
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [showSidePanel, setShowSidePanel] = useState(true) // サイドパネルの表示制御
+  const [modifierKeyLabel, setModifierKeyLabel] = useState('Alt') // プラットフォーム固有のキーラベル
 
   // Refs
   const imageRef = useRef<HTMLImageElement>(null)
@@ -186,6 +200,11 @@ export default function GradingPage() {
   // 現在の答案と設問
   const currentAnswerSheet = answerSheets[currentStudentIndex]
   const currentQuestion = questionRegions[currentQuestionIndex]
+
+  // プラットフォーム固有のキーラベルを初期化
+  useEffect(() => {
+    setModifierKeyLabel(getModifierKeyLabel())
+  }, [])
 
   // データの初期読み込み
   useEffect(() => {
@@ -272,6 +291,11 @@ export default function GradingPage() {
     initializeGradingData()
   }, [projectId])
 
+  // プラットフォーム固有のキーラベルを設定
+  useEffect(() => {
+    setModifierKeyLabel(isMacOS() ? 'Option' : 'Alt')
+  }, [])
+
   // displayFilterとappliedFilterの初期同期
   useEffect(() => {
     setAppliedFilter(displayFilter)
@@ -342,7 +366,7 @@ export default function GradingPage() {
       if (gradingMode === "grid") {
         const key = event.key.toLowerCase()
 
-        // Alt+採点キーでフィルタ切り替え
+        // Alt+採点キーでフィルタ切り替え (macOSではOption+採点キー、WindowsではAlt+採点キー)
         if (
           event.altKey &&
           [
@@ -355,6 +379,7 @@ export default function GradingPage() {
           ].includes(key)
         ) {
           event.preventDefault()
+          console.log(`macOS Option+${key.toUpperCase()} detected: altKey=${event.altKey}, metaKey=${event.metaKey}, platform=${window.navigator.platform}`)
           handleToggleFilterByScoreKey(key)
           return
         }
@@ -366,8 +391,8 @@ export default function GradingPage() {
           return
         }
 
-        // Rキーでフィルタを更新
-        if (key === "r") {
+        // Rキーでフィルタを更新（Ctrl+Rは除外してページリロードを許可）
+        if (key === "r" && !event.ctrlKey && !event.metaKey) {
           event.preventDefault()
           handleRefreshFilter()
           return
@@ -414,8 +439,8 @@ export default function GradingPage() {
           return
         }
 
-        // Rキーでフィルタリフレッシュ
-        if (key === "r") {
+        // Rキーでフィルタリフレッシュ（Ctrl+Rは除外してページリロードを許可）
+        if (key === "r" && !event.ctrlKey && !event.metaKey) {
           event.preventDefault()
           handleRefreshFilter()
           return
@@ -792,6 +817,27 @@ export default function GradingPage() {
     })
   }
 
+  // 表示フィルタを即座に更新（採点後などに使用）
+  const updateDisplayFilters = () => {
+    const newAppliedFilter = { ...displayFilter }
+    setAppliedFilter(newAppliedFilter)
+    setNeedsFilterRefresh(false)
+    setFilterUpdateKey((prev) => prev + 1) // 強制的に再レンダリング
+    // 選択状態をリセット
+    setSelectedAnswers(new Set())
+    // フィルタ適用後の最初の答案を選択
+    setTimeout(() => {
+      const allAnswers = getAllGridAnswerData()
+      const filteredAnswers = allAnswers.filter(
+        (answer) =>
+          newAppliedFilter[answer.status as keyof typeof newAppliedFilter],
+      )
+      if (filteredAnswers.length > 0) {
+        setSelectedAnswers(new Set([filteredAnswers[0].id]))
+      }
+    }, 100)
+  }
+
   // オーバーロード用のhandleBatchScore関数（部分点指定可能）
   const handleBatchScore = async (
     statusOrAnswerIds: ScoringStatus | string | string[],
@@ -1125,7 +1171,7 @@ export default function GradingPage() {
   }
 
   // Alt+採点キーでフィルタ切り替え
-  const handleToggleFilterByScoreKey = (scoreKey: string) => {
+  const handleToggleFilterByScoreKey = useCallback((scoreKey: string) => {
     const scoreToFilterMap: { [key: string]: keyof typeof displayFilter } = {
       [DEFAULT_SHORTCUTS.ungraded]: "ungraded",
       [DEFAULT_SHORTCUTS.correct]: "correct",
@@ -1146,7 +1192,49 @@ export default function GradingPage() {
       // displayFilterのみ更新、appliedFilterは手動（Rキー）で更新
       setNeedsFilterRefresh(true) // リフレッシュが必要であることを示す
     }
-  }
+  }, [displayFilter])
+
+  // メニューショートカットを設定し、IPCイベントリスナーを追加（handleToggleFilterByScoreKeyの後に配置）
+  useEffect(() => {
+    // スコアページ用のメニューを有効化
+    window.electronAPI.setShortcut("score")
+
+    // score-panel IPCイベントリスナーを追加
+    const handleScorePanelEvent = (_event: any, action: string) => {
+      console.log("Received score-panel IPC event:", action)
+      
+      switch (action) {
+        case "toggle-show-unscored":
+          handleToggleFilterByScoreKey("q")
+          break
+        case "toggle-show-correct":
+          handleToggleFilterByScoreKey("e")
+          break
+        case "toggle-show-partial":
+          handleToggleFilterByScoreKey("f")
+          break
+        case "toggle-show-pending":
+          handleToggleFilterByScoreKey("j")
+          break
+        case "toggle-show-incorrect":
+          handleToggleFilterByScoreKey("o")
+          break
+        case "toggle-show-noanswer":
+          handleToggleFilterByScoreKey("p")
+          break
+        default:
+          console.log("Unhandled score-panel action:", action)
+      }
+    }
+
+    // IPCレンダラーにリスナーを追加
+    window.electronAPI.scorePanel(handleScorePanelEvent)
+
+    return () => {
+      // クリーンアップ
+      window.electronAPI.removeScorePanelListener(handleScorePanelEvent)
+    }
+  }, [handleToggleFilterByScoreKey])
 
   // 部分点入力処理
   const handlePartialScoreInput = async (digit: string) => {
@@ -1603,7 +1691,6 @@ export default function GradingPage() {
               }`}
             >
               <AnswerGridView
-                key={`grid-${filterUpdateKey}`}
                 answers={getGridAnswerData()}
                 currentQuestionIndex={currentQuestionIndex}
                 layoutDirection={layoutDirection}
@@ -1886,7 +1973,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("1")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+Q: 未採点</span>
+                              <span className="text-xs">{modifierKeyLabel}+Q: 未採点</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
@@ -1895,7 +1982,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("2")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+E: 正答</span>
+                              <span className="text-xs">{modifierKeyLabel}+E: 正答</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
@@ -1904,7 +1991,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("3")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+O: 誤答</span>
+                              <span className="text-xs">{modifierKeyLabel}+O: 誤答</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
@@ -1913,7 +2000,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("4")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+F: 部分点</span>
+                              <span className="text-xs">{modifierKeyLabel}+F: 部分点</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
@@ -1922,7 +2009,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("5")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+J: 保留</span>
+                              <span className="text-xs">{modifierKeyLabel}+J: 保留</span>
                             </label>
                             <label className="flex cursor-pointer items-center space-x-2">
                               <input
@@ -1931,7 +2018,7 @@ export default function GradingPage() {
                                 onChange={() => handleToggleFilter("6")}
                                 className="rounded"
                               />
-                              <span className="text-xs">Alt+P: 無答</span>
+                              <span className="text-xs">{modifierKeyLabel}+P: 無答</span>
                             </label>
                           </div>
                         </div>
@@ -2000,7 +2087,7 @@ export default function GradingPage() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <kbd className="bg-muted rounded px-1 py-0.5 text-xs">
-                                  Alt+採点キー
+                                  {modifierKeyLabel}+採点キー
                                 </kbd>
                                 <span className="text-muted-foreground">
                                   フィルタ切替

@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
+import { Slider } from "@/components/ui/slider"
 import { CheckCircle, Circle, Clock, AlertTriangle, X, Minus } from "lucide-react"
 
 type ScoringStatus =
@@ -86,7 +87,7 @@ const CroppedAnswerImage = ({
   }
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
+    <div className={`relative w-full ${className}`} style={{ aspectRatio: questionRegion ? `${questionRegion.width}/${questionRegion.height}` : '3/4' }}>
       <img 
         ref={imageRef}
         src={imageUrl}
@@ -227,7 +228,36 @@ export default function AnswerGridView({
 }: AnswerGridViewProps) {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+  const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数 (0-10)
   const gridRef = useRef<HTMLDivElement>(null)
+  
+  // localStorageから初期値を読み込み
+  useEffect(() => {
+    const stored = localStorage.getItem('answerGridView-itemsPerRow')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+          setItemsPerRow(parsed)
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored itemsPerRow:', error)
+      }
+    }
+  }, [])
+  
+  // itemsPerRowの変更をlocalStorageに保存
+  const handleItemsPerRowChange = (value: number[]) => {
+    setItemsPerRow(value)
+    localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
+  }
+  
+  
+  // 実際に使用するgridSizeを計算
+  const effectiveGridSize = {
+    columns: itemsPerRow[0] === 0 ? gridSize.columns : itemsPerRow[0], // 0の場合は元のgridSizeを使用
+    rows: gridSize.rows
+  }
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {
@@ -238,7 +268,7 @@ export default function AnswerGridView({
     
     // グリッドサイズに基づくレイアウトは動的に計算
     const totalAnswers = answers.length
-    const cols = gridSize.columns
+    const cols = effectiveGridSize.columns
     const rows = Math.ceil(totalAnswers / cols)
     
     const sorted = new Array(totalAnswers)
@@ -268,7 +298,7 @@ export default function AnswerGridView({
     })
     
     return sorted.filter(Boolean)
-  }, [answers, layoutDirection, gridSize])
+  }, [answers, layoutDirection, effectiveGridSize])
 
   // キーボードショートカット処理
   useEffect(() => {
@@ -457,6 +487,21 @@ export default function AnswerGridView({
 
   return (
     <div className={`space-y-2 ${className}`}>
+      {/* 1行あたりの表示件数調整スライダー */}
+      <div className="flex items-center space-x-4 px-2 py-1 bg-muted/50 rounded-md">
+        <span className="text-sm font-medium min-w-[80px]">1行あたり:</span>
+        <Slider
+          value={itemsPerRow}
+          onValueChange={handleItemsPerRowChange}
+          max={10}
+          min={1}
+          step={1}
+          className="flex-1 max-w-[200px]"
+        />
+        <span className="text-sm text-muted-foreground min-w-[20px]">
+          {itemsPerRow[0]}件
+        </span>
+      </div>
 
       {/* 答案グリッド */}
       <div 
@@ -464,14 +509,12 @@ export default function AnswerGridView({
         className="grid gap-2 select-none"
         style={{
           gridTemplateColumns: layoutDirection === "down-right" || layoutDirection === "down-left" 
-            ? `repeat(${Math.ceil(answers.length / gridSize.rows)}, 200px)` 
-            : `repeat(${gridSize.columns}, minmax(200px, 1fr))`,
+            ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)` 
+            : `repeat(${effectiveGridSize.columns}, minmax(200px, 1fr))`,
           gridTemplateRows: layoutDirection === "down-right" || layoutDirection === "down-left"
-            ? `repeat(${Math.min(gridSize.rows, answers.length)}, 200px)`
-            : 'auto',
-          gridAutoRows: layoutDirection === "down-right" || layoutDirection === "down-left" 
-            ? undefined 
-            : '200px', // 固定サイズにして一貫性を保つ
+            ? `repeat(${Math.min(effectiveGridSize.rows, answers.length)}, minmax(150px, auto))`
+            : 'none', // gridAutoRowsに統一
+          gridAutoRows: 'minmax(150px, auto)', // 最低150px、内容に応じて拡張
           width: layoutDirection === "down-right" || layoutDirection === "down-left" 
             ? 'max-content' 
             : '100%',
@@ -488,22 +531,13 @@ export default function AnswerGridView({
           const isSelected = selectedAnswers.has(answer.id)
           const isCurrentAnswer = currentAnswerId === answer.id
           
-          // 採点領域に応じてサイズを動的調整
-          const aspectRatio = answer.questionRegion 
-            ? answer.questionRegion.width / answer.questionRegion.height 
-            : 3/4
-          const imageAspectClass = aspectRatio > 1.2 
-            ? "aspect-[4/2]" // 横長の採点領域
-            : aspectRatio < 0.8 
-            ? "aspect-[2/3]" // 縦長の採点領域  
-            : "aspect-[3/4]" // 標準比率
           
           return (
             <Card
               key={answer.id}
               data-answer-id={answer.id}
               className={`
-                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2 flex-shrink-0
+                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2 flex-shrink-0 py-0
                 ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
                 ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
                 ${config.borderColor}
@@ -511,14 +545,14 @@ export default function AnswerGridView({
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
-              <CardContent className="p-0.5">
+              <CardContent className="p-2 px-2">
                 {/* 答案画像 */}
-                <div className={`${imageAspectClass} overflow-hidden rounded`}>
+                <div className="overflow-hidden rounded">
                   <CroppedAnswerImage
                     imageUrl={answer.imageUrl}
                     questionRegion={answer.questionRegion}
                     alt={`${answer.studentName}の答案`}
-                    className="rounded"
+                    className="rounded w-full h-auto"
                   />
                 </div>
                 

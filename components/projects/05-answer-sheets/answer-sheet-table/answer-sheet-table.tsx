@@ -26,6 +26,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
+  PendingChange,
 } from "@/types/answer-sheet.types"
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
 import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
@@ -50,6 +51,11 @@ interface AnswerSheetTableProps {
   observerRef?: React.RefObject<IntersectionObserver | null>
   mode?: "upload" | "view"
   onReloadData?: () => void
+  
+  // 変更状態管理用（確認モードのみ）
+  pendingChanges?: PendingChange[]
+  affectedCells?: Set<string>
+  onAddPendingChange?: (change: PendingChange) => void
 }
 
 // ============================================================================
@@ -70,6 +76,9 @@ export function AnswerSheetTable({
   observerRef,
   mode = "upload",
   onReloadData,
+  pendingChanges,
+  affectedCells,
+  onAddPendingChange,
 }: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
@@ -124,6 +133,7 @@ export function AnswerSheetTable({
     masterImageCount,
     mode,
     onReloadData,
+    onAddPendingChange,
   )
 
   // ============================================================================
@@ -343,6 +353,7 @@ export function AnswerSheetTable({
                               getFileColor={getFileColor}
                               drawNameRegionCanvas={drawNameRegionCanvas}
                               imageLoadState={imageLoadStates[file.id]}
+                              isPendingChange={affectedCells?.has(file.id) || false}
                             />
                           </SortableTableCell>
                         )

@@ -88,6 +88,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-answer-sheet-placement", answerSheetId, studentId, pageNumber),
   swapAnswerSheetPlacements: (answerSheetId1: string, answerSheetId2: string) =>
     ipcRenderer.invoke("swap-answer-sheet-placements", answerSheetId1, answerSheetId2),
+  swapAnswerSheetPlacementsWithScoring: (answerSheetId1: string, answerSheetId2: string) =>
+    ipcRenderer.invoke("swap-answer-sheet-placements-with-scoring", answerSheetId1, answerSheetId2),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
 
