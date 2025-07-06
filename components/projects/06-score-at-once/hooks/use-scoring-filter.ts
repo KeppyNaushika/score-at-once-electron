@@ -222,11 +222,6 @@ export function useScoringFilter({
     }
   }, [filterSettings])
 
-  // メニューショートカットを設定
-  useEffect(() => {
-    // スコアページ用のメニューを有効化
-    window.electronAPI.setShortcut("score")
-  }, [])
 
   return {
     filterSettings,

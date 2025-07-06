@@ -625,16 +625,6 @@ export interface MyAPI {
     percentage: number
   }) => void) => () => void
 
-  // IPC related (existing)
-  sendScorePanel: (data: {
-    action: string
-    payload?: Record<string, unknown>
-  }) => Promise<void>
-  removeScorePanelListener: (
-    listener: (_event: Electron.IpcRendererEvent, value: Record<string, unknown>) => void,
-  ) => unknown
-  setShortcut: (page: string) => void
-  scorePanel: (listener: (_event: Electron.IpcRendererEvent, value: Record<string, unknown>) => void) => () => void
 }
 
 declare global {
