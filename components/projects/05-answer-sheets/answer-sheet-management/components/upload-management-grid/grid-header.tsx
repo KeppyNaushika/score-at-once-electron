@@ -1,15 +1,11 @@
 "use client"
 
-import { TableHead, TableRow } from "@/components/ui/table"
 import { FileText, User } from "lucide-react"
 
-interface GridHeaderProps {
-  maxPages: number
-  pageStates: Set<number>
-  onTogglePage: (pageNumber: number) => void
-}
+import { TableHead, TableRow } from "@/components/ui/table"
+import type { GridHeaderProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
 
-export default function GridHeader({ 
+export function GridHeader({ 
   maxPages, 
   pageStates, 
   onTogglePage 
@@ -58,7 +54,7 @@ export default function GridHeader({
               
               {/* ページ状態表示 */}
               <div className="text-xs text-muted-foreground">
-                {!isPageDisabled ? 'クリックしてページを除外' : 'クリックしてページを表示'}
+                {!isPageDisabled ? 'クリックして除外' : 'クリックして表示'}
               </div>
             </div>
           </TableHead>

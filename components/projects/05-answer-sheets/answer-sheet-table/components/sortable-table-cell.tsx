@@ -1,5 +1,6 @@
 "use client"
 
+import type { SortableTableCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,7 +13,6 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Ban, Upload, X } from "lucide-react"
 import { useEffect } from "react"
-import type { SortableTableCellProps } from "../types"
 
 export function SortableTableCell({
   id,

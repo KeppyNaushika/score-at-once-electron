@@ -1,16 +1,15 @@
 import { useCallback, useState } from "react"
-import type { ExtendedDisabledState } from "../types"
+
+import type { ExtendedDisabledState } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
-    rows: new Set<number>(),
-    cols: new Set<number>(),
-    positions: new Set<number>(),
-    cells: new Set<string>(), // ファイルID単位の無効化（既存、現在未使用）
-    files: new Set<string>(), // ファイル答案無効化（コンテキストメニュー用）
+    rows: new Set(),
+    cols: new Set(),
+    positions: new Set(),
+    files: new Set(),
   })
 
-  // 行の無効化切り替え
   const toggleRowDisabled = useCallback((rowIndex: number) => {
     setDisabledState((prev) => {
       const newRows = new Set(prev.rows)
@@ -23,7 +22,6 @@ export function useDisabledState() {
     })
   }, [])
 
-  // 列の無効化切り替え
   const toggleColDisabled = useCallback((colIndex: number) => {
     setDisabledState((prev) => {
       const newCols = new Set(prev.cols)
@@ -36,7 +34,6 @@ export function useDisabledState() {
     })
   }, [])
 
-  // ポジションの無効化切り替え
   const togglePositionDisabled = useCallback((position: number) => {
     setDisabledState((prev) => {
       const newPositions = new Set(prev.positions)
@@ -49,7 +46,6 @@ export function useDisabledState() {
     })
   }, [])
 
-  // ファイルの無効化切り替え
   const toggleFileDisabled = useCallback((fileId: string) => {
     setDisabledState((prev) => {
       const newFiles = new Set(prev.files)
@@ -62,15 +58,12 @@ export function useDisabledState() {
     })
   }, [])
 
-  // ポジションが無効化されているかチェック
   const isPositionDisabled = useCallback(
-    (position: number, maxPages: number) => {
-      const row = Math.floor(position / maxPages)
-      const col = position % maxPages
-
+    (studentIndex: number, pageIndex: number) => {
+      const position = studentIndex * 100 + pageIndex // Simple position calculation
       return (
-        disabledState.rows.has(row) ||
-        disabledState.cols.has(col) ||
+        disabledState.rows.has(studentIndex) ||
+        disabledState.cols.has(pageIndex) ||
         disabledState.positions.has(position)
       )
     },

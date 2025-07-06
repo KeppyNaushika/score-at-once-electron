@@ -1,4 +1,8 @@
-import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
+import type {
+  PlacementStrategy,
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/types/answer-sheet.types"
 
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"
@@ -28,7 +32,10 @@ export interface FilePreviewCellProps {
   isFileDisabled: boolean
   nameRegionAvailable: boolean
   getFileColor: (file: UnifiedFile) => string
-  drawNameRegionCanvas: (file: UnifiedFile, pageNumber: number) => Promise<string | null>
+  drawNameRegionCanvas: (
+    file: UnifiedFile,
+    pageNumber: number,
+  ) => Promise<string | null>
   imageLoadState?: "pending" | "loading" | "loaded" | "error"
 }
 
@@ -63,16 +70,16 @@ export interface TableHeaderProps {
   isUploading: boolean
   mode: "upload" | "view"
   onUpload: () => void
-  fileOrder: "page-first" | "student-first"
-  onFileOrderChange?: (order: "page-first" | "student-first") => void
+  fileOrder: PlacementStrategy
+  onFileOrderChange?: (order: PlacementStrategy) => void
   previewMode: PreviewMode
   onPreviewModeChange: (mode: PreviewMode) => void
   hasNameRegion: boolean
 }
 
 export interface PlacementStrategySelectorProps {
-  fileOrder: "page-first" | "student-first"
-  onFileOrderChange?: (order: "page-first" | "student-first") => void
+  fileOrder: PlacementStrategy
+  onFileOrderChange?: (order: PlacementStrategy) => void
 }
 
 export interface PreviewModeToggleProps {
