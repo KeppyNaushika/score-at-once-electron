@@ -34,12 +34,10 @@ import {
 type GridLayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
 
 interface NavigationControlsProps {
-  gridSize: { columns: number; rows: number }
   layoutDirection: GridLayoutDirection
   selectedAnswersCount: number
   visibleAnswersCount: number
   totalAnswersCount: number
-  onGridSizeChange: (size: { columns: number; rows: number }) => void
   onLayoutDirectionChange: (direction: GridLayoutDirection) => void
   onGridNavigation: (direction: string) => void
   onRefreshView: () => void
@@ -53,22 +51,11 @@ const LAYOUT_OPTIONS = [
   { value: "down-left", label: "下→左", description: "下に進んでから左へ" },
 ]
 
-const GRID_SIZE_OPTIONS = [
-  { columns: 3, rows: 2, label: "3×2" },
-  { columns: 4, rows: 3, label: "4×3" },
-  { columns: 5, rows: 3, label: "5×3" },
-  { columns: 6, rows: 4, label: "6×4" },
-  { columns: 8, rows: 4, label: "8×4" },
-  { columns: 10, rows: 5, label: "10×5" },
-]
-
 export default function NavigationControls({
-  gridSize,
   layoutDirection,
   selectedAnswersCount,
   visibleAnswersCount,
   totalAnswersCount,
-  onGridSizeChange,
   onLayoutDirectionChange,
   onGridNavigation,
   onRefreshView,
@@ -76,8 +63,7 @@ export default function NavigationControls({
 }: NavigationControlsProps) {
   return (
     <TooltipProvider delayDuration={300}>
-      <Card className="mb-4">
-        <CardContent className="p-4 space-y-4">
+      <div className="mb-4 bg-white p-4 space-y-4">
           
           {/* 表示状況 */}
           <div>
@@ -100,57 +86,26 @@ export default function NavigationControls({
 
           <Separator />
 
-          {/* グリッド設定 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                グリッドサイズ
-              </label>
-              <Select
-                value={`${gridSize.columns}x${gridSize.rows}`}
-                onValueChange={(value) => {
-                  const option = GRID_SIZE_OPTIONS.find(opt => `${opt.columns}x${opt.rows}` === value)
-                  if (option) {
-                    onGridSizeChange({ columns: option.columns, rows: option.rows })
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {GRID_SIZE_OPTIONS.map((option) => (
-                    <SelectItem 
-                      key={`${option.columns}x${option.rows}`} 
-                      value={`${option.columns}x${option.rows}`}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                レイアウト方向
-              </label>
-              <Select
-                value={layoutDirection}
-                onValueChange={(value) => onLayoutDirectionChange(value as GridLayoutDirection)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LAYOUT_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* レイアウト設定 */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              レイアウト方向
+            </label>
+            <Select
+              value={layoutDirection}
+              onValueChange={(value) => onLayoutDirectionChange(value as GridLayoutDirection)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LAYOUT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
@@ -281,8 +236,7 @@ export default function NavigationControls({
 
           </div>
 
-        </CardContent>
-      </Card>
+      </div>
     </TooltipProvider>
   )
 }

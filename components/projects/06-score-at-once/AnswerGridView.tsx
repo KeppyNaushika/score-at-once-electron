@@ -272,6 +272,38 @@ export default function AnswerGridView({
       onEffectiveColumnsChange(value[0])
     }
   }
+
+  // 答案表示数の増減機能
+  const incrementItemsPerRow = useCallback(() => {
+    const currentValue = itemsPerRow[0]
+    const newValue = Math.min(currentValue + 1, 12) // 最大12列
+    handleItemsPerRowChange([newValue])
+  }, [itemsPerRow])
+
+  const decrementItemsPerRow = useCallback(() => {
+    const currentValue = itemsPerRow[0]
+    const newValue = Math.max(currentValue - 1, 2) // 最小2列
+    handleItemsPerRowChange([newValue])
+  }, [itemsPerRow])
+
+  // Opt + [-/+] キーボードイベント処理
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Option/Alt + Minus で減少
+      if (event.altKey && (event.key === '-' || event.key === '_')) {
+        event.preventDefault()
+        decrementItemsPerRow()
+      }
+      // Option/Alt + Plus で増加
+      else if (event.altKey && (event.key === '+' || event.key === '=' || event.key === 'Equal')) {
+        event.preventDefault()
+        incrementItemsPerRow()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [incrementItemsPerRow, decrementItemsPerRow])
   
   
   // 実際に使用するgridSizeを計算
@@ -513,7 +545,7 @@ export default function AnswerGridView({
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`h-full flex flex-col ${className}`}>
       {/* 1行あたりの表示件数調整スライダー */}
       <div className="flex items-center space-x-4 px-2 py-1 bg-muted/50 rounded-md">
         <span className="text-sm font-medium min-w-[80px]">1行あたり:</span>
@@ -533,7 +565,7 @@ export default function AnswerGridView({
       {/* 答案グリッド */}
       <div 
         ref={gridRef}
-        className="grid gap-2 select-none"
+        className="grid gap-2 select-none flex-1 overflow-y-auto"
         style={{
           gridTemplateColumns: layoutDirection === "down-right" || layoutDirection === "down-left" 
             ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)` 
@@ -561,75 +593,69 @@ export default function AnswerGridView({
           
           
           return (
-            <Card
+            <div
               key={answer.id}
               data-answer-id={answer.id}
               className={`
-                relative transition-all duration-150 border-2 flex-shrink-0 py-0
-                ${isMaster ? "cursor-default" : "cursor-pointer hover:shadow-md"}
-                ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
-                ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
+                relative transition-all duration-150 flex-shrink-0 p-2
+                ${isMaster ? "cursor-default bg-gray-900 text-white border-gray-600" : "cursor-pointer hover:shadow-md bg-white"}
+                ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""}
+                ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-1 shadow-lg" : ""}
                 ${isMaster ? "ring-2 ring-blue-400 ring-offset-1 shadow-sm" : ""}
-                ${config.borderColor}
-                ${isSelected ? config.selectedBgColor : config.bgColor}
+                ${!isMaster ? config.borderColor : ""}
+                ${!isMaster && isSelected ? config.selectedBgColor : ""}
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
-              <CardContent className={`p-2 px-2 ${isMaster ? "bg-black text-white" : ""}`}>
-                {/* 答案画像 */}
-                <div className="overflow-hidden rounded">
-                  <CroppedAnswerImage
-                    imageUrl={answer.imageUrl}
-                    questionRegion={answer.questionRegion}
-                    alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
-                    className="rounded w-full h-auto"
-                  />
+              {/* 答案画像 */}
+              <div className="overflow-hidden mb-1">
+                <CroppedAnswerImage
+                  imageUrl={answer.imageUrl}
+                  questionRegion={answer.questionRegion}
+                  alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
+                  className="w-full h-auto"
+                />
+              </div>
+              
+              {/* 学生情報と採点状況 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1 flex-1 min-w-0">
+                  <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
+                    {answer.studentName}
+                  </span>
+                  
+                  {!isMaster && answer.status !== "ungraded" && (
+                    <Badge variant="outline" className="text-xs h-4 px-1">
+                      {answer.currentScore !== undefined 
+                        ? `${answer.currentScore}/${answer.maxScore}`
+                        : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
+                        : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
+                        : answer.status === "proposed" ? "提案中"
+                        : "採点中"
+                      }
+                    </Badge>
+                  )}
+                  
+                  {isMaster && (
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
+                      {answer.maxScore}点満点
+                    </Badge>
+                  )}
                 </div>
                 
-                {/* 学生情報と採点状況 */}
-                <div className="mt-0.5 flex items-center justify-between">
-                  <div className="flex items-center space-x-1 flex-1 min-w-0">
-                    <span className={`text-xs truncate ${isMaster ? "font-bold text-white" : "font-medium"}`}>
-                      {answer.studentName}
-                    </span>
-                    
-                    {!isMaster && answer.status !== "ungraded" && (
-                      <Badge variant="outline" className="text-xs h-4 px-1">
-                        {answer.currentScore !== undefined 
-                          ? `${answer.currentScore}/${answer.maxScore}`
-                          : answer.status === "correct" || answer.status === "final" ? `${answer.maxScore}pt`
-                          : answer.status === "incorrect" || answer.status === "no_answer" ? "0pt"
-                          : answer.status === "proposed" ? "提案中"
-                          : "採点中"
-                        }
-                      </Badge>
-                    )}
-                    
-                    {isMaster && (
-                      <Badge variant="outline" className="text-xs h-4 px-1 bg-gray-800 text-white border-gray-600">
-                        {answer.maxScore}点満点
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {!isMaster && <Icon className={`h-3 w-3 ${config.textColor} flex-shrink-0`} />}
-                </div>
-              </CardContent>
-            </Card>
+                {!isMaster && <Icon className={`h-3 w-3 ${config.textColor} flex-shrink-0`} />}
+              </div>
+            </div>
           )
         })}
       </div>
       
       {/* 選択状況表示 */}
       {selectedAnswers.size > 0 && (
-        <Card>
-          <CardContent className="p-2">
-            <div className="text-xs text-center">
-              <span className="font-medium">{selectedAnswers.size}件</span>
-              <span className="text-muted-foreground">選択中 - キーボードで一括採点</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-blue-50 p-2 text-xs text-center">
+          <span className="font-medium text-blue-800">{selectedAnswers.size}件</span>
+          <span className="text-blue-600 ml-1">選択中 - キーボードで一括採点</span>
+        </div>
       )}
     </div>
   )
