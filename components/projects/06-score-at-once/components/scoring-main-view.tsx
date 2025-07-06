@@ -28,6 +28,9 @@ import AnswerGridView from "../AnswerGridView"
 import GradingModeToggle, { GradingMode } from "../GradingModeToggle"
 import ProjectProgressCard from "../ProjectProgressCard"
 import ScoreComparisonModal from "../ScoreComparisonModal"
+import ScoringToolbar from "./scoring-toolbar"
+import QuestionNavigator from "./question-navigator"
+import NavigationControls from "./navigation-controls"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 import {
@@ -481,46 +484,16 @@ export default function ScoringMainView() {
               </div>
             </div>
 
-            {/* 設問ナビゲーション */}
+            {/* 簡潔な状態表示 */}
             <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePrevQuestion}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-gray-600">
-                  設問 {currentQuestionIndex + 1} / {questionRegions.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextQuestion}
-                  disabled={currentQuestionIndex === questionRegions.length - 1}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
+              <div className="text-sm text-gray-600">
+                設問 {currentQuestionIndex + 1} / {questionRegions.length} - 
+                表示中: {visibleAnswers.size}件 / 全体: {answerSheets.length}件
+                {selectedAnswers.size > 0 && ` (${selectedAnswers.size}件選択中)`}
               </div>
 
-              {/* フィルタ設定表示 */}
               <div className="text-xs text-gray-500">
-                フィルタ: {Object.entries(filterSettings)
-                  .filter(([_, enabled]) => enabled)
-                  .map(([key, _]) => {
-                    const labels: { [key: string]: string } = {
-                      ungraded: "未採点",
-                      correct: "正答", 
-                      incorrect: "誤答",
-                      partial: "部分点",
-                      pending: "保留",
-                      no_answer: "無答",
-                    }
-                    return labels[key]
-                  })
-                  .join(", ")}
+                右パネルで詳細操作 →
               </div>
             </div>
           </div>
@@ -554,9 +527,44 @@ export default function ScoringMainView() {
               )}
             </div>
 
-            {/* サイドパネル */}
+            {/* 右側サイドパネル */}
             {showSidePanel && (
-              <div className="w-80 bg-white border-l border-gray-200 p-6">
+              <div className="w-96 bg-gray-50 border-l border-gray-200 p-4 overflow-y-auto">
+                {/* 設問ナビゲーター */}
+                <QuestionNavigator
+                  questionRegions={questionRegions}
+                  currentQuestionIndex={currentQuestionIndex}
+                  onQuestionChange={setCurrentQuestionIndex}
+                  onPrevQuestion={handlePrevQuestion}
+                  onNextQuestion={handleNextQuestion}
+                />
+
+                {/* 採点ツールバー */}
+                <ScoringToolbar
+                  selectedAnswersCount={selectedAnswers.size}
+                  currentQuestion={currentQuestion}
+                  filterSettings={filterSettings}
+                  onScore={handleBatchScoreWithProgress}
+                  onToggleFilter={handleToggleFilter}
+                  onRefreshFilter={handleRefreshFilter}
+                  partialScoreInput={partialScoreInput}
+                  modifierKeyLabel={modifierKeyLabel}
+                />
+
+                {/* ナビゲーション制御 */}
+                <NavigationControls
+                  gridSize={gridSize}
+                  layoutDirection={layoutDirection}
+                  selectedAnswersCount={selectedAnswers.size}
+                  visibleAnswersCount={visibleAnswers.size}
+                  totalAnswersCount={answerSheets.length}
+                  onGridSizeChange={setGridSize}
+                  onLayoutDirectionChange={setLayoutDirection}
+                  onGridNavigation={handleGridNavigation}
+                  onRefreshView={handleRefreshFilter}
+                />
+
+                {/* プロジェクト進捗 */}
                 <ProjectProgressCard
                   projectId={projectId}
                 />
