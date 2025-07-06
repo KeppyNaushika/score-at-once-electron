@@ -58,6 +58,7 @@ export default function ScoringMainView() {
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
   const [effectiveColumns, setEffectiveColumns] = useState<number>(5) // 実際の表示列数
+  const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数
 
   // 状態管理
   const [loading, setLoading] = useState(true)
@@ -279,6 +280,33 @@ export default function ScoringMainView() {
     initializeGradingData()
   }, [projectId, loadExistingScoringData, setScoringData])
 
+  // localStorageから初期値を読み込み
+  useEffect(() => {
+    const stored = localStorage.getItem('answerGridView-itemsPerRow')
+    let initialValue = [5] // デフォルト値
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+          initialValue = parsed
+          setItemsPerRow(parsed)
+        }
+      } catch (error) {
+        console.warn('Failed to parse stored itemsPerRow:', error)
+      }
+    }
+    // 実際の列数を更新
+    setEffectiveColumns(initialValue[0])
+  }, [])
+  
+  // itemsPerRowの変更をlocalStorageに保存
+  const handleItemsPerRowChange = (value: number[]) => {
+    setItemsPerRow(value)
+    localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
+    // 実際の列数を更新
+    setEffectiveColumns(value[0])
+  }
+
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
     // 模範解答は選択対象外
@@ -329,7 +357,7 @@ export default function ScoringMainView() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex flex-1">
         <div className="flex-1 flex items-center justify-center">
           <LoadingSpinner text="採点データを読み込み中..." />
         </div>
@@ -339,7 +367,7 @@ export default function ScoringMainView() {
 
   if (!project || answerSheets.length === 0 || questionRegions.length === 0) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex flex-1">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center space-y-4">
             <h2 className="text-xl font-semibold text-gray-700">採点を開始できません</h2>
@@ -363,7 +391,7 @@ export default function ScoringMainView() {
         <title>{`採点 - ${project.examName}`}</title>
       </Head>
 
-      <div className="flex min-h-screen bg-gray-50">
+      <div className="flex h-full bg-gray-50">
         {/* メインコンテンツエリア */}
         <div className="flex-1 flex flex-col">
           {/* ヘッダー */}
@@ -517,9 +545,9 @@ export default function ScoringMainView() {
           </div>
 
           {/* メインコンテンツ */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex min-h-0">
             {/* 採点エリア */}
-            <div className="flex-1 p-6 overflow-hidden">
+            <div className="flex-1 p-6 overflow-auto">
               {gradingMode === "individual" ? (
                 <AnswerDisplayViewer
                   answerSheet={currentAnswerSheet}
@@ -542,6 +570,7 @@ export default function ScoringMainView() {
                   selectedAnswers={selectedAnswers}
                   currentAnswerId={currentAnswerSheet?.id}
                   onEffectiveColumnsChange={setEffectiveColumns}
+                  itemsPerRow={itemsPerRow}
                 />
               )}
             </div>
@@ -579,6 +608,8 @@ export default function ScoringMainView() {
                   onLayoutDirectionChange={setLayoutDirection}
                   onGridNavigation={handleGridNavigation}
                   onRefreshView={handleRefreshFilter}
+                  itemsPerRow={itemsPerRow}
+                  onItemsPerRowChange={handleItemsPerRowChange}
                 />
 
                 {/* プロジェクト進捗 */}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
 import {
   Tooltip,
   TooltipContent,
@@ -42,6 +43,8 @@ interface NavigationControlsProps {
   onGridNavigation: (direction: string) => void
   onRefreshView: () => void
   currentPosition?: { row: number; col: number }
+  itemsPerRow?: number[]
+  onItemsPerRowChange?: (value: number[]) => void
 }
 
 const LAYOUT_OPTIONS = [
@@ -60,6 +63,8 @@ export default function NavigationControls({
   onGridNavigation,
   onRefreshView,
   currentPosition,
+  itemsPerRow,
+  onItemsPerRowChange,
 }: NavigationControlsProps) {
   return (
     <TooltipProvider delayDuration={300}>
@@ -85,6 +90,31 @@ export default function NavigationControls({
           </div>
 
           <Separator />
+
+          {/* 1行あたりの表示件数 */}
+          {itemsPerRow && onItemsPerRowChange && (
+            <>
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  1行あたりの表示件数
+                </label>
+                <div className="flex items-center space-x-4">
+                  <Slider
+                    value={itemsPerRow}
+                    onValueChange={onItemsPerRowChange}
+                    max={10}
+                    min={1}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-sm text-muted-foreground min-w-[30px]">
+                    {itemsPerRow[0]}件
+                  </span>
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
 
           {/* レイアウト設定 */}
           <div>
