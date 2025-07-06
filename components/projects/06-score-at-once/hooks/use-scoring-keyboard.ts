@@ -20,6 +20,42 @@ export const DEFAULT_SHORTCUTS = {
   zoomOut: "-",
   resetZoom: "0",
   fullView: "f",
+  // WASD移動
+  moveUp: "w",
+  moveLeft: "a", 
+  moveDown: "s",
+  moveRight: "d",
+  // その他
+  refreshFilter: "r",
+  toggleNames: "n",
+}
+
+// localStorageからキーボードショートカットを読み込む
+export const getKeyboardShortcuts = () => {
+  if (typeof window === 'undefined') return DEFAULT_SHORTCUTS
+  
+  try {
+    const stored = localStorage.getItem('keyboard-shortcuts')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return { ...DEFAULT_SHORTCUTS, ...parsed }
+    }
+  } catch (error) {
+    console.warn('Failed to load keyboard shortcuts from localStorage:', error)
+  }
+  
+  return DEFAULT_SHORTCUTS
+}
+
+// キーボードショートカットをlocalStorageに保存
+export const saveKeyboardShortcuts = (shortcuts: typeof DEFAULT_SHORTCUTS) => {
+  if (typeof window === 'undefined') return
+  
+  try {
+    localStorage.setItem('keyboard-shortcuts', JSON.stringify(shortcuts))
+  } catch (error) {
+    console.error('Failed to save keyboard shortcuts to localStorage:', error)
+  }
 }
 
 // macOS detection utility
@@ -61,6 +97,37 @@ interface UseScoringKeyboardProps {
   onPartialScoreBackspace: () => void
   showPartialScoreModal: boolean
   onToggleFilter: (key: string) => void
+  onToggleStudentNames?: () => void
+}
+
+// macOSデッドキーのKeyCodeマッピング
+const DEAD_KEY_CODE_MAP: { [code: string]: string } = {
+  KeyQ: "q",
+  KeyE: "e", 
+  KeyF: "f",
+  KeyJ: "j",
+  KeyO: "o",
+  KeyP: "p",
+  KeyA: "a",
+  KeyS: "s",
+  KeyD: "d",
+  KeyW: "w",
+  KeyR: "r",
+  KeyT: "t",
+  KeyY: "y",
+  KeyU: "u",
+  KeyI: "i",
+  KeyG: "g",
+  KeyH: "h",
+  KeyK: "k",
+  KeyL: "l",
+  KeyZ: "z",
+  KeyX: "x",
+  KeyC: "c",
+  KeyV: "v",
+  KeyB: "b",
+  KeyN: "n",
+  KeyM: "m",
 }
 
 export function useScoringKeyboard({
@@ -89,11 +156,15 @@ export function useScoringKeyboard({
   onPartialScoreBackspace,
   showPartialScoreModal,
   onToggleFilter,
+  onToggleStudentNames,
 }: UseScoringKeyboardProps) {
   
   // キーボードイベントハンドラー
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
+      // 動的にショートカットを取得（リアルタイム反映のため）
+      const shortcuts = getKeyboardShortcuts()
+      
       // 入力フィールドがフォーカスされている場合はスキップ
       if (
         event.target instanceof HTMLInputElement ||
@@ -143,33 +214,53 @@ export function useScoringKeyboard({
         }
 
         // Alt+採点キーでフィルタ切り替え (macOSではOption+採点キー、WindowsではAlt+採点キー)
-        if (
-          event.altKey &&
-          [
-            DEFAULT_SHORTCUTS.ungraded,
-            DEFAULT_SHORTCUTS.correct,
-            DEFAULT_SHORTCUTS.incorrect,
-            DEFAULT_SHORTCUTS.partial,
-            DEFAULT_SHORTCUTS.pending,
-            DEFAULT_SHORTCUTS.no_answer,
-          ].includes(key)
-        ) {
-          event.preventDefault()
-          onToggleFilterByScoreKey(key)
-          return
+        // macOSのデッドキー対応: Option+Eは"Dead"として検知されるため、event.codeを使用
+        if (event.altKey) {
+          let targetKey = key
+          
+          // macOSのデッドキー対応
+          if (key === "dead" && event.code && DEAD_KEY_CODE_MAP[event.code]) {
+            targetKey = DEAD_KEY_CODE_MAP[event.code]
+          }
+          
+          if ([
+            shortcuts.ungraded,
+            shortcuts.correct,
+            shortcuts.incorrect,
+            shortcuts.partial,
+            shortcuts.pending,
+            shortcuts.no_answer,
+          ].includes(targetKey)) {
+            event.preventDefault()
+            onToggleFilterByScoreKey(targetKey)
+            return
+          }
         }
 
         // WASD移動の処理
-        if (["w", "a", "s", "d"].includes(key)) {
+        if ([shortcuts.moveUp, shortcuts.moveLeft, shortcuts.moveDown, shortcuts.moveRight].includes(key)) {
           event.preventDefault()
-          onGridNavigation(key)
+          // キーを対応する方向に変換
+          let direction = key
+          if (key === shortcuts.moveUp) direction = "w"
+          else if (key === shortcuts.moveLeft) direction = "a"
+          else if (key === shortcuts.moveDown) direction = "s"
+          else if (key === shortcuts.moveRight) direction = "d"
+          onGridNavigation(direction)
           return
         }
 
         // Rキーでフィルタを更新（Ctrl+Rは除外してページリロードを許可）
-        if (key === "r" && !event.ctrlKey && !event.metaKey) {
+        if (key === shortcuts.refreshFilter && !event.ctrlKey && !event.metaKey) {
           event.preventDefault()
           onRefreshFilter()
+          return
+        }
+
+        // Nキーで生徒名表示切り替え
+        if (key === shortcuts.toggleNames && onToggleStudentNames) {
+          event.preventDefault()
+          onToggleStudentNames()
           return
         }
 
@@ -187,12 +278,12 @@ export function useScoringKeyboard({
         // 採点キー（Alt無し）で通常の採点
         if (
           [
-            DEFAULT_SHORTCUTS.ungraded,
-            DEFAULT_SHORTCUTS.correct,
-            DEFAULT_SHORTCUTS.incorrect,
-            DEFAULT_SHORTCUTS.partial,
-            DEFAULT_SHORTCUTS.pending,
-            DEFAULT_SHORTCUTS.no_answer,
+            shortcuts.ungraded,
+            shortcuts.correct,
+            shortcuts.incorrect,
+            shortcuts.partial,
+            shortcuts.pending,
+            shortcuts.no_answer,
           ].includes(key) &&
           selectedAnswers.size > 0
         ) {
@@ -215,27 +306,27 @@ export function useScoringKeyboard({
       // 個別採点モードのキーボード処理
       const key = event.key.toLowerCase()
       switch (key) {
-        case DEFAULT_SHORTCUTS.ungraded:
+        case shortcuts.ungraded:
           event.preventDefault()
           onSetScore("ungraded")
           break
-        case DEFAULT_SHORTCUTS.correct:
+        case shortcuts.correct:
           event.preventDefault()
           onSetScore("correct")
           break
-        case DEFAULT_SHORTCUTS.partial:
+        case shortcuts.partial:
           event.preventDefault()
           onSetScore("partial")
           break
-        case DEFAULT_SHORTCUTS.pending:
+        case shortcuts.pending:
           event.preventDefault()
           onSetScore("pending")
           break
-        case DEFAULT_SHORTCUTS.incorrect:
+        case shortcuts.incorrect:
           event.preventDefault()
           onSetScore("incorrect")
           break
-        case DEFAULT_SHORTCUTS.no_answer:
+        case shortcuts.no_answer:
           event.preventDefault()
           onSetScore("no_answer")
           break
@@ -255,19 +346,19 @@ export function useScoringKeyboard({
           event.preventDefault()
           onPrevStudent()
           break
-        case DEFAULT_SHORTCUTS.zoomIn:
+        case shortcuts.zoomIn:
           event.preventDefault()
           onZoomIn()
           break
-        case DEFAULT_SHORTCUTS.zoomOut:
+        case shortcuts.zoomOut:
           event.preventDefault()
           onZoomOut()
           break
-        case DEFAULT_SHORTCUTS.resetZoom:
+        case shortcuts.resetZoom:
           event.preventDefault()
           onResetZoom()
           break
-        case DEFAULT_SHORTCUTS.fullView:
+        case shortcuts.fullView:
           event.preventDefault()
           onToggleViewMode()
           break
@@ -294,7 +385,10 @@ export function useScoringKeyboard({
       onToggleFilterByScoreKey,
       onRefreshFilter,
       onPartialScoreInput,
+      onPartialScoreConfirm,
+      onPartialScoreCancel,
       onPartialScoreBackspace,
+      showPartialScoreModal,
       onToggleFilter,
     ],
   )
