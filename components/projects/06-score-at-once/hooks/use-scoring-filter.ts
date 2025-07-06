@@ -76,11 +76,15 @@ export function useScoringFilter({
     }
   }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
 
-  // 最初の答案を初期選択状態にする
+  // 最初の生徒答案を初期選択状態にする（模範解答をスキップ）
   useEffect(() => {
     if (visibleAnswers.size > 0 && selectedAnswers.size === 0) {
-      const firstVisible = Array.from(visibleAnswers)[0]
-      setSelectedAnswers(new Set([firstVisible]))
+      // 模範解答をスキップして最初の生徒答案を選択
+      const visibleIds = Array.from(visibleAnswers)
+      const firstStudentAnswerId = visibleIds.find(id => !id.startsWith('master-'))
+      if (firstStudentAnswerId) {
+        setSelectedAnswers(new Set([firstStudentAnswerId]))
+      }
     }
   }, [visibleAnswers, selectedAnswers.size, setSelectedAnswers])
 

@@ -76,6 +76,17 @@ export function useScoringNavigation({
     handleResetZoom()
   }, [handleResetZoom])
 
+  // 模範解答をスキップして次の有効な答案を見つける関数
+  const findNextValidAnswer = useCallback((startIndex: number, direction: number, gridAnswers: any[]): number => {
+    const totalAnswers = gridAnswers.length
+    for (let i = startIndex; i >= 0 && i < totalAnswers; i += direction) {
+      if (!gridAnswers[i].id.startsWith('master-')) {
+        return i
+      }
+    }
+    return -1
+  }, [])
+
   // WASD移動ハンドラー（レイアウト方向とフィルタリングに対応）
   const handleGridNavigation = useCallback((key: string) => {
     if (answerSheetsLength === 0) return
@@ -97,123 +108,124 @@ export function useScoringNavigation({
 
     // 何も選択されていない場合は最初の生徒答案を選択（模範解答をスキップ）
     if (currentIndex === -1) {
-      if (totalAnswers > 0) {
-        // 模範解答以外の最初の答案を探す
-        const firstStudentAnswerIndex = gridAnswers.findIndex(answer => !answer.id.startsWith('master-'))
-        if (firstStudentAnswerIndex !== -1) {
-          setSelectedAnswers(new Set([gridAnswers[firstStudentAnswerIndex].id]))
-        }
+      const firstValidIndex = findNextValidAnswer(0, 1, gridAnswers)
+      if (firstValidIndex !== -1) {
+        setSelectedAnswers(new Set([gridAnswers[firstValidIndex].id]))
       }
       return
     }
 
     let newIndex = currentIndex
 
-    // デバッグ情報（開発時のみ）
-    if (process.env.NODE_ENV === "development") {
-      console.log("WASD Navigation:", {
-        key,
-        currentIndex,
-        totalAnswers,
-        cols,
-        rows,
-        layoutDirection,
-        selectedAnswerIds: Array.from(selectedAnswers),
-      })
-    }
-
     // レイアウト方向に応じた移動処理
     switch (layoutDirection) {
       case "right-down": // 右→下方向
         switch (key) {
-          case "w": // 上に移動（前の行）
-            newIndex = Math.max(0, currentIndex - cols)
-            break
-          case "s": // 下に移動（次の行）
-            newIndex = Math.min(totalAnswers - 1, currentIndex + cols)
-            break
-          case "a": // 左に移動（前の列）
-            if (currentIndex % cols > 0) {
-              newIndex = currentIndex - 1
+          case "w": // 上に移動（前の行、行境界を超えて移動可能）
+            newIndex = currentIndex - cols
+            if (newIndex < 0) {
+              // 最上行の場合、前の答案を選択
+              newIndex = Math.max(0, currentIndex - 1)
             }
             break
-          case "d": // 右に移動（次の列）
-            if (currentIndex % cols < cols - 1 && currentIndex + 1 < totalAnswers) {
-              newIndex = currentIndex + 1
+          case "s": // 下に移動（次の行、行境界を超えて移動可能）
+            newIndex = currentIndex + cols
+            if (newIndex >= totalAnswers) {
+              // 最下行の場合、次の答案を選択
+              newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }
+            break
+          case "a": // 左に移動（列境界を超えて移動可能）
+            newIndex = currentIndex - 1
+            break
+          case "d": // 右に移動（列境界を超えて移動可能）
+            newIndex = currentIndex + 1
             break
         }
         break
 
       case "left-down": // 左→下方向
         switch (key) {
-          case "w": // 上に移動（前の行）
-            newIndex = Math.max(0, currentIndex - cols)
-            break
-          case "s": // 下に移動（次の行）
-            newIndex = Math.min(totalAnswers - 1, currentIndex + cols)
-            break
-          case "d": // 右に移動（前の列、左→下では逆）
-            if (currentIndex % cols > 0) {
-              newIndex = currentIndex - 1
+          case "w": // 上に移動（前の行、行境界を超えて移動可能）
+            newIndex = currentIndex - cols
+            if (newIndex < 0) {
+              newIndex = Math.max(0, currentIndex - 1)
             }
             break
-          case "a": // 左に移動（次の列、左→下では逆）
-            if (currentIndex % cols < cols - 1 && currentIndex + 1 < totalAnswers) {
-              newIndex = currentIndex + 1
+          case "s": // 下に移動（次の行、行境界を超えて移動可能）
+            newIndex = currentIndex + cols
+            if (newIndex >= totalAnswers) {
+              newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }
+            break
+          case "d": // 右に移動（左→下では前の列、境界を超えて移動可能）
+            newIndex = currentIndex - 1
+            break
+          case "a": // 左に移動（左→下では次の列、境界を超えて移動可能）
+            newIndex = currentIndex + 1
             break
         }
         break
 
       case "down-right": // 下→右方向
         switch (key) {
-          case "a": // 左に移動（前の列）
-            newIndex = Math.max(0, currentIndex - rows)
-            break
-          case "d": // 右に移動（次の列）
-            newIndex = Math.min(totalAnswers - 1, currentIndex + rows)
-            break
-          case "w": // 上に移動（前の行）
-            if (currentIndex % rows > 0) {
-              newIndex = currentIndex - 1
+          case "a": // 左に移動（前の列、列境界を超えて移動可能）
+            newIndex = currentIndex - rows
+            if (newIndex < 0) {
+              newIndex = Math.max(0, currentIndex - 1)
             }
             break
-          case "s": // 下に移動（次の行）
-            if (currentIndex % rows < rows - 1 && currentIndex + 1 < totalAnswers) {
-              newIndex = currentIndex + 1
+          case "d": // 右に移動（次の列、列境界を超えて移動可能）
+            newIndex = currentIndex + rows
+            if (newIndex >= totalAnswers) {
+              newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }
+            break
+          case "w": // 上に移動（行境界を超えて移動可能）
+            newIndex = currentIndex - 1
+            break
+          case "s": // 下に移動（行境界を超えて移動可能）
+            newIndex = currentIndex + 1
             break
         }
         break
 
       case "down-left": // 下→左方向
         switch (key) {
-          case "d": // 右に移動（前の列、下→左では逆）
-            newIndex = Math.max(0, currentIndex - rows)
-            break
-          case "a": // 左に移動（次の列、下→左では逆）
-            newIndex = Math.min(totalAnswers - 1, currentIndex + rows)
-            break
-          case "w": // 上に移動（前の行）
-            if (currentIndex % rows > 0) {
-              newIndex = currentIndex - 1
+          case "d": // 右に移動（下→左では前の列、境界を超えて移動可能）
+            newIndex = currentIndex - rows
+            if (newIndex < 0) {
+              newIndex = Math.max(0, currentIndex - 1)
             }
             break
-          case "s": // 下に移動（次の行）
-            if (currentIndex % rows < rows - 1 && currentIndex + 1 < totalAnswers) {
-              newIndex = currentIndex + 1
+          case "a": // 左に移動（下→左では次の列、境界を超えて移動可能）
+            newIndex = currentIndex + rows
+            if (newIndex >= totalAnswers) {
+              newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }
+            break
+          case "w": // 上に移動（行境界を超えて移動可能）
+            newIndex = currentIndex - 1
+            break
+          case "s": // 下に移動（行境界を超えて移動可能）
+            newIndex = currentIndex + 1
             break
         }
         break
     }
 
-    // 模範解答を選択しないようにスキップ
-    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalAnswers) {
+    // 範囲チェックして模範解答をスキップ
+    if (newIndex >= 0 && newIndex < totalAnswers && newIndex !== currentIndex) {
       const targetAnswer = gridAnswers[newIndex]
       if (targetAnswer && !targetAnswer.id.startsWith('master-')) {
         setSelectedAnswers(new Set([targetAnswer.id]))
+      } else {
+        // 模範解答の場合、方向に応じて次の有効な答案を探す
+        const direction = newIndex > currentIndex ? 1 : -1
+        const validIndex = findNextValidAnswer(newIndex + direction, direction, gridAnswers)
+        if (validIndex !== -1) {
+          setSelectedAnswers(new Set([gridAnswers[validIndex].id]))
+        }
       }
     }
   }, [
@@ -223,6 +235,7 @@ export function useScoringNavigation({
     selectedAnswers,
     setSelectedAnswers,
     layoutDirection,
+    findNextValidAnswer,
   ])
 
   return {
