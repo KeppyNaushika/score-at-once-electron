@@ -38,28 +38,29 @@ export function useDragDrop(
     return { student, pageNumber }
   }, [students, masterImageCount])
 
-  // 確認モードでの答案配置更新
-  const updateAnswerSheetInDatabase = useCallback(async (file: UnifiedFile, targetPosition: number) => {
-    const { student, pageNumber } = getStudentAndPageFromPosition(targetPosition)
+  // 確認モードでの答案配置交換（安全なユニーク制約回避）
+  const swapAnswerSheetInDatabase = useCallback(async (file1: UnifiedFile, file2: UnifiedFile) => {
+    // APIが利用可能かチェック
+    if (!window.electronAPI || !window.electronAPI.swapAnswerSheetPlacements) {
+      console.error('swapAnswerSheetPlacements API is not available. Please restart the Electron app.')
+      toast.error('APIが利用できません。アプリを再起動してください。')
+      return
+    }
     
     try {
-      const result = await window.electronAPI.updateAnswerSheetPlacement(
-        file.id,
-        student?.id || null,
-        pageNumber
-      )
+      const result = await window.electronAPI.swapAnswerSheetPlacements(file1.id, file2.id)
       
       if (result.success) {
-        toast.success(`答案の配置を更新しました`)
+        toast.success(`答案の配置を交換しました`)
         onReloadData?.()
       } else {
-        toast.error(`配置更新に失敗しました: ${result.error}`)
+        toast.error(`配置交換に失敗しました: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error updating answer sheet placement:', error)
-      toast.error('配置更新中にエラーが発生しました')
+      console.error('Error swapping answer sheet placements:', error)
+      toast.error('配置交換中にエラーが発生しました')
     }
-  }, [getStudentAndPageFromPosition, onReloadData])
+  }, [onReloadData])
 
   // ドラッグ&ドロップセンサー設定
   const sensors = useSensors(
@@ -171,22 +172,13 @@ export function useDragDrop(
 
       if (activeContainer === overContainer && activeId !== overId) {
         if (mode === "view" && students && masterImageCount) {
-          // 確認モード: テーブル位置ベースでの配置交換
+          // 確認モード: 安全な答案配置交換
           const activeFile = getEnabledFiles().find(f => f.id === activeId)
           const overFile = getEnabledFiles().find(f => f.id === overId)
           
           if (activeFile && overFile) {
-            // 2つのファイルの配置を交換
-            const { student: activeStudent, pageNumber: activePageNumber } = 
-              getStudentAndPageFromPosition(activeFile.position || 0)
-            const { student: overStudent, pageNumber: overPageNumber } = 
-              getStudentAndPageFromPosition(overFile.position || 0)
-            
-            // データベースで交換
-            Promise.all([
-              updateAnswerSheetInDatabase(activeFile, overFile.position || 0),
-              updateAnswerSheetInDatabase(overFile, activeFile.position || 0)
-            ])
+            // 新しいスワップAPIを使用してユニーク制約エラーを回避
+            swapAnswerSheetInDatabase(activeFile, overFile)
           }
         } else {
           // アップロードモード: 従来の配列並び替え
@@ -204,7 +196,7 @@ export function useDragDrop(
       setActiveFile(null)
       setIsDraggingFromTrash(false)
     },
-    [files, onFilesChange, getEnabledFiles, getDisabledFiles, mode, students, masterImageCount, getStudentAndPageFromPosition, updateAnswerSheetInDatabase],
+    [files, onFilesChange, getEnabledFiles, getDisabledFiles, mode, students, masterImageCount, swapAnswerSheetInDatabase],
   )
 
   return {

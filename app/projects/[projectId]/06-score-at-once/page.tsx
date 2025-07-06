@@ -530,7 +530,7 @@ export default function GradingPage() {
   const handleSetScore = async (type: ScoringStatus) => {
     if (!currentAnswerSheet || !currentQuestion || !currentUserId) {
       if (!currentUserId) {
-        alert("ユーザー情報の取得中です。しばらくお待ちください。")
+        toast.warning("ユーザー情報の取得中です。しばらくお待ちください。")
       }
       return
     }
@@ -569,7 +569,7 @@ export default function GradingPage() {
           parsedScore < 0 ||
           parsedScore > currentQuestion.points
         ) {
-          alert("無効な点数です")
+          toast.error("無効な点数です")
           return
         }
         newScore = parsedScore
@@ -694,7 +694,7 @@ export default function GradingPage() {
       }
     } catch (error) {
       console.error("Error in scoring:", error)
-      alert("採点中にエラーが発生しました")
+      toast.error("採点中にエラーが発生しました")
     }
   }
 
@@ -1441,16 +1441,16 @@ export default function GradingPage() {
       const result =
         await window.electronAPI.initializeScoringRecords(projectId)
       if (result.success) {
-        alert(`採点レコードを初期化しました（${result.initialized}件）`)
+        toast.success(`採点レコードを初期化しました（${result.initialized}件）`)
         // 採点データを再読み込み
         const existingScores = await loadExistingScoringData(projectId)
         setScoringData(existingScores)
       } else {
-        alert("採点レコードの初期化に失敗しました: " + result.error)
+        toast.error("採点レコードの初期化に失敗しました: " + result.error)
       }
     } catch (error) {
       console.error("Failed to initialize scoring records:", error)
-      alert("採点レコードの初期化中にエラーが発生しました")
+      toast.error("採点レコードの初期化中にエラーが発生しました")
     }
   }
 

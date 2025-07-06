@@ -20,6 +20,7 @@ import {
   setAnswerSheetAbsent,
   getAnswerSheetById,
   updateAnswerSheetPlacement,
+  swapAnswerSheetPlacements,
 } from "../lib/prisma/answerSheet"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import { loginUser, createUser, getUserByToken, updateUserPassword } from "../lib/prisma/auth"
@@ -170,6 +171,15 @@ export function setupMiscHandlers(): void {
       return await updateAnswerSheetPlacement(answerSheetId, studentId, pageNumber)
     } catch (err) {
       console.error("Error updating answer sheet placement:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("swap-answer-sheet-placements", async (_event, answerSheetId1: string, answerSheetId2: string) => {
+    try {
+      return await swapAnswerSheetPlacements(answerSheetId1, answerSheetId2)
+    } catch (err) {
+      console.error("Error swapping answer sheet placements:", err)
       throw err
     }
   })

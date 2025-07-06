@@ -269,6 +269,28 @@ export interface MyAPI {
     answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
+  updateAnswerSheetPlacement: (
+    answerSheetId: string,
+    studentId: string | null,
+    pageNumber: number
+  ) => Promise<{
+    success: boolean
+    answerSheet?: AnswerSheetWithDetails
+    error?: string
+  }>
+  swapAnswerSheetPlacements: (
+    answerSheetId1: string,
+    answerSheetId2: string
+  ) => Promise<{
+    success: boolean
+    answerSheets?: AnswerSheetWithDetails[]
+    error?: string
+  }>
+  getImageData: (relativePath: string) => Promise<{
+    success: boolean
+    data?: string
+    error?: string
+  }>
 
   // Class related
   fetchClasses: () => Promise<ClassWithStudents[]>
