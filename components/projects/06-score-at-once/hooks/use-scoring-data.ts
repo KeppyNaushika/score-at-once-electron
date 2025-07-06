@@ -78,16 +78,25 @@ export function useScoringData({
     projectId: string,
   ): Promise<Record<string, ScoringData>> => {
     try {
-      console.log("🔄 Loading scoring data:", projectId, "scores count:")
-      const scores = await window.electronAPI.getQuestionScoresForProject(projectId)
-      console.log(scores?.length || 0)
+      console.log("🔄 Loading scoring data:", projectId)
+      const result = await window.electronAPI.getQuestionScoresForProject(projectId)
+      console.log("📊 API result:", result)
       
-      if (!scores || !Array.isArray(scores)) {
+      // Handle both direct array and { success, scores } format
+      let scores
+      if (Array.isArray(result)) {
+        scores = result
+      } else if (result?.success && Array.isArray(result.scores)) {
+        scores = result.scores
+      } else {
+        console.log("❌ No scores found or invalid format")
         return {}
       }
 
+      console.log("✅ Scores count:", scores.length)
+
       const scoringData: Record<string, ScoringData> = {}
-      scores.forEach((score: QuestionScore) => {
+      scores.forEach((score: any) => {
         const key = `${score.answerSheetId}-${score.layoutRegionId}`
         scoringData[key] = {
           id: score.id,
