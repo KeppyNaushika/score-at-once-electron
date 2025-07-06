@@ -324,6 +324,7 @@ export default function AnswerGridView({
       // Option/Alt + Minus で減少
       if (event.altKey && (event.key === "-" || event.key === "_")) {
         event.preventDefault()
+        console.log('Option+[-] 1行あたりの表示件数を減少')
         decrementItemsPerRow()
       }
       // Option/Alt + Plus で増加
@@ -332,6 +333,7 @@ export default function AnswerGridView({
         (event.key === "+" || event.key === "=" || event.key === "Equal")
       ) {
         event.preventDefault()
+        console.log('Option+[+] 1行あたりの表示件数を増加')
         incrementItemsPerRow()
       }
     }
@@ -600,8 +602,18 @@ export default function AnswerGridView({
 
   // 選択された答案のログ出力
   useEffect(() => {
-    console.log('選択された答案:', Array.from(selectedAnswers))
-  }, [selectedAnswers])
+    const selectedAnswerDetails = Array.from(selectedAnswers).map(id => {
+      const answer = answers.find(a => a.id === id)
+      if (!answer) {
+        console.error('🚨 謎の答案ID発見:', id, '- 答案リストに存在しません')
+        console.log('現在の答案リスト:', answers.map(a => ({ id: a.id, name: a.studentName, isMaster: a.isMaster })))
+        return `❌ 謎の答案ID: ${id}`
+      }
+      if (answer.isMaster) return '模範解答'
+      return `${answer.studentName} (${id})`
+    })
+    console.log('選択された答案:', selectedAnswerDetails)
+  }, [selectedAnswers, answers])
 
   return (
     <div className={`flex h-full flex-col ${className}`}>
