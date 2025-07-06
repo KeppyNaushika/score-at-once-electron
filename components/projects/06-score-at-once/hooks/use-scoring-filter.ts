@@ -93,14 +93,19 @@ export function useScoringFilter({
     })
     
     sortedAnswerSheets.forEach(sheet => {
-      const status = getScoringStatus(sheet.id, currentQuestion?.id)
+      // 現在のscoringDataを参照（採点時の更新を避けるため、依存配列に含めない）
+      const key = `${sheet.id}-${currentQuestion?.id}`
+      const scoreData = scoringData[key]
+      const status = scoreData?.status || "ungraded"
+      
       if (filterSettings[status as keyof typeof filterSettings]) {
         newVisibleAnswers.add(sheet.id)
       }
     })
     
     setVisibleAnswers(newVisibleAnswers)
-  }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, project])
+  // 注意: scoringDataを依存配列に含めない（採点時の更新を避けるため）
+  }, [answerSheets, currentQuestion, filterSettings, project])
 
   // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
   useEffect(() => {
@@ -111,7 +116,7 @@ export function useScoringFilter({
       // 表示対象を更新
       updateVisibleAnswers()
     }
-  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, updateVisibleAnswers])
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
 
   // visibleAnswersが更新されたら最初の生徒答案を選択（模範解答をスキップ）
   useEffect(() => {
@@ -224,9 +229,56 @@ export function useScoringFilter({
   const handleRefreshFilter = useCallback(() => {
     // 選択をクリア
     setSelectedAnswers(new Set())
-    // 表示対象を更新
-    updateVisibleAnswers()
-  }, [updateVisibleAnswers, setSelectedAnswers])
+    
+    // 最新のscoringDataを使用してフィルタリングを実行
+    const newVisibleAnswers = new Set<string>()
+    
+    if (!currentQuestion) {
+      setVisibleAnswers(newVisibleAnswers)
+      return
+    }
+
+    // masterImageIdに基づいてpageNumberを取得
+    const masterImage = project?.masterImages?.find(
+      (img: any) => img.id === currentQuestion.masterImageId,
+    )
+    const targetPageNumber = masterImage?.pageNumber || 1
+
+    // pageNumberでフィルタリングしてから受験生徒順でソート
+    const pageFilteredSheets = answerSheets.filter(
+      (sheet) => sheet.pageNumber === targetPageNumber,
+    )
+
+    const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
+      // ProjectStudentのcustomOrderで並び替え（小さい値が先）
+      const aOrder =
+        a.student.projectStudents?.[0]?.customOrder !== undefined ? a.student.projectStudents[0].customOrder : 999999
+      const bOrder =
+        b.student.projectStudents?.[0]?.customOrder !== undefined ? b.student.projectStudents[0].customOrder : 999999
+
+      // customOrderが同じ場合は姓名でソート
+      if (aOrder === bOrder) {
+        const aName = `${a.student.lastName}${a.student.firstName}`
+        const bName = `${b.student.lastName}${b.student.firstName}`
+        return aName.localeCompare(bName, "ja")
+      }
+
+      return aOrder - bOrder
+    })
+    
+    sortedAnswerSheets.forEach(sheet => {
+      // 最新のscoringDataを参照
+      const key = `${sheet.id}-${currentQuestion?.id}`
+      const scoreData = scoringData[key]
+      const status = scoreData?.status || "ungraded"
+      
+      if (filterSettings[status as keyof typeof filterSettings]) {
+        newVisibleAnswers.add(sheet.id)
+      }
+    })
+    
+    setVisibleAnswers(newVisibleAnswers)
+  }, [setSelectedAnswers, currentQuestion, project, answerSheets, filterSettings, scoringData])
 
   const handleToggleFilter = useCallback((key: string) => {
     // ボタン操作によるフィルター切り替え
