@@ -47,61 +47,121 @@ npx prisma studio
 ```
 /score-at-once-electron
 ├── /app                     # Next.js App Router
-│   ├── /(auth)             # 認証関連ページ
-│   ├── /dashboard          # ダッシュボード
-│   ├── /projects           # プロジェクト管理
-│   │   └── /[projectId]    # 個別プロジェクト
-│   │       ├── /answer-sheets    # 答案管理
-│   │       └── /score            # 採点関連
-│   │           ├── /template     # 採点領域作成
-│   │           └── /region-info  # 領域情報編集
-│   ├── /settings           # 設定
-│   └── /students           # 生徒管理
-├── /components
-│   ├── /auth               # 認証コンポーネント
-│   ├── /answer-sheet       # 答案関連コンポーネント
-│   ├── /common             # 共通コンポーネント
-│   │   ├── LoadingSpinner.tsx    # 再利用可能なローディング
-│   │   ├── BaseModal.tsx         # モーダルベース
-│   │   └── FileUploadDropzone.tsx # ファイルアップロード
-│   ├── /export             # 出力関連コンポーネント
-│   │   ├── ScoringMarkSettings.tsx   # 採点マーク設定
-│   │   └── ExportProgressModal.tsx   # 出力プログレス表示
-│   ├── /layout             # レイアウト関連
-│   ├── /project            # プロジェクト関連
-│   │   ├── /list           # プロジェクト一覧
-│   │   ├── /images         # マスター画像管理
-│   │   ├── /layout         # レイアウト領域エディタ
-│   │   ├── /forms          # プロジェクト作成・編集
-│   │   └── /05-answer-sheets     # 答案管理（機能特化構造）
-│   │       ├── /components       # 答案管理専用コンポーネント
-│   │       ├── /hooks           # 答案管理専用フック
-│   │       ├── /utils           # 答案管理専用ユーティリティ
-│   │       └── /types           # 答案管理専用型定義
-│   ├── /student            # 生徒関連
-│   └── /ui                 # 基礎UIコンポーネント
-├── /hooks                  # グローバルカスタムフック
-│   ├── useFileUpload.ts    # ファイルアップロード
-│   ├── usePdfConverter.ts  # PDF変換
-│   ├── useMasterImages.ts  # マスター画像管理
-│   ├── useProject.ts       # プロジェクト管理
-│   └── useLayoutRegions.ts # レイアウト領域管理
-├── /lib                    # グローバルユーティリティ
-│   ├── auth.ts             # 認証ユーティリティ
-│   ├── prisma.ts           # Prismaクライアント
-│   └── utils.ts            # 汎用ユーティリティ
-├── /types                  # グローバル型定義
-│   ├── common.types.ts     # 共通型定義（LayoutRegionArea、ProjectWithDetails等）
-│   └── electron.d.ts       # Electron API型定義
-├── /prisma
-│   ├── schema.prisma       # データベーススキーマ
-│   └── /migrations         # マイグレーションファイル
-├── /electron-src           # Electronメインプロセス
-│   └── /lib/prisma         # データベース操作
-│       ├── pdfExport.ts    # PDF出力（プログレス対応）
-│       └── excelExport.ts  # Excel出力（関数式計算）
-└── /public                 # 静的ファイル
-    └── /score-assets       # 採点マーク画像素材
+│   ├── /classes             # 学級管理
+│   │   ├── /[classId]       # 個別学級管理
+│   │   └── page.tsx         # 学級一覧
+│   ├── /dashboard           # ダッシュボード
+│   ├── /login               # ログイン
+│   ├── /signup              # サインアップ
+│   ├── /projects            # プロジェクト管理
+│   │   └── /[projectId]     # 個別プロジェクト（6段階ワークフロー）
+│   │       ├── /01-upload           # 模範解答アップロード
+│   │       ├── /02-template         # 採点領域作成
+│   │       ├── /03-region-info      # 領域情報編集
+│   │       ├── /04-students         # 受験生徒管理
+│   │       ├── /05-answer-sheets    # 答案アップロード
+│   │       ├── /06-score-at-once    # 採点実行
+│   │       ├── /07-export           # 結果出力
+│   │       ├── layout.tsx           # プロジェクト共通レイアウト
+│   │       └── page.tsx             # プロジェクト詳細
+│   ├── /settings            # 設定
+│   ├── /students            # 生徒管理
+│   │   ├── /[studentId]     # 個別生徒詳細
+│   │   └── page.tsx         # 生徒一覧
+│   └── /test pages          # 開発用テストページ
+├── /components              # Reactコンポーネント
+│   ├── /auth                # 認証コンポーネント
+│   ├── /class               # 学級管理コンポーネント
+│   ├── /common              # 共通コンポーネント
+│   │   ├── BaseModal.tsx            # モーダルベース
+│   │   ├── FileUploadDropzone.tsx   # ファイルアップロード
+│   │   ├── LoadingSpinner.tsx       # 再利用可能なローディング
+│   │   └── ToastProvider.tsx        # 通知プロバイダー
+│   ├── /help                # ヘルプ・ガイダンス
+│   │   ├── /common          # 共通ヘルプコンポーネント
+│   │   ├── /page-specific   # ページ別ヘルプコンテンツ
+│   │   └── PageHelpContent.tsx
+│   ├── /hooks               # コンポーネント固有のカスタムフック
+│   ├── /layout              # レイアウト関連
+│   ├── /projects            # プロジェクト関連（6段階ワークフロー対応）
+│   │   ├── /01-upload       # 模範解答アップロード
+│   │   ├── /02-template     # 採点領域作成
+│   │   ├── /03-region-info  # 領域情報編集
+│   │   ├── /04-students     # 受験生徒管理
+│   │   ├── /05-answer-sheets # 答案アップロード（高度な機能特化構造）
+│   │   │   ├── /answer-sheet-management    # 答案管理システム
+│   │   │   │   ├── /components      # 専用コンポーネント
+│   │   │   │   ├── /hooks          # 専用カスタムフック
+│   │   │   │   ├── /types          # 専用型定義
+│   │   │   │   └── /utils          # 専用ユーティリティ
+│   │   │   └── /answer-sheet-table # 答案テーブル管理
+│   │   │       ├── /components     # テーブル専用コンポーネント
+│   │   │       ├── /hooks         # テーブル専用フック
+│   │   │       └── /types         # テーブル専用型定義
+│   │   ├── /06-score-at-once # 採点実行
+│   │   ├── /07-export       # 結果出力
+│   │   │   ├── ExportProgressModal.tsx   # 出力プログレス表示
+│   │   │   └── ScoringMarkSettings.tsx   # 採点マーク設定
+│   │   ├── /detail          # プロジェクト詳細
+│   │   ├── /forms           # プロジェクト作成・編集
+│   │   ├── /list            # プロジェクト一覧
+│   │   └── /shared          # 共有コンポーネント
+│   ├── /settings            # 設定
+│   ├── /student             # 生徒関連
+│   └── /ui                  # 基礎UIコンポーネント（shadcn/ui）
+├── /hooks                   # グローバルカスタムフック
+│   ├── /02-template         # 採点領域作成専用
+│   ├── /06-score-at-once    # 採点実行専用
+│   ├── /07-export           # 出力専用
+│   ├── /answer-sheet-upload # 答案アップロード専用
+│   ├── /project-detail      # プロジェクト詳細専用
+│   ├── useFileUpload.ts     # ファイルアップロード
+│   ├── useMasterImages.ts   # マスター画像管理
+│   ├── useProject.ts        # プロジェクト管理
+│   └── useLayoutRegions.ts  # レイアウト領域管理
+├── /lib                     # グローバルユーティリティ
+│   ├── pdfConverter.ts      # PDF変換ユーティリティ
+│   └── utils.ts             # 汎用ユーティリティ
+├── /types                   # グローバル型定義
+│   ├── answer-sheet.types.ts    # 答案関連型定義
+│   ├── common.types.ts          # 共通型定義（LayoutRegionArea、ProjectWithDetails等）
+│   └── electron.d.ts            # Electron API型定義
+├── /utils                   # 特殊ユーティリティ
+│   ├── answerSheetConverter.ts  # 答案変換
+│   └── studentOrderUtils.ts     # 生徒順序管理
+├── /contexts                # Reactコンテキスト
+│   └── AuthContext.tsx      # 認証コンテキスト
+├── /prisma                  # データベース関連
+│   ├── schema.prisma        # データベーススキーマ
+│   ├── /migrations          # マイグレーションファイル
+│   └── /data                # データベースファイル
+├── /electron-src            # Electronメインプロセス
+│   ├── /ipc-handlers        # IPC通信ハンドラー
+│   │   ├── export-handlers.ts
+│   │   ├── project-handlers.ts
+│   │   ├── scoring-handlers.ts
+│   │   └── student-handlers.ts
+│   ├── /lib                 # Electronライブラリ
+│   │   ├── dataManager.ts
+│   │   └── /prisma          # データベース操作
+│   │       ├── pdfExport.ts     # PDF出力（プログレス対応）
+│   │       ├── excelExport.ts   # Excel出力（関数式計算）
+│   │       └── [その他多数のデータベース操作]
+│   ├── index.ts             # メインプロセス
+│   ├── preload.ts           # プリロードスクリプト
+│   └── window-manager.ts    # ウィンドウ管理
+├── /public                  # 静的ファイル
+│   ├── /js                  # JavaScript静的ファイル
+│   └── /score-assets        # 採点マーク画像素材
+├── /data                    # アプリケーションデータ
+│   ├── /exports             # 出力ファイル保存先
+│   └── /projects            # プロジェクトファイル
+│       └── [プロジェクトID]/
+│           ├── /master-images    # マスター画像
+│           └── /answer-sheets    # 答案画像
+├── /docs                    # ドキュメント
+├── /main                    # ビルド済みElectronファイル
+└── /scripts                 # 開発スクリプト
 ```
 
 ## 確立済みワークフロー
