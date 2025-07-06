@@ -1,9 +1,8 @@
 "use client"
 
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import { Progress } from "@/components/ui/progress"
 import { convertPdfToImages, getPdfPageCount } from "@/lib/pdfConverter"
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 // table-dnd-kit-test準拠のコンポーネント
@@ -87,6 +86,14 @@ export default function AnswerSheetUploadNew({
   const [currentPdfFile, setCurrentPdfFile] = useState<File | null>(null)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
+  // 画像遅延読み込み用のstate
+  const [imageLoadStates, setImageLoadStates] = useState<
+    Record<string, "pending" | "loading" | "loaded" | "error">
+  >({})
+  const observerRef = useRef<IntersectionObserver | null>(null)
+  const preloadQueueRef = useRef<string[]>([])
+  const isLoadingRef = useRef(false)
+
   // 統一された生徒データ
   const unifiedStudents: UnifiedStudent[] = students.map((s) => ({
     id: s.id,
@@ -100,50 +107,130 @@ export default function AnswerSheetUploadNew({
     customOrder: s.customOrder,
   }))
 
-  // 既存答案データの初期化
+  // 画像読み込み関数
+  const loadImageForFile = useCallback(
+    async (fileId: string) => {
+      if (imageLoadStates[fileId] !== "pending") return
+
+      setImageLoadStates((prev) => ({ ...prev, [fileId]: "loading" }))
+
+      try {
+        const file = files.find((f) => f.id === fileId)
+        if (!file?.imagePath) {
+          setImageLoadStates((prev) => ({ ...prev, [fileId]: "error" }))
+          return
+        }
+
+        const result = await window.electronAPI.readFileAsBase64(file.imagePath)
+
+        if (result.success && result.data) {
+          setFiles((prevFiles) =>
+            prevFiles.map((prevFile) =>
+              prevFile.id === fileId
+                ? { ...prevFile, preview: result.data }
+                : prevFile,
+            ),
+          )
+          setImageLoadStates((prev) => ({ ...prev, [fileId]: "loaded" }))
+        } else {
+          console.warn(`Failed to load image: ${file.imagePath}`, result.error)
+          setImageLoadStates((prev) => ({ ...prev, [fileId]: "error" }))
+        }
+      } catch (error) {
+        console.error(`Error loading image for file ${fileId}:`, error)
+        setImageLoadStates((prev) => ({ ...prev, [fileId]: "error" }))
+      }
+    },
+    [files, imageLoadStates],
+  )
+
+  // プリロードキューの処理
+  const processPreloadQueue = useCallback(async () => {
+    if (isLoadingRef.current || preloadQueueRef.current.length === 0) return
+
+    isLoadingRef.current = true
+    const fileId = preloadQueueRef.current.shift()!
+    await loadImageForFile(fileId)
+    isLoadingRef.current = false
+
+    // 次の画像を処理（少し間隔を空けてUIの応答性を保つ）
+    if (preloadQueueRef.current.length > 0) {
+      setTimeout(processPreloadQueue, 30)
+    }
+  }, [loadImageForFile])
+
+  // Intersection Observerの設定
+  useEffect(() => {
+    if (mode !== "view" || !files.length) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const fileId = entry.target.getAttribute("data-file-id")
+          if (
+            fileId &&
+            entry.isIntersecting &&
+            imageLoadStates[fileId] === "pending"
+          ) {
+            // キューに追加（重複避け）
+            if (!preloadQueueRef.current.includes(fileId)) {
+              preloadQueueRef.current.push(fileId)
+              processPreloadQueue()
+            }
+          }
+        })
+      },
+      {
+        // 非常に広い範囲で先読み：画面の3倍の範囲
+        rootMargin: "300% 0px 300% 0px", // 上下に画面3倍分の範囲
+        threshold: 0.01, // 要素が1%でも範囲内に入ったら発火
+      },
+    )
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [mode, files, imageLoadStates, processPreloadQueue])
+
+  // 既存答案データの初期化（Intersection Observer対応）
   useEffect(() => {
     const loadExistingFiles = async () => {
       if (mode === "view" && existingAnswerSheets) {
-        const convertedFiles: UnifiedFile[] = []
-        
-        for (const sheet of existingAnswerSheets) {
-          let previewUrl: string | undefined = undefined
-          
-          // ファイルパスが存在する場合、Base64として読み込み
-          if (sheet.originalImagePath) {
-            try {
-              const result = await window.electronAPI.readFileAsBase64(sheet.originalImagePath)
-              if (result.success && result.data) {
-                previewUrl = result.data
-              } else {
-                console.warn(`Failed to load image: ${sheet.originalImagePath}`, result.error)
-              }
-            } catch (error) {
-              console.error(`Error loading image: ${sheet.originalImagePath}`, error)
-            }
-          }
-          
-          convertedFiles.push({
+        // まず画像なしでファイル一覧を即座に表示
+        const convertedFiles: UnifiedFile[] = existingAnswerSheets.map(
+          (sheet) => ({
             id: sheet.id,
             name: `ページ ${sheet.pageNumber}`,
             type: "image/png",
             size: 0,
-            preview: previewUrl,
+            preview: undefined, // 最初はundefined
             studentId: sheet.studentId || undefined,
             pageNumber: sheet.pageNumber,
             isSelected: false,
             pageLabel: `ページ ${sheet.pageNumber}`,
             buffer: new ArrayBuffer(0),
             originalFileName: `ページ ${sheet.pageNumber}`,
-            position: (sheet.pageNumber - 1), // customOrderは別の仕組みで管理される
-            // isDisabled: sheet.isAbsent, // UnifiedFileにはisDisabledプロパティが存在しない
-          })
-        }
-        
+            position: sheet.pageNumber - 1,
+            imagePath: sheet.originalImagePath, // パスを保存
+          }),
+        )
+
         setFiles(convertedFiles)
+
+        // 画像読み込み状態を初期化
+        const initialLoadStates: Record<
+          string,
+          "pending" | "loading" | "loaded" | "error"
+        > = {}
+        convertedFiles.forEach((file) => {
+          initialLoadStates[file.id] = "pending"
+        })
+        setImageLoadStates(initialLoadStates)
       }
     }
-    
+
     loadExistingFiles()
   }, [mode, existingAnswerSheets, masterImageCount])
 
@@ -227,7 +314,6 @@ export default function AnswerSheetUploadNew({
         setIsConverting(true)
         setPdfProcessingProgress(0)
 
-
         // 総ページ数計算
         let totalPages = 0
 
@@ -253,7 +339,6 @@ export default function AnswerSheetUploadNew({
           }
         }
 
-
         let processedPages = 0
         const allConvertedFiles: ConvertedFileTemp[] = []
 
@@ -275,7 +360,6 @@ export default function AnswerSheetUploadNew({
               : 1
 
           try {
-
             const convertedFiles = await convertSingleFileToImages(
               file,
               password,
@@ -285,13 +369,11 @@ export default function AnswerSheetUploadNew({
                   (currentFileProgress / totalPages) * 100,
                 )
                 setPdfProcessingProgress(progress)
-
               },
             )
 
             allConvertedFiles.push(...convertedFiles)
             processedPages += expectedPages
-
           } catch (error) {
             if (
               error instanceof Error &&
@@ -321,7 +403,6 @@ export default function AnswerSheetUploadNew({
             const pageIndex = index % masterImageCount
             const targetStudent = unifiedStudents[studentIndex]
 
-
             return {
               id: convertedFile.id,
               name: convertedFile.name,
@@ -340,7 +421,6 @@ export default function AnswerSheetUploadNew({
         )
 
         setFiles((prev) => [...prev, ...newFiles])
-
 
         setPdfProcessingProgress(100)
         toast.success(`${allConvertedFiles.length}個のページを処理しました`)
@@ -382,7 +462,6 @@ export default function AnswerSheetUploadNew({
         return
       }
 
-
       processFiles(acceptedFiles)
     },
     [processFiles],
@@ -398,7 +477,6 @@ export default function AnswerSheetUploadNew({
         return
       }
 
-
       try {
         setPasswordDialog((prev) => ({ ...prev, isOpen: false }))
 
@@ -413,13 +491,11 @@ export default function AnswerSheetUploadNew({
           await processFiles(pendingFiles, password)
         }
 
-
         // 成功時のクリーンアップ
         setCurrentPdfFile(null)
         setPendingFiles([])
         setPasswordDialog({ isOpen: false, attempts: 0, hasError: false })
       } catch (error) {
-
         setPasswordDialog((prev) => ({
           ...prev,
           attempts: prev.attempts + 1,
@@ -565,6 +641,9 @@ export default function AnswerSheetUploadNew({
           onFileOrderChange={setPlacementStrategy}
           onFilesChange={setFiles}
           onUpload={handleUpload}
+          imageLoadStates={imageLoadStates}
+          observerRef={observerRef}
+          mode={mode}
         />
       </div>
 

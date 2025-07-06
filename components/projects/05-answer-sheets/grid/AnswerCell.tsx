@@ -84,6 +84,8 @@ export default function AnswerCell({
 
   // 氏名欄クロップ画像の生成
   const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
+  const [isCroppedImageLoading, setIsCroppedImageLoading] = useState(false)
 
   useEffect(() => {
     if (!file?.preview || !nameRegion || globalPreviewMode !== "name") {
@@ -92,6 +94,7 @@ export default function AnswerCell({
     }
 
     const createCroppedImage = async () => {
+      setIsCroppedImageLoading(true)
       try {
         const img = new Image()
         img.crossOrigin = "anonymous"
@@ -132,6 +135,8 @@ export default function AnswerCell({
         setCroppedImageUrl(croppedUrl)
       } catch (error) {
         setCroppedImageUrl(null)
+      } finally {
+        setIsCroppedImageLoading(false)
       }
     }
 
@@ -276,6 +281,18 @@ export default function AnswerCell({
                   }`}
                   {...listeners}
                 >
+                  {/* ローディング表示 */}
+                  {(isImageLoading || isCroppedImageLoading) && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
+                        <div className="text-xs text-gray-500">
+                          {isCroppedImageLoading ? "氏名欄生成中..." : "読み込み中..."}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {globalPreviewMode === "name" &&
                   nameRegion &&
                   croppedImageUrl ? (
@@ -284,12 +301,22 @@ export default function AnswerCell({
                       alt="氏名欄"
                       className="h-full w-full object-cover"
                     />
-                  ) : (
+                  ) : file.preview ? (
                     <img
                       src={file.preview}
                       alt={`${pageNumber}ページ目`}
                       className="h-full w-full object-contain"
+                      onLoad={() => setIsImageLoading(false)}
+                      onLoadStart={() => setIsImageLoading(true)}
+                      onError={() => setIsImageLoading(false)}
                     />
+                  ) : (
+                    <div className="text-center text-gray-500">
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500"></div>
+                        <div className="text-xs">読み込み中...</div>
+                      </div>
+                    </div>
                   )}
                   {globalPreviewMode === "name" && !nameRegion && (
                     <div className="bg-opacity-70 absolute inset-0 flex items-center justify-center bg-black">
