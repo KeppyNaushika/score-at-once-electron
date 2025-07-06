@@ -248,15 +248,39 @@ export default function ScoringMainView() {
         const existingScores = await loadExistingScoringData(projectId)
 
         // Transform the data to match AnswerSheet interface
-        const transformedAnswerSheets = (answersResult.answerSheets || []).map(
-          (sheet: any) => ({
-            id: sheet.id,
-            studentId: sheet.studentId,
-            projectId: sheet.projectId,
-            imagePath: sheet.originalImagePath || "",
-            pageNumber: sheet.pageNumber || 1,
-            status: sheet.status || "uploaded",
-            student: sheet.student,
+        const transformedAnswerSheets = await Promise.all(
+          (answersResult.answerSheets || []).map(async (sheet: any) => {
+            console.log("Answer sheet data:", {
+              id: sheet.id,
+              originalImagePath: sheet.originalImagePath,
+              studentId: sheet.studentId,
+              pageNumber: sheet.pageNumber
+            })
+            
+            // ファイル存在確認
+            if (sheet.originalImagePath) {
+              try {
+                const fileCheck = await window.electronAPI.checkFileExists(sheet.originalImagePath)
+                console.log("File existence check:", {
+                  path: sheet.originalImagePath,
+                  exists: fileCheck.exists,
+                  absolutePath: fileCheck.path,
+                  error: fileCheck.error
+                })
+              } catch (err) {
+                console.error("Error checking file existence:", err)
+              }
+            }
+            
+            return {
+              id: sheet.id,
+              studentId: sheet.studentId,
+              projectId: sheet.projectId,
+              imagePath: sheet.originalImagePath || "",
+              pageNumber: sheet.pageNumber || 1,
+              status: sheet.status || "uploaded",
+              student: sheet.student,
+            }
           }),
         )
         
@@ -487,13 +511,13 @@ export default function ScoringMainView() {
             {/* 簡潔な状態表示 */}
             <div className="flex items-center justify-between mt-4">
               <div className="text-sm text-gray-600">
-                設問 {currentQuestionIndex + 1} / {questionRegions.length} - 
-                表示中: {visibleAnswers.size}件 / 全体: {answerSheets.length}件
-                {selectedAnswers.size > 0 && ` (${selectedAnswers.size}件選択中)`}
+                設問 {currentQuestionIndex + 1}/{questionRegions.length} | 
+                表示 {visibleAnswers.size}/{answerSheets.length}
+                {selectedAnswers.size > 0 && ` | 選択 ${selectedAnswers.size}`}
               </div>
 
               <div className="text-xs text-gray-500">
-                右パネルで詳細操作 →
+                詳細操作 →
               </div>
             </div>
           </div>

@@ -84,6 +84,8 @@ export default function AnswerDisplayViewer({
     }
     img.onerror = (error) => {
       console.error("Failed to load image:", {
+        answerSheetId: answerSheet.id,
+        studentId: answerSheet.studentId,
         originalPath: answerSheet.imagePath,
         finalSrc: img.src,
         error

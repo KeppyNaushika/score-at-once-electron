@@ -143,14 +143,16 @@ export function useScoringData({
 
         if (allMatch) {
           // Auto-finalize if all scores match
+          const finalizeData = {
+            partialScore: firstScore.score,
+            status: "final",
+            comments: firstScore.comment || "",
+          }
           const result = await window.electronAPI.finalizeQuestionScore(
             answerSheetId,
             layoutRegionId,
             currentUserId,
-            {
-              score: firstScore.score,
-              comment: firstScore.comment || "",
-            } as any,
+            finalizeData,
           )
 
           if ((result as any).success) {
@@ -237,13 +239,14 @@ export function useScoringData({
     try {
       if (currentScore?.id) {
         // Update existing score
+        const updateData = {
+          partialScore: newScore,
+          status: status,
+          comment: currentScore.comment || "",
+        }
         const result = await window.electronAPI.updateQuestionScore(
           currentScore.id,
-          {
-            partialScore: newScore,
-            status,
-            comment: currentScore.comment || "",
-          },
+          updateData,
           currentScore.version,
         )
 
@@ -282,14 +285,15 @@ export function useScoringData({
         }
       } else {
         // Create new score
-        const result = await window.electronAPI.createQuestionScore({
+        const scoreData = {
           answerSheetId: currentAnswerSheet.id,
           layoutRegionId: currentQuestion.id,
           partialScore: newScore,
-          status,
+          status: status,
           comment: "",
           scoredByUserId: currentUserId,
-        } as any)
+        }
+        const result = await window.electronAPI.createQuestionScore(scoreData)
 
         if ((result as any).success || result.id) {
           setScoringData((prev) => ({
@@ -451,13 +455,14 @@ export function useScoringData({
       try {
         if (currentScore?.id) {
           // Update existing score
+          const updateData = {
+            partialScore: newScore,
+            status: scoringStatus,
+            comment: currentScore.comment || "",
+          }
           const result = await window.electronAPI.updateQuestionScore(
             currentScore.id,
-            {
-              partialScore: newScore,
-              status: scoringStatus,
-              comment: currentScore.comment || "",
-            },
+            updateData,
             currentScore.version,
           )
 
@@ -478,14 +483,15 @@ export function useScoringData({
           }
         } else {
           // Create new score
-          const result = await window.electronAPI.createQuestionScore({
+          const scoreData = {
             answerSheetId: answerId,
             layoutRegionId: currentQuestion.id,
             partialScore: newScore,
             status: scoringStatus,
             comment: "",
             scoredByUserId: effectiveUserId,
-          } as any)
+          }
+          const result = await window.electronAPI.createQuestionScore(scoreData)
 
           if ((result as any).success || result.id) {
             setScoringData((prev) => ({

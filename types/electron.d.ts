@@ -372,6 +372,12 @@ export interface MyAPI {
     mimeType?: string
     error?: string
   }>
+  checkFileExists: (relativePath: string) => Promise<{
+    success: boolean
+    exists: boolean
+    path: string
+    error?: string
+  }>
   getMasterImagesByProjectId: (
     projectId: string,
   ) => Promise<MasterImagePayload[]> // Added

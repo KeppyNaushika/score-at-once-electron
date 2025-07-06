@@ -85,21 +85,14 @@ export default function NavigationControls({
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1">
                 <Eye className="h-3 w-3 text-blue-500" />
-                <span>表示中:</span>
-                <Badge variant="outline">{visibleAnswersCount}件</Badge>
+                <Badge variant="outline">{visibleAnswersCount}</Badge>
               </div>
               <div className="text-gray-400">/</div>
-              <div className="flex items-center gap-1">
-                <span>全体:</span>
-                <Badge variant="secondary">{totalAnswersCount}件</Badge>
-              </div>
+              <Badge variant="secondary">{totalAnswersCount}</Badge>
               {selectedAnswersCount > 0 && (
                 <>
                   <div className="text-gray-400">/</div>
-                  <div className="flex items-center gap-1">
-                    <span>選択中:</span>
-                    <Badge className="bg-blue-500">{selectedAnswersCount}件</Badge>
-                  </div>
+                  <Badge className="bg-blue-500">{selectedAnswersCount}</Badge>
                 </>
               )}
             </div>
@@ -165,10 +158,10 @@ export default function NavigationControls({
           {/* WASD移動コントロール */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-medium text-gray-700">グリッド移動</h3>
+              <h3 className="text-sm font-medium text-gray-700">移動</h3>
               {currentPosition && (
                 <Badge variant="outline" className="text-xs">
-                  位置: {currentPosition.row + 1}行 {currentPosition.col + 1}列
+                  {currentPosition.row + 1}:{currentPosition.col + 1}
                 </Badge>
               )}
             </div>
@@ -286,23 +279,6 @@ export default function NavigationControls({
               </Tooltip>
             </div>
 
-            {/* 移動説明 */}
-            <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-              <strong>WASD移動:</strong> 答案を選択後、WASDキーまたはボタンで隣接する答案に移動できます。
-              レイアウト方向に応じて移動方向が調整されます。
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* 操作ヒント */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="text-xs text-green-800 space-y-1">
-              <div><strong>効率的な操作:</strong></div>
-              <div>• 答案をクリック → WASDで移動 → 採点キーで評価</div>
-              <div>• Ctrl+クリックで複数選択 → 一括採点</div>
-              <div>• Rキーで表示更新、数字キーでフィルター切り替え</div>
-            </div>
           </div>
 
         </CardContent>
