@@ -1,0 +1,1 @@
+export { default as ScoringMainView } from './scoring-main-view'
