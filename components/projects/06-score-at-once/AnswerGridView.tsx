@@ -655,13 +655,7 @@ export default function AnswerGridView({
                   <span
                     className={`truncate text-xs ${isMaster ? "font-bold text-black" : "font-medium"}`}
                   >
-                    {(() => {
-                      const displayName = isMaster ? answer.studentName : (showStudentNames ? answer.studentName : "")
-                      if (!isMaster) {
-                        console.log(`Student name display: showStudentNames=${showStudentNames}, displayName="${displayName}"`)
-                      }
-                      return displayName
-                    })()}
+                    {isMaster ? answer.studentName : (showStudentNames ? answer.studentName : "")}
                   </span>
 
                   {!isMaster && answer.status !== "ungraded" && (
