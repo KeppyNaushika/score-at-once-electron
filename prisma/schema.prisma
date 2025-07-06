@@ -243,9 +243,7 @@ model QuestionScore {
   id             String       @id @default(uuid())
   answerSheetId  String
   layoutRegionId String
-  score          Float?
-  detectedAnswer String?
-  isCorrect      Boolean?
+  score          Decimal?
   comment        String?
   scoredByUserId String
   status         String       @default("proposed")
