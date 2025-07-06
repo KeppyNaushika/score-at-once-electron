@@ -120,11 +120,43 @@ export function HelpContent05AnswerSheets() {
             </div>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-orange-700">現在の対応状況タブ</h4>
+            <h4 className="text-sm font-medium text-orange-700">配置済み答案の確認タブ</h4>
             <div className="text-xs space-y-1">
-              <p>• アップロード済み答案の確認</p>
-              <p>• 個別の画像削除・移動</p>
-              <p>• 対応状況の最終確認</p>
+              <p>• アップロード済み答案の確認・入れ替え</p>
+              <p>• 楽観的更新による即座な変更反映</p>
+              <p>• 手動更新ボタンによる変更確定</p>
+              <p>• 採点情報込み入れ替えの3つのオプション</p>
+            </div>
+          </div>
+        </div>
+      </HelpSection>
+
+      <HelpSection
+        icon={<Settings className="h-5 w-5 text-blue-600" />}
+        title="楽観的答案入れ替えシステム"
+      >
+        <div className="space-y-3">
+          <div className="border-l-4 border-blue-500 pl-3">
+            <h4 className="text-sm font-medium text-blue-700">新機能：手動更新システム</h4>
+            <div className="text-xs space-y-1 mt-1">
+              <p>• ドラッグ&ドロップで答案を入れ替え（即座に赤いオーバーレイ表示）</p>
+              <p>• 変更はローカルのみ反映、データベースは未更新</p>
+              <p>• 「x件の変更を反映」ボタンで一括確定</p>
+              <p>• 詳細な確認モーダルで安全な処理選択</p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-sm font-medium">入れ替え処理の選択肢</h4>
+            <div className="space-y-2 text-xs">
+              <div className="border rounded p-2 bg-blue-50 border-blue-200">
+                <p><strong className="text-blue-700">採点情報も一緒に入れ替え（推奨）</strong></p>
+                <p className="text-blue-600">答案画像と採点結果を正しく対応させます</p>
+              </div>
+              <div className="border rounded p-2 bg-orange-50 border-orange-200">
+                <p><strong className="text-orange-700">答案画像のみ入れ替え（注意）</strong></p>
+                <p className="text-orange-600">採点情報は元の位置に残り、データ不整合のリスクがあります</p>
+              </div>
             </div>
           </div>
         </div>
