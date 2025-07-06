@@ -70,18 +70,36 @@ export function useScoringFilter({
     )
     const targetPageNumber = masterImage?.pageNumber || 1
 
-    // pageNumberでフィルタリングしてから採点状況でフィルタリング
+    // pageNumberでフィルタリングしてから受験生徒順でソート
     const pageFilteredSheets = answerSheets.filter(
       (sheet) => sheet.pageNumber === targetPageNumber,
     )
+
+    const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
+      // ProjectStudentのcustomOrderで並び替え（小さい値が先）
+      const aOrder =
+        a.student.projectStudents?.[0]?.customOrder !== undefined ? a.student.projectStudents[0].customOrder : 999999
+      const bOrder =
+        b.student.projectStudents?.[0]?.customOrder !== undefined ? b.student.projectStudents[0].customOrder : 999999
+
+      // customOrderが同じ場合は姓名でソート
+      if (aOrder === bOrder) {
+        const aName = `${a.student.lastName}${a.student.firstName}`
+        const bName = `${b.student.lastName}${b.student.firstName}`
+        return aName.localeCompare(bName, "ja")
+      }
+
+      return aOrder - bOrder
+    })
     
-    pageFilteredSheets.forEach(sheet => {
+    sortedAnswerSheets.forEach(sheet => {
       const status = getScoringStatus(sheet.id, currentQuestion?.id)
       if (filterSettings[status as keyof typeof filterSettings]) {
         newVisibleAnswers.add(sheet.id)
       }
     })
     
+    console.log('📋 sortedAnswerSheets順序:', sortedAnswerSheets.slice(0, 3).map(s => ({ id: s.id, name: s.student.lastName + ' ' + s.student.firstName, customOrder: s.student.projectStudents?.[0]?.customOrder })))
     setVisibleAnswers(newVisibleAnswers)
   }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, project])
 
@@ -98,15 +116,25 @@ export function useScoringFilter({
 
   // visibleAnswersが更新されたら最初の生徒答案を選択（模範解答をスキップ）
   useEffect(() => {
+    console.log('🔍 自動選択ロジック実行:')
+    console.log('  - visibleAnswers.size:', visibleAnswers.size)
+    console.log('  - selectedAnswers.size:', selectedAnswers.size)
+    console.log('  - visibleAnswers配列:', Array.from(visibleAnswers))
+    
     if (visibleAnswers.size > 0 && selectedAnswers.size === 0) {
       // 模範解答をスキップして最初の生徒答案を選択
       const visibleIds = Array.from(visibleAnswers)
       const firstStudentAnswerId = visibleIds.find(id => !id.startsWith('master-'))
       
+      console.log('🎯 最初の生徒答案ID:', firstStudentAnswerId)
+      console.log('📄 visibleIds配列の最初の5個:', visibleIds.slice(0, 5))
+      
       // 実際に存在する答案IDかチェック
       if (firstStudentAnswerId) {
         const answerExists = answerSheets.some(sheet => sheet.id === firstStudentAnswerId)
+        console.log('✅ 答案存在チェック:', answerExists)
         if (answerExists) {
+          console.log('🚀 自動選択実行:', firstStudentAnswerId)
           setSelectedAnswers(new Set([firstStudentAnswerId]))
         }
       }
