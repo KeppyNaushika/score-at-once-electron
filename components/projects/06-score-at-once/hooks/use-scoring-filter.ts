@@ -218,47 +218,11 @@ export function useScoringFilter({
     }
   }, [filterSettings])
 
-  // メニューショートカットを設定し、IPCイベントリスナーを追加
+  // メニューショートカットを設定
   useEffect(() => {
     // スコアページ用のメニューを有効化
     window.electronAPI.setShortcut("score")
-
-    // score-panel IPCイベントリスナーを追加
-    const handleScorePanelEvent = (_event: any, value: Record<string, unknown>) => {
-      const action = value?.action as string
-      
-      if (!action) return
-      
-      switch (action) {
-        case "toggle-show-unscored":
-          handleToggleFilterByScoreKey("q")
-          break
-        case "toggle-show-correct":
-          handleToggleFilterByScoreKey("e")
-          break
-        case "toggle-show-partial":
-          handleToggleFilterByScoreKey("f")
-          break
-        case "toggle-show-pending":
-          handleToggleFilterByScoreKey("j")
-          break
-        case "toggle-show-incorrect":
-          handleToggleFilterByScoreKey("o")
-          break
-        case "toggle-show-noanswer":
-          handleToggleFilterByScoreKey("p")
-          break
-      }
-    }
-
-    // IPCレンダラーにリスナーを追加
-    window.electronAPI.scorePanel(handleScorePanelEvent)
-
-    return () => {
-      // クリーンアップ
-      window.electronAPI.removeScorePanelListener(handleScorePanelEvent)
-    }
-  }, [handleToggleFilterByScoreKey])
+  }, [])
 
   return {
     filterSettings,
