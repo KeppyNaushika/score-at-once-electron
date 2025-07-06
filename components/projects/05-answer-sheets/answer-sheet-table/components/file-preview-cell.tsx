@@ -1,0 +1,133 @@
+"use client"
+
+import type { FilePreviewCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
+import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+
+export function FilePreviewCell({
+  file,
+  pageNumber,
+  previewMode,
+  isFileDisabled,
+  nameRegionAvailable,
+  getFileColor,
+  drawNameRegionCanvas,
+  imageLoadState = "pending",
+}: FilePreviewCellProps) {
+  const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
+    null,
+  )
+  const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
+  const imgRef = useRef<HTMLImageElement>(null)
+
+  // 氏名欄プレビューの生成
+  useEffect(() => {
+    if (previewMode === "name-only" && nameRegionAvailable && file.preview) {
+      setIsNameRegionLoading(true)
+      drawNameRegionCanvas(file, pageNumber)
+        .then((canvas) => {
+          setNameRegionPreview(canvas)
+          setIsNameRegionLoading(false)
+        })
+        .catch((error) => {
+          console.error("氏名欄プレビュー生成エラー:", error)
+          setIsNameRegionLoading(false)
+        })
+    }
+  }, [file, pageNumber, previewMode, nameRegionAvailable, drawNameRegionCanvas])
+
+  // 画像プレビューの表示
+  const renderImagePreview = () => {
+    if (previewMode === "name-only" && nameRegionAvailable) {
+      if (isNameRegionLoading) {
+        return (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        )
+      }
+
+      if (nameRegionPreview) {
+        return (
+          <img
+            src={nameRegionPreview}
+            alt={`${file.name} - 氏名欄`}
+            className="h-full w-full object-contain"
+            loading="lazy"
+          />
+        )
+      }
+    }
+
+    // フルプレビューまたは氏名欄が利用できない場合
+    if (file.preview) {
+      return (
+        <img
+          ref={imgRef}
+          src={file.preview}
+          alt={file.name}
+          className="h-full w-full object-contain"
+          loading="lazy"
+        />
+      )
+    }
+
+    return (
+      <div className="flex h-full items-center justify-center">
+        <FileImage className="h-8 w-8 text-gray-400" />
+      </div>
+    )
+  }
+
+  // 読み込み状態インジケーター
+  const renderLoadingState = () => {
+    switch (imageLoadState) {
+      case "loading":
+        return (
+          <div className="bg-opacity-75 absolute inset-0 flex items-center justify-center bg-white">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+          </div>
+        )
+      case "loaded":
+        return (
+          <div className="absolute top-1 right-1">
+            <CheckCircle className="h-3 w-3 text-green-500" />
+          </div>
+        )
+      case "error":
+        return (
+          <div className="bg-opacity-75 absolute inset-0 flex items-center justify-center bg-white">
+            <XCircle className="h-4 w-4 text-red-500" />
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="relative h-full w-full">
+      {/* ファイル識別用のカラーバー */}
+      <div
+        className={`absolute top-0 left-0 h-full w-1 ${getFileColor(file)} z-10`}
+      />
+
+      {/* 画像プレビュー */}
+      <div
+        className={`h-full w-full ${isFileDisabled ? "opacity-50 grayscale" : ""}`}
+      >
+        {renderImagePreview()}
+      </div>
+
+      {/* 読み込み状態表示 */}
+      {renderLoadingState()}
+
+      {/* ファイル名表示 */}
+      <div className="bg-opacity-50 absolute right-0 bottom-0 left-0 bg-black p-1 text-[10px] text-white">
+        <div className="truncate" title={file.name}>
+          {file.name.split(" - ページ")[0] || file.name}
+        </div>
+      </div>
+    </div>
+  )
+}

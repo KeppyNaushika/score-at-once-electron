@@ -1,33 +1,14 @@
 "use client"
 
-import { TableCell } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
+import { UserCheck, UserMinus, UserX } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
-import { UserCheck, UserX, UserMinus } from "lucide-react"
+import { TableCell } from "@/components/ui/table"
+import type { StudentCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
 
-interface Student {
-  id: string
-  lastName: string
-  firstName: string
-  lastNameKana: string
-  firstNameKana: string
-  studentId: string
-  attendanceNumber?: number | null
-  status?: 'participating' | 'expected' | 'absent'
-  customOrder?: number | null
-}
-
-interface StudentCellProps {
-  student: Student
-  isEnabled: boolean
-  isSkipped: boolean
-  onToggle: () => void
-}
-
-export default function StudentCell({
+export function StudentCell({
   student,
   isEnabled,
-  isSkipped,
   onToggle
 }: StudentCellProps) {
   
@@ -58,7 +39,7 @@ export default function StudentCell({
     <TableCell 
       className={`
         border-r border-border min-w-36 p-2 cursor-pointer relative
-        ${!isEnabled || isSkipped ? 'bg-muted/80' : 'bg-background'}
+        ${!isEnabled ? 'bg-muted/80' : 'bg-background'}
         hover:bg-muted/50
       `}
       onClick={onToggle}
@@ -67,7 +48,7 @@ export default function StudentCell({
         {/* ホバー時のツールチップ */}
         <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
           <div className="text-slate-800 text-xs font-medium">
-            {(!isEnabled || isSkipped) ? 'クリックして生徒を表示' : 'クリックして生徒を除外'}
+            {!isEnabled ? 'クリックして生徒を表示' : 'クリックして生徒を除外'}
           </div>
         </div>
 
@@ -76,7 +57,7 @@ export default function StudentCell({
           <div className="flex items-center gap-1 mb-1">
             {getStatusIcon()}
             <span className={`font-medium text-xs truncate ${
-              !isEnabled || isSkipped ? 'text-muted-foreground' : 'text-foreground'
+              !isEnabled ? 'text-muted-foreground' : 'text-foreground'
             }`}>
               {student.lastName} {student.firstName}
             </span>
@@ -97,7 +78,7 @@ export default function StudentCell({
           
           {/* 生徒状態表示 */}
           <div className="text-xs text-muted-foreground mt-1">
-            {(!isEnabled || isSkipped) ? 'クリックして生徒を表示' : 'クリックして生徒を除外'}
+            {!isEnabled ? 'クリックして表示' : 'クリックして除外'}
           </div>
         </div>
       </div>

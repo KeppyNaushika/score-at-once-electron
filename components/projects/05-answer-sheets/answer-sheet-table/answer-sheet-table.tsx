@@ -1,55 +1,42 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import {
+  EmptyTableCell,
+  FilePreviewCell,
+  SortableTableCell,
+  TableHeader,
+} from "@/components/projects/05-answer-sheets/answer-sheet-table/components"
+import {
+  useDisabledState,
+  useDragDrop,
+  useNameRegion,
+  useTableData,
+} from "@/components/projects/05-answer-sheets/answer-sheet-table/hooks"
+import type { PreviewMode } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   Table,
   TableBody,
   TableHead,
-  TableHeader as UITableHeader,
   TableRow,
+  TableHeader as UITableHeader,
 } from "@/components/ui/table"
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-} from "@dnd-kit/core"
-import {
-  rectSortingStrategy,
-  SortableContext,
-} from "@dnd-kit/sortable"
-import { FileImage } from "lucide-react"
-
-// コンポーネントインポート
-import {
-  FilePreviewCell,
-  SortableTableCell,
-  EmptyTableCell,
-  TableHeader,
-} from "./components"
-
-// フックインポート
-import {
-  useNameRegion,
-  useDisabledState,
-  useTableData,
-  useDragAndDrop,
-} from "./hooks"
-
-// 型インポート
-import type { PreviewMode } from "./types"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
   UploadData,
 } from "@/types/answer-sheet.types"
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
+import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
+import { FileImage } from "lucide-react"
+import { useEffect, useState } from "react"
 
 // ============================================================================
 // Props定義
 // ============================================================================
 
-interface TableDndKitAnswerGridProps {
+interface AnswerSheetTableProps {
   projectId: string
   students: UnifiedStudent[]
   files: UnifiedFile[]
@@ -61,14 +48,14 @@ interface TableDndKitAnswerGridProps {
   onUpload: (data: UploadData[]) => void
   imageLoadStates?: Record<string, "pending" | "loading" | "loaded" | "error">
   observerRef?: React.RefObject<IntersectionObserver | null>
-  mode?: "upload" | "view" // アップロードモードか表示モードか
+  mode?: "upload" | "view"
 }
 
 // ============================================================================
-// メインコンポーネント（table-dnd-kit-test準拠）
+// メインコンポーネント
 // ============================================================================
 
-export default function TableDndKitAnswerGrid({
+export function AnswerSheetTable({
   projectId,
   students,
   files,
@@ -81,11 +68,11 @@ export default function TableDndKitAnswerGrid({
   imageLoadStates = {},
   observerRef,
   mode = "upload",
-}: TableDndKitAnswerGridProps) {
+}: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
   // ============================================================================
-  
+
   const {
     nameRegionAvailable,
     canvasRef,
@@ -124,7 +111,7 @@ export default function TableDndKitAnswerGrid({
     handleDragStart,
     handleDragOver,
     handleDragEnd,
-  } = useDragAndDrop(
+  } = useDragDrop(
     files,
     onFilesChange,
     getEnabledFiles,
@@ -293,7 +280,10 @@ export default function TableDndKitAnswerGrid({
 
                       {/* ファイルセル */}
                       {row.map((cellData, pageIndex) => {
-                        if (cellData.type === "disabled" || cellData.type === "empty") {
+                        if (
+                          cellData.type === "disabled" ||
+                          cellData.type === "empty"
+                        ) {
                           return (
                             <EmptyTableCell
                               key={cellData.position}
@@ -311,7 +301,7 @@ export default function TableDndKitAnswerGrid({
                           )
                         }
 
-                        // ファイルセル（table-dnd-kit-test準拠）
+                        // ファイルセル
                         const file = cellData.file!
                         const isFileDisabled = disabledState.files.has(file.id)
 
@@ -321,7 +311,7 @@ export default function TableDndKitAnswerGrid({
                             id={file.id}
                             position={cellData.position}
                             hasFile={true}
-                            isPositionDisabled={false} // 動的配置では無効セルにファイルは配置されない
+                            isPositionDisabled={false}
                             isFileDisabled={isFileDisabled}
                             onTogglePosition={() =>
                               togglePositionDisabled(cellData.position)

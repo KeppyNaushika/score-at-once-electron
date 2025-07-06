@@ -1,30 +1,13 @@
 "use client"
 
-import AnswerSheetUploadNew from "../../../../components/projects/05-answer-sheets/AnswerSheetUpload"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { Badge } from "@/components/ui/badge"
+import { AnswerSheetUpload } from "@/components/projects/05-answer-sheets/answer-sheet-management"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { useAuth } from "@/contexts/AuthContext"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import { Eye, Trash2, Upload, User, UserX, Grid3X3, FileImage } from "lucide-react"
+import { Eye, Grid3X3 } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -44,13 +27,12 @@ interface StudentData {
   studentId: string
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
-  customOrder?: number | null  // 🚨 必須: 受験生徒順序
+  customOrder?: number | null
 }
 
 export default function AnswerSheetsPage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
   const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
@@ -136,10 +118,12 @@ export default function AnswerSheetsPage() {
 
       // 模範解答のページ数を取得
       try {
-        const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
-        const maxPages = masterImages && masterImages.length > 0
-          ? Math.max(...masterImages.map((img: any) => img.pageNumber))
-          : 0
+        const masterImages =
+          await window.electronAPI.getMasterImagesByProjectId(projectId)
+        const maxPages =
+          masterImages && masterImages.length > 0
+            ? Math.max(...masterImages.map((img: any) => img.pageNumber))
+            : 0
         setMasterImageCount(maxPages)
       } catch (error) {
         console.error("Failed to load master image count:", error)
@@ -159,43 +143,6 @@ export default function AnswerSheetsPage() {
 
   const handleUploadComplete = () => {
     loadData() // データを再読み込み
-  }
-
-  const handleDeleteAnswerSheet = async (answerSheetId: string) => {
-    if (!confirm("この答案を削除しますか？")) return
-
-    try {
-      const result = await window.electronAPI.deleteAnswerSheet(answerSheetId)
-      if (result.success) {
-        toast.success("答案を削除しました")
-        loadData()
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      console.error("Error deleting answer sheet:", error)
-      toast.error("答案の削除に失敗しました")
-    }
-  }
-
-  const handleSetAbsent = async (answerSheetId: string, isAbsent: boolean) => {
-    try {
-      const result = await window.electronAPI.setAnswerSheetAbsent(
-        answerSheetId,
-        isAbsent,
-      )
-      if (result.success) {
-        toast.success(
-          isAbsent ? "欠席としてマークしました" : "欠席マークを解除しました",
-        )
-        loadData()
-      } else {
-        throw new Error(result.error)
-      }
-    } catch (error) {
-      console.error("Error setting absent status:", error)
-      toast.error("欠席状態の設定に失敗しました")
-    }
   }
 
   const getAnswerSheetsByStatus = () => {
@@ -252,7 +199,7 @@ export default function AnswerSheetsPage() {
             </TabsList>
 
             <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
-              <AnswerSheetUploadNew
+              <AnswerSheetUpload
                 projectId={projectId}
                 students={students}
                 masterImageCount={masterImageCount}
@@ -261,7 +208,7 @@ export default function AnswerSheetsPage() {
             </TabsContent>
 
             <TabsContent value="current" className="mt-3 min-h-0 flex-1 p-3">
-              <AnswerSheetUploadNew
+              <AnswerSheetUpload
                 projectId={projectId}
                 students={students}
                 masterImageCount={masterImageCount}
