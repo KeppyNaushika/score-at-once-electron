@@ -247,7 +247,7 @@ export default function AnswerSheetsPage() {
               </TabsTrigger>
               <TabsTrigger value="current" className="flex items-center gap-2">
                 <Eye className="h-4 w-4" />
-                現在の対応状況
+                配置済み答案の確認
               </TabsTrigger>
             </TabsList>
 

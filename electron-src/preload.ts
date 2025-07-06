@@ -153,6 +153,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // New API to resolve file path for display
   resolveFileProtocolPath: (relativePath: string) =>
     ipcRenderer.invoke("resolve-file-protocol-path", relativePath),
+  readFileAsBase64: (filePath: string) =>
+    ipcRenderer.invoke("read-file-as-base64", filePath),
   getMasterImagesByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-master-images-by-project-id", projectId),
   // Layout region functions (moved to new API)
