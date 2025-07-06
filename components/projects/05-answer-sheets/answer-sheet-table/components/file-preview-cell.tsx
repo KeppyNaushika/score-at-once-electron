@@ -1,6 +1,7 @@
 "use client"
 
 import type { FilePreviewCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
+import { loadAnswerSheetImage } from "@/components/projects/05-answer-sheets/answer-sheet-management/utils/convertAnswerSheetsToFiles"
 import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
@@ -18,13 +19,33 @@ export function FilePreviewCell({
     null,
   )
   const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(file.preview || null)
+  const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
+
+  // 既存画像の遅延読み込み
+  useEffect(() => {
+    if (!imagePreview && file.imagePath && !isImageLoading) {
+      setIsImageLoading(true)
+      loadAnswerSheetImage(file)
+        .then((dataUrl) => {
+          setImagePreview(dataUrl)
+          setIsImageLoading(false)
+        })
+        .catch((error) => {
+          console.error("画像読み込みエラー:", error)
+          setIsImageLoading(false)
+        })
+    }
+  }, [file, imagePreview, isImageLoading])
 
   // 氏名欄プレビューの生成
   useEffect(() => {
-    if (previewMode === "name-only" && nameRegionAvailable && file.preview) {
+    if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
       setIsNameRegionLoading(true)
-      drawNameRegionCanvas(file, pageNumber)
+      // imagePreviewを使用して氏名欄を描画
+      const tempFile = { ...file, preview: imagePreview }
+      drawNameRegionCanvas(tempFile, pageNumber)
         .then((canvas) => {
           setNameRegionPreview(canvas)
           setIsNameRegionLoading(false)
@@ -34,7 +55,7 @@ export function FilePreviewCell({
           setIsNameRegionLoading(false)
         })
     }
-  }, [file, pageNumber, previewMode, nameRegionAvailable, drawNameRegionCanvas])
+  }, [file, pageNumber, previewMode, nameRegionAvailable, drawNameRegionCanvas, imagePreview])
 
   // 画像プレビューの表示
   const renderImagePreview = () => {
@@ -60,11 +81,19 @@ export function FilePreviewCell({
     }
 
     // フルプレビューまたは氏名欄が利用できない場合
-    if (file.preview) {
+    if (isImageLoading) {
+      return (
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        </div>
+      )
+    }
+
+    if (imagePreview) {
       return (
         <img
           ref={imgRef}
-          src={file.preview}
+          src={imagePreview}
           alt={file.name}
           className="h-full w-full object-contain"
           loading="lazy"

@@ -6,6 +6,7 @@ import { useAnswerSheetUpload } from "@/components/projects/05-answer-sheets/ans
 import type { AnswerSheetUploadProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
 // table-dnd-kit-test準拠のコンポーネントも併用
 import { AnswerSheetTable } from "@/components/projects/05-answer-sheets/answer-sheet-table"
+import { convertAnswerSheetsToFiles } from "@/components/projects/05-answer-sheets/answer-sheet-management/utils/convertAnswerSheetsToFiles"
 
 export function AnswerSheetUpload({
   projectId,
@@ -37,14 +38,17 @@ export function AnswerSheetUpload({
 
   // 表示モードでは既存の答案をテーブル表示
   if (mode === "view" && existingAnswerSheets) {
+    // 既存答案をUnifiedFile形式に変換
+    const existingFiles = convertAnswerSheetsToFiles(existingAnswerSheets)
+    
     return (
       <AnswerSheetTable
         projectId={projectId}
         students={students}
-        files={[]} // 既存答案は別途処理
+        files={existingFiles}
         masterImageCount={masterImageCount}
         fileOrder={fileOrder}
-        isUploading={isUploading}
+        isUploading={false} // 確認モードではアップロード不可
         onFileOrderChange={setFileOrder}
         onFilesChange={setFiles}
         onUpload={handleUpload}

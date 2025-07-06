@@ -26,6 +26,7 @@ export function SortableTableCell({
   fileId,
   observerRef,
   children,
+  mode = "upload",
 }: SortableTableCellProps) {
   const {
     attributes,
@@ -36,7 +37,7 @@ export function SortableTableCell({
     isDragging,
   } = useSortable({
     id,
-    disabled: !hasFile || isFileDisabled || isPositionDisabled,
+    disabled: mode === "view" || !hasFile || isFileDisabled || isPositionDisabled,
   })
 
   const style = {
@@ -60,59 +61,63 @@ export function SortableTableCell({
       ref={setNodeRef}
       style={style}
       className={`relative h-32 w-32 border p-1 transition-all ${
-        hasFile && !isFileDisabled && !isPositionDisabled
+        mode === "upload" && hasFile && !isFileDisabled && !isPositionDisabled
           ? "cursor-grab active:cursor-grabbing"
           : ""
       } ${isPositionDisabled ? "bg-gray-100" : "bg-white"} ${
         isFileDisabled ? "bg-red-50" : ""
       }`}
       data-file-id={fileId}
-      {...attributes}
-      {...listeners}
+      {...(mode === "upload" ? attributes : {})}
+      {...(mode === "upload" ? listeners : {})}
     >
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          <div className="h-full w-full">{children}</div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {hasFile && (
-            <>
-              <ContextMenuItem
-                onClick={onToggleFileDisabled}
-                className="flex items-center gap-2"
-              >
-                {isFileDisabled ? (
-                  <>
-                    <X className="h-4 w-4" />
-                    答案画像を有効化
-                  </>
-                ) : (
-                  <>
-                    <Ban className="h-4 w-4" />
-                    答案画像を無効化
-                  </>
-                )}
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-            </>
-          )}
-          <ContextMenuItem
-            onClick={onTogglePosition}
-            className="flex items-center gap-2"
-          >
-            <Ban className="h-4 w-4" />
-            {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={onUploadToCell}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            このセルに答案画像をアップロード
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
+      {mode === "upload" ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>
+            <div className="h-full w-full">{children}</div>
+          </ContextMenuTrigger>
+          <ContextMenuContent>
+            {hasFile && (
+              <>
+                <ContextMenuItem
+                  onClick={onToggleFileDisabled}
+                  className="flex items-center gap-2"
+                >
+                  {isFileDisabled ? (
+                    <>
+                      <X className="h-4 w-4" />
+                      答案画像を有効化
+                    </>
+                  ) : (
+                    <>
+                      <Ban className="h-4 w-4" />
+                      答案画像を無効化
+                    </>
+                  )}
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            )}
+            <ContextMenuItem
+              onClick={onTogglePosition}
+              className="flex items-center gap-2"
+            >
+              <Ban className="h-4 w-4" />
+              {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem
+              onClick={onUploadToCell}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              このセルに答案画像をアップロード
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        <div className="h-full w-full">{children}</div>
+      )}
     </TableCell>
   )
 }

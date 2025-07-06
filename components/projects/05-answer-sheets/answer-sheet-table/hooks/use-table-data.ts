@@ -58,57 +58,111 @@ export function useTableData(
     const enabledFiles = getEnabledFiles()
     const data: CellData[][] = []
 
-    // 各生徒の行を生成
-    for (
-      let studentIndex = 0;
-      studentIndex < sortedStudents.length;
-      studentIndex++
-    ) {
-      const student = sortedStudents[studentIndex]
-      const row: CellData[] = []
+    // 確認モードか判定（既存答案データかどうか）
+    const isViewMode = enabledFiles.length > 0 && enabledFiles.some(file => file.imagePath)
 
-      // 各ページの列を生成
-      for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-        const position = studentIndex * masterImageCount + pageIndex
-        const isDisabled = isPositionDisabled(studentIndex, pageIndex)
+    if (isViewMode) {
+      // 確認モード: 実際の生徒IDとページ番号に基づいて配置
+      for (
+        let studentIndex = 0;
+        studentIndex < sortedStudents.length;
+        studentIndex++
+      ) {
+        const student = sortedStudents[studentIndex]
+        const row: CellData[] = []
 
-        if (isDisabled) {
-          row.push({
-            type: "disabled",
-            position,
-            student,
-            pageNumber: pageIndex + 1,
-          })
-        } else {
-          // 配置戦略に基づいてファイルを取得
-          let fileIndex: number
-          if (fileOrder === "page-first") {
-            fileIndex = pageIndex * sortedStudents.length + studentIndex
-          } else {
-            fileIndex = studentIndex * masterImageCount + pageIndex
-          }
+        // 各ページの列を生成
+        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+          const position = studentIndex * masterImageCount + pageIndex
+          const isDisabled = isPositionDisabled(studentIndex, pageIndex)
 
-          const file = enabledFiles[fileIndex]
-          if (file) {
+          if (isDisabled) {
             row.push({
-              type: "file",
-              position,
-              student,
-              pageNumber: pageIndex + 1,
-              file,
-            })
-          } else {
-            row.push({
-              type: "empty",
+              type: "disabled",
               position,
               student,
               pageNumber: pageIndex + 1,
             })
+          } else {
+            // 実際の生徒IDとページ番号に一致するファイルを検索
+            const file = enabledFiles.find(
+              f => f.studentId === student.id && f.pageNumber === pageIndex + 1
+            )
+            
+            if (file) {
+              row.push({
+                type: "file",
+                position,
+                student,
+                pageNumber: pageIndex + 1,
+                file,
+              })
+            } else {
+              row.push({
+                type: "empty",
+                position,
+                student,
+                pageNumber: pageIndex + 1,
+              })
+            }
           }
         }
-      }
 
-      data.push(row)
+        data.push(row)
+      }
+    } else {
+      // アップロードモード: 配置戦略に基づいて順次配置
+      for (
+        let studentIndex = 0;
+        studentIndex < sortedStudents.length;
+        studentIndex++
+      ) {
+        const student = sortedStudents[studentIndex]
+        const row: CellData[] = []
+
+        // 各ページの列を生成
+        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+          const position = studentIndex * masterImageCount + pageIndex
+          const isDisabled = isPositionDisabled(studentIndex, pageIndex)
+
+          if (isDisabled) {
+            row.push({
+              type: "disabled",
+              position,
+              student,
+              pageNumber: pageIndex + 1,
+            })
+          } else {
+            // 配置戦略に基づいてファイルを取得
+            let fileIndex: number
+            if (fileOrder === "page-first") {
+              fileIndex = pageIndex * sortedStudents.length + studentIndex
+            } else {
+              fileIndex = studentIndex * masterImageCount + pageIndex
+            }
+
+            const file = enabledFiles[fileIndex]
+            if (file) {
+              row.push({
+                type: "file",
+                position,
+                student,
+                pageNumber: pageIndex + 1,
+                file,
+              })
+            } else {
+              row.push({
+                type: "empty",
+                position,
+                student,
+                pageNumber: pageIndex + 1,
+              })
+            }
+          }
+        }
+
+        data.push(row)
+      }
     }
 
     return data

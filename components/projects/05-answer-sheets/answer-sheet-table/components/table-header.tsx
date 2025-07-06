@@ -42,15 +42,17 @@ export function TableHeader({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2">
           <FileText className="h-5 w-5" />
-          答案配置テーブル
+          {mode === "view" ? "配置済み答案の確認" : "答案配置テーブル"}
         </CardTitle>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* 配置戦略選択 */}
-          <PlacementStrategySelector
-            fileOrder={fileOrder}
-            onFileOrderChange={onFileOrderChange}
-          />
+          {/* 配置戦略選択 - 確認モードでは非表示 */}
+          {mode === "upload" && (
+            <PlacementStrategySelector
+              fileOrder={fileOrder}
+              onFileOrderChange={onFileOrderChange}
+            />
+          )}
 
           {/* プレビューモード切り替え */}
           <PreviewModeToggle
@@ -135,9 +137,18 @@ export function TableHeader({
 
       {/* 統計情報 */}
       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-        <span>配置済み: {enabledFilesCount}件</span>
-        <span>無効化済み: {trashFiles.length}件</span>
-        <span>容量: {totalCapacity}セル</span>
+        {mode === "view" ? (
+          <>
+            <span>登録済み答案: {enabledFilesCount}件</span>
+            <span>総ページ数: {maxPages}ページ</span>
+          </>
+        ) : (
+          <>
+            <span>配置済み: {enabledFilesCount}件</span>
+            <span>無効化済み: {trashFiles.length}件</span>
+            <span>容量: {totalCapacity}セル</span>
+          </>
+        )}
       </div>
     </CardHeader>
   )
