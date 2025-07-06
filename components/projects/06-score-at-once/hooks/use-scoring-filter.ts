@@ -59,7 +59,23 @@ export function useScoringFilter({
   const updateVisibleAnswers = useCallback(() => {
     const newVisibleAnswers = new Set<string>()
     
-    answerSheets.forEach(sheet => {
+    if (!currentQuestion) {
+      setVisibleAnswers(newVisibleAnswers)
+      return
+    }
+
+    // masterImageIdに基づいてpageNumberを取得
+    const masterImage = project?.masterImages?.find(
+      (img: any) => img.id === currentQuestion.masterImageId,
+    )
+    const targetPageNumber = masterImage?.pageNumber || 1
+
+    // pageNumberでフィルタリングしてから採点状況でフィルタリング
+    const pageFilteredSheets = answerSheets.filter(
+      (sheet) => sheet.pageNumber === targetPageNumber,
+    )
+    
+    pageFilteredSheets.forEach(sheet => {
       const status = getScoringStatus(sheet.id, currentQuestion?.id)
       if (filterSettings[status as keyof typeof filterSettings]) {
         newVisibleAnswers.add(sheet.id)
@@ -67,7 +83,7 @@ export function useScoringFilter({
     })
     
     setVisibleAnswers(newVisibleAnswers)
-  }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, scoringData])
+  }, [answerSheets, currentQuestion, filterSettings, getScoringStatus, project])
 
   // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
   useEffect(() => {
@@ -86,11 +102,16 @@ export function useScoringFilter({
       // 模範解答をスキップして最初の生徒答案を選択
       const visibleIds = Array.from(visibleAnswers)
       const firstStudentAnswerId = visibleIds.find(id => !id.startsWith('master-'))
+      
+      // 実際に存在する答案IDかチェック
       if (firstStudentAnswerId) {
-        setSelectedAnswers(new Set([firstStudentAnswerId]))
+        const answerExists = answerSheets.some(sheet => sheet.id === firstStudentAnswerId)
+        if (answerExists) {
+          setSelectedAnswers(new Set([firstStudentAnswerId]))
+        }
       }
     }
-  }, [visibleAnswers, selectedAnswers.size, setSelectedAnswers])
+  }, [visibleAnswers, selectedAnswers.size, setSelectedAnswers, answerSheets])
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
   const getAllGridAnswerData = useCallback(() => {
