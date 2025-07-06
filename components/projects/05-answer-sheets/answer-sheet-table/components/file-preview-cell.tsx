@@ -19,7 +19,9 @@ export function FilePreviewCell({
     null,
   )
   const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
-  const [imagePreview, setImagePreview] = useState<string | null>(file.preview || null)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    file.preview || null,
+  )
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
@@ -55,7 +57,14 @@ export function FilePreviewCell({
           setIsNameRegionLoading(false)
         })
     }
-  }, [file, pageNumber, previewMode, nameRegionAvailable, drawNameRegionCanvas, imagePreview])
+  }, [
+    file,
+    pageNumber,
+    previewMode,
+    nameRegionAvailable,
+    drawNameRegionCanvas,
+    imagePreview,
+  ])
 
   // 画像プレビューの表示
   const renderImagePreview = () => {
@@ -136,11 +145,6 @@ export function FilePreviewCell({
 
   return (
     <div className="relative h-full w-full">
-      {/* ファイル識別用のカラーバー */}
-      <div
-        className={`absolute top-0 left-0 h-full w-1 ${getFileColor(file)} z-10`}
-      />
-
       {/* 画像プレビュー */}
       <div
         className={`h-full w-full ${isFileDisabled ? "opacity-50 grayscale" : ""}`}
@@ -150,13 +154,6 @@ export function FilePreviewCell({
 
       {/* 読み込み状態表示 */}
       {renderLoadingState()}
-
-      {/* ファイル名表示 */}
-      <div className="bg-opacity-50 absolute right-0 bottom-0 left-0 bg-black p-1 text-[10px] text-white">
-        <div className="truncate" title={file.name}>
-          {file.name.split(" - ページ")[0] || file.name}
-        </div>
-      </div>
     </div>
   )
 }

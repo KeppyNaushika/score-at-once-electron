@@ -268,3 +268,114 @@ export async function updateAnswerSheetPlacement(
     }
   }
 }
+
+// 2つの答案の配置を交換（ユニーク制約を考慮した安全な交換）
+export async function swapAnswerSheetPlacements(
+  answerSheetId1: string,
+  answerSheetId2: string
+) {
+  try {
+    // トランザクション内で答案交換を実行
+    const result = await prisma.$transaction(async (tx) => {
+      // 2つの答案の現在の配置情報を取得
+      const [answerSheet1, answerSheet2] = await Promise.all([
+        tx.answerSheet.findUnique({
+          where: { id: answerSheetId1 },
+          select: { studentId: true, pageNumber: true, projectId: true }
+        }),
+        tx.answerSheet.findUnique({
+          where: { id: answerSheetId2 },
+          select: { studentId: true, pageNumber: true, projectId: true }
+        })
+      ])
+
+      if (!answerSheet1 || !answerSheet2) {
+        throw new Error('答案が見つかりません')
+      }
+
+      // 一時的にanswerSheet1をnull配置に移動（制約回避）
+      await tx.answerSheet.update({
+        where: { id: answerSheetId1 },
+        data: {
+          studentId: null,
+          pageNumber: -1, // 一時的な値
+        }
+      })
+
+      // answerSheet2をanswerSheet1の元の位置に移動
+      await tx.answerSheet.update({
+        where: { id: answerSheetId2 },
+        data: {
+          studentId: answerSheet1.studentId,
+          pageNumber: answerSheet1.pageNumber,
+        }
+      })
+
+      // answerSheet1をanswerSheet2の元の位置に移動
+      await tx.answerSheet.update({
+        where: { id: answerSheetId1 },
+        data: {
+          studentId: answerSheet2.studentId,
+          pageNumber: answerSheet2.pageNumber,
+        }
+      })
+
+      // 更新後の答案情報を取得
+      const [updatedAnswerSheet1, updatedAnswerSheet2] = await Promise.all([
+        tx.answerSheet.findUnique({
+          where: { id: answerSheetId1 },
+          include: {
+            student: {
+              include: {
+                projectStudents: {
+                  where: { projectId: answerSheet1.projectId },
+                  select: { customOrder: true }
+                }
+              }
+            },
+            project: true,
+            questionScores: {
+              include: {
+                layoutRegion: true,
+                scoredByUser: true,
+              }
+            }
+          }
+        }),
+        tx.answerSheet.findUnique({
+          where: { id: answerSheetId2 },
+          include: {
+            student: {
+              include: {
+                projectStudents: {
+                  where: { projectId: answerSheet2.projectId },
+                  select: { customOrder: true }
+                }
+              }
+            },
+            project: true,
+            questionScores: {
+              include: {
+                layoutRegion: true,
+                scoredByUser: true,
+              }
+            }
+          }
+        })
+      ])
+
+      return { updatedAnswerSheet1, updatedAnswerSheet2 }
+    })
+
+    return { 
+      success: true, 
+      answerSheets: [result.updatedAnswerSheet1, result.updatedAnswerSheet2] 
+    }
+  } catch (error) {
+    console.error('Error swapping answer sheet placements:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : '答案の配置交換に失敗しました',
+    }
+  }
+}
