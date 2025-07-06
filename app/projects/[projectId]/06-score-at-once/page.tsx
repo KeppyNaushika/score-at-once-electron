@@ -6,11 +6,11 @@ import AnswerGridView from "../../../../components/projects/06-score-at-once/Ans
 import GradingModeToggle, {
   GradingMode,
 } from "../../../../components/projects/06-score-at-once/GradingModeToggle"
+import MasterImageViewer from "../../../../components/projects/06-score-at-once/MasterImageViewer"
 import ProjectProgressCard from "../../../../components/projects/06-score-at-once/ProjectProgressCard"
 import ScoreComparisonModal from "../../../../components/projects/06-score-at-once/ScoreComparisonModal"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
   DialogContent,
@@ -335,7 +335,7 @@ export default function GradingPage() {
         scoringData[key] = {
           id: score.id,
           questionId: score.layoutRegionId,
-          score: score.score || 0,
+          score: Number(score.partialScore) || 0,
           maxScore: 0, // We'll need to get this from the layout region
           status: score.status as ScoringStatus,
           comment: score.comment || "",
@@ -795,6 +795,11 @@ export default function GradingPage() {
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
+    // 模範解答は選択対象外
+    if (answerId.startsWith('master-')) {
+      return
+    }
+    
     setSelectedAnswers((prev) => {
       const newSet = new Set(prev)
       if (isSelected) {
@@ -1074,7 +1079,40 @@ export default function GradingPage() {
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = () => {
     const allAnswers = getAllGridAnswerData()
-    return allAnswers.filter(answer => visibleAnswers.has(answer.id))
+    const filteredAnswers = allAnswers.filter(answer => visibleAnswers.has(answer.id))
+    
+    // 模範解答を最初に追加
+    const masterAnswer = getMasterAnswerData()
+    if (masterAnswer) {
+      return [masterAnswer, ...filteredAnswers]
+    }
+    
+    return filteredAnswers
+  }
+
+  // 模範解答データを取得
+  const getMasterAnswerData = () => {
+    if (!currentQuestion || !project?.masterImages) return null
+
+    // masterImageIdに基づいてmasterImageを取得
+    const masterImage = project.masterImages.find(
+      (img: any) => img.id === currentQuestion.masterImageId,
+    )
+    
+    if (!masterImage) return null
+
+    return {
+      id: `master-${currentQuestion.id}`,
+      studentId: "MASTER",
+      studentName: "模範解答",
+      imageUrl: `appimg://${masterImage.path}`,
+      currentScore: undefined,
+      maxScore: currentQuestion.points,
+      status: "master" as any, // 特別なステータス
+      isSelected: false,
+      questionRegion: currentQuestion, // 採点領域情報を追加
+      isMaster: true, // 模範解答フラグ
+    }
   }
 
   // フィルタリング関連ハンドラー（Rキー押下時のみ）
@@ -1232,10 +1270,14 @@ export default function GradingPage() {
       currentIndex = gridAnswers.findIndex((answer) => answer.id === selectedId)
     }
 
-    // 何も選択されていない場合は最初の答案を選択
+    // 何も選択されていない場合は最初の生徒答案を選択（模範解答をスキップ）
     if (currentIndex === -1) {
       if (totalAnswers > 0) {
-        setSelectedAnswers(new Set([gridAnswers[0].id]))
+        // 模範解答以外の最初の答案を探す
+        const firstStudentAnswerIndex = gridAnswers.findIndex(answer => !answer.id.startsWith('master-'))
+        if (firstStudentAnswerIndex !== -1) {
+          setSelectedAnswers(new Set([gridAnswers[firstStudentAnswerIndex].id]))
+        }
       }
       return
     }
@@ -1425,9 +1467,23 @@ export default function GradingPage() {
       }
     }
 
-    // 新しいインデックスが有効な場合のみ選択を更新
+    // 新しいインデックスが有効で、模範解答でない場合のみ選択を更新
     if (newIndex !== currentIndex && newIndex >= 0 && newIndex < totalAnswers) {
-      const newSelectedId = gridAnswers[newIndex].id
+      const targetAnswer = gridAnswers[newIndex]
+      
+      // 模範解答をスキップ
+      if (targetAnswer && targetAnswer.id.startsWith('master-')) {
+        // 模範解答の場合は、次の生徒答案を探す
+        const nextStudentIndex = gridAnswers.findIndex((answer, index) => 
+          index > newIndex && !answer.id.startsWith('master-')
+        )
+        if (nextStudentIndex !== -1) {
+          setSelectedAnswers(new Set([gridAnswers[nextStudentIndex].id]))
+        }
+        return
+      }
+      
+      const newSelectedId = targetAnswer.id
       setSelectedAnswers(new Set([newSelectedId]))
 
       // デバッグ情報（開発時のみ）
@@ -1585,6 +1641,7 @@ export default function GradingPage() {
           </div>
         </div>
 
+
         {/* メインコンテンツエリア */}
         <div className="flex min-h-0 flex-1">
           {gradingMode === "individual" ? (
@@ -1638,173 +1695,137 @@ export default function GradingPage() {
           {/* 共通サイドパネル */}
           {showSidePanel && (
             <div className="bg-background flex min-h-0 w-64 flex-col border-l">
-              <div className="min-h-0 flex-1 overflow-y-auto">
-                <div className="space-y-2 p-2">
-                  {/* プロジェクト進捗表示 */}
+              <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-4">
+                {/* プロジェクト進捗 */}
+                <div>
+                  <h3 className="font-medium text-sm mb-2">進捗状況</h3>
                   <ProjectProgressCard projectId={projectId} />
+                </div>
 
-                  {/* ナビゲーション - 横並びで高さ圧縮 */}
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">ナビゲーション</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {/* 設問選択 - 横並びボタン */}
-                      <div>
-                        <div className="text-muted-foreground mb-1 text-xs">
-                          設問
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          {questionRegions.map((question, index) => (
-                            <Button
-                              key={question.id}
-                              size="sm"
-                              variant={
-                                index === currentQuestionIndex
-                                  ? "default"
-                                  : "outline"
-                              }
-                              onClick={() => setCurrentQuestionIndex(index)}
-                              className="h-6 p-1 text-xs"
-                              title={`${question.questionNumber} (${question.points}点)`}
-                            >
-                              {question.questionNumber}
-                            </Button>
-                          ))}
-                        </div>
+                {/* ナビゲーション */}
+                <div className="border-t pt-3">
+                  <h3 className="font-medium text-sm mb-2">ナビゲーション</h3>
+                  
+                  {/* 設問選択 */}
+                  <div className="mb-3">
+                    <div className="text-muted-foreground mb-1 text-xs">設問</div>
+                    <div className="grid grid-cols-3 gap-1">
+                      {questionRegions.map((question, index) => (
+                        <Button
+                          key={question.id}
+                          size="sm"
+                          variant={index === currentQuestionIndex ? "default" : "outline"}
+                          onClick={() => setCurrentQuestionIndex(index)}
+                          className="h-6 p-1 text-xs"
+                          title={`${question.questionNumber} (${question.points}点)`}
+                        >
+                          {question.questionNumber}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 個別採点モード用の生徒ナビゲーション */}
+                  {gradingMode === "individual" && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-xs">生徒</span>
+                      <div className="flex items-center space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handlePrevStudent}
+                          disabled={currentStudentIndex === 0}
+                          className="h-5 w-5 p-0"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </Button>
+                        <span className="min-w-[3rem] px-1 text-center font-mono text-xs">
+                          {currentStudentIndex + 1}/{answerSheets.length}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={handleNextStudent}
+                          disabled={currentStudentIndex === answerSheets.length - 1}
+                          className="h-5 w-5 p-0"
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </Button>
                       </div>
+                    </div>
+                  )}
+                </div>
 
-                      {/* 個別採点モード用の生徒ナビゲーション */}
-                      {gradingMode === "individual" && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground text-xs">
-                            生徒
-                          </span>
-                          <div className="flex items-center space-x-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handlePrevStudent}
-                              disabled={currentStudentIndex === 0}
-                              className="h-5 w-5 p-0"
-                            >
-                              <ChevronLeft className="h-3 w-3" />
-                            </Button>
-                            <span className="min-w-[3rem] px-1 text-center font-mono text-xs">
-                              {currentStudentIndex + 1}/{answerSheets.length}
-                            </span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleNextStudent}
-                              disabled={
-                                currentStudentIndex === answerSheets.length - 1
-                              }
-                              className="h-5 w-5 p-0"
-                            >
-                              <ChevronRight className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
+                {/* レイアウト方向切り替え（一覧採点モード用） */}
+                {gradingMode === "grid" && (
+                  <div className="border-t pt-3">
+                    <h3 className="font-medium text-sm mb-2">表示順序</h3>
+                    <div className="grid grid-cols-2 gap-1">
+                      <Button
+                        size="sm"
+                        variant={layoutDirection === "right-down" ? "default" : "outline"}
+                        onClick={() => setLayoutDirection("right-down")}
+                        className="h-6 p-1 text-xs"
+                        title="右下順（左上から右に進んで次の行）"
+                      >
+                        →↓
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={layoutDirection === "left-down" ? "default" : "outline"}
+                        onClick={() => setLayoutDirection("left-down")}
+                        className="h-6 p-1 text-xs"
+                        title="左下順（右上から左に進んで次の行）"
+                      >
+                        ←↓
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={layoutDirection === "down-right" ? "default" : "outline"}
+                        onClick={() => setLayoutDirection("down-right")}
+                        className="h-6 p-1 text-xs"
+                        title="下右順（左上から下に進んで次の列）"
+                      >
+                        ↓→
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={layoutDirection === "down-left" ? "default" : "outline"}
+                        onClick={() => setLayoutDirection("down-left")}
+                        className="h-6 p-1 text-xs"
+                        title="下左順（右上から下に進んで次の列）"
+                      >
+                        ↓←
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-                  {/* レイアウト方向切り替え（一覧採点モード用） */}
-                  {gradingMode === "grid" && (
-                    <Card>
-                      <CardHeader className="pb-1">
-                        <CardTitle className="text-xs">表示順序</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 gap-1">
-                          <Button
-                            size="sm"
-                            variant={
-                              layoutDirection === "right-down"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() => setLayoutDirection("right-down")}
-                            className="h-6 p-1 text-xs"
-                            title="右下順（左上から右に進んで次の行）"
-                          >
-                            →↓
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={
-                              layoutDirection === "left-down"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() => setLayoutDirection("left-down")}
-                            className="h-6 p-1 text-xs"
-                            title="左下順（右上から左に進んで次の行）"
-                          >
-                            ←↓
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={
-                              layoutDirection === "down-right"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() => setLayoutDirection("down-right")}
-                            className="h-6 p-1 text-xs"
-                            title="下右順（左上から下に進んで次の列）"
-                          >
-                            ↓→
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant={
-                              layoutDirection === "down-left"
-                                ? "default"
-                                : "outline"
-                            }
-                            onClick={() => setLayoutDirection("down-left")}
-                            className="h-6 p-1 text-xs"
-                            title="下左順（右上から下に進んで次の列）"
-                          >
-                            ↓←
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {/* 採点操作・フィルタ・ショートカット */}
+                <div className="border-t pt-3">
+                  <h3 className="font-medium text-sm mb-2">
+                    {gradingMode === "grid" && selectedAnswers.size > 0
+                      ? `採点操作 (${selectedAnswers.size}件)`
+                      : "採点操作"}
+                  </h3>
+                  
+                  {/* 部分点入力表示 */}
+                  {partialScoreInput && (
+                    <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs mb-3">
+                      <div className="font-medium text-yellow-800">部分点入力中</div>
+                      <div className="text-yellow-700">
+                        {partialScoreInput} / {currentQuestion?.points || 10} 点
+                      </div>
+                      <div className="mt-1 text-xs text-yellow-600">
+                        1.5秒後に自動採点されます...
+                      </div>
+                    </div>
                   )}
 
-                  {/* 採点操作・フィルタ・ショートカット */}
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">
-                        {gradingMode === "grid" && selectedAnswers.size > 0
-                          ? `${selectedAnswers.size}件を採点`
-                          : "採点操作"}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {/* 部分点入力表示 */}
-                      {partialScoreInput && (
-                        <div className="rounded border border-yellow-200 bg-yellow-50 p-2 text-xs">
-                          <div className="font-medium text-yellow-800">
-                            部分点入力中
-                          </div>
-                          <div className="text-yellow-700">
-                            {partialScoreInput} /{" "}
-                            {currentQuestion?.points || 10} 点
-                          </div>
-                          <div className="mt-1 text-xs text-yellow-600">
-                            1.5秒後に自動採点されます...
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 採点ボタン（一覧採点モード用） */}
-                      {gradingMode === "grid" && selectedAnswers.size > 0 && (
-                        <div className="space-y-1">
-                          <Button
+                  {/* 採点ボタン（一覧採点モード用） */}
+                  {gradingMode === "grid" && selectedAnswers.size > 0 && (
+                    <div className="space-y-1 mb-3">
+                      <Button
                             className="h-6 w-full justify-start text-xs"
                             variant="outline"
                             onClick={() =>
@@ -2027,15 +2048,11 @@ export default function GradingPage() {
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
 
                   {/* 現在の採点状況 */}
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">現在の採点</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1">
+                  <div className="border-t pt-3">
+                    <h4 className="text-xs font-medium mb-2">現在の採点</h4>
+                    <div className="space-y-1">
                       {currentScoring ? (
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
@@ -2085,16 +2102,14 @@ export default function GradingPage() {
                       ) : (
                         <p className="text-muted-foreground text-xs">未採点</p>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
 
                   {/* 採点ボタン（個別採点モードのみ） */}
                   {gradingMode === "individual" && (
-                    <Card>
-                      <CardHeader className="pb-1">
-                        <CardTitle className="text-xs">採点操作</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-1">
+                    <div className="border-t pt-3">
+                      <h4 className="text-xs font-medium mb-2">採点操作</h4>
+                      <div className="space-y-1">
                         <div className="grid grid-cols-2 gap-1">
                           <Button
                             className="h-6 justify-start p-1 text-xs"
@@ -2163,16 +2178,14 @@ export default function GradingPage() {
                             ➖ 無答
                           </Button>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   )}
 
                   {/* 複数教員比較・次へボタン */}
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-xs">操作</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1">
+                  <div className="border-t pt-3">
+                    <h4 className="text-xs font-medium mb-2">操作</h4>
+                    <div className="space-y-1">
                       <Button
                         className="h-6 w-full text-xs"
                         variant="outline"
@@ -2190,8 +2203,8 @@ export default function GradingPage() {
                       >
                         次へ: 結果出力
                       </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

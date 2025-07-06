@@ -512,15 +512,13 @@ export interface MyAPI {
   createQuestionScore: (data: {
     answerSheetId: string
     layoutRegionId: string
-    score: number
-    maxScore: number
+    partialScore?: number
     status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     scoredByUserId: string
   }) => Promise<QuestionScore>
   updateQuestionScore: (id: string, data: {
-    score?: number
-    maxScore?: number
+    partialScore?: number
     status?: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     version?: number
@@ -532,7 +530,7 @@ export interface MyAPI {
     needsResolution: boolean
   }>
   finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: {
-    score: number
+    partialScore?: number
     status: string
     comments?: string
   }) => Promise<QuestionScore>

@@ -176,6 +176,14 @@ const SCORE_STATUS_CONFIG = {
     textColor: "text-green-800",
     key: ""
   },
+  master: {
+    icon: CheckCircle,
+    borderColor: "border-blue-600",
+    bgColor: "bg-blue-50",
+    selectedBgColor: "bg-blue-100",
+    textColor: "text-blue-800",
+    key: ""
+  },
 }
 
 export type GridLayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
@@ -198,9 +206,10 @@ interface AnswerItem {
   imageUrl: string
   currentScore?: number
   maxScore: number
-  status: ScoringStatus
+  status: ScoringStatus | "master"
   isSelected?: boolean
   questionRegion?: QuestionRegion
+  isMaster?: boolean
 }
 
 interface AnswerGridViewProps {
@@ -361,6 +370,12 @@ export default function AnswerGridView({
 
   // マウスドラッグ選択
   const handleMouseDown = (event: React.MouseEvent, answerId: string) => {
+    // 模範解答の場合は選択処理をスキップ
+    if (answerId.startsWith('master-')) {
+      event.preventDefault()
+      return
+    }
+    
     setDragStart({ x: event.clientX, y: event.clientY })
     setIsDragging(false)
     
@@ -530,6 +545,7 @@ export default function AnswerGridView({
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
           const isCurrentAnswer = currentAnswerId === answer.id
+          const isMaster = answer.isMaster
           
           
           return (
@@ -537,21 +553,32 @@ export default function AnswerGridView({
               key={answer.id}
               data-answer-id={answer.id}
               className={`
-                relative cursor-pointer transition-all duration-150 hover:shadow-md border-2 flex-shrink-0 py-0
+                relative transition-all duration-150 border-2 flex-shrink-0 py-0
+                ${isMaster ? "cursor-default" : "cursor-pointer hover:shadow-md"}
                 ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : ""}
                 ${isCurrentAnswer ? "ring-2 ring-orange-500 ring-offset-2 shadow-lg" : ""}
+                ${isMaster ? "ring-2 ring-blue-400 ring-offset-1 shadow-sm" : ""}
                 ${config.borderColor}
                 ${isSelected ? config.selectedBgColor : config.bgColor}
               `}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               <CardContent className="p-2 px-2">
+                {/* 模範解答ラベル */}
+                {isMaster && (
+                  <div className="mb-1 text-center">
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-blue-100 text-blue-800 border-blue-300">
+                      模範解答
+                    </Badge>
+                  </div>
+                )}
+                
                 {/* 答案画像 */}
                 <div className="overflow-hidden rounded">
                   <CroppedAnswerImage
                     imageUrl={answer.imageUrl}
                     questionRegion={answer.questionRegion}
-                    alt={`${answer.studentName}の答案`}
+                    alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
                     className="rounded w-full h-auto"
                   />
                 </div>
@@ -559,13 +586,13 @@ export default function AnswerGridView({
                 {/* 学生情報と採点状況 */}
                 <div className="mt-0.5 space-y-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium truncate">
+                    <span className={`text-xs truncate ${isMaster ? "font-bold text-blue-800" : "font-medium"}`}>
                       {answer.studentName}
                     </span>
-                    <Icon className={`h-3 w-3 ${config.textColor}`} />
+                    {!isMaster && <Icon className={`h-3 w-3 ${config.textColor}`} />}
                   </div>
                   
-                  {answer.status !== "ungraded" && (
+                  {!isMaster && answer.status !== "ungraded" && (
                     <Badge variant="outline" className="text-xs h-4 px-1">
                       {answer.currentScore !== undefined 
                         ? `${answer.currentScore}/${answer.maxScore}`
@@ -574,6 +601,12 @@ export default function AnswerGridView({
                         : answer.status === "proposed" ? "提案中"
                         : "採点中"
                       }
+                    </Badge>
+                  )}
+                  
+                  {isMaster && (
+                    <Badge variant="outline" className="text-xs h-4 px-1 bg-blue-50 text-blue-700 border-blue-200">
+                      {answer.maxScore}点満点
                     </Badge>
                   )}
                 </div>

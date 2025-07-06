@@ -1,7 +1,7 @@
 import { dialog } from "electron"
 import * as ExcelJS from "exceljs"
 import { getStudentsForProject } from "./projectStudent"
-import { getQuestionScoresForProject } from "./questionScore"
+import { getQuestionScoresForProject, calculateActualScore } from "./questionScore"
 import { getLayoutRegionsByProjectId } from "./layoutRegion"
 import { getProjectById } from "./project"
 
@@ -54,14 +54,6 @@ function getStatusDisplayText(score: number | null, _maxScore: number, status: s
   }
 }
 
-// 採点状態を判定
-function determineScoringStatus(score: number | null, maxScore: number): string {
-  if (score === null || score === undefined) return "unscored"
-  if (score === maxScore) return "correct"
-  if (score === 0) return "incorrect"
-  if (score > 0 && score < maxScore) return "partial"
-  return "unscored"
-}
 
 
 export async function exportGradingDataExcel(options: ExportGradingDataOptions): Promise<{
@@ -119,9 +111,7 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
         )
 
         const maxScore = region.points || region.maxScore || 10
-        const status = scoreData 
-          ? determineScoringStatus(scoreData.score, maxScore)
-          : "unscored"
+        const status = scoreData?.status || "unscored"
 
         return {
           questionId: region.id,
@@ -129,7 +119,10 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
           daimon: region.questionNumber?.toString() || region.label,
           shomon: region.questionSubNumber?.toString() || "",
           shimon: region.questionSubSubNumber?.toString() || "",
-          score: scoreData?.score || null,
+          score: scoreData ? calculateActualScore({
+            status: scoreData.status,
+            partialScore: scoreData.partialScore ? Number(scoreData.partialScore) : null
+          }, maxScore) : null,
           maxScore: maxScore,
           status: status as any
         }
