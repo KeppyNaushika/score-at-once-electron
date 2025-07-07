@@ -85,7 +85,8 @@ export default function ProjectDetailPage() {
           {project?.examName || "プロジェクト"} - 一括採点
         </title>
       </Head>
-      <div className="container mx-auto p-6">
+      <div className="h-full overflow-auto">
+        <div className="container mx-auto p-6">
         <ProjectHeader 
           project={project}
           onEdit={() => setShowEditModal(true)}
@@ -144,6 +145,7 @@ export default function ProjectDetailPage() {
             onProjectDeleted={handleProjectDeleted}
           />
         )}
+        </div>
       </div>
     </ProtectedRoute>
   )

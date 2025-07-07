@@ -133,7 +133,6 @@ export function AnswerSheetGridManager({
 
   const handleCellClick = useCallback((studentId: string, pageNumber: number) => {
     // セルクリック処理
-    console.log(`Cell clicked: ${studentId} - Page ${pageNumber}`)
   }, [])
 
   // アップロード処理
