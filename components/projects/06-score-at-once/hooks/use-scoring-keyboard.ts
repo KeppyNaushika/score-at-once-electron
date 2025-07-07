@@ -171,19 +171,8 @@ export function useScoringKeyboard({
     // storageイベントリスナー（他のタブでの変更検知）
     window.addEventListener('storage', handleStorageChange)
     
-    // 定期的な設定チェック（同一タブ内での変更検知）
-    const interval = setInterval(() => {
-      const currentShortcuts = getKeyboardShortcuts()
-      setShortcuts((prev: typeof DEFAULT_SHORTCUTS) => {
-        // 設定が変更されているかチェック
-        const changed = JSON.stringify(prev) !== JSON.stringify(currentShortcuts)
-        return changed ? currentShortcuts : prev
-      })
-    }, 500)
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange)
-      clearInterval(interval)
     }
   }, [])
   
