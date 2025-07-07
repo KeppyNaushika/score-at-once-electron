@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import type { GradingMode } from "../GradingModeToggle"
 import type { ScoringStatus } from "../types"
@@ -159,11 +159,37 @@ export function useScoringKeyboard({
   onToggleStudentNames,
 }: UseScoringKeyboardProps) {
   
+  // キーボードショートカット設定をstateで管理
+  const [shortcuts, setShortcuts] = useState(() => getKeyboardShortcuts())
+  
+  // 設定変更を監視
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setShortcuts(getKeyboardShortcuts())
+    }
+    
+    // storageイベントリスナー（他のタブでの変更検知）
+    window.addEventListener('storage', handleStorageChange)
+    
+    // 定期的な設定チェック（同一タブ内での変更検知）
+    const interval = setInterval(() => {
+      const currentShortcuts = getKeyboardShortcuts()
+      setShortcuts((prev: typeof DEFAULT_SHORTCUTS) => {
+        // 設定が変更されているかチェック
+        const changed = JSON.stringify(prev) !== JSON.stringify(currentShortcuts)
+        return changed ? currentShortcuts : prev
+      })
+    }, 500)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      clearInterval(interval)
+    }
+  }, [])
+  
   // キーボードイベントハンドラー
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
-      // 動的にショートカットを取得（リアルタイム反映のため）
-      const shortcuts = getKeyboardShortcuts()
       
       // 入力フィールドがフォーカスされている場合はスキップ
       if (
@@ -390,6 +416,8 @@ export function useScoringKeyboard({
       onPartialScoreBackspace,
       showPartialScoreModal,
       onToggleFilter,
+      onToggleStudentNames,
+      shortcuts,
     ],
   )
 

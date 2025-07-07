@@ -96,7 +96,7 @@ export const CroppedAnswerImage = ({
       <canvas
         ref={canvasRef}
         className="h-full w-full object-contain"
-        style={{ imageRendering: "high-quality" }}
+        style={{ imageRendering: "auto" as const }}
       />
     </div>
   )
