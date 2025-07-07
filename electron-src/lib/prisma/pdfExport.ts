@@ -359,7 +359,6 @@ async function addAnswerSheetToPDF(
         )
       : []
     
-    console.log(`Found ${relevantScores.length} scoring records for answer sheet ${answerSheet.id}`)
 
     // デフォルト設定
     const defaultConfig: ScoringMarkConfig = {

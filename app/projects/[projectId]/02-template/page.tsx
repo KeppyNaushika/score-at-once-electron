@@ -114,7 +114,6 @@ export default function TemplateStepPage() {
         try {
           const existingRegions =
             await window.electronAPI.getLayoutRegionsByProjectId(projectId)
-          console.log("loadInitialData - existingRegions:", existingRegions)
 
           const firstMasterImageId =
             fetchedProject.masterImages &&
@@ -123,10 +122,6 @@ export default function TemplateStepPage() {
                   (a, b) => a.pageNumber - b.pageNumber,
                 )[0].id
               : null
-          console.log(
-            "loadInitialData - firstMasterImageId:",
-            firstMasterImageId,
-          )
 
           if (existingRegions && existingRegions.length > 0) {
             setLayoutId("existing")
@@ -136,10 +131,6 @@ export default function TemplateStepPage() {
                   (region) => region.masterImageId === firstMasterImageId,
                 )
               : []
-            console.log(
-              "loadInitialData - currentImageRegions:",
-              currentImageRegions,
-            )
 
             const mappedRegions = currentImageRegions.map((region) => ({
               id: region.id,
@@ -153,7 +144,6 @@ export default function TemplateStepPage() {
               questionNumber: region.questionNumber || "",
               masterImageId: region.masterImageId || "",
             }))
-            console.log("loadInitialData - mappedRegions:", mappedRegions)
             setLayoutRegions(mappedRegions)
           } else {
             setLayoutId(undefined)

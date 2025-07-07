@@ -155,7 +155,6 @@ export function AnswerSheetTable({
   // ============================================================================
 
   const handleUploadToCell = (position: number) => {
-    console.log(`Upload to cell at position ${position}`)
     // TODO: セル特定位置へのアップロード処理
   }
 
