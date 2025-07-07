@@ -172,6 +172,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-layout-region", id),
   getLayoutRegionsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
+  updateLayoutRegionOrders: (updates: Array<{ id: string; orderIndex: number }>) =>
+    ipcRenderer.invoke("update-layout-region-orders", updates),
 
   // Project-Student relationship
   getStudentsForProject: (projectId: string) =>

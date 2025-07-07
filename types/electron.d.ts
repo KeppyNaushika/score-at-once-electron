@@ -398,6 +398,9 @@ export interface MyAPI {
     projectId: string,
   ) => Promise<LayoutRegionWithDetails[]>
   getLayoutRegionById: (id: string) => Promise<LayoutRegionWithDetails | null>
+  updateLayoutRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>
+  ) => Promise<LayoutRegion[]>
 
   // QuestionGroup related
   createQuestionGroup: (

@@ -43,6 +43,20 @@ export const updateLayoutRegion = async (
   })
 }
 
+// 複数の LayoutRegion の順序を一括更新
+export const updateLayoutRegionOrders = async (
+  updates: Array<{ id: string; orderIndex: number }>
+) => {
+  const updatePromises = updates.map((update) =>
+    prisma.layoutRegion.update({
+      where: { id: update.id },
+      data: { orderIndex: update.orderIndex },
+    })
+  )
+  
+  return Promise.all(updatePromises)
+}
+
 // LayoutRegion を削除
 export const deleteLayoutRegion = async (id: string) => {
   // 関連する SubtotalDefinition や QuestionSubtotalAssignment も削除する必要があるか確認
@@ -70,8 +84,10 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
       questionScores: true, // 関連する QuestionScore も取得
     },
     orderBy: [
-      { y: "asc" },
-      { x: "asc" }
+      { masterImageId: "asc" },    // ページ順（最優先）
+      { orderIndex: "asc" },       // 手動順序（優先）
+      { y: "asc" },               // Y座標（フォールバック）
+      { x: "asc" }                // X座標（フォールバック）
     ],
   })
 }

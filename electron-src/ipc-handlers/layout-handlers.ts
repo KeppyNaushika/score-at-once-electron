@@ -7,6 +7,7 @@ import {
   getLayoutRegionsByProjectId as dbGetLayoutRegionsByProjectId,
   getLayoutRegionById as dbGetLayoutRegionById,
   createManyLayoutRegions as dbCreateManyLayoutRegions,
+  updateLayoutRegionOrders as dbUpdateLayoutRegionOrders,
 } from "../lib/prisma/layoutRegion"
 import {
   createQuestionGroup as dbCreateQuestionGroup,
@@ -167,6 +168,18 @@ export function setupLayoutHandlers(): void {
         return await dbCreateManyLayoutRegions(data)
       } catch (err) {
         console.error("Error creating many layout regions:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "update-layout-region-orders",
+    async (_event, updates: Array<{ id: string; orderIndex: number }>) => {
+      try {
+        return await dbUpdateLayoutRegionOrders(updates)
+      } catch (err) {
+        console.error("Error updating layout region orders:", err)
         throw err
       }
     },

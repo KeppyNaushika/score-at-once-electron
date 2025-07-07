@@ -150,6 +150,7 @@ model LayoutRegion {
   height                      Float
   questionNumber              String?
   points                      Int?
+  orderIndex                  Int?
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
   masterImage                 MasterImage                  @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
