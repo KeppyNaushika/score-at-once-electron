@@ -19,6 +19,7 @@ interface CroppedAnswerImageProps {
   alt: string
   className?: string
   isColumnLayout?: boolean
+  itemsPerRow?: number // 1行あたりの表示数
 }
 
 // 採点領域をクロップして表示するコンポーネント
@@ -28,6 +29,7 @@ export default function CroppedAnswerImage({
   alt,
   className = "",
   isColumnLayout = false,
+  itemsPerRow,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -50,6 +52,19 @@ export default function CroppedAnswerImage({
     const containerWidth = canvas.offsetWidth
     const containerHeight = canvas.offsetHeight
 
+    // console.log(isColumnLayout, containerWidth, containerHeight, itemsPerRow)
+    console.log(
+      "itemsPerRow: ",
+      itemsPerRow,
+      "isColumnLayout: ",
+      isColumnLayout,
+      "containerWidth: ",
+      containerWidth,
+      "containerHeight: ",
+      containerHeight,
+      "aspectRatio: ",
+      aspectRatio,
+    )
     if (isColumnLayout) {
       // 列表示: 高さベースで幅を計算
       canvas.height = containerHeight
@@ -76,7 +91,7 @@ export default function CroppedAnswerImage({
       canvas.width,
       canvas.height,
     )
-  }, [imageLoaded, questionRegion, isColumnLayout])
+  }, [imageLoaded, questionRegion, isColumnLayout, itemsPerRow])
 
   const handleImageLoad = () => {
     setImageLoaded(true)
