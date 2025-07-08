@@ -104,7 +104,7 @@ const FILTER_BUTTONS = [
     label: "未採点",
     icon: Circle,
     color: "border-gray-400 text-gray-600",
-    activeColor: "bg-gray-100 border-gray-600 text-gray-800"
+    activeColor: "bg-gray-300 border-gray-700 text-gray-900"
   },
   {
     key: "correct", 
@@ -113,7 +113,7 @@ const FILTER_BUTTONS = [
     label: "正答",
     icon: CheckCircle,
     color: "border-green-400 text-green-600",
-    activeColor: "bg-green-100 border-green-600 text-green-800"
+    activeColor: "bg-green-300 border-green-700 text-green-900"
   },
   {
     key: "incorrect",
@@ -122,7 +122,7 @@ const FILTER_BUTTONS = [
     label: "誤答",
     icon: X,
     color: "border-red-400 text-red-600",
-    activeColor: "bg-red-100 border-red-600 text-red-800"
+    activeColor: "bg-red-300 border-red-700 text-red-900"
   },
   {
     key: "partial",
@@ -131,7 +131,7 @@ const FILTER_BUTTONS = [
     label: "部分点",
     icon: AlertTriangle,
     color: "border-yellow-400 text-yellow-600", 
-    activeColor: "bg-yellow-100 border-yellow-600 text-yellow-800"
+    activeColor: "bg-yellow-300 border-yellow-700 text-yellow-900"
   },
   {
     key: "pending",
@@ -140,7 +140,7 @@ const FILTER_BUTTONS = [
     label: "保留",
     icon: Clock,
     color: "border-blue-400 text-blue-600",
-    activeColor: "bg-blue-100 border-blue-600 text-blue-800"
+    activeColor: "bg-blue-300 border-blue-700 text-blue-900"
   },
   {
     key: "no_answer",
@@ -149,7 +149,7 @@ const FILTER_BUTTONS = [
     label: "無答", 
     icon: Minus,
     color: "border-purple-400 text-purple-600",
-    activeColor: "bg-purple-100 border-purple-600 text-purple-800"
+    activeColor: "bg-purple-300 border-purple-700 text-purple-900"
   },
 ] as const
 
