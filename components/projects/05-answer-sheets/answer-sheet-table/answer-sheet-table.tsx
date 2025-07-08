@@ -99,6 +99,7 @@ export function AnswerSheetTable({
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
+    initializeAbsentStudents,
   } = useDisabledState()
 
   const {
@@ -141,6 +142,12 @@ export function AnswerSheetTable({
   // ============================================================================
 
   const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
+  
+  // デバッグ用のpreviewMode変更ハンドラー
+  const handlePreviewModeChange = (mode: PreviewMode) => {
+    console.log("AnswerSheetTable - handlePreviewModeChange:", mode)
+    setPreviewMode(mode)
+  }
 
   // ============================================================================
   // 初期化処理
@@ -188,12 +195,26 @@ export function AnswerSheetTable({
   }
 
   // ============================================================================
+  // 初期化処理
+  // ============================================================================
+
+  // 欠席者の自動無効化
+  useEffect(() => {
+    initializeAbsentStudents(students)
+  }, [students, initializeAbsentStudents])
+
+  // ============================================================================
   // 計算済みプロパティ
   // ============================================================================
 
   const maxPages = masterImageCount
   const trashFiles = getDisabledFiles()
   const hasNameRegion = Object.values(nameRegionAvailable).some(Boolean)
+  
+  // デバッグログ
+  console.log("AnswerSheetTable - nameRegionAvailable:", nameRegionAvailable)
+  console.log("AnswerSheetTable - hasNameRegion:", hasNameRegion)
+  console.log("AnswerSheetTable - masterImageCount:", masterImageCount)
 
   // ============================================================================
   // レンダリング
@@ -235,7 +256,7 @@ export function AnswerSheetTable({
             fileOrder={fileOrder}
             onFileOrderChange={onFileOrderChange}
             previewMode={previewMode}
-            onPreviewModeChange={setPreviewMode}
+            onPreviewModeChange={handlePreviewModeChange}
             hasNameRegion={hasNameRegion}
           />
 

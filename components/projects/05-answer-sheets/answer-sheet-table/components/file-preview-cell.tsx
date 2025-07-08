@@ -46,12 +46,17 @@ export function FilePreviewCell({
 
   // 氏名欄プレビューの生成
   useEffect(() => {
+    console.log("FilePreviewCell - ページ", pageNumber, "- previewMode:", previewMode, "nameRegionAvailable:", nameRegionAvailable, "imagePreview:", !!imagePreview)
+    console.log("FilePreviewCell - ファイル:", file.name)
+    
     if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
+      console.log("FilePreviewCell - 氏名欄プレビュー生成開始")
       setIsNameRegionLoading(true)
       // imagePreviewを使用して氏名欄を描画
       const tempFile = { ...file, preview: imagePreview }
       drawNameRegionCanvas(tempFile, pageNumber)
         .then((canvas) => {
+          console.log("FilePreviewCell - 氏名欄プレビュー生成完了:", !!canvas)
           setNameRegionPreview(canvas)
           setIsNameRegionLoading(false)
         })
@@ -71,7 +76,15 @@ export function FilePreviewCell({
 
   // 画像プレビューの表示
   const renderImagePreview = () => {
-    if (previewMode === "name-only" && nameRegionAvailable) {
+    if (previewMode === "name-only") {
+      if (!nameRegionAvailable) {
+        return (
+          <div className="flex h-full items-center justify-center">
+            <span className="text-sm text-gray-500">氏名欄なし</span>
+          </div>
+        )
+      }
+
       if (isNameRegionLoading) {
         return (
           <div className="flex h-full items-center justify-center">
