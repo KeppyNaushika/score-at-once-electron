@@ -67,7 +67,18 @@ export function usePartialScore({
 
   // F/Jキーで部分点確定
   const handlePartialScoreConfirm = useCallback((confirmType: "partial" | "pending") => {
-    if (!showPartialScoreModal || selectedAnswers.size === 0) return
+    console.log("🔥 handlePartialScoreConfirm called:", {
+      confirmType,
+      showPartialScoreModal,
+      selectedAnswersSize: selectedAnswers.size,
+      partialScoreInput,
+      currentQuestion: currentQuestion?.questionNumber
+    })
+
+    if (!showPartialScoreModal || selectedAnswers.size === 0) {
+      console.log("❌ Early return: modal not open or no answers selected")
+      return
+    }
 
     let finalInput = partialScoreInput
     if (finalInput.endsWith(".")) {
@@ -77,13 +88,24 @@ export function usePartialScore({
     const finalValue = parseFloat(finalInput)
     const maxPoints = currentQuestion?.points || 10
 
+    console.log("📊 Processing input:", {
+      originalInput: partialScoreInput,
+      finalInput,
+      finalValue,
+      maxPoints
+    })
+
     // 値の妥当性チェック
     if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
       const roundedValue = Math.round(finalValue * 100) / 100
+      console.log("✅ Calling onBatchScore with:", confirmType, roundedValue)
       onBatchScore(confirmType, roundedValue)
     } else if (finalInput === "" || finalInput === "0.") {
       // 空の場合は0点として処理
+      console.log("✅ Calling onBatchScore with 0 points:", confirmType, 0)
       onBatchScore(confirmType, 0)
+    } else {
+      console.log("❌ Invalid input, not calling onBatchScore")
     }
 
     // モーダルを閉じる
@@ -113,6 +135,32 @@ export function usePartialScore({
     }
   }, [showPartialScoreModal, partialScoreInput])
 
+  // 直接入力変更ハンドラー
+  const handlePartialScoreChange = useCallback((value: string) => {
+    const maxPoints = currentQuestion?.points || 10
+    
+    // 空文字、数値のみ、または小数点を含む数値のみ許可
+    if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+      // 小数点以下の桁数制限（2桁まで）
+      const decimalPart = value.split(".")[1]
+      if (decimalPart && decimalPart.length > 2) {
+        return
+      }
+      
+      // 数値の妥当性チェック（小数点のみの場合は一旦スキップ）
+      if (value !== "" && !value.endsWith(".")) {
+        const numericValue = parseFloat(value)
+        
+        // 不正な値や最大点数超過の場合は無視
+        if (isNaN(numericValue) || numericValue > maxPoints) {
+          return
+        }
+      }
+      
+      setPartialScoreInput(value)
+    }
+  }, [currentQuestion])
+
   return {
     partialScoreInput,
     showPartialScoreModal,
@@ -121,5 +169,6 @@ export function usePartialScore({
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
     handlePartialScoreBackspace,
+    handlePartialScoreChange,
   }
 }

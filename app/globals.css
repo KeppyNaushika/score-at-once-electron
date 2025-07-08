@@ -120,33 +120,37 @@
   }
 }
 
-/* 透過スクロールバー設定 */
-.scrollbar-overlay {
+/* カスタムスクロールバー設定 */
+* {
   /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
-.scrollbar-overlay::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Webkit系ブラウザ */
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
 
-.scrollbar-overlay::-webkit-scrollbar-track {
-  background: transparent;
+*::-webkit-scrollbar-track {
+  background: transparent; /* ガイドは透明 */
 }
 
-.scrollbar-overlay::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
-  border: 1px solid transparent;
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  border: none;
 }
 
-.scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+  width: 8px; /* ホバー時に幅拡張 */
+  border-radius: 4px;
 }
 
-.scrollbar-overlay::-webkit-scrollbar-corner {
+*::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -158,14 +162,14 @@
 }
 
 /* ダークモード対応 */
-.dark .scrollbar-overlay {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
-.dark .scrollbar-overlay::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.dark .scrollbar-overlay::-webkit-scrollbar-thumb:hover {
+.dark *::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }

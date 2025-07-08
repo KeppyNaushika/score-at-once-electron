@@ -11,6 +11,7 @@ interface PartialScoreModalProps {
   maxPoints: number
   questionNumber: string
   onClose: () => void
+  onChange?: (value: string) => void
 }
 
 export default function PartialScoreModal({
@@ -19,6 +20,7 @@ export default function PartialScoreModal({
   maxPoints,
   questionNumber,
   onClose,
+  onChange,
 }: PartialScoreModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -37,9 +39,14 @@ export default function PartialScoreModal({
           <div className="relative">
             <Input
               value={value}
-              readOnly
               className="text-2xl text-center font-mono h-16 text-blue-700 bg-blue-50 border-blue-300"
               placeholder="0"
+              onChange={(e) => {
+                if (onChange) {
+                  onChange(e.target.value)
+                }
+              }}
+              autoFocus
             />
             {value.endsWith(".") && (
               <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-blue-500 text-2xl animate-pulse">

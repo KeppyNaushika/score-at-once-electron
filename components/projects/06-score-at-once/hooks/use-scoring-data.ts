@@ -334,6 +334,13 @@ export function useScoringData({
     partialScore?: number | null,
     selectedAnswers: Set<string> = new Set(),
   ) => {
+    console.log("🎯 handleBatchScore called with:", {
+      statusOrAnswerIds,
+      statusOrPartialScore,
+      partialScore,
+      selectedAnswersSize: selectedAnswers.size
+    })
+
     // 引数の解析
     let answerIds: string | string[]
     let status: ScoringStatus
@@ -408,8 +415,10 @@ export function useScoringData({
           // 指定された部分点を使用、なければ満点の半分を設定
           if (scoreValue !== null && scoreValue !== undefined) {
             newScore = scoreValue
+            console.log("📝 Using provided partial score:", scoreValue)
           } else {
             newScore = Math.floor(currentQuestion.points / 2)
+            console.log("📝 Using default partial score (half):", newScore)
           }
           break
         case "pending":
@@ -419,6 +428,14 @@ export function useScoringData({
 
       // Save to database
       try {
+        console.log("💾 Saving to database:", {
+          answerId,
+          questionId: currentQuestion.id,
+          newScore,
+          scoringStatus,
+          hasExistingScore: !!currentScore?.id
+        })
+
         if (currentScore?.id) {
           // Update existing score
           const updateData = {
@@ -426,11 +443,13 @@ export function useScoringData({
             status: scoringStatus,
             comment: currentScore.comment || "",
           }
+          console.log("🔄 Updating existing score:", updateData)
           const result = await window.electronAPI.updateQuestionScore(
             currentScore.id,
             updateData,
             currentScore.version,
           )
+          console.log("✅ Update result:", result)
 
           if ((result as any).success || result.scoreVersion) {
             setScoringData((prev) => ({
@@ -457,7 +476,9 @@ export function useScoringData({
             comment: "",
             scoredByUserId: effectiveUserId,
           }
+          console.log("➕ Creating new score:", scoreData)
           const result = await window.electronAPI.createQuestionScore(scoreData)
+          console.log("✅ Create result:", result)
 
           if ((result as any).success || result.id) {
             setScoringData((prev) => ({
