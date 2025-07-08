@@ -22,96 +22,7 @@ type ScoringStatus =
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-// 採点領域をクロップして表示するコンポーネント
-const CroppedAnswerImage = ({
-  imageUrl,
-  questionRegion,
-  alt,
-  className = "",
-  isColumnLayout = false,
-}: {
-  imageUrl: string
-  questionRegion: QuestionRegion  // not null（呼び出し元で保証）
-  alt: string
-  className?: string
-  isColumnLayout?: boolean
-}) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const imageRef = useRef<HTMLImageElement>(null)
-  const [imageLoaded, setImageLoaded] = useState(false)
-
-  useEffect(() => {
-    const canvas = canvasRef.current
-    const imageElement = imageRef.current
-    if (!canvas || !imageElement || !imageLoaded) return
-
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // 採点領域のアスペクト比を計算
-    const sourceWidth = questionRegion.width * imageElement.naturalWidth
-    const sourceHeight = questionRegion.height * imageElement.naturalHeight
-    const aspectRatio = sourceWidth / sourceHeight
-    
-    // コンテナサイズを取得
-    const containerWidth = canvas.offsetWidth
-    const containerHeight = canvas.offsetHeight
-
-    if (isColumnLayout) {
-      // 列表示: 高さベースで幅を計算
-      canvas.height = containerHeight
-      canvas.width = containerHeight * aspectRatio
-    } else {
-      // 行表示: 幅ベースで高さを計算
-      canvas.width = containerWidth
-      canvas.height = containerWidth / aspectRatio
-    }
-
-    // 採点領域をクロップして描画
-    const sourceX = questionRegion.x * imageElement.naturalWidth
-    const sourceY = questionRegion.y * imageElement.naturalHeight
-
-    // 採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
-    ctx.drawImage(
-      imageElement,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    )
-  }, [imageLoaded, questionRegion, isColumnLayout])
-
-  const handleImageLoad = () => {
-    setImageLoaded(true)
-  }
-
-  return (
-    <div className={`relative w-full ${className}`}>
-      <img
-        ref={imageRef}
-        src={imageUrl}
-        alt={alt}
-        className="hidden"
-        onLoad={handleImageLoad}
-        draggable={false}
-      />
-      <canvas
-        ref={canvasRef}
-        className="h-full w-full"
-        style={{ display: imageLoaded ? "block" : "none" }}
-      />
-      {!imageLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="text-xs text-gray-500">読み込み中...</div>
-        </div>
-      )}
-    </div>
-  )
-}
+import CroppedAnswerImage from "./components/CroppedAnswerImage"
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
@@ -215,7 +126,7 @@ interface AnswerItem {
   maxScore: number
   status: ScoringStatus | "master"
   isSelected?: boolean
-  questionRegion: QuestionRegion  // not null（データフローで保証される）
+  questionRegion: QuestionRegion // not null（データフローで保証される）
   isMaster?: boolean
 }
 
