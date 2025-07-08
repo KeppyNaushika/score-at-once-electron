@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
@@ -11,11 +10,11 @@ import {
   Upload,
   X,
 } from "lucide-react"
+import { useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
+import type { AnswerCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
 import { Button } from "@/components/ui/button"
 import { TableCell } from "@/components/ui/table"
-import type { AnswerCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
 
 export function AnswerCell({
   student,
@@ -32,8 +31,8 @@ export function AnswerCell({
   className = "",
 }: AnswerCellProps) {
   const [imageError, setImageError] = useState(false)
-  
-  const cellId = `${student?.id || 'unknown'}-${pageNumber}`
+
+  const cellId = `${student?.id || "unknown"}-${pageNumber}`
   const isDisabled = isStudentDisabled || isPageDisabled || isCellDisabled
 
   const {
@@ -57,7 +56,7 @@ export function AnswerCell({
   // セルの状態を取得
   const getCellStatus = () => {
     if (isDisabled) return "disabled"
-    if (!file) return "empty" 
+    if (!file) return "empty"
     if (isFileDisabled) return "file-disabled"
     return "active"
   }
@@ -83,7 +82,7 @@ export function AnswerCell({
   const getStatusIcon = () => {
     switch (cellStatus) {
       case "disabled":
-        return <SkipForward className="h-4 w-4 text-muted-foreground" />
+        return <SkipForward className="text-muted-foreground h-4 w-4" />
       case "file-disabled":
         return <AlertTriangle className="h-4 w-4 text-red-500" />
       case "active":
@@ -98,13 +97,8 @@ export function AnswerCell({
     <TableCell
       ref={setNodeRef}
       style={style}
-      className={`
-        relative min-w-32 h-32 border-r border-border p-1 transition-all cursor-pointer
-        ${getCellStyle()}
-        ${file && !isFileDisabled && !isDisabled ? "cursor-grab active:cursor-grabbing" : ""}
-        ${className}
-      `}
-      onClick={() => onCellClick?.()} 
+      className={`border-border relative h-32 min-w-32 cursor-pointer border-r p-1 transition-all ${getCellStyle()} ${file && !isFileDisabled && !isDisabled ? "cursor-grab active:cursor-grabbing" : ""} ${className} `}
+      onClick={() => onCellClick?.()}
       {...attributes}
       {...listeners}
     >
@@ -116,9 +110,9 @@ export function AnswerCell({
             <img
               src={file.preview}
               alt={file.name}
-              className="h-full w-full object-contain rounded"
+              className="h-full w-full rounded object-contain"
               onError={() => setImageError(true)}
-              loading="lazy"
+              loading="eager"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -127,16 +121,14 @@ export function AnswerCell({
           )}
 
           {/* ファイル情報オーバーレイ */}
-          <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white p-1">
-            <div className="text-xs truncate" title={file.name}>
-              {file.name.split(' - ページ')[0] || file.name}
+          <div className="absolute right-0 bottom-0 left-0 bg-black/70 p-1 text-white">
+            <div className="truncate text-xs" title={file.name}>
+              {file.name.split(" - ページ")[0] || file.name}
             </div>
           </div>
 
           {/* ステータスバッジ */}
-          <div className="absolute top-1 right-1">
-            {getStatusIcon()}
-          </div>
+          <div className="absolute top-1 right-1">{getStatusIcon()}</div>
 
           {/* ファイル操作ボタン */}
           {cellStatus === "active" && (
@@ -145,7 +137,7 @@ export function AnswerCell({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 bg-white/80 hover:bg-white"
+                  className="h-6 w-6 bg-white/80 p-0 hover:bg-white"
                   onClick={(e) => {
                     e.stopPropagation()
                     onToggleFile()
@@ -158,7 +150,7 @@ export function AnswerCell({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 w-6 p-0 bg-white/80 hover:bg-white"
+                  className="h-6 w-6 bg-white/80 p-0 hover:bg-white"
                   onClick={(e) => {
                     e.stopPropagation()
                     onRemoveFile()
@@ -180,20 +172,20 @@ export function AnswerCell({
             <div className="text-xs font-medium">
               {cellStatus === "disabled" ? "除外" : "空"}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               {student?.lastName} {student?.firstName}
             </div>
-            <div className="text-xs text-muted-foreground">
-              P{pageNumber}
-            </div>
+            <div className="text-muted-foreground text-xs">P{pageNumber}</div>
           </div>
         </div>
       )}
 
       {/* セル操作ツールチップ */}
-      <div className="absolute inset-0 bg-transparent opacity-0 hover:opacity-100 transition-opacity z-20 flex items-center justify-center">
-        <div className="text-slate-800 text-xs font-medium bg-white/90 px-2 py-1 rounded">
-          {cellStatus === "disabled" ? "クリックしてセルを有効化" : "クリックしてセルを無効化"}
+      <div className="absolute inset-0 z-20 flex items-center justify-center bg-transparent opacity-0 transition-opacity hover:opacity-100">
+        <div className="rounded bg-white/90 px-2 py-1 text-xs font-medium text-slate-800">
+          {cellStatus === "disabled"
+            ? "クリックしてセルを有効化"
+            : "クリックしてセルを無効化"}
         </div>
       </div>
     </TableCell>
