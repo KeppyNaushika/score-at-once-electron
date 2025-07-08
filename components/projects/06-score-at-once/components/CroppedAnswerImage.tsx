@@ -1,27 +1,34 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
-type QuestionRegion = {
+interface QuestionRegion {
   id: string
-  x: number
-  y: number
-  width: number
-  height: number
+  label: string
+  questionNumber: string
+  points: number
+  x: number // 0.0 - 1.0 (画像全体に対する割合)
+  y: number // 0.0 - 1.0
+  width: number // 0.0 - 1.0
+  height: number // 0.0 - 1.0
+}
+
+interface CroppedAnswerImageProps {
+  imageUrl: string
+  questionRegion: QuestionRegion // not null（呼び出し元で保証）
+  alt: string
+  className?: string
+  isColumnLayout?: boolean
 }
 
 // 採点領域をクロップして表示するコンポーネント
-export const CroppedAnswerImage = ({
+export default function CroppedAnswerImage({
   imageUrl,
   questionRegion,
   alt,
   className = "",
-}: {
-  imageUrl: string
-  questionRegion?: QuestionRegion
-  alt: string
-  className?: string
-}) => {
+  isColumnLayout = false,
+}: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
@@ -34,70 +41,67 @@ export const CroppedAnswerImage = ({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // キャンバスサイズを設定
+    // 採点領域のアスペクト比を計算
+    const sourceWidth = questionRegion.width * imageElement.naturalWidth
+    const sourceHeight = questionRegion.height * imageElement.naturalHeight
+    const aspectRatio = sourceWidth / sourceHeight
+
+    // コンテナサイズを取得
     const containerWidth = canvas.offsetWidth
     const containerHeight = canvas.offsetHeight
 
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = containerWidth * dpr
-    canvas.height = containerHeight * dpr
-    canvas.style.width = containerWidth + "px"
-    canvas.style.height = containerHeight + "px"
-    ctx.scale(dpr, dpr)
-
-    if (questionRegion) {
-      // 元画像の自然サイズ
-      const naturalWidth = imageElement.naturalWidth
-      const naturalHeight = imageElement.naturalHeight
-
-      // クロップする領域を計算
-      const cropX = (questionRegion.x / 100) * naturalWidth
-      const cropY = (questionRegion.y / 100) * naturalHeight
-      const cropWidth = (questionRegion.width / 100) * naturalWidth
-      const cropHeight = (questionRegion.height / 100) * naturalHeight
-
-      try {
-        ctx.drawImage(
-          imageElement,
-          cropX,
-          cropY,
-          cropWidth,
-          cropHeight,
-          0,
-          0,
-          containerWidth,
-          containerHeight,
-        )
-      } catch (error) {
-        console.error("Error drawing cropped image:", error)
-        // フォールバック: 全体画像を描画
-        ctx.drawImage(imageElement, 0, 0, containerWidth, containerHeight)
-      }
+    if (isColumnLayout) {
+      // 列表示: 高さベースで幅を計算
+      canvas.height = containerHeight
+      canvas.width = containerHeight * aspectRatio
     } else {
-      // クロップ領域が指定されていない場合は全体を表示
-      ctx.drawImage(imageElement, 0, 0, containerWidth, containerHeight)
+      // 行表示: 幅ベースで高さを計算
+      canvas.width = containerWidth
+      canvas.height = containerWidth / aspectRatio
     }
-  }, [imageLoaded, questionRegion])
 
-  const handleImageLoad = useCallback(() => {
+    // 採点領域をクロップして描画
+    const sourceX = questionRegion.x * imageElement.naturalWidth
+    const sourceY = questionRegion.y * imageElement.naturalHeight
+
+    // 採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
+    ctx.drawImage(
+      imageElement,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    )
+  }, [imageLoaded, questionRegion, isColumnLayout])
+
+  const handleImageLoad = () => {
     setImageLoaded(true)
-  }, [])
+  }
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative w-full ${className}`}>
       <img
         ref={imageRef}
         src={imageUrl}
         alt={alt}
-        onLoad={handleImageLoad}
         className="hidden"
-        crossOrigin="anonymous"
+        onLoad={handleImageLoad}
+        draggable={false}
       />
       <canvas
         ref={canvasRef}
-        className="h-full w-full object-contain"
-        style={{ imageRendering: "auto" as const }}
+        className="h-full w-full"
+        style={{ display: imageLoaded ? "block" : "none" }}
       />
+      {!imageLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="text-xs text-gray-500">読み込み中...</div>
+        </div>
+      )}
     </div>
   )
 }
