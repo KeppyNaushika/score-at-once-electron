@@ -531,11 +531,11 @@ export default function ScoringMainView() {
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span>前の設問</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">←</code>
+                            <code className="bg-gray-100 px-2 py-1 rounded">Shift+A</code>
                           </div>
                           <div className="flex justify-between">
                             <span>次の設問</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">→</code>
+                            <code className="bg-gray-100 px-2 py-1 rounded">Shift+D</code>
                           </div>
                           <div className="flex justify-between">
                             <span>WASD移動</span>

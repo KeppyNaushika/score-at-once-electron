@@ -371,7 +371,7 @@ export default function AnswerGridView({
       const totalAnswers = answers.length
       const cols = effectiveGridSize.columns
       const sorted = new Array(totalAnswers)
-      
+
       answers.forEach((answer, index) => {
         const row = Math.floor(index / cols)
         const col = index % cols
@@ -380,7 +380,7 @@ export default function AnswerGridView({
           sorted[newIndex] = answer
         }
       })
-      
+
       return sorted.filter(Boolean)
     }
 
@@ -594,7 +594,11 @@ export default function AnswerGridView({
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className="grid h-full min-w-0 gap-2 p-1 select-none"
+        className={`grid min-w-0 gap-2 p-1 select-none ${
+          layoutDirection === "down-right" || layoutDirection === "down-left"
+            ? "h-full"
+            : "h-auto"
+        }`}
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
@@ -611,8 +615,14 @@ export default function AnswerGridView({
               : "row",
           width: "100%",
           maxWidth: "100%", // 重要: 最大幅を強制制限
-          overflowX: layoutDirection === "down-right" || layoutDirection === "down-left" ? "auto" : "hidden",
-          overflowY: layoutDirection === "right-down" || layoutDirection === "left-down" ? "auto" : "hidden",
+          overflowX:
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? "auto"
+              : "hidden",
+          overflowY:
+            layoutDirection === "right-down" || layoutDirection === "left-down"
+              ? "auto"
+              : "hidden",
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -639,7 +649,7 @@ export default function AnswerGridView({
                 layoutDirection === "down-left"
                   ? "flex h-full flex-col"
                   : ""
-              } ${isMaster ? "cursor-default border-2 border-black bg-white" : `cursor-pointer hover:shadow-md ${config.bgColor || 'bg-white'}`} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
+              } ${isMaster ? "cursor-default border-2 border-black bg-white" : `cursor-pointer hover:shadow-md ${config.bgColor || "bg-white"}`} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
@@ -719,7 +729,6 @@ export default function AnswerGridView({
           )
         })}
       </div>
-
     </div>
   )
 }

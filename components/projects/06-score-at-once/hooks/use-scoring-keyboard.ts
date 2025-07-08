@@ -28,6 +28,9 @@ export const DEFAULT_SHORTCUTS = {
   // その他
   refreshFilter: "r",
   toggleNames: "n",
+  // 問題切り替え
+  nextQuestionShift: "shift+d",
+  prevQuestionShift: "shift+a",
 }
 
 // localStorageからキーボードショートカットを読み込む
@@ -257,18 +260,6 @@ export function useScoringKeyboard({
           }
         }
 
-        // WASD移動の処理
-        if ([shortcuts.moveUp, shortcuts.moveLeft, shortcuts.moveDown, shortcuts.moveRight].includes(key)) {
-          event.preventDefault()
-          // キーを対応する方向に変換
-          let direction = key
-          if (key === shortcuts.moveUp) direction = "w"
-          else if (key === shortcuts.moveLeft) direction = "a"
-          else if (key === shortcuts.moveDown) direction = "s"
-          else if (key === shortcuts.moveRight) direction = "d"
-          onGridNavigation(direction)
-          return
-        }
 
         // Rキーでフィルタを更新（Ctrl+Rは除外してページリロードを許可）
         if (key === shortcuts.refreshFilter && !event.ctrlKey && !event.metaKey) {
@@ -281,6 +272,31 @@ export function useScoringKeyboard({
         if (key === shortcuts.toggleNames && onToggleStudentNames) {
           event.preventDefault()
           onToggleStudentNames()
+          return
+        }
+
+        // Shift+Dで次の問題、Shift+Aで前の問題（通常のWASD移動より前に処理）
+        if (event.shiftKey && key === "d") {
+          event.preventDefault()
+          onNextQuestion()
+          return
+        }
+        if (event.shiftKey && key === "a") {
+          event.preventDefault()
+          onPrevQuestion()
+          return
+        }
+
+        // WASD移動の処理（Shiftキーが押されていない場合のみ）
+        if (!event.shiftKey && [shortcuts.moveUp, shortcuts.moveLeft, shortcuts.moveDown, shortcuts.moveRight].includes(key)) {
+          event.preventDefault()
+          // キーを対応する方向に変換
+          let direction = key
+          if (key === shortcuts.moveUp) direction = "w"
+          else if (key === shortcuts.moveLeft) direction = "a"
+          else if (key === shortcuts.moveDown) direction = "s"
+          else if (key === shortcuts.moveRight) direction = "d"
+          onGridNavigation(direction)
           return
         }
 
@@ -349,14 +365,6 @@ export function useScoringKeyboard({
         case shortcuts.no_answer:
           event.preventDefault()
           onSetScore("no_answer")
-          break
-        case "ArrowRight":
-          event.preventDefault()
-          onNextQuestion()
-          break
-        case "ArrowLeft":
-          event.preventDefault()
-          onPrevQuestion()
           break
         case "ArrowDown":
           event.preventDefault()
