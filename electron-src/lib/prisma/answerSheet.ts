@@ -34,11 +34,37 @@ export async function uploadAnswerSheets(
       const buffer = Buffer.from(fileData.buffer)
       await fs.writeFile(filePath, buffer)
 
-      // データベースに記録
-      const answerSheet = await prisma.answerSheet.create({
-        data: {
+      // studentIdが必須の場合のみ処理を継続
+      if (!fileData.studentId) {
+        throw new Error(`Student ID is required for file: ${fileData.name}`)
+      }
+
+      // 既存レコードの確認
+      const existingRecord = await prisma.answerSheet.findUnique({
+        where: {
+          projectId_studentId_pageNumber: {
+            projectId,
+            studentId: fileData.studentId,
+            pageNumber: fileData.pageNumber || 1,
+          }
+        }
+      })
+
+      // データベースに記録（upsertで重複回避）
+      const answerSheet = await prisma.answerSheet.upsert({
+        where: {
+          projectId_studentId_pageNumber: {
+            projectId,
+            studentId: fileData.studentId,
+            pageNumber: fileData.pageNumber || 1,
+          }
+        },
+        update: {
+          originalImagePath: relativePath, // 既存の場合は画像パスを更新
+        },
+        create: {
           projectId,
-          studentId: fileData.studentId || null,
+          studentId: fileData.studentId,
           pageNumber: fileData.pageNumber || 1,
           originalImagePath: relativePath, // 既にWindows対応済み
         },
@@ -48,7 +74,13 @@ export async function uploadAnswerSheets(
         }
       })
 
-      uploadedSheets.push(answerSheet)
+      // 上書きフラグを追加
+      const resultSheet = {
+        ...answerSheet,
+        isOverwrite: !!existingRecord
+      }
+
+      uploadedSheets.push(resultSheet)
     }
 
     return { success: true, answerSheets: uploadedSheets }
