@@ -238,6 +238,11 @@ export function useScoringKeyboard({
             targetKey = DEAD_KEY_CODE_MAP[event.code]
           }
           
+          // 全てのキーに対してevent.codeからの変換を試す
+          if (event.code && DEAD_KEY_CODE_MAP[event.code]) {
+            targetKey = DEAD_KEY_CODE_MAP[event.code]
+          }
+          
           if ([
             shortcuts.ungraded,
             shortcuts.correct,
