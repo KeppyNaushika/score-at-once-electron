@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
+import type { UnifiedStudent } from "@/types/answer-sheet.types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -70,6 +71,21 @@ export function useDisabledState() {
     [disabledState],
   )
 
+  // 欠席者を自動的に無効化する関数
+  const initializeAbsentStudents = useCallback((students: UnifiedStudent[]) => {
+    setDisabledState((prev) => {
+      const newRows = new Set(prev.rows)
+      
+      students.forEach((student, index) => {
+        if (student.status === "absent") {
+          newRows.add(index)
+        }
+      })
+      
+      return { ...prev, rows: newRows }
+    })
+  }, [])
+
   return {
     disabledState,
     setDisabledState,
@@ -78,5 +94,6 @@ export function useDisabledState() {
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
+    initializeAbsentStudents,
   }
 }

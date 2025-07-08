@@ -8,6 +8,9 @@ export function PreviewModeToggle({
   onPreviewModeChange,
   hasNameRegion,
 }: PreviewModeToggleProps) {
+  // デバッグログ
+  console.log("PreviewModeToggle - previewMode:", previewMode, "hasNameRegion:", hasNameRegion)
+  
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-600">プレビュー:</span>
@@ -15,7 +18,10 @@ export function PreviewModeToggle({
         <Button
           variant={previewMode === "full" ? "default" : "ghost"}
           size="sm"
-          onClick={() => onPreviewModeChange("full")}
+          onClick={() => {
+            console.log("PreviewModeToggle - 全体ボタンクリック")
+            onPreviewModeChange("full")
+          }}
           className="rounded-r-none border-r"
         >
           全体
@@ -23,7 +29,10 @@ export function PreviewModeToggle({
         <Button
           variant={previewMode === "name-only" ? "default" : "ghost"}
           size="sm"
-          onClick={() => onPreviewModeChange("name-only")}
+          onClick={() => {
+            console.log("PreviewModeToggle - 氏名欄のみボタンクリック")
+            onPreviewModeChange("name-only")
+          }}
           className="rounded-l-none"
           disabled={!hasNameRegion}
         >
