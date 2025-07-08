@@ -184,15 +184,17 @@ export function useScoringNavigation({
         break
 
       case "down-right": // 下→右方向
+        // 列表示では1列あたりの表示件数（effectiveColumns）が実際の列の高さ（行数）となる
+        const columnsForDownRight = actualColumns // 1列あたりの表示件数
         switch (key) {
           case "a": // 左に移動（前の列、列境界を超えて移動可能）
-            newIndex = currentIndex - rows
+            newIndex = currentIndex - columnsForDownRight
             if (newIndex < 0) {
               newIndex = Math.max(0, currentIndex - 1)
             }
             break
           case "d": // 右に移動（次の列、列境界を超えて移動可能）
-            newIndex = currentIndex + rows
+            newIndex = currentIndex + columnsForDownRight
             if (newIndex >= totalAnswers) {
               newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }
@@ -207,15 +209,17 @@ export function useScoringNavigation({
         break
 
       case "down-left": // 下→左方向
+        // 列表示では1列あたりの表示件数（effectiveColumns）が実際の列の高さ（行数）となる
+        const columnsForDownLeft = actualColumns // 1列あたりの表示件数
         switch (key) {
           case "d": // 右に移動（下→左では前の列、境界を超えて移動可能）
-            newIndex = currentIndex - rows
+            newIndex = currentIndex - columnsForDownLeft
             if (newIndex < 0) {
               newIndex = Math.max(0, currentIndex - 1)
             }
             break
           case "a": // 左に移動（下→左では次の列、境界を超えて移動可能）
-            newIndex = currentIndex + rows
+            newIndex = currentIndex + columnsForDownLeft
             if (newIndex >= totalAnswers) {
               newIndex = Math.min(totalAnswers - 1, currentIndex + 1)
             }

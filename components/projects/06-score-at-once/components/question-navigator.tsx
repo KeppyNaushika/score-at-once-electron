@@ -134,7 +134,7 @@ export default function QuestionNavigator({
                   <div className="text-center">
                     <div>前の設問に移動</div>
                     <div className="text-xs text-gray-400 mt-1">
-                      キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">←</kbd>
+                      キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Shift+A</kbd>
                     </div>
                   </div>
                 </TooltipContent>
@@ -162,7 +162,7 @@ export default function QuestionNavigator({
                   <div className="text-center">
                     <div>次の設問に移動</div>
                     <div className="text-xs text-gray-400 mt-1">
-                      キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">→</kbd>
+                      キー: <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">Shift+D</kbd>
                     </div>
                   </div>
                 </TooltipContent>
