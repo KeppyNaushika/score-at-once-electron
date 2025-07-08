@@ -28,11 +28,13 @@ const CroppedAnswerImage = ({
   questionRegion,
   alt,
   className = "",
+  isColumnLayout = false,
 }: {
   imageUrl: string
-  questionRegion?: QuestionRegion
+  questionRegion: QuestionRegion  // not null（呼び出し元で保証）
   alt: string
   className?: string
+  isColumnLayout?: boolean
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -46,52 +48,42 @@ const CroppedAnswerImage = ({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // キャンバスサイズを設定
+    // 採点領域のアスペクト比を計算
+    const sourceWidth = questionRegion.width * imageElement.naturalWidth
+    const sourceHeight = questionRegion.height * imageElement.naturalHeight
+    const aspectRatio = sourceWidth / sourceHeight
+    
+    // コンテナサイズを取得
     const containerWidth = canvas.offsetWidth
     const containerHeight = canvas.offsetHeight
-    canvas.width = containerWidth
-    canvas.height = containerHeight
 
-    if (questionRegion) {
-      // 採点領域をクロップして描画
-      const sourceX = questionRegion.x * imageElement.naturalWidth
-      const sourceY = questionRegion.y * imageElement.naturalHeight
-      const sourceWidth = questionRegion.width * imageElement.naturalWidth
-      const sourceHeight = questionRegion.height * imageElement.naturalHeight
-
-      // アスペクト比を維持してキャンバスにフィット
-      const aspectRatio = sourceWidth / sourceHeight
-      const canvasAspectRatio = containerWidth / containerHeight
-
-      let drawWidth = containerWidth
-      let drawHeight = containerHeight
-      let drawX = 0
-      let drawY = 0
-
-      if (aspectRatio > canvasAspectRatio) {
-        drawHeight = containerWidth / aspectRatio
-        drawY = (containerHeight - drawHeight) / 2
-      } else {
-        drawWidth = containerHeight * aspectRatio
-        drawX = (containerWidth - drawWidth) / 2
-      }
-
-      ctx.drawImage(
-        imageElement,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        drawX,
-        drawY,
-        drawWidth,
-        drawHeight,
-      )
+    if (isColumnLayout) {
+      // 列表示: 高さベースで幅を計算
+      canvas.height = containerHeight
+      canvas.width = containerHeight * aspectRatio
     } else {
-      // 全体画像を表示
-      ctx.drawImage(imageElement, 0, 0, containerWidth, containerHeight)
+      // 行表示: 幅ベースで高さを計算
+      canvas.width = containerWidth
+      canvas.height = containerWidth / aspectRatio
     }
-  }, [imageLoaded, questionRegion])
+
+    // 採点領域をクロップして描画
+    const sourceX = questionRegion.x * imageElement.naturalWidth
+    const sourceY = questionRegion.y * imageElement.naturalHeight
+
+    // 採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
+    ctx.drawImage(
+      imageElement,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    )
+  }, [imageLoaded, questionRegion, isColumnLayout])
 
   const handleImageLoad = () => {
     setImageLoaded(true)
@@ -109,7 +101,7 @@ const CroppedAnswerImage = ({
       />
       <canvas
         ref={canvasRef}
-        className="h-auto w-full"
+        className="h-full w-full"
         style={{ display: imageLoaded ? "block" : "none" }}
       />
       {!imageLoaded && (
@@ -223,7 +215,7 @@ interface AnswerItem {
   maxScore: number
   status: ScoringStatus | "master"
   isSelected?: boolean
-  questionRegion?: QuestionRegion
+  questionRegion: QuestionRegion  // not null（データフローで保証される）
   isMaster?: boolean
 }
 
@@ -235,7 +227,6 @@ interface AnswerGridViewProps {
   onAnswerSelect: (id: string, isSelected: boolean) => void
   onAnswerScore: (id: string | string[], status: ScoringStatus) => void
   selectedAnswers: Set<string>
-  currentAnswerId?: string // 現在採点中の答案ID
   className?: string
   onEffectiveColumnsChange?: (columns: number) => void // 実際の列数変更を親に通知
   itemsPerRow?: number[] // 外部からの1行あたり表示件数
@@ -251,7 +242,6 @@ export default function AnswerGridView({
   onAnswerSelect,
   onAnswerScore,
   selectedAnswers,
-  currentAnswerId,
   className = "",
   onEffectiveColumnsChange,
   itemsPerRow: externalItemsPerRow,
@@ -602,11 +592,11 @@ export default function AnswerGridView({
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)` // 固定幅
+              ? "auto" // 列幅は内容に応じて自動調整
               : `repeat(${effectiveGridSize.columns}, 1fr)`,
           gridTemplateRows:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${effectiveGridSize.rows}, 1fr)`
+              ? `repeat(${effectiveGridSize.rows}, 1fr)` // 高さのみ指定
               : "none",
           gridAutoRows: "auto",
           gridAutoFlow:
@@ -637,48 +627,31 @@ export default function AnswerGridView({
             ] || SCORE_STATUS_CONFIG.ungraded
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
-          const isCurrentAnswer = currentAnswerId === answer.id
           const isMaster = answer.isMaster
 
           return (
             <div
               key={answer.id}
               data-answer-id={answer.id}
-              className={`relative flex-shrink-0 p-2 transition-all duration-150 ${
-                layoutDirection === "down-right" ||
-                layoutDirection === "down-left"
-                  ? "flex h-full flex-col"
-                  : ""
-              } ${isMaster ? "cursor-default border-2 border-black bg-white" : `cursor-pointer hover:shadow-md ${config.bgColor || "bg-white"}`} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
+              className={`relative flex flex-shrink-0 flex-col gap-1 p-2 ${isMaster ? "border-2 border-black bg-white" : `${config.bgColor || "bg-white"}`} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
-              <div
-                className={`mb-1 overflow-hidden ${
+              <CroppedAnswerImage
+                imageUrl={answer.imageUrl}
+                questionRegion={answer.questionRegion}
+                alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
+                className={
                   layoutDirection === "down-right" ||
                   layoutDirection === "down-left"
-                    ? "flex flex-1 items-center justify-center"
-                    : ""
-                }`}
-                style={
-                  layoutDirection === "down-right" ||
-                  layoutDirection === "down-left"
-                    ? { minHeight: "0", height: "100%" } // flex-1が正しく動作するよう強制
-                    : {}
+                    ? "h-full w-auto flex-1" // 列表示: 高さ目一杯、幅は縦横比で自動、余白占有
+                    : "h-auto w-full" // 行表示: 幅目一杯、高さは縦横比で自動
                 }
-              >
-                <CroppedAnswerImage
-                  imageUrl={answer.imageUrl}
-                  questionRegion={answer.questionRegion}
-                  alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
-                  className={
-                    layoutDirection === "down-right" ||
-                    layoutDirection === "down-left"
-                      ? "h-full w-full object-contain" // 下→右: 幅高さ両方フル、比率保持
-                      : "h-auto w-full" // 右→下: 幅ベース
-                  }
-                />
-              </div>
+                isColumnLayout={
+                  layoutDirection === "down-right" ||
+                  layoutDirection === "down-left"
+                }
+              />
 
               {/* 学生情報と採点状況 */}
               <div className="flex items-center justify-between">

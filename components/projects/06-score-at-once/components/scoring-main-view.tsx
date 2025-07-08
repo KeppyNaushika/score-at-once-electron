@@ -1,9 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { toast } from "sonner"
-import Head from "next/head"
+import LoadingSpinner from "@/components/common/LoadingSpinner"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,36 +11,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 import {
   ChevronLeft,
-  ChevronRight,
-  FileText,
   Keyboard,
-  Settings,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react"
-import LoadingSpinner from "@/components/common/LoadingSpinner"
+import Head from "next/head"
+import { useParams, useRouter } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from "react"
 import AnswerDisplayViewer from "../AnswerDisplayViewer"
 import AnswerGridView from "../AnswerGridView"
 import GradingModeToggle, { GradingMode } from "../GradingModeToggle"
-import ProjectProgressCard from "../ProjectProgressCard"
-import ScoreComparisonModal from "../ScoreComparisonModal"
-import ScoringToolbar from "./scoring-toolbar"
-import QuestionNavigator from "./question-navigator"
-import NavigationControls from "./navigation-controls"
-import PartialScoreModal from "./PartialScoreModal"
-import { usePageHelp } from "@/components/help/usePageHelp"
-import { LAYOUT_REAGION_AREA_TYPES } from "@/types/common.types"
 import {
-  useScoringKeyboard,
+  getModifierKeyLabel,
+  usePartialScore,
   useScoringData,
   useScoringFilter,
+  useScoringKeyboard,
   useScoringNavigation,
-  usePartialScore,
-  getModifierKeyLabel,
-  DEFAULT_SHORTCUTS,
 } from "../hooks"
+import ProjectProgressCard from "../ProjectProgressCard"
+import ScoreComparisonModal from "../ScoreComparisonModal"
+import NavigationControls from "./navigation-controls"
+import PartialScoreModal from "./PartialScoreModal"
+import QuestionNavigator from "./question-navigator"
+import ScoringToolbar from "./scoring-toolbar"
 
 export default function ScoringMainView() {
   const params = useParams()
@@ -73,7 +68,7 @@ export default function ScoringMainView() {
   const [showScoreComparison, setShowScoreComparison] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [showSidePanel, setShowSidePanel] = useState(true)
-  const [modifierKeyLabel, setModifierKeyLabel] = useState('Alt')
+  const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
 
   // Refs
   const imageRef = useRef<HTMLImageElement>(null)
@@ -179,9 +174,12 @@ export default function ScoringMainView() {
 
   // 生徒名表示設定の変更をlocalStorageに保存
   const handleToggleStudentNames = useCallback(() => {
-    setShowStudentNames(prev => {
+    setShowStudentNames((prev) => {
       const newValue = !prev
-      localStorage.setItem('answerGridView-showStudentNames', JSON.stringify(newValue))
+      localStorage.setItem(
+        "answerGridView-showStudentNames",
+        JSON.stringify(newValue),
+      )
       return newValue
     })
   }, [])
@@ -236,13 +234,17 @@ export default function ScoringMainView() {
         }
 
         // 答案データを取得
-        const answersResult = await window.electronAPI.getAnswerSheetsByProjectId(projectId)
+        const answersResult =
+          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
         if (!answersResult.success) {
-          throw new Error(answersResult.error || "Failed to fetch answer sheets")
+          throw new Error(
+            answersResult.error || "Failed to fetch answer sheets",
+          )
         }
 
         // レイアウト領域（設問）データを取得
-        const regionsResult = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        const regionsResult =
+          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
 
         // 設問領域のみをフィルタリング
         const questionRegions = (
@@ -270,16 +272,18 @@ export default function ScoringMainView() {
         const existingScores = await loadExistingScoringData(projectId)
 
         // Transform the data to match AnswerSheet interface
-        const transformedAnswerSheets = (answersResult.answerSheets || []).map((sheet: any) => ({
-          id: sheet.id,
-          studentId: sheet.studentId,
-          projectId: sheet.projectId,
-          imagePath: sheet.originalImagePath || "",
-          pageNumber: sheet.pageNumber || 1,
-          status: sheet.status || "uploaded",
-          student: sheet.student,
-        }))
-        
+        const transformedAnswerSheets = (answersResult.answerSheets || []).map(
+          (sheet: any) => ({
+            id: sheet.id,
+            studentId: sheet.studentId,
+            projectId: sheet.projectId,
+            imagePath: sheet.originalImagePath || "",
+            pageNumber: sheet.pageNumber || 1,
+            status: sheet.status || "uploaded",
+            student: sheet.student,
+          }),
+        )
+
         setAnswerSheets(transformedAnswerSheets)
         setQuestionRegions(questionRegions)
         setScoringData(existingScores)
@@ -296,53 +300,61 @@ export default function ScoringMainView() {
   // localStorageから初期値を読み込み
   useEffect(() => {
     // 1行あたりの表示件数
-    const storedItemsPerRow = localStorage.getItem('answerGridView-itemsPerRow')
+    const storedItemsPerRow = localStorage.getItem("answerGridView-itemsPerRow")
     let initialValue = [5] // デフォルト値
     if (storedItemsPerRow) {
       try {
         const parsed = JSON.parse(storedItemsPerRow)
-        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+        if (
+          Array.isArray(parsed) &&
+          parsed.length === 1 &&
+          typeof parsed[0] === "number" &&
+          parsed[0] >= 1 &&
+          parsed[0] <= 10
+        ) {
           initialValue = parsed
           setItemsPerRow(parsed)
         }
       } catch (error) {
-        console.warn('Failed to parse stored itemsPerRow:', error)
+        console.warn("Failed to parse stored itemsPerRow:", error)
       }
     }
     // 実際の列数を更新
     setEffectiveColumns(initialValue[0])
 
     // 自動スクロール設定
-    const storedAutoScroll = localStorage.getItem('answerGridView-autoScroll')
+    const storedAutoScroll = localStorage.getItem("answerGridView-autoScroll")
     if (storedAutoScroll !== null) {
       try {
         const parsed = JSON.parse(storedAutoScroll)
-        if (typeof parsed === 'boolean') {
+        if (typeof parsed === "boolean") {
           setAutoScroll(parsed)
         }
       } catch (error) {
-        console.warn('Failed to parse stored autoScroll:', error)
+        console.warn("Failed to parse stored autoScroll:", error)
       }
     }
 
     // 生徒名表示設定
-    const storedShowNames = localStorage.getItem('answerGridView-showStudentNames')
+    const storedShowNames = localStorage.getItem(
+      "answerGridView-showStudentNames",
+    )
     if (storedShowNames !== null) {
       try {
         const parsed = JSON.parse(storedShowNames)
-        if (typeof parsed === 'boolean') {
+        if (typeof parsed === "boolean") {
           setShowStudentNames(parsed)
         }
       } catch (error) {
-        console.warn('Failed to parse stored showStudentNames:', error)
+        console.warn("Failed to parse stored showStudentNames:", error)
       }
     }
   }, [])
-  
+
   // itemsPerRowの変更をlocalStorageに保存
   const handleItemsPerRowChange = (value: number[]) => {
     setItemsPerRow(value)
-    localStorage.setItem('answerGridView-itemsPerRow', JSON.stringify(value))
+    localStorage.setItem("answerGridView-itemsPerRow", JSON.stringify(value))
     // 実際の列数を更新
     setEffectiveColumns(value[0])
   }
@@ -350,22 +362,22 @@ export default function ScoringMainView() {
   // 自動スクロール設定の変更をlocalStorageに保存
   const handleAutoScrollChange = (enabled: boolean) => {
     setAutoScroll(enabled)
-    localStorage.setItem('answerGridView-autoScroll', JSON.stringify(enabled))
+    localStorage.setItem("answerGridView-autoScroll", JSON.stringify(enabled))
   }
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
     // 模範解答は選択対象外
-    if (answerId.startsWith('master-')) {
+    if (answerId.startsWith("master-")) {
       return
     }
-    
+
     // 答案が実際に存在するかチェック
-    const answerExists = answerSheets.some(sheet => sheet.id === answerId)
+    const answerExists = answerSheets.some((sheet) => sheet.id === answerId)
     if (!answerExists) {
       return
     }
-    
+
     setSelectedAnswers((prev) => {
       const newSet = new Set(prev)
       if (isSelected) {
@@ -383,7 +395,12 @@ export default function ScoringMainView() {
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => {
-    await handleBatchScore(statusOrAnswerIds, statusOrPartialScore, partialScore, selectedAnswers)
+    await handleBatchScore(
+      statusOrAnswerIds,
+      statusOrPartialScore,
+      partialScore,
+      selectedAnswers,
+    )
 
     // 採点後の自動次答案選択（一覧採点モード用）
     if (gradingMode === "grid" && selectedAnswers.size === 1) {
@@ -410,7 +427,7 @@ export default function ScoringMainView() {
   if (loading) {
     return (
       <div className="flex flex-1">
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-1 items-center justify-center">
           <LoadingSpinner text="採点データを読み込み中..." />
         </div>
       </div>
@@ -420,15 +437,24 @@ export default function ScoringMainView() {
   if (!project || answerSheets.length === 0 || questionRegions.length === 0) {
     return (
       <div className="flex flex-1">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <h2 className="text-xl font-semibold text-gray-700">採点を開始できません</h2>
-            <div className="text-sm text-gray-500 space-y-1">
+        <div className="flex flex-1 items-center justify-center">
+          <div className="space-y-4 text-center">
+            <h2 className="text-xl font-semibold text-gray-700">
+              採点を開始できません
+            </h2>
+            <div className="space-y-1 text-sm text-gray-500">
               {!project && <p>• プロジェクト情報が見つかりません</p>}
-              {answerSheets.length === 0 && <p>• 答案がアップロードされていません</p>}
-              {questionRegions.length === 0 && <p>• 採点領域が設定されていません</p>}
+              {answerSheets.length === 0 && (
+                <p>• 答案がアップロードされていません</p>
+              )}
+              {questionRegions.length === 0 && (
+                <p>• 採点領域が設定されていません</p>
+              )}
             </div>
-            <Button onClick={() => router.push(`/projects/${projectId}`)} variant="outline">
+            <Button
+              onClick={() => router.push(`/projects/${projectId}`)}
+              variant="outline"
+            >
               プロジェクト詳細に戻る
             </Button>
           </div>
@@ -443,242 +469,288 @@ export default function ScoringMainView() {
         <title>{`採点 - ${project.examName}`}</title>
       </Head>
 
-      <div className="h-full bg-gray-50 grid" style={{
-        gridTemplateAreas: '"header header" "content sidebar"',
-        gridTemplateColumns: '1fr 384px',
-        gridTemplateRows: 'auto 1fr'
-      }}>
+      <div
+        className="grid h-full bg-gray-50"
+        style={{
+          gridTemplateAreas: '"header header" "content sidebar"',
+          gridTemplateColumns: "1fr 384px",
+          gridTemplateRows: "auto 1fr",
+        }}
+      >
         {/* ヘッダー */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4" style={{ gridArea: 'header' }}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push(`/projects/${projectId}`)}
-                  className="text-gray-600"
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  プロジェクト詳細
-                </Button>
-                <div className="text-lg font-semibold">{project.examName}</div>
-                <div className="text-sm text-gray-500">
-                  {currentQuestion ? (
-                    <>
-                      {currentQuestion.questionNumber} ({currentQuestion.points}点)
-                    </>
-                  ) : (
-                    "設問を選択してください"
-                  )}
-                </div>
+        <div
+          className="border-b border-gray-200 bg-white px-6 py-4"
+          style={{ gridArea: "header" }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push(`/projects/${projectId}`)}
+                className="text-gray-600"
+              >
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                プロジェクト詳細
+              </Button>
+              <div className="text-lg font-semibold">{project.examName}</div>
+              <div className="text-sm text-gray-500">
+                {currentQuestion ? (
+                  <>
+                    {currentQuestion.questionNumber} ({currentQuestion.points}
+                    点)
+                  </>
+                ) : (
+                  "設問を選択してください"
+                )}
               </div>
+            </div>
 
-              <div className="flex items-center space-x-2">
-                {/* 採点モード切り替え */}
-                <GradingModeToggle
-                  mode={gradingMode}
-                  onModeChange={setGradingMode}
-                  className="mr-4"
-                />
+            <div className="flex items-center space-x-2">
+              {/* 採点モード切り替え */}
+              <GradingModeToggle
+                mode={gradingMode}
+                onModeChange={setGradingMode}
+                className="mr-4"
+              />
 
-                {/* キーボードヘルプ */}
-                <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                      <Keyboard className="h-4 w-4 mr-2" />
-                      キーボード
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>キーボードショートカット</DialogTitle>
-                      <DialogDescription>
-                        効率的な採点のためのキーボードショートカット一覧
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-medium mb-3">採点操作</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>未採点</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">Q</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>正答</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">E</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>部分点</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">F</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>保留</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">J</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>誤答</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">O</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>無答</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">P</code>
-                          </div>
+              {/* キーボードヘルプ */}
+              <Dialog
+                open={showKeyboardHelp}
+                onOpenChange={setShowKeyboardHelp}
+              >
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Keyboard className="mr-2 h-4 w-4" />
+                    キーボード
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>キーボードショートカット</DialogTitle>
+                    <DialogDescription>
+                      効率的な採点のためのキーボードショートカット一覧
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="mb-3 font-medium">採点操作</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>未採点</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            Q
+                          </code>
                         </div>
-                      </div>
-                      <div>
-                        <h4 className="font-medium mb-3">ナビゲーション</h4>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>前の設問</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">Shift+A</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>次の設問</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">Shift+D</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>WASD移動</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">WASD</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>フィルタ更新</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">R</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>フィルタ切替</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">{modifierKeyLabel}+採点キー</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>部分点入力</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">0-9,.</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>部分点リセット</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">Backspace</code>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>フィルタ切替(数字)</span>
-                            <code className="bg-gray-100 px-2 py-1 rounded">Ctrl+1-6</code>
-                          </div>
+                        <div className="flex justify-between">
+                          <span>正答</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            E
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>部分点</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            F
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>保留</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            J
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>誤答</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            O
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>無答</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            P
+                          </code>
                         </div>
                       </div>
                     </div>
-                  </DialogContent>
-                </Dialog>
+                    <div>
+                      <h4 className="mb-3 font-medium">ナビゲーション</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>前の設問</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            Shift+A
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>次の設問</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            Shift+D
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>WASD移動</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            WASD
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>フィルタ更新</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            R
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>フィルタ切替</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            {modifierKeyLabel}+採点キー
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>部分点入力</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            0-9,.
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>部分点リセット</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            Backspace
+                          </code>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>フィルタ切替(数字)</span>
+                          <code className="rounded bg-gray-100 px-2 py-1">
+                            Ctrl+1-6
+                          </code>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
 
-                {/* サイドパネル表示切り替え */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSidePanel(!showSidePanel)}
-                >
-                  {showSidePanel ? (
-                    <PanelRightClose className="h-4 w-4" />
-                  ) : (
-                    <PanelRightOpen className="h-4 w-4" />
-                  )}
-                </Button>
+              {/* サイドパネル表示切り替え */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSidePanel(!showSidePanel)}
+              >
+                {showSidePanel ? (
+                  <PanelRightClose className="h-4 w-4" />
+                ) : (
+                  <PanelRightOpen className="h-4 w-4" />
+                )}
+              </Button>
 
-                {helpButton}
-              </div>
+              {helpButton}
+            </div>
+          </div>
+
+          {/* 簡潔な状態表示 */}
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              設問 {currentQuestionIndex + 1}/{questionRegions.length} | 表示{" "}
+              {visibleAnswers.size}/{answerSheets.length}
+              {selectedAnswers.size > 0 && ` | 選択 ${selectedAnswers.size}`}
             </div>
 
-            {/* 簡潔な状態表示 */}
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-gray-600">
-                設問 {currentQuestionIndex + 1}/{questionRegions.length} | 
-                表示 {visibleAnswers.size}/{answerSheets.length}
-                {selectedAnswers.size > 0 && ` | 選択 ${selectedAnswers.size}`}
-              </div>
-
-              <div className="text-xs text-gray-500">
-                詳細操作 →
-              </div>
-            </div>
+            <div className="text-xs text-gray-500">詳細操作 →</div>
+          </div>
         </div>
 
         {/* 採点エリア */}
-        <div className="p-6 min-h-0 min-w-0" style={{ 
-          gridArea: 'content',
-          overflowX: layoutDirection === "down-right" || layoutDirection === "down-left" ? 'auto' : 'hidden',
-          overflowY: layoutDirection === "right-down" || layoutDirection === "left-down" ? 'auto' : 'hidden'
-        }}>
-              {gradingMode === "individual" ? (
-                <AnswerDisplayViewer
-                  answerSheet={currentAnswerSheet}
-                  currentQuestion={currentQuestion}
-                  viewMode={viewMode}
-                  zoom={imageZoom}
-                  position={imagePosition}
-                  onZoomChange={setImageZoom}
-                  onPositionChange={setImagePosition}
-                  onViewModeChange={setViewMode}
-                />
-              ) : (
-                <AnswerGridView
-                  answers={getGridAnswerData()}
-                  currentQuestionIndex={currentQuestionIndex}
-                  layoutDirection={layoutDirection}
-                  gridSize={gridSize}
-                  onAnswerSelect={handleAnswerSelect}
-                  onAnswerScore={handleBatchScoreWithProgress}
-                  selectedAnswers={selectedAnswers}
-                  currentAnswerId={currentAnswerSheet?.id}
-                  onEffectiveColumnsChange={setEffectiveColumns}
-                  itemsPerRow={itemsPerRow}
-                  autoScroll={autoScroll}
-                  showStudentNames={showStudentNames}
-                />
-              )}
+        <div
+          className="min-h-0 min-w-0 p-6"
+          style={{
+            gridArea: "content",
+            overflowX:
+              layoutDirection === "down-right" ||
+              layoutDirection === "down-left"
+                ? "auto"
+                : "hidden",
+            overflowY:
+              layoutDirection === "right-down" ||
+              layoutDirection === "left-down"
+                ? "auto"
+                : "hidden",
+          }}
+        >
+          {gradingMode === "individual" ? (
+            <AnswerDisplayViewer
+              answerSheet={currentAnswerSheet}
+              currentQuestion={currentQuestion}
+              viewMode={viewMode}
+              zoom={imageZoom}
+              position={imagePosition}
+              onZoomChange={setImageZoom}
+              onPositionChange={setImagePosition}
+              onViewModeChange={setViewMode}
+            />
+          ) : (
+            <AnswerGridView
+              answers={getGridAnswerData()}
+              currentQuestionIndex={currentQuestionIndex}
+              layoutDirection={layoutDirection}
+              gridSize={gridSize}
+              onAnswerSelect={handleAnswerSelect}
+              onAnswerScore={handleBatchScoreWithProgress}
+              selectedAnswers={selectedAnswers}
+              onEffectiveColumnsChange={setEffectiveColumns}
+              itemsPerRow={itemsPerRow}
+              autoScroll={autoScroll}
+              showStudentNames={showStudentNames}
+            />
+          )}
         </div>
 
         {/* 右側サイドパネル */}
         {showSidePanel && (
-          <div className="bg-gray-50 border-l border-gray-200 p-4 overflow-y-auto" style={{ gridArea: 'sidebar' }}>
-                {/* 設問ナビゲーター */}
-                <QuestionNavigator
-                  questionRegions={questionRegions}
-                  currentQuestionIndex={currentQuestionIndex}
-                  onQuestionChange={setCurrentQuestionIndex}
-                  onPrevQuestion={handlePrevQuestion}
-                  onNextQuestion={handleNextQuestion}
-                />
+          <div
+            className="overflow-y-auto border-l border-gray-200 bg-gray-50 p-4"
+            style={{ gridArea: "sidebar" }}
+          >
+            {/* 設問ナビゲーター */}
+            <QuestionNavigator
+              questionRegions={questionRegions}
+              currentQuestionIndex={currentQuestionIndex}
+              onQuestionChange={setCurrentQuestionIndex}
+              onPrevQuestion={handlePrevQuestion}
+              onNextQuestion={handleNextQuestion}
+            />
 
-                {/* 採点ツールバー */}
-                <ScoringToolbar
-                  selectedAnswersCount={selectedAnswers.size}
-                  currentQuestion={currentQuestion}
-                  filterSettings={filterSettings}
-                  onScore={handleBatchScoreWithProgress}
-                  onToggleFilter={handleToggleFilter}
-                  onRefreshFilter={handleRefreshFilter}
-                  partialScoreInput={partialScoreInput}
-                  modifierKeyLabel={modifierKeyLabel}
-                />
+            {/* 採点ツールバー */}
+            <ScoringToolbar
+              selectedAnswersCount={selectedAnswers.size}
+              currentQuestion={currentQuestion}
+              filterSettings={filterSettings}
+              onScore={handleBatchScoreWithProgress}
+              onToggleFilter={handleToggleFilter}
+              onRefreshFilter={handleRefreshFilter}
+              partialScoreInput={partialScoreInput}
+              modifierKeyLabel={modifierKeyLabel}
+            />
 
-                {/* ナビゲーション制御 */}
-                <NavigationControls
-                  layoutDirection={layoutDirection}
-                  selectedAnswersCount={selectedAnswers.size}
-                  visibleAnswersCount={visibleAnswers.size}
-                  totalAnswersCount={answerSheets.length}
-                  onLayoutDirectionChange={setLayoutDirection}
-                  onGridNavigation={handleGridNavigation}
-                  onRefreshView={handleRefreshFilter}
-                  itemsPerRow={itemsPerRow}
-                  onItemsPerRowChange={handleItemsPerRowChange}
-                  autoScroll={autoScroll}
-                  onAutoScrollChange={handleAutoScrollChange}
-                />
+            {/* ナビゲーション制御 */}
+            <NavigationControls
+              layoutDirection={layoutDirection}
+              selectedAnswersCount={selectedAnswers.size}
+              visibleAnswersCount={visibleAnswers.size}
+              totalAnswersCount={answerSheets.length}
+              onLayoutDirectionChange={setLayoutDirection}
+              onGridNavigation={handleGridNavigation}
+              onRefreshView={handleRefreshFilter}
+              itemsPerRow={itemsPerRow}
+              onItemsPerRowChange={handleItemsPerRowChange}
+              autoScroll={autoScroll}
+              onAutoScrollChange={handleAutoScrollChange}
+            />
 
-                {/* プロジェクト進捗 */}
-                <ProjectProgressCard
-                  projectId={projectId}
-                />
+            {/* プロジェクト進捗 */}
+            <ProjectProgressCard projectId={projectId} />
           </div>
         )}
-
       </div>
 
       {/* モーダル類 */}
@@ -701,7 +773,11 @@ export default function ScoringMainView() {
           layoutRegionId={currentQuestion?.id || ""}
           questionNumber={currentQuestion?.questionNumber || ""}
           maxScore={currentQuestion?.points || 0}
-          studentName={currentAnswerSheet ? `${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}` : ""}
+          studentName={
+            currentAnswerSheet
+              ? `${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`
+              : ""
+          }
         />
       </div>
     </>
