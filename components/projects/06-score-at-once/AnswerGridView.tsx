@@ -503,7 +503,7 @@ export default function AnswerGridView({
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "auto" // 列幅は内容に応じて自動調整
+              ? `repeat(${effectiveGridSize.columns}, minmax(200px, 1fr))` // 列幅に最小値を設定
               : `repeat(${effectiveGridSize.columns}, 1fr)`,
           gridTemplateRows:
             layoutDirection === "down-right" || layoutDirection === "down-left"
@@ -544,7 +544,7 @@ export default function AnswerGridView({
             <div
               key={answer.id}
               data-answer-id={answer.id}
-              className={`relative flex flex-shrink-0 flex-col gap-1 p-2 ${isMaster ? "border-2 border-black bg-white" : `${config.bgColor || "bg-white"}`} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
+              className={`flex flex-shrink-0 flex-col gap-1 p-2 ${isMaster ? "border-2 border-black bg-white" : `${config.bgColor || "bg-white"}`} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
@@ -562,6 +562,7 @@ export default function AnswerGridView({
                   layoutDirection === "down-right" ||
                   layoutDirection === "down-left"
                 }
+                itemsPerRow={itemsPerRow[0]}
               />
 
               {/* 学生情報と採点状況 */}
