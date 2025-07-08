@@ -1,6 +1,6 @@
 "use client"
 
-// import { PasswordDialog } from "@/components/ui/password-dialog" // TODO: 修正が必要
+import { PasswordDialog } from "@/components/ui/password-dialog"
 import { FileUploadZone, AnswerSheetGridManager } from "@/components/projects/05-answer-sheets/answer-sheet-management/components"
 import { useAnswerSheetUpload } from "@/components/projects/05-answer-sheets/answer-sheet-management/hooks"
 import type { AnswerSheetUploadProps } from "@/components/projects/05-answer-sheets/answer-sheet-management/types"
@@ -96,20 +96,13 @@ export function AnswerSheetUpload({
         />
       </div>
 
-      {/* TODO: PDFパスワードダイアログの実装 */}
-      {passwordDialog.isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg">
-            <h3 className="text-lg font-semibold mb-4">
-              PDFパスワードが必要です: {passwordDialog.filename}
-            </h3>
-            {/* 簡易実装 - 後で本格的なダイアログに置き換え */}
-            <button onClick={passwordDialog.onCancel} className="bg-gray-500 text-white px-4 py-2 rounded">
-              キャンセル
-            </button>
-          </div>
-        </div>
-      )}
+      {/* PDFパスワードダイアログ */}
+      <PasswordDialog
+        isOpen={passwordDialog.isOpen}
+        onClose={passwordDialog.onCancel}
+        onSubmit={passwordDialog.onSubmit}
+        fileName={passwordDialog.filename}
+      />
     </div>
   )
 }

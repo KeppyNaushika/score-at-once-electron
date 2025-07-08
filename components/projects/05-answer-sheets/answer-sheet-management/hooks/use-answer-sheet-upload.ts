@@ -35,49 +35,49 @@ export function useAnswerSheetUpload(
     onCancel: () => {},
   })
 
-  // Intersection Observer for lazy loading
+  // Intersection Observer for lazy loading (無効化)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const [imageLoadStates, setImageLoadStates] = useState<
     Record<string, "pending" | "loading" | "loaded" | "error">
   >({})
 
-  // Intersection Observer setup
+  // Intersection Observer setup (無効化 - Blob URLではeager読み込みが適切)
   useEffect(() => {
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const fileId = entry.target.getAttribute("data-file-id")
-          if (fileId && entry.isIntersecting) {
-            setImageLoadStates((prev) => ({
-              ...prev,
-              [fileId]: "loading",
-            }))
+    // observerRef.current = new IntersectionObserver(
+    //   (entries) => {
+    //     entries.forEach((entry) => {
+    //       const fileId = entry.target.getAttribute("data-file-id")
+    //       if (fileId && entry.isIntersecting) {
+    //         setImageLoadStates((prev) => ({
+    //           ...prev,
+    //           [fileId]: "loading",
+    //         }))
 
-            const img = entry.target.querySelector("img")
-            if (img) {
-              img.onload = () => {
-                setImageLoadStates((prev) => ({
-                  ...prev,
-                  [fileId]: "loaded",
-                }))
-              }
-              img.onerror = () => {
-                setImageLoadStates((prev) => ({
-                  ...prev,
-                  [fileId]: "error",
-                }))
-              }
-            }
+    //         const img = entry.target.querySelector("img")
+    //         if (img) {
+    //           img.onload = () => {
+    //             setImageLoadStates((prev) => ({
+    //               ...prev,
+    //               [fileId]: "loaded",
+    //             }))
+    //           }
+    //           img.onerror = () => {
+    //             setImageLoadStates((prev) => ({
+    //               ...prev,
+    //               [fileId]: "error",
+    //             }))
+    //           }
+    //         }
 
-            observerRef.current?.unobserve(entry.target)
-          }
-        })
-      },
-      {
-        rootMargin: "50px",
-        threshold: 0.1,
-      }
-    )
+    //         observerRef.current?.unobserve(entry.target)
+    //       }
+    //     })
+    //   },
+    //   {
+    //     rootMargin: "50px",
+    //     threshold: 0.1,
+    //   }
+    // )
 
     return () => {
       observerRef.current?.disconnect()
@@ -93,24 +93,77 @@ export function useAnswerSheetUpload(
       for (const file of rawFiles) {
         try {
           if (file.type === "application/pdf") {
-            // PDF処理
+            // PDF処理 - 画像変換を実行
             try {
-              // PDF処理は一旦簡素化
-              const buffer = await file.arrayBuffer()
-              results.push({
-                id: crypto.randomUUID(),
-                name: file.name,
-                originalFileName: file.name,
-                type: file.type,
-                size: file.size,
-                buffer,
-                preview: URL.createObjectURL(file),
-                pageNumber: 1,
-                isSelected: false,
-              })
+              const images = await convertPdfToImages(file)
+              
+              for (let i = 0; i < images.length; i++) {
+                const image = images[i]
+                const blob = new Blob([image.buffer], { type: image.type })
+                const preview = URL.createObjectURL(blob)
+                
+                results.push({
+                  id: crypto.randomUUID(),
+                  name: image.name,
+                  originalFileName: file.name,
+                  type: image.type,
+                  size: image.buffer.byteLength,
+                  buffer: image.buffer,
+                  preview,
+                  pageNumber: i + 1,
+                  isSelected: false,
+                })
+              }
             } catch (pdfError: any) {
               console.error(`PDF conversion failed for ${file.name}:`, pdfError)
-              // パスワードエラー等は一旦スキップ
+              
+              // パスワードエラーの場合はパスワードダイアログを表示
+              if (pdfError.message === 'password-required') {
+                // パスワード入力を要求
+                const password = await new Promise<string | null>((resolve) => {
+                  setPasswordDialog({
+                    isOpen: true,
+                    filename: file.name,
+                    onSubmit: (pwd) => {
+                      setPasswordDialog(prev => ({ ...prev, isOpen: false }))
+                      resolve(pwd)
+                    },
+                    onCancel: () => {
+                      setPasswordDialog(prev => ({ ...prev, isOpen: false }))
+                      resolve(null)
+                    }
+                  })
+                })
+                
+                if (password) {
+                  try {
+                    const images = await convertPdfToImages(file, password)
+                    
+                    for (let i = 0; i < images.length; i++) {
+                      const image = images[i]
+                      const blob = new Blob([image.buffer], { type: image.type })
+                      const preview = URL.createObjectURL(blob)
+                      
+                      results.push({
+                        id: crypto.randomUUID(),
+                        name: image.name,
+                        originalFileName: file.name,
+                        type: image.type,
+                        size: image.buffer.byteLength,
+                        buffer: image.buffer,
+                        preview,
+                        pageNumber: i + 1,
+                        isSelected: false,
+                      })
+                    }
+                  } catch (passwordError: any) {
+                    console.error(`PDF conversion with password failed for ${file.name}:`, passwordError)
+                    toast.error(`${file.name}: パスワードが正しくないか、変換に失敗しました`)
+                  }
+                }
+              } else {
+                toast.error(`${file.name}: PDF変換に失敗しました`)
+              }
             }
           } else {
             // 画像ファイル処理
@@ -177,12 +230,18 @@ export function useAnswerSheetUpload(
 
       try {
         let successCount = 0
+        let overwriteCount = 0
+        
         for (let i = 0; i < uploadData.length; i++) {
           const data = uploadData[i]
           const result = await window.electronAPI.uploadAnswerSheets(projectId, [data])
 
           if (result.success) {
             successCount++
+            // 上書きフラグをチェック
+            if (result.answerSheets?.[0]?.isOverwrite) {
+              overwriteCount++
+            }
           } else {
             console.error(`Upload failed for ${data.name}:`, result.error)
           }
@@ -191,7 +250,17 @@ export function useAnswerSheetUpload(
         }
 
         if (successCount > 0) {
-          toast.success(`${successCount}件の答案をアップロードしました`)
+          if (overwriteCount > 0) {
+            toast.success(
+              `${successCount}件の答案をアップロードしました`,
+              {
+                description: `${overwriteCount}件は既存データを上書き更新しました`,
+                style: { backgroundColor: '#fef3c7', borderColor: '#f59e0b' }
+              }
+            )
+          } else {
+            toast.success(`${successCount}件の答案をアップロードしました`)
+          }
           setFiles([]) // アップロード成功後にファイルリストをクリア
           onUploadComplete?.()
         }
