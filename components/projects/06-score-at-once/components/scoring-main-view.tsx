@@ -170,6 +170,7 @@ export default function ScoringMainView() {
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
     handlePartialScoreBackspace,
+    handlePartialScoreChange,
   } = usePartialScore({
     selectedAnswers,
     currentQuestion,
@@ -442,11 +443,13 @@ export default function ScoringMainView() {
         <title>{`採点 - ${project.examName}`}</title>
       </Head>
 
-      <div className="flex h-full bg-gray-50">
-        {/* メインコンテンツエリア */}
-        <div className="flex-1 flex flex-col">
-          {/* ヘッダー */}
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="h-full bg-gray-50 grid" style={{
+        gridTemplateAreas: '"header header" "content sidebar"',
+        gridTemplateColumns: '1fr 384px',
+        gridTemplateRows: 'auto 1fr'
+      }}>
+        {/* ヘッダー */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4" style={{ gridArea: 'header' }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Button
@@ -593,12 +596,14 @@ export default function ScoringMainView() {
                 詳細操作 →
               </div>
             </div>
-          </div>
+        </div>
 
-          {/* メインコンテンツ */}
-          <div className="flex-1 flex min-h-0">
-            {/* 採点エリア */}
-            <div className="flex-1 p-6 overflow-auto">
+        {/* 採点エリア */}
+        <div className="p-6 min-h-0 min-w-0" style={{ 
+          gridArea: 'content',
+          overflowX: layoutDirection === "down-right" || layoutDirection === "down-left" ? 'auto' : 'hidden',
+          overflowY: layoutDirection === "right-down" || layoutDirection === "left-down" ? 'auto' : 'hidden'
+        }}>
               {gradingMode === "individual" ? (
                 <AnswerDisplayViewer
                   answerSheet={currentAnswerSheet}
@@ -626,11 +631,11 @@ export default function ScoringMainView() {
                   showStudentNames={showStudentNames}
                 />
               )}
-            </div>
+        </div>
 
-            {/* 右側サイドパネル */}
-            {showSidePanel && (
-              <div className="w-96 bg-gray-50 border-l border-gray-200 p-4 overflow-y-auto">
+        {/* 右側サイドパネル */}
+        {showSidePanel && (
+          <div className="bg-gray-50 border-l border-gray-200 p-4 overflow-y-auto" style={{ gridArea: 'sidebar' }}>
                 {/* 設問ナビゲーター */}
                 <QuestionNavigator
                   questionRegions={questionRegions}
@@ -671,11 +676,13 @@ export default function ScoringMainView() {
                 <ProjectProgressCard
                   projectId={projectId}
                 />
-              </div>
-            )}
           </div>
-        </div>
+        )}
 
+      </div>
+
+      {/* モーダル類 */}
+      <div>
         {/* 部分点入力モーダル */}
         <PartialScoreModal
           isOpen={showPartialScoreModal}
@@ -683,6 +690,7 @@ export default function ScoringMainView() {
           maxPoints={currentQuestion?.points || 0}
           questionNumber={currentQuestion?.questionNumber || ""}
           onClose={handlePartialScoreCancel}
+          onChange={handlePartialScoreChange}
         />
 
         {/* 採点比較モーダル */}

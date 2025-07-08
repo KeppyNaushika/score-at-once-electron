@@ -126,64 +126,64 @@ const SCORE_STATUS_CONFIG = {
   ungraded: {
     icon: Circle,
     borderColor: "border-gray-400",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-gray-50",
+    bgColor: "bg-gray-50",
+    selectedBgColor: "bg-gray-100",
     textColor: "text-gray-600",
     key: "q",
   },
   correct: {
     icon: CheckCircle,
     borderColor: "border-green-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-green-50",
+    bgColor: "bg-green-50",
+    selectedBgColor: "bg-green-100",
     textColor: "text-green-700",
     key: "e",
   },
   partial: {
     icon: AlertTriangle,
     borderColor: "border-yellow-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-yellow-50",
+    bgColor: "bg-yellow-50",
+    selectedBgColor: "bg-yellow-100",
     textColor: "text-yellow-700",
     key: "f",
   },
   pending: {
     icon: Clock,
     borderColor: "border-blue-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-blue-50",
+    bgColor: "bg-blue-50",
+    selectedBgColor: "bg-blue-100",
     textColor: "text-blue-700",
     key: "j",
   },
   incorrect: {
     icon: X,
     borderColor: "border-red-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-red-50",
+    bgColor: "bg-red-50",
+    selectedBgColor: "bg-red-100",
     textColor: "text-red-700",
     key: "o",
   },
   no_answer: {
     icon: Minus,
     borderColor: "border-purple-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-purple-50",
+    bgColor: "bg-purple-50",
+    selectedBgColor: "bg-purple-100",
     textColor: "text-purple-600",
     key: "p",
   },
   proposed: {
     icon: AlertTriangle,
     borderColor: "border-orange-500",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-orange-50",
+    bgColor: "bg-orange-50",
+    selectedBgColor: "bg-orange-100",
     textColor: "text-orange-700",
     key: "",
   },
   final: {
     icon: CheckCircle,
     borderColor: "border-green-600",
-    bgColor: "bg-white",
-    selectedBgColor: "bg-green-100",
+    bgColor: "bg-green-100",
+    selectedBgColor: "bg-green-200",
     textColor: "text-green-800",
     key: "",
   },
@@ -347,48 +347,44 @@ export default function AnswerGridView({
   // 実際に使用するgridSizeを計算
   const effectiveGridSize = {
     columns: itemsPerRow[0] === 0 ? gridSize.columns : itemsPerRow[0], // 0の場合は元のgridSizeを使用
-    rows: gridSize.rows,
+    rows:
+      layoutDirection === "down-right" || layoutDirection === "down-left"
+        ? itemsPerRow[0] // 下→右レイアウトでは1列の表示件数として使用
+        : gridSize.rows,
   }
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {
-    // 全ての答案を表示（グリッドサイズの制限を撤廃）
+    // 下→右・下→左レイアウトでは、CSS Gridのgrid-auto-flow: columnが自動で縦配置するため
+    // ソート変換不要、元の順序のまま使用
+    if (layoutDirection === "down-right" || layoutDirection === "down-left") {
+      return answers // 元の順序をそのまま使用
+    }
+
+    // 右→下レイアウトのみソート処理
     if (layoutDirection === "right-down") {
       return answers // デフォルト順序
     }
 
-    // グリッドサイズに基づくレイアウトは動的に計算
-    const totalAnswers = answers.length
-    const cols = effectiveGridSize.columns
-    const rows = Math.ceil(totalAnswers / cols)
+    // 左→下レイアウト用のソート
+    if (layoutDirection === "left-down") {
+      const totalAnswers = answers.length
+      const cols = effectiveGridSize.columns
+      const sorted = new Array(totalAnswers)
+      
+      answers.forEach((answer, index) => {
+        const row = Math.floor(index / cols)
+        const col = index % cols
+        const newIndex = row * cols + (cols - 1 - col)
+        if (newIndex < totalAnswers) {
+          sorted[newIndex] = answer
+        }
+      })
+      
+      return sorted.filter(Boolean)
+    }
 
-    const sorted = new Array(totalAnswers)
-    answers.forEach((answer, index) => {
-      const row = Math.floor(index / cols)
-      const col = index % cols
-
-      let newIndex: number
-      switch (layoutDirection) {
-        case "left-down":
-          newIndex = row * cols + (cols - 1 - col)
-          break
-        case "down-right":
-          newIndex = col * rows + row
-          if (newIndex >= totalAnswers) newIndex = index // フォールバック
-          break
-        case "down-left":
-          newIndex = (cols - 1 - col) * rows + row
-          if (newIndex >= totalAnswers) newIndex = index // フォールバック
-          break
-        default:
-          newIndex = index
-      }
-      if (newIndex < totalAnswers) {
-        sorted[newIndex] = answer
-      }
-    })
-
-    return sorted.filter(Boolean)
+    return answers
   }, [answers, layoutDirection, effectiveGridSize])
 
   // キーボードショートカット処理
@@ -593,28 +589,30 @@ export default function AnswerGridView({
     }
   }
 
-
-
   return (
-    <div className={`flex h-full flex-col ${className}`}>
+    <div className={`flex h-full min-w-0 flex-col ${className}`}>
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className="grid min-h-0 flex-1 gap-2 overflow-auto select-none p-1"
+        className="grid h-full min-w-0 gap-2 p-1 select-none"
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)`
+              ? `repeat(${Math.ceil(answers.length / effectiveGridSize.rows)}, 200px)` // 固定幅
               : `repeat(${effectiveGridSize.columns}, 1fr)`,
           gridTemplateRows:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${Math.min(effectiveGridSize.rows, answers.length)}, auto)`
+              ? `repeat(${effectiveGridSize.rows}, 1fr)`
               : "none",
-          gridAutoRows: "auto", // 内容に応じて自動調整
-          width:
+          gridAutoRows: "auto",
+          gridAutoFlow:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "max-content"
-              : "100%",
+              ? "column"
+              : "row",
+          width: "100%",
+          maxWidth: "100%", // 重要: 最大幅を強制制限
+          overflowX: layoutDirection === "down-right" || layoutDirection === "down-left" ? "auto" : "hidden",
+          overflowY: layoutDirection === "right-down" || layoutDirection === "left-down" ? "auto" : "hidden",
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -636,16 +634,39 @@ export default function AnswerGridView({
             <div
               key={answer.id}
               data-answer-id={answer.id}
-              className={`relative flex-shrink-0 p-2 transition-all duration-150 ${isMaster ? "cursor-default bg-white border-2 border-black" : "cursor-pointer bg-white hover:shadow-md"} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
+              className={`relative flex-shrink-0 p-2 transition-all duration-150 ${
+                layoutDirection === "down-right" ||
+                layoutDirection === "down-left"
+                  ? "flex h-full flex-col"
+                  : ""
+              } ${isMaster ? "cursor-default border-2 border-black bg-white" : `cursor-pointer hover:shadow-md ${config.bgColor || 'bg-white'}`} ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isCurrentAnswer ? "shadow-lg ring-2 ring-orange-500 ring-offset-1" : ""} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
-              <div className="mb-1 overflow-hidden">
+              <div
+                className={`mb-1 overflow-hidden ${
+                  layoutDirection === "down-right" ||
+                  layoutDirection === "down-left"
+                    ? "flex flex-1 items-center justify-center"
+                    : ""
+                }`}
+                style={
+                  layoutDirection === "down-right" ||
+                  layoutDirection === "down-left"
+                    ? { minHeight: "0", height: "100%" } // flex-1が正しく動作するよう強制
+                    : {}
+                }
+              >
                 <CroppedAnswerImage
                   imageUrl={answer.imageUrl}
                   questionRegion={answer.questionRegion}
                   alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
-                  className="h-auto w-full"
+                  className={
+                    layoutDirection === "down-right" ||
+                    layoutDirection === "down-left"
+                      ? "h-full w-full object-contain" // 下→右: 幅高さ両方フル、比率保持
+                      : "h-auto w-full" // 右→下: 幅ベース
+                  }
                 />
               </div>
 
@@ -655,7 +676,11 @@ export default function AnswerGridView({
                   <span
                     className={`truncate text-xs ${isMaster ? "font-bold text-black" : "font-medium"}`}
                   >
-                    {isMaster ? answer.studentName : (showStudentNames ? answer.studentName : "")}
+                    {isMaster
+                      ? answer.studentName
+                      : showStudentNames
+                        ? answer.studentName
+                        : ""}
                   </span>
 
                   {!isMaster && answer.status !== "ungraded" && (
@@ -695,17 +720,6 @@ export default function AnswerGridView({
         })}
       </div>
 
-      {/* 選択状況表示 */}
-      {selectedAnswers.size > 0 && (
-        <div className="flex-shrink-0 bg-blue-50 p-2 text-center text-xs">
-          <span className="font-medium text-blue-800">
-            {selectedAnswers.size}件
-          </span>
-          <span className="ml-1 text-blue-600">
-            選択中 - キーボードで一括採点
-          </span>
-        </div>
-      )}
     </div>
   )
 }

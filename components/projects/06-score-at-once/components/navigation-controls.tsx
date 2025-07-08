@@ -101,7 +101,9 @@ export default function NavigationControls({
             <>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  1行あたりの表示件数
+                  {layoutDirection === "down-right" || layoutDirection === "down-left" 
+                    ? "1列あたりの表示件数" 
+                    : "1行あたりの表示件数"}
                 </label>
                 <div className="flex items-center space-x-4">
                   <Slider

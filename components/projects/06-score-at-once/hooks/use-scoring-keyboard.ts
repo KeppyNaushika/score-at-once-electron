@@ -180,19 +180,11 @@ export function useScoringKeyboard({
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       
-      // 入力フィールドがフォーカスされている場合はスキップ
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
-      ) {
-        return
-      }
-
       // グリッドモードでの特殊キーハンドリング
       if (gradingMode === "grid") {
         const key = event.key.toLowerCase()
 
-        // 部分点入力モーダルが開いている場合の処理
+        // 部分点入力モーダルが開いている場合の処理（入力フィールドフォーカスチェックより優先）
         if (showPartialScoreModal) {
           // F/Jキーで確定
           if (key === "f") {
@@ -225,6 +217,14 @@ export function useScoringKeyboard({
           }
           // モーダル中はその他のキーを無視
           event.preventDefault()
+          return
+        }
+
+        // 部分点入力モーダルが開いていない場合のみ、入力フィールドフォーカスチェック
+        if (
+          event.target instanceof HTMLInputElement ||
+          event.target instanceof HTMLTextAreaElement
+        ) {
           return
         }
 
