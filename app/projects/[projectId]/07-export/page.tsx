@@ -41,7 +41,7 @@ export default function ExportPage() {
     setIsExporting,
   } = useExportPage()
 
-  const handleExport = async () => {
+  const handleExportScoredAnswers = async () => {
     if (selectedStudents.size === 0) {
       alert("出力する生徒を選択してください")
       return
@@ -54,28 +54,22 @@ export default function ExportPage() {
     try {
       const selectedStudentIds = Array.from(selectedStudents)
 
-      // Choose the appropriate export method based on options
-      const result =
-        exportOptions.format === "pdf"
-          ? await window.electronAPI.exportScoredAnswersPDF({
-              projectId: project.id,
-              selectedStudentIds,
-              scoringMarkConfig: {
-                position: scoringMarkConfig.position,
-                size: scoringMarkConfig.markSize,
-                showTransparent: scoringMarkConfig.useTransparent,
-              },
-            })
-          : await window.electronAPI.exportGradingDataExcel({
-              projectId: project.id,
-              selectedStudentIds,
-            })
+      const result = await window.electronAPI.exportScoredAnswersPDF({
+        projectId: project.id,
+        selectedStudentIds,
+        scoringMarkConfig: {
+          ...scoringMarkConfig,
+          position: scoringMarkConfig.markPosition,
+          size: scoringMarkConfig.markSize,
+          showTransparent: scoringMarkConfig.useTransparent,
+        },
+      })
 
       if (result.success) {
         setExportProgress(100)
         setTimeout(() => {
           setShowProgressModal(false)
-          alert(`出力が完了しました。\n保存先: ${result.outputPath}`)
+          alert(`採点済み答案PDFの出力が完了しました。\n保存先: ${result.outputPath}`)
         }, 1000)
       } else {
         alert(`出力に失敗しました: ${result.error}`)
@@ -88,6 +82,39 @@ export default function ExportPage() {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  const handleExportGradingData = async () => {
+    if (selectedStudents.size === 0) {
+      alert("出力する生徒を選択してください")
+      return
+    }
+
+    setIsExporting(true)
+
+    try {
+      const selectedStudentIds = Array.from(selectedStudents)
+
+      const result = await window.electronAPI.exportGradingDataExcel({
+        projectId: project.id,
+        selectedStudentIds,
+      })
+
+      if (result.success) {
+        alert(`採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`)
+      } else {
+        alert(`出力に失敗しました: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("Export error:", error)
+      alert("出力中にエラーが発生しました")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleExportIndividualReports = async () => {
+    alert("個人成績表PDF出力機能は現在開発中です。")
   }
 
   if (loading) {
@@ -108,7 +135,7 @@ export default function ExportPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <StudentSelectionCard
-          students={students}
+          students={students} // 受験生徒順（customOrder）でソート済み
           availableClasses={availableClasses}
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -134,26 +161,39 @@ export default function ExportPage() {
           <CardTitle>出力実行</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
+          <div className="space-y-4">
             <div>
               <p className="text-muted-foreground text-sm">
                 {selectedStudents.size}人の生徒を選択しています
               </p>
-              <p className="text-muted-foreground text-xs">
-                {exportOptions.includeScoredAnswers && "採点済み答案PDF、"}
-                {exportOptions.includeGradingData && "採点データExcel、"}
-                {exportOptions.includeIndividualReports && "個人成績表PDF"}
-                を出力します
-              </p>
             </div>
-            <Button
-              onClick={handleExport}
-              disabled={selectedStudents.size === 0 || isExporting}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              出力開始
-            </Button>
+            <div className="flex gap-4 justify-center">
+              <Button
+                onClick={handleExportScoredAnswers}
+                disabled={selectedStudents.size === 0 || isExporting}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                採点済み答案PDF
+              </Button>
+              <Button
+                onClick={handleExportGradingData}
+                disabled={selectedStudents.size === 0 || isExporting}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                採点データExcel
+              </Button>
+              <Button
+                onClick={handleExportIndividualReports}
+                disabled={true}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                個人成績表PDF
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

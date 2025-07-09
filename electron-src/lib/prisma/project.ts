@@ -14,6 +14,7 @@ export const getProjects = async () => {
         },
       },
       layoutRegions: true,
+      projectStudents: true, // ProjectStudent情報を含める
     },
     orderBy: {
       createdAt: "desc",

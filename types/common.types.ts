@@ -140,6 +140,17 @@ export interface ProjectWithDetails {
   layoutRegions?: LayoutRegionArea[]
   answerSheets?: AnswerSheetData[]
   tags?: TagData[]
+  projectStudents?: ProjectStudentData[]
+}
+
+export interface ProjectStudentData {
+  id: string
+  projectId: string
+  studentId: string
+  status: string
+  customOrder: number | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface MasterImageData {
@@ -165,6 +176,20 @@ export interface AnswerSheetData {
   createdAt: Date
   updatedAt: Date
   version: number
+  questionScores?: QuestionScoreData[]
+}
+
+export interface QuestionScoreData {
+  id: string
+  answerSheetId: string
+  layoutRegionId: string
+  partialScore: string | null
+  status: string
+  comment?: string
+  scoredByUserId: string
+  scoreVersion: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface TagData {

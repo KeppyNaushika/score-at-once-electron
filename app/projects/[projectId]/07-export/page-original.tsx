@@ -223,7 +223,7 @@ export default function ExportPage() {
         projectId,
         selectedStudentIds: Array.from(selectedStudents),
         scoringMarkConfig: {
-          position: scoringMarkConfig.position,
+          position: scoringMarkConfig.markPosition,
           size: scoringMarkConfig.markSize,
           showTransparent: scoringMarkConfig.useTransparent,
         },
