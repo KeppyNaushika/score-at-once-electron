@@ -37,13 +37,22 @@ import ScoreComparisonModal from "../ScoreComparisonModal"
 import NavigationControls from "./navigation-controls"
 import PartialScoreModal from "./PartialScoreModal"
 import QuestionNavigator from "./question-navigator"
+import ScoringHeader from "./scoring-header"
 import ScoringToolbar from "./scoring-toolbar"
+import { useScoringDataLoader } from "../hooks/use-scoring-data-loader"
+import { useScoringSettings } from "../hooks/use-scoring-settings"
 
 export default function ScoringMainView() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
   const { helpButton } = usePageHelp()
+
+  // データローダーフック
+  const { loading, project, answerSheets, questionRegions, currentUserId, error } = useScoringDataLoader(projectId)
+
+  // 設定管理フック
+  const { itemsPerRow, autoScroll, showStudentNames, setItemsPerRow, setAutoScroll, setShowStudentNames } = useScoringSettings()
 
   // 採点モード状態
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
@@ -52,21 +61,11 @@ export default function ScoringMainView() {
   const [layoutDirection, setLayoutDirection] = useState<
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
-  const [effectiveColumns, setEffectiveColumns] = useState<number>(5) // 実際の表示列数
-  const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数
-  const [autoScroll, setAutoScroll] = useState(true) // 自動スクロール設定
-  const [showStudentNames, setShowStudentNames] = useState(true) // 生徒名表示設定
-
-  // 状態管理
-  const [loading, setLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
-  const [answerSheets, setAnswerSheets] = useState<any[]>([])
-  const [questionRegions, setQuestionRegions] = useState<any[]>([])
+  const [effectiveColumns, setEffectiveColumns] = useState<number>(5)
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [showScoreComparison, setShowScoreComparison] = useState(false)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [showSidePanel, setShowSidePanel] = useState(true)
   const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
 
@@ -94,7 +93,7 @@ export default function ScoringMainView() {
   } = useScoringData({
     projectId,
     currentUserId,
-    setCurrentUserId,
+    setCurrentUserId: () => {}, // データローダーで管理するため空関数
     gradingMode,
     currentStudentIndex,
     setCurrentStudentIndex,
@@ -184,17 +183,10 @@ export default function ScoringMainView() {
     onAutoAdvance: handleAutoAdvance,
   })
 
-  // 生徒名表示設定の変更をlocalStorageに保存
+  // 生徒名表示設定の変更
   const handleToggleStudentNames = useCallback(() => {
-    setShowStudentNames((prev) => {
-      const newValue = !prev
-      localStorage.setItem(
-        "answerGridView-showStudentNames",
-        JSON.stringify(newValue),
-      )
-      return newValue
-    })
-  }, [])
+    setShowStudentNames(!showStudentNames)
+  }, [showStudentNames, setShowStudentNames])
 
   // キーボードハンドリングhook
   useScoringKeyboard({
@@ -226,155 +218,37 @@ export default function ScoringMainView() {
     onToggleStudentNames: handleToggleStudentNames,
   })
 
-  // データの初期読み込み
+  // 採点データの初期化
   useEffect(() => {
     const initializeGradingData = async () => {
-      setLoading(true)
-      try {
-        // 現在のユーザーを取得
-        const currentUser = await window.electronAPI.getCurrentUser()
-        if (currentUser) {
-          setCurrentUserId(currentUser.id)
-        } else {
-          console.error("No current user found")
+      if (!loading && project) {
+        try {
+          // 既存の採点データを読み込み
+          const existingScores = await loadExistingScoringData(projectId)
+          setScoringData(existingScores)
+        } catch (error) {
+          console.error("Failed to initialize grading data:", error)
         }
-
-        // プロジェクト情報を取得
-        const projectData = await window.electronAPI.fetchProjectById(projectId)
-        if (projectData) {
-          setProject(projectData)
-        }
-
-        // 答案データを取得
-        const answersResult =
-          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
-        if (!answersResult.success) {
-          throw new Error(
-            answersResult.error || "Failed to fetch answer sheets",
-          )
-        }
-
-        // レイアウト領域（設問）データを取得
-        const regionsResult =
-          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
-
-        // 設問領域のみをフィルタリング
-        const questionRegions = (
-          Array.isArray(regionsResult) ? regionsResult : []
-        )
-          .filter(
-            (region: any) =>
-              LAYOUT_REAGION_AREA_TYPES.includes(region.type) &&
-              region.type === "QUESTION_ANSWER" &&
-              region.questionNumber,
-          )
-          .map((region: any) => ({
-            id: region.id,
-            label: region.label,
-            questionNumber: region.questionNumber,
-            points: region.points || 0,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            masterImageId: region.masterImageId,
-          }))
-
-        // 既存の採点データを取得
-        const existingScores = await loadExistingScoringData(projectId)
-
-        // Transform the data to match AnswerSheet interface
-        const transformedAnswerSheets = (answersResult.answerSheets || []).map(
-          (sheet: any) => ({
-            id: sheet.id,
-            studentId: sheet.studentId,
-            projectId: sheet.projectId,
-            imagePath: sheet.originalImagePath || "",
-            pageNumber: sheet.pageNumber || 1,
-            status: sheet.status || "uploaded",
-            student: sheet.student,
-          }),
-        )
-
-        setAnswerSheets(transformedAnswerSheets)
-        setQuestionRegions(questionRegions)
-        setScoringData(existingScores)
-      } catch (error) {
-        console.error("Failed to initialize grading data:", error)
-      } finally {
-        setLoading(false)
       }
     }
 
     initializeGradingData()
-  }, [projectId, loadExistingScoringData, setScoringData])
+  }, [projectId, loading, project, loadExistingScoringData, setScoringData])
 
-  // localStorageから初期値を読み込み
+  // 設定の初期化
   useEffect(() => {
-    // 1行あたりの表示件数
-    const storedItemsPerRow = localStorage.getItem("answerGridView-itemsPerRow")
-    let initialValue = [5] // デフォルト値
-    if (storedItemsPerRow) {
-      try {
-        const parsed = JSON.parse(storedItemsPerRow)
-        if (
-          Array.isArray(parsed) &&
-          parsed.length === 1 &&
-          typeof parsed[0] === "number" &&
-          parsed[0] >= 1 &&
-          parsed[0] <= 10
-        ) {
-          initialValue = parsed
-          setItemsPerRow(parsed)
-        }
-      } catch (error) {
-        console.warn("Failed to parse stored itemsPerRow:", error)
-      }
-    }
-    // 実際の列数を更新
-    setEffectiveColumns(initialValue[0])
+    // 実際の列数を更新（設定フックから取得）
+    setEffectiveColumns(itemsPerRow[0])
+  }, [itemsPerRow])
 
-    // 自動スクロール設定
-    const storedAutoScroll = localStorage.getItem("answerGridView-autoScroll")
-    if (storedAutoScroll !== null) {
-      try {
-        const parsed = JSON.parse(storedAutoScroll)
-        if (typeof parsed === "boolean") {
-          setAutoScroll(parsed)
-        }
-      } catch (error) {
-        console.warn("Failed to parse stored autoScroll:", error)
-      }
-    }
-
-    // 生徒名表示設定
-    const storedShowNames = localStorage.getItem(
-      "answerGridView-showStudentNames",
-    )
-    if (storedShowNames !== null) {
-      try {
-        const parsed = JSON.parse(storedShowNames)
-        if (typeof parsed === "boolean") {
-          setShowStudentNames(parsed)
-        }
-      } catch (error) {
-        console.warn("Failed to parse stored showStudentNames:", error)
-      }
-    }
-  }, [])
-
-  // itemsPerRowの変更をlocalStorageに保存
+  // 設定変更ハンドラー
   const handleItemsPerRowChange = (value: number[]) => {
     setItemsPerRow(value)
-    localStorage.setItem("answerGridView-itemsPerRow", JSON.stringify(value))
-    // 実際の列数を更新
     setEffectiveColumns(value[0])
   }
 
-  // 自動スクロール設定の変更をlocalStorageに保存
   const handleAutoScrollChange = (enabled: boolean) => {
     setAutoScroll(enabled)
-    localStorage.setItem("answerGridView-autoScroll", JSON.stringify(enabled))
   }
 
   // グリッドビュー用のヘルパー関数

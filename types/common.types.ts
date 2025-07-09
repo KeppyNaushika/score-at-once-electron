@@ -116,15 +116,21 @@ export interface LayoutRegionArea {
   updatedAt?: Date
 }
 
-export type EditableTableRow = Record<string, any>
+export type EditableTableRow = Record<string, string | number | boolean | null>
 
 export interface EditableTableColumn<T extends EditableTableRow> {
   id: keyof T
   header: string
-  getValue: () => any
-  row: any
-  column: any
-  table: any
+  getValue: () => T[keyof T]
+  row: T
+  column: {
+    id: keyof T
+    header: string
+  }
+  table: {
+    data: T[]
+    columns: EditableTableColumn<T>[]
+  }
 }
 
 export interface ProjectWithDetails {

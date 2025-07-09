@@ -15,7 +15,7 @@ import {
   convertToUnifiedFile,
   convertToUploadData,
 } from "@/utils/answerSheetConverter"
-import { sortStudentsForTable, debugStudentOrder } from "@/utils/studentOrderUtils"
+import { sortStudentsForTable } from "@/utils/studentOrderUtils"
 
 // ============================================================================
 // フックのProps
@@ -75,10 +75,6 @@ export function useAnswerSheetGrid({
   const unifiedStudents = students.map(convertToUnifiedStudent)
   const sortedStudents = sortStudentsForTable(unifiedStudents)
   
-  // デバッグ情報（開発環境のみ）
-  if (process.env.NODE_ENV === "development") {
-    debugStudentOrder(unifiedStudents)
-  }
 
   // ============================================================================
   // 計算済みプロパティ
@@ -135,10 +131,8 @@ export function useAnswerSheetGrid({
         setUploadProgress(100)
         toast.success(`${filesToUpload.length}件のファイルをアップロードしました`)
         
-        // アップロード完了後、該当ファイルを削除
         setFiles(prev => prev.filter(f => !filesToUpload.some(uploaded => uploaded.id === f.id)))
         
-        // 完了コールバック
         onUploadComplete?.()
       } else {
         throw new Error(result.error || "アップロードに失敗しました")
@@ -155,15 +149,6 @@ export function useAnswerSheetGrid({
       setUploadProgress(0)
     }
   }, [projectId, unifiedStudents, onUploadComplete])
-
-  // ============================================================================
-  // デバッグログ
-  // ============================================================================
-
-
-  // ============================================================================
-  // 戻り値
-  // ============================================================================
 
   return {
     // State

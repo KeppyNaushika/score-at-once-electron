@@ -30,7 +30,17 @@ import {
  * 既存のStudentDataをUnifiedStudentに変換
  * 05-answer-sheets/page.tsxの形式から変換
  */
-export function convertToUnifiedStudent(studentData: any): UnifiedStudent {
+export function convertToUnifiedStudent(studentData: {
+  id: string;
+  lastName: string;
+  firstName: string;
+  lastNameKana: string;
+  firstNameKana: string;
+  studentId: string;
+  attendanceNumber?: number | null;
+  status?: string;
+  customOrder?: number;
+}): UnifiedStudent {
   return {
     id: studentData.id,
     lastName: studentData.lastName,
@@ -39,7 +49,7 @@ export function convertToUnifiedStudent(studentData: any): UnifiedStudent {
     firstNameKana: studentData.firstNameKana,
     studentId: studentData.studentId,
     attendanceNumber: studentData.attendanceNumber || null,
-    status: studentData.status || "participating",
+    status: (studentData.status as "participating" | "expected" | "absent") || "participating",
     customOrder: studentData.customOrder,
   }
 }
@@ -70,7 +80,19 @@ export function convertToExistingAnswerSheet(
 /**
  * 既存のConvertedFileをUnifiedFileに変換
  */
-export function convertToUnifiedFile(convertedFile: any): UnifiedFile {
+export function convertToUnifiedFile(convertedFile: {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  buffer: ArrayBuffer;
+  preview?: string;
+  studentId?: string;
+  pageNumber: number;
+  isSelected?: boolean;
+  originalFileName: string;
+  pageLabel?: string;
+}): UnifiedFile {
   return {
     id: convertedFile.id,
     name: convertedFile.name,
@@ -335,19 +357,3 @@ export function createInitialDisabledState(): DisabledState {
 }
 
 
-/**
- * デバッグ用: table構造の確認
- */
-export function debugTableData(tableData: TableData): void {
-  if (process.env.NODE_ENV !== "development") return
-  
-  console.log("🔍 Table構造（デバッグ）:")
-  tableData.forEach((row, rowIndex) => {
-    console.log(`  行 ${rowIndex} (${row[0]?.student.lastName} ${row[0]?.student.firstName}):`)
-    row.forEach((cell, colIndex) => {
-      const status = cell.file ? `📄 ${cell.file.name}` : "⬜ 空"
-      const disabled = cell.isDisabled ? " [無効]" : ""
-      console.log(`    列 ${colIndex} (ページ${cell.pageNumber}): ${status}${disabled}`)
-    })
-  })
-}

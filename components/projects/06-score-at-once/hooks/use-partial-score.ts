@@ -69,16 +69,8 @@ export function usePartialScore({
 
   // F/Jキーで部分点確定
   const handlePartialScoreConfirm = useCallback((confirmType: "partial" | "pending") => {
-    console.log("🔥 handlePartialScoreConfirm called:", {
-      confirmType,
-      showPartialScoreModal,
-      selectedAnswersSize: selectedAnswers.size,
-      partialScoreInput,
-      currentQuestion: currentQuestion?.questionNumber
-    })
 
     if (!showPartialScoreModal || selectedAnswers.size === 0) {
-      console.log("❌ Early return: modal not open or no answers selected")
       return
     }
 
@@ -90,31 +82,15 @@ export function usePartialScore({
     const finalValue = parseFloat(finalInput)
     const maxPoints = currentQuestion?.points || 10
 
-    console.log("📊 Processing input:", {
-      originalInput: partialScoreInput,
-      finalInput,
-      finalValue,
-      maxPoints
-    })
 
     // 値の妥当性チェック
     if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
       const roundedValue = Math.round(finalValue * 100) / 100
-      console.log("✅ Calling onBatchScore with args:", {
-        arg1: confirmType,
-        arg2: roundedValue,
-        arg4: selectedAnswers,
-        type1: typeof confirmType,
-        type2: typeof roundedValue,
-        selectedAnswersSize: selectedAnswers.size
-      })
       onBatchScore(confirmType, roundedValue, null, selectedAnswers)
     } else if (finalInput === "" || finalInput === "0.") {
       // 空の場合は0点として処理
-      console.log("✅ Calling onBatchScore with 0 points:", confirmType, 0, selectedAnswers.size)
       onBatchScore(confirmType, 0, null, selectedAnswers)
     } else {
-      console.log("❌ Invalid input, not calling onBatchScore")
     }
 
     // モーダルを閉じる

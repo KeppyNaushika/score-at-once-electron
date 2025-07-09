@@ -147,7 +147,6 @@ export function useAnswerSheetUploadMain({
       const newFiles = await fileProcessing.convertFilesToImages([fileProcessing.currentPdfFile], password)
       fileProcessing.setFiles(prev => [...prev, ...newFiles])
       
-      // 現在のファイル処理完了、次のファイルがあるかチェック
       const remainingFiles = fileProcessing.pendingFiles
       if (remainingFiles.length > 0) {
         // 次のパスワード保護ファイルを処理
@@ -156,7 +155,6 @@ export function useAnswerSheetUploadMain({
         fileProcessing.setPasswordError('')
         // ダイアログは開いたまま
       } else {
-        // すべて完了
         fileProcessing.setShowPasswordDialog(false)
         fileProcessing.setCurrentPdfFile(null)
         fileProcessing.setPasswordError('')
