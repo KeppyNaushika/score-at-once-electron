@@ -503,19 +503,29 @@ export default function AnswerGridView({
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${effectiveGridSize.columns}, minmax(200px, 1fr))` // 列幅に最小値を設定
+              ? "none" // 列表示: 自動生成される列
               : `repeat(${effectiveGridSize.columns}, 1fr)`,
           gridTemplateRows:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? `repeat(${effectiveGridSize.rows}, 1fr)` // 高さのみ指定
               : "none",
           gridAutoRows: "auto",
+          gridAutoColumns:
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? "minmax(200px, max-content)" // 列表示: 最小200px、内容に応じて拡張
+              : undefined,
           gridAutoFlow:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "column"
               : "row",
-          width: "100%",
-          maxWidth: "100%", // 重要: 最大幅を強制制限
+          width: 
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? "auto" // 列表示: 内容に応じて幅を拡張
+              : "100%", // 行表示: 幅100%
+          maxWidth: 
+            layoutDirection === "down-right" || layoutDirection === "down-left"
+              ? "none" // 列表示: 最大幅制限なし
+              : "100%", // 行表示: 最大幅100%
           overflowX:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "auto"

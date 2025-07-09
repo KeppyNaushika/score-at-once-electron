@@ -40,7 +40,7 @@ const File = () => {
     const hasImages = project.masterImages && project.masterImages.length > 0
     const hasLayout = project.layoutRegions && project.layoutRegions.length > 0
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
-    const hasStudents = true // 仮定：生徒データは常に存在
+    const hasStudents = project.projectStudents && project.projectStudents.length > 0
     const hasAnswers = project.answerSheets && project.answerSheets.length > 0
 
     if (!hasImages)
@@ -78,11 +78,40 @@ const File = () => {
         text: "5. 生徒解答をアップロード",
         url: `/projects/${project.id}/05-answer-sheets`,
       }
+    
+    // 採点が完了しているかチェック
+    // QUESTION_ANSWER領域数 × 答案数 = 全採点すべき数
+    const questionAnswerCount = project.layoutRegions?.filter(region => 
+      region.type === "QUESTION_ANSWER"
+    ).length || 0
+    
+    const answerSheetCount = project.answerSheets?.length || 0
+    const expectedScoringCount = questionAnswerCount * answerSheetCount
+    
+    // ungraded以外のquestionScoresの個数を取得
+    const actualScoringCount = project.answerSheets?.reduce((total, sheet) => {
+      const gradedScores = sheet.questionScores?.filter(score => 
+        score.status !== "unscored"
+      ).length || 0
+      return total + gradedScores
+    }, 0) || 0
+    
+    const hasScoring = expectedScoringCount > 0 && actualScoringCount >= expectedScoringCount
+    
+    if (!hasScoring) {
+      return {
+        step: 6,
+        action: "start-grading",
+        text: "6. 採点を開始",
+        url: `/projects/${project.id}/06-score-at-once`,
+      }
+    }
+    
     return {
-      step: 6,
-      action: "start-grading",
-      text: "6. 採点を開始",
-      url: `/projects/${project.id}/06-score-at-once`,
+      step: 7,
+      action: "export-results",
+      text: "7. 結果出力",
+      url: `/projects/${project.id}/07-export`,
     }
   }
 

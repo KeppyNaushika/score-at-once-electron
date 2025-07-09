@@ -57,6 +57,8 @@ const SHORTCUT_LABELS: { [key in keyof typeof DEFAULT_SHORTCUTS]: string } = {
   moveRight: "右に移動",
   refreshFilter: "フィルタ更新",
   toggleNames: "名前表示切替",
+  nextQuestionShift: "次の設問（Shift）",
+  prevQuestionShift: "前の設問（Shift）",
 }
 
 export default function SettingsPage() {

@@ -239,9 +239,9 @@ export function useAnswerSheetUpload(
           if (result.success) {
             successCount++
             // 上書きフラグをチェック
-            if (result.answerSheets?.[0]?.isOverwrite) {
-              overwriteCount++
-            }
+            // if (result.answerSheets?.[0]?.isOverwrite) {
+            //   overwriteCount++
+            // }
           } else {
             console.error(`Upload failed for ${data.name}:`, result.error)
           }

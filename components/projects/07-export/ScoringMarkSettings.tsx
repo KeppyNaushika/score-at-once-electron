@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Settings } from "lucide-react"
-import { useState } from "react"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Settings, AlignLeft, AlignCenter, AlignRight } from "lucide-react"
+import { useState, useEffect } from "react"
 
 // 採点状態の型定義
 export type ScoringStatus = 
@@ -30,20 +31,27 @@ export type MarkPosition =
   | "bottom-center" // 下
   | "bottom-right"  // 右下
 
+// テキスト配置の型定義
+export type TextAlignment = "left" | "center" | "right"
+
 // 採点マーク設定の型定義
 export interface ScoringMarkConfig {
   // 表示設定
   showMarkForStatus: Record<ScoringStatus, boolean>
-  showScore: boolean
+  showScoreForStatus: Record<ScoringStatus, boolean>
   
-  // 位置設定
-  position: MarkPosition
-  offsetX: number // X軸オフセット（-100 to 100）
-  offsetY: number // Y軸オフセット（-100 to 100）
-  
-  // サイズ設定
+  // 採点マーク用設定
+  markPosition: MarkPosition
+  markOffsetX: number // X軸オフセット（-100 to 100）
+  markOffsetY: number // Y軸オフセット（-100 to 100）
   markSize: number // マークサイズ（20 to 200）
+  
+  // 点数テキスト用設定
+  scorePosition: MarkPosition
+  scoreOffsetX: number // X軸オフセット（-100 to 100）
+  scoreOffsetY: number // Y軸オフセット（-100 to 100）
   scoreSize: number // 点数サイズ（8 to 48）
+  scoreAlignment: TextAlignment
   
   // 透明度設定
   useTransparent: boolean
@@ -59,13 +67,68 @@ const defaultConfig: ScoringMarkConfig = {
     incorrect: true,
     no_answer: true,
   },
-  showScore: true,
-  position: "top-right",
-  offsetX: 0,
-  offsetY: 0,
+  showScoreForStatus: {
+    unscored: false,
+    correct: true,
+    partial: true,
+    hold: true,
+    incorrect: true,
+    no_answer: true,
+  },
+  // 採点マーク設定
+  markPosition: "middle-center",
+  markOffsetX: 0,
+  markOffsetY: 0,
   markSize: 50,
+  // 点数テキスト設定
+  scorePosition: "middle-center",  // デフォルトを中央に変更
+  scoreOffsetX: 0,
+  scoreOffsetY: 0,
   scoreSize: 14,
+  scoreAlignment: "center",
   useTransparent: false,
+}
+
+// localStorageのキー
+const STORAGE_KEY = "scoring-mark-config"
+
+// localStorageから設定を読み込む
+function loadConfigFromStorage(): ScoringMarkConfig {
+  if (typeof window === "undefined") return defaultConfig
+  
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return {
+        ...defaultConfig,
+        ...parsed,
+        showMarkForStatus: {
+          ...defaultConfig.showMarkForStatus,
+          ...(parsed.showMarkForStatus || {})
+        },
+        showScoreForStatus: {
+          ...defaultConfig.showScoreForStatus,
+          ...(parsed.showScoreForStatus || {})
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load config from localStorage:", error)
+  }
+  
+  return defaultConfig
+}
+
+// localStorageに設定を保存する
+function saveConfigToStorage(config: ScoringMarkConfig) {
+  if (typeof window === "undefined") return
+  
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
+  } catch (error) {
+    console.error("Failed to save config to localStorage:", error)
+  }
 }
 
 // 位置のラベル
@@ -97,13 +160,13 @@ interface ScoringMarkSettingsProps {
 }
 
 export default function ScoringMarkSettings({ config, onChange }: ScoringMarkSettingsProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
-    onChange({ ...config, ...updates })
+    const newConfig = { ...config, ...updates }
+    onChange(newConfig)
+    saveConfigToStorage(newConfig)
   }
 
-  const updateStatusDisplay = (status: ScoringStatus, show: boolean) => {
+  const updateMarkStatusDisplay = (status: ScoringStatus, show: boolean) => {
     updateConfig({
       showMarkForStatus: {
         ...config.showMarkForStatus,
@@ -112,8 +175,18 @@ export default function ScoringMarkSettings({ config, onChange }: ScoringMarkSet
     })
   }
 
+  const updateScoreStatusDisplay = (status: ScoringStatus, show: boolean) => {
+    updateConfig({
+      showScoreForStatus: {
+        ...config.showScoreForStatus,
+        [status]: show,
+      }
+    })
+  }
+
   const resetToDefaults = () => {
     onChange(defaultConfig)
+    saveConfigToStorage(defaultConfig)
   }
 
   const getMarkImagePath = (status: ScoringStatus) => {
@@ -129,254 +202,254 @@ export default function ScoringMarkSettings({ config, onChange }: ScoringMarkSet
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            採点マーク設定
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            {isExpanded ? "閉じる" : "設定"}
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      
-      {isExpanded && (
-        <CardContent className="space-y-6">
-          {/* 表示対象の選択 */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">マーク表示対象</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
-                <div key={status} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`status-${status}`}
-                    checked={config.showMarkForStatus[status]}
-                    onCheckedChange={(checked) => 
-                      updateStatusDisplay(status, checked as boolean)
-                    }
-                  />
-                  <div className="flex items-center space-x-2">
-                    <img 
-                      src={getMarkImagePath(status)}
-                      alt={statusLabels[status]}
-                      className="w-6 h-6"
-                    />
-                    <Label htmlFor={`status-${status}`} className="text-sm cursor-pointer">
-                      {statusLabels[status]}
-                    </Label>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <Settings className="h-5 w-5" />
+        <Label className="text-base font-medium">採点マーク設定</Label>
+      </div>
 
-          {/* 点数表示 */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="show-score"
-              checked={config.showScore}
-              onCheckedChange={(checked) => 
-                updateConfig({ showScore: checked as boolean })
-              }
-            />
-            <Label htmlFor="show-score" className="text-sm font-medium">
-              点数を表示
-            </Label>
-          </div>
-
-          {/* 透明度設定 */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="use-transparent"
-              checked={config.useTransparent}
-              onCheckedChange={(checked) => 
-                updateConfig({ useTransparent: checked as boolean })
-              }
-            />
-            <Label htmlFor="use-transparent" className="text-sm font-medium">
-              透明マークを使用
-            </Label>
-          </div>
-
-          {/* 位置設定 */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">マーク位置</Label>
-            <Select 
-              value={config.position} 
-              onValueChange={(value: MarkPosition) => updateConfig({ position: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="位置を選択" />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(positionLabels) as MarkPosition[]).map((position) => (
-                  <SelectItem key={position} value={position}>
-                    {positionLabels[position]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* オフセット設定 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                X軸オフセット: {config.offsetX}px
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="range"
-                  value={config.offsetX}
-                  onChange={(e) => updateConfig({ offsetX: parseInt(e.target.value) })}
-                  min={-100}
-                  max={100}
-                  step={1}
-                  className="flex-1"
+      {/* 採点マークと点数の表示対象を左右対称に配置 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 左側：採点マーク表示対象 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">📌 採点マーク表示対象</Label>
+          <div className="space-y-2">
+            {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
+              <div key={`mark-${status}`} className="flex items-center space-x-3">
+                <Checkbox
+                  id={`mark-${status}`}
+                  checked={config.showMarkForStatus[status]}
+                  onCheckedChange={(checked) => 
+                    updateMarkStatusDisplay(status, checked as boolean)
+                  }
                 />
-                <Input
-                  type="number"
-                  value={config.offsetX}
-                  onChange={(e) => updateConfig({ offsetX: parseInt(e.target.value) || 0 })}
-                  min={-100}
-                  max={100}
-                  className="w-16"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                Y軸オフセット: {config.offsetY}px
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="range"
-                  value={config.offsetY}
-                  onChange={(e) => updateConfig({ offsetY: parseInt(e.target.value) })}
-                  min={-100}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  value={config.offsetY}
-                  onChange={(e) => updateConfig({ offsetY: parseInt(e.target.value) || 0 })}
-                  min={-100}
-                  max={100}
-                  className="w-16"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* サイズ設定 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                マークサイズ: {config.markSize}px
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="range"
-                  value={config.markSize}
-                  onChange={(e) => updateConfig({ markSize: parseInt(e.target.value) })}
-                  min={20}
-                  max={200}
-                  step={5}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  value={config.markSize}
-                  onChange={(e) => updateConfig({ markSize: parseInt(e.target.value) || 50 })}
-                  min={20}
-                  max={200}
-                  className="w-16"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">
-                点数サイズ: {config.scoreSize}px
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="range"
-                  value={config.scoreSize}
-                  onChange={(e) => updateConfig({ scoreSize: parseInt(e.target.value) })}
-                  min={8}
-                  max={48}
-                  step={1}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  value={config.scoreSize}
-                  onChange={(e) => updateConfig({ scoreSize: parseInt(e.target.value) || 14 })}
-                  min={8}
-                  max={48}
-                  className="w-16"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* リセットボタン */}
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={resetToDefaults}>
-              デフォルトに戻す
-            </Button>
-          </div>
-
-          {/* プレビュー */}
-          <div className="border rounded-lg p-4 bg-gray-50">
-            <Label className="text-sm font-medium mb-2 block">プレビュー</Label>
-            <div className="relative w-32 h-32 bg-white border-2 border-dashed border-gray-300 rounded">
-              {/* プレビュー画像を表示 */}
-              <div 
-                className="absolute"
-                style={{
-                  [config.position.includes('top') ? 'top' : 
-                   config.position.includes('bottom') ? 'bottom' : 'top']: 
-                   config.position.includes('top') ? `${config.offsetY + 8}px` :
-                   config.position.includes('bottom') ? `${-config.offsetY + 8}px` : '50%',
-                  [config.position.includes('left') ? 'left' : 
-                   config.position.includes('right') ? 'right' : 'left']: 
-                   config.position.includes('left') ? `${config.offsetX + 8}px` :
-                   config.position.includes('right') ? `${-config.offsetX + 8}px` : '50%',
-                  transform: config.position === 'middle-center' ? 'translate(-50%, -50%)' : 'none'
-                }}
-              >
-                <div className="flex items-center gap-1">
+                <div className="flex items-center space-x-2">
                   <img 
-                    src={getMarkImagePath('correct')}
-                    alt="プレビュー"
-                    style={{ width: `${config.markSize}px`, height: `${config.markSize}px` }}
+                    src={getMarkImagePath(status)}
+                    alt={statusLabels[status]}
+                    className="w-6 h-6"
                   />
-                  {config.showScore && (
-                    <span 
-                      style={{ fontSize: `${config.scoreSize}px` }}
-                      className="font-bold text-red-600"
-                    >
-                      10/10
-                    </span>
-                  )}
+                  <Label htmlFor={`mark-${status}`} className="text-sm cursor-pointer">
+                    {statusLabels[status]}
+                  </Label>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 右側：点数表示対象 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">🔢 点数表示対象</Label>
+          <div className="space-y-2">
+            {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
+              <div key={`score-${status}`} className="flex items-center space-x-3">
+                <Checkbox
+                  id={`score-${status}`}
+                  checked={config.showScoreForStatus[status]}
+                  onCheckedChange={(checked) => 
+                    updateScoreStatusDisplay(status, checked as boolean)
+                  }
+                />
+                <div className="flex items-center space-x-2">
+                  <span className="w-6 h-6 flex items-center justify-center text-red-600 font-bold text-sm border rounded">
+                    10
+                  </span>
+                  <Label htmlFor={`score-${status}`} className="text-sm cursor-pointer">
+                    {statusLabels[status]}
+                  </Label>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* 透明度設定 */}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="use-transparent"
+          checked={config.useTransparent}
+          onCheckedChange={(checked) => 
+            updateConfig({ useTransparent: checked as boolean })
+          }
+        />
+        <Label htmlFor="use-transparent" className="text-sm font-medium">
+          透明マークを使用
+        </Label>
+      </div>
+
+      {/* 位置設定を左右対称に配置 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 左側：採点マーク位置設定 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">📌 採点マーク位置</Label>
+          <Select 
+            value={config.markPosition} 
+            onValueChange={(value: MarkPosition) => updateConfig({ markPosition: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="位置を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(positionLabels) as MarkPosition[]).map((position) => (
+                <SelectItem key={position} value={position}>
+                  {positionLabels[position]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* 右側：点数テキスト位置設定 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">🔢 点数テキスト位置</Label>
+          <Select 
+            value={config.scorePosition} 
+            onValueChange={(value: MarkPosition) => updateConfig({ scorePosition: value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="位置を選択" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(positionLabels) as MarkPosition[]).map((position) => (
+                <SelectItem key={position} value={position}>
+                  {positionLabels[position]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* オフセット設定を左右対称に配置 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 左側：採点マークオフセット設定 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">📌 採点マークオフセット</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">左右: {config.markOffsetX}px</Label>
+              <Input
+                type="range"
+                value={config.markOffsetX}
+                onChange={(e) => updateConfig({ markOffsetX: parseInt(e.target.value) })}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">上下: {config.markOffsetY}px</Label>
+              <Input
+                type="range"
+                value={config.markOffsetY}
+                onChange={(e) => updateConfig({ markOffsetY: parseInt(e.target.value) })}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
+              />
             </div>
           </div>
-        </CardContent>
-      )}
-    </Card>
+        </div>
+
+        {/* 右側：点数テキストオフセット設定 */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">🔢 点数テキストオフセット</Label>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">左右: {config.scoreOffsetX}px</Label>
+              <Input
+                type="range"
+                value={config.scoreOffsetX}
+                onChange={(e) => updateConfig({ scoreOffsetX: parseInt(e.target.value) })}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">上下: {config.scoreOffsetY}px</Label>
+              <Input
+                type="range"
+                value={config.scoreOffsetY}
+                onChange={(e) => updateConfig({ scoreOffsetY: parseInt(e.target.value) })}
+                min={-100}
+                max={100}
+                step={1}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* サイズ設定を左右対称に配置 */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* 左側：採点マークサイズ */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">📌 マークサイズ: {config.markSize}px</Label>
+          <Input
+            type="range"
+            value={config.markSize}
+            onChange={(e) => updateConfig({ markSize: parseInt(e.target.value) })}
+            min={20}
+            max={200}
+            step={5}
+            className="w-full"
+          />
+        </div>
+
+        {/* 右側：点数サイズ */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">🔢 点数サイズ: {config.scoreSize}px</Label>
+          <Input
+            type="range"
+            value={config.scoreSize}
+            onChange={(e) => updateConfig({ scoreSize: parseInt(e.target.value) })}
+            min={8}
+            max={48}
+            step={1}
+            className="w-full"
+          />
+        </div>
+      </div>
+
+      {/* テキスト配置設定を追加 */}
+      <div className="space-y-3">
+        <Label className="text-sm font-medium">🔢 点数テキスト配置</Label>
+        <ToggleGroup 
+          type="single" 
+          value={config.scoreAlignment} 
+          onValueChange={(value: TextAlignment) => {
+            if (value) updateConfig({ scoreAlignment: value })
+          }}
+          className="justify-start"
+        >
+          <ToggleGroupItem value="left" aria-label="左揃え">
+            <AlignLeft className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="center" aria-label="中央揃え">
+            <AlignCenter className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="right" aria-label="右揃え">
+            <AlignRight className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {/* リセットボタン */}
+      <div className="flex justify-end">
+        <Button variant="outline" onClick={resetToDefaults}>
+          デフォルトに戻す
+        </Button>
+      </div>
+    </div>
   )
 }
 
 // デフォルト設定をエクスポート
-export { defaultConfig as defaultScoringMarkConfig }
+export { defaultConfig as defaultScoringMarkConfig, loadConfigFromStorage, saveConfigToStorage }

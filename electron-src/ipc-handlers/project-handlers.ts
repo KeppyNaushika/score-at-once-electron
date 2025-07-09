@@ -73,6 +73,15 @@ export function setupProjectHandlers(): void {
           createdAt: region.createdAt.toISOString(),
           updatedAt: region.updatedAt.toISOString(),
         })) || [],
+        projectStudents: project.projectStudents?.map(ps => ({
+          id: ps.id,
+          projectId: ps.projectId,
+          studentId: ps.studentId,
+          status: ps.status,
+          customOrder: ps.customOrder,
+          createdAt: ps.createdAt.toISOString(),
+          updatedAt: ps.updatedAt.toISOString(),
+        })) || [],
       }))
       
       return serializedProjects

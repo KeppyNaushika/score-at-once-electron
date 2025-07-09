@@ -11,6 +11,34 @@ import {
   defaultScoringMarkConfig,
 } from "../../components/projects/07-export/ScoringMarkSettings"
 
+// localStorageから設定を読み込む関数
+function loadScoringMarkConfig(): ScoringMarkConfig {
+  if (typeof window === "undefined") return defaultScoringMarkConfig
+  
+  try {
+    const stored = localStorage.getItem("scoring-mark-config")
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return {
+        ...defaultScoringMarkConfig,
+        ...parsed,
+        showMarkForStatus: {
+          ...defaultScoringMarkConfig.showMarkForStatus,
+          ...(parsed.showMarkForStatus || {})
+        },
+        showScoreForStatus: {
+          ...defaultScoringMarkConfig.showScoreForStatus,
+          ...(parsed.showScoreForStatus || {})
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Failed to load scoring mark config from localStorage:", error)
+  }
+  
+  return defaultScoringMarkConfig
+}
+
 export function useExportPage() {
   const params = useParams()
   const projectId = params.projectId as string
@@ -44,7 +72,7 @@ export function useExportPage() {
   })
 
   const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
-    defaultScoringMarkConfig,
+    loadScoringMarkConfig(),
   )
 
   // プログレス状態
@@ -66,9 +94,35 @@ export function useExportPage() {
       }
 
       if (studentsResponse && studentsResponse.success) {
-        setStudents(studentsResponse.students || [])
+        // 受験生徒順（customOrder）でソート
+        const sortedStudents = (studentsResponse.students || []).sort((a: any, b: any) => {
+          // customOrderが設定されている場合はそれを優先
+          if (a.customOrder !== null && a.customOrder !== undefined && 
+              b.customOrder !== null && b.customOrder !== undefined) {
+            return a.customOrder - b.customOrder
+          }
+          if (a.customOrder !== null && a.customOrder !== undefined) return -1
+          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+
+          // customOrderが未設定の場合は出席番号順をフォールバック
+          const aAttendanceNumber = a.memberships?.[0]?.attendanceNumber
+          const bAttendanceNumber = b.memberships?.[0]?.attendanceNumber
+          
+          if (aAttendanceNumber && bAttendanceNumber) {
+            return aAttendanceNumber - bAttendanceNumber
+          }
+          if (aAttendanceNumber) return -1
+          if (bAttendanceNumber) return 1
+
+          // 出席番号もない場合は名前順
+          const aName = `${a.lastName}${a.firstName}`
+          const bName = `${b.lastName}${b.firstName}`
+          return aName.localeCompare(bName, "ja")
+        })
+        
+        setStudents(sortedStudents)
         // デフォルトで参加中の学生を選択
-        const participatingStudents = (studentsResponse.students || [])
+        const participatingStudents = sortedStudents
           .filter((s: any) => s.status === "participating")
           .map((s: any) => s.id)
         setSelectedStudents(new Set(participatingStudents))
@@ -85,7 +139,17 @@ export function useExportPage() {
     loadStudentData()
   }, [loadStudentData])
 
-  // フィルタリング
+  // プログレスリスナーの設定
+  useEffect(() => {
+    const removeListener = window.electronAPI.onExportProgress?.((progress) => {
+      console.log('Progress update:', progress)
+      setExportProgress(progress.percentage)
+    })
+
+    return removeListener
+  }, [])
+
+  // フィルタリング（既にソート済みの students を使用）
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
       searchTerm === "" ||

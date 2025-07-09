@@ -198,9 +198,16 @@ export function StudentSelectionCard({
                   <span>
                     {student.lastName} {student.firstName}
                   </span>
-                  <span className="text-muted-foreground text-sm">
-                    {student.studentId}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {student.customOrder !== null && student.customOrder !== undefined && (
+                      <span className="text-muted-foreground text-xs bg-muted px-1 py-0.5 rounded">
+                        {student.customOrder}
+                      </span>
+                    )}
+                    <span className="text-muted-foreground text-sm">
+                      {student.studentId}
+                    </span>
+                  </div>
                 </div>
               </Label>
             </div>
