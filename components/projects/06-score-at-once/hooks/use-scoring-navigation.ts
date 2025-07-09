@@ -98,22 +98,40 @@ export function useScoringNavigation({
 
     if (totalAnswers === 0) return
 
-    // localStorageから実際の1行あたりの表示件数を取得
+    // effectiveColumnsから実際の1行あたりの表示件数を取得
     let actualColumns = effectiveColumns || gridSize.columns
-    try {
-      const stored = localStorage.getItem('answerGridView-itemsPerRow')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
-          actualColumns = parsed[0]
+    
+    // effectiveColumnsが正しく設定されていない場合のフォールバック
+    if (!effectiveColumns || effectiveColumns <= 0) {
+      try {
+        const stored = localStorage.getItem('scoring-itemsPerRow')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          if (Array.isArray(parsed) && parsed.length === 1 && typeof parsed[0] === 'number' && parsed[0] >= 1 && parsed[0] <= 10) {
+            actualColumns = parsed[0]
+          }
         }
+      } catch (error) {
+        // localStorageエラーの場合はfallback値を使用
+        actualColumns = gridSize.columns
       }
-    } catch (error) {
-      // localStorageエラーの場合はfallback値を使用
     }
 
     const cols = Math.max(1, actualColumns) // 実際の表示列数を使用、最低1列は確保
     const rows = Math.ceil(totalAnswers / cols)
+    
+    // デバッグ情報（開発時のみ）
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Grid Navigation Debug:', {
+        effectiveColumns,
+        actualColumns,
+        cols,
+        totalAnswers,
+        rows,
+        layoutDirection,
+        key
+      })
+    }
 
     // 現在選択されている答案のインデックスを取得
     let currentIndex = -1

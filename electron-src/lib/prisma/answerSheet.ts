@@ -121,7 +121,13 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
       ]
     })
 
-    return { success: true, answerSheets }
+    // originalImagePathをimagePathにマップして返す
+    const processedAnswerSheets = answerSheets.map(sheet => ({
+      ...sheet,
+      imagePath: sheet.originalImagePath
+    }))
+
+    return { success: true, answerSheets: processedAnswerSheets }
   } catch (error) {
     console.error('Error fetching answer sheets:', error)
     return {
