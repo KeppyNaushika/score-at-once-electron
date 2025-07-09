@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { GradingMode } from "../../components/projects/06-score-at-once/GradingModeToggle"
-import { AnswerSheet, QuestionRegion, ScoringData } from "../../components/projects/06-score-at-once/types"
+import { GradingMode } from "../GradingModeToggle"
+import { AnswerSheet, QuestionRegion, ScoringData } from "../types"
 import type { ProjectWithDetails } from "@/types/electron"
 
 export function useGradingPage() {

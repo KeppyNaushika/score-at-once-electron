@@ -113,12 +113,6 @@ export default function AnswerSheetsPage() {
             customOrder: student.customOrder ?? null,
           }))
 
-        console.log("答案画面 - 取得した生徒数:", sortedStudents.length)
-        console.log("答案画面 - 欠席者数:", sortedStudents.filter((s: any) => s.status === "absent").length)
-        console.log("答案画面 - 生徒ステータス内訳:", sortedStudents.reduce((acc: any, s: any) => {
-          acc[s.status] = (acc[s.status] || 0) + 1
-          return acc
-        }, {}))
         
         setStudents(sortedStudents)
       }

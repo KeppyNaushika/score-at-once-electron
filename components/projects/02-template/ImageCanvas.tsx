@@ -1,7 +1,7 @@
 "use client"
 
 import { LayoutRegionAreaType } from "@/types/common.types"
-import { useImageCanvasInteraction } from "../../../hooks/02-template/useImageCanvasInteraction"
+import { useImageCanvasInteraction } from "./hooks/useImageCanvasInteraction"
 import { AreaRenderer } from "./AreaRenderer"
 import { DragPreview } from "./DragPreview"
 import { LayoutRegionArea } from "../../../types/common.types"

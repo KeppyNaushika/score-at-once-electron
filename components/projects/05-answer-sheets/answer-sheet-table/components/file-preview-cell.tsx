@@ -46,11 +46,8 @@ export function FilePreviewCell({
 
   // 氏名欄プレビューの生成
   useEffect(() => {
-    console.log("FilePreviewCell - ページ", pageNumber, "- previewMode:", previewMode, "nameRegionAvailable:", nameRegionAvailable, "imagePreview:", !!imagePreview)
-    console.log("FilePreviewCell - ファイル:", file.name)
     
     if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
-      console.log("FilePreviewCell - 氏名欄プレビュー生成開始")
       setIsNameRegionLoading(true)
       // imagePreviewを使用して氏名欄を描画
       const tempFile = { ...file, preview: imagePreview }

@@ -17,7 +17,6 @@ export function PreviewModeToggle({
           variant={previewMode === "full" ? "default" : "ghost"}
           size="sm"
           onClick={() => {
-            console.log("PreviewModeToggle - 全体ボタンクリック")
             onPreviewModeChange("full")
           }}
           className="rounded-r-none border-r"
@@ -28,7 +27,6 @@ export function PreviewModeToggle({
           variant={previewMode === "name-only" ? "default" : "ghost"}
           size="sm"
           onClick={() => {
-            console.log("PreviewModeToggle - 氏名欄のみボタンクリック")
             onPreviewModeChange("name-only")
           }}
           className="rounded-l-none"
