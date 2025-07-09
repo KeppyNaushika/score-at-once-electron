@@ -622,37 +622,6 @@ async function addAnswerSheetToPDF(
       console.log(`  - 採点領域中央Y: ${regionYOnImage + regionHeightOnImage / 2}`)
       console.log(`  - マーク中央Y: ${markPosition.y + config.markSize / 2}`)
 
-      // デバッグ用：採点領域の長方形と対角線を描画
-      try {
-        // 長方形の枠線を描画（青色）
-        page.drawRectangle({
-          x: regionXOnImage,
-          y: regionYOnImage,
-          width: regionWidthOnImage,
-          height: regionHeightOnImage,
-          borderColor: rgb(0, 0, 1), // 青色
-          borderWidth: 2,
-        })
-
-        // 対角線を描画（緑色）
-        page.drawLine({
-          start: { x: regionXOnImage, y: regionYOnImage },
-          end: { x: regionXOnImage + regionWidthOnImage, y: regionYOnImage + regionHeightOnImage },
-          color: rgb(0, 1, 0), // 緑色
-          thickness: 1,
-        })
-
-        page.drawLine({
-          start: { x: regionXOnImage + regionWidthOnImage, y: regionYOnImage },
-          end: { x: regionXOnImage, y: regionYOnImage + regionHeightOnImage },
-          color: rgb(0, 1, 0), // 緑色
-          thickness: 1,
-        })
-
-        console.log(`✅ デバッグ用長方形と対角線を描画完了`)
-      } catch (debugError) {
-        console.warn('Failed to draw debug rectangle:', debugError)
-      }
 
       try {
         // 採点マーク画像を読み込んで描画

@@ -177,7 +177,7 @@ export function useScoringFilter({
         studentId: sheet.student.studentId,
         studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
         imageUrl: `appimg://${sheet.imagePath}`,
-        currentScore: scoreData?.score,
+        currentScore: scoreData?.score ?? undefined,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "ungraded") as ScoringStatus,
         isSelected: selectedAnswers.has(sheet.id),

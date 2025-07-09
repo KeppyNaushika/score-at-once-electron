@@ -4,13 +4,15 @@ import type { ScoringStatus, QuestionRegion } from "../types"
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>
   currentQuestion: QuestionRegion | undefined
-  onBatchScore: (status: ScoringStatus, score?: number | null) => void
+  onBatchScore: (status: ScoringStatus, score?: number | null, partialScore?: number | null, selectedAnswers?: Set<string>) => void
+  onAutoAdvance?: () => void  // 自動進行コールバック
 }
 
 export function usePartialScore({
   selectedAnswers,
   currentQuestion,
   onBatchScore,
+  onAutoAdvance,
 }: UsePartialScoreProps) {
   // 部分点入力モーダル用状態
   const [partialScoreInput, setPartialScoreInput] = useState("")
@@ -98,12 +100,19 @@ export function usePartialScore({
     // 値の妥当性チェック
     if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
       const roundedValue = Math.round(finalValue * 100) / 100
-      console.log("✅ Calling onBatchScore with:", confirmType, roundedValue)
-      onBatchScore(confirmType, roundedValue)
+      console.log("✅ Calling onBatchScore with args:", {
+        arg1: confirmType,
+        arg2: roundedValue,
+        arg4: selectedAnswers,
+        type1: typeof confirmType,
+        type2: typeof roundedValue,
+        selectedAnswersSize: selectedAnswers.size
+      })
+      onBatchScore(confirmType, roundedValue, null, selectedAnswers)
     } else if (finalInput === "" || finalInput === "0.") {
       // 空の場合は0点として処理
-      console.log("✅ Calling onBatchScore with 0 points:", confirmType, 0)
-      onBatchScore(confirmType, 0)
+      console.log("✅ Calling onBatchScore with 0 points:", confirmType, 0, selectedAnswers.size)
+      onBatchScore(confirmType, 0, null, selectedAnswers)
     } else {
       console.log("❌ Invalid input, not calling onBatchScore")
     }
@@ -111,12 +120,20 @@ export function usePartialScore({
     // モーダルを閉じる
     setPartialScoreInput("")
     setShowPartialScoreModal(false)
+    
+    // 自動進行（300ms後に実行）
+    if (onAutoAdvance) {
+      setTimeout(() => {
+        onAutoAdvance()
+      }, 300)
+    }
   }, [
     showPartialScoreModal,
     selectedAnswers.size,
     partialScoreInput,
     currentQuestion,
     onBatchScore,
+    onAutoAdvance,
   ])
 
   // モーダルキャンセル（Escape等）

@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { Settings, AlignLeft, AlignCenter, AlignRight } from "lucide-react"
+import { Settings, AlignLeft, AlignCenter, AlignRight, FileText, RotateCcw } from "lucide-react"
 import { useState, useEffect } from "react"
 
 // 採点状態の型定義
@@ -34,6 +34,10 @@ export type MarkPosition =
 // テキスト配置の型定義
 export type TextAlignment = "left" | "center" | "right"
 
+// PDF設定の型定義
+export type PageSize = "A4" | "A3" | "B4" | "B5" | "Letter"
+export type PageOrientation = "portrait" | "landscape"
+
 // 採点マーク設定の型定義
 export interface ScoringMarkConfig {
   // 表示設定
@@ -55,6 +59,11 @@ export interface ScoringMarkConfig {
   
   // 透明度設定
   useTransparent: boolean
+  
+  // PDF設定
+  pageSize: PageSize
+  pageOrientation: PageOrientation
+  marginPercent: number // 余白パーセント（0-20）
 }
 
 // デフォルト設定
@@ -87,6 +96,10 @@ const defaultConfig: ScoringMarkConfig = {
   scoreSize: 14,
   scoreAlignment: "center",
   useTransparent: false,
+  // PDF設定
+  pageSize: "A4",
+  pageOrientation: "portrait",
+  marginPercent: 5, // 5%の余白
 }
 
 // localStorageのキー

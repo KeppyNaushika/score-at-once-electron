@@ -53,7 +53,7 @@ export function useScoringData({
         scoringData[key] = {
           id: score.id,
           questionId: score.layoutRegionId,
-          score: Number(score.partialScore) || 0,
+          score: score.partialScore ? Number(score.partialScore) : null,  // partialScoreを直接格納
           maxScore: 0, // We'll need to get this from the layout region
           status: score.status as ScoringStatus,
           comment: score.comment || "",
@@ -79,6 +79,34 @@ export function useScoringData({
     
     if (!scoreData) return "ungraded"
     return scoreData.status
+  }, [scoringData])
+
+  // 実際の得点を計算する関数
+  const getActualScore = useCallback((answerSheetId: string, questionId?: string, maxScore: number = 0): number | null => {
+    if (!questionId) return null
+    
+    const key = `${answerSheetId}-${questionId}`
+    const scoreData = scoringData[key]
+    
+    if (!scoreData) return null
+    
+    // calculateActualScoreと同じロジック
+    switch (scoreData.status) {
+      case "correct":
+      case "final":
+        return maxScore
+      case "incorrect":
+      case "no_answer":
+        return 0
+      case "ungraded":
+        return null
+      case "partial":
+      case "pending":
+      case "proposed":
+        return scoreData.score
+      default:
+        return 0
+    }
   }, [scoringData])
 
   // Auto-finalization logic for collaborative grading
@@ -182,7 +210,7 @@ export function useScoringData({
         // 部分点の場合は入力ダイアログを表示（簡易実装）
         const inputScore = prompt(
           `部分点を入力してください (0-${currentQuestion.points}):`,
-          currentScore?.score.toString() || "0",
+          currentScore?.score?.toString() || "0",
         )
         if (inputScore === null) return
         const parsedScore = parseInt(inputScore)
@@ -206,7 +234,7 @@ export function useScoringData({
       if (currentScore?.id) {
         // Update existing score
         const updateData = {
-          partialScore: newScore,
+          partialScore: newScore !== null ? newScore : undefined,
           status: status,
           comment: currentScore.comment || "",
         }
@@ -254,7 +282,7 @@ export function useScoringData({
         const scoreData = {
           answerSheetId: currentAnswerSheet.id,
           layoutRegionId: currentQuestion.id,
-          partialScore: newScore,
+          partialScore: newScore !== null ? newScore : undefined,
           status: status,
           comment: "",
           scoredByUserId: currentUserId,
@@ -344,7 +372,7 @@ export function useScoringData({
     // 引数の解析
     let answerIds: string | string[]
     let status: ScoringStatus
-    let scoreValue: number | null = null
+    let inputPartialScore: number | null = null
 
     if (
       typeof statusOrAnswerIds === "string" &&
@@ -361,13 +389,16 @@ export function useScoringData({
       // 新形式: handleBatchScore(status, partialScore?)
       status = statusOrAnswerIds as ScoringStatus
       answerIds = Array.from(selectedAnswers)
-      scoreValue =
-        typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
+      inputPartialScore = typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
+      
+      console.log("📝 New format detected - status:", status, "partialScore:", inputPartialScore)
     } else {
       // 旧形式: handleBatchScore(answerIds, status)
       answerIds = statusOrAnswerIds as string | string[]
       status = statusOrPartialScore as ScoringStatus
-      scoreValue = partialScore || null
+      inputPartialScore = partialScore || null
+      
+      console.log("📝 Old format detected - status:", status, "partialScore:", inputPartialScore)
     }
 
     let effectiveUserId: string
@@ -395,34 +426,45 @@ export function useScoringData({
       const key = `${answerId}-${currentQuestion.id}`
       const currentScore = scoringData[key]
 
-      let newScore = 0
+      let newScore: number | null = 0
       // Use the actual status type from the scoring action
       let scoringStatus: ScoringStatus = status
 
       switch (status) {
         case "ungraded":
-          newScore = 0
+          newScore = null  // partialScoreはnullに設定
           scoringStatus = "ungraded"
           break
         case "correct":
-          newScore = currentQuestion.points
+          newScore = null  // partialScoreはnullに設定
           break
         case "incorrect":
         case "no_answer":
-          newScore = 0
+          newScore = null  // partialScoreはnullに設定
           break
         case "partial":
-          // 指定された部分点を使用、なければ満点の半分を設定
-          if (scoreValue !== null && scoreValue !== undefined) {
-            newScore = scoreValue
-            console.log("📝 Using provided partial score:", scoreValue)
+          // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
+          console.log("🔍 Partial case - inputPartialScore:", inputPartialScore, "currentScore:", currentScore?.score)
+          if (inputPartialScore !== null && inputPartialScore !== undefined) {
+            newScore = inputPartialScore
+            console.log("✅ Using provided partial score:", inputPartialScore)
           } else {
-            newScore = Math.floor(currentQuestion.points / 2)
-            console.log("📝 Using default partial score (half):", newScore)
+            // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
+            newScore = currentScore?.score || null
+            console.log("📋 Keeping current partial score (status only change):", newScore)
           }
           break
         case "pending":
-          newScore = currentScore?.score || 0
+          // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
+          console.log("🔍 Pending case - inputPartialScore:", inputPartialScore, "currentScore:", currentScore?.score)
+          if (inputPartialScore !== null && inputPartialScore !== undefined) {
+            newScore = inputPartialScore
+            console.log("✅ Using provided pending score:", inputPartialScore)
+          } else {
+            // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
+            newScore = currentScore?.score || null
+            console.log("📋 Keeping current partial score (status only change):", newScore)
+          }
           break
       }
 
@@ -439,7 +481,7 @@ export function useScoringData({
         if (currentScore?.id) {
           // Update existing score
           const updateData = {
-            partialScore: newScore,
+            partialScore: newScore !== null ? newScore : undefined,
             status: scoringStatus,
             comment: currentScore.comment || "",
           }
@@ -471,7 +513,7 @@ export function useScoringData({
           const scoreData = {
             answerSheetId: answerId,
             layoutRegionId: currentQuestion.id,
-            partialScore: newScore,
+            partialScore: newScore !== null ? newScore : undefined,
             status: scoringStatus,
             comment: "",
             scoredByUserId: effectiveUserId,
@@ -525,6 +567,7 @@ export function useScoringData({
     setScoringData,
     loadExistingScoringData,
     getScoringStatus,
+    getActualScore,
     handleSetScore,
     handleBatchScore,
   }

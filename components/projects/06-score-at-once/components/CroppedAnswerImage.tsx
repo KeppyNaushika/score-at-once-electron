@@ -20,6 +20,7 @@ interface CroppedAnswerImageProps {
   className?: string
   isColumnLayout?: boolean
   itemsPerRow?: number // 1行あたりの表示数
+  isSelected?: boolean
 }
 
 // 採点領域をクロップして表示するコンポーネント
@@ -30,6 +31,7 @@ export default function CroppedAnswerImage({
   className = "",
   isColumnLayout = false,
   itemsPerRow,
+  isSelected = false,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -98,7 +100,7 @@ export default function CroppedAnswerImage({
   }
 
   return (
-    <div className={`relative w-full ${className}`}>
+    <div className={`relative w-full ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${className}`}>
       <img
         ref={imageRef}
         src={imageUrl}

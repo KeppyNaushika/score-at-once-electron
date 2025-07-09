@@ -10,19 +10,20 @@ import { Decimal } from "@prisma/client/runtime/library"
 export const calculateActualScore = (
   questionScore: { status: string; partialScore?: number | null },
   maxScore: number
-): number => {
+): number | null => {
   switch (questionScore.status) {
     case "correct":
     case "final":
       return maxScore
     case "incorrect":
     case "no_answer":
+      return 0  // 誤答・無答は 0/配点 と表示
     case "ungraded":
-      return 0
+      return null  // 未採点は null を返して -/配点 と表示
     case "partial":
     case "pending":
     case "proposed":
-      return questionScore.partialScore ? Number(questionScore.partialScore) : 0
+      return questionScore.partialScore ? Number(questionScore.partialScore) : null
     default:
       return 0
   }

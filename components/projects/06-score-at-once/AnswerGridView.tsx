@@ -573,6 +573,7 @@ export default function AnswerGridView({
                   layoutDirection === "down-left"
                 }
                 itemsPerRow={itemsPerRow[0]}
+                isSelected={isSelected}
               />
 
               {/* 学生情報と採点状況 */}
@@ -590,14 +591,14 @@ export default function AnswerGridView({
 
                   {!isMaster && answer.status !== "ungraded" && (
                     <Badge variant="outline" className="h-4 px-1 text-xs">
-                      {answer.currentScore !== undefined
-                        ? `${answer.currentScore}/${answer.maxScore}`
-                        : answer.status === "correct" ||
-                            answer.status === "final"
-                          ? `${answer.maxScore}pt`
-                          : answer.status === "incorrect" ||
-                              answer.status === "no_answer"
-                            ? "0pt"
+                      {answer.status === "correct" || answer.status === "final"
+                        ? `${answer.maxScore}/${answer.maxScore}`
+                        : answer.status === "incorrect" || answer.status === "no_answer"
+                          ? `0/${answer.maxScore}`
+                          : answer.status === "partial" || answer.status === "pending"
+                            ? answer.currentScore !== null && answer.currentScore !== undefined
+                              ? `${answer.currentScore}/${answer.maxScore}`
+                              : `-/${answer.maxScore}`
                             : answer.status === "proposed"
                               ? "提案中"
                               : "採点中"}

@@ -157,6 +157,17 @@ export default function ScoringMainView() {
     effectiveColumns,
   })
 
+  // 自動進行関数
+  const handleAutoAdvance = useCallback(() => {
+    if (gradingMode === "grid") {
+      // グリッドモードでは次の答案に移動
+      handleGridNavigation("d")
+    } else {
+      // 個別モードでは次の学生に移動
+      handleNextStudent()
+    }
+  }, [gradingMode, handleGridNavigation, handleNextStudent])
+
   // 部分点入力管理hook
   const {
     partialScoreInput,
@@ -170,6 +181,7 @@ export default function ScoringMainView() {
     selectedAnswers,
     currentQuestion,
     onBatchScore: handleBatchScore,
+    onAutoAdvance: handleAutoAdvance,
   })
 
   // 生徒名表示設定の変更をlocalStorageに保存

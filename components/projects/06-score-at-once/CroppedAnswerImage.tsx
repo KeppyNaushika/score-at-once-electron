@@ -18,13 +18,15 @@ interface CroppedAnswerImageProps {
   questionRegion?: QuestionRegion
   alt: string
   className?: string
+  isSelected?: boolean
 }
 
 export function CroppedAnswerImage({ 
   imageUrl, 
   questionRegion, 
   alt, 
-  className = "" 
+  className = "",
+  isSelected = false
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -93,7 +95,7 @@ export function CroppedAnswerImage({
   }, [imageUrl])
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${className}`}>
       <img
         ref={imageRef}
         src={imageUrl}
