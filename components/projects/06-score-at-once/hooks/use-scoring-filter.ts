@@ -55,8 +55,8 @@ export function useScoringFilter({
     return scoreData.status
   }, [scoringData])
 
-  // 表示対象答案の更新（初期化時とRキー押下時のみ）
-  const updateVisibleAnswers = useCallback(() => {
+  // 表示対象答案の更新（統合版）
+  const updateVisibleAnswers = useCallback((useLatestScoringData: boolean = false) => {
     const newVisibleAnswers = new Set<string>()
     
     if (!currentQuestion) {
@@ -93,7 +93,6 @@ export function useScoringFilter({
     })
     
     sortedAnswerSheets.forEach(sheet => {
-      // 現在のscoringDataを参照（採点時の更新を避けるため、依存配列に含めない）
       const key = `${sheet.id}-${currentQuestion?.id}`
       const scoreData = scoringData[key]
       const status = scoreData?.status || "ungraded"
@@ -104,8 +103,7 @@ export function useScoringFilter({
     })
     
     setVisibleAnswers(newVisibleAnswers)
-  // 注意: scoringDataを依存配列に含めない（採点時の更新を避けるため）
-  }, [answerSheets, currentQuestion, filterSettings, project])
+  }, [answerSheets, currentQuestion, filterSettings, project, scoringData])
 
   // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
   useEffect(() => {
@@ -225,60 +223,14 @@ export function useScoringFilter({
     return filteredAnswers
   }, [getAllGridAnswerData, visibleAnswers, getMasterAnswerData])
 
-  // フィルタリング関連ハンドラー（Rキー押下時のみ）
+  // フィルタリング関連ハンドラー（Rキー押下時およびフィルター変更時）
   const handleRefreshFilter = useCallback(() => {
     // 選択をクリア
     setSelectedAnswers(new Set())
     
     // 最新のscoringDataを使用してフィルタリングを実行
-    const newVisibleAnswers = new Set<string>()
-    
-    if (!currentQuestion) {
-      setVisibleAnswers(newVisibleAnswers)
-      return
-    }
-
-    // masterImageIdに基づいてpageNumberを取得
-    const masterImage = project?.masterImages?.find(
-      (img: any) => img.id === currentQuestion.masterImageId,
-    )
-    const targetPageNumber = masterImage?.pageNumber || 1
-
-    // pageNumberでフィルタリングしてから受験生徒順でソート
-    const pageFilteredSheets = answerSheets.filter(
-      (sheet) => sheet.pageNumber === targetPageNumber,
-    )
-
-    const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
-      // ProjectStudentのcustomOrderで並び替え（小さい値が先）
-      const aOrder =
-        a.student.projectStudents?.[0]?.customOrder !== undefined ? a.student.projectStudents[0].customOrder : 999999
-      const bOrder =
-        b.student.projectStudents?.[0]?.customOrder !== undefined ? b.student.projectStudents[0].customOrder : 999999
-
-      // customOrderが同じ場合は姓名でソート
-      if (aOrder === bOrder) {
-        const aName = `${a.student.lastName}${a.student.firstName}`
-        const bName = `${b.student.lastName}${b.student.firstName}`
-        return aName.localeCompare(bName, "ja")
-      }
-
-      return aOrder - bOrder
-    })
-    
-    sortedAnswerSheets.forEach(sheet => {
-      // 最新のscoringDataを参照
-      const key = `${sheet.id}-${currentQuestion?.id}`
-      const scoreData = scoringData[key]
-      const status = scoreData?.status || "ungraded"
-      
-      if (filterSettings[status as keyof typeof filterSettings]) {
-        newVisibleAnswers.add(sheet.id)
-      }
-    })
-    
-    setVisibleAnswers(newVisibleAnswers)
-  }, [setSelectedAnswers, currentQuestion, project, answerSheets, filterSettings, scoringData])
+    updateVisibleAnswers(true)
+  }, [setSelectedAnswers, updateVisibleAnswers])
 
   const handleToggleFilter = useCallback((key: string) => {
     // ボタン操作によるフィルター切り替え
@@ -288,9 +240,15 @@ export function useScoringFilter({
         [key]: !filterSettings[key as keyof typeof filterSettings],
       }
       setFilterSettings(newFilterSettings)
-      // 注意: 表示更新は手動（Rキー）でのみ実行
+      
+      // フィルター変更時にRキーと同じ更新ロジックを実行
+      // 新しいフィルター設定を使用するため、次のレンダリングサイクルで実行
+      setTimeout(() => {
+        setSelectedAnswers(new Set())
+        updateVisibleAnswers(true)
+      }, 0)
     }
-  }, [filterSettings])
+  }, [filterSettings, setSelectedAnswers, updateVisibleAnswers])
 
   // Alt+採点キーでフィルタ切り替え
   const handleToggleFilterByScoreKey = useCallback((scoreKey: string) => {
@@ -310,9 +268,15 @@ export function useScoringFilter({
         [filterKey]: !filterSettings[filterKey],
       }
       setFilterSettings(newFilterSettings)
-      // 注意: 表示更新は手動（Rキー）でのみ実行
+      
+      // フィルター変更時にRキーと同じ更新ロジックを実行
+      // 新しいフィルター設定を使用するため、次のレンダリングサイクルで実行
+      setTimeout(() => {
+        setSelectedAnswers(new Set())
+        updateVisibleAnswers(true)
+      }, 0)
     }
-  }, [filterSettings])
+  }, [filterSettings, setSelectedAnswers, updateVisibleAnswers])
 
 
   return {
