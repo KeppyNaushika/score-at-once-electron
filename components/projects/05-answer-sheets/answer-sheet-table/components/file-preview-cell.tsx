@@ -56,7 +56,6 @@ export function FilePreviewCell({
       const tempFile = { ...file, preview: imagePreview }
       drawNameRegionCanvas(tempFile, pageNumber)
         .then((canvas) => {
-          console.log("FilePreviewCell - 氏名欄プレビュー生成完了:", !!canvas)
           setNameRegionPreview(canvas)
           setIsNameRegionLoading(false)
         })

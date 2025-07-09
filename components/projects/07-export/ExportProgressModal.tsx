@@ -41,10 +41,8 @@ export default function ExportProgressModal({
 
   useEffect(() => {
     if (status === 'completed' && progress === 100) {
-      // 完了時に2秒後にフェードアウト開始
       const timer = setTimeout(() => {
         setIsClosing(true)
-        // フェードアウトアニメーション完了後に閉じる
         setTimeout(() => {
           setIsVisible(false)
           onClose()

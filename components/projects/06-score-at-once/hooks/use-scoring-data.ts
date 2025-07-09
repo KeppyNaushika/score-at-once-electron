@@ -362,12 +362,6 @@ export function useScoringData({
     partialScore?: number | null,
     selectedAnswers: Set<string> = new Set(),
   ) => {
-    console.log("🎯 handleBatchScore called with:", {
-      statusOrAnswerIds,
-      statusOrPartialScore,
-      partialScore,
-      selectedAnswersSize: selectedAnswers.size
-    })
 
     // 引数の解析
     let answerIds: string | string[]
@@ -391,14 +385,12 @@ export function useScoringData({
       answerIds = Array.from(selectedAnswers)
       inputPartialScore = typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
       
-      console.log("📝 New format detected - status:", status, "partialScore:", inputPartialScore)
     } else {
       // 旧形式: handleBatchScore(answerIds, status)
       answerIds = statusOrAnswerIds as string | string[]
       status = statusOrPartialScore as ScoringStatus
       inputPartialScore = partialScore || null
       
-      console.log("📝 Old format detected - status:", status, "partialScore:", inputPartialScore)
     }
 
     let effectiveUserId: string
@@ -444,39 +436,26 @@ export function useScoringData({
           break
         case "partial":
           // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
-          console.log("🔍 Partial case - inputPartialScore:", inputPartialScore, "currentScore:", currentScore?.score)
           if (inputPartialScore !== null && inputPartialScore !== undefined) {
             newScore = inputPartialScore
-            console.log("✅ Using provided partial score:", inputPartialScore)
           } else {
             // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
             newScore = currentScore?.score || null
-            console.log("📋 Keeping current partial score (status only change):", newScore)
           }
           break
         case "pending":
           // モーダルで入力された場合は具体的な値、モーダル無しの場合は現在の値を維持（ステータスのみ変更）
-          console.log("🔍 Pending case - inputPartialScore:", inputPartialScore, "currentScore:", currentScore?.score)
           if (inputPartialScore !== null && inputPartialScore !== undefined) {
             newScore = inputPartialScore
-            console.log("✅ Using provided pending score:", inputPartialScore)
           } else {
             // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
             newScore = currentScore?.score || null
-            console.log("📋 Keeping current partial score (status only change):", newScore)
           }
           break
       }
 
       // Save to database
       try {
-        console.log("💾 Saving to database:", {
-          answerId,
-          questionId: currentQuestion.id,
-          newScore,
-          scoringStatus,
-          hasExistingScore: !!currentScore?.id
-        })
 
         if (currentScore?.id) {
           // Update existing score
@@ -485,13 +464,11 @@ export function useScoringData({
             status: scoringStatus,
             comment: currentScore.comment || "",
           }
-          console.log("🔄 Updating existing score:", updateData)
           const result = await window.electronAPI.updateQuestionScore(
             currentScore.id,
             updateData,
             currentScore.version,
           )
-          console.log("✅ Update result:", result)
 
           if ((result as any).success || result.scoreVersion) {
             setScoringData((prev) => ({
@@ -518,9 +495,7 @@ export function useScoringData({
             comment: "",
             scoredByUserId: effectiveUserId,
           }
-          console.log("➕ Creating new score:", scoreData)
           const result = await window.electronAPI.createQuestionScore(scoreData)
-          console.log("✅ Create result:", result)
 
           if ((result as any).success || result.id) {
             setScoringData((prev) => ({

@@ -124,17 +124,3 @@ export function formatStudentInfo(student: UnifiedStudent): {
   }
 }
 
-/**
- * デバッグ用: 生徒順序の確認（開発環境でのみ使用）
- */
-export function debugStudentOrder(students: UnifiedStudent[]): void {
-  if (process.env.NODE_ENV !== "development") return
-  
-  const sorted = sortStudentsForTable(students)
-  console.log("🔍 受験生徒順序（デバッグ）:")
-  sorted.forEach((student, index) => {
-    console.log(
-      `  ${index}: ${getStudentDisplayName(student)} (ID: ${student.studentId}, customOrder: ${student.customOrder}, 出席番号: ${student.attendanceNumber})`
-    )
-  })
-}

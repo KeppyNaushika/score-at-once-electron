@@ -8,8 +8,6 @@ export function PreviewModeToggle({
   onPreviewModeChange,
   hasNameRegion,
 }: PreviewModeToggleProps) {
-  // デバッグログ
-  console.log("PreviewModeToggle - previewMode:", previewMode, "hasNameRegion:", hasNameRegion)
   
   return (
     <div className="flex items-center gap-2">
