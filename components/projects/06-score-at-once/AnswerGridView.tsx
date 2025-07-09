@@ -163,6 +163,9 @@ export default function AnswerGridView({
     null,
   )
   const [isDragging, setIsDragging] = useState(false)
+  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(
+    null,
+  )
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数 (0-10)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -421,13 +424,18 @@ export default function AnswerGridView({
   }
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (dragStart && !isDragging) {
+    if (dragStart) {
       const distance = Math.sqrt(
         Math.pow(event.clientX - dragStart.x, 2) +
           Math.pow(event.clientY - dragStart.y, 2),
       )
-      if (distance > 5) {
+      if (distance > 5 && !isDragging) {
         setIsDragging(true)
+      }
+      
+      // ドラッグ中の現在位置を更新
+      if (isDragging || distance > 5) {
+        setDragCurrent({ x: event.clientX, y: event.clientY })
       }
     }
   }
@@ -439,6 +447,26 @@ export default function AnswerGridView({
     }
     setDragStart(null)
     setIsDragging(false)
+    setDragCurrent(null)
+  }
+
+  // 選択範囲の描画を計算する関数
+  const getDragSelectionRect = () => {
+    if (!dragStart || !dragCurrent || !gridRef.current) return null
+    
+    const gridRect = gridRef.current.getBoundingClientRect()
+    
+    const startX = Math.min(dragStart.x, dragCurrent.x) - gridRect.left
+    const endX = Math.max(dragStart.x, dragCurrent.x) - gridRect.left
+    const startY = Math.min(dragStart.y, dragCurrent.y) - gridRect.top
+    const endY = Math.max(dragStart.y, dragCurrent.y) - gridRect.top
+    
+    return {
+      left: startX,
+      top: startY,
+      width: endX - startX,
+      height: endY - startY,
+    }
   }
 
   // ドラッグによる矩形選択処理
@@ -495,7 +523,7 @@ export default function AnswerGridView({
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className={`grid min-w-0 gap-2 p-1 select-none ${
+        className={`grid min-w-0 gap-2 p-1 select-none relative ${
           layoutDirection === "down-right" || layoutDirection === "down-left"
             ? "h-full"
             : "h-auto"
@@ -624,6 +652,28 @@ export default function AnswerGridView({
             </div>
           )
         })}
+        
+        {/* ドラッグ選択範囲の可視化 */}
+        {isDragging && dragStart && dragCurrent && (() => {
+          const rect = getDragSelectionRect()
+          if (!rect) return null
+          
+          return (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                backgroundColor: 'rgba(59, 130, 246, 0.2)', // 透過した青色
+                border: '2px solid rgba(59, 130, 246, 0.5)',
+                borderRadius: '4px',
+                zIndex: 1000,
+              }}
+            />
+          )
+        })()}
       </div>
     </div>
   )
