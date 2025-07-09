@@ -13,6 +13,13 @@ export interface MasterImagesState {
   isUploading: boolean
   isDeleting: Record<string, boolean>
   isMoving: boolean
+  passwordDialog: {
+    isOpen: boolean
+    fileName?: string
+    attempts: number
+    hasError: boolean
+    isLoading: boolean
+  }
 }
 
 export function useMasterImages(
@@ -25,7 +32,14 @@ export function useMasterImages(
     imageUrls: {},
     isUploading: false,
     isDeleting: {},
-    isMoving: false
+    isMoving: false,
+    passwordDialog: {
+      isOpen: false,
+      fileName: undefined,
+      attempts: 0,
+      hasError: false,
+      isLoading: false
+    }
   })
 
 
@@ -55,6 +69,11 @@ export function useMasterImages(
     }
   }, [initialImages])
 
+  // パスワード処理用の状態
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [currentFileIndex, setCurrentFileIndex] = useState(0)
+  const [currentPassword, setCurrentPassword] = useState<string>("")
+
   const uploadImages = useCallback(async (files: File[]) => {
     if (!projectId) {
       toast.error("プロジェクトIDが指定されていません。")
@@ -68,14 +87,19 @@ export function useMasterImages(
     }
     
     setState(prev => ({ ...prev, isUploading: true }))
+    setPendingFiles(files)
+    setCurrentFileIndex(0)
     
     try {
       const allFilesData: ConvertedImage[] = []
 
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        setCurrentFileIndex(i)
+        
         if (file.type === 'application/pdf') {
-          // Convert PDF to individual page images
-          const pdfImages = await convertPdfToImages(file)
+          // Convert PDF to individual page images with password handling
+          const pdfImages = await convertPdfToImagesWithPassword(file)
           allFilesData.push(...pdfImages)
         } else {
           // Handle regular image files
@@ -133,8 +157,148 @@ export function useMasterImages(
       toast.error("ファイルのアップロードに失敗しました。")
     } finally {
       setState(prev => ({ ...prev, isUploading: false }))
+      setPendingFiles([])
+      setCurrentFileIndex(0)
+      setCurrentPassword("")
     }
-  }, [projectId, onImagesChange, convertPdfToImages])
+  }, [projectId, onImagesChange])
+
+  // パスワード付きPDF変換処理
+  const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
+    try {
+      // まずパスワードなしで試行
+      const pdfImages = await convertPdfToImages(file)
+      return pdfImages
+    } catch (error) {
+      if (error === 'password-required' || error === 'invalid-password') {
+        // パスワードが必要な場合、ダイアログを表示してPromiseを返す
+        return new Promise((resolve, reject) => {
+          const isInvalidPassword = error === 'invalid-password'
+          
+          setState(prev => ({
+            ...prev,
+            passwordDialog: {
+              isOpen: true,
+              fileName: file.name,
+              attempts: isInvalidPassword ? prev.passwordDialog.attempts + 1 : 0,
+              hasError: isInvalidPassword,
+              isLoading: false
+            }
+          }))
+          
+          // グローバルスコープで解決関数を保存
+          ;(window as any).__masterImagePasswordResolve = resolve
+          ;(window as any).__masterImagePasswordReject = reject
+          ;(window as any).__masterImagePasswordFile = file
+        })
+      } else {
+        // その他のエラーはそのまま投げる
+        throw error
+      }
+    }
+  }, [])
+
+  // パスワード送信処理
+  const handlePasswordSubmit = useCallback(async (password: string) => {
+    const file = (window as any).__masterImagePasswordFile
+    const resolve = (window as any).__masterImagePasswordResolve
+    const reject = (window as any).__masterImagePasswordReject
+    
+    if (!file || !resolve || !reject) return
+    
+    setState(prev => ({
+      ...prev,
+      passwordDialog: {
+        ...prev.passwordDialog,
+        isLoading: true,
+        hasError: false
+      }
+    }))
+    
+    try {
+      const pdfImages = await convertPdfToImages(file, password)
+      
+      // パスワード成功時の処理
+      setState(prev => ({
+        ...prev,
+        passwordDialog: {
+          isOpen: false,
+          fileName: undefined,
+          attempts: 0,
+          hasError: false,
+          isLoading: false
+        }
+      }))
+      
+      // グローバル変数をクリア
+      ;(window as any).__masterImagePasswordResolve = null
+      ;(window as any).__masterImagePasswordReject = null
+      ;(window as any).__masterImagePasswordFile = null
+      
+      resolve(pdfImages)
+    } catch (error) {
+      if (error === 'invalid-password') {
+        setState(prev => ({
+          ...prev,
+          passwordDialog: {
+            ...prev.passwordDialog,
+            isLoading: false,
+            hasError: true,
+            attempts: prev.passwordDialog.attempts + 1
+          }
+        }))
+      } else {
+        setState(prev => ({
+          ...prev,
+          passwordDialog: {
+            isOpen: false,
+            fileName: undefined,
+            attempts: 0,
+            hasError: false,
+            isLoading: false
+          }
+        }))
+        
+        // グローバル変数をクリア
+        ;(window as any).__masterImagePasswordResolve = null
+        ;(window as any).__masterImagePasswordReject = null
+        ;(window as any).__masterImagePasswordFile = null
+        
+        reject(error)
+      }
+    }
+  }, [])
+
+  // パスワードダイアログを閉じる
+  const handlePasswordCancel = useCallback(() => {
+    const reject = (window as any).__masterImagePasswordReject
+    
+    setState(prev => ({
+      ...prev,
+      passwordDialog: {
+        isOpen: false,
+        fileName: undefined,
+        attempts: 0,
+        hasError: false,
+        isLoading: false
+      },
+      isUploading: false
+    }))
+    
+    // グローバル変数をクリア
+    ;(window as any).__masterImagePasswordResolve = null
+    ;(window as any).__masterImagePasswordReject = null
+    ;(window as any).__masterImagePasswordFile = null
+    
+    // Promise を拒否
+    if (reject) {
+      reject(new Error('Password input cancelled'))
+    }
+    
+    setPendingFiles([])
+    setCurrentFileIndex(0)
+    setCurrentPassword("")
+  }, [])
 
   const deleteImage = useCallback(async (imageId: string) => {
     setState(prev => ({
@@ -199,6 +363,8 @@ export function useMasterImages(
     ...state,
     uploadImages,
     deleteImage,
-    moveImage
+    moveImage,
+    handlePasswordSubmit,
+    handlePasswordCancel
   }
 }
