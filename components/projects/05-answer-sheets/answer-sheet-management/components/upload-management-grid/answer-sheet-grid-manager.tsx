@@ -64,16 +64,11 @@ export function AnswerSheetGridManager({
       .filter(student => student.status === "absent")
       .map(student => student.id)
     
-    console.log("全生徒数:", students.length)
-    console.log("欠席者数:", absentStudentIds.length)
-    console.log("欠席者ID:", absentStudentIds)
-    console.log("生徒ステータス:", students.map(s => ({ id: s.id, name: `${s.lastName} ${s.firstName}`, status: s.status })))
     
     if (absentStudentIds.length > 0) {
       setStudentStates(prev => {
         const newStates = new Set(prev)
         absentStudentIds.forEach(id => newStates.add(id))
-        console.log("無効化された生徒ID:", Array.from(newStates))
         return newStates
       })
     }

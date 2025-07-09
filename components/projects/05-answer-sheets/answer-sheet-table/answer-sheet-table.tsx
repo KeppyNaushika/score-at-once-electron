@@ -145,7 +145,6 @@ export function AnswerSheetTable({
   
   // デバッグ用のpreviewMode変更ハンドラー
   const handlePreviewModeChange = (mode: PreviewMode) => {
-    console.log("AnswerSheetTable - handlePreviewModeChange:", mode)
     setPreviewMode(mode)
   }
 
@@ -212,9 +211,6 @@ export function AnswerSheetTable({
   const hasNameRegion = Object.values(nameRegionAvailable).some(Boolean)
   
   // デバッグログ
-  console.log("AnswerSheetTable - nameRegionAvailable:", nameRegionAvailable)
-  console.log("AnswerSheetTable - hasNameRegion:", hasNameRegion)
-  console.log("AnswerSheetTable - masterImageCount:", masterImageCount)
 
   // ============================================================================
   // レンダリング

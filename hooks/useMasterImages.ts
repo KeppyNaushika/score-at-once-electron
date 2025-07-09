@@ -105,7 +105,6 @@ export function useMasterImages(
           } catch (error) {
             if (error instanceof Error && error.message === 'Password input cancelled') {
               // ユーザーがパスワード入力をキャンセルした場合
-              console.log('Password input cancelled by user')
               return // アップロード処理を中断
             } else {
               throw error // その他のエラーは再投げ
@@ -176,13 +175,10 @@ export function useMasterImages(
   // パスワード付きPDF変換処理
   const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
     try {
-      console.log('Attempting to convert PDF without password:', file.name)
       // まずパスワードなしで試行
       const pdfImages = await convertPdfToImages(file)
-      console.log('PDF converted successfully without password')
       return pdfImages
     } catch (error) {
-      console.log('PDF conversion error:', error)
       const errorMessage = error instanceof Error ? error.message : String(error)
       if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
         console.log('Password required, showing dialog for:', file.name)

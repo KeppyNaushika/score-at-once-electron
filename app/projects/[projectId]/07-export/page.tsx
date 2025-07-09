@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useExportPage } from "../../../../hooks/07-export/useExportPage"
+import { useExportPage } from "../../../../components/projects/07-export/hooks/useExportPage"
 import { StudentSelectionCard } from "../../../../components/projects/07-export/StudentSelectionCard"
 import { ExportOptionsCard } from "../../../../components/projects/07-export/ExportOptionsCard"
 import ExportProgressModal from "../../../../components/projects/07-export/ExportProgressModal"
@@ -69,7 +69,9 @@ export default function ExportPage() {
         setExportProgress(100)
         setTimeout(() => {
           setShowProgressModal(false)
-          alert(`採点済み答案PDFの出力が完了しました。\n保存先: ${result.outputPath}`)
+          alert(
+            `採点済み答案PDFの出力が完了しました。\n保存先: ${result.outputPath}`,
+          )
         }, 1000)
       } else {
         alert(`出力に失敗しました: ${result.error}`)
@@ -101,7 +103,9 @@ export default function ExportPage() {
       })
 
       if (result.success) {
-        alert(`採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`)
+        alert(
+          `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`,
+        )
       } else {
         alert(`出力に失敗しました: ${result.error}`)
       }
@@ -167,7 +171,7 @@ export default function ExportPage() {
                 {selectedStudents.size}人の生徒を選択しています
               </p>
             </div>
-            <div className="flex gap-4 justify-center">
+            <div className="flex justify-center gap-4">
               <Button
                 onClick={handleExportScoredAnswers}
                 disabled={selectedStudents.size === 0 || isExporting}

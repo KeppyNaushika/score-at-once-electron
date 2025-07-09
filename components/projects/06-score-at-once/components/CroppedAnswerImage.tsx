@@ -54,19 +54,6 @@ export default function CroppedAnswerImage({
     const containerWidth = canvas.offsetWidth
     const containerHeight = canvas.offsetHeight
 
-    // console.log(isColumnLayout, containerWidth, containerHeight, itemsPerRow)
-    console.log(
-      "itemsPerRow: ",
-      itemsPerRow,
-      "isColumnLayout: ",
-      isColumnLayout,
-      "containerWidth: ",
-      containerWidth,
-      "containerHeight: ",
-      containerHeight,
-      "aspectRatio: ",
-      aspectRatio,
-    )
     if (isColumnLayout) {
       // 列表示: 高さベースで幅を計算
       canvas.height = containerHeight

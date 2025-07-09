@@ -1,5 +1,5 @@
 "use client"
 
 // Re-export types and main hook
-export * from "./answer-sheet-upload/types"
-export { useAnswerSheetUploadMain as useAnswerSheetUpload } from "./answer-sheet-upload/useAnswerSheetUploadMain"
+export * from "../components/projects/05-answer-sheets/answer-sheet-management/hooks/types"
+export { useAnswerSheetUploadMain as useAnswerSheetUpload } from "../components/projects/05-answer-sheets/answer-sheet-management/hooks/useAnswerSheetUploadMain"
