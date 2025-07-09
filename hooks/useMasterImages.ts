@@ -98,9 +98,19 @@ export function useMasterImages(
         setCurrentFileIndex(i)
         
         if (file.type === 'application/pdf') {
-          // Convert PDF to individual page images with password handling
-          const pdfImages = await convertPdfToImagesWithPassword(file)
-          allFilesData.push(...pdfImages)
+          try {
+            // Convert PDF to individual page images with password handling
+            const pdfImages = await convertPdfToImagesWithPassword(file)
+            allFilesData.push(...pdfImages)
+          } catch (error) {
+            if (error instanceof Error && error.message === 'Password input cancelled') {
+              // ユーザーがパスワード入力をキャンセルした場合
+              console.log('Password input cancelled by user')
+              return // アップロード処理を中断
+            } else {
+              throw error // その他のエラーは再投げ
+            }
+          }
         } else {
           // Handle regular image files
           const buffer = await file.arrayBuffer()
@@ -166,15 +176,21 @@ export function useMasterImages(
   // パスワード付きPDF変換処理
   const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
     try {
+      console.log('Attempting to convert PDF without password:', file.name)
       // まずパスワードなしで試行
       const pdfImages = await convertPdfToImages(file)
+      console.log('PDF converted successfully without password')
       return pdfImages
     } catch (error) {
-      if (error === 'password-required' || error === 'invalid-password') {
+      console.log('PDF conversion error:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
+        console.log('Password required, showing dialog for:', file.name)
         // パスワードが必要な場合、ダイアログを表示してPromiseを返す
         return new Promise((resolve, reject) => {
-          const isInvalidPassword = error === 'invalid-password'
+          const isInvalidPassword = errorMessage === 'invalid-password'
           
+          console.log('Setting password dialog state')
           setState(prev => ({
             ...prev,
             passwordDialog: {
@@ -190,9 +206,11 @@ export function useMasterImages(
           ;(window as any).__masterImagePasswordResolve = resolve
           ;(window as any).__masterImagePasswordReject = reject
           ;(window as any).__masterImagePasswordFile = file
+          console.log('Password dialog promise created and waiting...')
         })
       } else {
         // その他のエラーはそのまま投げる
+        console.log('Other error, rethrowing:', error)
         throw error
       }
     }
@@ -200,11 +218,16 @@ export function useMasterImages(
 
   // パスワード送信処理
   const handlePasswordSubmit = useCallback(async (password: string) => {
+    console.log('Password submit called with password:', password ? '[REDACTED]' : 'empty')
     const file = (window as any).__masterImagePasswordFile
     const resolve = (window as any).__masterImagePasswordResolve
     const reject = (window as any).__masterImagePasswordReject
     
-    if (!file || !resolve || !reject) return
+    console.log('Global variables check:', { file: !!file, resolve: !!resolve, reject: !!reject })
+    if (!file || !resolve || !reject) {
+      console.log('Missing global variables, returning early')
+      return
+    }
     
     setState(prev => ({
       ...prev,
@@ -237,7 +260,8 @@ export function useMasterImages(
       
       resolve(pdfImages)
     } catch (error) {
-      if (error === 'invalid-password') {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage === 'invalid-password') {
         setState(prev => ({
           ...prev,
           passwordDialog: {
