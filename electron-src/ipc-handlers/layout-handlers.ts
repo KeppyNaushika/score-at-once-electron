@@ -8,14 +8,14 @@ import {
   getLayoutRegionById as dbGetLayoutRegionById,
   createManyLayoutRegions as dbCreateManyLayoutRegions,
   updateLayoutRegionOrders as dbUpdateLayoutRegionOrders,
-} from "../lib/prisma/layoutRegion"
+} from "@/lib/prisma/layoutRegion"
 import {
   createQuestionGroup as dbCreateQuestionGroup,
   updateQuestionGroup as dbUpdateQuestionGroup,
   deleteQuestionGroup as dbDeleteQuestionGroup,
   getQuestionGroupsByProjectId as dbGetQuestionGroupsByProjectId,
   getQuestionGroupById as dbGetQuestionGroupById,
-} from "../lib/prisma/questionGroup"
+} from "@/lib/prisma/questionGroup"
 import {
   createQuestionGroupItem as dbCreateQuestionGroupItem,
   updateQuestionGroupItem as dbUpdateQuestionGroupItem,
@@ -23,7 +23,7 @@ import {
   getQuestionGroupItemsByGroupId as dbGetQuestionGroupItemsByGroupId,
   getQuestionGroupItemById as dbGetQuestionGroupItemById,
   createManyQuestionGroupItems as dbCreateManyQuestionGroupItems,
-} from "../lib/prisma/questionGroupItem"
+} from "@/lib/prisma/questionGroupItem"
 import {
   createSubtotalDefinition as dbCreateSubtotalDefinition,
   deleteSubtotalDefinition as dbDeleteSubtotalDefinition,
@@ -31,7 +31,7 @@ import {
   getSubtotalDefinitionsByQuestionGroupItemId as dbGetSubtotalDefsByQGItemId,
   createManySubtotalDefinitions as dbCreateManySubtotalDefinitions,
   deleteSubtotalDefinitionsByLayoutRegionId as dbDeleteSubDefsByLayoutRegionId,
-} from "../lib/prisma/subtotalDefinition"
+} from "@/lib/prisma/subtotalDefinition"
 import {
   createQuestionSubtotalAssignment as dbCreateQuestionSubtotalAssignment,
   deleteQuestionSubtotalAssignment as dbDeleteQuestionSubtotalAssignment,
@@ -40,7 +40,7 @@ import {
   createManyQuestionSubtotalAssignments as dbCreateManyQuestionSubtotalAssignments,
   deleteAssignmentsByQuestionLayoutRegionId as dbDeleteAssignsByQuestionLayoutRegionId,
   deleteAssignmentsByQuestionGroupItemId as dbDeleteAssignsByQGItemId,
-} from "../lib/prisma/questionSubtotalAssignment"
+} from "@/lib/prisma/questionSubtotalAssignment"
 
 export function setupLayoutHandlers(): void {
   // --- LayoutRegion Handlers ---
@@ -82,36 +82,47 @@ export function setupLayoutHandlers(): void {
     async (_event, projectId: string) => {
       try {
         const layoutRegions = await dbGetLayoutRegionsByProjectId(projectId)
-        return layoutRegions.map(region => ({
+        return layoutRegions.map((region) => ({
           ...region,
           createdAt: region.createdAt.toISOString(),
           updatedAt: region.updatedAt.toISOString(),
-          subtotalDefinitions: region.subtotalDefinitions?.map(def => ({
-            ...def,
-            createdAt: def.createdAt.toISOString(),
-            updatedAt: def.updatedAt.toISOString(),
-            questionGroupItem: def.questionGroupItem ? {
-              ...def.questionGroupItem,
-              createdAt: def.questionGroupItem.createdAt.toISOString(),
-              updatedAt: def.questionGroupItem.updatedAt.toISOString(),
-            } : null
-          })) || [],
-          questionSubtotalAssignments: region.questionSubtotalAssignments?.map(assignment => ({
-            ...assignment,
-            createdAt: assignment.createdAt.toISOString(),
-            updatedAt: assignment.updatedAt.toISOString(),
-            questionGroupItem: assignment.questionGroupItem ? {
-              ...assignment.questionGroupItem,
-              createdAt: assignment.questionGroupItem.createdAt.toISOString(),
-              updatedAt: assignment.questionGroupItem.updatedAt.toISOString(),
-            } : null
-          })) || [],
-          questionScores: region.questionScores?.map(score => ({
-            ...score,
-            partialScore: score.partialScore ? score.partialScore.toString() : null,
-            createdAt: score.createdAt.toISOString(),
-            updatedAt: score.updatedAt.toISOString(),
-          })) || []
+          subtotalDefinitions:
+            region.subtotalDefinitions?.map((def) => ({
+              ...def,
+              createdAt: def.createdAt.toISOString(),
+              updatedAt: def.updatedAt.toISOString(),
+              questionGroupItem: def.questionGroupItem
+                ? {
+                    ...def.questionGroupItem,
+                    createdAt: def.questionGroupItem.createdAt.toISOString(),
+                    updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+                  }
+                : null,
+            })) || [],
+          questionSubtotalAssignments:
+            region.questionSubtotalAssignments?.map((assignment) => ({
+              ...assignment,
+              createdAt: assignment.createdAt.toISOString(),
+              updatedAt: assignment.updatedAt.toISOString(),
+              questionGroupItem: assignment.questionGroupItem
+                ? {
+                    ...assignment.questionGroupItem,
+                    createdAt:
+                      assignment.questionGroupItem.createdAt.toISOString(),
+                    updatedAt:
+                      assignment.questionGroupItem.updatedAt.toISOString(),
+                  }
+                : null,
+            })) || [],
+          questionScores:
+            region.questionScores?.map((score) => ({
+              ...score,
+              partialScore: score.partialScore
+                ? score.partialScore.toString()
+                : null,
+              createdAt: score.createdAt.toISOString(),
+              updatedAt: score.updatedAt.toISOString(),
+            })) || [],
         }))
       } catch (err) {
         console.error("Error fetching layout regions by project ID:", err)
@@ -128,32 +139,43 @@ export function setupLayoutHandlers(): void {
         ...region,
         createdAt: region.createdAt.toISOString(),
         updatedAt: region.updatedAt.toISOString(),
-        subtotalDefinitions: region.subtotalDefinitions?.map(def => ({
-          ...def,
-          createdAt: def.createdAt.toISOString(),
-          updatedAt: def.updatedAt.toISOString(),
-          questionGroupItem: def.questionGroupItem ? {
-            ...def.questionGroupItem,
-            createdAt: def.questionGroupItem.createdAt.toISOString(),
-            updatedAt: def.questionGroupItem.updatedAt.toISOString(),
-          } : null
-        })) || [],
-        questionSubtotalAssignments: region.questionSubtotalAssignments?.map(assignment => ({
-          ...assignment,
-          createdAt: assignment.createdAt.toISOString(),
-          updatedAt: assignment.updatedAt.toISOString(),
-          questionGroupItem: assignment.questionGroupItem ? {
-            ...assignment.questionGroupItem,
-            createdAt: assignment.questionGroupItem.createdAt.toISOString(),
-            updatedAt: assignment.questionGroupItem.updatedAt.toISOString(),
-          } : null
-        })) || [],
-        questionScores: region.questionScores?.map(score => ({
-          ...score,
-          partialScore: score.partialScore ? score.partialScore.toString() : null,
-          createdAt: score.createdAt.toISOString(),
-          updatedAt: score.updatedAt.toISOString(),
-        })) || []
+        subtotalDefinitions:
+          region.subtotalDefinitions?.map((def) => ({
+            ...def,
+            createdAt: def.createdAt.toISOString(),
+            updatedAt: def.updatedAt.toISOString(),
+            questionGroupItem: def.questionGroupItem
+              ? {
+                  ...def.questionGroupItem,
+                  createdAt: def.questionGroupItem.createdAt.toISOString(),
+                  updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+                }
+              : null,
+          })) || [],
+        questionSubtotalAssignments:
+          region.questionSubtotalAssignments?.map((assignment) => ({
+            ...assignment,
+            createdAt: assignment.createdAt.toISOString(),
+            updatedAt: assignment.updatedAt.toISOString(),
+            questionGroupItem: assignment.questionGroupItem
+              ? {
+                  ...assignment.questionGroupItem,
+                  createdAt:
+                    assignment.questionGroupItem.createdAt.toISOString(),
+                  updatedAt:
+                    assignment.questionGroupItem.updatedAt.toISOString(),
+                }
+              : null,
+          })) || [],
+        questionScores:
+          region.questionScores?.map((score) => ({
+            ...score,
+            partialScore: score.partialScore
+              ? score.partialScore.toString()
+              : null,
+            createdAt: score.createdAt.toISOString(),
+            updatedAt: score.updatedAt.toISOString(),
+          })) || [],
       }
     } catch (err) {
       console.error("Error fetching layout region by ID:", err)

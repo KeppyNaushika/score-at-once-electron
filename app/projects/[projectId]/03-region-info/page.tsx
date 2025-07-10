@@ -6,6 +6,7 @@ import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetai
 import { Button } from "@/components/ui/button"
 import type { LayoutRegionWithDetails } from "@/types/electron"
 import { MasterImage, Project, User } from "@prisma/client"
+import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -91,7 +92,7 @@ export default function RegionInfoPage() {
 
           // 最初のページの寸法を取得
           const firstUrl = urls[sortedMasterImages[0].id]
-          const img = new Image()
+          const img = new window.Image()
           img.onload = () => {
             setImageDimensions({
               width: img.naturalWidth,
@@ -297,14 +298,17 @@ export default function RegionInfoPage() {
                   </div>
                   {imageUrl && (
                     <div className="relative overflow-hidden rounded-lg border">
-                      <img
+                      <Image
                         src={imageUrl}
                         alt={`模範解答 ページ ${displayPageNumber}`}
                         className="w-full cursor-pointer object-contain transition-opacity hover:opacity-75"
+                        width={800}
+                        height={600}
+                        unoptimized
                         onClick={() => {
                           setSelectedMasterImage(correspondingImage)
                           // 画像寸法を更新
-                          const img = new Image()
+                          const img = new window.Image()
                           img.onload = () => {
                             setImageDimensions({
                               width: img.naturalWidth,

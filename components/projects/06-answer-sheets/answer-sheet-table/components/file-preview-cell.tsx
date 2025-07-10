@@ -3,6 +3,7 @@
 import { loadAnswerSheetImage } from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/convertAnswerSheetsToFiles"
 import type { FilePreviewCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
+import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
 export function FilePreviewCell({
@@ -90,11 +91,13 @@ export function FilePreviewCell({
 
       if (nameRegionPreview) {
         return (
-          <img
+          <Image
             src={nameRegionPreview}
             alt={`${file.name} - 氏名欄`}
             className="h-full w-full object-contain"
-            loading="lazy"
+            width={200}
+            height={200}
+            unoptimized
           />
         )
       }
@@ -111,12 +114,14 @@ export function FilePreviewCell({
 
     if (imagePreview) {
       return (
-        <img
+        <Image
           ref={imgRef}
           src={imagePreview}
           alt={file.name}
           className="h-full w-full object-contain"
-          loading="lazy"
+          width={200}
+          height={200}
+          unoptimized
         />
       )
     }

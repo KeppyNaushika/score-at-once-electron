@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { MasterImageData } from "@/types/common.types"
+import Image from "next/image"
 import React, { useEffect, useState } from "react"
 
 /**
@@ -113,7 +114,7 @@ const MasterImageViewer = React.memo(
                   >
                     {imageUrl && !isLoading ? (
                       <>
-                        <img
+                        <Image
                           src={imageUrl}
                           alt={`ページ ${image.pageNumber}`}
                           className="h-full w-full object-cover"
@@ -126,6 +127,9 @@ const MasterImageViewer = React.memo(
                               imageUrl,
                             )
                           }}
+                          width={96}
+                          height={128}
+                          unoptimized
                         />
                         <div className="absolute right-0 bottom-0 left-0 bg-black/70 px-1 py-0.5">
                           <p className="text-center text-xs font-medium text-white">
