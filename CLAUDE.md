@@ -78,7 +78,7 @@ npx prisma studio
 │   │   └── /[projectId]     # 個別プロジェクト（6段階ワークフロー）
 │   │       ├── /01-upload           # 模範解答アップロード
 │   │       ├── /02-template         # 採点領域作成
-│   │       ├── /03-region-info      # 領域情報編集
+│   │       ├── /03-region-info      # 領域情報
 │   │       ├── /05-students         # 受験生徒管理
 │   │       ├── /06-answer-sheets    # 答案アップロード
 │   │       ├── /07-score-at-once    # 採点実行
@@ -107,7 +107,7 @@ npx prisma studio
 │   ├── /projects            # プロジェクト関連（6段階ワークフロー対応）
 │   │   ├── /01-upload       # 模範解答アップロード
 │   │   ├── /02-template     # 採点領域作成
-│   │   ├── /03-region-info  # 領域情報編集
+│   │   ├── /03-region-info  # 領域情報
 │   │   ├── /05-students     # 受験生徒管理
 │   │   ├── /06-answer-sheets # 答案アップロード（高度な機能特化構造）
 │   │   │   ├── /answer-sheet-management    # 答案管理システム
@@ -197,7 +197,7 @@ npx prisma studio
    - ドラッグ&ドロップによる視覚的領域定義
    - マルチページ対応、自動保存
 
-3. **領域情報編集** (`/projects/[id]/score/region-info`)
+3. **領域情報** (`/projects/[id]/score/region-info`)
    - 表形式による効率的な設定編集
    - 設問番号・配点・ラベル管理
 

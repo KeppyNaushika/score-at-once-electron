@@ -67,18 +67,18 @@ export default function QuestionGroupPage() {
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">
       <PageHeader
-        title="小計点管理"
+        title="小計点"
         description="設問をグループ化し、小計点を管理します。大問別や観点別の集計が可能です。"
         helpButton={helpButton}
       />
 
       <div className="grid grid-cols-1 gap-6">
-        {/* 小計点管理 */}
+        {/* 小計点 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              小計点管理
+              小計点
             </CardTitle>
           </CardHeader>
           <CardContent>
