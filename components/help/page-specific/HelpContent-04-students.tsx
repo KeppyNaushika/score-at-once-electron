@@ -1,7 +1,18 @@
 "use client"
 
-import { Users, Info, Upload, Settings, CheckCircle, Lightbulb } from "lucide-react"
-import { HelpSection, StepItem, TipItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  CheckCircle,
+  Info,
+  Lightbulb,
+  Settings,
+  Upload,
+  Users,
+} from "lucide-react"
 
 export function HelpContent04Students() {
   return (
@@ -52,18 +63,30 @@ export function HelpContent04Students() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div className="border-l-4 border-green-500 pl-3">
             <h4 className="text-sm font-medium text-green-700">受験</h4>
-            <p className="text-xs text-muted-foreground">通常の受験者</p>
-            <p className="text-xs text-green-600">• 答案照合の対象<br/>• 採点作業の対象<br/>• 成績集計に含む</p>
+            <p className="text-muted-foreground text-xs">通常の受験者</p>
+            <p className="text-xs text-green-600">
+              • 答案照合の対象
+              <br />• 採点作業の対象
+              <br />• 成績集計に含む
+            </p>
           </div>
           <div className="border-l-4 border-yellow-500 pl-3">
             <h4 className="text-sm font-medium text-yellow-700">見込</h4>
-            <p className="text-xs text-muted-foreground">後日受験・追試</p>
-            <p className="text-xs text-yellow-600">• 採点は実施<br/>• 統計から除外<br/>• 個人記録には反映</p>
+            <p className="text-muted-foreground text-xs">後日受験・追試</p>
+            <p className="text-xs text-yellow-600">
+              • 採点は実施
+              <br />• 統計から除外
+              <br />• 個人記録には反映
+            </p>
           </div>
           <div className="border-l-4 border-red-500 pl-3">
             <h4 className="text-sm font-medium text-red-700">欠席</h4>
-            <p className="text-xs text-muted-foreground">試験欠席者</p>
-            <p className="text-xs text-red-600">• 答案照合対象外<br/>• 採点対象外<br/>• 欠席として記録</p>
+            <p className="text-muted-foreground text-xs">試験欠席者</p>
+            <p className="text-xs text-red-600">
+              • 答案照合対象外
+              <br />• 採点対象外
+              <br />• 欠席として記録
+            </p>
           </div>
         </div>
       </HelpSection>
@@ -74,8 +97,10 @@ export function HelpContent04Students() {
       >
         <div className="space-y-3">
           <div>
-            <h4 className="text-sm font-medium text-purple-700">学級から追加</h4>
-            <p className="text-xs text-muted-foreground mb-2">
+            <h4 className="text-sm font-medium text-purple-700">
+              学級から追加
+            </h4>
+            <p className="text-muted-foreground mb-2 text-xs">
               既存の学級データから複数の生徒を一括で追加できます。
             </p>
             <div className="rounded-lg border border-purple-200 bg-purple-50 p-2">
@@ -87,7 +112,7 @@ export function HelpContent04Students() {
 
           <div>
             <h4 className="text-sm font-medium text-green-700">個別追加</h4>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="text-muted-foreground mb-2 text-xs">
               新しい生徒を個別に登録できます。
             </p>
             <div className="rounded-lg border border-green-200 bg-green-50 p-2">
@@ -105,13 +130,20 @@ export function HelpContent04Students() {
       >
         <div className="space-y-2">
           <div className="text-sm">
-            <p><strong>複数選択:</strong> チェックボックスで対象の生徒を選択</p>
-            <p><strong>全選択:</strong> ヘッダーのチェックボックスで一括選択</p>
-            <p><strong>一括削除:</strong> 選択した生徒をまとめて削除</p>
+            <p>
+              <strong>複数選択:</strong> チェックボックスで対象の生徒を選択
+            </p>
+            <p>
+              <strong>全選択:</strong> ヘッダーのチェックボックスで一括選択
+            </p>
+            <p>
+              <strong>一括削除:</strong> 選択した生徒をまとめて削除
+            </p>
           </div>
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="text-xs text-orange-700">
-              <strong>削除の注意:</strong> 採点データがある生徒を削除する場合、影響範囲が表示されます。
+              <strong>削除の注意:</strong>{" "}
+              採点データがある生徒を削除する場合、影響範囲が表示されます。
             </p>
           </div>
         </div>
@@ -139,7 +171,9 @@ export function HelpContent04Students() {
         title="完了前のチェック"
       >
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <h4 className="mb-2 text-sm font-medium">生徒管理完了チェックリスト</h4>
+          <h4 className="mb-2 text-sm font-medium">
+            生徒管理完了チェックリスト
+          </h4>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <div>□ 全受験生徒を登録</div>

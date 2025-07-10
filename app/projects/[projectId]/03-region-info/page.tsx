@@ -4,13 +4,21 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
-// AreaType enum は削除されたため、文字列型として定義
-type AreaType = "QUESTION_ANSWER" | "STUDENT_NAME" | "STUDENT_ID" | "TOTAL_SCORE" | "SUBTOTAL_SCORE" | "MARK" | "COMMENT" | "OTHER"
-import { MasterImage, Project, User } from "@prisma/client"
 import type { LayoutRegionWithDetails } from "@/types/electron"
+import { MasterImage, Project, User } from "@prisma/client"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+// AreaType enum は削除されたため、文字列型として定義
+type AreaType =
+  | "QUESTION_ANSWER"
+  | "STUDENT_NAME"
+  | "STUDENT_ID"
+  | "TOTAL_SCORE"
+  | "SUBTOTAL_SCORE"
+  | "MARK"
+  | "COMMENT"
+  | "OTHER"
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -28,12 +36,16 @@ export default function RegionInfoPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
-  const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>([])
+  const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
+    [],
+  )
 
   const [masterImages, setMasterImages] = useState<MasterImage[]>([])
   const [selectedMasterImage, setSelectedMasterImage] =
     useState<MasterImage | null>(null)
-  const [backgroundImageUrls, setBackgroundImageUrls] = useState<{[key: string]: string}>({})
+  const [backgroundImageUrls, setBackgroundImageUrls] = useState<{
+    [key: string]: string
+  }>({})
   const [imageDimensions, setImageDimensions] = useState<{
     width: number
     height: number
@@ -66,15 +78,17 @@ export default function RegionInfoPage() {
           )
           setMasterImages(sortedMasterImages)
           setSelectedMasterImage(sortedMasterImages[0])
-          
+
           // 全ページの画像URLを取得
-          const urls: {[key: string]: string} = {}
+          const urls: { [key: string]: string } = {}
           for (const image of sortedMasterImages) {
-            const url = await window.electronAPI.resolveFileProtocolPath(image.path)
+            const url = await window.electronAPI.resolveFileProtocolPath(
+              image.path,
+            )
             urls[image.id] = url
           }
           setBackgroundImageUrls(urls)
-          
+
           // 最初のページの寸法を取得
           const firstUrl = urls[sortedMasterImages[0].id]
           const img = new Image()
@@ -164,7 +178,9 @@ export default function RegionInfoPage() {
 
         if (savedRegions.length > 0) {
           setLayoutRegions(
-            savedRegions.filter((region): region is LayoutRegionWithDetails => region !== null)
+            savedRegions.filter(
+              (region): region is LayoutRegionWithDetails => region !== null,
+            ),
           )
           setLayoutId("saved")
         }
@@ -176,7 +192,11 @@ export default function RegionInfoPage() {
   )
 
   const handleRegionsChange = useCallback(
-    (newRegions: LayoutRegionWithDetails[] | ((prev: LayoutRegionWithDetails[]) => LayoutRegionWithDetails[])) => {
+    (
+      newRegions:
+        | LayoutRegionWithDetails[]
+        | ((prev: LayoutRegionWithDetails[]) => LayoutRegionWithDetails[]),
+    ) => {
       const updatedRegions =
         typeof newRegions === "function"
           ? newRegions(layoutRegions)
@@ -216,11 +236,7 @@ export default function RegionInfoPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <PageHeader
-        title="領域情報の編集"
-        description=""
-        helpButton={helpButton}
-      >
+      <PageHeader title="領域情報の編集" description="" helpButton={helpButton}>
         <Button
           onClick={() => router.push(`/projects/${projectId}/04-students`)}
         >
@@ -232,7 +248,7 @@ export default function RegionInfoPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left: All Pages Preview */}
         <div
-          className="border-r p-4 overflow-y-auto"
+          className="overflow-y-auto border-r p-4"
           style={{ width: "400px", maxWidth: "33.333%" }}
         >
           <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
@@ -240,32 +256,42 @@ export default function RegionInfoPage() {
             {masterImages.map((_, pageIndex) => {
               // 順序は固定（1, 2, 3...）だが、対応する画像は実際のpageNumber順
               const displayPageNumber = pageIndex + 1
-              const correspondingImage = masterImages.find(img => img.pageNumber === displayPageNumber)
-              
+              const correspondingImage = masterImages.find(
+                (img) => img.pageNumber === displayPageNumber,
+              )
+
               if (!correspondingImage) {
                 return (
                   <div key={`page-${displayPageNumber}`} className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">ページ {displayPageNumber}</h4>
-                      <div className="text-xs text-muted-foreground">
+                      <h4 className="text-sm font-medium">
+                        ページ {displayPageNumber}
+                      </h4>
+                      <div className="text-muted-foreground text-xs">
                         (画像なし)
                       </div>
                     </div>
-                    <div className="relative overflow-hidden rounded-lg border bg-gray-100 aspect-[3/4] flex items-center justify-center">
-                      <div className="text-muted-foreground text-sm">画像が見つかりません</div>
+                    <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
+                      <div className="text-muted-foreground text-sm">
+                        画像が見つかりません
+                      </div>
                     </div>
                   </div>
                 )
               }
 
               const imageUrl = backgroundImageUrls[correspondingImage.id]
-              const pageRegions = layoutRegions.filter(region => region.masterImageId === correspondingImage.id)
-              
+              const pageRegions = layoutRegions.filter(
+                (region) => region.masterImageId === correspondingImage.id,
+              )
+
               return (
                 <div key={`page-${displayPageNumber}`} className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-medium">ページ {displayPageNumber}</h4>
-                    <div className="text-xs text-muted-foreground">
+                    <h4 className="text-sm font-medium">
+                      ページ {displayPageNumber}
+                    </h4>
+                    <div className="text-muted-foreground text-xs">
                       ({pageRegions.length}個の領域)
                     </div>
                   </div>
@@ -274,7 +300,7 @@ export default function RegionInfoPage() {
                       <img
                         src={imageUrl}
                         alt={`模範解答 ページ ${displayPageNumber}`}
-                        className="w-full object-contain cursor-pointer hover:opacity-75 transition-opacity"
+                        className="w-full cursor-pointer object-contain transition-opacity hover:opacity-75"
                         onClick={() => {
                           setSelectedMasterImage(correspondingImage)
                           // 画像寸法を更新
@@ -290,7 +316,9 @@ export default function RegionInfoPage() {
                       />
                       {/* Overlay regions for this page */}
                       {pageRegions.map((area, index) => {
-                        const globalIndex = layoutRegions.findIndex(r => r.id === area.id)
+                        const globalIndex = layoutRegions.findIndex(
+                          (r) => r.id === area.id,
+                        )
                         const isSelected = selectedRowIndex === globalIndex
                         return (
                           <div
@@ -315,7 +343,7 @@ export default function RegionInfoPage() {
                       })}
                       {/* Page indicator if this is selected */}
                       {selectedMasterImage?.id === correspondingImage.id && (
-                        <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                        <div className="absolute top-2 left-2 rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white">
                           編集中
                         </div>
                       )}
@@ -331,8 +359,10 @@ export default function RegionInfoPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <div className="mb-4">
-              <h3 className="text-lg font-medium">領域情報テーブル（全ページ統一順序）</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-lg font-medium">
+                領域情報テーブル（全ページ統一順序）
+              </h3>
+              <p className="text-muted-foreground text-sm">
                 全ページ {layoutRegions.length}個の領域を統一順序で表示
                 {selectedMasterImage && (
                   <span className="ml-2 text-blue-600">

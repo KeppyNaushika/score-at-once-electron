@@ -1,7 +1,19 @@
 "use client"
 
-import { Upload, Info, Settings, FileImage, CheckCircle, Lightbulb, AlertTriangle } from "lucide-react"
-import { HelpSection, StepItem, TipItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  AlertTriangle,
+  CheckCircle,
+  FileImage,
+  Info,
+  Lightbulb,
+  Settings,
+  Upload,
+} from "lucide-react"
 
 export function HelpContent05AnswerSheets() {
   return (
@@ -51,14 +63,26 @@ export function HelpContent05AnswerSheets() {
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="border-l-4 border-green-500 pl-3">
-            <h4 className="text-sm font-medium text-green-700">ページごと並べる</h4>
-            <p className="text-xs text-muted-foreground mb-1">1ページ目全員 → 2ページ目全員の順</p>
-            <p className="text-xs text-green-600">ページ別にスキャンした場合に適している</p>
+            <h4 className="text-sm font-medium text-green-700">
+              ページごと並べる
+            </h4>
+            <p className="text-muted-foreground mb-1 text-xs">
+              1ページ目全員 → 2ページ目全員の順
+            </p>
+            <p className="text-xs text-green-600">
+              ページ別にスキャンした場合に適している
+            </p>
           </div>
           <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">生徒ごと並べる</h4>
-            <p className="text-xs text-muted-foreground mb-1">生徒A全ページ → 生徒B全ページの順</p>
-            <p className="text-xs text-blue-600">生徒別にスキャンした場合に適している</p>
+            <h4 className="text-sm font-medium text-blue-700">
+              生徒ごと並べる
+            </h4>
+            <p className="text-muted-foreground mb-1 text-xs">
+              生徒A全ページ → 生徒B全ページの順
+            </p>
+            <p className="text-xs text-blue-600">
+              生徒別にスキャンした場合に適している
+            </p>
           </div>
         </div>
       </HelpSection>
@@ -70,11 +94,19 @@ export function HelpContent05AnswerSheets() {
         <div className="space-y-3">
           <div>
             <h4 className="text-sm font-medium">基本操作</h4>
-            <div className="text-xs space-y-1">
-              <p>• <strong>ドラッグ&ドロップ:</strong> 画像を別のセルに移動</p>
-              <p>• <strong>Alt+クリック:</strong> セルを無効化（配置対象外）</p>
-              <p>• <strong>画像削除:</strong> セル右上の×ボタンで画像削除</p>
-              <p>• <strong>プレビュー切替:</strong> 全体表示と氏名欄表示を切替</p>
+            <div className="space-y-1 text-xs">
+              <p>
+                • <strong>ドラッグ&ドロップ:</strong> 画像を別のセルに移動
+              </p>
+              <p>
+                • <strong>Alt+クリック:</strong> セルを無効化（配置対象外）
+              </p>
+              <p>
+                • <strong>画像削除:</strong> セル右上の×ボタンで画像削除
+              </p>
+              <p>
+                • <strong>プレビュー切替:</strong> 全体表示と氏名欄表示を切替
+              </p>
             </div>
           </div>
 
@@ -113,15 +145,17 @@ export function HelpContent05AnswerSheets() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
             <h4 className="text-sm font-medium text-green-700">新規追加タブ</h4>
-            <div className="text-xs space-y-1">
+            <div className="space-y-1 text-xs">
               <p>• 新しい答案画像のアップロード</p>
               <p>• 配置戦略の選択と自動配置</p>
               <p>• 一括アップロード実行</p>
             </div>
           </div>
           <div>
-            <h4 className="text-sm font-medium text-orange-700">配置済み答案の確認タブ</h4>
-            <div className="text-xs space-y-1">
+            <h4 className="text-sm font-medium text-orange-700">
+              配置済み答案の確認タブ
+            </h4>
+            <div className="space-y-1 text-xs">
               <p>• アップロード済み答案の確認・入れ替え</p>
               <p>• 楽観的更新による即座な変更反映</p>
               <p>• 手動更新ボタンによる変更確定</p>
@@ -137,25 +171,42 @@ export function HelpContent05AnswerSheets() {
       >
         <div className="space-y-3">
           <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">新機能：手動更新システム</h4>
-            <div className="text-xs space-y-1 mt-1">
-              <p>• ドラッグ&ドロップで答案を入れ替え（即座に赤いオーバーレイ表示）</p>
+            <h4 className="text-sm font-medium text-blue-700">
+              新機能：手動更新システム
+            </h4>
+            <div className="mt-1 space-y-1 text-xs">
+              <p>
+                •
+                ドラッグ&ドロップで答案を入れ替え（即座に赤いオーバーレイ表示）
+              </p>
               <p>• 変更はローカルのみ反映、データベースは未更新</p>
               <p>• 「x件の変更を反映」ボタンで一括確定</p>
               <p>• 詳細な確認モーダルで安全な処理選択</p>
             </div>
           </div>
-          
+
           <div>
             <h4 className="text-sm font-medium">入れ替え処理の選択肢</h4>
             <div className="space-y-2 text-xs">
-              <div className="border rounded p-2 bg-blue-50 border-blue-200">
-                <p><strong className="text-blue-700">採点情報も一緒に入れ替え（推奨）</strong></p>
-                <p className="text-blue-600">答案画像と採点結果を正しく対応させます</p>
+              <div className="rounded border border-blue-200 bg-blue-50 p-2">
+                <p>
+                  <strong className="text-blue-700">
+                    採点情報も一緒に入れ替え（推奨）
+                  </strong>
+                </p>
+                <p className="text-blue-600">
+                  答案画像と採点結果を正しく対応させます
+                </p>
               </div>
-              <div className="border rounded p-2 bg-orange-50 border-orange-200">
-                <p><strong className="text-orange-700">答案画像のみ入れ替え（注意）</strong></p>
-                <p className="text-orange-600">採点情報は元の位置に残り、データ不整合のリスクがあります</p>
+              <div className="rounded border border-orange-200 bg-orange-50 p-2">
+                <p>
+                  <strong className="text-orange-700">
+                    答案画像のみ入れ替え（注意）
+                  </strong>
+                </p>
+                <p className="text-orange-600">
+                  採点情報は元の位置に残り、データ不整合のリスクがあります
+                </p>
               </div>
             </div>
           </div>
@@ -186,12 +237,14 @@ export function HelpContent05AnswerSheets() {
         <div className="space-y-2">
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="text-xs text-red-700">
-              <strong>画像が表示されない:</strong> ファイルパスや権限を確認してください
+              <strong>画像が表示されない:</strong>{" "}
+              ファイルパスや権限を確認してください
             </p>
           </div>
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="text-xs text-orange-700">
-              <strong>自動配置が期待通りにならない:</strong> 配置戦略の選択を確認し、必要に応じて手動調整してください
+              <strong>自動配置が期待通りにならない:</strong>{" "}
+              配置戦略の選択を確認し、必要に応じて手動調整してください
             </p>
           </div>
         </div>
@@ -202,7 +255,9 @@ export function HelpContent05AnswerSheets() {
         title="完了前のチェック"
       >
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <h4 className="mb-2 text-sm font-medium">答案管理完了チェックリスト</h4>
+          <h4 className="mb-2 text-sm font-medium">
+            答案管理完了チェックリスト
+          </h4>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <div>□ 全受験者の答案を配置</div>

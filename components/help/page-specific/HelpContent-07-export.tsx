@@ -1,7 +1,20 @@
 "use client"
 
-import { Download, FileSpreadsheet, FileText, Settings, CheckCircle, Lightbulb, Info, AlertTriangle } from "lucide-react"
-import { HelpSection, StepItem, TipItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  AlertTriangle,
+  CheckCircle,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Info,
+  Lightbulb,
+  Settings,
+} from "lucide-react"
 
 export function HelpContent07Export() {
   return (
@@ -52,7 +65,7 @@ export function HelpContent07Export() {
         <div className="space-y-3">
           <div>
             <h4 className="text-sm font-medium text-red-700">基本機能</h4>
-            <div className="text-xs space-y-1">
+            <div className="space-y-1 text-xs">
               <p>• 元の答案画像に採点マークを重ね合わせて出力</p>
               <p>• 生徒別に個別PDFファイルを生成</p>
               <p>• 高品質な画像品質を維持</p>
@@ -96,16 +109,20 @@ export function HelpContent07Export() {
             <h4 className="text-sm font-medium text-green-700">出力内容</h4>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="border-l-4 border-blue-500 pl-3">
-                <h5 className="text-sm font-medium text-blue-700">点数一覧シート</h5>
-                <div className="text-xs space-y-1">
+                <h5 className="text-sm font-medium text-blue-700">
+                  点数一覧シート
+                </h5>
+                <div className="space-y-1 text-xs">
                   <p>• 生徒別・設問別の獲得点数</p>
                   <p>• 自動計算された合計点・平均点</p>
                   <p>• 順位の自動算出</p>
                 </div>
               </div>
               <div className="border-l-4 border-green-500 pl-3">
-                <h5 className="text-sm font-medium text-green-700">正誤一覧シート</h5>
-                <div className="text-xs space-y-1">
+                <h5 className="text-sm font-medium text-green-700">
+                  正誤一覧シート
+                </h5>
+                <div className="space-y-1 text-xs">
                   <p>• ○×△の正誤結果</p>
                   <p>• 設問別正答率の表示</p>
                   <p>• 難易度分析用データ</p>
@@ -115,7 +132,9 @@ export function HelpContent07Export() {
           </div>
 
           <div className="rounded-lg border border-green-200 bg-green-50 p-3">
-            <h4 className="text-xs font-medium text-green-800">Excel関数による動的計算</h4>
+            <h4 className="text-xs font-medium text-green-800">
+              Excel関数による動的計算
+            </h4>
             <p className="text-xs text-green-700">
               SUM、AVERAGE、RANK関数により、後から点数を修正しても自動的に合計・順位が更新されます。
             </p>
@@ -129,26 +148,36 @@ export function HelpContent07Export() {
       >
         <div className="space-y-3">
           <div>
-            <h4 className="text-sm font-medium text-purple-700">位置設定（9位置）</h4>
+            <h4 className="text-sm font-medium text-purple-700">
+              位置設定（9位置）
+            </h4>
             <div className="grid grid-cols-3 gap-1 text-xs">
-              <div className="text-center border p-1">左上</div>
-              <div className="text-center border p-1">中上</div>
-              <div className="text-center border p-1">右上</div>
-              <div className="text-center border p-1">左中</div>
-              <div className="text-center border p-1 bg-blue-100">中央</div>
-              <div className="text-center border p-1">右中</div>
-              <div className="text-center border p-1">左下</div>
-              <div className="text-center border p-1">中下</div>
-              <div className="text-center border p-1">右下</div>
+              <div className="border p-1 text-center">左上</div>
+              <div className="border p-1 text-center">中上</div>
+              <div className="border p-1 text-center">右上</div>
+              <div className="border p-1 text-center">左中</div>
+              <div className="border bg-blue-100 p-1 text-center">中央</div>
+              <div className="border p-1 text-center">右中</div>
+              <div className="border p-1 text-center">左下</div>
+              <div className="border p-1 text-center">中下</div>
+              <div className="border p-1 text-center">右下</div>
             </div>
           </div>
 
           <div>
-            <h4 className="text-sm font-medium text-purple-700">サイズと表示設定</h4>
-            <div className="text-xs space-y-1">
-              <p>• <strong>サイズ調整:</strong> 小・中・大の3段階</p>
-              <p>• <strong>透過設定:</strong> 背景が透ける透過マークと通常マーク</p>
-              <p>• <strong>表示切替:</strong> マーク種別ごとの表示/非表示</p>
+            <h4 className="text-sm font-medium text-purple-700">
+              サイズと表示設定
+            </h4>
+            <div className="space-y-1 text-xs">
+              <p>
+                • <strong>サイズ調整:</strong> 小・中・大の3段階
+              </p>
+              <p>
+                • <strong>透過設定:</strong> 背景が透ける透過マークと通常マーク
+              </p>
+              <p>
+                • <strong>表示切替:</strong> マーク種別ごとの表示/非表示
+              </p>
             </div>
           </div>
         </div>
@@ -161,14 +190,14 @@ export function HelpContent07Export() {
         <div className="space-y-3">
           <div>
             <h4 className="text-sm font-medium">リアルタイム進捗表示</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               出力処理の進行状況をリアルタイムで確認できます。
             </p>
           </div>
 
           <div>
             <h4 className="text-sm font-medium">並行処理対応</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               保存場所の選択と出力処理を並行実行し、効率的に処理します。
             </p>
           </div>
@@ -211,17 +240,20 @@ export function HelpContent07Export() {
         <div className="space-y-2">
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="text-xs text-red-700">
-              <strong>容量不足:</strong> 大量のPDFファイル生成時は十分な空き容量を確保してください
+              <strong>容量不足:</strong>{" "}
+              大量のPDFファイル生成時は十分な空き容量を確保してください
             </p>
           </div>
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="text-xs text-orange-700">
-              <strong>見込受験者の扱い:</strong> 統計計算から除外されますが、個人記録PDFは出力されます
+              <strong>見込受験者の扱い:</strong>{" "}
+              統計計算から除外されますが、個人記録PDFは出力されます
             </p>
           </div>
           <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
             <p className="text-xs text-yellow-700">
-              <strong>出力時間:</strong> 生徒数・ページ数に応じて処理時間が変わります。進捗を確認しながらお待ちください
+              <strong>出力時間:</strong>{" "}
+              生徒数・ページ数に応じて処理時間が変わります。進捗を確認しながらお待ちください
             </p>
           </div>
         </div>

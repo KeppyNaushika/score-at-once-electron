@@ -1,7 +1,7 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { StudentData } from "../../types/common.types"
+import { StudentData } from "@/types/common.types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -204,7 +204,9 @@ export default function StudentTable() {
           ),
         )
       } else {
-        const newStudent = await window.electronAPI.createStudent(studentData as any)
+        const newStudent = await window.electronAPI.createStudent(
+          studentData as any,
+        )
         setStudents([...students, newStudent])
       }
       setIsStudentModalOpen(false)

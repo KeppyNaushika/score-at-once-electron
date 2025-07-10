@@ -6,31 +6,33 @@ import path from "path"
 import sharp from "sharp"
 import { getAnswerSheetsByProjectId } from "./answerSheet"
 import { getStudentsForProject } from "./projectStudent"
-import { getQuestionScoresForProject, calculateActualScore } from "./questionScore"
+import {
+  getQuestionScoresForProject,
+  calculateActualScore,
+} from "./questionScore"
 import { getLayoutRegionsByProjectId } from "./layoutRegion"
 import { getAbsolutePathFromData } from "../dataManager"
 
-
 // 採点状態の型定義（フロントエンドと統一）
-type ScoringStatus = 
-  | "ungraded"      // 未採点
-  | "correct"       // 正答
-  | "partial"       // 部分点
-  | "pending"       // 保留
-  | "incorrect"     // 誤答
-  | "no_answer"     // 無答
+type ScoringStatus =
+  | "ungraded" // 未採点
+  | "correct" // 正答
+  | "partial" // 部分点
+  | "pending" // 保留
+  | "incorrect" // 誤答
+  | "no_answer" // 無答
 
 // 位置の型定義
-type MarkPosition = 
-  | "top-left"      // 左上
-  | "top-center"    // 上
-  | "top-right"     // 右上
-  | "middle-left"   // 左
+type MarkPosition =
+  | "top-left" // 左上
+  | "top-center" // 上
+  | "top-right" // 右上
+  | "middle-left" // 左
   | "middle-center" // 中央
-  | "middle-right"  // 右
-  | "bottom-left"   // 左下
+  | "middle-right" // 右
+  | "bottom-left" // 左下
   | "bottom-center" // 下
-  | "bottom-right"  // 右下
+  | "bottom-right" // 右下
 
 // テキスト配置の型定義
 type TextAlignment = "left" | "center" | "right"
@@ -58,7 +60,7 @@ interface ExportScoredAnswersOptions {
   selectedStudentIds: string[]
   outputPath?: string
   scoringMarkConfig?: ScoringMarkConfig
-  pdfOrientation?: 'portrait' | 'landscape'
+  pdfOrientation?: "portrait" | "landscape"
   progressCallback?: (progress: {
     current: number
     total: number
@@ -69,20 +71,29 @@ interface ExportScoredAnswersOptions {
   }) => void
 }
 
-
 // 採点マーク画像のパスを取得する関数
-function getMarkImagePath(status: ScoringStatus, useTransparent: boolean): string {
-  const publicDir = path.join(process.cwd(), 'public')
+function getMarkImagePath(
+  status: ScoringStatus,
+  useTransparent: boolean,
+): string {
+  const publicDir = path.join(process.cwd(), "public")
   const prefix = useTransparent ? "tranceparent_" : ""
-  
+
   switch (status) {
-    case "ungraded": return path.join(publicDir, 'score-assets', `${prefix}unscored.png`)
-    case "correct": return path.join(publicDir, 'score-assets', `${prefix}correct.png`)
-    case "partial": return path.join(publicDir, 'score-assets', `${prefix}partial.png`)
-    case "pending": return path.join(publicDir, 'score-assets', `${prefix}hold.png`)
-    case "incorrect": return path.join(publicDir, 'score-assets', `${prefix}incorrect.png`)
-    case "no_answer": return path.join(publicDir, 'score-assets', `${prefix}incorrect.png`)
-    default: return path.join(publicDir, 'score-assets', `${prefix}unscored.png`)
+    case "ungraded":
+      return path.join(publicDir, "score-assets", `${prefix}unscored.png`)
+    case "correct":
+      return path.join(publicDir, "score-assets", `${prefix}correct.png`)
+    case "partial":
+      return path.join(publicDir, "score-assets", `${prefix}partial.png`)
+    case "pending":
+      return path.join(publicDir, "score-assets", `${prefix}hold.png`)
+    case "incorrect":
+      return path.join(publicDir, "score-assets", `${prefix}incorrect.png`)
+    case "no_answer":
+      return path.join(publicDir, "score-assets", `${prefix}incorrect.png`)
+    default:
+      return path.join(publicDir, "score-assets", `${prefix}unscored.png`)
   }
 }
 
@@ -96,8 +107,8 @@ function calculateMarkPosition(
   regionY: number,
   regionWidth: number,
   regionHeight: number,
-  markSize: number
-): { x: number, y: number } {
+  markSize: number,
+): { x: number; y: number } {
   let baseX: number, baseY: number
 
   // 基準位置を計算（マーク画像の上下中央を基準とする）
@@ -105,39 +116,39 @@ function calculateMarkPosition(
   switch (position) {
     case "top-left":
       baseX = regionX - markSize / 2
-      baseY = regionY + regionHeight - markSize / 2  // 上端
+      baseY = regionY + regionHeight - markSize / 2 // 上端
       break
     case "top-center":
       baseX = regionX + regionWidth / 2 - markSize / 2
-      baseY = regionY + regionHeight - markSize / 2  // 上端
+      baseY = regionY + regionHeight - markSize / 2 // 上端
       break
     case "top-right":
       baseX = regionX + regionWidth - markSize / 2
-      baseY = regionY + regionHeight - markSize / 2  // 上端
+      baseY = regionY + regionHeight - markSize / 2 // 上端
       break
     case "middle-left":
       baseX = regionX - markSize / 2
-      baseY = regionY + regionHeight / 2 - markSize / 2  // 中央
+      baseY = regionY + regionHeight / 2 - markSize / 2 // 中央
       break
     case "middle-center":
       baseX = regionX + regionWidth / 2 - markSize / 2
-      baseY = regionY + regionHeight / 2 - markSize / 2  // 中央
+      baseY = regionY + regionHeight / 2 - markSize / 2 // 中央
       break
     case "middle-right":
       baseX = regionX + regionWidth - markSize / 2
-      baseY = regionY + regionHeight / 2 - markSize / 2  // 中央
+      baseY = regionY + regionHeight / 2 - markSize / 2 // 中央
       break
     case "bottom-left":
       baseX = regionX - markSize / 2
-      baseY = regionY - markSize / 2  // 下端
+      baseY = regionY - markSize / 2 // 下端
       break
     case "bottom-center":
       baseX = regionX + regionWidth / 2 - markSize / 2
-      baseY = regionY - markSize / 2  // 下端
+      baseY = regionY - markSize / 2 // 下端
       break
     case "bottom-right":
       baseX = regionX + regionWidth - markSize / 2
-      baseY = regionY - markSize / 2  // 下端
+      baseY = regionY - markSize / 2 // 下端
       break
     default:
       baseX = regionX + regionWidth / 2 - markSize / 2
@@ -147,7 +158,7 @@ function calculateMarkPosition(
   // オフセットを適用（Y軸は直感的な方向に修正）
   return {
     x: baseX + offsetX,
-    y: baseY - offsetY  // Y軸オフセットを反転させて直感的な方向にする
+    y: baseY - offsetY, // Y軸オフセットを反転させて直感的な方向にする
   }
 }
 
@@ -162,13 +173,13 @@ function calculateTextPosition(
   regionHeight: number,
   textWidth: number,
   textHeight: number,
-  alignment: TextAlignment
-): { x: number, y: number } {
+  alignment: TextAlignment,
+): { x: number; y: number } {
   let baseX: number, baseY: number
 
   // テキストの高さ補正（ベースラインを考慮）
   const textBaseline = textHeight * 0.3 // フォントのベースラインはおよそ高さの30%下
-  
+
   // 基準位置を計算（テキストの視覚的中央を基準とする）
   switch (position) {
     case "top-left":
@@ -228,84 +239,101 @@ function calculateTextPosition(
   // オフセットを適用（Y軸は直感的な方向に修正）
   return {
     x: baseX + offsetX,
-    y: baseY - offsetY  // Y軸オフセットを反転させて直感的な方向にする
+    y: baseY - offsetY, // Y軸オフセットを反転させて直感的な方向にする
   }
 }
 
-export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions): Promise<{
+export async function exportScoredAnswersPDF(
+  options: ExportScoredAnswersOptions,
+): Promise<{
   success: boolean
   outputPath?: string
   error?: string
 }> {
   try {
-    const { projectId, selectedStudentIds, scoringMarkConfig, progressCallback } = options
+    const {
+      projectId,
+      selectedStudentIds,
+      scoringMarkConfig,
+      progressCallback,
+    } = options
 
     // 進捗レポート関数
     const totalSteps = 7 // 全体ステップ数
-    const reportProgress = (current: number, total: number, step: string, currentStepIndex: number = 0) => {
+    const reportProgress = (
+      current: number,
+      total: number,
+      step: string,
+      currentStepIndex: number = 0,
+    ) => {
       const percentage = Math.round((current / total) * 100)
-      progressCallback?.({ current, total, step, percentage, currentStepIndex, totalSteps })
+      progressCallback?.({
+        current,
+        total,
+        step,
+        percentage,
+        currentStepIndex,
+        totalSteps,
+      })
     }
 
     // 保存場所を最初に選択
     let outputPath = options.outputPath
     if (!outputPath) {
-      reportProgress(0, 100, '保存場所を選択してください...', 0)
-      const defaultFileName = `採点済み答案_${new Date().toISOString().split('T')[0]}.pdf`
+      reportProgress(0, 100, "保存場所を選択してください...", 0)
+      const defaultFileName = `採点済み答案_${new Date().toISOString().split("T")[0]}.pdf`
       const result = await dialog.showSaveDialog({
-        title: '採点済み答案PDFの保存',
+        title: "採点済み答案PDFの保存",
         defaultPath: defaultFileName,
-        filters: [
-          { name: 'PDF Files', extensions: ['pdf'] }
-        ]
+        filters: [{ name: "PDF Files", extensions: ["pdf"] }],
       })
-      
+
       if (result.canceled || !result.filePath) {
-        throw new Error('ユーザーによってキャンセルされました')
+        throw new Error("ユーザーによってキャンセルされました")
       }
-      
+
       outputPath = result.filePath
-      reportProgress(5, 100, '保存場所が選択されました。データを取得中...', 1)
+      reportProgress(5, 100, "保存場所が選択されました。データを取得中...", 1)
     }
 
-    reportProgress(10, 100, '生徒データを取得中...', 1)
+    reportProgress(10, 100, "生徒データを取得中...", 1)
 
     // データの取得
     const studentsResult = await getStudentsForProject(projectId)
     if (!studentsResult.success || !studentsResult.students) {
-      throw new Error('生徒データの取得に失敗しました')
+      throw new Error("生徒データの取得に失敗しました")
     }
 
-    reportProgress(20, 100, '答案データを取得中...', 2)
+    reportProgress(20, 100, "答案データを取得中...", 2)
 
     const answerSheetsResult = await getAnswerSheetsByProjectId(projectId)
     if (!answerSheetsResult.success || !answerSheetsResult.answerSheets) {
-      throw new Error('答案データの取得に失敗しました')
+      throw new Error("答案データの取得に失敗しました")
     }
 
-    reportProgress(30, 100, '採点データを取得中...', 3)
+    reportProgress(30, 100, "採点データを取得中...", 3)
 
     const questionScores = await getQuestionScoresForProject(projectId)
     const layoutRegions = await getLayoutRegionsByProjectId(projectId)
 
     // 選択された生徒のデータをフィルタリング
-    const selectedStudents = studentsResult.students.filter(student => 
-      selectedStudentIds.includes(student.id)
+    const selectedStudents = studentsResult.students.filter((student) =>
+      selectedStudentIds.includes(student.id),
     )
 
     if (selectedStudents.length === 0) {
-      throw new Error('選択された生徒が見つかりません')
+      throw new Error("選択された生徒が見つかりません")
     }
 
-    reportProgress(40, 100, 'PDFドキュメントを初期化中...', 5)
+    reportProgress(40, 100, "PDFドキュメントを初期化中...", 5)
 
     // 全体の答案枚数を計算し、データの存在をチェック
     let totalAnswerSheets = 0
     const studentAnswerSheetMap = new Map()
-    
+
     for (const student of selectedStudents) {
       const studentAnswerSheets = answerSheetsResult.answerSheets.filter(
-        sheet => sheet.student?.id === student.id
+        (sheet) => sheet.student?.id === student.id,
       )
       studentAnswerSheetMap.set(student.id, studentAnswerSheets)
       totalAnswerSheets += studentAnswerSheets.length
@@ -313,17 +341,19 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
 
     // 答案データが存在しない場合は早期にエラーを投げる
     if (totalAnswerSheets === 0) {
-      throw new Error('選択された生徒に答案データが見つかりません')
+      throw new Error("選択された生徒に答案データが見つかりません")
     }
 
     // 実際の答案画像ファイルの存在チェック
-    reportProgress(35, 100, '答案画像ファイルを確認中...', 4)
+    reportProgress(35, 100, "答案画像ファイルを確認中...", 4)
     let validAnswerSheets = 0
     for (const student of selectedStudents) {
       const studentAnswerSheets = studentAnswerSheetMap.get(student.id) || []
       for (const answerSheet of studentAnswerSheets) {
         if ((answerSheet as any).originalImagePath) {
-          const answerImagePath = getAbsolutePathFromData((answerSheet as any).originalImagePath)
+          const answerImagePath = getAbsolutePathFromData(
+            (answerSheet as any).originalImagePath,
+          )
           if (fs.existsSync(answerImagePath)) {
             validAnswerSheets++
           }
@@ -333,12 +363,12 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
 
     // 有効な答案画像が存在しない場合は早期にエラーを投げる
     if (validAnswerSheets === 0) {
-      throw new Error('答案データが見つからないか、画像ファイルが存在しません')
+      throw new Error("答案データが見つからないか、画像ファイルが存在しません")
     }
 
     // PDFドキュメントの作成
     const pdfDoc = await PDFDocument.create()
-    
+
     // fontkit を登録
     pdfDoc.registerFontkit(fontkit)
 
@@ -352,26 +382,33 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
         const progressStep = `答案を処理中... (${processedSheets + 1}/${totalAnswerSheets})`
         const progressPercent = 50 + (processedSheets / totalAnswerSheets) * 40
         reportProgress(progressPercent, 100, progressStep)
-        
+
         // 答案画像の取得と処理
         if ((answerSheet as any).originalImagePath) {
           try {
-            const answerImagePath = getAbsolutePathFromData((answerSheet as any).originalImagePath)
-            
+            const answerImagePath = getAbsolutePathFromData(
+              (answerSheet as any).originalImagePath,
+            )
+
             // 画像が存在するかチェック
             if (fs.existsSync(answerImagePath)) {
               // 画像をPDFに追加（進捗コールバック付き）
               await addAnswerSheetToPDF(
-                pdfDoc, 
-                answerImagePath, 
-                answerSheet, 
-                questionScores, 
-                layoutRegions, 
+                pdfDoc,
+                answerImagePath,
+                answerSheet,
+                questionScores,
+                layoutRegions,
                 scoringMarkConfig,
-                options.pdfOrientation || 'portrait',
+                options.pdfOrientation || "portrait",
                 (step) => {
-                  reportProgress(progressPercent + (1 / totalAnswerSheets) * 40 * 0.5, 100, `${progressStep} - ${step}`, 6)
-                }
+                  reportProgress(
+                    progressPercent + (1 / totalAnswerSheets) * 40 * 0.5,
+                    100,
+                    `${progressStep} - ${step}`,
+                    6,
+                  )
+                },
               )
             } else {
               // Answer image not found, skip
@@ -386,34 +423,36 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       }
     }
 
-    reportProgress(90, 100, 'PDFファイルを生成中...')
+    reportProgress(90, 100, "PDFファイルを生成中...")
 
     // PDFに追加されたページ数をチェック
     const pageCount = pdfDoc.getPageCount()
 
     if (pageCount === 0) {
-      throw new Error('PDF生成中にエラーが発生しました。答案画像の読み込みに失敗した可能性があります')
+      throw new Error(
+        "PDF生成中にエラーが発生しました。答案画像の読み込みに失敗した可能性があります",
+      )
     }
 
     // PDF バイト生成（進捗表示）
-    reportProgress(95, 100, 'PDFドキュメントを最適化中...')
+    reportProgress(95, 100, "PDFドキュメントを最適化中...")
     const pdfBytes = await pdfDoc.save()
 
     // PDFファイルの保存
-    reportProgress(98, 100, 'ファイルを保存中...', 7)
+    reportProgress(98, 100, "ファイルを保存中...", 7)
     fs.writeFileSync(outputPath, pdfBytes)
 
-    reportProgress(100, 100, '完了しました', 7)
+    reportProgress(100, 100, "完了しました", 7)
 
     return {
       success: true,
-      outputPath
+      outputPath,
     }
-
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : '不明なエラーが発生しました'
+      error:
+        error instanceof Error ? error.message : "不明なエラーが発生しました",
     }
   }
 }
@@ -425,25 +464,25 @@ async function addAnswerSheetToPDF(
   questionScores: any,
   layoutRegions: any[],
   scoringMarkConfig?: ScoringMarkConfig,
-  pdfOrientation?: 'portrait' | 'landscape',
-  progressCallback?: (step: string) => void
+  pdfOrientation?: "portrait" | "landscape",
+  progressCallback?: (step: string) => void,
 ): Promise<void> {
   try {
-    progressCallback?.('画像を読み込み中...')
-    
+    progressCallback?.("画像を読み込み中...")
+
     // フォントを初期化
-    const font = await pdfDoc.embedFont('Helvetica')
+    const font = await pdfDoc.embedFont("Helvetica")
 
     // 画像を読み込み
     const imageBuffer = fs.readFileSync(imagePath)
-    
+
     // 画像形式を判定して埋め込み
     let image
     const ext = path.extname(imagePath).toLowerCase()
-    
-    if (ext === '.png') {
+
+    if (ext === ".png") {
       image = await pdfDoc.embedPng(imageBuffer)
-    } else if (ext === '.jpg' || ext === '.jpeg') {
+    } else if (ext === ".jpg" || ext === ".jpeg") {
       image = await pdfDoc.embedJpg(imageBuffer)
     } else {
       // その他の形式はSharpを使ってPNGに変換
@@ -452,9 +491,10 @@ async function addAnswerSheetToPDF(
     }
 
     // 新しいページを追加（用紙の向きを考慮）
-    const pageSize = pdfOrientation === 'landscape' 
-      ? [PageSizes.A4[1], PageSizes.A4[0]] as [number, number] // 横向き（幅と高さを入れ替え）
-      : PageSizes.A4 // 縦向き（デフォルト）
+    const pageSize =
+      pdfOrientation === "landscape"
+        ? ([PageSizes.A4[1], PageSizes.A4[0]] as [number, number]) // 横向き（幅と高さを入れ替え）
+        : PageSizes.A4 // 縦向き（デフォルト）
     const page = pdfDoc.addPage(pageSize)
     const { width, height } = page.getSize()
 
@@ -478,8 +518,8 @@ async function addAnswerSheetToPDF(
       imageY = height * 0.05
     }
 
-    progressCallback?.('答案画像を描画中...')
-    
+    progressCallback?.("答案画像を描画中...")
+
     // 答案画像を描画
     page.drawImage(image, {
       x: imageX,
@@ -488,36 +528,37 @@ async function addAnswerSheetToPDF(
       height: imageHeight,
     })
 
-    progressCallback?.('採点情報を重ね合わせ中...')
-    
+    progressCallback?.("採点情報を重ね合わせ中...")
+
     // 採点情報を重ね合わせ
-    const relevantScores = questionScores.success && questionScores.scores 
-      ? questionScores.scores.filter((score: any) => 
-          score.answerSheet?.id === answerSheet.id
-        )
-      : []
-    
-    
+    const relevantScores =
+      questionScores.success && questionScores.scores
+        ? questionScores.scores.filter(
+            (score: any) => score.answerSheet?.id === answerSheet.id,
+          )
+        : []
+
     // 採点データを適切に処理
     const processedScores = relevantScores.map((score: any) => {
-      const layoutRegion = layoutRegions.find(region => region.id === score.layoutRegionId)
+      const layoutRegion = layoutRegions.find(
+        (region) => region.id === score.layoutRegionId,
+      )
       const maxScore = layoutRegion?.points || 10
       const actualScore = calculateActualScore(score, maxScore)
-      
+
       return {
         ...score,
         score: actualScore,
-        maxScore: maxScore
+        maxScore: maxScore,
       }
     })
-    
+
     // processedScores are ready for mark placement
-    
 
     // デフォルト設定
     const defaultConfig: ScoringMarkConfig = {
       showMarkForStatus: {
-        ungraded: true,    // 未採点も表示してテストするため
+        ungraded: true, // 未採点も表示してテストするため
         correct: true,
         partial: true,
         pending: true,
@@ -533,16 +574,16 @@ async function addAnswerSheetToPDF(
         no_answer: true,
       },
       // 採点マーク設定
-      markPosition: "middle-center",  // 既定を中央に変更
+      markPosition: "middle-center", // 既定を中央に変更
       markOffsetX: 0,
       markOffsetY: 0,
       markSize: 50,
       // 点数テキスト設定
-      scorePosition: "middle-center",  // 既定を中央に配置
-      scoreOffsetX: 0,  // 中央配置なのでオフセットなし
+      scorePosition: "middle-center", // 既定を中央に配置
+      scoreOffsetX: 0, // 中央配置なのでオフセットなし
       scoreOffsetY: 0,
       scoreSize: 14,
-      scoreAlignment: "center",  // 中央揃え
+      scoreAlignment: "center", // 中央揃え
       useTransparent: false,
     }
 
@@ -551,23 +592,25 @@ async function addAnswerSheetToPDF(
       ...scoringMarkConfig,
       showMarkForStatus: {
         ...defaultConfig.showMarkForStatus,
-        ...(scoringMarkConfig?.showMarkForStatus || {})
+        ...(scoringMarkConfig?.showMarkForStatus || {}),
       },
       showScoreForStatus: {
         ...defaultConfig.showScoreForStatus,
-        ...(scoringMarkConfig?.showScoreForStatus || {})
-      }
+        ...(scoringMarkConfig?.showScoreForStatus || {}),
+      },
     }
 
     for (const score of processedScores) {
-      const layoutRegion = layoutRegions.find(region => region.id === score.layoutRegionId)
+      const layoutRegion = layoutRegions.find(
+        (region) => region.id === score.layoutRegionId,
+      )
       if (!layoutRegion) {
         continue
       }
 
       // 採点状態を判定（statusを直接使用）
       const scoringStatus = score.status as ScoringStatus
-      
+
       // この状態のマークを表示するかチェック
       if (!config.showMarkForStatus[scoringStatus]) {
         continue
@@ -575,22 +618,35 @@ async function addAnswerSheetToPDF(
 
       // 採点枠の位置をPDF座標系に変換
       // layoutRegionの座標が正規化されている場合 (0.0-1.0)
-      const isNormalized = layoutRegion.x <= 1.0 && layoutRegion.y <= 1.0 && layoutRegion.width <= 1.0 && layoutRegion.height <= 1.0
-      
-      let regionXOnImage, regionYOnImage, regionWidthOnImage, regionHeightOnImage
-      
+      const isNormalized =
+        layoutRegion.x <= 1.0 &&
+        layoutRegion.y <= 1.0 &&
+        layoutRegion.width <= 1.0 &&
+        layoutRegion.height <= 1.0
+
+      let regionXOnImage,
+        regionYOnImage,
+        regionWidthOnImage,
+        regionHeightOnImage
+
       if (isNormalized) {
         // 正規化座標の場合 (0.0-1.0)
         regionXOnImage = layoutRegion.x * imageWidth + imageX
         // PDF座標系（Y軸が下から上）に変換: 画像の上端から下端への座標を下端から上端に変換
-        regionYOnImage = imageY + imageHeight - (layoutRegion.y + layoutRegion.height) * imageHeight
+        regionYOnImage =
+          imageY +
+          imageHeight -
+          (layoutRegion.y + layoutRegion.height) * imageHeight
         regionWidthOnImage = layoutRegion.width * imageWidth
         regionHeightOnImage = layoutRegion.height * imageHeight
       } else {
         // ピクセル座標の場合
         regionXOnImage = (layoutRegion.x / image.width) * imageWidth + imageX
         // PDF座標系（Y軸が下から上）に変換: 画像の上端から下端への座標を下端から上端に変換
-        regionYOnImage = imageY + imageHeight - ((layoutRegion.y + layoutRegion.height) / image.height) * imageHeight
+        regionYOnImage =
+          imageY +
+          imageHeight -
+          ((layoutRegion.y + layoutRegion.height) / image.height) * imageHeight
         regionWidthOnImage = (layoutRegion.width / image.width) * imageWidth
         regionHeightOnImage = (layoutRegion.height / image.height) * imageHeight
       }
@@ -606,20 +662,22 @@ async function addAnswerSheetToPDF(
         regionYOnImage,
         regionWidthOnImage,
         regionHeightOnImage,
-        config.markSize
+        config.markSize,
       )
 
       // Mark position calculated
 
-
       try {
         // 採点マーク画像を読み込んで描画
-        const markImagePath = getMarkImagePath(scoringStatus, config.useTransparent)
-        
+        const markImagePath = getMarkImagePath(
+          scoringStatus,
+          config.useTransparent,
+        )
+
         if (fs.existsSync(markImagePath)) {
           const markImageBuffer = fs.readFileSync(markImagePath)
           const markImage = await pdfDoc.embedPng(markImageBuffer)
-          
+
           page.drawImage(markImage, {
             x: markPosition.x,
             y: markPosition.y,
@@ -632,13 +690,17 @@ async function addAnswerSheetToPDF(
       }
 
       // 点数を描画
-      if (config.showScoreForStatus[scoringStatus] && score.score !== null && score.score !== undefined) {
+      if (
+        config.showScoreForStatus[scoringStatus] &&
+        score.score !== null &&
+        score.score !== undefined
+      ) {
         const scoreText = `${score.score}` // 満点表示は削除、点数のみ表示
-        
+
         // テキストの幅を測定
         const textWidth = font.widthOfTextAtSize(scoreText, config.scoreSize)
         const textHeight = config.scoreSize // フォントサイズを高さとして使用
-        
+
         // テキストの位置を計算（新しい関数を使用）
         const scorePosition = calculateTextPosition(
           config.scorePosition,
@@ -650,7 +712,7 @@ async function addAnswerSheetToPDF(
           regionHeightOnImage,
           textWidth,
           textHeight,
-          config.scoreAlignment
+          config.scoreAlignment,
         )
 
         // Draw score text
@@ -680,7 +742,6 @@ async function addAnswerSheetToPDF(
     }
 
     // ヘッダー情報は削除（日本語フォント問題を回避）
-
   } catch (error) {
     throw error
   }

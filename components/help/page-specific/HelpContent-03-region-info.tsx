@@ -1,7 +1,19 @@
 "use client"
 
-import { Settings, Info, Lightbulb, Keyboard, CheckCircle, AlertTriangle } from "lucide-react"
-import { HelpSection, StepItem, TipItem, ShortcutItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  Keyboard,
+  Lightbulb,
+  Settings,
+} from "lucide-react"
 
 export function HelpContent03RegionInfo() {
   return (
@@ -53,21 +65,25 @@ export function HelpContent03RegionInfo() {
           <div className="space-y-2">
             <div className="border-l-4 border-green-500 pl-3">
               <p className="text-sm font-medium">設問 (QUESTION)</p>
-              <p className="text-xs text-muted-foreground">採点が必要な解答領域</p>
+              <p className="text-muted-foreground text-xs">
+                採点が必要な解答領域
+              </p>
             </div>
             <div className="border-l-4 border-orange-500 pl-3">
               <p className="text-sm font-medium">氏名欄 (NAME)</p>
-              <p className="text-xs text-muted-foreground">学生の氏名記入部分</p>
+              <p className="text-muted-foreground text-xs">
+                学生の氏名記入部分
+              </p>
             </div>
           </div>
           <div className="space-y-2">
             <div className="border-l-4 border-purple-500 pl-3">
               <p className="text-sm font-medium">合計点 (TOTAL)</p>
-              <p className="text-xs text-muted-foreground">全体の合計点表示</p>
+              <p className="text-muted-foreground text-xs">全体の合計点表示</p>
             </div>
             <div className="border-l-4 border-blue-500 pl-3">
               <p className="text-sm font-medium">小計 (SUBTOTAL)</p>
-              <p className="text-xs text-muted-foreground">部分点の合計表示</p>
+              <p className="text-muted-foreground text-xs">部分点の合計表示</p>
             </div>
           </div>
         </div>
@@ -113,12 +129,14 @@ export function HelpContent03RegionInfo() {
         <div className="space-y-2">
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="text-sm text-red-700">
-              <strong>設問番号の重複:</strong> 同じ番号を複数の領域に付けないよう注意
+              <strong>設問番号の重複:</strong>{" "}
+              同じ番号を複数の領域に付けないよう注意
             </p>
           </div>
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
             <p className="text-sm text-orange-700">
-              <strong>配点の設定漏れ:</strong> 設問タイプには必ず配点を設定してください
+              <strong>配点の設定漏れ:</strong>{" "}
+              設問タイプには必ず配点を設定してください
             </p>
           </div>
         </div>

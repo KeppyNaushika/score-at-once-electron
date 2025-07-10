@@ -1,7 +1,20 @@
 "use client"
 
-import { BarChart3, Keyboard, Users, Settings, CheckCircle, Lightbulb, Info } from "lucide-react"
-import { HelpSection, StepItem, TipItem, ShortcutItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  BarChart3,
+  CheckCircle,
+  Info,
+  Keyboard,
+  Lightbulb,
+  Settings,
+  Users,
+} from "lucide-react"
 
 export function HelpContent06Scoring() {
   return (
@@ -60,7 +73,9 @@ export function HelpContent06Scoring() {
             </div>
           </div>
           <div>
-            <h4 className="mb-2 text-sm font-medium text-green-700">便利機能</h4>
+            <h4 className="mb-2 text-sm font-medium text-green-700">
+              便利機能
+            </h4>
             <div className="space-y-1">
               <ShortcutItem keys="F" description="満点を入力" />
               <ShortcutItem keys="X" description="0点を入力" />
@@ -77,13 +92,21 @@ export function HelpContent06Scoring() {
       >
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">設問拡大モード</h4>
-            <p className="text-xs text-muted-foreground">現在採点中の設問領域を拡大表示</p>
+            <h4 className="text-sm font-medium text-blue-700">
+              設問拡大モード
+            </h4>
+            <p className="text-muted-foreground text-xs">
+              現在採点中の設問領域を拡大表示
+            </p>
             <p className="text-xs text-blue-600">詳細な確認に最適</p>
           </div>
           <div className="border-l-4 border-green-500 pl-3">
-            <h4 className="text-sm font-medium text-green-700">全体表示モード</h4>
-            <p className="text-xs text-muted-foreground">答案全体を表示して文脈を把握</p>
+            <h4 className="text-sm font-medium text-green-700">
+              全体表示モード
+            </h4>
+            <p className="text-muted-foreground text-xs">
+              答案全体を表示して文脈を把握
+            </p>
             <p className="text-xs text-green-600">記述問題の採点に有効</p>
           </div>
         </div>
@@ -95,9 +118,11 @@ export function HelpContent06Scoring() {
       >
         <div className="space-y-3">
           <div>
-            <h4 className="text-sm font-medium text-purple-700">分担採点の例</h4>
+            <h4 className="text-sm font-medium text-purple-700">
+              分担採点の例
+            </h4>
             <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
-              <div className="text-xs space-y-1">
+              <div className="space-y-1 text-xs">
                 <p>• A先生: 問1-3（計算問題）</p>
                 <p>• B先生: 問4-6（記述問題）</p>
                 <p>• C先生: 問7-9（証明問題）</p>
@@ -106,7 +131,9 @@ export function HelpContent06Scoring() {
           </div>
 
           <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-            <h4 className="text-xs font-medium text-orange-800">競合回避システム</h4>
+            <h4 className="text-xs font-medium text-orange-800">
+              競合回避システム
+            </h4>
             <p className="text-xs text-orange-700">
               同じ答案を複数の教員が採点しようとした場合、システムが自動的に検出して警告表示
             </p>
@@ -121,14 +148,14 @@ export function HelpContent06Scoring() {
         <div className="space-y-3">
           <div>
             <h4 className="text-sm font-medium">自動保存機能</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               採点データは入力と同時に自動保存されます。
             </p>
           </div>
 
           <div>
             <h4 className="text-sm font-medium">採点履歴の確認</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               「いつ」「誰が」「何点付けたか」の履歴を確認できます。
             </p>
           </div>

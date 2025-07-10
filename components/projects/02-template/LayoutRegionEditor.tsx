@@ -5,7 +5,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 import ImageCanvas from "./ImageCanvas"
 import LayoutRegionList from "./LayoutRegionList"
-import { LayoutRegionArea } from "../../../types/common.types"
+import { LayoutRegionArea } from "@/types/common.types"
 
 type LayoutRegionEditorProps = {
   areas: LayoutRegionArea[]

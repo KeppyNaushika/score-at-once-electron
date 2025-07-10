@@ -20,7 +20,7 @@ export function createMainWindow(): BrowserWindow {
   const url = isDev
     ? "http://localhost:3000"
     : format({
-        pathname: join(__dirname, "../renderer/out/index.html"),
+        pathname: join(__dirname, "@/renderer/out/index.html"),
         protocol: "file:",
         slashes: true,
       })
@@ -30,7 +30,7 @@ export function createMainWindow(): BrowserWindow {
   if (isDev) {
     mainWindow.webContents.openDevTools()
   }
-  
+
   mainWindow.loadURL(url)
 
   return mainWindow
@@ -38,12 +38,12 @@ export function createMainWindow(): BrowserWindow {
 
 export function setupWindowEvents(mainWindow: BrowserWindow): void {
   // アプリケーションフォーカス監視でバックグラウンド処理対策
-  app.on('browser-window-focus', () => {
+  app.on("browser-window-focus", () => {
     // アプリがアクティブになった時の処理
   })
 
-  app.on('browser-window-blur', () => {
+  app.on("browser-window-blur", () => {
     // 重要な保存処理を強制実行
-    mainWindow.webContents.send('force-save')
+    mainWindow.webContents.send("force-save")
   })
 }
