@@ -1,12 +1,11 @@
-import { useState, useCallback } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import type { QuestionScore } from "@prisma/client"
 import type {
-  ScoringStatus,
-  ScoringData,
   AnswerSheet,
   QuestionRegion,
-} from "@/types"
+  ScoringData,
+  ScoringStatus,
+} from "../types"
 
 interface UseScoringDataProps {
   projectId: string

@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Search } from "lucide-react"
 
-import type { ClassGroup, StudentStatus } from "@/utils/studentTypes"
+import type { ClassGroup, StudentStatus } from "../utils/studentTypes"
 
 interface StudentFiltersProps {
   classes: ClassGroup[]

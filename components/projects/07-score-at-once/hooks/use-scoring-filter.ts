@@ -5,7 +5,7 @@ import type {
   QuestionRegion,
   AnswerSheet,
   ScoringData,
-} from "@/types"
+} from "../types"
 
 interface FilterSettings {
   ungraded: boolean

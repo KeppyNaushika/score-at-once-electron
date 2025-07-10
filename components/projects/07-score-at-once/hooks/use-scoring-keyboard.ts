@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
-import type { GradingMode } from "@/GradingModeToggle"
-import type { ScoringStatus } from "@/types"
+import type { GradingMode } from "../GradingModeToggle"
+import type { ScoringStatus } from "../types"
 
 // キーボードショートカットの設定（Python版互換）
 export const DEFAULT_SHORTCUTS = {

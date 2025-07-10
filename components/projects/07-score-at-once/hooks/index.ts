@@ -19,4 +19,4 @@ export type {
   ScoringData,
   AnswerSheet,
   QuestionRegion,
-} from "@/types"
+} from "../types"

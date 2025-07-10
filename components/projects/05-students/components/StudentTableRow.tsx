@@ -7,7 +7,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
 
-import type { Student, StudentStatus } from "@/utils/studentTypes"
+import type { Student, StudentStatus } from "../utils/studentTypes"
 
 interface StudentTableRowProps {
   student: Student
