@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 
-import type { Student } from "@/utils/studentTypes"
+import type { Student } from "../utils/studentTypes"
 
 interface UseDragAndDropProps {
   students: Student[]

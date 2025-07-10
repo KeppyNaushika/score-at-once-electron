@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react"
 
-interface ScoringSettings {
-  itemsPerRow: number[]
-  autoScroll: boolean
-  showStudentNames: boolean
-}
-
 export function useScoringSettings() {
   const [itemsPerRow, setItemsPerRow] = useState([5])
   const [autoScroll, setAutoScroll] = useState(true)
@@ -25,7 +19,9 @@ export function useScoringSettings() {
           setAutoScroll(JSON.parse(savedAutoScroll))
         }
 
-        const savedShowStudentNames = localStorage.getItem("scoring-showStudentNames")
+        const savedShowStudentNames = localStorage.getItem(
+          "scoring-showStudentNames",
+        )
         if (savedShowStudentNames) {
           setShowStudentNames(JSON.parse(savedShowStudentNames))
         }

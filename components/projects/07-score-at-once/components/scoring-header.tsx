@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, PanelRightClose, PanelRightOpen } from "lucide-react"
-import GradingModeToggle, { GradingMode } from "@/GradingModeToggle"
+import GradingModeToggle, { GradingMode } from "../GradingModeToggle"
 import ScoringKeyboardHelp from "./scoring-keyboard-help"
 
 interface ScoringHeaderProps {

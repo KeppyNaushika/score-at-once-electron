@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-import type { Student } from "@/utils/studentTypes"
+import type { Student } from "../utils/studentTypes"
 
 interface StudentStatsProps {
   filteredStudents: Student[]

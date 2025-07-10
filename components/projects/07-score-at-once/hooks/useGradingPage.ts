@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { GradingMode } from "@/GradingModeToggle"
-import { AnswerSheet, QuestionRegion, ScoringData } from "@/types"
 import type { ProjectWithDetails } from "@/types/electron"
+import { useParams, useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { GradingMode } from "../GradingModeToggle"
+import { AnswerSheet, QuestionRegion, ScoringData } from "../types"
 
 export function useGradingPage() {
   const params = useParams()
