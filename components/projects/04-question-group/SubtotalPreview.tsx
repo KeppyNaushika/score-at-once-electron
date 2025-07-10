@@ -110,7 +110,7 @@ export function SubtotalPreview({
           {questionGroups.length === 0 ? (
             <div className="text-muted-foreground py-8 text-center">
               <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
-              <p>設問グループがありません</p>
+              <p>小計点がありません</p>
             </div>
           ) : (
             <div className="space-y-6">

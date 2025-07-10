@@ -19,15 +19,11 @@ const workflowSteps = [
   { id: "01-upload", label: "1. 模範解答", path: "01-upload" },
   { id: "02-template", label: "2. 採点領域", path: "02-template" },
   { id: "03-region-info", label: "3. 領域情報編集", path: "03-region-info" },
-  {
-    id: "04-question-group",
-    label: "3-2. 設問グループ",
-    path: "04-question-group",
-  },
-  { id: "05-students", label: "4. 受験生徒", path: "05-students" },
-  { id: "06-answer-sheets", label: "5. 生徒解答", path: "06-answer-sheets" },
-  { id: "07-score-at-once", label: "6. 採点", path: "07-score-at-once" },
-  { id: "08-export", label: "7. 結果", path: "08-export" },
+  { id: "04-question-group", label: "4. 小計点", path: "04-question-group" },
+  { id: "05-students", label: "5. 受験生徒", path: "05-students" },
+  { id: "06-answer-sheets", label: "6. 生徒解答", path: "06-answer-sheets" },
+  { id: "07-score-at-once", label: "7. 採点", path: "07-score-at-once" },
+  { id: "08-export", label: "8. 結果", path: "08-export" },
 ]
 
 // 旧ページヒント情報（削除予定）
@@ -101,11 +97,11 @@ const pageHints: {
     ],
   },
   "03-2-question-group": {
-    title: "設問グループ・小計点管理",
+    title: "小計点管理",
     description:
       "設問をグループ化して小計点を管理します。大問別や観点別の集計が可能になります。",
     content: [
-      "設問グループ（大問、観点など）を作成し、グループ内の項目を定義します",
+      "小計点（大問、観点など）を作成し、グループ内の項目を定義します",
       "各設問をグループ項目に関連付けることで、小計点を自動計算します",
       "一つの設問を複数のグループに関連付けることができます",
       "小計点はExcel出力時に自動的に列として追加されます",

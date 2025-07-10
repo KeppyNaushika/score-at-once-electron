@@ -186,8 +186,8 @@ export function QuestionAssignmentMatrix({
     return (
       <div className="text-muted-foreground py-8 text-center">
         <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>設問グループがありません</p>
-        <p className="text-sm">まず設問グループと項目を作成してください</p>
+        <p>小計点がありません</p>
+        <p className="text-sm">まず小計点と項目を作成してください</p>
       </div>
     )
   }
