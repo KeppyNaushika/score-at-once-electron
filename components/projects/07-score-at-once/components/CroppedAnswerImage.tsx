@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Image from "next/image"
 
 interface QuestionRegion {
   id: string
@@ -88,13 +89,16 @@ export default function CroppedAnswerImage({
 
   return (
     <div className={`relative w-full ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${className}`}>
-      <img
+      <Image
         ref={imageRef}
         src={imageUrl}
         alt={alt}
         className="hidden"
         onLoad={handleImageLoad}
         draggable={false}
+        width={800}
+        height={600}
+        unoptimized
       />
       <canvas
         ref={canvasRef}

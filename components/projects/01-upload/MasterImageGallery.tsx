@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Prisma } from "@prisma/client"
 import { ArrowLeft, ArrowRight, Loader2, Trash2 } from "lucide-react"
+import Image from "next/image"
 import React from "react"
 
 type MasterImage = Prisma.MasterImageGetPayload<{}>
@@ -108,10 +109,13 @@ const MasterImageCard = React.memo(
 
     return (
       <div className="group relative flex h-48 w-40 shrink-0 overflow-hidden rounded-md border">
-        <img
+        <Image
           src={imageUrl}
           alt={`ページ ${image.pageNumber}`}
           className="h-full w-full object-cover"
+          width={160}
+          height={192}
+          unoptimized
           onError={(e) => {
             e.currentTarget.alt = `画像読込エラー: ${image.path}`
             console.error(

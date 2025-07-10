@@ -10,6 +10,7 @@ import {
   Upload,
   X,
 } from "lucide-react"
+import Image from "next/image"
 import { useState } from "react"
 
 import type { AnswerCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
@@ -107,12 +108,14 @@ export function AnswerCell({
         <div className="relative h-full w-full">
           {/* 画像プレビュー */}
           {file.preview && !imageError ? (
-            <img
+            <Image
               src={file.preview}
               alt={file.name}
               className="h-full w-full rounded object-contain"
               onError={() => setImageError(true)}
-              loading="eager"
+              width={200}
+              height={200}
+              unoptimized
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">

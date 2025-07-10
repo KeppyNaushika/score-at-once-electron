@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Settings, AlignLeft, AlignCenter, AlignRight, FileText, RotateCcw } from "lucide-react"
+import Image from "next/image"
 import { useState, useEffect } from "react"
 
 // 採点状態の型定義
@@ -237,10 +238,13 @@ export default function ScoringMarkSettings({ config, onChange }: ScoringMarkSet
                   }
                 />
                 <div className="flex items-center space-x-2">
-                  <img 
+                  <Image 
                     src={getMarkImagePath(status)}
                     alt={statusLabels[status]}
                     className="w-6 h-6"
+                    width={24}
+                    height={24}
+                    unoptimized
                   />
                   <Label htmlFor={`mark-${status}`} className="text-sm cursor-pointer">
                     {statusLabels[status]}

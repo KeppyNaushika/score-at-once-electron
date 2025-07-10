@@ -5,13 +5,13 @@ import {
   deleteClass,
   fetchClasses,
   updateClass,
-} from "../lib/prisma/class"
+} from "@/lib/prisma/class"
 import {
   deleteMasterImage,
   uploadMasterImages,
   updateMasterImagesOrder,
   getMasterImagesByProjectId,
-} from "../lib/prisma/masterImage"
+} from "@/lib/prisma/masterImage"
 import {
   uploadAnswerSheets,
   getAnswerSheetsByProjectId,
@@ -22,10 +22,15 @@ import {
   updateAnswerSheetPlacement,
   swapAnswerSheetPlacements,
   swapAnswerSheetPlacementsWithScoring,
-} from "../lib/prisma/answerSheet"
-import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
-import { loginUser, createUser, getUserByToken, updateUserPassword } from "../lib/prisma/auth"
-import { getAbsolutePathFromData } from "../lib/dataManager"
+} from "@/lib/prisma/answerSheet"
+import { fetchUsers, getCurrentUser } from "@/lib/prisma/user"
+import {
+  loginUser,
+  createUser,
+  getUserByToken,
+  updateUserPassword,
+} from "@/lib/prisma/auth"
+import { getAbsolutePathFromData } from "@/lib/dataManager"
 import * as fs from "fs/promises"
 
 export function setupMiscHandlers(): void {
@@ -49,28 +54,37 @@ export function setupMiscHandlers(): void {
   })
 
   // Authentication handlers
-  ipcMain.handle("login-user", async (_event, username: string, password: string) => {
-    try {
-      return await loginUser(username, password)
-    } catch (err) {
-      console.error("Error logging in user:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "login-user",
+    async (_event, username: string, password: string) => {
+      try {
+        return await loginUser(username, password)
+      } catch (err) {
+        console.error("Error logging in user:", err)
+        throw err
+      }
+    },
+  )
 
-  ipcMain.handle("create-user", async (_event, userData: {
-    username: string
-    password: string
-    name: string
-    role?: string
-  }) => {
-    try {
-      return await createUser(userData)
-    } catch (err) {
-      console.error("Error creating user:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "create-user",
+    async (
+      _event,
+      userData: {
+        username: string
+        password: string
+        name: string
+        role?: string
+      },
+    ) => {
+      try {
+        return await createUser(userData)
+      } catch (err) {
+        console.error("Error creating user:", err)
+        throw err
+      }
+    },
+  )
 
   ipcMain.handle("get-user-by-token", async (_event, token: string) => {
     try {
@@ -81,14 +95,17 @@ export function setupMiscHandlers(): void {
     }
   })
 
-  ipcMain.handle("update-user-password", async (_event, userId: string, newPassword: string) => {
-    try {
-      return await updateUserPassword(userId, newPassword)
-    } catch (err) {
-      console.error("Error updating user password:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "update-user-password",
+    async (_event, userId: string, newPassword: string) => {
+      try {
+        return await updateUserPassword(userId, newPassword)
+      } catch (err) {
+        console.error("Error updating user password:", err)
+        throw err
+      }
+    },
+  )
 
   // Answer sheet handlers
   ipcMain.handle(
@@ -102,7 +119,7 @@ export function setupMiscHandlers(): void {
         buffer: ArrayBuffer
         studentId?: string
         pageNumber?: number
-      }[]
+      }[],
     ) => {
       try {
         return await uploadAnswerSheets(projectId, filesData)
@@ -110,7 +127,7 @@ export function setupMiscHandlers(): void {
         console.error("Error uploading answer sheets:", err)
         throw err
       }
-    }
+    },
   )
 
   ipcMain.handle(
@@ -121,29 +138,40 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           return { success: false, error: result.error }
         }
-        const serializedAnswerSheets = (result.answerSheets || []).map(sheet => ({
-          ...sheet,
-          questionScores: sheet.questionScores?.map(score => ({
-            ...score,
-            partialScore: score.partialScore ? score.partialScore.toString() : null
-          })) || []
-        }))
+        const serializedAnswerSheets = (result.answerSheets || []).map(
+          (sheet) => ({
+            ...sheet,
+            questionScores:
+              sheet.questionScores?.map((score) => ({
+                ...score,
+                partialScore: score.partialScore
+                  ? score.partialScore.toString()
+                  : null,
+              })) || [],
+          }),
+        )
         return { success: true, answerSheets: serializedAnswerSheets }
       } catch (err) {
         console.error("Error fetching answer sheets:", err)
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        }
       }
-    }
+    },
   )
 
-  ipcMain.handle("delete-answer-sheet", async (_event, answerSheetId: string) => {
-    try {
-      return await deleteAnswerSheet(answerSheetId)
-    } catch (err) {
-      console.error("Error deleting answer sheet:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "delete-answer-sheet",
+    async (_event, answerSheetId: string) => {
+      try {
+        return await deleteAnswerSheet(answerSheetId)
+      } catch (err) {
+        console.error("Error deleting answer sheet:", err)
+        throw err
+      }
+    },
+  )
 
   ipcMain.handle(
     "associate-answer-sheet-with-student",
@@ -154,7 +182,7 @@ export function setupMiscHandlers(): void {
         console.error("Error associating answer sheet with student:", err)
         throw err
       }
-    }
+    },
   )
 
   ipcMain.handle(
@@ -166,85 +194,131 @@ export function setupMiscHandlers(): void {
         console.error("Error setting answer sheet absent status:", err)
         throw err
       }
-    }
+    },
   )
 
-  ipcMain.handle("get-answer-sheet-by-id", async (_event, answerSheetId: string) => {
-    try {
-      const result = await getAnswerSheetById(answerSheetId)
-      if (!result.success) {
-        throw new Error(result.error)
+  ipcMain.handle(
+    "get-answer-sheet-by-id",
+    async (_event, answerSheetId: string) => {
+      try {
+        const result = await getAnswerSheetById(answerSheetId)
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+        if (!result.answerSheet) return null
+        return {
+          ...result.answerSheet,
+          questionScores:
+            result.answerSheet.questionScores?.map((score) => ({
+              ...score,
+              partialScore: score.partialScore
+                ? score.partialScore.toString()
+                : null,
+            })) || [],
+        }
+      } catch (err) {
+        console.error("Error fetching answer sheet by ID:", err)
+        throw err
       }
-      if (!result.answerSheet) return null
-      return {
-        ...result.answerSheet,
-        questionScores: result.answerSheet.questionScores?.map(score => ({
-          ...score,
-          partialScore: score.partialScore ? score.partialScore.toString() : null
-        })) || []
-      }
-    } catch (err) {
-      console.error("Error fetching answer sheet by ID:", err)
-      throw err
-    }
-  })
+    },
+  )
 
-  ipcMain.handle("update-answer-sheet-placement", async (_event, answerSheetId: string, studentId: string | null, pageNumber: number) => {
-    try {
-      const result = await updateAnswerSheetPlacement(answerSheetId, studentId, pageNumber)
-      if (!result.success) {
-        throw new Error(result.error)
+  ipcMain.handle(
+    "update-answer-sheet-placement",
+    async (
+      _event,
+      answerSheetId: string,
+      studentId: string | null,
+      pageNumber: number,
+    ) => {
+      try {
+        const result = await updateAnswerSheetPlacement(
+          answerSheetId,
+          studentId,
+          pageNumber,
+        )
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+        return {
+          ...result.answerSheet,
+          questionScores:
+            result.answerSheet?.questionScores?.map((score) => ({
+              ...score,
+              partialScore: score.partialScore
+                ? score.partialScore.toString()
+                : null,
+            })) || [],
+        }
+      } catch (err) {
+        console.error("Error updating answer sheet placement:", err)
+        throw err
       }
-      return {
-        ...result.answerSheet,
-        questionScores: result.answerSheet?.questionScores?.map(score => ({
-          ...score,
-          partialScore: score.partialScore ? score.partialScore.toString() : null
-        })) || []
-      }
-    } catch (err) {
-      console.error("Error updating answer sheet placement:", err)
-      throw err
-    }
-  })
+    },
+  )
 
-  ipcMain.handle("swap-answer-sheet-placements", async (_event, answerSheetId1: string, answerSheetId2: string) => {
-    try {
-      const result = await swapAnswerSheetPlacements(answerSheetId1, answerSheetId2)
-      if (!result.success) {
-        throw new Error(result.error)
+  ipcMain.handle(
+    "swap-answer-sheet-placements",
+    async (_event, answerSheetId1: string, answerSheetId2: string) => {
+      try {
+        const result = await swapAnswerSheetPlacements(
+          answerSheetId1,
+          answerSheetId2,
+        )
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+        return (result.answerSheets || [])
+          .filter((sheet) => sheet !== null)
+          .map((sheet) => ({
+            ...sheet,
+            questionScores:
+              sheet.questionScores?.map((score) => ({
+                ...score,
+                partialScore: score.partialScore
+                  ? score.partialScore.toString()
+                  : null,
+              })) || [],
+          }))
+      } catch (err) {
+        console.error("Error swapping answer sheet placements:", err)
+        throw err
       }
-      return (result.answerSheets || []).filter(sheet => sheet !== null).map(sheet => ({
-        ...sheet,
-        questionScores: sheet.questionScores?.map(score => ({
-          ...score,
-          partialScore: score.partialScore ? score.partialScore.toString() : null
-        })) || []
-      }))
-    } catch (err) {
-      console.error("Error swapping answer sheet placements:", err)
-      throw err
-    }
-  })
+    },
+  )
 
-  ipcMain.handle("swap-answer-sheet-placements-with-scoring", async (_event, answerSheetId1: string, answerSheetId2: string) => {
-    try {
-      const result = await swapAnswerSheetPlacementsWithScoring(answerSheetId1, answerSheetId2)
-      if (!result.success) {
-        throw new Error(result.error)
+  ipcMain.handle(
+    "swap-answer-sheet-placements-with-scoring",
+    async (_event, answerSheetId1: string, answerSheetId2: string) => {
+      try {
+        const result = await swapAnswerSheetPlacementsWithScoring(
+          answerSheetId1,
+          answerSheetId2,
+        )
+        if (!result.success) {
+          throw new Error(result.error)
+        }
+        return (result.answerSheets || [])
+          .filter((sheet) => sheet !== null)
+          .map((sheet) => ({
+            ...sheet,
+            questionScores:
+              sheet.questionScores?.map((score) => ({
+                ...score,
+                partialScore: score.partialScore
+                  ? score.partialScore.toString()
+                  : null,
+              })) || [],
+          }))
+      } catch (err) {
+        console.error(
+          "Error swapping answer sheet placements with scoring:",
+          err,
+        )
+        throw err
       }
-      return (result.answerSheets || []).filter(sheet => sheet !== null).map(sheet => ({
-        ...sheet,
-        questionScores: sheet.questionScores?.map(score => ({
-          ...score,
-          partialScore: score.partialScore ? score.partialScore.toString() : null
-        })) || []
-      }))
-    } catch (err) {
-      console.error("Error swapping answer sheet placements with scoring:", err)
-      throw err
-    }
-  })
+    },
+  )
 
   // Class handlers
   ipcMain.handle("fetch-classes", async () => {
@@ -344,65 +418,67 @@ export function setupMiscHandlers(): void {
     },
   )
 
-  ipcMain.handle(
-    "read-file-as-base64",
-    async (_event, filePath: string) => {
+  ipcMain.handle("read-file-as-base64", async (_event, filePath: string) => {
+    try {
+      const fs = await import("fs/promises")
+      const path = await import("path")
+      const { getDataDirectory } = await import("@/lib/dataManager")
+
+      // 相対パスの場合はdataディレクトリからの相対パスとして解決
+      const resolvedPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.join(getDataDirectory(), filePath)
+
+      // ファイルの存在確認
       try {
-        const fs = await import("fs/promises")
-        const path = await import("path")
-        const { getDataDirectory } = await import("../lib/dataManager")
-        
-        // 相対パスの場合はdataディレクトリからの相対パスとして解決
-        const resolvedPath = path.isAbsolute(filePath) 
-          ? filePath 
-          : path.join(getDataDirectory(), filePath)
-        
-        // ファイルの存在確認
-        try {
-          await fs.access(resolvedPath)
-        } catch {
-          return {
-            success: false,
-            error: "File not found"
-          }
-        }
-        
-        // ファイルを読み込んでBase64に変換
-        const buffer = await fs.readFile(resolvedPath)
-        const base64Data = buffer.toString('base64')
-        
-        // MIMEタイプを推定
-        const ext = path.extname(resolvedPath).toLowerCase()
-        const mimeType = ext === '.png' ? 'image/png' 
-                      : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg'
-                      : ext === '.gif' ? 'image/gif'
-                      : ext === '.webp' ? 'image/webp'
-                      : 'application/octet-stream'
-        
-        return {
-          success: true,
-          data: `data:${mimeType};base64,${base64Data}`,
-          mimeType
-        }
-      } catch (err) {
-        console.error("Error reading file as base64:", err)
+        await fs.access(resolvedPath)
+      } catch {
         return {
           success: false,
-          error: err instanceof Error ? err.message : 'Unknown error'
+          error: "File not found",
         }
       }
-    },
-  )
-  
+
+      // ファイルを読み込んでBase64に変換
+      const buffer = await fs.readFile(resolvedPath)
+      const base64Data = buffer.toString("base64")
+
+      // MIMEタイプを推定
+      const ext = path.extname(resolvedPath).toLowerCase()
+      const mimeType =
+        ext === ".png"
+          ? "image/png"
+          : ext === ".jpg" || ext === ".jpeg"
+            ? "image/jpeg"
+            : ext === ".gif"
+              ? "image/gif"
+              : ext === ".webp"
+                ? "image/webp"
+                : "application/octet-stream"
+
+      return {
+        success: true,
+        data: `data:${mimeType};base64,${base64Data}`,
+        mimeType,
+      }
+    } catch (err) {
+      console.error("Error reading file as base64:", err)
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }
+    }
+  })
+
   ipcMain.handle(
     "get-master-images-by-project-id",
     async (_event, projectId: string) => {
       try {
         const masterImages = await getMasterImagesByProjectId(projectId)
-        return masterImages.map(image => ({
+        return masterImages.map((image) => ({
           ...image,
           createdAt: image.createdAt.toISOString(),
-          updatedAt: image.updatedAt.toISOString()
+          updatedAt: image.updatedAt.toISOString(),
         }))
       } catch (err) {
         console.error("Error getting master images by project ID:", err)
@@ -412,113 +488,105 @@ export function setupMiscHandlers(): void {
   )
 
   // Data management handlers
-  ipcMain.handle(
-    "get-data-directory-info",
-    async (_event) => {
-      try {
-        const { 
-          getDataDirectory, 
-          calculateDataSize 
-        } = await import("../lib/dataManager")
-        const { getProjects: dbFetchProjects } = await import("../lib/prisma/project")
-        
-        const dataDirectory = getDataDirectory()
-        const size = await calculateDataSize()
-        
-        // プロジェクト数を取得
-        const projects = await dbFetchProjects()
-        const projectCount = Array.isArray(projects) ? projects.length : 0
-        
-        return {
-          success: true,
-          directory: dataDirectory,
-          size,
-          projectCount
-        }
-      } catch (err) {
-        console.error("Error getting data directory info:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : 'Unknown error'
-        }
-      }
-    },
-  )
+  ipcMain.handle("get-data-directory-info", async (_event) => {
+    try {
+      const { getDataDirectory, calculateDataSize } = await import(
+        "@/lib/dataManager"
+      )
+      const { getProjects: dbFetchProjects } = await import(
+        "@/lib/prisma/project"
+      )
 
-  ipcMain.handle(
-    "open-data-directory",
-    async (_event) => {
-      try {
-        const { shell } = await import("electron")
-        const { getDataDirectory } = await import("../lib/dataManager")
-        
-        const dataDirectory = getDataDirectory()
-        await shell.openPath(dataDirectory)
-        
-        return { success: true }
-      } catch (err) {
-        console.error("Error opening data directory:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : 'Unknown error'
-        }
-      }
-    },
-  )
+      const dataDirectory = getDataDirectory()
+      const size = await calculateDataSize()
 
-  ipcMain.handle(
-    "delete-all-data",
-    async (_event) => {
-      try {
-        const { getDataDirectory } = await import("../lib/dataManager")
-        const fs = await import("fs/promises")
-        
-        const dataDirectory = getDataDirectory()
-        
-        // データフォルダを完全削除
-        await fs.rm(dataDirectory, { recursive: true, force: true })
-        
-        // データディレクトリを再作成
-        await fs.mkdir(dataDirectory, { recursive: true })
-        
-        return { success: true }
-      } catch (err) {
-        console.error("Error deleting all data:", err)
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : 'Unknown error'
-        }
+      // プロジェクト数を取得
+      const projects = await dbFetchProjects()
+      const projectCount = Array.isArray(projects) ? projects.length : 0
+
+      return {
+        success: true,
+        directory: dataDirectory,
+        size,
+        projectCount,
       }
-    },
-  )
+    } catch (err) {
+      console.error("Error getting data directory info:", err)
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }
+    }
+  })
+
+  ipcMain.handle("open-data-directory", async (_event) => {
+    try {
+      const { shell } = await import("electron")
+      const { getDataDirectory } = await import("@/lib/dataManager")
+
+      const dataDirectory = getDataDirectory()
+      await shell.openPath(dataDirectory)
+
+      return { success: true }
+    } catch (err) {
+      console.error("Error opening data directory:", err)
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }
+    }
+  })
+
+  ipcMain.handle("delete-all-data", async (_event) => {
+    try {
+      const { getDataDirectory } = await import("@/lib/dataManager")
+      const fs = await import("fs/promises")
+
+      const dataDirectory = getDataDirectory()
+
+      // データフォルダを完全削除
+      await fs.rm(dataDirectory, { recursive: true, force: true })
+
+      // データディレクトリを再作成
+      await fs.mkdir(dataDirectory, { recursive: true })
+
+      return { success: true }
+    } catch (err) {
+      console.error("Error deleting all data:", err)
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }
+    }
+  })
 
   // 画像ファイル読み込みハンドラー
   ipcMain.handle("get-image-data", async (_event, relativePath: string) => {
     try {
       const absolutePath = getAbsolutePathFromData(relativePath)
       const imageBuffer = await fs.readFile(absolutePath)
-      const base64 = imageBuffer.toString('base64')
-      
+      const base64 = imageBuffer.toString("base64")
+
       // MIMEタイプを推定
-      const ext = relativePath.split('.').pop()?.toLowerCase()
-      let mimeType = 'image/png' // デフォルト
-      if (ext === 'jpg' || ext === 'jpeg') {
-        mimeType = 'image/jpeg'
-      } else if (ext === 'gif') {
-        mimeType = 'image/gif'
-      } else if (ext === 'webp') {
-        mimeType = 'image/webp'
+      const ext = relativePath.split(".").pop()?.toLowerCase()
+      let mimeType = "image/png" // デフォルト
+      if (ext === "jpg" || ext === "jpeg") {
+        mimeType = "image/jpeg"
+      } else if (ext === "gif") {
+        mimeType = "image/gif"
+      } else if (ext === "webp") {
+        mimeType = "image/webp"
       }
-      
+
       return {
         success: true,
-        data: `data:${mimeType};base64,${base64}`
+        data: `data:${mimeType};base64,${base64}`,
       }
     } catch (err) {
       console.error("Error reading image file:", err)
       return {
         success: false,
-        error: err instanceof Error ? err.message : 'Unknown error'
+        error: err instanceof Error ? err.message : "Unknown error",
       }
     }
   })
@@ -530,11 +598,11 @@ export function setupMiscHandlers(): void {
       await fs.access(absolutePath)
       return { success: true, exists: true, path: absolutePath }
     } catch (err) {
-      return { 
-        success: true, 
-        exists: false, 
+      return {
+        success: true,
+        exists: false,
         path: getAbsolutePathFromData(relativePath),
-        error: err instanceof Error ? err.message : 'Unknown error'
+        error: err instanceof Error ? err.message : "Unknown error",
       }
     }
   })

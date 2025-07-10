@@ -1,12 +1,12 @@
 import { ipcMain } from "electron"
 import { Prisma } from "@prisma/client"
-import { 
-  fetchStudents, 
-  importStudentsFromFile, 
-  createStudent, 
-  updateStudent, 
-  deleteStudent 
-} from "../lib/prisma/student"
+import {
+  fetchStudents,
+  importStudentsFromFile,
+  createStudent,
+  updateStudent,
+  deleteStudent,
+} from "@/lib/prisma/student"
 import {
   getStudentsForProject,
   addStudentsToProject,
@@ -15,10 +15,8 @@ import {
   getClassesNotInProject,
   getStudentsNotInProject,
   updateStudentOrders,
-} from "../lib/prisma/projectStudent"
-import {
-  checkGradingDataForStudents,
-} from "../lib/prisma/gradingData"
+} from "@/lib/prisma/projectStudent"
+import { checkGradingDataForStudents } from "@/lib/prisma/gradingData"
 import {
   createStudentClassMembership,
   updateStudentClassMembership,
@@ -29,7 +27,7 @@ import {
   addStudentToClass,
   endStudentMembership,
   getMembershipsByDateRange,
-} from "../lib/prisma/studentClassMembership"
+} from "@/lib/prisma/studentClassMembership"
 
 export function setupStudentHandlers(): void {
   ipcMain.handle("fetch-students", async () => {
@@ -93,7 +91,10 @@ export function setupStudentHandlers(): void {
   // Student Class Membership handlers
   ipcMain.handle(
     "create-student-class-membership",
-    async (_event, membershipData: Prisma.StudentClassMembershipCreateInput) => {
+    async (
+      _event,
+      membershipData: Prisma.StudentClassMembershipCreateInput,
+    ) => {
       try {
         return await createStudentClassMembership(membershipData)
       } catch (err) {
@@ -105,7 +106,11 @@ export function setupStudentHandlers(): void {
 
   ipcMain.handle(
     "update-student-class-membership",
-    async (_event, id: string, membershipData: Prisma.StudentClassMembershipUpdateInput) => {
+    async (
+      _event,
+      id: string,
+      membershipData: Prisma.StudentClassMembershipUpdateInput,
+    ) => {
       try {
         return await updateStudentClassMembership(id, membershipData)
       } catch (err) {
@@ -115,14 +120,17 @@ export function setupStudentHandlers(): void {
     },
   )
 
-  ipcMain.handle("delete-student-class-membership", async (_event, id: string) => {
-    try {
-      return await deleteStudentClassMembership(id)
-    } catch (err) {
-      console.error("Error deleting student class membership:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "delete-student-class-membership",
+    async (_event, id: string) => {
+      try {
+        return await deleteStudentClassMembership(id)
+      } catch (err) {
+        console.error("Error deleting student class membership:", err)
+        throw err
+      }
+    },
+  )
 
   ipcMain.handle(
     "get-current-memberships-by-student-id",
@@ -171,9 +179,8 @@ export function setupStudentHandlers(): void {
       notes?: string,
     ) => {
       try {
-        
         const dateToUse = startDate ? new Date(startDate) : new Date()
-        
+
         const result = await addStudentToClass(
           studentId,
           classId,
@@ -252,7 +259,12 @@ export function setupStudentHandlers(): void {
 
   ipcMain.handle(
     "update-student-project-status",
-    async (_event, projectId: string, studentId: string, status: 'participating' | 'expected' | 'absent') => {
+    async (
+      _event,
+      projectId: string,
+      studentId: string,
+      status: "participating" | "expected" | "absent",
+    ) => {
       try {
         return await updateStudentProjectStatus(projectId, studentId, status)
       } catch (err) {
@@ -294,14 +306,21 @@ export function setupStudentHandlers(): void {
         return { success: true, ...result }
       } catch (err) {
         console.error("Error checking grading data for students:", err)
-        return { success: false, error: err instanceof Error ? err.message : 'Unknown error' }
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        }
       }
     },
   )
 
   ipcMain.handle(
     "update-student-orders",
-    async (_event, projectId: string, studentOrders: { studentId: string; customOrder: number }[]) => {
+    async (
+      _event,
+      projectId: string,
+      studentOrders: { studentId: string; customOrder: number }[],
+    ) => {
       try {
         return await updateStudentOrders(projectId, studentOrders)
       } catch (err) {
