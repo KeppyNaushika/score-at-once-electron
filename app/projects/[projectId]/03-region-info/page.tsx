@@ -239,7 +239,7 @@ export default function RegionInfoPage() {
     <div className="flex h-screen flex-col">
       <PageHeader title="領域情報の編集" description="" helpButton={helpButton}>
         <Button
-          onClick={() => router.push(`/projects/${projectId}/04-students`)}
+          onClick={() => router.push(`/projects/${projectId}/05-students`)}
         >
           次へ: 受験生徒管理
         </Button>

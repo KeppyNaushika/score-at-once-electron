@@ -1,20 +1,22 @@
 /**
  * 受験生徒順序管理ユーティリティ
- * 04-studentsと同じソート論理を実装
+ * 05-studentsと同じソート論理を実装
  */
 
 import type { UnifiedStudent } from "@/types/answer-sheet.types"
 
 /**
  * 受験生徒を適切な順序でソートする
- * 04-studentsと05-answer-sheets/page.tsxで使用されているロジックと同一
- * 
+ * 05-studentsと06-answer-sheets/page.tsxで使用されているロジックと同一
+ *
  * ソート優先度:
  * 1. customOrder（設定されている場合）
  * 2. attendanceNumber（出席番号）
  * 3. 名前順（lastName + firstName）
  */
-export function sortStudentsForTable(students: UnifiedStudent[]): UnifiedStudent[] {
+export function sortStudentsForTable(
+  students: UnifiedStudent[],
+): UnifiedStudent[] {
   return students
     .filter((s) => s.status === "participating") // 受験する生徒のみ
     .sort((a, b) => {
@@ -52,7 +54,7 @@ export function sortStudentsForTable(students: UnifiedStudent[]): UnifiedStudent
  */
 export function getStudentRowIndex(
   studentId: string,
-  sortedStudents: UnifiedStudent[]
+  sortedStudents: UnifiedStudent[],
 ): number {
   return sortedStudents.findIndex((student) => student.id === studentId)
 }
@@ -62,7 +64,7 @@ export function getStudentRowIndex(
  */
 export function getStudentByRowIndex(
   rowIndex: number,
-  sortedStudents: UnifiedStudent[]
+  sortedStudents: UnifiedStudent[],
 ): UnifiedStudent | null {
   return sortedStudents[rowIndex] || null
 }
@@ -74,7 +76,7 @@ export function getStudentByRowIndex(
 export function calculatePosition(
   studentIndex: number,
   pageNumber: number,
-  maxPages: number
+  maxPages: number,
 ): number {
   return studentIndex * maxPages + (pageNumber - 1)
 }
@@ -84,7 +86,7 @@ export function calculatePosition(
  */
 export function parsePosition(
   position: number,
-  maxPages: number
+  maxPages: number,
 ): { studentIndex: number; pageNumber: number } {
   const studentIndex = Math.floor(position / maxPages)
   const pageNumber = (position % maxPages) + 1
@@ -118,9 +120,8 @@ export function formatStudentInfo(student: UnifiedStudent): {
     displayName: getStudentDisplayName(student),
     kanaName: getStudentKanaName(student),
     studentId: student.studentId,
-    attendanceNumber: student.attendanceNumber 
-      ? `${student.attendanceNumber}番` 
-      : "未設定"
+    attendanceNumber: student.attendanceNumber
+      ? `${student.attendanceNumber}番`
+      : "未設定",
   }
 }
-

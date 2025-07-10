@@ -93,8 +93,8 @@ export default function WorkflowSteps({
           </Button>
         </Link>
 
-        {/* Step 4: 受験生徒管理 */}
-        <Link href={`/projects/${projectId}/04-students`}>
+        {/* Step 5: 受験生徒管理 */}
+        <Link href={`/projects/${projectId}/05-students`}>
           <Button
             variant="outline"
             className="w-full justify-between"
@@ -111,8 +111,8 @@ export default function WorkflowSteps({
           </Button>
         </Link>
 
-        {/* Step 5: 答案アップロード */}
-        <Link href={`/projects/${projectId}/05-answer-sheets`}>
+        {/* Step 6: 答案アップロード */}
+        <Link href={`/projects/${projectId}/06-answer-sheets`}>
           <Button
             variant="outline"
             className="w-full justify-between"
@@ -129,8 +129,8 @@ export default function WorkflowSteps({
           </Button>
         </Link>
 
-        {/* Step 6: 採点実行 */}
-        <Link href={`/projects/${projectId}/06-score-at-once`}>
+        {/* Step 7: 採点実行 */}
+        <Link href={`/projects/${projectId}/07-score-at-once`}>
           <Button
             variant="outline"
             className="w-full justify-between"

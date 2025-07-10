@@ -34,13 +34,14 @@ answer-sheet-table/
 ### 1. ファイル命名の統一
 
 - **前**: `TableDndKitAnswerGrid.tsx` → **後**: `answer-sheet-table.tsx`
-- **前**: `useNameRegion.ts` → **後**: `use-name-region.ts` 
+- **前**: `useNameRegion.ts` → **後**: `use-name-region.ts`
 - **前**: `useDragAndDrop.ts` → **後**: `use-drag-drop.ts`
 - kebab-case への統一で一貫性を確保
 
 ### 2. インポート構造の簡素化
 
 **前** (複雑な相対インポート):
+
 ```typescript
 import { FilePreviewCell } from "./table-grid/components"
 import { useNameRegion } from "./table-grid/hooks"
@@ -48,10 +49,11 @@ import type { PreviewMode } from "./table-grid/types"
 ```
 
 **後** (統一された@インポート):
+
 ```typescript
-import { FilePreviewCell } from "@/components/projects/05-answer-sheets/answer-sheet-table/components"
-import { useNameRegion } from "@/components/projects/05-answer-sheets/answer-sheet-table/hooks"
-import type { PreviewMode } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
+import { FilePreviewCell } from "@/components/projects/06-answer-sheets/answer-sheet-table/components"
+import { useNameRegion } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks"
+import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 ```
 
 ### 3. 明確な階層構造
@@ -71,7 +73,7 @@ import { Ban, Upload, X } from "lucide-react"
 
 import { ContextMenu, ContextMenuContent } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import type { SortableTableCellProps } from "@/components/projects/05-answer-sheets/answer-sheet-table/types"
+import type { SortableTableCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 ```
 
 ## 使用方法
@@ -79,7 +81,7 @@ import type { SortableTableCellProps } from "@/components/projects/05-answer-she
 ### 基本的な使用
 
 ```typescript
-import { AnswerSheetTable } from "@/components/projects/05-answer-sheets/answer-sheet-table"
+import { AnswerSheetTable } from "@/components/projects/06-answer-sheets/answer-sheet-table"
 
 function MyComponent() {
   return (
@@ -101,7 +103,7 @@ function MyComponent() {
 既存のコードは `TableDndKitAnswerGrid` ラッパーコンポーネントで継続利用可能:
 
 ```typescript
-import TableDndKitAnswerGrid from "@/components/projects/05-answer-sheets/TableDndKitAnswerGrid"
+import TableDndKitAnswerGrid from "@/components/projects/06-answer-sheets/TableDndKitAnswerGrid"
 
 // 既存のコードがそのまま動作
 <TableDndKitAnswerGrid {...props} />
@@ -153,7 +155,7 @@ export interface CellData {
 
 ```typescript
 export interface PlacementStrategySelectorProps {
-  fileOrder: PlacementStrategy  // 制限なし
+  fileOrder: PlacementStrategy // 制限なし
   onFileOrderChange?: (order: PlacementStrategy) => void
 }
 ```
@@ -182,10 +184,10 @@ export interface PlacementStrategySelectorProps {
 import TableDndKitAnswerGrid from "./table-grid/TableDndKitAnswerGrid"
 
 // 新形式
-import { AnswerSheetTable } from "@/components/projects/05-answer-sheets/answer-sheet-table"
+import { AnswerSheetTable } from "@/components/projects/06-answer-sheets/answer-sheet-table"
 
 // ラッパー利用（移行期間中）
-import TableDndKitAnswerGrid from "@/components/projects/05-answer-sheets/TableDndKitAnswerGrid"
+import TableDndKitAnswerGrid from "@/components/projects/06-answer-sheets/TableDndKitAnswerGrid"
 ```
 
 旧 `table-grid` ディレクトリは削除済みです。すべての機能が新しい `answer-sheet-table` 構造に移植されています。

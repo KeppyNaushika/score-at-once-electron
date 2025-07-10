@@ -415,7 +415,7 @@ export default function ProjectStudentsPage() {
           </Popover>
           <Button
             onClick={() =>
-              router.push(`/projects/${projectId}/05-answer-sheets`)
+              router.push(`/projects/${projectId}/06-answer-sheets`)
             }
           >
             次へ: 答案アップロード

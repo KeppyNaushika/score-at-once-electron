@@ -142,7 +142,7 @@ export default function QuestionGroupPage() {
       {/* フッター */}
       <div className="flex justify-center">
         <Button
-          onClick={() => router.push(`/projects/${projectId}/04-students`)}
+          onClick={() => router.push(`/projects/${projectId}/05-students`)}
           className="bg-blue-600 hover:bg-blue-700"
         >
           次のステップ: 受験生徒管理

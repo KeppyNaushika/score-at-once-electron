@@ -1,6 +1,6 @@
 /**
  * table-dnd-kit-test準拠の型定義
- * 05-answer-sheetsページ専用の統一型定義
+ * 06-answer-sheetsページ専用の統一型定義
  * レポート分析に基づき6つのStudent型と4つのAnswerSheet型を1つに統合
  */
 
@@ -10,7 +10,7 @@
 
 /**
  * 統一された生徒型定義
- * 04-studentsのcustomOrder順序に対応
+ * 05-studentsのcustomOrder順序に対応
  */
 export interface UnifiedStudent {
   id: string
@@ -21,7 +21,7 @@ export interface UnifiedStudent {
   studentId: string
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
-  customOrder?: number | null  // 🚨 必須: 受験生徒順序
+  customOrder?: number | null // 🚨 必須: 受験生徒順序
 }
 
 /**
@@ -35,16 +35,16 @@ export interface UnifiedFile {
   size: number
   buffer: ArrayBuffer
   preview?: string
-  studentId?: string           // 配置済みの場合の生徒ID
-  pageNumber: number           // ページ番号（1から開始）
-  isSelected: boolean          // UI選択状態
-  originalFileName: string     // 元ファイル名保持
-  pageLabel?: string          // 表示用ラベル
-  
+  studentId?: string // 配置済みの場合の生徒ID
+  pageNumber: number // ページ番号（1から開始）
+  isSelected: boolean // UI選択状態
+  originalFileName: string // 元ファイル名保持
+  pageLabel?: string // 表示用ラベル
+
   // table-dnd-kit-test統合用
-  color?: string              // 表示色（テスト・デバッグ用）
-  position?: number           // table内の位置（studentIndex * maxPages + pageNumber - 1）
-  imagePath?: string | null   // 既存画像ファイルのパス（遅延読み込み用）
+  color?: string // 表示色（テスト・デバッグ用）
+  position?: number // table内の位置（studentIndex * maxPages + pageNumber - 1）
+  imagePath?: string | null // 既存画像ファイルのパス（遅延読み込み用）
 }
 
 // ============================================================================
@@ -62,9 +62,9 @@ export type PlacementStrategy = "page-first" | "student-first" | "filename-auto"
  * table-dnd-kit-testのDisabledStateと互換
  */
 export interface DisabledState {
-  rows: Set<number>        // 生徒レベル無効化（studentIndex）
-  cols: Set<number>        // ページレベル無効化（pageNumber - 1）
-  positions: Set<number>   // セルレベル無効化（position）
+  rows: Set<number> // 生徒レベル無効化（studentIndex）
+  cols: Set<number> // ページレベル無効化（pageNumber - 1）
+  positions: Set<number> // セルレベル無効化（position）
 }
 
 /**
@@ -72,10 +72,10 @@ export interface DisabledState {
  * 従来のGridStateを大幅簡素化
  */
 export interface SimpleGridState {
-  files: UnifiedFile[]                    // メインのファイル配列
-  disabledState: DisabledState           // 無効化状態
-  placementStrategy: PlacementStrategy   // 配置戦略
-  maxPages: number                       // 最大ページ数（動的計算）
+  files: UnifiedFile[] // メインのファイル配列
+  disabledState: DisabledState // 無効化状態
+  placementStrategy: PlacementStrategy // 配置戦略
+  maxPages: number // 最大ページ数（動的計算）
 }
 
 // ============================================================================
@@ -92,9 +92,9 @@ export interface UploadData {
   originalFileName: string
   type: string
   buffer: ArrayBuffer
-  studentId: string        // 受験生徒ID
-  pageNumber: number       // ページ番号
-  overwrite: boolean       // 上書きフラグ
+  studentId: string // 受験生徒ID
+  pageNumber: number // ページ番号
+  overwrite: boolean // 上書きフラグ
 }
 
 /**
@@ -125,13 +125,13 @@ export interface ExistingAnswerSheet {
  */
 export interface NameFieldRegion {
   id: string
-  type: "name" | "studentId"  // 氏名欄または学籍番号欄
-  x: number                   // 相対座標（0-1）
+  type: "name" | "studentId" // 氏名欄または学籍番号欄
+  x: number // 相対座標（0-1）
   y: number
   width: number
   height: number
-  masterImageId: string       // 対応するマスター画像ID
-  pageNumber: number          // ページ番号
+  masterImageId: string // 対応するマスター画像ID
+  pageNumber: number // ページ番号
 }
 
 // ============================================================================
@@ -150,7 +150,7 @@ export interface TableCell {
   isDisabled: boolean
 }
 
-export type TableData = TableCell[][]  // [row][col]形式
+export type TableData = TableCell[][] // [row][col]形式
 
 /**
  * ドラッグ&ドロップイベント用
@@ -207,26 +207,28 @@ export interface PasswordDialogState {
  * 保留中の変更データ
  */
 export interface PendingChange {
-  id: string                    // ユニークID
-  answerSheetId1: string       // 交換対象1のID
-  answerSheetId2: string       // 交換対象2のID
-  timestamp: Date              // 変更時刻
-  position1: {                 // 交換前の位置1
+  id: string // ユニークID
+  answerSheetId1: string // 交換対象1のID
+  answerSheetId2: string // 交換対象2のID
+  timestamp: Date // 変更時刻
+  position1: {
+    // 交換前の位置1
     studentId: string | null
     pageNumber: number
-    studentName?: string       // 表示用
+    studentName?: string // 表示用
   }
-  position2: {                 // 交換前の位置2
+  position2: {
+    // 交換前の位置2
     studentId: string | null
     pageNumber: number
-    studentName?: string       // 表示用
+    studentName?: string // 表示用
   }
 }
 
 /**
  * 採点データ処理オプション
  */
-export type ScoringDataOption = 
-  | "image-only"        // 答案画像のみ入れ替え
-  | "with-scoring"      // 採点情報も一緒に入れ替え
-  | "cancel"           // キャンセル
+export type ScoringDataOption =
+  | "image-only" // 答案画像のみ入れ替え
+  | "with-scoring" // 採点情報も一緒に入れ替え
+  | "cancel" // キャンセル

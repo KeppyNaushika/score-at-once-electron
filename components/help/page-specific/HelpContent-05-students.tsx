@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react"
 
-export function HelpContent04Students() {
+export function HelpContent05Students() {
   return (
     <div className="space-y-6">
       <div>

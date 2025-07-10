@@ -9,24 +9,26 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import Head from "next/head"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
-import React, { useState, useEffect } from "react"
-import { toast } from "sonner"
-import Head from "next/head"
+import React, { useEffect, useState } from "react"
 
 // ワークフローステップの定義
 const workflowSteps = [
   { id: "01-upload", label: "1. 模範解答", path: "01-upload" },
   { id: "02-template", label: "2. 採点領域", path: "02-template" },
   { id: "03-region-info", label: "3. 領域情報編集", path: "03-region-info" },
-  { id: "03-2-question-group", label: "3-2. 設問グループ", path: "03-2-question-group" },
-  { id: "04-students", label: "4. 受験生徒", path: "04-students" },
-  { id: "05-answer-sheets", label: "5. 生徒解答", path: "05-answer-sheets" },
-  { id: "06-score-at-once", label: "6. 採点", path: "06-score-at-once" },
-  { id: "07-export", label: "7. 結果", path: "07-export" },
+  {
+    id: "04-question-group",
+    label: "3-2. 設問グループ",
+    path: "04-question-group",
+  },
+  { id: "05-students", label: "4. 受験生徒", path: "05-students" },
+  { id: "06-answer-sheets", label: "5. 生徒解答", path: "06-answer-sheets" },
+  { id: "07-score-at-once", label: "6. 採点", path: "07-score-at-once" },
+  { id: "08-export", label: "7. 結果", path: "08-export" },
 ]
-
 
 // 旧ページヒント情報（削除予定）
 const pageHints: {
@@ -115,7 +117,7 @@ const pageHints: {
       "設問の関連付けを変更すると、小計点も自動で更新されます",
     ],
   },
-  "04-students": {
+  "05-students": {
     title: "受験生徒の確認・選択",
     description:
       "このプロジェクトで採点する生徒を確認し、必要に応じて受験者の選択を行います。",
@@ -132,7 +134,7 @@ const pageHints: {
       "学籍番号が正確に設定されていると、答案との自動照合がスムーズになります",
     ],
   },
-  "05-answer-sheets": {
+  "06-answer-sheets": {
     title: "生徒解答のアップロード",
     description:
       "スキャンした生徒の答案画像をアップロードし、生徒情報との関連付けを行います。",
@@ -149,7 +151,7 @@ const pageHints: {
       "画像の解像度は200DPI以上を推奨（文字が鮮明に読める程度）",
     ],
   },
-  "06-score-at-once": {
+  "07-score-at-once": {
     title: "採点",
     description:
       "効率的な採点インターフェースで、キーボードショートカットを活用した高速採点が可能です。",
@@ -174,7 +176,7 @@ const pageHints: {
       { key: "Ctrl + S", description: "一時保存" },
     ],
   },
-  "07-export": {
+  "08-export": {
     title: "結果",
     description: "採点結果の確認、分析、そして各種形式での出力を行います。",
     content: [
@@ -255,31 +257,21 @@ export default function ProjectWorkflowLayout({
           {/* 右側のナビゲーション要素 */}
           <div className="flex items-center space-x-2">
             {/* プロジェクト詳細に戻るボタン */}
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-            >
-              <Link href={`/projects/${projectId}`}>
-                プロジェクト詳細
-              </Link>
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/projects/${projectId}`}>プロジェクト詳細</Link>
             </Button>
 
             {/* 戻るボタン（採点画面でのみ表示） */}
-            {pathname.includes('06-score-at-once') && (
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-              >
-                <Link href={`/projects/${projectId}/05-answer-sheets`}>
+            {pathname.includes("07-score-at-once") && (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/projects/${projectId}/06-answer-sheets`}>
                   戻る
                 </Link>
               </Button>
             )}
           </div>
         </header>
-        <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+        <main className="min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
     </>
   )

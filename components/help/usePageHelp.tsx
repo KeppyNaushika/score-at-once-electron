@@ -29,10 +29,10 @@ const pageHelpComponents: {
   "01-upload": UploadHelpContent,
   "02-template": TemplateHelpContent,
   "03-region-info": RegionInfoHelpContent,
-  "04-students": StudentsHelpContent,
-  "05-answer-sheets": AnswerSheetsHelpContent,
-  "06-score-at-once": ScoringHelpContent,
-  "07-export": ExportHelpContent,
+  "05-students": StudentsHelpContent,
+  "06-answer-sheets": AnswerSheetsHelpContent,
+  "07-score-at-once": ScoringHelpContent,
+  "08-export": ExportHelpContent,
 }
 
 export function usePageHelp() {
@@ -54,11 +54,11 @@ export function usePageHelp() {
     const titles: { [key: string]: string } = {
       "01-upload": "模範解答アップロード",
       "02-template": "採点領域作成",
-      "03-region-info": "領域情報編集", 
-      "04-students": "受験生徒管理",
-      "05-answer-sheets": "答案アップロード",
-      "06-score-at-once": "一括採点",
-      "07-export": "結果出力",
+      "03-region-info": "領域情報編集",
+      "05-students": "受験生徒管理",
+      "06-answer-sheets": "答案アップロード",
+      "07-score-at-once": "一括採点",
+      "08-export": "結果出力",
     }
     return currentPageId ? titles[currentPageId] : "ヘルプ"
   }

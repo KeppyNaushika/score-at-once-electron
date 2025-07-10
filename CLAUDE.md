@@ -79,10 +79,10 @@ npx prisma studio
 │   │       ├── /01-upload           # 模範解答アップロード
 │   │       ├── /02-template         # 採点領域作成
 │   │       ├── /03-region-info      # 領域情報編集
-│   │       ├── /04-students         # 受験生徒管理
-│   │       ├── /05-answer-sheets    # 答案アップロード
-│   │       ├── /06-score-at-once    # 採点実行
-│   │       ├── /07-export           # 結果出力
+│   │       ├── /05-students         # 受験生徒管理
+│   │       ├── /06-answer-sheets    # 答案アップロード
+│   │       ├── /07-score-at-once    # 採点実行
+│   │       ├── /08-export           # 結果出力
 │   │       ├── layout.tsx           # プロジェクト共通レイアウト
 │   │       └── page.tsx             # プロジェクト詳細
 │   ├── /settings            # 設定
@@ -108,8 +108,8 @@ npx prisma studio
 │   │   ├── /01-upload       # 模範解答アップロード
 │   │   ├── /02-template     # 採点領域作成
 │   │   ├── /03-region-info  # 領域情報編集
-│   │   ├── /04-students     # 受験生徒管理
-│   │   ├── /05-answer-sheets # 答案アップロード（高度な機能特化構造）
+│   │   ├── /05-students     # 受験生徒管理
+│   │   ├── /06-answer-sheets # 答案アップロード（高度な機能特化構造）
 │   │   │   ├── /answer-sheet-management    # 答案管理システム
 │   │   │   │   ├── /components      # 専用コンポーネント
 │   │   │   │   ├── /hooks          # 専用カスタムフック
@@ -119,8 +119,8 @@ npx prisma studio
 │   │   │       ├── /components     # テーブル専用コンポーネント
 │   │   │       ├── /hooks         # テーブル専用フック
 │   │   │       └── /types         # テーブル専用型定義
-│   │   ├── /06-score-at-once # 採点実行
-│   │   ├── /07-export       # 結果出力
+│   │   ├── /07-score-at-once # 採点実行
+│   │   ├── /08-export       # 結果出力
 │   │   │   ├── ExportProgressModal.tsx   # 出力プログレス表示
 │   │   │   └── ScoringMarkSettings.tsx   # 採点マーク設定
 │   │   ├── /detail          # プロジェクト詳細
@@ -132,8 +132,8 @@ npx prisma studio
 │   └── /ui                  # 基礎UIコンポーネント（shadcn/ui）
 ├── /hooks                   # グローバルカスタムフック
 │   ├── /02-template         # 採点領域作成専用
-│   ├── /06-score-at-once    # 採点実行専用
-│   ├── /07-export           # 出力専用
+│   ├── /07-score-at-once    # 採点実行専用
+│   ├── /08-export           # 出力専用
 │   ├── /answer-sheet-upload # 答案アップロード専用
 │   ├── /project-detail      # プロジェクト詳細専用
 │   ├── useFileUpload.ts     # ファイルアップロード
@@ -255,12 +255,14 @@ npx prisma studio
 **対象**: プロジェクト全体で共有される要素
 
 **配置基準**:
+
 - ✅ 3つ以上の機能・画面で使用される
 - ✅ プロジェクトの根幹となる型・ロジック
 - ✅ 外部ライブラリとのインターフェース
 - ✅ 汎用的なユーティリティ関数
 
 **例**:
+
 ```typescript
 // トップレベル配置の例
 /hooks/useProject.ts       # 複数画面で使用されるプロジェクト管理
@@ -268,20 +270,22 @@ npx prisma studio
 /lib/utils.ts             # 日付フォーマット、バリデーション等の汎用関数
 ```
 
-#### 🎯 機能内配置（`/components/projects/05-answer-sheets/hooks` 等）
+#### 🎯 機能内配置（`/components/projects/06-answer-sheets/hooks` 等）
 
 **対象**: 特定機能専用の要素
 
 **配置基準**:
+
 - ✅ その機能でのみ使用される
 - ✅ 機能特有のビジネスロジック
 - ✅ 機能専用の型定義・ユーティリティ
 - ✅ 他機能では再利用されない
 
 **例**:
+
 ```typescript
 // 機能内配置の例
-/components/projects/05-answer-sheets/
+/components/projects/06-answer-sheets/
 ├── hooks/useAnswerSheetUpload.ts     # 答案アップロード専用ロジック
 ├── types/answer-sheet.types.ts      # PendingChange, ScoringDataOption等
 └── utils/file-processing.ts         # ファイル変換・検証の専用関数
@@ -290,17 +294,19 @@ npx prisma studio
 #### 📖 import文の書き方
 
 **トップレベル要素**:
+
 ```typescript
-import { useProject } from '@/hooks/useProject'
-import { ProjectData } from '@/types/common.types'
-import { formatDate } from '@/lib/utils'
+import { useProject } from "@/hooks/useProject"
+import { ProjectData } from "@/types/common.types"
+import { formatDate } from "@/lib/utils"
 ```
 
 **機能内要素**:
+
 ```typescript
-import { useAnswerSheetUpload } from './hooks/useAnswerSheetUpload'
-import { PendingChange } from './types/answer-sheet.types'
-import { validateFile } from './utils/file-processing'
+import { useAnswerSheetUpload } from "./hooks/useAnswerSheetUpload"
+import { PendingChange } from "./types/answer-sheet.types"
+import { validateFile } from "./utils/file-processing"
 ```
 
 #### 🎯 判断基準・チェックリスト
@@ -322,11 +328,13 @@ import { validateFile } from './utils/file-processing'
 #### 🔄 移行・リファクタリング時の注意
 
 **機能内 → トップレベル移行時**:
+
 - 他機能での使用が確認されてから移行
 - import文の一括置換を忘れずに
 - 命名の汎用化を検討
 
 **トップレベル → 機能内移行時**:
+
 - 実際の使用箇所を全て確認
 - 本当にその機能でのみ使用されているかチェック
 - 機能特化の命名に変更を検討
