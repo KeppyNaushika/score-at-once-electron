@@ -331,15 +331,15 @@ export default function RegionInfoPage() {
         <div className="flex-1 overflow-y-auto">
           <div className="p-4">
             <div className="mb-4">
-              <h3 className="text-lg font-medium">領域情報テーブル</h3>
-              {selectedMasterImage && (
-                <p className="text-sm text-muted-foreground">
-                  編集中: ページ {selectedMasterImage.pageNumber}
-                  {layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length > 0 && 
-                    ` (${layoutRegions.filter(r => r.masterImageId === selectedMasterImage.id).length}個の領域)`
-                  }
-                </p>
-              )}
+              <h3 className="text-lg font-medium">領域情報テーブル（全ページ統一順序）</h3>
+              <p className="text-sm text-muted-foreground">
+                全ページ {layoutRegions.length}個の領域を統一順序で表示
+                {selectedMasterImage && (
+                  <span className="ml-2 text-blue-600">
+                    ※ ページ {selectedMasterImage.pageNumber} を選択中
+                  </span>
+                )}
+              </p>
             </div>
             <RegionDetailsTable
               regions={layoutRegions}

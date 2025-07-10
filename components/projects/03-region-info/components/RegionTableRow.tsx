@@ -41,13 +41,12 @@ const typeIcons: Record<LayoutRegionAreaType, string> = {
 
 type RegionTableRowProps = {
   region: LayoutRegionWithDetails
-  filteredIndex: number
   globalIndex: number
   isSelected: boolean
   isDragged: boolean
   isDraggedOver: boolean
   disabled: boolean
-  onRegionChange: (filteredIndex: number, field: string, value: any) => void
+  onRegionChange: (globalIndex: number, field: string, value: any) => void
   onKeyDown: (e: React.KeyboardEvent, rowIndex: number, fieldName: string) => void
   onDelete: (globalIndex: number) => void
   onSelect: (globalIndex: number | null) => void
@@ -60,7 +59,6 @@ type RegionTableRowProps = {
 
 export const RegionTableRow = ({
   region,
-  filteredIndex,
   globalIndex,
   isSelected,
   isDragged,
@@ -87,12 +85,12 @@ export const RegionTableRow = ({
 
   return (
     <tr
-      key={region.id || `region-${filteredIndex}`}
+      key={region.id || `region-${globalIndex}`}
       draggable={!disabled}
-      onDragStart={() => onDragStart(filteredIndex)}
-      onDragOver={(e) => onDragOver(e, filteredIndex)}
+      onDragStart={() => onDragStart(globalIndex)}
+      onDragOver={(e) => onDragOver(e, globalIndex)}
       onDragLeave={onDragLeave}
-      onDrop={(e) => onDrop(e, filteredIndex)}
+      onDrop={(e) => onDrop(e, globalIndex)}
       onDragEnd={onDragEnd}
       className={`hover:bg-accent/50 cursor-pointer transition-colors ${
         isSelected ? "bg-primary/10 border-primary" : ""
@@ -110,15 +108,20 @@ export const RegionTableRow = ({
         <div className="flex items-center space-x-2">
           <span className="text-lg">{icon}</span>
           <span className="text-sm font-medium">
-            {filteredIndex + 1}
+            {globalIndex + 1}
           </span>
+        </div>
+      </td>
+      <td className="border-border border px-2 py-1 text-center">
+        <div className="text-sm text-muted-foreground">
+          {region.masterImage ? region.masterImage.pageNumber : '?'}
         </div>
       </td>
       <td className="border-border border px-2 py-1">
         <Select
           value={region.type}
           onValueChange={(value) =>
-            onRegionChange(filteredIndex, "type", value)
+            onRegionChange(globalIndex, "type", value)
           }
           disabled={disabled}
         >
@@ -138,18 +141,18 @@ export const RegionTableRow = ({
       </td>
       <td className="border-border border px-2 py-1">
         <Input
-          data-row={filteredIndex}
+          data-row={globalIndex}
           data-field="label"
           value={region.label || ""}
           onChange={(e) =>
             onRegionChange(
-              filteredIndex,
+              globalIndex,
               "label",
               e.target.value,
             )
           }
           onKeyDown={(e) =>
-            onKeyDown(e, filteredIndex, "label")
+            onKeyDown(e, globalIndex, "label")
           }
           disabled={disabled}
           placeholder="領域名を入力"
@@ -159,19 +162,19 @@ export const RegionTableRow = ({
       <td className="border-border border px-2 py-1">
         {region.type === "QUESTION_ANSWER" ? (
           <Input
-            data-row={filteredIndex}
+            data-row={globalIndex}
             data-field="points"
             type="number"
             value={region.points ?? ""}
             onChange={(e) =>
               onRegionChange(
-                filteredIndex,
+                globalIndex,
                 "points",
                 e.target.value,
               )
             }
             onKeyDown={(e) =>
-              onKeyDown(e, filteredIndex, "points")
+              onKeyDown(e, globalIndex, "points")
             }
             disabled={disabled}
             placeholder="10"

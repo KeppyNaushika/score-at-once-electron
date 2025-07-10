@@ -82,13 +82,26 @@ export default function ExportProgressModal({
         <div className="space-y-4">
           {status === 'processing' && (
             <>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span>進行状況</span>
-                  <span>{currentStepIndex + 1} / {totalSteps}</span>
+                  <span className="font-medium">{progress}%</span>
                 </div>
-                <Progress value={progress} className="w-full" />
-                <p className="text-sm text-muted-foreground">{currentStep}</p>
+                <div className="space-y-1">
+                  <Progress value={progress} className="w-full h-2" />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{currentStep}</p>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>ステップ {currentStepIndex + 1}</span>
+                    <span>全 {totalSteps} ステップ</span>
+                  </div>
+                </div>
               </div>
             </>
           )}

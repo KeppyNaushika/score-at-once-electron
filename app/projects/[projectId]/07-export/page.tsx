@@ -37,6 +37,14 @@ export default function ExportPage() {
     setShowProgressModal,
     exportProgress,
     setExportProgress,
+    exportStatus,
+    setExportStatus,
+    currentStep,
+    setCurrentStep,
+    currentStepIndex,
+    setCurrentStepIndex,
+    totalSteps,
+    setTotalSteps,
     isExporting,
     setIsExporting,
   } = useExportPage()
@@ -50,6 +58,9 @@ export default function ExportPage() {
     setIsExporting(true)
     setShowProgressModal(true)
     setExportProgress(0)
+    setExportStatus('processing')
+    setCurrentStep('初期化中...')
+    setCurrentStepIndex(0)
 
     try {
       const selectedStudentIds = Array.from(selectedStudents)
@@ -57,6 +68,7 @@ export default function ExportPage() {
       const result = await window.electronAPI.exportScoredAnswersPDF({
         projectId: project.id,
         selectedStudentIds,
+        pdfOrientation: exportOptions.pdfOrientation,
         scoringMarkConfig: {
           ...scoringMarkConfig,
           position: scoringMarkConfig.markPosition,
@@ -67,20 +79,16 @@ export default function ExportPage() {
 
       if (result.success) {
         setExportProgress(100)
-        setTimeout(() => {
-          setShowProgressModal(false)
-          alert(
-            `採点済み答案PDFの出力が完了しました。\n保存先: ${result.outputPath}`,
-          )
-        }, 1000)
+        setExportStatus('completed')
+        setCurrentStep('完了しました')
       } else {
-        alert(`出力に失敗しました: ${result.error}`)
-        setShowProgressModal(false)
+        setExportStatus('error')
+        setCurrentStep(`エラー: ${result.error}`)
       }
     } catch (error) {
       console.error("Export error:", error)
-      alert("出力中にエラーが発生しました")
-      setShowProgressModal(false)
+      setExportStatus('error')
+      setCurrentStep('出力中にエラーが発生しました')
     } finally {
       setIsExporting(false)
     }
@@ -207,10 +215,10 @@ export default function ExportPage() {
         isOpen={showProgressModal}
         onClose={() => setShowProgressModal(false)}
         progress={exportProgress}
-        status={isExporting ? "processing" : "completed"}
-        currentStep="出力中..."
-        totalSteps={1}
-        currentStepIndex={0}
+        status={exportStatus}
+        currentStep={currentStep}
+        totalSteps={totalSteps}
+        currentStepIndex={currentStepIndex}
       />
     </div>
   )

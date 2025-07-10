@@ -23,6 +23,9 @@ export interface Student {
   customOrder?: number | null
 }
 
+// PDF用紙の向きの型
+export type PdfOrientation = 'portrait' | 'landscape'
+
 // 出力オプションの型
 export interface ExportOptions {
   includeScoredAnswers: boolean
@@ -32,4 +35,5 @@ export interface ExportOptions {
   markPosition: string
   markSize: number
   showMarks: boolean
+  pdfOrientation: PdfOrientation
 }

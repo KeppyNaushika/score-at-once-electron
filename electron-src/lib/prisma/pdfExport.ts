@@ -58,11 +58,14 @@ interface ExportScoredAnswersOptions {
   selectedStudentIds: string[]
   outputPath?: string
   scoringMarkConfig?: ScoringMarkConfig
+  pdfOrientation?: 'portrait' | 'landscape'
   progressCallback?: (progress: {
     current: number
     total: number
     step: string
     percentage: number
+    currentStepIndex: number
+    totalSteps: number
   }) => void
 }
 
@@ -238,15 +241,16 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     const { projectId, selectedStudentIds, scoringMarkConfig, progressCallback } = options
 
     // 進捗レポート関数
-    const reportProgress = (current: number, total: number, step: string) => {
+    const totalSteps = 7 // 全体ステップ数
+    const reportProgress = (current: number, total: number, step: string, currentStepIndex: number = 0) => {
       const percentage = Math.round((current / total) * 100)
-      progressCallback?.({ current, total, step, percentage })
+      progressCallback?.({ current, total, step, percentage, currentStepIndex, totalSteps })
     }
 
     // 保存場所を最初に選択
     let outputPath = options.outputPath
     if (!outputPath) {
-      reportProgress(0, 100, '保存場所を選択してください...')
+      reportProgress(0, 100, '保存場所を選択してください...', 0)
       const defaultFileName = `採点済み答案_${new Date().toISOString().split('T')[0]}.pdf`
       const result = await dialog.showSaveDialog({
         title: '採点済み答案PDFの保存',
@@ -261,10 +265,10 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       }
       
       outputPath = result.filePath
-      reportProgress(5, 100, '保存場所が選択されました。データを取得中...')
+      reportProgress(5, 100, '保存場所が選択されました。データを取得中...', 1)
     }
 
-    reportProgress(10, 100, 'データを取得中...')
+    reportProgress(10, 100, '生徒データを取得中...', 1)
 
     // データの取得
     const studentsResult = await getStudentsForProject(projectId)
@@ -272,14 +276,14 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       throw new Error('生徒データの取得に失敗しました')
     }
 
-    reportProgress(20, 100, '答案データを取得中...')
+    reportProgress(20, 100, '答案データを取得中...', 2)
 
     const answerSheetsResult = await getAnswerSheetsByProjectId(projectId)
     if (!answerSheetsResult.success || !answerSheetsResult.answerSheets) {
       throw new Error('答案データの取得に失敗しました')
     }
 
-    reportProgress(30, 100, '採点データを取得中...')
+    reportProgress(30, 100, '採点データを取得中...', 3)
 
     const questionScores = await getQuestionScoresForProject(projectId)
     const layoutRegions = await getLayoutRegionsByProjectId(projectId)
@@ -293,7 +297,7 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
       throw new Error('選択された生徒が見つかりません')
     }
 
-    reportProgress(40, 100, 'PDFドキュメントを初期化中...')
+    reportProgress(40, 100, 'PDFドキュメントを初期化中...', 5)
 
     // 全体の答案枚数を計算し、データの存在をチェック
     let totalAnswerSheets = 0
@@ -313,21 +317,16 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     }
 
     // 実際の答案画像ファイルの存在チェック
+    reportProgress(35, 100, '答案画像ファイルを確認中...', 4)
     let validAnswerSheets = 0
     for (const student of selectedStudents) {
       const studentAnswerSheets = studentAnswerSheetMap.get(student.id) || []
-      console.log(`Student ${student.id}: ${studentAnswerSheets.length} answer sheets`)
       for (const answerSheet of studentAnswerSheets) {
         if ((answerSheet as any).originalImagePath) {
           const answerImagePath = getAbsolutePathFromData((answerSheet as any).originalImagePath)
-          console.log(`Checking answer sheet path: ${answerImagePath}`)
           if (fs.existsSync(answerImagePath)) {
             validAnswerSheets++
-          } else {
-            console.warn(`Answer sheet not found: ${answerImagePath}`)
           }
-        } else {
-          console.warn(`Answer sheet missing originalImagePath for student ${student.id}`)
         }
       }
     }
@@ -369,19 +368,19 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
                 questionScores, 
                 layoutRegions, 
                 scoringMarkConfig,
+                options.pdfOrientation || 'portrait',
                 (step) => {
-                  reportProgress(progressPercent + (1 / totalAnswerSheets) * 40 * 0.5, 100, `${progressStep} - ${step}`)
+                  reportProgress(progressPercent + (1 / totalAnswerSheets) * 40 * 0.5, 100, `${progressStep} - ${step}`, 6)
                 }
               )
             } else {
-              console.warn('Answer image not found at:', answerImagePath)
+              // Answer image not found, skip
             }
           } catch (imageError) {
-            console.warn(`Failed to process answer sheet for student ${student.studentId}:`, imageError)
             // 個別の画像処理エラーは警告として扱い、処理を続行
           }
         } else {
-          console.warn('Answer sheet has no originalImagePath:', answerSheet)
+          // Answer sheet has no originalImagePath, skip
         }
         processedSheets++
       }
@@ -401,10 +400,10 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     const pdfBytes = await pdfDoc.save()
 
     // PDFファイルの保存
-    reportProgress(98, 100, 'ファイルを保存中...')
+    reportProgress(98, 100, 'ファイルを保存中...', 7)
     fs.writeFileSync(outputPath, pdfBytes)
 
-    reportProgress(100, 100, '完了しました')
+    reportProgress(100, 100, '完了しました', 7)
 
     return {
       success: true,
@@ -412,7 +411,6 @@ export async function exportScoredAnswersPDF(options: ExportScoredAnswersOptions
     }
 
   } catch (error) {
-    console.error('Error exporting scored answers PDF:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : '不明なエラーが発生しました'
@@ -427,6 +425,7 @@ async function addAnswerSheetToPDF(
   questionScores: any,
   layoutRegions: any[],
   scoringMarkConfig?: ScoringMarkConfig,
+  pdfOrientation?: 'portrait' | 'landscape',
   progressCallback?: (step: string) => void
 ): Promise<void> {
   try {
@@ -452,8 +451,11 @@ async function addAnswerSheetToPDF(
       image = await pdfDoc.embedPng(pngBuffer)
     }
 
-    // 新しいページを追加
-    const page = pdfDoc.addPage(PageSizes.A4)
+    // 新しいページを追加（用紙の向きを考慮）
+    const pageSize = pdfOrientation === 'landscape' 
+      ? [PageSizes.A4[1], PageSizes.A4[0]] as [number, number] // 横向き（幅と高さを入れ替え）
+      : PageSizes.A4 // 縦向き（デフォルト）
+    const page = pdfDoc.addPage(pageSize)
     const { width, height } = page.getSize()
 
     // 画像のスケーリング計算
@@ -495,7 +497,6 @@ async function addAnswerSheetToPDF(
         )
       : []
     
-    console.log(`📊 答案 ${answerSheet.id} の採点データ数: ${relevantScores.length}`)
     
     // 採点データを適切に処理
     const processedScores = relevantScores.map((score: any) => {
@@ -510,9 +511,7 @@ async function addAnswerSheetToPDF(
       }
     })
     
-    processedScores.forEach((score: any, index: number) => {
-      console.log(`  ${index + 1}. 領域ID: ${score.layoutRegionId}, 点数: ${score.score}/${score.maxScore}, 状態: ${score.status}`)
-    })
+    // processedScores are ready for mark placement
     
 
     // デフォルト設定
@@ -563,17 +562,14 @@ async function addAnswerSheetToPDF(
     for (const score of processedScores) {
       const layoutRegion = layoutRegions.find(region => region.id === score.layoutRegionId)
       if (!layoutRegion) {
-        console.warn(`❌ 採点領域が見つかりません: ${score.layoutRegionId}`)
         continue
       }
 
       // 採点状態を判定（statusを直接使用）
       const scoringStatus = score.status as ScoringStatus
-      console.log(`🎯 採点状態判定: ${scoringStatus} (${score.score}/${score.maxScore})`)
       
       // この状態のマークを表示するかチェック
       if (!config.showMarkForStatus[scoringStatus]) {
-        console.log(`⏭️  状態 ${scoringStatus} のマーク表示は無効化されています`)
         continue
       }
 
@@ -599,12 +595,7 @@ async function addAnswerSheetToPDF(
         regionHeightOnImage = (layoutRegion.height / image.height) * imageHeight
       }
 
-      console.log(`📐 座標変換詳細:`)
-      console.log(`  - 画像サイズ: ${image.width}x${image.height}`)
-      console.log(`  - PDF画像位置: x=${imageX}, y=${imageY}, w=${imageWidth}, h=${imageHeight}`)
-      console.log(`  - 採点領域(元座標): x=${layoutRegion.x}, y=${layoutRegion.y}, w=${layoutRegion.width}, h=${layoutRegion.height}`)
-      console.log(`  - 正規化判定: ${isNormalized}`)
-      console.log(`  - 採点領域(PDF座標): x=${regionXOnImage}, y=${regionYOnImage}, w=${regionWidthOnImage}, h=${regionHeightOnImage}`)
+      // Calculate region coordinates on PDF
 
       // 採点マークの位置を採点枠基準で計算
       const markPosition = calculateMarkPosition(
@@ -618,34 +609,25 @@ async function addAnswerSheetToPDF(
         config.markSize
       )
 
-      console.log(`🎯 マーク位置計算: x=${markPosition.x}, y=${markPosition.y} (位置: ${config.markPosition})`)
-      console.log(`  - 採点領域中央Y: ${regionYOnImage + regionHeightOnImage / 2}`)
-      console.log(`  - マーク中央Y: ${markPosition.y + config.markSize / 2}`)
+      // Mark position calculated
 
 
       try {
         // 採点マーク画像を読み込んで描画
         const markImagePath = getMarkImagePath(scoringStatus, config.useTransparent)
-        console.log(`🔍 採点マーク処理: status=${scoringStatus}, path=${markImagePath}`)
         
         if (fs.existsSync(markImagePath)) {
-          console.log(`✅ 採点マーク画像発見: ${markImagePath}`)
           const markImageBuffer = fs.readFileSync(markImagePath)
           const markImage = await pdfDoc.embedPng(markImageBuffer)
           
-          console.log(`🎯 採点マーク描画: x=${markPosition.x}, y=${markPosition.y}, size=${config.markSize}`)
           page.drawImage(markImage, {
             x: markPosition.x,
             y: markPosition.y,
             width: config.markSize,
             height: config.markSize,
           })
-          console.log(`✅ 採点マーク描画完了`)
-        } else {
-          console.warn(`❌ 採点マーク画像が見つかりません: ${markImagePath}`)
         }
       } catch (markError) {
-        console.warn('Failed to draw scoring mark:', markError)
         // マーク描画に失敗しても続行
       }
 
@@ -671,7 +653,7 @@ async function addAnswerSheetToPDF(
           config.scoreAlignment
         )
 
-        console.log(`📝 点数描画: "${scoreText}" at x=${scorePosition.x}, y=${scorePosition.y} (位置: ${config.scorePosition}, 配置: ${config.scoreAlignment})`)
+        // Draw score text
 
         page.drawText(scoreText, {
           x: scorePosition.x,
@@ -700,7 +682,6 @@ async function addAnswerSheetToPDF(
     // ヘッダー情報は削除（日本語フォント問題を回避）
 
   } catch (error) {
-    console.error('Error adding answer sheet to PDF:', error)
     throw error
   }
 }

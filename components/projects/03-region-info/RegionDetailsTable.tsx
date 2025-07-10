@@ -29,8 +29,8 @@ const RegionDetailsTable = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [regionToDelete, setRegionToDelete] = useState<number | null>(null)
 
-  // 選択されたページの領域のみをフィルタ
-  const filteredRegions = filterRegionsByPage(regions, selectedMasterImageId)
+  // 全ページの領域を表示（統一順序）
+  const filteredRegions = regions
 
   // カスタムフック
   const { handleKeyDown } = useKeyboardNavigation({ filteredRegions })
@@ -49,11 +49,10 @@ const RegionDetailsTable = ({
   })
 
   const handleRegionChange = (
-    filteredIndex: number,
+    globalIndex: number,
     field: string,
     value: any,
   ) => {
-    const globalIndex = getGlobalIndex(filteredIndex, filteredRegions, regions, selectedMasterImageId)
     const newRegions = [...regions]
     if (field === "points" && value !== "") {
       newRegions[globalIndex] = {
@@ -130,9 +129,9 @@ const RegionDetailsTable = ({
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h3 className="mb-2 text-lg font-semibold">作成した領域の詳細設定</h3>
+        <h3 className="mb-2 text-lg font-semibold">作成した領域の詳細設定（全ページ統一順序）</h3>
         <p className="text-muted-foreground text-sm">
-          各行をクリックして選択し、種類・ラベル・配点などを設定してください。
+          各行をクリックして選択し、種類・ラベル・配点などを設定してください。ドラッグ&ドロップで順序を変更できます。
         </p>
       </div>
 
@@ -143,6 +142,9 @@ const RegionDetailsTable = ({
               <th className="border-border w-8 border px-2 py-1 text-left font-medium"></th>
               <th className="border-border w-16 border px-2 py-1 text-left font-medium">
                 #
+              </th>
+              <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+                ページ
               </th>
               <th className="border-border w-36 border px-2 py-1 text-left font-medium">
                 種類
@@ -159,17 +161,15 @@ const RegionDetailsTable = ({
             </tr>
           </thead>
           <tbody>
-            {filteredRegions.map((region, filteredIndex) => {
-              const globalIndex = getGlobalIndex(filteredIndex, filteredRegions, regions, selectedMasterImageId)
+            {filteredRegions.map((region, globalIndex) => {
               const isSelected = selectedRowIndex === globalIndex
-              const isDragged = dragState.draggedIndex === filteredIndex
-              const isDraggedOver = dragState.dragOverIndex === filteredIndex
+              const isDragged = dragState.draggedIndex === globalIndex
+              const isDraggedOver = dragState.dragOverIndex === globalIndex
 
               return (
                 <RegionTableRow
-                  key={region.id || `region-${filteredIndex}`}
+                  key={region.id || `region-${globalIndex}`}
                   region={region}
-                  filteredIndex={filteredIndex}
                   globalIndex={globalIndex}
                   isSelected={isSelected}
                   isDragged={isDragged}
