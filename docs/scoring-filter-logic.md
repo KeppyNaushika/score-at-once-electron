@@ -340,17 +340,6 @@ switch (
 | 表示件数がリセット     | localStorage削除    | 再設定           |
 | Ctrl+Rが効かない       | キーハンドラー競合  | 修飾キーチェック |
 
-### 7.2 デバッグ情報
-
-```typescript
-// デバッグ用の状態確認
-console.log("Display Filter:", displayFilter)
-console.log("Applied Filter:", appliedFilter)
-console.log("Needs Refresh:", needsFilterRefresh)
-console.log("Scoring Data:", scoringData)
-console.log("Selected Answers:", selectedAnswers)
-```
-
 ## 8. 今後の拡張可能性
 
 ### 8.1 パフォーマンス改善

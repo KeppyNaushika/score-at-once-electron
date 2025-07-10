@@ -181,12 +181,9 @@ export function useMasterImages(
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
-        console.log('Password required, showing dialog for:', file.name)
         // パスワードが必要な場合、ダイアログを表示してPromiseを返す
         return new Promise((resolve, reject) => {
           const isInvalidPassword = errorMessage === 'invalid-password'
-          
-          console.log('Setting password dialog state')
           setState(prev => ({
             ...prev,
             passwordDialog: {
@@ -202,11 +199,9 @@ export function useMasterImages(
           ;(window as any).__masterImagePasswordResolve = resolve
           ;(window as any).__masterImagePasswordReject = reject
           ;(window as any).__masterImagePasswordFile = file
-          console.log('Password dialog promise created and waiting...')
         })
       } else {
         // その他のエラーはそのまま投げる
-        console.log('Other error, rethrowing:', error)
         throw error
       }
     }
@@ -214,14 +209,11 @@ export function useMasterImages(
 
   // パスワード送信処理
   const handlePasswordSubmit = useCallback(async (password: string) => {
-    console.log('Password submit called with password:', password ? '[REDACTED]' : 'empty')
     const file = (window as any).__masterImagePasswordFile
     const resolve = (window as any).__masterImagePasswordResolve
     const reject = (window as any).__masterImagePasswordReject
     
-    console.log('Global variables check:', { file: !!file, resolve: !!resolve, reject: !!reject })
     if (!file || !resolve || !reject) {
-      console.log('Missing global variables, returning early')
       return
     }
     

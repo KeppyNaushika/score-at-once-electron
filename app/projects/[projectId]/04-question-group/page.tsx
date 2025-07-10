@@ -63,11 +63,6 @@ export default function QuestionGroupPage() {
     )
   }
 
-  // デバッグ用console.log
-  console.log("questionGroups.length:", questionGroups.length)
-  console.log("layoutRegions.length:", layoutRegions.length)
-  console.log("questionGroups:", questionGroups)
-  console.log("layoutRegions:", layoutRegions)
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">

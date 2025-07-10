@@ -22,7 +22,6 @@ export async function initializeApp(): Promise<void> {
     // 共有ドライブ用の最適化
     await optimizeDatabaseForSharedDrive()
 
-    console.log("Application initialization completed")
   } catch (error) {
     console.error("Failed to initialize application:", error)
   }

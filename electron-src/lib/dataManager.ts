@@ -83,25 +83,21 @@ export const migrateFromApplicationSupport = async (): Promise<boolean> => {
       // 旧フォルダを削除
       await fs.rm(oldProjectsPath, { recursive: true, force: true })
       hasMigrated = true
-      console.log("Projects migrated successfully")
     } catch (error) {
       // 旧データが存在しない場合はスキップ
-      console.log("No old projects folder found")
     }
 
     // データベースファイルの移行
     try {
       await fs.access(oldDbPath)
-      console.log("Found old database, migrating...")
 
       const newDbPath = path.join(newDataPath, "database.db")
       await fs.copyFile(oldDbPath, newDbPath)
       await fs.unlink(oldDbPath)
 
       hasMigrated = true
-      console.log("Database migrated successfully")
     } catch (error) {
-      console.log("No old database found")
+      // 旧データベースが存在しない場合はスキップ
     }
 
     return hasMigrated
