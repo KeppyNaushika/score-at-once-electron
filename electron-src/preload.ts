@@ -1,12 +1,12 @@
 import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
 import { CreateProjectArgs } from "../types/electron"
-import { 
-  LayoutRegionCreateData, 
-  LayoutRegionUpdateData, 
-  QuestionScoreCreateData, 
-  QuestionScoreUpdateData, 
-  ScoringMarkConfig 
+import {
+  LayoutRegionCreateData,
+  LayoutRegionUpdateData,
+  QuestionScoreCreateData,
+  QuestionScoreUpdateData,
+  ScoringMarkConfig,
 } from "../types/common.types"
 
 declare global {
@@ -80,12 +80,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
   getAnswerSheetById: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-by-id", answerSheetId),
-  updateAnswerSheetPlacement: (answerSheetId: string, studentId: string | null, pageNumber: number) =>
-    ipcRenderer.invoke("update-answer-sheet-placement", answerSheetId, studentId, pageNumber),
+  updateAnswerSheetPlacement: (
+    answerSheetId: string,
+    studentId: string | null,
+    pageNumber: number,
+  ) =>
+    ipcRenderer.invoke(
+      "update-answer-sheet-placement",
+      answerSheetId,
+      studentId,
+      pageNumber,
+    ),
   swapAnswerSheetPlacements: (answerSheetId1: string, answerSheetId2: string) =>
-    ipcRenderer.invoke("swap-answer-sheet-placements", answerSheetId1, answerSheetId2),
-  swapAnswerSheetPlacementsWithScoring: (answerSheetId1: string, answerSheetId2: string) =>
-    ipcRenderer.invoke("swap-answer-sheet-placements-with-scoring", answerSheetId1, answerSheetId2),
+    ipcRenderer.invoke(
+      "swap-answer-sheet-placements",
+      answerSheetId1,
+      answerSheetId2,
+    ),
+  swapAnswerSheetPlacementsWithScoring: (
+    answerSheetId1: string,
+    answerSheetId2: string,
+  ) =>
+    ipcRenderer.invoke(
+      "swap-answer-sheet-placements-with-scoring",
+      answerSheetId1,
+      answerSheetId2,
+    ),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
 
@@ -111,9 +131,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("import-students-from-file", filePath, existingClasses),
 
   // Student Class Membership related
-  createStudentClassMembership: (membershipData: Prisma.StudentClassMembershipCreateInput) =>
-    ipcRenderer.invoke("create-student-class-membership", membershipData),
-  updateStudentClassMembership: (id: string, membershipData: Prisma.StudentClassMembershipUpdateInput) =>
+  createStudentClassMembership: (
+    membershipData: Prisma.StudentClassMembershipCreateInput,
+  ) => ipcRenderer.invoke("create-student-class-membership", membershipData),
+  updateStudentClassMembership: (
+    id: string,
+    membershipData: Prisma.StudentClassMembershipUpdateInput,
+  ) =>
     ipcRenderer.invoke("update-student-class-membership", id, membershipData),
   deleteStudentClassMembership: (id: string) =>
     ipcRenderer.invoke("delete-student-class-membership", id),
@@ -172,8 +196,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-layout-region", id),
   getLayoutRegionsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
-  updateLayoutRegionOrders: (updates: Array<{ id: string; orderIndex: number }>) =>
-    ipcRenderer.invoke("update-layout-region-orders", updates),
+  updateLayoutRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>,
+  ) => ipcRenderer.invoke("update-layout-region-orders", updates),
 
   // Project-Student relationship
   getStudentsForProject: (projectId: string) =>
@@ -182,16 +207,31 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("add-students-to-project", projectId, studentIds),
   removeStudentsFromProject: (projectId: string, studentIds: string[]) =>
     ipcRenderer.invoke("remove-students-from-project", projectId, studentIds),
-  updateStudentProjectStatus: (projectId: string, studentId: string, status: 'participating' | 'expected' | 'absent') =>
-    ipcRenderer.invoke("update-student-project-status", projectId, studentId, status),
+  updateStudentProjectStatus: (
+    projectId: string,
+    studentId: string,
+    status: "participating" | "expected" | "absent",
+  ) =>
+    ipcRenderer.invoke(
+      "update-student-project-status",
+      projectId,
+      studentId,
+      status,
+    ),
   checkGradingDataForStudents: (projectId: string, studentIds: string[]) =>
-    ipcRenderer.invoke("check-grading-data-for-students", projectId, studentIds),
+    ipcRenderer.invoke(
+      "check-grading-data-for-students",
+      projectId,
+      studentIds,
+    ),
   getClassesNotInProject: (projectId: string) =>
     ipcRenderer.invoke("get-classes-not-in-project", projectId),
   getStudentsNotInProject: (projectId: string) =>
     ipcRenderer.invoke("get-students-not-in-project", projectId),
-  updateStudentOrders: (projectId: string, studentOrders: { studentId: string; customOrder: number }[]) =>
-    ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
+  updateStudentOrders: (
+    projectId: string,
+    studentOrders: { studentId: string; customOrder: number }[],
+  ) => ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
 
   // QuestionScore related functions
   getQuestionScoresForProject: (projectId: string) =>
@@ -200,14 +240,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
   createQuestionScore: (data: QuestionScoreCreateData) =>
     ipcRenderer.invoke("create-question-score", data),
-  updateQuestionScore: (id: string, data: QuestionScoreUpdateData, expectedVersion: number) =>
-    ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
+  updateQuestionScore: (
+    id: string,
+    data: QuestionScoreUpdateData,
+    expectedVersion: number,
+  ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
   deleteQuestionScore: (id: string) =>
     ipcRenderer.invoke("delete-question-score", id),
   getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) =>
-    ipcRenderer.invoke("get-question-score-comparison", answerSheetId, layoutRegionId),
-  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: QuestionScoreUpdateData) =>
-    ipcRenderer.invoke("finalize-question-score", answerSheetId, layoutRegionId, scoredByUserId, scoreData),
+    ipcRenderer.invoke(
+      "get-question-score-comparison",
+      answerSheetId,
+      layoutRegionId,
+    ),
+  finalizeQuestionScore: (
+    answerSheetId: string,
+    layoutRegionId: string,
+    scoredByUserId: string,
+    scoreData: QuestionScoreUpdateData,
+  ) =>
+    ipcRenderer.invoke(
+      "finalize-question-score",
+      answerSheetId,
+      layoutRegionId,
+      scoredByUserId,
+      scoreData,
+    ),
   getAnswerSheetProgress: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
   getProjectProgress: (projectId: string) =>
@@ -228,12 +286,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-question-group-by-id", id),
 
   // QuestionGroupItem related
-  createQuestionGroupItem: (data: Prisma.QuestionGroupItemUncheckedCreateInput) =>
-    ipcRenderer.invoke("create-question-group-item", data),
-  createManyQuestionGroupItems: (items: Prisma.QuestionGroupItemUncheckedCreateInput[]) =>
-    ipcRenderer.invoke("create-many-question-group-items", items),
-  updateQuestionGroupItem: (id: string, data: Prisma.QuestionGroupItemUpdateInput) =>
-    ipcRenderer.invoke("update-question-group-item", id, data),
+  createQuestionGroupItem: (
+    data: Prisma.QuestionGroupItemUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-question-group-item", data),
+  createManyQuestionGroupItems: (
+    items: Prisma.QuestionGroupItemUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-question-group-items", items),
+  updateQuestionGroupItem: (
+    id: string,
+    data: Prisma.QuestionGroupItemUpdateInput,
+  ) => ipcRenderer.invoke("update-question-group-item", id, data),
   deleteQuestionGroupItem: (id: string) =>
     ipcRenderer.invoke("delete-question-group-item", id),
   getQuestionGroupItemsByGroupId: (questionGroupId: string) =>
@@ -242,34 +304,63 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-question-group-item-by-id", id),
 
   // QuestionSubtotalAssignment related
-  createQuestionSubtotalAssignment: (data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput) =>
-    ipcRenderer.invoke("create-question-subtotal-assignment", data),
-  createManyQuestionSubtotalAssignments: (assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[]) =>
-    ipcRenderer.invoke("create-many-question-subtotal-assignments", assignments),
+  createQuestionSubtotalAssignment: (
+    data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-question-subtotal-assignment", data),
+  createManyQuestionSubtotalAssignments: (
+    assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[],
+  ) =>
+    ipcRenderer.invoke(
+      "create-many-question-subtotal-assignments",
+      assignments,
+    ),
   deleteQuestionSubtotalAssignment: (id: string) =>
     ipcRenderer.invoke("delete-question-subtotal-assignment", id),
   deleteAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
-    ipcRenderer.invoke("delete-assignments-by-question-layout-region-id", questionLayoutRegionId),
+    ipcRenderer.invoke(
+      "delete-assignments-by-question-layout-region-id",
+      questionLayoutRegionId,
+    ),
   deleteAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
-    ipcRenderer.invoke("delete-assignments-by-question-group-item-id", questionGroupItemId),
+    ipcRenderer.invoke(
+      "delete-assignments-by-question-group-item-id",
+      questionGroupItemId,
+    ),
   getAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
-    ipcRenderer.invoke("get-assignments-by-question-layout-region-id", questionLayoutRegionId),
+    ipcRenderer.invoke(
+      "get-assignments-by-question-layout-region-id",
+      questionLayoutRegionId,
+    ),
   getAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
-    ipcRenderer.invoke("get-assignments-by-question-group-item-id", questionGroupItemId),
+    ipcRenderer.invoke(
+      "get-assignments-by-question-group-item-id",
+      questionGroupItemId,
+    ),
 
   // SubtotalDefinition related
-  createSubtotalDefinition: (data: Prisma.SubtotalDefinitionUncheckedCreateInput) =>
-    ipcRenderer.invoke("create-subtotal-definition", data),
-  createManySubtotalDefinitions: (definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[]) =>
-    ipcRenderer.invoke("create-many-subtotal-definitions", definitions),
+  createSubtotalDefinition: (
+    data: Prisma.SubtotalDefinitionUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-subtotal-definition", data),
+  createManySubtotalDefinitions: (
+    definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-subtotal-definitions", definitions),
   deleteSubtotalDefinition: (id: string) =>
     ipcRenderer.invoke("delete-subtotal-definition", id),
   deleteSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
-    ipcRenderer.invoke("delete-subtotal-definitions-by-layout-region-id", layoutRegionId),
+    ipcRenderer.invoke(
+      "delete-subtotal-definitions-by-layout-region-id",
+      layoutRegionId,
+    ),
   getSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
-    ipcRenderer.invoke("get-subtotal-definitions-by-layout-region-id", layoutRegionId),
+    ipcRenderer.invoke(
+      "get-subtotal-definitions-by-layout-region-id",
+      layoutRegionId,
+    ),
   getSubtotalDefinitionsByQuestionGroupItemId: (questionGroupItemId: string) =>
-    ipcRenderer.invoke("get-subtotal-definitions-by-question-group-item-id", questionGroupItemId),
+    ipcRenderer.invoke(
+      "get-subtotal-definitions-by-question-group-item-id",
+      questionGroupItemId,
+    ),
 
   // PDF Export related
   exportScoredAnswersPDF: (options: {
@@ -287,24 +378,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   }) => ipcRenderer.invoke("export-grading-data-excel", options),
 
   // Data management related
-  getDataDirectoryInfo: () =>
-    ipcRenderer.invoke("get-data-directory-info"),
-  openDataDirectory: () =>
-    ipcRenderer.invoke("open-data-directory"),
-  deleteAllData: () =>
-    ipcRenderer.invoke("delete-all-data"),
+  getDataDirectoryInfo: () => ipcRenderer.invoke("get-data-directory-info"),
+  openDataDirectory: () => ipcRenderer.invoke("open-data-directory"),
+  deleteAllData: () => ipcRenderer.invoke("delete-all-data"),
 
   // Progress listeners
-  onExportProgress: (callback: (progress: {
-    current: number
-    total: number
-    step: string
-    percentage: number
-  }) => void) => {
-    ipcRenderer.on('export-progress', (_event, progress) => callback(progress))
-    return () => ipcRenderer.removeAllListeners('export-progress')
+  onExportProgress: (
+    callback: (progress: {
+      current: number
+      total: number
+      step: string
+      percentage: number
+    }) => void,
+  ) => {
+    ipcRenderer.on("export-progress", (_event, progress) => callback(progress))
+    return () => ipcRenderer.removeAllListeners("export-progress")
   },
-
 })
 
 process.once("loaded", () => {

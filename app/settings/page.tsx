@@ -9,18 +9,18 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { 
-  DEFAULT_SHORTCUTS, 
-  getKeyboardShortcuts, 
+import {
+  DEFAULT_SHORTCUTS,
+  getKeyboardShortcuts,
   saveKeyboardShortcuts,
   isMacOS,
-  getModifierKeyLabel
-} from "@/components/projects/06-score-at-once/hooks/use-scoring-keyboard"
+  getModifierKeyLabel,
+} from "@/components/projects/07-score-at-once/hooks/use-scoring-keyboard"
 
 // キーの表示名マッピング
 const KEY_DISPLAY_NAMES: { [key: string]: string } = {
   q: "Q",
-  e: "E", 
+  e: "E",
   f: "F",
   j: "J",
   o: "O",
@@ -39,7 +39,7 @@ const SHORTCUT_LABELS: { [key in keyof typeof DEFAULT_SHORTCUTS]: string } = {
   ungraded: "未採点",
   correct: "正答",
   partial: "部分点",
-  pending: "保留", 
+  pending: "保留",
   incorrect: "誤答",
   no_answer: "無答",
   nextQuestion: "次の設問",
@@ -65,7 +65,7 @@ export default function SettingsPage() {
   const [shortcuts, setShortcuts] = useState(DEFAULT_SHORTCUTS)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [pendingKey, setPendingKey] = useState<string>("")
-  const [modifierKeyLabel, setModifierKeyLabel] = useState('Alt')
+  const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
 
   // 初期化時にlocalStorageから読み込み
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function SettingsPage() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       event.preventDefault()
-      
+
       // Escapeでキャンセル
       if (event.key === "Escape") {
         setEditingKey(null)
@@ -95,7 +95,7 @@ export default function SettingsPage() {
       // キーを記録
       let key = event.key
       if (key === " ") key = "Space"
-      
+
       setPendingKey(key)
     }
 
@@ -109,18 +109,20 @@ export default function SettingsPage() {
 
     // 重複チェック
     const duplicate = Object.entries(shortcuts).find(
-      ([existingKey, existingValue]) => 
-        existingKey !== editingKey && existingValue === pendingKey
+      ([existingKey, existingValue]) =>
+        existingKey !== editingKey && existingValue === pendingKey,
     )
 
     if (duplicate) {
-      toast.error(`キー「${pendingKey}」は既に「${SHORTCUT_LABELS[duplicate[0] as keyof typeof DEFAULT_SHORTCUTS]}」に割り当てられています`)
+      toast.error(
+        `キー「${pendingKey}」は既に「${SHORTCUT_LABELS[duplicate[0] as keyof typeof DEFAULT_SHORTCUTS]}」に割り当てられています`,
+      )
       return
     }
 
     const newShortcuts = {
       ...shortcuts,
-      [editingKey]: pendingKey
+      [editingKey]: pendingKey,
     }
 
     setShortcuts(newShortcuts)
@@ -216,8 +218,8 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 キーバインド設定
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={handleResetToDefault}
                 >
@@ -227,42 +229,66 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="text-sm text-gray-600 mb-4">
+                <div className="mb-4 text-sm text-gray-600">
                   キーをクリックして新しいキーを設定できます。Escapeでキャンセルします。
                 </div>
 
                 {/* 採点操作 */}
                 <div>
-                  <h4 className="font-medium mb-3 text-gray-800">採点操作</h4>
+                  <h4 className="mb-3 font-medium text-gray-800">採点操作</h4>
                   <div className="grid grid-cols-1 gap-4">
-                    {(['ungraded', 'correct', 'partial', 'pending', 'incorrect', 'no_answer'] as const).map((key) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    {(
+                      [
+                        "ungraded",
+                        "correct",
+                        "partial",
+                        "pending",
+                        "incorrect",
+                        "no_answer",
+                      ] as const
+                    ).map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-3"
+                      >
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
                             <span className="text-sm font-medium">
                               {SHORTCUT_LABELS[key]}
                             </span>
                             <Badge variant="secondary" className="text-xs">
-                              {modifierKeyLabel}+{getDisplayKey(shortcuts[key])} でフィルタ切替
+                              {modifierKeyLabel}+{getDisplayKey(shortcuts[key])}{" "}
+                              でフィルタ切替
                             </Badge>
                           </div>
                         </div>
                         {editingKey === key ? (
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                            <Badge
+                              variant="secondary"
+                              className="min-w-[60px] justify-center"
+                            >
                               {pendingKey || "キーを押してください"}
                             </Badge>
-                            <Button size="sm" onClick={handleSaveKey} disabled={!pendingKey}>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveKey}
+                              disabled={!pendingKey}
+                            >
                               保存
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                            >
                               キャンセル
                             </Button>
                           </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-gray-100 min-w-[60px] justify-center"
+                          <Badge
+                            variant="outline"
+                            className="min-w-[60px] cursor-pointer justify-center hover:bg-gray-100"
                             onClick={() => setEditingKey(key)}
                           >
                             {getDisplayKey(shortcuts[key])}
@@ -277,29 +303,52 @@ export default function SettingsPage() {
 
                 {/* ナビゲーション */}
                 <div>
-                  <h4 className="font-medium mb-3 text-gray-800">ナビゲーション</h4>
+                  <h4 className="mb-3 font-medium text-gray-800">
+                    ナビゲーション
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
-                    {(['nextQuestion', 'prevQuestion', 'nextStudent', 'prevStudent'] as const).map((key) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    {(
+                      [
+                        "nextQuestion",
+                        "prevQuestion",
+                        "nextStudent",
+                        "prevStudent",
+                      ] as const
+                    ).map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-3"
+                      >
                         <span className="text-sm font-medium">
                           {SHORTCUT_LABELS[key]}
                         </span>
                         {editingKey === key ? (
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                            <Badge
+                              variant="secondary"
+                              className="min-w-[60px] justify-center"
+                            >
                               {pendingKey || "キーを押してください"}
                             </Badge>
-                            <Button size="sm" onClick={handleSaveKey} disabled={!pendingKey}>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveKey}
+                              disabled={!pendingKey}
+                            >
                               保存
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                            >
                               キャンセル
                             </Button>
                           </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-gray-100 min-w-[60px] justify-center"
+                          <Badge
+                            variant="outline"
+                            className="min-w-[60px] cursor-pointer justify-center hover:bg-gray-100"
                             onClick={() => setEditingKey(key)}
                           >
                             {getDisplayKey(shortcuts[key])}
@@ -314,29 +363,47 @@ export default function SettingsPage() {
 
                 {/* 移動操作 */}
                 <div>
-                  <h4 className="font-medium mb-3 text-gray-800">移動操作 (WASD)</h4>
+                  <h4 className="mb-3 font-medium text-gray-800">
+                    移動操作 (WASD)
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
-                    {(['moveUp', 'moveLeft', 'moveDown', 'moveRight'] as const).map((key) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    {(
+                      ["moveUp", "moveLeft", "moveDown", "moveRight"] as const
+                    ).map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-3"
+                      >
                         <span className="text-sm font-medium">
                           {SHORTCUT_LABELS[key]}
                         </span>
                         {editingKey === key ? (
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                            <Badge
+                              variant="secondary"
+                              className="min-w-[60px] justify-center"
+                            >
                               {pendingKey || "キーを押してください"}
                             </Badge>
-                            <Button size="sm" onClick={handleSaveKey} disabled={!pendingKey}>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveKey}
+                              disabled={!pendingKey}
+                            >
                               保存
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                            >
                               キャンセル
                             </Button>
                           </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-gray-100 min-w-[60px] justify-center"
+                          <Badge
+                            variant="outline"
+                            className="min-w-[60px] cursor-pointer justify-center hover:bg-gray-100"
                             onClick={() => setEditingKey(key)}
                           >
                             {getDisplayKey(shortcuts[key])}
@@ -351,29 +418,45 @@ export default function SettingsPage() {
 
                 {/* その他の操作 */}
                 <div>
-                  <h4 className="font-medium mb-3 text-gray-800">その他の操作</h4>
+                  <h4 className="mb-3 font-medium text-gray-800">
+                    その他の操作
+                  </h4>
                   <div className="grid grid-cols-2 gap-4">
-                    {(['refreshFilter', 'toggleNames'] as const).map((key) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    {(["refreshFilter", "toggleNames"] as const).map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-3"
+                      >
                         <span className="text-sm font-medium">
                           {SHORTCUT_LABELS[key]}
                         </span>
                         {editingKey === key ? (
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                            <Badge
+                              variant="secondary"
+                              className="min-w-[60px] justify-center"
+                            >
                               {pendingKey || "キーを押してください"}
                             </Badge>
-                            <Button size="sm" onClick={handleSaveKey} disabled={!pendingKey}>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveKey}
+                              disabled={!pendingKey}
+                            >
                               保存
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                            >
                               キャンセル
                             </Button>
                           </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-gray-100 min-w-[60px] justify-center"
+                          <Badge
+                            variant="outline"
+                            className="min-w-[60px] cursor-pointer justify-center hover:bg-gray-100"
                             onClick={() => setEditingKey(key)}
                           >
                             {getDisplayKey(shortcuts[key])}
@@ -388,29 +471,45 @@ export default function SettingsPage() {
 
                 {/* 表示操作 */}
                 <div>
-                  <h4 className="font-medium mb-3 text-gray-800">表示操作</h4>
+                  <h4 className="mb-3 font-medium text-gray-800">表示操作</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    {(['zoomIn', 'zoomOut', 'resetZoom', 'fullView'] as const).map((key) => (
-                      <div key={key} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                    {(
+                      ["zoomIn", "zoomOut", "resetZoom", "fullView"] as const
+                    ).map((key) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-3"
+                      >
                         <span className="text-sm font-medium">
                           {SHORTCUT_LABELS[key]}
                         </span>
                         {editingKey === key ? (
                           <div className="flex items-center space-x-2">
-                            <Badge variant="secondary" className="min-w-[60px] justify-center">
+                            <Badge
+                              variant="secondary"
+                              className="min-w-[60px] justify-center"
+                            >
                               {pendingKey || "キーを押してください"}
                             </Badge>
-                            <Button size="sm" onClick={handleSaveKey} disabled={!pendingKey}>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveKey}
+                              disabled={!pendingKey}
+                            >
                               保存
                             </Button>
-                            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={handleCancelEdit}
+                            >
                               キャンセル
                             </Button>
                           </div>
                         ) : (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-gray-100 min-w-[60px] justify-center"
+                          <Badge
+                            variant="outline"
+                            className="min-w-[60px] cursor-pointer justify-center hover:bg-gray-100"
                             onClick={() => setEditingKey(key)}
                           >
                             {getDisplayKey(shortcuts[key])}
@@ -421,11 +520,15 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-blue-50 rounded-md">
-                  <h5 className="font-medium text-blue-800 mb-2">使用方法</h5>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• キーをクリックして新しいキーを割り当てることができます</li>
-                    <li>• Alt+採点キーでフィルタの表示/非表示を切り替えできます</li>
+                <div className="mt-6 rounded-md bg-blue-50 p-4">
+                  <h5 className="mb-2 font-medium text-blue-800">使用方法</h5>
+                  <ul className="space-y-1 text-sm text-blue-700">
+                    <li>
+                      • キーをクリックして新しいキーを割り当てることができます
+                    </li>
+                    <li>
+                      • Alt+採点キーでフィルタの表示/非表示を切り替えできます
+                    </li>
                     <li>• 変更は自動的に保存され、すぐに反映されます</li>
                     <li>• 重複するキーは設定できません</li>
                   </ul>

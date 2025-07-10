@@ -4,7 +4,7 @@ import { LayoutRegionAreaType } from "@/types/common.types"
 import { useImageCanvasInteraction } from "./hooks/useImageCanvasInteraction"
 import { AreaRenderer } from "./AreaRenderer"
 import { DragPreview } from "./DragPreview"
-import { LayoutRegionArea } from "../../../types/common.types"
+import { LayoutRegionArea } from "@/types/common.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 type ImageCanvasProps = {
@@ -66,7 +66,7 @@ const ImageCanvas = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       // 削除機能
       if (selectedAreaIndex !== null) {
-        if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (e.key === "Backspace" || e.key === "Delete") {
           e.preventDefault()
           onDeleteArea(selectedAreaIndex)
           return
@@ -74,24 +74,27 @@ const ImageCanvas = ({
       }
 
       // ズーム機能（ImageCanvasがフォーカスされているとき）
-      if (imageContainerRef.current && imageContainerRef.current.contains(document.activeElement)) {
-        switch(e.key) {
-          case '+':
-          case '=':
+      if (
+        imageContainerRef.current &&
+        imageContainerRef.current.contains(document.activeElement)
+      ) {
+        switch (e.key) {
+          case "+":
+          case "=":
             if (e.ctrlKey) {
               e.preventDefault()
               e.stopPropagation()
-              setZoom(prev => Math.min(5, prev + 0.1))
+              setZoom((prev) => Math.min(5, prev + 0.1))
             }
             break
-          case '-':
+          case "-":
             if (e.ctrlKey) {
               e.preventDefault()
               e.stopPropagation()
-              setZoom(prev => Math.max(0.1, prev - 0.1))
+              setZoom((prev) => Math.max(0.1, prev - 0.1))
             }
             break
-          case '0':
+          case "0":
             if (e.ctrlKey) {
               e.preventDefault()
               e.stopPropagation()
@@ -102,8 +105,8 @@ const ImageCanvas = ({
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
   }, [selectedAreaIndex, onDeleteArea])
 
   // シンプルなホイールズーム機能
@@ -119,31 +122,30 @@ const ImageCanvas = ({
 
     const container = imageContainerRef.current
     if (container) {
-      container.addEventListener('wheel', handleWheel, { passive: false })
+      container.addEventListener("wheel", handleWheel, { passive: false })
     }
 
     return () => {
       if (container) {
-        container.removeEventListener('wheel', handleWheel)
+        container.removeEventListener("wheel", handleWheel)
       }
     }
   }, [zoom])
-
 
   // 画像サイズの計算
   const imageWidth = imageDimensions ? imageDimensions.width * zoom : 0
   const imageHeight = imageDimensions ? imageDimensions.height * zoom : 0
 
   return (
-    <div className="relative w-full h-full bg-gray-100">
+    <div className="relative h-full w-full bg-gray-100">
       {/* ズーム操作のヘルプ表示 */}
       {showZoomHelp && (
-        <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white text-xs p-2 rounded z-20 max-w-xs">
-          <div className="flex justify-between items-center mb-1">
+        <div className="bg-opacity-70 absolute top-2 right-2 z-20 max-w-xs rounded bg-black p-2 text-xs text-white">
+          <div className="mb-1 flex items-center justify-between">
             <span className="font-semibold">操作:</span>
             <button
               onClick={() => setShowZoomHelp(false)}
-              className="text-white hover:text-gray-300 ml-2"
+              className="ml-2 text-white hover:text-gray-300"
               aria-label="ヘルプを閉じる"
             >
               ×
@@ -161,7 +163,7 @@ const ImageCanvas = ({
       {!showZoomHelp && (
         <button
           onClick={() => setShowZoomHelp(true)}
-          className="absolute top-2 right-2 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded z-20"
+          className="absolute top-2 right-2 z-20 rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
           aria-label="ヘルプを表示"
         >
           ?
@@ -169,14 +171,19 @@ const ImageCanvas = ({
       )}
 
       {/* 標準HTMLスクロール可能なコンテナ */}
-      <div className="w-full h-full overflow-auto scrollbar-overlay" tabIndex={0}>
+      <div
+        className="scrollbar-overlay h-full w-full overflow-auto"
+        tabIndex={0}
+      >
         <div
           ref={imageContainerRef}
           className="relative cursor-crosshair focus:outline-none"
           style={{
             width: `${imageWidth}px`,
             height: `${imageHeight}px`,
-            backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : "none",
+            backgroundImage: backgroundImageUrl
+              ? `url(${backgroundImageUrl})`
+              : "none",
             backgroundSize: `${imageWidth}px ${imageHeight}px`,
             backgroundRepeat: "no-repeat",
             backgroundPosition: "0 0",

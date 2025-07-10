@@ -1,7 +1,11 @@
 import { MasterImage, Prisma } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
-import { getMasterImagesDirectory, getRelativePathFromData, getAbsolutePathFromData } from '../dataManager'
+import {
+  getMasterImagesDirectory,
+  getRelativePathFromData,
+  getAbsolutePathFromData,
+} from "../dataManager"
 import prisma from "./client"
 
 export const uploadMasterImages = async (

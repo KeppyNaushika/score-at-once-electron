@@ -1,7 +1,19 @@
 "use client"
 
-import { Settings, Mouse, Lightbulb, Keyboard, Info, CheckCircle } from "lucide-react"
-import { HelpSection, StepItem, TipItem, ShortcutItem } from "../common/HelpComponents"
+import {
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  CheckCircle,
+  Info,
+  Keyboard,
+  Lightbulb,
+  Mouse,
+  Settings,
+} from "lucide-react"
 
 export function HelpContent02Template() {
   return (

@@ -1,7 +1,19 @@
 "use client"
 
-import { FileImage, Upload, Settings, Mouse, CheckCircle, Lightbulb } from "lucide-react"
-import { HelpSection, StepItem, TipItem, Badge } from "../common/HelpComponents"
+import {
+  Badge,
+  HelpSection,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
+import {
+  CheckCircle,
+  FileImage,
+  Lightbulb,
+  Mouse,
+  Settings,
+  Upload,
+} from "lucide-react"
 
 export function HelpContent01Upload() {
   return (
