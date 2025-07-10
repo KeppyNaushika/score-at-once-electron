@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react"
 
-export function HelpContent06Scoring() {
+export function HelpContent07Scoring() {
   return (
     <div className="space-y-6">
       <div>

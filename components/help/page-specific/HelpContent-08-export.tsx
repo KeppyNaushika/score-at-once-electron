@@ -16,7 +16,7 @@ import {
   Settings,
 } from "lucide-react"
 
-export function HelpContent07Export() {
+export function HelpContent08Export() {
   return (
     <div className="space-y-6">
       <div>

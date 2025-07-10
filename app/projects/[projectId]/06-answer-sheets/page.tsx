@@ -268,7 +268,7 @@ export default function AnswerSheetsPage() {
             )}
             <Button
               onClick={() =>
-                router.push(`/projects/${projectId}/06-score-at-once`)
+                router.push(`/projects/${projectId}/07-score-at-once`)
               }
             >
               次へ: 採点開始

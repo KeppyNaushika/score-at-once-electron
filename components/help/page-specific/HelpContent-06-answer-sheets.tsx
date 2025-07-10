@@ -15,7 +15,7 @@ import {
   Upload,
 } from "lucide-react"
 
-export function HelpContent05AnswerSheets() {
+export function HelpContent06AnswerSheets() {
   return (
     <div className="space-y-6">
       <div>

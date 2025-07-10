@@ -70,14 +70,14 @@ const File = () => {
         step: 4,
         action: "manage-students",
         text: "4. 受験生徒を確認",
-        url: `/projects/${project.id}/04-students`,
+        url: `/projects/${project.id}/05-students`,
       }
     if (!hasAnswers)
       return {
         step: 5,
         action: "upload-answers",
         text: "5. 生徒解答をアップロード",
-        url: `/projects/${project.id}/05-answer-sheets`,
+        url: `/projects/${project.id}/06-answer-sheets`,
       }
 
     // 採点が完了しているかチェック
@@ -107,7 +107,7 @@ const File = () => {
         step: 6,
         action: "start-grading",
         text: "6. 採点を開始",
-        url: `/projects/${project.id}/06-score-at-once`,
+        url: `/projects/${project.id}/07-score-at-once`,
       }
     }
 
@@ -115,7 +115,7 @@ const File = () => {
       step: 7,
       action: "export-results",
       text: "7. 結果出力",
-      url: `/projects/${project.id}/07-export`,
+      url: `/projects/${project.id}/08-export`,
     }
   }
 

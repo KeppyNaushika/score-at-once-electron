@@ -28,18 +28,18 @@ import {
 
 /**
  * 既存のStudentDataをUnifiedStudentに変換
- * 05-answer-sheets/page.tsxの形式から変換
+ * 06-answer-sheets/page.tsxの形式から変換
  */
 export function convertToUnifiedStudent(studentData: {
-  id: string;
-  lastName: string;
-  firstName: string;
-  lastNameKana: string;
-  firstNameKana: string;
-  studentId: string;
-  attendanceNumber?: number | null;
-  status?: string;
-  customOrder?: number;
+  id: string
+  lastName: string
+  firstName: string
+  lastNameKana: string
+  firstNameKana: string
+  studentId: string
+  attendanceNumber?: number | null
+  status?: string
+  customOrder?: number
 }): UnifiedStudent {
   return {
     id: studentData.id,
@@ -49,7 +49,9 @@ export function convertToUnifiedStudent(studentData: {
     firstNameKana: studentData.firstNameKana,
     studentId: studentData.studentId,
     attendanceNumber: studentData.attendanceNumber || null,
-    status: (studentData.status as "participating" | "expected" | "absent") || "participating",
+    status:
+      (studentData.status as "participating" | "expected" | "absent") ||
+      "participating",
     customOrder: studentData.customOrder,
   }
 }
@@ -58,7 +60,7 @@ export function convertToUnifiedStudent(studentData: {
  * 既存のAnswerSheetWithDetailsからExistingAnswerSheetに変換
  */
 export function convertToExistingAnswerSheet(
-  answerSheet: AnswerSheetWithDetails
+  answerSheet: AnswerSheetWithDetails,
 ): ExistingAnswerSheet {
   return {
     id: answerSheet.id,
@@ -81,17 +83,17 @@ export function convertToExistingAnswerSheet(
  * 既存のConvertedFileをUnifiedFileに変換
  */
 export function convertToUnifiedFile(convertedFile: {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  buffer: ArrayBuffer;
-  preview?: string;
-  studentId?: string;
-  pageNumber: number;
-  isSelected?: boolean;
-  originalFileName: string;
-  pageLabel?: string;
+  id: string
+  name: string
+  type: string
+  size: number
+  buffer: ArrayBuffer
+  preview?: string
+  studentId?: string
+  pageNumber: number
+  isSelected?: boolean
+  originalFileName: string
+  pageLabel?: string
 }): UnifiedFile {
   return {
     id: convertedFile.id,
@@ -125,33 +127,43 @@ export function getTableData(
   sortedStudents: UnifiedStudent[], // 既にソート済みの生徒データを受け取る
   disabledState: DisabledState,
   placementStrategy: PlacementStrategy = "page-first",
-  maxPages?: number
+  maxPages?: number,
 ): TableData {
   // 🚨 修正: 模範解答のページ数を優先使用
-  const actualMaxPages = maxPages || Math.max(...files.map((f) => f.pageNumber), 1)
+  const actualMaxPages =
+    maxPages || Math.max(...files.map((f) => f.pageNumber), 1)
 
   const tableData: TableData = []
 
   // 行（生徒）ごとに処理
-  for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+  for (
+    let studentIndex = 0;
+    studentIndex < sortedStudents.length;
+    studentIndex++
+  ) {
     const student = sortedStudents[studentIndex]
     const row: TableCell[] = []
 
     // 列（ページ）ごとに処理
     for (let pageNumber = 1; pageNumber <= actualMaxPages; pageNumber++) {
-      const position = calculatePosition(studentIndex, pageNumber, actualMaxPages)
-      
+      const position = calculatePosition(
+        studentIndex,
+        pageNumber,
+        actualMaxPages,
+      )
+
       // この位置に配置されているファイルを検索
-      const file = files.find(
-        (f) => f.studentId === student.id && f.pageNumber === pageNumber
-      ) || null
+      const file =
+        files.find(
+          (f) => f.studentId === student.id && f.pageNumber === pageNumber,
+        ) || null
 
       // 無効化判定
       const isDisabled = isPositionDisabled(
         position,
         studentIndex,
         pageNumber - 1, // colIndex は 0-based
-        disabledState
+        disabledState,
       )
 
       const cell: TableCell = {
@@ -179,7 +191,7 @@ export function isPositionDisabled(
   position: number,
   rowIndex: number,
   colIndex: number,
-  disabledState: DisabledState
+  disabledState: DisabledState,
 ): boolean {
   return (
     disabledState.rows.has(rowIndex) ||
@@ -197,14 +209,14 @@ export function autoPlaceFiles(
   students: UnifiedStudent[],
   disabledState: DisabledState,
   strategy: PlacementStrategy,
-  maxPages: number
+  maxPages: number,
 ): UnifiedFile[] {
   const sortedStudents = sortStudentsForTable(students)
   let fileIndex = 0
-  
+
   // 有効なファイル（未配置）のみ取得
-  const enabledFiles = files.filter(f => !f.studentId)
-  
+  const enabledFiles = files.filter((f) => !f.studentId)
+
   const getNextFile = () => {
     if (fileIndex < enabledFiles.length) {
       return enabledFiles[fileIndex++]
@@ -216,12 +228,23 @@ export function autoPlaceFiles(
   if (strategy === "page-first") {
     // ページ優先配置（行優先と同じ）
     const result: UnifiedFile[] = []
-    
-    for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+
+    for (
+      let studentIndex = 0;
+      studentIndex < sortedStudents.length;
+      studentIndex++
+    ) {
       for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
         const position = studentIndex * maxPages + (pageNumber - 1)
-        
-        if (!isPositionDisabled(position, studentIndex, pageNumber - 1, disabledState)) {
+
+        if (
+          !isPositionDisabled(
+            position,
+            studentIndex,
+            pageNumber - 1,
+            disabledState,
+          )
+        ) {
           const nextFile = getNextFile()
           if (nextFile) {
             result.push({
@@ -234,19 +257,29 @@ export function autoPlaceFiles(
         }
       }
     }
-    
-    return [...files.filter(f => f.studentId), ...result]
-    
+
+    return [...files.filter((f) => f.studentId), ...result]
   } else if (strategy === "student-first") {
     // 生徒優先配置（列優先と同じ）
     const result: UnifiedFile[] = []
-    
+
     // 列優先でファイルを配置
     for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
-      for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+      for (
+        let studentIndex = 0;
+        studentIndex < sortedStudents.length;
+        studentIndex++
+      ) {
         const position = studentIndex * maxPages + (pageNumber - 1)
-        
-        if (!isPositionDisabled(position, studentIndex, pageNumber - 1, disabledState)) {
+
+        if (
+          !isPositionDisabled(
+            position,
+            studentIndex,
+            pageNumber - 1,
+            disabledState,
+          )
+        ) {
           const nextFile = getNextFile()
           if (nextFile) {
             result.push({
@@ -259,13 +292,18 @@ export function autoPlaceFiles(
         }
       }
     }
-    
-    return [...files.filter(f => f.studentId), ...result]
-    
+
+    return [...files.filter((f) => f.studentId), ...result]
   } else {
     // filename-auto: ファイル名から自動判定（将来的な拡張）
     // とりあえずpage-firstと同じ動作
-    return autoPlaceFiles(files, students, disabledState, "page-first", maxPages)
+    return autoPlaceFiles(
+      files,
+      students,
+      disabledState,
+      "page-first",
+      maxPages,
+    )
   }
 }
 
@@ -275,7 +313,7 @@ export function autoPlaceFiles(
 function generatePlacementOrder(
   studentCount: number,
   maxPages: number,
-  strategy: PlacementStrategy
+  strategy: PlacementStrategy,
 ): number[] {
   const positions: number[] = []
 
@@ -311,7 +349,7 @@ function generatePlacementOrder(
  */
 export function convertToUploadData(
   files: UnifiedFile[],
-  students: UnifiedStudent[]
+  students: UnifiedStudent[],
 ): UploadData[] {
   const sortedStudents = sortStudentsForTable(students)
   const uploadData: UploadData[] = []
@@ -355,5 +393,3 @@ export function createInitialDisabledState(): DisabledState {
     positions: new Set<number>(),
   }
 }
-
-

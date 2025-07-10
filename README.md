@@ -206,10 +206,10 @@ score-at-once-electron/
 │   │       ├── 01-upload/           # 模範解答アップロード
 │   │       ├── 02-template/         # 採点領域作成
 │   │       ├── 03-region-info/      # 領域情報編集
-│   │       ├── 04-students/         # 受験生徒管理
-│   │       ├── 05-answer-sheets/    # 答案アップロード
-│   │       ├── 06-score-at-once/    # 採点実行
-│   │       └── 07-export/           # 結果出力
+│   │       ├── 05-students/         # 受験生徒管理
+│   │       ├── 06-answer-sheets/    # 答案アップロード
+│   │       ├── 07-score-at-once/    # 採点実行
+│   │       └── 08-export/           # 結果出力
 │   ├── classes/            # 学級管理
 │   └── students/           # 生徒管理
 ├── components/             # Reactコンポーネント
