@@ -92,19 +92,46 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
     const questionScores = await getQuestionScoresForProject(projectId)
     const layoutRegions = await getLayoutRegionsByProjectId(projectId)
 
-    // 選択された生徒のデータをフィルタリング
-    const selectedStudents = studentsResult.students.filter(student => 
-      selectedStudentIds.includes(student.id)
-    )
+    // 選択された生徒のデータをフィルタリングし、受験生徒順（customOrder）でソート
+    const selectedStudents = studentsResult.students
+      .filter(student => selectedStudentIds.includes(student.id))
+      .sort((a, b) => {
+        // customOrderで並び替え（小さい値が先）
+        const aOrder = (a as any).customOrder !== undefined 
+          ? (a as any).customOrder 
+          : 999999
+        const bOrder = (b as any).customOrder !== undefined 
+          ? (b as any).customOrder 
+          : 999999
+
+        // customOrderが同じ場合は姓名でソート
+        if (aOrder === bOrder) {
+          const aName = `${a.lastName}${a.firstName}`
+          const bName = `${b.lastName}${b.firstName}`
+          return aName.localeCompare(bName, "ja")
+        }
+
+        return aOrder - bOrder
+      })
 
     if (selectedStudents.length === 0) {
       throw new Error('選択された生徒が見つかりません')
     }
 
-    // 設問情報を取得（layoutRegionsからquestionタイプをフィルタ）
+    // 設問情報を取得（QUESTION_ANSWERタイプのみを設問として扱う）
     const questionRegions = layoutRegions.filter((region: any) => 
-      region.type === 'question' || region.type === 'QUESTION' || region.label?.includes('問')
-    )
+      region.type === 'QUESTION_ANSWER'
+    ).sort((a: any, b: any) => {
+      // orderIndexがある場合はそれでソート、ない場合は座標でソート
+      if (a.orderIndex !== undefined && b.orderIndex !== undefined) {
+        return a.orderIndex - b.orderIndex
+      }
+      // Y座標でソート（上から下）、同じYの場合はX座標でソート（左から右）
+      if (Math.abs(a.y - b.y) < 0.01) {
+        return a.x - b.x
+      }
+      return a.y - b.y
+    })
     
     // 大問リストを作成
     const daimonList = Array.from(new Set(
@@ -126,6 +153,11 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
 
         const maxScore = region.points || region.maxScore || 10
         const status = scoreData?.status || "unscored"
+        
+        const actualScore = scoreData ? calculateActualScore({
+          status: scoreData.status,
+          partialScore: scoreData.partialScore ? Number(scoreData.partialScore) : null
+        }, maxScore) : null
 
         return {
           questionId: region.id,
@@ -133,10 +165,7 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
           daimon: region.questionNumber?.toString() || region.label,
           shomon: region.questionSubNumber?.toString() || "",
           shimon: region.questionSubSubNumber?.toString() || "",
-          score: scoreData ? calculateActualScore({
-            status: scoreData.status,
-            partialScore: scoreData.partialScore ? Number(scoreData.partialScore) : null
-          }, maxScore) : null,
+          score: actualScore,
           maxScore: maxScore,
           status: status as any
         }
@@ -319,7 +348,7 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
           row.getCell('G').value = { formula: `COUNTIF(${firstScoreCol}${rowIndex}:${lastScoreCol}${rowIndex},"○")` }
         }
 
-        // 順位列 - Excel関数で計算
+        // 順位列 - Excel関数で計算（受験生徒順でソート済みデータに基づく）
         if (isScoreSheet) {
           // 学年順位（降順）
           row.getCell(gradeRankCol).value = {

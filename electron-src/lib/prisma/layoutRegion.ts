@@ -29,6 +29,7 @@ export const updateLayoutRegion = async (
     data,
     include: {
       // 更新後に必要な関連データも返す
+      masterImage: true,
       subtotalDefinitions: {
         include: {
           questionGroupItem: true,
@@ -71,6 +72,7 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
   return prisma.layoutRegion.findMany({
     where: { projectId },
     include: {
+      masterImage: true, // masterImage情報を追加
       subtotalDefinitions: {
         include: {
           questionGroupItem: true,
@@ -84,8 +86,8 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
       questionScores: true, // 関連する QuestionScore も取得
     },
     orderBy: [
-      { masterImageId: "asc" },    // ページ順（最優先）
-      { orderIndex: "asc" },       // 手動順序（優先）
+      { orderIndex: "asc" },       // 手動順序（最優先）
+      { masterImageId: "asc" },    // ページ順（フォールバック）
       { y: "asc" },               // Y座標（フォールバック）
       { x: "asc" }                // X座標（フォールバック）
     ],
@@ -97,6 +99,7 @@ export const getLayoutRegionById = async (id: string) => {
   return prisma.layoutRegion.findUnique({
     where: { id },
     include: {
+      masterImage: true,
       subtotalDefinitions: {
         include: {
           questionGroupItem: true,
@@ -115,6 +118,7 @@ export const getLayoutRegionById = async (id: string) => {
 
 export type LayoutRegionWithDetails = Prisma.LayoutRegionGetPayload<{
   include: {
+    masterImage: true
     subtotalDefinitions: {
       include: {
         questionGroupItem: true

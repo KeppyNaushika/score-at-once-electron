@@ -72,6 +72,7 @@ export function useExportPage() {
     markPosition: "bottom-right",
     markSize: 50,
     showMarks: true,
+    pdfOrientation: "portrait", // デフォルトはA4縦
   })
 
   const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
@@ -81,6 +82,10 @@ export function useExportPage() {
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
+  const [exportStatus, setExportStatus] = useState<'processing' | 'completed' | 'error'>('processing')
+  const [currentStep, setCurrentStep] = useState('')
+  const [currentStepIndex, setCurrentStepIndex] = useState(0)
+  const [totalSteps, setTotalSteps] = useState(7)
   const [isExporting, setIsExporting] = useState(false)
 
   // データ読み込み
@@ -152,6 +157,9 @@ export function useExportPage() {
   useEffect(() => {
     const removeListener = window.electronAPI.onExportProgress?.((progress) => {
       setExportProgress(progress.percentage)
+      setCurrentStep(progress.step)
+      setCurrentStepIndex(progress.currentStepIndex || 0)
+      setTotalSteps(progress.totalSteps || 7)
     })
 
     return removeListener
@@ -210,6 +218,14 @@ export function useExportPage() {
     setShowProgressModal,
     exportProgress,
     setExportProgress,
+    exportStatus,
+    setExportStatus,
+    currentStep,
+    setCurrentStep,
+    currentStepIndex,
+    setCurrentStepIndex,
+    totalSteps,
+    setTotalSteps,
     isExporting,
     setIsExporting,
 

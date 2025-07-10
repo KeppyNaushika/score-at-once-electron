@@ -11,6 +11,7 @@ export function setupExportHandlers(): void {
       selectedStudentIds: string[]
       outputPath?: string
       scoringMarkConfig?: any
+      pdfOrientation?: 'portrait' | 'landscape'
     }) => {
       try {
         // プログレスコールバックを設定
@@ -19,6 +20,8 @@ export function setupExportHandlers(): void {
           total: number
           step: string
           percentage: number
+          currentStepIndex: number
+          totalSteps: number
         }) => {
           event.sender.send('export-progress', progress)
         }

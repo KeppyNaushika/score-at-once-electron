@@ -124,6 +124,7 @@ export interface UpdateProjectArgs extends Partial<CreateProjectArgs> {
 export type LayoutRegionWithDetails = Prisma.LayoutRegionGetPayload<{
   include: {
     project: true
+    masterImage: true
     subtotalDefinitions: { include: { questionGroupItem: true } }
     questionSubtotalAssignments: { include: { questionGroupItem: true } }
     questionScores: true
@@ -581,6 +582,7 @@ export interface MyAPI {
     projectId: string
     selectedStudentIds: string[]
     outputPath?: string
+    pdfOrientation?: 'portrait' | 'landscape'
     scoringMarkConfig?: {
       position: string
       size: number
@@ -626,6 +628,8 @@ export interface MyAPI {
     total: number
     step: string
     percentage: number
+    currentStepIndex?: number
+    totalSteps?: number
   }) => void) => () => void
 
 }
