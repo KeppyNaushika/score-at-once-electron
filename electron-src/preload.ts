@@ -215,6 +215,62 @@ contextBridge.exposeInMainWorld("electronAPI", {
   initializeScoringRecords: (projectId: string) =>
     ipcRenderer.invoke("initialize-scoring-records", projectId),
 
+  // QuestionGroup related
+  createQuestionGroup: (data: Prisma.QuestionGroupUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-question-group", data),
+  updateQuestionGroup: (id: string, data: Prisma.QuestionGroupUpdateInput) =>
+    ipcRenderer.invoke("update-question-group", id, data),
+  deleteQuestionGroup: (id: string) =>
+    ipcRenderer.invoke("delete-question-group", id),
+  getQuestionGroupsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-question-groups-by-project-id", projectId),
+  getQuestionGroupById: (id: string) =>
+    ipcRenderer.invoke("get-question-group-by-id", id),
+
+  // QuestionGroupItem related
+  createQuestionGroupItem: (data: Prisma.QuestionGroupItemUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-question-group-item", data),
+  createManyQuestionGroupItems: (items: Prisma.QuestionGroupItemUncheckedCreateInput[]) =>
+    ipcRenderer.invoke("create-many-question-group-items", items),
+  updateQuestionGroupItem: (id: string, data: Prisma.QuestionGroupItemUpdateInput) =>
+    ipcRenderer.invoke("update-question-group-item", id, data),
+  deleteQuestionGroupItem: (id: string) =>
+    ipcRenderer.invoke("delete-question-group-item", id),
+  getQuestionGroupItemsByGroupId: (questionGroupId: string) =>
+    ipcRenderer.invoke("get-question-group-items-by-group-id", questionGroupId),
+  getQuestionGroupItemById: (id: string) =>
+    ipcRenderer.invoke("get-question-group-item-by-id", id),
+
+  // QuestionSubtotalAssignment related
+  createQuestionSubtotalAssignment: (data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-question-subtotal-assignment", data),
+  createManyQuestionSubtotalAssignments: (assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[]) =>
+    ipcRenderer.invoke("create-many-question-subtotal-assignments", assignments),
+  deleteQuestionSubtotalAssignment: (id: string) =>
+    ipcRenderer.invoke("delete-question-subtotal-assignment", id),
+  deleteAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
+    ipcRenderer.invoke("delete-assignments-by-question-layout-region-id", questionLayoutRegionId),
+  deleteAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
+    ipcRenderer.invoke("delete-assignments-by-question-group-item-id", questionGroupItemId),
+  getAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
+    ipcRenderer.invoke("get-assignments-by-question-layout-region-id", questionLayoutRegionId),
+  getAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
+    ipcRenderer.invoke("get-assignments-by-question-group-item-id", questionGroupItemId),
+
+  // SubtotalDefinition related
+  createSubtotalDefinition: (data: Prisma.SubtotalDefinitionUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-subtotal-definition", data),
+  createManySubtotalDefinitions: (definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[]) =>
+    ipcRenderer.invoke("create-many-subtotal-definitions", definitions),
+  deleteSubtotalDefinition: (id: string) =>
+    ipcRenderer.invoke("delete-subtotal-definition", id),
+  deleteSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
+    ipcRenderer.invoke("delete-subtotal-definitions-by-layout-region-id", layoutRegionId),
+  getSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
+    ipcRenderer.invoke("get-subtotal-definitions-by-layout-region-id", layoutRegionId),
+  getSubtotalDefinitionsByQuestionGroupItemId: (questionGroupItemId: string) =>
+    ipcRenderer.invoke("get-subtotal-definitions-by-question-group-item-id", questionGroupItemId),
+
   // PDF Export related
   exportScoredAnswersPDF: (options: {
     projectId: string

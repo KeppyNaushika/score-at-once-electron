@@ -4,6 +4,7 @@ import { setupLayoutHandlers } from "./layout-handlers"
 import { setupScoringHandlers } from "./scoring-handlers"
 import { setupExportHandlers } from "./export-handlers"
 import { setupMiscHandlers } from "./misc-handlers"
+import { setupQuestionGroupHandlers } from "./question-group-handlers"
 
 export function setupAllIPCHandlers(): void {
   setupProjectHandlers()
@@ -12,4 +13,5 @@ export function setupAllIPCHandlers(): void {
   setupScoringHandlers()
   setupExportHandlers()
   setupMiscHandlers()
+  setupQuestionGroupHandlers()
 }

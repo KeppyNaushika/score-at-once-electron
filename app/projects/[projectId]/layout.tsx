@@ -20,6 +20,7 @@ const workflowSteps = [
   { id: "01-upload", label: "1. 模範解答", path: "01-upload" },
   { id: "02-template", label: "2. 採点領域", path: "02-template" },
   { id: "03-region-info", label: "3. 領域情報編集", path: "03-region-info" },
+  { id: "03-2-question-group", label: "3-2. 設問グループ", path: "03-2-question-group" },
   { id: "04-students", label: "4. 受験生徒", path: "04-students" },
   { id: "05-answer-sheets", label: "5. 生徒解答", path: "05-answer-sheets" },
   { id: "06-score-at-once", label: "6. 採点", path: "06-score-at-once" },
@@ -95,6 +96,23 @@ const pageHints: {
       { key: "Tab", description: "次のフィールドに移動" },
       { key: "Shift + Tab", description: "前のフィールドに移動" },
       { key: "Enter", description: "編集を確定して次の行に移動" },
+    ],
+  },
+  "03-2-question-group": {
+    title: "設問グループ・小計点管理",
+    description:
+      "設問をグループ化して小計点を管理します。大問別や観点別の集計が可能になります。",
+    content: [
+      "設問グループ（大問、観点など）を作成し、グループ内の項目を定義します",
+      "各設問をグループ項目に関連付けることで、小計点を自動計算します",
+      "一つの設問を複数のグループに関連付けることができます",
+      "小計点はExcel出力時に自動的に列として追加されます",
+      "リアルタイムで小計点のプレビューを確認できます",
+    ],
+    tips: [
+      "「大問1」「大問2」のような大問別グループが一般的です",
+      "「知識・理解」「思考・判断」のような観点別グループも作成できます",
+      "設問の関連付けを変更すると、小計点も自動で更新されます",
     ],
   },
   "04-students": {
