@@ -78,7 +78,7 @@ export function QuestionGroupManagement({
   const handleDeleteGroup = async (group: QuestionGroupWithItems) => {
     if (
       window.confirm(
-        `グループ「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`,
+        `小計点「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`,
       )
     ) {
       await onDeleteQuestionGroup(group.id)
@@ -91,24 +91,24 @@ export function QuestionGroupManagement({
 
   return (
     <div className="space-y-6">
-      {/* グループ一覧 */}
+      {/* 小計点一覧 */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">設問グループ</h3>
+          <h3 className="text-lg font-semibold">小計点</h3>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button size="sm" className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                新しいグループ
+                新しい小計点
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>新しい設問グループを作成</DialogTitle>
+                <DialogTitle>新しい小計点を作成</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="groupName">グループ名</Label>
+                  <Label htmlFor="groupName">小計点名</Label>
                   <Input
                     id="groupName"
                     value={newGroupName}
@@ -133,9 +133,9 @@ export function QuestionGroupManagement({
         {questionGroups.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center">
             <List className="mx-auto mb-4 h-12 w-12 opacity-50" />
-            <p>設問グループがありません</p>
+            <p>小計点がありません</p>
             <p className="text-sm">
-              「新しいグループ」ボタンから作成してください
+              「新しい小計点」ボタンから作成してください
             </p>
           </div>
         ) : (
@@ -209,11 +209,11 @@ export function QuestionGroupManagement({
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>設問グループを編集</DialogTitle>
+            <DialogTitle>小計点を編集</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="editGroupName">グループ名</Label>
+              <Label htmlFor="editGroupName">小計点名</Label>
               <Input
                 id="editGroupName"
                 value={editGroupName}
@@ -233,7 +233,7 @@ export function QuestionGroupManagement({
         </DialogContent>
       </Dialog>
 
-      {/* 選択中のグループの項目管理 */}
+      {/* 選択中の小計点の項目管理 */}
       {selectedGroup && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
