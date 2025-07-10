@@ -18,7 +18,7 @@ import React, { useEffect, useState } from "react"
 const workflowSteps = [
   { id: "01-upload", label: "1. 模範解答", path: "01-upload" },
   { id: "02-template", label: "2. 採点領域", path: "02-template" },
-  { id: "03-region-info", label: "3. 領域情報編集", path: "03-region-info" },
+  { id: "03-region-info", label: "3. 領域情報", path: "03-region-info" },
   { id: "04-question-group", label: "4. 小計点", path: "04-question-group" },
   { id: "05-students", label: "5. 受験生徒", path: "05-students" },
   { id: "06-answer-sheets", label: "6. 生徒解答", path: "06-answer-sheets" },
@@ -96,8 +96,8 @@ const pageHints: {
       { key: "Enter", description: "編集を確定して次の行に移動" },
     ],
   },
-  "03-2-question-group": {
-    title: "小計点管理",
+  "04-question-group": {
+    title: "小計点",
     description:
       "設問をグループ化して小計点を管理します。大問別や観点別の集計が可能になります。",
     content: [

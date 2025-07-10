@@ -21,7 +21,7 @@ export function HelpContent03RegionInfo() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Settings className="h-6 w-6 text-indigo-600" />
-          領域情報編集の使い方
+          領域情報の使い方
         </h2>
         <p className="text-muted-foreground">
           作成した採点領域に設問番号や配点などの詳細情報を設定します。

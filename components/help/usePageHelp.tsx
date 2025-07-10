@@ -41,20 +41,24 @@ export function usePageHelp() {
 
   // 現在のページを特定
   const getCurrentPageId = () => {
-    const pathSegments = pathname.split('/')
+    const pathSegments = pathname.split("/")
     const lastSegment = pathSegments[pathSegments.length - 1]
-    return Object.keys(pageHelpComponents).find(key => lastSegment.includes(key.split('-')[1]))
+    return Object.keys(pageHelpComponents).find((key) =>
+      lastSegment.includes(key.split("-")[1]),
+    )
   }
 
   const currentPageId = getCurrentPageId()
-  const CurrentHelpComponent = currentPageId ? pageHelpComponents[currentPageId] : null
+  const CurrentHelpComponent = currentPageId
+    ? pageHelpComponents[currentPageId]
+    : null
 
   // ページタイトルを取得
   const getPageTitle = () => {
     const titles: { [key: string]: string } = {
       "01-upload": "模範解答アップロード",
       "02-template": "採点領域作成",
-      "03-region-info": "領域情報編集",
+      "03-region-info": "領域情報",
       "05-students": "受験生徒管理",
       "06-answer-sheets": "答案アップロード",
       "07-score-at-once": "一括採点",
@@ -69,11 +73,7 @@ export function usePageHelp() {
     return (
       <Drawer open={isOpen} onOpenChange={setIsOpen}>
         <DrawerTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="relative"
-          >
+          <Button variant="ghost" size="sm" className="relative">
             <Info className="h-4 w-4" />
           </Button>
         </DrawerTrigger>
@@ -94,6 +94,6 @@ export function usePageHelp() {
 
   return {
     helpButton: createHelpButton(),
-    hasHelp: !!CurrentHelpComponent
+    hasHelp: !!CurrentHelpComponent,
   }
 }

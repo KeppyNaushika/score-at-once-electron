@@ -255,7 +255,7 @@ export function QuestionAssignmentMatrix({
                         <div className="text-sm font-semibold">
                           {group.name}
                         </div>
-                        <div className="grid gap-1">
+                        <div className="flex flex-wrap gap-1 justify-center">
                           {group.items.map((item) => (
                             <div
                               key={item.id}
@@ -285,7 +285,7 @@ export function QuestionAssignmentMatrix({
                     </TableCell>
                     {questionGroups.map((group) => (
                       <TableCell key={group.id} className="text-center">
-                        <div className="grid gap-2">
+                        <div className="flex flex-wrap gap-2 justify-center">
                           {group.items.map((item) => (
                             <div key={item.id} className="flex justify-center">
                               <Checkbox
