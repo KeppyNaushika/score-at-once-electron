@@ -56,7 +56,8 @@ export function useScoringFilter({
   }, [scoringData])
 
   // 表示対象答案の更新（統合版）
-  const updateVisibleAnswers = useCallback((useLatestScoringData: boolean = false) => {
+  const updateVisibleAnswers = useCallback((customFilterSettings?: FilterSettings) => {
+    const activeFilterSettings = customFilterSettings || filterSettings
     const newVisibleAnswers = new Set<string>()
     
     if (!currentQuestion) {
@@ -97,7 +98,7 @@ export function useScoringFilter({
       const scoreData = scoringData[key]
       const status = scoreData?.status || "ungraded"
       
-      if (filterSettings[status as keyof typeof filterSettings]) {
+      if (activeFilterSettings[status as keyof typeof activeFilterSettings]) {
         newVisibleAnswers.add(sheet.id)
       }
     })
@@ -229,7 +230,7 @@ export function useScoringFilter({
     setSelectedAnswers(new Set())
     
     // 最新のscoringDataを使用してフィルタリングを実行
-    updateVisibleAnswers(true)
+    updateVisibleAnswers()
   }, [setSelectedAnswers, updateVisibleAnswers])
 
   const handleToggleFilter = useCallback((key: string) => {
@@ -241,12 +242,11 @@ export function useScoringFilter({
       }
       setFilterSettings(newFilterSettings)
       
-      // フィルター変更時にRキーと同じ更新ロジックを実行
-      // 新しいフィルター設定を使用するため、次のレンダリングサイクルで実行
-      setTimeout(() => {
-        setSelectedAnswers(new Set())
-        updateVisibleAnswers(true)
-      }, 0)
+      // 選択をクリア
+      setSelectedAnswers(new Set())
+      
+      // 新しいフィルター設定を直接渡してフィルタリングを実行
+      updateVisibleAnswers(newFilterSettings)
     }
   }, [filterSettings, setSelectedAnswers, updateVisibleAnswers])
 
@@ -269,12 +269,11 @@ export function useScoringFilter({
       }
       setFilterSettings(newFilterSettings)
       
-      // フィルター変更時にRキーと同じ更新ロジックを実行
-      // 新しいフィルター設定を使用するため、次のレンダリングサイクルで実行
-      setTimeout(() => {
-        setSelectedAnswers(new Set())
-        updateVisibleAnswers(true)
-      }, 0)
+      // 選択をクリア
+      setSelectedAnswers(new Set())
+      
+      // 新しいフィルター設定を直接渡してフィルタリングを実行
+      updateVisibleAnswers(newFilterSettings)
     }
   }, [filterSettings, setSelectedAnswers, updateVisibleAnswers])
 

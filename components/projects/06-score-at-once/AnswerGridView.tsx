@@ -365,7 +365,14 @@ export default function AnswerGridView({
       return
     }
 
-    setDragStart({ x: event.clientX, y: event.clientY })
+    // グリッドコンテナに対する相対座標を保存
+    if (gridRef.current) {
+      const gridRect = gridRef.current.getBoundingClientRect()
+      setDragStart({ 
+        x: event.clientX - gridRect.left, 
+        y: event.clientY - gridRect.top 
+      })
+    }
     setIsDragging(false)
 
     // Ctrlキーが押されている場合は複数選択（追加・削除切り替え）
@@ -424,18 +431,22 @@ export default function AnswerGridView({
   }
 
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (dragStart) {
+    if (dragStart && gridRef.current) {
+      const gridRect = gridRef.current.getBoundingClientRect()
+      const currentX = event.clientX - gridRect.left
+      const currentY = event.clientY - gridRect.top
+      
       const distance = Math.sqrt(
-        Math.pow(event.clientX - dragStart.x, 2) +
-          Math.pow(event.clientY - dragStart.y, 2),
+        Math.pow(currentX - dragStart.x, 2) +
+          Math.pow(currentY - dragStart.y, 2),
       )
       if (distance > 5 && !isDragging) {
         setIsDragging(true)
       }
       
-      // ドラッグ中の現在位置を更新
+      // ドラッグ中の現在位置を更新（グリッドコンテナに対する相対座標）
       if (isDragging || distance > 5) {
-        setDragCurrent({ x: event.clientX, y: event.clientY })
+        setDragCurrent({ x: currentX, y: currentY })
       }
     }
   }
@@ -454,12 +465,16 @@ export default function AnswerGridView({
   const getDragSelectionRect = () => {
     if (!dragStart || !dragCurrent || !gridRef.current) return null
     
-    const gridRect = gridRef.current.getBoundingClientRect()
+    // スクロール位置を取得
+    const scrollLeft = gridRef.current.scrollLeft
+    const scrollTop = gridRef.current.scrollTop
     
-    const startX = Math.min(dragStart.x, dragCurrent.x) - gridRect.left
-    const endX = Math.max(dragStart.x, dragCurrent.x) - gridRect.left
-    const startY = Math.min(dragStart.y, dragCurrent.y) - gridRect.top
-    const endY = Math.max(dragStart.y, dragCurrent.y) - gridRect.top
+    // dragStartとdragCurrentは既にグリッドコンテナに対する相対座標だが、
+    // 表示用にはスクロール位置を加算する必要がある
+    const startX = Math.min(dragStart.x, dragCurrent.x) + scrollLeft
+    const endX = Math.max(dragStart.x, dragCurrent.x) + scrollLeft
+    const startY = Math.min(dragStart.y, dragCurrent.y) + scrollTop
+    const endY = Math.max(dragStart.y, dragCurrent.y) + scrollTop
     
     return {
       left: startX,
@@ -471,16 +486,20 @@ export default function AnswerGridView({
 
   // ドラッグによる矩形選択処理
   const handleDragSelection = (event: React.MouseEvent) => {
-    if (!dragStart) return
+    if (!dragStart || !gridRef.current) return
 
-    const gridElement = event.currentTarget as HTMLElement
+    const gridElement = gridRef.current
     const gridRect = gridElement.getBoundingClientRect()
 
-    // 矩形選択範囲を計算
-    const startX = Math.min(dragStart.x, event.clientX) - gridRect.left
-    const endX = Math.max(dragStart.x, event.clientX) - gridRect.left
-    const startY = Math.min(dragStart.y, event.clientY) - gridRect.top
-    const endY = Math.max(dragStart.y, event.clientY) - gridRect.top
+    // 現在のマウス位置をグリッドコンテナに対する相対座標に変換
+    const currentX = event.clientX - gridRect.left
+    const currentY = event.clientY - gridRect.top
+
+    // 矩形選択範囲を計算（dragStartは既にグリッドコンテナに対する相対座標）
+    const startX = Math.min(dragStart.x, currentX)
+    const endX = Math.max(dragStart.x, currentX)
+    const startY = Math.min(dragStart.y, currentY)
+    const endY = Math.max(dragStart.y, currentY)
 
     // グリッド内の答案カードをチェック
     const cardElements = gridElement.querySelectorAll("[data-answer-id]")

@@ -289,17 +289,34 @@ export default function ScoringMainView() {
     )
 
     // 採点後の自動次答案選択（一覧採点モード用）
-    if (gradingMode === "grid" && selectedAnswers.size === 1) {
-      const currentSelectedId = Array.from(selectedAnswers)[0]
+    if (gradingMode === "grid" && selectedAnswers.size >= 1) {
       const gridAnswers = getGridAnswerData()
-      const currentIndex = gridAnswers.findIndex(
-        (answer) => answer.id === currentSelectedId,
-      )
+      
+      // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
+      const selectedIds = Array.from(selectedAnswers)
+      let maxIndex = -1
+      
+      selectedIds.forEach(selectedId => {
+        const index = gridAnswers.findIndex(answer => answer.id === selectedId)
+        if (index > maxIndex) {
+          maxIndex = index
+        }
+      })
 
-      if (currentIndex >= 0 && currentIndex < gridAnswers.length - 1) {
-        // 次の答案を選択
-        const nextAnswerId = gridAnswers[currentIndex + 1].id
-        setSelectedAnswers(new Set([nextAnswerId]))
+      if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
+        // 最終答案の次の答案を選択（模範解答をスキップ）
+        let nextIndex = maxIndex + 1
+        while (nextIndex < gridAnswers.length && gridAnswers[nextIndex].id.startsWith('master-')) {
+          nextIndex++
+        }
+        
+        if (nextIndex < gridAnswers.length) {
+          const nextAnswerId = gridAnswers[nextIndex].id
+          setSelectedAnswers(new Set([nextAnswerId]))
+        } else {
+          // 最後の答案の場合は選択をクリア
+          setSelectedAnswers(new Set())
+        }
       } else {
         // 最後の答案の場合は選択をクリア
         setSelectedAnswers(new Set())
