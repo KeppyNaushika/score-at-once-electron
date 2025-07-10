@@ -33,8 +33,6 @@ export const initializeDatabase = async (): Promise<boolean> => {
     const dbExists = await checkDatabaseExists()
 
     if (!dbExists) {
-      console.log("Database not found, creating new database...")
-
       // データディレクトリが存在することを確認
       const dataDir = getDataDirectory()
       await fs.mkdir(dataDir, { recursive: true })
@@ -49,7 +47,6 @@ export const initializeDatabase = async (): Promise<boolean> => {
         await prisma.$connect()
         await prisma.$disconnect()
 
-        console.log("Database initialized successfully at:", databasePath)
         return true
       } catch (error) {
         console.error("Failed to initialize database:", error)
@@ -58,7 +55,6 @@ export const initializeDatabase = async (): Promise<boolean> => {
         await prisma.$disconnect()
       }
     } else {
-      console.log("Database already exists at:", databasePath)
       return false
     }
   } catch (error) {
@@ -112,7 +108,6 @@ export const optimizeDatabaseForSharedDrive = async (): Promise<void> => {
     // キャッシュサイズを増加
     await prisma.$queryRaw`PRAGMA cache_size = -64000`
 
-    console.log("Database optimized for shared drive")
   } catch (error) {
     console.error("Failed to optimize database:", error)
   } finally {
@@ -127,7 +122,6 @@ export const createDatabaseBackup = async (): Promise<string> => {
 
   try {
     await fs.copyFile(databasePath, backupPath)
-    console.log("Database backup created:", backupPath)
     return backupPath
   } catch (error) {
     console.error("Failed to create database backup:", error)
