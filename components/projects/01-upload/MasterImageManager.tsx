@@ -1,10 +1,10 @@
 "use client"
 
 import FileUploadDropzone from "@/components/common/FileUploadDropzone"
+import MasterImageGallery from "@/components/projects/01-upload/MasterImageGallery"
+import { PasswordDialog } from "@/components/ui/password-dialog"
 import { useMasterImages } from "@/hooks/useMasterImages"
 import { Prisma } from "@prisma/client"
-import MasterImageGallery from "./MasterImageGallery"
-import { PasswordDialog } from "@/components/ui/password-dialog"
 
 interface MasterImageManagerProps {
   projectId: string
@@ -60,7 +60,9 @@ export default function MasterImageManager({
         onClose={handlePasswordCancel}
         onSubmit={handlePasswordSubmit}
         fileName={passwordDialog.fileName || ""}
-        error={passwordDialog.hasError ? "パスワードが正しくありません" : undefined}
+        error={
+          passwordDialog.hasError ? "パスワードが正しくありません" : undefined
+        }
         isLoading={passwordDialog.isLoading}
         isFirstAttempt={passwordDialog.attempts === 0}
       />

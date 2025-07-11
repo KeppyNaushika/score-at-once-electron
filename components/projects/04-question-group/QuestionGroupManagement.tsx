@@ -1,9 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { QuestionGroupItemList } from "@/components/projects/04-question-group/QuestionGroupItemList"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Dialog,
@@ -12,11 +11,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Settings, List } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { QuestionGroupWithItems } from "@/types/electron"
-import { QuestionGroupItemList } from "./QuestionGroupItemList"
+import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
+import { useState } from "react"
 
 interface QuestionGroupManagementProps {
   questionGroups: QuestionGroupWithItems[]
@@ -31,7 +30,9 @@ interface QuestionGroupManagementProps {
   ) => Promise<boolean>
   onUpdateQuestionGroupItem: (id: string, name: string) => Promise<boolean>
   onDeleteQuestionGroupItem: (id: string) => Promise<boolean>
-  onUpdateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) => Promise<boolean>
+  onUpdateQuestionGroupItemOrders: (
+    orders: { id: string; order: number }[],
+  ) => Promise<boolean>
 }
 
 export function QuestionGroupManagement({

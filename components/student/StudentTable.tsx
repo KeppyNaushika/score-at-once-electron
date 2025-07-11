@@ -1,7 +1,6 @@
 "use client"
 
 import { Badge } from "@/components/ui/badge"
-import { StudentData } from "@/types/common.types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -31,6 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { StudentData } from "@/types/common.types"
 import {
   Edit,
   Info,
@@ -43,9 +43,9 @@ import {
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import SpreadsheetImportModal from "./SpreadsheetImportModal"
-import StudentImportModal from "./StudentImportModal"
-import StudentModal from "./StudentModal"
+import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
+import StudentImportModal from "@/components/student/StudentImportModal"
+import StudentModal from "@/components/student/StudentModal"
 
 interface StudentWithMemberships {
   id: string

@@ -1,5 +1,6 @@
 "use client"
 
+import StudentImportTable from "@/components/student/StudentImportTable"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/dialog"
 import { useStudentImport } from "@/hooks/useStudentImport"
 import { AlertCircle, Upload } from "lucide-react"
-import StudentImportTable from "./StudentImportTable"
 
 interface ClassWithMemberships {
   id: string
@@ -131,7 +131,7 @@ export default function SpreadsheetImportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] min-w-[95%] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[90vh] min-w-[95%] flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
@@ -142,7 +142,7 @@ export default function SpreadsheetImportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+        <div className="flex-1 space-y-4 overflow-y-auto py-4">
           <div className="overflow-x-auto">
             <StudentImportTable
               data={studentData}

@@ -1,5 +1,6 @@
 "use client"
 
+import SortableClassList from "@/components/projects/05-students/SortableClassList"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -29,7 +30,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, UserPlus } from "lucide-react"
 import { useEffect, useState } from "react"
-import SortableClassList from "./SortableClassList"
 
 // 利用可能な学級の型（プロジェクトに未追加の学級）
 interface AvailableClass {

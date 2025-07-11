@@ -1,9 +1,11 @@
 "use client"
 
+import GradingModeToggle, {
+  GradingMode,
+} from "@/components/projects/07-score-at-once/GradingModeToggle"
+import ScoringKeyboardHelp from "@/components/projects/07-score-at-once/components/scoring-keyboard-help"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, PanelRightClose, PanelRightOpen } from "lucide-react"
-import GradingModeToggle, { GradingMode } from "../GradingModeToggle"
-import ScoringKeyboardHelp from "./scoring-keyboard-help"
 
 interface ScoringHeaderProps {
   project: any
@@ -48,7 +50,8 @@ export default function ScoringHeader({
             <h1 className="text-lg font-semibold">{project?.examName}</h1>
             {currentQuestion && (
               <p className="text-sm text-gray-600">
-                {currentQuestion.label} ({currentQuestion.label || currentQuestion.orderIndex || 1}番)
+                {currentQuestion.label} (
+                {currentQuestion.label || currentQuestion.orderIndex || 1}番)
               </p>
             )}
           </div>

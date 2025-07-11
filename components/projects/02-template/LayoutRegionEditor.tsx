@@ -1,11 +1,10 @@
 "use client"
 
-import { LayoutRegionAreaType } from "@/types/common.types"
+import ImageCanvas from "@/components/projects/02-template/ImageCanvas"
+import LayoutRegionList from "@/components/projects/02-template/LayoutRegionList"
+import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
 import { useState } from "react"
 import { toast } from "sonner"
-import ImageCanvas from "./ImageCanvas"
-import LayoutRegionList from "./LayoutRegionList"
-import { LayoutRegionArea } from "@/types/common.types"
 
 type LayoutRegionEditorProps = {
   areas: LayoutRegionArea[]
