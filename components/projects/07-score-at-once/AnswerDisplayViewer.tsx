@@ -163,7 +163,7 @@ export default function AnswerDisplayViewer({
         ctx.fillStyle = "#ef4444"
         ctx.font = "16px sans-serif"
         ctx.fillText(
-          `設問${currentQuestion.orderIndex || 1}`,
+          `設問${currentQuestion.label || currentQuestion.orderIndex || 1}`,
           regionX + 5,
           regionY - 5,
         )
@@ -337,7 +337,7 @@ export default function AnswerDisplayViewer({
             </div>
             {currentQuestion && (
               <div>
-                設問: {currentQuestion.orderIndex || 1} ({currentQuestion.points}
+                設問: {currentQuestion.label || currentQuestion.orderIndex || 1} ({currentQuestion.points}
                 点)
               </div>
             )}
