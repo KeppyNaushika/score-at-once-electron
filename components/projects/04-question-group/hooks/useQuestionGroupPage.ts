@@ -34,6 +34,7 @@ export function useQuestionGroupPage(projectId: string) {
   // データ読み込み
   const loadData = useCallback(async () => {
     try {
+      console.log("📥 loadData called for projectId:", projectId)
       setLoading(true)
       setError(null)
 
@@ -43,6 +44,20 @@ export function useQuestionGroupPage(projectId: string) {
           window.electronAPI.getQuestionGroupsByProjectId(projectId),
           window.electronAPI.getLayoutRegionsByProjectId(projectId),
         ])
+
+      console.log("📊 questionGroupsResponse:", questionGroupsResponse)
+      
+      // 各グループの詳細を確認
+      if (questionGroupsResponse && questionGroupsResponse.length > 0) {
+        questionGroupsResponse.forEach((group: any, groupIndex: number) => {
+          console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
+          if (group.items && group.items.length > 0) {
+            group.items.forEach((item: any, itemIndex: number) => {
+              console.log(`  📝 Item ${itemIndex + 1}: ${item.name} (order: ${item.order})`)
+            })
+          }
+        })
+      }
 
       if (projectResponse) {
         setProject(projectResponse)
@@ -63,7 +78,10 @@ export function useQuestionGroupPage(projectId: string) {
         )
         setLayoutRegions(questionRegions)
       }
+      
+      console.log("✅ loadData completed successfully")
     } catch (err) {
+      console.error("❌ loadData error:", err)
       setError(
         err instanceof Error ? err.message : "データの読み込みに失敗しました",
       )
@@ -271,10 +289,17 @@ export function useQuestionGroupPage(projectId: string) {
   const updateQuestionGroupItemOrders = useCallback(
     async (orders: { id: string; order: number }[]) => {
       try {
-        await window.electronAPI.updateQuestionGroupItemOrders(orders)
+        console.log("🔄 updateQuestionGroupItemOrders called with:", orders)
+        const result = await window.electronAPI.updateQuestionGroupItemOrders(orders)
+        console.log("✅ updateQuestionGroupItemOrders result:", result)
+        
+        console.log("🔄 Reloading data after order update...")
         await loadData()
+        console.log("✅ Data reloaded successfully")
+        
         return true
       } catch (err) {
+        console.error("❌ updateQuestionGroupItemOrders error:", err)
         setError(
           err instanceof Error ? err.message : "順序の更新に失敗しました",
         )

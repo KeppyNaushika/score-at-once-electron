@@ -43,8 +43,8 @@ export const getQuestionGroupsByProjectId = async (projectId: string) => {
     include: {
       items: {
         orderBy: {
-          // name や createdAt などでソート
-          name: "asc",
+          // DnD順序に従って表示
+          order: "asc",
         },
       },
       project: true,
@@ -62,7 +62,8 @@ export const getQuestionGroupById = async (id: string) => {
     include: {
       items: {
         orderBy: {
-          name: "asc",
+          // DnD順序に従って表示
+          order: "asc",
         },
       },
       project: true,

@@ -74,6 +74,8 @@ export type QuestionGroupItemWithDetails = Prisma.QuestionGroupItemGetPayload<{
 export const updateQuestionGroupItemOrders = async (
   orders: { id: string; order: number }[],
 ) => {
+  console.log("🔄 DB: updateQuestionGroupItemOrders called with:", orders)
+  
   const updates = orders.map(({ id, order }) =>
     prisma.questionGroupItem.update({
       where: { id },
@@ -81,10 +83,14 @@ export const updateQuestionGroupItemOrders = async (
     })
   )
 
+  console.log("🔄 DB: Executing transaction with", updates.length, "updates")
   const result = await prisma.$transaction(updates)
+  console.log("✅ DB: Transaction completed, result:", result)
   
   // BatchPayload形式で返す
-  return { count: result.length }
+  const batchResult = { count: result.length }
+  console.log("✅ DB: Returning batch result:", batchResult)
+  return batchResult
 }
 
 export type QuestionGroupItemPayload = QuestionGroupItem

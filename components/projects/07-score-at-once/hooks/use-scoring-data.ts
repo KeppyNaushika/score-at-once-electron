@@ -562,6 +562,42 @@ export function useScoringData({
     ],
   )
 
+  // 設問別進捗を計算する関数
+  const calculateQuestionProgress = useCallback(() => {
+    const progress: {
+      [questionId: string]: {
+        totalAnswers: number
+        gradedAnswers: number
+        percentage: number
+      }
+    } = {}
+
+    questionRegions.forEach((question) => {
+      const totalAnswers = answerSheets.length
+      let gradedAnswers = 0
+
+      answerSheets.forEach((sheet) => {
+        const key = `${sheet.id}-${question.id}`
+        const scoreData = scoringData[key]
+        
+        // 採点済みの状態をチェック（ungradedでない場合は採点済み）
+        if (scoreData && scoreData.status !== "ungraded") {
+          gradedAnswers++
+        }
+      })
+
+      const percentage = totalAnswers > 0 ? Math.round((gradedAnswers / totalAnswers) * 100) : 0
+
+      progress[question.id] = {
+        totalAnswers,
+        gradedAnswers,
+        percentage,
+      }
+    })
+
+    return progress
+  }, [answerSheets, questionRegions, scoringData])
+
   return {
     scoringData,
     setScoringData,
@@ -570,5 +606,6 @@ export function useScoringData({
     getActualScore,
     handleSetScore,
     handleBatchScore,
+    calculateQuestionProgress,
   }
 }

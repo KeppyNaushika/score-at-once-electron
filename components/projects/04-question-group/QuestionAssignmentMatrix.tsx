@@ -91,12 +91,13 @@ export function QuestionAssignmentMatrix({
     }
   }, [layoutRegions])
 
-  // チェックボックスの状態を変更
-  const handleAssignmentChange = (
+  // チェックボックスの状態を変更（逐次保存）
+  const handleAssignmentChange = async (
     questionId: string,
     itemId: string,
     checked: boolean,
   ) => {
+    // UI状態を即座に更新
     setAssignments((prev) => {
       const newAssignments = { ...prev }
       if (!newAssignments[questionId]) {
@@ -111,6 +112,54 @@ export function QuestionAssignmentMatrix({
 
       return newAssignments
     })
+
+    // 逐次保存処理
+    try {
+      setSaving(true)
+      
+      // 現在の関連付け状態を取得
+      const currentAssignments = assignments[questionId] || new Set()
+      const updatedAssignments = new Set(currentAssignments)
+      
+      if (checked) {
+        updatedAssignments.add(itemId)
+      } else {
+        updatedAssignments.delete(itemId)
+      }
+
+      // データベースに即座に保存
+      await onUpdateAssignments(questionId, Array.from(updatedAssignments))
+      
+      // 成功時にoriginalAssignmentsも更新
+      setOriginalAssignments((prev) => {
+        const updated = { ...prev }
+        updated[questionId] = Array.from(updatedAssignments)
+        return updated
+      })
+      
+      console.log(`✅ 関連付け保存成功: 設問${questionId}, 項目${itemId}, チェック:${checked}`)
+      
+    } catch (error) {
+      console.error("❌ 関連付け保存エラー:", error)
+      
+      // エラー時はUIを元に戻す
+      setAssignments((prev) => {
+        const revertedAssignments = { ...prev }
+        if (!revertedAssignments[questionId]) {
+          revertedAssignments[questionId] = new Set()
+        }
+
+        if (checked) {
+          revertedAssignments[questionId].delete(itemId)
+        } else {
+          revertedAssignments[questionId].add(itemId)
+        }
+
+        return revertedAssignments
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   // 変更を保存
@@ -204,14 +253,14 @@ export function QuestionAssignmentMatrix({
 
   return (
     <div className="space-y-4">
-      {/* 保存・リセットボタン */}
+      {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Grid3X3 className="h-5 w-5" />
           <span className="font-medium">設問とグループ項目の関連付け</span>
-          {hasChanges() && (
-            <Badge variant="outline" className="text-xs">
-              未保存の変更があります
+          {saving && (
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+              保存中...
             </Badge>
           )}
         </div>
@@ -220,18 +269,10 @@ export function QuestionAssignmentMatrix({
             variant="outline"
             size="sm"
             onClick={handleReset}
-            disabled={!hasChanges() || saving}
+            disabled={saving}
           >
             <RotateCcw className="mr-2 h-4 w-4" />
             リセット
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={!hasChanges() || saving}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "保存中..." : "保存"}
           </Button>
         </div>
       </div>
@@ -304,6 +345,7 @@ export function QuestionAssignmentMatrix({
                                   checked as boolean,
                                 )
                               }
+                              disabled={saving}
                             />
                           </div>
                         </TableCell>
@@ -326,7 +368,7 @@ export function QuestionAssignmentMatrix({
           </li>
           <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
           <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
-          <li>• 変更後は必ず「保存」ボタンをクリックしてください</li>
+          <li>• <strong>変更は自動で保存されます</strong>（逐次保存）</li>
         </ul>
       </div>
     </div>
