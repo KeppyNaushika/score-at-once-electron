@@ -6,7 +6,7 @@ import {
   getProjectById as dbFetchProjectById,
   getProjects as dbFetchProjects,
   updateProject as dbUpdateProject,
-} from "@/lib/prisma/project"
+} from "../lib/prisma/project"
 
 export function setupProjectHandlers(): void {
   ipcMain.handle("fetch-projects", async () => {

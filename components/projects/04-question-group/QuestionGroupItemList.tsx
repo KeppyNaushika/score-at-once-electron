@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,14 +13,96 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Tag } from "lucide-react"
+import { Plus, Edit, Trash2, Tag, GripVertical } from "lucide-react"
 import { QuestionGroupWithItems } from "@/types/electron"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import {
+  useSortable,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 
 interface QuestionGroupItemListProps {
   questionGroup: QuestionGroupWithItems
   onCreateItem: (questionGroupId: string, name: string) => Promise<boolean>
   onUpdateItem: (id: string, name: string) => Promise<boolean>
   onDeleteItem: (id: string) => Promise<boolean>
+  onUpdateItemOrders: (orders: { id: string; order: number }[]) => Promise<boolean>
+}
+
+interface SortableItemProps {
+  item: any
+  index: number
+  onEdit: (item: any) => void
+  onDelete: (item: any) => void
+}
+
+function SortableItem({ item, index, onEdit, onDelete }: SortableItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
+    >
+      <div className="flex items-center gap-3">
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-200"
+        >
+          <GripVertical className="h-4 w-4 text-gray-500" />
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {index + 1}
+        </Badge>
+        <span className="font-medium">{item.name}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onEdit(item)}
+        >
+          <Edit className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => onDelete(item)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  )
 }
 
 export function QuestionGroupItemList({
@@ -28,12 +110,46 @@ export function QuestionGroupItemList({
   onCreateItem,
   onUpdateItem,
   onDeleteItem,
+  onUpdateItemOrders,
 }: QuestionGroupItemListProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [newItemName, setNewItemName] = useState("")
   const [editingItem, setEditingItem] = useState<any>(null)
   const [editItemName, setEditItemName] = useState("")
+  const [items, setItems] = useState(questionGroup.items)
+
+  // Sync local items with props when questionGroup changes
+  useEffect(() => {
+    setItems(questionGroup.items)
+  }, [questionGroup.items])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      const oldIndex = items.findIndex((item) => item.id === active.id)
+      const newIndex = items.findIndex((item) => item.id === over?.id)
+
+      const newItems = arrayMove(items, oldIndex, newIndex)
+      setItems(newItems)
+
+      // Create order updates
+      const orderUpdates = newItems.map((item, index) => ({
+        id: item.id,
+        order: index,
+      }))
+
+      await onUpdateItemOrders(orderUpdates)
+    }
+  }
 
   const handleCreateItem = async () => {
     if (!newItemName.trim()) return
@@ -117,41 +233,29 @@ export function QuestionGroupItemList({
             <p className="text-sm">「新しい項目」ボタンから作成してください</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {questionGroup.items.map((item, index) => (
-              <div
-                key={item.id}
-                className="bg-muted/50 flex items-center justify-between rounded-lg p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-xs">
-                    {index + 1}
-                  </Badge>
-                  <span className="font-medium">{item.name}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={items} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <SortableItem
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    onEdit={(item) => {
                       setEditingItem(item)
                       setEditItemName(item.name)
                       setShowEditDialog(true)
                     }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteItem(item)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                    onDelete={handleDeleteItem}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </CardContent>
 

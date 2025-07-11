@@ -5,13 +5,13 @@ import {
   deleteClass,
   fetchClasses,
   updateClass,
-} from "@/lib/prisma/class"
+} from "../lib/prisma/class"
 import {
   deleteMasterImage,
   uploadMasterImages,
   updateMasterImagesOrder,
   getMasterImagesByProjectId,
-} from "@/lib/prisma/masterImage"
+} from "../lib/prisma/masterImage"
 import {
   uploadAnswerSheets,
   getAnswerSheetsByProjectId,
@@ -22,15 +22,15 @@ import {
   updateAnswerSheetPlacement,
   swapAnswerSheetPlacements,
   swapAnswerSheetPlacementsWithScoring,
-} from "@/lib/prisma/answerSheet"
-import { fetchUsers, getCurrentUser } from "@/lib/prisma/user"
+} from "../lib/prisma/answerSheet"
+import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import {
   loginUser,
   createUser,
   getUserByToken,
   updateUserPassword,
-} from "@/lib/prisma/auth"
-import { getAbsolutePathFromData } from "@/lib/dataManager"
+} from "../lib/prisma/auth"
+import { getAbsolutePathFromData } from "../lib/dataManager"
 import * as fs from "fs/promises"
 
 export function setupMiscHandlers(): void {
@@ -422,7 +422,7 @@ export function setupMiscHandlers(): void {
     try {
       const fs = await import("fs/promises")
       const path = await import("path")
-      const { getDataDirectory } = await import("@/lib/dataManager")
+      const { getDataDirectory } = await import("../lib/dataManager")
 
       // 相対パスの場合はdataディレクトリからの相対パスとして解決
       const resolvedPath = path.isAbsolute(filePath)
@@ -491,10 +491,10 @@ export function setupMiscHandlers(): void {
   ipcMain.handle("get-data-directory-info", async (_event) => {
     try {
       const { getDataDirectory, calculateDataSize } = await import(
-        "@/lib/dataManager"
+        "../lib/dataManager"
       )
       const { getProjects: dbFetchProjects } = await import(
-        "@/lib/prisma/project"
+        "../lib/prisma/project"
       )
 
       const dataDirectory = getDataDirectory()
@@ -522,7 +522,7 @@ export function setupMiscHandlers(): void {
   ipcMain.handle("open-data-directory", async (_event) => {
     try {
       const { shell } = await import("electron")
-      const { getDataDirectory } = await import("@/lib/dataManager")
+      const { getDataDirectory } = await import("../lib/dataManager")
 
       const dataDirectory = getDataDirectory()
       await shell.openPath(dataDirectory)
@@ -539,7 +539,7 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("delete-all-data", async (_event) => {
     try {
-      const { getDataDirectory } = await import("@/lib/dataManager")
+      const { getDataDirectory } = await import("../lib/dataManager")
       const fs = await import("fs/promises")
 
       const dataDirectory = getDataDirectory()

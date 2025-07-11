@@ -1,6 +1,6 @@
 import { ipcMain } from "electron"
-import { exportScoredAnswersPDF } from "@/lib/prisma/pdfExport"
-import { exportGradingDataExcel } from "@/lib/prisma/excelExport"
+import { exportScoredAnswersPDF } from "../lib/prisma/pdfExport"
+import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 
 export function setupExportHandlers(): void {
   // PDF Export handlers

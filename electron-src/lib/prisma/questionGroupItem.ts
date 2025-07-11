@@ -45,7 +45,7 @@ export const getQuestionGroupItemsByGroupId = async (
   return prisma.questionGroupItem.findMany({
     where: { questionGroupId },
     orderBy: {
-      name: "asc", // または createdAt など
+      order: "asc",
     },
   })
 }
@@ -69,5 +69,19 @@ export type QuestionGroupItemWithDetails = Prisma.QuestionGroupItemGetPayload<{
     questionAssignments: true
   }
 }>
+
+// QuestionGroupItem の順序を一括更新
+export const updateQuestionGroupItemOrders = async (
+  orders: { id: string; order: number }[],
+) => {
+  const updates = orders.map(({ id, order }) =>
+    prisma.questionGroupItem.update({
+      where: { id },
+      data: { order },
+    })
+  )
+
+  return prisma.$transaction(updates)
+}
 
 export type QuestionGroupItemPayload = QuestionGroupItem

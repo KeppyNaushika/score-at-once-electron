@@ -29,6 +29,7 @@ interface QuestionRegion {
   id: string
   label: string
   questionNumber: string
+  orderIndex?: number
   points: number
 }
 
@@ -83,7 +84,7 @@ export default function QuestionNavigator({
                     <SelectItem key={question.id} value={index.toString()}>
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
-                          <span>{question.questionNumber}</span>
+                          <span>{question.orderIndex || 1}</span>
                           <Badge variant="outline" className="text-xs">
                             {question.points}点
                           </Badge>
@@ -203,7 +204,7 @@ export default function QuestionNavigator({
                         }`}
                         onClick={() => onQuestionChange(index)}
                       >
-                        <span className="text-xs">{question.questionNumber}</span>
+                        <span className="text-xs">{question.orderIndex || 1}</span>
                         {progress && progress.percentage > 0 && (
                           <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 flex items-center justify-center">
                             {progress.percentage === 100 && (
@@ -215,7 +216,7 @@ export default function QuestionNavigator({
                     </TooltipTrigger>
                     <TooltipContent>
                       <div className="text-center">
-                        <div className="font-medium">{question.questionNumber}</div>
+                        <div className="font-medium">{question.orderIndex || 1}</div>
                         <div className="text-xs text-gray-400">{question.label}</div>
                         <div className="text-xs text-gray-400">{question.points}点</div>
                         {progress && (

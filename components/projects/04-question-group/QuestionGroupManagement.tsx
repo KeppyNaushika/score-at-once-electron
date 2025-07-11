@@ -31,6 +31,7 @@ interface QuestionGroupManagementProps {
   ) => Promise<boolean>
   onUpdateQuestionGroupItem: (id: string, name: string) => Promise<boolean>
   onDeleteQuestionGroupItem: (id: string) => Promise<boolean>
+  onUpdateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) => Promise<boolean>
 }
 
 export function QuestionGroupManagement({
@@ -43,6 +44,7 @@ export function QuestionGroupManagement({
   onCreateQuestionGroupItem,
   onUpdateQuestionGroupItem,
   onDeleteQuestionGroupItem,
+  onUpdateQuestionGroupItemOrders,
 }: QuestionGroupManagementProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -247,6 +249,7 @@ export function QuestionGroupManagement({
             onCreateItem={onCreateQuestionGroupItem}
             onUpdateItem={onUpdateQuestionGroupItem}
             onDeleteItem={onDeleteQuestionGroupItem}
+            onUpdateItemOrders={onUpdateQuestionGroupItemOrders}
           />
         </div>
       )}

@@ -6,7 +6,7 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
-} from "@/lib/prisma/student"
+} from "../lib/prisma/student"
 import {
   getStudentsForProject,
   addStudentsToProject,
@@ -15,8 +15,8 @@ import {
   getClassesNotInProject,
   getStudentsNotInProject,
   updateStudentOrders,
-} from "@/lib/prisma/projectStudent"
-import { checkGradingDataForStudents } from "@/lib/prisma/gradingData"
+} from "../lib/prisma/projectStudent"
+import { checkGradingDataForStudents } from "../lib/prisma/gradingData"
 import {
   createStudentClassMembership,
   updateStudentClassMembership,
@@ -27,7 +27,7 @@ import {
   addStudentToClass,
   endStudentMembership,
   getMembershipsByDateRange,
-} from "@/lib/prisma/studentClassMembership"
+} from "../lib/prisma/studentClassMembership"
 
 export function setupStudentHandlers(): void {
   ipcMain.handle("fetch-students", async () => {

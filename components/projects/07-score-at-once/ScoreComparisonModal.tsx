@@ -205,7 +205,7 @@ export default function ScoreComparisonModal({
             採点結果の比較・最終決定
           </DialogTitle>
           <DialogDescription>
-            {studentName} - 設問{questionNumber} ({maxScore}点満点)
+            {studentName} - 問{questionNumber} ({maxScore}点満点)
           </DialogDescription>
         </DialogHeader>
 

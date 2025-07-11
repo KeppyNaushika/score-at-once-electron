@@ -267,6 +267,23 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
+  // QuestionGroupItem順序更新
+  const updateQuestionGroupItemOrders = useCallback(
+    async (orders: { id: string; order: number }[]) => {
+      try {
+        await window.electronAPI.updateQuestionGroupItemOrders(orders)
+        await loadData()
+        return true
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "順序の更新に失敗しました",
+        )
+        return false
+      }
+    },
+    [loadData],
+  )
+
   // 設問とグループの関連付け更新
   const updateQuestionAssignments = useCallback(
     async (questionLayoutRegionId: string, questionGroupItemIds: string[]) => {
@@ -329,6 +346,7 @@ export function useQuestionGroupPage(projectId: string) {
     createQuestionGroupItem,
     updateQuestionGroupItem,
     deleteQuestionGroupItem,
+    updateQuestionGroupItemOrders,
     updateQuestionAssignments,
     subtotalData,
   }

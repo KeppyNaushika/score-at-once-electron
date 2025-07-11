@@ -33,6 +33,7 @@ export default function QuestionGroupPage() {
     createQuestionGroupItem,
     updateQuestionGroupItem,
     deleteQuestionGroupItem,
+    updateQuestionGroupItemOrders,
     updateQuestionAssignments,
     subtotalData,
   } = useQuestionGroupPage(projectId)
@@ -92,6 +93,7 @@ export default function QuestionGroupPage() {
               onCreateQuestionGroupItem={createQuestionGroupItem}
               onUpdateQuestionGroupItem={updateQuestionGroupItem}
               onDeleteQuestionGroupItem={deleteQuestionGroupItem}
+              onUpdateQuestionGroupItemOrders={updateQuestionGroupItemOrders}
             />
           </CardContent>
         </Card>

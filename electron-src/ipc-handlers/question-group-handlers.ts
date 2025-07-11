@@ -5,7 +5,7 @@ import {
   deleteQuestionGroup,
   getQuestionGroupsByProjectId,
   getQuestionGroupById,
-} from "@/lib/prisma/questionGroup"
+} from "../lib/prisma/questionGroup"
 import {
   createQuestionGroupItem,
   createManyQuestionGroupItems,
@@ -13,7 +13,8 @@ import {
   deleteQuestionGroupItem,
   getQuestionGroupItemsByGroupId,
   getQuestionGroupItemById,
-} from "@/lib/prisma/questionGroupItem"
+  updateQuestionGroupItemOrders,
+} from "../lib/prisma/questionGroupItem"
 import {
   createQuestionSubtotalAssignment,
   createManyQuestionSubtotalAssignments,
@@ -22,7 +23,7 @@ import {
   deleteAssignmentsByQuestionGroupItemId,
   getAssignmentsByQuestionLayoutRegionId,
   getAssignmentsByQuestionGroupItemId,
-} from "@/lib/prisma/questionSubtotalAssignment"
+} from "../lib/prisma/questionSubtotalAssignment"
 import {
   createSubtotalDefinition,
   createManySubtotalDefinitions,
@@ -30,7 +31,7 @@ import {
   deleteSubtotalDefinitionsByLayoutRegionId,
   getSubtotalDefinitionsByLayoutRegionId,
   getSubtotalDefinitionsByQuestionGroupItemId,
-} from "@/lib/prisma/subtotalDefinition"
+} from "../lib/prisma/subtotalDefinition"
 
 export function setupQuestionGroupHandlers(): void {
   // QuestionGroup handlers
@@ -136,6 +137,15 @@ export function setupQuestionGroupHandlers(): void {
       return await getQuestionGroupItemById(id)
     } catch (err) {
       console.error("Error getting question group item by id:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("update-question-group-item-orders", async (_event, orders) => {
+    try {
+      return await updateQuestionGroupItemOrders(orders)
+    } catch (err) {
+      console.error("Error updating question group item orders:", err)
       throw err
     }
   })

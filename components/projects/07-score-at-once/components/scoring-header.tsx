@@ -48,7 +48,7 @@ export default function ScoringHeader({
             <h1 className="text-lg font-semibold">{project?.examName}</h1>
             {currentQuestion && (
               <p className="text-sm text-gray-600">
-                {currentQuestion.label} ({currentQuestion.questionNumber}番)
+                {currentQuestion.label} ({currentQuestion.orderIndex || 1}番)
               </p>
             )}
           </div>
