@@ -170,9 +170,12 @@ export function setupQuestionGroupHandlers(): void {
 
   ipcMain.handle("update-question-group-item-orders", async (_event, orders) => {
     try {
-      return await updateQuestionGroupItemOrders(orders)
+      console.log("🔄 IPC: update-question-group-item-orders called with:", orders)
+      const result = await updateQuestionGroupItemOrders(orders)
+      console.log("✅ IPC: update-question-group-item-orders result:", result)
+      return result
     } catch (err) {
-      console.error("Error updating question group item orders:", err)
+      console.error("❌ IPC: Error updating question group item orders:", err)
       throw err
     }
   })

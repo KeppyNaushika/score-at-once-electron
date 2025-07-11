@@ -104,6 +104,7 @@ export default function ScoringMainView() {
     getScoringStatus,
     handleSetScore,
     handleBatchScore,
+    calculateQuestionProgress,
   } = useScoringData({
     projectId,
     currentUserId,
@@ -264,6 +265,9 @@ export default function ScoringMainView() {
   const handleAutoScrollChange = (enabled: boolean) => {
     setAutoScroll(enabled)
   }
+
+  // 設問別進捗を計算
+  const questionProgress = calculateQuestionProgress()
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = (answerId: string, isSelected: boolean) => {
@@ -640,6 +644,7 @@ export default function ScoringMainView() {
               onQuestionChange={setCurrentQuestionIndex}
               onPrevQuestion={handlePrevQuestion}
               onNextQuestion={handleNextQuestion}
+              questionProgress={questionProgress}
             />
 
             {/* 採点ツールバー */}
