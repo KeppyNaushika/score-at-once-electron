@@ -72,7 +72,6 @@ const LayoutRegionEditor = ({
       width: customCoords?.width ?? 0.1,
       height: customCoords?.height ?? 0.05,
       points: null,
-      questionNumber: null,
       label: "",
       masterImageId: masterImageId,
     }
@@ -97,9 +96,6 @@ const LayoutRegionEditor = ({
             areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
           }`,
           type: "QUESTION_ANSWER",
-          questionNumber: (
-            areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
-          ).toString(),
           points: 10, // デフォルトポイント
         }
         break

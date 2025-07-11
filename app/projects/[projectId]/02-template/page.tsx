@@ -47,7 +47,6 @@ export default function TemplateStepPage() {
       height: number
       label: string
       points: string | null
-      questionNumber: string
       masterImageId: string
     }[]
   >([])
@@ -141,8 +140,7 @@ export default function TemplateStepPage() {
               height: region.height,
               label: region.label || "",
               points: region.points ? String(region.points) : null,
-              questionNumber: region.questionNumber || "",
-              masterImageId: region.masterImageId || "",
+                            masterImageId: region.masterImageId || "",
             }))
             setLayoutRegions(mappedRegions)
           } else {
@@ -215,8 +213,7 @@ export default function TemplateStepPage() {
                 height: region.height,
                 label: region.label || "",
                 points: region.points ? String(region.points) : null,
-                questionNumber: region.questionNumber || "",
-                masterImageId: region.masterImageId || "",
+                                masterImageId: region.masterImageId || "",
               })),
             )
           } else {
@@ -250,8 +247,7 @@ export default function TemplateStepPage() {
             height: area.height,
             label: area.label,
             points: area.points ? parseInt(area.points) : null,
-            questionNumber: area.questionNumber,
-          }
+                      }
 
           if (area.id) {
             return await window.electronAPI.updateLayoutRegion(
@@ -329,8 +325,7 @@ export default function TemplateStepPage() {
           height: area.height,
           label: area.label,
           points: area.points ? parseInt(area.points) : null,
-          questionNumber: area.questionNumber,
-        }
+                  }
 
         if (area.id) {
           // 既存の領域を更新
@@ -359,7 +354,6 @@ export default function TemplateStepPage() {
             height: region!.height,
             label: region!.label || "",
             points: region!.points ? String(region!.points) : null,
-            questionNumber: region!.questionNumber || "",
             masterImageId: region!.masterImageId || "",
           })),
       )

@@ -62,7 +62,7 @@ interface ScoreComparisonModalProps {
   onClose: () => void
   answerSheetId: string
   layoutRegionId: string
-  questionNumber: string
+  questionLabel: string
   maxScore: number
   studentName: string
   onScoreFinalized?: () => void
@@ -73,7 +73,7 @@ export default function ScoreComparisonModal({
   onClose,
   answerSheetId,
   layoutRegionId,
-  questionNumber,
+  questionLabel,
   maxScore,
   studentName,
   onScoreFinalized,
@@ -205,7 +205,7 @@ export default function ScoreComparisonModal({
             採点結果の比較・最終決定
           </DialogTitle>
           <DialogDescription>
-            {studentName} - 問{questionNumber} ({maxScore}点満点)
+            {studentName} - 問{questionLabel} ({maxScore}点満点)
           </DialogDescription>
         </DialogHeader>
 

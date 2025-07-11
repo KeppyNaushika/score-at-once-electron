@@ -28,7 +28,6 @@ import {
 interface QuestionRegion {
   id: string
   label: string
-  questionNumber: string
   orderIndex?: number
   points: number
 }

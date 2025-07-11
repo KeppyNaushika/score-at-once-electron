@@ -24,7 +24,6 @@ import {
 interface ScoringToolbarProps {
   selectedAnswersCount: number
   currentQuestion?: {
-    questionNumber: string
     points: number
   }
   filterSettings: {

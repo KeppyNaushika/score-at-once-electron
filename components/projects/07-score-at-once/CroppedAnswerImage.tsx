@@ -6,7 +6,6 @@ import Image from "next/image"
 interface QuestionRegion {
   id: string
   label: string
-  questionNumber: string
   orderIndex?: number
   points: number
   x: number

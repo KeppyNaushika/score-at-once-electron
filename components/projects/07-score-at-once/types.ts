@@ -43,7 +43,6 @@ export interface AnswerSheet {
 export interface QuestionRegion {
   id: string
   label: string
-  questionNumber: string
   points: number
   x: number
   y: number

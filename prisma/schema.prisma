@@ -148,7 +148,6 @@ model LayoutRegion {
   y                           Float
   width                       Float
   height                      Float
-  questionNumber              String?
   points                      Int?
   orderIndex                  Int?
   createdAt                   DateTime                     @default(now())
