@@ -4,3 +4,6 @@ import { createSharedPrismaClient } from "./databaseInitializer"
 const prisma = createSharedPrismaClient()
 
 export default prisma
+export function getPrismaClient() {
+  return prisma
+}

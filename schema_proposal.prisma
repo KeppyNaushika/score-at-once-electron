@@ -1,3 +1,11 @@
+// 理想的なスキーマ設計提案
+// 主要改善点：
+// 1. AnswerSheetとMasterImageの直接関連付け
+// 2. 統一的なバージョン管理システム
+// 3. 採点進捗計算の簡素化
+// 4. パフォーマンス最適化
+// 5. データ整合性の強化
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,23 +15,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// =============================================================================
+// ユーザー・認証関連
+// =============================================================================
+
 model User {
-  id                 String                @id @default(uuid())
-  username           String                @unique
-  passwordHash       String?
-  name               String
-  role               String                @default("teacher")
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  assignedProjects   GradingAssignment[]
-  createdProjects    Project[]             @relation("UserProjects")
-  examSessions       ProjectSession[]
-  questionScores     QuestionScore[]
-  scoreRecords       ScoreRecord[]
-  ClassTeachers      ClassTeachers[]
-  locks              Lock[]
-  questionPartScores QuestionPartScore[]
+  id               String              @id @default(uuid())
+  username         String              @unique
+  passwordHash     String?
+  name             String
+  role             String              @default("teacher")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  version          Int                 @default(1) // 統一的なバージョン管理
+  
+  // Relations
+  assignedProjects GradingAssignment[]
+  createdProjects  Project[]           @relation("UserProjects")
+  examSessions     ProjectSession[]
+  questionScores   QuestionScore[]
+  scoreRecords     ScoreRecord[]
+  teacherClasses   TeacherClass[]
+  locks            Lock[]
+  
+  @@map("users")
 }
+
+// =============================================================================
+// 学級・生徒管理
+// =============================================================================
 
 model Class {
   id            String                   @id @default(uuid())
@@ -34,9 +54,12 @@ model Class {
   isVisible     Boolean                  @default(true)
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
+  version       Int                      @default(1)
+  
+  // Relations
   memberships   StudentClassMembership[]
-  ClassTeachers ClassTeachers[]
-
+  teachers      TeacherClass[]
+  
   @@map("classes")
 }
 
@@ -50,10 +73,15 @@ model Student {
   enrollmentYear  Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
+  version         Int                      @default(1)
+  
+  // Relations
   answerSheets    AnswerSheet[]
   projectStudents ProjectStudent[]
   scoreRecords    ScoreRecord[]
   memberships     StudentClassMembership[]
+  
+  @@map("students")
 }
 
 model StudentClassMembership {
@@ -66,28 +94,42 @@ model StudentClassMembership {
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  version          Int       @default(1)
+  
+  // Relations
   class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
   student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
+  
+  @@unique([studentId, classId, startDate])
   @@index([studentId])
   @@index([classId])
   @@index([startDate, endDate])
   @@index([classId, attendanceNumber])
+  @@map("student_class_memberships")
 }
 
-model MasterImage {
-  id            String         @id @default(uuid())
-  projectId     String
-  path          String
-  pageNumber    Int
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  layoutRegions LayoutRegion[]
-  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, pageNumber])
-  @@index([projectId])
+// 改善点：ClassTeachersテーブルの命名とフィールドの明確化
+model TeacherClass {
+  id        String   @id @default(uuid())
+  teacherId String
+  classId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  version   Int      @default(1)
+  
+  // Relations
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  
+  @@unique([teacherId, classId])
+  @@index([teacherId])
+  @@index([classId])
+  @@map("teacher_classes")
 }
+
+// =============================================================================
+// プロジェクト・画像管理
+// =============================================================================
 
 model Project {
   id                 String              @id @default(uuid())
@@ -98,18 +140,42 @@ model Project {
   userId             String
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
-  answerSheets       AnswerSheet[]
-  gradingAssignments GradingAssignment[]
-  layoutRegions      LayoutRegion[]
+  version            Int                 @default(1)
+  
+  // Relations
   masterImages       MasterImage[]
+  answerSheets       AnswerSheet[]
+  layoutRegions      LayoutRegion[]
+  gradingAssignments GradingAssignment[]
   user               User                @relation("UserProjects", fields: [userId], references: [id])
   projectSessions    ProjectSession[]
   projectStudents    ProjectStudent[]
   questionGroups     QuestionGroup[]
   scoreRecords       ScoreRecord[]
-  questions          Question[]
-
+  
   @@index([userId])
+  @@index([examDate])
+  @@map("projects")
+}
+
+model MasterImage {
+  id            String         @id @default(uuid())
+  projectId     String
+  path          String
+  pageNumber    Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  version       Int            @default(1)
+  
+  // Relations
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  layoutRegions LayoutRegion[]
+  answerSheets  AnswerSheet[]  // 新規：直接関連付け
+  
+  @@unique([projectId, pageNumber])
+  @@index([projectId])
+  @@index([projectId, pageNumber])
+  @@map("master_images")
 }
 
 model ProjectStudent {
@@ -120,25 +186,37 @@ model ProjectStudent {
   customOrder Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+  
+  // Relations
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+  
   @@unique([projectId, studentId])
   @@index([projectId])
   @@index([studentId])
   @@index([projectId, customOrder])
+  @@map("project_students")
 }
 
 model GradingAssignment {
   projectId  String
   userId     String
   assignedAt DateTime @default(now())
+  version    Int      @default(1)
+  
+  // Relations
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+  
   @@id([projectId, userId])
   @@index([userId])
+  @@map("grading_assignments")
 }
+
+// =============================================================================
+// レイアウト・採点領域
+// =============================================================================
 
 model LayoutRegion {
   id                          String                       @id @default(uuid())
@@ -154,16 +232,25 @@ model LayoutRegion {
   orderIndex                  Int?
   createdAt                   DateTime                     @default(now())
   updatedAt                   DateTime                     @updatedAt
-  masterImage                 MasterImage                  @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
+  version                     Int                          @default(1)
+  
+  // Relations
   project                     Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  masterImage                 MasterImage                  @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
   questionScores              QuestionScore[]
   questionSubtotalAssignments QuestionSubtotalAssignment[]
   subtotalDefinitions         SubtotalDefinition[]
-  questionParts               QuestionPart[]
-
+  
   @@index([projectId])
   @@index([masterImageId])
+  @@index([projectId, orderIndex])
+  @@index([masterImageId, orderIndex])
+  @@map("layout_regions")
 }
+
+// =============================================================================
+// 問題グループ・小計管理（責務明確化）
+// =============================================================================
 
 model QuestionGroup {
   id        String              @id @default(uuid())
@@ -171,41 +258,54 @@ model QuestionGroup {
   projectId String
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
+  version   Int                 @default(1)
+  
+  // Relations
   project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   items     QuestionGroupItem[]
-
+  
   @@unique([projectId, name])
   @@index([projectId])
+  @@map("question_groups")
 }
 
 model QuestionGroupItem {
   id                  String                       @id @default(uuid())
   name                String
   questionGroupId     String
-  order               Int                          @default(0)
+  orderIndex          Int                          @default(0) // 統一的な命名
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
+  version             Int                          @default(1)
+  
+  // Relations
   questionGroup       QuestionGroup                @relation(fields: [questionGroupId], references: [id], onDelete: Cascade)
   questionAssignments QuestionSubtotalAssignment[]
   subtotalDefinitions SubtotalDefinition[]
-
+  
   @@unique([questionGroupId, name])
   @@index([questionGroupId])
-  @@index([questionGroupId, order])
+  @@index([questionGroupId, orderIndex])
+  @@map("question_group_items")
 }
 
+// 改善点：責務の明確化
 model SubtotalDefinition {
   id                  String            @id @default(uuid())
   layoutRegionId      String
   questionGroupItemId String
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
-  questionGroupItem   QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  version             Int               @default(1)
+  
+  // Relations
   layoutRegion        LayoutRegion      @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
-
+  questionGroupItem   QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  
   @@unique([layoutRegionId, questionGroupItemId])
   @@index([layoutRegionId])
   @@index([questionGroupItemId])
+  @@map("subtotal_definitions")
 }
 
 model QuestionSubtotalAssignment {
@@ -214,97 +314,56 @@ model QuestionSubtotalAssignment {
   questionGroupItemId    String
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
-  questionGroupItem      QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  version                Int               @default(1)
+  
+  // Relations
   questionLayoutRegion   LayoutRegion      @relation(fields: [questionLayoutRegionId], references: [id], onDelete: Cascade)
-
+  questionGroupItem      QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  
   @@unique([questionLayoutRegionId, questionGroupItemId])
   @@index([questionLayoutRegionId])
   @@index([questionGroupItemId])
+  @@map("question_subtotal_assignments")
 }
 
+// =============================================================================
+// 答案・採点関連（重要な改善）
+// =============================================================================
+
 model AnswerSheet {
-  id                 String                @id @default(uuid())
+  id                 String          @id @default(uuid())
   projectId          String
   studentId          String?
-  pageNumber         Int
+  masterImageId      String          // 新規：直接関連付け
+  pageNumber         Int             // 保持：互換性のため
   originalImagePath  String
   processedImagePath String?
   scoredPdfPath      String?
-  isScored           Boolean               @default(false)
+  isScored           Boolean         @default(false)
   totalScore         Float?
-  isAbsent           Boolean               @default(false)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  version            Int                   @default(1)
-  student            Student?              @relation(fields: [studentId], references: [id])
-  project            Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  isAbsent           Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  version            Int             @default(1)
+  
+  // Relations
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student            Student?        @relation(fields: [studentId], references: [id])
+  masterImage        MasterImage     @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
   questionScores     QuestionScore[]
-  questionPartScores QuestionPartScore[]
-
+  
   @@unique([projectId, studentId, pageNumber])
+  @@unique([projectId, studentId, masterImageId]) // 新規：直接関連付け用
   @@index([projectId])
-}
-
-model Question {
-  id               String                    @id @default(uuid())
-  projectId        String
-  title            String
-  description      String?
-  maxScore         Int                       @default(0)
-  orderIndex       Int                       @default(0)
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  project          Project                   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  questionParts    QuestionPart[]
-  questionScores   QuestionScore[]
-  
-  @@index([projectId])
-  @@index([projectId, orderIndex])
-}
-
-model QuestionPart {
-  id               String                    @id @default(uuid())
-  questionId       String
-  layoutRegionId   String
-  partLabel        String                    @default("")
-  partScore        Int                       @default(0)
-  orderIndex       Int                       @default(0)
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  question         Question                  @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  layoutRegion     LayoutRegion              @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
-  partScores       QuestionPartScore[]
-  
-  @@unique([questionId, layoutRegionId])
-  @@index([questionId])
-  @@index([layoutRegionId])
-  @@index([questionId, orderIndex])
-}
-
-model QuestionPartScore {
-  id               String                    @id @default(uuid())
-  questionPartId   String
-  answerSheetId    String
-  score            Decimal?
-  comment          String?
-  scoredByUserId   String
-  status           String                    @default("proposed")
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  scoreVersion     Int                       @default(1)
-  questionPart     QuestionPart              @relation(fields: [questionPartId], references: [id], onDelete: Cascade)
-  answerSheet      AnswerSheet               @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
-  scoredByUser     User                      @relation(fields: [scoredByUserId], references: [id])
-  
-  @@unique([questionPartId, answerSheetId, scoredByUserId])
-  @@index([questionPartId])
-  @@index([answerSheetId])
-  @@index([scoredByUserId])
+  @@index([studentId])
+  @@index([masterImageId])
+  @@index([projectId, isScored])
+  @@index([projectId, isAbsent])
+  @@map("answer_sheets")
 }
 
 model QuestionScore {
   id             String       @id @default(uuid())
-  questionId     String?
   answerSheetId  String
   layoutRegionId String
   partialScore   Decimal?
@@ -313,18 +372,23 @@ model QuestionScore {
   status         String       @default("proposed")
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-  scoreVersion   Int          @default(1)
-  question       Question?    @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  scoredByUser   User         @relation(fields: [scoredByUserId], references: [id])
-  layoutRegion   LayoutRegion @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+  version        Int          @default(1) // 統一的なバージョン管理
+  
+  // Relations
   answerSheet    AnswerSheet  @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
-
+  layoutRegion   LayoutRegion @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+  scoredByUser   User         @relation(fields: [scoredByUserId], references: [id])
+  
   @@unique([answerSheetId, layoutRegionId, scoredByUserId])
-  @@index([answerSheetId, layoutRegionId, status])
+  @@index([answerSheetId])
   @@index([layoutRegionId])
-  @@index([questionId])
+  @@index([scoredByUserId])
+  @@index([answerSheetId, layoutRegionId, status])
+  @@index([status])
+  @@map("question_scores")
 }
 
+// 改善点：採点進捗計算の簡素化
 model ScoreRecord {
   id                String   @id @default(uuid())
   studentId         String
@@ -335,13 +399,23 @@ model ScoreRecord {
   finalizedByUserId String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-  finalizedByUser   User?    @relation(fields: [finalizedByUserId], references: [id])
-  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  version           Int      @default(1)
+  
+  // Relations
   student           Student  @relation(fields: [studentId], references: [id])
-
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  finalizedByUser   User?    @relation(fields: [finalizedByUserId], references: [id])
+  
   @@unique([studentId, projectId])
   @@index([projectId])
+  @@index([studentId])
+  @@index([finalizedByUserId])
+  @@map("score_records")
 }
+
+// =============================================================================
+// セッション・ロック管理
+// =============================================================================
 
 model ProjectSession {
   id                String    @id @default(uuid())
@@ -350,11 +424,16 @@ model ProjectSession {
   machineIdentifier String?
   sessionStartedAt  DateTime  @default(now())
   sessionEndedAt    DateTime?
-  user              User      @relation(fields: [userId], references: [id])
+  version           Int       @default(1)
+  
+  // Relations
   project           Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
+  user              User      @relation(fields: [userId], references: [id])
+  
   @@index([projectId])
   @@index([userId])
+  @@index([projectId, userId])
+  @@map("project_sessions")
 }
 
 model Lock {
@@ -364,19 +443,13 @@ model Lock {
   lockedByUserId   String
   lockedAt         DateTime  @default(now())
   expiresAt        DateTime?
+  version          Int       @default(1)
+  
+  // Relations
   lockedByUser     User      @relation(fields: [lockedByUserId], references: [id])
-
+  
   @@index([lockedResourceId, resourceType])
+  @@index([lockedByUserId])
+  @@index([expiresAt])
   @@map("locks")
-}
-
-model ClassTeachers {
-  A       String
-  B       String
-  User    User   @relation(fields: [B], references: [id], onDelete: Cascade)
-  classes Class  @relation(fields: [A], references: [id], onDelete: Cascade)
-
-  @@unique([A, B], map: "_ClassTeachers_AB_unique")
-  @@index([B], map: "_ClassTeachers_B_index")
-  @@map("_ClassTeachers")
 }
