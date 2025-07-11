@@ -302,6 +302,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-question-group-items-by-group-id", questionGroupId),
   getQuestionGroupItemById: (id: string) =>
     ipcRenderer.invoke("get-question-group-item-by-id", id),
+  updateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) =>
+    ipcRenderer.invoke("update-question-group-item-orders", orders),
 
   // QuestionSubtotalAssignment related
   createQuestionSubtotalAssignment: (

@@ -8,14 +8,14 @@ import {
   getLayoutRegionById as dbGetLayoutRegionById,
   createManyLayoutRegions as dbCreateManyLayoutRegions,
   updateLayoutRegionOrders as dbUpdateLayoutRegionOrders,
-} from "@/lib/prisma/layoutRegion"
+} from "../lib/prisma/layoutRegion"
 import {
   createQuestionGroup as dbCreateQuestionGroup,
   updateQuestionGroup as dbUpdateQuestionGroup,
   deleteQuestionGroup as dbDeleteQuestionGroup,
   getQuestionGroupsByProjectId as dbGetQuestionGroupsByProjectId,
   getQuestionGroupById as dbGetQuestionGroupById,
-} from "@/lib/prisma/questionGroup"
+} from "../lib/prisma/questionGroup"
 import {
   createQuestionGroupItem as dbCreateQuestionGroupItem,
   updateQuestionGroupItem as dbUpdateQuestionGroupItem,
@@ -23,7 +23,7 @@ import {
   getQuestionGroupItemsByGroupId as dbGetQuestionGroupItemsByGroupId,
   getQuestionGroupItemById as dbGetQuestionGroupItemById,
   createManyQuestionGroupItems as dbCreateManyQuestionGroupItems,
-} from "@/lib/prisma/questionGroupItem"
+} from "../lib/prisma/questionGroupItem"
 import {
   createSubtotalDefinition as dbCreateSubtotalDefinition,
   deleteSubtotalDefinition as dbDeleteSubtotalDefinition,
@@ -31,7 +31,7 @@ import {
   getSubtotalDefinitionsByQuestionGroupItemId as dbGetSubtotalDefsByQGItemId,
   createManySubtotalDefinitions as dbCreateManySubtotalDefinitions,
   deleteSubtotalDefinitionsByLayoutRegionId as dbDeleteSubDefsByLayoutRegionId,
-} from "@/lib/prisma/subtotalDefinition"
+} from "../lib/prisma/subtotalDefinition"
 import {
   createQuestionSubtotalAssignment as dbCreateQuestionSubtotalAssignment,
   deleteQuestionSubtotalAssignment as dbDeleteQuestionSubtotalAssignment,
@@ -40,7 +40,7 @@ import {
   createManyQuestionSubtotalAssignments as dbCreateManyQuestionSubtotalAssignments,
   deleteAssignmentsByQuestionLayoutRegionId as dbDeleteAssignsByQuestionLayoutRegionId,
   deleteAssignmentsByQuestionGroupItemId as dbDeleteAssignsByQGItemId,
-} from "@/lib/prisma/questionSubtotalAssignment"
+} from "../lib/prisma/questionSubtotalAssignment"
 
 export function setupLayoutHandlers(): void {
   // --- LayoutRegion Handlers ---

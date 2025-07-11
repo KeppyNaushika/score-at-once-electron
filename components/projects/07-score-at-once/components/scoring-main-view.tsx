@@ -419,7 +419,7 @@ export default function ScoringMainView() {
               <div className="text-sm text-gray-500">
                 {currentQuestion ? (
                   <>
-                    {currentQuestion.questionNumber} ({currentQuestion.points}
+                    {currentQuestion.orderIndex || 1} ({currentQuestion.points}
                     点)
                   </>
                 ) : (
@@ -682,7 +682,7 @@ export default function ScoringMainView() {
           isOpen={showPartialScoreModal}
           value={partialScoreInput}
           maxPoints={currentQuestion?.points || 0}
-          questionNumber={currentQuestion?.questionNumber || ""}
+          questionNumber={currentQuestion?.orderIndex?.toString() || "1"}
           onClose={handlePartialScoreCancel}
           onChange={handlePartialScoreChange}
         />
@@ -693,7 +693,7 @@ export default function ScoringMainView() {
           onClose={() => setShowScoreComparison(false)}
           answerSheetId={currentAnswerSheet?.id || ""}
           layoutRegionId={currentQuestion?.id || ""}
-          questionNumber={currentQuestion?.questionNumber || ""}
+          questionNumber={currentQuestion?.orderIndex?.toString() || "1"}
           maxScore={currentQuestion?.points || 0}
           studentName={
             currentAnswerSheet

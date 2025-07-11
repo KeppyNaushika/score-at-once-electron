@@ -180,6 +180,7 @@ model QuestionGroupItem {
   id                  String                       @id @default(uuid())
   name                String
   questionGroupId     String
+  order               Int                          @default(0)
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
   questionGroup       QuestionGroup                @relation(fields: [questionGroupId], references: [id], onDelete: Cascade)
@@ -188,6 +189,7 @@ model QuestionGroupItem {
 
   @@unique([questionGroupId, name])
   @@index([questionGroupId])
+  @@index([questionGroupId, order])
 }
 
 model SubtotalDefinition {

@@ -26,7 +26,6 @@ export const createSharedPrismaClient = (): PrismaClient => {
 
 // データベースの初期化（初回起動時）
 export const initializeDatabase = async (): Promise<boolean> => {
-  const databasePath = getDatabasePath()
 
   try {
     // データベースファイルの存在確認

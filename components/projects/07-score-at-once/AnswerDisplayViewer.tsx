@@ -31,6 +31,7 @@ interface QuestionRegion {
   id: string
   label: string
   questionNumber: string
+  orderIndex?: number
   points: number
   x: number // 0.0 - 1.0 (画像全体に対する割合)
   y: number // 0.0 - 1.0
@@ -163,7 +164,7 @@ export default function AnswerDisplayViewer({
         ctx.fillStyle = "#ef4444"
         ctx.font = "16px sans-serif"
         ctx.fillText(
-          `設問${currentQuestion.questionNumber}`,
+          `設問${currentQuestion.orderIndex || 1}`,
           regionX + 5,
           regionY - 5,
         )
@@ -337,7 +338,7 @@ export default function AnswerDisplayViewer({
             </div>
             {currentQuestion && (
               <div>
-                設問: {currentQuestion.questionNumber} ({currentQuestion.points}
+                設問: {currentQuestion.orderIndex || 1} ({currentQuestion.points}
                 点)
               </div>
             )}

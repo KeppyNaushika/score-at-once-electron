@@ -11,8 +11,8 @@ import {
   getProjectProgress,
   CreateQuestionScoreData,
   UpdateQuestionScoreData,
-} from "@/lib/prisma/questionScore"
-import { initializeScoringRecords } from "@/lib/prisma/scoringInitializer"
+} from "../lib/prisma/questionScore"
+import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 
 export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー

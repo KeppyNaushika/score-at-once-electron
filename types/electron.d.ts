@@ -435,6 +435,7 @@ export interface MyAPI {
   getQuestionGroupItemById: (
     id: string,
   ) => Promise<QuestionGroupItemWithDetails | null>
+  updateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) => Promise<Prisma.BatchPayload>
 
   // SubtotalDefinition related
   createSubtotalDefinition: (

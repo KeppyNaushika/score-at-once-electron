@@ -250,23 +250,29 @@ export function QuestionAssignmentMatrix({
                     設問
                   </TableHead>
                   {questionGroups.map((group) => (
-                    <TableHead key={group.id} className="min-w-32 text-center">
-                      <div className="space-y-1">
-                        <div className="text-sm font-semibold">
-                          {group.name}
-                        </div>
-                        <div className="flex flex-wrap gap-1 justify-center">
-                          {group.items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="text-muted-foreground text-xs"
-                            >
-                              {item.name}
-                            </div>
-                          ))}
-                        </div>
+                    <TableHead 
+                      key={group.id} 
+                      className="min-w-24 text-center bg-blue-50/50 border-l-2 border-blue-200" 
+                      colSpan={group.items.length}
+                    >
+                      <div className="text-sm font-semibold text-blue-700">
+                        {group.name}
                       </div>
                     </TableHead>
+                  ))}
+                </TableRow>
+                <TableRow>
+                  <TableHead className="bg-background sticky left-0 z-10 w-40">
+                    {/* 空のセル */}
+                  </TableHead>
+                  {questionGroups.map((group) => (
+                    group.items.map((item) => (
+                      <TableHead key={item.id} className="min-w-24 text-center bg-gray-50/50">
+                        <div className="text-muted-foreground text-xs">
+                          {item.name}
+                        </div>
+                      </TableHead>
+                    ))
                   ))}
                 </TableRow>
               </TableHeader>
@@ -276,7 +282,7 @@ export function QuestionAssignmentMatrix({
                     <TableCell className="bg-background sticky left-0 z-10">
                       <div className="space-y-1">
                         <div className="font-medium">
-                          {region.questionNumber || region.label}
+                          {region.label || `問${region.orderIndex || 1}`}
                         </div>
                         <Badge variant="outline" className="text-xs">
                           {region.points || 0}点
@@ -284,26 +290,24 @@ export function QuestionAssignmentMatrix({
                       </div>
                     </TableCell>
                     {questionGroups.map((group) => (
-                      <TableCell key={group.id} className="text-center">
-                        <div className="flex flex-wrap gap-2 justify-center">
-                          {group.items.map((item) => (
-                            <div key={item.id} className="flex justify-center">
-                              <Checkbox
-                                checked={
-                                  assignments[region.id]?.has(item.id) || false
-                                }
-                                onCheckedChange={(checked) =>
-                                  handleAssignmentChange(
-                                    region.id,
-                                    item.id,
-                                    checked as boolean,
-                                  )
-                                }
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </TableCell>
+                      group.items.map((item) => (
+                        <TableCell key={item.id} className="text-center">
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={
+                                assignments[region.id]?.has(item.id) || false
+                              }
+                              onCheckedChange={(checked) =>
+                                handleAssignmentChange(
+                                  region.id,
+                                  item.id,
+                                  checked as boolean,
+                                )
+                              }
+                            />
+                          </div>
+                        </TableCell>
+                      ))
                     ))}
                   </TableRow>
                 ))}
