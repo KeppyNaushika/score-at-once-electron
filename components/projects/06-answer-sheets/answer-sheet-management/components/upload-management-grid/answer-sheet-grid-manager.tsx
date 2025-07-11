@@ -1,21 +1,21 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableHeader } from "@/components/ui/table"
+import { GridHeader } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/grid-header"
+import { StudentGridRow } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/student-grid-row"
 import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
-import { GridHeader } from "./grid-header"
-import { StudentGridRow } from "./student-grid-row"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Table, TableBody, TableHeader } from "@/components/ui/table"
 
 interface AnswerSheetGridManagerProps {
   projectId: string

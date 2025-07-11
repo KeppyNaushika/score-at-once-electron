@@ -1,7 +1,7 @@
 "use client"
 
+import { StudentWithAnswers } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
 import { useCallback, useEffect, useState } from "react"
-import { StudentWithAnswers } from "./types"
 
 interface UseStudentManagementProps {
   students: Array<{
@@ -12,17 +12,19 @@ interface UseStudentManagementProps {
     firstNameKana: string
     studentId: string
     attendanceNumber?: number | null
-    status?: 'participating' | 'expected' | 'absent'
+    status?: "participating" | "expected" | "absent"
     customOrder?: number | null
   }>
 }
 
 export function useStudentManagement({ students }: UseStudentManagementProps) {
-  const [studentsWithAnswers, setStudentsWithAnswers] = useState<StudentWithAnswers[]>([])
+  const [studentsWithAnswers, setStudentsWithAnswers] = useState<
+    StudentWithAnswers[]
+  >([])
 
   // 学生データの更新
   const updateStudentsWithAnswers = useCallback(() => {
-    const updatedStudents = students.map(student => ({
+    const updatedStudents = students.map((student) => ({
       ...student,
       isSelected: true,
       hasExistingAnswers: false,
@@ -38,30 +40,30 @@ export function useStudentManagement({ students }: UseStudentManagementProps) {
 
   // 学生選択状態の切り替え
   const toggleStudentSelection = useCallback((studentId: string) => {
-    setStudentsWithAnswers(prev => 
-      prev.map(student => 
-        student.id === studentId 
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) =>
+        student.id === studentId
           ? { ...student, isSelected: !student.isSelected }
-          : student
-      )
+          : student,
+      ),
     )
   }, [])
 
   // 全学生の選択状態切り替え
   const toggleAllStudents = useCallback((selected: boolean) => {
-    setStudentsWithAnswers(prev => 
-      prev.map(student => ({ ...student, isSelected: selected }))
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) => ({ ...student, isSelected: selected })),
     )
   }, [])
 
   // 上書き設定の切り替え
   const toggleOverwrite = useCallback((studentId: string) => {
-    setStudentsWithAnswers(prev =>
-      prev.map(student =>
+    setStudentsWithAnswers((prev) =>
+      prev.map((student) =>
         student.id === studentId
           ? { ...student, overwrite: !student.overwrite }
-          : student
-      )
+          : student,
+      ),
     )
   }, [])
 

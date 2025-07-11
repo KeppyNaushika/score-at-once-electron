@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { DeleteConfirmModal } from "@/components/projects/03-region-info/components/DeleteConfirmModal"
+import { RegionTableRow } from "@/components/projects/03-region-info/components/RegionTableRow"
+import { useDragAndDrop } from "@/components/projects/03-region-info/hooks/useDragAndDrop"
+import { useKeyboardNavigation } from "@/components/projects/03-region-info/hooks/useKeyboardNavigation"
 import type { LayoutRegionWithDetails } from "@/types/electron"
-import { RegionTableRow } from "./components/RegionTableRow"
-import { DeleteConfirmModal } from "./components/DeleteConfirmModal"
-import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation"
-import { useDragAndDrop } from "./hooks/useDragAndDrop"
-import { filterRegionsByPage, getGlobalIndex } from "./utils/regionUtils"
+import { useState } from "react"
 
 type RegionDetailsTableProps = {
   regions: LayoutRegionWithDetails[]
@@ -16,7 +15,6 @@ type RegionDetailsTableProps = {
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
   selectedMasterImageId?: string
 }
-
 
 const RegionDetailsTable = ({
   regions,
@@ -67,7 +65,6 @@ const RegionDetailsTable = ({
     setRegions(newRegions)
   }
 
-
   const handleDeleteRegion = (index: number) => {
     setRegionToDelete(index)
     setDeleteModalOpen(true)
@@ -107,7 +104,6 @@ const RegionDetailsTable = ({
     }
   }
 
-
   if (filteredRegions.length === 0) {
     return (
       <div className="p-8 text-center">
@@ -129,7 +125,9 @@ const RegionDetailsTable = ({
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h3 className="mb-2 text-lg font-semibold">作成した領域の詳細設定（全ページ統一順序）</h3>
+        <h3 className="mb-2 text-lg font-semibold">
+          作成した領域の詳細設定（全ページ統一順序）
+        </h3>
         <p className="text-muted-foreground text-sm">
           各行をクリックして選択し、種類・ラベル・配点などを設定してください。ドラッグ&ドロップで順序を変更できます。
         </p>

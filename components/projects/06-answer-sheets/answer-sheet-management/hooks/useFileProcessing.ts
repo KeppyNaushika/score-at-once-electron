@@ -1,16 +1,16 @@
 "use client"
 
+import { ConvertedFile } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
+import { convertPdfToImages } from "@/lib/pdfConverter"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import { convertPdfToImages } from "@/lib/pdfConverter"
-import { ConvertedFile } from "./types"
 
 export function useFileProcessing() {
   const [files, setFiles] = useState<ConvertedFile[]>([])
   const [isConverting, setIsConverting] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [currentPdfFile, setCurrentPdfFile] = useState<File | null>(null)
-  const [passwordError, setPasswordError] = useState<string>('')
+  const [passwordError, setPasswordError] = useState<string>("")
   const [isPasswordProcessing, setIsPasswordProcessing] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
 
@@ -18,7 +18,7 @@ export function useFileProcessing() {
   const convertFilesToImages = useCallback(
     async (fileList: File[], password?: string): Promise<ConvertedFile[]> => {
       const convertedFiles: ConvertedFile[] = []
-      
+
       for (const file of fileList) {
         try {
           if (file.type === "application/pdf") {
@@ -27,7 +27,7 @@ export function useFileProcessing() {
               // プレビューURL作成
               const blob = new Blob([images[i].buffer], { type: "image/png" })
               const preview = URL.createObjectURL(blob)
-              
+
               convertedFiles.push({
                 id: crypto.randomUUID(),
                 name: `${file.name} - ページ ${i + 1}`,
@@ -46,7 +46,7 @@ export function useFileProcessing() {
             // プレビューURL作成
             const blob = new Blob([buffer], { type: file.type })
             const preview = URL.createObjectURL(blob)
-            
+
             convertedFiles.push({
               id: crypto.randomUUID(),
               name: file.name,
@@ -61,7 +61,10 @@ export function useFileProcessing() {
           }
         } catch (error: any) {
           // パスワード要求エラーは静かに再スロー
-          if (error.message === 'password-required' || error.message === 'invalid-password') {
+          if (
+            error.message === "password-required" ||
+            error.message === "invalid-password"
+          ) {
             throw error
           }
           // その他のエラーのみログ出力
@@ -69,10 +72,10 @@ export function useFileProcessing() {
           throw error
         }
       }
-      
+
       return convertedFiles
     },
-    []
+    [],
   )
 
   // ファイル処理
@@ -98,7 +101,7 @@ export function useFileProcessing() {
             }
           } catch (error: any) {
             // パスワード要求エラーの場合
-            if (error.message === 'password-required') {
+            if (error.message === "password-required") {
               passwordRequiredFiles.push(file)
             } else {
               console.error(`ファイル処理エラー (${file.name}):`, error)
@@ -109,7 +112,7 @@ export function useFileProcessing() {
 
         // 正常に処理されたファイルを追加
         if (processedFiles.length > 0) {
-          setFiles(prev => [...prev, ...processedFiles])
+          setFiles((prev) => [...prev, ...processedFiles])
           toast.success(`${processedFiles.length}個のファイルを処理しました`)
         }
 
@@ -118,7 +121,7 @@ export function useFileProcessing() {
           setPendingFiles(passwordRequiredFiles.slice(1)) // 2番目以降を保留
           setCurrentPdfFile(passwordRequiredFiles[0]) // 最初のファイルを設定
           setShowPasswordDialog(true)
-          setPasswordError('')
+          setPasswordError("")
         }
       } catch (error) {
         console.error("ファイル処理エラー:", error)
@@ -127,7 +130,7 @@ export function useFileProcessing() {
         setIsConverting(false)
       }
     },
-    [convertFilesToImages]
+    [convertFilesToImages],
   )
 
   return {

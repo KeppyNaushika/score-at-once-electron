@@ -1,11 +1,10 @@
 "use client"
 
-import { LayoutRegionAreaType } from "@/types/common.types"
-import { useImageCanvasInteraction } from "./hooks/useImageCanvasInteraction"
-import { AreaRenderer } from "./AreaRenderer"
-import { DragPreview } from "./DragPreview"
-import { LayoutRegionArea } from "@/types/common.types"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { AreaRenderer } from "@/components/projects/02-template/AreaRenderer"
+import { DragPreview } from "@/components/projects/02-template/DragPreview"
+import { useImageCanvasInteraction } from "@/components/projects/02-template/hooks/useImageCanvasInteraction"
+import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
+import { useEffect, useState } from "react"
 
 type ImageCanvasProps = {
   backgroundImageUrl: string | null

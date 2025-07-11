@@ -1,10 +1,10 @@
 "use client"
 
 import { ToastProvider } from "@/components/common/ToastProvider"
+import Navigation from "@/components/layout/Navigation"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 import React, { useEffect, useState } from "react"
-import Navigation from "./Navigation"
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSidebarMinimized, setIsSidebarMinimized] = useState(false)

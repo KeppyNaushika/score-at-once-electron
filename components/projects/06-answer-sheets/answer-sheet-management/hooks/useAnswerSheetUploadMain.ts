@@ -1,13 +1,13 @@
 "use client"
 
+import { LayoutRegion, MasterImage, UseAnswerSheetUploadProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
+import { useFileProcessing } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useFileProcessing"
+import { useStudentManagement } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useStudentManagement"
 import type { UploadAnswerSheetFileData } from "@/types/electron"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { LayoutRegion, MasterImage, UseAnswerSheetUploadProps } from "./types"
-import { useFileProcessing } from "./useFileProcessing"
-import { useStudentManagement } from "./useStudentManagement"
 
 export function useAnswerSheetUploadMain({
   projectId,

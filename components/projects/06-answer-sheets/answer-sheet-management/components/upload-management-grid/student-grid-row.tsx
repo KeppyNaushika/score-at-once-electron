@@ -1,9 +1,9 @@
 "use client"
 
-import { TableRow } from "@/components/ui/table"
-import { AnswerCell } from "./answer-cell"
-import { StudentCell } from "./student-cell"
+import { AnswerCell } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/answer-cell"
+import { StudentCell } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/student-cell"
 import type { StudentGridRowProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import { TableRow } from "@/components/ui/table"
 
 export function StudentGridRow({
   student,

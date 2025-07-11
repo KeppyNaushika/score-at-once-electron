@@ -22,7 +22,7 @@ type ScoringStatus =
 
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import CroppedAnswerImage from "./components/CroppedAnswerImage"
+import CroppedAnswerImage from "@/components/projects/07-score-at-once/components/CroppedAnswerImage"
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
@@ -163,9 +163,10 @@ export default function AnswerGridView({
     null,
   )
   const [isDragging, setIsDragging] = useState(false)
-  const [dragCurrent, setDragCurrent] = useState<{ x: number; y: number } | null>(
-    null,
-  )
+  const [dragCurrent, setDragCurrent] = useState<{
+    x: number
+    y: number
+  } | null>(null)
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数 (0-10)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -368,9 +369,9 @@ export default function AnswerGridView({
     // グリッドコンテナに対する相対座標を保存
     if (gridRef.current) {
       const gridRect = gridRef.current.getBoundingClientRect()
-      setDragStart({ 
-        x: event.clientX - gridRect.left, 
-        y: event.clientY - gridRect.top 
+      setDragStart({
+        x: event.clientX - gridRect.left,
+        y: event.clientY - gridRect.top,
       })
     }
     setIsDragging(false)
@@ -435,7 +436,7 @@ export default function AnswerGridView({
       const gridRect = gridRef.current.getBoundingClientRect()
       const currentX = event.clientX - gridRect.left
       const currentY = event.clientY - gridRect.top
-      
+
       const distance = Math.sqrt(
         Math.pow(currentX - dragStart.x, 2) +
           Math.pow(currentY - dragStart.y, 2),
@@ -443,7 +444,7 @@ export default function AnswerGridView({
       if (distance > 5 && !isDragging) {
         setIsDragging(true)
       }
-      
+
       // ドラッグ中の現在位置を更新（グリッドコンテナに対する相対座標）
       if (isDragging || distance > 5) {
         setDragCurrent({ x: currentX, y: currentY })
@@ -464,18 +465,18 @@ export default function AnswerGridView({
   // 選択範囲の描画を計算する関数
   const getDragSelectionRect = () => {
     if (!dragStart || !dragCurrent || !gridRef.current) return null
-    
+
     // スクロール位置を取得
     const scrollLeft = gridRef.current.scrollLeft
     const scrollTop = gridRef.current.scrollTop
-    
+
     // dragStartとdragCurrentは既にグリッドコンテナに対する相対座標だが、
     // 表示用にはスクロール位置を加算する必要がある
     const startX = Math.min(dragStart.x, dragCurrent.x) + scrollLeft
     const endX = Math.max(dragStart.x, dragCurrent.x) + scrollLeft
     const startY = Math.min(dragStart.y, dragCurrent.y) + scrollTop
     const endY = Math.max(dragStart.y, dragCurrent.y) + scrollTop
-    
+
     return {
       left: startX,
       top: startY,
@@ -542,7 +543,7 @@ export default function AnswerGridView({
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className={`grid min-w-0 gap-2 p-1 select-none relative ${
+        className={`relative grid min-w-0 gap-2 p-1 select-none ${
           layoutDirection === "down-right" || layoutDirection === "down-left"
             ? "h-full"
             : "h-auto"
@@ -565,11 +566,11 @@ export default function AnswerGridView({
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "column"
               : "row",
-          width: 
+          width:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "auto" // 列表示: 内容に応じて幅を拡張
               : "100%", // 行表示: 幅100%
-          maxWidth: 
+          maxWidth:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "none" // 列表示: 最大幅制限なし
               : "100%", // 行表示: 最大幅100%
@@ -640,10 +641,13 @@ export default function AnswerGridView({
                     <Badge variant="outline" className="h-4 px-1 text-xs">
                       {answer.status === "correct" || answer.status === "final"
                         ? `${answer.maxScore}/${answer.maxScore}`
-                        : answer.status === "incorrect" || answer.status === "no_answer"
+                        : answer.status === "incorrect" ||
+                            answer.status === "no_answer"
                           ? `0/${answer.maxScore}`
-                          : answer.status === "partial" || answer.status === "pending"
-                            ? answer.currentScore !== null && answer.currentScore !== undefined
+                          : answer.status === "partial" ||
+                              answer.status === "pending"
+                            ? answer.currentScore !== null &&
+                              answer.currentScore !== undefined
                               ? `${answer.currentScore}/${answer.maxScore}`
                               : `-/${answer.maxScore}`
                             : answer.status === "proposed"
@@ -671,28 +675,31 @@ export default function AnswerGridView({
             </div>
           )
         })}
-        
+
         {/* ドラッグ選択範囲の可視化 */}
-        {isDragging && dragStart && dragCurrent && (() => {
-          const rect = getDragSelectionRect()
-          if (!rect) return null
-          
-          return (
-            <div
-              className="absolute pointer-events-none"
-              style={{
-                left: rect.left,
-                top: rect.top,
-                width: rect.width,
-                height: rect.height,
-                backgroundColor: 'rgba(59, 130, 246, 0.2)', // 透過した青色
-                border: '2px solid rgba(59, 130, 246, 0.5)',
-                borderRadius: '4px',
-                zIndex: 1000,
-              }}
-            />
-          )
-        })()}
+        {isDragging &&
+          dragStart &&
+          dragCurrent &&
+          (() => {
+            const rect = getDragSelectionRect()
+            if (!rect) return null
+
+            return (
+              <div
+                className="pointer-events-none absolute"
+                style={{
+                  left: rect.left,
+                  top: rect.top,
+                  width: rect.width,
+                  height: rect.height,
+                  backgroundColor: "rgba(59, 130, 246, 0.2)", // 透過した青色
+                  border: "2px solid rgba(59, 130, 246, 0.5)",
+                  borderRadius: "4px",
+                  zIndex: 1000,
+                }}
+              />
+            )
+          })()}
       </div>
     </div>
   )

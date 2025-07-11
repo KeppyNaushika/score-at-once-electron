@@ -1,11 +1,14 @@
 "use client"
 
-import React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Table,
   TableBody,
@@ -16,24 +19,19 @@ import {
 } from "@/components/ui/table"
 import {
   BookOpen,
+  Calendar,
   Edit,
+  GraduationCap,
   Info,
   PlusCircle,
   Search,
   Trash2,
   Users,
-  GraduationCap,
-  Calendar,
 } from "lucide-react"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import ClassModal from "./ClassModal"
+import ClassModal from "@/components/class/ClassModal"
 
 interface ClassWithMemberships {
   id: string

@@ -3,6 +3,9 @@
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
+import ProjectStudentAddModal from "@/components/projects/05-students/ProjectStudentAddModal"
+import SortableStudentTable from "@/components/projects/05-students/SortableStudentTable"
+import StudentRemovalConfirmModal from "@/components/projects/05-students/StudentRemovalConfirmModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -13,9 +16,6 @@ import {
 import { Info, Plus, UserCheck, Users, UserX } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import ProjectStudentAddModal from "./ProjectStudentAddModal"
-import SortableStudentTable from "./SortableStudentTable"
-import StudentRemovalConfirmModal from "./StudentRemovalConfirmModal"
 
 // 生徒の状態を表す型
 type StudentStatus = "participating" | "expected" | "absent"

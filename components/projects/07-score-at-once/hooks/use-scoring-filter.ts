@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react"
-import { DEFAULT_SHORTCUTS } from "./use-scoring-keyboard"
+import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/use-scoring-keyboard"
+import { useCallback, useEffect, useState } from "react"
 import type {
-  ScoringStatus,
-  QuestionRegion,
   AnswerSheet,
+  QuestionRegion,
   ScoringData,
+  ScoringStatus,
 } from "../types"
 
 interface FilterSettings {

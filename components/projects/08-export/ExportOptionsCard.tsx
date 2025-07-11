@@ -4,7 +4,9 @@ import {
   ExportOptions,
   PdfOrientation,
 } from "@/app/projects/[projectId]/08-export/types"
-import ScoringMarkSettings, { ScoringMarkConfig } from "./ScoringMarkSettings"
+import ScoringMarkSettings, {
+  ScoringMarkConfig,
+} from "@/components/projects/08-export/ScoringMarkSettings"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
