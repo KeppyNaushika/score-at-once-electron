@@ -1,8 +1,22 @@
 module.exports = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: "**/{node_modules/sharp,node_modules/@img}/**"
+    },
     name: "Score at Once",
     executableName: "score-at-once",
+    afterCopy: [
+      (buildPath, electronVersion, platform, arch, callback) => {
+        // Rebuild native modules for the target platform
+        const { execSync } = require('child_process');
+        try {
+          execSync('npm rebuild --arch=' + arch, { cwd: buildPath });
+          callback();
+        } catch (error) {
+          callback(error);
+        }
+      }
+    ],
   },
   rebuildConfig: {},
   makers: [
