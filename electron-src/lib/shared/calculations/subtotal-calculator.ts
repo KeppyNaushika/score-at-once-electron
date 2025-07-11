@@ -1,10 +1,8 @@
-import { 
-  getSubtotalDefinitionsByLayoutRegionId,
-  getAssignmentsByQuestionGroupItemId 
-} from "../../prisma/questionGroup"
+import { getAssignmentsByQuestionGroupItemId } from "../../prisma/questionSubtotalAssignment"
+import { getSubtotalDefinitionsByLayoutRegionId } from "../../prisma/subtotalDefinition"
 
 // 小計点計算で使用する型定義
-export interface ScoreDetail {
+export interface SubtotalScoreDetail {
   questionId: string
   score: number | null
   maxScore: number
@@ -25,24 +23,25 @@ export interface SubtotalTargetMap {
  * GROUP内OR、GROUP間ANDのロジックを実装
  */
 export async function checkIfQuestionIsInSubtotal(
-  questionId: string, 
-  subtotalRegionId: string
+  questionId: string,
+  subtotalRegionId: string,
 ): Promise<boolean> {
   try {
     // 小計点領域に関連付けられたグループ項目を取得
-    const subtotalDefinitions = await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
-    
+    const subtotalDefinitions =
+      await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
       return false
     }
 
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
-    
+
     for (const definition of subtotalDefinitions) {
       const groupId = definition.questionGroupItem?.questionGroupId
       if (!groupId) continue
-      
+
       if (!groupMap.has(groupId)) {
         groupMap.set(groupId, [])
       }
@@ -55,10 +54,10 @@ export async function checkIfQuestionIsInSubtotal(
 
     // 各グループで該当する設問を取得（GROUP内OR）
     const groupQuestionSets: Set<string>[] = []
-    
+
     for (const [groupId, itemIds] of groupMap) {
       const groupQuestionIds = new Set<string>()
-      
+
       // 各項目に関連付けられた設問を取得
       for (const itemId of itemIds) {
         try {
@@ -72,7 +71,7 @@ export async function checkIfQuestionIsInSubtotal(
           console.error(`Error getting assignments for item ${itemId}:`, error)
         }
       }
-      
+
       groupQuestionSets.push(groupQuestionIds)
     }
 
@@ -83,9 +82,11 @@ export async function checkIfQuestionIsInSubtotal(
     } else {
       finalQuestionIds = new Set()
       const firstGroup = groupQuestionSets[0]
-      
+
       for (const qId of firstGroup) {
-        const existsInAllGroups = groupQuestionSets.every(group => group.has(qId))
+        const existsInAllGroups = groupQuestionSets.every((group) =>
+          group.has(qId),
+        )
         if (existsInAllGroups) {
           finalQuestionIds.add(qId)
         }
@@ -94,7 +95,10 @@ export async function checkIfQuestionIsInSubtotal(
 
     return finalQuestionIds.has(questionId)
   } catch (error) {
-    console.error(`Error checking if question ${questionId} is in subtotal ${subtotalRegionId}:`, error)
+    console.error(
+      `Error checking if question ${questionId} is in subtotal ${subtotalRegionId}:`,
+      error,
+    )
     return false
   }
 }
@@ -104,23 +108,24 @@ export async function checkIfQuestionIsInSubtotal(
  */
 export async function calculateSubtotalScore(
   subtotalRegionId: string,
-  studentScores: ScoreDetail[]
+  studentScores: SubtotalScoreDetail[],
 ): Promise<SubtotalResult> {
   try {
     // 小計点領域に関連付けられたグループ項目を取得
-    const subtotalDefinitions = await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
-    
+    const subtotalDefinitions =
+      await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
       return { score: 0, maxScore: 0 }
     }
 
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
-    
+
     for (const definition of subtotalDefinitions) {
       const groupId = definition.questionGroupItem?.questionGroupId
       if (!groupId) continue
-      
+
       if (!groupMap.has(groupId)) {
         groupMap.set(groupId, [])
       }
@@ -133,10 +138,10 @@ export async function calculateSubtotalScore(
 
     // 各グループで該当する設問を取得（GROUP内OR）
     const groupQuestionSets: Set<string>[] = []
-    
+
     for (const [groupId, itemIds] of groupMap) {
       const groupQuestionIds = new Set<string>()
-      
+
       // 各項目に関連付けられた設問を取得
       for (const itemId of itemIds) {
         try {
@@ -150,7 +155,7 @@ export async function calculateSubtotalScore(
           console.error(`Error getting assignments for item ${itemId}:`, error)
         }
       }
-      
+
       groupQuestionSets.push(groupQuestionIds)
     }
 
@@ -161,9 +166,11 @@ export async function calculateSubtotalScore(
     } else {
       finalQuestionIds = new Set()
       const firstGroup = groupQuestionSets[0]
-      
+
       for (const questionId of firstGroup) {
-        const existsInAllGroups = groupQuestionSets.every(group => group.has(questionId))
+        const existsInAllGroups = groupQuestionSets.every((group) =>
+          group.has(questionId),
+        )
         if (existsInAllGroups) {
           finalQuestionIds.add(questionId)
         }
@@ -173,9 +180,9 @@ export async function calculateSubtotalScore(
     // 該当する設問の点数を合計
     let totalScore = 0
     let totalMaxScore = 0
-    
+
     for (const questionId of finalQuestionIds) {
-      const scoreDetail = studentScores.find(s => s.questionId === questionId)
+      const scoreDetail = studentScores.find((s) => s.questionId === questionId)
       if (scoreDetail) {
         totalScore += scoreDetail.score || 0
         totalMaxScore += scoreDetail.maxScore
@@ -184,7 +191,10 @@ export async function calculateSubtotalScore(
 
     return { score: totalScore, maxScore: totalMaxScore }
   } catch (error) {
-    console.error(`Error calculating subtotal score for region ${subtotalRegionId}:`, error)
+    console.error(
+      `Error calculating subtotal score for region ${subtotalRegionId}:`,
+      error,
+    )
     return { score: 0, maxScore: 0 }
   }
 }
@@ -195,23 +205,28 @@ export async function calculateSubtotalScore(
  */
 export async function buildSubtotalTargetMap(
   subtotalRegions: any[],
-  questionRegions: any[]
+  questionRegions: any[],
 ): Promise<SubtotalTargetMap> {
   const subtotalTargetMap: SubtotalTargetMap = {}
-  
+
   for (const subtotalRegion of subtotalRegions) {
     const targetIndices: number[] = []
-    
+
     for (let i = 0; i < questionRegions.length; i++) {
       const questionRegion = questionRegions[i]
-      const isTarget = await checkIfQuestionIsInSubtotal(questionRegion.id, subtotalRegion.id)
+      const isTarget = await checkIfQuestionIsInSubtotal(
+        questionRegion.id,
+        subtotalRegion.id,
+      )
       if (isTarget) {
         targetIndices.push(i)
       }
     }
-    
+
     subtotalTargetMap[subtotalRegion.id] = targetIndices
-    console.log(`Subtotal ${subtotalRegion.id} targets questions at indices: ${targetIndices.join(', ')}`)
+    console.log(
+      `Subtotal ${subtotalRegion.id} targets questions at indices: ${targetIndices.join(", ")}`,
+    )
   }
 
   return subtotalTargetMap
@@ -222,17 +237,20 @@ export async function buildSubtotalTargetMap(
  */
 export async function getTargetQuestionIndicesForSubtotal(
   subtotalRegionId: string,
-  scores: ScoreDetail[]
+  scores: SubtotalScoreDetail[],
 ): Promise<number[]> {
   const targetIndices: number[] = []
-  
+
   for (let i = 0; i < scores.length; i++) {
     const score = scores[i]
-    const isTarget = await checkIfQuestionIsInSubtotal(score.questionId, subtotalRegionId)
+    const isTarget = await checkIfQuestionIsInSubtotal(
+      score.questionId,
+      subtotalRegionId,
+    )
     if (isTarget) {
       targetIndices.push(i)
     }
   }
-  
+
   return targetIndices
 }
