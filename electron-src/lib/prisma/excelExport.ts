@@ -79,6 +79,110 @@ function getStatusDisplayText(score: number | null, _maxScore: number, status: s
   }
 }
 
+// 小計点の対象設問インデックスを取得する関数
+async function getTargetQuestionIndicesForSubtotal(
+  subtotalRegionId: string,
+  scores: ScoreDetail[]
+): Promise<number[]> {
+  const targetIndices: number[] = []
+  
+  for (let i = 0; i < scores.length; i++) {
+    const score = scores[i]
+    const isTarget = await checkIfQuestionIsInSubtotal(score.questionId, subtotalRegionId)
+    if (isTarget) {
+      targetIndices.push(i)
+    }
+  }
+  
+  return targetIndices
+}
+
+// 設問が小計点の対象かチェックする関数（簡易版）
+async function isQuestionInSubtotal(
+  questionId: string,
+  subtotalRegionId: string,
+  subtotalScores: SubtotalScore[]
+): Promise<boolean> {
+  // 詳細版と同じロジックを使用
+  return await checkIfQuestionIsInSubtotal(questionId, subtotalRegionId)
+}
+
+// 設問が小計点の対象かチェックする関数（詳細版）
+async function checkIfQuestionIsInSubtotal(
+  questionId: string, 
+  subtotalRegionId: string
+): Promise<boolean> {
+  try {
+    // 小計点領域に関連付けられたグループ項目を取得
+    const subtotalDefinitions = await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+    
+    if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
+      return false
+    }
+
+    // グループ別に項目をまとめる
+    const groupMap = new Map<string, string[]>()
+    
+    for (const definition of subtotalDefinitions) {
+      const groupId = definition.questionGroupItem?.questionGroupId
+      if (!groupId) continue
+      
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, [])
+      }
+      groupMap.get(groupId)!.push(definition.questionGroupItemId)
+    }
+
+    if (groupMap.size === 0) {
+      return false
+    }
+
+    // 各グループで該当する設問を取得（GROUP内OR）
+    const groupQuestionSets: Set<string>[] = []
+    
+    for (const [groupId, itemIds] of groupMap) {
+      const groupQuestionIds = new Set<string>()
+      
+      // 各項目に関連付けられた設問を取得
+      for (const itemId of itemIds) {
+        try {
+          const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
+          if (assignments && assignments.length > 0) {
+            assignments.forEach((assignment: any) => {
+              groupQuestionIds.add(assignment.questionLayoutRegionId)
+            })
+          }
+        } catch (error) {
+          console.error(`Error getting assignments for item ${itemId}:`, error)
+        }
+      }
+      
+      groupQuestionSets.push(groupQuestionIds)
+    }
+
+    // GROUP間AND：全てのグループに共通する設問を取得
+    let finalQuestionIds: Set<string>
+    if (groupQuestionSets.length === 1) {
+      finalQuestionIds = groupQuestionSets[0]
+    } else {
+      finalQuestionIds = new Set()
+      const firstGroup = groupQuestionSets[0]
+      
+      for (const qId of firstGroup) {
+        const existsInAllGroups = groupQuestionSets.every(group => group.has(qId))
+        if (existsInAllGroups) {
+          finalQuestionIds.add(qId)
+        }
+      }
+    }
+
+    return finalQuestionIds.has(questionId)
+  } catch (error) {
+    console.error(`Error checking if question ${questionId} is in subtotal ${subtotalRegionId}:`, error)
+    return false
+  }
+}
+
 // 小計点を計算する関数（GROUP内OR、GROUP間AND）
 async function calculateSubtotalScore(
   subtotalRegionId: string,
@@ -248,6 +352,24 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
       }
       return a.y - b.y
     })
+
+    // 小計点の対象設問マップを事前に構築（パフォーマンス向上）
+    const subtotalTargetMap = new Map<string, number[]>()
+    
+    for (const subtotalRegion of subtotalRegions) {
+      const targetIndices: number[] = []
+      
+      for (let i = 0; i < questionRegions.length; i++) {
+        const questionRegion = questionRegions[i]
+        const isTarget = await checkIfQuestionIsInSubtotal(questionRegion.id, subtotalRegion.id)
+        if (isTarget) {
+          targetIndices.push(i)
+        }
+      }
+      
+      subtotalTargetMap.set(subtotalRegion.id, targetIndices)
+      console.log(`Subtotal ${subtotalRegion.id} targets questions at indices: ${targetIndices.join(', ')}`)
+    }
 
     // 採点データの構造化
     const scoringData: ScoringData[] = await Promise.all(
@@ -428,21 +550,45 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
         // 小計列の開始位置を計算
         let subtotalColIndex = 8
         
-        // 小計（小計点領域ごと）- 計算済みの値を使用
+        // 小計（小計点領域ごと）- 正確な小計点ロジックでExcel関数を組む
+        // 設問列の開始位置を計算（小計列の後から設問列が始まる）
+        const questionStartColIndex = 8 + subtotalRegions.length
+        
         for (let i = 0; i < subtotalRegions.length; i++) {
           const col = getExcelColumnLetter(subtotalColIndex)
           const subtotalScore = student.subtotalScores[i]
           
           if (subtotalScore) {
-            if (isScoreSheet) {
-              row.getCell(col).value = subtotalScore.score
+            console.log(`Processing subtotal ${col} for region ${subtotalScore.subtotalRegionId}: score=${subtotalScore.score}, maxScore=${subtotalScore.maxScore}`)
+            
+            // 事前に構築したマップから対象設問を取得
+            const targetQuestionIndices = subtotalTargetMap.get(subtotalScore.subtotalRegionId) || []
+            
+            if (targetQuestionIndices.length > 0) {
+              // 対象設問の列番号を取得
+              const targetCells = targetQuestionIndices.map(index => {
+                const questionCol = getExcelColumnLetter(questionStartColIndex + index)
+                return `${questionCol}${rowIndex}`
+              })
+              
+              if (isScoreSheet) {
+                // 点数一覧：対象設問の合計
+                const formula = targetCells.join('+')
+                console.log(`Setting formula for subtotal ${col}: ${formula}`)
+                row.getCell(col).value = { formula }
+              } else {
+                // 正誤一覧：対象設問の正答数
+                const formula = targetCells.map(cell => `IF(${cell}="○",1,0)`).join('+')
+                console.log(`Setting formula for subtotal ${col}: ${formula}`)
+                row.getCell(col).value = { formula }
+              }
             } else {
-              // 正誤一覧では該当する設問のうち正答した数を表示
-              // 実際の実装では、該当する設問の正答数を計算する必要がある
-              // 簡略化のため、小計点が満点の場合は正答数とする
-              const correctCount = subtotalScore.score === subtotalScore.maxScore ? subtotalScore.maxScore : 0
-              row.getCell(col).value = correctCount
+              console.log(`No target questions found for subtotal ${col}, setting to 0`)
+              row.getCell(col).value = 0
             }
+          } else {
+            console.log(`No subtotal score found for subtotal ${col}, setting to 0`)
+            row.getCell(col).value = 0
           }
           subtotalColIndex++
         }
