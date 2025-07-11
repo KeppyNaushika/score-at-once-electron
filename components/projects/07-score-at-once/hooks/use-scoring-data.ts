@@ -573,10 +573,18 @@ export function useScoringData({
     } = {}
 
     questionRegions.forEach((question) => {
-      const totalAnswers = answerSheets.length
+      // このLayoutRegionが属するMasterImageのページ番号を取得
+      const questionPageNumber = question.masterImageId ? (question as any).masterImage?.pageNumber : undefined
+      
+      // 同じページ番号のAnswerSheetのみを対象とする
+      const relevantAnswerSheets = answerSheets.filter(sheet => 
+        sheet.pageNumber === questionPageNumber
+      )
+      
+      const totalAnswers = relevantAnswerSheets.length
       let gradedAnswers = 0
 
-      answerSheets.forEach((sheet) => {
+      relevantAnswerSheets.forEach((sheet) => {
         const key = `${sheet.id}-${question.id}`
         const scoreData = scoringData[key]
         

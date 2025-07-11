@@ -10,6 +10,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useQuestionGroupPage } from "@/components/projects/04-question-group/hooks/useQuestionGroupPage"
 import { QuestionGroupManagement } from "@/components/projects/04-question-group/QuestionGroupManagement"
 import { QuestionAssignmentMatrix } from "@/components/projects/04-question-group/QuestionAssignmentMatrix"
+import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/SubtotalAssignmentMatrix"
 import { SubtotalPreview } from "@/components/projects/04-question-group/SubtotalPreview"
 
 export default function QuestionGroupPage() {
@@ -22,6 +23,7 @@ export default function QuestionGroupPage() {
     project,
     questionGroups,
     layoutRegions,
+    subtotalRegions,
     loading,
     error,
     selectedQuestionGroupId,
@@ -35,6 +37,7 @@ export default function QuestionGroupPage() {
     deleteQuestionGroupItem,
     updateQuestionGroupItemOrders,
     updateQuestionAssignments,
+    updateSubtotalAssignments,
     subtotalData,
   } = useQuestionGroupPage(projectId)
 
@@ -112,6 +115,25 @@ export default function QuestionGroupPage() {
                 questionGroups={questionGroups}
                 layoutRegions={layoutRegions}
                 onUpdateAssignments={updateQuestionAssignments}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 小計点とグループの関連付け */}
+        {questionGroups.length > 0 && subtotalRegions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                小計点とグループの関連付け
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <SubtotalAssignmentMatrix
+                questionGroups={questionGroups}
+                subtotalRegions={subtotalRegions}
+                onUpdateSubtotalAssignments={updateSubtotalAssignments}
               />
             </CardContent>
           </Card>

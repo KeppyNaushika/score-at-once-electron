@@ -147,6 +147,7 @@ export interface ProjectWithDetails {
   answerSheets?: AnswerSheetData[]
   tags?: TagData[]
   projectStudents?: ProjectStudentData[]
+  questions?: QuestionData[]
 }
 
 export interface ProjectStudentData {
@@ -283,4 +284,88 @@ export interface ScoringMarkConfig {
   showCorrect: boolean
   showIncorrect: boolean
   showPartial: boolean
+}
+
+// 新しいQuestion管理システムの型定義
+export interface QuestionData {
+  id: string
+  projectId: string
+  title: string
+  description?: string
+  maxScore: number
+  orderIndex: number
+  createdAt: Date
+  updatedAt: Date
+  questionParts?: QuestionPartData[]
+  questionScores?: QuestionScoreData[]
+}
+
+export interface QuestionPartData {
+  id: string
+  questionId: string
+  layoutRegionId: string
+  partLabel: string
+  partScore: number
+  orderIndex: number
+  createdAt: Date
+  updatedAt: Date
+  partScores?: QuestionPartScoreData[]
+  layoutRegion?: LayoutRegionArea
+}
+
+export interface QuestionPartScoreData {
+  id: string
+  questionPartId: string
+  answerSheetId: string
+  score: number | null
+  comment?: string
+  scoredByUserId: string
+  status: string
+  createdAt: Date
+  updatedAt: Date
+  scoreVersion: number
+}
+
+export interface QuestionCreateData {
+  projectId: string
+  title: string
+  description?: string
+  maxScore: number
+  orderIndex: number
+}
+
+export interface QuestionUpdateData {
+  title?: string
+  description?: string
+  maxScore?: number
+  orderIndex?: number
+}
+
+export interface QuestionPartCreateData {
+  questionId: string
+  layoutRegionId: string
+  partLabel: string
+  partScore: number
+  orderIndex: number
+}
+
+export interface QuestionPartUpdateData {
+  partLabel?: string
+  partScore?: number
+  orderIndex?: number
+}
+
+export interface QuestionPartScoreCreateData {
+  questionPartId: string
+  answerSheetId: string
+  score?: number | null
+  comment?: string
+  scoredByUserId: string
+  status?: string
+}
+
+export interface QuestionPartScoreUpdateData {
+  score?: number | null
+  comment?: string
+  status?: string
 }

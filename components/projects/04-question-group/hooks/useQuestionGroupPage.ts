@@ -24,6 +24,9 @@ export function useQuestionGroupPage(projectId: string) {
   const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
     [],
   )
+  const [subtotalRegions, setSubtotalRegions] = useState<LayoutRegionWithDetails[]>(
+    [],
+  )
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedQuestionGroupId, setSelectedQuestionGroupId] = useState<
@@ -77,6 +80,13 @@ export function useQuestionGroupPage(projectId: string) {
             region.type === "QUESTION_ANSWER",
         )
         setLayoutRegions(questionRegions)
+        
+        // 小計点タイプの領域のみフィルタリング
+        const subtotalRegions = layoutRegionsResponse.filter(
+          (region: LayoutRegionWithDetails) =>
+            region.type === "SUBTOTAL_SCORE",
+        )
+        setSubtotalRegions(subtotalRegions)
       }
       
       console.log("✅ loadData completed successfully")
@@ -344,6 +354,38 @@ export function useQuestionGroupPage(projectId: string) {
     [calculateSubtotalData],
   )
 
+  // 小計点とグループの関連付け更新
+  const updateSubtotalAssignments = useCallback(
+    async (subtotalLayoutRegionId: string, questionGroupItemIds: string[]) => {
+      try {
+        // 既存の関連付けを削除
+        await window.electronAPI.deleteSubtotalDefinitionsByLayoutRegionId(
+          subtotalLayoutRegionId,
+        )
+
+        // 新しい関連付けを作成
+        if (questionGroupItemIds.length > 0) {
+          const definitions = questionGroupItemIds.map(
+            (questionGroupItemId) => ({
+              layoutRegionId: subtotalLayoutRegionId,
+              questionGroupItemId,
+            }),
+          )
+
+          await window.electronAPI.createManySubtotalDefinitions(definitions)
+        }
+
+        return true
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "小計点関連付けの更新に失敗しました",
+        )
+        return false
+      }
+    },
+    [],
+  )
+
   // 初期化
   useEffect(() => {
     loadData()
@@ -360,6 +402,7 @@ export function useQuestionGroupPage(projectId: string) {
     project,
     questionGroups,
     layoutRegions,
+    subtotalRegions,
     loading,
     error,
     selectedQuestionGroupId,
@@ -373,6 +416,7 @@ export function useQuestionGroupPage(projectId: string) {
     deleteQuestionGroupItem,
     updateQuestionGroupItemOrders,
     updateQuestionAssignments,
+    updateSubtotalAssignments,
     subtotalData,
   }
 }

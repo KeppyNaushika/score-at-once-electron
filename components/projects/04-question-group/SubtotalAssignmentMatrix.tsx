@@ -14,37 +14,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Save, RotateCcw, Grid3X3 } from "lucide-react"
+import { RotateCcw, Calculator } from "lucide-react"
 import {
   QuestionGroupWithItems,
   LayoutRegionWithDetails,
 } from "@/types/electron"
 
-interface QuestionAssignmentMatrixProps {
+interface SubtotalAssignmentMatrixProps {
   questionGroups: QuestionGroupWithItems[]
-  layoutRegions: LayoutRegionWithDetails[]
-  onUpdateAssignments: (
-    questionLayoutRegionId: string,
+  subtotalRegions: LayoutRegionWithDetails[] // SUBTOTAL_SCORE type regions
+  onUpdateSubtotalAssignments: (
+    subtotalLayoutRegionId: string,
     questionGroupItemIds: string[],
   ) => Promise<boolean>
 }
 
-interface AssignmentState {
-  [questionId: string]: Set<string> // questionLayoutRegionId -> Set of questionGroupItemIds
+interface SubtotalAssignmentState {
+  [subtotalRegionId: string]: Set<string> // subtotalLayoutRegionId -> Set of questionGroupItemIds
 }
 
-interface OriginalAssignmentState {
-  [questionId: string]: string[] // questionLayoutRegionId -> Array of questionGroupItemIds
+interface OriginalSubtotalAssignmentState {
+  [subtotalRegionId: string]: string[] // subtotalLayoutRegionId -> Array of questionGroupItemIds
 }
 
-export function QuestionAssignmentMatrix({
+export function SubtotalAssignmentMatrix({
   questionGroups,
-  layoutRegions,
-  onUpdateAssignments,
-}: QuestionAssignmentMatrixProps) {
-  const [assignments, setAssignments] = useState<AssignmentState>({})
+  subtotalRegions,
+  onUpdateSubtotalAssignments,
+}: SubtotalAssignmentMatrixProps) {
+  const [assignments, setAssignments] = useState<SubtotalAssignmentState>({})
   const [originalAssignments, setOriginalAssignments] =
-    useState<OriginalAssignmentState>({})
+    useState<OriginalSubtotalAssignmentState>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -52,24 +52,24 @@ export function QuestionAssignmentMatrix({
   useEffect(() => {
     const loadAssignments = async () => {
       setLoading(true)
-      const newAssignments: AssignmentState = {}
+      const newAssignments: SubtotalAssignmentState = {}
 
-      for (const region of layoutRegions) {
+      for (const region of subtotalRegions) {
         try {
           const result =
-            (await window.electronAPI.getAssignmentsByQuestionLayoutRegionId(
+            (await window.electronAPI.getSubtotalDefinitionsByLayoutRegionId(
               region.id,
             )) as any
-          if (result && result.success && result.assignments) {
+          
+          if (result && Array.isArray(result)) {
             newAssignments[region.id] = new Set(
-              result.assignments.map(
-                (assignment: any) => assignment.questionGroupItemId,
-              ),
+              result.map((definition: any) => definition.questionGroupItemId),
             )
           } else {
             newAssignments[region.id] = new Set()
           }
         } catch (error) {
+          console.error(`Error loading subtotal assignments for region ${region.id}:`, error)
           newAssignments[region.id] = new Set()
         }
       }
@@ -86,28 +86,28 @@ export function QuestionAssignmentMatrix({
       setLoading(false)
     }
 
-    if (layoutRegions.length > 0) {
+    if (subtotalRegions.length > 0) {
       loadAssignments()
     }
-  }, [layoutRegions])
+  }, [subtotalRegions])
 
   // チェックボックスの状態を変更（逐次保存）
   const handleAssignmentChange = async (
-    questionId: string,
+    subtotalRegionId: string,
     itemId: string,
     checked: boolean,
   ) => {
     // UI状態を即座に更新
     setAssignments((prev) => {
       const newAssignments = { ...prev }
-      if (!newAssignments[questionId]) {
-        newAssignments[questionId] = new Set()
+      if (!newAssignments[subtotalRegionId]) {
+        newAssignments[subtotalRegionId] = new Set()
       }
 
       if (checked) {
-        newAssignments[questionId].add(itemId)
+        newAssignments[subtotalRegionId].add(itemId)
       } else {
-        newAssignments[questionId].delete(itemId)
+        newAssignments[subtotalRegionId].delete(itemId)
       }
 
       return newAssignments
@@ -118,7 +118,7 @@ export function QuestionAssignmentMatrix({
       setSaving(true)
       
       // 現在の関連付け状態を取得
-      const currentAssignments = assignments[questionId] || new Set()
+      const currentAssignments = assignments[subtotalRegionId] || new Set()
       const updatedAssignments = new Set(currentAssignments)
       
       if (checked) {
@@ -128,31 +128,31 @@ export function QuestionAssignmentMatrix({
       }
 
       // データベースに即座に保存
-      await onUpdateAssignments(questionId, Array.from(updatedAssignments))
+      await onUpdateSubtotalAssignments(subtotalRegionId, Array.from(updatedAssignments))
       
       // 成功時にoriginalAssignmentsも更新
       setOriginalAssignments((prev) => {
         const updated = { ...prev }
-        updated[questionId] = Array.from(updatedAssignments)
+        updated[subtotalRegionId] = Array.from(updatedAssignments)
         return updated
       })
       
-      console.log(`✅ 関連付け保存成功: 設問${questionId}, 項目${itemId}, チェック:${checked}`)
+      console.log(`✅ 小計点関連付け保存成功: 小計点${subtotalRegionId}, 項目${itemId}, チェック:${checked}`)
       
     } catch (error) {
-      console.error("❌ 関連付け保存エラー:", error)
+      console.error("❌ 小計点関連付け保存エラー:", error)
       
       // エラー時はUIを元に戻す
       setAssignments((prev) => {
         const revertedAssignments = { ...prev }
-        if (!revertedAssignments[questionId]) {
-          revertedAssignments[questionId] = new Set()
+        if (!revertedAssignments[subtotalRegionId]) {
+          revertedAssignments[subtotalRegionId] = new Set()
         }
 
         if (checked) {
-          revertedAssignments[questionId].delete(itemId)
+          revertedAssignments[subtotalRegionId].delete(itemId)
         } else {
-          revertedAssignments[questionId].add(itemId)
+          revertedAssignments[subtotalRegionId].add(itemId)
         }
 
         return revertedAssignments
@@ -162,62 +162,15 @@ export function QuestionAssignmentMatrix({
     }
   }
 
-  // 変更を保存
-  const handleSave = async () => {
-    setSaving(true)
-
-    try {
-      for (const [questionId, itemIds] of Object.entries(assignments)) {
-        await onUpdateAssignments(questionId, Array.from(itemIds))
-      }
-
-      // 成功時にoriginalAssignmentsを更新
-      setOriginalAssignments(
-        JSON.parse(
-          JSON.stringify(
-            Object.fromEntries(
-              Object.entries(assignments).map(([key, value]) => [
-                key,
-                Array.from(value),
-              ]),
-            ),
-          ),
-        ),
-      )
-    } catch (error) {
-      console.error("保存に失敗しました:", error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
   // 変更をリセット
   const handleReset = () => {
-    const resetAssignments: AssignmentState = {}
-    for (const [questionId, itemIds] of Object.entries(originalAssignments)) {
-      resetAssignments[questionId] = new Set(
+    const resetAssignments: SubtotalAssignmentState = {}
+    for (const [regionId, itemIds] of Object.entries(originalAssignments)) {
+      resetAssignments[regionId] = new Set(
         Array.isArray(itemIds) ? itemIds : [],
       )
     }
     setAssignments(resetAssignments)
-  }
-
-  // 変更があるかチェック
-  const hasChanges = () => {
-    for (const [questionId, itemIds] of Object.entries(assignments)) {
-      const originalIds = Array.isArray(originalAssignments[questionId])
-        ? (originalAssignments[questionId] as string[])
-        : []
-      const currentIds = Array.from(itemIds)
-
-      if (
-        currentIds.length !== originalIds.length ||
-        !currentIds.every((id) => originalIds.includes(id))
-      ) {
-        return true
-      }
-    }
-    return false
   }
 
   if (loading) {
@@ -225,7 +178,7 @@ export function QuestionAssignmentMatrix({
       <div className="py-8 text-center">
         <div className="border-primary mx-auto h-8 w-8 animate-spin rounded-full border-4 border-t-transparent"></div>
         <p className="text-muted-foreground mt-2">
-          関連付けデータを読み込み中...
+          小計点関連付けデータを読み込み中...
         </p>
       </div>
     )
@@ -234,19 +187,19 @@ export function QuestionAssignmentMatrix({
   if (questionGroups.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
-        <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
         <p>小計点がありません</p>
         <p className="text-sm">まず小計点と項目を作成してください</p>
       </div>
     )
   }
 
-  if (layoutRegions.length === 0) {
+  if (subtotalRegions.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
-        <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
-        <p>設問がありません</p>
-        <p className="text-sm">採点領域から設問を作成してください</p>
+        <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+        <p>小計点領域がありません</p>
+        <p className="text-sm">採点領域から小計点領域を作成してください</p>
       </div>
     )
   }
@@ -256,8 +209,8 @@ export function QuestionAssignmentMatrix({
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Grid3X3 className="h-5 w-5" />
-          <span className="font-medium">設問とグループ項目の関連付け</span>
+          <Calculator className="h-5 w-5" />
+          <span className="font-medium">小計点領域とグループ項目の関連付け</span>
           {saving && (
             <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
               保存中...
@@ -280,7 +233,7 @@ export function QuestionAssignmentMatrix({
       {/* マトリックステーブル */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">関連付けマトリックス</CardTitle>
+          <CardTitle className="text-base">小計点関連付けマトリックス</CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-96 w-full">
@@ -289,15 +242,15 @@ export function QuestionAssignmentMatrix({
               <TableHeader>
                 <TableRow>
                   <TableHead className="bg-background sticky left-0 z-10 w-48">
-                    設問
+                    小計点領域
                   </TableHead>
                   {questionGroups.map((group) => (
                     <TableHead 
                       key={group.id} 
-                      className="w-32 text-center bg-blue-50/50 border-l-2 border-blue-200" 
+                      className="w-32 text-center bg-green-50/50 border-l-2 border-green-200" 
                       colSpan={group.items.length}
                     >
-                      <div className="text-sm font-semibold text-blue-700">
+                      <div className="text-sm font-semibold text-green-700">
                         {group.name}
                       </div>
                     </TableHead>
@@ -319,15 +272,15 @@ export function QuestionAssignmentMatrix({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {layoutRegions.map((region) => (
+                {subtotalRegions.map((region) => (
                   <TableRow key={region.id}>
                     <TableCell className="bg-background sticky left-0 z-10">
                       <div className="flex items-center gap-2">
                         <div className="font-medium">
-                          {region.label || `問${region.orderIndex || 1}`}
+                          {region.label || `小計${region.orderIndex || 1}`}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {region.points || 0}点
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                          小計点
                         </Badge>
                       </div>
                     </TableCell>
@@ -361,15 +314,13 @@ export function QuestionAssignmentMatrix({
         </CardContent>
       </Card>
 
-      {/* 説明 */}
-      <div className="text-muted-foreground bg-muted/50 rounded-lg p-4 text-sm">
-        <h4 className="mb-2 font-medium">使い方:</h4>
+      {/* 計算ロジック説明 */}
+      <div className="text-muted-foreground bg-green-50 rounded-lg p-4 text-sm">
+        <h4 className="mb-2 font-medium text-green-800">計算ロジック:</h4>
         <ul className="ml-4 space-y-1">
-          <li>
-            • 各設問に対して、関連付けたいグループ項目にチェックを入れてください
-          </li>
-          <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
-          <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
+          <li>• <strong>グループ内はOR条件</strong>: 同じグループ内のいずれかの項目に該当する設問の合計</li>
+          <li>• <strong>グループ間はAND条件</strong>: 複数グループを選択した場合、すべてのグループに該当する設問の合計</li>
+          <li>• 例: 「大問1」OR「大問2」の設問 AND 「知識・理解」の設問 = 該当する設問の合計点</li>
           <li>• <strong>変更は自動で保存されます</strong>（逐次保存）</li>
         </ul>
       </div>
