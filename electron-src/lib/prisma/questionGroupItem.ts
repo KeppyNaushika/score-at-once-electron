@@ -81,7 +81,10 @@ export const updateQuestionGroupItemOrders = async (
     })
   )
 
-  return prisma.$transaction(updates)
+  const result = await prisma.$transaction(updates)
+  
+  // BatchPayload形式で返す
+  return { count: result.length }
 }
 
 export type QuestionGroupItemPayload = QuestionGroupItem

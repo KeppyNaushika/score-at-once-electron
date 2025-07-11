@@ -419,7 +419,7 @@ export default function ScoringMainView() {
               <div className="text-sm text-gray-500">
                 {currentQuestion ? (
                   <>
-                    {currentQuestion.orderIndex || 1} ({currentQuestion.points}
+                    {currentQuestion.label || currentQuestion.orderIndex || 1} ({currentQuestion.points}
                     点)
                   </>
                 ) : (

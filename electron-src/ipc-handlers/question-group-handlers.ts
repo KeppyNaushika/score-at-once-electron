@@ -34,6 +34,33 @@ import {
 } from "../lib/prisma/subtotalDefinition"
 
 export function setupQuestionGroupHandlers(): void {
+  // 既存のハンドラーをクリア（重複登録を防ぐ）
+  ipcMain.removeHandler("create-question-group")
+  ipcMain.removeHandler("update-question-group")
+  ipcMain.removeHandler("delete-question-group")
+  ipcMain.removeHandler("get-question-groups-by-project-id")
+  ipcMain.removeHandler("get-question-group-by-id")
+  ipcMain.removeHandler("create-question-group-item")
+  ipcMain.removeHandler("create-many-question-group-items")
+  ipcMain.removeHandler("update-question-group-item")
+  ipcMain.removeHandler("delete-question-group-item")
+  ipcMain.removeHandler("get-question-group-items-by-group-id")
+  ipcMain.removeHandler("get-question-group-item-by-id")
+  ipcMain.removeHandler("update-question-group-item-orders")
+  ipcMain.removeHandler("create-question-subtotal-assignment")
+  ipcMain.removeHandler("create-many-question-subtotal-assignments")
+  ipcMain.removeHandler("delete-question-subtotal-assignment")
+  ipcMain.removeHandler("delete-assignments-by-question-layout-region-id")
+  ipcMain.removeHandler("delete-assignments-by-question-group-item-id")
+  ipcMain.removeHandler("get-assignments-by-question-layout-region-id")
+  ipcMain.removeHandler("get-assignments-by-question-group-item-id")
+  ipcMain.removeHandler("create-subtotal-definition")
+  ipcMain.removeHandler("create-many-subtotal-definitions")
+  ipcMain.removeHandler("delete-subtotal-definition")
+  ipcMain.removeHandler("delete-subtotal-definitions-by-layout-region-id")
+  ipcMain.removeHandler("get-subtotal-definitions-by-layout-region-id")
+  ipcMain.removeHandler("get-subtotal-definitions-by-question-group-item-id")
+
   // QuestionGroup handlers
   ipcMain.handle("create-question-group", async (_event, data) => {
     try {
