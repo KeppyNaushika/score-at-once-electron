@@ -85,7 +85,7 @@ export const getQuestionScoresForProject = async (projectId: string) => {
       orderBy: [
         { answerSheet: { student: { lastName: "asc" } } },
         { answerSheet: { student: { firstName: "asc" } } },
-        { layoutRegion: { questionNumber: "asc" } },
+        { layoutRegion: { orderIndex: "asc" } },
       ],
     })
 
@@ -115,7 +115,7 @@ export const getQuestionScoresForAnswerSheet = async (
         scoredByUser: true,
       },
       orderBy: {
-        layoutRegion: { questionNumber: "asc" },
+        layoutRegion: { orderIndex: "asc" },
       },
     })
 

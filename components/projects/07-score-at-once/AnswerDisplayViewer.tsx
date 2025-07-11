@@ -30,7 +30,6 @@ interface AnswerSheet {
 interface QuestionRegion {
   id: string
   label: string
-  questionNumber: string
   orderIndex?: number
   points: number
   x: number // 0.0 - 1.0 (画像全体に対する割合)

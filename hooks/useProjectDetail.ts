@@ -43,7 +43,7 @@ export function useProjectDetail(projectId: string) {
         const regionsResult = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
         if (Array.isArray(regionsResult)) {
           const questionRegions = regionsResult.filter(
-            region => region.type === "QUESTION_ANSWER" && region.questionNumber
+            region => region.type === "QUESTION_ANSWER" && (region.orderIndex || region.label)
           )
           setQuestionRegionCount(questionRegions.length)
         }

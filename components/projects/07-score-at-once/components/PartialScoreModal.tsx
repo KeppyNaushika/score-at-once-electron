@@ -9,7 +9,7 @@ interface PartialScoreModalProps {
   isOpen: boolean
   value: string
   maxPoints: number
-  questionNumber: string
+  questionLabel: string
   onClose: () => void
   onChange?: (value: string) => void
 }
@@ -18,7 +18,7 @@ export default function PartialScoreModal({
   isOpen,
   value,
   maxPoints,
-  questionNumber,
+  questionLabel,
   onClose,
   onChange,
 }: PartialScoreModalProps) {
@@ -29,7 +29,7 @@ export default function PartialScoreModal({
           <DialogTitle className="flex items-center gap-2">
             部分点入力
             <Badge variant="outline">
-              問{questionNumber} ({maxPoints}点満点)
+              問{questionLabel} ({maxPoints}点満点)
             </Badge>
           </DialogTitle>
         </DialogHeader>

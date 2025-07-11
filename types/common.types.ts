@@ -110,7 +110,7 @@ export interface LayoutRegionArea {
   y: number
   width: number
   height: number
-  questionNumber?: string | null
+  orderIndex?: number | null
   points?: number | string | null
   createdAt?: Date
   updatedAt?: Date
@@ -230,7 +230,7 @@ export interface LayoutRegionCreateData {
   y: number
   width: number
   height: number
-  questionNumber?: string
+  orderIndex?: number
   points?: number
 }
 
@@ -249,7 +249,7 @@ export interface LayoutRegionUpdateData {
   y?: number
   width?: number
   height?: number
-  questionNumber?: string
+  orderIndex?: number
   points?: number
 }
 

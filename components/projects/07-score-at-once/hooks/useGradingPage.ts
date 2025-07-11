@@ -143,7 +143,7 @@ export function useGradingPage() {
         const questionRegions = regions.map((region) => ({
           id: region.id,
           label: region.label,
-          questionNumber: region.questionNumber || "",
+          orderIndex: region.orderIndex || 1,
           points: region.points || 0,
           x: region.x,
           y: region.y,

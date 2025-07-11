@@ -95,11 +95,11 @@ export function useQuestionGroupPage(projectId: string) {
               assignmentsResult.success &&
               assignmentsResult.assignments
             ) {
-              const questionNumbers = assignmentsResult.assignments
+              const questionLabels = assignmentsResult.assignments
                 .map(
                   (assignment: any) =>
-                    assignment.questionLayoutRegion?.questionNumber ||
-                    assignment.questionLayoutRegion?.label,
+                    assignment.questionLayoutRegion?.label ||
+                    `問${assignment.questionLayoutRegion?.orderIndex || 1}`,
                 )
                 .filter(Boolean)
 
@@ -110,7 +110,7 @@ export function useQuestionGroupPage(projectId: string) {
               )
 
               data[group.id][item.id] = {
-                questions: questionNumbers,
+                questions: questionLabels,
                 totalPoints,
               }
             } else {

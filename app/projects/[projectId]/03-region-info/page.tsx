@@ -162,7 +162,6 @@ export default function RegionInfoPage() {
             height: area.height,
             label: area.label,
             points: area.points,
-            questionNumber: area.questionNumber,
           }
 
           if (area.id) {

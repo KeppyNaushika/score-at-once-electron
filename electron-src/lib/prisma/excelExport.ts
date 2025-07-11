@@ -136,7 +136,7 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
     // 大問リストを作成
     const daimonList = Array.from(new Set(
       questionRegions
-        .map((q: any) => q.questionNumber || q.label)
+        .map((q: any) => q.label || `問${q.orderIndex || 1}`)
         .filter(q => q !== null && q !== undefined)
     )).sort()
 
@@ -161,8 +161,8 @@ export async function exportGradingDataExcel(options: ExportGradingDataOptions):
 
         return {
           questionId: region.id,
-          questionLabel: region.label || `問${region.questionNumber || region.id}`,
-          daimon: region.questionNumber?.toString() || region.label,
+          questionLabel: region.label || `問${region.orderIndex || 1}`,
+          daimon: region.label || `問${region.orderIndex || 1}`,
           shomon: region.questionSubNumber?.toString() || "",
           shimon: region.questionSubSubNumber?.toString() || "",
           score: actualScore,

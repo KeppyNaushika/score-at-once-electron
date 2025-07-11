@@ -13,7 +13,7 @@ export interface LayoutRegion {
   height: number
   label: string
   points: string | null
-  questionNumber: string
+  orderIndex: number
   masterImageId: string
 }
 
@@ -44,7 +44,7 @@ export function useLayoutRegions(projectId?: string) {
         height: region.height,
         label: region.label || "",
         points: region.points ? String(region.points) : null,
-        questionNumber: region.questionNumber || "",
+        orderIndex: region.orderIndex || 1,
         masterImageId: region.masterImageId || ""
       }))
 
@@ -77,7 +77,7 @@ export function useLayoutRegions(projectId?: string) {
           height: region.height,
           label: region.label,
           points: region.points ? parseInt(region.points) : null,
-          questionNumber: region.questionNumber,
+          orderIndex: region.orderIndex,
         }
 
         if (region.id) {
@@ -101,7 +101,7 @@ export function useLayoutRegions(projectId?: string) {
             height: region!.height,
             label: region!.label || "",
             points: region!.points ? String(region!.points) : null,
-            questionNumber: region!.questionNumber || "",
+            orderIndex: region!.orderIndex || 1,
             masterImageId: region!.masterImageId || "",
           }))
 
