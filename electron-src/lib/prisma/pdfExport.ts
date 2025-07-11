@@ -12,6 +12,8 @@ import {
 } from "./questionScore"
 import { getLayoutRegionsByProjectId } from "./layoutRegion"
 import { getAbsolutePathFromData } from "../dataManager"
+import { getSubtotalDefinitionsByLayoutRegionId } from "./subtotalDefinition"
+import { getAssignmentsByQuestionGroupItemId } from "./questionSubtotalAssignment"
 
 // 採点状態の型定義（フロントエンドと統一）
 type ScoringStatus =
@@ -240,6 +242,104 @@ function calculateTextPosition(
   return {
     x: baseX + offsetX,
     y: baseY - offsetY, // Y軸オフセットを反転させて直感的な方向にする
+  }
+}
+
+// 小計点を計算する関数
+async function calculateSubtotalScore(
+  subtotalRegionId: string,
+  allScores: any[],
+  layoutRegions: any[]
+): Promise<number> {
+  try {
+    console.log(`Calculating subtotal for region ${subtotalRegionId}`)
+    console.log(`Available scores: ${allScores.length}`)
+    
+    // 小計点領域に関連付けられたグループ項目を取得
+    const subtotalDefinitions = await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+    console.log(`Found ${subtotalDefinitions?.length || 0} subtotal definitions`)
+    
+    if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
+      console.log(`No subtotal definitions found for region ${subtotalRegionId}`)
+      return 0
+    }
+
+    // グループ別に項目をまとめる
+    const groupMap = new Map<string, string[]>()
+    
+    for (const definition of subtotalDefinitions) {
+      const groupId = definition.questionGroupItem?.questionGroupId
+      if (!groupId) continue
+      
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, [])
+      }
+      groupMap.get(groupId)!.push(definition.questionGroupItemId)
+    }
+
+    if (groupMap.size === 0) {
+      return 0
+    }
+
+    // 各グループで該当する設問を取得（GROUP内OR）
+    const groupQuestionSets: Set<string>[] = []
+    
+    for (const [groupId, itemIds] of groupMap) {
+      const groupQuestionIds = new Set<string>()
+      
+      // 各項目に関連付けられた設問を取得
+      for (const itemId of itemIds) {
+        try {
+          const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
+          if (assignments && assignments.length > 0) {
+            assignments.forEach((assignment: any) => {
+              groupQuestionIds.add(assignment.questionLayoutRegionId)
+            })
+          }
+        } catch (error) {
+          console.error(`Error getting assignments for item ${itemId}:`, error)
+        }
+      }
+      
+      groupQuestionSets.push(groupQuestionIds)
+    }
+
+    // GROUP間AND：全てのグループに共通する設問を取得
+    let finalQuestionIds: Set<string>
+    if (groupQuestionSets.length === 1) {
+      finalQuestionIds = groupQuestionSets[0]
+    } else {
+      finalQuestionIds = new Set()
+      const firstGroup = groupQuestionSets[0]
+      
+      for (const questionId of firstGroup) {
+        const existsInAllGroups = groupQuestionSets.every(group => group.has(questionId))
+        if (existsInAllGroups) {
+          finalQuestionIds.add(questionId)
+        }
+      }
+    }
+
+    // 該当する設問の点数を合計
+    let totalScore = 0
+    console.log(`Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`)
+    
+    for (const questionId of finalQuestionIds) {
+      const scoreData = allScores.find(s => s.layoutRegionId === questionId)
+      if (scoreData) {
+        const layoutRegion = layoutRegions.find(r => r.id === questionId)
+        const maxScore = layoutRegion?.points || 10
+        const actualScore = calculateActualScore(scoreData, maxScore)
+        console.log(`Question ${questionId}: score ${actualScore}`)
+        totalScore += actualScore || 0
+      }
+    }
+
+    console.log(`Total subtotal score: ${totalScore}`)
+    return totalScore
+  } catch (error) {
+    console.error(`Error calculating subtotal score for region ${subtotalRegionId}:`, error)
+    return 0
   }
 }
 
@@ -738,6 +838,88 @@ async function addAnswerSheetToPDF(
           font: font,
           color: rgb(0.5, 0, 0), // 暗い赤色
         })
+      }
+    }
+
+    progressCallback?.("小計点を計算中...")
+
+    // 小計点領域の処理
+    const subtotalRegions = layoutRegions.filter(region => region.type === 'SUBTOTAL_SCORE')
+    console.log(`Found ${subtotalRegions.length} subtotal regions:`, subtotalRegions.map(r => ({id: r.id, label: r.label, type: r.type})))
+    
+    for (const subtotalRegion of subtotalRegions) {
+      try {
+        // 小計点を計算
+        const subtotalScore = await calculateSubtotalScore(
+          subtotalRegion.id,
+          relevantScores,
+          layoutRegions
+        )
+        console.log(`Calculated subtotal score for region ${subtotalRegion.id} (${subtotalRegion.label}): ${subtotalScore}`)
+
+        // 小計点領域の座標をPDF座標系に変換
+        const isNormalized =
+          subtotalRegion.x <= 1.0 &&
+          subtotalRegion.y <= 1.0 &&
+          subtotalRegion.width <= 1.0 &&
+          subtotalRegion.height <= 1.0
+
+        let regionXOnImage,
+          regionYOnImage,
+          regionWidthOnImage,
+          regionHeightOnImage
+
+        if (isNormalized) {
+          // 正規化座標の場合 (0.0-1.0)
+          regionXOnImage = subtotalRegion.x * imageWidth + imageX
+          regionYOnImage =
+            imageY +
+            imageHeight -
+            (subtotalRegion.y + subtotalRegion.height) * imageHeight
+          regionWidthOnImage = subtotalRegion.width * imageWidth
+          regionHeightOnImage = subtotalRegion.height * imageHeight
+        } else {
+          // ピクセル座標の場合
+          regionXOnImage = (subtotalRegion.x / image.width) * imageWidth + imageX
+          regionYOnImage =
+            imageY +
+            imageHeight -
+            ((subtotalRegion.y + subtotalRegion.height) / image.height) * imageHeight
+          regionWidthOnImage = (subtotalRegion.width / image.width) * imageWidth
+          regionHeightOnImage = (subtotalRegion.height / image.height) * imageHeight
+        }
+
+        // 小計点テキストを描画
+        const subtotalText = `${subtotalScore}`
+        const textWidth = font.widthOfTextAtSize(subtotalText, config.scoreSize)
+        const textHeight = config.scoreSize
+
+        // テキストの位置を計算
+        const subtotalPosition = calculateTextPosition(
+          config.scorePosition,
+          config.scoreOffsetX,
+          config.scoreOffsetY,
+          regionXOnImage,
+          regionYOnImage,
+          regionWidthOnImage,
+          regionHeightOnImage,
+          textWidth,
+          textHeight,
+          config.scoreAlignment,
+        )
+
+        // 小計点を描画
+        console.log(`Drawing subtotal text "${subtotalText}" at position (${subtotalPosition.x}, ${subtotalPosition.y})`)
+        page.drawText(subtotalText, {
+          x: subtotalPosition.x,
+          y: subtotalPosition.y,
+          size: config.scoreSize,
+          font: font,
+          color: rgb(0, 0, 1), // 青色（小計点は青色で区別）
+        })
+      } catch (subtotalError) {
+        console.error(`Error processing subtotal region ${subtotalRegion.id}:`, subtotalError)
+        // エラーが発生しても続行
       }
     }
 
