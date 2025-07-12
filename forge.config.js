@@ -1,21 +1,16 @@
 module.exports = {
   packagerConfig: {
     asar: {
-      unpack: "**/{node_modules/sharp,node_modules/@img}/**"
+      unpack: "**/{node_modules,/.next,package.json,next.config.js}/**"
     },
     name: "Score at Once",
     executableName: "score-at-once",
-    afterCopy: [
-      (buildPath, electronVersion, platform, arch, callback) => {
-        // Rebuild native modules for the target platform
-        const { execSync } = require('child_process');
-        try {
-          execSync('npm rebuild --arch=' + arch, { cwd: buildPath });
-          callback();
-        } catch (error) {
-          callback(error);
-        }
-      }
+    ignore: [
+      /^\/src/, 
+      /^\/\.git/,
+      /^\/docs/,
+      /^\/scripts/,
+      /^\/out/
     ],
   },
   rebuildConfig: {},
