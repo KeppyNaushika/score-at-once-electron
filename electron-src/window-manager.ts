@@ -1,5 +1,4 @@
 import { join } from "path"
-import { format } from "url"
 import { BrowserWindow, app, Menu } from "electron"
 import isDev from "electron-is-dev"
 import menu from "./menu"
@@ -12,18 +11,12 @@ export function createMainWindow(): BrowserWindow {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false, // 開発環境でのみ使用
-      backgroundThrottling: false, // バックグラウンドでの実行制限を無効化
+      webSecurity: false,
+      backgroundThrottling: false,
     },
   })
 
-  const url = isDev
-    ? "http://localhost:3000"
-    : format({
-        pathname: join(__dirname, "@/renderer/out/index.html"),
-        protocol: "file:",
-        slashes: true,
-      })
+  const url = "http://localhost:3000"
 
   Menu.setApplicationMenu(menu(app, mainWindow, "home"))
 
@@ -31,7 +24,10 @@ export function createMainWindow(): BrowserWindow {
     mainWindow.webContents.openDevTools()
   }
 
-  mainWindow.loadURL(url)
+  // 少し待ってからURLを読み込む
+  setTimeout(() => {
+    mainWindow.loadURL(url)
+  }, isDev ? 100 : 3000)
 
   return mainWindow
 }

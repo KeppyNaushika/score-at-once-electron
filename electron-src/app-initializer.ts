@@ -1,6 +1,4 @@
 import { net, protocol } from "electron"
-import isDev from "electron-is-dev"
-import prepareNext from "electron-next"
 import { format } from "url"
 import {
   getAbsolutePathFromData,
@@ -24,12 +22,6 @@ export async function initializeApp(): Promise<void> {
 
   } catch (error) {
     console.error("Failed to initialize application:", error)
-  }
-
-  if (isDev) {
-    // 開発環境では electron-next は使わない
-  } else {
-    await prepareNext("./")
   }
 
   // カスタムプロトコルの設定

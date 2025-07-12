@@ -41,17 +41,35 @@ export const initializeDatabase = async (): Promise<boolean> => {
 
       try {
         // データベースのマイグレーション実行
-        // 本来は prisma migrate deploy を使うべきだが、
-        // 開発環境では直接接続してテーブル作成を試行
-        await prisma.$connect()
-        await prisma.$disconnect()
+        console.log("Initializing database schema...")
+        
+        // Prismaマイグレーションを実行してテーブルを作成
+        const { spawn } = require('child_process')
+        const path = require('path')
+        
+        // プロダクション環境でのマイグレーション実行
+        const prismaPath = path.join(process.cwd(), 'node_modules', '.bin', 'prisma')
+        const migrationProcess = spawn(prismaPath, ['migrate', 'deploy'], {
+          cwd: process.cwd(),
+          env: { ...process.env, DATABASE_URL: `file:${getDatabasePath()}` },
+          stdio: 'inherit'
+        })
+        
+        await new Promise((resolve, reject) => {
+          migrationProcess.on('close', (code) => {
+            if (code === 0) {
+              console.log("Database schema initialized successfully")
+              resolve(true)
+            } else {
+              reject(new Error(`Migration failed with code ${code}`))
+            }
+          })
+        })
 
         return true
       } catch (error) {
         console.error("Failed to initialize database:", error)
         throw error
-      } finally {
-        await prisma.$disconnect()
       }
     } else {
       return false

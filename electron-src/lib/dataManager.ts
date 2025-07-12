@@ -6,7 +6,18 @@ import * as fs from "fs/promises"
 const getAppRootPath = (): string => {
   if (app.isPackaged) {
     // パッケージ化されている場合
-    return path.dirname(app.getPath("exe"))
+    const exePath = app.getPath("exe")
+    
+    // macOSの場合、.appと同階層にdataフォルダを作成
+    if (process.platform === "darwin" && exePath.includes(".app/")) {
+      // /path/to/Score at Once.app/Contents/MacOS/score-at-once
+      // から /path/to/ を取得
+      const appPath = exePath.substring(0, exePath.indexOf(".app/") + 4)
+      return path.dirname(appPath)
+    }
+    
+    // Windows等その他のプラットフォーム
+    return path.dirname(exePath)
   } else {
     // 開発環境の場合
     return process.cwd()
