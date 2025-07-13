@@ -209,11 +209,19 @@ export function useImageCanvasInteraction({
 
       onUpdateArea(areaIndex, newArea)
     }
-  }, [dragging, dragStartCoords, resizing, moving, onUpdateArea, getRelativeCoords])
+  }, [dragging, dragStartCoords, resizing, moving, getRelativeCoords, onUpdateArea])
 
   const handleMouseUp = useCallback(() => {
+    // 即座な重複防止チェック（デバウンシング機構）
+    if (isCreatingRef.current) {
+      return
+    }
+
     // 重複作成を防ぐため、draggingがtrueかつ作成中でない時のみ実行
-    if (dragging && dragStartCoords && dragCurrentCoords && !isCreatingRef.current) {
+    if (dragging && dragStartCoords && dragCurrentCoords) {
+      // 即座に重複防止フラグを設定
+      isCreatingRef.current = true
+
       const startX = Math.min(dragStartCoords.x, dragCurrentCoords.x)
       const startY = Math.min(dragStartCoords.y, dragCurrentCoords.y)
       const width = Math.abs(dragCurrentCoords.x - dragStartCoords.x)
@@ -226,21 +234,16 @@ export function useImageCanvasInteraction({
 
       // Only create area if drag is large enough
       if (width > 0.01 && height > 0.01) {
-        // 重複防止フラグを設定
-        isCreatingRef.current = true
-        
         onAddAreaByDrag("QUESTION_ANSWER", {
           x: startX,
           y: startY,
           width,
           height,
         })
-        
-        // 少し遅らせてフラグをリセット
-        setTimeout(() => {
-          isCreatingRef.current = false
-        }, 100)
       }
+
+      // 即座にフラグをリセット（setTimeoutは不要）
+      isCreatingRef.current = false
     } else {
       // draggingでない場合も確実にリセット
       setDragging(false)
