@@ -63,5 +63,4 @@ main
 **/config.json
 
 /temp-test
-
-
+/.claude
