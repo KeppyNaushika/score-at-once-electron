@@ -17,7 +17,9 @@
     "type-check": "tsc --noEmit && tsc -p ./electron-src/tsconfig.json",
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make"
+    "make": "electron-forge make",
+    "windows-build-fix": "node scripts/windows-build-fix.js",
+    "windows-build": "npm run windows-build-fix && npm run build && npm run make"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
