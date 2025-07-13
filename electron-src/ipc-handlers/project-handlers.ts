@@ -7,6 +7,12 @@ import {
   getProjects as dbFetchProjects,
   updateProject as dbUpdateProject,
 } from "../lib/prisma/project"
+import {
+  fetchUsers,
+  createUser,
+  verifyPasscode,
+  updateUserPasscode,
+} from "../lib/prisma/user"
 
 export function setupProjectHandlers(): void {
   ipcMain.handle("fetch-projects", async () => {
@@ -370,4 +376,6 @@ export function setupProjectHandlers(): void {
       throw err
     }
   })
+
+
 }

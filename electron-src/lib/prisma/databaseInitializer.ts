@@ -11,16 +11,24 @@ export const getDatabasePath = (): string => {
 // 共有ドライブ用のPrismaクライアントを作成
 export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
-  const databaseUrl = `file:${databasePath}`
+  // パッケージ化されたアプリでは絶対パスを使用
+  const absolutePath = path.resolve(databasePath)
+  const databaseUrl = `file:${absolutePath.replace(/\\/g, '/')}`
 
+  console.log(`Creating Prisma client with database URL: ${databaseUrl}`)
+  console.log(`Resolved database path: ${absolutePath}`)
+  
+  // 環境変数を動的にオーバーライド
+  process.env.DATABASE_URL = databaseUrl
+  
   return new PrismaClient({
     datasources: {
       db: {
         url: databaseUrl,
       },
     },
-    // 共有ドライブでの競合を避けるための設定
-    log: [],
+    // パッケージ化されたアプリでの設定
+    log: ['error', 'warn'],
   })
 }
 
@@ -32,9 +40,26 @@ export const initializeDatabase = async (): Promise<boolean> => {
     const dbExists = await checkDatabaseExists()
 
     if (!dbExists) {
+      console.log("Database does not exist, creating new database...")
+      
       // データディレクトリが存在することを確認
       const dataDir = getDataDirectory()
-      await fs.mkdir(dataDir, { recursive: true })
+      console.log(`Creating data directory: ${dataDir}`)
+      await fs.mkdir(dataDir, { recursive: true, mode: 0o755 })
+
+      // 空のデータベースファイルを作成
+      const dbPath = getDatabasePath()
+      console.log(`Creating database file: ${dbPath}`)
+      await fs.writeFile(dbPath, '', { mode: 0o644 })
+      
+      // ファイルが実際に作成されたか確認
+      try {
+        const stats = await fs.stat(dbPath)
+        console.log(`Database file created successfully, size: ${stats.size} bytes`)
+      } catch (error) {
+        console.error(`Failed to verify database file creation:`, error)
+        throw new Error(`Database file creation verification failed: ${error}`)
+      }
 
       // Prismaクライアントでデータベースを初期化
       const prisma = createSharedPrismaClient()
@@ -44,7 +69,48 @@ export const initializeDatabase = async (): Promise<boolean> => {
         console.log("Initializing database schema...")
         
         // Prismaクライアントを使用してスキーマを直接作成
-        await prisma.$connect()
+        console.log("Connecting to database...")
+        
+        // Prisma接続にタイムアウトを設定（Windows対応）
+        console.log("Attempting database connection with timeout...")
+        let connectionSuccessful = false
+        
+        try {
+          const connectPromise = prisma.$connect()
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Database connection timeout after 15 seconds")), 15000)
+          })
+          
+          await Promise.race([connectPromise, timeoutPromise])
+          connectionSuccessful = true
+          console.log("Database connection successful")
+        } catch (connectError) {
+          console.error("Database connection failed:", connectError)
+          
+          // Windowsでの接続失敗時は別の方法を試行
+          if (process.platform === "win32") {
+            console.log("Attempting Windows-specific connection method...")
+            try {
+              // 短時間待機後に再試行
+              await new Promise(resolve => setTimeout(resolve, 2000))
+              await prisma.$connect()
+              connectionSuccessful = true
+              console.log("Windows-specific connection successful")
+            } catch (winError) {
+              console.error("Windows-specific connection also failed:", winError)
+              throw winError
+            }
+          } else {
+            throw connectError
+          }
+        }
+        
+        // 直接SQLを実行してスキーマを作成
+        if (!connectionSuccessful) {
+          throw new Error("Failed to establish database connection")
+        }
+        
+        console.log("Running direct SQL migration...")
         
         // マイグレーションSQLを直接実行
         const migrationSQL = `
@@ -409,12 +475,29 @@ CREATE UNIQUE INDEX "_ClassTeachers_AB_unique" ON "_ClassTeachers"("A", "B");
         console.log("Database schema initialized successfully")
         return true
       } catch (error) {
-        console.error("Failed to initialize database:", error)
+        console.error("Failed to initialize database schema:", error)
+        if (error instanceof Error) {
+          console.error("Error details:", {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          })
+        }
+        
+        // データベースファイルを削除して再試行
+        try {
+          await fs.unlink(dbPath)
+          console.log("Removed corrupted database file")
+        } catch (unlinkError) {
+          console.error("Failed to remove corrupted database file:", unlinkError)
+        }
+        
         throw error
       } finally {
         await prisma.$disconnect()
       }
     } else {
+      console.log("Database already exists")
       return false
     }
   } catch (error) {

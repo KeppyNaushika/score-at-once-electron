@@ -54,6 +54,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-user-by-token", token),
   updateUserPassword: (userId: string, newPassword: string) =>
     ipcRenderer.invoke("update-user-password", userId, newPassword),
+  updateUserPasscode: (userId: string, passcode?: string, passcodeType?: string) =>
+    ipcRenderer.invoke("update-user-passcode", userId, passcode, passcodeType),
 
   // Answer sheet related
   uploadAnswerSheets: (

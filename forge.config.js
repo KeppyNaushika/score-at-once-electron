@@ -1,7 +1,7 @@
 module.exports = {
   packagerConfig: {
     asar: {
-      unpack: "**/{node_modules,/.next,package.json,next.config.js}/**"
+      unpack: "**/{node_modules,.next,main,sharp}/**"
     },
     name: "Score at Once",
     executableName: "score-at-once",
@@ -12,19 +12,16 @@ module.exports = {
       /^\/scripts/,
       /^\/out/
     ],
+    extraResource: [
+      ".next"
+    ]
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    buildPath: "./out",
+    electronVersion: "37.1.0",
+    onlyModules: ["sharp"]
+  },
   makers: [
-    {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        name: "Score at Once",
-        exe: "score-at-once.exe",
-        setupExe: "ScoreAtOnce-Setup.exe",
-        noMsi: true,
-      },
-      platforms: ['win32'],
-    },
     {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin', 'win32'],
@@ -41,7 +38,9 @@ module.exports = {
   plugins: [
     {
       name: '@electron-forge/plugin-auto-unpack-natives',
-      config: {},
+      config: {
+        unpackNatives: true
+      },
     },
   ],
 };

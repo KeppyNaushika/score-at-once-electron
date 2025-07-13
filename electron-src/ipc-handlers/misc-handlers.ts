@@ -107,6 +107,19 @@ export function setupMiscHandlers(): void {
     },
   )
 
+  ipcMain.handle(
+    "update-user-passcode",
+    async (_event, userId: string, passcode?: string, passcodeType?: string) => {
+      try {
+        const { updateUserPasscode } = await import("../lib/prisma/user")
+        return await updateUserPasscode(userId, passcode, passcodeType as "none" | "4digit" | "6digit" | "alphanumeric")
+      } catch (err) {
+        console.error("Error updating user passcode:", err)
+        throw err
+      }
+    },
+  )
+
   // Answer sheet handlers
   ipcMain.handle(
     "upload-answer-sheets",
