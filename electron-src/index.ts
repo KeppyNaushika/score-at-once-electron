@@ -79,7 +79,18 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason)
 })
 
-// アプリが異常終了する前にログを出力
-app.on("before-quit", () => {
+// アプリが異常終了する前にログを出力とクリーンアップ
+app.on("before-quit", async (event) => {
   console.log("Application is about to quit")
+  
+  // Prismaクライアントのクリーンアップ
+  try {
+    const { getPrismaClient } = await import("./lib/prisma/prismaClient")
+    const prisma = getPrismaClient()
+    await prisma.$disconnect()
+    console.log("Prisma client disconnected successfully")
+  } catch (error) {
+    console.warn("Failed to disconnect Prisma client:", error)
+    // エラーがあってもアプリ終了は継続
+  }
 })
