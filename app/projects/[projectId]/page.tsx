@@ -1,6 +1,6 @@
 "use client"
 
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import AdditionalActions from "@/components/projects/detail/AdditionalActions"

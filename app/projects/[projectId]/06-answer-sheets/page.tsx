@@ -1,6 +1,6 @@
 "use client"
 
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management"

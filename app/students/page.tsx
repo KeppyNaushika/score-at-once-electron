@@ -1,4 +1,4 @@
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import StudentTable from "@/components/student/StudentTable"
 
 export default function StudentsPage() {
