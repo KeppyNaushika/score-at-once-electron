@@ -3,8 +3,9 @@ module.exports = {
     asar: {
       unpack: "**/{node_modules,.next,main,sharp}/**"
     },
-    name: "Score at Once",
-    executableName: "score-at-once",
+    name: "一括採点",
+    executableName: "一括採点",
+    icon: "一括採点アイコン.png",
     ignore: [
       /^\/src/, 
       /^\/\.git/,
@@ -25,6 +26,18 @@ module.exports = {
     {
       name: '@electron-forge/maker-zip',
       platforms: ['darwin', 'win32'],
+      config: {
+        darwin: {
+          options: {
+            name: "一括採点.app"
+          }
+        },
+        win32: {
+          options: {
+            name: "一括採点.exe"
+          }
+        }
+      }
     },
     {
       name: '@electron-forge/maker-deb',

@@ -1,7 +1,7 @@
 {
   "private": true,
   "main": "main/electron-src/index.js",
-  "productName": "Score at Once",
+  "productName": "一括採点",
   "version": "0.0.0",
   "scripts": {
     "clean": "rimraf dist main .next out",
@@ -116,7 +116,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   },
   "build": {
-    "productName": "Score at Once",
+    "productName": "一括採点",
     "appId": "com.scoreatonce.app",
     "directories": {
       "output": "dist"
