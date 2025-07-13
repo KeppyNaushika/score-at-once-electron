@@ -26,7 +26,7 @@ async function startDev() {
   console.log('Starting Electron...')
   
   // Start Electron
-  const electronProcess = spawn('npx', ['electron', './main/'], { stdio: 'inherit' })
+  const electronProcess = spawn('npx', ['electron', '.'], { stdio: 'inherit' })
   
   // Handle cleanup
   process.on('SIGINT', () => {

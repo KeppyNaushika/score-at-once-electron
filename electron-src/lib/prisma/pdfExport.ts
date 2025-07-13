@@ -3,7 +3,13 @@ import { PDFDocument, rgb, PageSizes } from "pdf-lib"
 const fontkit = require("fontkit")
 import fs from "fs"
 import path from "path"
-import sharp from "sharp"
+// Optional sharp import with fallback
+let sharp: any = null
+try {
+  sharp = require("sharp")
+} catch (error) {
+  console.warn("Sharp module not available, some image processing features may be limited:", error instanceof Error ? error.message : error)
+}
 import { getAnswerSheetsByProjectId } from "./answerSheet"
 import { getStudentsForProject } from "./projectStudent"
 import {
@@ -586,8 +592,22 @@ async function addAnswerSheetToPDF(
       image = await pdfDoc.embedJpg(imageBuffer)
     } else {
       // その他の形式はSharpを使ってPNGに変換
-      const pngBuffer = await sharp(imageBuffer).png().toBuffer()
-      image = await pdfDoc.embedPng(pngBuffer)
+      if (sharp) {
+        const pngBuffer = await sharp(imageBuffer).png().toBuffer()
+        image = await pdfDoc.embedPng(pngBuffer)
+      } else {
+        // Sharpが利用できない場合は元の形式で試行
+        console.warn(`Sharp not available, attempting to embed ${ext} format directly`)
+        try {
+          image = await pdfDoc.embedPng(imageBuffer)
+        } catch (pngError) {
+          try {
+            image = await pdfDoc.embedJpg(imageBuffer)
+          } catch (jpgError) {
+            throw new Error(`Unsupported image format ${ext} and Sharp not available for conversion`)
+          }
+        }
+      }
     }
 
     // 新しいページを追加（用紙の向きを考慮）

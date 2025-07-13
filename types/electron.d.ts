@@ -208,20 +208,17 @@ export interface MyAPI {
   // User related
   fetchUsers: () => Promise<User[]>
   getCurrentUser: () => Promise<User | null>
-  
-  // Authentication related
-  loginUser: (username: string, password: string) => Promise<{
-    success: boolean
-    user?: { id: string; username: string; name: string; role: string }
-    token?: string
-    error?: string
-  }>
   createUser: (userData: {
     username: string
-    password: string
     name: string
-    role?: string
-  }) => Promise<{
+    passcode?: string
+    passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
+  }) => Promise<User>
+  verifyPasscode: (userId: string, passcode: string) => Promise<boolean>
+  updateUserPasscode: (userId: string, passcode?: string, passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric") => Promise<User>
+  
+  // Authentication related (legacy - may be deprecated)
+  loginUser: (username: string, password: string) => Promise<{
     success: boolean
     user?: { id: string; username: string; name: string; role: string }
     token?: string

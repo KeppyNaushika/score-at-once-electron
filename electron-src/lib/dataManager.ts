@@ -7,26 +7,46 @@ const getAppRootPath = (): string => {
   if (app.isPackaged) {
     // パッケージ化されている場合
     const exePath = app.getPath("exe")
+    console.log(`Packaged app exe path: ${exePath}`)
     
     // macOSの場合、.appと同階層にdataフォルダを作成
     if (process.platform === "darwin" && exePath.includes(".app/")) {
       // /path/to/Score at Once.app/Contents/MacOS/score-at-once
       // から /path/to/ を取得
       const appPath = exePath.substring(0, exePath.indexOf(".app/") + 4)
-      return path.dirname(appPath)
+      const rootPath = path.dirname(appPath)
+      console.log(`macOS app root path: ${rootPath}`)
+      return rootPath
     }
     
     // Windows等その他のプラットフォーム
-    return path.dirname(exePath)
+    const rootPath = path.dirname(exePath)
+    console.log(`Windows platform exe path: ${exePath}`)
+    console.log(`Windows platform root path: ${rootPath}`)
+    
+    // Windowsでファイルパスが適切に解決されるかチェック
+    try {
+      const fs = require("fs")
+      const exists = fs.existsSync(rootPath)
+      console.log(`Windows root path exists: ${exists}`)
+    } catch (error) {
+      console.error(`Error checking Windows root path:`, error)
+    }
+    
+    return rootPath
   } else {
     // 開発環境の場合
-    return process.cwd()
+    const rootPath = process.cwd()
+    console.log(`Development root path: ${rootPath}`)
+    return rootPath
   }
 }
 
 // データディレクトリのパス
 export const getDataDirectory = (): string => {
-  return path.join(getAppRootPath(), "data")
+  const dataPath = path.join(getAppRootPath(), "data")
+  console.log(`Data directory path: ${dataPath}`)
+  return dataPath
 }
 
 // プロジェクトディレクトリのパス

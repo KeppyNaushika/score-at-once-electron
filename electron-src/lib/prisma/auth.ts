@@ -51,13 +51,12 @@ export async function loginUser(username: string, password: string) {
       throw new Error('ユーザーが見つかりません');
     }
 
-    if (!user.passwordHash) {
-      throw new Error('パスワードが設定されていません');
+    if (!user.passcode) {
+      throw new Error('パスコードが設定されていません');
     }
 
-    const isValid = await verifyPassword(password, user.passwordHash);
-    if (!isValid) {
-      throw new Error('パスワードが正しくありません');
+    if (password !== user.passcode) {
+      throw new Error('パスコードが正しくありません');
     }
 
     const token = generateToken({
@@ -101,14 +100,11 @@ export async function createUser(userData: {
       throw new Error('このユーザー名は既に使用されています');
     }
 
-    // Hash password
-    const passwordHash = await hashPassword(userData.password);
-
-    // Create user
+    // Create user with passcode (stored as plain text for simple auth)
     const user = await prisma.user.create({
       data: {
         username: userData.username,
-        passwordHash,
+        passcode: userData.password,
         name: userData.name,
         role: userData.role || 'teacher',
       },
@@ -174,18 +170,16 @@ export async function getUserByToken(token: string) {
 // Update user password
 export async function updateUserPassword(userId: string, newPassword: string) {
   try {
-    const passwordHash = await hashPassword(newPassword);
-
     await prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: { passcode: newPassword },
     });
 
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'パスワードの更新に失敗しました',
+      error: error instanceof Error ? error.message : 'パスコードの更新に失敗しました',
     };
   }
 }

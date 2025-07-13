@@ -6,17 +6,23 @@ import { useAuth } from "@/contexts/AuthContext"
 import { Plus, Settings, User } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { UserCreateModal } from "./UserCreateModal"
+import { PasscodeModal } from "./PasscodeModal"
 
 interface User {
   id: string
   username: string
   name: string
   role: string
+  passcodeType?: string
 }
 
 export default function UserSelection() {
   const [users, setUsers] = useState<User[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showPasscodeModal, setShowPasscodeModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const { quickLogin } = useAuth()
 
   useEffect(() => {
@@ -36,12 +42,27 @@ export default function UserSelection() {
   }
 
   const handleUserSelect = async (user: User) => {
-    await quickLogin(user)
+    if (user.passcodeType && user.passcodeType !== "none") {
+      setSelectedUser(user)
+      setShowPasscodeModal(true)
+    } else {
+      await quickLogin(user)
+    }
+  }
+
+  const handlePasscodeVerified = async () => {
+    if (selectedUser) {
+      await quickLogin(selectedUser)
+    }
   }
 
   const handleCreateUser = () => {
-    // TODO: Show create user modal
-    toast.info("新規ユーザー作成機能は後で実装予定です")
+    setShowCreateModal(true)
+  }
+
+  const handleUserCreated = () => {
+    loadUsers()
+    toast.success("新しいユーザーが作成されました")
   }
 
   if (isLoading) {
@@ -134,6 +155,21 @@ export default function UserSelection() {
           </Button>
         </div>
       </div>
+
+      <UserCreateModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onUserCreated={handleUserCreated}
+      />
+
+      {selectedUser && (
+        <PasscodeModal
+          isOpen={showPasscodeModal}
+          onClose={() => setShowPasscodeModal(false)}
+          user={selectedUser}
+          onPasscodeVerified={handlePasscodeVerified}
+        />
+      )}
     </div>
   )
 }
