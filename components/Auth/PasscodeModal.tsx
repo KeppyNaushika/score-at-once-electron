@@ -24,7 +24,7 @@ interface PasscodeModalProps {
   user: {
     id: string
     name: string
-    passcodeType: string
+    passcodeType?: string | null
   }
   onPasscodeVerified: () => void
 }

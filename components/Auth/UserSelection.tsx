@@ -14,7 +14,7 @@ interface User {
   username: string
   name: string
   role: string
-  passcodeType?: string
+  passcodeType?: string | null
 }
 
 export default function UserSelection() {

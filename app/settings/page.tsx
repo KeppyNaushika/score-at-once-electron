@@ -8,6 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
+import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
+import { UserPen } from "lucide-react"
+import { useState, useEffect } from "react"
+
+interface User {
+  id: string
+  username: string
+  name: string
+  role: string
+  passcodeType?: string | null
+}
 
 export default function SettingsPage() {
   const {
@@ -22,6 +33,32 @@ export default function SettingsPage() {
     getKeyDisplayName,
   } = useKeyboardSettings()
 
+  const [users, setUsers] = useState<User[]>([])
+  const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    try {
+      const usersData = await window.electronAPI.fetchUsers()
+      setUsers(usersData)
+    } catch (error) {
+      console.error("Failed to load users:", error)
+    }
+  }
+
+  const handleEditPasscode = (user: User) => {
+    setSelectedUser(user)
+    setIsPasscodeEditOpen(true)
+  }
+
+  const handlePasscodeUpdated = () => {
+    loadUsers() // ユーザー一覧を再読み込み
+  }
+
   return (
     <ProtectedRoute>
       <div className="container mx-auto max-w-4xl p-6">
@@ -33,6 +70,41 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>ユーザー管理</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {users.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div>
+                      <div className="font-medium">{user.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        @{user.username} • {user.role}
+                        {user.passcodeType && user.passcodeType !== "none" && (
+                          <span className="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                            パスコード: {user.passcodeType}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditPasscode(user)}
+                    >
+                      <UserPen className="h-4 w-4 mr-2" />
+                      パスコード編集
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Separator />
+
           <KeyboardShortcutSection
             shortcuts={shortcuts}
             editingKey={editingKey}
@@ -99,6 +171,16 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <PasscodeEditModal
+          isOpen={isPasscodeEditOpen}
+          onClose={() => {
+            setIsPasscodeEditOpen(false)
+            setSelectedUser(null)
+          }}
+          onPasscodeUpdated={handlePasscodeUpdated}
+          user={selectedUser}
+        />
       </div>
     </ProtectedRoute>
   )

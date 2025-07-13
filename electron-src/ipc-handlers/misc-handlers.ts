@@ -72,13 +72,34 @@ export function setupMiscHandlers(): void {
       _event,
       userData: {
         username: string
-        password: string
         name: string
+        passcode?: string
+        passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
+        password?: string  // Legacy support
         role?: string
       },
     ) => {
       try {
-        return await createUser(userData)
+        if (userData.passcode !== undefined || userData.passcodeType !== undefined) {
+          // New passcode-based user creation
+          const { createUser: createUserWithPasscode } = await import("../lib/prisma/user")
+          return await createUserWithPasscode({
+            username: userData.username,
+            name: userData.name,
+            passcode: userData.passcode,
+            passcodeType: userData.passcodeType
+          })
+        } else if (userData.password) {
+          // Legacy password-based user creation
+          return await createUser({
+            username: userData.username,
+            password: userData.password,
+            name: userData.name,
+            role: userData.role
+          })
+        } else {
+          throw new Error("Either passcode or password must be provided")
+        }
       } catch (err) {
         console.error("Error creating user:", err)
         throw err
@@ -106,6 +127,16 @@ export function setupMiscHandlers(): void {
       }
     },
   )
+
+  ipcMain.handle("verify-passcode", async (_event, userId: string, passcode: string) => {
+    try {
+      const { verifyPasscode } = await import("../lib/prisma/user")
+      return await verifyPasscode(userId, passcode)
+    } catch (err) {
+      console.error("Error verifying passcode:", err)
+      throw err
+    }
+  })
 
   ipcMain.handle(
     "update-user-passcode",
