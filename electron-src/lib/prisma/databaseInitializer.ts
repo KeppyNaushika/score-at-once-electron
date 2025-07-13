@@ -118,9 +118,10 @@ export const initializeDatabase = async (): Promise<boolean> => {
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "username" TEXT NOT NULL,
-    "passwordHash" TEXT,
     "name" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'teacher',
+    "passcode" TEXT,
+    "passcodeType" TEXT DEFAULT 'none',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL
 );
