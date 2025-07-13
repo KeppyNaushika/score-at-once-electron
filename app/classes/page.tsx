@@ -1,4 +1,4 @@
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import ClassManagementTable from "@/components/class/ClassManagementTable"
 
 export default function ClassesPage() {

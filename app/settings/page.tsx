@@ -2,13 +2,13 @@
 
 import { KeyboardShortcutSection } from "@/app/settings/components/keyboard-shortcut-section"
 import { useKeyboardSettings } from "@/app/settings/hooks/use-keyboard-settings"
-import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ProtectedRoute from "@/components/Auth/ProtectedRoute"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
+import { PasscodeEditModal } from "@/components/Auth/PasscodeEditModal"
 import { UserPen } from "lucide-react"
 import { useState, useEffect } from "react"
 

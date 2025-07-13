@@ -1,6 +1,6 @@
 "use client"
 
-import UserSelection from "@/components/auth/UserSelection"
+import UserSelection from "@/components/Auth/UserSelection"
 import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
