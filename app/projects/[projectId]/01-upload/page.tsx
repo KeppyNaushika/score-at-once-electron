@@ -4,7 +4,7 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import MasterImageManager from "@/components/projects/01-upload/MasterImageManager"
 import { Button } from "@/components/ui/button"
-import { MasterImage } from "@prisma/client"
+import { MasterImageData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"; // sonnerのtoastを直接使用
@@ -17,7 +17,7 @@ export default function MasterImageStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [masterImages, setMasterImages] = useState<MasterImage[]>([])
+  const [masterImages, setMasterImages] = useState<MasterImageData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [project, setProject] = useState<any>(null)
 
@@ -51,7 +51,7 @@ export default function MasterImageStepPage() {
   }, [loadMasterImages])
 
   const handleImagesChange = useCallback(
-    (updatedImages: MasterImage[]) => {
+    (updatedImages: MasterImageData[]) => {
       // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
       // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
       // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
