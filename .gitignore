@@ -62,4 +62,4 @@ main
 # アプリケーション設定ファイル
 **/config.json
 
-/temp_test
+/temp-test
