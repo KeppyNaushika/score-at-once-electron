@@ -85,7 +85,7 @@ app.on("before-quit", async (event) => {
   
   // Prismaクライアントのクリーンアップ
   try {
-    const { getPrismaClient } = await import("./lib/prisma/prismaClient")
+    const { getPrismaClient } = await import("./lib/prisma/client")
     const prisma = getPrismaClient()
     await prisma.$disconnect()
     console.log("Prisma client disconnected successfully")
