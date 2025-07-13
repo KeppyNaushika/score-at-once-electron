@@ -3,15 +3,16 @@ module.exports = {
     asar: {
       unpack: "**/{node_modules,.next,main,sharp}/**"
     },
-    name: "一括採点",
-    executableName: "一括採点",
+    name: "Score at Once",
+    executableName: "score-at-once",
     icon: "一括採点アイコン.png",
     ignore: [
       /^\/src/, 
       /^\/\.git/,
       /^\/docs/,
       /^\/scripts/,
-      /^\/out/
+      /^\/out/,
+      /^\/temp-test/
     ],
     extraResource: [
       ".next"
@@ -29,12 +30,12 @@ module.exports = {
       config: {
         darwin: {
           options: {
-            name: "一括採点.app"
+            name: "Score at Once.app"
           }
         },
         win32: {
           options: {
-            name: "一括採点.exe"
+            name: "Score at Once.exe"
           }
         }
       }
