@@ -60,127 +60,99 @@ export default function QuestionNavigator({
   return (
     <TooltipProvider delayDuration={300}>
       <div className="mb-4 bg-white p-4">
-        {/* 設問選択ドロップダウン */}
-        <div className="mb-4 flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">設問選択</span>
-          </div>
+        {/* 設問ラベル */}
+        <div className="mb-2 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">設問</span>
+        </div>
+
+        {/* ナビゲーション: [前] [設問プルダウン] [次] */}
+        <div className="mb-4 flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onPrevQuestion}
+                disabled={currentQuestionIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-center">
+                <div>前の設問に移動</div>
+                <div className="mt-1 text-xs text-gray-400">
+                  キー:{" "}
+                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                    Shift+A
+                  </kbd>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
 
           <Select
             value={currentQuestionIndex.toString()}
             onValueChange={(value) => onQuestionChange(parseInt(value))}
           >
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="flex-1">
               <SelectValue placeholder="設問を選択" />
             </SelectTrigger>
             <SelectContent>
               {questionRegions.map((question, index) => {
                 const progress = questionProgress?.[question.id]
                 return (
-                  <SelectItem key={question.id} value={index.toString()}>
-                    <div className="flex w-full items-center gap-2">
+                  <SelectItem key={question.id} value={index.toString()} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       <span>
                         {question.label || question.orderIndex || 1}
                       </span>
                       <Badge variant="outline" className="text-xs">
                         {question.points}点
                       </Badge>
-                      {progress && (
-                        <div className="ml-auto flex items-center gap-1">
-                          {progress.percentage === 100 ? (
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                          ) : progress.percentage > 0 ? (
-                            <AlertCircle className="h-3 w-3 text-yellow-500" />
-                          ) : null}
-                          <span className="text-xs text-gray-500">
-                            {progress.percentage}%
-                          </span>
-                        </div>
-                      )}
                     </div>
+                    {progress && (
+                      <div className="flex items-center gap-1 ml-auto">
+                        {progress.percentage === 100 ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        ) : progress.percentage > 0 ? (
+                          <AlertCircle className="h-3 w-3 text-yellow-500" />
+                        ) : null}
+                        <span className="text-xs text-gray-500">
+                          {progress.gradedAnswers}/{progress.totalAnswers}
+                        </span>
+                      </div>
+                    )}
                   </SelectItem>
                 )
               })}
             </SelectContent>
           </Select>
-        </div>
 
-        {/* ナビゲーションボタン */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onPrevQuestion}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  前の設問
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-center">
-                  <div>前の設問に移動</div>
-                  <div className="mt-1 text-xs text-gray-400">
-                    キー:{" "}
-                    <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                      Shift+A
-                    </kbd>
-                  </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNextQuestion}
+                disabled={currentQuestionIndex === questionRegions.length - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="text-center">
+                <div>次の設問に移動</div>
+                <div className="mt-1 text-xs text-gray-400">
+                  キー:{" "}
+                  <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                    Shift+D
+                  </kbd>
                 </div>
-              </TooltipContent>
-            </Tooltip>
-
-            <div className="flex items-center gap-2 rounded-md bg-gray-100 px-3 py-1">
-              <span className="text-sm text-gray-600">
-                {currentQuestionIndex + 1} / {questionRegions.length}
-              </span>
-            </div>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onNextQuestion}
-                  disabled={currentQuestionIndex === questionRegions.length - 1}
-                >
-                  次の設問
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-center">
-                  <div>次の設問に移動</div>
-                  <div className="mt-1 text-xs text-gray-400">
-                    キー:{" "}
-                    <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                      Shift+D
-                    </kbd>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-
-          {/* 現在の設問の進捗 */}
-          {currentProgress && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                採点進捗: {currentProgress.gradedAnswers}/
-                {currentProgress.totalAnswers}
-              </span>
-              <div className="w-20">
-                <Progress value={currentProgress.percentage} className="h-2" />
               </div>
-              <span className="text-xs font-medium text-gray-700">
-                {currentProgress.percentage}%
-              </span>
-            </div>
-          )}
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* 設問一覧（サムネイル表示） */}
