@@ -184,7 +184,7 @@ function buildScoreDetails(
       ? calculateActualScore(
           {
             status: scoreRecord.status,
-            partialScore: scoreRecord.partialScore
+            partialScore: scoreRecord.partialScore !== null && scoreRecord.partialScore !== undefined
               ? Number(scoreRecord.partialScore)
               : null,
           },

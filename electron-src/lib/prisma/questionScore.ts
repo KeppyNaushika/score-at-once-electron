@@ -23,7 +23,7 @@ export const calculateActualScore = (
     case "partial":
     case "pending":
     case "proposed":
-      return questionScore.partialScore
+      return questionScore.partialScore !== null && questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)
         : null
     default:
