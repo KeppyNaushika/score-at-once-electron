@@ -1,6 +1,6 @@
 "use client"
 
-import ProtectedRoute from "@/components/Auth/ProtectedRoute"
+import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management"
@@ -251,8 +251,8 @@ export default function AnswerSheetsPage() {
     <ProtectedRoute>
       <div className="flex h-full flex-col overflow-y-auto">
         <PageHeader
-          title="生徒解答のアップロード"
-          description=""
+          title="答案アップロード"
+          description="生徒の答案画像をアップロードし、生徒と関連付けます"
           helpButton={helpButton}
         >
           <div className="flex gap-2">
