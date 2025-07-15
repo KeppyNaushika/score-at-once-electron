@@ -185,9 +185,13 @@ export function useExportPage() {
     return matchesSearch && matchesClass && matchesStatus
   })
 
-  // 学級一覧取得
+  // 学級一覧取得（生徒が所属している学級のみ、重複なし）
   const availableClasses = Array.from(
-    new Set(students.flatMap((s) => s.memberships.map((m) => m.class))),
+    new Map(
+      students
+        .flatMap((s) => s.memberships.map((m) => m.class))
+        .map((cls) => [cls.id, cls])
+    ).values()
   )
 
   return {

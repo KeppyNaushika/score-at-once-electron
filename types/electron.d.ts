@@ -597,10 +597,24 @@ export interface MyAPI {
     projectId: string
     selectedStudentIds: string[]
     outputPath?: string
+    forceExport?: boolean
   }) => Promise<{
     success: boolean
     outputPath?: string
     error?: string
+    warnings?: {
+      noScoringData: string[]
+      ungraded: string[]
+      missingPartialScore: string[]
+    }
+    validationResult?: {
+      hasWarnings: boolean
+      warnings: {
+        noScoringData: string[]
+        ungraded: string[]
+        missingPartialScore: string[]
+      }
+    }
   }>
 
   // データ管理関連

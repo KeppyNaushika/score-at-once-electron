@@ -176,96 +176,98 @@ export default function ExportPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-6">
+    <div className="flex h-full flex-col">
       <PageHeader
         title="結果出力"
         description="採点結果をPDFまたはExcelファイルとして出力します"
         helpButton={helpButton}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <StudentSelectionCard
-          students={students} // 受験生徒順（customOrder）でソート済み
-          availableClasses={availableClasses}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          selectedClasses={selectedClasses}
-          setSelectedClasses={setSelectedClasses}
-          selectedStatuses={selectedStatuses}
-          setSelectedStatuses={setSelectedStatuses}
-          selectedStudents={selectedStudents}
-          setSelectedStudents={setSelectedStudents}
-        />
+      <div className="container mx-auto space-y-6 px-4 py-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <StudentSelectionCard
+              students={students} // 受験生徒順（customOrder）でソート済み
+              availableClasses={availableClasses}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              selectedClasses={selectedClasses}
+              setSelectedClasses={setSelectedClasses}
+              selectedStatuses={selectedStatuses}
+              setSelectedStatuses={setSelectedStatuses}
+              selectedStudents={selectedStudents}
+              setSelectedStudents={setSelectedStudents}
+            />
 
-        <ExportOptionsCard
-          exportOptions={exportOptions}
-          setExportOptions={setExportOptions}
-          scoringMarkConfig={scoringMarkConfig}
-          setScoringMarkConfig={setScoringMarkConfig}
-        />
-      </div>
-
-      {/* 出力実行 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>出力実行</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="text-muted-foreground text-sm">
-                {selectedStudents.size}人の生徒を選択しています
-              </p>
-            </div>
-            <div className="flex justify-center gap-4">
-              <Button
-                onClick={handleExportScoredAnswers}
-                disabled={selectedStudents.size === 0 || isExporting}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                採点済み答案PDF
-              </Button>
-              <Button
-                onClick={handleExportGradingData}
-                disabled={selectedStudents.size === 0 || isExporting}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                採点データExcel
-              </Button>
-              <Button
-                onClick={handleExportIndividualReports}
-                disabled={true}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                個人成績表PDF
-              </Button>
-            </div>
+            <ExportOptionsCard
+              exportOptions={exportOptions}
+              setExportOptions={setExportOptions}
+              scoringMarkConfig={scoringMarkConfig}
+              setScoringMarkConfig={setScoringMarkConfig}
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* プログレスモーダル */}
-      <ExportProgressModal
-        isOpen={showProgressModal}
-        onClose={() => setShowProgressModal(false)}
-        progress={exportProgress}
-        status={exportStatus}
-        currentStep={currentStep}
-        totalSteps={totalSteps}
-        currentStepIndex={currentStepIndex}
-      />
+          {/* 出力実行 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>出力実行</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-muted-foreground text-sm">
+                    {selectedStudents.size}人の生徒を選択しています
+                  </p>
+                </div>
+                <div className="flex justify-center gap-4">
+                  <Button
+                    onClick={handleExportScoredAnswers}
+                    disabled={selectedStudents.size === 0 || isExporting}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    採点済み答案PDF
+                  </Button>
+                  <Button
+                    onClick={handleExportGradingData}
+                    disabled={selectedStudents.size === 0 || isExporting}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    採点データExcel
+                  </Button>
+                  <Button
+                    onClick={handleExportIndividualReports}
+                    disabled={true}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    個人成績表PDF
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* 警告モーダル */}
-      <ExportWarningModal
-        isOpen={showWarningModal}
-        onClose={() => setShowWarningModal(false)}
-        onContinue={handleContinueExport}
-        warnings={warningData}
-      />
-    </div>
+          {/* プログレスモーダル */}
+          <ExportProgressModal
+            isOpen={showProgressModal}
+            onClose={() => setShowProgressModal(false)}
+            progress={exportProgress}
+            status={exportStatus}
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            currentStepIndex={currentStepIndex}
+          />
+
+          {/* 警告モーダル */}
+          <ExportWarningModal
+            isOpen={showWarningModal}
+            onClose={() => setShowWarningModal(false)}
+            onContinue={handleContinueExport}
+            warnings={warningData}
+          />
+        </div>
+      </div>
   )
 }
