@@ -22,6 +22,15 @@
 .DS_Store
 *.pem
 
+# IDE設定
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 環境変数
+.env
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -41,18 +50,17 @@ next-env.d.ts
 main
 
 # Score at Once データフォルダ（共有ドライブ対応）
-/data/
-**/data/
+data/
 **/*.db
+**/*.db-shm
+**/*.db-wal
 **/*.db-journal
 **/*.sqlite
 **/*.sqlite3
 
-# プロジェクトデータ
-# **/projects/
-# **/master-images/
-# **/answer-sheets/
-# **/exports/
+# プロジェクトデータ（dataフォルダ内のみ）
+data/projects/
+data/exports/
 
 # 出力ファイル
 **/*_scored.pdf
@@ -62,5 +70,8 @@ main
 # アプリケーション設定ファイル
 **/config.json
 
-/temp-test
+# ビルド出力
+out/
+temp-test/
+
 /.claude
