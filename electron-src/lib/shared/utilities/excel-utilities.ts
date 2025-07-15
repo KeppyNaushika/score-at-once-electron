@@ -17,14 +17,14 @@ export function getExcelColumnLetter(colIndex: number): string {
 /**
  * 採点ステータスを正誤記号に変換する関数
  */
-export function getStatusSymbol(status: string): string {
+export function getStatusSymbol(status: string, score?: number): string {
   switch (status) {
     case "correct":
       return "○"
     case "partial":
-      return "△"
+      return score !== undefined && score !== null ? `△${score}` : "△"
     case "hold":
-      return "保"
+      return score !== undefined && score !== null ? `△${score}` : "保"
     case "incorrect":
       return "×"
     case "no_answer":
