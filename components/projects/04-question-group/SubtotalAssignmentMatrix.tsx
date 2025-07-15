@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Table,
   TableBody,
@@ -235,20 +234,32 @@ export function SubtotalAssignmentMatrix({
         <CardHeader>
           <CardTitle className="text-base">小計点関連付けマトリックス</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ScrollArea className="h-96 w-full">
-            <div className="overflow-x-auto">
-              <Table className="table-auto" style={{ minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 128}px` }}>
+        <CardContent className="p-0">
+          <div 
+            className="relative h-96 w-full overflow-x-auto overflow-y-auto"
+            style={{ 
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(0, 0, 0, 0.2) transparent'
+            }}
+          >
+            <Table 
+              className="table-fixed" 
+              style={{ 
+                minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`,
+                width: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`
+              }}
+            >
               <TableHeader>
                 <TableRow>
-                  <TableHead className="bg-background sticky left-0 z-10 w-48">
+                  <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     小計点領域
                   </TableHead>
                   {questionGroups.map((group) => (
                     <TableHead 
                       key={group.id} 
-                      className="w-32 text-center bg-green-50/50 border-l-2 border-green-200" 
+                      className="text-center bg-green-50/50 border-l-2 border-green-200" 
                       colSpan={group.items.length}
+                      style={{ width: `${group.items.length * 120}px` }}
                     >
                       <div className="text-sm font-semibold text-green-700">
                         {group.name}
@@ -257,12 +268,16 @@ export function SubtotalAssignmentMatrix({
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableHead className="bg-background sticky left-0 z-10 w-48">
+                  <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     {/* 空のセル */}
                   </TableHead>
                   {questionGroups.map((group) => (
                     group.items.map((item) => (
-                      <TableHead key={item.id} className="w-32 text-center bg-gray-50/50">
+                      <TableHead 
+                        key={item.id} 
+                        className="text-center bg-gray-50/50"
+                        style={{ width: '120px', minWidth: '120px' }}
+                      >
                         <div className="text-muted-foreground text-xs">
                           {item.name}
                         </div>
@@ -274,7 +289,7 @@ export function SubtotalAssignmentMatrix({
               <TableBody>
                 {subtotalRegions.map((region) => (
                   <TableRow key={region.id}>
-                    <TableCell className="bg-background sticky left-0 z-10">
+                    <TableCell className="bg-white sticky left-0 z-10 border-r-2 border-gray-200">
                       <div className="flex items-center gap-2">
                         <div className="font-medium">
                           {region.label || `小計${region.orderIndex || 1}`}
@@ -286,7 +301,11 @@ export function SubtotalAssignmentMatrix({
                     </TableCell>
                     {questionGroups.map((group) => (
                       group.items.map((item) => (
-                        <TableCell key={item.id} className="text-center">
+                        <TableCell 
+                          key={item.id} 
+                          className="text-center"
+                          style={{ width: '120px', minWidth: '120px' }}
+                        >
                           <div className="flex justify-center">
                             <Checkbox
                               checked={
@@ -309,8 +328,7 @@ export function SubtotalAssignmentMatrix({
                 ))}
               </TableBody>
               </Table>
-            </div>
-          </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 
