@@ -4,6 +4,7 @@ export interface ExportGradingDataOptions {
   projectId: string
   selectedStudentIds: string[]
   outputPath?: string
+  forceExport?: boolean // 警告を無視して強制実行
 }
 
 export interface ScoringData {
@@ -41,6 +42,19 @@ export interface ExportResult {
   success: boolean
   outputPath?: string
   error?: string
+  warnings?: {
+    noScoringData: string[]
+    ungraded: string[]
+    missingPartialScore: string[]
+  }
+  validationResult?: {
+    hasWarnings: boolean
+    warnings: {
+      noScoringData: string[]
+      ungraded: string[]
+      missingPartialScore: string[]
+    }
+  }
 }
 
 // Excel固有の型定義

@@ -8,11 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download } from "lucide-react"
 import { ExportOptionsCard } from "@/components/projects/08-export/ExportOptionsCard"
 import ExportProgressModal from "@/components/projects/08-export/ExportProgressModal"
+import ExportWarningModal from "@/components/projects/08-export/ExportWarningModal"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
 import { StudentSelectionCard } from "@/components/projects/08-export/StudentSelectionCard"
+import { useState } from "react"
 
 export default function ExportPage() {
   const { helpButton } = usePageHelp()
+  const [showWarningModal, setShowWarningModal] = useState(false)
+  const [warningData, setWarningData] = useState({
+    noScoringData: [] as string[],
+    ungraded: [] as string[],
+    missingPartialScore: [] as string[],
+  })
 
   const {
     project,
@@ -106,6 +114,38 @@ export default function ExportPage() {
       const result = await window.electronAPI.exportGradingDataExcel({
         projectId: project.id,
         selectedStudentIds,
+      })
+
+      if (result.success) {
+        alert(
+          `採点データExcelの出力が完了しました。\n保存先: ${result.outputPath}`,
+        )
+      } else if (result.warnings) {
+        // 警告がある場合は警告モーダルを表示
+        setWarningData(result.warnings)
+        setShowWarningModal(true)
+      } else {
+        alert(`出力に失敗しました: ${result.error}`)
+      }
+    } catch (error) {
+      console.error("Export error:", error)
+      alert("出力中にエラーが発生しました")
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleContinueExport = async () => {
+    setShowWarningModal(false)
+    setIsExporting(true)
+
+    try {
+      const selectedStudentIds = Array.from(selectedStudents)
+
+      const result = await window.electronAPI.exportGradingDataExcel({
+        projectId: project.id,
+        selectedStudentIds,
+        forceExport: true, // 警告を無視して強制実行
       })
 
       if (result.success) {
@@ -217,6 +257,14 @@ export default function ExportPage() {
         currentStep={currentStep}
         totalSteps={totalSteps}
         currentStepIndex={currentStepIndex}
+      />
+
+      {/* 警告モーダル */}
+      <ExportWarningModal
+        isOpen={showWarningModal}
+        onClose={() => setShowWarningModal(false)}
+        onContinue={handleContinueExport}
+        warnings={warningData}
       />
     </div>
   )
