@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -48,6 +48,12 @@ export function QuestionAssignmentMatrix({
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  // ドラッグ選択の状態
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [dragInitialState, setDragInitialState] = useState<boolean | null>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
+
   // 既存の関連付けを読み込み
   useEffect(() => {
     const loadAssignments = async () => {
@@ -90,6 +96,104 @@ export function QuestionAssignmentMatrix({
       loadAssignments()
     }
   }, [layoutRegions])
+
+  // チェックボックスのドラッグ開始
+  const handleMouseDown = (
+    event: React.MouseEvent,
+    questionId: string,
+    itemId: string,
+  ) => {
+    event.preventDefault()
+    
+    const currentState = assignments[questionId]?.has(itemId) || false
+    const newState = !currentState
+    
+    // ドラッグ開始の状態を記録
+    setDragInitialState(newState)
+    setIsDragging(true)
+    
+    if (tableRef.current) {
+      const tableRect = tableRef.current.getBoundingClientRect()
+      setDragStart({
+        x: event.clientX - tableRect.left,
+        y: event.clientY - tableRect.top,
+      })
+    }
+
+    // 最初のチェックボックスの状態を変更
+    handleAssignmentChange(questionId, itemId, newState)
+  }
+
+  // ドラッグ中のマウス移動
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (!isDragging || dragInitialState === null) return
+
+    // マウス位置のチェックボックスを取得
+    const target = document.elementFromPoint(event.clientX, event.clientY)
+    const checkboxCell = target?.closest('[data-checkbox-cell]')
+    
+    if (checkboxCell) {
+      const questionId = checkboxCell.getAttribute('data-question-id')
+      const itemId = checkboxCell.getAttribute('data-item-id')
+      
+      if (questionId && itemId) {
+        const currentState = assignments[questionId]?.has(itemId) || false
+        
+        // ドラッグ初期状態と現在の状態が異なる場合のみ変更
+        if (currentState !== dragInitialState) {
+          // ドラッグ中は非同期処理を簡素化（UIのみ更新、保存は後で）
+          setAssignments((prev) => {
+            const newAssignments = { ...prev }
+            if (!newAssignments[questionId]) {
+              newAssignments[questionId] = new Set()
+            }
+
+            if (dragInitialState) {
+              newAssignments[questionId].add(itemId)
+            } else {
+              newAssignments[questionId].delete(itemId)
+            }
+
+            return newAssignments
+          })
+        }
+      }
+    }
+  }
+
+  // ドラッグ終了
+  const handleMouseUp = async () => {
+    if (isDragging) {
+      // ドラッグ終了時に一括保存
+      try {
+        setSaving(true)
+        for (const [questionId, itemIds] of Object.entries(assignments)) {
+          await onUpdateAssignments(questionId, Array.from(itemIds))
+        }
+
+        // 成功時にoriginalAssignmentsを更新
+        setOriginalAssignments(
+          Object.fromEntries(
+            Object.entries(assignments).map(([key, value]) => [
+              key,
+              Array.from(value),
+            ]),
+          ),
+        )
+        
+        console.log(`✅ ドラッグ選択の一括保存完了`)
+        
+      } catch (error) {
+        console.error("❌ ドラッグ選択の保存エラー:", error)
+      } finally {
+        setSaving(false)
+      }
+    }
+    
+    setIsDragging(false)
+    setDragStart(null)
+    setDragInitialState(null)
+  }
 
   // チェックボックスの状態を変更（逐次保存）
   const handleAssignmentChange = async (
@@ -285,7 +389,14 @@ export function QuestionAssignmentMatrix({
         <CardContent>
           <ScrollArea className="h-96 w-full">
             <div className="overflow-x-auto">
-              <Table className="table-auto" style={{ minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 128}px` }}>
+              <Table 
+                ref={tableRef}
+                className="table-auto" 
+                style={{ minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 128}px` }}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
               <TableHeader>
                 <TableRow>
                   <TableHead className="bg-background sticky left-0 z-10 w-48">
@@ -333,7 +444,13 @@ export function QuestionAssignmentMatrix({
                     </TableCell>
                     {questionGroups.map((group) => (
                       group.items.map((item) => (
-                        <TableCell key={item.id} className="text-center">
+                        <TableCell 
+                          key={item.id} 
+                          className="text-center"
+                          data-checkbox-cell
+                          data-question-id={region.id}
+                          data-item-id={item.id}
+                        >
                           <div className="flex justify-center">
                             <Checkbox
                               checked={
@@ -346,6 +463,7 @@ export function QuestionAssignmentMatrix({
                                   checked as boolean,
                                 )
                               }
+                              onMouseDown={(e) => handleMouseDown(e, region.id, item.id)}
                               disabled={saving}
                             />
                           </div>
@@ -370,6 +488,7 @@ export function QuestionAssignmentMatrix({
           </li>
           <li>• 一つの設問は複数のグループ項目に関連付けることができます</li>
           <li>• 例: 「問1」を「大問1」と「知識・理解」の両方に関連付け可能</li>
+          <li>• <strong>ドラッグでまとめてチェック/チェック解除できます</strong>（採点画面と同様）</li>
           <li>• <strong>変更は自動で保存されます</strong>（逐次保存）</li>
         </ul>
       </div>
