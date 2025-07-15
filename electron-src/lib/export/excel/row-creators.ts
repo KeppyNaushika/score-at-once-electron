@@ -42,9 +42,12 @@ export async function createDataRows(
       questionStartColIndex + student.scores.length - 1
     const questionStartCol = getExcelColumnLetter(questionStartColIndex)
     const questionEndCol = getExcelColumnLetter(questionEndColIndex)
-    row.getCell("G").value = {
+    const totalCell = row.getCell("G")
+    totalCell.value = {
       formula: `SUM(${questionStartCol}${rowIndex}:${questionEndCol}${rowIndex})`,
     }
+    // 合計点を赤色に設定
+    totalCell.font = { color: { argb: 'FFFF0000' } }
 
     // 小計点の設定
     await setSubtotalCells(
@@ -140,13 +143,22 @@ function setQuestionCells(
 
   for (const score of student.scores) {
     const col = getExcelColumnLetter(scoreColIndex)
+    const cell = row.getCell(col)
 
     if (isScoreSheet) {
       // 点数一覧
-      row.getCell(col).value = score.score || 0
+      cell.value = score.score || 0
+      // 部分点・保留の場合は赤色に設定
+      if (score.status === "partial" || score.status === "hold") {
+        cell.font = { color: { argb: 'FFFF0000' } }
+      }
     } else {
       // 正誤一覧
-      row.getCell(col).value = getStatusSymbol(score.status)
+      cell.value = getStatusSymbol(score.status, score.score ?? undefined)
+      // 部分点・保留の場合は赤色に設定
+      if (score.status === "partial" || score.status === "hold") {
+        cell.font = { color: { argb: 'FFFF0000' } }
+      }
     }
     scoreColIndex++
   }
