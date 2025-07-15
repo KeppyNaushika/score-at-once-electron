@@ -1,4 +1,4 @@
-import prisma from './client'
+import prisma from "./client"
 // ProjectStudentStatus enum は削除されたため、文字列として定義
 type ProjectStudentStatus = "PARTICIPATING" | "EXPECTED" | "ABSENT"
 
@@ -15,34 +15,37 @@ export async function getStudentsForProject(projectId: string) {
           include: {
             memberships: {
               include: {
-                class: true
+                class: true,
               },
               // endDate制限を削除 - 過去の所属も含めて取得
               orderBy: {
-                startDate: 'desc'
-              }
-            }
-          }
-        }
-      }
+                startDate: "desc",
+              },
+            },
+          },
+        },
+      },
     })
 
     const studentsWithStatus = projectStudents.map((projectStudent) => ({
       ...projectStudent.student,
-      status: projectStudent.status.toLowerCase() as 'participating' | 'expected' | 'absent',
+      status: projectStudent.status.toLowerCase() as
+        | "participating"
+        | "expected"
+        | "absent",
       isInProject: true,
-      customOrder: projectStudent.customOrder
+      customOrder: projectStudent.customOrder,
     }))
 
     return {
       success: true,
-      students: studentsWithStatus
+      students: studentsWithStatus,
     }
   } catch (error) {
-    console.error('Error fetching students for project:', error)
+    console.error("Error fetching students for project:", error)
     return {
       success: false,
-      error: 'Failed to fetch students for project'
+      error: "Failed to fetch students for project",
     }
   }
 }
@@ -50,42 +53,50 @@ export async function getStudentsForProject(projectId: string) {
 /**
  * プロジェクトに生徒を追加
  */
-export async function addStudentsToProject(projectId: string, studentIds: string[]) {
+export async function addStudentsToProject(
+  projectId: string,
+  studentIds: string[],
+) {
   try {
     // 既に参加している生徒を除外
     const existingProjectStudents = await prisma.projectStudent.findMany({
       where: {
         projectId,
-        studentId: { in: studentIds }
+        studentId: { in: studentIds },
       },
-      select: { studentId: true }
+      select: { studentId: true },
     })
 
-    const existingStudentIds = new Set(existingProjectStudents.map(ps => ps.studentId))
-    const newStudentIds = studentIds.filter(id => !existingStudentIds.has(id))
+    const existingStudentIds = new Set(
+      existingProjectStudents.map((ps) => ps.studentId),
+    )
+    const newStudentIds = studentIds.filter((id) => !existingStudentIds.has(id))
 
     // 新しい生徒をプロジェクトに追加
     if (newStudentIds.length > 0) {
-      const createData = newStudentIds.map(studentId => ({
+      const createData = newStudentIds.map((studentId) => ({
         projectId,
         studentId,
-        status: "PARTICIPATING"
+        status: "PARTICIPATING",
       }))
 
       await prisma.projectStudent.createMany({
-        data: createData
+        data: createData,
       })
     }
     return {
       success: true,
       addedCount: newStudentIds.length,
-      skippedCount: studentIds.length - newStudentIds.length
+      skippedCount: studentIds.length - newStudentIds.length,
     }
   } catch (error) {
-    console.error('Error adding students to project:', error)
+    console.error("Error adding students to project:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to add students to project'
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to add students to project",
     }
   }
 }
@@ -93,14 +104,17 @@ export async function addStudentsToProject(projectId: string, studentIds: string
 /**
  * プロジェクトから生徒を削除
  */
-export async function removeStudentsFromProject(projectId: string, studentIds: string[]) {
+export async function removeStudentsFromProject(
+  projectId: string,
+  studentIds: string[],
+) {
   try {
     // プロジェクトから生徒を削除
     await prisma.projectStudent.deleteMany({
       where: {
         projectId,
-        studentId: { in: studentIds }
-      }
+        studentId: { in: studentIds },
+      },
     })
 
     // 関連するAnswerSheetを削除
@@ -108,19 +122,19 @@ export async function removeStudentsFromProject(projectId: string, studentIds: s
       where: {
         projectId: projectId,
         studentId: {
-          in: studentIds
-        }
-      }
+          in: studentIds,
+        },
+      },
     })
 
     return {
-      success: true
+      success: true,
     }
   } catch (error) {
-    console.error('Error removing students from project:', error)
+    console.error("Error removing students from project:", error)
     return {
       success: false,
-      error: 'Failed to remove students from project'
+      error: "Failed to remove students from project",
     }
   }
 }
@@ -131,7 +145,7 @@ export async function removeStudentsFromProject(projectId: string, studentIds: s
 export async function updateStudentProjectStatus(
   projectId: string,
   studentId: string,
-  status: 'participating' | 'expected' | 'absent'
+  status: "participating" | "expected" | "absent",
 ) {
   try {
     // statusを大文字に変換してenumに合わせる
@@ -140,21 +154,21 @@ export async function updateStudentProjectStatus(
     await prisma.projectStudent.updateMany({
       where: {
         projectId,
-        studentId
+        studentId,
       },
       data: {
-        status: enumStatus
-      }
+        status: enumStatus,
+      },
     })
 
     return {
-      success: true
+      success: true,
     }
   } catch (error) {
-    console.error('Error updating student project status:', error)
+    console.error("Error updating student project status:", error)
     return {
       success: false,
-      error: 'Failed to update student project status'
+      error: "Failed to update student project status",
     }
   }
 }
@@ -164,7 +178,7 @@ export async function updateStudentProjectStatus(
  */
 export async function updateStudentOrders(
   projectId: string,
-  studentOrders: { studentId: string; customOrder: number }[]
+  studentOrders: { studentId: string; customOrder: number }[],
 ) {
   try {
     // 各生徒の並び順を更新
@@ -175,22 +189,22 @@ export async function updateStudentOrders(
       await prisma.projectStudent.updateMany({
         where: {
           projectId,
-          studentId
+          studentId,
         },
         data: {
-          customOrder: orderValue
-        }
+          customOrder: orderValue,
+        },
       })
     }
 
     return {
-      success: true
+      success: true,
     }
   } catch (error) {
-    console.error('Error updating student orders:', error)
+    console.error("Error updating student orders:", error)
     return {
       success: false,
-      error: 'Failed to update student orders'
+      error: "Failed to update student orders",
     }
   }
 }
@@ -205,44 +219,46 @@ export async function getClassesNotInProject(projectId: string) {
       include: {
         memberships: {
           include: {
-            student: true
-          }
+            student: true,
+          },
           // endDate条件を削除 - 期限切れでも採点できるべき
-        }
-      }
+        },
+      },
     })
 
     // プロジェクトに既に参加している生徒IDを取得
     const projectStudents = await prisma.projectStudent.findMany({
       where: { projectId },
-      select: { studentId: true }
+      select: { studentId: true },
     })
-    const participatingStudentIds = new Set(projectStudents.map(ps => ps.studentId))
+    const participatingStudentIds = new Set(
+      projectStudents.map((ps) => ps.studentId),
+    )
 
     // プロジェクトに参加していない学級を抽出
     const availableClasses = allClasses
       .map((cls) => {
         const allStudents = cls.memberships.map((m) => m.student)
         const nonParticipatingStudents = allStudents.filter(
-          (student) => !participatingStudentIds.has(student.id)
+          (student) => !participatingStudentIds.has(student.id),
         )
 
         return {
           ...cls,
-          studentCount: nonParticipatingStudents.length
+          studentCount: nonParticipatingStudents.length,
         }
       })
       .filter((cls) => cls.studentCount > 0)
 
     return {
       success: true,
-      classes: availableClasses
+      classes: availableClasses,
     }
   } catch (error) {
-    console.error('Error fetching classes not in project:', error)
+    console.error("Error fetching classes not in project:", error)
     return {
       success: false,
-      error: 'Failed to fetch available classes'
+      error: "Failed to fetch available classes",
     }
   }
 }
@@ -255,38 +271,40 @@ export async function getStudentsNotInProject(projectId: string) {
     // プロジェクトに既に参加している生徒IDを取得
     const projectStudents = await prisma.projectStudent.findMany({
       where: { projectId },
-      select: { studentId: true }
+      select: { studentId: true },
     })
-    const participatingStudentIds = new Set(projectStudents.map(ps => ps.studentId))
+    const participatingStudentIds = new Set(
+      projectStudents.map((ps) => ps.studentId),
+    )
 
     // プロジェクトに参加していない生徒を取得
     const availableStudents = await prisma.student.findMany({
       where: {
         id: {
-          notIn: Array.from(participatingStudentIds)
-        }
+          notIn: Array.from(participatingStudentIds),
+        },
       },
       include: {
         memberships: {
           include: {
-            class: true
+            class: true,
           },
           orderBy: {
-            startDate: 'desc'
-          }
-        }
-      }
+            startDate: "desc",
+          },
+        },
+      },
     })
 
     return {
       success: true,
-      students: availableStudents
+      students: availableStudents,
     }
   } catch (error) {
-    console.error('Error fetching students not in project:', error)
+    console.error("Error fetching students not in project:", error)
     return {
       success: false,
-      error: 'Failed to fetch available students'
+      error: "Failed to fetch available students",
     }
   }
 }

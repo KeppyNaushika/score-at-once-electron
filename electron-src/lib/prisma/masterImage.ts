@@ -2,9 +2,9 @@ import { MasterImage, Prisma } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
 import {
+  getAbsolutePathFromData,
   getMasterImagesDirectory,
   getRelativePathFromData,
-  getAbsolutePathFromData,
 } from "../dataManager"
 import prisma from "./client"
 

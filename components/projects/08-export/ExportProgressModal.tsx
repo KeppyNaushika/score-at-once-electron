@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle, XCircle, Loader2, Square, CheckSquare } from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface ExportProgressModalProps {
@@ -18,6 +18,17 @@ interface ExportProgressModalProps {
   outputPath?: string
 }
 
+// PDF出力の7つのステップを定義
+const PDF_EXPORT_STEPS = [
+  { id: 1, name: "保存場所選択", progressRange: [0, 5] },
+  { id: 2, name: "生徒データ取得", progressRange: [5, 20] },
+  { id: 3, name: "答案データ取得", progressRange: [20, 30] },
+  { id: 4, name: "採点データ取得", progressRange: [30, 40] },
+  { id: 5, name: "答案画像確認", progressRange: [40, 45] },
+  { id: 6, name: "PDFページ作成", progressRange: [45, 95] },
+  { id: 7, name: "最適化・保存", progressRange: [95, 100] }
+]
+
 export default function ExportProgressModal({
   isOpen,
   onClose,
@@ -31,6 +42,32 @@ export default function ExportProgressModal({
 }: ExportProgressModalProps) {
   const [isVisible, setIsVisible] = useState(isOpen)
   const [isClosing, setIsClosing] = useState(false)
+  
+  // 現在の進捗に基づいてステップの状態を計算
+  const getStepStatus = (step: typeof PDF_EXPORT_STEPS[0]) => {
+    const [minProgress, maxProgress] = step.progressRange
+    if (progress >= maxProgress) {
+      return 'completed'
+    } else if (progress >= minProgress) {
+      return 'processing'
+    } else {
+      return 'pending'
+    }
+  }
+
+  // Step6のページ数を抽出する関数
+  const getPageProgress = () => {
+    // currentStepから「答案 X / Y を処理中...」や「ページ X / Y を作成中...」などの形式を抽出
+    const pageMatch = currentStep.match(/(?:答案|ページ)\s*(\d+)\s*\/\s*(\d+)/) || 
+                     currentStep.match(/(\d+)\s*\/\s*(\d+)/)
+    if (pageMatch) {
+      return {
+        current: parseInt(pageMatch[1]),
+        total: parseInt(pageMatch[2])
+      }
+    }
+    return null
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -87,20 +124,54 @@ export default function ExportProgressModal({
                   <span>進行状況</span>
                   <span className="font-medium">{progress}%</span>
                 </div>
-                <div className="space-y-1">
-                  <Progress value={progress} className="w-full h-2" />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>0%</span>
-                    <span>50%</span>
-                    <span>100%</span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">{currentStep}</p>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>ステップ {currentStepIndex + 1}</span>
-                    <span>全 {totalSteps} ステップ</span>
-                  </div>
+                <Progress value={progress} className="w-full h-2" />
+              </div>
+              
+              {/* ステップ表示 */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">処理ステップ</h4>
+                <div className="space-y-2">
+                  {PDF_EXPORT_STEPS.map((step) => {
+                    const stepStatus = getStepStatus(step)
+                    const pageProgress = getPageProgress()
+                    
+                    return (
+                      <div
+                        key={step.id}
+                        className={`flex items-center space-x-3 p-2 rounded-md transition-colors ${
+                          stepStatus === 'processing' ? 'bg-blue-50 border border-blue-200' : 
+                          stepStatus === 'completed' ? 'bg-green-50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex-shrink-0">
+                          {stepStatus === 'completed' && (
+                            <CheckSquare className="h-4 w-4 text-green-600" />
+                          )}
+                          {stepStatus === 'processing' && (
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                          )}
+                          {stepStatus === 'pending' && (
+                            <Square className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <span className={`text-sm ${
+                            stepStatus === 'processing' ? 'font-medium text-blue-700' :
+                            stepStatus === 'completed' ? 'text-green-700' : 'text-gray-500'
+                          }`}>
+                            Step {step.id}: {step.name}
+                            {stepStatus === 'completed' && '：完了'}
+                            {stepStatus === 'processing' && step.id === 6 && pageProgress && (
+                              <span className="ml-2 text-blue-600">
+                                ({pageProgress.current} / {pageProgress.total})
+                              </span>
+                            )}
+                            {stepStatus === 'processing' && step.id !== 6 && '中...'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </>
@@ -117,6 +188,28 @@ export default function ExportProgressModal({
                   </p>
                 )}
               </div>
+              
+              {/* 完了したステップの一覧 */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">完了したステップ</h4>
+                <div className="space-y-2">
+                  {PDF_EXPORT_STEPS.map((step) => (
+                    <div
+                      key={step.id}
+                      className="flex items-center space-x-3 p-2 rounded-md bg-green-50"
+                    >
+                      <div className="flex-shrink-0">
+                        <CheckSquare className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-sm text-green-700">
+                          Step {step.id}: {step.name}：完了
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
           
@@ -130,6 +223,47 @@ export default function ExportProgressModal({
                     エラー: {error}
                   </p>
                 )}
+              </div>
+              
+              {/* エラー時のステップ状況 */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">処理状況</h4>
+                <div className="space-y-2">
+                  {PDF_EXPORT_STEPS.map((step) => {
+                    const stepStatus = getStepStatus(step)
+                    return (
+                      <div
+                        key={step.id}
+                        className={`flex items-center space-x-3 p-2 rounded-md ${
+                          stepStatus === 'processing' ? 'bg-red-50 border border-red-200' : 
+                          stepStatus === 'completed' ? 'bg-green-50' : 'bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex-shrink-0">
+                          {stepStatus === 'completed' && (
+                            <CheckSquare className="h-4 w-4 text-green-600" />
+                          )}
+                          {stepStatus === 'processing' && (
+                            <XCircle className="h-4 w-4 text-red-600" />
+                          )}
+                          {stepStatus === 'pending' && (
+                            <Square className="h-4 w-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <span className={`text-sm ${
+                            stepStatus === 'processing' ? 'font-medium text-red-700' :
+                            stepStatus === 'completed' ? 'text-green-700' : 'text-gray-500'
+                          }`}>
+                            Step {step.id}: {step.name}
+                            {stepStatus === 'completed' && '：完了'}
+                            {stepStatus === 'processing' && '：エラー'}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </div>
           )}

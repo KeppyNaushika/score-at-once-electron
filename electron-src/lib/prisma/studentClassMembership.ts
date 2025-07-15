@@ -226,7 +226,7 @@ export const getMembershipsByDateRange = async (
 }
 
 export {
+  type ClassWithMemberships,
   type StudentClassMembershipWithDetails,
   type StudentWithMemberships,
-  type ClassWithMemberships,
 }

@@ -1,42 +1,46 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import { PrismaClient } from "@prisma/client"
+import bcrypt from "bcrypt"
+import jwt from "jsonwebtoken"
 
 const prisma = new PrismaClient({
   log: [], // すべてのログを無効化
-});
+})
 
 // JWT secret - in production, this should be in environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const SALT_ROUNDS = 10;
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-change-in-production"
+const SALT_ROUNDS = 10
 
 export interface AuthTokenPayload {
-  userId: string;
-  username: string;
-  role: string;
+  userId: string
+  username: string
+  role: string
 }
 
 // Hash password
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS);
+  return bcrypt.hash(password, SALT_ROUNDS)
 }
 
 // Verify password
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+export async function verifyPassword(
+  password: string,
+  hash: string,
+): Promise<boolean> {
+  return bcrypt.compare(password, hash)
 }
 
 // Generate JWT token
 export function generateToken(payload: AuthTokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" })
 }
 
 // Verify JWT token
 export function verifyToken(token: string): AuthTokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    return jwt.verify(token, JWT_SECRET) as AuthTokenPayload
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -45,25 +49,25 @@ export async function loginUser(username: string, password: string) {
   try {
     const user = await prisma.user.findUnique({
       where: { username },
-    });
+    })
 
     if (!user) {
-      throw new Error('ユーザーが見つかりません');
+      throw new Error("ユーザーが見つかりません")
     }
 
     if (!user.passcode) {
-      throw new Error('パスコードが設定されていません');
+      throw new Error("パスコードが設定されていません")
     }
 
     if (password !== user.passcode) {
-      throw new Error('パスコードが正しくありません');
+      throw new Error("パスコードが正しくありません")
     }
 
     const token = generateToken({
       userId: user.id,
       username: user.username,
       role: user.role,
-    });
+    })
 
     return {
       success: true,
@@ -74,30 +78,30 @@ export async function loginUser(username: string, password: string) {
         role: user.role,
       },
       token,
-    };
+    }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : '認証に失敗しました',
-    };
+      error: error instanceof Error ? error.message : "認証に失敗しました",
+    }
   }
 }
 
 // Create new user
 export async function createUser(userData: {
-  username: string;
-  password: string;
-  name: string;
-  role?: string;
+  username: string
+  password: string
+  name: string
+  role?: string
 }) {
   try {
     // Check if username already exists
     const existing = await prisma.user.findUnique({
       where: { username: userData.username },
-    });
+    })
 
     if (existing) {
-      throw new Error('このユーザー名は既に使用されています');
+      throw new Error("このユーザー名は既に使用されています")
     }
 
     // Create user with passcode (stored as plain text for simple auth)
@@ -106,15 +110,15 @@ export async function createUser(userData: {
         username: userData.username,
         passcode: userData.password,
         name: userData.name,
-        role: userData.role || 'teacher',
+        role: userData.role || "teacher",
       },
-    });
+    })
 
     const token = generateToken({
       userId: user.id,
       username: user.username,
       role: user.role,
-    });
+    })
 
     return {
       success: true,
@@ -125,29 +129,30 @@ export async function createUser(userData: {
         role: user.role,
       },
       token,
-    };
+    }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'ユーザーの作成に失敗しました',
-    };
+      error:
+        error instanceof Error ? error.message : "ユーザーの作成に失敗しました",
+    }
   }
 }
 
 // Get user by token
 export async function getUserByToken(token: string) {
   try {
-    const payload = verifyToken(token);
+    const payload = verifyToken(token)
     if (!payload) {
-      throw new Error('無効なトークンです');
+      throw new Error("無効なトークンです")
     }
 
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-    });
+    })
 
     if (!user) {
-      throw new Error('ユーザーが見つかりません');
+      throw new Error("ユーザーが見つかりません")
     }
 
     return {
@@ -158,12 +163,12 @@ export async function getUserByToken(token: string) {
         name: user.name,
         role: user.role,
       },
-    };
+    }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : '認証に失敗しました',
-    };
+      error: error instanceof Error ? error.message : "認証に失敗しました",
+    }
   }
 }
 
@@ -173,13 +178,16 @@ export async function updateUserPassword(userId: string, newPassword: string) {
     await prisma.user.update({
       where: { id: userId },
       data: { passcode: newPassword },
-    });
+    })
 
-    return { success: true };
+    return { success: true }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'パスコードの更新に失敗しました',
-    };
+      error:
+        error instanceof Error
+          ? error.message
+          : "パスコードの更新に失敗しました",
+    }
   }
 }

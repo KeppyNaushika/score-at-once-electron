@@ -1,4 +1,4 @@
-import type { Prisma, LayoutRegion } from "@prisma/client"
+import type { LayoutRegion, Prisma } from "@prisma/client"
 import prisma from "./client"
 
 // LayoutRegion を作成
@@ -46,15 +46,15 @@ export const updateLayoutRegion = async (
 
 // 複数の LayoutRegion の順序を一括更新
 export const updateLayoutRegionOrders = async (
-  updates: Array<{ id: string; orderIndex: number }>
+  updates: Array<{ id: string; orderIndex: number }>,
 ) => {
   const updatePromises = updates.map((update) =>
     prisma.layoutRegion.update({
       where: { id: update.id },
       data: { orderIndex: update.orderIndex },
-    })
+    }),
   )
-  
+
   return Promise.all(updatePromises)
 }
 
@@ -86,10 +86,10 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
       questionScores: true, // 関連する QuestionScore も取得
     },
     orderBy: [
-      { orderIndex: "asc" },       // 手動順序（最優先）
-      { masterImageId: "asc" },    // ページ順（フォールバック）
-      { y: "asc" },               // Y座標（フォールバック）
-      { x: "asc" }                // X座標（フォールバック）
+      { orderIndex: "asc" }, // 手動順序（最優先）
+      { masterImageId: "asc" }, // ページ順（フォールバック）
+      { y: "asc" }, // Y座標（フォールバック）
+      { x: "asc" }, // X座標（フォールバック）
     ],
   })
 }

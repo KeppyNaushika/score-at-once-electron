@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client"
-import prisma from "./client"
 import * as XLSX from "xlsx"
+import prisma from "./client"
 
 type StudentWithMemberships = Prisma.StudentGetPayload<{
   include: {
@@ -194,11 +194,13 @@ export const deleteClass = async (id: string): Promise<void> => {
         },
       },
     })
-    
+
     if (classWithMemberships && classWithMemberships.memberships.length > 0) {
-      throw new Error("この学級には現在も所属している生徒がいるため削除できません。")
+      throw new Error(
+        "この学級には現在も所属している生徒がいるため削除できません。",
+      )
     }
-    
+
     await prisma.class.delete({ where: { id } })
   } catch (error) {
     console.error("Failed to delete class:", error)
@@ -269,15 +271,15 @@ export const importStudentsFromFile = async (
           // 学生を作成または更新
           const student = await tx.student.upsert({
             where: { studentId },
-            update: { 
+            update: {
               lastName: name?.split(/\s+/)[0] || "",
               firstName: name?.split(/\s+/).slice(1).join(" ") || "",
               lastNameKana: "",
               firstNameKana: "",
               enrollmentYear: enrollmentYear || undefined,
             },
-            create: { 
-              studentId, 
+            create: {
+              studentId,
               lastName: name?.split(/\s+/)[0] || "",
               firstName: name?.split(/\s+/).slice(1).join(" ") || "",
               lastNameKana: "",
@@ -348,7 +350,4 @@ export const importStudentsFromFile = async (
 }
 
 // Export the updated types
-export {
-  type StudentWithMemberships,
-  type ClassWithMemberships,
-}
+export { type ClassWithMemberships, type StudentWithMemberships }

@@ -1,5 +1,5 @@
-import prisma from "./client"
 import { Decimal } from "@prisma/client/runtime/library"
+import prisma from "./client"
 
 /**
  * 実際の得点を計算する関数
@@ -9,7 +9,7 @@ import { Decimal } from "@prisma/client/runtime/library"
  */
 export const calculateActualScore = (
   questionScore: { status: string; partialScore?: number | null },
-  maxScore: number
+  maxScore: number,
 ): number | null => {
   switch (questionScore.status) {
     case "correct":
@@ -17,13 +17,15 @@ export const calculateActualScore = (
       return maxScore
     case "incorrect":
     case "no_answer":
-      return 0  // 誤答・無答は 0/配点 と表示
+      return 0 // 誤答・無答は 0/配点 と表示
     case "ungraded":
-      return null  // 未採点は null を返して -/配点 と表示
+      return null // 未採点は null を返して -/配点 と表示
     case "partial":
     case "pending":
     case "proposed":
-      return questionScore.partialScore ? Number(questionScore.partialScore) : null
+      return questionScore.partialScore
+        ? Number(questionScore.partialScore)
+        : null
     default:
       return 0
   }
@@ -33,7 +35,7 @@ export const calculateActualScore = (
 export interface CreateQuestionScoreData {
   answerSheetId: string
   layoutRegionId: string
-  partialScore?: number  // 部分点・保留時のみ使用
+  partialScore?: number // 部分点・保留時のみ使用
   status:
     | "ungraded"
     | "correct"
@@ -48,7 +50,7 @@ export interface CreateQuestionScoreData {
 }
 
 export interface UpdateQuestionScoreData {
-  partialScore?: number  // 部分点・保留時のみ使用
+  partialScore?: number // 部分点・保留時のみ使用
   status?:
     | "ungraded"
     | "correct"
@@ -148,9 +150,10 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       const updated = await prisma.questionScore.update({
         where: { id: existing.id },
         data: {
-          partialScore: data.partialScore !== null && data.partialScore !== undefined 
-            ? new Decimal(data.partialScore) 
-            : null,
+          partialScore:
+            data.partialScore !== null && data.partialScore !== undefined
+              ? new Decimal(data.partialScore)
+              : null,
           status: data.status,
           comment: data.comment,
           scoreVersion: existing.scoreVersion + 1,
@@ -172,9 +175,10 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         data: {
           answerSheetId: data.answerSheetId,
           layoutRegionId: data.layoutRegionId,
-          partialScore: data.partialScore !== null && data.partialScore !== undefined 
-            ? new Decimal(data.partialScore) 
-            : null,
+          partialScore:
+            data.partialScore !== null && data.partialScore !== undefined
+              ? new Decimal(data.partialScore)
+              : null,
           status: data.status,
           comment: data.comment,
           scoredByUserId: data.scoredByUserId,
@@ -233,9 +237,10 @@ export const updateQuestionScore = async (
     const updated = await prisma.questionScore.update({
       where: { id },
       data: {
-        partialScore: data.partialScore !== null && data.partialScore !== undefined 
-          ? new Decimal(data.partialScore) 
-          : null,
+        partialScore:
+          data.partialScore !== null && data.partialScore !== undefined
+            ? new Decimal(data.partialScore)
+            : null,
         status: data.status,
         comment: data.comment,
         scoreVersion: { increment: 1 },
@@ -329,7 +334,7 @@ export const finalizeQuestionScore = async (
   layoutRegionId: string,
   scoredByUserId: string,
   scoreData: {
-    partialScore?: number  // 部分点・保留の場合のみ
+    partialScore?: number // 部分点・保留の場合のみ
     status: string
     comment?: string
   },
@@ -350,9 +355,11 @@ export const finalizeQuestionScore = async (
         data: {
           answerSheetId,
           layoutRegionId,
-          partialScore: scoreData.partialScore !== null && scoreData.partialScore !== undefined 
-            ? new Decimal(scoreData.partialScore) 
-            : null,
+          partialScore:
+            scoreData.partialScore !== null &&
+            scoreData.partialScore !== undefined
+              ? new Decimal(scoreData.partialScore)
+              : null,
           status: scoreData.status,
           comment: scoreData.comment,
           scoredByUserId,
@@ -409,7 +416,7 @@ export const getAnswerSheetProgress = async (answerSheetId: string) => {
 
     // 採点済み設問数を取得（finalまたはproposedステータス）
     const gradedQuestionsCount = await prisma.questionScore.groupBy({
-      by: ['layoutRegionId'],
+      by: ["layoutRegionId"],
       where: {
         answerSheetId,
         OR: [{ status: "final" }, { status: "proposed" }],
