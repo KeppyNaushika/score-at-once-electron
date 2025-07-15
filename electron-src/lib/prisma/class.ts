@@ -1,31 +1,31 @@
-import { Prisma, Class } from "@prisma/client"
+import { Class, Prisma } from "@prisma/client"
 import prisma from "./client"
 
-type ClassWithStudents = Prisma.ClassGetPayload<{ 
-  include: { 
+type ClassWithStudents = Prisma.ClassGetPayload<{
+  include: {
     memberships: {
       include: {
         student: true
       }
     }
-  } 
+  }
 }>
 
 export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
   try {
-    return await prisma.class.findMany({ 
-      include: { 
+    return await prisma.class.findMany({
+      include: {
         memberships: {
           include: {
-            student: true
+            student: true,
           },
           orderBy: [
-            { endDate: 'asc' }, // null values first (current memberships)
-            { attendanceNumber: 'asc' },
-            { student: { studentId: 'asc' } }
-          ]
-        }
-      } 
+            { endDate: "asc" }, // null values first (current memberships)
+            { attendanceNumber: "asc" },
+            { student: { studentId: "asc" } },
+          ],
+        },
+      },
     })
   } catch (error) {
     console.error("Failed to fetch classes:", error)
@@ -39,17 +39,17 @@ export const createClass = async (
   try {
     return await prisma.class.create({
       data: classData,
-      include: { 
+      include: {
         memberships: {
           include: {
-            student: true
+            student: true,
           },
           orderBy: [
-            { endDate: 'asc' }, // null values first (current memberships)
-            { attendanceNumber: 'asc' },
-            { student: { studentId: 'asc' } }
-          ]
-        }
+            { endDate: "asc" }, // null values first (current memberships)
+            { attendanceNumber: "asc" },
+            { student: { studentId: "asc" } },
+          ],
+        },
       },
     })
   } catch (error) {
@@ -66,17 +66,17 @@ export const updateClass = async (
     return await prisma.class.update({
       where: { id },
       data,
-      include: { 
+      include: {
         memberships: {
           include: {
-            student: true
+            student: true,
           },
           orderBy: [
-            { endDate: 'asc' }, // null values first (current memberships)
-            { attendanceNumber: 'asc' },
-            { student: { studentId: 'asc' } }
-          ]
-        }
+            { endDate: "asc" }, // null values first (current memberships)
+            { attendanceNumber: "asc" },
+            { student: { studentId: "asc" } },
+          ],
+        },
       },
     })
   } catch (error) {
@@ -88,11 +88,11 @@ export const updateClass = async (
 export const deleteClass = async (classId: string): Promise<Class | void> => {
   try {
     // Check for current memberships instead of students directly
-    const membershipCount = await prisma.studentClassMembership.count({ 
-      where: { 
+    const membershipCount = await prisma.studentClassMembership.count({
+      where: {
         classId,
-        endDate: null // current memberships only
-      } 
+        endDate: null, // current memberships only
+      },
     })
     if (membershipCount > 0) {
       throw new Error(

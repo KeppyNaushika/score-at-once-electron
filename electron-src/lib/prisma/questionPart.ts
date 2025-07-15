@@ -1,4 +1,3 @@
-import { PrismaClient } from "@prisma/client"
 import { getPrismaClient } from "./client"
 
 export async function createQuestionPart(data: {
@@ -9,7 +8,7 @@ export async function createQuestionPart(data: {
   orderIndex: number
 }) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.create({
     data,
     include: {
@@ -20,15 +19,17 @@ export async function createQuestionPart(data: {
   })
 }
 
-export async function createManyQuestionParts(parts: {
-  questionId: string
-  layoutRegionId: string
-  partLabel: string
-  partScore: number
-  orderIndex: number
-}[]) {
+export async function createManyQuestionParts(
+  parts: {
+    questionId: string
+    layoutRegionId: string
+    partLabel: string
+    partScore: number
+    orderIndex: number
+  }[],
+) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.createMany({
     data: parts,
   })
@@ -40,10 +41,10 @@ export async function updateQuestionPart(
     partLabel?: string
     partScore?: number
     orderIndex?: number
-  }
+  },
 ) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.update({
     where: { id },
     data,
@@ -57,7 +58,7 @@ export async function updateQuestionPart(
 
 export async function deleteQuestionPart(id: string) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.delete({
     where: { id },
   })
@@ -65,7 +66,7 @@ export async function deleteQuestionPart(id: string) {
 
 export async function getQuestionPartsByQuestionId(questionId: string) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.findMany({
     where: { questionId },
     include: {
@@ -73,13 +74,13 @@ export async function getQuestionPartsByQuestionId(questionId: string) {
       layoutRegion: true,
       partScores: true,
     },
-    orderBy: { orderIndex: 'asc' },
+    orderBy: { orderIndex: "asc" },
   })
 }
 
 export async function getQuestionPartById(id: string) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.findUnique({
     where: { id },
     include: {
@@ -90,19 +91,21 @@ export async function getQuestionPartById(id: string) {
   })
 }
 
-export async function updateQuestionPartOrders(orders: { id: string; orderIndex: number }[]) {
+export async function updateQuestionPartOrders(
+  orders: { id: string; orderIndex: number }[],
+) {
   const prisma = getPrismaClient()
-  
+
   try {
     const updatePromises = orders.map(({ id, orderIndex }) =>
       prisma.questionPart.update({
         where: { id },
         data: { orderIndex },
-      })
+      }),
     )
-    
+
     await Promise.all(updatePromises)
-    
+
     return { success: true }
   } catch (error) {
     console.error("Error updating question part orders:", error)
@@ -112,7 +115,7 @@ export async function updateQuestionPartOrders(orders: { id: string; orderIndex:
 
 export async function getQuestionPartsByLayoutRegionId(layoutRegionId: string) {
   const prisma = getPrismaClient()
-  
+
   return await prisma.questionPart.findMany({
     where: { layoutRegionId },
     include: {
@@ -120,6 +123,6 @@ export async function getQuestionPartsByLayoutRegionId(layoutRegionId: string) {
       layoutRegion: true,
       partScores: true,
     },
-    orderBy: { orderIndex: 'asc' },
+    orderBy: { orderIndex: "asc" },
   })
 }

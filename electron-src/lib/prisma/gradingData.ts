@@ -13,7 +13,7 @@ export interface GradingDataInfo {
  */
 export const checkGradingDataForStudent = async (
   projectId: string,
-  studentId: string
+  studentId: string,
 ): Promise<GradingDataInfo> => {
   try {
     // 答案シート数をカウント
@@ -42,7 +42,8 @@ export const checkGradingDataForStudent = async (
       },
     })
 
-    const totalGradingItems = answerSheetCount + questionScoreCount + scoreRecordCount
+    const totalGradingItems =
+      answerSheetCount + questionScoreCount + scoreRecordCount
     const hasData = totalGradingItems > 0
 
     return {
@@ -63,7 +64,7 @@ export const checkGradingDataForStudent = async (
  */
 export const checkGradingDataForStudents = async (
   projectId: string,
-  studentIds: string[]
+  studentIds: string[],
 ): Promise<{
   hasAnyData: boolean
   totalGradingItems: number
@@ -98,7 +99,7 @@ export const checkGradingDataForStudents = async (
  */
 export const deleteAllGradingDataForStudent = async (
   projectId: string,
-  studentId: string
+  studentId: string,
 ): Promise<void> => {
   try {
     await prisma.$transaction(async (tx) => {

@@ -1,6 +1,6 @@
 import { User } from "@prisma/client"
-import prisma from "./client"
 import bcrypt from "bcrypt"
+import prisma from "./client"
 
 export const fetchUsers = async (): Promise<User[]> => {
   try {
@@ -29,9 +29,10 @@ export const createUser = async (userData: {
   passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
 }): Promise<User> => {
   try {
-    const hashedPasscode = userData.passcode && userData.passcodeType !== "none" 
-      ? await bcrypt.hash(userData.passcode, 10)
-      : null
+    const hashedPasscode =
+      userData.passcode && userData.passcodeType !== "none"
+        ? await bcrypt.hash(userData.passcode, 10)
+        : null
 
     return await prisma.user.create({
       data: {
@@ -39,7 +40,7 @@ export const createUser = async (userData: {
         name: userData.name,
         passcode: hashedPasscode,
         passcodeType: userData.passcodeType || "none",
-      }
+      },
     })
   } catch (error) {
     console.error("Failed to create user:", error)
@@ -47,10 +48,13 @@ export const createUser = async (userData: {
   }
 }
 
-export const verifyPasscode = async (userId: string, passcode: string): Promise<boolean> => {
+export const verifyPasscode = async (
+  userId: string,
+  passcode: string,
+): Promise<boolean> => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: userId }
+      where: { id: userId },
     })
 
     if (!user || !user.passcode || user.passcodeType === "none") {
@@ -65,21 +69,22 @@ export const verifyPasscode = async (userId: string, passcode: string): Promise<
 }
 
 export const updateUserPasscode = async (
-  userId: string, 
-  passcode?: string, 
-  passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
+  userId: string,
+  passcode?: string,
+  passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric",
 ): Promise<User> => {
   try {
-    const hashedPasscode = passcode && passcodeType !== "none" 
-      ? await bcrypt.hash(passcode, 10)
-      : null
+    const hashedPasscode =
+      passcode && passcodeType !== "none"
+        ? await bcrypt.hash(passcode, 10)
+        : null
 
     return await prisma.user.update({
       where: { id: userId },
       data: {
         passcode: hashedPasscode,
         passcodeType: passcodeType || "none",
-      }
+      },
     })
   } catch (error) {
     console.error("Failed to update user passcode:", error)

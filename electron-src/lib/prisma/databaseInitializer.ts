@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
-import * as path from "path"
 import * as fs from "fs/promises"
+import * as path from "path"
 import { getDataDirectory } from "../dataManager"
 
 // データベースファイルのパス
@@ -13,14 +13,14 @@ export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
   // パッケージ化されたアプリでは絶対パスを使用
   const absolutePath = path.resolve(databasePath)
-  const databaseUrl = `file:${absolutePath.replace(/\\/g, '/')}`
+  const databaseUrl = `file:${absolutePath.replace(/\\/g, "/")}`
 
   console.log(`Creating Prisma client with database URL: ${databaseUrl}`)
   console.log(`Resolved database path: ${absolutePath}`)
-  
+
   // 環境変数を動的にオーバーライド
   process.env.DATABASE_URL = databaseUrl
-  
+
   return new PrismaClient({
     datasources: {
       db: {
@@ -28,20 +28,19 @@ export const createSharedPrismaClient = (): PrismaClient => {
       },
     },
     // パッケージ化されたアプリでの設定
-    log: ['error', 'warn'],
+    log: ["error", "warn"],
   })
 }
 
 // データベースの初期化（初回起動時）
 export const initializeDatabase = async (): Promise<boolean> => {
-
   try {
     // データベースファイルの存在確認
     const dbExists = await checkDatabaseExists()
 
     if (!dbExists) {
       console.log("Database does not exist, creating new database...")
-      
+
       // データディレクトリが存在することを確認
       const dataDir = getDataDirectory()
       console.log(`Creating data directory: ${dataDir}`)
@@ -50,12 +49,14 @@ export const initializeDatabase = async (): Promise<boolean> => {
       // 空のデータベースファイルを作成
       const dbPath = getDatabasePath()
       console.log(`Creating database file: ${dbPath}`)
-      await fs.writeFile(dbPath, '', { mode: 0o644 })
-      
+      await fs.writeFile(dbPath, "", { mode: 0o644 })
+
       // ファイルが実際に作成されたか確認
       try {
         const stats = await fs.stat(dbPath)
-        console.log(`Database file created successfully, size: ${stats.size} bytes`)
+        console.log(
+          `Database file created successfully, size: ${stats.size} bytes`,
+        )
       } catch (error) {
         console.error(`Failed to verify database file creation:`, error)
         throw new Error(`Database file creation verification failed: ${error}`)
@@ -67,51 +68,60 @@ export const initializeDatabase = async (): Promise<boolean> => {
       try {
         // データベーススキーマの直接作成
         console.log("Initializing database schema...")
-        
+
         // Prismaクライアントを使用してスキーマを直接作成
         console.log("Connecting to database...")
-        
+
         // Prisma接続にタイムアウトを設定（Windows対応）
         console.log("Attempting database connection with timeout...")
         let connectionSuccessful = false
-        
+
         try {
           const connectPromise = prisma.$connect()
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Database connection timeout after 15 seconds")), 15000)
+            setTimeout(
+              () =>
+                reject(
+                  new Error("Database connection timeout after 15 seconds"),
+                ),
+              15000,
+            )
           })
-          
+
           await Promise.race([connectPromise, timeoutPromise])
           connectionSuccessful = true
           console.log("Database connection successful")
         } catch (connectError) {
           console.error("Database connection failed:", connectError)
-          
+
           // Windowsでの接続失敗時は別の方法を試行
           if (process.platform === "win32") {
             console.log("Attempting Windows-specific connection method...")
             try {
               // 短時間待機後に再試行
-              await new Promise(resolve => setTimeout(resolve, 2000))
+              await new Promise((resolve) => setTimeout(resolve, 2000))
               await prisma.$connect()
               connectionSuccessful = true
               console.log("Windows-specific connection successful")
             } catch (winError) {
-              console.error("Windows-specific connection also failed:", winError)
+              console.error(
+                "Windows-specific connection also failed:",
+                winError,
+              )
               throw winError
             }
           } else {
             throw connectError
           }
         }
-        
+
         // 直接SQLを実行してスキーマを作成
         if (!connectionSuccessful) {
           throw new Error("Failed to establish database connection")
         }
-        
+
         console.log("Running direct SQL migration...")
-        
+
         // マイグレーションSQLを直接実行
         const migrationSQL = `
 -- CreateTable
@@ -405,7 +415,7 @@ CREATE TABLE "_ClassTeachers" (
     CONSTRAINT "_ClassTeachers_A_fkey" FOREIGN KEY ("A") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
         `
-        
+
         // インデックス作成SQL
         const indexSQL = `
 -- CreateIndex
@@ -462,17 +472,17 @@ CREATE INDEX "locks_lockedResourceId_resourceType_idx" ON "locks"("lockedResourc
 CREATE INDEX "_ClassTeachers_B_index" ON "_ClassTeachers"("B");
 CREATE UNIQUE INDEX "_ClassTeachers_AB_unique" ON "_ClassTeachers"("A", "B");
         `
-        
+
         // SQLを複数のステートメントに分割して実行
         const allSQL = migrationSQL + indexSQL
-        const statements = allSQL.split(';').filter(stmt => stmt.trim())
-        
+        const statements = allSQL.split(";").filter((stmt) => stmt.trim())
+
         for (const statement of statements) {
           if (statement.trim()) {
             await prisma.$executeRawUnsafe(statement.trim())
           }
         }
-        
+
         console.log("Database schema initialized successfully")
         return true
       } catch (error) {
@@ -481,18 +491,21 @@ CREATE UNIQUE INDEX "_ClassTeachers_AB_unique" ON "_ClassTeachers"("A", "B");
           console.error("Error details:", {
             message: error.message,
             name: error.name,
-            stack: error.stack
+            stack: error.stack,
           })
         }
-        
+
         // データベースファイルを削除して再試行
         try {
           await fs.unlink(dbPath)
           console.log("Removed corrupted database file")
         } catch (unlinkError) {
-          console.error("Failed to remove corrupted database file:", unlinkError)
+          console.error(
+            "Failed to remove corrupted database file:",
+            unlinkError,
+          )
         }
-        
+
         throw error
       } finally {
         await prisma.$disconnect()
@@ -551,7 +564,6 @@ export const optimizeDatabaseForSharedDrive = async (): Promise<void> => {
 
     // キャッシュサイズを増加
     await prisma.$queryRaw`PRAGMA cache_size = -64000`
-
   } catch (error) {
     console.error("Failed to optimize database:", error)
   } finally {
