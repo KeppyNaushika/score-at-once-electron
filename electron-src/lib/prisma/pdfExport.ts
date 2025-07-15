@@ -251,23 +251,76 @@ function calculateTextPosition(
   }
 }
 
-// 小計点を計算する関数
-async function calculateSubtotalScore(
+
+// 特定の生徒のプロジェクト全体の合計点を計算する関数
+function calculateStudentTotalScore(
+  studentId: string,
+  allQuestionScores: any,
+  layoutRegions: any[]
+): number {
+  try {
+    let totalScore = 0
+    console.log(`Calculating total score for student ${studentId}`)
+    
+    if (!allQuestionScores.success || !allQuestionScores.scores) {
+      console.log(`No question scores available`)
+      return 0
+    }
+    
+    // この生徒の全採点データを取得
+    const studentScores = allQuestionScores.scores.filter((score: any) => 
+      score.answerSheet?.student?.id === studentId
+    )
+    
+    console.log(`Found ${studentScores.length} scores for student ${studentId}`)
+    
+    for (const scoreData of studentScores) {
+      const layoutRegion = layoutRegions.find(r => r.id === scoreData.layoutRegionId)
+      // 設問領域のみを対象とする（小計点・合計点領域は除外）
+      if (layoutRegion && layoutRegion.type === 'QUESTION_ANSWER') {
+        const maxScore = layoutRegion?.points || 10
+        const actualScore = calculateActualScore(scoreData, maxScore)
+        console.log(`Question ${scoreData.layoutRegionId}: score ${actualScore}`)
+        totalScore += actualScore || 0
+      }
+    }
+    
+    console.log(`Total score calculated for student ${studentId}: ${totalScore}`)
+    return totalScore
+  } catch (error) {
+    console.error(`Error calculating total score for student ${studentId}:`, error)
+    return 0
+  }
+}
+
+// 特定の生徒の特定の小計点領域の点数を計算する関数
+async function calculateStudentSubtotalScore(
+  studentId: string,
   subtotalRegionId: string,
-  allScores: any[],
+  allQuestionScores: any,
   layoutRegions: any[]
 ): Promise<number> {
   try {
-    console.log(`Calculating subtotal for region ${subtotalRegionId}`)
-    console.log(`Available scores: ${allScores.length}`)
+    console.log(`Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`)
+    
+    if (!allQuestionScores.success || !allQuestionScores.scores) {
+      console.log(`No question scores available`)
+      return 0
+    }
+    
+    // この生徒の全採点データを取得
+    const studentScores = allQuestionScores.scores.filter((score: any) => 
+      score.answerSheet?.student?.id === studentId
+    )
     
     // 小計点領域に関連付けられたグループ項目を取得
     const subtotalDefinitions = await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
     console.log(`Found ${subtotalDefinitions?.length || 0} subtotal definitions`)
     
+    // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
-      console.log(`No subtotal definitions found for region ${subtotalRegionId}`)
-      return 0
+      console.log(`No subtotal definitions found for region ${subtotalRegionId}, calculating total of all questions for student`)
+      return calculateStudentTotalScore(studentId, allQuestionScores, layoutRegions)
     }
 
     // グループ別に項目をまとめる
@@ -284,7 +337,8 @@ async function calculateSubtotalScore(
     }
 
     if (groupMap.size === 0) {
-      return 0
+      console.log(`No valid groups found, calculating total of all questions for student`)
+      return calculateStudentTotalScore(studentId, allQuestionScores, layoutRegions)
     }
 
     // 各グループで該当する設問を取得（GROUP内OR）
@@ -331,7 +385,7 @@ async function calculateSubtotalScore(
     console.log(`Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`)
     
     for (const questionId of finalQuestionIds) {
-      const scoreData = allScores.find(s => s.layoutRegionId === questionId)
+      const scoreData = studentScores.find((s: any) => s.layoutRegionId === questionId)
       if (scoreData) {
         const layoutRegion = layoutRegions.find(r => r.id === questionId)
         const maxScore = layoutRegion?.points || 10
@@ -341,10 +395,10 @@ async function calculateSubtotalScore(
       }
     }
 
-    console.log(`Total subtotal score: ${totalScore}`)
+    console.log(`Total subtotal score for student ${studentId}: ${totalScore}`)
     return totalScore
   } catch (error) {
-    console.error(`Error calculating subtotal score for region ${subtotalRegionId}:`, error)
+    console.error(`Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`, error)
     return 0
   }
 }
@@ -507,6 +561,8 @@ export async function exportScoredAnswersPDF(
                 layoutRegions,
                 scoringMarkConfig,
                 options.pdfOrientation || "portrait",
+                student,
+                selectedStudents,
                 (step) => {
                   reportProgress(
                     progressPercent + (1 / totalAnswerSheets) * 40 * 0.5,
@@ -571,6 +627,8 @@ async function addAnswerSheetToPDF(
   layoutRegions: any[],
   scoringMarkConfig?: ScoringMarkConfig,
   pdfOrientation?: "portrait" | "landscape",
+  currentStudent?: any,
+  allSelectedStudents?: any[],
   progressCallback?: (step: string) => void,
 ): Promise<void> {
   try {
@@ -863,19 +921,33 @@ async function addAnswerSheetToPDF(
 
     progressCallback?.("小計点を計算中...")
 
-    // 小計点領域の処理
-    const subtotalRegions = layoutRegions.filter(region => region.type === 'SUBTOTAL_SCORE')
-    console.log(`Found ${subtotalRegions.length} subtotal regions:`, subtotalRegions.map(r => ({id: r.id, label: r.label, type: r.type})))
+    // この答案ページに属する小計点領域のみを処理
+    const currentPageNumber = answerSheet.pageNumber
+    const currentPageSubtotalRegions = layoutRegions.filter(region => 
+      region.type === 'SUBTOTAL_SCORE' && 
+      region.masterImage && 
+      region.masterImage.pageNumber === currentPageNumber
+    )
+    console.log(`Found ${currentPageSubtotalRegions.length} subtotal regions on page ${currentPageNumber}:`, 
+      currentPageSubtotalRegions.map(r => ({id: r.id, label: r.label, type: r.type, page: r.masterImage?.pageNumber})))
     
-    for (const subtotalRegion of subtotalRegions) {
+    for (const subtotalRegion of currentPageSubtotalRegions) {
       try {
-        // 小計点を計算
-        const subtotalScore = await calculateSubtotalScore(
+        // 生徒IDを取得
+        const studentId = answerSheet.student?.id
+        if (!studentId) {
+          console.log(`No student ID found for answer sheet`)
+          continue
+        }
+
+        // プロジェクト全体スコープで小計点を計算
+        const subtotalScore = await calculateStudentSubtotalScore(
+          studentId,
           subtotalRegion.id,
-          relevantScores,
+          questionScores,
           layoutRegions
         )
-        console.log(`Calculated subtotal score for region ${subtotalRegion.id} (${subtotalRegion.label}): ${subtotalScore}`)
+        console.log(`Calculated subtotal score for student ${studentId}, region ${subtotalRegion.id} (${subtotalRegion.label}): ${subtotalScore}`)
 
         // 小計点領域の座標をPDF座標系に変換
         const isNormalized =
@@ -939,6 +1011,96 @@ async function addAnswerSheetToPDF(
         })
       } catch (subtotalError) {
         console.error(`Error processing subtotal region ${subtotalRegion.id}:`, subtotalError)
+        // エラーが発生しても続行
+      }
+    }
+
+    progressCallback?.("合計点を計算中...")
+
+    // この答案ページに属する合計点領域のみを処理
+    const currentPageTotalScoreRegions = layoutRegions.filter(region => 
+      region.type === 'TOTAL_SCORE' && 
+      region.masterImage && 
+      region.masterImage.pageNumber === currentPageNumber
+    )
+    console.log(`Found ${currentPageTotalScoreRegions.length} total score regions on page ${currentPageNumber}:`, 
+      currentPageTotalScoreRegions.map(r => ({id: r.id, label: r.label, type: r.type, page: r.masterImage?.pageNumber})))
+    
+    for (const totalScoreRegion of currentPageTotalScoreRegions) {
+      try {
+        // 生徒IDを取得
+        const studentId = answerSheet.student?.id
+        if (!studentId) {
+          console.log(`No student ID found for answer sheet`)
+          continue
+        }
+
+        // プロジェクト全体スコープで合計点を計算
+        const totalScore = calculateStudentTotalScore(studentId, questionScores, layoutRegions)
+        console.log(`Calculated total score for student ${studentId}, region ${totalScoreRegion.id} (${totalScoreRegion.label}): ${totalScore}`)
+
+        // 合計点領域の座標をPDF座標系に変換
+        const isNormalized =
+          totalScoreRegion.x <= 1.0 &&
+          totalScoreRegion.y <= 1.0 &&
+          totalScoreRegion.width <= 1.0 &&
+          totalScoreRegion.height <= 1.0
+
+        let regionXOnImage,
+          regionYOnImage,
+          regionWidthOnImage,
+          regionHeightOnImage
+
+        if (isNormalized) {
+          // 正規化座標の場合 (0.0-1.0)
+          regionXOnImage = totalScoreRegion.x * imageWidth + imageX
+          regionYOnImage =
+            imageY +
+            imageHeight -
+            (totalScoreRegion.y + totalScoreRegion.height) * imageHeight
+          regionWidthOnImage = totalScoreRegion.width * imageWidth
+          regionHeightOnImage = totalScoreRegion.height * imageHeight
+        } else {
+          // ピクセル座標の場合
+          regionXOnImage = (totalScoreRegion.x / image.width) * imageWidth + imageX
+          regionYOnImage =
+            imageY +
+            imageHeight -
+            ((totalScoreRegion.y + totalScoreRegion.height) / image.height) * imageHeight
+          regionWidthOnImage = (totalScoreRegion.width / image.width) * imageWidth
+          regionHeightOnImage = (totalScoreRegion.height / image.height) * imageHeight
+        }
+
+        // 合計点テキストを描画
+        const totalScoreText = `${totalScore}`
+        const textWidth = font.widthOfTextAtSize(totalScoreText, config.scoreSize)
+        const textHeight = config.scoreSize
+
+        // テキストの位置を計算
+        const totalScorePosition = calculateTextPosition(
+          config.scorePosition,
+          config.scoreOffsetX,
+          config.scoreOffsetY,
+          regionXOnImage,
+          regionYOnImage,
+          regionWidthOnImage,
+          regionHeightOnImage,
+          textWidth,
+          textHeight,
+          config.scoreAlignment,
+        )
+
+        // 合計点を描画
+        console.log(`Drawing total score text "${totalScoreText}" at position (${totalScorePosition.x}, ${totalScorePosition.y})`)
+        page.drawText(totalScoreText, {
+          x: totalScorePosition.x,
+          y: totalScorePosition.y,
+          size: config.scoreSize,
+          font: font,
+          color: rgb(1, 0, 0), // 赤色（合計点は赤色で区別）
+        })
+      } catch (totalScoreError) {
+        console.error(`Error processing total score region ${totalScoreRegion.id}:`, totalScoreError)
         // エラーが発生しても続行
       }
     }
