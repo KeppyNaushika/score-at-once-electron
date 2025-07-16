@@ -513,10 +513,19 @@ export async function exportScoredAnswersPDF(
     const questionScores = await getQuestionScoresForProject(projectId)
     const layoutRegions = await getLayoutRegionsByProjectId(projectId)
 
-    // 選択された生徒のデータをフィルタリング
-    const selectedStudents = studentsResult.students.filter((student) =>
-      selectedStudentIds.includes(student.id),
-    )
+    // 選択された生徒のデータをフィルタリングして順序を保持
+    const selectedStudents = studentsResult.students
+      .filter((student) => selectedStudentIds.includes(student.id))
+      .sort((a, b) => {
+        // customOrderが設定されている場合は優先
+        if (a.customOrder !== null && b.customOrder !== null) {
+          return a.customOrder - b.customOrder;
+        }
+        if (a.customOrder !== null) return -1;  // aが優先
+        if (b.customOrder !== null) return 1;   // bが優先
+        // 学籍番号でソート
+        return a.studentId.localeCompare(b.studentId);
+      })
 
     if (selectedStudents.length === 0) {
       throw new Error("選択された生徒が見つかりません")
