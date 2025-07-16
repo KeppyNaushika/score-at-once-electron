@@ -10,6 +10,10 @@ export async function getStudentsForProject(projectId: string) {
     // プロジェクトに参加している生徒を取得
     const projectStudents = await prisma.projectStudent.findMany({
       where: { projectId },
+      orderBy: [
+        { customOrder: 'asc' },  // カスタム順序を優先
+        { student: { studentId: 'asc' } }  // 学籍番号順をフォールバック
+      ],
       include: {
         student: {
           include: {
