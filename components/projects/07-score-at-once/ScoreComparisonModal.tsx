@@ -95,7 +95,7 @@ export default function ScoreComparisonModal({
         layoutRegionId,
       )
 
-      if (result && typeof result === 'object') {
+      if (result && typeof result === "object") {
         setComparison(result as any)
 
         // 既存の最終結果がある場合はフォームに設定
@@ -132,7 +132,7 @@ export default function ScoreComparisonModal({
     try {
       const finalizeData = {
         partialScore: finalScore,
-        status: 'finalized',
+        status: "finalized",
         comments: finalComment,
       }
       const result = await window.electronAPI.finalizeQuestionScore(

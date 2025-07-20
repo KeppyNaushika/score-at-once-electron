@@ -1,5 +1,6 @@
 "use client"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -8,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import {
   Tooltip,
   TooltipContent,
@@ -17,11 +16,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  AlertCircle,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
   FileText,
-  CheckCircle,
-  AlertCircle,
 } from "lucide-react"
 
 interface QuestionRegion {
@@ -103,17 +102,19 @@ export default function QuestionNavigator({
               {questionRegions.map((question, index) => {
                 const progress = questionProgress?.[question.id]
                 return (
-                  <SelectItem key={question.id} value={index.toString()} className="flex items-center justify-between">
+                  <SelectItem
+                    key={question.id}
+                    value={index.toString()}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-2">
-                      <span>
-                        {question.label || question.orderIndex || 1}
-                      </span>
+                      <span>{question.label || question.orderIndex || 1}</span>
                       <Badge variant="outline" className="text-xs">
                         {question.points}点
                       </Badge>
                     </div>
                     {progress && (
-                      <div className="flex items-center gap-1 ml-auto">
+                      <div className="ml-auto flex items-center gap-1">
                         {progress.percentage === 100 ? (
                           <CheckCircle className="h-3 w-3 text-green-500" />
                         ) : progress.percentage > 0 ? (

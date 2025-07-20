@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface ScoringDataLoaderResult {
@@ -10,7 +10,9 @@ interface ScoringDataLoaderResult {
   error: string | null
 }
 
-export function useScoringDataLoader(projectId: string): ScoringDataLoaderResult {
+export function useScoringDataLoader(
+  projectId: string,
+): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<any>(null)
   const [answerSheets, setAnswerSheets] = useState<any[]>([])
@@ -32,20 +34,22 @@ export function useScoringDataLoader(projectId: string): ScoringDataLoaderResult
         setProject(projectData)
 
         // 答案データの読み込み
-        const answersResult = await window.electronAPI.getAnswerSheetsByProjectId(projectId)
+        const answersResult =
+          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
         setAnswerSheets(answersResult.answerSheets || [])
 
         // 設問領域データの読み込み
-        const regionsResult = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        const regionsResult =
+          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
         if (!regionsResult || !Array.isArray(regionsResult)) {
           throw new Error("設問領域データの読み込みに失敗しました")
         }
-        
+
         const questionRegions = regionsResult.filter(
-          (region: any) => region.type === "QUESTION_ANSWER"
+          (region: any) => region.type === "QUESTION_ANSWER",
         )
         setQuestionRegions(questionRegions)
 
@@ -57,10 +61,11 @@ export function useScoringDataLoader(projectId: string): ScoringDataLoaderResult
           console.warn("ユーザーIDが取得できませんでした")
           setCurrentUserId("default-user")
         }
-
       } catch (error) {
         console.error("データの読み込みに失敗しました:", error)
-        setError(error instanceof Error ? error.message : "不明なエラーが発生しました")
+        setError(
+          error instanceof Error ? error.message : "不明なエラーが発生しました",
+        )
         toast.error("データの読み込みに失敗しました")
       } finally {
         setLoading(false)

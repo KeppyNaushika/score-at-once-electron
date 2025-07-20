@@ -111,11 +111,12 @@ export default function StudentClassMembershipModal({
     onSave({
       studentId,
       classId,
-      attendanceNumber: attendanceNumber ? parseInt(attendanceNumber) : undefined,
+      attendanceNumber: attendanceNumber
+        ? parseInt(attendanceNumber)
+        : undefined,
       notes: notes || undefined,
     })
   }
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

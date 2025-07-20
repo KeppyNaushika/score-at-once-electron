@@ -6,19 +6,19 @@ import { useEffect, useRef, useState } from "react"
  * 画像表示について：
  * このコンポーネントでは標準の<img>要素を使用しています。
  * Next.js Image コンポーネントを使用しない理由：
- * 
+ *
  * 1. Canvas描画での直接操作が必要
  *    - 画像データを直接Canvasに描画するため、HTMLImageElementへの直接アクセスが必要
- * 
+ *
  * 2. naturalWidth/naturalHeightの取得
  *    - 画像の実際のサイズ情報が必要で、Next.js Imageでは取得が困難
- * 
+ *
  * 3. refの互換性問題
  *    - Next.js Imageコンポーネントのrefは実際の<img>要素を直接参照しない場合がある
- * 
+ *
  * 4. onLoadイベントの確実な発火
  *    - 画像読み込み完了の検出が確実に必要
- * 
+ *
  * 5. Electronアプリでの制限
  *    - Next.jsの画像最適化機能がElectronアプリで正常に動作しない場合がある
  */
@@ -108,7 +108,9 @@ export default function CroppedAnswerImage({
   }
 
   return (
-    <div className={`relative w-full ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${className}`}>
+    <div
+      className={`relative w-full ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
+    >
       <img
         ref={imageRef}
         src={imageUrl}

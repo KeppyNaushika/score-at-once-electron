@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea" // Textarea をインポート
+import { Textarea } from "@/components/ui/textarea"
 import { X as XIcon } from "lucide-react"
 import React, { useState } from "react"
 

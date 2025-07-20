@@ -13,7 +13,7 @@ export type ScoringStatus =
 export interface ScoringData {
   id?: string
   questionId: string
-  score: number | null  // partialScoreを直接格納（nullableに変更）
+  score: number | null // partialScoreを直接格納（nullableに変更）
   maxScore: number
   status: ScoringStatus
   comment: string

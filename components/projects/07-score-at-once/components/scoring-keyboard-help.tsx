@@ -20,7 +20,7 @@ interface ScoringKeyboardHelpProps {
 export default function ScoringKeyboardHelp({
   isOpen,
   onOpenChange,
-  modifierKeyLabel
+  modifierKeyLabel,
 }: ScoringKeyboardHelpProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

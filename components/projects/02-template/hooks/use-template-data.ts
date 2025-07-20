@@ -1,0 +1,241 @@
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
+import { MasterImage } from "@prisma/client"
+import { 
+  AreaType, 
+  InitialDataState, 
+  ImageDimensions 
+} from "../types"
+import { LayoutRegionArea } from "@/types/common.types"
+
+/**
+ * テンプレートページの初期データ読み込みと状態管理を担当するカスタムフック
+ * 
+ * @param projectId - プロジェクトID
+ * @returns 初期データ読み込み関連の状態と関数
+ */
+export function useTemplateData(projectId: string | undefined) {
+  // 初期データの状態管理
+  const [initialData, setInitialData] = useState<InitialDataState>({
+    project: null,
+    currentUser: null,
+    masterImages: [],
+    selectedMasterImage: null,
+    backgroundImageUrl: null,
+    imageDimensions: null,
+    layoutRegions: [],
+    layoutId: undefined,
+  })
+
+  const [isLoading, setIsLoading] = useState(true)
+
+  /**
+   * 初期データの読み込み処理
+   * プロジェクト情報、ユーザー情報、マスター画像、既存の領域データを取得する
+   */
+  const loadInitialData = useCallback(async () => {
+    if (!projectId) {
+      toast.error("プロジェクトIDが見つかりません。")
+      setIsLoading(false)
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      // ユーザー情報を取得
+      const user = await window.electronAPI.getCurrentUser()
+      
+      // プロジェクト情報を取得
+      const fetchedProject = await window.electronAPI.fetchProjectById(projectId)
+      
+      if (!fetchedProject) {
+        toast.error("プロジェクトが見つかりません。")
+        setInitialData(prev => ({
+          ...prev,
+          project: null,
+          currentUser: user,
+          masterImages: [],
+          selectedMasterImage: null,
+          backgroundImageUrl: null,
+          imageDimensions: null,
+          layoutRegions: [],
+        }))
+        return
+      }
+
+      // マスター画像の処理
+      let processedMasterImages: MasterImage[] = []
+      let selectedImage: MasterImage | null = null
+      let backgroundUrl: string | null = null
+      let dimensions: ImageDimensions | null = null
+
+      if (fetchedProject.masterImages && fetchedProject.masterImages.length > 0) {
+        processedMasterImages = [...fetchedProject.masterImages].sort(
+          (a, b) => a.pageNumber - b.pageNumber
+        )
+        selectedImage = processedMasterImages[0]
+        
+        // 最初の画像のURLと寸法を取得
+        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(selectedImage.path)
+        dimensions = await loadImageDimensions(backgroundUrl)
+      }
+
+      // 既存のレイアウト領域を取得
+      let regions: LayoutRegionArea[] = []
+      let layoutIdValue: string | undefined
+
+      try {
+        const existingRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        
+        if (existingRegions && existingRegions.length > 0) {
+          layoutIdValue = "existing"
+          
+          // 最初のマスター画像に対応する領域のみをフィルター
+          const firstMasterImageId = selectedImage?.id
+          const currentImageRegions = firstMasterImageId
+            ? existingRegions.filter(region => region.masterImageId === firstMasterImageId)
+            : []
+
+          regions = currentImageRegions.map(region => ({
+            id: region.id,
+            type: region.type as AreaType,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            label: region.label || "",
+            points: region.points ? String(region.points) : null,
+            masterImageId: region.masterImageId || "",
+          }))
+        }
+      } catch (regionError) {
+        console.error("Failed to load layout regions:", regionError)
+        layoutIdValue = undefined
+        regions = []
+      }
+
+      // 状態を更新
+      setInitialData({
+        project: fetchedProject,
+        currentUser: user,
+        masterImages: processedMasterImages,
+        selectedMasterImage: selectedImage,
+        backgroundImageUrl: backgroundUrl,
+        imageDimensions: dimensions,
+        layoutRegions: regions,
+        layoutId: layoutIdValue,
+      })
+
+    } catch (error) {
+      console.error("Failed to load initial data:", error)
+      toast.error("初期データの読み込みに失敗しました。")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [projectId])
+
+  /**
+   * 画像の寸法を取得する補助関数
+   * 
+   * @param imageUrl - 画像のURL
+   * @returns Promise<ImageDimensions | null> 画像の寸法情報
+   */
+  const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions | null> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        })
+      }
+      img.onerror = () => {
+        resolve(null)
+      }
+      img.src = imageUrl
+    })
+  }, [])
+
+  /**
+   * マスター画像の変更処理
+   * 選択された画像に対応する領域データを読み込む
+   * 
+   * @param imageId - 選択する画像のID
+   */
+  const handleMasterImageChange = useCallback(async (imageId: string) => {
+    const image = initialData.masterImages.find(img => img.id === imageId)
+    if (!image || !projectId) return
+
+    try {
+      // 新しい画像のURLと寸法を取得
+      const url = await window.electronAPI.resolveFileProtocolPath(image.path)
+      const dimensions = await loadImageDimensions(url)
+
+      // 新しいページの領域を読み込む
+      const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      const currentImageRegions = allRegions.filter(
+        region => region.masterImageId === image.id
+      )
+
+      const mappedRegions: LayoutRegionArea[] = currentImageRegions.length > 0
+        ? currentImageRegions.map(region => ({
+            id: region.id,
+            type: region.type as AreaType,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            label: region.label || "",
+            points: region.points ? String(region.points) : null,
+            masterImageId: region.masterImageId || "",
+          }))
+        : []
+
+      // 状態を更新
+      setInitialData(prev => ({
+        ...prev,
+        selectedMasterImage: image,
+        backgroundImageUrl: url,
+        imageDimensions: dimensions,
+        layoutRegions: mappedRegions,
+      }))
+
+    } catch (error) {
+      toast.error("背景画像の読み込みに失敗しました。")
+      console.error("Failed to change master image:", error)
+    }
+  }, [initialData.masterImages, projectId, loadImageDimensions])
+
+  /**
+   * レイアウト領域の状態を更新する
+   * 
+   * @param regions - 新しい領域データ
+   */
+  const updateLayoutRegions = useCallback((regions: LayoutRegionArea[]) => {
+    setInitialData(prev => ({
+      ...prev,
+      layoutRegions: regions,
+    }))
+  }, [])
+
+  /**
+   * レイアウトIDの状態を更新する
+   * 
+   * @param layoutId - 新しいレイアウトID
+   */
+  const updateLayoutId = useCallback((layoutId: string | undefined) => {
+    setInitialData(prev => ({
+      ...prev,
+      layoutId,
+    }))
+  }, [])
+
+  return {
+    initialData,
+    isLoading,
+    loadInitialData,
+    handleMasterImageChange,
+    updateLayoutRegions,
+    updateLayoutId,
+  }
+}

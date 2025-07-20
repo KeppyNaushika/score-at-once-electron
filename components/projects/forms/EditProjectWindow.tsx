@@ -13,9 +13,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import type { ProjectWithDetails } from "@/types/electron"
 import { CheckIcon, Edit2Icon, Trash2Icon, X as XIcon } from "lucide-react"
 import React, { useState } from "react"
-import type { ProjectWithDetails } from "@/types/electron"
 
 type Tag = {
   id: string

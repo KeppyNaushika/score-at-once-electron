@@ -1,13 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Edit,
-  FileImage,
-  Settings,
-  Upload,
-  Users,
-} from "lucide-react"
+import { Edit, FileImage, Settings, Upload, Users } from "lucide-react"
 
 interface ProjectStatsProps {
   masterImageCount: number
@@ -36,9 +30,7 @@ export default function ProjectStats({
         <CardContent>
           <div className="text-2xl font-bold">{masterImageCount}</div>
           <p className="text-muted-foreground text-xs">
-            {masterImageCount > 0
-              ? "ページアップロード済み"
-              : "未アップロード"}
+            {masterImageCount > 0 ? "ページアップロード済み" : "未アップロード"}
           </p>
         </CardContent>
       </Card>

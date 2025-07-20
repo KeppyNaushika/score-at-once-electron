@@ -574,27 +574,30 @@ export function useScoringData({
 
     questionRegions.forEach((question) => {
       // このLayoutRegionが属するMasterImageのページ番号を取得
-      const questionPageNumber = question.masterImageId ? (question as any).masterImage?.pageNumber : undefined
-      
+      const questionPageNumber = question.masterImageId
+        ? (question as any).masterImage?.pageNumber
+        : undefined
+
       // 同じページ番号のAnswerSheetのみを対象とする
-      const relevantAnswerSheets = answerSheets.filter(sheet => 
-        sheet.pageNumber === questionPageNumber
+      const relevantAnswerSheets = answerSheets.filter(
+        (sheet) => sheet.pageNumber === questionPageNumber,
       )
-      
+
       const totalAnswers = relevantAnswerSheets.length
       let gradedAnswers = 0
 
       relevantAnswerSheets.forEach((sheet) => {
         const key = `${sheet.id}-${question.id}`
         const scoreData = scoringData[key]
-        
+
         // 採点済みの状態をチェック（ungradedでない場合は採点済み）
         if (scoreData && scoreData.status !== "ungraded") {
           gradedAnswers++
         }
       })
 
-      const percentage = totalAnswers > 0 ? Math.round((gradedAnswers / totalAnswers) * 100) : 0
+      const percentage =
+        totalAnswers > 0 ? Math.round((gradedAnswers / totalAnswers) * 100) : 0
 
       progress[question.id] = {
         totalAnswers,

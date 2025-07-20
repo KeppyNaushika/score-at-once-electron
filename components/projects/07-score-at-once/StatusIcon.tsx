@@ -1,6 +1,13 @@
 "use client"
 
-import { CheckCircle, Circle, Clock, AlertTriangle, X, Minus } from "lucide-react"
+import {
+  AlertTriangle,
+  CheckCircle,
+  Circle,
+  Clock,
+  Minus,
+  X,
+} from "lucide-react"
 
 type ScoringStatus =
   | "ungraded"

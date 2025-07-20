@@ -33,12 +33,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-  ChevronLeft,
-  Keyboard,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react"
+import { Keyboard, PanelRightClose, PanelRightOpen } from "lucide-react"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -395,7 +390,7 @@ export default function ScoringMainView() {
       <Head>
         <title>{`採点 - ${project.examName}`}</title>
       </Head>
-      
+
       {/* PageHeader */}
       <PageHeader
         title="採点"
@@ -405,7 +400,9 @@ export default function ScoringMainView() {
         <div className="flex items-center space-x-2">
           {/* 採点モード切り替え */}
           <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700">採点モード:</span>
+            <span className="text-sm font-medium text-gray-700">
+              採点モード:
+            </span>
             <GradingModeToggle
               mode={gradingMode}
               onModeChange={setGradingMode}
@@ -413,10 +410,7 @@ export default function ScoringMainView() {
           </div>
 
           {/* キーボードヘルプ */}
-          <Dialog
-            open={showKeyboardHelp}
-            onOpenChange={setShowKeyboardHelp}
-          >
+          <Dialog open={showKeyboardHelp} onOpenChange={setShowKeyboardHelp}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Keyboard className="mr-2 h-4 w-4" />
@@ -436,39 +430,27 @@ export default function ScoringMainView() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>未採点</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                      Q
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">Q</code>
                     </div>
                     <div className="flex justify-between">
                       <span>正答</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        E
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">E</code>
                     </div>
                     <div className="flex justify-between">
                       <span>部分点</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        F
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">F</code>
                     </div>
                     <div className="flex justify-between">
                       <span>保留</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        J
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">J</code>
                     </div>
                     <div className="flex justify-between">
                       <span>誤答</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        O
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">O</code>
                     </div>
                     <div className="flex justify-between">
                       <span>無答</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        P
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">P</code>
                     </div>
                   </div>
                 </div>
@@ -495,9 +477,7 @@ export default function ScoringMainView() {
                     </div>
                     <div className="flex justify-between">
                       <span>フィルタ更新</span>
-                      <code className="rounded bg-gray-100 px-2 py-1">
-                        R
-                      </code>
+                      <code className="rounded bg-gray-100 px-2 py-1">R</code>
                     </div>
                     <div className="flex justify-between">
                       <span>フィルタ切替</span>
@@ -546,91 +526,93 @@ export default function ScoringMainView() {
         </div>
       </PageHeader>
 
-        {/* 採点エリア */}
-        <div className="flex min-h-0 flex-1">
-          <div className="min-h-0 flex-1 p-6">
-            {gradingMode === "individual" ? (
-              <AnswerDisplayViewer
-                answerSheet={currentAnswerSheet}
-                currentQuestion={currentQuestion}
-                viewMode={viewMode}
-                zoom={imageZoom}
-                position={imagePosition}
-                onZoomChange={setImageZoom}
-                onPositionChange={setImagePosition}
-                onViewModeChange={setViewMode}
-              />
-            ) : (
-              <AnswerGridView
-                answers={getGridAnswerData()}
-                currentQuestionIndex={currentQuestionIndex}
-                layoutDirection={layoutDirection}
-                gridSize={gridSize}
-                onAnswerSelect={handleAnswerSelect}
-                onAnswerScore={handleBatchScoreWithProgress}
-                selectedAnswers={selectedAnswers}
-                onEffectiveColumnsChange={setEffectiveColumns}
-                itemsPerRow={itemsPerRow}
-                autoScroll={autoScroll}
-                showStudentNames={showStudentNames}
-              />
-            )}
-          </div>
-
-          {/* 右側サイドパネル */}
-          {showSidePanel && (
-            <div className="w-96 overflow-y-auto border-l border-gray-200 bg-gray-50 p-4">
-              {/* 設問ナビゲーター */}
-              <QuestionNavigator
-                questionRegions={questionRegions}
-                currentQuestionIndex={currentQuestionIndex}
-                onQuestionChange={setCurrentQuestionIndex}
-                onPrevQuestion={handlePrevQuestion}
-                onNextQuestion={handleNextQuestion}
-                questionProgress={questionProgress}
-              />
-
-              {/* 採点ツールバー */}
-              <ScoringToolbar
-                selectedAnswersCount={selectedAnswers.size}
-                currentQuestion={currentQuestion}
-                filterSettings={filterSettings}
-                onScore={handleBatchScoreWithProgress}
-                onToggleFilter={handleToggleFilter}
-                onRefreshFilter={handleRefreshFilter}
-                partialScoreInput={partialScoreInput}
-                modifierKeyLabel={modifierKeyLabel}
-              />
-
-              {/* ナビゲーション制御 */}
-              <NavigationControls
-                layoutDirection={layoutDirection}
-                selectedAnswersCount={selectedAnswers.size}
-                visibleAnswersCount={visibleAnswers.size}
-                totalAnswersCount={answerSheets.length}
-                onLayoutDirectionChange={setLayoutDirection}
-                onGridNavigation={handleGridNavigation}
-                onRefreshView={handleRefreshFilter}
-                itemsPerRow={itemsPerRow}
-                onItemsPerRowChange={handleItemsPerRowChange}
-                autoScroll={autoScroll}
-                onAutoScrollChange={handleAutoScrollChange}
-              />
-
-              {/* プロジェクト進捗 */}
-              <ProjectProgressCard projectId={projectId} />
-            </div>
+      {/* 採点エリア */}
+      <div className="flex min-h-0 flex-1">
+        <div className="min-h-0 flex-1 p-6">
+          {gradingMode === "individual" ? (
+            <AnswerDisplayViewer
+              answerSheet={currentAnswerSheet}
+              currentQuestion={currentQuestion}
+              viewMode={viewMode}
+              zoom={imageZoom}
+              position={imagePosition}
+              onZoomChange={setImageZoom}
+              onPositionChange={setImagePosition}
+              onViewModeChange={setViewMode}
+            />
+          ) : (
+            <AnswerGridView
+              answers={getGridAnswerData()}
+              currentQuestionIndex={currentQuestionIndex}
+              layoutDirection={layoutDirection}
+              gridSize={gridSize}
+              onAnswerSelect={handleAnswerSelect}
+              onAnswerScore={handleBatchScoreWithProgress}
+              selectedAnswers={selectedAnswers}
+              onEffectiveColumnsChange={setEffectiveColumns}
+              itemsPerRow={itemsPerRow}
+              autoScroll={autoScroll}
+              showStudentNames={showStudentNames}
+            />
           )}
         </div>
 
-        {/* モーダル類 */}
-        <div>
+        {/* 右側サイドパネル */}
+        {showSidePanel && (
+          <div className="w-96 overflow-y-auto border-l border-gray-200 bg-gray-50 p-4">
+            {/* 設問ナビゲーター */}
+            <QuestionNavigator
+              questionRegions={questionRegions}
+              currentQuestionIndex={currentQuestionIndex}
+              onQuestionChange={setCurrentQuestionIndex}
+              onPrevQuestion={handlePrevQuestion}
+              onNextQuestion={handleNextQuestion}
+              questionProgress={questionProgress}
+            />
+
+            {/* 採点ツールバー */}
+            <ScoringToolbar
+              selectedAnswersCount={selectedAnswers.size}
+              currentQuestion={currentQuestion}
+              filterSettings={filterSettings}
+              onScore={handleBatchScoreWithProgress}
+              onToggleFilter={handleToggleFilter}
+              onRefreshFilter={handleRefreshFilter}
+              partialScoreInput={partialScoreInput}
+              modifierKeyLabel={modifierKeyLabel}
+            />
+
+            {/* ナビゲーション制御 */}
+            <NavigationControls
+              layoutDirection={layoutDirection}
+              selectedAnswersCount={selectedAnswers.size}
+              visibleAnswersCount={visibleAnswers.size}
+              totalAnswersCount={answerSheets.length}
+              onLayoutDirectionChange={setLayoutDirection}
+              onGridNavigation={handleGridNavigation}
+              onRefreshView={handleRefreshFilter}
+              itemsPerRow={itemsPerRow}
+              onItemsPerRowChange={handleItemsPerRowChange}
+              autoScroll={autoScroll}
+              onAutoScrollChange={handleAutoScrollChange}
+            />
+
+            {/* プロジェクト進捗 */}
+            <ProjectProgressCard projectId={projectId} />
+          </div>
+        )}
+      </div>
+
+      {/* モーダル類 */}
+      <div>
         {/* 部分点入力モーダル */}
         <PartialScoreModal
           isOpen={showPartialScoreModal}
           value={partialScoreInput}
           maxPoints={currentQuestion?.points || 0}
-          questionLabel={currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`}
+          questionLabel={
+            currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`
+          }
           onClose={handlePartialScoreCancel}
           onChange={handlePartialScoreChange}
         />
@@ -641,7 +623,9 @@ export default function ScoringMainView() {
           onClose={() => setShowScoreComparison(false)}
           answerSheetId={currentAnswerSheet?.id || ""}
           layoutRegionId={currentQuestion?.id || ""}
-          questionLabel={currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`}
+          questionLabel={
+            currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`
+          }
           maxScore={currentQuestion?.points || 0}
           studentName={
             currentAnswerSheet

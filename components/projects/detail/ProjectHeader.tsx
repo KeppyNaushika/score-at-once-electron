@@ -9,14 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Calendar,
-  Edit,
-  Info,
-  MoreVertical,
-  Tag,
-  Trash2,
-} from "lucide-react"
+import { Calendar, Edit, Info, MoreVertical, Tag, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 interface ProjectData {
@@ -34,16 +27,18 @@ interface ProjectHeaderProps {
   onDelete: () => void
 }
 
-export default function ProjectHeader({ project, onEdit, onDelete }: ProjectHeaderProps) {
+export default function ProjectHeader({
+  project,
+  onEdit,
+  onDelete,
+}: ProjectHeaderProps) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <h1 className="text-3xl font-bold">{project.examName}</h1>
           {project.description && (
-            <p className="text-muted-foreground mt-2">
-              {project.description}
-            </p>
+            <p className="text-muted-foreground mt-2">{project.description}</p>
           )}
           <div className="mt-3 flex items-center gap-4">
             {project.subject && (
@@ -64,11 +59,7 @@ export default function ProjectHeader({ project, onEdit, onDelete }: ProjectHead
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onEdit}
-          >
+          <Button variant="outline" size="sm" onClick={onEdit}>
             <Edit className="mr-2 h-4 w-4" />
             編集
           </Button>

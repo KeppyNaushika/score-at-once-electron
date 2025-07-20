@@ -1,16 +1,27 @@
 "use client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, XCircle, Loader2, Square, CheckSquare } from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
+import {
+  CheckCircle,
+  CheckSquare,
+  Loader2,
+  Square,
+  XCircle,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 
 interface ExportProgressModalProps {
   isOpen: boolean
   onClose: () => void
   progress: number
-  status: 'processing' | 'completed' | 'error'
+  status: "processing" | "completed" | "error"
   currentStep: string
   totalSteps: number
   currentStepIndex: number
@@ -26,7 +37,7 @@ const PDF_EXPORT_STEPS = [
   { id: 4, name: "採点データ取得", progressRange: [30, 40] },
   { id: 5, name: "答案画像確認", progressRange: [40, 45] },
   { id: 6, name: "PDFページ作成", progressRange: [45, 95] },
-  { id: 7, name: "最適化・保存", progressRange: [95, 100] }
+  { id: 7, name: "最適化・保存", progressRange: [95, 100] },
 ]
 
 export default function ExportProgressModal({
@@ -38,32 +49,33 @@ export default function ExportProgressModal({
   totalSteps,
   currentStepIndex,
   error,
-  outputPath
+  outputPath,
 }: ExportProgressModalProps) {
   const [isVisible, setIsVisible] = useState(isOpen)
   const [isClosing, setIsClosing] = useState(false)
-  
+
   // 現在の進捗に基づいてステップの状態を計算
-  const getStepStatus = (step: typeof PDF_EXPORT_STEPS[0]) => {
+  const getStepStatus = (step: (typeof PDF_EXPORT_STEPS)[0]) => {
     const [minProgress, maxProgress] = step.progressRange
     if (progress >= maxProgress) {
-      return 'completed'
+      return "completed"
     } else if (progress >= minProgress) {
-      return 'processing'
+      return "processing"
     } else {
-      return 'pending'
+      return "pending"
     }
   }
 
   // Step6のページ数を抽出する関数
   const getPageProgress = () => {
     // currentStepから「答案 X / Y を処理中...」や「ページ X / Y を作成中...」などの形式を抽出
-    const pageMatch = currentStep.match(/(?:答案|ページ)\s*(\d+)\s*\/\s*(\d+)/) || 
-                     currentStep.match(/(\d+)\s*\/\s*(\d+)/)
+    const pageMatch =
+      currentStep.match(/(?:答案|ページ)\s*(\d+)\s*\/\s*(\d+)/) ||
+      currentStep.match(/(\d+)\s*\/\s*(\d+)/)
     if (pageMatch) {
       return {
         current: parseInt(pageMatch[1]),
-        total: parseInt(pageMatch[2])
+        total: parseInt(pageMatch[2]),
       }
     }
     return null
@@ -77,7 +89,7 @@ export default function ExportProgressModal({
   }, [isOpen])
 
   useEffect(() => {
-    if (status === 'completed' && progress === 100) {
+    if (status === "completed" && progress === 100) {
       const timer = setTimeout(() => {
         setIsClosing(true)
         setTimeout(() => {
@@ -91,7 +103,7 @@ export default function ExportProgressModal({
   }, [status, progress, onClose])
 
   const handleClose = () => {
-    if (status !== 'processing') {
+    if (status !== "processing") {
       setIsClosing(true)
       setTimeout(() => {
         setIsVisible(false)
@@ -102,31 +114,35 @@ export default function ExportProgressModal({
 
   return (
     <Dialog open={isVisible} onOpenChange={handleClose}>
-      <DialogContent 
-        className={`sm:max-w-md transition-opacity duration-300 ${
-          isClosing ? 'opacity-0' : 'opacity-100'
+      <DialogContent
+        className={`transition-opacity duration-300 sm:max-w-md ${
+          isClosing ? "opacity-0" : "opacity-100"
         }`}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {status === 'processing' && <Loader2 className="h-5 w-5 animate-spin" />}
-            {status === 'completed' && <CheckCircle className="h-5 w-5 text-green-600" />}
-            {status === 'error' && <XCircle className="h-5 w-5 text-red-600" />}
+            {status === "processing" && (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            )}
+            {status === "completed" && (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            )}
+            {status === "error" && <XCircle className="h-5 w-5 text-red-600" />}
             PDF出力
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
-          {status === 'processing' && (
+          {status === "processing" && (
             <>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span>進行状況</span>
                   <span className="font-medium">{progress}%</span>
                 </div>
-                <Progress value={progress} className="w-full h-2" />
+                <Progress value={progress} className="h-2 w-full" />
               </div>
-              
+
               {/* ステップ表示 */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">処理ステップ</h4>
@@ -134,39 +150,52 @@ export default function ExportProgressModal({
                   {PDF_EXPORT_STEPS.map((step) => {
                     const stepStatus = getStepStatus(step)
                     const pageProgress = getPageProgress()
-                    
+
                     return (
                       <div
                         key={step.id}
-                        className={`flex items-center space-x-3 p-2 rounded-md transition-colors ${
-                          stepStatus === 'processing' ? 'bg-blue-50 border border-blue-200' : 
-                          stepStatus === 'completed' ? 'bg-green-50' : 'bg-gray-50'
+                        className={`flex items-center space-x-3 rounded-md p-2 transition-colors ${
+                          stepStatus === "processing"
+                            ? "border border-blue-200 bg-blue-50"
+                            : stepStatus === "completed"
+                              ? "bg-green-50"
+                              : "bg-gray-50"
                         }`}
                       >
                         <div className="flex-shrink-0">
-                          {stepStatus === 'completed' && (
+                          {stepStatus === "completed" && (
                             <CheckSquare className="h-4 w-4 text-green-600" />
                           )}
-                          {stepStatus === 'processing' && (
+                          {stepStatus === "processing" && (
                             <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                           )}
-                          {stepStatus === 'pending' && (
+                          {stepStatus === "pending" && (
                             <Square className="h-4 w-4 text-gray-400" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <span className={`text-sm ${
-                            stepStatus === 'processing' ? 'font-medium text-blue-700' :
-                            stepStatus === 'completed' ? 'text-green-700' : 'text-gray-500'
-                          }`}>
+                          <span
+                            className={`text-sm ${
+                              stepStatus === "processing"
+                                ? "font-medium text-blue-700"
+                                : stepStatus === "completed"
+                                  ? "text-green-700"
+                                  : "text-gray-500"
+                            }`}
+                          >
                             Step {step.id}: {step.name}
-                            {stepStatus === 'completed' && '：完了'}
-                            {stepStatus === 'processing' && step.id === 6 && pageProgress && (
-                              <span className="ml-2 text-blue-600">
-                                ({pageProgress.current} / {pageProgress.total})
-                              </span>
-                            )}
-                            {stepStatus === 'processing' && step.id !== 6 && '中...'}
+                            {stepStatus === "completed" && "：完了"}
+                            {stepStatus === "processing" &&
+                              step.id === 6 &&
+                              pageProgress && (
+                                <span className="ml-2 text-blue-600">
+                                  ({pageProgress.current} / {pageProgress.total}
+                                  )
+                                </span>
+                              )}
+                            {stepStatus === "processing" &&
+                              step.id !== 6 &&
+                              "中..."}
                           </span>
                         </div>
                       </div>
@@ -176,19 +205,19 @@ export default function ExportProgressModal({
               </div>
             </>
           )}
-          
-          {status === 'completed' && (
+
+          {status === "completed" && (
             <div className="space-y-4">
               <div className="text-center">
-                <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
+                <CheckCircle className="mx-auto mb-2 h-12 w-12 text-green-600" />
                 <p className="font-medium">PDF出力が完了しました</p>
                 {outputPath && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     保存先: {outputPath}
                   </p>
                 )}
               </div>
-              
+
               {/* 完了したステップの一覧 */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">完了したステップ</h4>
@@ -196,7 +225,7 @@ export default function ExportProgressModal({
                   {PDF_EXPORT_STEPS.map((step) => (
                     <div
                       key={step.id}
-                      className="flex items-center space-x-3 p-2 rounded-md bg-green-50"
+                      className="flex items-center space-x-3 rounded-md bg-green-50 p-2"
                     >
                       <div className="flex-shrink-0">
                         <CheckSquare className="h-4 w-4 text-green-600" />
@@ -212,19 +241,19 @@ export default function ExportProgressModal({
               </div>
             </div>
           )}
-          
-          {status === 'error' && (
+
+          {status === "error" && (
             <div className="space-y-4">
               <div className="text-center">
-                <XCircle className="h-12 w-12 text-red-600 mx-auto mb-2" />
+                <XCircle className="mx-auto mb-2 h-12 w-12 text-red-600" />
                 <p className="font-medium">PDF出力に失敗しました</p>
                 {error && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-muted-foreground mt-1 text-sm">
                     エラー: {error}
                   </p>
                 )}
               </div>
-              
+
               {/* エラー時のステップ状況 */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">処理状況</h4>
@@ -234,30 +263,38 @@ export default function ExportProgressModal({
                     return (
                       <div
                         key={step.id}
-                        className={`flex items-center space-x-3 p-2 rounded-md ${
-                          stepStatus === 'processing' ? 'bg-red-50 border border-red-200' : 
-                          stepStatus === 'completed' ? 'bg-green-50' : 'bg-gray-50'
+                        className={`flex items-center space-x-3 rounded-md p-2 ${
+                          stepStatus === "processing"
+                            ? "border border-red-200 bg-red-50"
+                            : stepStatus === "completed"
+                              ? "bg-green-50"
+                              : "bg-gray-50"
                         }`}
                       >
                         <div className="flex-shrink-0">
-                          {stepStatus === 'completed' && (
+                          {stepStatus === "completed" && (
                             <CheckSquare className="h-4 w-4 text-green-600" />
                           )}
-                          {stepStatus === 'processing' && (
+                          {stepStatus === "processing" && (
                             <XCircle className="h-4 w-4 text-red-600" />
                           )}
-                          {stepStatus === 'pending' && (
+                          {stepStatus === "pending" && (
                             <Square className="h-4 w-4 text-gray-400" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <span className={`text-sm ${
-                            stepStatus === 'processing' ? 'font-medium text-red-700' :
-                            stepStatus === 'completed' ? 'text-green-700' : 'text-gray-500'
-                          }`}>
+                          <span
+                            className={`text-sm ${
+                              stepStatus === "processing"
+                                ? "font-medium text-red-700"
+                                : stepStatus === "completed"
+                                  ? "text-green-700"
+                                  : "text-gray-500"
+                            }`}
+                          >
                             Step {step.id}: {step.name}
-                            {stepStatus === 'completed' && '：完了'}
-                            {stepStatus === 'processing' && '：エラー'}
+                            {stepStatus === "completed" && "：完了"}
+                            {stepStatus === "processing" && "：エラー"}
                           </span>
                         </div>
                       </div>
@@ -267,16 +304,14 @@ export default function ExportProgressModal({
               </div>
             </div>
           )}
-          
+
           <div className="flex justify-end">
-            {status === 'processing' ? (
+            {status === "processing" ? (
               <Button variant="outline" disabled>
                 処理中...
               </Button>
             ) : (
-              <Button onClick={handleClose}>
-                閉じる
-              </Button>
+              <Button onClick={handleClose}>閉じる</Button>
             )}
           </div>
         </div>

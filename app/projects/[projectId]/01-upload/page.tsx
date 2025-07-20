@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { MasterImageData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"; // sonnerのtoastを直接使用
+import { toast } from "sonner"
 
 export default function MasterImageStepPage() {
   const params = useParams()
@@ -25,7 +25,8 @@ export default function MasterImageStepPage() {
     if (!projectId) return
     setIsLoading(true)
     try {
-      const fetchedProject = await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
+      const fetchedProject =
+        await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
       if (fetchedProject && fetchedProject.masterImages) {
         setProject(fetchedProject)
         // pageNumber でソートしてセット
@@ -50,20 +51,17 @@ export default function MasterImageStepPage() {
     loadMasterImages()
   }, [loadMasterImages])
 
-  const handleImagesChange = useCallback(
-    (updatedImages: MasterImageData[]) => {
-      // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
-      // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
-      // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
-      // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
-      // その通知されたリストをそのまま使うのがシンプル。
-      setMasterImages(updatedImages) // MasterImageManagerからの最新のリストで状態を更新
-      toast("模範解答更新", {
-        description: "模範解答リストが更新されました。",
-      })
-    },
-    [],
-  )
+  const handleImagesChange = useCallback((updatedImages: MasterImageData[]) => {
+    // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
+    // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
+    // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
+    // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
+    // その通知されたリストをそのまま使うのがシンプル。
+    setMasterImages(updatedImages) // MasterImageManagerからの最新のリストで状態を更新
+    toast("模範解答更新", {
+      description: "模範解答リストが更新されました。",
+    })
+  }, [])
 
   const goToNextStep = async () => {
     if (!projectId) return

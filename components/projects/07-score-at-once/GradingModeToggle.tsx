@@ -18,15 +18,15 @@ export default function GradingModeToggle({
 }: GradingModeToggleProps) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <span className="text-sm font-medium text-muted-foreground">
+      <span className="text-muted-foreground text-sm font-medium">
         採点モード:
       </span>
-      <div className="flex rounded-lg border bg-muted p-1">
+      <div className="bg-muted flex rounded-lg border p-1">
         <Button
           variant={mode === "individual" ? "default" : "ghost"}
           size="sm"
           onClick={() => onModeChange("individual")}
-          className="gap-1 text-xs px-2 py-1 h-7"
+          className="h-7 gap-1 px-2 py-1 text-xs"
         >
           <User className="h-3 w-3" />
           個別
@@ -35,7 +35,7 @@ export default function GradingModeToggle({
           variant={mode === "grid" ? "default" : "ghost"}
           size="sm"
           onClick={() => onModeChange("grid")}
-          className="gap-1 text-xs px-2 py-1 h-7"
+          className="h-7 gap-1 px-2 py-1 text-xs"
         >
           <Grid className="h-3 w-3" />
           一覧

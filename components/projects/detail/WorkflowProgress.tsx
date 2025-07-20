@@ -74,14 +74,14 @@ export default function WorkflowProgress({
     },
   ]
 
-  const getStepCircleClass = (step: typeof steps[0], index: number) => {
+  const getStepCircleClass = (step: (typeof steps)[0], index: number) => {
     if (step.completed) {
       return "bg-green-500 text-white"
     }
     if (step.canStart) {
       const colors = [
         "bg-blue-100 text-blue-600",
-        "bg-green-100 text-green-600", 
+        "bg-green-100 text-green-600",
         "bg-indigo-100 text-indigo-600",
         "bg-purple-100 text-purple-600",
         "bg-orange-100 text-orange-600",
@@ -112,7 +112,10 @@ export default function WorkflowProgress({
                 <p className="text-muted-foreground text-sm">
                   {step.description}
                   {step.count > 0 && ` (${step.count}${step.countLabel})`}
-                  {step.canStart && !step.completed && step.title === "採点実行" && " (実行可能)"}
+                  {step.canStart &&
+                    !step.completed &&
+                    step.title === "採点実行" &&
+                    " (実行可能)"}
                 </p>
               </div>
             </li>

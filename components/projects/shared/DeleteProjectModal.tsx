@@ -60,33 +60,50 @@ export default function DeleteProjectModal({
     }
   }
 
-  const hasData = projectData.masterImageCount > 0 || 
-                  projectData.answerSheetCount > 0 || 
-                  projectData.layoutRegionCount > 0
+  const hasData =
+    projectData.masterImageCount > 0 ||
+    projectData.answerSheetCount > 0 ||
+    projectData.layoutRegionCount > 0
 
   // プロジェクト情報をアイテムとして構成
-  const projectItems = project ? [{
-    id: project.id,
-    display: project.examName,
-    badges: [
-      ...(project.subject ? [{ label: project.subject, variant: "outline" as const }] : []),
-      ...(project.examDate ? [{ 
-        label: new Date(project.examDate).toLocaleDateString(), 
-        variant: "secondary" as const 
-      }] : []),
-    ]
-  }] : []
+  const projectItems = project
+    ? [
+        {
+          id: project.id,
+          display: project.examName,
+          badges: [
+            ...(project.subject
+              ? [{ label: project.subject, variant: "outline" as const }]
+              : []),
+            ...(project.examDate
+              ? [
+                  {
+                    label: new Date(project.examDate).toLocaleDateString(),
+                    variant: "secondary" as const,
+                  },
+                ]
+              : []),
+          ],
+        },
+      ]
+    : []
 
   // 警告メッセージを構成
   const warnings = [
     {
       type: "destructive" as const,
-      message: "この操作は取り消せません。" + (hasData ? "関連するすべてのデータも同時に削除されます。" : "")
+      message:
+        "この操作は取り消せません。" +
+        (hasData ? "関連するすべてのデータも同時に削除されます。" : ""),
     },
-    ...(hasData ? [{
-      type: "warning" as const,
-      message: `削除されるデータ: 模範解答${projectData.masterImageCount}件、採点領域${projectData.layoutRegionCount}件、答案${projectData.answerSheetCount}件`
-    }] : [])
+    ...(hasData
+      ? [
+          {
+            type: "warning" as const,
+            message: `削除されるデータ: 模範解答${projectData.masterImageCount}件、採点領域${projectData.layoutRegionCount}件、答案${projectData.answerSheetCount}件`,
+          },
+        ]
+      : []),
   ]
 
   return (

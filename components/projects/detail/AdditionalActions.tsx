@@ -8,11 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  BarChart3,
-  ChevronRight,
-  Info,
-} from "lucide-react"
+import { BarChart3, ChevronRight, Info } from "lucide-react"
 import Link from "next/link"
 
 interface AdditionalActionsProps {
@@ -34,11 +30,16 @@ export default function AdditionalActions({
 }: AdditionalActionsProps) {
   const getNextStepMessage = () => {
     if (masterImageCount === 0) return "まず模範解答をアップロードしてください"
-    if (masterImageCount > 0 && layoutRegionCount === 0) return "採点領域を作成してください"
-    if (layoutRegionCount > 0 && questionRegionCount === 0) return "領域情報を編集してください"
-    if (questionRegionCount > 0 && studentCount === 0) return "受験生徒を登録してください"
-    if (studentCount > 0 && answerSheetCount === 0) return "答案をアップロードしてください"
-    if (answerSheetCount > 0 && questionRegionCount > 0) return "採点を開始できます"
+    if (masterImageCount > 0 && layoutRegionCount === 0)
+      return "採点領域を作成してください"
+    if (layoutRegionCount > 0 && questionRegionCount === 0)
+      return "領域情報を編集してください"
+    if (questionRegionCount > 0 && studentCount === 0)
+      return "受験生徒を登録してください"
+    if (studentCount > 0 && answerSheetCount === 0)
+      return "答案をアップロードしてください"
+    if (answerSheetCount > 0 && questionRegionCount > 0)
+      return "採点を開始できます"
     return ""
   }
 
@@ -77,8 +78,8 @@ export default function AdditionalActions({
         </Link>
 
         {/* 次のステップガイド */}
-        <div className="mt-4 rounded-lg bg-muted/50 p-4">
-          <h4 className="font-medium text-sm mb-2">次に進むべきステップ</h4>
+        <div className="bg-muted/50 mt-4 rounded-lg p-4">
+          <h4 className="mb-2 text-sm font-medium">次に進むべきステップ</h4>
           <p className="text-muted-foreground text-xs">
             {getNextStepMessage()}
           </p>

@@ -1,25 +1,27 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  AlertTriangle, 
-  FolderOpen, 
-  Trash2, 
-  HardDrive,
+import {
+  AlertTriangle,
   Database,
-  Info
+  FolderOpen,
+  HardDrive,
+  Info,
+  Trash2,
 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 interface DataManagementSettingsProps {
   className?: string
 }
 
-export default function DataManagementSettings({ className = "" }: DataManagementSettingsProps) {
+export default function DataManagementSettings({
+  className = "",
+}: DataManagementSettingsProps) {
   const [dataDirectory, setDataDirectory] = useState<string>("")
   const [dataSize, setDataSize] = useState<number>(0)
   const [projectCount, setProjectCount] = useState<number>(0)
@@ -32,17 +34,17 @@ export default function DataManagementSettings({ className = "" }: DataManagemen
   const loadDataInfo = async () => {
     try {
       setLoading(true)
-      
+
       // データディレクトリの情報を取得
       const dataInfo = await window.electronAPI.getDataDirectoryInfo()
-      
+
       if (dataInfo.success) {
-        setDataDirectory(dataInfo.directory || '')
+        setDataDirectory(dataInfo.directory || "")
         setDataSize(dataInfo.size || 0)
         setProjectCount(dataInfo.projectCount || 0)
       }
     } catch (error) {
-      console.error('Failed to load data info:', error)
+      console.error("Failed to load data info:", error)
     } finally {
       setLoading(false)
     }
@@ -52,42 +54,42 @@ export default function DataManagementSettings({ className = "" }: DataManagemen
     try {
       await window.electronAPI.openDataDirectory()
     } catch (error) {
-      console.error('Failed to open data directory:', error)
+      console.error("Failed to open data directory:", error)
     }
   }
 
   const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes'
-    
+    if (bytes === 0) return "0 Bytes"
+
     const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
+    const sizes = ["Bytes", "KB", "MB", "GB"]
     const i = Math.floor(Math.log(bytes) / Math.log(k))
-    
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
   const confirmDataDeletion = async () => {
     const confirmed = confirm(
-      'すべてのデータを完全に削除しますか？\n\n' +
-      '・すべてのプロジェクト\n' +
-      '・すべての答案画像\n' +
-      '・すべての採点データ\n' +
-      '・データベース\n\n' +
-      'この操作は取り消せません。'
+      "すべてのデータを完全に削除しますか？\n\n" +
+        "・すべてのプロジェクト\n" +
+        "・すべての答案画像\n" +
+        "・すべての採点データ\n" +
+        "・データベース\n\n" +
+        "この操作は取り消せません。",
     )
-    
+
     if (confirmed) {
       try {
         const result = await window.electronAPI.deleteAllData()
         if (result.success) {
-          alert('すべてのデータが削除されました。')
+          alert("すべてのデータが削除されました。")
           await loadDataInfo()
         } else {
-          alert('データの削除に失敗しました: ' + result.error)
+          alert("データの削除に失敗しました: " + result.error)
         }
       } catch (error) {
-        console.error('Failed to delete data:', error)
-        alert('データの削除中にエラーが発生しました。')
+        console.error("Failed to delete data:", error)
+        alert("データの削除中にエラーが発生しました。")
       }
     }
   }
@@ -125,40 +127,36 @@ export default function DataManagementSettings({ className = "" }: DataManagemen
         <div className="space-y-4">
           <div>
             <Label>データフォルダ</Label>
-            <div className="flex gap-2 mt-1">
-              <Input 
-                value={dataDirectory} 
-                readOnly 
-                className="bg-muted"
-              />
-              <Button 
-                variant="outline" 
+            <div className="mt-1 flex gap-2">
+              <Input value={dataDirectory} readOnly className="bg-muted" />
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={openDataDirectory}
                 className="shrink-0"
               >
-                <FolderOpen className="h-4 w-4 mr-1" />
+                <FolderOpen className="mr-1 h-4 w-4" />
                 開く
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               すべてのプロジェクトデータがここに保存されます
             </p>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium">使用容量</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Database className="h-4 w-4 text-muted-foreground" />
+              <div className="mt-1 flex items-center gap-2">
+                <Database className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm">{formatBytes(dataSize)}</span>
               </div>
             </div>
-            
+
             <div>
               <Label className="text-sm font-medium">プロジェクト数</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              <div className="mt-1 flex items-center gap-2">
+                <FolderOpen className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm">{projectCount}個</span>
               </div>
             </div>
@@ -169,31 +167,33 @@ export default function DataManagementSettings({ className = "" }: DataManagemen
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            <strong>共有ドライブでの利用について</strong><br />
+            <strong>共有ドライブでの利用について</strong>
+            <br />
             このアプリケーションを共有ドライブで実行すると、複数のPCから同じデータにアクセスして協調採点が可能です。
             データフォルダはアプリケーションと同じ場所の「data」フォルダに保存されます。
           </AlertDescription>
         </Alert>
 
         {/* データ削除 */}
-        <div className="pt-4 border-t">
+        <div className="border-t pt-4">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-destructive">
+            <div className="text-destructive flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium text-sm">危険な操作</span>
+              <span className="text-sm font-medium">危険な操作</span>
             </div>
-            
-            <Button 
-              variant="destructive" 
+
+            <Button
+              variant="destructive"
               onClick={confirmDataDeletion}
               className="w-full"
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="mr-2 h-4 w-4" />
               すべてのデータを完全削除
             </Button>
-            
-            <p className="text-xs text-muted-foreground">
-              ※この操作ですべてのプロジェクト、答案画像、採点データが削除されます。<br />
+
+            <p className="text-muted-foreground text-xs">
+              ※この操作ですべてのプロジェクト、答案画像、採点データが削除されます。
+              <br />
               削除されたデータは復元できません。
             </p>
           </div>

@@ -1,10 +1,9 @@
-import { ja } from "date-fns/locale" // Ensure this import is correct
+import { ja } from "date-fns/locale"
 import dayjs from "dayjs"
 import React from "react"
 import DatePicker from "react-datepicker"
-
 import "react-datepicker/dist/react-datepicker.css"
-import "./ProjectDate.css" // Assuming custom styles
+import "./ProjectDate.css"
 
 const ProjectDate = (props: {
   date: Date | null

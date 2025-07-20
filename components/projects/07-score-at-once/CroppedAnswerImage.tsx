@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useCallback, useEffect, useRef } from "react"
 import Image from "next/image"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 interface QuestionRegion {
   id: string
@@ -22,12 +22,12 @@ interface CroppedAnswerImageProps {
   isSelected?: boolean
 }
 
-export function CroppedAnswerImage({ 
-  imageUrl, 
-  questionRegion, 
-  alt, 
+export function CroppedAnswerImage({
+  imageUrl,
+  questionRegion,
+  alt,
   className = "",
-  isSelected = false
+  isSelected = false,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -38,7 +38,7 @@ export function CroppedAnswerImage({
     const imageElement = imageRef.current
     if (!canvas || !imageElement || !imageLoaded) return
 
-    const ctx = canvas.getContext('2d')
+    const ctx = canvas.getContext("2d")
     if (!ctx) return
 
     // キャンバスサイズを設定
@@ -67,8 +67,14 @@ export function CroppedAnswerImage({
       ctx.clearRect(0, 0, containerWidth, containerHeight)
       ctx.drawImage(
         imageElement,
-        sourceX, sourceY, sourceWidth, sourceHeight,
-        destX, destY, destWidth, destHeight
+        sourceX,
+        sourceY,
+        sourceWidth,
+        sourceHeight,
+        destX,
+        destY,
+        destWidth,
+        destHeight,
       )
     } else {
       // 全体画像を表示
@@ -90,13 +96,18 @@ export function CroppedAnswerImage({
     setImageLoaded(true)
   }, [])
 
-  const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    console.error('Failed to load image:', imageUrl, e)
-    setImageLoaded(false)
-  }, [imageUrl])
+  const handleImageError = useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+      console.error("Failed to load image:", imageUrl, e)
+      setImageLoaded(false)
+    },
+    [imageUrl],
+  )
 
   return (
-    <div className={`relative ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${className}`}>
+    <div
+      className={`relative ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
+    >
       <Image
         ref={imageRef}
         src={imageUrl}
@@ -110,12 +121,12 @@ export function CroppedAnswerImage({
       />
       <canvas
         ref={canvasRef}
-        className="w-full h-full"
-        style={{ display: imageLoaded ? 'block' : 'none' }}
+        className="h-full w-full"
+        style={{ display: imageLoaded ? "block" : "none" }}
       />
       {!imageLoaded && (
-        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-          <span className="text-gray-500 text-sm">読み込み中...</span>
+        <div className="flex h-full w-full items-center justify-center bg-gray-200">
+          <span className="text-sm text-gray-500">読み込み中...</span>
         </div>
       )}
     </div>

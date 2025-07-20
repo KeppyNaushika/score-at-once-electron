@@ -3,11 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import {
-  AlertCircle,
-  RefreshCw,
-  Users,
-} from "lucide-react"
+import { AlertCircle, RefreshCw, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 
 // プロジェクト進捗の型定義
@@ -45,7 +41,7 @@ export default function ProjectProgressCard({
       setError(null)
       const result = await window.electronAPI.getProjectProgress(projectId)
 
-      if (result && typeof result.percentage === 'number') {
+      if (result && typeof result.percentage === "number") {
         setProgress({
           totalAnswerSheets: result.totalAnswerSheets,
           totalQuestions: 0,
@@ -53,7 +49,7 @@ export default function ProjectProgressCard({
           gradedItems: result.completedAnswerSheets,
           finalizedItems: result.completedAnswerSheets,
           progressPercentage: result.percentage,
-          finalizedPercentage: result.percentage
+          finalizedPercentage: result.percentage,
         })
         setLastUpdated(new Date())
         onProgressUpdate?.({
@@ -63,7 +59,7 @@ export default function ProjectProgressCard({
           gradedItems: result.completedAnswerSheets,
           finalizedItems: result.completedAnswerSheets,
           progressPercentage: result.percentage,
-          finalizedPercentage: result.percentage
+          finalizedPercentage: result.percentage,
         })
       } else {
         setError("Failed to fetch progress")
@@ -95,7 +91,6 @@ export default function ProjectProgressCard({
     if (percentage >= 50) return "bg-yellow-500"
     return "bg-red-500"
   }
-
 
   if (loading) {
     return (

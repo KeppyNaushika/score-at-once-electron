@@ -337,7 +337,8 @@ export default function AnswerDisplayViewer({
             </div>
             {currentQuestion && (
               <div>
-                設問: {currentQuestion.label || currentQuestion.orderIndex || 1} ({currentQuestion.points}
+                設問: {currentQuestion.label || currentQuestion.orderIndex || 1}{" "}
+                ({currentQuestion.points}
                 点)
               </div>
             )}

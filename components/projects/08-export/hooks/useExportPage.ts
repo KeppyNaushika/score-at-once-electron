@@ -190,8 +190,8 @@ export function useExportPage() {
     new Map(
       students
         .flatMap((s) => s.memberships.map((m) => m.class))
-        .map((cls) => [cls.id, cls])
-    ).values()
+        .map((cls) => [cls.id, cls]),
+    ).values(),
   )
 
   return {

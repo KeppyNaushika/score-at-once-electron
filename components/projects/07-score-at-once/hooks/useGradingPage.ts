@@ -1,14 +1,13 @@
 "use client"
 
 import type { ProjectWithDetails } from "@/types/electron"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { GradingMode } from "../GradingModeToggle"
 import { AnswerSheet, QuestionRegion, ScoringData } from "../types"
 
 export function useGradingPage() {
   const params = useParams()
-  const router = useRouter()
   const projectId = params.projectId as string
 
   // 基本状態
