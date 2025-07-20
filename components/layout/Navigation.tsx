@@ -181,9 +181,9 @@ export default function Navigation({
             {isSidebarMinimized ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link href="/login" passHref>
+                  <Link href="/" passHref>
                     <Button
-                      variant={pathname === "/login" ? "secondary" : "ghost"}
+                      variant={pathname === "/" ? "secondary" : "ghost"}
                       size="icon"
                       className="w-full justify-center"
                       aria-label="ログイン"
@@ -197,9 +197,9 @@ export default function Navigation({
                 </TooltipContent>
               </Tooltip>
             ) : (
-              <Link href="/login" passHref>
+              <Link href="/" passHref>
                 <Button
-                  variant={pathname === "/login" ? "secondary" : "ghost"}
+                  variant={pathname === "/" ? "secondary" : "ghost"}
                   className="w-full justify-start"
                 >
                   <LogIn className="mr-3 h-5 w-5" />
