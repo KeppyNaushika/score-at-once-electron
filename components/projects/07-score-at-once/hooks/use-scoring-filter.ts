@@ -1,5 +1,5 @@
 import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/use-scoring-keyboard"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useMemo, useRef } from "react"
 import type {
   AnswerSheet,
   QuestionRegion,
@@ -75,93 +75,90 @@ export function useScoringFilter({
         return
       }
 
-      // masterImageIdに基づいてpageNumberを取得
+      // 事前にmasterImageを取得（ループ内での重複検索を避ける）
       const masterImage = project?.masterImages?.find(
         (img: any) => img.id === currentQuestion.masterImageId,
       )
       const targetPageNumber = masterImage?.pageNumber || 1
 
-      // pageNumberでフィルタリングしてから受験生徒順でソート
-      const pageFilteredSheets = answerSheets.filter(
-        (sheet) => sheet.pageNumber === targetPageNumber,
-      )
+      // 最適化: ページフィルタリングを先に実行
+      for (const sheet of answerSheets) {
+        if (sheet.pageNumber !== targetPageNumber) continue
 
-      const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
-        // ProjectStudentのcustomOrderで並び替え（小さい値が先）
-        const aOrder =
-          a.student.projectStudents?.[0]?.customOrder !== undefined
-            ? a.student.projectStudents[0].customOrder
-            : 999999
-        const bOrder =
-          b.student.projectStudents?.[0]?.customOrder !== undefined
-            ? b.student.projectStudents[0].customOrder
-            : 999999
-
-        // customOrderが同じ場合は姓名でソート
-        if (aOrder === bOrder) {
-          const aName = `${a.student.lastName}${a.student.firstName}`
-          const bName = `${b.student.lastName}${b.student.firstName}`
-          return aName.localeCompare(bName, "ja")
-        }
-
-        return aOrder - bOrder
-      })
-
-      sortedAnswerSheets.forEach((sheet) => {
-        const key = `${sheet.id}-${currentQuestion?.id}`
+        const key = `${sheet.id}-${currentQuestion.id}`
         const scoreData = scoringData[key]
         const status = scoreData?.status || "ungraded"
 
-        // 通常のフィルター条件 OR 最近採点した答案は強制表示
+        // フィルター条件チェック（最近採点答案は強制表示）
         if (activeFilterSettings[status as keyof typeof activeFilterSettings] || recentlyScoredAnswers.has(sheet.id)) {
           newVisibleAnswers.add(sheet.id)
         }
-      })
+      }
 
       setVisibleAnswers(newVisibleAnswers)
     },
-    [answerSheets, currentQuestion, filterSettings, project, scoringData, recentlyScoredAnswers],
+    [answerSheets, currentQuestion, filterSettings, project?.masterImages, scoringData, recentlyScoredAnswers],
   )
 
-  // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
+  // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
   useEffect(() => {
     if (answerSheets.length > 0 && questionRegions.length > 0) {
-      // まず選択をクリア
-      setSelectedAnswers(new Set())
-
-      // 表示対象を更新
+      // 表示対象を更新（選択はクリアしない）
       updateVisibleAnswers()
     }
-  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, setSelectedAnswers, updateVisibleAnswers])
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, updateVisibleAnswers])
 
-  // visibleAnswersが更新されたら適切な答案選択を行う
+  // 選択状態の管理用ref
+  const selectedAnswersRef = useRef<Set<string>>(new Set())
+  const lastVisibleAnswersRef = useRef<Set<string>>(new Set())
+  
+  // selectedAnswersが変更されたらrefも更新
   useEffect(() => {
-    if (visibleAnswers.size > 0) {
-      // 選択されている答案がvisibleAnswersに存在するかチェック
-      const selectedIds = Array.from(selectedAnswers)
-      const hasValidSelection = selectedIds.some(id => visibleAnswers.has(id))
-      
-      if (!hasValidSelection) {
-        // 選択答案がない、またはvisibleAnswersに存在しない場合のみ最初の答案を選択
-        const firstStudentAnswerId = Array.from(visibleAnswers).find(
-          (id) => !id.startsWith("master-")
-        )
-        
-        // 実際に存在する答案IDかチェック
-        if (firstStudentAnswerId) {
-          const answerExists = answerSheets.some(
-            (sheet) => sheet.id === firstStudentAnswerId,
-          )
-          if (answerExists) {
-            setSelectedAnswers(new Set([firstStudentAnswerId]))
-          }
+    selectedAnswersRef.current = selectedAnswers
+  }, [selectedAnswers])
+
+  // visibleAnswersが更新されたら適切な答案選択を行う（最適化版）
+  useEffect(() => {
+    // visibleAnswersに変化がない場合はスキップ（パフォーマンス向上）
+    if (visibleAnswers.size === lastVisibleAnswersRef.current.size) {
+      let hasChanged = false
+      for (const id of visibleAnswers) {
+        if (!lastVisibleAnswersRef.current.has(id)) {
+          hasChanged = true
+          break
+        }
+      }
+      if (!hasChanged) return
+    }
+    
+    // 最新のvisibleAnswersを記録
+    lastVisibleAnswersRef.current = new Set(visibleAnswers)
+    
+    // 早期リターンで不要な処理をスキップ
+    if (visibleAnswers.size === 0) return
+    
+    // 現在の選択状態をrefから取得（最新の状態）
+    const currentSelection = selectedAnswersRef.current
+    if (currentSelection.size > 0) {
+      // 高速な有効性チェック（Set.hasは高速）
+      for (const selectedId of currentSelection) {
+        if (visibleAnswers.has(selectedId)) {
+          return // 有効な選択があるので処理終了
         }
       }
     }
-  }, [visibleAnswers, selectedAnswers, setSelectedAnswers, answerSheets])
+    
+    // 選択が空か無効な場合のみ、最初の学生答案を選択
+    for (const answerId of visibleAnswers) {
+      if (!answerId.startsWith("master-")) {
+        setSelectedAnswers(new Set([answerId]))
+        return // 見つかったらすぐ終了
+      }
+    }
+  }, [visibleAnswers, setSelectedAnswers])
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
-  const getAllGridAnswerData = useCallback(() => {
+  const getAllGridAnswerData = useMemo(() => {
     if (!currentQuestion) return []
 
     // masterImageIdに基づいてmasterImageのpageNumberを取得
@@ -213,7 +210,7 @@ export function useScoringFilter({
         questionRegion: currentQuestion, // 採点領域情報を追加
       }
     })
-  }, [currentQuestion, project, answerSheets, scoringData, selectedAnswers])
+  }, [currentQuestion, project?.masterImages, answerSheets, scoringData, selectedAnswers])
 
   // 模範解答データを取得
   const getMasterAnswerData = useCallback(() => {
@@ -242,8 +239,7 @@ export function useScoringFilter({
 
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
-    const allAnswers = getAllGridAnswerData()
-    const filteredAnswers = allAnswers.filter((answer) =>
+    const filteredAnswers = getAllGridAnswerData.filter((answer) =>
       visibleAnswers.has(answer.id),
     )
 
@@ -258,15 +254,15 @@ export function useScoringFilter({
 
   // フィルタリング関連ハンドラー（Rキー押下時およびフィルター変更時）
   const handleRefreshFilter = useCallback(() => {
-    // 選択をクリア
-    setSelectedAnswers(new Set())
-
+    
     // 最近採点した答案をクリア
     setRecentlyScoredAnswers(new Set())
 
     // 最新のscoringDataを使用してフィルタリングを実行
     updateVisibleAnswers()
-  }, [setSelectedAnswers, updateVisibleAnswers])
+    
+    // 選択は自動管理useEffectに任せる
+  }, [updateVisibleAnswers])
 
   const handleToggleFilter = useCallback(
     (key: string) => {
@@ -278,17 +274,14 @@ export function useScoringFilter({
         }
         setFilterSettings(newFilterSettings)
 
-        // 選択をクリア
-        setSelectedAnswers(new Set())
-
-        // 最近採点した答案をクリア
-        setRecentlyScoredAnswers(new Set())
-
         // 新しいフィルター設定を直接渡してフィルタリングを実行
         updateVisibleAnswers(newFilterSettings)
+        
+        // 最近採点した答案をクリア（選択は自動管理useEffectに任せる）
+        setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, setSelectedAnswers, updateVisibleAnswers],
+    [filterSettings, updateVisibleAnswers],
   )
 
   // Alt+採点キーでフィルタ切り替え
@@ -311,17 +304,14 @@ export function useScoringFilter({
         }
         setFilterSettings(newFilterSettings)
 
-        // 選択をクリア
-        setSelectedAnswers(new Set())
-
-        // 最近採点した答案をクリア
-        setRecentlyScoredAnswers(new Set())
-
         // 新しいフィルター設定を直接渡してフィルタリングを実行
         updateVisibleAnswers(newFilterSettings)
+        
+        // 最近採点した答案をクリア（選択は自動管理useEffectに任せる）
+        setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, setSelectedAnswers, updateVisibleAnswers],
+    [filterSettings, updateVisibleAnswers],
   )
 
   return {
