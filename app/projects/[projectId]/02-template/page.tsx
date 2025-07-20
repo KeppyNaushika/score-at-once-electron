@@ -231,17 +231,17 @@ export default function TemplateStepPage() {
 
       isSavingRef.current = true
       try {
-
         const saveResults: Array<{
           originalIndex: number
           result: any
-          wasUpdate?: boolean
+          wasUpdate: boolean
         }> = []
         
+        // 順次処理で確実にID管理
         for (let i = 0; i < regions.length; i++) {
           const area = regions[i]
           if (!area.masterImageId) {
-            saveResults.push({ originalIndex: i, result: null })
+            saveResults.push({ originalIndex: i, result: null, wasUpdate: false })
             continue
           }
 
@@ -258,29 +258,32 @@ export default function TemplateStepPage() {
           }
 
           if (area.id) {
+            // 既存領域の更新
             const result = await window.electronAPI.updateLayoutRegion(
               area.id,
               regionData,
             )
             saveResults.push({ originalIndex: i, result, wasUpdate: true })
           } else {
+            // 新規領域の作成
             const result = await window.electronAPI.createLayoutRegion(regionData)
             saveResults.push({ originalIndex: i, result, wasUpdate: false })
           }
         }
 
-        // IDが新規作成された領域がある場合、状態を更新
+        // 新規作成されたIDをReact stateに反映
         const hasNewIds = saveResults.some(r => r.result && !r.wasUpdate)
         if (hasNewIds) {
           const updatedRegions = regions.map((region, index) => {
             const saveResult = saveResults.find(r => r.originalIndex === index)
             if (saveResult && saveResult.result && !saveResult.wasUpdate) {
-              const updatedRegion = { ...region, id: saveResult.result.id }
-              return updatedRegion
+              // 新規作成されたIDを設定
+              return { ...region, id: saveResult.result.id }
             }
             return region
           })
           
+          // 確実に状態を更新
           setLayoutRegions(updatedRegions)
         }
 
