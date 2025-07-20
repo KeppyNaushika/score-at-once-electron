@@ -48,6 +48,22 @@ export function useScoringFilter({
   const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
   const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<Set<string>>(new Set())
   const [isScoringInProgress, setIsScoringInProgress] = useState(false)
+  
+  // recentlyScoredAnswersの自動クリア用タイマー
+  useEffect(() => {
+    if (recentlyScoredAnswers.size > 0) {
+      console.log("⏰ recentlyScoredAnswers自動クリアタイマー開始 (5秒)")
+      const timer = setTimeout(() => {
+        console.log("⏰ recentlyScoredAnswers自動クリア実行")
+        setRecentlyScoredAnswers(new Set())
+      }, 5000) // 5秒後に自動クリア
+
+      return () => {
+        console.log("⏰ タイマークリア")
+        clearTimeout(timer)
+      }
+    }
+  }, [recentlyScoredAnswers])
 
   const currentQuestion = questionRegions[currentQuestionIndex]
 
@@ -68,10 +84,7 @@ export function useScoringFilter({
   // 表示対象答案の更新（統合版）
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {
-      console.log("🔧 updateVisibleAnswers実行開始")
-      console.log("📋 filterSettings:", filterSettings)
-      console.log("🔄 customFilterSettings:", customFilterSettings)
-      console.log("🏅 recentlyScoredAnswers:", Array.from(recentlyScoredAnswers))
+      console.log("🔧 updateVisibleAnswers実行 - recent保持中:", Array.from(recentlyScoredAnswers))
       
       const activeFilterSettings = customFilterSettings || filterSettings
       const newVisibleAnswers = new Set<string>()
@@ -293,6 +306,8 @@ export function useScoringFilter({
 
   // フィルタリング関連ハンドラー（Rキー押下時およびフィルター変更時）
   const handleRefreshFilter = useCallback(() => {
+    console.log("🔄 handleRefreshFilter実行 - recentlyScoredAnswersをクリア")
+    
     // 選択をクリア
     setSelectedAnswers(new Set())
 

@@ -191,6 +191,7 @@ export default function ScoringMainView() {
       const newSet = new Set(prev)
       answerIds.forEach(id => newSet.add(id))
       console.log("✅ recentlyScoredAnswers更新:", Array.from(newSet))
+      console.log("🕒 この答案は5秒間自動進行対象として保持されます")
       return newSet
     })
 
