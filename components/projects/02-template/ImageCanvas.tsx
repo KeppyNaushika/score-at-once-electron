@@ -1,10 +1,26 @@
+/**
+ * ImageCanvas - Main canvas component for layout region editing
+ * 
+ * Features:
+ * - Drag to create new regions
+ * - Zoom and pan functionality
+ * - Keyboard shortcuts for area management
+ * - Area rendering and interaction
+ * 
+ * @param props - Configuration properties for the canvas
+ * @returns JSX component for the image canvas
+ */
+
 "use client"
 
 import { AreaRenderer } from "@/components/projects/02-template/AreaRenderer"
 import { DragPreview } from "@/components/projects/02-template/DragPreview"
+import { ZoomControls } from "@/components/projects/02-template/components/zoom-controls"
 import { useImageCanvasInteraction } from "@/components/projects/02-template/hooks/useImageCanvasInteraction"
+import { useZoomControls } from "@/components/projects/02-template/hooks/use-zoom-controls"
+import { useKeyboardShortcuts } from "@/components/projects/02-template/hooks/use-keyboard-shortcuts"
 import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
 type ImageCanvasProps = {
   backgroundImageUrl: string | null
@@ -37,15 +53,13 @@ const ImageCanvas = ({
   disabled,
   masterImageId,
 }: ImageCanvasProps) => {
-  // ズーム機能のみ実装（パンはブラウザ標準スクロール）
-  const [zoom, setZoom] = useState(1)
-  const [showZoomHelp, setShowZoomHelp] = useState(true)
+  // Get zoom controls first
+  const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } = useZoomControls()
 
   const {
     dragging,
     dragStartCoords,
     dragCurrentCoords,
-    imageContainerRef,
     handleMouseDown,
     handleResizeMouseDown,
     handleMoveMouseDown,
@@ -58,116 +72,24 @@ const ImageCanvas = ({
     onAddAreaByDrag,
     onUpdateArea,
     zoom,
+    imageContainerRef,
   })
+  
+  useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)
 
-  // キーボードイベントハンドラー（削除機能 + ズーム機能）
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 削除機能
-      if (selectedAreaIndex !== null) {
-        if (e.key === "Backspace" || e.key === "Delete") {
-          e.preventDefault()
-          onDeleteArea(selectedAreaIndex)
-          return
-        }
-      }
-
-      // ズーム機能（ImageCanvasがフォーカスされているとき）
-      if (
-        imageContainerRef.current &&
-        imageContainerRef.current.contains(document.activeElement)
-      ) {
-        switch (e.key) {
-          case "+":
-          case "=":
-            if (e.ctrlKey) {
-              e.preventDefault()
-              e.stopPropagation()
-              setZoom((prev) => Math.min(5, prev + 0.1))
-            }
-            break
-          case "-":
-            if (e.ctrlKey) {
-              e.preventDefault()
-              e.stopPropagation()
-              setZoom((prev) => Math.max(0.1, prev - 0.1))
-            }
-            break
-          case "0":
-            if (e.ctrlKey) {
-              e.preventDefault()
-              e.stopPropagation()
-              setZoom(1)
-            }
-            break
-        }
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown)
-    return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [selectedAreaIndex, onDeleteArea, imageContainerRef])
-
-  // シンプルなホイールズーム機能
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      if (e.ctrlKey) {
-        e.preventDefault()
-        const zoomSpeed = 0.005
-        const newZoom = zoom - e.deltaY * zoomSpeed
-        setZoom(Math.max(0.1, Math.min(5, newZoom)))
-      }
-    }
-
-    const container = imageContainerRef.current
-    if (container) {
-      container.addEventListener("wheel", handleWheel, { passive: false })
-    }
-
-    return () => {
-      if (container) {
-        container.removeEventListener("wheel", handleWheel)
-      }
-    }
-  }, [zoom, imageContainerRef])
-
-  // 画像サイズの計算
-  const imageWidth = imageDimensions ? imageDimensions.width * zoom : 0
-  const imageHeight = imageDimensions ? imageDimensions.height * zoom : 0
+  // Calculate image dimensions based on zoom
+  const imageDimensionsWithZoom = useMemo(() => ({
+    width: imageDimensions ? imageDimensions.width * zoom : 0,
+    height: imageDimensions ? imageDimensions.height * zoom : 0,
+  }), [imageDimensions, zoom])
 
   return (
     <div className="relative h-full w-full bg-gray-100">
-      {/* ズーム操作のヘルプ表示 */}
-      {showZoomHelp && (
-        <div className="bg-opacity-70 absolute top-2 right-2 z-20 max-w-xs rounded bg-black p-2 text-xs text-white">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="font-semibold">操作:</span>
-            <button
-              onClick={() => setShowZoomHelp(false)}
-              className="ml-2 text-white hover:text-gray-300"
-              aria-label="ヘルプを閉じる"
-            >
-              ×
-            </button>
-          </div>
-          <div>スクロール: 標準ブラウザスクロール</div>
-          <div>Ctrl + ホイール: ズーム</div>
-          <div>Ctrl + +/-: ズーム</div>
-          <div>Ctrl + 0: リセット</div>
-          <div>ズーム: {Math.round(zoom * 100)}%</div>
-        </div>
-      )}
-
-      {/* ヘルプ再表示ボタン */}
-      {!showZoomHelp && (
-        <button
-          onClick={() => setShowZoomHelp(true)}
-          className="absolute top-2 right-2 z-20 rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
-          aria-label="ヘルプを表示"
-        >
-          ?
-        </button>
-      )}
+      <ZoomControls 
+        zoom={zoom}
+        showZoomHelp={showZoomHelp}
+        onToggleHelp={setShowZoomHelp}
+      />
 
       {/* 標準HTMLスクロール可能なコンテナ */}
       <div
@@ -178,12 +100,12 @@ const ImageCanvas = ({
           ref={imageContainerRef}
           className="relative cursor-crosshair focus:outline-none"
           style={{
-            width: `${imageWidth}px`,
-            height: `${imageHeight}px`,
+            width: `${imageDimensionsWithZoom.width}px`,
+            height: `${imageDimensionsWithZoom.height}px`,
             backgroundImage: backgroundImageUrl
               ? `url(${backgroundImageUrl})`
               : "none",
-            backgroundSize: `${imageWidth}px ${imageHeight}px`,
+            backgroundSize: `${imageDimensionsWithZoom.width}px ${imageDimensionsWithZoom.height}px`,
             backgroundRepeat: "no-repeat",
             backgroundPosition: "0 0",
             minWidth: "400px",
