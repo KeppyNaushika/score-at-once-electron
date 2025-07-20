@@ -29,9 +29,6 @@ export default function TemplateStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
-    null,
-  )
   const isSavingRef = useRef(false)
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [project, setProject] = useState<Project | null>(null)
@@ -274,28 +271,19 @@ export default function TemplateStepPage() {
   )
 
   const handleRegionsChange = useCallback(
-    (newRegions: any[] | ((prev: any[]) => any[])) => {
-      setLayoutRegions((prevRegions) => {
-        const finalRegions =
-          typeof newRegions === "function"
-            ? newRegions(prevRegions)
-            : newRegions
+    async (newRegions: any[] | ((prev: any[]) => any[])) => {
+      const finalRegions =
+        typeof newRegions === "function"
+          ? newRegions(layoutRegions)
+          : newRegions
 
-        // Auto-save logic with timeout
-        setSaveTimeoutId((currentTimeoutId) => {
-          if (currentTimeoutId) {
-            clearTimeout(currentTimeoutId)
-          }
+      // Update React state immediately
+      setLayoutRegions(finalRegions)
 
-          return setTimeout(() => {
-            autoSaveRegions(finalRegions)
-          }, 1000)
-        })
-
-        return finalRegions
-      })
+      // Save to database immediately without timeout
+      await autoSaveRegions(finalRegions)
     },
-    [autoSaveRegions],
+    [layoutRegions, autoSaveRegions],
   )
 
   const handleSaveTemplate = async () => {
