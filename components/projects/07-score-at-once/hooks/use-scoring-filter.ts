@@ -46,6 +46,7 @@ export function useScoringFilter({
   })
 
   const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
+  const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<Set<string>>(new Set())
 
   const currentQuestion = questionRegions[currentQuestionIndex]
 
@@ -111,14 +112,15 @@ export function useScoringFilter({
         const scoreData = scoringData[key]
         const status = scoreData?.status || "ungraded"
 
-        if (activeFilterSettings[status as keyof typeof activeFilterSettings]) {
+        // 通常のフィルター条件 OR 最近採点した答案は強制表示
+        if (activeFilterSettings[status as keyof typeof activeFilterSettings] || recentlyScoredAnswers.has(sheet.id)) {
           newVisibleAnswers.add(sheet.id)
         }
       })
 
       setVisibleAnswers(newVisibleAnswers)
     },
-    [answerSheets, currentQuestion, filterSettings, project, scoringData],
+    [answerSheets, currentQuestion, filterSettings, project, scoringData, recentlyScoredAnswers],
   )
 
   // 初期化時と設問変更時に表示対象を設定し、最初の答案を選択
@@ -130,28 +132,33 @@ export function useScoringFilter({
       // 表示対象を更新
       updateVisibleAnswers()
     }
-  }, [answerSheets.length, questionRegions.length, currentQuestionIndex])
+  }, [answerSheets.length, questionRegions.length, currentQuestionIndex, setSelectedAnswers, updateVisibleAnswers])
 
-  // visibleAnswersが更新されたら最初の生徒答案を選択（模範解答をスキップ）
+  // visibleAnswersが更新されたら適切な答案選択を行う
   useEffect(() => {
-    if (visibleAnswers.size > 0 && selectedAnswers.size === 0) {
-      // 模範解答をスキップして最初の生徒答案を選択
-      const visibleIds = Array.from(visibleAnswers)
-      const firstStudentAnswerId = visibleIds.find(
-        (id) => !id.startsWith("master-"),
-      )
-
-      // 実際に存在する答案IDかチェック
-      if (firstStudentAnswerId) {
-        const answerExists = answerSheets.some(
-          (sheet) => sheet.id === firstStudentAnswerId,
+    if (visibleAnswers.size > 0) {
+      // 選択されている答案がvisibleAnswersに存在するかチェック
+      const selectedIds = Array.from(selectedAnswers)
+      const hasValidSelection = selectedIds.some(id => visibleAnswers.has(id))
+      
+      if (!hasValidSelection) {
+        // 選択答案がない、またはvisibleAnswersに存在しない場合のみ最初の答案を選択
+        const firstStudentAnswerId = Array.from(visibleAnswers).find(
+          (id) => !id.startsWith("master-")
         )
-        if (answerExists) {
-          setSelectedAnswers(new Set([firstStudentAnswerId]))
+        
+        // 実際に存在する答案IDかチェック
+        if (firstStudentAnswerId) {
+          const answerExists = answerSheets.some(
+            (sheet) => sheet.id === firstStudentAnswerId,
+          )
+          if (answerExists) {
+            setSelectedAnswers(new Set([firstStudentAnswerId]))
+          }
         }
       }
     }
-  }, [visibleAnswers, selectedAnswers.size, setSelectedAnswers, answerSheets])
+  }, [visibleAnswers, selectedAnswers, setSelectedAnswers, answerSheets])
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
   const getAllGridAnswerData = useCallback(() => {
@@ -254,6 +261,9 @@ export function useScoringFilter({
     // 選択をクリア
     setSelectedAnswers(new Set())
 
+    // 最近採点した答案をクリア
+    setRecentlyScoredAnswers(new Set())
+
     // 最新のscoringDataを使用してフィルタリングを実行
     updateVisibleAnswers()
   }, [setSelectedAnswers, updateVisibleAnswers])
@@ -270,6 +280,9 @@ export function useScoringFilter({
 
         // 選択をクリア
         setSelectedAnswers(new Set())
+
+        // 最近採点した答案をクリア
+        setRecentlyScoredAnswers(new Set())
 
         // 新しいフィルター設定を直接渡してフィルタリングを実行
         updateVisibleAnswers(newFilterSettings)
@@ -301,6 +314,9 @@ export function useScoringFilter({
         // 選択をクリア
         setSelectedAnswers(new Set())
 
+        // 最近採点した答案をクリア
+        setRecentlyScoredAnswers(new Set())
+
         // 新しいフィルター設定を直接渡してフィルタリングを実行
         updateVisibleAnswers(newFilterSettings)
       }
@@ -312,6 +328,8 @@ export function useScoringFilter({
     filterSettings,
     setFilterSettings,
     visibleAnswers,
+    recentlyScoredAnswers,
+    setRecentlyScoredAnswers,
     getAllGridAnswerData,
     getGridAnswerData,
     getMasterAnswerData,

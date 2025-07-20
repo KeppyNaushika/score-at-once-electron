@@ -119,6 +119,8 @@ export default function ScoringMainView() {
     filterSettings,
     setFilterSettings,
     visibleAnswers,
+    recentlyScoredAnswers,
+    setRecentlyScoredAnswers,
     getAllGridAnswerData,
     getGridAnswerData,
     getMasterAnswerData,
@@ -295,6 +297,15 @@ export default function ScoringMainView() {
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => {
+    // 最近採点した答案を記録（先に実行）
+    const answerIds = Array.from(selectedAnswers)
+    setRecentlyScoredAnswers(prev => {
+      const newSet = new Set(prev)
+      answerIds.forEach(id => newSet.add(id))
+      return newSet
+    })
+
+    // その後で採点実行
     await handleBatchScore(
       statusOrAnswerIds,
       statusOrPartialScore,
