@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { AlertCircle, RefreshCw, Users } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // プロジェクト進捗の型定義
 interface ProjectProgress {
@@ -36,7 +36,7 @@ export default function ProjectProgressCard({
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // 進捗データを取得する関数
-  const fetchProgress = async () => {
+  const fetchProgress = useCallback(async () => {
     try {
       setError(null)
       const result = await window.electronAPI.getProjectProgress(projectId)
@@ -70,12 +70,12 @@ export default function ProjectProgressCard({
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId, onProgressUpdate])
 
   // 初回読み込み
   useEffect(() => {
     fetchProgress()
-  }, [projectId])
+  }, [fetchProgress])
 
   // 自動リフレッシュの設定
   useEffect(() => {
@@ -83,7 +83,7 @@ export default function ProjectProgressCard({
 
     const interval = setInterval(fetchProgress, refreshInterval)
     return () => clearInterval(interval)
-  }, [autoRefresh, refreshInterval, projectId])
+  }, [autoRefresh, refreshInterval, fetchProgress])
 
   // 進捗率の計算
   const getProgressColor = (percentage: number) => {

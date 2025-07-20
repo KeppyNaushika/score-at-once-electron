@@ -68,40 +68,6 @@ export default function AnswerDisplayViewer({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragMode, setDragMode] = useState(false) // ドラッグモードの切り替え
 
-  // 画像の読み込み
-  useEffect(() => {
-    if (!answerSheet?.imagePath) {
-      console.warn("AnswerDisplayViewer: No image path provided")
-      return
-    }
-
-    const img = new Image()
-    img.onload = () => {
-      setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
-      setImageLoaded(true)
-      drawCanvas(img)
-    }
-    img.onerror = (error) => {
-      console.error("Failed to load image:", {
-        answerSheetId: answerSheet.id,
-        studentId: answerSheet.studentId,
-        originalPath: answerSheet.imagePath,
-        finalSrc: img.src,
-        error,
-      })
-      setImageLoaded(false)
-    }
-
-    // Electronの場合、appimg プロトコルを使用
-    img.src = answerSheet.imagePath.startsWith("appimg://")
-      ? answerSheet.imagePath
-      : `appimg://${answerSheet.imagePath}`
-
-    if (imageRef.current) {
-      imageRef.current = img
-    }
-  }, [answerSheet?.imagePath])
-
   // キャンバスの描画
   const drawCanvas = useCallback(
     (img?: HTMLImageElement) => {
@@ -171,6 +137,40 @@ export default function AnswerDisplayViewer({
     },
     [imageLoaded, zoom, position, viewMode, currentQuestion],
   )
+
+  // 画像の読み込み
+  useEffect(() => {
+    if (!answerSheet?.imagePath) {
+      console.warn("AnswerDisplayViewer: No image path provided")
+      return
+    }
+
+    const img = new Image()
+    img.onload = () => {
+      setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
+      setImageLoaded(true)
+      drawCanvas(img)
+    }
+    img.onerror = (error) => {
+      console.error("Failed to load image:", {
+        answerSheetId: answerSheet.id,
+        studentId: answerSheet.studentId,
+        originalPath: answerSheet.imagePath,
+        finalSrc: img.src,
+        error,
+      })
+      setImageLoaded(false)
+    }
+
+    // Electronの場合、appimg プロトコルを使用
+    img.src = answerSheet.imagePath.startsWith("appimg://")
+      ? answerSheet.imagePath
+      : `appimg://${answerSheet.imagePath}`
+
+    if (imageRef.current) {
+      imageRef.current = img
+    }
+  }, [answerSheet, drawCanvas])
 
   // 描画の更新
   useEffect(() => {
