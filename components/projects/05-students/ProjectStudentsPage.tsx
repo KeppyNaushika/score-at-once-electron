@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/popover"
 import { Info, Plus, UserCheck, Users, UserX } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // 生徒の状態を表す型
 type StudentStatus = "participating" | "expected" | "absent"
@@ -82,11 +82,68 @@ export default function ProjectStudentsPage() {
   ).length
   const absentStudents = students.filter((s) => s.status === "absent").length
 
+  // データの再読み込み
+  const refreshStudentData = useCallback(async () => {
+    const studentsResult =
+      await window.electronAPI.getStudentsForProject(projectId)
+
+    if (studentsResult.success && studentsResult.students) {
+      // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
+      const sortedStudents = [...studentsResult.students].sort(
+        (a: any, b: any) => {
+          // customOrderが設定されている場合はそれを優先
+          if (
+            a.customOrder !== null &&
+            a.customOrder !== undefined &&
+            b.customOrder !== null &&
+            b.customOrder !== undefined
+          ) {
+            return a.customOrder - b.customOrder
+          }
+          if (a.customOrder !== null && a.customOrder !== undefined) return -1
+          if (b.customOrder !== null && b.customOrder !== undefined) return 1
+
+          // customOrderが未設定の場合はデフォルト順序（追加順など）
+          return 0
+        },
+      )
+
+      setStudents(sortedStudents)
+
+      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
+      const uniqueClasses = new Map<string, { id: string; name: string }>()
+
+      sortedStudents.forEach((student) => {
+        // 各生徒の全所属履歴を確認
+        student.memberships?.forEach((membership) => {
+          if (!uniqueClasses.has(membership.class.id)) {
+            uniqueClasses.set(membership.class.id, {
+              id: membership.class.id,
+              name: membership.class.name,
+            })
+          }
+        })
+      })
+
+      // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
+      const filterClasses: ClassGroup[] = Array.from(
+        uniqueClasses.values(),
+      ).map((cls) => ({
+        ...cls,
+        students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
+      }))
+
+      setClasses(filterClasses)
+    } else {
+      console.error("Failed to refresh student data:", studentsResult.error)
+    }
+  }, [projectId])
+
   // データの取得（実際のAPIから）
   useEffect(() => {
     setLoading(true)
     refreshStudentData().finally(() => setLoading(false))
-  }, [projectId])
+  }, [refreshStudentData])
 
   // 生徒の状態を更新
   const updateStudentStatus = async (
@@ -241,62 +298,6 @@ export default function ProjectStudentsPage() {
     }
   }
 
-  // データの再読み込み
-  const refreshStudentData = async () => {
-    const studentsResult =
-      await window.electronAPI.getStudentsForProject(projectId)
-
-    if (studentsResult.success && studentsResult.students) {
-      // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
-      const sortedStudents = [...studentsResult.students].sort(
-        (a: any, b: any) => {
-          // customOrderが設定されている場合はそれを優先
-          if (
-            a.customOrder !== null &&
-            a.customOrder !== undefined &&
-            b.customOrder !== null &&
-            b.customOrder !== undefined
-          ) {
-            return a.customOrder - b.customOrder
-          }
-          if (a.customOrder !== null && a.customOrder !== undefined) return -1
-          if (b.customOrder !== null && b.customOrder !== undefined) return 1
-
-          // customOrderが未設定の場合はデフォルト順序（追加順など）
-          return 0
-        },
-      )
-
-      setStudents(sortedStudents)
-
-      // フィルタ用学級リスト: 受験生徒の所属履歴から抽出（表示のみ）
-      const uniqueClasses = new Map<string, { id: string; name: string }>()
-
-      sortedStudents.forEach((student) => {
-        // 各生徒の全所属履歴を確認
-        student.memberships?.forEach((membership) => {
-          if (!uniqueClasses.has(membership.class.id)) {
-            uniqueClasses.set(membership.class.id, {
-              id: membership.class.id,
-              name: membership.class.name,
-            })
-          }
-        })
-      })
-
-      // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
-      const filterClasses: ClassGroup[] = Array.from(
-        uniqueClasses.values(),
-      ).map((cls) => ({
-        ...cls,
-        students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
-      }))
-
-      setClasses(filterClasses)
-    } else {
-      console.error("Failed to refresh student data:", studentsResult.error)
-    }
-  }
 
   // フィルタリングされた生徒リスト（順序を維持したまま表示用フィルタを適用）
   const filteredStudents = students.filter((student) => {

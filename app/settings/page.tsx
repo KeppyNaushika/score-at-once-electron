@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
-import { UserPen } from "lucide-react"
+import { UserEditModal } from "@/components/auth/UserEditModal"
+import { UserPen, Edit3 } from "lucide-react"
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
 
 interface User {
   id: string
@@ -35,6 +37,7 @@ export default function SettingsPage() {
 
   const [users, setUsers] = useState<User[]>([])
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
+  const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -50,9 +53,19 @@ export default function SettingsPage() {
     }
   }
 
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user)
+    setIsUserEditOpen(true)
+  }
+
   const handleEditPasscode = (user: User) => {
     setSelectedUser(user)
     setIsPasscodeEditOpen(true)
+  }
+
+  const handleUserUpdated = () => {
+    loadUsers()
+    toast.success("ユーザー情報が更新されました")
   }
 
   const handlePasscodeUpdated = () => {
@@ -89,14 +102,24 @@ export default function SettingsPage() {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditPasscode(user)}
-                    >
-                      <UserPen className="h-4 w-4 mr-2" />
-                      パスコード編集
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        ユーザー情報編集
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditPasscode(user)}
+                      >
+                        <UserPen className="h-4 w-4 mr-2" />
+                        パスコード編集
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -171,6 +194,16 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+
+        <UserEditModal
+          isOpen={isUserEditOpen}
+          onClose={() => {
+            setIsUserEditOpen(false)
+            setSelectedUser(null)
+          }}
+          onUserUpdated={handleUserUpdated}
+          user={selectedUser}
+        />
 
         <PasscodeEditModal
           isOpen={isPasscodeEditOpen}
