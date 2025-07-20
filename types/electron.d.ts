@@ -214,6 +214,7 @@ export interface MyAPI {
     passcode?: string
     passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
   }) => Promise<User>
+  updateUser: (userId: string, userData: { username?: string; name?: string }) => Promise<User>
   verifyPasscode: (userId: string, passcode: string) => Promise<boolean>
   updateUserPasscode: (userId: string, passcode?: string, passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric") => Promise<User>
   

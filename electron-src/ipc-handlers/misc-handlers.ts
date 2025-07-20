@@ -139,6 +139,19 @@ export function setupMiscHandlers(): void {
   })
 
   ipcMain.handle(
+    "update-user",
+    async (_event, userId: string, userData: { username?: string; name?: string }) => {
+      try {
+        const { updateUser } = await import("../lib/prisma/user")
+        return await updateUser(userId, userData)
+      } catch (err) {
+        console.error("Error updating user:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
     "update-user-passcode",
     async (_event, userId: string, passcode?: string, passcodeType?: string) => {
       try {
