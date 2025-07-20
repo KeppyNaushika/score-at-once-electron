@@ -106,7 +106,7 @@ const ImageCanvas = ({
 
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [selectedAreaIndex, onDeleteArea])
+  }, [selectedAreaIndex, onDeleteArea, imageContainerRef])
 
   // シンプルなホイールズーム機能
   useEffect(() => {
@@ -129,7 +129,7 @@ const ImageCanvas = ({
         container.removeEventListener("wheel", handleWheel)
       }
     }
-  }, [zoom])
+  }, [zoom, imageContainerRef])
 
   // 画像サイズの計算
   const imageWidth = imageDimensions ? imageDimensions.width * zoom : 0

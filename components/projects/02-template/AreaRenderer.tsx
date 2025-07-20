@@ -71,7 +71,7 @@ export function AreaRenderer({
         height: area.height * scaledImageHeight,
       }
     },
-    [imageDimensions, zoom, forceUpdate],
+    [imageDimensions, zoom, containerRef],
   )
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export function AreaRenderer({
         resizeObserver.disconnect()
       }
     }
-  }, [containerRef.current, triggerUpdate])
+  }, [containerRef, triggerUpdate])
 
   // refが準備できていない場合は何も描画しない
   if (!containerRef.current) {

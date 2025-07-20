@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Search, UserPlus } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // 利用可能な学級の型（プロジェクトに未追加の学級）
 interface AvailableClass {
@@ -83,14 +83,7 @@ export default function ProjectStudentAddModal({
   const [loading, setLoading] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
 
-  // データの取得
-  useEffect(() => {
-    if (isOpen) {
-      fetchAvailableData()
-    }
-  }, [isOpen, projectId])
-
-  const fetchAvailableData = async () => {
+  const fetchAvailableData = useCallback(async () => {
     setLoading(true)
     try {
       // 利用可能な学級を取得
@@ -121,7 +114,14 @@ export default function ProjectStudentAddModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId])
+
+  // データの取得
+  useEffect(() => {
+    if (isOpen) {
+      fetchAvailableData()
+    }
+  }, [isOpen, fetchAvailableData])
 
   // 学級選択の処理
   const handleClassSelection = (classId: string, isSelected: boolean) => {
