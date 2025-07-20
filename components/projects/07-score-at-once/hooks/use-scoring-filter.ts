@@ -48,22 +48,6 @@ export function useScoringFilter({
   const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
   const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<Set<string>>(new Set())
   const [isScoringInProgress, setIsScoringInProgress] = useState(false)
-  
-  // recentlyScoredAnswersの自動クリア用タイマー
-  useEffect(() => {
-    if (recentlyScoredAnswers.size > 0) {
-      console.log("⏰ recentlyScoredAnswers自動クリアタイマー開始 (5秒)")
-      const timer = setTimeout(() => {
-        console.log("⏰ recentlyScoredAnswers自動クリア実行")
-        setRecentlyScoredAnswers(new Set())
-      }, 5000) // 5秒後に自動クリア
-
-      return () => {
-        console.log("⏰ タイマークリア")
-        clearTimeout(timer)
-      }
-    }
-  }, [recentlyScoredAnswers])
 
   const currentQuestion = questionRegions[currentQuestionIndex]
 
@@ -180,28 +164,24 @@ export function useScoringFilter({
         inRecent: recentlyScoredAnswers.has(id)
       })))
       
-      if (!hasValidSelection) {
-        console.log("🔄 有効な選択がないため最初の答案を選択")
-        // 選択答案がない、またはvisibleAnswersに存在しない場合のみ最初の答案を選択
+      if (!hasValidSelection && selectedAnswers.size === 0) {
+        console.log("🔄 選択が空のため最初の答案を選択")
+        // 選択が完全に空の場合のみ最初の答案を選択
         const firstStudentAnswerId = Array.from(visibleAnswers).find(
           (id) => !id.startsWith("master-")
         )
         
-        console.log("🎯 firstStudentAnswerId:", firstStudentAnswerId)
-        
-        // 実際に存在する答案IDかチェック
         if (firstStudentAnswerId) {
           const answerExists = answerSheets.some(
             (sheet) => sheet.id === firstStudentAnswerId,
           )
-          console.log("📋 answerExists:", answerExists)
           if (answerExists) {
             console.log("✨ 最初の答案を選択:", firstStudentAnswerId)
             setSelectedAnswers(new Set([firstStudentAnswerId]))
           }
         }
       } else {
-        console.log("✅ 有効な選択が存在するため何もしない")
+        console.log("✅ 選択を保持")
       }
     } else {
       console.log("⚠️ visibleAnswersが空のため何もしない")
