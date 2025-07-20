@@ -231,8 +231,19 @@ export default function TemplateStepPage() {
 
       isSavingRef.current = true
       try {
-        const savePromises = regions.map(async (area) => {
-          if (!area.masterImageId) return null
+
+        const saveResults: Array<{
+          originalIndex: number
+          result: any
+          wasUpdate?: boolean
+        }> = []
+        
+        for (let i = 0; i < regions.length; i++) {
+          const area = regions[i]
+          if (!area.masterImageId) {
+            saveResults.push({ originalIndex: i, result: null })
+            continue
+          }
 
           const regionData = {
             projectId,
@@ -244,21 +255,36 @@ export default function TemplateStepPage() {
             height: area.height,
             label: area.label,
             points: area.points ? parseInt(area.points) : null,
-                      }
+          }
 
           if (area.id) {
-            return await window.electronAPI.updateLayoutRegion(
+            const result = await window.electronAPI.updateLayoutRegion(
               area.id,
               regionData,
             )
+            saveResults.push({ originalIndex: i, result, wasUpdate: true })
           } else {
-            return await window.electronAPI.createLayoutRegion(regionData)
+            const result = await window.electronAPI.createLayoutRegion(regionData)
+            saveResults.push({ originalIndex: i, result, wasUpdate: false })
           }
-        })
+        }
 
-        const savedRegions = await Promise.all(savePromises.filter(Boolean))
+        // IDが新規作成された領域がある場合、状態を更新
+        const hasNewIds = saveResults.some(r => r.result && !r.wasUpdate)
+        if (hasNewIds) {
+          const updatedRegions = regions.map((region, index) => {
+            const saveResult = saveResults.find(r => r.originalIndex === index)
+            if (saveResult && saveResult.result && !saveResult.wasUpdate) {
+              const updatedRegion = { ...region, id: saveResult.result.id }
+              return updatedRegion
+            }
+            return region
+          })
+          
+          setLayoutRegions(updatedRegions)
+        }
 
-        if (savedRegions.length > 0) {
+        if (saveResults.some(r => r.result)) {
           setLayoutId("saved")
         }
       } catch (error) {

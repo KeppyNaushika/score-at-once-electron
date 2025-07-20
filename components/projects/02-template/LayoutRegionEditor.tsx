@@ -65,6 +65,7 @@ const LayoutRegionEditor = ({
       return
     }
 
+
     const newAreaBase = {
       x: customCoords?.x ?? 0.05,
       y: customCoords?.y ?? 0.05,
@@ -114,10 +115,11 @@ const LayoutRegionEditor = ({
         newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
     }
 
-    setAreas([
-      ...areas,
-      { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea,
-    ])
+    const newArea = { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea
+
+    const newAreasArray = [...areas, newArea]
+
+    setAreas(newAreasArray)
     setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
