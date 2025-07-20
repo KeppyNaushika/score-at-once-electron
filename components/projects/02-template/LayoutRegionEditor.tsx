@@ -9,6 +9,8 @@ import { toast } from "sonner"
 type LayoutRegionEditorProps = {
   areas: LayoutRegionArea[]
   setAreas: React.Dispatch<React.SetStateAction<LayoutRegionArea[]>>
+  onCreateRegion?: (type: LayoutRegionAreaType, coords: { x: number; y: number; width: number; height: number }) => Promise<void>
+  onUpdateRegion?: (index: number, coords: { x: number; y: number; width: number; height: number }) => Promise<void>
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
@@ -18,6 +20,8 @@ type LayoutRegionEditorProps = {
 const LayoutRegionEditor = ({
   areas,
   setAreas,
+  onCreateRegion,
+  onUpdateRegion,
   disabled,
   backgroundImageUrl,
   imageDimensions,
@@ -27,13 +31,19 @@ const LayoutRegionEditor = ({
     null,
   )
 
-  const handleUpdateArea = (
+  const handleUpdateArea = async (
     index: number,
     coords: { x: number; y: number; width: number; height: number },
   ) => {
-    const newAreas = [...areas]
-    newAreas[index] = { ...newAreas[index], ...coords }
-    setAreas(newAreas)
+    if (onUpdateRegion) {
+      // Use efficient individual update
+      await onUpdateRegion(index, coords)
+    } else {
+      // Fall back to bulk update
+      const newAreas = [...areas]
+      newAreas[index] = { ...newAreas[index], ...coords }
+      setAreas(newAreas)
+    }
   }
 
   const handleDeleteArea = async (index: number) => {
@@ -56,7 +66,7 @@ const LayoutRegionEditor = ({
     setSelectedAreaIndex(null)
   }
 
-  const addArea = (
+  const addArea = async (
     type: LayoutRegionAreaType,
     customCoords?: { x: number; y: number; width: number; height: number },
   ) => {
@@ -65,62 +75,72 @@ const LayoutRegionEditor = ({
       return
     }
 
-
-    const newAreaBase = {
+    const coords = {
       x: customCoords?.x ?? 0.05,
       y: customCoords?.y ?? 0.05,
       width: customCoords?.width ?? 0.1,
       height: customCoords?.height ?? 0.05,
-      points: null,
-      label: "",
-      masterImageId: masterImageId,
     }
 
-    let newAreaSpecifics = {}
-    switch (type) {
-      case "STUDENT_NAME":
-        newAreaSpecifics = {
-          label: "氏名",
-          type: "STUDENT_NAME",
-        }
-        break
-      case "STUDENT_ID":
-        newAreaSpecifics = {
-          label: "生徒番号",
-          type: "STUDENT_ID",
-        }
-        break
-      case "QUESTION_ANSWER":
-        newAreaSpecifics = {
-          label: `設問 ${
-            areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
-          }`,
-          type: "QUESTION_ANSWER",
-          points: 10, // デフォルトポイント
-        }
-        break
-      case "TOTAL_SCORE":
-        newAreaSpecifics = {
-          label: "合計点",
-          type: "TOTAL_SCORE",
-        }
-        break
-      case "SUBTOTAL_SCORE":
-        newAreaSpecifics = {
-          label: "小計",
-          type: "SUBTOTAL_SCORE",
-        }
-        break
-      default:
-        newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
+    if (onCreateRegion) {
+      // Use efficient individual creation
+      await onCreateRegion(type, coords)
+      setSelectedAreaIndex(areas.length) // Select the newly added area
+    } else {
+      // Fall back to bulk update
+      const newAreaBase = {
+        ...coords,
+        points: null,
+        label: "",
+        masterImageId: masterImageId,
+      }
+
+      let newAreaSpecifics = {}
+      switch (type) {
+        case "STUDENT_NAME":
+          newAreaSpecifics = {
+            label: "氏名",
+            type: "STUDENT_NAME",
+          }
+          break
+        case "STUDENT_ID":
+          newAreaSpecifics = {
+            label: "生徒番号",
+            type: "STUDENT_ID",
+          }
+          break
+        case "QUESTION_ANSWER":
+          newAreaSpecifics = {
+            label: `設問 ${
+              areas.filter((a) => a.type === "QUESTION_ANSWER").length + 1
+            }`,
+            type: "QUESTION_ANSWER",
+            points: 10, // デフォルトポイント
+          }
+          break
+        case "TOTAL_SCORE":
+          newAreaSpecifics = {
+            label: "合計点",
+            type: "TOTAL_SCORE",
+          }
+          break
+        case "SUBTOTAL_SCORE":
+          newAreaSpecifics = {
+            label: "小計",
+            type: "SUBTOTAL_SCORE",
+          }
+          break
+        default:
+          newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
+      }
+
+      const newArea = { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea
+
+      const newAreasArray = [...areas, newArea]
+
+      setAreas(newAreasArray)
+      setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
     }
-
-    const newArea = { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea
-
-    const newAreasArray = [...areas, newArea]
-
-    setAreas(newAreasArray)
-    setSelectedAreaIndex(areas.length) // 新しく追加されたエリアを選択
   }
 
   return (

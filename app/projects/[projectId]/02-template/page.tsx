@@ -225,6 +225,60 @@ export default function TemplateStepPage() {
     }
   }
 
+  // Individual region save function - efficient alternative to autoSaveRegions
+  const saveRegion = useCallback(
+    async (region: {
+      id?: string
+      type: AreaType
+      x: number
+      y: number
+      width: number
+      height: number
+      label: string
+      points: string | null
+      masterImageId: string
+    }, operation: 'create' | 'update') => {
+      if (!projectId || !currentUser) {
+        console.warn("Missing projectId or currentUser for saveRegion")
+        return null
+      }
+
+      try {
+        if (!region.masterImageId) {
+          throw new Error(
+            `Layout region ${region.label || "Unnamed"} is missing masterImageId.`,
+          )
+        }
+
+        const regionData = {
+          projectId,
+          masterImageId: region.masterImageId,
+          type: region.type,
+          x: region.x,
+          y: region.y,
+          width: region.width,
+          height: region.height,
+          label: region.label,
+          points: region.points ? parseInt(region.points) : null,
+        }
+
+        if (operation === 'update' && region.id) {
+          // Update existing region
+          return await window.electronAPI.updateLayoutRegion(region.id, regionData)
+        } else if (operation === 'create') {
+          // Create new region
+          return await window.electronAPI.createLayoutRegion(regionData)
+        } else {
+          throw new Error(`Invalid operation: ${operation} for region with ID: ${region.id}`)
+        }
+      } catch (error) {
+        console.error(`Error during ${operation} operation:`, error)
+        throw error
+      }
+    },
+    [projectId, currentUser],
+  )
+
   const autoSaveRegions = useCallback(
     async (regions: any[]) => {
       if (!projectId || !currentUser || isSavingRef.current) return
@@ -299,6 +353,7 @@ export default function TemplateStepPage() {
     [projectId, currentUser],
   )
 
+  // Efficient handler for region changes - using individual saves
   const handleRegionsChange = useCallback(
     async (newRegions: any[] | ((prev: any[]) => any[])) => {
       const finalRegions =
@@ -309,10 +364,107 @@ export default function TemplateStepPage() {
       // Update React state immediately
       setLayoutRegions(finalRegions)
 
-      // Save to database immediately without timeout
+      // For now, fall back to autoSaveRegions to maintain compatibility
+      // TODO: Implement individual region change detection and use saveRegion
       await autoSaveRegions(finalRegions)
     },
     [layoutRegions, autoSaveRegions],
+  )
+
+  // New handler for individual region creation
+  const handleCreateRegion = useCallback(
+    async (type: AreaType, coords: { x: number; y: number; width: number; height: number }) => {
+      if (!selectedMasterImage) {
+        console.warn("No master image selected for region creation")
+        return
+      }
+
+      // Create label and points based on type
+      let label = ""
+      let points = null
+      
+      switch (type) {
+        case "STUDENT_NAME":
+          label = "氏名"
+          break
+        case "STUDENT_ID":
+          label = "生徒番号"
+          break
+        case "QUESTION_ANSWER":
+          label = `設問 ${
+            layoutRegions.filter((a) => a.type === "QUESTION_ANSWER").length + 1
+          }`
+          points = "10" // デフォルトポイント
+          break
+        case "TOTAL_SCORE":
+          label = "合計点"
+          break
+        case "SUBTOTAL_SCORE":
+          label = "小計"
+          break
+        default:
+          label = "新規エリア"
+      }
+
+      // Create new region object
+      const newRegion = {
+        type,
+        x: coords.x,
+        y: coords.y,
+        width: coords.width,
+        height: coords.height,
+        label,
+        points,
+        masterImageId: selectedMasterImage.id,
+      }
+
+      try {
+        // Save to database first
+        const savedRegion = await saveRegion(newRegion, 'create')
+        
+        if (savedRegion) {
+          // Add to React state with ID from database
+          const regionWithId = {
+            ...newRegion,
+            id: savedRegion.id,
+          }
+          
+          setLayoutRegions(prev => [...prev, regionWithId])
+          setLayoutId("saved")
+        }
+      } catch (error) {
+        console.error("Failed to create region:", error)
+        toast.error("採点領域の作成に失敗しました")
+      }
+    },
+    [selectedMasterImage, saveRegion, layoutRegions],
+  )
+
+  // New handler for individual region updates
+  const handleUpdateRegion = useCallback(
+    async (index: number, coords: { x: number; y: number; width: number; height: number }) => {
+      const regionToUpdate = layoutRegions[index]
+      if (!regionToUpdate) return
+
+      // Update React state immediately for responsiveness
+      const updatedRegions = [...layoutRegions]
+      updatedRegions[index] = { ...regionToUpdate, ...coords }
+      setLayoutRegions(updatedRegions)
+
+      // Save to database if region has ID
+      if (regionToUpdate.id) {
+        try {
+          const updatedRegion = { ...regionToUpdate, ...coords }
+          await saveRegion(updatedRegion, 'update')
+        } catch (error) {
+          console.error("Failed to update region:", error)
+          toast.error("採点領域の更新に失敗しました")
+          // Revert state on error
+          setLayoutRegions(layoutRegions)
+        }
+      }
+    },
+    [layoutRegions, saveRegion],
   )
 
   const handleSaveTemplate = async () => {
@@ -526,6 +678,8 @@ export default function TemplateStepPage() {
           <LayoutRegionEditor
             areas={layoutRegions}
             setAreas={handleRegionsChange}
+            onCreateRegion={handleCreateRegion}
+            onUpdateRegion={handleUpdateRegion}
             disabled={isSaving}
             backgroundImageUrl={backgroundImageUrl}
             imageDimensions={imageDimensions}
