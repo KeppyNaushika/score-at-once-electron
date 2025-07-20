@@ -454,14 +454,9 @@ export function setupMiscHandlers(): void {
     "resolve-file-protocol-path",
     async (_event, relativePath: string) => {
       try {
-        console.log(`[resolve-file-protocol-path] Input path: ${relativePath}`)
-        
         // パスを適切にエンコード
         const encodedPath = encodeURI(relativePath)
         const result = `appimg://${encodedPath}`
-        
-        console.log(`[resolve-file-protocol-path] Encoded path: ${encodedPath}`)
-        console.log(`[resolve-file-protocol-path] Result URL: ${result}`)
         
         return result
       } catch (err) {

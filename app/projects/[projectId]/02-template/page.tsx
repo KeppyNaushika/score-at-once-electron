@@ -231,8 +231,19 @@ export default function TemplateStepPage() {
 
       isSavingRef.current = true
       try {
-        const savePromises = regions.map(async (area) => {
-          if (!area.masterImageId) return null
+        const saveResults: Array<{
+          originalIndex: number
+          result: any
+          wasUpdate: boolean
+        }> = []
+        
+        // 順次処理で確実にID管理
+        for (let i = 0; i < regions.length; i++) {
+          const area = regions[i]
+          if (!area.masterImageId) {
+            saveResults.push({ originalIndex: i, result: null, wasUpdate: false })
+            continue
+          }
 
           const regionData = {
             projectId,
@@ -244,21 +255,39 @@ export default function TemplateStepPage() {
             height: area.height,
             label: area.label,
             points: area.points ? parseInt(area.points) : null,
-                      }
+          }
 
           if (area.id) {
-            return await window.electronAPI.updateLayoutRegion(
+            // 既存領域の更新
+            const result = await window.electronAPI.updateLayoutRegion(
               area.id,
               regionData,
             )
+            saveResults.push({ originalIndex: i, result, wasUpdate: true })
           } else {
-            return await window.electronAPI.createLayoutRegion(regionData)
+            // 新規領域の作成
+            const result = await window.electronAPI.createLayoutRegion(regionData)
+            saveResults.push({ originalIndex: i, result, wasUpdate: false })
           }
-        })
+        }
 
-        const savedRegions = await Promise.all(savePromises.filter(Boolean))
+        // 新規作成されたIDをReact stateに反映
+        const hasNewIds = saveResults.some(r => r.result && !r.wasUpdate)
+        if (hasNewIds) {
+          const updatedRegions = regions.map((region, index) => {
+            const saveResult = saveResults.find(r => r.originalIndex === index)
+            if (saveResult && saveResult.result && !saveResult.wasUpdate) {
+              // 新規作成されたIDを設定
+              return { ...region, id: saveResult.result.id }
+            }
+            return region
+          })
+          
+          // 確実に状態を更新
+          setLayoutRegions(updatedRegions)
+        }
 
-        if (savedRegions.length > 0) {
+        if (saveResults.some(r => r.result)) {
           setLayoutId("saved")
         }
       } catch (error) {

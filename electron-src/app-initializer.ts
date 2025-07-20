@@ -52,40 +52,30 @@ export async function initializeApp(): Promise<void> {
   // カスタムプロトコルの設定
   protocol.handle("appimg", async (request) => {
     try {
-      console.log(`[appimg] Request URL: ${request.url}`)
-      
       const relativePathInData = request.url.substring("appimg://".length)
-      console.log(`[appimg] Relative path (raw): ${relativePathInData}`)
       
       // より確実なデコード処理
       let decodedRelativePath
       try {
         // まずdecodeURIComponentを試す
         decodedRelativePath = decodeURIComponent(relativePathInData)
-        console.log(`[appimg] Decoded with decodeURIComponent: ${decodedRelativePath}`)
       } catch (err) {
         try {
           // 失敗したらdecodeURIを試す
           decodedRelativePath = decodeURI(relativePathInData)
-          console.log(`[appimg] Decoded with decodeURI: ${decodedRelativePath}`)
         } catch (err2) {
           // 両方失敗したら生のパスを使用
           decodedRelativePath = relativePathInData
-          console.log(`[appimg] Using raw path (decode failed): ${decodedRelativePath}`)
         }
       }
       
       const absolutePath = getAbsolutePathFromData(decodedRelativePath)
-      console.log(`[appimg] Absolute path: ${absolutePath}`)
 
       // ファイル存在確認
       const fs = await import("fs/promises")
       try {
         await fs.access(absolutePath)
-        console.log(`[appimg] File exists: ✓`)
       } catch (accessError) {
-        const errorMessage = accessError instanceof Error ? accessError.message : String(accessError)
-        console.log(`[appimg] File not accessible: ${errorMessage}`)
         return new Response("File not found", { status: 404 })
       }
 
@@ -94,11 +84,8 @@ export async function initializeApp(): Promise<void> {
         protocol: "file:",
         slashes: true,
       })
-      console.log(`[appimg] File URL: ${fileURL}`)
       
       const response = await net.fetch(fileURL)
-      console.log(`[appimg] Response status: ${response.status}`)
-      
       return response
     } catch (error) {
       console.error(
