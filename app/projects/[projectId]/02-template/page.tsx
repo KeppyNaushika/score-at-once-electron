@@ -7,13 +7,18 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 // Refactored imports
-import { TemplateHeader } from "@/components/projects/02-template/components/template-header"
-import { PageNavigation } from "@/components/projects/02-template/components/page-navigation"
-import { TemplateStatus } from "@/components/projects/02-template/components/template-status"
-import { useTemplateData } from "@/components/projects/02-template/hooks/use-template-data"
-import { useRegionSave } from "@/components/projects/02-template/hooks/use-region-save"
-import { saveTemplate, detectLayoutRegions, canProceedToNextStep } from "@/components/projects/02-template/utils/template-actions"
-import { AreaType, RegionCoordinates } from "@/components/projects/02-template/types"
+import { 
+  TemplateHeader,
+  PageNavigation, 
+  TemplateStatus,
+  useTemplateData,
+  useRegionSave,
+  saveTemplate,
+  detectLayoutRegions,
+  canProceedToNextStep,
+  AreaType,
+  RegionCoordinates
+} from "@/components/projects/02-template"
 import { LayoutRegionArea } from "@/types/common.types"
 
 export default function TemplateStepPage() {

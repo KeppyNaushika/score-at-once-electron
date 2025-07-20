@@ -282,6 +282,7 @@ export function useScoringNavigation({
       setSelectedAnswers,
       layoutDirection,
       findNextValidAnswer,
+      effectiveColumns,
     ],
   )
 

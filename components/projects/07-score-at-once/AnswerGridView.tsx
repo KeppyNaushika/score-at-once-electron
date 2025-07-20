@@ -20,7 +20,7 @@ type ScoringStatus =
   | "proposed"
   | "final"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import CroppedAnswerImage from "@/components/projects/07-score-at-once/components/CroppedAnswerImage"
 
@@ -205,27 +205,30 @@ export default function AnswerGridView({
   }, [externalItemsPerRow, onEffectiveColumnsChange])
 
   // itemsPerRowの変更をlocalStorageに保存
-  const handleItemsPerRowChange = (value: number[]) => {
-    setItemsPerRow(value)
-    localStorage.setItem("answerGridView-itemsPerRow", JSON.stringify(value))
-    // 親コンポーネントに実際の列数を通知
-    if (onEffectiveColumnsChange) {
-      onEffectiveColumnsChange(value[0])
-    }
-  }
+  const handleItemsPerRowChange = useCallback(
+    (value: number[]) => {
+      setItemsPerRow(value)
+      localStorage.setItem("answerGridView-itemsPerRow", JSON.stringify(value))
+      // 親コンポーネントに実際の列数を通知
+      if (onEffectiveColumnsChange) {
+        onEffectiveColumnsChange(value[0])
+      }
+    },
+    [onEffectiveColumnsChange],
+  )
 
   // 答案表示数の増減機能
   const incrementItemsPerRow = useCallback(() => {
     const currentValue = itemsPerRow[0]
     const newValue = Math.min(currentValue + 1, 12) // 最大12列
     handleItemsPerRowChange([newValue])
-  }, [itemsPerRow])
+  }, [handleItemsPerRowChange, itemsPerRow])
 
   const decrementItemsPerRow = useCallback(() => {
     const currentValue = itemsPerRow[0]
     const newValue = Math.max(currentValue - 1, 2) // 最小2列
     handleItemsPerRowChange([newValue])
-  }, [itemsPerRow])
+  }, [handleItemsPerRowChange, itemsPerRow])
 
   // Opt + [-/+] キーボードイベント処理
   useEffect(() => {
@@ -250,13 +253,13 @@ export default function AnswerGridView({
   }, [incrementItemsPerRow, decrementItemsPerRow])
 
   // 実際に使用するgridSizeを計算
-  const effectiveGridSize = {
+  const effectiveGridSize = useMemo(() => ({
     columns: itemsPerRow[0] === 0 ? gridSize.columns : itemsPerRow[0], // 0の場合は元のgridSizeを使用
     rows:
       layoutDirection === "down-right" || layoutDirection === "down-left"
         ? itemsPerRow[0] // 下→右レイアウトでは1列の表示件数として使用
         : gridSize.rows,
-  }
+  }), [itemsPerRow, gridSize.columns, gridSize.rows, layoutDirection])
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {

@@ -62,3 +62,5 @@ export function DragPreview({
     />
   )
 }
+
+export default DragPreview

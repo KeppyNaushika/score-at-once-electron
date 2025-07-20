@@ -23,7 +23,7 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // 採点結果の型定義
 interface QuestionScore {
@@ -85,7 +85,7 @@ export default function ScoreComparisonModal({
   const [finalComment, setFinalComment] = useState("")
 
   // 採点比較データを取得
-  const fetchComparison = async () => {
+  const fetchComparison = useCallback(async () => {
     if (!answerSheetId || !layoutRegionId) return
 
     setLoading(true)
@@ -115,14 +115,14 @@ export default function ScoreComparisonModal({
     } finally {
       setLoading(false)
     }
-  }
+  }, [answerSheetId, layoutRegionId])
 
   // モーダルが開かれたときにデータを取得
   useEffect(() => {
     if (isOpen) {
       fetchComparison()
     }
-  }, [isOpen, answerSheetId, layoutRegionId])
+  }, [isOpen, fetchComparison])
 
   // 採点結果を最終決定
   const handleFinalize = async () => {

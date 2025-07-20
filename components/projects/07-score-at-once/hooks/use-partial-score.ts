@@ -68,7 +68,7 @@ export function usePartialScore({
       setPartialScoreInput(newInput)
     },
     [
-      selectedAnswers.size,
+      selectedAnswers,
       currentQuestion,
       partialScoreInput,
       showPartialScoreModal,
@@ -113,7 +113,7 @@ export function usePartialScore({
     },
     [
       showPartialScoreModal,
-      selectedAnswers.size,
+      selectedAnswers,
       partialScoreInput,
       currentQuestion,
       onBatchScore,
