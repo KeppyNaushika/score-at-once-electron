@@ -47,6 +47,7 @@ export function useScoringFilter({
 
   const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
   const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<Set<string>>(new Set())
+  const [isScoringInProgress, setIsScoringInProgress] = useState(false)
 
   const currentQuestion = questionRegions[currentQuestionIndex]
 
@@ -67,10 +68,16 @@ export function useScoringFilter({
   // 表示対象答案の更新（統合版）
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {
+      console.log("🔧 updateVisibleAnswers実行開始")
+      console.log("📋 filterSettings:", filterSettings)
+      console.log("🔄 customFilterSettings:", customFilterSettings)
+      console.log("🏅 recentlyScoredAnswers:", Array.from(recentlyScoredAnswers))
+      
       const activeFilterSettings = customFilterSettings || filterSettings
       const newVisibleAnswers = new Set<string>()
 
       if (!currentQuestion) {
+        console.log("❌ currentQuestionが存在しない")
         setVisibleAnswers(newVisibleAnswers)
         return
       }
@@ -118,6 +125,7 @@ export function useScoringFilter({
         }
       })
 
+      console.log("✅ updateVisibleAnswers完了 - 新しいvisibleAnswers:", Array.from(newVisibleAnswers))
       setVisibleAnswers(newVisibleAnswers)
     },
     [answerSheets, currentQuestion, filterSettings, project, scoringData, recentlyScoredAnswers],
@@ -136,29 +144,56 @@ export function useScoringFilter({
 
   // visibleAnswersが更新されたら適切な答案選択を行う
   useEffect(() => {
+    console.log("🔄 visibleAnswers useEffect実行")
+    console.log("👀 visibleAnswers:", Array.from(visibleAnswers))
+    console.log("🎯 selectedAnswers:", Array.from(selectedAnswers))
+    console.log("🚩 isScoringInProgress:", isScoringInProgress)
+    
+    // 採点中は選択更新をスキップ
+    if (isScoringInProgress) {
+      console.log("⏸️ 採点中のため選択更新をスキップ")
+      return
+    }
+    
     if (visibleAnswers.size > 0) {
       // 選択されている答案がvisibleAnswersに存在するかチェック
       const selectedIds = Array.from(selectedAnswers)
       const hasValidSelection = selectedIds.some(id => visibleAnswers.has(id))
       
+      console.log("✅ hasValidSelection:", hasValidSelection)
+      console.log("🔍 selectedIds詳細:", selectedIds.map(id => ({
+        id, 
+        inVisible: visibleAnswers.has(id),
+        inRecent: recentlyScoredAnswers.has(id)
+      })))
+      
       if (!hasValidSelection) {
+        console.log("🔄 有効な選択がないため最初の答案を選択")
         // 選択答案がない、またはvisibleAnswersに存在しない場合のみ最初の答案を選択
         const firstStudentAnswerId = Array.from(visibleAnswers).find(
           (id) => !id.startsWith("master-")
         )
+        
+        console.log("🎯 firstStudentAnswerId:", firstStudentAnswerId)
         
         // 実際に存在する答案IDかチェック
         if (firstStudentAnswerId) {
           const answerExists = answerSheets.some(
             (sheet) => sheet.id === firstStudentAnswerId,
           )
+          console.log("📋 answerExists:", answerExists)
           if (answerExists) {
+            console.log("✨ 最初の答案を選択:", firstStudentAnswerId)
             setSelectedAnswers(new Set([firstStudentAnswerId]))
           }
         }
+      } else {
+        console.log("✅ 有効な選択が存在するため何もしない")
       }
+    } else {
+      console.log("⚠️ visibleAnswersが空のため何もしない")
     }
-  }, [visibleAnswers, selectedAnswers, setSelectedAnswers, answerSheets])
+  }, [visibleAnswers, selectedAnswers, setSelectedAnswers, answerSheets, recentlyScoredAnswers, isScoringInProgress])
 
   // 基本的なグリッドデータ取得（フィルタリングなし）
   const getAllGridAnswerData = useCallback(() => {
@@ -330,6 +365,8 @@ export function useScoringFilter({
     visibleAnswers,
     recentlyScoredAnswers,
     setRecentlyScoredAnswers,
+    isScoringInProgress,
+    setIsScoringInProgress,
     getAllGridAnswerData,
     getGridAnswerData,
     getMasterAnswerData,

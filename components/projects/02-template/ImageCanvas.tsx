@@ -72,7 +72,7 @@ const ImageCanvas = ({
     onAddAreaByDrag,
     onUpdateArea,
     zoom,
-    imageContainerRef,
+    imageContainerRef: imageContainerRef as React.RefObject<HTMLDivElement>,
   })
   
   useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)

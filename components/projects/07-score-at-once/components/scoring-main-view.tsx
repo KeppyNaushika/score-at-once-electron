@@ -121,6 +121,8 @@ export default function ScoringMainView() {
     visibleAnswers,
     recentlyScoredAnswers,
     setRecentlyScoredAnswers,
+    isScoringInProgress,
+    setIsScoringInProgress,
     getAllGridAnswerData,
     getGridAnswerData,
     getMasterAnswerData,
@@ -169,6 +171,98 @@ export default function ScoringMainView() {
     effectiveColumns,
   })
 
+  // 自動進行機能付きのhandleBatchScore（ラッパー）
+  const handleBatchScoreWithProgress = useCallback(async (
+    statusOrAnswerIds: any,
+    statusOrPartialScore?: any,
+    partialScore?: any,
+  ) => {
+    console.log("🎯 handleBatchScoreWithProgress実行開始!")
+    console.log("📝 現在の選択:", Array.from(selectedAnswers))
+    console.log("📊 gradingMode:", gradingMode)
+    
+    // 採点開始フラグを設定
+    console.log("🚩 採点開始フラグを設定")
+    setIsScoringInProgress(true)
+    
+    // 最近採点した答案を記録（先に実行）
+    const answerIds = Array.from(selectedAnswers)
+    setRecentlyScoredAnswers(prev => {
+      const newSet = new Set(prev)
+      answerIds.forEach(id => newSet.add(id))
+      console.log("✅ recentlyScoredAnswers更新:", Array.from(newSet))
+      return newSet
+    })
+
+    // その後で採点実行
+    console.log("⚡ handleBatchScore実行前")
+    await handleBatchScore(
+      statusOrAnswerIds,
+      statusOrPartialScore,
+      partialScore,
+      selectedAnswers,
+    )
+    console.log("✅ handleBatchScore実行完了")
+
+    // 採点後の自動次答案選択（一覧採点モード用）
+    console.log("🚀 自動進行開始 - gradingMode:", gradingMode, "選択数:", selectedAnswers.size)
+    if (gradingMode === "grid" && selectedAnswers.size >= 1) {
+      const gridAnswers = getGridAnswerData()
+      console.log("📊 gridAnswers総数:", gridAnswers.length)
+
+      // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
+      const selectedIds = Array.from(selectedAnswers)
+      console.log("🎯 selectedIds:", selectedIds)
+      let maxIndex = -1
+
+      selectedIds.forEach((selectedId) => {
+        const index = gridAnswers.findIndex(
+          (answer) => answer.id === selectedId,
+        )
+        console.log(`🔍 selectedId: ${selectedId}, index: ${index}`)
+        if (index > maxIndex) {
+          maxIndex = index
+        }
+      })
+
+      console.log("📍 maxIndex:", maxIndex)
+      if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
+        // 最終答案の次の答案を選択（模範解答をスキップ）
+        let nextIndex = maxIndex + 1
+        console.log("⏭️ 初期nextIndex:", nextIndex)
+        while (
+          nextIndex < gridAnswers.length &&
+          gridAnswers[nextIndex].id.startsWith("master-")
+        ) {
+          console.log("⏭️ 模範解答スキップ:", nextIndex)
+          nextIndex++
+        }
+
+        console.log("⏭️ 最終nextIndex:", nextIndex)
+        if (nextIndex < gridAnswers.length) {
+          const nextAnswerId = gridAnswers[nextIndex].id
+          console.log("✨ 次の答案を選択:", nextAnswerId)
+          setSelectedAnswers(new Set([nextAnswerId]))
+        } else {
+          console.log("🏁 最後の答案のため選択をクリア")
+          setSelectedAnswers(new Set())
+        }
+      } else {
+        console.log("🏁 最後の答案のため選択をクリア (maxIndex条件)")
+        setSelectedAnswers(new Set())
+      }
+    } else {
+      console.log("🔄 グリッドモードでない、または選択なしのため選択をクリア")
+      setSelectedAnswers(new Set())
+    }
+    
+    // 採点完了フラグをリセット
+    console.log("🏁 採点完了フラグをリセット")
+    setIsScoringInProgress(false)
+    
+    console.log("🏆 handleBatchScoreWithProgress完了!")
+  }, [selectedAnswers, gradingMode, setRecentlyScoredAnswers, handleBatchScore, getGridAnswerData, setSelectedAnswers, setIsScoringInProgress])
+
   // 自動進行関数
   const handleAutoAdvance = useCallback(() => {
     if (gradingMode === "grid") {
@@ -192,7 +286,7 @@ export default function ScoringMainView() {
   } = usePartialScore({
     selectedAnswers,
     currentQuestion,
-    onBatchScore: handleBatchScore,
+    onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
     onAutoAdvance: handleAutoAdvance,
   })
 
@@ -209,7 +303,7 @@ export default function ScoringMainView() {
     currentQuestionIndex,
     answerSheetsLength: answerSheets.length,
     questionRegionsLength: questionRegions.length,
-    onBatchScore: handleBatchScore,
+    onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
     onSetScore: handleSetScore,
     onNextQuestion: handleNextQuestion,
     onPrevQuestion: handlePrevQuestion,
@@ -291,71 +385,6 @@ export default function ScoringMainView() {
     })
   }
 
-  // 自動進行機能付きのhandleBatchScore（ラッパー）
-  const handleBatchScoreWithProgress = async (
-    statusOrAnswerIds: any,
-    statusOrPartialScore?: any,
-    partialScore?: any,
-  ) => {
-    // 最近採点した答案を記録（先に実行）
-    const answerIds = Array.from(selectedAnswers)
-    setRecentlyScoredAnswers(prev => {
-      const newSet = new Set(prev)
-      answerIds.forEach(id => newSet.add(id))
-      return newSet
-    })
-
-    // その後で採点実行
-    await handleBatchScore(
-      statusOrAnswerIds,
-      statusOrPartialScore,
-      partialScore,
-      selectedAnswers,
-    )
-
-    // 採点後の自動次答案選択（一覧採点モード用）
-    if (gradingMode === "grid" && selectedAnswers.size >= 1) {
-      const gridAnswers = getGridAnswerData()
-
-      // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
-      const selectedIds = Array.from(selectedAnswers)
-      let maxIndex = -1
-
-      selectedIds.forEach((selectedId) => {
-        const index = gridAnswers.findIndex(
-          (answer) => answer.id === selectedId,
-        )
-        if (index > maxIndex) {
-          maxIndex = index
-        }
-      })
-
-      if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
-        // 最終答案の次の答案を選択（模範解答をスキップ）
-        let nextIndex = maxIndex + 1
-        while (
-          nextIndex < gridAnswers.length &&
-          gridAnswers[nextIndex].id.startsWith("master-")
-        ) {
-          nextIndex++
-        }
-
-        if (nextIndex < gridAnswers.length) {
-          const nextAnswerId = gridAnswers[nextIndex].id
-          setSelectedAnswers(new Set([nextAnswerId]))
-        } else {
-          // 最後の答案の場合は選択をクリア
-          setSelectedAnswers(new Set())
-        }
-      } else {
-        // 最後の答案の場合は選択をクリア
-        setSelectedAnswers(new Set())
-      }
-    } else {
-      // 選択をクリア
-      setSelectedAnswers(new Set())
-    }
-  }
 
   if (loading) {
     return (
