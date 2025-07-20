@@ -121,8 +121,6 @@ export default function ScoringMainView() {
     visibleAnswers,
     recentlyScoredAnswers,
     setRecentlyScoredAnswers,
-    isScoringInProgress,
-    setIsScoringInProgress,
     getAllGridAnswerData,
     getGridAnswerData,
     getMasterAnswerData,
@@ -177,92 +175,70 @@ export default function ScoringMainView() {
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => {
-    console.log("🎯 handleBatchScoreWithProgress実行開始!")
-    console.log("📝 現在の選択:", Array.from(selectedAnswers))
-    console.log("📊 gradingMode:", gradingMode)
     
-    // 採点開始フラグを設定
-    console.log("🚩 採点開始フラグを設定")
-    setIsScoringInProgress(true)
+    // 採点実行開始
     
     // 最近採点した答案を記録（先に実行）
     const answerIds = Array.from(selectedAnswers)
     setRecentlyScoredAnswers(prev => {
       const newSet = new Set(prev)
       answerIds.forEach(id => newSet.add(id))
-      console.log("✅ recentlyScoredAnswers更新:", Array.from(newSet))
-      console.log("🕒 この答案は5秒間自動進行対象として保持されます")
       return newSet
     })
 
     // その後で採点実行
-    console.log("⚡ handleBatchScore実行前")
     await handleBatchScore(
       statusOrAnswerIds,
       statusOrPartialScore,
       partialScore,
       selectedAnswers,
     )
-    console.log("✅ handleBatchScore実行完了")
 
     // 採点後の自動次答案選択（一覧採点モード用）
-    console.log("🚀 自動進行開始 - gradingMode:", gradingMode, "選択数:", selectedAnswers.size)
     if (gradingMode === "grid" && selectedAnswers.size >= 1) {
       const gridAnswers = getGridAnswerData()
-      console.log("📊 gridAnswers総数:", gridAnswers.length)
 
-      // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
-      const selectedIds = Array.from(selectedAnswers)
-      console.log("🎯 selectedIds:", selectedIds)
-      let maxIndex = -1
-
-      selectedIds.forEach((selectedId) => {
-        const index = gridAnswers.findIndex(
-          (answer) => answer.id === selectedId,
-        )
-        console.log(`🔍 selectedId: ${selectedId}, index: ${index}`)
-        if (index > maxIndex) {
-          maxIndex = index
-        }
+      // 最適化: 答案IDのインデックスマップを事前作成
+      const answerIndexMap = new Map<string, number>()
+      gridAnswers.forEach((answer, index) => {
+        answerIndexMap.set(answer.id, index)
       })
 
-      console.log("📍 maxIndex:", maxIndex)
+      // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
+      let maxIndex = -1
+      for (const selectedId of selectedAnswers) {
+        const index = answerIndexMap.get(selectedId)
+        if (index !== undefined && index > maxIndex) {
+          maxIndex = index
+        }
+      }
+
       if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
         // 最終答案の次の答案を選択（模範解答をスキップ）
         let nextIndex = maxIndex + 1
-        console.log("⏭️ 初期nextIndex:", nextIndex)
         while (
           nextIndex < gridAnswers.length &&
           gridAnswers[nextIndex].id.startsWith("master-")
         ) {
-          console.log("⏭️ 模範解答スキップ:", nextIndex)
           nextIndex++
         }
 
-        console.log("⏭️ 最終nextIndex:", nextIndex)
         if (nextIndex < gridAnswers.length) {
           const nextAnswerId = gridAnswers[nextIndex].id
-          console.log("✨ 次の答案を選択:", nextAnswerId)
           setSelectedAnswers(new Set([nextAnswerId]))
         } else {
-          console.log("🏁 最後の答案のため選択をクリア")
-          setSelectedAnswers(new Set())
+          // 選択をクリアせず保持する
         }
       } else {
-        console.log("🏁 最後の答案のため選択をクリア (maxIndex条件)")
-        setSelectedAnswers(new Set())
+        // 選択をクリアせず保持する
       }
     } else {
-      console.log("🔄 グリッドモードでない、または選択なしのため選択をクリア")
-      setSelectedAnswers(new Set())
+      // 選択をクリアせず保持する
     }
     
-    // 採点完了フラグをリセット
-    console.log("🏁 採点完了フラグをリセット")
-    setIsScoringInProgress(false)
+    // 採点実行完了
     
-    console.log("🏆 handleBatchScoreWithProgress完了!")
-  }, [selectedAnswers, gradingMode, setRecentlyScoredAnswers, handleBatchScore, getGridAnswerData, setSelectedAnswers, setIsScoringInProgress])
+  }, [selectedAnswers, gradingMode, setRecentlyScoredAnswers, handleBatchScore, getGridAnswerData, setSelectedAnswers])
 
   // 自動進行関数
   const handleAutoAdvance = useCallback(() => {
