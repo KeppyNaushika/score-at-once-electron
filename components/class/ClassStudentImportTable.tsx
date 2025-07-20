@@ -65,7 +65,6 @@ export default function ClassStudentImportTable({
       onDataChange={onDataChange}
       allowInsertRow={true}
       allowDeleteRow={true}
-      minRows={10}
       className="min-w-[650px]"
     />
   )
