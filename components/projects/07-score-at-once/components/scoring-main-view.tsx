@@ -297,64 +297,76 @@ export default function ScoringMainView() {
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => {
+    console.log("🎯 採点開始 - selectedAnswers:", Array.from(selectedAnswers))
+    
     // 最近採点した答案を記録（先に実行）
     const answerIds = Array.from(selectedAnswers)
     setRecentlyScoredAnswers(prev => {
       const newSet = new Set(prev)
       answerIds.forEach(id => newSet.add(id))
+      console.log("📝 recentlyScoredAnswers更新:", Array.from(newSet))
       return newSet
     })
 
     // その後で採点実行
+    console.log("⚡ handleBatchScore実行前")
     await handleBatchScore(
       statusOrAnswerIds,
       statusOrPartialScore,
       partialScore,
       selectedAnswers,
     )
+    console.log("✅ handleBatchScore実行後")
 
     // 採点後の自動次答案選択（一覧採点モード用）
+    console.log("🚀 自動進行チェック - gradingMode:", gradingMode, "selectedAnswers.size:", selectedAnswers.size)
     if (gradingMode === "grid" && selectedAnswers.size >= 1) {
       const gridAnswers = getGridAnswerData()
+      console.log("📊 gridAnswers:", gridAnswers.map(a => ({ id: a.id, studentName: a.studentName })))
 
       // 複数選択の場合は最終答案（最後にソートされた答案）を基準にする
       const selectedIds = Array.from(selectedAnswers)
+      console.log("🎯 selectedIds:", selectedIds)
       let maxIndex = -1
 
       selectedIds.forEach((selectedId) => {
         const index = gridAnswers.findIndex(
           (answer) => answer.id === selectedId,
         )
+        console.log(`🔍 selectedId: ${selectedId}, index: ${index}`)
         if (index > maxIndex) {
           maxIndex = index
         }
       })
 
-      if (maxIndex >= 0 && maxIndex < gridAnswers.length - 1) {
-        // 最終答案の次の答案を選択（模範解答をスキップ）
-        let nextIndex = maxIndex + 1
-        while (
-          nextIndex < gridAnswers.length &&
-          gridAnswers[nextIndex].id.startsWith("master-")
-        ) {
-          nextIndex++
-        }
+      console.log("📍 maxIndex:", maxIndex, "gridAnswers.length:", gridAnswers.length)
+      
+      // 次の答案を探して選択（模範解答をスキップ）
+      let nextIndex = maxIndex + 1
+      console.log("⏭️ 初期nextIndex:", nextIndex)
+      while (
+        nextIndex < gridAnswers.length &&
+        gridAnswers[nextIndex].id.startsWith("master-")
+      ) {
+        console.log("⏭️ 模範解答スキップ:", gridAnswers[nextIndex].id)
+        nextIndex++
+      }
 
-        if (nextIndex < gridAnswers.length) {
-          const nextAnswerId = gridAnswers[nextIndex].id
-          setSelectedAnswers(new Set([nextAnswerId]))
-        } else {
-          // 最後の答案の場合は選択をクリア
-          setSelectedAnswers(new Set())
-        }
+      console.log("⏭️ 最終nextIndex:", nextIndex)
+      if (nextIndex < gridAnswers.length) {
+        const nextAnswerId = gridAnswers[nextIndex].id
+        console.log("✨ 次の答案を選択:", nextAnswerId)
+        setSelectedAnswers(new Set([nextAnswerId]))
       } else {
-        // 最後の答案の場合は選択をクリア
+        console.log("🏁 全ての答案を採点完了 - 選択をクリア")
         setSelectedAnswers(new Set())
       }
-    } else {
-      // 選択をクリア
+    } else if (gradingMode !== "grid") {
+      console.log("🔄 個別モードのため選択をクリア")
       setSelectedAnswers(new Set())
     }
+    // グリッドモードで選択がない場合は何もしない（選択をクリアしない）
+    console.log("✅ 自動進行処理完了")
   }
 
   if (loading) {
