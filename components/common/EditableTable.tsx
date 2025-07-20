@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { Plus, Trash2 } from "lucide-react"
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface EditableTableProps<T> {
   data: T[]
@@ -91,6 +91,14 @@ export function EditableTable<T extends Record<string, any>>({
     setTableData(data)
   }, [data])
 
+  const deleteRow = useCallback((rowIndex: number) => {
+    if (tableData.length <= minRows) return
+
+    const newData = tableData.filter((_, index) => index !== rowIndex)
+    setTableData(newData)
+    setTimeout(() => onDataChange(newData), 0)
+  }, [tableData, minRows, setTableData, onDataChange])
+
   const editableColumns = useMemo(
     () => [
       ...columns.map((col) => ({
@@ -117,7 +125,7 @@ export function EditableTable<T extends Record<string, any>>({
           ]
         : []),
     ],
-    [columns, allowDeleteRow],
+    [columns, allowDeleteRow, deleteRow],
   )
 
   const table = useReactTable({
@@ -151,14 +159,6 @@ export function EditableTable<T extends Record<string, any>>({
     }, {} as T)
 
     const newData = [...tableData, newRow]
-    setTableData(newData)
-    setTimeout(() => onDataChange(newData), 0)
-  }
-
-  const deleteRow = (rowIndex: number) => {
-    if (tableData.length <= minRows) return
-
-    const newData = tableData.filter((_, index) => index !== rowIndex)
     setTableData(newData)
     setTimeout(() => onDataChange(newData), 0)
   }

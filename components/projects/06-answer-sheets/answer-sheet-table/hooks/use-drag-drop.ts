@@ -274,7 +274,6 @@ export function useDragDrop(
       mode,
       students,
       masterImageCount,
-      swapAnswerSheetInDatabase,
       onAddPendingChange,
     ],
   )
