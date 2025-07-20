@@ -410,10 +410,6 @@ export function useScoringKeyboard({
     [
       gradingMode,
       selectedAnswers,
-      currentStudentIndex,
-      currentQuestionIndex,
-      answerSheetsLength,
-      questionRegionsLength,
       onBatchScore,
       onSetScore,
       onNextQuestion,

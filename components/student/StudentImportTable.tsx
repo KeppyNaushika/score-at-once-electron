@@ -86,7 +86,6 @@ export default function StudentImportTable({
       onDataChange={onDataChange}
       allowInsertRow={true}
       allowDeleteRow={true}
-      minRows={10}
       className="min-h-[400px] min-w-[800px]"
       getRowProps={(row) => ({
         className: row.original.isDuplicate ? "bg-red-50" : "",

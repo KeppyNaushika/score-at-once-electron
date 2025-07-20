@@ -30,6 +30,28 @@ export function useTemplateData(projectId: string | undefined) {
   const [isLoading, setIsLoading] = useState(true)
 
   /**
+   * 画像の寸法を取得する補助関数
+   * 
+   * @param imageUrl - 画像のURL
+   * @returns Promise<ImageDimensions | null> 画像の寸法情報
+   */
+  const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions | null> => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        resolve({
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        })
+      }
+      img.onerror = () => {
+        resolve(null)
+      }
+      img.src = imageUrl
+    })
+  }, [])
+
+  /**
    * 初期データの読み込み処理
    * プロジェクト情報、ユーザー情報、マスター画像、既存の領域データを取得する
    */
@@ -132,29 +154,7 @@ export function useTemplateData(projectId: string | undefined) {
     } finally {
       setIsLoading(false)
     }
-  }, [projectId])
-
-  /**
-   * 画像の寸法を取得する補助関数
-   * 
-   * @param imageUrl - 画像のURL
-   * @returns Promise<ImageDimensions | null> 画像の寸法情報
-   */
-  const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions | null> => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => {
-        resolve({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-        })
-      }
-      img.onerror = () => {
-        resolve(null)
-      }
-      img.src = imageUrl
-    })
-  }, [])
+  }, [projectId, loadImageDimensions])
 
   /**
    * マスター画像の変更処理

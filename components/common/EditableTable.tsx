@@ -8,7 +8,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { Plus, Trash2 } from "lucide-react"
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface EditableTableProps<T> {
   data: T[]
@@ -16,7 +16,6 @@ interface EditableTableProps<T> {
   onDataChange: (data: T[]) => void
   allowInsertRow?: boolean
   allowDeleteRow?: boolean
-  minRows?: number
   className?: string
   getRowProps?: (row: any) => { className?: string }
 }
@@ -81,7 +80,6 @@ export function EditableTable<T extends Record<string, any>>({
   onDataChange,
   allowInsertRow = true,
   allowDeleteRow = true,
-  minRows = 5,
   className = "",
   getRowProps,
 }: EditableTableProps<T>) {
@@ -91,12 +89,50 @@ export function EditableTable<T extends Record<string, any>>({
     setTableData(data)
   }, [data])
 
+  const deleteRow = useCallback((rowIndex: number) => {
+    const newData = tableData.filter((_, index) => index !== rowIndex)
+    setTableData(newData)
+    setTimeout(() => onDataChange(newData), 0)
+  }, [tableData, setTableData, onDataChange])
+
+  const addRowAfter = useCallback((index: number) => {
+    const newRow = columns.reduce((acc, col) => {
+      ;(acc as any)[col.id as string] = ""
+      return acc
+    }, {} as T)
+
+    const newData = [
+      ...tableData.slice(0, index + 1),
+      newRow,
+      ...tableData.slice(index + 1)
+    ]
+    setTableData(newData)
+    setTimeout(() => onDataChange(newData), 0)
+  }, [columns, tableData, setTableData, onDataChange])
+
   const editableColumns = useMemo(
     () => [
       ...columns.map((col) => ({
         ...col,
         cell: EditableCell,
       })),
+      // 行追加ボタン列
+      {
+        id: "addRow",
+        header: "",
+        cell: ({ row }: { row: any }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => addRowAfter(row.index)}
+            className="h-6 w-6 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+            title="この行の下に新しい行を追加"
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        ),
+        size: 40,
+      },
       ...(allowDeleteRow
         ? [
             {
@@ -117,7 +153,7 @@ export function EditableTable<T extends Record<string, any>>({
           ]
         : []),
     ],
-    [columns, allowDeleteRow],
+    [columns, allowDeleteRow, deleteRow, addRowAfter],
   )
 
   const table = useReactTable({
@@ -155,10 +191,15 @@ export function EditableTable<T extends Record<string, any>>({
     setTimeout(() => onDataChange(newData), 0)
   }
 
-  const deleteRow = (rowIndex: number) => {
-    if (tableData.length <= minRows) return
+  const addMultipleRows = (count: number) => {
+    const newRows = Array.from({ length: count }, () =>
+      columns.reduce((acc, col) => {
+        ;(acc as any)[col.id as string] = ""
+        return acc
+      }, {} as T)
+    )
 
-    const newData = tableData.filter((_, index) => index !== rowIndex)
+    const newData = [...tableData, ...newRows]
     setTableData(newData)
     setTimeout(() => onDataChange(newData), 0)
   }
@@ -183,20 +224,6 @@ export function EditableTable<T extends Record<string, any>>({
     onDataChange(pastedData)
   }
 
-  // Ensure minimum rows
-  useEffect(() => {
-    if (tableData.length < minRows) {
-      const emptyRows = Array.from({ length: minRows - tableData.length }, () =>
-        columns.reduce((acc, col) => {
-          ;(acc as any)[col.id as string] = ""
-          return acc
-        }, {} as T),
-      )
-      const newData = [...tableData, ...emptyRows]
-      setTableData(newData)
-      onDataChange(newData)
-    }
-  }, [tableData.length, minRows, columns, onDataChange])
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -246,7 +273,7 @@ export function EditableTable<T extends Record<string, any>>({
       </div>
 
       {allowInsertRow && (
-        <div className="flex justify-start">
+        <div className="flex justify-start gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -256,6 +283,24 @@ export function EditableTable<T extends Record<string, any>>({
             <Plus className="h-4 w-4" />
             行を追加
           </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => addMultipleRows(5)}
+              className="text-xs px-2"
+            >
+              +5行
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => addMultipleRows(10)}
+              className="text-xs px-2"
+            >
+              +10行
+            </Button>
+          </div>
         </div>
       )}
 
