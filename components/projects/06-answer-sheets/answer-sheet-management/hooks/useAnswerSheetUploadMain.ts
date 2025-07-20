@@ -1,6 +1,10 @@
 "use client"
 
-import { LayoutRegion, MasterImage, UseAnswerSheetUploadProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
+import {
+  LayoutRegion,
+  MasterImage,
+  UseAnswerSheetUploadProps,
+} from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
 import { useFileProcessing } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useFileProcessing"
 import { useStudentManagement } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useStudentManagement"
 import type { UploadAnswerSheetFileData } from "@/types/electron"
@@ -125,7 +129,7 @@ export function useAnswerSheetUploadMain({
         })
       }
     },
-    [fileProcessing.setFiles],
+    [fileProcessing],
   )
 
   // ヘルパー関数
@@ -140,7 +144,7 @@ export function useAnswerSheetUploadMain({
     (fileId: string) => {
       fileProcessing.setFiles((prev) => prev.filter((f) => f.id !== fileId))
     },
-    [fileProcessing.setFiles],
+    [fileProcessing],
   )
 
   const toggleFileSelection = useCallback(
@@ -151,7 +155,7 @@ export function useAnswerSheetUploadMain({
         ),
       )
     },
-    [fileProcessing.setFiles],
+    [fileProcessing],
   )
 
   const moveFile = useCallback(
@@ -164,7 +168,7 @@ export function useAnswerSheetUploadMain({
         return newFiles
       })
     },
-    [fileProcessing.setFiles],
+    [fileProcessing],
   )
 
   const handleUpload = uploadAnswerSheets

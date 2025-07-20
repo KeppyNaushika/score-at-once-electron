@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 
-import { convertPdfToImages, getPdfPageCount } from "@/lib/pdfConverter"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
   UploadData,
 } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import { convertPdfToImages } from "@/lib/pdfConverter"
 
 export function useAnswerSheetUpload(
   projectId: string,
@@ -40,49 +40,6 @@ export function useAnswerSheetUpload(
   const [imageLoadStates, setImageLoadStates] = useState<
     Record<string, "pending" | "loading" | "loaded" | "error">
   >({})
-
-  // Intersection Observer setup (無効化 - Blob URLではeager読み込みが適切)
-  useEffect(() => {
-    // observerRef.current = new IntersectionObserver(
-    //   (entries) => {
-    //     entries.forEach((entry) => {
-    //       const fileId = entry.target.getAttribute("data-file-id")
-    //       if (fileId && entry.isIntersecting) {
-    //         setImageLoadStates((prev) => ({
-    //           ...prev,
-    //           [fileId]: "loading",
-    //         }))
-
-    //         const img = entry.target.querySelector("img")
-    //         if (img) {
-    //           img.onload = () => {
-    //             setImageLoadStates((prev) => ({
-    //               ...prev,
-    //               [fileId]: "loaded",
-    //             }))
-    //           }
-    //           img.onerror = () => {
-    //             setImageLoadStates((prev) => ({
-    //               ...prev,
-    //               [fileId]: "error",
-    //             }))
-    //           }
-    //         }
-
-    //         observerRef.current?.unobserve(entry.target)
-    //       }
-    //     })
-    //   },
-    //   {
-    //     rootMargin: "50px",
-    //     threshold: 0.1,
-    //   }
-    // )
-
-    return () => {
-      observerRef.current?.disconnect()
-    }
-  }, [])
 
   // ファイル変換処理
   const convertFiles = useCallback(
@@ -290,7 +247,7 @@ export function useAnswerSheetUpload(
         setUploadProgress(0)
       }
     },
-    [onUploadComplete],
+    [onUploadComplete, projectId],
   )
 
   return {
