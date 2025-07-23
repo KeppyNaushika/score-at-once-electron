@@ -130,6 +130,7 @@
     "files": [
       "main/**/*",
       ".next/**/*",
+      "public/**/*",
       "node_modules/**/*",
       "package.json"
     ],

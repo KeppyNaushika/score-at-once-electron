@@ -2,7 +2,7 @@ import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument, rgb } from "pdf-lib"
-import { getAbsolutePathFromData } from "../dataManager"
+import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
 import { getAnswerSheetsByProjectId } from "./answerSheet"
 import { getLayoutRegionsByProjectId } from "./layoutRegion"
 import { getStudentsForProject } from "./projectStudent"
@@ -87,7 +87,7 @@ function getMarkImagePath(
   status: ScoringStatus,
   useTransparent: boolean,
 ): string {
-  const publicDir = path.join(process.cwd(), "public")
+  const publicDir = path.join(getAppRootPath(), "public")
   const prefix = useTransparent ? "tranceparent_" : ""
 
   switch (status) {
