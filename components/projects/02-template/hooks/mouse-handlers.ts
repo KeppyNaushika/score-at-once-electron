@@ -203,7 +203,7 @@ export function useMouseHandlers({
 
       onUpdateArea(areaIndex, newArea)
     }
-  }, [dragging, dragStartCoords, resizing, moving, getRelativeCoords, onUpdateArea])
+  }, [dragging, dragStartCoords, resizing, moving, getRelativeCoords, onUpdateArea, imageContainerRef, setDragCurrentCoords])
 
   /**
    * Handle mouse up events to complete drag, resize, and move operations
@@ -250,7 +250,7 @@ export function useMouseHandlers({
 
     setResizing(null)
     setMoving(null)
-  }, [dragging, dragStartCoords, dragCurrentCoords, onAddAreaByDrag])
+  }, [dragging, dragStartCoords, dragCurrentCoords, onAddAreaByDrag, setDragCurrentCoords, setDragStartCoords, setDragging, setMoving, setResizing])
 
   return {
     handleMouseDown,
