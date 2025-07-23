@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { getSelectionBorderSettings } from "@/lib/utils"
 
 interface QuestionRegion {
   id: string
@@ -32,6 +33,22 @@ export function CroppedAnswerImage({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [selectionBorderSettings, setSelectionBorderSettings] = useState(getSelectionBorderSettings())
+
+  // 選択枠色の設定変更を監視
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSelectionBorderSettings(getSelectionBorderSettings())
+    }
+    
+    window.addEventListener("storage", handleStorageChange)
+    window.addEventListener("selectionBorderColorChanged", handleStorageChange)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("selectionBorderColorChanged", handleStorageChange)
+    }
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -106,7 +123,8 @@ export function CroppedAnswerImage({
 
   return (
     <div
-      className={`relative ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
+      className={`relative ring-2 ring-inset ${isSelected ? "" : "ring-transparent"} ${className}`}
+      style={isSelected ? { "--tw-ring-color": selectionBorderSettings.color } as React.CSSProperties : undefined}
     >
       <Image
         ref={imageRef}
