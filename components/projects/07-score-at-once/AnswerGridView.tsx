@@ -23,6 +23,7 @@ type ScoringStatus =
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import CroppedAnswerImage from "@/components/projects/07-score-at-once/components/CroppedAnswerImage"
+import { getSelectionBorderSettings } from "@/lib/utils"
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
@@ -169,6 +170,23 @@ export default function AnswerGridView({
   } | null>(null)
   const [itemsPerRow, setItemsPerRow] = useState([5]) // 1行あたりの表示件数 (0-10)
   const gridRef = useRef<HTMLDivElement>(null)
+  const [selectionBorderSettings, setSelectionBorderSettings] = useState(getSelectionBorderSettings())
+
+  // 選択枠色の設定変更を監視
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setSelectionBorderSettings(getSelectionBorderSettings())
+    }
+    
+    window.addEventListener("storage", handleStorageChange)
+    // カスタムイベントでも監視（同じページ内での変更）
+    window.addEventListener("selectionBorderColorChanged", handleStorageChange)
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
+      window.removeEventListener("selectionBorderColorChanged", handleStorageChange)
+    }
+  }, [])
 
   // 外部からのitemsPerRowを優先し、ない場合はlocalStorageから読み込み
   useEffect(() => {
@@ -605,7 +623,7 @@ export default function AnswerGridView({
             <div
               key={answer.id}
               data-answer-id={answer.id}
-              className={`flex flex-shrink-0 flex-col gap-1 p-2 ${isMaster ? "border-2 border-black bg-white" : `${config.bgColor || "bg-white"}`} ${!isMaster ? config.borderColor : ""} ${!isMaster && isSelected ? config.selectedBgColor : ""}`}
+              className={`flex flex-shrink-0 flex-col gap-1 p-2 ${isMaster ? "border-2 border-black bg-white" : `${config.bgColor || "bg-white"}`} ${!isMaster ? config.borderColor : ""} ${!isMaster ? (isSelected ? `border-2 ${selectionBorderSettings.tailwindClass}` : "border-2 border-transparent") : ""}`}
               onMouseDown={(e) => handleMouseDown(e, answer.id)}
             >
               {/* 答案画像 */}
