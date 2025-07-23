@@ -519,12 +519,12 @@ export async function exportScoredAnswersPDF(
       .sort((a, b) => {
         // customOrderが設定されている場合は優先
         if (a.customOrder !== null && b.customOrder !== null) {
-          return a.customOrder - b.customOrder;
+          return a.customOrder - b.customOrder
         }
-        if (a.customOrder !== null) return -1;  // aが優先
-        if (b.customOrder !== null) return 1;   // bが優先
+        if (a.customOrder !== null) return -1 // aが優先
+        if (b.customOrder !== null) return 1 // bが優先
         // 学籍番号でソート
-        return a.studentId.localeCompare(b.studentId);
+        return a.studentId.localeCompare(b.studentId)
       })
 
     if (selectedStudents.length === 0) {
@@ -671,7 +671,8 @@ export async function exportScoredAnswersPDF(
 
       reportProgress(99, 100, "PDF生成完了")
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
       throw new Error(`PDF最適化エラー: ${errorMessage}`)
     }
 

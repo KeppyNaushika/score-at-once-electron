@@ -3,12 +3,12 @@ import * as path from "path"
 import * as fs from "fs/promises"
 
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
-const getAppRootPath = (): string => {
+export const getAppRootPath = (): string => {
   if (app.isPackaged) {
     // パッケージ化されている場合
     const exePath = app.getPath("exe")
     console.log(`Packaged app exe path: ${exePath}`)
-    
+
     // macOSの場合、.appと同階層にdataフォルダを作成
     if (process.platform === "darwin" && exePath.includes(".app/")) {
       // /path/to/Score at Once.app/Contents/MacOS/score-at-once
@@ -18,12 +18,12 @@ const getAppRootPath = (): string => {
       console.log(`macOS app root path: ${rootPath}`)
       return rootPath
     }
-    
+
     // Windows等その他のプラットフォーム
     const rootPath = path.dirname(exePath)
     console.log(`Windows platform exe path: ${exePath}`)
     console.log(`Windows platform root path: ${rootPath}`)
-    
+
     // Windowsでファイルパスが適切に解決されるかチェック
     try {
       const fs = require("fs")
@@ -32,7 +32,7 @@ const getAppRootPath = (): string => {
     } catch (error) {
       console.error(`Error checking Windows root path:`, error)
     }
-    
+
     return rootPath
   } else {
     // 開発環境の場合
