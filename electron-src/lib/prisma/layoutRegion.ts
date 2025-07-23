@@ -69,7 +69,7 @@ export const deleteLayoutRegion = async (id: string) => {
 
 // プロジェクトIDで LayoutRegion を取得
 export const getLayoutRegionsByProjectId = async (projectId: string) => {
-  return prisma.layoutRegion.findMany({
+  const regions = await prisma.layoutRegion.findMany({
     where: { projectId },
     include: {
       masterImage: true, // masterImage情報を追加
@@ -92,6 +92,49 @@ export const getLayoutRegionsByProjectId = async (projectId: string) => {
       { x: "asc" }, // X座標（フォールバック）
     ],
   })
+
+  // orderIndexがnullの領域があった場合、自動で設定する
+  const regionsWithNullOrder = regions.filter(region => region.orderIndex === null)
+  if (regionsWithNullOrder.length > 0) {
+    console.log(`Found ${regionsWithNullOrder.length} regions with null orderIndex, fixing...`)
+    
+    // orderIndex順で並べ替え済みの結果を使用してorderIndexを設定
+    const updates = regions.map((region, index) => 
+      prisma.layoutRegion.update({
+        where: { id: region.id },
+        data: { orderIndex: index }
+      })
+    )
+    
+    await Promise.all(updates)
+    
+    // 更新後のデータを再取得
+    return await prisma.layoutRegion.findMany({
+      where: { projectId },
+      include: {
+        masterImage: true,
+        subtotalDefinitions: {
+          include: {
+            questionGroupItem: true,
+          },
+        },
+        questionSubtotalAssignments: {
+          include: {
+            questionGroupItem: true,
+          },
+        },
+        questionScores: true,
+      },
+      orderBy: [
+        { orderIndex: "asc" },
+        { masterImageId: "asc" },
+        { y: "asc" },
+        { x: "asc" },
+      ],
+    })
+  }
+
+  return regions
 }
 
 // IDで LayoutRegion を取得

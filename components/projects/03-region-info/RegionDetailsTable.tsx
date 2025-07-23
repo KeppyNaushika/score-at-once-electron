@@ -82,7 +82,28 @@ const RegionDetailsTable = ({
 
         // UI状態を更新
         const newRegions = regions.filter((_, i) => i !== regionToDelete)
-        setRegions(newRegions)
+        
+        // orderIndexを再計算してデータベースに反映
+        const updatedRegions = newRegions.map((region, index) => ({
+          ...region,
+          orderIndex: index,
+        }))
+        
+        // データベースのorderIndexを更新
+        try {
+          const updates = updatedRegions.map((region, index) => ({
+            id: region.id,
+            orderIndex: index,
+          })).filter(update => update.id) // IDがあるもののみ
+          
+          if ((window as any).electronAPI?.updateLayoutRegionOrders && updates.length > 0) {
+            await (window as any).electronAPI.updateLayoutRegionOrders(updates)
+          }
+        } catch (orderError) {
+          console.error("Error updating region order after deletion:", orderError)
+        }
+        
+        setRegions(updatedRegions)
         setDeleteModalOpen(false)
         setRegionToDelete(null)
 

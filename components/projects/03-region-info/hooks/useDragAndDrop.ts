@@ -55,7 +55,7 @@ export const useDragAndDrop = ({
       try {
         const updates = newRegions.map((region, index) => ({
           id: region.id,
-          orderIndex: index + 1, // 1から始まる連番
+          orderIndex: index, // 0から始まる連番
         }))
         
         if ((window as any).electronAPI?.updateLayoutRegionOrders) {

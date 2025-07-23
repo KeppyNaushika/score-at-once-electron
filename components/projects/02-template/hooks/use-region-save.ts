@@ -50,6 +50,7 @@ export function useRegionSave(
           height: region.height,
           label: region.label,
           points: typeof region.points === 'string' ? parseInt(region.points) : region.points,
+          orderIndex: region.orderIndex,
         }
 
         if (operation === 'update' && region.id) {
@@ -106,6 +107,7 @@ export function useRegionSave(
             height: area.height,
             label: area.label,
             points: typeof area.points === 'string' ? parseInt(area.points) : area.points,
+            orderIndex: area.orderIndex,
           }
 
           if (area.id) {
@@ -174,7 +176,8 @@ export function useRegionSave(
           label = "新規エリア"
       }
 
-      // 新規領域オブジェクトを作成
+      // 新規領域オブジェクトを作成（orderIndexを設定）
+      const nextOrderIndex = existingRegions.length
       const newRegion: LayoutRegionArea = {
         type,
         x: coords.x,
@@ -184,6 +187,7 @@ export function useRegionSave(
         label,
         points,
         masterImageId,
+        orderIndex: nextOrderIndex,
       }
 
       try {
