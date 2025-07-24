@@ -1,0 +1,250 @@
+import type { FileState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/drag-drop-types"
+import {
+  compareFileStates,
+  updateFileStatesFromDnDArray,
+} from "@/components/projects/06-answer-sheets/answer-sheet-table/utils/drag-drop-utils"
+import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type {
+  PlacementStrategy,
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/types/answer-sheet.types"
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
+import { useCallback } from "react"
+import { toast } from "sonner"
+
+interface UseDragDropHandlersParams {
+  files: UnifiedFile[]
+  onFilesChange: (files: UnifiedFile[]) => void
+  getEnabledFiles: () => UnifiedFile[]
+  getDisabledFiles: () => UnifiedFile[]
+  disabledState: ExtendedDisabledState
+  setDisabledState: (
+    state:
+      | ExtendedDisabledState
+      | ((prev: ExtendedDisabledState) => ExtendedDisabledState),
+  ) => void
+  students?: UnifiedStudent[]
+  masterImageCount?: number
+  mode?: "upload" | "view"
+  fileOrder?: PlacementStrategy
+  onReloadData?: () => void
+  onUpdatePendingChanges?: (
+    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+  ) => void
+  setActiveFile: (file: UnifiedFile | null) => void
+  setIsDraggingFromTrash: (isDragging: boolean) => void
+  fileStatesRef: React.MutableRefObject<FileState[]>
+  initialFileStatesRef: React.MutableRefObject<FileState[]>
+}
+
+/**
+ * ドラッグ&ドロップのイベントハンドラーを管理するカスタムフック
+ */
+export function useDragDropHandlers({
+  files,
+  onFilesChange,
+  getEnabledFiles,
+  getDisabledFiles,
+  disabledState,
+  setDisabledState,
+  students,
+  masterImageCount,
+  mode,
+  onUpdatePendingChanges,
+  setActiveFile,
+  setIsDraggingFromTrash,
+  fileStatesRef,
+  initialFileStatesRef,
+}: UseDragDropHandlersParams) {
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const { active } = event
+      const activeId = active.id.toString()
+
+      const activeFileFromEnabled = getEnabledFiles().find(
+        (f) => f.id === activeId,
+      )
+      const activeFileFromDisabled = getDisabledFiles().find(
+        (f) => f.id === activeId,
+      )
+
+      if (activeFileFromEnabled) {
+        setActiveFile(activeFileFromEnabled)
+        setIsDraggingFromTrash(false)
+      } else if (activeFileFromDisabled) {
+        setActiveFile(activeFileFromDisabled)
+        setIsDraggingFromTrash(true)
+      }
+    },
+    [getEnabledFiles, getDisabledFiles, setActiveFile, setIsDraggingFromTrash],
+  )
+
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { active, over } = event
+      if (!over) return
+
+      const activeId = active.id.toString()
+      const overId = over.id.toString()
+
+      // コンテナ判定関数
+      const findContainer = (id: string) => {
+        if (id === "trash-area" || id === "trash-popover-trigger")
+          return "trash"
+
+        const enabledFile = getEnabledFiles().find((file) => file.id === id)
+        if (enabledFile) return "main"
+
+        const disabledFile = getDisabledFiles().find((file) => file.id === id)
+        if (disabledFile) return "trash"
+
+        return null
+      }
+
+      const activeContainer = findContainer(activeId)
+      const overContainer = findContainer(overId)
+
+      if (activeContainer !== overContainer) {
+        // コンテナ間移動の処理
+        setDisabledState((prev) => {
+          const newFiles = new Set(prev.files)
+          if (activeContainer === "main" && overContainer === "trash") {
+            newFiles.add(activeId)
+          } else if (activeContainer === "trash" && overContainer === "main") {
+            newFiles.delete(activeId)
+          }
+          return { ...prev, files: newFiles }
+        })
+      }
+    },
+    [getEnabledFiles, getDisabledFiles, setDisabledState],
+  )
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over) {
+        setActiveFile(null)
+        setIsDraggingFromTrash(false)
+        return
+      }
+
+      const activeId = active.id.toString()
+      const overId = over.id.toString()
+
+      if (activeId === overId) {
+        setActiveFile(null)
+        setIsDraggingFromTrash(false)
+        return
+      }
+
+      // コンテナ判定関数
+      const findContainer = (id: string) => {
+        if (id === "trash-area" || id === "trash-popover-trigger")
+          return "trash"
+
+        const enabledFile = getEnabledFiles().find((file) => file.id === id)
+        if (enabledFile) return "main"
+
+        const disabledFile = getDisabledFiles().find((file) => file.id === id)
+        if (disabledFile) return "trash"
+
+        return null
+      }
+
+      const activeContainer = findContainer(activeId)
+      const overContainer = findContainer(overId)
+
+      if (activeContainer === overContainer && activeId !== overId) {
+        // 新規追加・確認モード共通: arrayMoveによる順延ロジック
+        const newFiles = [...files]
+        const oldIndex = newFiles.findIndex((file) => file.id === activeId)
+        const newIndex = newFiles.findIndex((file) => file.id === overId)
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          // 1. fileIdのみを入れ替え、各位置のstudentIdとpageNumberは固定
+          const originalFiles = [...newFiles]
+          const reorderedFileIds = arrayMove(
+            newFiles.map((f) => f.id),
+            oldIndex,
+            newIndex,
+          )
+
+          // 2. 各位置に対して、新しいfileIdと元の論理位置を組み合わせ
+          const reorderedFiles = originalFiles.map((originalFile, index) => ({
+            ...files.find((f) => f.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
+            studentId: originalFile.studentId, // 元の位置のstudentId
+            pageNumber: originalFile.pageNumber, // 元の位置のpageNumber
+          }))
+
+          onFilesChange(reorderedFiles)
+
+          // 3. DnD操作時: 配列変更 + 3つ組同期更新（ファイル実データをそのまま使用）
+          if (mode === "view") {
+            const newFileStates = updateFileStatesFromDnDArray(reorderedFiles)
+            fileStatesRef.current = newFileStates
+          }
+
+          // 確認モードでは一括でPendingChangeを更新
+          if (
+            mode === "view" &&
+            students &&
+            masterImageCount &&
+            onUpdatePendingChanges &&
+            initialFileStatesRef.current.length > 0
+          ) {
+            // 現在のファイル状態と初期状態を比較
+            const currentFileStates = fileStatesRef.current
+            const changedFiles = compareFileStates(
+              initialFileStatesRef.current,
+              currentFileStates,
+            )
+
+            // 変更されたファイル情報を一括で親に渡す
+            onUpdatePendingChanges(changedFiles)
+
+            // ドラッグ操作完了のtoast表示
+            if (changedFiles.length > 0) {
+              toast.success(
+                `${changedFiles.length}件の答案配置を変更しました`,
+                {
+                  description: "「変更を反映」ボタンで確定してください",
+                },
+              )
+            } else {
+              toast.info("元の位置に戻されました")
+            }
+          } else if (mode === "upload") {
+            // upload モードでのドラッグ操作完了のtoast
+            toast.success("答案の配置を変更しました")
+          }
+        }
+      }
+
+      setActiveFile(null)
+      setIsDraggingFromTrash(false)
+    },
+    [
+      files,
+      onFilesChange,
+      getEnabledFiles,
+      getDisabledFiles,
+      mode,
+      students,
+      masterImageCount,
+      onUpdatePendingChanges,
+      setActiveFile,
+      setIsDraggingFromTrash,
+      fileStatesRef,
+      initialFileStatesRef,
+    ],
+  )
+
+  return {
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+  }
+}
