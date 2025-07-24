@@ -144,11 +144,7 @@ export function useTableData(
     const enabledFiles = getEnabledFiles()
     const data: CellData[][] = []
 
-    // 確認モードか判定（既存答案データかどうか）
-    const isViewMode =
-      enabledFiles.length > 0 && enabledFiles.some((file) => file.imagePath)
-
-    if (isViewMode) {
+    if (mode === "view") {
       // 確認モード: ファイル配列の順序に基づく配置戦略適用（動的無効化対応）
 
       // 有効セル（無効でないセル）の位置を事前に計算（動的無効化考慮）
@@ -279,13 +275,19 @@ export function useTableData(
         })
       }
 
-      // ファイルと有効セルをマッピング
+      // アップロードモード: ファイルの実際の位置に基づいてマッピング
       const filePositionMap = new Map<string, UnifiedFile>()
-      validPositions.forEach((pos, fileIndex) => {
-        const file = enabledFiles[fileIndex]
-        if (file) {
-          const key = `${pos.studentIndex}-${pos.pageIndex}`
-          filePositionMap.set(key, file)
+      enabledFiles.forEach((file) => {
+        // ファイルの実際のstudentIdとpageNumberに基づいて位置を特定
+        const studentIndex = sortedStudents.findIndex(s => s.id === file.studentId)
+        const pageIndex = file.pageNumber - 1
+        
+        if (studentIndex !== -1 && pageIndex >= 0 && pageIndex < masterImageCount) {
+          // その位置が無効化されていないかチェック
+          if (!enhancedIsPositionDisabled(studentIndex, pageIndex)) {
+            const key = `${studentIndex}-${pageIndex}`
+            filePositionMap.set(key, file)
+          }
         }
       })
 
@@ -345,6 +347,7 @@ export function useTableData(
     fileOrder,
     getEnabledFiles,
     enhancedIsPositionDisabled,
+    mode,
   ])
 
   return {
