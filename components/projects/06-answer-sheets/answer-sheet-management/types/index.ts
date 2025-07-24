@@ -73,7 +73,6 @@ export interface AnswerCellProps {
   isPageDisabled: boolean
   isCellDisabled: boolean
   isFileDisabled: boolean
-  onToggleCell: () => void
   onToggleFile?: () => void
   onRemoveFile?: () => void
   onCellClick?: () => void

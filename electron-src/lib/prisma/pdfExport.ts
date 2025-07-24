@@ -372,7 +372,7 @@ async function calculateStudentSubtotalScore(
     // 各グループで該当する設問を取得（GROUP内OR）
     const groupQuestionSets: Set<string>[] = []
 
-    for (const [groupId, itemIds] of groupMap) {
+    for (const [_groupId, itemIds] of groupMap) {
       const groupQuestionIds = new Set<string>()
 
       // 各項目に関連付けられた設問を取得
@@ -703,8 +703,8 @@ async function addAnswerSheetToPDF(
   layoutRegions: any[],
   scoringMarkConfig?: ScoringMarkConfig,
   pdfOrientation?: "portrait" | "landscape",
-  currentStudent?: any,
-  allSelectedStudents?: any[],
+  _currentStudent?: any,
+  _allSelectedStudents?: any[],
   progressCallback?: (step: string) => void,
 ): Promise<void> {
   try {

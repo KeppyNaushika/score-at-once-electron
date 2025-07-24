@@ -4,14 +4,12 @@ import { toast } from "sonner"
 import type {
   PlacementStrategy,
   UnifiedFile,
-  UnifiedStudent,
   UploadData,
 } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
 import { convertPdfToImages } from "@/lib/pdfConverter"
 
 export function useAnswerSheetUpload(
   projectId: string,
-  students: UnifiedStudent[],
   onUploadComplete?: () => void,
 ) {
   // State管理
@@ -37,9 +35,6 @@ export function useAnswerSheetUpload(
 
   // Intersection Observer for lazy loading (無効化)
   const observerRef = useRef<IntersectionObserver | null>(null)
-  const [imageLoadStates, setImageLoadStates] = useState<
-    Record<string, "pending" | "loading" | "loaded" | "error">
-  >({})
 
   // ファイル変換処理
   const convertFiles = useCallback(
@@ -259,7 +254,6 @@ export function useAnswerSheetUpload(
     fileOrder,
     uploadProgress,
     passwordDialog,
-    imageLoadStates,
     observerRef,
 
     // Actions

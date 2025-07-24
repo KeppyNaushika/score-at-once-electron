@@ -3,7 +3,6 @@ import {
   compareFileStates,
   updateFileStatesFromDnDArray,
 } from "@/components/projects/06-answer-sheets/answer-sheet-table/utils/drag-drop-utils"
-import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 import type {
   PlacementStrategy,
   UnifiedFile,
@@ -19,12 +18,6 @@ interface UseDragDropHandlersParams {
   onFilesChange: (files: UnifiedFile[]) => void
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
-  disabledState: ExtendedDisabledState
-  setDisabledState: (
-    state:
-      | ExtendedDisabledState
-      | ((prev: ExtendedDisabledState) => ExtendedDisabledState),
-  ) => void
   students?: UnifiedStudent[]
   masterImageCount?: number
   mode?: "upload" | "view"
@@ -47,8 +40,6 @@ export function useDragDropHandlers({
   onFilesChange,
   getEnabledFiles,
   getDisabledFiles,
-  disabledState,
-  setDisabledState,
   students,
   masterImageCount,
   mode,
@@ -103,23 +94,9 @@ export function useDragDropHandlers({
         return null
       }
 
-      const activeContainer = findContainer(activeId)
-      const overContainer = findContainer(overId)
-
-      if (activeContainer !== overContainer) {
-        // コンテナ間移動の処理
-        setDisabledState((prev) => {
-          const newFiles = new Set(prev.files)
-          if (activeContainer === "main" && overContainer === "trash") {
-            newFiles.add(activeId)
-          } else if (activeContainer === "trash" && overContainer === "main") {
-            newFiles.delete(activeId)
-          }
-          return { ...prev, files: newFiles }
-        })
-      }
+      // Container movement is handled elsewhere
     },
-    [getEnabledFiles, getDisabledFiles, setDisabledState],
+    [getEnabledFiles, getDisabledFiles],
   )
 
   const handleDragEnd = useCallback(

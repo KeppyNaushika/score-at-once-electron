@@ -33,7 +33,6 @@ export default function ProjectProgressCard({
   const [progress, setProgress] = useState<ProjectProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // 進捗データを取得する関数
   const fetchProgress = useCallback(async () => {
@@ -51,7 +50,6 @@ export default function ProjectProgressCard({
           progressPercentage: result.percentage,
           finalizedPercentage: result.percentage,
         })
-        setLastUpdated(new Date())
         onProgressUpdate?.({
           totalAnswerSheets: result.totalAnswerSheets,
           totalQuestions: 0,
@@ -85,12 +83,6 @@ export default function ProjectProgressCard({
     return () => clearInterval(interval)
   }, [autoRefresh, refreshInterval, fetchProgress])
 
-  // 進捗率の計算
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 80) return "bg-green-500"
-    if (percentage >= 50) return "bg-yellow-500"
-    return "bg-red-500"
-  }
 
   if (loading) {
     return (

@@ -63,7 +63,7 @@ export const StudentTableRow = ({
           </div>
           <Checkbox
             checked={isSelected}
-            onCheckedChange={(checked) => {
+            onCheckedChange={() => {
               onToggleSelection(student.id)
             }}
           />

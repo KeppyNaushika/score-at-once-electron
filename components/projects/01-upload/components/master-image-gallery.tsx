@@ -2,18 +2,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import type { MasterImage, MasterImageGalleryProps } from "../types"
+import type { MasterImageGalleryProps } from "../types"
 import { MasterImageCard } from "./master-image-card"
 
 /**
  * MasterImageGallery - 模範解答画像一覧を表示するコンポーネント
- * 
+ *
  * 機能:
  * - 模範解答画像の一覧表示
  * - 水平スクロール対応
  * - 画像の削除・順序変更操作
  * - 読み込み状態の表示
- * 
+ *
  * @param images - 模範解答画像のリスト
  * @param imageUrls - 画像IDとURLのマッピング
  * @param isDeleting - 削除処理中の画像IDマップ
@@ -67,9 +67,7 @@ export function MasterImageGallery({
                   key={image.id}
                   className="group relative flex h-48 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border"
                 >
-                  <p className="text-muted-foreground text-xs">
-                    画像準備中...
-                  </p>
+                  <p className="text-muted-foreground text-xs">画像準備中...</p>
                 </div>
               )
             })}

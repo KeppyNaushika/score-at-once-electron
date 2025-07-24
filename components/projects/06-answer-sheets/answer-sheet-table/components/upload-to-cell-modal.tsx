@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { convertPdfToImages } from "@/lib/pdfConverter"
-import { Upload, FileImage, Lock } from "lucide-react"
+import { FileImage, Lock, Upload } from "lucide-react"
+import { useRef, useState } from "react"
 import { toast } from "sonner"
 
 interface UploadToCellModalProps {
@@ -46,7 +46,9 @@ export function UploadToCellModal({
   const [showPasswordInput, setShowPasswordInput] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -62,13 +64,15 @@ export function UploadToCellModal({
       // 画像ファイルの場合は直接表示
       const preview = URL.createObjectURL(file)
       const buffer = await file.arrayBuffer()
-      setConvertedImages([{
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        buffer,
-        preview,
-      }])
+      setConvertedImages([
+        {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          buffer,
+          preview,
+        },
+      ])
     }
   }
 
@@ -87,7 +91,7 @@ export function UploadToCellModal({
             buffer: image.buffer,
             preview,
           }
-        })
+        }),
       )
       setConvertedImages(convertedImages)
       setShowPasswordInput(false)
@@ -95,11 +99,16 @@ export function UploadToCellModal({
       if (error instanceof Error && error.message === "password-required") {
         setShowPasswordInput(true)
         toast.error("PDFファイルにパスワードが必要です")
-      } else if (error instanceof Error && error.message === "invalid-password") {
+      } else if (
+        error instanceof Error &&
+        error.message === "invalid-password"
+      ) {
         toast.error("パスワードが正しくありません")
         setShowPasswordInput(true)
       } else {
-        toast.error(`PDF変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`)
+        toast.error(
+          `PDF変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`,
+        )
       }
     } finally {
       setIsConverting(false)
@@ -116,15 +125,18 @@ export function UploadToCellModal({
     if (!selectedFile || convertedImages.length === 0) return
 
     const selectedImage = convertedImages[selectedImageIndex]
-    
-    // FileオブジェクトとしてConvertedImageを変換
-    const file = new File(
-      [selectedImage.buffer],
-      selectedImage.name,
-      { type: selectedImage.type }
-    )
 
-    onUpload(file, selectedFile.type === "application/pdf" ? selectedImageIndex + 1 : undefined)
+    // FileオブジェクトとしてConvertedImageを変換
+    const file = new File([selectedImage.buffer], selectedImage.name, {
+      type: selectedImage.type,
+    })
+
+    onUpload(
+      file,
+      selectedFile.type === "application/pdf"
+        ? selectedImageIndex + 1
+        : undefined,
+    )
     handleClose()
   }
 
@@ -148,7 +160,7 @@ export function UploadToCellModal({
           <DialogTitle>
             セルに答案を追加
             {studentName && pageNumber && (
-              <span className="text-sm text-gray-500 ml-2">
+              <span className="ml-2 text-sm text-gray-500">
                 ({studentName} - ページ{pageNumber})
               </span>
             )}
@@ -185,7 +197,10 @@ export function UploadToCellModal({
                   placeholder="PDFのパスワードを入力"
                   onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
                 />
-                <Button onClick={handlePasswordSubmit} disabled={!pdfPassword.trim()}>
+                <Button
+                  onClick={handlePasswordSubmit}
+                  disabled={!pdfPassword.trim()}
+                >
                   変換
                 </Button>
               </div>
@@ -195,7 +210,7 @@ export function UploadToCellModal({
           {/* 変換中 */}
           {isConverting && (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
               <span className="ml-2">PDF変換中...</span>
             </div>
           )}
@@ -204,21 +219,23 @@ export function UploadToCellModal({
           {convertedImages.length > 0 && (
             <div className="space-y-3">
               <Label>
-                {selectedFile?.type === "application/pdf" ? "ページを選択" : "選択された画像"}
+                {selectedFile?.type === "application/pdf"
+                  ? "ページを選択"
+                  : "選択された画像"}
                 {convertedImages.length > 1 && (
-                  <span className="text-sm text-gray-500 ml-2">
+                  <span className="ml-2 text-sm text-gray-500">
                     ({convertedImages.length}ページ)
                   </span>
                 )}
               </Label>
-              
+
               {convertedImages.length > 1 && (
-                <div className="grid grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+                <div className="grid max-h-40 grid-cols-4 gap-2 overflow-y-auto">
                   {convertedImages.map((image, index) => (
                     <button
                       key={index}
                       onClick={() => setSelectedImageIndex(index)}
-                      className={`relative aspect-square border-2 rounded overflow-hidden ${
+                      className={`relative aspect-square overflow-hidden rounded border-2 ${
                         selectedImageIndex === index
                           ? "border-blue-500 bg-blue-50"
                           : "border-gray-200 hover:border-gray-300"
@@ -227,9 +244,9 @@ export function UploadToCellModal({
                       <img
                         src={image.preview}
                         alt={`Page ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="h-full w-full object-cover"
                       />
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
+                      <div className="absolute right-0 bottom-0 left-0 bg-black/50 p-1 text-center text-xs text-white">
                         {index + 1}
                       </div>
                     </button>
@@ -238,8 +255,8 @@ export function UploadToCellModal({
               )}
 
               {/* 選択された画像のプレビュー */}
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <div className="flex items-center gap-2 mb-3">
+              <div className="rounded-lg border bg-gray-50 p-4">
+                <div className="mb-3 flex items-center gap-2">
                   <FileImage className="h-5 w-5 text-gray-600" />
                   <span className="font-medium">
                     選択中: {convertedImages[selectedImageIndex]?.name}
@@ -249,7 +266,7 @@ export function UploadToCellModal({
                   <img
                     src={convertedImages[selectedImageIndex]?.preview}
                     alt="Selected image"
-                    className="w-full h-auto border rounded"
+                    className="h-auto w-full rounded border"
                   />
                 </div>
               </div>
@@ -263,7 +280,9 @@ export function UploadToCellModal({
           </Button>
           <Button
             onClick={handleUpload}
-            disabled={!selectedFile || convertedImages.length === 0 || isConverting}
+            disabled={
+              !selectedFile || convertedImages.length === 0 || isConverting
+            }
             className="flex items-center gap-2"
           >
             <Upload className="h-4 w-4" />

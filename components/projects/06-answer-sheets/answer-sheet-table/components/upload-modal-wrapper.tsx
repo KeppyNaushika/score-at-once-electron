@@ -4,7 +4,7 @@ import type { UploadModalState } from "@/components/projects/06-answer-sheets/an
 interface UploadModalWrapperProps {
   uploadModalState: UploadModalState
   onClose: () => void
-  onUpload: (file: File, pageNumber: number) => void
+  onUpload: (file: File, pageNumber?: number) => void
 }
 
 export function UploadModalWrapper({

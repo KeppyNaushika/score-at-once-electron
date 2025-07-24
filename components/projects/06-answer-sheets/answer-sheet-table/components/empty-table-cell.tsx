@@ -9,17 +9,15 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { Ban, Upload, FileX } from "lucide-react"
+import { Ban, FileX, Upload } from "lucide-react"
 
 export function EmptyTableCell({
-  position,
   student,
   pageNumber,
   isPositionDisabled,
   isPendingChange = false,
   mode = "upload",
   hasExistingAnswer = false,
-  allowOverwrite = false,
   disabledReason,
   onTogglePosition,
   onUploadToCell,

@@ -480,7 +480,6 @@ export default function StudentTable() {
             onSave={handleSaveStudent as any}
             onUpdate={handleSaveStudent as any}
             studentToEdit={studentToEdit as any}
-            availableClasses={classes as any}
           />
         )}
 

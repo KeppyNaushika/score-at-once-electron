@@ -36,7 +36,7 @@ export default function AnswerSheetsPage() {
 
   // Data loading hook
   const {
-    project,
+    project: _project,
     students,
     answerSheets,
     masterImageCount,

@@ -153,7 +153,6 @@ const FILTER_BUTTONS = [
 
 export default function ScoringToolbar({
   selectedAnswersCount,
-  currentQuestion,
   filterSettings,
   onScore,
   onToggleFilter,

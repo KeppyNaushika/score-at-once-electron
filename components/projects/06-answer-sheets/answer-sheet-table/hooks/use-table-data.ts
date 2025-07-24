@@ -23,7 +23,6 @@ interface UseTableDataParams {
   disabledState: ExtendedDisabledState
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean
   mode?: "upload" | "view"
-  allowOverwrite?: boolean
   existingAnswerSheets?: Array<{
     id: string
     studentId: string | null
@@ -42,7 +41,6 @@ export function useTableData({
   disabledState,
   isPositionDisabled,
   mode,
-  allowOverwrite,
   existingAnswerSheets,
 }: UseTableDataParams) {
   // 生徒のソート（customOrder準拠）

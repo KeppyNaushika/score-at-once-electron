@@ -63,7 +63,6 @@ export default function AnswerDisplayViewer({
   const imageRef = useRef<HTMLImageElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [imageSize, setImageSize] = useState({ width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [dragMode, setDragMode] = useState(false) // ドラッグモードの切り替え
@@ -147,7 +146,6 @@ export default function AnswerDisplayViewer({
 
     const img = new Image()
     img.onload = () => {
-      setImageSize({ width: img.naturalWidth, height: img.naturalHeight })
       setImageLoaded(true)
       drawCanvas(img)
     }

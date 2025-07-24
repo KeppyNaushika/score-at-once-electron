@@ -8,8 +8,6 @@ import { LayoutRegionArea } from "@/types/common.types"
 interface TemplateHeaderProps {
   /** ヘルプボタン要素 */
   helpButton: React.ReactNode
-  /** プロジェクトID */
-  projectId: string
   /** 選択中のマスター画像 */
   selectedMasterImage: MasterImage | null
   /** レイアウト領域データ */
@@ -24,7 +22,6 @@ interface TemplateHeaderProps {
  */
 export function TemplateHeader({
   helpButton,
-  projectId,
   selectedMasterImage,
   layoutRegions,
   onNextStep,

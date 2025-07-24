@@ -1,17 +1,17 @@
 import { app } from "electron"
-import { createMainWindow, setupWindowEvents } from "./window-manager"
-import { setupAllIPCHandlers } from "./ipc-handlers"
 import { initializeApp } from "./app-initializer"
+import { setupAllIPCHandlers } from "./ipc-handlers"
 import { startEmbeddedNextServer } from "./next-server-embedded"
+import { createMainWindow, setupWindowEvents } from "./window-manager"
 
 // Windows用デバッグ出力の有効化
 if (process.platform === "win32" && app.isPackaged) {
   console.log("Windows packaged app starting...")
-  
+
   // Windowsでコンソールを割り当て
   if (process.platform === "win32") {
     try {
-      const { spawn } = require("child_process")
+      const { spawn: _spawn } = require("child_process")
       // コンソール出力をファイルにリダイレクト
       const logPath = require("path").join(process.cwd(), "debug.log")
       console.log = (...args) => {
@@ -29,7 +29,7 @@ if (process.platform === "win32" && app.isPackaged) {
 
 app.on("ready", async () => {
   console.log("Electron app ready event triggered")
-  
+
   try {
     console.log("Starting application initialization...")
     // アプリケーションの初期化
@@ -58,7 +58,7 @@ app.on("ready", async () => {
     // IPCハンドラーの設定
     setupAllIPCHandlers()
     console.log("IPC handlers setup completed")
-    
+
     console.log("Application startup completed successfully")
   } catch (error) {
     console.error("Critical error during application startup:", error)
@@ -80,9 +80,9 @@ process.on("unhandledRejection", (reason, promise) => {
 })
 
 // アプリが異常終了する前にログを出力とクリーンアップ
-app.on("before-quit", async (event) => {
+app.on("before-quit", async (_event) => {
   console.log("Application is about to quit")
-  
+
   // Prismaクライアントのクリーンアップ
   try {
     const { getPrismaClient } = await import("./lib/prisma/client")

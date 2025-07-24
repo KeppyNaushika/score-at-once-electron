@@ -70,9 +70,9 @@ export function useMasterImages(
   }, [initialImages])
 
   // パスワード処理用の状態
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [currentFileIndex, setCurrentFileIndex] = useState(0)
-  const [currentPassword, setCurrentPassword] = useState<string>("")
+  const [_pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [_currentFileIndex, setCurrentFileIndex] = useState(0)
+  const [_currentPassword, setCurrentPassword] = useState<string>("")
 
   const uploadImages = useCallback(async (files: File[]) => {
     if (!projectId) {

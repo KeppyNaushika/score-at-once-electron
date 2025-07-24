@@ -18,8 +18,6 @@ import type { AnswerSheetWithDetails } from "@/types/electron"
 import {
   sortStudentsForTable,
   calculatePosition,
-  parsePosition,
-  getStudentRowIndex,
 } from "./studentOrderUtils"
 
 // ============================================================================
@@ -126,7 +124,6 @@ export function getTableData(
   files: UnifiedFile[],
   sortedStudents: UnifiedStudent[], // 既にソート済みの生徒データを受け取る
   disabledState: DisabledState,
-  placementStrategy: PlacementStrategy = "page-first",
   maxPages?: number,
 ): TableData {
   // 🚨 修正: 模範解答のページ数を優先使用
@@ -310,7 +307,7 @@ export function autoPlaceFiles(
 /**
  * 配置戦略に基づく順序生成
  */
-function generatePlacementOrder(
+function _generatePlacementOrder(
   studentCount: number,
   maxPages: number,
   strategy: PlacementStrategy,
@@ -334,7 +331,7 @@ function generatePlacementOrder(
   } else {
     // filename-auto: ファイル名から自動判定（将来的な拡張）
     // とりあえずpage-firstと同じ動作
-    return generatePlacementOrder(studentCount, maxPages, "page-first")
+    return _generatePlacementOrder(studentCount, maxPages, "page-first")
   }
 
   return positions

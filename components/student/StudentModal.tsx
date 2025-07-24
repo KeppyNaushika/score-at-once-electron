@@ -17,17 +17,12 @@ import { useEffect, useState } from "react"
 type StudentWithClass = Prisma.StudentGetPayload<{
   include: { memberships: { include: { class: true } } }
 }>
-type ClassWithStudents = Prisma.ClassGetPayload<{
-  include: { memberships: true }
-}>
-
 interface StudentModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (studentData: Prisma.StudentCreateInput) => void
   onUpdate: (id: string, studentData: Prisma.StudentUpdateInput) => void
   studentToEdit: StudentWithClass | null
-  availableClasses: ClassWithStudents[]
 }
 
 export default function StudentModal({
@@ -36,7 +31,6 @@ export default function StudentModal({
   onSave,
   onUpdate,
   studentToEdit,
-  availableClasses,
 }: StudentModalProps) {
   const [studentId, setStudentId] = useState("")
   const [lastName, setLastName] = useState("")

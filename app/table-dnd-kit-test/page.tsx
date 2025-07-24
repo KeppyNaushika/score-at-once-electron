@@ -181,12 +181,10 @@ function SortableTableCell({
 
 // ドロップ可能なPopoverトリガーボタン
 function DroppableTrashButton({
-  children,
   trashCount,
   onClick,
   droppableId = "trash-popover-trigger",
 }: {
-  children: React.ReactNode
   trashCount: number
   onClick?: () => void
   droppableId?: string
@@ -196,7 +194,7 @@ function DroppableTrashButton({
     data: { type: "trash" },
   })
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     // ドラッグ中でない場合のみクリックイベントを実行
     if (!isOver && onClick) {
       onClick()
@@ -241,27 +239,6 @@ function TrashArea({ children }: { children: React.ReactNode }) {
         isOver
           ? "ring-opacity-50 scale-[1.02] border-red-400 bg-red-50 shadow-lg ring-2 ring-red-200"
           : "border-red-300 bg-red-50/50 hover:bg-red-100/50"
-      }`}
-    >
-      {children}
-    </div>
-  )
-}
-
-// ドロップ可能なゴミ箱エリア（旧版）
-function DroppableTrashArea({ children }: { children: React.ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: "trash-area",
-    data: {
-      type: "trash-area",
-    },
-  })
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`transition-all duration-200 ${
-        isOver ? "ring-opacity-50 scale-105 ring-4 ring-red-300" : ""
       }`}
     >
       {children}
@@ -355,18 +332,6 @@ export default function TableDndKitTestPage() {
     )
   }
 
-  // ファイルが無効化されているかチェック
-  const isFileDisabled = (fileId: string) => {
-    return disabledState.cells.has(fileId)
-  }
-
-  // ファイルインデックスが無効化されているかチェック（dnd-kit用のみ）
-  const isDisabled = (fileIndex: number) => {
-    if (fileIndex >= files.length) return false // ファイルが存在しない場合は無効ではない
-
-    const fileId = files[fileIndex]?.id
-    return disabledState.cells.has(fileId) // 個別セル無効化のみチェック
-  }
 
   // 有効なファイルのみ取得（dnd-kit用）
   const getEnabledFiles = () => {
@@ -382,17 +347,6 @@ export default function TableDndKitTestPage() {
     )
   }
 
-  // 仮想インデックス → 実インデックスのマッピング
-  const getVirtualToRealMapping = () => {
-    const mapping: number[] = []
-    for (let realIndex = 0; realIndex < files.length; realIndex++) {
-      if (!isDisabled(realIndex)) {
-        mapping.push(realIndex)
-      }
-    }
-    return mapping
-  }
-
   // テーブルセルのデータ型定義
   interface CellData {
     type: "disabled" | "file" | "empty"
@@ -402,8 +356,6 @@ export default function TableDndKitTestPage() {
 
   // テーブルデータを配置戦略に応じて再構成（5x5）
   const getTableData = (): CellData[][] => {
-    let nextFileIndex = 0 // 次に配置するファイルの実インデックス
-
     // 次の有効ファイルを取得する関数（無効化されていないファイルのみ）
     const enabledFiles = getEnabledFiles()
     let enabledFileIndex = 0
@@ -521,13 +473,6 @@ export default function TableDndKitTestPage() {
     })
   }
 
-  const restoreFileFromTrash = (fileId: string) => {
-    setDisabledState((prev) => {
-      const newFiles = new Set(prev.files)
-      newFiles.delete(fileId)
-      return { ...prev, files: newFiles }
-    })
-  }
 
   const handleUploadToCell = (position: number) => {
     // 後日実装予定のアップロード機能
@@ -706,9 +651,7 @@ export default function TableDndKitTestPage() {
                   <DroppableTrashButton
                     trashCount={getDisabledFiles().length}
                     onClick={() => setIsPopoverOpen(!isPopoverOpen)}
-                  >
-                    <div>ゴミ箱を開く</div>
-                  </DroppableTrashButton>
+                  />
                 </div>
               </PopoverTrigger>
               <PopoverContent className="w-96 p-4" side="bottom" align="end">

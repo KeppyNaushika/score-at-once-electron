@@ -128,7 +128,7 @@ interface AnswerSheetsTabContentProps {
 }
 
 export function AnswerSheetsTabContent({
-  activeTab,
+  activeTab: _activeTab,
   projectId,
   students,
   masterImageCount,

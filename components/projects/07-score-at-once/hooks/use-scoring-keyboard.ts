@@ -76,10 +76,6 @@ export const getModifierKeyLabel = () => {
 interface UseScoringKeyboardProps {
   gradingMode: GradingMode
   selectedAnswers: Set<string>
-  currentStudentIndex: number
-  currentQuestionIndex: number
-  answerSheetsLength: number
-  questionRegionsLength: number
   onBatchScore: (status: ScoringStatus) => void
   onSetScore: (status: ScoringStatus) => void
   onNextQuestion: () => void
@@ -135,10 +131,6 @@ const DEAD_KEY_CODE_MAP: { [code: string]: string } = {
 export function useScoringKeyboard({
   gradingMode,
   selectedAnswers,
-  currentStudentIndex,
-  currentQuestionIndex,
-  answerSheetsLength,
-  questionRegionsLength,
   onBatchScore,
   onSetScore,
   onNextQuestion,

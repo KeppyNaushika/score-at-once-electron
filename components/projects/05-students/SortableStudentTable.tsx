@@ -1,6 +1,5 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -28,21 +27,21 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
+  closestCenter,
   DndContext,
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
-  KeyboardSensor,
 } from "@dnd-kit/core"
 import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
   arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, Search, UserCheck, Users, UserX } from "lucide-react"
@@ -156,7 +155,7 @@ function SortableTableRow({
           </div>
           <Checkbox
             checked={isSelected}
-            onCheckedChange={(checked) => {
+            onCheckedChange={() => {
               onToggleSelection(student.id)
             }}
           />

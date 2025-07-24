@@ -105,7 +105,6 @@ export default function StudentDetailPage() {
           onSave={() => {}} // Not used for editing
           onUpdate={handleSaveStudentData}
           studentToEdit={student as any}
-          availableClasses={classes as any}
         />
       )}
 

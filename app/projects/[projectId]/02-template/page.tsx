@@ -3,21 +3,18 @@
 import { usePageHelp } from "@/components/help/usePageHelp"
 import LayoutRegionEditor from "@/components/projects/02-template/LayoutRegionEditor"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
+import { useCallback, useEffect } from "react"
 
 // Refactored imports
-import { 
-  TemplateHeader,
-  PageNavigation, 
-  TemplateStatus,
-  useTemplateData,
-  useRegionSave,
-  saveTemplate,
-  detectLayoutRegions,
-  canProceedToNextStep,
+import {
   AreaType,
-  RegionCoordinates
+  canProceedToNextStep,
+  PageNavigation,
+  RegionCoordinates,
+  TemplateHeader,
+  TemplateStatus,
+  useRegionSave,
+  useTemplateData,
 } from "@/components/projects/02-template"
 import { LayoutRegionArea } from "@/types/common.types"
 
@@ -40,15 +37,10 @@ export default function TemplateStepPage() {
     updateLayoutId,
   } = useTemplateData(projectId)
 
-  const {
-    saveRegion,
-    autoSaveRegions,
-    createRegion,
-    updateRegion,
-  } = useRegionSave(projectId, initialData.currentUser)
-
-  const [isSaving, setIsSaving] = useState(false)
-  const [isDetecting, setIsDetecting] = useState(false)
+  const { autoSaveRegions, createRegion, updateRegion } = useRegionSave(
+    projectId,
+    initialData.currentUser,
+  )
 
   // 初期データの読み込み初期化
   useEffect(() => {
@@ -56,19 +48,34 @@ export default function TemplateStepPage() {
   }, [loadInitialData])
 
   // 保存時のページ変更処理
-  const handleMasterImageChangeWithSave = useCallback(async (imageId: string) => {
-    // 現在の領域を保存
-    if (initialData.layoutRegions.length > 0 && initialData.selectedMasterImage) {
-      await autoSaveRegions(initialData.layoutRegions)
-    }
+  const handleMasterImageChangeWithSave = useCallback(
+    async (imageId: string) => {
+      // 現在の領域を保存
+      if (
+        initialData.layoutRegions.length > 0 &&
+        initialData.selectedMasterImage
+      ) {
+        await autoSaveRegions(initialData.layoutRegions)
+      }
 
-    // 新しいページに変更
-    await handleMasterImageChange(imageId)
-  }, [initialData.layoutRegions, initialData.selectedMasterImage, autoSaveRegions, handleMasterImageChange])
+      // 新しいページに変更
+      await handleMasterImageChange(imageId)
+    },
+    [
+      initialData.layoutRegions,
+      initialData.selectedMasterImage,
+      autoSaveRegions,
+      handleMasterImageChange,
+    ],
+  )
 
   // 領域変更処理の効率化
   const handleRegionsChange = useCallback(
-    async (newRegions: LayoutRegionArea[] | ((prev: LayoutRegionArea[]) => LayoutRegionArea[])) => {
+    async (
+      newRegions:
+        | LayoutRegionArea[]
+        | ((prev: LayoutRegionArea[]) => LayoutRegionArea[]),
+    ) => {
       const finalRegions =
         typeof newRegions === "function"
           ? newRegions(initialData.layoutRegions)
@@ -92,18 +99,24 @@ export default function TemplateStepPage() {
       }
 
       const newRegion = await createRegion(
-        type, 
-        coords, 
-        initialData.selectedMasterImage.id, 
-        initialData.layoutRegions
+        type,
+        coords,
+        initialData.selectedMasterImage.id,
+        initialData.layoutRegions,
       )
-      
+
       if (newRegion) {
         updateLayoutRegions([...initialData.layoutRegions, newRegion])
         updateLayoutId("saved")
       }
     },
-    [initialData.selectedMasterImage, initialData.layoutRegions, createRegion, updateLayoutRegions, updateLayoutId],
+    [
+      initialData.selectedMasterImage,
+      initialData.layoutRegions,
+      createRegion,
+      updateLayoutRegions,
+      updateLayoutId,
+    ],
   )
 
   // 領域更新ハンドラー
@@ -129,40 +142,6 @@ export default function TemplateStepPage() {
     [initialData.layoutRegions, updateRegion, updateLayoutRegions],
   )
 
-  // テンプレート保存処理
-  const handleSaveTemplate = useCallback(async () => {
-    if (!projectId || !initialData.currentUser || !initialData.selectedMasterImage) {
-      return
-    }
-
-    setIsSaving(true)
-    try {
-      const result = await saveTemplate(
-        projectId,
-        initialData.currentUser,
-        initialData.selectedMasterImage.id,
-        initialData.layoutRegions
-      )
-
-      if (result.success && result.savedRegions) {
-        updateLayoutRegions(result.savedRegions)
-        updateLayoutId("saved")
-      }
-    } finally {
-      setIsSaving(false)
-    }
-  }, [projectId, initialData.currentUser, initialData.selectedMasterImage, initialData.layoutRegions, updateLayoutRegions, updateLayoutId])
-
-  // 自動検出処理
-  const handleDetectLayoutRegions = useCallback(async () => {
-    setIsDetecting(true)
-    try {
-      await detectLayoutRegions(initialData.selectedMasterImage)
-    } finally {
-      setIsDetecting(false)
-    }
-  }, [initialData.selectedMasterImage])
-
   // 次のステップへの遷移
   const goToNextStep = useCallback(() => {
     if (canProceedToNextStep(initialData.layoutId)) {
@@ -170,19 +149,9 @@ export default function TemplateStepPage() {
     }
   }, [initialData.layoutId, projectId, router])
 
-  // 前のステップへの遷移
-  const goToPreviousStep = useCallback(() => {
-    router.push(`/projects/${projectId}/01-upload`)
-  }, [projectId, router])
-
   // ローディング・エラー状態の表示
   if (isLoading || !projectId) {
-    return (
-      <TemplateStatus 
-        isLoading={isLoading} 
-        hasProjectId={!!projectId} 
-      />
-    )
+    return <TemplateStatus isLoading={isLoading} hasProjectId={!!projectId} />
   }
 
   return (
@@ -190,7 +159,6 @@ export default function TemplateStepPage() {
       {/* ヘッダー */}
       <TemplateHeader
         helpButton={helpButton}
-        projectId={projectId}
         selectedMasterImage={initialData.selectedMasterImage}
         layoutRegions={initialData.layoutRegions}
         onNextStep={goToNextStep}
@@ -204,7 +172,7 @@ export default function TemplateStepPage() {
           selectedMasterImage={initialData.selectedMasterImage}
           onImageChange={handleMasterImageChangeWithSave}
           isLoading={isLoading}
-          isSaving={isSaving}
+          isSaving={false}
         />
 
         {/* レイアウトエディター */}
@@ -214,7 +182,7 @@ export default function TemplateStepPage() {
             setAreas={handleRegionsChange}
             onCreateRegion={handleCreateRegion}
             onUpdateRegion={handleUpdateRegion}
-            disabled={isSaving}
+            disabled={false}
             backgroundImageUrl={initialData.backgroundImageUrl}
             imageDimensions={initialData.imageDimensions}
             masterImageId={initialData.selectedMasterImage?.id || null}

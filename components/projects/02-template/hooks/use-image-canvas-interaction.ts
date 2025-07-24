@@ -13,7 +13,7 @@
 
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { UseImageCanvasInteractionProps, DragState, ResizeState, MoveState } from "./interaction-types"
 import { useCanvasCoordinates } from "./canvas-coordinates"
 import { useMouseHandlers } from "./mouse-handlers"
@@ -39,7 +39,7 @@ export function useImageCanvasInteraction({
   const [moving, setMoving] = useState<MoveState | null>(null)
 
   // Coordinate calculations
-  const { getImageBounds, getRelativeCoords } = useCanvasCoordinates(imageDimensions, zoom)
+  const { getImageBounds: _getImageBounds, getRelativeCoords } = useCanvasCoordinates(imageDimensions, zoom)
 
   // Mouse event handlers
   const {

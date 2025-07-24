@@ -50,9 +50,7 @@ export function useMasterImages(
     passwordDialog: createClosedPasswordDialogState()
   })
 
-  // パスワード処理用の状態
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [currentFileIndex, setCurrentFileIndex] = useState(0)
+  // パスワード処理用の状態（削除済み - 未使用のため）
 
   /**
    * 初期画像とURLの設定
@@ -127,15 +125,12 @@ export function useMasterImages(
     }
     
     setState(prev => ({ ...prev, isUploading: true }))
-    setPendingFiles(files)
-    setCurrentFileIndex(0)
     
     try {
       const allFilesData: ConvertedImage[] = []
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
-        setCurrentFileIndex(i)
         
         if (file.type === 'application/pdf') {
           try {
@@ -185,8 +180,6 @@ export function useMasterImages(
       toast.error("ファイルのアップロードに失敗しました。")
     } finally {
       setState(prev => ({ ...prev, isUploading: false }))
-      setPendingFiles([])
-      setCurrentFileIndex(0)
     }
   }, [projectId, onImagesChange, convertPdfToImagesWithPassword])
 
@@ -254,9 +247,6 @@ export function useMasterImages(
     if (reject) {
       reject(new Error('Password input cancelled'))
     }
-    
-    setPendingFiles([])
-    setCurrentFileIndex(0)
   }, [])
 
   /**

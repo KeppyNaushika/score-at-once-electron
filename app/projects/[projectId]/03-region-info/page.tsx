@@ -5,21 +5,11 @@ import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import type { LayoutRegionWithDetails } from "@/types/electron"
-import { MasterImage, Project, User } from "@prisma/client"
+import { MasterImage, User } from "@prisma/client"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-// AreaType enum は削除されたため、文字列型として定義
-type AreaType =
-  | "QUESTION_ANSWER"
-  | "STUDENT_NAME"
-  | "STUDENT_ID"
-  | "TOTAL_SCORE"
-  | "SUBTOTAL_SCORE"
-  | "MARK"
-  | "COMMENT"
-  | "OTHER"
 
 export default function RegionInfoPage() {
   const params = useParams()
@@ -34,9 +24,7 @@ export default function RegionInfoPage() {
     null,
   )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
-  const [project, setProject] = useState<Project | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [layoutId, setLayoutId] = useState<string | undefined>(undefined)
   const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
     [],
   )
@@ -47,13 +35,9 @@ export default function RegionInfoPage() {
   const [backgroundImageUrls, setBackgroundImageUrls] = useState<{
     [key: string]: string
   }>({})
-  const [imageDimensions, setImageDimensions] = useState<{
-    width: number
-    height: number
-  } | null>(null)
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isSaving, _setIsSaving] = useState(false)
 
   const loadInitialData = useCallback(async () => {
     if (!projectId) {
@@ -69,7 +53,6 @@ export default function RegionInfoPage() {
       const fetchedProject =
         await window.electronAPI.fetchProjectById(projectId)
       if (fetchedProject) {
-        setProject(fetchedProject)
         if (
           fetchedProject.masterImages &&
           fetchedProject.masterImages.length > 0
@@ -89,22 +72,10 @@ export default function RegionInfoPage() {
             urls[image.id] = url
           }
           setBackgroundImageUrls(urls)
-
-          // 最初のページの寸法を取得
-          const firstUrl = urls[sortedMasterImages[0].id]
-          const img = new window.Image()
-          img.onload = () => {
-            setImageDimensions({
-              width: img.naturalWidth,
-              height: img.naturalHeight,
-            })
-          }
-          img.src = firstUrl
         } else {
           setMasterImages([])
           setSelectedMasterImage(null)
           setBackgroundImageUrls({})
-          setImageDimensions(null)
         }
 
         // 既存のレイアウト領域を取得
@@ -112,24 +83,19 @@ export default function RegionInfoPage() {
           const existingRegions =
             await window.electronAPI.getLayoutRegionsByProjectId(projectId)
           if (existingRegions && existingRegions.length > 0) {
-            setLayoutId("existing")
             setLayoutRegions(existingRegions)
           } else {
-            setLayoutId(undefined)
             setLayoutRegions([])
           }
         } catch (regionError) {
           console.error("Failed to load layout regions:", regionError)
-          setLayoutId(undefined)
           setLayoutRegions([])
         }
       } else {
         toast.error("プロジェクトが見つかりません。")
-        setProject(null)
         setMasterImages([])
         setSelectedMasterImage(null)
         setBackgroundImageUrls({})
-        setImageDimensions(null)
         setLayoutRegions([])
       }
     } catch (error) {
@@ -183,7 +149,6 @@ export default function RegionInfoPage() {
               (region): region is LayoutRegionWithDetails => region !== null,
             ),
           )
-          setLayoutId("saved")
         }
       } catch (error) {
         console.error("Auto-save failed:", error)
@@ -307,15 +272,6 @@ export default function RegionInfoPage() {
                         unoptimized
                         onClick={() => {
                           setSelectedMasterImage(correspondingImage)
-                          // 画像寸法を更新
-                          const img = new window.Image()
-                          img.onload = () => {
-                            setImageDimensions({
-                              width: img.naturalWidth,
-                              height: img.naturalHeight,
-                            })
-                          }
-                          img.src = imageUrl
                         }}
                       />
                       {/* Overlay regions for this page */}

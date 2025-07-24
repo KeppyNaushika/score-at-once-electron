@@ -265,7 +265,7 @@ export default function ScoreComparisonModal({
                     採点結果一覧 ({comparison.proposedScores.length}件)
                   </h3>
                   <div className="grid gap-3">
-                    {comparison.proposedScores.map((score, index) => (
+                    {comparison.proposedScores.map((score) => (
                       <Card key={score.id} className={getScoreStyle(score)}>
                         <CardContent className="p-4">
                           <div className="mb-2 flex items-center justify-between">

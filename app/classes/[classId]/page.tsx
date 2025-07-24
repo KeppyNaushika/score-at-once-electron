@@ -1,18 +1,26 @@
 "use client"
 
-import MembershipTable from "@/components/class/MembershipTable"
 import ClassModal from "@/components/class/ClassModal"
 import ClassStudentImportModal from "@/components/class/ClassStudentImportModal"
+import MembershipTable from "@/components/class/MembershipTable"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useClassManagement, type Membership } from "@/hooks/useClassManagement"
-import { ArrowLeft, Edit, Info, Plus, Trash2, Upload, Users, Calendar, Hash, FileText } from "lucide-react"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useClassManagement, type Membership } from "@/hooks/useClassManagement"
+import {
+  ArrowLeft,
+  Edit,
+  Info,
+  Plus,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 export default function ClassDetailPage() {
@@ -30,7 +38,7 @@ export default function ClassDetailPage() {
     setIsStudentImportModalOpen,
     isMembershipModalOpen,
     setIsMembershipModalOpen,
-    membershipToEdit,
+    membershipToEdit: _membershipToEdit,
     setMembershipToEdit,
     handleSaveClass,
     handleStudentImportSuccess,
@@ -105,81 +113,85 @@ export default function ClassDetailPage() {
             <h1 className="text-3xl font-bold">{classData.name}</h1>
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                >
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Info className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent
-                className="w-[500px]"
-                align="start"
-                side="bottom"
-              >
+              <PopoverContent className="w-[500px]" align="start" side="bottom">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-indigo-600" />
-                      <h3 className="font-semibold text-base">学級詳細ページ</h3>
+                      <h3 className="text-base font-semibold">
+                        学級詳細ページ
+                      </h3>
                     </div>
-                    <p className="text-sm text-muted-foreground pl-7">
+                    <p className="text-muted-foreground pl-7 text-sm">
                       このページでは、学級の情報と所属生徒を管理できます。
                     </p>
                   </div>
 
                   <div className="space-y-3 pl-7">
                     <div className="space-y-2">
-                      <p className="font-medium text-sm">主な操作：</p>
+                      <p className="text-sm font-medium">主な操作：</p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="flex gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
                             1
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">生徒を追加</p>
-                            <p className="text-muted-foreground text-xs">個別または一括で追加</p>
+                            <p className="text-muted-foreground text-xs">
+                              個別または一括で追加
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-700">
                             2
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">出席番号設定</p>
-                            <p className="text-muted-foreground text-xs">学級内の番号</p>
+                            <p className="text-muted-foreground text-xs">
+                              学級内の番号
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-orange-700 text-sm font-semibold">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-sm font-semibold text-orange-700">
                             3
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">所属期間管理</p>
-                            <p className="text-muted-foreground text-xs">開始日・終了日</p>
+                            <p className="text-muted-foreground text-xs">
+                              開始日・終了日
+                            </p>
                           </div>
                         </div>
                         <div className="flex gap-3">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-700">
                             4
                           </div>
                           <div className="flex-1">
                             <p className="font-medium">学級情報編集</p>
-                            <p className="text-muted-foreground text-xs">名称・コードなど</p>
+                            <p className="text-muted-foreground text-xs">
+                              名称・コードなど
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="border rounded-lg p-3 text-sm bg-green-50 border-green-200 text-green-800">
-                      <strong>一括インポート機能:</strong><br />
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                      <strong>一括インポート機能:</strong>
+                      <br />
                       Excelファイルから生徒を一括で追加できます。
                       学籍番号、出席番号、所属期間をまとめて設定可能です。
                     </div>
 
-                    <div className="border rounded-lg p-3 text-sm bg-orange-50 border-orange-200 text-orange-800">
-                      <strong>注意:</strong> 学級を削除すると、所属情報も削除されます。
+                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+                      <strong>注意:</strong>{" "}
+                      学級を削除すると、所属情報も削除されます。
                       削除前に必ず確認してください。
                     </div>
                   </div>

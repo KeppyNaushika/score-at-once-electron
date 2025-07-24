@@ -57,7 +57,6 @@ export function StudentGridRow({
             isPageDisabled={isPageDisabled}
             isCellDisabled={isCellDisabled}
             isFileDisabled={isFileDisabled}
-            onToggleCell={() => onToggleCell(student.id, pageNumber)}
             onToggleFile={file ? () => onToggleFile(file.id) : undefined}
             onRemoveFile={file ? () => onRemoveFile(file.id) : undefined}
             onCellClick={() => onCellClick(student.id, pageNumber)}

@@ -25,14 +25,6 @@ export async function exportGradingDataExcel(
       return { success: false, error: dataResult.error }
     }
 
-    const {
-      project,
-      selectedStudents,
-      questionRegions,
-      subtotalRegions,
-      scoringData,
-    } = dataResult
-
     // データが正常に取得できているかチェック
     if (
       !dataResult.questionRegions ||
@@ -59,18 +51,16 @@ export async function exportGradingDataExcel(
     const workbook = new ExcelJS.Workbook()
 
     // 点数一覧シート作成
-    const scoreSheet = await createScoreSheet(
+    await createScoreSheet(
       workbook,
-      project,
       dataResult.questionRegions,
       dataResult.subtotalRegions,
       dataResult.scoringData,
     )
 
     // 正誤一覧シート作成
-    const resultSheet = await createResultSheet(
+    await createResultSheet(
       workbook,
-      project,
       dataResult.questionRegions,
       dataResult.subtotalRegions,
       dataResult.scoringData,
@@ -117,11 +107,11 @@ function validateScoringData(scoringData: any[]): ValidationResult {
 
   for (const studentData of scoringData) {
     const studentName = studentData.studentName
-    
+
     for (const score of studentData.scores) {
       const questionLabel = score.questionLabel
       const identifier = `${studentName} - ${questionLabel}`
-      
+
       // 採点データが存在しない
       if (!score.status || score.status === "unscored") {
         if (score.score === null) {
@@ -130,19 +120,22 @@ function validateScoringData(scoringData: any[]): ValidationResult {
           warnings.ungraded.push(identifier)
         }
       }
-      
+
       // 部分点・保留で値が入力されていない（0点は有効な値なので除外）
-      if ((score.status === "partial" || score.status === "hold") && 
-          score.score === null) {
+      if (
+        (score.status === "partial" || score.status === "hold") &&
+        score.score === null
+      ) {
         warnings.missingPartialScore.push(identifier)
       }
     }
   }
 
   return {
-    hasWarnings: warnings.noScoringData.length > 0 || 
-                 warnings.ungraded.length > 0 || 
-                 warnings.missingPartialScore.length > 0,
+    hasWarnings:
+      warnings.noScoringData.length > 0 ||
+      warnings.ungraded.length > 0 ||
+      warnings.missingPartialScore.length > 0,
     warnings,
   }
 }

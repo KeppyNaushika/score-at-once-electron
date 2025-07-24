@@ -326,8 +326,8 @@ function EmptyTableCellWithLogic({
   return (
     <EmptyTableCell
       position={cellData.position}
-      student={cellData.student}
-      pageNumber={cellData.pageNumber}
+      student={cellData.student || null}
+      pageNumber={cellData.pageNumber || null}
       isPositionDisabled={cellData.type === "disabled"}
       isPendingChange={false}
       mode={mode}

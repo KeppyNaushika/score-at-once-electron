@@ -298,7 +298,6 @@ export default function ProjectStudentsPage() {
     }
   }
 
-
   // フィルタリングされた生徒リスト（順序を維持したまま表示用フィルタを適用）
   const filteredStudents = students.filter((student) => {
     const fullName = `${student.lastName} ${student.firstName}`

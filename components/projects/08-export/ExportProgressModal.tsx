@@ -23,8 +23,6 @@ interface ExportProgressModalProps {
   progress: number
   status: "processing" | "completed" | "error"
   currentStep: string
-  totalSteps: number
-  currentStepIndex: number
   error?: string
   outputPath?: string
 }
@@ -46,8 +44,6 @@ export default function ExportProgressModal({
   progress,
   status,
   currentStep,
-  totalSteps,
-  currentStepIndex,
   error,
   outputPath,
 }: ExportProgressModalProps) {

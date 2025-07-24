@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedStudent } from "@/types/answer-sheet.types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -76,7 +76,7 @@ export function useDisabledState() {
 
   // 初期化関数（現在は何もしない）
   const initializeStudentsWithoutAnswers = useCallback(
-    (students: UnifiedStudent[], files: UnifiedFile[]) => {
+    (students: UnifiedStudent[]) => {
       // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
       const sortedStudents = [...students].sort((a, b) => {
         const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER

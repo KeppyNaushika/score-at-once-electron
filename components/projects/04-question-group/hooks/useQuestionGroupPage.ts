@@ -1,11 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
 import {
-  QuestionGroupWithItems,
-  QuestionGroupItemWithDetails,
   LayoutRegionWithDetails,
+  QuestionGroupWithItems,
 } from "@/types/electron"
+import { useCallback, useEffect, useState } from "react"
 
 interface SubtotalData {
   [questionGroupId: string]: {
@@ -24,9 +23,9 @@ export function useQuestionGroupPage(projectId: string) {
   const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
     [],
   )
-  const [subtotalRegions, setSubtotalRegions] = useState<LayoutRegionWithDetails[]>(
-    [],
-  )
+  const [subtotalRegions, setSubtotalRegions] = useState<
+    LayoutRegionWithDetails[]
+  >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedQuestionGroupId, setSelectedQuestionGroupId] = useState<
@@ -49,14 +48,16 @@ export function useQuestionGroupPage(projectId: string) {
         ])
 
       console.log("📊 questionGroupsResponse:", questionGroupsResponse)
-      
+
       // 各グループの詳細を確認
       if (questionGroupsResponse && questionGroupsResponse.length > 0) {
         questionGroupsResponse.forEach((group: any, groupIndex: number) => {
           console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
           if (group.items && group.items.length > 0) {
             group.items.forEach((item: any, itemIndex: number) => {
-              console.log(`  📝 Item ${itemIndex + 1}: ${item.name} (order: ${item.order})`)
+              console.log(
+                `  📝 Item ${itemIndex + 1}: ${item.name} (order: ${item.order})`,
+              )
             })
           }
         })
@@ -80,15 +81,14 @@ export function useQuestionGroupPage(projectId: string) {
             region.type === "QUESTION_ANSWER",
         )
         setLayoutRegions(questionRegions)
-        
+
         // 小計点タイプの領域のみフィルタリング
         const subtotalRegions = layoutRegionsResponse.filter(
-          (region: LayoutRegionWithDetails) =>
-            region.type === "SUBTOTAL_SCORE",
+          (region: LayoutRegionWithDetails) => region.type === "SUBTOTAL_SCORE",
         )
         setSubtotalRegions(subtotalRegions)
       }
-      
+
       console.log("✅ loadData completed successfully")
     } catch (err) {
       console.error("❌ loadData error:", err)
@@ -300,13 +300,14 @@ export function useQuestionGroupPage(projectId: string) {
     async (orders: { id: string; order: number }[]) => {
       try {
         console.log("🔄 updateQuestionGroupItemOrders called with:", orders)
-        const result = await window.electronAPI.updateQuestionGroupItemOrders(orders)
+        const result =
+          await window.electronAPI.updateQuestionGroupItemOrders(orders)
         console.log("✅ updateQuestionGroupItemOrders result:", result)
-        
+
         console.log("🔄 Reloading data after order update...")
         await loadData()
         console.log("✅ Data reloaded successfully")
-        
+
         return true
       } catch (err) {
         console.error("❌ updateQuestionGroupItemOrders error:", err)
@@ -378,7 +379,9 @@ export function useQuestionGroupPage(projectId: string) {
         return true
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "小計点関連付けの更新に失敗しました",
+          err instanceof Error
+            ? err.message
+            : "小計点関連付けの更新に失敗しました",
         )
         return false
       }

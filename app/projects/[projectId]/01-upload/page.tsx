@@ -11,15 +11,15 @@ import { toast } from "sonner"
 
 /**
  * MasterImageStepPage - 模範解答アップロードページ
- * 
+ *
  * 機能:
  * - プロジェクトの模範解答画像の管理
  * - ファイルアップロード（PDF・画像対応）
  * - 画像の削除・順序変更
  * - 次ステップへの遷移
- * 
+ *
  * URL: /projects/[projectId]/01-upload
- * 
+ *
  * @returns 模範解答アップロードページコンポーネント
  */
 export default function MasterImageStepPage() {
@@ -32,11 +32,10 @@ export default function MasterImageStepPage() {
 
   const [masterImages, setMasterImages] = useState<MasterImageData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
 
   /**
    * 模範解答画像データを読み込む
-   * 
+   *
    * プロジェクトIDから模範解答画像のリストを取得し、
    * ページ番号順にソートして状態を更新します。
    */
@@ -47,14 +46,12 @@ export default function MasterImageStepPage() {
       const fetchedProject =
         await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
       if (fetchedProject && fetchedProject.masterImages) {
-        setProject(fetchedProject)
         // pageNumber でソートしてセット
         const sortedImages = [...fetchedProject.masterImages].sort(
           (a, b) => a.pageNumber - b.pageNumber,
         )
         setMasterImages(sortedImages)
       } else {
-        setProject(fetchedProject)
         setMasterImages([])
       }
     } catch (error) {
@@ -72,10 +69,10 @@ export default function MasterImageStepPage() {
 
   /**
    * 画像データ変更時のハンドラー
-   * 
+   *
    * MasterImageManagerからの画像データ更新を受け取り、
    * 状態を更新してユーザーに通知します。
-   * 
+   *
    * @param updatedImages - 更新された画像データリスト
    */
   const handleImagesChange = useCallback((updatedImages: MasterImageData[]) => {
@@ -92,14 +89,13 @@ export default function MasterImageStepPage() {
 
   /**
    * 次のステップへ遷移する
-   * 
+   *
    * 模範解答が登録されているかチェックし、
    * 問題がなければ採点領域作成ページへ遷移します。
    * 画像がない場合は確認ダイアログを表示します。
    */
   const goToNextStep = async () => {
     if (!projectId) return
-    const project = await window.electronAPI.fetchProjectById(projectId) // 最新のプロジェクト情報を取得
 
     if (masterImages.length === 0) {
       toast("確認", {

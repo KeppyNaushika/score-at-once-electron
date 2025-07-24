@@ -8,7 +8,6 @@ import type {
 } from "../types"
 
 interface UseScoringDataProps {
-  projectId: string
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
   gradingMode: "grid" | "individual"
@@ -21,7 +20,6 @@ interface UseScoringDataProps {
 }
 
 export function useScoringData({
-  projectId,
   currentUserId,
   setCurrentUserId,
   gradingMode,

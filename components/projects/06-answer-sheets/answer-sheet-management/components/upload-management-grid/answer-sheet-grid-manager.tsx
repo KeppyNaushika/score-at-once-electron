@@ -159,7 +159,7 @@ export function AnswerSheetGridManager({
   )
 
   const handleCellClick = useCallback(
-    (studentId: string, pageNumber: number) => {
+    (_studentId: string, _pageNumber: number) => {
       // セルクリック処理
     },
     [],

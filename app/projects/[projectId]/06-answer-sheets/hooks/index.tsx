@@ -2,7 +2,7 @@
  * Hooks for 06-answer-sheets page - quick inline version
  */
 
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { AnswerSheetWithDetails } from "@/types/electron"
 import type { PendingChange, ScoringDataOption } from "@/types/answer-sheet.types"

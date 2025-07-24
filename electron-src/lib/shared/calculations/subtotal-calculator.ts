@@ -55,7 +55,7 @@ export async function checkIfQuestionIsInSubtotal(
     // 各グループで該当する設問を取得（GROUP内OR）
     const groupQuestionSets: Set<string>[] = []
 
-    for (const [groupId, itemIds] of groupMap) {
+    for (const [, itemIds] of groupMap) {
       const groupQuestionIds = new Set<string>()
 
       // 各項目に関連付けられた設問を取得
@@ -139,7 +139,7 @@ export async function calculateSubtotalScore(
     // 各グループで該当する設問を取得（GROUP内OR）
     const groupQuestionSets: Set<string>[] = []
 
-    for (const [groupId, itemIds] of groupMap) {
+    for (const [, itemIds] of groupMap) {
       const groupQuestionIds = new Set<string>()
 
       // 各項目に関連付けられた設問を取得

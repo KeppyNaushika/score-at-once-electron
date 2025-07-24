@@ -128,7 +128,6 @@ export function useScoringNavigation({
       }
 
       const cols = Math.max(1, actualColumns) // 実際の表示列数を使用、最低1列は確保
-      const rows = Math.ceil(totalAnswers / cols)
 
       // 現在選択されている答案のインデックスを取得
       let currentIndex = -1

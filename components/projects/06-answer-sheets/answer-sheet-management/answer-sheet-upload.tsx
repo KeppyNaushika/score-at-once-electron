@@ -4,14 +4,12 @@ import { useCallback, useEffect } from "react"
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import {
   FileUploadZone,
-  AnswerSheetGridManager,
 } from "@/components/projects/06-answer-sheets/answer-sheet-management/components"
 import { useAnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks"
 import type { AnswerSheetUploadProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
 import type { PlacementStrategy } from "@/types/answer-sheet.types"
 // table-dnd-kit-test準拠のコンポーネントも併用
 import { AnswerSheetTable } from "@/components/projects/06-answer-sheets/answer-sheet-table"
-import { convertAnswerSheetsToFiles } from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/convertAnswerSheetsToFiles"
 import { buildOrderedFileArrayFromAnswerSheets, reorderFilesByStrategy } from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/reorderFilesByStrategy"
 
 export function AnswerSheetUpload({
@@ -33,18 +31,15 @@ export function AnswerSheetUpload({
     files,
     pdfProcessingProgress,
     fileOrder,
-    uploadProgress,
     passwordDialog,
-    imageLoadStates,
     observerRef,
 
     // Actions
     setFiles,
     setFileOrder,
-    setPasswordDialog,
     handleDrop,
     handleUpload,
-  } = useAnswerSheetUpload(projectId, students, onUploadComplete)
+  } = useAnswerSheetUpload(projectId, onUploadComplete)
 
   // 確認モード用の初期化処理
   useEffect(() => {
@@ -89,7 +84,6 @@ export function AnswerSheetUpload({
         onFileOrderChange={handleFileOrderChangeInViewMode}
         onFilesChange={setFiles}
         onUpload={handleUpload}
-        imageLoadStates={imageLoadStates}
         observerRef={observerRef}
         mode="view"
         onReloadData={onUploadComplete}
@@ -125,7 +119,6 @@ export function AnswerSheetUpload({
           onFileOrderChange={setFileOrder}
           onFilesChange={setFiles}
           onUpload={handleUpload}
-          imageLoadStates={imageLoadStates}
           observerRef={observerRef}
           mode={mode}
           onReloadData={onUploadComplete}

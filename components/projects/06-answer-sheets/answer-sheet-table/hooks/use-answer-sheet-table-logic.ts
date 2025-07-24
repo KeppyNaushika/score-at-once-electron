@@ -65,7 +65,6 @@ export function useAnswerSheetTableLogic({
     disabledState,
     isPositionDisabled,
     mode,
-    allowOverwrite,
     existingAnswerSheets,
   })
 
@@ -81,8 +80,6 @@ export function useAnswerSheetTableLogic({
     onFilesChange,
     getEnabledFiles,
     getDisabledFiles,
-    disabledState,
-    setDisabledState,
     students,
     masterImageCount,
     mode,
@@ -118,8 +115,8 @@ export function useAnswerSheetTableLogic({
 
   // 答案がない生徒の自動無効化（DBベース）
   useEffect(() => {
-    initializeStudentsWithoutAnswers(students, files)
-  }, [students, files, initializeStudentsWithoutAnswers])
+    initializeStudentsWithoutAnswers(students)
+  }, [students, initializeStudentsWithoutAnswers])
 
   // ============================================================================
   // イベントハンドラー
@@ -175,7 +172,7 @@ export function useAnswerSheetTableLogic({
     setUploadModalState({ isOpen: false })
   }
 
-  const handleUploadToCell = (file: File, pageNumber: number) => {
+  const handleUploadToCell = (file: File, pageNumber?: number) => {
     // TODO: 指定されたセル位置にファイルをアップロード
     console.log(
       `Uploading to position ${uploadModalState.position}:`,

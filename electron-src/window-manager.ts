@@ -1,5 +1,5 @@
 import { join } from "path"
-import { BrowserWindow, app, Menu, nativeImage } from "electron"
+import { BrowserWindow, app, Menu } from "electron"
 import menu from "./menu"
 
 // Electron公式推奨の環境判定方法

@@ -23,8 +23,8 @@ interface StudentDetailHeaderProps {
 }
 
 export function StudentDetailHeader({
-  onEditStudent,
-  onDeleteStudent,
+  onEditStudent: _onEditStudent,
+  onDeleteStudent: _onDeleteStudent,
 }: StudentDetailHeaderProps) {
   const router = useRouter()
 

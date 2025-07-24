@@ -148,7 +148,6 @@ interface AnswerGridViewProps {
 
 export default function AnswerGridView({
   answers,
-  currentQuestionIndex,
   layoutDirection,
   gridSize,
   onAnswerSelect,

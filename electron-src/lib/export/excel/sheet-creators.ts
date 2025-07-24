@@ -17,7 +17,6 @@ import { createDataRows } from "./row-creators"
  */
 export async function createScoreSheet(
   workbook: ExcelJS.Workbook,
-  project: any,
   questionRegions: any[],
   subtotalRegions: any[],
   scoringData: ScoringData[],
@@ -25,13 +24,7 @@ export async function createScoreSheet(
   const worksheet = workbook.addWorksheet("点数一覧")
 
   // ヘッダー行の作成
-  await createSheetHeaders(
-    worksheet,
-    project,
-    questionRegions,
-    subtotalRegions,
-    true,
-  )
+  await createSheetHeaders(worksheet, questionRegions, subtotalRegions)
 
   // 小計点の対象設問マップを事前に構築
   const subtotalTargetMap = await buildSubtotalTargetMap(
@@ -66,7 +59,6 @@ export async function createScoreSheet(
  */
 export async function createResultSheet(
   workbook: ExcelJS.Workbook,
-  project: any,
   questionRegions: any[],
   subtotalRegions: any[],
   scoringData: ScoringData[],
@@ -74,13 +66,7 @@ export async function createResultSheet(
   const worksheet = workbook.addWorksheet("正誤一覧")
 
   // ヘッダー行の作成
-  await createSheetHeaders(
-    worksheet,
-    project,
-    questionRegions,
-    subtotalRegions,
-    false,
-  )
+  await createSheetHeaders(worksheet, questionRegions, subtotalRegions)
 
   // 小計点の対象設問マップを事前に構築
   const subtotalTargetMap = await buildSubtotalTargetMap(

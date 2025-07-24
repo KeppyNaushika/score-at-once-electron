@@ -1,17 +1,17 @@
 "use client"
 
-import { usePageHelp } from "@/components/help/usePageHelp"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
+import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Settings, Calculator } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
 import { useQuestionGroupPage } from "@/components/projects/04-question-group/hooks/useQuestionGroupPage"
-import { QuestionGroupManagement } from "@/components/projects/04-question-group/QuestionGroupManagement"
 import { QuestionAssignmentMatrix } from "@/components/projects/04-question-group/QuestionAssignmentMatrix"
+import { QuestionGroupManagement } from "@/components/projects/04-question-group/QuestionGroupManagement"
 import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/SubtotalAssignmentMatrix"
 import { SubtotalPreview } from "@/components/projects/04-question-group/SubtotalPreview"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calculator, Plus, Settings } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
 export default function QuestionGroupPage() {
   const params = useParams()
@@ -20,7 +20,7 @@ export default function QuestionGroupPage() {
   const projectId = params.projectId as string
 
   const {
-    project,
+    project: _project,
     questionGroups,
     layoutRegions,
     subtotalRegions,
@@ -66,7 +66,6 @@ export default function QuestionGroupPage() {
       </div>
     )
   }
-
 
   return (
     <div className="container mx-auto space-y-6 px-4 py-6">

@@ -1,7 +1,6 @@
 "use client"
 
 import type { SortableTableCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import { DeleteConfirmationModal } from "./delete-confirmation-modal"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -12,12 +11,12 @@ import {
 import { TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Ban, Upload, X, Trash2 } from "lucide-react"
+import { Ban, Trash2, Upload, X } from "lucide-react"
 import { useEffect, useState } from "react"
+import { DeleteConfirmationModal } from "./delete-confirmation-modal"
 
 export function SortableTableCell({
   id,
-  position,
   hasFile,
   isPositionDisabled,
   isFileDisabled,
@@ -89,10 +88,7 @@ export function SortableTableCell({
     >
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          <div 
-            className="h-full w-full"
-            {...listeners}
-          >
+          <div className="h-full w-full" {...listeners}>
             {children}
           </div>
         </ContextMenuTrigger>
@@ -150,7 +146,7 @@ export function SortableTableCell({
           )}
         </ContextMenuContent>
       </ContextMenu>
-      
+
       <DeleteConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}

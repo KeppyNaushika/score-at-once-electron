@@ -12,7 +12,6 @@ export function FilePreviewCell({
   previewMode,
   isFileDisabled,
   nameRegionAvailable,
-  getFileColor,
   drawNameRegionCanvas,
   imageLoadState = "pending",
   isPendingChange = false,

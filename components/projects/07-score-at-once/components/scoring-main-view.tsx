@@ -36,7 +36,7 @@ import {
 import { Keyboard, PanelRightClose, PanelRightOpen } from "lucide-react"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 export default function ScoringMainView() {
   const params = useParams()
@@ -51,7 +51,7 @@ export default function ScoringMainView() {
     answerSheets,
     questionRegions,
     currentUserId,
-    error,
+    error: _error,
   } = useScoringDataLoader(projectId)
 
   // 設定管理フック
@@ -67,7 +67,7 @@ export default function ScoringMainView() {
   // 採点モード状態
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set())
-  const [gridSize, setGridSize] = useState({ columns: 4, rows: 3 })
+  const [gridSize, _setGridSize] = useState({ columns: 4, rows: 3 })
   const [layoutDirection, setLayoutDirection] = useState<
     "right-down" | "left-down" | "down-right" | "down-left"
   >("right-down")
@@ -79,9 +79,6 @@ export default function ScoringMainView() {
   const [showSidePanel, setShowSidePanel] = useState(true)
   const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
 
-  // Refs
-  const imageRef = useRef<HTMLImageElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   // 現在の答案と設問
   const currentAnswerSheet = answerSheets[currentStudentIndex]
@@ -97,12 +94,10 @@ export default function ScoringMainView() {
     scoringData,
     setScoringData,
     loadExistingScoringData,
-    getScoringStatus,
     handleSetScore,
     handleBatchScore,
     calculateQuestionProgress,
   } = useScoringData({
-    projectId,
     currentUserId,
     setCurrentUserId: () => {}, // データローダーで管理するため空関数
     gradingMode,
@@ -117,13 +112,9 @@ export default function ScoringMainView() {
   // フィルタリング管理hook
   const {
     filterSettings,
-    setFilterSettings,
     visibleAnswers,
-    recentlyScoredAnswers,
     setRecentlyScoredAnswers,
-    getAllGridAnswerData,
     getGridAnswerData,
-    getMasterAnswerData,
     handleRefreshFilter,
     handleToggleFilter,
     handleToggleFilterByScoreKey,
@@ -276,10 +267,6 @@ export default function ScoringMainView() {
   useScoringKeyboard({
     gradingMode,
     selectedAnswers,
-    currentStudentIndex,
-    currentQuestionIndex,
-    answerSheetsLength: answerSheets.length,
-    questionRegionsLength: questionRegions.length,
     onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
     onSetScore: handleSetScore,
     onNextQuestion: handleNextQuestion,

@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Save, RotateCcw, Grid3X3 } from "lucide-react"
+import { RotateCcw, Grid3X3 } from "lucide-react"
 import {
   QuestionGroupWithItems,
   LayoutRegionWithDetails,
@@ -49,7 +49,7 @@ export function QuestionAssignmentMatrix({
 
   // ドラッグ選択の状態
   const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
+  const [_dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
   const [dragInitialState, setDragInitialState] = useState<boolean | null>(null)
   const tableRef = useRef<HTMLTableElement>(null)
 
@@ -265,34 +265,6 @@ export function QuestionAssignmentMatrix({
     }
   }
 
-  // 変更を保存
-  const handleSave = async () => {
-    setSaving(true)
-
-    try {
-      for (const [questionId, itemIds] of Object.entries(assignments)) {
-        await onUpdateAssignments(questionId, Array.from(itemIds))
-      }
-
-      // 成功時にoriginalAssignmentsを更新
-      setOriginalAssignments(
-        JSON.parse(
-          JSON.stringify(
-            Object.fromEntries(
-              Object.entries(assignments).map(([key, value]) => [
-                key,
-                Array.from(value),
-              ]),
-            ),
-          ),
-        ),
-      )
-    } catch (error) {
-      console.error("保存に失敗しました:", error)
-    } finally {
-      setSaving(false)
-    }
-  }
 
   // 変更をリセット
   const handleReset = () => {
@@ -305,23 +277,6 @@ export function QuestionAssignmentMatrix({
     setAssignments(resetAssignments)
   }
 
-  // 変更があるかチェック
-  const hasChanges = () => {
-    for (const [questionId, itemIds] of Object.entries(assignments)) {
-      const originalIds = Array.isArray(originalAssignments[questionId])
-        ? (originalAssignments[questionId] as string[])
-        : []
-      const currentIds = Array.from(itemIds)
-
-      if (
-        currentIds.length !== originalIds.length ||
-        !currentIds.every((id) => originalIds.includes(id))
-      ) {
-        return true
-      }
-    }
-    return false
-  }
 
   if (loading) {
     return (

@@ -40,8 +40,17 @@ npm run build
 # Lintチェック
 npm run lint
 
+# 厳密なLint（警告ゼロ）
+npm run lint:strict
+
 # 型チェック（ビルド時に実行）
-npm run build
+npm run typecheck
+
+# 厳密な型チェック（未使用変数・関数も検出）
+npm run typecheck:strict
+
+# 全チェック（型・lint）
+npm run check-all
 
 # テスト実行 (未実装の場合は追加予定)
 npm test

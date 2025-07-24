@@ -54,7 +54,6 @@ export default function QuestionNavigator({
   questionProgress,
 }: QuestionNavigatorProps) {
   const currentQuestion = questionRegions[currentQuestionIndex]
-  const currentProgress = questionProgress?.[currentQuestion?.id]
 
   return (
     <TooltipProvider delayDuration={300}>

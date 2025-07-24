@@ -25,7 +25,6 @@ export function AnswerCell({
   isPageDisabled,
   isCellDisabled,
   isFileDisabled,
-  onToggleCell,
   onToggleFile,
   onRemoveFile,
   onCellClick,

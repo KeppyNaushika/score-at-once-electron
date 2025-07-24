@@ -1,4 +1,3 @@
-import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 import type {
   PlacementStrategy,
   UnifiedFile,
@@ -18,12 +17,6 @@ export interface UseDragDropParams {
   onFilesChange: (files: UnifiedFile[]) => void
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
-  disabledState: ExtendedDisabledState
-  setDisabledState: (
-    state:
-      | ExtendedDisabledState
-      | ((prev: ExtendedDisabledState) => ExtendedDisabledState),
-  ) => void
   students?: UnifiedStudent[]
   masterImageCount?: number
   mode?: "upload" | "view"

@@ -38,8 +38,8 @@ export function AreaRenderer({
   zoom,
 }: AreaRendererProps) {
   // 全てのhooksを最初に定義（条件分岐の前に）
-  const [containerReady, setContainerReady] = useState(false)
-  const [forceUpdate, setForceUpdate] = useState(0)
+  const [_containerReady, setContainerReady] = useState(false)
+  const [_forceUpdate, setForceUpdate] = useState(0)
 
   // ウィンドウリサイズ時の再計算を強制
   const triggerUpdate = useCallback(() => {

@@ -13,15 +13,14 @@ import { cn } from "@/lib/utils"
 import {
   ChevronsLeft,
   ChevronsRight,
-  GraduationCap,
   Home,
   LogIn,
   LogOut,
   School,
   Settings,
+  TestTube2,
   User,
   Users,
-  TestTube2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"

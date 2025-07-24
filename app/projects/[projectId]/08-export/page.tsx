@@ -47,10 +47,6 @@ export default function ExportPage() {
     setExportStatus,
     currentStep,
     setCurrentStep,
-    currentStepIndex,
-    setCurrentStepIndex,
-    totalSteps,
-    setTotalSteps,
     isExporting,
     setIsExporting,
   } = useExportPage()
@@ -66,7 +62,6 @@ export default function ExportPage() {
     setExportProgress(0)
     setExportStatus("processing")
     setCurrentStep("初期化中...")
-    setCurrentStepIndex(0)
 
     try {
       const selectedStudentIds = Array.from(selectedStudents)
@@ -256,8 +251,6 @@ export default function ExportPage() {
             progress={exportProgress}
             status={exportStatus}
             currentStep={currentStep}
-            totalSteps={totalSteps}
-            currentStepIndex={currentStepIndex}
           />
 
           {/* 警告モーダル */}

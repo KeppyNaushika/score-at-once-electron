@@ -1,23 +1,23 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
 } from "@dnd-kit/core"
 import {
   arrayMove,
-  SortableContext,
   rectSortingStrategy,
+  SortableContext,
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import { useCallback, useEffect, useState } from "react"
 
 // テスト用のファイル型
 interface TestFile {
@@ -33,14 +33,12 @@ function SortableCell({
   row,
   col,
   draggedFileId,
-  isAnimationSuppressed,
 }: {
   cellId: string
   file?: TestFile
   row: number
   col: number
   draggedFileId: string | null
-  isAnimationSuppressed: boolean
 }) {
   const {
     attributes,
@@ -54,10 +52,6 @@ function SortableCell({
     disabled: !file,
     // ドラッグ中とドラッグ後のアニメーションを適切に制御
     animateLayoutChanges: (args) => {
-      // dragend直後はアニメーションを抑制（瞬間的な移動を防ぐ）
-      if (isAnimationSuppressed) {
-        return false
-      }
       // ドラッグされている要素自体はアニメーションしない（DragOverlayが担当）
       if (args.isSorting && draggedFileId === file?.id) {
         return false
@@ -70,11 +64,7 @@ function SortableCell({
   const style = {
     transform: CSS.Transform.toString(transform),
     // アニメーション制御：抑制時は即座に移動、通常時はスムーズ
-    transition: isDragging
-      ? "none"
-      : isAnimationSuppressed
-        ? "none"
-        : transition || "transform 200ms ease",
+    transition: isDragging ? "none" : transition || "transform 200ms ease",
     // ドラッグ中の元セルは非表示にしてDragOverlayを見せる
     opacity: isDragging ? 0 : 1,
   }
@@ -126,10 +116,8 @@ export default function DndKitTestPage() {
   ])
 
   // ドラッグ状態管理
-  const [isDragging, setIsDragging] = useState(false)
   const [activeFile, setActiveFile] = useState<TestFile | null>(null)
   const [draggedFileId, setDraggedFileId] = useState<string | null>(null)
-  const [isAnimationSuppressed, setIsAnimationSuppressed] = useState(false)
 
   // セル位置からファイルを取得する関数
   const getFileAtPosition = useCallback(
@@ -145,27 +133,6 @@ export default function DndKitTestPage() {
       }
 
       return files[index]
-    },
-    [files, placementStrategy],
-  )
-
-  // ファイル位置からセル座標を取得する関数
-  const getPositionOfFile = useCallback(
-    (fileId: string): { row: number; col: number } | null => {
-      const fileIndex = files.findIndex((f) => f.id === fileId)
-      if (fileIndex === -1 || fileIndex >= 9) return null
-
-      let row: number, col: number
-
-      if (placementStrategy === "row-first") {
-        row = Math.floor(fileIndex / 3)
-        col = fileIndex % 3
-      } else {
-        col = Math.floor(fileIndex / 3)
-        row = fileIndex % 3
-      }
-
-      return { row, col }
     },
     [files, placementStrategy],
   )
@@ -203,7 +170,6 @@ export default function DndKitTestPage() {
   // ドラッグ開始処理
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      setIsDragging(true)
       const activeId = event.active.id as string
       const file = files.find((f) => f.id === activeId)
       setActiveFile(file || null)
@@ -217,12 +183,10 @@ export default function DndKitTestPage() {
     const { active, over } = event
 
     if (!over || active.id === over.id) {
-      setIsDragging(false)
       setActiveFile(null)
       setDraggedFileId(null)
       return
     }
-
 
     // ファイル配列を更新（DragOverlay完了後）
     setFiles((prevFiles) => {
@@ -231,12 +195,10 @@ export default function DndKitTestPage() {
 
       if (activeIndex === -1 || overIndex === -1) return prevFiles
 
-
       return arrayMove(prevFiles, activeIndex, overIndex)
     })
 
     // 状態をリセット（即座に）
-    setIsDragging(false)
     setActiveFile(null)
     setDraggedFileId(null)
   }
@@ -352,7 +314,6 @@ export default function DndKitTestPage() {
                       row={row}
                       col={col}
                       draggedFileId={draggedFileId}
-                      isAnimationSuppressed={isAnimationSuppressed}
                     />
                   )
                 }),

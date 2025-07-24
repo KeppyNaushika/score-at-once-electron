@@ -3,19 +3,14 @@
  * table-dnd-kit-test統合版
  */
 
-import { useState, useCallback, useEffect } from "react"
-import { toast } from "sonner"
-import type {
-  UnifiedStudent,
-  UnifiedFile,
-  UploadData,
-} from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
 import {
   convertToUnifiedStudent,
-  convertToUnifiedFile,
   convertToUploadData,
 } from "@/utils/answerSheetConverter"
 import { sortStudentsForTable } from "@/utils/studentOrderUtils"
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
 
 // ============================================================================
 // フックのProps
@@ -37,12 +32,12 @@ interface UseAnswerSheetGridReturn {
   unifiedStudents: UnifiedStudent[]
   isUploading: boolean
   uploadProgress: number
-  
+
   // Actions
   setFiles: (files: UnifiedFile[]) => void
   addFiles: (newFiles: UnifiedFile[]) => void
   handleUpload: (filesToUpload: UnifiedFile[]) => Promise<void>
-  
+
   // Computed
   sortedStudents: UnifiedStudent[]
   placedFiles: UnifiedFile[]
@@ -74,14 +69,13 @@ export function useAnswerSheetGrid({
 
   const unifiedStudents = students.map(convertToUnifiedStudent)
   const sortedStudents = sortStudentsForTable(unifiedStudents)
-  
 
   // ============================================================================
   // 計算済みプロパティ
   // ============================================================================
 
-  const placedFiles = files.filter(f => f.studentId)
-  const unplacedFiles = files.filter(f => !f.studentId)
+  const placedFiles = files.filter((f) => f.studentId)
+  const unplacedFiles = files.filter((f) => !f.studentId)
   const totalFiles = files.length
   const placedCount = placedFiles.length
 
@@ -90,65 +84,76 @@ export function useAnswerSheetGrid({
   // ============================================================================
 
   const addFiles = useCallback((newFiles: UnifiedFile[]) => {
-    setFiles(prev => [...prev, ...newFiles])
+    setFiles((prev) => [...prev, ...newFiles])
   }, [])
 
   // ============================================================================
   // アップロード処理
   // ============================================================================
 
-  const handleUpload = useCallback(async (filesToUpload: UnifiedFile[]) => {
-    if (filesToUpload.length === 0) {
-      toast.error("アップロードするファイルがありません")
-      return
-    }
-
-    try {
-      setIsUploading(true)
-      setUploadProgress(0)
-
-      // UploadData形式に変換
-      const uploadData = convertToUploadData(filesToUpload, unifiedStudents)
-
-
-      // プログレス更新（簡易版）
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return 90
-          }
-          return prev + 10
-        })
-      }, 100)
-
-      // ElectronAPIを呼び出し
-      const result = await window.electronAPI.uploadAnswerSheets(projectId, uploadData)
-
-      clearInterval(progressInterval)
-
-      if (result.success) {
-        setUploadProgress(100)
-        toast.success(`${filesToUpload.length}件のファイルをアップロードしました`)
-        
-        setFiles(prev => prev.filter(f => !filesToUpload.some(uploaded => uploaded.id === f.id)))
-        
-        onUploadComplete?.()
-      } else {
-        throw new Error(result.error || "アップロードに失敗しました")
+  const handleUpload = useCallback(
+    async (filesToUpload: UnifiedFile[]) => {
+      if (filesToUpload.length === 0) {
+        toast.error("アップロードするファイルがありません")
+        return
       }
-    } catch (error) {
-      console.error("アップロードエラー:", error)
-      toast.error(
-        error instanceof Error 
-          ? `アップロードに失敗しました: ${error.message}`
-          : "アップロードに失敗しました"
-      )
-    } finally {
-      setIsUploading(false)
-      setUploadProgress(0)
-    }
-  }, [projectId, unifiedStudents, onUploadComplete])
+
+      try {
+        setIsUploading(true)
+        setUploadProgress(0)
+
+        // UploadData形式に変換
+        const uploadData = convertToUploadData(filesToUpload, unifiedStudents)
+
+        // プログレス更新（簡易版）
+        const progressInterval = setInterval(() => {
+          setUploadProgress((prev) => {
+            if (prev >= 90) {
+              clearInterval(progressInterval)
+              return 90
+            }
+            return prev + 10
+          })
+        }, 100)
+
+        // ElectronAPIを呼び出し
+        const result = await window.electronAPI.uploadAnswerSheets(
+          projectId,
+          uploadData,
+        )
+
+        clearInterval(progressInterval)
+
+        if (result.success) {
+          setUploadProgress(100)
+          toast.success(
+            `${filesToUpload.length}件のファイルをアップロードしました`,
+          )
+
+          setFiles((prev) =>
+            prev.filter(
+              (f) => !filesToUpload.some((uploaded) => uploaded.id === f.id),
+            ),
+          )
+
+          onUploadComplete?.()
+        } else {
+          throw new Error(result.error || "アップロードに失敗しました")
+        }
+      } catch (error) {
+        console.error("アップロードエラー:", error)
+        toast.error(
+          error instanceof Error
+            ? `アップロードに失敗しました: ${error.message}`
+            : "アップロードに失敗しました",
+        )
+      } finally {
+        setIsUploading(false)
+        setUploadProgress(0)
+      }
+    },
+    [projectId, unifiedStudents, onUploadComplete],
+  )
 
   return {
     // State
@@ -156,12 +161,12 @@ export function useAnswerSheetGrid({
     unifiedStudents,
     isUploading,
     uploadProgress,
-    
+
     // Actions
     setFiles,
     addFiles,
     handleUpload,
-    
+
     // Computed
     sortedStudents,
     placedFiles,
