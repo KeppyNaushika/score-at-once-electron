@@ -18,7 +18,11 @@ export function useTableData(
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean,
   mode?: "upload" | "view",
   allowOverwrite?: boolean,
-  existingAnswerSheets?: any[],
+  existingAnswerSheets?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+  }>,
 ) {
   // 動的無効化計算：答案がない位置を無効化（確認モードのみ）
   const calculateDynamicDisabledPositions = useCallback(() => {
@@ -89,10 +93,16 @@ export function useTableData(
   const positionsWithExistingAnswers = useMemo(() => {
     const positions = new Set<number>()
     
-    // アップロードモードでは existingAnswerSheets を使用
-    const dataSource = mode === "upload" && existingAnswerSheets 
-      ? existingAnswerSheets 
-      : files
+    // デバッグ情報
+    if (mode === "upload") {
+      console.log('=== DEBUG: positionsWithExistingAnswers ===')
+      console.log('mode:', mode)
+      console.log('existingAnswerSheets:', existingAnswerSheets?.length, existingAnswerSheets?.slice(0, 3))
+      console.log('sortedStudents:', sortedStudents.length, sortedStudents.slice(0, 3).map(s => ({
+        id: s.id.slice(0, 8),
+        name: `${s.lastName} ${s.firstName}`
+      })))
+    }
     
     // sortedStudentsを使用してテーブル表示順序と一致させる
     for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
@@ -111,6 +121,10 @@ export function useTableData(
             sheet.studentId === student.id && 
             sheet.pageNumber === pageNumber
           )
+          
+          if (hasAnswerForPosition && studentIndex < 3 && pageIndex < 2) {
+            console.log(`Found existing answer: student ${student.lastName} ${student.firstName} (${student.id.slice(0, 8)}), page ${pageNumber}, position ${position}`)
+          }
         } else {
           // 確認モード: files から判定
           hasAnswerForPosition = files.some(file => 
@@ -124,6 +138,11 @@ export function useTableData(
           positions.add(position)
         }
       }
+    }
+    
+    if (mode === "upload") {
+      console.log('positionsWithExistingAnswers:', Array.from(positions).slice(0, 10))
+      console.log('=== END DEBUG ===')
     }
     
     return positions

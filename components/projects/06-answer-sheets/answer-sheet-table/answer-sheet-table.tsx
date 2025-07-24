@@ -59,7 +59,11 @@ interface AnswerSheetTableProps {
   onResetDragDrop?: React.MutableRefObject<(() => void) | null>
   
   // 上書き制御用（アップロードモードでの既存答案情報）
-  existingAnswerSheets?: any[]
+  existingAnswerSheets?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+  }>
 }
 
 // ============================================================================
