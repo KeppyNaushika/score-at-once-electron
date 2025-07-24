@@ -24,61 +24,6 @@ export function useTableData(
     pageNumber: number
   }>,
 ) {
-  // 動的無効化計算：答案がない位置を無効化（確認モードのみ）
-  const calculateDynamicDisabledPositions = useCallback(() => {
-    const dynamicDisabled = new Set<number>()
-    
-    // 確認モードでは常に答案がない位置のみ無効化
-    if (mode === "view") {
-      for (let studentIndex = 0; studentIndex < students.length; studentIndex++) {
-        const student = students[studentIndex]
-        
-        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-          const pageNumber = pageIndex + 1
-          const position = studentIndex * masterImageCount + pageIndex
-          
-          // 手動無効化済みの位置はスキップ
-          if (disabledState.rows.has(studentIndex) || 
-              disabledState.cols.has(pageIndex) || 
-              disabledState.positions.has(position)) {
-            continue
-          }
-          
-          // その位置に対応する答案があるかチェック
-          const hasAnswerForPosition = files.some(file => 
-            file.studentId === student.id && 
-            file.pageNumber === pageNumber &&
-            !disabledState.files.has(file.id)
-          )
-          
-          // 答案がない場合は動的無効化
-          if (!hasAnswerForPosition) {
-            dynamicDisabled.add(position)
-          }
-        }
-      }
-    }
-    // アップロードモードでは動的無効化は行わない（警告オーバーレイのみ）
-    
-    return dynamicDisabled
-  }, [files, students, masterImageCount, disabledState, mode])
-  
-  // 動的無効化位置の計算
-  const dynamicDisabledPositions = useMemo(() => 
-    calculateDynamicDisabledPositions(), 
-    [calculateDynamicDisabledPositions]
-  )
-  
-  // 拡張されたisPositionDisabled関数
-  const enhancedIsPositionDisabled = useCallback((studentIndex: number, pageIndex: number) => {
-    const position = studentIndex * masterImageCount + pageIndex
-    
-    // 元の無効化チェック
-    if (isPositionDisabled(studentIndex, pageIndex)) return true
-    
-    // 動的無効化チェック
-    return dynamicDisabledPositions.has(position)
-  }, [isPositionDisabled, masterImageCount, dynamicDisabledPositions])
   // 生徒のソート（customOrder準拠）
   const sortedStudents = useMemo(() => {
     return [...students].sort((a, b) => {
@@ -88,65 +33,123 @@ export function useTableData(
     })
   }, [students])
 
+  // 動的無効化計算：答案がない位置を無効化（確認モードのみ）
+  const calculateDynamicDisabledPositions = useCallback(() => {
+    const dynamicDisabled = new Set<number>()
+
+    // 確認モードでは答案がない位置のみ無効化
+    if (mode === "view") {
+      for (
+        let studentIndex = 0;
+        studentIndex < sortedStudents.length;
+        studentIndex++
+      ) {
+        const student = sortedStudents[studentIndex]
+
+        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+          const pageNumber = pageIndex + 1
+          const position = studentIndex * masterImageCount + pageIndex
+
+          // 手動無効化済みの位置はスキップ
+          if (
+            disabledState.rows.has(studentIndex) ||
+            disabledState.cols.has(pageIndex) ||
+            disabledState.positions.has(position)
+          ) {
+            continue
+          }
+
+          // その位置に対応する答案があるかチェック
+          const hasAnswerForPosition = files.some(
+            (file) =>
+              file.studentId === student.id &&
+              file.pageNumber === pageNumber &&
+              !disabledState.files.has(file.id),
+          )
+
+          // 答案がない場合は動的無効化
+          if (!hasAnswerForPosition) {
+            dynamicDisabled.add(position)
+          }
+        }
+      }
+    }
+    // アップロードモードでは動的無効化は行わない（警告オーバーレイのみ）
+
+    return dynamicDisabled
+  }, [files, sortedStudents, masterImageCount, disabledState, mode])
+
+  // 動的無効化位置の計算
+  const dynamicDisabledPositions = useMemo(
+    () => calculateDynamicDisabledPositions(),
+    [calculateDynamicDisabledPositions],
+  )
+
+  // 拡張されたisPositionDisabled関数
+  const enhancedIsPositionDisabled = useCallback(
+    (studentIndex: number, pageIndex: number) => {
+      const position = studentIndex * masterImageCount + pageIndex
+
+      // 元の無効化チェック
+      if (isPositionDisabled(studentIndex, pageIndex)) return true
+
+      // 動的無効化チェック
+      return dynamicDisabledPositions.has(position)
+    },
+    [isPositionDisabled, masterImageCount, dynamicDisabledPositions],
+  )
+
   // 既存答案がある位置の計算（警告オーバーレイ用）
   // sortedStudentsを使用してテーブル表示順序と一致させる
   const positionsWithExistingAnswers = useMemo(() => {
     const positions = new Set<number>()
-    
-    // デバッグ情報
-    if (mode === "upload") {
-      console.log('=== DEBUG: positionsWithExistingAnswers ===')
-      console.log('mode:', mode)
-      console.log('existingAnswerSheets:', existingAnswerSheets?.length, existingAnswerSheets?.slice(0, 3))
-      console.log('sortedStudents:', sortedStudents.length, sortedStudents.slice(0, 3).map(s => ({
-        id: s.id.slice(0, 8),
-        name: `${s.lastName} ${s.firstName}`
-      })))
-    }
-    
+
     // sortedStudentsを使用してテーブル表示順序と一致させる
-    for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
+    for (
+      let studentIndex = 0;
+      studentIndex < sortedStudents.length;
+      studentIndex++
+    ) {
       const student = sortedStudents[studentIndex]
-      
+
       for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
         const pageNumber = pageIndex + 1
         const position = studentIndex * masterImageCount + pageIndex
-        
+
         // その位置に対応する答案があるかチェック
         let hasAnswerForPosition = false
-        
+
         if (mode === "upload" && existingAnswerSheets) {
           // アップロードモード: existingAnswerSheets から判定
-          hasAnswerForPosition = existingAnswerSheets.some(sheet => 
-            sheet.studentId === student.id && 
-            sheet.pageNumber === pageNumber
+          hasAnswerForPosition = existingAnswerSheets.some(
+            (sheet) =>
+              sheet.studentId === student.id && sheet.pageNumber === pageNumber,
           )
-          
-          if (hasAnswerForPosition && studentIndex < 3 && pageIndex < 2) {
-            console.log(`Found existing answer: student ${student.lastName} ${student.firstName} (${student.id.slice(0, 8)}), page ${pageNumber}, position ${position}`)
-          }
         } else {
           // 確認モード: files から判定
-          hasAnswerForPosition = files.some(file => 
-            file.studentId === student.id && 
-            file.pageNumber === pageNumber &&
-            !disabledState.files.has(file.id)
+          hasAnswerForPosition = files.some(
+            (file) =>
+              file.studentId === student.id &&
+              file.pageNumber === pageNumber &&
+              !disabledState.files.has(file.id),
           )
         }
-        
+
         if (hasAnswerForPosition) {
           positions.add(position)
         }
       }
     }
-    
-    if (mode === "upload") {
-      console.log('positionsWithExistingAnswers:', Array.from(positions).slice(0, 10))
-      console.log('=== END DEBUG ===')
-    }
-    
+
     return positions
-  }, [files, sortedStudents, masterImageCount, disabledState.files, mode, existingAnswerSheets])
+  }, [
+    files,
+    sortedStudents,
+    masterImageCount,
+    disabledState.files,
+    mode,
+    existingAnswerSheets,
+  ])
 
   // 有効/無効ファイルの取得
   const getEnabledFiles = useCallback(() => {
@@ -177,9 +180,6 @@ export function useTableData(
 
   // テーブルデータの生成
   const tableData = useMemo(() => {
-    // デバッグ: 元データの確認
-    console.log(`=== DEBUG: mode=${mode}, files=${files.length}, enabled=${getEnabledFiles().length} ===`)
-    
     const enabledFiles = getEnabledFiles()
     const data: CellData[][] = []
 
@@ -314,73 +314,50 @@ export function useTableData(
         })
       }
 
-      // アップロードモード: ファイルの実際の位置に基づいてマッピング
+      // アップロードモード: 新規ファイルのみを配置戦略に基づいて配置
       const filePositionMap = new Map<string, UnifiedFile>()
-      
-      // デバッグ情報
-      console.log(`=== UPLOAD MODE: ${enabledFiles.length} files, ${sortedStudents.length} students ===`)
-      
-      // Step 1: 既存答案を先に配置
-      enabledFiles.forEach((file) => {
-        if (file.studentId && file.pageNumber) {
-          const studentIndex = sortedStudents.findIndex(s => s.id === file.studentId)
-          const pageIndex = file.pageNumber - 1
-          
-          console.log(`既存答案 ${file.id.slice(0, 8)} -> studentIndex=${studentIndex}, pageIndex=${pageIndex}`)
-          
-          if (studentIndex !== -1 && pageIndex >= 0 && pageIndex < masterImageCount) {
-            const isDisabled = enhancedIsPositionDisabled(studentIndex, pageIndex) 
-            console.log(`Position (${studentIndex}, ${pageIndex}): disabled=${isDisabled}`)
-            
-            if (!isDisabled) {
-              const key = `${studentIndex}-${pageIndex}`
-              filePositionMap.set(key, file)
-              console.log(`既存答案をマッピング: ${key}`)
+
+      // アップロードモードでは新規ファイル（既存答案でない）のみを配置
+      const newFiles = enabledFiles.filter(
+        (file) => !file.studentId || !file.pageNumber,
+      )
+
+      // 新規ファイルがある場合のみ配置処理を行う
+      if (newFiles.length > 0) {
+        // 有効な位置を配置戦略に基づいて取得
+        const availablePositions = []
+        for (let si = 0; si < sortedStudents.length; si++) {
+          for (let pi = 0; pi < masterImageCount; pi++) {
+            if (!enhancedIsPositionDisabled(si, pi)) {
+              availablePositions.push({ studentIndex: si, pageIndex: pi })
             }
           }
         }
-      })
-      
-      // Step 2: 新規ファイルを空いている位置に配置
-      const newFiles = enabledFiles.filter(file => !file.studentId || !file.pageNumber)
-      console.log(`新規ファイル数: ${newFiles.length}`)
-      
-      // 有効な位置を配置戦略に基づいて取得
-      const availablePositions = []
-      for (let si = 0; si < sortedStudents.length; si++) {
-        for (let pi = 0; pi < masterImageCount; pi++) {
-          if (!enhancedIsPositionDisabled(si, pi)) {
-            availablePositions.push({ studentIndex: si, pageIndex: pi })
+
+        // 配置戦略に基づいてソート
+        if (fileOrder === "page-first") {
+          availablePositions.sort((a, b) => {
+            if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex
+            return a.studentIndex - b.studentIndex
+          })
+        } else {
+          availablePositions.sort((a, b) => {
+            if (a.studentIndex !== b.studentIndex)
+              return a.studentIndex - b.studentIndex
+            return a.pageIndex - b.pageIndex
+          })
+        }
+
+        // 新規ファイルを順次配置
+        let newFileIndex = 0
+        for (const pos of availablePositions) {
+          const posKey = `${pos.studentIndex}-${pos.pageIndex}`
+          if (newFileIndex < newFiles.length) {
+            filePositionMap.set(posKey, newFiles[newFileIndex])
+            newFileIndex++
           }
         }
       }
-      
-      // 配置戦略に基づいてソート
-      if (fileOrder === "page-first") {
-        availablePositions.sort((a, b) => {
-          if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex
-          return a.studentIndex - b.studentIndex
-        })
-      } else {
-        availablePositions.sort((a, b) => {
-          if (a.studentIndex !== b.studentIndex) return a.studentIndex - b.studentIndex
-          return a.pageIndex - b.pageIndex
-        })
-      }
-      
-      // 新規ファイルを空いている位置に順次配置
-      let newFileIndex = 0
-      for (const pos of availablePositions) {
-        const posKey = `${pos.studentIndex}-${pos.pageIndex}`
-        if (!filePositionMap.has(posKey) && newFileIndex < newFiles.length) {
-          filePositionMap.set(posKey, newFiles[newFileIndex])
-          console.log(`新規ファィル ${newFiles[newFileIndex].id.slice(0, 8)} をマッピング: ${posKey}`)
-          newFileIndex++
-        }
-      }
-      
-      console.log('filePositionMap keys:', Array.from(filePositionMap.keys()))
-      console.log('=== END DEBUG ===')
 
       // テーブルデータを生成
       for (
@@ -393,10 +370,22 @@ export function useTableData(
 
         for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
           const position = studentIndex * masterImageCount + pageIndex
-          const isDisabled = enhancedIsPositionDisabled(studentIndex, pageIndex)
+          const isManuallyDisabled = enhancedIsPositionDisabled(
+            studentIndex,
+            pageIndex,
+          )
+
+          // 上書き無効時の既存答案チェック
+          const hasExistingAnswer =
+            mode === "upload" &&
+            !allowOverwrite &&
+            positionsWithExistingAnswers.has(position)
+
+          // 総合的な無効化判定（手動無効化 OR 上書き無効時の既存答案）
+          const isDisabled = isManuallyDisabled || hasExistingAnswer
 
           if (isDisabled) {
-            // 無効セル（欠席者等）
+            // 無効セル（手動無効化、上書き無効時の既存答案等）
             row.push({
               type: "disabled",
               position,
@@ -404,7 +393,7 @@ export function useTableData(
               pageNumber: pageIndex + 1,
             })
           } else {
-            // 有効セル: マッピングからファイルを取得
+            // 有効セル: 新規ファイルまたは空セル
             const key = `${studentIndex}-${pageIndex}`
             const file = filePositionMap.get(key)
 
@@ -417,6 +406,7 @@ export function useTableData(
                 file,
               })
             } else {
+              // 空セル（ファイルドロップ可能、右クリックメニュー表示）
               row.push({
                 type: "empty",
                 position,
@@ -439,6 +429,8 @@ export function useTableData(
     getEnabledFiles,
     enhancedIsPositionDisabled,
     mode,
+    allowOverwrite,
+    positionsWithExistingAnswers,
   ])
 
   return {

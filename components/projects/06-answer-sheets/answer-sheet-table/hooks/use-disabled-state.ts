@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { UnifiedStudent, UnifiedFile } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -11,7 +11,7 @@ export function useDisabledState() {
     files: new Set(),
   })
 
-  // 答案上書きモードの状態管理
+  // 既存答案上書きモードの状態管理
   const [allowOverwrite, setAllowOverwrite] = useState(false)
 
   const toggleRowDisabled = useCallback((rowIndex: number) => {
@@ -75,10 +75,32 @@ export function useDisabledState() {
   )
 
   // 初期化関数（現在は何もしない）
-  const initializeStudentsWithoutAnswers = useCallback((students: UnifiedStudent[], files: UnifiedFile[]) => {
-    // セル単位の動的無効化に統一するため、行の無効化は行わない
-    // 動的無効化が答案の有無に基づいてセル単位で制御する
-  }, [])
+  const initializeStudentsWithoutAnswers = useCallback(
+    (students: UnifiedStudent[], files: UnifiedFile[]) => {
+      // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
+      const sortedStudents = [...students].sort((a, b) => {
+        const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
+        const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+        return aOrder - bOrder
+      })
+
+      const absentStudentRows = new Set<number>()
+      sortedStudents.forEach((student, index) => {
+        if (student.status === "absent") {
+          absentStudentRows.add(index)
+        }
+      })
+
+      // 欠席生徒がいる場合のみ状態を更新
+      if (absentStudentRows.size > 0) {
+        setDisabledState((prev) => ({
+          ...prev,
+          rows: new Set([...prev.rows, ...absentStudentRows]),
+        }))
+      }
+    },
+    [],
+  )
 
   return {
     disabledState,
