@@ -55,7 +55,8 @@ interface AnswerSheetTableProps {
   // 変更状態管理用（確認モードのみ）
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
-  onAddPendingChange?: (change: PendingChange) => void
+  onUpdatePendingChanges?: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void
+  onResetDragDrop?: React.MutableRefObject<(() => void) | null>
 }
 
 // ============================================================================
@@ -77,8 +78,9 @@ export function AnswerSheetTable({
   mode = "upload",
   onReloadData,
   pendingChanges,
-  affectedCells,
-  onAddPendingChange,
+  affectedCells,  
+  onUpdatePendingChanges,
+  onResetDragDrop,
 }: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
@@ -123,6 +125,7 @@ export function AnswerSheetTable({
     handleDragStart,
     handleDragOver,
     handleDragEnd,
+    resetToInitialState,
   } = useDragDrop(
     files,
     onFilesChange,
@@ -133,9 +136,17 @@ export function AnswerSheetTable({
     students,
     masterImageCount,
     mode,
+    fileOrder,
     onReloadData,
-    onAddPendingChange,
+    onUpdatePendingChanges,
   )
+
+  // コールバック関数をプロップとして渡すためのuseEffect
+  useEffect(() => {
+    if (onResetDragDrop) {
+      onResetDragDrop.current = resetToInitialState
+    }
+  }, [onResetDragDrop, resetToInitialState])
 
   // ============================================================================
   // ローカルState
@@ -329,6 +340,7 @@ export function AnswerSheetTable({
                               onUploadToCell={() =>
                                 handleUploadToCell(cellData.position)
                               }
+                              isPendingChange={false} // 空のセルは通常変更対象外
                             />
                           )
                         }

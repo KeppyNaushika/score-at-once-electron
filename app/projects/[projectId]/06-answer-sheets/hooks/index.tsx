@@ -109,23 +109,50 @@ export function useAnswerSheetsData(projectId: string) {
   }
 }
 
-export function usePendingChanges(onDataReload: () => Promise<void>) {
+export function usePendingChanges(onDataReload: () => Promise<void>, students?: StudentData[]) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
-  const handleAddPendingChange = useCallback((change: PendingChange) => {
-    setPendingChanges((prev) => [...prev, change])
-    setAffectedCells((prev) => new Set([...prev, change.answerSheetId1, change.answerSheetId2]))
-    toast.success("変更を保留しました", {
-      description: "「変更を反映」ボタンで確定してください",
-    })
-  }, [])
+  const handleUpdatePendingChanges = useCallback((changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => {
+    // PendingChange配列を一括作成
+    const newPendingChanges = changedFiles.map(({ fileId, fromState, toState }) => {
+      // 生徒名を解決
+      const fromStudent = students?.find(s => s.id === fromState.studentId)
+      const toStudent = students?.find(s => s.id === toState.studentId)
 
-  const handleApplyChanges = useCallback(async (option: ScoringDataOption) => {
+      const change: PendingChange = {
+        id: `${fileId}-change-${Date.now()}-${fromState.studentId}-${fromState.pageNumber}-${toState.studentId}-${toState.pageNumber}`,
+        answerSheetId1: fileId,
+        answerSheetId2: fileId,
+        timestamp: new Date(),
+        position1: {
+          studentId: fromState.studentId,
+          pageNumber: fromState.pageNumber,
+          studentName: fromStudent ? `${fromStudent.lastName} ${fromStudent.firstName}` : undefined,
+        },
+        position2: {
+          studentId: toState.studentId,
+          pageNumber: toState.pageNumber,
+          studentName: toStudent ? `${toStudent.lastName} ${toStudent.firstName}` : undefined,
+        },
+      }
+      return change
+    })
+
+    // 一括更新
+    setPendingChanges(newPendingChanges)
+    setAffectedCells(new Set(changedFiles.map(({ fileId }) => fileId)))
+  }, [students])
+
+  const handleApplyChanges = useCallback(async (option: ScoringDataOption, resetDragDropFn?: () => void) => {
     if (option === "cancel") {
       setPendingChanges([])
       setAffectedCells(new Set())
+      // DnD配列も初期状態に戻す
+      if (resetDragDropFn) {
+        resetDragDropFn()
+      }
       toast.info("変更をキャンセルしました")
       return
     }
@@ -162,7 +189,7 @@ export function usePendingChanges(onDataReload: () => Promise<void>) {
     pendingChanges,
     affectedCells,
     isConfirmModalOpen,
-    handleAddPendingChange,
+    handleUpdatePendingChanges,
     handleApplyChanges,
     openConfirmModal: () => setIsConfirmModalOpen(true),
     closeConfirmModal: () => setIsConfirmModalOpen(false),

@@ -46,13 +46,11 @@ export function TableHeader({
         </CardTitle>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* 配置戦略選択 - 確認モードでは非表示 */}
-          {mode === "upload" && (
-            <PlacementStrategySelector
-              fileOrder={fileOrder}
-              onFileOrderChange={onFileOrderChange}
-            />
-          )}
+          {/* 配置戦略選択 */}
+          <PlacementStrategySelector
+            fileOrder={fileOrder}
+            onFileOrderChange={onFileOrderChange}
+          />
 
           {/* プレビューモード切り替え */}
           <PreviewModeToggle

@@ -91,14 +91,22 @@ export function FilePreviewCell({
 
       if (nameRegionPreview) {
         return (
-          <Image
-            src={nameRegionPreview}
-            alt={`${file.name} - 氏名欄`}
-            className="h-full w-full object-contain"
-            width={200}
-            height={200}
-            unoptimized
-          />
+          <div className="relative h-full w-full">
+            <Image
+              src={nameRegionPreview}
+              alt={`${file.name} - 氏名欄`}
+              className="h-full w-full object-contain"
+              width={200}
+              height={200}
+              unoptimized
+            />
+            {/* デバッグ用オーバーレイ */}
+            <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+              <div>ID: {file.id.slice(0, 8)}</div>
+              <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+              <div>P: {file.pageNumber}</div>
+            </div>
+          </div>
         )
       }
     }
@@ -114,15 +122,23 @@ export function FilePreviewCell({
 
     if (imagePreview) {
       return (
-        <Image
-          ref={imgRef}
-          src={imagePreview}
-          alt={file.name}
-          className="h-full w-full object-contain"
-          width={200}
-          height={200}
-          unoptimized
-        />
+        <div className="relative h-full w-full">
+          <Image
+            ref={imgRef}
+            src={imagePreview}
+            alt={file.name}
+            className="h-full w-full object-contain"
+            width={200}
+            height={200}
+            unoptimized
+          />
+          {/* デバッグ用オーバーレイ */}
+          <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+            <div>ID: {file.id.slice(0, 8)}</div>
+            <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+            <div>P: {file.pageNumber}</div>
+          </div>
+        </div>
       )
     }
 
@@ -170,7 +186,7 @@ export function FilePreviewCell({
 
       {/* 変更予定オーバーレイ */}
       {isPendingChange && (
-        <div className="pointer-events-none absolute inset-0 bg-red-500 opacity-10" />
+        <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
       )}
 
       {/* 読み込み状態表示 */}

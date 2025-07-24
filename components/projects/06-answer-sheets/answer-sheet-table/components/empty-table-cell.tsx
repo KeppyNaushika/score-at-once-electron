@@ -18,6 +18,7 @@ export function EmptyTableCell({
   isPositionDisabled,
   onTogglePosition,
   onUploadToCell,
+  isPendingChange = false,
 }: EmptyTableCellProps) {
   return (
     <TableCell
@@ -61,6 +62,11 @@ export function EmptyTableCell({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+
+      {/* 変更予定オーバーレイ */}
+      {isPendingChange && (
+        <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
+      )}
     </TableCell>
   )
 }

@@ -61,6 +61,7 @@ export interface EmptyTableCellProps {
   isPositionDisabled: boolean
   onTogglePosition: () => void
   onUploadToCell: () => void
+  isPendingChange?: boolean
 }
 
 export interface TableHeaderProps {

@@ -41,7 +41,8 @@ export interface AnswerSheetUploadProps {
   // 変更状態管理用（確認モードのみ）
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
-  onAddPendingChange?: (change: PendingChange) => void
+  onUpdatePendingChanges?: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void
+  onResetDragDrop?: React.MutableRefObject<(() => void) | null>
 }
 
 export interface FileUploadZoneProps {
