@@ -141,6 +141,9 @@ export function useTableData(
 
   // テーブルデータの生成
   const tableData = useMemo(() => {
+    // デバッグ: 元データの確認
+    console.log(`=== DEBUG: mode=${mode}, files=${files.length}, enabled=${getEnabledFiles().length} ===`)
+    
     const enabledFiles = getEnabledFiles()
     const data: CellData[][] = []
 
@@ -279,17 +282,7 @@ export function useTableData(
       const filePositionMap = new Map<string, UnifiedFile>()
       
       // デバッグ情報
-      console.log('=== DEBUG: アップロードモード ファィルマッピング ===')
-      console.log('enabledFiles:', enabledFiles.length, enabledFiles.map(f => ({
-        id: f.id.slice(0, 8),
-        studentId: f.studentId?.slice(0, 8),
-        pageNumber: f.pageNumber,
-        name: f.name
-      })))
-      console.log('sortedStudents:', sortedStudents.map(s => ({
-        id: s.id.slice(0, 8),
-        name: `${s.lastName} ${s.firstName}`
-      })))
+      console.log(`=== UPLOAD MODE: ${enabledFiles.length} files, ${sortedStudents.length} students ===`)
       
       // Step 1: 既存答案を先に配置
       enabledFiles.forEach((file) => {

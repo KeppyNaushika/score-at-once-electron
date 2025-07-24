@@ -148,6 +148,8 @@ export function AnswerSheetsTabContent({
           students={students}
           masterImageCount={masterImageCount}
           onUploadComplete={onUploadComplete}
+          existingAnswerSheets={answerSheets}
+          mode="upload"
         />
       </TabsContent>
 
