@@ -1,13 +1,19 @@
 import { join } from "path"
-import { BrowserWindow, app, Menu } from "electron"
+import { BrowserWindow, app, Menu, nativeImage } from "electron"
 import isDev from "electron-is-dev"
 import menu from "./menu"
 
 export function createMainWindow(): BrowserWindow {
+  // アイコンのパスを設定
+  const iconPath = isDev 
+    ? join(__dirname, "../public/一括採点アイコン.png")
+    : join(process.resourcesPath, "app.asar/public/一括採点アイコン.png")
+  
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false, // 最初は非表示
+    icon: iconPath, // アイコンを設定
     webPreferences: {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,

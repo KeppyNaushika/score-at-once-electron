@@ -277,19 +277,81 @@ export function useTableData(
 
       // アップロードモード: ファイルの実際の位置に基づいてマッピング
       const filePositionMap = new Map<string, UnifiedFile>()
+      
+      // デバッグ情報
+      console.log('=== DEBUG: アップロードモード ファィルマッピング ===')
+      console.log('enabledFiles:', enabledFiles.length, enabledFiles.map(f => ({
+        id: f.id.slice(0, 8),
+        studentId: f.studentId?.slice(0, 8),
+        pageNumber: f.pageNumber,
+        name: f.name
+      })))
+      console.log('sortedStudents:', sortedStudents.map(s => ({
+        id: s.id.slice(0, 8),
+        name: `${s.lastName} ${s.firstName}`
+      })))
+      
+      // Step 1: 既存答案を先に配置
       enabledFiles.forEach((file) => {
-        // ファイルの実際のstudentIdとpageNumberに基づいて位置を特定
-        const studentIndex = sortedStudents.findIndex(s => s.id === file.studentId)
-        const pageIndex = file.pageNumber - 1
-        
-        if (studentIndex !== -1 && pageIndex >= 0 && pageIndex < masterImageCount) {
-          // その位置が無効化されていないかチェック
-          if (!enhancedIsPositionDisabled(studentIndex, pageIndex)) {
-            const key = `${studentIndex}-${pageIndex}`
-            filePositionMap.set(key, file)
+        if (file.studentId && file.pageNumber) {
+          const studentIndex = sortedStudents.findIndex(s => s.id === file.studentId)
+          const pageIndex = file.pageNumber - 1
+          
+          console.log(`既存答案 ${file.id.slice(0, 8)} -> studentIndex=${studentIndex}, pageIndex=${pageIndex}`)
+          
+          if (studentIndex !== -1 && pageIndex >= 0 && pageIndex < masterImageCount) {
+            const isDisabled = enhancedIsPositionDisabled(studentIndex, pageIndex) 
+            console.log(`Position (${studentIndex}, ${pageIndex}): disabled=${isDisabled}`)
+            
+            if (!isDisabled) {
+              const key = `${studentIndex}-${pageIndex}`
+              filePositionMap.set(key, file)
+              console.log(`既存答案をマッピング: ${key}`)
+            }
           }
         }
       })
+      
+      // Step 2: 新規ファイルを空いている位置に配置
+      const newFiles = enabledFiles.filter(file => !file.studentId || !file.pageNumber)
+      console.log(`新規ファイル数: ${newFiles.length}`)
+      
+      // 有効な位置を配置戦略に基づいて取得
+      const availablePositions = []
+      for (let si = 0; si < sortedStudents.length; si++) {
+        for (let pi = 0; pi < masterImageCount; pi++) {
+          if (!enhancedIsPositionDisabled(si, pi)) {
+            availablePositions.push({ studentIndex: si, pageIndex: pi })
+          }
+        }
+      }
+      
+      // 配置戦略に基づいてソート
+      if (fileOrder === "page-first") {
+        availablePositions.sort((a, b) => {
+          if (a.pageIndex !== b.pageIndex) return a.pageIndex - b.pageIndex
+          return a.studentIndex - b.studentIndex
+        })
+      } else {
+        availablePositions.sort((a, b) => {
+          if (a.studentIndex !== b.studentIndex) return a.studentIndex - b.studentIndex
+          return a.pageIndex - b.pageIndex
+        })
+      }
+      
+      // 新規ファイルを空いている位置に順次配置
+      let newFileIndex = 0
+      for (const pos of availablePositions) {
+        const posKey = `${pos.studentIndex}-${pos.pageIndex}`
+        if (!filePositionMap.has(posKey) && newFileIndex < newFiles.length) {
+          filePositionMap.set(posKey, newFiles[newFileIndex])
+          console.log(`新規ファィル ${newFiles[newFileIndex].id.slice(0, 8)} をマッピング: ${posKey}`)
+          newFileIndex++
+        }
+      }
+      
+      console.log('filePositionMap keys:', Array.from(filePositionMap.keys()))
+      console.log('=== END DEBUG ===')
 
       // テーブルデータを生成
       for (
