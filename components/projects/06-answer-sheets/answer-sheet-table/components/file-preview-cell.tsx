@@ -16,8 +16,10 @@ export function FilePreviewCell({
   drawNameRegionCanvas,
   imageLoadState = "pending",
   isPendingChange = false,
+  hasExistingAnswer = false,
 }: FilePreviewCellProps & {
   isPendingChange?: boolean
+  hasExistingAnswer?: boolean
 }) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null,
@@ -91,14 +93,24 @@ export function FilePreviewCell({
 
       if (nameRegionPreview) {
         return (
-          <Image
-            src={nameRegionPreview}
-            alt={`${file.name} - 氏名欄`}
-            className="h-full w-full object-contain"
-            width={200}
-            height={200}
-            unoptimized
-          />
+          <div className="relative h-full w-full">
+            <Image
+              src={nameRegionPreview}
+              alt={`${file.name} - 氏名欄`}
+              className="h-full w-full object-contain"
+              width={200}
+              height={200}
+              unoptimized
+            />
+            {/* デバッグ用オーバーレイ（開発環境のみ） */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+                <div>ID: {file.id.slice(0, 8)}</div>
+                <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+                <div>P: {file.pageNumber}</div>
+              </div>
+            )}
+          </div>
         )
       }
     }
@@ -114,15 +126,25 @@ export function FilePreviewCell({
 
     if (imagePreview) {
       return (
-        <Image
-          ref={imgRef}
-          src={imagePreview}
-          alt={file.name}
-          className="h-full w-full object-contain"
-          width={200}
-          height={200}
-          unoptimized
-        />
+        <div className="relative h-full w-full">
+          <Image
+            ref={imgRef}
+            src={imagePreview}
+            alt={file.name}
+            className="h-full w-full object-contain"
+            width={200}
+            height={200}
+            unoptimized
+          />
+          {/* デバッグ用オーバーレイ（開発環境のみ） */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+              <div>ID: {file.id.slice(0, 8)}</div>
+              <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+              <div>P: {file.pageNumber}</div>
+            </div>
+          )}
+        </div>
       )
     }
 
@@ -168,9 +190,14 @@ export function FilePreviewCell({
         {renderImagePreview()}
       </div>
 
-      {/* 変更予定オーバーレイ */}
+      {/* 変更予定オーバーレイ（赤色） */}
       {isPendingChange && (
-        <div className="pointer-events-none absolute inset-0 bg-red-500 opacity-10" />
+        <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
+      )}
+
+      {/* 既存答案警告オーバーレイ（オレンジ色） */}
+      {hasExistingAnswer && (
+        <div className="pointer-events-none absolute inset-0 bg-orange-500/20 border-2 border-orange-500 z-30" />
       )}
 
       {/* 読み込み状態表示 */}

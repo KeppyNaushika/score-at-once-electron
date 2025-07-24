@@ -52,6 +52,10 @@ export interface SortableTableCellProps {
   fileId?: string
   observerRef?: React.RefObject<IntersectionObserver | null>
   children: React.ReactNode
+  onDeleteFileWithScoring?: () => void
+  studentName?: string
+  pageNumber?: number
+  hasScoreData?: boolean
 }
 
 export interface EmptyTableCellProps {
@@ -59,8 +63,20 @@ export interface EmptyTableCellProps {
   student: UnifiedStudent | null
   pageNumber: number | null
   isPositionDisabled: boolean
-  onTogglePosition: () => void
-  onUploadToCell: () => void
+  isPendingChange?: boolean
+  mode?: "upload" | "view"
+  hasExistingAnswer?: boolean
+  allowOverwrite?: boolean
+  disabledReason?:
+    | "row"
+    | "column"
+    | "position"
+    | "existing_answer"
+    | "absent_student"
+  onTogglePosition?: () => void
+  onUploadToCell?: () => void
+  onToggleAnswerDisabled?: () => void
+  hasNewFileToUpload?: boolean
 }
 
 export interface TableHeaderProps {
@@ -76,6 +92,8 @@ export interface TableHeaderProps {
   previewMode: PreviewMode
   onPreviewModeChange: (mode: PreviewMode) => void
   hasNameRegion: boolean
+  allowOverwrite?: boolean
+  onAllowOverwriteChange?: (allow: boolean) => void
 }
 
 export interface PlacementStrategySelectorProps {

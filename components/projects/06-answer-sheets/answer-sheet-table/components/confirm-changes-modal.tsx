@@ -12,14 +12,15 @@ import {
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type { PendingChange, ScoringDataOption } from "@/types/answer-sheet.types"
-import { AlertTriangle, ArrowLeftRight, FileEdit, Loader2 } from "lucide-react"
+import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
 import { useState } from "react"
 
 interface ConfirmChangesModalProps {
   isOpen: boolean
   onClose: () => void
   pendingChanges: PendingChange[]
-  onConfirm: (option: ScoringDataOption) => Promise<void>
+  onConfirm: (option: ScoringDataOption, resetDragDropFn?: () => void) => Promise<void>
+  resetDragDropFn?: (() => void) | undefined
 }
 
 export function ConfirmChangesModal({
@@ -27,6 +28,7 @@ export function ConfirmChangesModal({
   onClose,
   pendingChanges,
   onConfirm,
+  resetDragDropFn,
 }: ConfirmChangesModalProps) {
   const [selectedOption, setSelectedOption] = useState<ScoringDataOption>("with-scoring")
   const [isApplying, setIsApplying] = useState(false)
@@ -34,7 +36,7 @@ export function ConfirmChangesModal({
   const handleConfirm = async () => {
     setIsApplying(true)
     try {
-      await onConfirm(selectedOption)
+      await onConfirm(selectedOption, resetDragDropFn)
       onClose()
     } catch (error) {
       console.error("変更の適用に失敗しました:", error)
@@ -44,7 +46,7 @@ export function ConfirmChangesModal({
   }
 
   const handleCancel = () => {
-    onConfirm("cancel")
+    onConfirm("cancel", resetDragDropFn)
     onClose()
   }
 
@@ -80,16 +82,13 @@ export function ConfirmChangesModal({
                         {change.position1.studentName || "未割当"} 
                         <span className="text-gray-500 ml-1">P{change.position1.pageNumber}</span>
                       </span>
-                      <ArrowLeftRight className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <span className="text-gray-400">→</span>
                       <span className="font-medium">
                         {change.position2.studentName || "未割当"}
                         <span className="text-gray-500 ml-1">P{change.position2.pageNumber}</span>
                       </span>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-400">
-                    {change.timestamp.toLocaleTimeString()}
-                  </span>
                 </div>
               ))}
             </div>

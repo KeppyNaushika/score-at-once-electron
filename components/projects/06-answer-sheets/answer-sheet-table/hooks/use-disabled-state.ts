@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -10,6 +10,9 @@ export function useDisabledState() {
     positions: new Set(),
     files: new Set(),
   })
+
+  // 既存答案上書きモードの状態管理
+  const [allowOverwrite, setAllowOverwrite] = useState(false)
 
   const toggleRowDisabled = useCallback((rowIndex: number) => {
     setDisabledState((prev) => {
@@ -71,20 +74,33 @@ export function useDisabledState() {
     [disabledState],
   )
 
-  // 欠席者を自動的に無効化する関数
-  const initializeAbsentStudents = useCallback((students: UnifiedStudent[]) => {
-    setDisabledState((prev) => {
-      const newRows = new Set(prev.rows)
+  // 初期化関数（現在は何もしない）
+  const initializeStudentsWithoutAnswers = useCallback(
+    (students: UnifiedStudent[], files: UnifiedFile[]) => {
+      // 欠席生徒を初期状態で行無効にする（ユーザーが手動で有効化可能）
+      const sortedStudents = [...students].sort((a, b) => {
+        const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
+        const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+        return aOrder - bOrder
+      })
 
-      students.forEach((student, index) => {
+      const absentStudentRows = new Set<number>()
+      sortedStudents.forEach((student, index) => {
         if (student.status === "absent") {
-          newRows.add(index)
+          absentStudentRows.add(index)
         }
       })
 
-      return { ...prev, rows: newRows }
-    })
-  }, [])
+      // 欠席生徒がいる場合のみ状態を更新
+      if (absentStudentRows.size > 0) {
+        setDisabledState((prev) => ({
+          ...prev,
+          rows: new Set([...prev.rows, ...absentStudentRows]),
+        }))
+      }
+    },
+    [],
+  )
 
   return {
     disabledState,
@@ -94,6 +110,8 @@ export function useDisabledState() {
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
-    initializeAbsentStudents,
+    initializeStudentsWithoutAnswers,
+    allowOverwrite,
+    setAllowOverwrite,
   }
 }

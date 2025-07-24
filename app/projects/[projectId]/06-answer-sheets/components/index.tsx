@@ -123,7 +123,8 @@ interface AnswerSheetsTabContentProps {
   affectedCells: Set<string>
   onUploadComplete: () => void
   onAnswerSheetUpdate: () => void
-  onAddPendingChange: (change: PendingChange) => void
+  onUpdatePendingChanges: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void
+  onResetDragDrop?: React.MutableRefObject<(() => void) | null>
 }
 
 export function AnswerSheetsTabContent({
@@ -136,7 +137,8 @@ export function AnswerSheetsTabContent({
   affectedCells,
   onUploadComplete,
   onAnswerSheetUpdate,
-  onAddPendingChange,
+  onUpdatePendingChanges,
+  onResetDragDrop,
 }: AnswerSheetsTabContentProps) {
   return (
     <>
@@ -146,6 +148,8 @@ export function AnswerSheetsTabContent({
           students={students}
           masterImageCount={masterImageCount}
           onUploadComplete={onUploadComplete}
+          mode="upload"
+          existingAnswerSheets={answerSheets}
         />
       </TabsContent>
 
@@ -159,7 +163,8 @@ export function AnswerSheetsTabContent({
           mode="view"
           pendingChanges={pendingChanges}
           affectedCells={affectedCells}
-          onAddPendingChange={onAddPendingChange}
+          onUpdatePendingChanges={onUpdatePendingChanges}
+          onResetDragDrop={onResetDragDrop}
         />
       </TabsContent>
     </>

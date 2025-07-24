@@ -5,6 +5,7 @@ import {
   FilePreviewCell,
   SortableTableCell,
   TableHeader,
+  UploadToCellModal,
 } from "@/components/projects/06-answer-sheets/answer-sheet-table/components"
 import {
   useDisabledState,
@@ -22,11 +23,11 @@ import {
   TableHeader as UITableHeader,
 } from "@/components/ui/table"
 import type {
+  PendingChange,
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
   UploadData,
-  PendingChange,
 } from "@/types/answer-sheet.types"
 import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
 import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
@@ -55,7 +56,17 @@ interface AnswerSheetTableProps {
   // 変更状態管理用（確認モードのみ）
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
-  onAddPendingChange?: (change: PendingChange) => void
+  onUpdatePendingChanges?: (
+    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+  ) => void
+  onResetDragDrop?: React.MutableRefObject<(() => void) | null>
+
+  // 上書き制御用（アップロードモードでの既存答案情報）
+  existingAnswerSheets?: Array<{
+    id: string
+    studentId: string | null
+    pageNumber: number
+  }>
 }
 
 // ============================================================================
@@ -78,7 +89,9 @@ export function AnswerSheetTable({
   onReloadData,
   pendingChanges,
   affectedCells,
-  onAddPendingChange,
+  onUpdatePendingChanges,
+  onResetDragDrop,
+  existingAnswerSheets = [],
 }: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
@@ -99,7 +112,9 @@ export function AnswerSheetTable({
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
-    initializeAbsentStudents,
+    initializeStudentsWithoutAnswers,
+    allowOverwrite,
+    setAllowOverwrite,
   } = useDisabledState()
 
   const {
@@ -108,6 +123,7 @@ export function AnswerSheetTable({
     getDisabledFiles,
     getFileColor,
     tableData,
+    positionsWithExistingAnswers,
   } = useTableData(
     files,
     students,
@@ -115,6 +131,9 @@ export function AnswerSheetTable({
     fileOrder,
     disabledState,
     isPositionDisabled,
+    mode,
+    allowOverwrite,
+    existingAnswerSheets,
   )
 
   const {
@@ -123,6 +142,7 @@ export function AnswerSheetTable({
     handleDragStart,
     handleDragOver,
     handleDragEnd,
+    resetToInitialState,
   } = useDragDrop(
     files,
     onFilesChange,
@@ -133,15 +153,29 @@ export function AnswerSheetTable({
     students,
     masterImageCount,
     mode,
+    fileOrder,
     onReloadData,
-    onAddPendingChange,
+    onUpdatePendingChanges,
   )
+
+  // コールバック関数をプロップとして渡すためのuseEffect
+  useEffect(() => {
+    if (onResetDragDrop) {
+      onResetDragDrop.current = resetToInitialState
+    }
+  }, [onResetDragDrop, resetToInitialState])
 
   // ============================================================================
   // ローカルState
   // ============================================================================
 
   const [previewMode, setPreviewMode] = useState<PreviewMode>("full")
+  const [uploadModalState, setUploadModalState] = useState<{
+    isOpen: boolean
+    position?: number
+    studentName?: string
+    pageNumber?: number
+  }>({ isOpen: false })
 
   // デバッグ用のpreviewMode変更ハンドラー
   const handlePreviewModeChange = (mode: PreviewMode) => {
@@ -159,10 +193,6 @@ export function AnswerSheetTable({
   // ============================================================================
   // イベントハンドラー
   // ============================================================================
-
-  const handleUploadToCell = (position: number) => {
-    // TODO: セル特定位置へのアップロード処理
-  }
 
   const handleUpload = () => {
     const uploadData: UploadData[] = []
@@ -197,10 +227,10 @@ export function AnswerSheetTable({
   // 初期化処理
   // ============================================================================
 
-  // 欠席者の自動無効化
+  // 答案がない生徒の自動無効化（DBベース）
   useEffect(() => {
-    initializeAbsentStudents(students)
-  }, [students, initializeAbsentStudents])
+    initializeStudentsWithoutAnswers(students, files)
+  }, [students, files, initializeStudentsWithoutAnswers])
 
   // ============================================================================
   // 計算済みプロパティ
@@ -254,6 +284,8 @@ export function AnswerSheetTable({
             previewMode={previewMode}
             onPreviewModeChange={handlePreviewModeChange}
             hasNameRegion={hasNameRegion}
+            allowOverwrite={allowOverwrite}
+            onAllowOverwriteChange={setAllowOverwrite}
           />
 
           <CardContent className="min-h-0 flex-1 overflow-auto p-4">
@@ -266,8 +298,12 @@ export function AnswerSheetTable({
                   <TableRow>
                     {/* 生徒名列ヘッダー */}
                     <TableHead
-                      className="w-32 cursor-pointer border text-center"
-                      onClick={() => toggleColDisabled(-1)}
+                      className={`w-32 border text-center ${mode === "upload" ? "cursor-pointer" : ""}`}
+                      onClick={
+                        mode === "upload"
+                          ? () => toggleColDisabled(-1)
+                          : undefined
+                      }
                     >
                       生徒名
                     </TableHead>
@@ -275,12 +311,18 @@ export function AnswerSheetTable({
                     {Array.from({ length: maxPages }, (_, pageIndex) => (
                       <TableHead
                         key={pageIndex}
-                        className={`w-32 cursor-pointer border text-center ${
+                        className={`w-32 border text-center ${
+                          mode === "upload" ? "cursor-pointer" : ""
+                        } ${
                           disabledState.cols.has(pageIndex)
                             ? "bg-gray-200"
                             : "bg-white"
                         }`}
-                        onClick={() => toggleColDisabled(pageIndex)}
+                        onClick={
+                          mode === "upload"
+                            ? () => toggleColDisabled(pageIndex)
+                            : undefined
+                        }
                       >
                         ページ {pageIndex + 1}
                       </TableHead>
@@ -293,13 +335,19 @@ export function AnswerSheetTable({
                       {/* 生徒名セル */}
                       <TableHead
                         className={`border text-center ${
+                          mode === "upload" ? "cursor-pointer" : ""
+                        } ${
                           disabledState.rows.has(studentIndex)
                             ? "bg-gray-200"
                             : "bg-white"
                         }`}
-                        onClick={() => toggleRowDisabled(studentIndex)}
+                        onClick={
+                          mode === "upload"
+                            ? () => toggleRowDisabled(studentIndex)
+                            : undefined
+                        }
                       >
-                        <div className="cursor-pointer px-2 py-1">
+                        <div className="px-2 py-1">
                           <div className="text-sm font-medium">
                             {sortedStudents[studentIndex].lastName}{" "}
                             {sortedStudents[studentIndex].firstName}
@@ -316,6 +364,56 @@ export function AnswerSheetTable({
                           cellData.type === "disabled" ||
                           cellData.type === "empty"
                         ) {
+                          // 既存答案があるかチェック（空セル用）
+                          const hasExistingAnswerForEmpty =
+                            mode === "upload" &&
+                            cellData.type === "empty" &&
+                            positionsWithExistingAnswers.has(cellData.position)
+
+                          // そのセルに新しく追加しようとしている画像ファイルがあるかチェック
+                          // (つまり、files配列にstudentId・pageNumberが設定されているが、まだアップロードされていない状態)
+                          const newFileInCell = files.find(file => 
+                            file.studentId === cellData.student?.id && 
+                            file.pageNumber === cellData.pageNumber &&
+                            !disabledState.files.has(file.id) // 無効化されていない
+                          )
+                          const hasNewFileToUpload = !!newFileInCell
+
+                          // 無効化の理由を判定
+                          let disabledReason:
+                            | "row"
+                            | "column"
+                            | "position"
+                            | "existing_answer"
+                            | "absent_student"
+                            | undefined
+                          if (cellData.type === "disabled") {
+                            const student = sortedStudents[studentIndex]
+
+                            if (disabledState.rows.has(studentIndex)) {
+                              // 行無効の場合、欠席生徒かどうかをチェック
+                              if (student?.status === "absent") {
+                                disabledReason = "absent_student"
+                              } else {
+                                disabledReason = "row"
+                              }
+                            } else if (disabledState.cols.has(pageIndex)) {
+                              disabledReason = "column"
+                            } else if (
+                              disabledState.positions.has(cellData.position)
+                            ) {
+                              disabledReason = "position"
+                            } else if (
+                              mode === "upload" &&
+                              !allowOverwrite &&
+                              positionsWithExistingAnswers.has(
+                                cellData.position,
+                              )
+                            ) {
+                              disabledReason = "existing_answer"
+                            }
+                          }
+
                           return (
                             <EmptyTableCell
                               key={cellData.position}
@@ -323,12 +421,30 @@ export function AnswerSheetTable({
                               student={cellData.student}
                               pageNumber={cellData.pageNumber}
                               isPositionDisabled={cellData.type === "disabled"}
-                              onTogglePosition={() =>
+                              isPendingChange={false} // 空のセルは通常変更対象外
+                              mode={mode}
+                              hasExistingAnswer={hasExistingAnswerForEmpty}
+                              allowOverwrite={allowOverwrite}
+                              disabledReason={disabledReason}
+                              onTogglePosition={() => 
                                 togglePositionDisabled(cellData.position)
                               }
-                              onUploadToCell={() =>
-                                handleUploadToCell(cellData.position)
-                              }
+                              onUploadToCell={() => {
+                                setUploadModalState({
+                                  isOpen: true,
+                                  position: cellData.position,
+                                  studentName: cellData.student 
+                                    ? `${cellData.student.lastName} ${cellData.student.firstName}`
+                                    : undefined,
+                                  pageNumber: cellData.pageNumber ?? undefined,
+                                })
+                              }}
+                              onToggleAnswerDisabled={() => {
+                                if (newFileInCell) {
+                                  toggleFileDisabled(newFileInCell.id)
+                                }
+                              }}
+                              hasNewFileToUpload={hasNewFileToUpload}
                             />
                           )
                         }
@@ -336,6 +452,12 @@ export function AnswerSheetTable({
                         // ファイルセル
                         const file = cellData.file!
                         const isFileDisabled = disabledState.files.has(file.id)
+                        const hasExistingAnswer =
+                          mode === "upload" &&
+                          !allowOverwrite &&
+                          positionsWithExistingAnswers.has(cellData.position)
+                        // 上書き無効時で既存答案がある場合はドラッグ無効
+                        const isDragDisabledByOverwrite = hasExistingAnswer
 
                         return (
                           <SortableTableCell
@@ -343,20 +465,32 @@ export function AnswerSheetTable({
                             id={file.id}
                             position={cellData.position}
                             hasFile={true}
-                            isPositionDisabled={false}
+                            isPositionDisabled={isDragDisabledByOverwrite}
                             isFileDisabled={isFileDisabled}
-                            onTogglePosition={() =>
-                              togglePositionDisabled(cellData.position)
+                            onTogglePosition={
+                              mode === "upload"
+                                ? () =>
+                                    togglePositionDisabled(cellData.position)
+                                : () => {}
                             }
-                            onToggleFileDisabled={() =>
-                              toggleFileDisabled(file.id)
+                            onToggleFileDisabled={
+                              mode === "upload"
+                                ? () => toggleFileDisabled(file.id)
+                                : () => {}
                             }
-                            onUploadToCell={() =>
-                              handleUploadToCell(cellData.position)
-                            }
+                            onUploadToCell={() => {
+                              // アップロードはアップロードタブから行う
+                            }}
                             fileId={file.id}
                             observerRef={observerRef}
                             mode={mode}
+                            studentName={cellData.student ? `${cellData.student.lastName} ${cellData.student.firstName}` : undefined}
+                            pageNumber={cellData.pageNumber ?? undefined}
+                            hasScoreData={true} // TODO: 実際の採点データ有無を判定
+                            onDeleteFileWithScoring={() => {
+                              // TODO: 実際の削除処理を実装
+                              console.log(`Delete file ${file.id} with scoring data`)
+                            }}
                           >
                             <FilePreviewCell
                               file={file}
@@ -372,6 +506,7 @@ export function AnswerSheetTable({
                               isPendingChange={
                                 affectedCells?.has(file.id) || false
                               }
+                              hasExistingAnswer={hasExistingAnswer}
                             />
                           </SortableTableCell>
                         )
@@ -404,6 +539,19 @@ export function AnswerSheetTable({
 
       {/* 氏名欄クリッピング用の隠しcanvas */}
       <canvas ref={canvasRef} className="hidden" width={0} height={0} />
+
+      {/* セルにアップロードモーダル */}
+      <UploadToCellModal
+        isOpen={uploadModalState.isOpen}
+        onClose={() => setUploadModalState({ isOpen: false })}
+        onUpload={(file, pageNumber) => {
+          // TODO: 指定されたセル位置にファイルをアップロード
+          console.log(`Uploading to position ${uploadModalState.position}:`, file.name, pageNumber)
+          setUploadModalState({ isOpen: false })
+        }}
+        studentName={uploadModalState.studentName}
+        pageNumber={uploadModalState.pageNumber}
+      />
     </div>
   )
 }

@@ -29,7 +29,7 @@ export function getSelectionBorderSettings(): SelectionBorderSettings {
   const stored = localStorage.getItem("selectionBorderColor")
   const color = stored || DEFAULT_SELECTION_BORDER_COLOR
   
-  return SELECTION_BORDER_COLORS[color] || SELECTION_BORDER_COLORS[DEFAULT_SELECTION_BORDER_COLOR]
+  return SELECTION_BORDER_COLORS[color as keyof typeof SELECTION_BORDER_COLORS] || SELECTION_BORDER_COLORS[DEFAULT_SELECTION_BORDER_COLOR]
 }
 
 export function saveSelectionBorderColor(color: string): void {

@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "一括採点",
   description: "複数教員対応型採点アプリケーション",
+  icons: {
+    icon: "/一括採点アイコン.png",
+  },
 }
 
 export default function RootLayout({

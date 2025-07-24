@@ -12,7 +12,7 @@ import {
   type AnswerSheetTab,
 } from "./components"
 import { useAnswerSheetsData, usePendingChanges } from "./hooks"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 /**
@@ -49,11 +49,14 @@ export default function AnswerSheetsPage() {
     pendingChanges,
     affectedCells,
     isConfirmModalOpen,
-    handleAddPendingChange,
+    handleUpdatePendingChanges,
     handleApplyChanges,
     openConfirmModal,
     closeConfirmModal,
-  } = usePendingChanges(loadData)
+  } = usePendingChanges(loadData, students)
+
+  // DnD reset function ref
+  const resetDragDropRef = useRef<(() => void) | null>(null)
 
   // Load data on mount
   useEffect(() => {
@@ -106,7 +109,8 @@ export default function AnswerSheetsPage() {
               affectedCells={affectedCells}
               onUploadComplete={handleUploadComplete}
               onAnswerSheetUpdate={handleAnswerSheetUpdate}
-              onAddPendingChange={handleAddPendingChange}
+              onUpdatePendingChanges={handleUpdatePendingChanges}
+              onResetDragDrop={resetDragDropRef}
             />
           </AnswerSheetsTabsNavigation>
 
@@ -115,6 +119,7 @@ export default function AnswerSheetsPage() {
             onClose={closeConfirmModal}
             pendingChanges={pendingChanges}
             onConfirm={handleApplyChanges}
+            resetDragDropFn={resetDragDropRef.current || undefined}
           />
         </div>
       </div>
