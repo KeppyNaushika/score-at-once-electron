@@ -5,10 +5,11 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { Ban } from "lucide-react"
+import { Ban, Upload, FileX } from "lucide-react"
 
 export function EmptyTableCell({
   position,
@@ -16,7 +17,36 @@ export function EmptyTableCell({
   pageNumber,
   isPositionDisabled,
   isPendingChange = false,
+  mode = "upload",
+  hasExistingAnswer = false,
+  allowOverwrite = false,
+  disabledReason,
+  onTogglePosition,
+  onUploadToCell,
+  onToggleAnswerDisabled,
+  hasNewFileToUpload = false,
 }: EmptyTableCellProps) {
+  // 無効化理由のテキストを取得
+  const getDisabledReasonText = () => {
+    switch (disabledReason) {
+      case "absent_student":
+        return "欠席生徒"
+      case "row":
+        return "行無効"
+      case "column":
+        return "列無効"
+      case "position":
+        return "セル無効"
+      case "existing_answer":
+        return "既存答案あり（上書き無効）"
+      default:
+        return "無効"
+    }
+  }
+
+  // 右クリックメニューを表示するかの判定
+  const shouldShowContextMenu = mode === "upload" && !isPositionDisabled
+
   return (
     <TableCell
       className={`relative h-32 w-32 border p-1 ${
@@ -27,10 +57,15 @@ export function EmptyTableCell({
         <ContextMenuTrigger asChild>
           <div className="flex h-full w-full items-center justify-center">
             {isPositionDisabled ? (
-              <Ban className="h-6 w-6 text-gray-400" />
+              <div className="flex flex-col items-center">
+                <Ban className="h-6 w-6 text-gray-400" />
+                <div className="mt-1 text-center text-xs text-gray-500">
+                  {getDisabledReasonText()}
+                </div>
+              </div>
             ) : (
               <div className="text-xs text-gray-400">
-                空セル
+                {hasExistingAnswer ? "答案画像あり" : "空セル"}
                 {student && (
                   <div className="mt-1">
                     {student.lastName} {student.firstName}
@@ -41,17 +76,47 @@ export function EmptyTableCell({
             )}
           </div>
         </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem disabled className="flex items-center gap-2 text-gray-400">
-            <Ban className="h-4 w-4" />
-            空のセル
-          </ContextMenuItem>
-        </ContextMenuContent>
+        {shouldShowContextMenu && (
+          <ContextMenuContent>
+            <ContextMenuItem
+              onClick={onTogglePosition}
+              className="flex items-center gap-2"
+            >
+              <Ban className="h-4 w-4" />
+              セル無効
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            {hasNewFileToUpload && (
+              <>
+                <ContextMenuItem
+                  onClick={onToggleAnswerDisabled}
+                  className="flex items-center gap-2"
+                >
+                  <FileX className="h-4 w-4" />
+                  答案無効
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            )}
+            <ContextMenuItem
+              onClick={onUploadToCell}
+              className="flex items-center gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              このセルに答案を追加
+            </ContextMenuItem>
+          </ContextMenuContent>
+        )}
       </ContextMenu>
 
       {/* 変更予定オーバーレイ */}
       {isPendingChange && (
-        <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
+        <div className="pointer-events-none absolute inset-0 z-40 animate-pulse border-4 border-red-500 bg-red-500/30" />
+      )}
+
+      {/* 既存答案警告オーバーレイ */}
+      {hasExistingAnswer && mode === "upload" && (
+        <div className="pointer-events-none absolute inset-0 z-30 border-2 border-orange-500 bg-orange-500/20" />
       )}
     </TableCell>
   )

@@ -1,6 +1,7 @@
 "use client"
 
 import type { SortableTableCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import { DeleteConfirmationModal } from "./delete-confirmation-modal"
 import {
   ContextMenu,
   ContextMenuContent,
@@ -11,8 +12,8 @@ import {
 import { TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { Ban, Upload, X } from "lucide-react"
-import { useEffect } from "react"
+import { Ban, Upload, X, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export function SortableTableCell({
   id,
@@ -27,7 +28,13 @@ export function SortableTableCell({
   observerRef,
   children,
   mode = "upload",
+  onDeleteFileWithScoring,
+  studentName,
+  pageNumber,
+  hasScoreData = false,
 }: SortableTableCellProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
   const {
     attributes,
     listeners,
@@ -56,6 +63,16 @@ export function SortableTableCell({
     }
   }, [fileId, observerRef])
 
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (onDeleteFileWithScoring) {
+      onDeleteFileWithScoring()
+    }
+  }
+
   return (
     <TableCell
       ref={setNodeRef}
@@ -69,55 +86,79 @@ export function SortableTableCell({
       }`}
       data-file-id={fileId}
       {...attributes}
-      {...listeners}
     >
-      {mode === "upload" ? (
-        <ContextMenu>
-          <ContextMenuTrigger asChild>
-            <div className="h-full w-full">{children}</div>
-          </ContextMenuTrigger>
-          <ContextMenuContent>
-            {hasFile && (
-              <>
-                <ContextMenuItem
-                  onClick={onToggleFileDisabled}
-                  className="flex items-center gap-2"
-                >
-                  {isFileDisabled ? (
-                    <>
-                      <X className="h-4 w-4" />
-                      答案画像を有効化
-                    </>
-                  ) : (
-                    <>
-                      <Ban className="h-4 w-4" />
-                      答案画像を無効化
-                    </>
-                  )}
-                </ContextMenuItem>
-                <ContextMenuSeparator />
-              </>
-            )}
-            <ContextMenuItem
-              onClick={onTogglePosition}
-              className="flex items-center gap-2"
-            >
-              <Ban className="h-4 w-4" />
-              {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              onClick={onUploadToCell}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              このセルに答案画像をアップロード
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      ) : (
-        <div className="h-full w-full">{children}</div>
-      )}
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div 
+            className="h-full w-full"
+            {...listeners}
+          >
+            {children}
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {hasFile && mode === "upload" && (
+            <>
+              <ContextMenuItem
+                onClick={onToggleFileDisabled}
+                className="flex items-center gap-2"
+              >
+                {isFileDisabled ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    答案画像を有効化
+                  </>
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4" />
+                    答案画像を無効化
+                  </>
+                )}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+            </>
+          )}
+          {mode === "upload" && (
+            <>
+              <ContextMenuItem
+                onClick={onTogglePosition}
+                className="flex items-center gap-2"
+              >
+                <Ban className="h-4 w-4" />
+                {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              <ContextMenuItem
+                onClick={onUploadToCell}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                このセルに答案画像をアップロード
+              </ContextMenuItem>
+            </>
+          )}
+          {mode === "view" && hasFile && onDeleteFileWithScoring && (
+            <>
+              <ContextMenuItem
+                onClick={handleDeleteClick}
+                className="flex items-center gap-2 text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+                答案画像を削除
+              </ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+      
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        studentName={studentName}
+        pageNumber={pageNumber}
+        hasScoreData={hasScoreData}
+      />
     </TableCell>
   )
 }
