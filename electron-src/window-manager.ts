@@ -1,7 +1,9 @@
 import { join } from "path"
 import { BrowserWindow, app, Menu, nativeImage } from "electron"
-import isDev from "electron-is-dev"
 import menu from "./menu"
+
+// Electron公式推奨の環境判定方法
+const isDev = !app.isPackaged
 
 export function createMainWindow(): BrowserWindow {
   // アイコンのパスを設定
