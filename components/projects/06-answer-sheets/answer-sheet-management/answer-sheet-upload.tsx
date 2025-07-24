@@ -46,9 +46,9 @@ export function AnswerSheetUpload({
     handleUpload,
   } = useAnswerSheetUpload(projectId, students, onUploadComplete)
 
-  // 既存答案の初期化処理（両モード対応）
+  // 確認モード用の初期化処理
   useEffect(() => {
-    if (existingAnswerSheets && files.length === 0) {
+    if (mode === "view" && existingAnswerSheets && files.length === 0) {
       // 初回のみ既存答案を配置戦略に基づいて配列構築
       const initialFiles = buildOrderedFileArrayFromAnswerSheets(
         existingAnswerSheets, 
@@ -58,7 +58,7 @@ export function AnswerSheetUpload({
       )
       setFiles(initialFiles)
     }
-  }, [existingAnswerSheets, files.length, students, masterImageCount, fileOrder, setFiles])
+  }, [mode, existingAnswerSheets, files.length, students, masterImageCount, fileOrder, setFiles])
 
   // 確認モード用の配置戦略変更ハンドラー
   const handleFileOrderChangeInViewMode = useCallback((newFileOrder: PlacementStrategy) => {
@@ -97,6 +97,7 @@ export function AnswerSheetUpload({
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
         onResetDragDrop={onResetDragDrop}
+        existingAnswerSheets={existingAnswerSheets}
       />
     )
   }
@@ -129,6 +130,7 @@ export function AnswerSheetUpload({
           mode={mode}
           onReloadData={onUploadComplete}
           onResetDragDrop={onResetDragDrop}
+          existingAnswerSheets={existingAnswerSheets}
         />
       </div>
 

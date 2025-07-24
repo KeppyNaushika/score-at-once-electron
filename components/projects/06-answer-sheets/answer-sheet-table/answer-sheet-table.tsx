@@ -57,6 +57,9 @@ interface AnswerSheetTableProps {
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void
   onResetDragDrop?: React.MutableRefObject<(() => void) | null>
+  
+  // 上書き制御用（アップロードモードでの既存答案情報）
+  existingAnswerSheets?: any[]
 }
 
 // ============================================================================
@@ -81,6 +84,7 @@ export function AnswerSheetTable({
   affectedCells,  
   onUpdatePendingChanges,
   onResetDragDrop,
+  existingAnswerSheets = [],
 }: AnswerSheetTableProps) {
   // ============================================================================
   // カスタムフック
@@ -122,6 +126,7 @@ export function AnswerSheetTable({
     isPositionDisabled,
     mode,
     allowOverwrite,
+    existingAnswerSheets,
   )
 
   const {

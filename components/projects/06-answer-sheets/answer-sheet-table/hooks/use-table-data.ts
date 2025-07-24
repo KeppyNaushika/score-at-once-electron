@@ -18,6 +18,7 @@ export function useTableData(
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean,
   mode?: "upload" | "view",
   allowOverwrite?: boolean,
+  existingAnswerSheets?: any[],
 ) {
   // 動的無効化計算：答案がない位置を無効化（確認モードのみ）
   const calculateDynamicDisabledPositions = useCallback(() => {
@@ -88,6 +89,11 @@ export function useTableData(
   const positionsWithExistingAnswers = useMemo(() => {
     const positions = new Set<number>()
     
+    // アップロードモードでは existingAnswerSheets を使用
+    const dataSource = mode === "upload" && existingAnswerSheets 
+      ? existingAnswerSheets 
+      : files
+    
     // sortedStudentsを使用してテーブル表示順序と一致させる
     for (let studentIndex = 0; studentIndex < sortedStudents.length; studentIndex++) {
       const student = sortedStudents[studentIndex]
@@ -97,11 +103,22 @@ export function useTableData(
         const position = studentIndex * masterImageCount + pageIndex
         
         // その位置に対応する答案があるかチェック
-        const hasAnswerForPosition = files.some(file => 
-          file.studentId === student.id && 
-          file.pageNumber === pageNumber &&
-          !disabledState.files.has(file.id)
-        )
+        let hasAnswerForPosition = false
+        
+        if (mode === "upload" && existingAnswerSheets) {
+          // アップロードモード: existingAnswerSheets から判定
+          hasAnswerForPosition = existingAnswerSheets.some(sheet => 
+            sheet.studentId === student.id && 
+            sheet.pageNumber === pageNumber
+          )
+        } else {
+          // 確認モード: files から判定
+          hasAnswerForPosition = files.some(file => 
+            file.studentId === student.id && 
+            file.pageNumber === pageNumber &&
+            !disabledState.files.has(file.id)
+          )
+        }
         
         if (hasAnswerForPosition) {
           positions.add(position)
@@ -110,7 +127,7 @@ export function useTableData(
     }
     
     return positions
-  }, [files, sortedStudents, masterImageCount, disabledState.files])
+  }, [files, sortedStudents, masterImageCount, disabledState.files, mode, existingAnswerSheets])
 
   // 有効/無効ファイルの取得
   const getEnabledFiles = useCallback(() => {
