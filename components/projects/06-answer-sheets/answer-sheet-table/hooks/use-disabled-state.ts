@@ -11,6 +11,9 @@ export function useDisabledState() {
     files: new Set(),
   })
 
+  // 答案上書きモードの状態管理
+  const [allowOverwrite, setAllowOverwrite] = useState(false)
+
   const toggleRowDisabled = useCallback((rowIndex: number) => {
     setDisabledState((prev) => {
       const newRows = new Set(prev.rows)
@@ -86,5 +89,7 @@ export function useDisabledState() {
     toggleFileDisabled,
     isPositionDisabled,
     initializeStudentsWithoutAnswers,
+    allowOverwrite,
+    setAllowOverwrite,
   }
 }

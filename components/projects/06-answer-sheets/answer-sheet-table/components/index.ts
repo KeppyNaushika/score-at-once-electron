@@ -1,5 +1,6 @@
 export { EmptyTableCell } from "./empty-table-cell"
 export { FilePreviewCell } from "./file-preview-cell"
+export { OverwriteToggle } from "./overwrite-toggle"
 export { PlacementStrategySelector } from "./placement-strategy-selector"
 export { PreviewModeToggle } from "./preview-mode-toggle"
 export { SortableTableCell } from "./sortable-table-cell"

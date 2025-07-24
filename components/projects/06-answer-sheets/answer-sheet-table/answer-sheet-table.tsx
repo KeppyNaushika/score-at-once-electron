@@ -102,6 +102,8 @@ export function AnswerSheetTable({
     toggleFileDisabled,
     isPositionDisabled,
     initializeStudentsWithoutAnswers,
+    allowOverwrite,
+    setAllowOverwrite,
   } = useDisabledState()
 
   const {
@@ -110,6 +112,7 @@ export function AnswerSheetTable({
     getDisabledFiles,
     getFileColor,
     tableData,
+    positionsWithExistingAnswers,
   } = useTableData(
     files,
     students,
@@ -117,6 +120,8 @@ export function AnswerSheetTable({
     fileOrder,
     disabledState,
     isPositionDisabled,
+    mode,
+    allowOverwrite,
   )
 
   const {
@@ -262,6 +267,8 @@ export function AnswerSheetTable({
             previewMode={previewMode}
             onPreviewModeChange={handlePreviewModeChange}
             hasNameRegion={hasNameRegion}
+            allowOverwrite={allowOverwrite}
+            onAllowOverwriteChange={setAllowOverwrite}
           />
 
           <CardContent className="min-h-0 flex-1 overflow-auto p-4">
@@ -343,6 +350,9 @@ export function AnswerSheetTable({
                         // ファイルセル
                         const file = cellData.file!
                         const isFileDisabled = disabledState.files.has(file.id)
+                        const hasExistingAnswer = mode === "upload" && 
+                          !allowOverwrite && 
+                          positionsWithExistingAnswers.has(cellData.position)
 
                         return (
                           <SortableTableCell
@@ -379,6 +389,7 @@ export function AnswerSheetTable({
                               isPendingChange={
                                 affectedCells?.has(file.id) || false
                               }
+                              hasExistingAnswer={hasExistingAnswer}
                             />
                           </SortableTableCell>
                         )

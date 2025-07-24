@@ -75,6 +75,8 @@ export interface TableHeaderProps {
   previewMode: PreviewMode
   onPreviewModeChange: (mode: PreviewMode) => void
   hasNameRegion: boolean
+  allowOverwrite?: boolean
+  onAllowOverwriteChange?: (allow: boolean) => void
 }
 
 export interface PlacementStrategySelectorProps {

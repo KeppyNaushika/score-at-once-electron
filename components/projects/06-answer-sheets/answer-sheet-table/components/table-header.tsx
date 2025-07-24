@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator"
 import { useDroppable } from "@dnd-kit/core"
 import { FileText, Trash2, Upload } from "lucide-react"
 import { useState } from "react"
+import { OverwriteToggle } from "./overwrite-toggle"
 import { PlacementStrategySelector } from "./placement-strategy-selector"
 import { PreviewModeToggle } from "./preview-mode-toggle"
 
@@ -28,6 +29,8 @@ export function TableHeader({
   previewMode,
   onPreviewModeChange,
   hasNameRegion,
+  allowOverwrite = false,
+  onAllowOverwriteChange,
 }: TableHeaderProps) {
   const [isTrashOpen, setIsTrashOpen] = useState(false)
 
@@ -58,6 +61,14 @@ export function TableHeader({
             onPreviewModeChange={onPreviewModeChange}
             hasNameRegion={hasNameRegion}
           />
+
+          {/* 答案上書きトグル（アップロードモードのみ） */}
+          {mode === "upload" && onAllowOverwriteChange && (
+            <OverwriteToggle
+              allowOverwrite={allowOverwrite}
+              onAllowOverwriteChange={onAllowOverwriteChange}
+            />
+          )}
 
           {/* アップロードボタン */}
           {mode === "upload" && (

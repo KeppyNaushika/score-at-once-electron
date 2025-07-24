@@ -16,8 +16,10 @@ export function FilePreviewCell({
   drawNameRegionCanvas,
   imageLoadState = "pending",
   isPendingChange = false,
+  hasExistingAnswer = false,
 }: FilePreviewCellProps & {
   isPendingChange?: boolean
+  hasExistingAnswer?: boolean
 }) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null,
@@ -188,9 +190,14 @@ export function FilePreviewCell({
         {renderImagePreview()}
       </div>
 
-      {/* 変更予定オーバーレイ */}
+      {/* 変更予定オーバーレイ（赤色） */}
       {isPendingChange && (
         <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
+      )}
+
+      {/* 既存答案警告オーバーレイ（オレンジ色） */}
+      {hasExistingAnswer && (
+        <div className="pointer-events-none absolute inset-0 bg-orange-500/20 border-2 border-orange-500 z-30" />
       )}
 
       {/* 読み込み状態表示 */}

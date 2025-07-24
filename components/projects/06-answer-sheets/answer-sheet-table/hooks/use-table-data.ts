@@ -16,25 +16,93 @@ export function useTableData(
   fileOrder: PlacementStrategy,
   disabledState: ExtendedDisabledState,
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean,
+  mode?: "upload" | "view",
+  allowOverwrite?: boolean,
 ) {
-  // 動的無効化計算：答案がない位置を無効化
+  // 動的無効化計算：答案がない位置を無効化（モード・上書き設定考慮）
   const calculateDynamicDisabledPositions = useCallback(() => {
     const dynamicDisabled = new Set<number>()
     
-    // 全ての位置について答案があるかチェック
+    // 確認モードでは常に答案がない位置のみ無効化
+    if (mode === "view") {
+      for (let studentIndex = 0; studentIndex < students.length; studentIndex++) {
+        const student = students[studentIndex]
+        
+        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+          const pageNumber = pageIndex + 1
+          const position = studentIndex * masterImageCount + pageIndex
+          
+          // 手動無効化済みの位置はスキップ
+          if (disabledState.rows.has(studentIndex) || 
+              disabledState.cols.has(pageIndex) || 
+              disabledState.positions.has(position)) {
+            continue
+          }
+          
+          // その位置に対応する答案があるかチェック
+          const hasAnswerForPosition = files.some(file => 
+            file.studentId === student.id && 
+            file.pageNumber === pageNumber &&
+            !disabledState.files.has(file.id)
+          )
+          
+          // 答案がない場合は動的無効化
+          if (!hasAnswerForPosition) {
+            dynamicDisabled.add(position)
+          }
+        }
+      }
+    }
+    // 新規追加モードでは上書き設定に基づく制御
+    else if (mode === "upload" && !allowOverwrite) {
+      for (let studentIndex = 0; studentIndex < students.length; studentIndex++) {
+        const student = students[studentIndex]
+        
+        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+          const pageNumber = pageIndex + 1
+          const position = studentIndex * masterImageCount + pageIndex
+          
+          // 手動無効化済みの位置はスキップ
+          if (disabledState.rows.has(studentIndex) || 
+              disabledState.cols.has(pageIndex) || 
+              disabledState.positions.has(position)) {
+            continue
+          }
+          
+          // その位置に対応する答案があるかチェック
+          const hasAnswerForPosition = files.some(file => 
+            file.studentId === student.id && 
+            file.pageNumber === pageNumber &&
+            !disabledState.files.has(file.id)
+          )
+          
+          // 上書き無効時：答案がある場合は動的無効化
+          if (hasAnswerForPosition) {
+            dynamicDisabled.add(position)
+          }
+        }
+      }
+    }
+    
+    return dynamicDisabled
+  }, [files, students, masterImageCount, disabledState, mode, allowOverwrite])
+  
+  // 動的無効化位置の計算
+  const dynamicDisabledPositions = useMemo(() => 
+    calculateDynamicDisabledPositions(), 
+    [calculateDynamicDisabledPositions]
+  )
+
+  // 既存答案がある位置の計算（警告オーバーレイ用）
+  const positionsWithExistingAnswers = useMemo(() => {
+    const positions = new Set<number>()
+    
     for (let studentIndex = 0; studentIndex < students.length; studentIndex++) {
       const student = students[studentIndex]
       
       for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
         const pageNumber = pageIndex + 1
         const position = studentIndex * masterImageCount + pageIndex
-        
-        // 手動無効化済みの位置はスキップ
-        if (disabledState.rows.has(studentIndex) || 
-            disabledState.cols.has(pageIndex) || 
-            disabledState.positions.has(position)) {
-          continue
-        }
         
         // その位置に対応する答案があるかチェック
         const hasAnswerForPosition = files.some(file => 
@@ -43,21 +111,14 @@ export function useTableData(
           !disabledState.files.has(file.id)
         )
         
-        // 答案がない場合は動的無効化
-        if (!hasAnswerForPosition) {
-          dynamicDisabled.add(position)
+        if (hasAnswerForPosition) {
+          positions.add(position)
         }
       }
     }
     
-    return dynamicDisabled
-  }, [files, students, masterImageCount, disabledState])
-  
-  // 動的無効化位置の計算
-  const dynamicDisabledPositions = useMemo(() => 
-    calculateDynamicDisabledPositions(), 
-    [calculateDynamicDisabledPositions]
-  )
+    return positions
+  }, [files, students, masterImageCount, disabledState.files])
   
   // 拡張されたisPositionDisabled関数
   const enhancedIsPositionDisabled = useCallback((studentIndex: number, pageIndex: number) => {
@@ -319,5 +380,6 @@ export function useTableData(
     getDisabledFiles,
     getFileColor,
     tableData,
+    positionsWithExistingAnswers,
   }
 }
