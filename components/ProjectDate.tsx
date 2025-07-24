@@ -50,7 +50,7 @@ const ProjectDate = (props: {
               </button>
             </div>
           )}
-          locale={ja}
+          locale={ja as any}
           className="w-96 border-b-2 p-4 outline-none placeholder:opacity-0"
           selected={date}
           onChange={(newDate) => {
