@@ -62,7 +62,7 @@ export function TableHeader({
             hasNameRegion={hasNameRegion}
           />
 
-          {/* 答案上書きトグル（アップロードモードのみ） */}
+          {/* 既存答案上書きトグル（アップロードモードのみ） */}
           {mode === "upload" && onAllowOverwriteChange && (
             <OverwriteToggle
               allowOverwrite={allowOverwrite}

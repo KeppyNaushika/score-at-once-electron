@@ -20,11 +20,14 @@ export function OverwriteToggle({
         checked={allowOverwrite}
         onCheckedChange={onAllowOverwriteChange}
       />
-      <Label htmlFor="overwrite-toggle" className="flex items-center gap-1 text-sm">
+      <Label
+        htmlFor="overwrite-toggle"
+        className="flex items-center gap-1 text-sm"
+      >
         {allowOverwrite && (
           <AlertTriangle className="h-3 w-3 text-orange-500" />
         )}
-        答案上書き
+        既存答案上書き
       </Label>
     </div>
   )
