@@ -5,7 +5,7 @@ module.exports = {
     },
     name: "Score at Once",
     executableName: "score-at-once",
-    icon: "一括採点アイコン.png",
+    icon: "./public/一括採点アイコン.png",
     ignore: [
       /^\/src/, 
       /^\/\.git/,

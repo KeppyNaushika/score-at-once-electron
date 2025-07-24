@@ -353,6 +353,8 @@ export function AnswerSheetTable({
                         const hasExistingAnswer = mode === "upload" && 
                           !allowOverwrite && 
                           positionsWithExistingAnswers.has(cellData.position)
+                        // 上書き無効時で既存答案がある場合はドラッグ無効
+                        const isDragDisabledByOverwrite = hasExistingAnswer
 
                         return (
                           <SortableTableCell
@@ -360,7 +362,7 @@ export function AnswerSheetTable({
                             id={file.id}
                             position={cellData.position}
                             hasFile={true}
-                            isPositionDisabled={false}
+                            isPositionDisabled={isDragDisabledByOverwrite}
                             isFileDisabled={isFileDisabled}
                             onTogglePosition={mode === "upload" ? () =>
                               togglePositionDisabled(cellData.position)
