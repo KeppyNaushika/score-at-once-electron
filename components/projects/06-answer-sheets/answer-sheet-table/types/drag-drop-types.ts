@@ -1,0 +1,45 @@
+import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type {
+  PlacementStrategy,
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/types/answer-sheet.types"
+
+// ファイル状態管理用の型定義
+export interface FileState {
+  fileId: string
+  studentId: string | null
+  pageNumber: number
+}
+
+// ドラッグ&ドロップフックの引数型
+export interface UseDragDropParams {
+  files: UnifiedFile[]
+  onFilesChange: (files: UnifiedFile[]) => void
+  getEnabledFiles: () => UnifiedFile[]
+  getDisabledFiles: () => UnifiedFile[]
+  disabledState: ExtendedDisabledState
+  setDisabledState: (
+    state:
+      | ExtendedDisabledState
+      | ((prev: ExtendedDisabledState) => ExtendedDisabledState),
+  ) => void
+  students?: UnifiedStudent[]
+  masterImageCount?: number
+  mode?: "upload" | "view"
+  fileOrder?: PlacementStrategy
+  onReloadData?: () => void
+  onUpdatePendingChanges?: (
+    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+  ) => void
+}
+
+// ドラッグ&ドロップフックの戻り値型
+export interface UseDragDropReturn {
+  sensors: any
+  activeFile: UnifiedFile | null
+  handleDragStart: (event: any) => void
+  handleDragOver: (event: any) => void
+  handleDragEnd: (event: any) => void
+  resetToInitialState: () => void
+}
