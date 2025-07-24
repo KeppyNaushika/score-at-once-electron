@@ -59,8 +59,6 @@ export interface EmptyTableCellProps {
   student: UnifiedStudent | null
   pageNumber: number | null
   isPositionDisabled: boolean
-  onTogglePosition: () => void
-  onUploadToCell: () => void
   isPendingChange?: boolean
 }
 

@@ -17,53 +17,41 @@ export function useTableData(
   disabledState: ExtendedDisabledState,
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean,
 ) {
-  // 動的無効化計算：ファイル数不足による無効位置
+  // 動的無効化計算：答案がない位置を無効化
   const calculateDynamicDisabledPositions = useCallback(() => {
     const dynamicDisabled = new Set<number>()
     
-    // 有効ファイル数を取得
-    const enabledFiles = files.filter((file) => !disabledState.files.has(file.id))
-    const enabledFileCount = enabledFiles.length
-    
-    // 有効セル位置を配置戦略に基づいて計算
-    const validPositions: Array<{ studentIndex: number; pageIndex: number }> = []
+    // 全ての位置について答案があるかチェック
     for (let studentIndex = 0; studentIndex < students.length; studentIndex++) {
+      const student = students[studentIndex]
+      
       for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+        const pageNumber = pageIndex + 1
         const position = studentIndex * masterImageCount + pageIndex
-        if (!disabledState.rows.has(studentIndex) && 
-            !disabledState.cols.has(pageIndex) && 
-            !disabledState.positions.has(position)) {
-          validPositions.push({ studentIndex, pageIndex })
+        
+        // 手動無効化済みの位置はスキップ
+        if (disabledState.rows.has(studentIndex) || 
+            disabledState.cols.has(pageIndex) || 
+            disabledState.positions.has(position)) {
+          continue
+        }
+        
+        // その位置に対応する答案があるかチェック
+        const hasAnswerForPosition = files.some(file => 
+          file.studentId === student.id && 
+          file.pageNumber === pageNumber &&
+          !disabledState.files.has(file.id)
+        )
+        
+        // 答案がない場合は動的無効化
+        if (!hasAnswerForPosition) {
+          dynamicDisabled.add(position)
         }
       }
     }
     
-    // 配置戦略に基づいてソート
-    if (fileOrder === "page-first") {
-      validPositions.sort((a, b) => {
-        if (a.pageIndex !== b.pageIndex) {
-          return a.pageIndex - b.pageIndex
-        }
-        return a.studentIndex - b.studentIndex
-      })
-    } else {
-      validPositions.sort((a, b) => {
-        if (a.studentIndex !== b.studentIndex) {
-          return a.studentIndex - b.studentIndex
-        }
-        return a.pageIndex - b.pageIndex
-      })
-    }
-    
-    // ファイル数を超える位置を動的無効化
-    for (let i = enabledFileCount; i < validPositions.length; i++) {
-      const pos = validPositions[i]
-      const position = pos.studentIndex * masterImageCount + pos.pageIndex
-      dynamicDisabled.add(position)
-    }
-    
     return dynamicDisabled
-  }, [files, students, masterImageCount, fileOrder, disabledState])
+  }, [files, students, masterImageCount, disabledState])
   
   // 動的無効化位置の計算
   const dynamicDisabledPositions = useMemo(() => 

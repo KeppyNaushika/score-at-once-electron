@@ -101,7 +101,7 @@ export function AnswerSheetTable({
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
-    initializeAbsentStudents,
+    initializeStudentsWithoutAnswers,
   } = useDisabledState()
 
   const {
@@ -171,9 +171,6 @@ export function AnswerSheetTable({
   // イベントハンドラー
   // ============================================================================
 
-  const handleUploadToCell = (position: number) => {
-    // TODO: セル特定位置へのアップロード処理
-  }
 
   const handleUpload = () => {
     const uploadData: UploadData[] = []
@@ -208,10 +205,10 @@ export function AnswerSheetTable({
   // 初期化処理
   // ============================================================================
 
-  // 欠席者の自動無効化
+  // 答案がない生徒の自動無効化（DBベース）
   useEffect(() => {
-    initializeAbsentStudents(students)
-  }, [students, initializeAbsentStudents])
+    initializeStudentsWithoutAnswers(students, files)
+  }, [students, files, initializeStudentsWithoutAnswers])
 
   // ============================================================================
   // 計算済みプロパティ
@@ -277,8 +274,8 @@ export function AnswerSheetTable({
                   <TableRow>
                     {/* 生徒名列ヘッダー */}
                     <TableHead
-                      className="w-32 cursor-pointer border text-center"
-                      onClick={() => toggleColDisabled(-1)}
+                      className={`w-32 border text-center ${mode === "upload" ? "cursor-pointer" : ""}`}
+                      onClick={mode === "upload" ? () => toggleColDisabled(-1) : undefined}
                     >
                       生徒名
                     </TableHead>
@@ -286,12 +283,14 @@ export function AnswerSheetTable({
                     {Array.from({ length: maxPages }, (_, pageIndex) => (
                       <TableHead
                         key={pageIndex}
-                        className={`w-32 cursor-pointer border text-center ${
+                        className={`w-32 border text-center ${
+                          mode === "upload" ? "cursor-pointer" : ""
+                        } ${
                           disabledState.cols.has(pageIndex)
                             ? "bg-gray-200"
                             : "bg-white"
                         }`}
-                        onClick={() => toggleColDisabled(pageIndex)}
+                        onClick={mode === "upload" ? () => toggleColDisabled(pageIndex) : undefined}
                       >
                         ページ {pageIndex + 1}
                       </TableHead>
@@ -304,13 +303,15 @@ export function AnswerSheetTable({
                       {/* 生徒名セル */}
                       <TableHead
                         className={`border text-center ${
+                          mode === "upload" ? "cursor-pointer" : ""
+                        } ${
                           disabledState.rows.has(studentIndex)
                             ? "bg-gray-200"
                             : "bg-white"
                         }`}
-                        onClick={() => toggleRowDisabled(studentIndex)}
+                        onClick={mode === "upload" ? () => toggleRowDisabled(studentIndex) : undefined}
                       >
-                        <div className="cursor-pointer px-2 py-1">
+                        <div className="px-2 py-1">
                           <div className="text-sm font-medium">
                             {sortedStudents[studentIndex].lastName}{" "}
                             {sortedStudents[studentIndex].firstName}
@@ -334,12 +335,6 @@ export function AnswerSheetTable({
                               student={cellData.student}
                               pageNumber={cellData.pageNumber}
                               isPositionDisabled={cellData.type === "disabled"}
-                              onTogglePosition={() =>
-                                togglePositionDisabled(cellData.position)
-                              }
-                              onUploadToCell={() =>
-                                handleUploadToCell(cellData.position)
-                              }
                               isPendingChange={false} // 空のセルは通常変更対象外
                             />
                           )
@@ -357,15 +352,15 @@ export function AnswerSheetTable({
                             hasFile={true}
                             isPositionDisabled={false}
                             isFileDisabled={isFileDisabled}
-                            onTogglePosition={() =>
+                            onTogglePosition={mode === "upload" ? () =>
                               togglePositionDisabled(cellData.position)
-                            }
-                            onToggleFileDisabled={() =>
+                            : () => {}}
+                            onToggleFileDisabled={mode === "upload" ? () =>
                               toggleFileDisabled(file.id)
-                            }
-                            onUploadToCell={() =>
-                              handleUploadToCell(cellData.position)
-                            }
+                            : () => {}}
+                            onUploadToCell={() => {
+                              // アップロードはアップロードタブから行う
+                            }}
                             fileId={file.id}
                             observerRef={observerRef}
                             mode={mode}

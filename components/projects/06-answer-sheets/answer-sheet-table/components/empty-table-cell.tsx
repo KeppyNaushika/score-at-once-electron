@@ -5,19 +5,16 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
-  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { Ban, Upload } from "lucide-react"
+import { Ban } from "lucide-react"
 
 export function EmptyTableCell({
   position,
   student,
   pageNumber,
   isPositionDisabled,
-  onTogglePosition,
-  onUploadToCell,
   isPendingChange = false,
 }: EmptyTableCellProps) {
   return (
@@ -45,20 +42,9 @@ export function EmptyTableCell({
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem
-            onClick={onTogglePosition}
-            className="flex items-center gap-2"
-          >
+          <ContextMenuItem disabled className="flex items-center gap-2 text-gray-400">
             <Ban className="h-4 w-4" />
-            {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem
-            onClick={onUploadToCell}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            このセルに答案画像をアップロード
+            空のセル
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

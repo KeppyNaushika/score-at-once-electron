@@ -100,12 +100,14 @@ export function FilePreviewCell({
               height={200}
               unoptimized
             />
-            {/* デバッグ用オーバーレイ */}
-            <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
-              <div>ID: {file.id.slice(0, 8)}</div>
-              <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
-              <div>P: {file.pageNumber}</div>
-            </div>
+            {/* デバッグ用オーバーレイ（開発環境のみ） */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+                <div>ID: {file.id.slice(0, 8)}</div>
+                <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+                <div>P: {file.pageNumber}</div>
+              </div>
+            )}
           </div>
         )
       }
@@ -132,12 +134,14 @@ export function FilePreviewCell({
             height={200}
             unoptimized
           />
-          {/* デバッグ用オーバーレイ */}
-          <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
-            <div>ID: {file.id.slice(0, 8)}</div>
-            <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
-            <div>P: {file.pageNumber}</div>
-          </div>
+          {/* デバッグ用オーバーレイ（開発環境のみ） */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
+              <div>ID: {file.id.slice(0, 8)}</div>
+              <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
+              <div>P: {file.pageNumber}</div>
+            </div>
+          )}
         </div>
       )
     }

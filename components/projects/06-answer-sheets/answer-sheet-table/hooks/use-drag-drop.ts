@@ -1,6 +1,5 @@
 import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 import type {
-  PendingChange,
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
@@ -8,7 +7,7 @@ import type {
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import { useCallback, useState, useRef, useEffect } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
 export function useDragDrop(
@@ -27,7 +26,9 @@ export function useDragDrop(
   mode?: "upload" | "view",
   fileOrder?: PlacementStrategy,
   onReloadData?: () => void,
-  onUpdatePendingChanges?: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void,
+  onUpdatePendingChanges?: (
+    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+  ) => void,
 ) {
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
   const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
@@ -44,140 +45,150 @@ export function useDragDrop(
   const initialFileStatesRef = useRef<FileState[]>([])
   const prevFileOrderRef = useRef<PlacementStrategy | undefined>(undefined)
 
-
-
   // 3つ組からDnD配列を構築する関数（戦略ベース順序）
-  const buildDnDArrayFromFileStates = useCallback((
-    fileStates: FileState[],
-    strategy: PlacementStrategy
-  ): UnifiedFile[] => {
-    if (!students || !masterImageCount || fileStates.length === 0) return []
+  const buildDnDArrayFromFileStates = useCallback(
+    (fileStates: FileState[], strategy: PlacementStrategy): UnifiedFile[] => {
+      if (!students || !masterImageCount || fileStates.length === 0) return []
 
-    // 生徒のソート（受験生徒順：customOrder準拠）
-    const sortedStudents = [...students].sort((a, b) => {
-      const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
-      const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
-      return aOrder - bOrder
-    })
+      // 生徒のソート（受験生徒順：customOrder準拠）
+      const sortedStudents = [...students].sort((a, b) => {
+        const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
+        const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
+        return aOrder - bOrder
+      })
 
-    // 配置戦略に基づいて論理位置の順序を決定（Math.floor不使用）
-    const orderedPositions: Array<{ studentId: string | null; pageNumber: number }> = []
+      // 配置戦略に基づいて論理位置の順序を決定（Math.floor不使用）
+      const orderedPositions: Array<{
+        studentId: string | null
+        pageNumber: number
+      }> = []
 
-    if (strategy === "student-first") {
-      // 生徒順: s1p1, s1p2, s2p1, s2p2, ...
-      sortedStudents.forEach(student => {
+      if (strategy === "student-first") {
+        // 生徒順: s1p1, s1p2, s2p1, s2p2, ...
+        sortedStudents.forEach((student) => {
+          for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
+            orderedPositions.push({
+              studentId: student.id,
+              pageNumber: pageNum,
+            })
+          }
+        })
+      } else {
+        // ページ順: s1p1, s2p1, s3p1, ..., s1p2, s2p2, s3p2, ...
         for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
-          orderedPositions.push({
-            studentId: student.id,
-            pageNumber: pageNum
+          sortedStudents.forEach((student) => {
+            orderedPositions.push({
+              studentId: student.id,
+              pageNumber: pageNum,
+            })
           })
+        }
+      }
+
+      // 論理位置の順序に基づいてファイルを配置
+      const orderedFiles: UnifiedFile[] = []
+
+      orderedPositions.forEach((position) => {
+        // 3つ組から対応するファイルを検索
+        const matchingFileState = fileStates.find(
+          (state) =>
+            state.studentId === position.studentId &&
+            state.pageNumber === position.pageNumber,
+        )
+
+        if (matchingFileState) {
+          // 元のfiles配列から実際のUnifiedFileオブジェクトを取得
+          const actualFile = files.find(
+            (file) => file.id === matchingFileState.fileId,
+          )
+          if (actualFile) {
+            orderedFiles.push(actualFile)
+          }
         }
       })
-    } else {
-      // ページ順: s1p1, s2p1, s3p1, ..., s1p2, s2p2, s3p2, ...
-      for (let pageNum = 1; pageNum <= masterImageCount; pageNum++) {
-        sortedStudents.forEach(student => {
-          orderedPositions.push({
-            studentId: student.id,
-            pageNumber: pageNum
-          })
-        })
-      }
-    }
 
-    // 論理位置の順序に基づいてファイルを配置
-    const orderedFiles: UnifiedFile[] = []
-
-    orderedPositions.forEach(position => {
-      // 3つ組から対応するファイルを検索
-      const matchingFileState = fileStates.find(state =>
-        state.studentId === position.studentId &&
-        state.pageNumber === position.pageNumber
-      )
-
-      if (matchingFileState) {
-        // 元のfiles配列から実際のUnifiedFileオブジェクトを取得
-        const actualFile = files.find(file => file.id === matchingFileState.fileId)
-        if (actualFile) {
-          orderedFiles.push(actualFile)
-        }
-      }
-    })
-
-    console.log('戦略変更後のfiles:', orderedFiles.map(f => f.name || f.id.slice(0, 8)))
-    return orderedFiles
-  }, [students, masterImageCount, files])
+      return orderedFiles
+    },
+    [students, masterImageCount, files],
+  )
 
   // DnD配列から3つ組を更新する関数（ファイル実データを直接使用）
-  const updateFileStatesFromDnDArray = useCallback((
-    dndArray: UnifiedFile[]
-  ): FileState[] => {
-    // ファイルの実データをそのまま使用（推測ではない）
-    return dndArray.map(file => ({
-      fileId: file.id,
-      studentId: file.studentId || null,  // ファイルの実データ
-      pageNumber: file.pageNumber         // ファイルの実データ
-    }))
-  }, [])
+  const updateFileStatesFromDnDArray = useCallback(
+    (dndArray: UnifiedFile[]): FileState[] => {
+      // ファイルの実データをそのまま使用（推測ではない）
+      return dndArray.map((file) => ({
+        fileId: file.id,
+        studentId: file.studentId || null, // ファイルの実データ
+        pageNumber: file.pageNumber, // ファイルの実データ
+      }))
+    },
+    [],
+  )
 
   // ファイル状態を比較して変更されたファイルを検知する関数
-  const compareFileStates = useCallback((
-    initialStates: FileState[],
-    currentStates: FileState[]
-  ) => {
-    const changedFiles: Array<{
-      fileId: string
-      fromState: FileState
-      toState: FileState
-    }> = []
+  const compareFileStates = useCallback(
+    (initialStates: FileState[], currentStates: FileState[]) => {
+      const changedFiles: Array<{
+        fileId: string
+        fromState: FileState
+        toState: FileState
+      }> = []
 
-    // 各ファイルについて、初期状態と現在状態を比較
-    currentStates.forEach(currentState => {
-      const initialState = initialStates.find(state => state.fileId === currentState.fileId)
+      // 各ファイルについて、初期状態と現在状態を比較
+      currentStates.forEach((currentState) => {
+        const initialState = initialStates.find(
+          (state) => state.fileId === currentState.fileId,
+        )
 
-      if (initialState) {
-        // studentId または pageNumber が変わった場合
-        if (initialState.studentId !== currentState.studentId ||
-            initialState.pageNumber !== currentState.pageNumber) {
-
-          changedFiles.push({
-            fileId: currentState.fileId,
-            fromState: initialState,
-            toState: currentState
-          })
+        if (initialState) {
+          // studentId または pageNumber が変わった場合
+          if (
+            initialState.studentId !== currentState.studentId ||
+            initialState.pageNumber !== currentState.pageNumber
+          ) {
+            changedFiles.push({
+              fileId: currentState.fileId,
+              fromState: initialState,
+              toState: currentState,
+            })
+          }
         }
-      }
-    })
+      })
 
-    return changedFiles
-  }, [])
+      return changedFiles
+    },
+    [],
+  )
 
   // 1. 初期化: DB → 3つ組（実データから直接生成）
   useEffect(() => {
-    if (mode === "view" && files.length > 0 && fileStatesRef.current.length === 0) {
+    if (
+      mode === "view" &&
+      files.length > 0 &&
+      fileStatesRef.current.length === 0
+    ) {
       // DBから直接3つ組を生成（推測ではなく実データ）
-      const states: FileState[] = files.map(file => ({
+      const states: FileState[] = files.map((file) => ({
         fileId: file.id,
-        studentId: file.studentId || null,  // DBの実際の値
-        pageNumber: file.pageNumber         // DBの実際の値
+        studentId: file.studentId || null, // DBの実際の値
+        pageNumber: file.pageNumber, // DBの実際の値
       }))
 
       fileStatesRef.current = [...states]
       initialFileStatesRef.current = [...states] // 初期状態保存
-
-      console.log('実際のfilesオブジェクト:', files.slice(0, 3).map(f => ({
-        id: f.id.slice(0, 8),
-        studentId: f.studentId,
-        pageNumber: f.pageNumber
-      })))
-      console.log('DB実データから生成した3つ組:', states.slice(0, 5))
     }
   }, [mode, files.length, files])
 
   // 2. 戦略変更時: 初期状態の3つ組 → DnD配列再構築
   useEffect(() => {
-    if (initialFileStatesRef.current.length > 0 && prevFileOrderRef.current !== fileOrder) {
-      const newFiles = buildDnDArrayFromFileStates(initialFileStatesRef.current, fileOrder || "page-first")
+    if (
+      initialFileStatesRef.current.length > 0 &&
+      prevFileOrderRef.current !== fileOrder
+    ) {
+      const newFiles = buildDnDArrayFromFileStates(
+        initialFileStatesRef.current,
+        fileOrder || "page-first",
+      )
       if (newFiles.length > 0) {
         onFilesChange(newFiles)
         // 戦略変更後、現在の3つ組も初期状態に戻す
@@ -337,47 +348,42 @@ export function useDragDrop(
         const newIndex = newFiles.findIndex((file) => file.id === overId)
 
         if (oldIndex !== -1 && newIndex !== -1) {
-          console.log('DnD操作前のfiles詳細:', newFiles.map(f => ({
-            id: f.id.slice(0, 8),
-            name: f.name,
-            studentId: f.studentId,
-            pageNumber: f.pageNumber
-          })))
-
           // 1. fileIdのみを入れ替え、各位置のstudentIdとpageNumberは固定
           const originalFiles = [...newFiles]
-          const reorderedFileIds = arrayMove(newFiles.map(f => f.id), oldIndex, newIndex)
-          
+          const reorderedFileIds = arrayMove(
+            newFiles.map((f) => f.id),
+            oldIndex,
+            newIndex,
+          )
+
           // 2. 各位置に対して、新しいfileIdと元の論理位置を組み合わせ
           const reorderedFiles = originalFiles.map((originalFile, index) => ({
-            ...files.find(f => f.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
-            studentId: originalFile.studentId,    // 元の位置のstudentId
-            pageNumber: originalFile.pageNumber   // 元の位置のpageNumber
+            ...files.find((f) => f.id === reorderedFileIds[index])!, // 新しいfileIdのファイルオブジェクト
+            studentId: originalFile.studentId, // 元の位置のstudentId
+            pageNumber: originalFile.pageNumber, // 元の位置のpageNumber
           }))
 
-          console.log('DnD操作後のfiles詳細:', reorderedFiles.slice(0, 5).map(f => ({
-            id: f.id.slice(0, 8),
-            name: f.name,
-            studentId: f.studentId,
-            pageNumber: f.pageNumber
-          })))
           onFilesChange(reorderedFiles)
 
           // 3. DnD操作時: 配列変更 + 3つ組同期更新（ファイル実データをそのまま使用）
           if (mode === "view") {
             const newFileStates = updateFileStatesFromDnDArray(reorderedFiles)
-            console.log('DnD前の3つ組:', fileStatesRef.current.slice(0, 3))
-            console.log('DnD後の3つ組:', newFileStates.slice(0, 3))
             fileStatesRef.current = newFileStates
           }
 
           // 確認モードでは一括でPendingChangeを更新
-          if (mode === "view" && students && masterImageCount && onUpdatePendingChanges && initialFileStatesRef.current.length > 0) {
+          if (
+            mode === "view" &&
+            students &&
+            masterImageCount &&
+            onUpdatePendingChanges &&
+            initialFileStatesRef.current.length > 0
+          ) {
             // 現在のファイル状態と初期状態を比較
             const currentFileStates = fileStatesRef.current
             const changedFiles = compareFileStates(
               initialFileStatesRef.current,
-              currentFileStates
+              currentFileStates,
             )
 
             // 変更されたファイル情報を一括で親に渡す
@@ -385,9 +391,12 @@ export function useDragDrop(
 
             // ドラッグ操作完了のtoast表示
             if (changedFiles.length > 0) {
-              toast.success(`${changedFiles.length}件の答案配置を変更しました`, {
-                description: "「変更を反映」ボタンで確定してください",
-              })
+              toast.success(
+                `${changedFiles.length}件の答案配置を変更しました`,
+                {
+                  description: "「変更を反映」ボタンで確定してください",
+                },
+              )
             } else {
               toast.info("元の位置に戻されました")
             }
@@ -418,11 +427,13 @@ export function useDragDrop(
   // キャンセル時に初期状態に戻すリセット関数
   const resetToInitialState = useCallback(() => {
     if (mode === "view" && initialFileStatesRef.current.length > 0) {
-      const resetFiles = buildDnDArrayFromFileStates(initialFileStatesRef.current, fileOrder || "page-first")
+      const resetFiles = buildDnDArrayFromFileStates(
+        initialFileStatesRef.current,
+        fileOrder || "page-first",
+      )
       if (resetFiles.length > 0) {
         onFilesChange(resetFiles)
         fileStatesRef.current = [...initialFileStatesRef.current]
-        console.log('DnD配列を初期状態にリセットしました')
       }
     }
   }, [mode, fileOrder, buildDnDArrayFromFileStates, onFilesChange])

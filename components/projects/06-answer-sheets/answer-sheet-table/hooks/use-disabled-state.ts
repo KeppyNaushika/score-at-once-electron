@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedStudent, UnifiedFile } from "@/types/answer-sheet.types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({
@@ -71,19 +71,10 @@ export function useDisabledState() {
     [disabledState],
   )
 
-  // 欠席者を自動的に無効化する関数
-  const initializeAbsentStudents = useCallback((students: UnifiedStudent[]) => {
-    setDisabledState((prev) => {
-      const newRows = new Set(prev.rows)
-
-      students.forEach((student, index) => {
-        if (student.status === "absent") {
-          newRows.add(index)
-        }
-      })
-
-      return { ...prev, rows: newRows }
-    })
+  // 初期化関数（現在は何もしない）
+  const initializeStudentsWithoutAnswers = useCallback((students: UnifiedStudent[], files: UnifiedFile[]) => {
+    // セル単位の動的無効化に統一するため、行の無効化は行わない
+    // 動的無効化が答案の有無に基づいてセル単位で制御する
   }, [])
 
   return {
@@ -94,6 +85,6 @@ export function useDisabledState() {
     togglePositionDisabled,
     toggleFileDisabled,
     isPositionDisabled,
-    initializeAbsentStudents,
+    initializeStudentsWithoutAnswers,
   }
 }
