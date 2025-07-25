@@ -76,7 +76,7 @@ jobs:
 
       - name: Setup build variables (Windows)
         if: runner.os == 'Windows'
-        id: vars
+        id: vars_win
         run: |
           if ($env:GITHUB_REF -like "refs/tags/*") {
             $VERSION = $env:GITHUB_REF -replace "refs/tags/v", ""
@@ -89,7 +89,7 @@ jobs:
 
       - name: Setup build variables (Unix)
         if: runner.os != 'Windows'
-        id: vars
+        id: vars_unix
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
             VERSION=${GITHUB_REF#refs/tags/v}
@@ -180,7 +180,7 @@ jobs:
 
             if ($zipFiles.Count -gt 0) {
               $sourceZip = $zipFiles[0].FullName
-              $version = "${{ steps.vars.outputs.version }}"
+              $version = "${{ steps.vars_win.outputs.version }}"
               $targetZip = Join-Path $rootDir "${{ matrix.artifact_name }}-$version.zip"
               Write-Host "Copying $sourceZip to $targetZip"
               Copy-Item $sourceZip $targetZip
@@ -191,7 +191,7 @@ jobs:
           }
 
           # Verify final result
-          $version = "${{ steps.vars.outputs.version }}"
+          $version = "${{ steps.vars_win.outputs.version }}"
           $finalZip = "${{ matrix.artifact_name }}-$version.zip"
           if (Test-Path $finalZip) {
             Write-Host "SUCCESS: $finalZip created successfully"
@@ -206,7 +206,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cd out
-          VERSION="${{ steps.vars.outputs.version }}"
+          VERSION="${{ steps.vars_unix.outputs.version }}"
           FINAL_NAME="${{ matrix.artifact_name }}-$VERSION.zip"
           
           if [ -d "make" ]; then
@@ -228,8 +228,8 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}-${{ steps.vars.outputs.version }}
-          path: ${{ matrix.artifact_name }}-${{ steps.vars.outputs.version }}.zip
+          name: ${{ matrix.artifact_name }}-${{ steps.vars_win.outputs.version || steps.vars_unix.outputs.version }}
+          path: ${{ matrix.artifact_name }}-${{ steps.vars_win.outputs.version || steps.vars_unix.outputs.version }}.zip
           if-no-files-found: error
 
   release:
