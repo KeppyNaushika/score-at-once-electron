@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import type { LayoutRegionWithDetails } from "@/types/electron"
 
 type UseKeyboardNavigationProps = {
@@ -5,11 +6,26 @@ type UseKeyboardNavigationProps = {
 }
 
 export const useKeyboardNavigation = ({ filteredRegions }: UseKeyboardNavigationProps) => {
+  const isComposingRef = useRef(false)
+
+  const handleCompositionStart = () => {
+    isComposingRef.current = true
+  }
+
+  const handleCompositionEnd = () => {
+    isComposingRef.current = false
+  }
+
   const handleKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
     fieldName: string,
   ) => {
+    // IME入力中はEnterキーとTabキーでの移動をスキップ
+    if ((e.key === "Enter" || e.key === "Tab") && isComposingRef.current) {
+      return
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       // Move to next row, same field
@@ -102,5 +118,9 @@ export const useKeyboardNavigation = ({ filteredRegions }: UseKeyboardNavigation
     }
   }
 
-  return { handleKeyDown }
+  return { 
+    handleKeyDown,
+    handleCompositionStart,
+    handleCompositionEnd
+  }
 }
