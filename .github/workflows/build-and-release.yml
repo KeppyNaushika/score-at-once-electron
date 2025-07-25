@@ -406,7 +406,6 @@ jobs:
             const https = require('https');
             
             const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-            const botToken = process.env.DISCORD_BOT_TOKEN;
             const releaseUrl = process.env.RELEASE_URL;
             const isPrerelease = process.env.IS_PRERELEASE === 'true';
             const version = process.env.VERSION;
@@ -417,7 +416,7 @@ jobs:
               content: '@everyone',
               embeds: [{
                 title: `一括採点 ${version} をリリースしました！`,
-                description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](${releaseUrl})**\\nダウンロードしたら <:try:1393919620301324430> を押して下さい` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
+                description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](${releaseUrl})**` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
                 color: isPrerelease ? 0xffa500 : 0x00ff00,
                 fields: [{
                   name: '📦 バージョン',
@@ -435,7 +434,7 @@ jobs:
             const options = {
               hostname: url.hostname,
               port: 443,
-              path: url.pathname + '?wait=true',
+              path: url.pathname,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -452,48 +451,7 @@ jobs:
               });
               
               res.on('end', () => {
-                console.log('Discord response completed');
-                
-                if (res.statusCode === 200 && responseData && botToken) {
-                  try {
-                    const messageData = JSON.parse(responseData);
-                    const messageId = messageData.id;
-                    const channelId = messageData.channel_id;
-                    
-                    if (messageId && channelId) {
-                      // Add :try: reaction
-                      const reactionOptions = {
-                        hostname: 'discord.com',
-                        port: 443,
-                        path: `/api/v10/channels/${channelId}/messages/${messageId}/reactions/try:1393919620301324430/@me`,
-                        method: 'PUT',
-                        headers: {
-                          'Authorization': `Bot ${botToken}`,
-                          'Content-Length': 0
-                        }
-                      };
-                      
-                      const reactionReq = https.request(reactionOptions, (reactionRes) => {
-                        console.log('Discord reaction added:', reactionRes.statusCode);
-                      });
-                      
-                      reactionReq.on('error', (error) => {
-                        console.error('Discord reaction failed:', error.message);
-                      });
-                      
-                      reactionReq.setTimeout(5000, () => {
-                        reactionReq.destroy();
-                        console.log('Discord reaction timeout');
-                      });
-                      
-                      reactionReq.end();
-                    }
-                  } catch (error) {
-                    console.error('Failed to parse Discord response:', error.message);
-                  }
-                } else if (!botToken) {
-                  console.log('Bot token not configured, skipping reaction');
-                }
+                console.log('Discord webhook sent successfully');
               });
             });
             
@@ -511,7 +469,6 @@ jobs:
             DISCORD_EOF
             
             DISCORD_WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}" \
-            DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
             IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
             VERSION="${{ steps.vars.outputs.version }}" \
