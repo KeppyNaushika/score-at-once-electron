@@ -120,7 +120,8 @@ jobs:
 
             if ($zipFiles.Count -gt 0) {
               $sourceZip = $zipFiles[0].FullName
-              $targetZip = Join-Path $rootDir "${{ matrix.artifact_name }}.zip"
+              $version = "${{ steps.vars.outputs.version }}"
+              $targetZip = Join-Path $rootDir "${{ matrix.artifact_name }}-$version.zip"
               Write-Host "Copying $sourceZip to $targetZip"
               Copy-Item $sourceZip $targetZip
               Write-Host "Copy completed"
@@ -130,7 +131,8 @@ jobs:
           }
 
           # Verify final result
-          $finalZip = "${{ matrix.artifact_name }}.zip"
+          $version = "${{ steps.vars.outputs.version }}"
+          $finalZip = "${{ matrix.artifact_name }}-$version.zip"
           if (Test-Path $finalZip) {
             Write-Host "SUCCESS: $finalZip created successfully"
             $fileInfo = Get-Item $finalZip
@@ -144,24 +146,30 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           cd out
+          VERSION="${{ steps.vars.outputs.version }}"
+          FINAL_NAME="${{ matrix.artifact_name }}-$VERSION.zip"
+          
           if [ -d "make" ]; then
-            find make -name "*.zip" -exec cp {} ../${{ matrix.artifact_name }}.zip \;
+            find make -name "*.zip" -exec cp {} "../$FINAL_NAME" \;
           fi
-          if [ ! -f "../${{ matrix.artifact_name }}.zip" ]; then
+          if [ ! -f "../$FINAL_NAME" ]; then
             # Fallback: create archive from packaged app
             if [ "${{ matrix.os }}" = "macos-latest" ]; then
-              zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-darwin-${{ matrix.arch }}"
+              zip -r "../$FINAL_NAME" "一括採点-darwin-${{ matrix.arch }}"
             else
-              zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-linux-${{ matrix.arch }}"
+              zip -r "../$FINAL_NAME" "一括採点-linux-${{ matrix.arch }}"
             fi
           fi
+          
+          echo "Created: $FINAL_NAME"
+          ls -la "../$FINAL_NAME"
 
       # Upload artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.artifact_name }}.zip
+          name: ${{ matrix.artifact_name }}-${{ steps.vars.outputs.version }}
+          path: ${{ matrix.artifact_name }}-${{ steps.vars.outputs.version }}.zip
           if-no-files-found: error
 
   release:
@@ -212,10 +220,10 @@ jobs:
 
           ### 📦 ダウンロード
 
-          - **macOS (Intel)**: \`score-at-once-mac-x64.zip\`
-          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64.zip\`
-          - **Windows**: \`score-at-once-windows-x64.zip\`
-          - **Linux**: \`score-at-once-linux-x64.zip\`
+          - **macOS (Intel)**: \`score-at-once-mac-x64-$VERSION.zip\`
+          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64-$VERSION.zip\`
+          - **Windows**: \`score-at-once-windows-x64-$VERSION.zip\`
+          - **Linux**: \`score-at-once-linux-x64-$VERSION.zip\`
 
           ### 🧪 プレリリース版について
 
@@ -258,10 +266,10 @@ jobs:
 
           ### 📦 ダウンロード
 
-          - **macOS (Intel)**: \`score-at-once-mac-x64.zip\`
-          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64.zip\`
-          - **Windows**: \`score-at-once-windows-x64.zip\`
-          - **Linux**: \`score-at-once-linux-x64.zip\`
+          - **macOS (Intel)**: \`score-at-once-mac-x64-$VERSION.zip\`
+          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64-$VERSION.zip\`
+          - **Windows**: \`score-at-once-windows-x64-$VERSION.zip\`
+          - **Linux**: \`score-at-once-linux-x64-$VERSION.zip\`
 
           ### 🚀 機能
 
