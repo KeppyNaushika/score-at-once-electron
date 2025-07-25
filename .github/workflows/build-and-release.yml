@@ -15,6 +15,9 @@ on:
           - 'prerelease'
           - 'release'
 
+permissions:
+  contents: write
+
 env:
   # Node.js version to use
   NODE_VERSION: '20'

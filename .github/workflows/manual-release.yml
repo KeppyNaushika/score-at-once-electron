@@ -22,6 +22,10 @@ on:
           - 'beta'
           - 'rc'
 
+permissions:
+  contents: write
+  actions: write
+
 env:
   NODE_VERSION: '20'
 
@@ -83,8 +87,8 @@ jobs:
       - name: Create and push tag
         run: |
           git tag -a "${{ steps.version.outputs.tag_name }}" -m "Release ${{ steps.version.outputs.tag_name }}"
-          git push origin main
-          git push origin "${{ steps.version.outputs.tag_name }}"
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "${{ steps.version.outputs.tag_name }}"
 
       - name: Trigger build workflow
         uses: actions/github-script@v7
