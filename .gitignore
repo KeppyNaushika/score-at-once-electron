@@ -60,4 +60,7 @@ temp-test/
 dist/
 releases/
 
+# リリース一時ファイル
+temp-notes-*.md
+
 /.claude

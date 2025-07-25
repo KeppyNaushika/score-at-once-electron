@@ -117,19 +117,30 @@ async function createRelease() {
     // Create GitHub release
     console.log("🎉 Creating GitHub release...")
 
-    const releaseCommand = [
-      "gh",
-      "release",
-      "create",
-      tagName,
-      ...archives,
-      "--title",
-      `一括採点 ${tagName}`,
-      "--notes",
-      releaseNotes,
-    ]
+    // リリースノートをファイルに書き出し
+    const tempNotesFile = `temp-notes-${currentVersion}.md`
+    fs.writeFileSync(tempNotesFile, releaseNotes)
+    
+    try {
+      const releaseCommand = [
+        "gh",
+        "release",
+        "create",
+        tagName,
+        ...archives,
+        "--title",
+        `一括採点 ${tagName}`,
+        "--notes-file",
+        tempNotesFile,
+      ]
 
-    execSync(releaseCommand.join(" "), { stdio: "inherit" })
+      execSync(releaseCommand.join(" "), { stdio: "inherit" })
+    } finally {
+      // 一時ファイルを削除
+      if (fs.existsSync(tempNotesFile)) {
+        fs.unlinkSync(tempNotesFile)
+      }
+    }
 
     console.log("\n✅ Release created successfully!")
 

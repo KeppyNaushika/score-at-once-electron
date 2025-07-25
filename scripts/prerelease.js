@@ -161,20 +161,33 @@ async function createPrereleaseGitHub(version) {
     console.log("🎉 Creating GitHub pre-release...")
 
     const tagName = `v${version}`
-    const releaseCommand = [
-      "gh",
-      "release",
-      "create",
-      tagName,
-      ...archives,
-      "--prerelease", // This marks it as pre-release
-      "--title",
-      `一括採点 ${tagName} (Pre-release)`,
-      "--notes",
-      releaseNotes,
-    ]
+    
+    // リリースノートをファイルに書き出し
+    const fs = require("fs")
+    const tempNotesFile = `temp-notes-${version}.md`
+    fs.writeFileSync(tempNotesFile, releaseNotes)
+    
+    try {
+      const releaseCommand = [
+        "gh",
+        "release",
+        "create",
+        tagName,
+        ...archives,
+        "--prerelease", // This marks it as pre-release
+        "--title",
+        `一括採点 ${tagName} (Pre-release)`,
+        "--notes-file",
+        tempNotesFile,
+      ]
 
-    execSync(releaseCommand.join(" "), { stdio: "inherit" })
+      execSync(releaseCommand.join(" "), { stdio: "inherit" })
+    } finally {
+      // 一時ファイルを削除
+      if (fs.existsSync(tempNotesFile)) {
+        fs.unlinkSync(tempNotesFile)
+      }
+    }
 
     console.log("\n✅ Pre-release created successfully!")
 
