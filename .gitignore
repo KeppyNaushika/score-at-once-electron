@@ -63,4 +63,7 @@ releases/
 # リリース一時ファイル
 temp-notes-*.md
 
+# GitHub Actions artifacts
+release-files/
+
 /.claude

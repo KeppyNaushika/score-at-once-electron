@@ -72,27 +72,8 @@ async function createRelease() {
       archives.push(macArchive)
     }
 
-    // Windows
-    if (distContents.some((item) => item.includes("win"))) {
-      const winDir = distContents.find((item) => item.includes("win"))
-      const winArchive = `releases/一括採点-${currentVersion}-windows.zip`
-      console.log(`  🪟 Creating Windows archive: ${winArchive}`)
-      execSync(`cd dist && zip -r ../${winArchive} "${winDir}"`, {
-        stdio: "inherit",
-      })
-      archives.push(winArchive)
-    }
-
-    // Linux
-    if (distContents.some((item) => item.includes("linux"))) {
-      const linuxDir = distContents.find((item) => item.includes("linux"))
-      const linuxArchive = `releases/一括採点-${currentVersion}-linux.zip`
-      console.log(`  🐧 Creating Linux archive: ${linuxArchive}`)
-      execSync(`cd dist && zip -r ../${linuxArchive} "${linuxDir}"`, {
-        stdio: "inherit",
-      })
-      archives.push(linuxArchive)
-    }
+    // Note: Only macOS builds are created to avoid cross-compilation issues
+    // Windows and Linux builds would require native compilation on respective platforms
 
     if (archives.length === 0) {
       console.error("❌ No distribution files found to archive")

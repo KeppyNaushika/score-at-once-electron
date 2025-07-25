@@ -1,0 +1,101 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - 'patch'
+          - 'minor'
+          - 'major'
+      prerelease_type:
+        description: 'Prerelease type (leave empty for stable release)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - 'alpha'
+          - 'beta'
+          - 'rc'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump version
+        id: version
+        run: |
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          PRERELEASE_TYPE="${{ github.event.inputs.prerelease_type }}"
+          
+          if [ -n "$PRERELEASE_TYPE" ]; then
+            # Prerelease version
+            if [ "$PRERELEASE_TYPE" = "alpha" ] || [ "$PRERELEASE_TYPE" = "beta" ] || [ "$PRERELEASE_TYPE" = "rc" ]; then
+              NEW_VERSION=$(npm version "pre$VERSION_TYPE" --preid="$PRERELEASE_TYPE" --no-git-tag-version)
+            else
+              NEW_VERSION=$(npm version "pre$VERSION_TYPE" --no-git-tag-version)
+            fi
+            IS_PRERELEASE="true"
+          else
+            # Stable release
+            NEW_VERSION=$(npm version "$VERSION_TYPE" --no-git-tag-version)
+            IS_PRERELEASE="false"
+          fi
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "tag_name=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git add package.json package-lock.json
+          git commit -m "Bump version to ${{ steps.version.outputs.new_version }}"
+
+      - name: Create and push tag
+        run: |
+          git tag -a "${{ steps.version.outputs.tag_name }}" -m "Release ${{ steps.version.outputs.tag_name }}"
+          git push origin main
+          git push origin "${{ steps.version.outputs.tag_name }}"
+
+      - name: Trigger build workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-and-release.yml',
+              ref: '${{ steps.version.outputs.tag_name }}',
+              inputs: {
+                release_type: '${{ steps.version.outputs.is_prerelease }}' === 'true' ? 'prerelease' : 'release'
+              }
+            })
