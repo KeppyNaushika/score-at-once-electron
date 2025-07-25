@@ -147,10 +147,17 @@
       "main/**/*",
       ".next/**/*",
       "public/**/*",
-      "node_modules/**/*",
-      "!node_modules/@prisma/client/**/*",
       "package.json",
-      "prisma/schema.prisma"
+      "prisma/schema.prisma",
+      {
+        "from": "node_modules",
+        "to": "node_modules",
+        "filter": [
+          "**/*",
+          "!@prisma/client/**/*",
+          "!.prisma/**/*"
+        ]
+      }
     ],
     "extraFiles": [
       {
