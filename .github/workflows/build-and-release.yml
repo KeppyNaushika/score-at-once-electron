@@ -105,49 +105,38 @@ jobs:
       - name: Create archive from Forge output (Windows)
         if: runner.os == 'Windows'
         run: |
-          Write-Host "=== Debugging Windows archive creation ==="
-          Write-Host "Current directory:"
-          Get-Location
-          Write-Host "Contents of current directory:"
-          Get-ChildItem -Force
+          Write-Host "=== Creating Windows archive ==="
           
-          if (Test-Path "out") {
-            Write-Host "Contents of out directory:"
-            Get-ChildItem -Path "out" -Recurse -Force
-            cd out
+          # Use absolute paths to avoid confusion
+          $rootDir = Get-Location
+          Write-Host "Root directory: $rootDir"
+          
+          if (Test-Path "out\make") {
+            Write-Host "Found out\make directory, searching for ZIP files..."
+            $zipFiles = Get-ChildItem -Path "out\make" -Recurse -Filter "*.zip"
+            Write-Host "Found $($zipFiles.Count) ZIP files:"
+            $zipFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
             
-            if (Test-Path "make") {
-              Write-Host "Contents of make directory:"
-              Get-ChildItem -Path "make" -Recurse -Force
-              $zipFile = Get-ChildItem -Path "make" -Recurse -Filter "*.zip" | Select-Object -First 1
-              if ($zipFile) {
-                Write-Host "Found ZIP file: $($zipFile.FullName)"
-                Copy-Item $zipFile.FullName "../${{ matrix.artifact_name }}.zip"
-              } else {
-                Write-Host "No ZIP file found in make directory"
-              }
-            } else {
-              Write-Host "make directory does not exist"
-            }
-            
-            if (!(Test-Path "../${{ matrix.artifact_name }}.zip")) {
-              Write-Host "Creating archive from packaged app directory"
-              $packagedDir = "一括採点-win32-${{ matrix.arch }}"
-              if (Test-Path $packagedDir) {
-                Write-Host "Found packaged directory: $packagedDir"
-                Compress-Archive -Path $packagedDir -DestinationPath "../${{ matrix.artifact_name }}.zip"
-              } else {
-                Write-Host "Packaged directory $packagedDir not found. Available directories:"
-                Get-ChildItem -Directory -Force
-              }
+            if ($zipFiles.Count -gt 0) {
+              $sourceZip = $zipFiles[0].FullName
+              $targetZip = Join-Path $rootDir "${{ matrix.artifact_name }}.zip"
+              Write-Host "Copying $sourceZip to $targetZip"
+              Copy-Item $sourceZip $targetZip
+              Write-Host "Copy completed"
             }
           } else {
-            Write-Host "out directory does not exist"
+            Write-Host "out\make directory not found"
           }
           
-          Write-Host "Final check - ZIP file exists:"
-          cd ..
-          Test-Path "${{ matrix.artifact_name }}.zip"
+          # Verify final result
+          $finalZip = "${{ matrix.artifact_name }}.zip"
+          if (Test-Path $finalZip) {
+            Write-Host "SUCCESS: $finalZip created successfully"
+            $fileInfo = Get-Item $finalZip
+            Write-Host "File size: $($fileInfo.Length) bytes"
+          } else {
+            Write-Host "ERROR: $finalZip was not created"
+          }
         shell: powershell
         
       - name: Create archive from Forge output (Unix)
