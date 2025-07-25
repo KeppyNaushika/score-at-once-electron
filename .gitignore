@@ -56,4 +56,8 @@ data/
 # ビルド出力・テスト
 temp-test/
 
+# Electron配布ファイル
+dist/
+releases/
+
 /.claude
