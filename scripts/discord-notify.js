@@ -114,6 +114,76 @@ async function addReactionToWebhookMessage(webhookUrl, messageId, emoji) {
 }
 
 /**
+ * 最近のコミット履歴からPR情報を取得
+ * @param {string} previousVersion 前回のバージョンタグ
+ * @returns {string[]} PR情報のリスト
+ */
+function getRecentPRs(previousVersion) {
+  try {
+    const { execSync } = require("child_process")
+    
+    // 前回バージョンから現在までのコミット履歴を取得
+    let gitLogCommand
+    if (previousVersion) {
+      gitLogCommand = `git log ${previousVersion}..HEAD --oneline --grep="Merge pull request" -n 10`
+    } else {
+      gitLogCommand = `git log --oneline --grep="Merge pull request" -n 10`
+    }
+    
+    const gitLog = execSync(gitLogCommand, { encoding: "utf-8", stdio: "pipe" }).trim()
+    
+    if (!gitLog) return []
+    
+    // PRコミットから情報を抽出
+    return gitLog
+      .split("\n")
+      .map((line) => {
+        // "a1b2c3d Merge pull request #123 from user/feature-branch" から "#123" と説明を抽出
+        const prMatch = line.match(/Merge pull request (#\d+) from .+?\/(.+)/)
+        if (prMatch) {
+          const [, prNumber, branchName] = prMatch
+          return `${prNumber}: ${branchName.replace(/-/g, " ")}`
+        }
+        return null
+      })
+      .filter(Boolean)
+      .slice(0, 5) // 最大5個まで
+  } catch (error) {
+    console.warn("PR情報の取得に失敗:", error.message)
+    return []
+  }
+}
+
+/**
+ * 前回のバージョンタグを取得
+ * @param {string} currentVersion 現在のバージョン
+ * @returns {string|null} 前回のバージョンタグ
+ */
+function getPreviousVersion(currentVersion) {
+  try {
+    const { execSync } = require("child_process")
+    
+    // すべてのタグを取得し、バージョン順でソート
+    const tags = execSync("git tag -l 'v*' --sort=-version:refname", { 
+      encoding: "utf-8", 
+      stdio: "pipe" 
+    })
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+    
+    // 現在のバージョンタグを除外して最新のものを取得
+    const currentTag = `v${currentVersion}`
+    const previousTag = tags.find(tag => tag !== currentTag)
+    
+    return previousTag || null
+  } catch (error) {
+    console.warn("前回バージョンの取得に失敗:", error.message)
+    return null
+  }
+}
+
+/**
  * リリース通知用のDiscordメッセージを生成
  * @param {string} version バージョン
  * @param {string} releaseUrl GitHub Release URL
@@ -137,13 +207,36 @@ function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
     description += "\n\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**"
   }
 
+  // 最近のPR情報を取得
+  const previousVersion = getPreviousVersion(version)
+  const recentPRs = getRecentPRs(previousVersion)
+  
+  // フィールドを動的に生成
+  const fields = [
+    {
+      name: "📦 バージョン",
+      value: version,
+      inline: true,
+    }
+  ]
+
+  // PR情報があれば追加
+  if (recentPRs.length > 0) {
+    fields.push({
+      name: "🔄 最近のマージされたPR",
+      value: recentPRs.map(pr => `• ${pr}`).join("\n"),
+      inline: false,
+    })
+  }
+
   return {
     content: "@everyone", // 全メンバーに通知
     embeds: [
       {
-        title: `:app_icon: 一括採点 ${version} をリリースしました！`,
+        title: `:app_icon: 一括採点 ${version} ${releaseType}をリリースしました！`,
         description: description,
         color: color,
+        fields: fields,
         footer: {
           text: "KeppyNaushika",
           icon_url: "https://github.com/KeppyNaushika.png",

@@ -3,28 +3,59 @@ const { notifyRelease } = require("./discord-notify").default
 const { createRelease } = require("./release")
 
 async function createPrerelease(prereleaseType) {
+  let versionCommitHash = null
+  let tagName = null
+  
   try {
     console.log(`🚀 Creating pre-release (${prereleaseType})...`)
+
+    // 現在のコミットハッシュを保存（ロールバック用）
+    const originalCommit = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
 
     // Bump version with prerelease
     execSync(`npm version pre${prereleaseType}`, { stdio: "inherit" })
 
-    // Get new version
+    // バージョンコミットのハッシュとタグ名を保存
+    versionCommitHash = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
     const packageJson = require("../package.json")
     const newVersion = packageJson.version
+    tagName = `v${newVersion}`
 
     console.log(`✅ Version bumped to: ${newVersion}`)
 
-    // Create pre-release (ビルド含む)
+    // Create pre-release (ビルド含む) - これが失敗する可能性がある
     await createPrereleaseGitHub(newVersion)
 
     console.log("📤 Pushing version commit and tag...")
 
-    // Push the version commit and tag created by npm version (最後に実行)
+    // 全て成功したら最後にプッシュ
     execSync("git push", { stdio: "inherit" })
     execSync("git push --tags", { stdio: "inherit" })
+    
   } catch (error) {
     console.error("❌ Pre-release failed:", error.message)
+    
+    // ビルド失敗時のクリーンアップ
+    if (versionCommitHash && tagName) {
+      console.log("🧹 Cleaning up failed pre-release...")
+      
+      try {
+        // ローカルタグを削除
+        execSync(`git tag -d ${tagName}`, { stdio: "ignore" })
+        console.log(`✅ Deleted local tag: ${tagName}`)
+        
+        // バージョンコミットを取り消し（HEADを一つ前に戻す）
+        execSync("git reset --hard HEAD~1", { stdio: "inherit" })
+        console.log("✅ Reverted version commit")
+        
+      } catch (cleanupError) {
+        console.error("⚠️ Cleanup failed:", cleanupError.message)
+        console.log("手動でのクリーンアップが必要です:")
+        console.log(`  git tag -d ${tagName}`)
+        console.log("  git reset --hard HEAD~1")
+      }
+    }
+    
     process.exit(1)
   }
 }
