@@ -10,10 +10,14 @@
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "prisma generate && next build && tsc -p electron-src",
-    "dist": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:all": "npm run build && electron-builder --mac --win --linux",
+    "dist": "npm run build && electron-forge package --platform=darwin",
+    "dist:win": "npm run build && electron-forge package --platform=win32",
+    "dist:linux": "npm run build && electron-forge package --platform=linux",
+    "dist:all": "npm run build && electron-forge package",
+    "make": "electron-forge make",
+    "make:mac": "electron-forge make --platform=darwin",
+    "make:win": "electron-forge make --platform=win32",
+    "make:linux": "electron-forge make --platform=linux",
     "clean": "rimraf dist main .next out",
     "lint": "next lint",
     "typecheck": "tsc --noEmit && tsc -p ./electron-src/tsconfig.json",
@@ -134,59 +138,5 @@
   },
   "overrides": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
-  },
-  "build": {
-    "productName": "一括採点",
-    "appId": "com.scoreatonce.app",
-    "directories": {
-      "output": "dist"
-    },
-    "icon": "public/icon.png",
-    "asar": false,
-    "files": [
-      "main/**/*",
-      ".next/**/*",
-      "public/**/*",
-      "package.json",
-      "prisma/schema.prisma"
-    ],
-    "beforePack": "./scripts/prepare-prisma.js",
-    "afterPack": "./scripts/copy-prisma.js",
-    "nodeGypRebuild": false,
-    "buildDependenciesFromSource": false,
-    "mac": {
-      "category": "public.app-category.education",
-      "identity": null,
-      "target": [
-        {
-          "target": "dir",
-          "arch": "x64"
-        },
-        {
-          "target": "dir",
-          "arch": "arm64"
-        }
-      ]
-    },
-    "win": {
-      "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "dir",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    }
   }
 }

@@ -1,10 +1,10 @@
 module.exports = {
   packagerConfig: {
     asar: {
-      unpack: "**/{node_modules,.next,main,sharp}/**"
+      unpack: "**/{node_modules,.next,main,sharp,@prisma,.prisma}/**"
     },
-    name: "Score at Once",
-    executableName: "score-at-once",
+    name: "一括採点",
+    executableName: "一括採点",
     icon: "./public/一括採点アイコン.png",
     ignore: [
       /^\/src/, 
@@ -12,7 +12,9 @@ module.exports = {
       /^\/docs/,
       /^\/scripts/,
       /^\/out/,
-      /^\/temp-test/
+      /^\/temp-test/,
+      /^\/dist/,
+      /^\/temp-prisma-backup/
     ],
     extraResource: [
       ".next"
