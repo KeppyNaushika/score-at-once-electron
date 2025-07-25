@@ -74,6 +74,18 @@ jobs:
         if: runner.os != 'Windows'
         run: rm -rf dist/ build/
 
+      - name: Setup build variables
+        id: vars
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            # Use package.json version for manual releases
+            PACKAGE_VERSION=$(node -p "require('./package.json').version")
+            VERSION="$PACKAGE_VERSION-dev"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Run linting and type checks
         run: npm run check-all
 
