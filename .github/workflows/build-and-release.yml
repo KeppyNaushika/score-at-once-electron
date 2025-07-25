@@ -83,7 +83,19 @@ jobs:
 
       - name: Build Electron app for Windows
         if: matrix.os == 'windows-latest'
-        run: npx electron-forge make --platform=win32 --arch=${{ matrix.arch }}
+        run: |
+          Write-Host "=== Starting Windows build ==="
+          npx electron-forge make --platform=win32 --arch=${{ matrix.arch }}
+          Write-Host "=== Build completed, checking results ==="
+          Write-Host "Current directory contents after build:"
+          Get-ChildItem -Force
+          if (Test-Path "out") {
+            Write-Host "out directory exists, contents:"
+            Get-ChildItem -Path "out" -Recurse -Force
+          } else {
+            Write-Host "out directory does not exist after build"
+          }
+        shell: powershell
 
       - name: Build Electron app for Linux
         if: matrix.os == 'ubuntu-latest'
