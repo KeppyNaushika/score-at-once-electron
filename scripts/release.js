@@ -1,6 +1,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const { notifyRelease } = require('./discord-notify');
 
 async function createRelease() {
   try {
@@ -118,7 +119,15 @@ async function createRelease() {
     execSync(releaseCommand.join(' '), { stdio: 'inherit' });
 
     console.log('\n✅ Release created successfully!');
-    console.log(`🔗 View release: https://github.com/$(gh repo view --json owner,name -q '.owner.login + "/" + .name')/releases/tag/${tagName}`);
+    
+    // リリースURLを取得
+    const repoInfo = JSON.parse(execSync('gh repo view --json owner,name', { encoding: 'utf-8' }));
+    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`;
+    
+    console.log(`🔗 View release: ${releaseUrl}`);
+    
+    // Discord通知を送信
+    await notifyRelease(currentVersion, releaseUrl, false);
     
     // Cleanup
     console.log('🧹 Cleaning up temporary files...');

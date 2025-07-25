@@ -1,4 +1,5 @@
 const { execSync } = require('child_process');
+const { notifyRelease } = require('./discord-notify');
 const { createRelease } = require('./release');
 
 async function createPrerelease(prereleaseType) {
@@ -134,7 +135,15 @@ async function createPrereleaseGitHub(version) {
     execSync(releaseCommand.join(' '), { stdio: 'inherit' });
 
     console.log('\n✅ Pre-release created successfully!');
-    console.log(`🔗 View pre-release: https://github.com/$(gh repo view --json owner,name -q '.owner.login + "/" + .name')/releases/tag/${tagName}`);
+    
+    // リリースURLを取得
+    const repoInfo = JSON.parse(execSync('gh repo view --json owner,name', { encoding: 'utf-8' }));
+    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`;
+    
+    console.log(`🔗 View pre-release: ${releaseUrl}`);
+    
+    // Discord通知を送信（プレリリース）
+    await notifyRelease(version, releaseUrl, true);
     
     // Cleanup
     console.log('🧹 Cleaning up temporary files...');
