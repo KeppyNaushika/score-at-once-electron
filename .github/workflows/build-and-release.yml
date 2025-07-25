@@ -20,7 +20,7 @@ permissions:
 
 env:
   # Node.js version to use
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   build:
