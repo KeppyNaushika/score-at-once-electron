@@ -27,13 +27,13 @@ permissions:
   actions: write
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
         run: |
           VERSION_TYPE="${{ github.event.inputs.version_type }}"
           PRERELEASE_TYPE="${{ github.event.inputs.prerelease_type }}"
-          
+
           if [ -n "$PRERELEASE_TYPE" ]; then
             # Prerelease version
             if [ "$PRERELEASE_TYPE" = "alpha" ] || [ "$PRERELEASE_TYPE" = "beta" ] || [ "$PRERELEASE_TYPE" = "rc" ]; then
@@ -74,7 +74,7 @@ jobs:
             NEW_VERSION=$(npm version "$VERSION_TYPE" --no-git-tag-version)
             IS_PRERELEASE="false"
           fi
-          
+
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
           echo "tag_name=$NEW_VERSION" >> $GITHUB_OUTPUT
