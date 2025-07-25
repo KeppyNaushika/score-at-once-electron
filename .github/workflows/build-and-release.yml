@@ -66,9 +66,6 @@ jobs:
       - name: Run linting and type checks
         run: npm run check-all
 
-      - name: Build application
-        run: npm run build
-
       - name: Clean build artifacts
         run: rm -rf dist/ build/
 
