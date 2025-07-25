@@ -28,6 +28,7 @@ interface UseTableDataParams {
     studentId: string | null
     pageNumber: number
   }>
+  allowOverwrite?: boolean
 }
 
 /**
@@ -42,6 +43,7 @@ export function useTableData({
   isPositionDisabled,
   mode,
   existingAnswerSheets,
+  allowOverwrite = false,
 }: UseTableDataParams) {
   // 生徒のソート（customOrder準拠）
   const sortedStudents = useMemo(() => {
@@ -115,6 +117,8 @@ export function useTableData({
     disabledState,
     mode,
     enhancedIsPositionDisabled,
+    allowOverwrite,
+    existingAnswerSheets,
   })
 
   return {

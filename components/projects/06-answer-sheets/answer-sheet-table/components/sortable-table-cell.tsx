@@ -120,17 +120,30 @@ export function SortableTableCell({
                 onClick={onTogglePosition}
                 className="flex items-center gap-2"
               >
-                <Ban className="h-4 w-4" />
-                {isPositionDisabled ? "セルを有効化" : "セルを無効化"}
+                {isPositionDisabled ? (
+                  <>
+                    <X className="h-4 w-4" />
+                    セルを有効化
+                  </>
+                ) : (
+                  <>
+                    <Ban className="h-4 w-4" />
+                    セルを無効化
+                  </>
+                )}
               </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem
-                onClick={onUploadToCell}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                このセルに答案画像をアップロード
-              </ContextMenuItem>
+              {!isPositionDisabled && (
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    onClick={onUploadToCell}
+                    className="flex items-center gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    このセルに答案画像をアップロード
+                  </ContextMenuItem>
+                </>
+              )}
             </>
           )}
           {mode === "view" && hasFile && onDeleteFileWithScoring && (

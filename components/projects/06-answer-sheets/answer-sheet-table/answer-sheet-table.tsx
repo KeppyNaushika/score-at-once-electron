@@ -21,6 +21,7 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
     affectedCells,
   } = props
 
+
   // メインロジックを含むカスタムフック
   const {
     canvasRef,
@@ -49,6 +50,7 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
     handleUploadModalOpen,
     handleUploadModalClose,
     handleUploadToCell,
+    handleDeleteAnswerSheet,
     maxPages,
     trashFiles,
     hasNameRegion,
@@ -120,6 +122,7 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
               togglePositionDisabled={togglePositionDisabled}
               toggleFileDisabled={toggleFileDisabled}
               onUploadModalOpen={handleUploadModalOpen}
+              onDeleteAnswerSheet={handleDeleteAnswerSheet}
             />
           </CardContent>
         </Card>

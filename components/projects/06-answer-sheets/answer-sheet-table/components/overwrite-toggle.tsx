@@ -24,9 +24,13 @@ export function OverwriteToggle({
         htmlFor="overwrite-toggle"
         className="flex items-center gap-1 text-sm"
       >
-        {allowOverwrite && (
-          <AlertTriangle className="h-3 w-3 text-orange-500" />
-        )}
+        <AlertTriangle 
+          className={`h-3 w-3 transition-opacity ${
+            allowOverwrite 
+              ? "text-orange-500 opacity-100" 
+              : "text-gray-400 opacity-30"
+          }`} 
+        />
         既存答案上書き
       </Label>
     </div>

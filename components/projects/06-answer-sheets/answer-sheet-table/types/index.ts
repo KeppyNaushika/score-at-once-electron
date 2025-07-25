@@ -26,6 +26,7 @@ export interface CellData {
   student?: UnifiedStudent
   pageNumber?: number
   file?: UnifiedFile
+  disabledReason?: "row" | "column" | "position" | "existing_answer" | "absent_student"
 }
 
 // Component props interfaces

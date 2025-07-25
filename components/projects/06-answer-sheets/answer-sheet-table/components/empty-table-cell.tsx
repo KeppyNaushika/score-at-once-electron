@@ -9,7 +9,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { Ban, FileX, Upload } from "lucide-react"
+import { Ban, FileX, Upload, X } from "lucide-react"
 
 export function EmptyTableCell({
   student,
@@ -18,6 +18,7 @@ export function EmptyTableCell({
   isPendingChange = false,
   mode = "upload",
   hasExistingAnswer = false,
+  allowOverwrite = false,
   disabledReason,
   onTogglePosition,
   onUploadToCell,
@@ -26,6 +27,12 @@ export function EmptyTableCell({
 }: EmptyTableCellProps) {
   // 無効化理由のテキストを取得
   const getDisabledReasonText = () => {
+    // 確認モード（view）では「答案なし」と表示
+    if (mode === "view") {
+      return "答案なし"
+    }
+    
+    // uploadモードでは詳細な理由を表示
     switch (disabledReason) {
       case "absent_student":
         return "欠席生徒"
@@ -37,13 +44,16 @@ export function EmptyTableCell({
         return "セル無効"
       case "existing_answer":
         return "既存答案あり（上書き無効）"
+      case undefined:
+      case null:
+        return "空セル"
       default:
-        return "無効"
+        return "空セル"
     }
   }
 
-  // 右クリックメニューを表示するかの判定
-  const shouldShowContextMenu = mode === "upload" && !isPositionDisabled
+  // 右クリックメニューを表示するかの判定（uploadモードでは無効セルでもメニュー表示）
+  const shouldShowContextMenu = mode === "upload"
 
   return (
     <TableCell
@@ -80,8 +90,17 @@ export function EmptyTableCell({
               onClick={onTogglePosition}
               className="flex items-center gap-2"
             >
-              <Ban className="h-4 w-4" />
-              セル無効
+              {isPositionDisabled ? (
+                <>
+                  <X className="h-4 w-4" />
+                  セルを有効化
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4" />
+                  セル無効
+                </>
+              )}
             </ContextMenuItem>
             <ContextMenuSeparator />
             {hasNewFileToUpload && (
@@ -112,8 +131,8 @@ export function EmptyTableCell({
         <div className="pointer-events-none absolute inset-0 z-40 animate-pulse border-4 border-red-500 bg-red-500/30" />
       )}
 
-      {/* 既存答案警告オーバーレイ */}
-      {hasExistingAnswer && mode === "upload" && (
+      {/* 既存答案警告オーバーレイ（上書きオン時のみ表示） */}
+      {hasExistingAnswer && mode === "upload" && allowOverwrite && (
         <div className="pointer-events-none absolute inset-0 z-30 border-2 border-orange-500 bg-orange-500/20" />
       )}
     </TableCell>
