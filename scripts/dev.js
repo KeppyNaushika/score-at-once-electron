@@ -6,7 +6,7 @@ async function startDev() {
   console.log('Building Electron...')
   
   // Build Electron
-  const buildProcess = spawn('npm', ['run', 'build-electron'], { stdio: 'inherit' })
+  const buildProcess = spawn('npx', ['tsc', '-p', 'electron-src'], { stdio: 'inherit' })
   await new Promise((resolve, reject) => {
     buildProcess.on('close', (code) => {
       if (code === 0) resolve()
