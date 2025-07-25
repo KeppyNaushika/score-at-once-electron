@@ -223,8 +223,8 @@ function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
   // PR情報があれば追加
   if (recentPRs.length > 0) {
     fields.push({
-      name: "🔄 最近のマージされたPR",
-      value: recentPRs.map(pr => `• ${pr}`).join("\n"),
+      name: "✨ このバージョンの新機能・改善",
+      value: recentPRs.map(pr => `• ${pr.replace(/^#\d+:\s*/, "")}`).join("\n"),
       inline: false,
     })
   }
@@ -233,7 +233,7 @@ function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
     content: "@everyone", // 全メンバーに通知
     embeds: [
       {
-        title: `:app_icon: 一括採点 ${version} ${releaseType}をリリースしました！`,
+        title: `:app_icon: 一括採点 ${version} をリリースしました！`,
         description: description,
         color: color,
         fields: fields,
