@@ -147,27 +147,9 @@
       "main/**/*",
       ".next/**/*",
       "public/**/*",
+      "node_modules/**/*",
       "package.json",
-      "prisma/schema.prisma",
-      {
-        "from": "node_modules",
-        "to": "node_modules",
-        "filter": [
-          "**/*",
-          "!@prisma/client/**/*",
-          "!.prisma/**/*"
-        ]
-      }
-    ],
-    "extraFiles": [
-      {
-        "from": "node_modules/@prisma/client",
-        "to": "Resources/node_modules/@prisma/client"
-      },
-      {
-        "from": "node_modules/.prisma",
-        "to": "Resources/node_modules/.prisma"
-      }
+      "prisma/schema.prisma"
     ],
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,

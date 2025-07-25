@@ -71,27 +71,19 @@ jobs:
 
       - name: Build Electron app for macOS (x64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
-        run: |
-          rm -rf dist/mac
-          npx electron-builder --mac --x64
+        run: npx electron-builder --mac --x64
 
       - name: Build Electron app for macOS (arm64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
-        run: |
-          rm -rf dist/mac-arm64
-          npx electron-builder --mac --arm64
+        run: npx electron-builder --mac --arm64
 
       - name: Build Electron app for Windows
         if: matrix.os == 'windows-latest'
-        run: |
-          rm -rf dist/win-unpacked/resources/app/node_modules/@prisma/client
-          npx electron-builder --win --x64
+        run: npx electron-builder --win --x64
 
       - name: Build Electron app for Linux
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          rm -rf dist/linux-unpacked/resources/app/node_modules/@prisma/client
-          npx electron-builder --linux --x64
+        run: npx electron-builder --linux --x64
 
       # Create archives for distribution
       - name: Create macOS archive (x64)
@@ -159,13 +151,13 @@ jobs:
           else
             VERSION=$(date +'%Y%m%d-%H%M%S')
             TAG_NAME="v$VERSION-dev"
-            RELEASE_TYPE="prerelease"
+            RELEASE_TYPE="${{ github.event.inputs.release_type || 'prerelease' }}"
           fi
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$([[ $RELEASE_TYPE == "prerelease" ]] && echo "true" || echo "false")" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$([[ $RELEASE_TYPE == \"prerelease\" ]] && echo \"true\" || echo \"false\")" >> $GITHUB_OUTPUT
 
       - name: Generate release notes
         id: release_notes
