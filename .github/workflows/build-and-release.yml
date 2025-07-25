@@ -186,8 +186,10 @@ jobs:
             TAG_NAME=${GITHUB_REF#refs/tags/}
             RELEASE_TYPE="release"
           else
-            VERSION=$(date +'%Y%m%d-%H%M%S')
-            TAG_NAME="v$VERSION-dev"
+            # Use package.json version for manual releases
+            PACKAGE_VERSION=$(node -p "require('./package.json').version")
+            VERSION="$PACKAGE_VERSION-dev"
+            TAG_NAME="v$VERSION"
             RELEASE_TYPE="${{ github.event.inputs.release_type || 'prerelease' }}"
           fi
 
@@ -361,10 +363,20 @@ jobs:
 
               const req = https.request(options, (res) => {
                 console.log('Discord notification sent:', res.statusCode);
+                res.on('data', () => {}); // Consume response data to prevent connection issues
+                res.on('end', () => {
+                  console.log('Discord response completed');
+                });
               });
 
               req.on('error', (error) => {
-                console.error('Discord notification failed:', error);
+                console.error('Discord notification failed:', error.message);
+                // Don't fail the build for notification errors
+              });
+
+              req.setTimeout(10000, () => {
+                req.destroy();
+                console.log('Discord notification timeout');
               });
 
               req.write(payload);
