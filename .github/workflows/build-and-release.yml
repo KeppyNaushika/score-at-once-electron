@@ -75,13 +75,13 @@ jobs:
       - name: Build Electron app for macOS (x64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
         run: |
-          rm -rf dist/mac/Electron.app/Contents/Resources/app/node_modules/@prisma/client
+          rm -rf dist/mac
           npx electron-builder --mac --x64
 
       - name: Build Electron app for macOS (arm64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
         run: |
-          rm -rf dist/mac-arm64/Electron.app/Contents/Resources/app/node_modules/@prisma/client
+          rm -rf dist/mac-arm64
           npx electron-builder --mac --arm64
 
       - name: Build Electron app for Windows

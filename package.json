@@ -163,10 +163,11 @@
       "target": [
         {
           "target": "dir",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
+          "arch": "x64"
+        },
+        {
+          "target": "dir",
+          "arch": "arm64"
         }
       ]
     },
