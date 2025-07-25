@@ -78,25 +78,66 @@ jobs:
         run: npm run check-all
 
       - name: Build Next.js application
-        run: npm run build
+        run: |
+          echo "=== Building Next.js application ==="
+          npm run build
+          echo "=== Next.js build completed ==="
+          echo "Checking .next directory contents:"
+          ls -la .next/
+          echo "Checking build-manifest.json:"
+          if [ -f ".next/build-manifest.json" ]; then
+            echo "✓ build-manifest.json exists"
+          else
+            echo "✗ build-manifest.json missing"
+          fi
+          echo "Checking BUILD_ID:"
+          if [ -f ".next/BUILD_ID" ]; then
+            echo "✓ BUILD_ID exists: $(cat .next/BUILD_ID)"
+          else
+            echo "✗ BUILD_ID missing"
+          fi
 
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
-        run: npx electron-forge make --platform=darwin --arch=${{ matrix.arch }}
+        run: |
+          echo "=== Starting macOS Electron Forge build ==="
+          npx electron-forge make --platform=darwin --arch=${{ matrix.arch }}
+          echo "=== macOS build completed ==="
+          echo "Checking packaged .next directory:"
+          if [ -d "out/一括採点-darwin-${{ matrix.arch }}/一括採点.app/Contents/Resources/app.asar.unpacked/.next" ]; then
+            echo "✓ .next directory found in packaged app"
+            ls -la "out/一括採点-darwin-${{ matrix.arch }}/一括採点.app/Contents/Resources/app.asar.unpacked/.next/"
+          else
+            echo "✗ .next directory missing in packaged app"
+            echo "Available directories in app.asar.unpacked:"
+            ls -la "out/一括採点-darwin-${{ matrix.arch }}/一括採点.app/Contents/Resources/app.asar.unpacked/" || echo "app.asar.unpacked not found"
+          fi
 
       - name: Build Electron app for Windows
         if: matrix.os == 'windows-latest'
         run: |
           Write-Host "=== Starting Windows build ==="
           npx electron-forge make --platform=win32 --arch=${{ matrix.arch }}
-          Write-Host "=== Build completed, checking results ==="
-          Write-Host "Current directory contents after build:"
-          Get-ChildItem -Force
-          if (Test-Path "out") {
-            Write-Host "out directory exists, contents:"
-            Get-ChildItem -Path "out" -Recurse -Force
+          Write-Host "=== Build completed, checking .next inclusion ==="
+          $packagedNextPath = "out\一括採点-win32-${{ matrix.arch }}\resources\app.asar.unpacked\.next"
+          if (Test-Path $packagedNextPath) {
+            Write-Host "✓ .next directory found in packaged app"
+            Get-ChildItem -Path $packagedNextPath -Force
+            if (Test-Path "$packagedNextPath\BUILD_ID") {
+              $buildId = Get-Content "$packagedNextPath\BUILD_ID"
+              Write-Host "✓ BUILD_ID found: $buildId"
+            } else {
+              Write-Host "✗ BUILD_ID missing in packaged .next"
+            }
           } else {
-            Write-Host "out directory does not exist after build"
+            Write-Host "✗ .next directory missing in packaged app"
+            Write-Host "Available in app.asar.unpacked:"
+            $unpackedPath = "out\一括採点-win32-${{ matrix.arch }}\resources\app.asar.unpacked"
+            if (Test-Path $unpackedPath) {
+              Get-ChildItem -Path $unpackedPath -Force
+            } else {
+              Write-Host "app.asar.unpacked not found"
+            }
           }
         shell: powershell
 
