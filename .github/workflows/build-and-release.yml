@@ -41,7 +41,7 @@ jobs:
           - os: windows-latest
             platform: win
             arch: x64
-            artifact_name: 一括採点-windows-x64
+            artifact_name: score-at-once-windows-x64
           - os: ubuntu-latest
             platform: linux
             arch: x64
@@ -211,7 +211,7 @@ jobs:
 
           - **macOS (Intel)**: \`一括採点-mac-x64.zip\`
           - **macOS (Apple Silicon)**: \`一括採点-mac-arm64.zip\`
-          - **Windows**: \`一括採点-windows-x64.zip\`
+          - **Windows**: \`score-at-once-windows-x64.zip\`
           - **Linux**: \`一括採点-linux-x64.zip\`
 
           ### 🧪 プレリリース版について
@@ -257,7 +257,7 @@ jobs:
 
           - **macOS (Intel)**: \`一括採点-mac-x64.zip\`
           - **macOS (Apple Silicon)**: \`一括採点-mac-arm64.zip\`
-          - **Windows**: \`一括採点-windows-x64.zip\`
+          - **Windows**: \`score-at-once-windows-x64.zip\`
           - **Linux**: \`一括採点-linux-x64.zip\`
 
           ### 🚀 機能
