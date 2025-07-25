@@ -33,11 +33,11 @@ jobs:
           - os: macos-latest
             platform: mac
             arch: x64
-            artifact_name: 一括採点-mac-x64
+            artifact_name: score-at-once-mac-x64
           - os: macos-latest
             platform: mac
             arch: arm64
-            artifact_name: 一括採点-mac-arm64
+            artifact_name: score-at-once-mac-arm64
           - os: windows-latest
             platform: win
             arch: x64
@@ -45,7 +45,7 @@ jobs:
           - os: ubuntu-latest
             platform: linux
             arch: x64
-            artifact_name: 一括採点-linux-x64
+            artifact_name: score-at-once-linux-x64
 
     steps:
       - name: Checkout code
@@ -209,10 +209,10 @@ jobs:
 
           ### 📦 ダウンロード
 
-          - **macOS (Intel)**: \`一括採点-mac-x64.zip\`
-          - **macOS (Apple Silicon)**: \`一括採点-mac-arm64.zip\`
+          - **macOS (Intel)**: \`score-at-once-mac-x64.zip\`
+          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64.zip\`
           - **Windows**: \`score-at-once-windows-x64.zip\`
-          - **Linux**: \`一括採点-linux-x64.zip\`
+          - **Linux**: \`score-at-once-linux-x64.zip\`
 
           ### 🧪 プレリリース版について
 
@@ -255,10 +255,10 @@ jobs:
 
           ### 📦 ダウンロード
 
-          - **macOS (Intel)**: \`一括採点-mac-x64.zip\`
-          - **macOS (Apple Silicon)**: \`一括採点-mac-arm64.zip\`
+          - **macOS (Intel)**: \`score-at-once-mac-x64.zip\`
+          - **macOS (Apple Silicon)**: \`score-at-once-mac-arm64.zip\`
           - **Windows**: \`score-at-once-windows-x64.zip\`
-          - **Linux**: \`一括採点-linux-x64.zip\`
+          - **Linux**: \`score-at-once-linux-x64.zip\`
 
           ### 🚀 機能
 
@@ -332,8 +332,8 @@ jobs:
               const payload = JSON.stringify({
                 content: '@everyone',
                 embeds: [{
-                  title: \`:app_icon: 一括採点 \${version} をリリースしました！\`,
-                  description: \`完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](\${releaseUrl})**\\nダウンロードしたら :try: を押して下さい\` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
+                  title: \`一括採点 \${version} をリリースしました！\`,
+                  description: \`📱 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](\${releaseUrl})**\\nダウンロードしたら 🔥 を押して下さい\` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
                   color: isPrerelease ? 0xffa500 : 0x00ff00,
                   fields: [{
                     name: '📦 バージョン',
