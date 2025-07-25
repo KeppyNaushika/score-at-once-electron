@@ -31,7 +31,7 @@ const RegionDetailsTable = ({
   const filteredRegions = regions
 
   // カスタムフック
-  const { handleKeyDown } = useKeyboardNavigation({ filteredRegions })
+  const { handleKeyDown, handleCompositionStart, handleCompositionEnd } = useKeyboardNavigation({ filteredRegions })
   const {
     dragState,
     handleDragStart,
@@ -196,6 +196,8 @@ const RegionDetailsTable = ({
                   disabled={disabled}
                   onRegionChange={handleRegionChange}
                   onKeyDown={handleKeyDown}
+                  onCompositionStart={handleCompositionStart}
+                  onCompositionEnd={handleCompositionEnd}
                   onDelete={handleDeleteRegion}
                   onSelect={setSelectedRowIndex}
                   onDragStart={handleDragStart}

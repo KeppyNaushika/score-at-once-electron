@@ -48,6 +48,8 @@ type RegionTableRowProps = {
   disabled: boolean
   onRegionChange: (globalIndex: number, field: string, value: any) => void
   onKeyDown: (e: React.KeyboardEvent, rowIndex: number, fieldName: string) => void
+  onCompositionStart: () => void
+  onCompositionEnd: () => void
   onDelete: (globalIndex: number) => void
   onSelect: (globalIndex: number | null) => void
   onDragStart: (index: number) => void
@@ -66,6 +68,8 @@ export const RegionTableRow = ({
   disabled,
   onRegionChange,
   onKeyDown,
+  onCompositionStart,
+  onCompositionEnd,
   onDelete,
   onSelect,
   onDragStart,
@@ -154,6 +158,8 @@ export const RegionTableRow = ({
           onKeyDown={(e) =>
             onKeyDown(e, globalIndex, "label")
           }
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
           disabled={disabled}
           placeholder="領域名を入力"
           className="h-8 w-full min-w-20"
@@ -176,6 +182,8 @@ export const RegionTableRow = ({
             onKeyDown={(e) =>
               onKeyDown(e, globalIndex, "points")
             }
+            onCompositionStart={onCompositionStart}
+            onCompositionEnd={onCompositionEnd}
             disabled={disabled}
             placeholder="10"
             className="h-8 w-full min-w-20"
