@@ -79,15 +79,15 @@ jobs:
 
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
-        run: npm run make:mac -- --arch=${{ matrix.arch }}
+        run: npm run make:mac:${{ matrix.arch }}
 
       - name: Build Electron app for Windows
         if: matrix.os == 'windows-latest'
-        run: npm run make:win -- --arch=${{ matrix.arch }}
+        run: npm run make:win:${{ matrix.arch }}
 
       - name: Build Electron app for Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npm run make:linux -- --arch=${{ matrix.arch }}
+        run: npm run make:linux:${{ matrix.arch }}
 
       # Create archives for distribution
       - name: Create archive from Forge output (Windows)
