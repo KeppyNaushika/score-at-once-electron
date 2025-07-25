@@ -163,7 +163,6 @@ async function createPrereleaseGitHub(version) {
     const tagName = `v${version}`
     
     // リリースノートをファイルに書き出し
-    const fs = require("fs")
     const tempNotesFile = `temp-notes-${version}.md`
     fs.writeFileSync(tempNotesFile, releaseNotes)
     
