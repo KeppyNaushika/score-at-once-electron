@@ -74,19 +74,27 @@ jobs:
 
       - name: Build Electron app for macOS (x64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
-        run: npx electron-builder --mac --x64
+        run: |
+          rm -rf dist/mac/Electron.app/Contents/Resources/app/node_modules/@prisma/client
+          npx electron-builder --mac --x64
 
       - name: Build Electron app for macOS (arm64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
-        run: npx electron-builder --mac --arm64
+        run: |
+          rm -rf dist/mac-arm64/Electron.app/Contents/Resources/app/node_modules/@prisma/client
+          npx electron-builder --mac --arm64
 
       - name: Build Electron app for Windows
         if: matrix.os == 'windows-latest'
-        run: npx electron-builder --win --x64
+        run: |
+          rm -rf dist/win-unpacked/resources/app/node_modules/@prisma/client
+          npx electron-builder --win --x64
 
       - name: Build Electron app for Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npx electron-builder --linux --x64
+        run: |
+          rm -rf dist/linux-unpacked/resources/app/node_modules/@prisma/client
+          npx electron-builder --linux --x64
 
       # Create archives for distribution
       - name: Create macOS archive (x64)
