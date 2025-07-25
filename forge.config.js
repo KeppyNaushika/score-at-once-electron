@@ -24,11 +24,7 @@ module.exports = {
       /^\/temp-prisma-backup/
     ],
     extraResource: [
-      {
-        from: ".next",
-        to: ".next",
-        filter: ["**/*"]
-      }
+      ".next"
     ]
   },
   rebuildConfig: {
