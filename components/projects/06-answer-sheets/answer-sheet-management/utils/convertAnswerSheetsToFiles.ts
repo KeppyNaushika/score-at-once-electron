@@ -59,19 +59,27 @@ export function convertAnswerSheetsToFiles(
  * @returns Base64エンコードされた画像データURL
  */
 export async function loadAnswerSheetImage(file: UnifiedFile): Promise<string> {
+  // 新規ファイル（メモリ内）の場合はpreviewを返す
+  if (file.preview && !file.imagePath) {
+    return file.preview;
+  }
+
+  // 既存ファイル（DB保存済み）の場合
   if (!file.imagePath) {
-    throw new Error('Image path not found')
+    throw new Error('Image path not found');
   }
   
   try {
-    const result = await window.electronAPI.getImageData(file.imagePath)
+    const result = await window.electronAPI.getImageData(file.imagePath);
+
     if (result.success && result.data) {
-      return result.data
+      return result.data;
     } else {
-      throw new Error(result.error || 'Failed to load image')
+      const error = result.error || 'Failed to load image';
+      throw new Error(error);
     }
   } catch (error) {
-    console.error('Error loading answer sheet image:', error)
-    throw error
+    console.error('画像読み込みエラー:', error);
+    throw error;
   }
 }

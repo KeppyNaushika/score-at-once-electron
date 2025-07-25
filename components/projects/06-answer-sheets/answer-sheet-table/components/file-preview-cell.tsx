@@ -16,9 +16,11 @@ export function FilePreviewCell({
   imageLoadState = "pending",
   isPendingChange = false,
   hasExistingAnswer = false,
+  allowOverwrite = false,
 }: FilePreviewCellProps & {
   isPendingChange?: boolean
   hasExistingAnswer?: boolean
+  allowOverwrite?: boolean
 }) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
     null,
@@ -29,6 +31,7 @@ export function FilePreviewCell({
   )
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
+
 
   // 既存画像の遅延読み込み
   useEffect(() => {
@@ -135,14 +138,6 @@ export function FilePreviewCell({
             height={200}
             unoptimized
           />
-          {/* デバッグ用オーバーレイ（開発環境のみ） */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="absolute top-0 left-0 bg-black bg-opacity-75 text-white text-xs p-1 font-mono">
-              <div>ID: {file.id.slice(0, 8)}</div>
-              <div>SID: {file.studentId?.slice(0, 8) || 'undefined'}</div>
-              <div>P: {file.pageNumber}</div>
-            </div>
-          )}
         </div>
       )
     }
@@ -194,8 +189,8 @@ export function FilePreviewCell({
         <div className="pointer-events-none absolute inset-0 bg-red-500/30 border-4 border-red-500 animate-pulse z-40" />
       )}
 
-      {/* 既存答案警告オーバーレイ（オレンジ色） */}
-      {hasExistingAnswer && (
+      {/* 既存答案警告オーバーレイ（上書きオン時のみ表示） */}
+      {hasExistingAnswer && allowOverwrite && (
         <div className="pointer-events-none absolute inset-0 bg-orange-500/20 border-2 border-orange-500 z-30" />
       )}
 

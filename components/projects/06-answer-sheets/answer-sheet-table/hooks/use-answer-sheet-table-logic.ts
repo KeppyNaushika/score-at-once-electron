@@ -7,7 +7,7 @@ import {
 import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
 import type { AnswerSheetTableProps, UploadModalState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
 import type { UploadData } from "@/types/answer-sheet.types"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 /**
  * AnswerSheetTableのメインロジックを管理するカスタムフック
@@ -66,6 +66,7 @@ export function useAnswerSheetTableLogic({
     isPositionDisabled,
     mode,
     existingAnswerSheets,
+    allowOverwrite,
   })
 
   const {
@@ -96,6 +97,33 @@ export function useAnswerSheetTableLogic({
   const [uploadModalState, setUploadModalState] = useState<UploadModalState>({
     isOpen: false,
   })
+
+  // ============================================================================
+  // 削除処理
+  // ============================================================================
+  
+  // 答案削除処理
+  const handleDeleteAnswerSheet = useCallback(async (fileId: string) => {
+    try {
+      // UnifiedFileから対応するAnswerSheetのIDを特定
+      // 既存答案の場合はfileIdがAnswerSheetのIDと一致
+      const result = await window.electronAPI.deleteAnswerSheet(fileId)
+      
+      if (result.success) {
+        // 削除成功時はデータを再読み込み
+        if (onReloadData) {
+          onReloadData()
+        }
+        // TODO: 成功通知を追加
+      } else {
+        console.error('答案削除エラー:', result.error)
+        // TODO: エラー通知を追加
+      }
+    } catch (error) {
+      console.error('答案削除例外:', error)
+      // TODO: エラー通知を追加
+    }
+  }, [onReloadData])
 
   // ============================================================================
   // Effects
@@ -224,6 +252,7 @@ export function useAnswerSheetTableLogic({
     handleUploadModalOpen,
     handleUploadModalClose,
     handleUploadToCell,
+    handleDeleteAnswerSheet,
 
     // 計算済みプロパティ
     maxPages,

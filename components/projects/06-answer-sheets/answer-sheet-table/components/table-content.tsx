@@ -52,6 +52,7 @@ interface TableContentProps {
     studentName: string | undefined,
     pageNumber: number | undefined,
   ) => void
+  onDeleteAnswerSheet?: (fileId: string) => void
 }
 
 export function TableContent({
@@ -76,6 +77,7 @@ export function TableContent({
   togglePositionDisabled,
   toggleFileDisabled,
   onUploadModalOpen,
+  onDeleteAnswerSheet,
 }: TableContentProps) {
   return (
     <SortableContext
@@ -173,10 +175,9 @@ export function TableContent({
                 const isFileDisabled = disabledState.files.has(file.id)
                 const hasExistingAnswer =
                   mode === "upload" &&
-                  !allowOverwrite &&
                   positionsWithExistingAnswers.has(cellData.position)
                 // 上書き無効時で既存答案がある場合はドラッグ無効
-                const isDragDisabledByOverwrite = hasExistingAnswer
+                const isDragDisabledByOverwrite = hasExistingAnswer && !allowOverwrite
 
                 return (
                   <SortableTableCell
@@ -208,9 +209,9 @@ export function TableContent({
                     pageNumber={cellData.pageNumber ?? undefined}
                     hasScoreData={true}
                     onDeleteFileWithScoring={() => {
-                      console.log(
-                        `Delete file ${file.id} with scoring data`,
-                      )
+                      if (onDeleteAnswerSheet) {
+                        onDeleteAnswerSheet(file.id)
+                      }
                     }}
                   >
                     <FilePreviewCell
@@ -226,6 +227,7 @@ export function TableContent({
                       imageLoadState={imageLoadStates[file.id]}
                       isPendingChange={affectedCells?.has(file.id) || false}
                       hasExistingAnswer={hasExistingAnswer}
+                      allowOverwrite={allowOverwrite}
                     />
                   </SortableTableCell>
                 )
@@ -283,10 +285,10 @@ function EmptyTableCellWithLogic({
   toggleFileDisabled,
   onUploadModalOpen,
 }: EmptyTableCellWithLogicProps) {
-  // 既存答案があるかチェック（空セル用）
+  // 既存答案があるかチェック（空セルまたは無効セル用）
   const hasExistingAnswerForEmpty =
     mode === "upload" &&
-    cellData.type === "empty" &&
+    (cellData.type === "empty" || cellData.type === "disabled") &&
     positionsWithExistingAnswers.has(cellData.position)
 
   // そのセルに新しく追加しようとしている画像ファイルがあるかチェック
@@ -299,7 +301,7 @@ function EmptyTableCellWithLogic({
   const hasNewFileToUpload = !!newFileInCell
 
   // 無効化の理由を判定
-  let disabledReason: DisabledReason
+  let disabledReason: DisabledReason = undefined
   if (cellData.type === "disabled") {
     const student = sortedStudents[studentIndex]
 
@@ -320,6 +322,9 @@ function EmptyTableCellWithLogic({
       positionsWithExistingAnswers.has(cellData.position)
     ) {
       disabledReason = "existing_answer"
+    } else {
+      // 他の理由で無効化されている場合はundefinedのまま
+      disabledReason = undefined
     }
   }
 
