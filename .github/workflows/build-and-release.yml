@@ -77,6 +77,9 @@ jobs:
       - name: Run linting and type checks
         run: npm run check-all
 
+      - name: Build application
+        run: npm run build
+
       - name: Verify Next.js build completion
         run: |
           echo "Checking .next directory structure..."
