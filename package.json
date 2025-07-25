@@ -149,21 +149,11 @@
       "public/**/*",
       "node_modules/**/*",
       "package.json",
-      "prisma/schema.prisma",
-      {
-        "from": "node_modules/.prisma",
-        "to": "node_modules/.prisma",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "node_modules/@prisma/client",
-        "to": "node_modules/@prisma/client",
-        "filter": [
-          "**/*"
-        ]
-      }
+      "prisma/schema.prisma"
+    ],
+    "asarUnpack": [
+      "node_modules/.prisma/**/*",
+      "node_modules/@prisma/client/**/*"
     ],
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
