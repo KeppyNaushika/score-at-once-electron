@@ -147,12 +147,10 @@
       "main/**/*",
       ".next/**/*",
       "public/**/*",
-      "node_modules/**/*",
-      "!node_modules/@prisma/**/*",
-      "!node_modules/.prisma/**/*",
       "package.json",
       "prisma/schema.prisma"
     ],
+    "beforePack": "./scripts/prepare-prisma.js",
     "afterPack": "./scripts/copy-prisma.js",
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,

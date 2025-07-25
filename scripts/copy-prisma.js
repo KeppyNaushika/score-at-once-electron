@@ -2,17 +2,42 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Electron-builder afterPack hook to copy Prisma files
- * This avoids EEXIST conflicts by copying Prisma files after the main packaging
+ * Electron-builder afterPack hook to restore and copy Prisma files
+ * This restores Prisma files from temp location and copies them to the packaged app
  */
 module.exports = async function(context) {
   const { appOutDir, packager } = context;
   const platform = packager.platform.name;
   
-  console.log(`🔧 Copying Prisma files for ${platform}...`);
+  console.log(`🔧 Restoring and copying Prisma files for ${platform}...`);
   
   try {
-    const sourceDir = path.join(process.cwd(), 'node_modules');
+    const tempPath = path.join(process.cwd(), 'temp-prisma-backup');
+    const nodeModulesPath = path.join(process.cwd(), 'node_modules');
+    
+    // First, restore Prisma files to original location
+    console.log('🔄 Restoring Prisma files to node_modules...');
+    
+    const tempPrismaPath = path.join(tempPath, '@prisma');
+    const prismaPath = path.join(nodeModulesPath, '@prisma');
+    
+    if (fs.existsSync(tempPrismaPath)) {
+      await fs.promises.rename(tempPrismaPath, prismaPath);
+    }
+    
+    const tempDotPrismaPath = path.join(tempPath, '.prisma');
+    const dotPrismaPath = path.join(nodeModulesPath, '.prisma');
+    
+    if (fs.existsSync(tempDotPrismaPath)) {
+      await fs.promises.rename(tempDotPrismaPath, dotPrismaPath);
+    }
+    
+    // Clean up temp directory
+    if (fs.existsSync(tempPath)) {
+      await fs.promises.rmdir(tempPath, { recursive: true });
+    }
+    
+    // Now copy Prisma files to the packaged app
     let targetDir;
     
     // Determine target directory based on platform
@@ -28,27 +53,25 @@ module.exports = async function(context) {
     await fs.promises.mkdir(targetDir, { recursive: true });
     
     // Copy @prisma/client
-    const prismaClientSource = path.join(sourceDir, '@prisma');
     const prismaClientTarget = path.join(targetDir, '@prisma');
     
-    if (fs.existsSync(prismaClientSource)) {
-      console.log(`📦 Copying @prisma/client...`);
-      await copyRecursive(prismaClientSource, prismaClientTarget);
+    if (fs.existsSync(prismaPath)) {
+      console.log(`📦 Copying @prisma to packaged app...`);
+      await copyRecursive(prismaPath, prismaClientTarget);
     }
     
     // Copy .prisma
-    const dotPrismaSource = path.join(sourceDir, '.prisma');
     const dotPrismaTarget = path.join(targetDir, '.prisma');
     
-    if (fs.existsSync(dotPrismaSource)) {
-      console.log(`📦 Copying .prisma...`);
-      await copyRecursive(dotPrismaSource, dotPrismaTarget);
+    if (fs.existsSync(dotPrismaPath)) {
+      console.log(`📦 Copying .prisma to packaged app...`);
+      await copyRecursive(dotPrismaPath, dotPrismaTarget);
     }
     
-    console.log(`✅ Prisma files copied successfully for ${platform}`);
+    console.log(`✅ Prisma files restored and copied successfully for ${platform}`);
     
   } catch (error) {
-    console.error(`❌ Error copying Prisma files: ${error.message}`);
+    console.error(`❌ Error restoring/copying Prisma files: ${error.message}`);
     throw error;
   }
 };
