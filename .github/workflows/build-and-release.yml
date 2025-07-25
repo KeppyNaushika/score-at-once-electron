@@ -63,9 +63,6 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
-      - name: Run linting and type checks
-        run: npm run check-all
-
       - name: Clean build artifacts (Windows)
         if: runner.os == 'Windows'
         run: |
@@ -76,6 +73,12 @@ jobs:
       - name: Clean build artifacts (Unix)
         if: runner.os != 'Windows'
         run: rm -rf dist/ build/
+
+      - name: Run linting and type checks
+        run: npm run check-all
+
+      - name: Build Next.js application
+        run: npm run build
 
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'

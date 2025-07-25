@@ -3,6 +3,7 @@ module.exports = {
     asar: {
       unpack: "**/{node_modules,.next,main,sharp,@prisma,.prisma}/**"
     },
+    asarUnpack: ".next/**/*",
     name: "一括採点",
     executableName: "score-at-once",
     icon: "./public/一括採点アイコン.png",
