@@ -77,6 +77,16 @@ jobs:
       - name: Run linting and type checks
         run: npm run check-all
 
+      - name: Verify Next.js build completion
+        run: |
+          echo "Checking .next directory structure..."
+          ls -la .next/ || echo ".next directory not found"
+          echo "Checking critical Next.js files..."
+          test -f .next/BUILD_ID && echo "✓ BUILD_ID exists: $(cat .next/BUILD_ID)" || echo "✗ BUILD_ID missing"
+          test -f .next/build-manifest.json && echo "✓ build-manifest.json exists" || echo "✗ build-manifest.json missing"
+          test -d .next/server && echo "✓ server directory exists" || echo "✗ server directory missing"
+          test -d .next/static && echo "✓ static directory exists" || echo "✗ static directory missing"
+
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
         run: npm run make:mac:${{ matrix.arch }}
