@@ -34,7 +34,7 @@ module.exports = async function(context) {
     
     // Clean up temp directory
     if (fs.existsSync(tempPath)) {
-      await fs.promises.rmdir(tempPath, { recursive: true });
+      await fs.promises.rm(tempPath, { recursive: true });
     }
     
     // Now copy Prisma files to the packaged app
