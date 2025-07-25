@@ -14,14 +14,15 @@ async function createPrerelease(prereleaseType) {
     const newVersion = packageJson.version
 
     console.log(`✅ Version bumped to: ${newVersion}`)
+
+    // Create pre-release (ビルド含む)
+    await createPrereleaseGitHub(newVersion)
+
     console.log("📤 Pushing version commit and tag...")
 
-    // Push the version commit and tag created by npm version
+    // Push the version commit and tag created by npm version (最後に実行)
     execSync("git push", { stdio: "inherit" })
     execSync("git push --tags", { stdio: "inherit" })
-
-    // Create pre-release
-    await createPrereleaseGitHub(newVersion)
   } catch (error) {
     console.error("❌ Pre-release failed:", error.message)
     process.exit(1)
