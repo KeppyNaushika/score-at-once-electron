@@ -122,19 +122,15 @@ async function createRelease() {
     fs.writeFileSync(tempNotesFile, releaseNotes)
     
     try {
-      const releaseCommand = [
-        "gh",
-        "release",
-        "create",
-        tagName,
+      // 個別にコマンドを構築してクォート問題を回避
+      const titleText = `一括採点 ${tagName}`
+      
+      execSync([
+        "gh", "release", "create", tagName,
         ...archives,
-        "--title",
-        `一括採点 ${tagName}`,
-        "--notes-file",
-        tempNotesFile,
-      ]
-
-      execSync(releaseCommand.join(" "), { stdio: "inherit" })
+        "--title", `"${titleText}"`,
+        "--notes-file", tempNotesFile
+      ].join(" "), { stdio: "inherit" })
     } finally {
       // 一時ファイルを削除
       if (fs.existsSync(tempNotesFile)) {

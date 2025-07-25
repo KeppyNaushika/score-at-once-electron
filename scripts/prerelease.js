@@ -167,20 +167,16 @@ async function createPrereleaseGitHub(version) {
     fs.writeFileSync(tempNotesFile, releaseNotes)
     
     try {
-      const releaseCommand = [
-        "gh",
-        "release",
-        "create",
-        tagName,
+      // 個別にコマンドを構築してクォート問題を回避
+      const titleText = `一括採点 ${tagName} (Pre-release)`
+      
+      execSync([
+        "gh", "release", "create", tagName,
         ...archives,
-        "--prerelease", // This marks it as pre-release
-        "--title",
-        `一括採点 ${tagName} (Pre-release)`,
-        "--notes-file",
-        tempNotesFile,
-      ]
-
-      execSync(releaseCommand.join(" "), { stdio: "inherit" })
+        "--prerelease",
+        "--title", `"${titleText}"`,
+        "--notes-file", tempNotesFile
+      ].join(" "), { stdio: "inherit" })
     } finally {
       // 一時ファイルを削除
       if (fs.existsSync(tempNotesFile)) {
