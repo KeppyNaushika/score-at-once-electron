@@ -9,7 +9,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "node scripts/dev.js",
-    "build": "next build && tsc -p electron-src",
+    "build": "prisma generate && next build && tsc -p electron-src",
     "dist": "npm run build && electron-builder --mac --win --linux",
     "clean": "rimraf dist main .next out",
     "lint": "next lint",
@@ -24,7 +24,8 @@
     "prerelease:major": "node scripts/prerelease.js major",
     "prerelease:alpha": "node scripts/prerelease-advanced.js patch alpha",
     "prerelease:beta": "node scripts/prerelease-advanced.js patch beta",
-    "prerelease:rc": "node scripts/prerelease-advanced.js patch rc"
+    "prerelease:rc": "node scripts/prerelease-advanced.js patch rc",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -132,13 +133,27 @@
       "output": "dist"
     },
     "icon": "public/icon.png",
+    "asar": false,
     "files": [
       "main/**/*",
       ".next/**/*",
       "public/**/*",
       "node_modules/**/*",
-      "package.json"
+      "package.json",
+      "prisma/schema.prisma",
+      {
+        "from": "node_modules/.prisma",
+        "to": "node_modules/.prisma",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "node_modules/@prisma/client",
+        "to": "node_modules/@prisma/client",
+        "filter": ["**/*"]
+      }
     ],
+    "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.education",
       "identity": null,
