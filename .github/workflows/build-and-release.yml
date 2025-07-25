@@ -74,7 +74,21 @@ jobs:
         if: runner.os != 'Windows'
         run: rm -rf dist/ build/
 
-      - name: Setup build variables
+      - name: Setup build variables (Windows)
+        if: runner.os == 'Windows'
+        id: vars
+        run: |
+          if ($env:GITHUB_REF -like "refs/tags/*") {
+            $VERSION = $env:GITHUB_REF -replace "refs/tags/v", ""
+          } else {
+            $PACKAGE_VERSION = node -p "require('./package.json').version"
+            $VERSION = "$PACKAGE_VERSION-dev"
+          }
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+        shell: powershell
+
+      - name: Setup build variables (Unix)
+        if: runner.os != 'Windows'
         id: vars
         run: |
           if [[ $GITHUB_REF == refs/tags/* ]]; then
