@@ -12,7 +12,7 @@ module.exports = {
     ],
     name: "一括採点",
     executableName: "score-at-once",
-    icon: "./public/一括採点アイコン.png",
+    icon: "./public/icon.png",
     osxSign: false,
     osxNotarize: false,
     ignore: [
@@ -54,11 +54,19 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
-      config: {},
+      config: {
+        options: {
+          icon: "./public/icon.png"
+        }
+      }
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: {},
+      config: {
+        options: {
+          icon: "./public/icon.png"
+        }
+      }
     },
   ],
   plugins: [

@@ -150,6 +150,7 @@ jobs:
           test -d .next/server && echo "✓ server directory exists" || echo "✗ server directory missing"
           test -d .next/static && echo "✓ static directory exists" || echo "✗ static directory missing"
 
+
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
         run: npm run make:mac:${{ matrix.arch }}
@@ -306,7 +307,11 @@ jobs:
 
           1. お使いのOSに対応するZIPファイルをダウンロード
           2. 解凍してフォルダ内の実行ファイルを起動
-             - macOS: \`一括採点.app\`
+             - macOS: \`score-at-once-mac-*.zip\`をダウンロード・解凍
+               **初回起動時**: 解凍したフォルダ内の\`一括採点.app\`をダブルクリック時、
+               「開発元を確認できません」と表示されたら：
+               - **簡単な方法**: アプリを右クリック→「開く」→「開く」をクリック
+               - **コマンド**: \`sudo xattr -r -d com.apple.quarantine 一括採点.app\`
              - Windows: \`一括採点.exe\`
              - Linux: \`一括採点\`
 
@@ -339,7 +344,11 @@ jobs:
 
           1. お使いのOSに対応するZIPファイルをダウンロード
           2. 解凍してフォルダ内の実行ファイルを起動
-             - macOS: \`一括採点.app\`
+             - macOS: \`score-at-once-mac-*.zip\`をダウンロード・解凍
+               **初回起動時**: 解凍したフォルダ内の\`一括採点.app\`をダブルクリック時、
+               「開発元を確認できません」と表示されたら：
+               - **簡単な方法**: アプリを右クリック→「開く」→「開く」をクリック
+               - **コマンド**: \`sudo xattr -r -d com.apple.quarantine 一括採点.app\`
              - Windows: \`一括採点.exe\`
              - Linux: \`一括採点\`
 
@@ -393,108 +402,120 @@ jobs:
         if: always()
         run: |
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
-            node -e "
-              const https = require('https');
-              const url = new URL('${{ secrets.DISCORD_WEBHOOK_URL }}');
-              const releaseUrl = 'https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}';
-              const isPrerelease = '${{ steps.vars.outputs.is_prerelease }}' === 'true';
-              const version = '${{ steps.vars.outputs.version }}';
-
-              const payload = JSON.stringify({
-                content: '@everyone',
-                embeds: [{
-                  title: \`一括採点 \${version} をリリースしました！\`,
-                  description: \`<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](\${releaseUrl})**\\nダウンロードしたら <:try:1393919620301324430> を押して下さい\` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
-                  color: isPrerelease ? 0xffa500 : 0x00ff00,
-                  fields: [{
-                    name: '📦 バージョン',
-                    value: version,
-                    inline: true
-                  }],
-                  footer: {
-                    text: 'KeppyNaushika',
-                    icon_url: 'https://github.com/KeppyNaushika.png'
-                  },
-                  timestamp: new Date().toISOString()
-                }]
+            cat > discord_notify.js << 'DISCORD_EOF'
+            const https = require('https');
+            
+            const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+            const releaseUrl = process.env.RELEASE_URL;
+            const isPrerelease = process.env.IS_PRERELEASE === 'true';
+            const version = process.env.VERSION;
+            
+            const url = new URL(webhookUrl);
+            
+            const payload = JSON.stringify({
+              content: '@everyone',
+              embeds: [{
+                title: `一括採点 ${version} をリリースしました！`,
+                description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](${releaseUrl})**\\nダウンロードしたら <:try:1393919620301324430> を押して下さい` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
+                color: isPrerelease ? 0xffa500 : 0x00ff00,
+                fields: [{
+                  name: '📦 バージョン',
+                  value: version,
+                  inline: true
+                }],
+                footer: {
+                  text: 'KeppyNaushika',
+                  icon_url: 'https://github.com/KeppyNaushika.png'
+                },
+                timestamp: new Date().toISOString()
+              }]
+            });
+            
+            const options = {
+              hostname: url.hostname,
+              port: 443,
+              path: url.pathname + '?wait=true',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload)
+              }
+            };
+            
+            const req = https.request(options, (res) => {
+              console.log('Discord notification sent:', res.statusCode);
+              let responseData = '';
+              
+              res.on('data', (chunk) => {
+                responseData += chunk;
               });
-
-              const options = {
-                hostname: url.hostname,
-                port: 443,
-                path: url.pathname + '?wait=true',
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Content-Length': Buffer.byteLength(payload)
-                }
-              };
-
-              const req = https.request(options, (res) => {
-                console.log('Discord notification sent:', res.statusCode);
-                let responseData = '';
+              
+              res.on('end', () => {
+                console.log('Discord response completed');
                 
-                res.on('data', (chunk) => {
-                  responseData += chunk;
-                });
-                
-                res.on('end', () => {
-                  console.log('Discord response completed');
-                  
-                  if (res.statusCode === 200 && responseData) {
-                    try {
-                      const messageData = JSON.parse(responseData);
-                      const messageId = messageData.id;
-                      const channelId = messageData.channel_id;
+                if (res.statusCode === 200 && responseData && botToken) {
+                  try {
+                    const messageData = JSON.parse(responseData);
+                    const messageId = messageData.id;
+                    const channelId = messageData.channel_id;
+                    
+                    if (messageId && channelId) {
+                      // Add :try: reaction
+                      const reactionOptions = {
+                        hostname: 'discord.com',
+                        port: 443,
+                        path: `/api/v10/channels/${channelId}/messages/${messageId}/reactions/try:1393919620301324430/@me`,
+                        method: 'PUT',
+                        headers: {
+                          'Authorization': `Bot ${botToken}`,
+                          'Content-Length': 0
+                        }
+                      };
                       
-                      if (messageId && channelId) {
-                        // Add :try: reaction
-                        const reactionOptions = {
-                          hostname: 'discord.com',
-                          port: 443,
-                          path: \\`/api/v10/channels/\\${channelId}/messages/\\${messageId}/reactions/try:1393919620301324430/@me\\`,
-                          method: 'PUT',
-                          headers: {
-                            'Authorization': 'Bot ${{ secrets.DISCORD_BOT_TOKEN }}',
-                            'Content-Length': 0
-                          }
-                        };
-                        
-                        const reactionReq = https.request(reactionOptions, (reactionRes) => {
-                          console.log('Discord reaction added:', reactionRes.statusCode);
-                        });
-                        
-                        reactionReq.on('error', (error) => {
-                          console.error('Discord reaction failed:', error.message);
-                        });
-                        
-                        reactionReq.setTimeout(5000, () => {
-                          reactionReq.destroy();
-                          console.log('Discord reaction timeout');
-                        });
-                        
-                        reactionReq.end();
-                      }
-                    } catch (error) {
-                      console.error('Failed to parse Discord response:', error.message);
+                      const reactionReq = https.request(reactionOptions, (reactionRes) => {
+                        console.log('Discord reaction added:', reactionRes.statusCode);
+                      });
+                      
+                      reactionReq.on('error', (error) => {
+                        console.error('Discord reaction failed:', error.message);
+                      });
+                      
+                      reactionReq.setTimeout(5000, () => {
+                        reactionReq.destroy();
+                        console.log('Discord reaction timeout');
+                      });
+                      
+                      reactionReq.end();
                     }
+                  } catch (error) {
+                    console.error('Failed to parse Discord response:', error.message);
                   }
-                });
+                } else if (!botToken) {
+                  console.log('Bot token not configured, skipping reaction');
+                }
               });
-
-              req.on('error', (error) => {
-                console.error('Discord notification failed:', error.message);
-                // Don't fail the build for notification errors
-              });
-
-              req.setTimeout(10000, () => {
-                req.destroy();
-                console.log('Discord notification timeout');
-              });
-
-              req.write(payload);
-              req.end();
-            "
+            });
+            
+            req.on('error', (error) => {
+              console.error('Discord notification failed:', error.message);
+            });
+            
+            req.setTimeout(10000, () => {
+              req.destroy();
+              console.log('Discord notification timeout');
+            });
+            
+            req.write(payload);
+            req.end();
+            DISCORD_EOF
+            
+            DISCORD_WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}" \
+            DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
+            RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
+            IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
+            VERSION="${{ steps.vars.outputs.version }}" \
+            node discord_notify.js
           else
             echo "Discord webhook URL not configured"
           fi
