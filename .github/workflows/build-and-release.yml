@@ -66,15 +66,16 @@ jobs:
       - name: Run linting and type checks
         run: npm run check-all
 
-      - name: Clean build artifacts
+      - name: Clean build artifacts (Windows)
+        if: runner.os == 'Windows'
         run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
-            if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
-          else
-            rm -rf dist/ build/
-          fi
-        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+          if (Test-Path "dist") { Remove-Item -Recurse -Force "dist" }
+          if (Test-Path "build") { Remove-Item -Recurse -Force "build" }
+        shell: powershell
+        
+      - name: Clean build artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: rm -rf dist/ build/
 
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
@@ -89,34 +90,36 @@ jobs:
         run: npx electron-forge make --platform=linux --arch=${{ matrix.arch }}
 
       # Create archives for distribution
-      - name: Create archive from Forge output
+      - name: Create archive from Forge output (Windows)
+        if: runner.os == 'Windows'
         run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            cd out
-            if (Test-Path "make") {
-              $zipFile = Get-ChildItem -Path "make" -Recurse -Filter "*.zip" | Select-Object -First 1
-              if ($zipFile) {
-                Copy-Item $zipFile.FullName "../${{ matrix.artifact_name }}.zip"
-              }
+          cd out
+          if (Test-Path "make") {
+            $zipFile = Get-ChildItem -Path "make" -Recurse -Filter "*.zip" | Select-Object -First 1
+            if ($zipFile) {
+              Copy-Item $zipFile.FullName "../${{ matrix.artifact_name }}.zip"
             }
-            if (!(Test-Path "../${{ matrix.artifact_name }}.zip")) {
-              Compress-Archive -Path "一括採点-win32-${{ matrix.arch }}" -DestinationPath "../${{ matrix.artifact_name }}.zip"
-            }
-          else
-            cd out
-            if [ -d "make" ]; then
-              find make -name "*.zip" -exec cp {} ../${{ matrix.artifact_name }}.zip \;
-            fi
-            if [ ! -f "../${{ matrix.artifact_name }}.zip" ]; then
-              # Fallback: create archive from packaged app
-              if [ "${{ matrix.os }}" = "macos-latest" ]; then
-                zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-darwin-${{ matrix.arch }}"
-              else
-                zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-linux-${{ matrix.arch }}"
-              fi
+          }
+          if (!(Test-Path "../${{ matrix.artifact_name }}.zip")) {
+            Compress-Archive -Path "一括採点-win32-${{ matrix.arch }}" -DestinationPath "../${{ matrix.artifact_name }}.zip"
+          }
+        shell: powershell
+        
+      - name: Create archive from Forge output (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          cd out
+          if [ -d "make" ]; then
+            find make -name "*.zip" -exec cp {} ../${{ matrix.artifact_name }}.zip \;
+          fi
+          if [ ! -f "../${{ matrix.artifact_name }}.zip" ]; then
+            # Fallback: create archive from packaged app
+            if [ "${{ matrix.os }}" = "macos-latest" ]; then
+              zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-darwin-${{ matrix.arch }}"
+            else
+              zip -r "../${{ matrix.artifact_name }}.zip" "一括採点-linux-${{ matrix.arch }}"
             fi
           fi
-        shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
 
       # Upload artifacts
       - name: Upload build artifacts
