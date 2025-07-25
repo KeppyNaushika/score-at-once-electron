@@ -4,7 +4,7 @@ module.exports = {
       unpack: "**/{node_modules,.next,main,sharp,@prisma,.prisma}/**"
     },
     name: "一括採点",
-    executableName: "一括採点",
+    executableName: "score-at-once",
     icon: "./public/一括採点アイコン.png",
     ignore: [
       /^\/src/, 
@@ -32,12 +32,12 @@ module.exports = {
       config: {
         darwin: {
           options: {
-            name: "Score at Once.app"
+            name: "一括採点.app"
           }
         },
         win32: {
           options: {
-            name: "Score at Once.exe"
+            name: "一括採点.exe"
           }
         }
       }

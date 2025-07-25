@@ -26,7 +26,7 @@ jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    
+
     strategy:
       matrix:
         include:
@@ -81,7 +81,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: npx electron-forge make --platform=linux --arch=${{ matrix.arch }}
 
-      # Create archives for distribution  
+      # Create archives for distribution
       - name: Create archive from Forge output
         run: |
           cd out
@@ -134,7 +134,7 @@ jobs:
             TAG_NAME="v$VERSION-dev"
             RELEASE_TYPE="${{ github.event.inputs.release_type || 'prerelease' }}"
           fi
-          
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "release_type=$RELEASE_TYPE" >> $GITHUB_OUTPUT
@@ -145,7 +145,7 @@ jobs:
         run: |
           RELEASE_TYPE="${{ steps.vars.outputs.release_type }}"
           VERSION="${{ steps.vars.outputs.version }}"
-          
+
           if [ "$RELEASE_TYPE" = "prerelease" ]; then
             NOTES="## 一括採点 $VERSION (プレリリース)
 
@@ -240,7 +240,7 @@ jobs:
           **バージョン**: $VERSION
           **種類**: 早期プレビュー版"
           fi
-          
+
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -272,7 +272,7 @@ jobs:
               const releaseUrl = 'https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}';
               const isPrerelease = '${{ steps.vars.outputs.is_prerelease }}' === 'true';
               const version = '${{ steps.vars.outputs.version }}';
-              
+
               const payload = JSON.stringify({
                 content: '@everyone',
                 embeds: [{
@@ -291,7 +291,7 @@ jobs:
                   timestamp: new Date().toISOString()
                 }]
               });
-              
+
               const options = {
                 hostname: url.hostname,
                 port: 443,
@@ -302,15 +302,15 @@ jobs:
                   'Content-Length': Buffer.byteLength(payload)
                 }
               };
-              
+
               const req = https.request(options, (res) => {
                 console.log('Discord notification sent:', res.statusCode);
               });
-              
+
               req.on('error', (error) => {
                 console.error('Discord notification failed:', error);
               });
-              
+
               req.write(payload);
               req.end();
             "
