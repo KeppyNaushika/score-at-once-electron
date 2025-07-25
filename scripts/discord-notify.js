@@ -1,4 +1,6 @@
 import { request } from "https"
+import dotenv from "dotenv"
+dotenv.config()
 
 /**
  * Discord Webhookにメッセージを送信

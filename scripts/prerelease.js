@@ -1,6 +1,7 @@
 const { execSync } = require("child_process")
 const { notifyRelease } = require("./discord-notify").default
 const { createRelease } = require("./release")
+require("dotenv").config()
 
 async function createPrerelease(prereleaseType) {
   let versionCommitHash = null
