@@ -148,12 +148,19 @@
       ".next/**/*",
       "public/**/*",
       "node_modules/**/*",
+      "!node_modules/@prisma/client/**/*",
       "package.json",
       "prisma/schema.prisma"
     ],
-    "asarUnpack": [
-      "node_modules/.prisma/**/*",
-      "node_modules/@prisma/client/**/*"
+    "extraFiles": [
+      {
+        "from": "node_modules/@prisma/client",
+        "to": "Resources/node_modules/@prisma/client"
+      },
+      {
+        "from": "node_modules/.prisma",
+        "to": "Resources/node_modules/.prisma"
+      }
     ],
     "nodeGypRebuild": false,
     "buildDependenciesFromSource": false,
