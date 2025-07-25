@@ -1,147 +1,161 @@
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const { notifyRelease } = require('./discord-notify');
+const { execSync } = require("child_process")
+const fs = require("fs")
+const path = require("path")
+const { notifyRelease } = require("./discord-notify").default
 
 async function createRelease() {
   try {
-    console.log('🚀 Starting automated release process...\n');
+    console.log("🚀 Starting automated release process...\n")
 
     // Check if gh CLI is installed
     try {
-      execSync('gh --version', { stdio: 'ignore' });
+      execSync("gh --version", { stdio: "ignore" })
     } catch (error) {
-      console.error('❌ GitHub CLI (gh) is not installed.');
-      console.log('Please install it: https://cli.github.com/');
-      process.exit(1);
+      console.error("❌ GitHub CLI (gh) is not installed.")
+      console.log("Please install it: https://cli.github.com/")
+      process.exit(1)
     }
 
     // Check if user is authenticated
     try {
-      execSync('gh auth status', { stdio: 'ignore' });
+      execSync("gh auth status", { stdio: "ignore" })
     } catch (error) {
-      console.error('❌ Not authenticated with GitHub.');
-      console.log('Please run: gh auth login');
-      process.exit(1);
+      console.error("❌ Not authenticated with GitHub.")
+      console.log("Please run: gh auth login")
+      process.exit(1)
     }
 
     // Get current version from package.json
-    const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-    const currentVersion = packageJson.version;
-    
-    console.log(`📦 Current version: ${currentVersion}`);
+    const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"))
+    const currentVersion = packageJson.version
+
+    console.log(`📦 Current version: ${currentVersion}`)
 
     // Clean and build
-    console.log('🧹 Cleaning previous builds...');
-    execSync('npm run clean', { stdio: 'inherit' });
+    console.log("🧹 Cleaning previous builds...")
+    execSync("npm run clean", { stdio: "inherit" })
 
-    console.log('🔍 Running pre-build checks...');
-    execSync('npm run check-all', { stdio: 'inherit' });
+    console.log("🔍 Running pre-build checks...")
+    execSync("npm run check-all", { stdio: "inherit" })
 
-    console.log('🏗️  Building application...');
-    execSync('npm run build', { stdio: 'inherit' });
+    console.log("🏗️  Building application...")
+    execSync("npm run build", { stdio: "inherit" })
 
-    console.log('📦 Creating distribution packages...');
-    execSync('npm run dist', { stdio: 'inherit' });
+    console.log("📦 Creating distribution packages...")
+    execSync("npm run dist", { stdio: "inherit" })
 
     // Create release archives
-    console.log('📦 Creating release archives...');
-    
-    const distPath = path.join(process.cwd(), 'dist');
-    const releasesPath = path.join(process.cwd(), 'releases');
-    
+    console.log("📦 Creating release archives...")
+
+    const distPath = path.join(process.cwd(), "dist")
+    const releasesPath = path.join(process.cwd(), "releases")
+
     // Create releases directory
     if (!fs.existsSync(releasesPath)) {
-      fs.mkdirSync(releasesPath);
+      fs.mkdirSync(releasesPath)
     }
 
-    const archives = [];
+    const archives = []
 
     // Check what platforms were built
-    const distContents = fs.readdirSync(distPath);
-    
+    const distContents = fs.readdirSync(distPath)
+
     // macOS
-    if (distContents.some(item => item.includes('mac'))) {
-      const macDir = distContents.find(item => item.includes('mac'));
-      const macArchive = `releases/一括採点-${currentVersion}-mac.zip`;
-      console.log(`  📱 Creating macOS archive: ${macArchive}`);
-      execSync(`cd dist && zip -r ../${macArchive} "${macDir}"`, { stdio: 'inherit' });
-      archives.push(macArchive);
+    if (distContents.some((item) => item.includes("mac"))) {
+      const macDir = distContents.find((item) => item.includes("mac"))
+      const macArchive = `releases/一括採点-${currentVersion}-mac.zip`
+      console.log(`  📱 Creating macOS archive: ${macArchive}`)
+      execSync(`cd dist && zip -r ../${macArchive} "${macDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(macArchive)
     }
 
     // Windows
-    if (distContents.some(item => item.includes('win'))) {
-      const winDir = distContents.find(item => item.includes('win'));
-      const winArchive = `releases/一括採点-${currentVersion}-windows.zip`;
-      console.log(`  🪟 Creating Windows archive: ${winArchive}`);
-      execSync(`cd dist && zip -r ../${winArchive} "${winDir}"`, { stdio: 'inherit' });
-      archives.push(winArchive);
+    if (distContents.some((item) => item.includes("win"))) {
+      const winDir = distContents.find((item) => item.includes("win"))
+      const winArchive = `releases/一括採点-${currentVersion}-windows.zip`
+      console.log(`  🪟 Creating Windows archive: ${winArchive}`)
+      execSync(`cd dist && zip -r ../${winArchive} "${winDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(winArchive)
     }
 
     // Linux
-    if (distContents.some(item => item.includes('linux'))) {
-      const linuxDir = distContents.find(item => item.includes('linux'));
-      const linuxArchive = `releases/一括採点-${currentVersion}-linux.zip`;
-      console.log(`  🐧 Creating Linux archive: ${linuxArchive}`);
-      execSync(`cd dist && zip -r ../${linuxArchive} "${linuxDir}"`, { stdio: 'inherit' });
-      archives.push(linuxArchive);
+    if (distContents.some((item) => item.includes("linux"))) {
+      const linuxDir = distContents.find((item) => item.includes("linux"))
+      const linuxArchive = `releases/一括採点-${currentVersion}-linux.zip`
+      console.log(`  🐧 Creating Linux archive: ${linuxArchive}`)
+      execSync(`cd dist && zip -r ../${linuxArchive} "${linuxDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(linuxArchive)
     }
 
     if (archives.length === 0) {
-      console.error('❌ No distribution files found to archive');
-      process.exit(1);
+      console.error("❌ No distribution files found to archive")
+      process.exit(1)
     }
 
     // Create git tag
-    const tagName = `v${currentVersion}`;
-    console.log(`🏷️  Creating git tag: ${tagName}`);
-    
+    const tagName = `v${currentVersion}`
+    console.log(`🏷️  Creating git tag: ${tagName}`)
+
     try {
-      execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, { stdio: 'inherit' });
-      execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
+      execSync(`git tag -a ${tagName} -m "Release ${tagName}"`, {
+        stdio: "inherit",
+      })
+      execSync(`git push origin ${tagName}`, { stdio: "inherit" })
     } catch (error) {
-      console.log(`⚠️  Tag ${tagName} may already exist, continuing...`);
+      console.log(`⚠️  Tag ${tagName} may already exist, continuing...`)
     }
 
     // Generate release notes
-    const releaseNotes = generateReleaseNotes(currentVersion);
+    const releaseNotes = generateReleaseNotes(currentVersion)
 
     // Create GitHub release
-    console.log('🎉 Creating GitHub release...');
-    
+    console.log("🎉 Creating GitHub release...")
+
     const releaseCommand = [
-      'gh', 'release', 'create', tagName,
+      "gh",
+      "release",
+      "create",
+      tagName,
       ...archives,
-      '--title', `一括採点 ${tagName}`,
-      '--notes', releaseNotes
-    ];
+      "--title",
+      `一括採点 ${tagName}`,
+      "--notes",
+      releaseNotes,
+    ]
 
-    execSync(releaseCommand.join(' '), { stdio: 'inherit' });
+    execSync(releaseCommand.join(" "), { stdio: "inherit" })
 
-    console.log('\n✅ Release created successfully!');
-    
+    console.log("\n✅ Release created successfully!")
+
     // リリースURLを取得
-    const repoInfo = JSON.parse(execSync('gh repo view --json owner,name', { encoding: 'utf-8' }));
-    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`;
-    
-    console.log(`🔗 View release: ${releaseUrl}`);
-    
-    // Discord通知を送信
-    await notifyRelease(currentVersion, releaseUrl, false);
-    
-    // Cleanup
-    console.log('🧹 Cleaning up temporary files...');
-    fs.rmSync(releasesPath, { recursive: true, force: true });
+    const repoInfo = JSON.parse(
+      execSync("gh repo view --json owner,name", { encoding: "utf-8" }),
+    )
+    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`
 
+    console.log(`🔗 View release: ${releaseUrl}`)
+
+    // Discord通知を送信
+    await notifyRelease(currentVersion, releaseUrl, false)
+
+    // Cleanup
+    console.log("🧹 Cleaning up temporary files...")
+    fs.rmSync(releasesPath, { recursive: true, force: true })
   } catch (error) {
-    console.error('❌ Release failed:', error.message);
-    process.exit(1);
+    console.error("❌ Release failed:", error.message)
+    process.exit(1)
   }
 }
 
 function generateReleaseNotes(version) {
-  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"))
+
   return `## 一括採点 ${version} 早期プレビュー版
 
 ⚠️ **これは早期プレビュー版です** - 限定配布・テスト用途
@@ -154,7 +168,7 @@ function generateReleaseNotes(version) {
 
 ### 🚀 機能
 
-${packageJson.description || '複数教員による協調採点システム'}
+${packageJson.description || "複数教員による協調採点システム"}
 
 ### 📝 使用方法
 
@@ -186,11 +200,11 @@ ${packageJson.description || '複数教員による協調採点システム'}
 
 **作者**: ${packageJson.author}
 **バージョン**: ${version}
-**種類**: 早期プレビュー版`;
+**種類**: 早期プレビュー版`
 }
 
 if (require.main === module) {
-  createRelease();
+  createRelease()
 }
 
-module.exports = { createRelease };
+module.exports = { createRelease }

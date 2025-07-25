@@ -1,168 +1,183 @@
-const { execSync } = require('child_process');
-const { notifyRelease } = require('./discord-notify');
-const { createRelease } = require('./release');
+const { execSync } = require("child_process")
+const { notifyRelease } = require("./discord-notify").default
+const { createRelease } = require("./release")
 
 async function createPrerelease(prereleaseType) {
   try {
-    console.log(`🚀 Creating pre-release (${prereleaseType})...`);
-    
+    console.log(`🚀 Creating pre-release (${prereleaseType})...`)
+
     // Bump version with prerelease
-    execSync(`npm version pre${prereleaseType}`, { stdio: 'inherit' });
-    
+    execSync(`npm version pre${prereleaseType}`, { stdio: "inherit" })
+
     // Get new version
-    const packageJson = require('../package.json');
-    const newVersion = packageJson.version;
-    
-    console.log(`✅ Version bumped to: ${newVersion}`);
-    console.log('📤 Pushing version commit and tag...');
-    
+    const packageJson = require("../package.json")
+    const newVersion = packageJson.version
+
+    console.log(`✅ Version bumped to: ${newVersion}`)
+    console.log("📤 Pushing version commit and tag...")
+
     // Push the version commit and tag created by npm version
-    execSync('git push', { stdio: 'inherit' });
-    execSync('git push --tags', { stdio: 'inherit' });
-    
+    execSync("git push", { stdio: "inherit" })
+    execSync("git push --tags", { stdio: "inherit" })
+
     // Create pre-release
-    await createPrereleaseGitHub(newVersion);
-    
+    await createPrereleaseGitHub(newVersion)
   } catch (error) {
-    console.error('❌ Pre-release failed:', error.message);
-    process.exit(1);
+    console.error("❌ Pre-release failed:", error.message)
+    process.exit(1)
   }
 }
 
 async function createPrereleaseGitHub(version) {
   try {
-    console.log('🚀 Starting pre-release process...\n');
+    console.log("🚀 Starting pre-release process...\n")
 
     // Check if gh CLI is installed
     try {
-      execSync('gh --version', { stdio: 'ignore' });
+      execSync("gh --version", { stdio: "ignore" })
     } catch (error) {
-      console.error('❌ GitHub CLI (gh) is not installed.');
-      console.log('Please install it: https://cli.github.com/');
-      process.exit(1);
+      console.error("❌ GitHub CLI (gh) is not installed.")
+      console.log("Please install it: https://cli.github.com/")
+      process.exit(1)
     }
 
     // Check if user is authenticated
     try {
-      execSync('gh auth status', { stdio: 'ignore' });
+      execSync("gh auth status", { stdio: "ignore" })
     } catch (error) {
-      console.error('❌ Not authenticated with GitHub.');
-      console.log('Please run: gh auth login');
-      process.exit(1);
+      console.error("❌ Not authenticated with GitHub.")
+      console.log("Please run: gh auth login")
+      process.exit(1)
     }
 
-    console.log(`📦 Creating pre-release for version: ${version}`);
+    console.log(`📦 Creating pre-release for version: ${version}`)
 
     // Clean and build
-    console.log('🧹 Cleaning previous builds...');
-    execSync('npm run clean', { stdio: 'inherit' });
+    console.log("🧹 Cleaning previous builds...")
+    execSync("npm run clean", { stdio: "inherit" })
 
-    console.log('🔍 Running pre-build checks...');
-    execSync('npm run check-all', { stdio: 'inherit' });
+    console.log("🔍 Running pre-build checks...")
+    execSync("npm run check-all", { stdio: "inherit" })
 
-    console.log('🏗️  Building application...');
-    execSync('npm run build', { stdio: 'inherit' });
+    console.log("🏗️  Building application...")
+    execSync("npm run build", { stdio: "inherit" })
 
-    console.log('📦 Creating distribution packages...');
-    execSync('npm run dist', { stdio: 'inherit' });
+    console.log("📦 Creating distribution packages...")
+    execSync("npm run dist", { stdio: "inherit" })
 
     // Create release archives
-    console.log('📦 Creating pre-release archives...');
-    
-    const fs = require('fs');
-    const path = require('path');
-    
-    const distPath = path.join(process.cwd(), 'dist');
-    const releasesPath = path.join(process.cwd(), 'releases');
-    
+    console.log("📦 Creating pre-release archives...")
+
+    const fs = require("fs")
+    const path = require("path")
+
+    const distPath = path.join(process.cwd(), "dist")
+    const releasesPath = path.join(process.cwd(), "releases")
+
     // Create releases directory
     if (!fs.existsSync(releasesPath)) {
-      fs.mkdirSync(releasesPath);
+      fs.mkdirSync(releasesPath)
     }
 
-    const archives = [];
+    const archives = []
 
     // Check what platforms were built
-    const distContents = fs.readdirSync(distPath);
-    
+    const distContents = fs.readdirSync(distPath)
+
     // macOS
-    if (distContents.some(item => item.includes('mac'))) {
-      const macDir = distContents.find(item => item.includes('mac'));
-      const macArchive = `releases/一括採点-${version}-mac.zip`;
-      console.log(`  📱 Creating macOS archive: ${macArchive}`);
-      execSync(`cd dist && zip -r ../${macArchive} "${macDir}"`, { stdio: 'inherit' });
-      archives.push(macArchive);
+    if (distContents.some((item) => item.includes("mac"))) {
+      const macDir = distContents.find((item) => item.includes("mac"))
+      const macArchive = `releases/一括採点-${version}-mac.zip`
+      console.log(`  📱 Creating macOS archive: ${macArchive}`)
+      execSync(`cd dist && zip -r ../${macArchive} "${macDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(macArchive)
     }
 
     // Windows
-    if (distContents.some(item => item.includes('win'))) {
-      const winDir = distContents.find(item => item.includes('win'));
-      const winArchive = `releases/一括採点-${version}-windows.zip`;
-      console.log(`  🪟 Creating Windows archive: ${winArchive}`);
-      execSync(`cd dist && zip -r ../${winArchive} "${winDir}"`, { stdio: 'inherit' });
-      archives.push(winArchive);
+    if (distContents.some((item) => item.includes("win"))) {
+      const winDir = distContents.find((item) => item.includes("win"))
+      const winArchive = `releases/一括採点-${version}-windows.zip`
+      console.log(`  🪟 Creating Windows archive: ${winArchive}`)
+      execSync(`cd dist && zip -r ../${winArchive} "${winDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(winArchive)
     }
 
     // Linux
-    if (distContents.some(item => item.includes('linux'))) {
-      const linuxDir = distContents.find(item => item.includes('linux'));
-      const linuxArchive = `releases/一括採点-${version}-linux.zip`;
-      console.log(`  🐧 Creating Linux archive: ${linuxArchive}`);
-      execSync(`cd dist && zip -r ../${linuxArchive} "${linuxDir}"`, { stdio: 'inherit' });
-      archives.push(linuxArchive);
+    if (distContents.some((item) => item.includes("linux"))) {
+      const linuxDir = distContents.find((item) => item.includes("linux"))
+      const linuxArchive = `releases/一括採点-${version}-linux.zip`
+      console.log(`  🐧 Creating Linux archive: ${linuxArchive}`)
+      execSync(`cd dist && zip -r ../${linuxArchive} "${linuxDir}"`, {
+        stdio: "inherit",
+      })
+      archives.push(linuxArchive)
     }
 
     if (archives.length === 0) {
-      console.error('❌ No distribution files found to archive');
-      process.exit(1);
+      console.error("❌ No distribution files found to archive")
+      process.exit(1)
     }
 
     // Generate pre-release notes
-    const releaseNotes = generatePrereleaseNotes(version);
+    const releaseNotes = generatePrereleaseNotes(version)
 
     // Create GitHub pre-release
-    console.log('🎉 Creating GitHub pre-release...');
-    
-    const tagName = `v${version}`;
+    console.log("🎉 Creating GitHub pre-release...")
+
+    const tagName = `v${version}`
     const releaseCommand = [
-      'gh', 'release', 'create', tagName,
+      "gh",
+      "release",
+      "create",
+      tagName,
       ...archives,
-      '--prerelease',  // This marks it as pre-release
-      '--title', `一括採点 ${tagName} (Pre-release)`,
-      '--notes', releaseNotes
-    ];
+      "--prerelease", // This marks it as pre-release
+      "--title",
+      `一括採点 ${tagName} (Pre-release)`,
+      "--notes",
+      releaseNotes,
+    ]
 
-    execSync(releaseCommand.join(' '), { stdio: 'inherit' });
+    execSync(releaseCommand.join(" "), { stdio: "inherit" })
 
-    console.log('\n✅ Pre-release created successfully!');
-    
+    console.log("\n✅ Pre-release created successfully!")
+
     // リリースURLを取得
-    const repoInfo = JSON.parse(execSync('gh repo view --json owner,name', { encoding: 'utf-8' }));
-    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`;
-    
-    console.log(`🔗 View pre-release: ${releaseUrl}`);
-    
-    // Discord通知を送信（プレリリース）
-    await notifyRelease(version, releaseUrl, true);
-    
-    // Cleanup
-    console.log('🧹 Cleaning up temporary files...');
-    fs.rmSync(releasesPath, { recursive: true, force: true });
+    const repoInfo = JSON.parse(
+      execSync("gh repo view --json owner,name", { encoding: "utf-8" }),
+    )
+    const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`
 
+    console.log(`🔗 View pre-release: ${releaseUrl}`)
+
+    // Discord通知を送信（プレリリース）
+    await notifyRelease(version, releaseUrl, true)
+
+    // Cleanup
+    console.log("🧹 Cleaning up temporary files...")
+    fs.rmSync(releasesPath, { recursive: true, force: true })
   } catch (error) {
-    console.error('❌ Pre-release failed:', error.message);
-    process.exit(1);
+    console.error("❌ Pre-release failed:", error.message)
+    process.exit(1)
   }
 }
 
 function generatePrereleaseNotes(version) {
-  const fs = require('fs');
-  const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  
-  const prereleaseType = version.includes('alpha') ? 'Alpha' : 
-                        version.includes('beta') ? 'Beta' : 
-                        version.includes('rc') ? 'Release Candidate' : 'Pre-release';
-  
+  const fs = require("fs")
+  const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"))
+
+  const prereleaseType = version.includes("alpha")
+    ? "Alpha"
+    : version.includes("beta")
+      ? "Beta"
+      : version.includes("rc")
+        ? "Release Candidate"
+        : "Pre-release"
+
   return `## 一括採点 ${version} (${prereleaseType})
 
 ⚠️ **これはプレリリース版です** - テスト用途での使用を推奨します
@@ -188,7 +203,7 @@ function generatePrereleaseNotes(version) {
 
 ### 🚀 機能
 
-${packageJson.description || '複数教員による協調採点システム'}
+${packageJson.description || "複数教員による協調採点システム"}
 
 ### 📝 使用方法
 
@@ -206,21 +221,21 @@ ${packageJson.description || '複数教員による協調採点システム'}
 
 **作者**: ${packageJson.author}
 **バージョン**: ${version}
-**種類**: ${prereleaseType}`;
+**種類**: ${prereleaseType}`
 }
 
 // Export function for use in other scripts
-module.exports = { createPrerelease, createPrereleaseGitHub };
+module.exports = { createPrerelease, createPrereleaseGitHub }
 
 // Only run if this file is executed directly
 if (require.main === module) {
   // Get prerelease type from command line argument
-  const prereleaseType = process.argv[2] || 'patch';
+  const prereleaseType = process.argv[2] || "patch"
 
-  if (!['patch', 'minor', 'major'].includes(prereleaseType)) {
-    console.error('❌ Invalid prerelease type. Use: patch, minor, or major');
-    process.exit(1);
+  if (!["patch", "minor", "major"].includes(prereleaseType)) {
+    console.error("❌ Invalid prerelease type. Use: patch, minor, or major")
+    process.exit(1)
   }
 
-  createPrerelease(prereleaseType);
+  createPrerelease(prereleaseType)
 }
