@@ -55,10 +55,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          # Use npm install instead of npm ci to ensure proper platform-specific binaries
+          npm install
+          # Clear any cached binaries and rebuild native modules
+          npm rebuild
 
       - name: Generate Prisma client
         run: npx prisma generate
