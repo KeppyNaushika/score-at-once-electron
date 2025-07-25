@@ -364,9 +364,53 @@ jobs:
 
               const req = https.request(options, (res) => {
                 console.log('Discord notification sent:', res.statusCode);
-                res.on('data', () => {}); // Consume response data to prevent connection issues
+                let responseData = '';
+                
+                res.on('data', (chunk) => {
+                  responseData += chunk;
+                });
+                
                 res.on('end', () => {
                   console.log('Discord response completed');
+                  
+                  if (res.statusCode === 200 && responseData) {
+                    try {
+                      const messageData = JSON.parse(responseData);
+                      const messageId = messageData.id;
+                      const channelId = messageData.channel_id;
+                      
+                      if (messageId && channelId) {
+                        // Add :try: reaction
+                        const reactionOptions = {
+                          hostname: 'discord.com',
+                          port: 443,
+                          path: \\`/api/v10/channels/\\${channelId}/messages/\\${messageId}/reactions/try:1393919620301324430/@me\\`,
+                          method: 'PUT',
+                          headers: {
+                            'Authorization': 'Bot ${{ secrets.DISCORD_BOT_TOKEN }}',
+                            'Content-Length': 0
+                          }
+                        };
+                        
+                        const reactionReq = https.request(reactionOptions, (reactionRes) => {
+                          console.log('Discord reaction added:', reactionRes.statusCode);
+                        });
+                        
+                        reactionReq.on('error', (error) => {
+                          console.error('Discord reaction failed:', error.message);
+                        });
+                        
+                        reactionReq.setTimeout(5000, () => {
+                          reactionReq.destroy();
+                          console.log('Discord reaction timeout');
+                        });
+                        
+                        reactionReq.end();
+                      }
+                    } catch (error) {
+                      console.error('Failed to parse Discord response:', error.message);
+                    }
+                  }
                 });
               });
 
