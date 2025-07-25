@@ -80,7 +80,41 @@ jobs:
       - name: Build application
         run: npm run build
 
-      - name: Verify Next.js build completion
+      - name: Verify Next.js build completion (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          Write-Host "Checking .next directory structure..."
+          if (Test-Path ".next") {
+            Get-ChildItem -Path ".next" -Force
+            Write-Host "Checking critical Next.js files..."
+            if (Test-Path ".next/BUILD_ID") {
+              $buildId = Get-Content ".next/BUILD_ID"
+              Write-Host "✓ BUILD_ID exists: $buildId"
+            } else {
+              Write-Host "✗ BUILD_ID missing"
+            }
+            if (Test-Path ".next/build-manifest.json") {
+              Write-Host "✓ build-manifest.json exists"
+            } else {
+              Write-Host "✗ build-manifest.json missing"
+            }
+            if (Test-Path ".next/server") {
+              Write-Host "✓ server directory exists"
+            } else {
+              Write-Host "✗ server directory missing"
+            }
+            if (Test-Path ".next/static") {
+              Write-Host "✓ static directory exists"
+            } else {
+              Write-Host "✗ static directory missing"
+            }
+          } else {
+            Write-Host "✗ .next directory not found"
+          }
+        shell: powershell
+
+      - name: Verify Next.js build completion (Unix)
+        if: runner.os != 'Windows'
         run: |
           echo "Checking .next directory structure..."
           ls -la .next/ || echo ".next directory not found"
