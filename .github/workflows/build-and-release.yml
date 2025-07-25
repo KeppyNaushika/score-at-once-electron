@@ -60,31 +60,23 @@ jobs:
         run: |
           # Clear npm cache to avoid stale binaries
           npm cache clean --force
-          # Install dependencies with prefer-online to get latest binaries
+          # Install dependencies with fresh download
           npm install --prefer-online
-          # Force reinstall lightningcss to ensure correct binary
-          npm uninstall lightningcss
-          npm install lightningcss --prefer-online
-          # Verify installation
+          # Force reinstall all Tailwind CSS v4 native modules
+          npm uninstall lightningcss @tailwindcss/oxide @tailwindcss/postcss tailwindcss
+          npm install lightningcss@1.27.0 @tailwindcss/postcss@4.1.7 tailwindcss@4.1.7 --prefer-online
+          # Verify native modules
           node -e "
             console.log('Node.js:', process.version, 'Platform:', process.platform, process.arch);
-            try {
-              require('lightningcss');
-              console.log('✓ lightningcss loaded successfully');
-            } catch (err) {
-              console.error('✗ lightningcss error:', err.message);
-              const fs = require('fs');
+            const modules = ['lightningcss', '@tailwindcss/oxide'];
+            modules.forEach(mod => {
               try {
-                const files = fs.readdirSync('./node_modules/lightningcss');
-                console.log('lightningcss directory contents:', files);
-                if (fs.existsSync('./node_modules/lightningcss/node')) {
-                  const nodeFiles = fs.readdirSync('./node_modules/lightningcss/node');
-                  console.log('lightningcss/node contents:', nodeFiles);
-                }
-              } catch (e) {
-                console.error('Directory read error:', e.message);
+                require(mod);
+                console.log('✓', mod, 'loaded successfully');
+              } catch (err) {
+                console.error('✗', mod, 'error:', err.message);
               }
-            }
+            });
           "
 
       - name: Generate Prisma client
