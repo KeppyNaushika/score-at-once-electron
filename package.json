@@ -130,6 +130,7 @@
     "directories": {
       "output": "dist"
     },
+    "icon": "public/icon.png",
     "files": [
       "main/**/*",
       ".next/**/*",
@@ -139,6 +140,7 @@
     ],
     "mac": {
       "category": "public.app-category.education",
+      "identity": null,
       "target": [
         {
           "target": "dir",
