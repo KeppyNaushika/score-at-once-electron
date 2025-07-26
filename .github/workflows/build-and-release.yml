@@ -3,24 +3,24 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Release type'
+        description: "Release type"
         required: true
-        default: 'prerelease'
+        default: "prerelease"
         type: choice
         options:
-          - 'prerelease'
-          - 'release'
+          - "prerelease"
+          - "release"
 
 permissions:
   contents: write
 
 env:
   # Node.js version to use
-  NODE_VERSION: '22'
+  NODE_VERSION: "22"
 
 jobs:
   build:
@@ -169,7 +169,6 @@ jobs:
           test -d .next/server && echo "✓ server directory exists" || echo "✗ server directory missing"
           test -d .next/static && echo "✓ static directory exists" || echo "✗ static directory missing"
 
-
       - name: Build Electron app for macOS
         if: matrix.os == 'macos-latest'
         run: npm run make:mac:${{ matrix.arch }}
@@ -228,7 +227,7 @@ jobs:
           cd out
           VERSION="${{ steps.vars_unix.outputs.version }}"
           FINAL_NAME="${{ matrix.artifact_name }}-$VERSION.zip"
-          
+
           if [ -d "make" ]; then
             find make -name "*.zip" -exec cp {} "../$FINAL_NAME" \;
           fi
@@ -240,7 +239,7 @@ jobs:
               zip -r "../$FINAL_NAME" "一括採点-linux-${{ matrix.arch }}"
             fi
           fi
-          
+
           echo "Created: $FINAL_NAME"
           ls -la "../$FINAL_NAME"
 
@@ -423,19 +422,19 @@ jobs:
           if [ -n "${{ secrets.DISCORD_WEBHOOK_URL }}" ]; then
             cat > discord_notify.js << 'EOF'
           const https = require('https');
-          
+
           const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
           const releaseUrl = process.env.RELEASE_URL;
           const isPrerelease = process.env.IS_PRERELEASE === 'true';
           const version = process.env.VERSION;
-          
+
           const url = new URL(webhookUrl);
-          
+
           const payload = JSON.stringify({
             content: '@everyone',
             embeds: [{
               title: `一括採点 ${version} をリリースしました！`,
-              description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\\n\\n**[📥 ダウンロード](${releaseUrl})**` + (isPrerelease ? '\\n\\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
+              description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\n\n**[📥 ダウンロード](${releaseUrl})**` + (isPrerelease ? '\n\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
               color: isPrerelease ? 0xffa500 : 0x00ff00,
               fields: [{
                 name: '📦 バージョン',
@@ -449,7 +448,7 @@ jobs:
               timestamp: new Date().toISOString()
             }]
           });
-          
+
           const options = {
             hostname: url.hostname,
             port: 443,
@@ -460,33 +459,33 @@ jobs:
               'Content-Length': Buffer.byteLength(payload)
             }
           };
-          
+
           const req = https.request(options, (res) => {
             console.log('Discord notification sent:', res.statusCode);
             let responseData = '';
-            
+
             res.on('data', (chunk) => {
               responseData += chunk;
             });
-            
+
             res.on('end', () => {
               console.log('Discord webhook sent successfully');
             });
           });
-          
+
           req.on('error', (error) => {
             console.error('Discord notification failed:', error.message);
           });
-          
+
           req.setTimeout(10000, () => {
             req.destroy();
             console.log('Discord notification timeout');
           });
-          
+
           req.write(payload);
           req.end();
           EOF
-            
+
             DISCORD_WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}" \
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
             IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
