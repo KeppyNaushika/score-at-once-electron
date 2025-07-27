@@ -55,6 +55,7 @@ data/
 
 # ビルド出力・テスト
 temp-test/
+test-results/
 
 # Electron配布ファイル
 dist/
