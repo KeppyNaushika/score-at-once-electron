@@ -88,6 +88,7 @@
     "fontkit": "^2.0.4",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.2",
+    "lightningcss": "1.27.0",
     "lucide-react": "^0.525.0",
     "next": "^15.4.4",
     "next-themes": "^0.4.6",
@@ -102,7 +103,6 @@
     "sonner": "^2.0.6",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "4.1.7",
-    "lightningcss": "1.27.0",
     "vaul": "^1.1.2",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   },

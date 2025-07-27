@@ -6,6 +6,7 @@ import { setupExportHandlers } from "./export-handlers"
 import { setupMiscHandlers } from "./misc-handlers"
 import { setupQuestionGroupHandlers } from "./question-group-handlers"
 import { setupQuestionHandlers } from "./question-handlers"
+import { setupAuthHandlers } from "./auth-handlers"
 
 export function setupAllIPCHandlers(): void {
   setupProjectHandlers()
@@ -16,4 +17,5 @@ export function setupAllIPCHandlers(): void {
   setupMiscHandlers()
   setupQuestionGroupHandlers()
   setupQuestionHandlers()
+  setupAuthHandlers()
 }

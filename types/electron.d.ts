@@ -235,6 +235,12 @@ export interface MyAPI {
     error?: string
   }>
 
+  // Auth token persistence (electron-store)
+  saveAuthToken: (token: string) => Promise<{ success: boolean; error?: string }>
+  getAuthToken: () => Promise<{ success: boolean; token: string | null; error?: string }>
+  clearAuthToken: () => Promise<{ success: boolean; error?: string }>
+  getAuthStoreStatus: () => Promise<{ success: boolean; hasToken: boolean; storePath: string; error?: string }>
+
   // Answer sheet related
   uploadAnswerSheets: (
     projectId: string,
