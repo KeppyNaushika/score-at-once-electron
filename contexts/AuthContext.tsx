@@ -39,7 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      const userId = localStorage.getItem("authToken")
+      // electron-storeから認証トークンを取得
+      const result = await window.electronAPI.getAuthToken()
+      const userId = result.success ? result.token : null
+      
       if (userId) {
         // userIdから直接ユーザー情報を取得
         const users = await window.electronAPI.fetchUsers()
@@ -47,13 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (user) {
           setUser(user)
         } else {
-          localStorage.removeItem("authToken")
+          // 無効なトークンの場合は削除
+          await window.electronAPI.clearAuthToken()
           setUser(null)
         }
+      } else {
+        // トークンがない場合は明示的にnullに設定
+        setUser(null)
       }
     } catch (error) {
       console.error("Auth check failed:", error)
-      localStorage.removeItem("authToken")
+      await window.electronAPI.clearAuthToken()
       setUser(null)
     } finally {
       setIsLoading(false)
@@ -68,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await window.electronAPI.loginUser(username, password)
 
       if (result.success && result.user && result.token) {
-        localStorage.setItem("authToken", result.token)
+        await window.electronAPI.saveAuthToken(result.token)
         setUser(result.user)
         toast.success("ログインしました")
         router.push("/dashboard")
@@ -89,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // パスワード不要のクイックログイン
       setUser(selectedUser)
       // 簡易トークンとして user.id を保存
-      localStorage.setItem("authToken", selectedUser.id)
+      await window.electronAPI.saveAuthToken(selectedUser.id)
       toast.success(`${selectedUser.name}さん、おかえりなさい！`)
       router.push("/dashboard")
     } catch (error) {
@@ -98,11 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem("authToken")
+  const logout = async () => {
+    await window.electronAPI.clearAuthToken()
     setUser(null)
     toast.success("ログアウトしました")
-    router.push("/")
+    router.push("/login")
   }
 
   return (
