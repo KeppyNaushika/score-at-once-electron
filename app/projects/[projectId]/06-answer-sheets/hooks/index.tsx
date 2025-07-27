@@ -5,7 +5,10 @@
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import type { PendingChange, ScoringDataOption } from "@/types/answer-sheet.types"
+import type {
+  PendingChange,
+  ScoringDataOption,
+} from "@/types/answer-sheet.types"
 import type { StudentData } from "../components"
 
 interface ProjectData {
@@ -15,7 +18,6 @@ interface ProjectData {
 }
 
 export function useAnswerSheetsData(projectId: string) {
-  const [project, setProject] = useState<ProjectData | null>(null)
   const [students, setStudents] = useState<StudentData[]>([])
   const [answerSheets, setAnswerSheets] = useState<AnswerSheetWithDetails[]>([])
   const [masterImageCount, setMasterImageCount] = useState<number>(0)
@@ -27,23 +29,18 @@ export function useAnswerSheetsData(projectId: string) {
     try {
       setIsLoading(true)
 
-      // Load project
-      const projectResult = await window.electronAPI.fetchProjectById(projectId)
-      if (projectResult) {
-        setProject({
-          id: projectResult.id,
-          name: projectResult.examName,
-          description: projectResult.description || undefined,
-        })
-      }
-
       // Load students
-      const projectStudentsResult = await window.electronAPI.getStudentsForProject(projectId)
+      const projectStudentsResult =
+        await window.electronAPI.getStudentsForProject(projectId)
       if (projectStudentsResult.success && projectStudentsResult.students) {
         const sortedStudents = projectStudentsResult.students
           .sort((a: any, b: any) => {
-            if (a.customOrder !== null && a.customOrder !== undefined && 
-                b.customOrder !== null && b.customOrder !== undefined) {
+            if (
+              a.customOrder !== null &&
+              a.customOrder !== undefined &&
+              b.customOrder !== null &&
+              b.customOrder !== undefined
+            ) {
               return a.customOrder - b.customOrder
             }
             if (a.customOrder !== null && a.customOrder !== undefined) return -1
@@ -66,7 +63,8 @@ export function useAnswerSheetsData(projectId: string) {
             lastNameKana: student.lastNameKana,
             firstNameKana: student.firstNameKana,
             studentId: student.studentId,
-            attendanceNumber: student.memberships?.[0]?.attendanceNumber || null,
+            attendanceNumber:
+              student.memberships?.[0]?.attendanceNumber || null,
             status: student.status,
             customOrder: student.customOrder ?? null,
           }))
@@ -75,17 +73,20 @@ export function useAnswerSheetsData(projectId: string) {
       }
 
       // Load answer sheets
-      const answerSheetsResult = await window.electronAPI.getAnswerSheetsByProjectId(projectId)
+      const answerSheetsResult =
+        await window.electronAPI.getAnswerSheetsByProjectId(projectId)
       if (answerSheetsResult.success && answerSheetsResult.answerSheets) {
         setAnswerSheets(answerSheetsResult.answerSheets)
       }
 
       // Load master image count
       try {
-        const masterImages = await window.electronAPI.getMasterImagesByProjectId(projectId)
-        const maxPages = masterImages && masterImages.length > 0 
-          ? Math.max(...masterImages.map((img: any) => img.pageNumber)) 
-          : 0
+        const masterImages =
+          await window.electronAPI.getMasterImagesByProjectId(projectId)
+        const maxPages =
+          masterImages && masterImages.length > 0
+            ? Math.max(...masterImages.map((img: any) => img.pageNumber))
+            : 0
         setMasterImageCount(maxPages)
       } catch (error) {
         console.error("Failed to load master image count:", error)
@@ -100,7 +101,6 @@ export function useAnswerSheetsData(projectId: string) {
   }, [projectId])
 
   return {
-    project,
     students,
     answerSheets,
     masterImageCount,
@@ -109,81 +109,157 @@ export function useAnswerSheetsData(projectId: string) {
   }
 }
 
-export function usePendingChanges(onDataReload: () => Promise<void>, students?: StudentData[]) {
+export function usePendingChanges(
+  onDataReload: () => Promise<void>,
+  students?: StudentData[],
+  answerSheets?: AnswerSheetWithDetails[],
+) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
-  const handleUpdatePendingChanges = useCallback((changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => {
-    // PendingChange配列を一括作成
-    const newPendingChanges = changedFiles.map(({ fileId, fromState, toState }) => {
-      // 生徒名を解決
-      const fromStudent = students?.find(s => s.id === fromState.studentId)
-      const toStudent = students?.find(s => s.id === toState.studentId)
+  const handleUpdatePendingChanges = useCallback(
+    (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => {
+      console.log(
+        "🔄 Creating pending changes from changed files:",
+        changedFiles,
+      )
 
-      const change: PendingChange = {
-        id: `${fileId}-change-${Date.now()}-${fromState.studentId}-${fromState.pageNumber}-${toState.studentId}-${toState.pageNumber}`,
-        answerSheetId1: fileId,
-        answerSheetId2: fileId,
-        timestamp: new Date(),
-        position1: {
-          studentId: fromState.studentId,
-          pageNumber: fromState.pageNumber,
-          studentName: fromStudent ? `${fromStudent.lastName} ${fromStudent.firstName}` : undefined,
-        },
-        position2: {
-          studentId: toState.studentId,
-          pageNumber: toState.pageNumber,
-          studentName: toStudent ? `${toStudent.lastName} ${toStudent.firstName}` : undefined,
-        },
-      }
-      return change
-    })
-
-    // 一括更新
-    setPendingChanges(newPendingChanges)
-    setAffectedCells(new Set(changedFiles.map(({ fileId }) => fileId)))
-  }, [students])
-
-  const handleApplyChanges = useCallback(async (option: ScoringDataOption, resetDragDropFn?: () => void) => {
-    if (option === "cancel") {
-      setPendingChanges([])
-      setAffectedCells(new Set())
-      // DnD配列も初期状態に戻す
-      if (resetDragDropFn) {
-        resetDragDropFn()
-      }
-      toast.info("変更をキャンセルしました")
-      return
-    }
-
-    try {
-      for (const change of pendingChanges) {
-        if (option === "with-scoring") {
-          await window.electronAPI.swapAnswerSheetPlacementsWithScoring(
-            change.answerSheetId1,
-            change.answerSheetId2
+      // PendingChange配列を一括作成
+      const newPendingChanges = changedFiles.map(
+        ({ fileId, fromState, toState }) => {
+          // 生徒名を解決
+          const fromStudent = students?.find(
+            (s) => s.id === fromState.studentId,
           )
-        } else {
-          await window.electronAPI.swapAnswerSheetPlacements(
-            change.answerSheetId1,
-            change.answerSheetId2
+          const toStudent = students?.find((s) => s.id === toState.studentId)
+
+          // 移動先にある既存ファイルを特定
+          // answerSheetsから移動先位置(toState.studentId, toState.pageNumber)にあるファイルを検索
+          const targetFile = answerSheets?.find(
+            (sheet) =>
+              sheet.studentId === toState.studentId &&
+              sheet.pageNumber === toState.pageNumber &&
+              sheet.id !== fileId, // 移動されたファイル自体は除外
           )
+
+          console.log("🎯 Target file search:", {
+            fileId,
+            toState,
+            targetFile: targetFile
+              ? {
+                  id: targetFile.id,
+                  studentId: targetFile.studentId,
+                  pageNumber: targetFile.pageNumber,
+                }
+              : null,
+            totalAnswerSheets: answerSheets?.length || 0,
+          })
+
+          const change: PendingChange = {
+            id: `${fileId}-change-${Date.now()}-${fromState.studentId}-${fromState.pageNumber}-${toState.studentId}-${toState.pageNumber}`,
+            movedFileId: fileId,
+            targetFileId: targetFile?.id || null, // 移動先にファイルがない場合はnull
+            timestamp: new Date(),
+            fromPosition: {
+              studentId: fromState.studentId,
+              pageNumber: fromState.pageNumber,
+              studentName: fromStudent
+                ? `${fromStudent.lastName} ${fromStudent.firstName}`
+                : undefined,
+            },
+            toPosition: {
+              studentId: toState.studentId,
+              pageNumber: toState.pageNumber,
+              studentName: toStudent
+                ? `${toStudent.lastName} ${toStudent.firstName}`
+                : undefined,
+            },
+          }
+          return change
+        },
+      )
+
+      // 一括更新
+      setPendingChanges(newPendingChanges)
+      setAffectedCells(new Set(changedFiles.map(({ fileId }) => fileId)))
+    },
+    [students, answerSheets],
+  )
+
+  const handleApplyChanges = useCallback(
+    async (option: ScoringDataOption, resetDragDropFn?: () => void) => {
+      try {
+        // 全ての変更を一方向移動として収集
+        const allMoves: Array<{
+          fileId: string
+          finalStudentId: string | null
+          finalPageNumber: number
+        }> = []
+
+        for (const change of pendingChanges) {
+          // 移動されるファイルの最終位置
+          allMoves.push({
+            fileId: change.movedFileId,
+            finalStudentId: change.toPosition.studentId,
+            finalPageNumber: change.toPosition.pageNumber,
+          })
         }
+
+        console.log("🔄 Batch moves to apply:", {
+          totalMoves: allMoves.length,
+          moves: allMoves.map((m) => ({
+            fileId: m.fileId.substring(0, 8) + "...",
+            to: `${m.finalStudentId?.substring(0, 8) || "null"}...page${m.finalPageNumber}`,
+          })),
+        })
+
+        // 一括移動処理：トランザクション内で全ての移動を同時実行
+        console.log("📝 Calling batch placement update...")
+        const result =
+          await window.electronAPI.batchUpdateAnswerSheetPlacements(
+            allMoves,
+            option === "with-scoring",
+          )
+
+        console.log("✅ Batch placement update result:", result)
+
+        if (!result || !result.success) {
+          throw new Error(result?.error || "一括配置変更に失敗しました")
+        }
+
+        console.log("🔄 Clearing pending changes and reloading data...")
+        setPendingChanges([])
+        setAffectedCells(new Set())
+
+        console.log("🔄 Calling onDataReload...")
+        await onDataReload()
+        console.log("✅ Data reload completed")
+
+        const optionText =
+          option === "with-scoring" ? "採点情報込み" : "答案画像のみ"
+        toast.success(
+          `${pendingChanges.length}件の変更を適用しました（${optionText}）`,
+        )
+      } catch (error) {
+        console.error("変更の適用に失敗しました:", error)
+        toast.error("変更の適用に失敗しました")
+        throw error
       }
+    },
+    [pendingChanges, onDataReload],
+  )
 
-      setPendingChanges([])
-      setAffectedCells(new Set())
-      await onDataReload()
-
-      const optionText = option === "with-scoring" ? "採点情報込み" : "答案画像のみ"
-      toast.success(`${pendingChanges.length}件の変更を適用しました（${optionText}）`)
-    } catch (error) {
-      console.error("変更の適用に失敗しました:", error)
-      toast.error("変更の適用に失敗しました")
-      throw error
+  const handleResetChanges = useCallback((resetDragDropFn?: () => void) => {
+    setPendingChanges([])
+    setAffectedCells(new Set())
+    // DnD配列も初期状態に戻す
+    if (resetDragDropFn) {
+      resetDragDropFn()
     }
-  }, [pendingChanges, onDataReload])
+    setIsConfirmModalOpen(false)
+    toast.info("変更をリセットしました")
+  }, [])
 
   return {
     pendingChanges,
@@ -191,6 +267,7 @@ export function usePendingChanges(onDataReload: () => Promise<void>, students?: 
     isConfirmModalOpen,
     handleUpdatePendingChanges,
     handleApplyChanges,
+    handleResetChanges,
     openConfirmModal: () => setIsConfirmModalOpen(true),
     closeConfirmModal: () => setIsConfirmModalOpen(false),
   }

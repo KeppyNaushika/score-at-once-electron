@@ -22,6 +22,7 @@ import {
   updateAnswerSheetPlacement,
   swapAnswerSheetPlacements,
   swapAnswerSheetPlacementsWithScoring,
+  batchUpdateAnswerSheetPlacements,
 } from "../lib/prisma/answerSheet"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import {
@@ -372,6 +373,31 @@ export function setupMiscHandlers(): void {
           "Error swapping answer sheet placements with scoring:",
           err,
         )
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "batch-update-answer-sheet-placements",
+    async (
+      _event,
+      moves: Array<{
+        fileId: string
+        finalStudentId: string | null
+        finalPageNumber: number
+      }>,
+      withScoring: boolean = false
+    ) => {
+      try {
+        const result = await batchUpdateAnswerSheetPlacements(moves, withScoring)
+        if (!result.success) {
+          const errorMessage = "error" in result ? result.error : "Unknown error"
+          throw new Error(errorMessage)
+        }
+        return result
+      } catch (err) {
+        console.error("Error in batch update answer sheet placements:", err)
         throw err
       }
     },
