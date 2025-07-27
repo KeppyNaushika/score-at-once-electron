@@ -293,7 +293,14 @@ jobs:
           VERSION="${{ steps.vars.outputs.version }}"
 
           # Get recent changes from git log since last tag
+          # Get the second most recent tag (the one before current release)
+          CURRENT_TAG=$(git tag --sort=-version:refname | head -n 1)
           LAST_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
+          
+          # If current tag is the same as last tag, get the third most recent
+          if [ "$CURRENT_TAG" = "$LAST_TAG" ]; then
+            LAST_TAG=$(git tag --sort=-version:refname | head -n 3 | tail -n 1)
+          fi
           
           echo "Last tag: $LAST_TAG"
           
@@ -301,6 +308,12 @@ jobs:
             # Get all commits since last tag with detailed info
             echo "Getting commits since $LAST_TAG..."
             COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short $LAST_TAG..HEAD | head -15)
+            
+            # If no commits since last tag, get commits from the last tag and before
+            if [ -z "$COMMIT_INFO" ]; then
+              echo "No commits since last tag, getting commits including the tag..."
+              COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short -5)
+            fi
           else
             # Get last 15 commits if no previous tag
             echo "No previous tag found, getting last 15 commits..."
@@ -313,9 +326,19 @@ jobs:
           CHANGES=""
           processed_prs=""
           
-          # Process each commit
-          while IFS='|' read -r commit_hash commit_msg author date; do
-            echo "Processing: $commit_msg"
+          # Check if we have any commits to process
+          if [ -z "$COMMIT_INFO" ]; then
+            echo "No commit information available"
+            CHANGES="- バグ修正と機能改善"
+          else
+            # Process each commit
+            while IFS='|' read -r commit_hash commit_msg author date; do
+              # Skip empty lines
+              if [ -z "$commit_hash" ] || [ -z "$commit_msg" ]; then
+                continue
+              fi
+              
+              echo "Processing: $commit_msg"
             
             # Check if it's a merge commit from a PR
             if [[ $commit_msg =~ ^Merge\ pull\ request\ #([0-9]+)\ from\ (.+)$ ]]; then
@@ -374,6 +397,7 @@ jobs:
               fi
             fi
           done <<< "$COMMIT_INFO"
+          fi
 
           # Format final output
           CHANGES=$(echo -e "$CHANGES" | sed '/^$/d')
