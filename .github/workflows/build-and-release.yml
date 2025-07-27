@@ -292,10 +292,27 @@ jobs:
           RELEASE_TYPE="${{ steps.vars.outputs.release_type }}"
           VERSION="${{ steps.vars.outputs.version }}"
 
+          # Get recent changes from git log since last tag
+          LAST_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log --oneline --pretty=format:"- %s" $LAST_TAG..HEAD | head -20)
+          else
+            CHANGES=$(git log --oneline --pretty=format:"- %s" -10)
+          fi
+
+          # If no meaningful changes, provide default message
+          if [ -z "$CHANGES" ] || [ "$CHANGES" = "- " ]; then
+            CHANGES="- バグ修正と機能改善"
+          fi
+
           if [ "$RELEASE_TYPE" = "prerelease" ]; then
             NOTES="## 一括採点 $VERSION (プレリリース)
 
           ⚠️ **これはプレリリース版です** - テスト用途での使用を推奨します
+
+          ### 🔄 このバージョンの変更点
+
+          $CHANGES
 
           ### 📦 ダウンロード
 
@@ -346,6 +363,10 @@ jobs:
             NOTES="## 一括採点 $VERSION 早期プレビュー版
 
           ⚠️ **これは早期プレビュー版です** - 限定配布・テスト用途
+
+          ### 🔄 このバージョンの変更点
+
+          $CHANGES
 
           ### 📦 ダウンロード
 
@@ -427,19 +448,24 @@ jobs:
           const releaseUrl = process.env.RELEASE_URL;
           const isPrerelease = process.env.IS_PRERELEASE === 'true';
           const version = process.env.VERSION;
+          const changes = process.env.CHANGES || 'バグ修正と機能改善';
 
           const url = new URL(webhookUrl);
 
           const payload = JSON.stringify({
             content: '@everyone',
             embeds: [{
-              title: `一括採点 ${version} をリリースしました！`,
-              description: `<:app_icon:1398223842488483840> 完全無料・インストール不要・オフライン完結の採点支援ソフト\n\n**[📥 ダウンロード](${releaseUrl})**` + (isPrerelease ? '\n\n⚠️ **プレリリース版です。ライセンスをご確認下さい。**' : ''),
+              title: `📚 採点支援ソフト「一括採点」${version} が利用可能です！`,
+              description: `<:app_icon:1398223842488483840> **完全無料・インストール不要・オフライン完結**\n\n**[📥 今すぐダウンロード](${releaseUrl})**` + (isPrerelease ? '\n\n⚠️ **テスト版につきご留意下さい。**' : ''),
               color: isPrerelease ? 0xffa500 : 0x00ff00,
               fields: [{
                 name: '📦 バージョン',
                 value: version,
                 inline: true
+              }, {
+                name: '🔄 主な変更点',
+                value: changes.split('\n').slice(0, 5).join('\n') || 'バグ修正と機能改善',
+                inline: false
               }],
               footer: {
                 text: 'KeppyNaushika',
@@ -490,6 +516,7 @@ jobs:
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
             IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
             VERSION="${{ steps.vars.outputs.version }}" \
+            CHANGES="$(echo "$CHANGES" | head -5)" \
             node discord_notify.js
           else
             echo "Discord webhook URL not configured"
