@@ -294,14 +294,95 @@ jobs:
 
           # Get recent changes from git log since last tag
           LAST_TAG=$(git tag --sort=-version:refname | head -n 2 | tail -n 1)
+          
+          echo "Last tag: $LAST_TAG"
+          
           if [ -n "$LAST_TAG" ]; then
-            CHANGES=$(git log --oneline --pretty=format:"- %s" $LAST_TAG..HEAD | head -20)
+            # Get all commits since last tag with detailed info
+            echo "Getting commits since $LAST_TAG..."
+            COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short $LAST_TAG..HEAD | head -15)
           else
-            CHANGES=$(git log --oneline --pretty=format:"- %s" -10)
+            # Get last 15 commits if no previous tag
+            echo "No previous tag found, getting last 15 commits..."
+            COMMIT_INFO=$(git log --pretty=format:"%H|%s|%an|%ad" --date=short -15)
           fi
 
+          echo "Raw commit info:"
+          echo "$COMMIT_INFO"
+
+          CHANGES=""
+          processed_prs=""
+          
+          # Process each commit
+          while IFS='|' read -r commit_hash commit_msg author date; do
+            echo "Processing: $commit_msg"
+            
+            # Check if it's a merge commit from a PR
+            if [[ $commit_msg =~ ^Merge\ pull\ request\ #([0-9]+)\ from\ (.+)$ ]]; then
+              pr_number="${BASH_REMATCH[1]}"
+              branch_info="${BASH_REMATCH[2]}"
+              
+              # Skip if we've already processed this PR
+              if [[ "$processed_prs" =~ $pr_number ]]; then
+                continue
+              fi
+              processed_prs="$processed_prs $pr_number"
+              
+              echo "Found PR #$pr_number"
+              
+              # Try to get PR title from GitHub API (with authentication for higher rate limits)
+              if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
+                pr_data=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "Accept: application/vnd.github.v3+json" \
+                  "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number" 2>/dev/null)
+              else
+                pr_data=$(curl -s -H "Accept: application/vnd.github.v3+json" \
+                  "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number" 2>/dev/null)
+              fi
+              
+              if [ $? -eq 0 ] && [ -n "$pr_data" ]; then
+                pr_title=$(echo "$pr_data" | jq -r '.title // empty' 2>/dev/null)
+                pr_body=$(echo "$pr_data" | jq -r '.body // empty' 2>/dev/null | head -3 | tr '\n' ' ')
+                
+                if [ -n "$pr_title" ] && [ "$pr_title" != "null" ] && [ "$pr_title" != "empty" ]; then
+                  CHANGES="$CHANGES### 🔀 $pr_title (PR #$pr_number)\n"
+                  
+                  # Get commits within this PR for hierarchy
+                  pr_commits=$(git log --pretty=format:"  - %s (%an)" --grep="(#$pr_number)" --oneline | head -5)
+                  if [ -n "$pr_commits" ]; then
+                    CHANGES="$CHANGES$pr_commits\n"
+                  fi
+                  CHANGES="$CHANGES\n"
+                  continue
+                fi
+              fi
+              
+              # Fallback: format branch name nicely
+              branch_name=$(echo "$branch_info" | sed 's/.*\///' | sed 's/-/ /g' | sed 's/_/ /g')
+              CHANGES="$CHANGES### 🔀 $(echo $branch_name | sed 's/.*/\L&/; s/[a-z]/\u&/') (PR #$pr_number)\n\n"
+              
+            elif [[ $commit_msg =~ .*\(#([0-9]+)\)$ ]]; then
+              # Commit with PR reference - skip as it will be included in PR hierarchy
+              continue
+              
+            else
+              # Regular direct commit
+              if [[ ! $commit_msg =~ ^(Merge\ branch|Update|Bump\ |chore\(|docs\(|style\() ]]; then
+                # Clean up commit message
+                clean_msg=$(echo "$commit_msg" | sed 's/^fix: //' | sed 's/^feat: //' | sed 's/^refactor: //')
+                CHANGES="$CHANGES- $clean_msg ($author)\n"
+              fi
+            fi
+          done <<< "$COMMIT_INFO"
+
+          # Format final output
+          CHANGES=$(echo -e "$CHANGES" | sed '/^$/d')
+
+          echo "Final changes:"
+          echo "$CHANGES"
+
           # If no meaningful changes, provide default message
-          if [ -z "$CHANGES" ] || [ "$CHANGES" = "- " ]; then
+          if [ -z "$CHANGES" ] || [ "$(echo "$CHANGES" | wc -l)" -eq 0 ]; then
             CHANGES="- バグ修正と機能改善"
           fi
 
@@ -419,6 +500,10 @@ jobs:
           echo "notes<<EOF" >> $GITHUB_OUTPUT
           echo "$NOTES" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Collect release files
         run: |
@@ -512,11 +597,14 @@ jobs:
           req.end();
           EOF
 
+            # Format changes for Discord (clean up markdown and limit length)
+            DISCORD_CHANGES=$(echo '${{ steps.release_notes.outputs.changes }}' | sed 's/###/•/g' | sed 's/🔀//' | head -8 | tr '\n' ' ')
+            
             DISCORD_WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}" \
             RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${{ steps.vars.outputs.tag_name }}" \
             IS_PRERELEASE="${{ steps.vars.outputs.is_prerelease }}" \
             VERSION="${{ steps.vars.outputs.version }}" \
-            CHANGES="$(echo "$CHANGES" | head -5)" \
+            CHANGES="$DISCORD_CHANGES" \
             node discord_notify.js
           else
             echo "Discord webhook URL not configured"
