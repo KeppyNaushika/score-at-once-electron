@@ -293,6 +293,17 @@ export interface MyAPI {
     answerSheets?: AnswerSheetWithDetails[]
     error?: string
   }>
+  batchUpdateAnswerSheetPlacements: (
+    moves: Array<{
+      fileId: string
+      finalStudentId: string | null
+      finalPageNumber: number
+    }>,
+    withScoring: boolean
+  ) => Promise<{
+    success: boolean
+    error?: string
+  }>
   getImageData: (relativePath: string) => Promise<{
     success: boolean
     data?: string

@@ -20,6 +20,7 @@ interface ConfirmChangesModalProps {
   onClose: () => void
   pendingChanges: PendingChange[]
   onConfirm: (option: ScoringDataOption, resetDragDropFn?: () => void) => Promise<void>
+  onReset?: (resetDragDropFn?: () => void) => void
   resetDragDropFn?: (() => void) | undefined
 }
 
@@ -28,6 +29,7 @@ export function ConfirmChangesModal({
   onClose,
   pendingChanges,
   onConfirm,
+  onReset,
   resetDragDropFn,
 }: ConfirmChangesModalProps) {
   const [selectedOption, setSelectedOption] = useState<ScoringDataOption>("with-scoring")
@@ -46,8 +48,13 @@ export function ConfirmChangesModal({
   }
 
   const handleCancel = () => {
-    onConfirm("cancel", resetDragDropFn)
     onClose()
+  }
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset(resetDragDropFn)
+    }
   }
 
   return (
@@ -79,14 +86,19 @@ export function ConfirmChangesModal({
                   <div className="flex-1 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {change.position1.studentName || "未割当"} 
-                        <span className="text-gray-500 ml-1">P{change.position1.pageNumber}</span>
+                        {change.fromPosition.studentName || "未割当"} 
+                        <span className="text-gray-500 ml-1">P{change.fromPosition.pageNumber}</span>
                       </span>
                       <span className="text-gray-400">→</span>
                       <span className="font-medium">
-                        {change.position2.studentName || "未割当"}
-                        <span className="text-gray-500 ml-1">P{change.position2.pageNumber}</span>
+                        {change.toPosition.studentName || "未割当"}
+                        <span className="text-gray-500 ml-1">P{change.toPosition.pageNumber}</span>
                       </span>
+                      {change.targetFileId && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          入れ替え
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -173,10 +185,15 @@ export function ConfirmChangesModal({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex gap-2">
           <Button variant="outline" onClick={handleCancel} disabled={isApplying}>
             キャンセル
           </Button>
+          {onReset && (
+            <Button variant="outline" onClick={handleReset} disabled={isApplying} className="text-red-600 border-red-300 hover:bg-red-50">
+              リセット
+            </Button>
+          )}
           <Button
             onClick={handleConfirm}
             disabled={isApplying}

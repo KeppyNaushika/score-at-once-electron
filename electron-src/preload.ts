@@ -110,6 +110,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
       answerSheetId1,
       answerSheetId2,
     ),
+  batchUpdateAnswerSheetPlacements: (
+    moves: Array<{
+      fileId: string
+      finalStudentId: string | null
+      finalPageNumber: number
+    }>,
+    withScoring: boolean
+  ) =>
+    ipcRenderer.invoke(
+      "batch-update-answer-sheet-placements",
+      moves,
+      withScoring
+    ),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
 

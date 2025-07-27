@@ -17,13 +17,13 @@ import { toast } from "sonner"
 
 /**
  * AnswerSheetsPage - Main page component for answer sheet management
- * 
+ *
  * Features:
  * - Upload and manage answer sheets
  * - Associate answer sheets with students
  * - Optimistic updates for answer sheet placement changes
  * - Tabbed interface for new uploads and existing sheets
- * 
+ *
  * @returns JSX component for answer sheets page
  */
 
@@ -36,7 +36,6 @@ export default function AnswerSheetsPage() {
 
   // Data loading hook
   const {
-    project: _project,
     students,
     answerSheets,
     masterImageCount,
@@ -51,9 +50,10 @@ export default function AnswerSheetsPage() {
     isConfirmModalOpen,
     handleUpdatePendingChanges,
     handleApplyChanges,
+    handleResetChanges,
     openConfirmModal,
     closeConfirmModal,
-  } = usePendingChanges(loadData, students)
+  } = usePendingChanges(loadData, students, answerSheets)
 
   // DnD reset function ref
   const resetDragDropRef = useRef<(() => void) | null>(null)
@@ -119,6 +119,7 @@ export default function AnswerSheetsPage() {
             onClose={closeConfirmModal}
             pendingChanges={pendingChanges}
             onConfirm={handleApplyChanges}
+            onReset={handleResetChanges}
             resetDragDropFn={resetDragDropRef.current || undefined}
           />
         </div>
