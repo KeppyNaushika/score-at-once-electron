@@ -58,6 +58,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-user-password", userId, newPassword),
   updateUserPasscode: (userId: string, passcode?: string, passcodeType?: string) =>
     ipcRenderer.invoke("update-user-passcode", userId, passcode, passcodeType),
+  verifyPasscode: (userId: string, passcode: string) =>
+    ipcRenderer.invoke("verify-passcode", userId, passcode),
 
   // Auth token persistence (electron-store)
   saveAuthToken: (token: string) => ipcRenderer.invoke("auth:saveToken", token),
