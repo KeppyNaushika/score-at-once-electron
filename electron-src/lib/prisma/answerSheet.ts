@@ -433,11 +433,132 @@ export async function swapAnswerSheetPlacements(
   }
 }
 
+// 複数の答案の配置を一括で変更（採点情報の移行も対応）
+export async function batchUpdateAnswerSheetPlacements(
+  moves: Array<{
+    fileId: string
+    finalStudentId: string | null
+    finalPageNumber: number
+  }>,
+  withScoring: boolean = false
+) {
+  console.log("🔄 [Electron] Starting batch placement update:", {
+    movesCount: moves.length,
+    withScoring,
+    moves: moves.map(m => ({ fileId: m.fileId.substring(0, 8) + "...", to: `${m.finalStudentId?.substring(0, 8) || 'null'}...p${m.finalPageNumber}` }))
+  })
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      // 移動対象の答案情報と採点データを取得
+      const answerSheets = await Promise.all(
+        moves.map(move => 
+          tx.answerSheet.findUnique({
+            where: { id: move.fileId },
+            select: { 
+              id: true,
+              projectId: true, 
+              studentId: true, 
+              pageNumber: true 
+            },
+          })
+        )
+      )
+
+      console.log("📄 [Electron] Found answer sheets:", answerSheets.filter(Boolean).length)
+
+      // 見つからない答案をチェック
+      const missingSheets = moves.filter((_, index) => !answerSheets[index])
+      if (missingSheets.length > 0) {
+        throw new Error(`答案が見つかりません: ${missingSheets.map(m => m.fileId).join(', ')}`)
+      }
+
+      let allQuestionScores: any[] = []
+
+      if (withScoring) {
+        // 全ての採点データを取得
+        allQuestionScores = await tx.questionScore.findMany({
+          where: { 
+            answerSheetId: { 
+              in: moves.map(m => m.fileId) 
+            } 
+          },
+        })
+
+        console.log("📊 [Electron] Found question scores:", allQuestionScores.length)
+
+        // 一時的に採点データを削除（制約回避）
+        await tx.questionScore.deleteMany({
+          where: { 
+            answerSheetId: { 
+              in: moves.map(m => m.fileId) 
+            } 
+          },
+        })
+      }
+
+      // 一時的に全ての答案をnull位置に移動（制約回避）
+      await Promise.all(
+        moves.map((_, index) => 
+          tx.answerSheet.update({
+            where: { id: moves[index].fileId },
+            data: {
+              studentId: null,
+              pageNumber: -(index + 1), // 一時的な一意の値
+            },
+          })
+        )
+      )
+
+      // 各答案を最終位置に移動
+      await Promise.all(
+        moves.map(move => 
+          tx.answerSheet.update({
+            where: { id: move.fileId },
+            data: {
+              studentId: move.finalStudentId,
+              pageNumber: move.finalPageNumber,
+            },
+          })
+        )
+      )
+
+      if (withScoring && allQuestionScores.length > 0) {
+        // 採点データを復元（答案IDは変更せず、位置情報が変わっただけ）
+        await tx.questionScore.createMany({
+          data: allQuestionScores.map((score) => ({
+            answerSheetId: score.answerSheetId,
+            layoutRegionId: score.layoutRegionId,
+            status: score.status,
+            comment: score.comment,
+            scoredByUserId: score.scoredByUserId,
+            scoreVersion: score.scoreVersion,
+          })),
+        })
+      }
+
+      console.log("✅ [Electron] Batch placement update transaction completed")
+      return { success: true }
+    })
+
+    console.log("✅ [Electron] Batch placement update completed successfully")
+    return result
+  } catch (error) {
+    console.error("❌ [Electron] Error in batch placement update:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "一括配置変更に失敗しました",
+    }
+  }
+}
+
 // 2つの答案の配置を交換（採点情報も一緒に入れ替え）
 export async function swapAnswerSheetPlacementsWithScoring(
   answerSheetId1: string,
   answerSheetId2: string,
 ) {
+  console.log("🔄 [Electron] Starting swap with scoring:", answerSheetId1, "↔", answerSheetId2)
+  console.log("🔄 [Electron] Transaction starting...")
   try {
     // トランザクション内で答案交換を実行
     const result = await prisma.$transaction(async (tx) => {
@@ -453,6 +574,11 @@ export async function swapAnswerSheetPlacementsWithScoring(
         }),
       ])
 
+      console.log("📄 [Electron] Found answer sheets:", {
+        answerSheet1: answerSheet1 ? { studentId: answerSheet1.studentId, pageNumber: answerSheet1.pageNumber } : null,
+        answerSheet2: answerSheet2 ? { studentId: answerSheet2.studentId, pageNumber: answerSheet2.pageNumber } : null
+      })
+
       if (!answerSheet1 || !answerSheet2) {
         throw new Error("答案が見つかりません")
       }
@@ -466,6 +592,11 @@ export async function swapAnswerSheetPlacementsWithScoring(
           where: { answerSheetId: answerSheetId2 },
         }),
       ])
+
+      console.log("📊 [Electron] Found question scores:", {
+        questionScores1Count: questionScores1.length,
+        questionScores2Count: questionScores2.length
+      })
 
       // 採点データを一時的に削除（制約回避のため）
       await Promise.all([
@@ -577,15 +708,21 @@ export async function swapAnswerSheetPlacementsWithScoring(
         }),
       ])
 
+      console.log("✅ [Electron] Transaction completed successfully")
+      console.log("📝 [Electron] Final answer sheet positions:", {
+        answerSheet1: { id: answerSheetId1, studentId: updatedAnswerSheet1?.studentId, pageNumber: updatedAnswerSheet1?.pageNumber },
+        answerSheet2: { id: answerSheetId2, studentId: updatedAnswerSheet2?.studentId, pageNumber: updatedAnswerSheet2?.pageNumber }
+      })
       return { updatedAnswerSheet1, updatedAnswerSheet2 }
     })
 
+    console.log("✅ [Electron] Swap with scoring completed successfully")
     return {
       success: true,
       answerSheets: [result.updatedAnswerSheet1, result.updatedAnswerSheet2],
     }
   } catch (error) {
-    console.error("Error swapping answer sheet placements with scoring:", error)
+    console.error("❌ [Electron] Error swapping answer sheet placements with scoring:", error)
     return {
       success: false,
       error:
