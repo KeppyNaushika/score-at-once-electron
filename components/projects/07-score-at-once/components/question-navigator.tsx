@@ -53,8 +53,6 @@ export default function QuestionNavigator({
   onNextQuestion,
   questionProgress,
 }: QuestionNavigatorProps) {
-  const currentQuestion = questionRegions[currentQuestionIndex]
-
   return (
     <TooltipProvider delayDuration={300}>
       <div className="mb-4 bg-white p-4">

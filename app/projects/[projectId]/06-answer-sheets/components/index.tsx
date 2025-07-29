@@ -4,13 +4,17 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import PageHeader from "@/components/layout/PageHeader"
+import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management"
+import { ConfirmChangesModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/confirm-changes-modal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management"
-import { FileEdit, Eye, Grid3X3 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import type {
+  PendingChange,
+  ScoringDataOption,
+} from "@/types/answer-sheet.types"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import type { PendingChange } from "@/types/answer-sheet.types"
+import { Eye, FileEdit, Grid3X3 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // Types
 export type AnswerSheetTab = "new-grid" | "current"
@@ -73,7 +77,9 @@ export function AnswerSheetsPageHeader({
             {pendingChangesCount}件の変更を反映
           </Button>
         )}
-        <Button onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}>
+        <Button
+          onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}
+        >
           次へ: 採点開始
         </Button>
       </div>
@@ -123,8 +129,13 @@ interface AnswerSheetsTabContentProps {
   affectedCells: Set<string>
   onUploadComplete: () => void
   onAnswerSheetUpdate: () => void
-  onUpdatePendingChanges: (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => void
-  onResetDragDrop?: React.MutableRefObject<(() => void) | null>
+  onUpdatePendingChanges: (
+    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+  ) => void
+  isConfirmModalOpen: boolean
+  onCloseConfirmModal: () => void
+  onApplyChanges: (option: ScoringDataOption) => Promise<void>
+  onResetChanges: () => Promise<void>
 }
 
 export function AnswerSheetsTabContent({
@@ -138,8 +149,12 @@ export function AnswerSheetsTabContent({
   onUploadComplete,
   onAnswerSheetUpdate,
   onUpdatePendingChanges,
-  onResetDragDrop,
+  isConfirmModalOpen,
+  onCloseConfirmModal,
+  onApplyChanges,
+  onResetChanges,
 }: AnswerSheetsTabContentProps) {
+  // resetFnは不要！リセットも反映もDB再読み込みで解決
   return (
     <>
       <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
@@ -164,9 +179,17 @@ export function AnswerSheetsTabContent({
           pendingChanges={pendingChanges}
           affectedCells={affectedCells}
           onUpdatePendingChanges={onUpdatePendingChanges}
-          onResetDragDrop={onResetDragDrop}
         />
       </TabsContent>
+
+      {/* Confirm Changes Modal - only for current tab */}
+      <ConfirmChangesModal
+        isOpen={isConfirmModalOpen}
+        onClose={onCloseConfirmModal}
+        pendingChanges={pendingChanges}
+        onConfirm={onApplyChanges}
+        onReset={onResetChanges}
+      />
     </>
   )
 }

@@ -9,12 +9,10 @@ export function StudentGridRow({
   student,
   maxPages,
   pageStates,
-  cellStates,
   fileStates,
   files,
   isStudentDisabled,
   onToggleStudent,
-  onToggleCell,
   onToggleFile,
   onRemoveFile,
   onCellClick,
@@ -41,21 +39,18 @@ export function StudentGridRow({
       {/* 答案セル */}
       {Array.from({ length: maxPages }, (_, i) => {
         const pageNumber = i + 1
-        const cellKey = `${student.id}-${pageNumber}`
         const file = getFileForCell(pageNumber)
         const isPageDisabled = pageStates.has(i)
-        const isCellDisabled = cellStates.has(cellKey)
         const isFileDisabled = file ? fileStates.has(file.id) : false
 
         return (
           <AnswerCell
-            key={cellKey}
+            key={`${student.id}-${pageNumber}`}
             student={student}
             pageNumber={pageNumber}
             file={file}
             isStudentDisabled={isStudentDisabled}
             isPageDisabled={isPageDisabled}
-            isCellDisabled={isCellDisabled}
             isFileDisabled={isFileDisabled}
             onToggleFile={file ? () => onToggleFile(file.id) : undefined}
             onRemoveFile={file ? () => onRemoveFile(file.id) : undefined}

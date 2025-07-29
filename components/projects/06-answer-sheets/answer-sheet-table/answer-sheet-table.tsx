@@ -12,7 +12,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { closestCenter, DndContext } from "@dnd-kit/core"
 import { FileImage } from "lucide-react"
 
-
 export function AnswerSheetTable(props: AnswerSheetTableProps) {
   const {
     imageLoadStates = {},
@@ -20,7 +19,6 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
     mode = "upload",
     affectedCells,
   } = props
-
 
   // メインロジックを含むカスタムフック
   const {
@@ -39,7 +37,6 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
     sensors,
     activeFile,
     handleDragStart,
-    handleDragOver,
     handleDragEnd,
     allowOverwrite,
     setAllowOverwrite,
@@ -78,7 +75,6 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <Card className="flex h-full flex-col">

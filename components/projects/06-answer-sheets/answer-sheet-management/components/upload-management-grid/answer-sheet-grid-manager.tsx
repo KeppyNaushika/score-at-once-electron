@@ -1,11 +1,5 @@
 "use client"
 
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
-
 import { GridHeader } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/grid-header"
 import { StudentGridRow } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/upload-management-grid/student-grid-row"
 import type {
@@ -16,6 +10,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHeader } from "@/components/ui/table"
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 interface AnswerSheetGridManagerProps {
   projectId: string
@@ -46,7 +45,6 @@ export function AnswerSheetGridManager({
   >([])
   const [studentStates, setStudentStates] = useState<Set<string>>(new Set())
   const [pageStates, setPageStates] = useState<Set<number>>(new Set())
-  const [cellStates, setCellStates] = useState<Set<string>>(new Set())
   const [fileStates, setFileStates] = useState<Set<string>>(new Set())
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
 
@@ -119,22 +117,6 @@ export function AnswerSheetGridManager({
       return newSet
     })
   }, [])
-
-  const toggleCellState = useCallback(
-    (studentId: string, pageNumber: number) => {
-      const cellKey = `${studentId}-${pageNumber}`
-      setCellStates((prev) => {
-        const newSet = new Set(prev)
-        if (newSet.has(cellKey)) {
-          newSet.delete(cellKey)
-        } else {
-          newSet.add(cellKey)
-        }
-        return newSet
-      })
-    },
-    [],
-  )
 
   const toggleFileState = useCallback((fileId: string) => {
     setFileStates((prev) => {
@@ -333,12 +315,10 @@ export function AnswerSheetGridManager({
                     student={student}
                     maxPages={maxPages}
                     pageStates={pageStates}
-                    cellStates={cellStates}
                     fileStates={fileStates}
                     files={files}
                     isStudentDisabled={studentStates.has(student.id)}
                     onToggleStudent={() => toggleStudentState(student.id)}
-                    onToggleCell={toggleCellState}
                     onToggleFile={toggleFileState}
                     onRemoveFile={removeFile}
                     onCellClick={handleCellClick}

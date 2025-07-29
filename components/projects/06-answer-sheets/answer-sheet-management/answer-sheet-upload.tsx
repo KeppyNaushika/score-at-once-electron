@@ -1,16 +1,16 @@
 "use client"
 
-import { useCallback, useEffect } from "react"
-import { PasswordDialog } from "@/components/ui/password-dialog"
-import {
-  FileUploadZone,
-} from "@/components/projects/06-answer-sheets/answer-sheet-management/components"
+import { FileUploadZone } from "@/components/projects/06-answer-sheets/answer-sheet-management/components"
 import { useAnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks"
 import type { AnswerSheetUploadProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
-import type { PlacementStrategy } from "@/types/answer-sheet.types"
-// table-dnd-kit-test準拠のコンポーネントも併用
+import {
+  buildOrderedFileArrayFromAnswerSheets,
+  reorderFilesByStrategy,
+} from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/reorderFilesByStrategy"
 import { AnswerSheetTable } from "@/components/projects/06-answer-sheets/answer-sheet-table"
-import { buildOrderedFileArrayFromAnswerSheets, reorderFilesByStrategy } from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/reorderFilesByStrategy"
+import { PasswordDialog } from "@/components/ui/password-dialog"
+import type { PlacementStrategy } from "@/types/answer-sheet.types"
+import { useCallback, useEffect } from "react"
 
 export function AnswerSheetUpload({
   projectId,
@@ -22,7 +22,6 @@ export function AnswerSheetUpload({
   pendingChanges,
   affectedCells,
   onUpdatePendingChanges,
-  onResetDragDrop,
 }: AnswerSheetUploadProps) {
   const {
     // State
@@ -46,33 +45,43 @@ export function AnswerSheetUpload({
     if (mode === "view" && existingAnswerSheets && files.length === 0) {
       // 初回のみ既存答案を配置戦略に基づいて配列構築
       const initialFiles = buildOrderedFileArrayFromAnswerSheets(
-        existingAnswerSheets, 
-        students, 
-        masterImageCount, 
-        fileOrder
+        existingAnswerSheets,
+        students,
+        masterImageCount,
+        fileOrder,
       )
       setFiles(initialFiles)
     }
-  }, [mode, existingAnswerSheets, files.length, students, masterImageCount, fileOrder, setFiles])
+  }, [
+    mode,
+    existingAnswerSheets,
+    files.length,
+    students,
+    masterImageCount,
+    fileOrder,
+    setFiles,
+  ])
 
   // 確認モード用の配置戦略変更ハンドラー
-  const handleFileOrderChangeInViewMode = useCallback((newFileOrder: PlacementStrategy) => {
-    if (mode === "view" && files.length > 0) {
-      // 現在のファイル配列を新しい配置戦略で再配置
-      const reorderedFiles = reorderFilesByStrategy(
-        files,
-        students,
-        masterImageCount,
-        newFileOrder
-      )
-      setFiles(reorderedFiles)
-    }
-    setFileOrder(newFileOrder)
-  }, [mode, files, students, masterImageCount, setFiles, setFileOrder])
+  const handleFileOrderChangeInViewMode = useCallback(
+    (newFileOrder: PlacementStrategy) => {
+      if (mode === "view" && files.length > 0) {
+        // 現在のファイル配列を新しい配置戦略で再配置
+        const reorderedFiles = reorderFilesByStrategy(
+          files,
+          students,
+          masterImageCount,
+          newFileOrder,
+        )
+        setFiles(reorderedFiles)
+      }
+      setFileOrder(newFileOrder)
+    },
+    [mode, files, students, masterImageCount, setFiles, setFileOrder],
+  )
 
   // 表示モードでは既存の答案をテーブル表示
   if (mode === "view" && existingAnswerSheets) {
-
     return (
       <AnswerSheetTable
         projectId={projectId}
@@ -90,7 +99,6 @@ export function AnswerSheetUpload({
         pendingChanges={pendingChanges}
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
-        onResetDragDrop={onResetDragDrop}
         existingAnswerSheets={existingAnswerSheets}
       />
     )
@@ -122,7 +130,6 @@ export function AnswerSheetUpload({
           observerRef={observerRef}
           mode={mode}
           onReloadData={onUploadComplete}
-          onResetDragDrop={onResetDragDrop}
           existingAnswerSheets={existingAnswerSheets}
         />
       </div>

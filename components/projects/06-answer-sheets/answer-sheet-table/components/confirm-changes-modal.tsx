@@ -11,7 +11,10 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { PendingChange, ScoringDataOption } from "@/types/answer-sheet.types"
+import type {
+  PendingChange,
+  ScoringDataOption,
+} from "@/types/answer-sheet.types"
 import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
 import { useState } from "react"
 
@@ -19,9 +22,8 @@ interface ConfirmChangesModalProps {
   isOpen: boolean
   onClose: () => void
   pendingChanges: PendingChange[]
-  onConfirm: (option: ScoringDataOption, resetDragDropFn?: () => void) => Promise<void>
-  onReset?: (resetDragDropFn?: () => void) => void
-  resetDragDropFn?: (() => void) | undefined
+  onConfirm: (option: ScoringDataOption) => Promise<void>
+  onReset?: () => Promise<void>
 }
 
 export function ConfirmChangesModal({
@@ -30,15 +32,15 @@ export function ConfirmChangesModal({
   pendingChanges,
   onConfirm,
   onReset,
-  resetDragDropFn,
 }: ConfirmChangesModalProps) {
-  const [selectedOption, setSelectedOption] = useState<ScoringDataOption>("with-scoring")
+  const [selectedOption, setSelectedOption] =
+    useState<ScoringDataOption>("with-scoring")
   const [isApplying, setIsApplying] = useState(false)
 
   const handleConfirm = async () => {
     setIsApplying(true)
     try {
-      await onConfirm(selectedOption, resetDragDropFn)
+      await onConfirm(selectedOption)
       onClose()
     } catch (error) {
       console.error("変更の適用に失敗しました:", error)
@@ -51,15 +53,15 @@ export function ConfirmChangesModal({
     onClose()
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (onReset) {
-      onReset(resetDragDropFn)
+      await onReset()
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileEdit className="h-5 w-5" />
@@ -73,29 +75,33 @@ export function ConfirmChangesModal({
         <div className="space-y-6">
           {/* 変更リスト */}
           <div className="space-y-3">
-            <h4 className="font-medium text-sm text-gray-700">変更内容:</h4>
-            <div className="max-h-40 overflow-y-auto space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">変更内容:</h4>
+            <div className="max-h-40 space-y-2 overflow-y-auto">
               {pendingChanges.map((change, index) => (
                 <div
                   key={change.id}
-                  className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border"
+                  className="flex items-center gap-4 rounded-lg border bg-gray-50 p-3"
                 >
-                  <span className="font-mono text-sm text-gray-500 min-w-[30px]">
+                  <span className="min-w-[30px] font-mono text-sm text-gray-500">
                     #{index + 1}
                   </span>
                   <div className="flex-1 text-sm">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">
-                        {change.fromPosition.studentName || "未割当"} 
-                        <span className="text-gray-500 ml-1">P{change.fromPosition.pageNumber}</span>
+                        {change.fromPosition.studentName || "未割当"}
+                        <span className="ml-1 text-gray-500">
+                          P{change.fromPosition.pageNumber}
+                        </span>
                       </span>
                       <span className="text-gray-400">→</span>
                       <span className="font-medium">
                         {change.toPosition.studentName || "未割当"}
-                        <span className="text-gray-500 ml-1">P{change.toPosition.pageNumber}</span>
+                        <span className="ml-1 text-gray-500">
+                          P{change.toPosition.pageNumber}
+                        </span>
                       </span>
                       {change.targetFileId && (
-                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-600">
                           入れ替え
                         </span>
                       )}
@@ -108,27 +114,36 @@ export function ConfirmChangesModal({
 
           {/* 処理オプション選択 */}
           <div className="border-t pt-4">
-            <Label className="text-base font-semibold mb-4 block">
+            <Label className="mb-4 block text-base font-semibold">
               採点データの処理方法
             </Label>
             <RadioGroup
               value={selectedOption}
-              onValueChange={(value) => setSelectedOption(value as ScoringDataOption)}
+              onValueChange={(value) =>
+                setSelectedOption(value as ScoringDataOption)
+              }
               className="space-y-4"
             >
               {/* 推奨オプション: 採点情報も一緒に入れ替え */}
-              <div className="p-4 border-2 border-blue-200 bg-blue-50 rounded-lg">
+              <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
                 <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="with-scoring" id="with-scoring" className="mt-1 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <Label htmlFor="with-scoring" className="cursor-pointer block">
-                      <div className="font-medium text-blue-800 flex items-center gap-2 flex-wrap">
+                  <RadioGroupItem
+                    value="with-scoring"
+                    id="with-scoring"
+                    className="mt-1 flex-shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Label
+                      htmlFor="with-scoring"
+                      className="block cursor-pointer"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 font-medium text-blue-800">
                         採点情報も一緒に入れ替え
-                        <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex-shrink-0">
+                        <span className="flex-shrink-0 rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
                           推奨
                         </span>
                       </div>
-                      <div className="text-sm text-blue-700 mt-2">
+                      <div className="mt-2 text-sm text-blue-700">
                         答案画像と採点結果を正しく対応させます。論理的に一貫した処理です。
                       </div>
                     </Label>
@@ -137,19 +152,26 @@ export function ConfirmChangesModal({
               </div>
 
               {/* 答案画像のみ入れ替え（警告付き） */}
-              <div className="p-4 border-2 border-orange-200 bg-orange-50 rounded-lg">
+              <div className="rounded-lg border-2 border-orange-200 bg-orange-50 p-4">
                 <div className="flex items-start space-x-3">
-                  <RadioGroupItem value="image-only" id="image-only" className="mt-1 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <Label htmlFor="image-only" className="cursor-pointer block">
-                      <div className="font-medium text-orange-800 flex items-center gap-2 flex-wrap">
+                  <RadioGroupItem
+                    value="image-only"
+                    id="image-only"
+                    className="mt-1 flex-shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <Label
+                      htmlFor="image-only"
+                      className="block cursor-pointer"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 font-medium text-orange-800">
                         <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                         答案画像のみ入れ替え
                       </div>
-                      <div className="text-sm text-orange-700 mt-2">
+                      <div className="mt-2 text-sm text-orange-700">
                         採点情報は元の位置に残します。
                       </div>
-                      <div className="text-sm font-medium text-red-600 mt-2 flex items-center gap-1">
+                      <div className="mt-2 flex items-center gap-1 text-sm font-medium text-red-600">
                         <AlertTriangle className="h-3 w-3 flex-shrink-0" />
                         注意: 答案と評価結果の不整合が発生します
                       </div>
@@ -161,20 +183,22 @@ export function ConfirmChangesModal({
 
             {/* 警告メッセージ（答案のみ選択時） */}
             {selectedOption === "image-only" && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-red-800 mb-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-3 font-medium text-red-800">
                       ⚠️ データ整合性への影響
                     </div>
-                    <ul className="text-red-700 space-y-2 text-sm">
+                    <ul className="space-y-2 text-sm text-red-700">
                       <li>• 生徒Aの答案に生徒Bの採点結果が紐づきます</li>
                       <li>• 採点結果と実際の答案内容が一致しなくなります</li>
-                      <li>• 成績データの信頼性に問題が生じる可能性があります</li>
+                      <li>
+                        • 成績データの信頼性に問題が生じる可能性があります
+                      </li>
                     </ul>
-                    <div className="mt-4 p-3 bg-red-100 rounded border border-red-300">
-                      <div className="text-red-800 font-medium text-sm">
+                    <div className="mt-4 rounded border border-red-300 bg-red-100 p-3">
+                      <div className="text-sm font-medium text-red-800">
                         推奨: 「採点情報も一緒に入れ替え」を選択してください
                       </div>
                     </div>
@@ -186,11 +210,20 @@ export function ConfirmChangesModal({
         </div>
 
         <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={handleCancel} disabled={isApplying}>
+          <Button
+            variant="outline"
+            onClick={handleCancel}
+            disabled={isApplying}
+          >
             キャンセル
           </Button>
           {onReset && (
-            <Button variant="outline" onClick={handleReset} disabled={isApplying} className="text-red-600 border-red-300 hover:bg-red-50">
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              disabled={isApplying}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+            >
               リセット
             </Button>
           )}
@@ -204,7 +237,9 @@ export function ConfirmChangesModal({
             }
           >
             {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {selectedOption === "with-scoring" ? "採点情報込みで" : "答案画像のみ"}
+            {selectedOption === "with-scoring"
+              ? "採点情報込みで"
+              : "答案画像のみ"}
             {pendingChanges.length}件を適用
           </Button>
         </DialogFooter>

@@ -104,7 +104,6 @@ export function useDisabledState() {
 
   return {
     disabledState,
-    setDisabledState,
     toggleRowDisabled,
     toggleColDisabled,
     togglePositionDisabled,

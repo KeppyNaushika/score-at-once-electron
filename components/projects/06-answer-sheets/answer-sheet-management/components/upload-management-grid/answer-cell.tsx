@@ -1,5 +1,8 @@
 "use client"
 
+import type { AnswerCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import { Button } from "@/components/ui/button"
+import { TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
@@ -13,17 +16,12 @@ import {
 import Image from "next/image"
 import { useState } from "react"
 
-import type { AnswerCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
-import { Button } from "@/components/ui/button"
-import { TableCell } from "@/components/ui/table"
-
 export function AnswerCell({
   student,
   pageNumber,
   file,
   isStudentDisabled,
   isPageDisabled,
-  isCellDisabled,
   isFileDisabled,
   onToggleFile,
   onRemoveFile,
@@ -33,7 +31,7 @@ export function AnswerCell({
   const [imageError, setImageError] = useState(false)
 
   const cellId = `${student?.id || "unknown"}-${pageNumber}`
-  const isDisabled = isStudentDisabled || isPageDisabled || isCellDisabled
+  const isDisabled = isStudentDisabled || isPageDisabled
 
   const {
     attributes,

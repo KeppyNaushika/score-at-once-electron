@@ -5,7 +5,6 @@ import type {
   UseDragDropReturn,
 } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/drag-drop-types"
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
-import { useCallback } from "react"
 
 /**
  * ドラッグ&ドロップ機能を提供するメインフック（リファクタリング版）
@@ -40,23 +39,22 @@ export function useDragDrop({
   })
 
   // イベントハンドラー
-  const { handleDragStart, handleDragOver, handleDragEnd } =
-    useDragDropHandlers({
-      files,
-      onFilesChange,
-      getEnabledFiles,
-      getDisabledFiles,
-      students,
-      masterImageCount,
-      mode,
-      fileOrder,
-      onReloadData,
-      onUpdatePendingChanges,
-      setActiveFile,
-      setIsDraggingFromTrash,
-      fileStatesRef,
-      initialFileStatesRef,
-    })
+  const { handleDragStart, handleDragEnd } = useDragDropHandlers({
+    files,
+    onFilesChange,
+    getEnabledFiles,
+    getDisabledFiles,
+    students,
+    masterImageCount,
+    mode,
+    fileOrder,
+    onReloadData,
+    onUpdatePendingChanges,
+    setActiveFile,
+    setIsDraggingFromTrash,
+    fileStatesRef,
+    initialFileStatesRef,
+  })
 
   // ドラッグ&ドロップセンサー設定
   const sensors = useSensors(
@@ -67,33 +65,10 @@ export function useDragDrop({
     }),
   )
 
-  // キャンセル時に初期状態に戻すリセット関数
-  const resetToInitialState = useCallback(() => {
-    if (mode === "view" && initialFileStatesRef.current.length > 0) {
-      const resetFiles = buildDnDArray(
-        initialFileStatesRef.current,
-        fileOrder || "page-first",
-      )
-      if (resetFiles.length > 0) {
-        onFilesChange(resetFiles)
-        fileStatesRef.current = [...initialFileStatesRef.current]
-      }
-    }
-  }, [
-    mode,
-    fileOrder,
-    buildDnDArray,
-    onFilesChange,
-    fileStatesRef,
-    initialFileStatesRef,
-  ])
-
   return {
     sensors,
     activeFile,
     handleDragStart,
-    handleDragOver,
     handleDragEnd,
-    resetToInitialState,
   }
 }

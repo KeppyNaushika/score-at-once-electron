@@ -2,20 +2,14 @@
  * Hooks for 06-answer-sheets page - quick inline version
  */
 
-import { useCallback, useState } from "react"
-import { toast } from "sonner"
-import type { AnswerSheetWithDetails } from "@/types/electron"
 import type {
   PendingChange,
   ScoringDataOption,
 } from "@/types/answer-sheet.types"
+import type { AnswerSheetWithDetails } from "@/types/electron"
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
 import type { StudentData } from "../components"
-
-interface ProjectData {
-  id: string
-  name: string
-  description?: string
-}
 
 export function useAnswerSheetsData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
@@ -188,7 +182,7 @@ export function usePendingChanges(
   )
 
   const handleApplyChanges = useCallback(
-    async (option: ScoringDataOption, resetDragDropFn?: () => void) => {
+    async (option: ScoringDataOption) => {
       try {
         // 全ての変更を一方向移動として収集
         const allMoves: Array<{
@@ -243,23 +237,25 @@ export function usePendingChanges(
         )
       } catch (error) {
         console.error("変更の適用に失敗しました:", error)
-        toast.error("変更の適用に失敗しました")
+
+        // エラー時も結局DB再読み込みで解決（resetFn不要）
+        await onDataReload()
+
+        toast.error("変更の適用に失敗しました。元の状態に戻しました。")
         throw error
       }
     },
     [pendingChanges, onDataReload],
   )
 
-  const handleResetChanges = useCallback((resetDragDropFn?: () => void) => {
+  const handleResetChanges = useCallback(async () => {
     setPendingChanges([])
     setAffectedCells(new Set())
-    // DnD配列も初期状態に戻す
-    if (resetDragDropFn) {
-      resetDragDropFn()
-    }
+    // リセット = DBから最新データを再読み込み（resetFn不要）
+    await onDataReload()
     setIsConfirmModalOpen(false)
     toast.info("変更をリセットしました")
-  }, [])
+  }, [onDataReload])
 
   return {
     pendingChanges,

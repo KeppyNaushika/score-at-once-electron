@@ -63,11 +63,7 @@ export function useDragDropState({
 
   // 1. 初期化: DB → 3つ組（実データから直接生成）
   useEffect(() => {
-    if (
-      mode === "view" &&
-      files.length > 0 &&
-      fileStatesRef.current.length === 0
-    ) {
+    if (mode === "view" && files.length > 0) {
       // DBから直接3つ組を生成（推測ではなく実データ）
       const states: FileState[] = files.map((file) => ({
         fileId: file.id,
@@ -76,7 +72,7 @@ export function useDragDropState({
       }))
 
       fileStatesRef.current = [...states]
-      initialFileStatesRef.current = [...states] // 初期状態保存
+      initialFileStatesRef.current = [...states] // 常に最新のDBデータを初期状態として設定
     }
   }, [mode, files.length, files])
 
