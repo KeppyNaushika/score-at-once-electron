@@ -8,7 +8,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/types/answer-sheet.types"
-import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core"
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback } from "react"
 import { toast } from "sonner"
@@ -70,33 +70,6 @@ export function useDragDropHandlers({
       }
     },
     [getEnabledFiles, getDisabledFiles, setActiveFile, setIsDraggingFromTrash],
-  )
-
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event
-      if (!over) return
-
-      const activeId = active.id.toString()
-      const overId = over.id.toString()
-
-      // コンテナ判定関数
-      const findContainer = (id: string) => {
-        if (id === "trash-area" || id === "trash-popover-trigger")
-          return "trash"
-
-        const enabledFile = getEnabledFiles().find((file) => file.id === id)
-        if (enabledFile) return "main"
-
-        const disabledFile = getDisabledFiles().find((file) => file.id === id)
-        if (disabledFile) return "trash"
-
-        return null
-      }
-
-      // Container movement is handled elsewhere
-    },
-    [getEnabledFiles, getDisabledFiles],
   )
 
   const handleDragEnd = useCallback(
@@ -221,7 +194,6 @@ export function useDragDropHandlers({
 
   return {
     handleDragStart,
-    handleDragOver,
     handleDragEnd,
   }
 }

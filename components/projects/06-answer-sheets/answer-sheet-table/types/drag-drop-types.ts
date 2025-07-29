@@ -32,7 +32,5 @@ export interface UseDragDropReturn {
   sensors: any
   activeFile: UnifiedFile | null
   handleDragStart: (event: any) => void
-  handleDragOver: (event: any) => void
   handleDragEnd: (event: any) => void
-  resetToInitialState: () => void
 }

@@ -55,7 +55,6 @@ const EditProjectWindow = ({
       examName: examName.trim(),
       examDate: examDate ?? null,
       description: description ?? null,
-      // tags: tags, // Remove tags as they're not in the expected type
       updatedAt: new Date(),
     }
     await onSave(updatedProjectPayload)
@@ -87,7 +86,7 @@ const EditProjectWindow = ({
     setTags(tags.filter((tag) => tag.id !== tagIdToRemove))
   }
 
-  const handleDeleteTagFromDb = async (tagIdToDelete: string) => {
+  const handleDeleteTagFromDb = async (_tagIdToDelete: string) => {
     if (
       window.confirm(
         "このタグをデータベースから完全に削除しますか？関連する他のプロジェクトからも削除されます。",

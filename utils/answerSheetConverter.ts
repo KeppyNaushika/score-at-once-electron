@@ -304,38 +304,6 @@ export function autoPlaceFiles(
   }
 }
 
-/**
- * 配置戦略に基づく順序生成
- */
-function _generatePlacementOrder(
-  studentCount: number,
-  maxPages: number,
-  strategy: PlacementStrategy,
-): number[] {
-  const positions: number[] = []
-
-  if (strategy === "page-first") {
-    // ページ優先: 1ページ目を全生徒、2ページ目を全生徒...
-    for (let page = 1; page <= maxPages; page++) {
-      for (let student = 0; student < studentCount; student++) {
-        positions.push(calculatePosition(student, page, maxPages))
-      }
-    }
-  } else if (strategy === "student-first") {
-    // 生徒優先: 1人目の全ページ、2人目の全ページ...
-    for (let student = 0; student < studentCount; student++) {
-      for (let page = 1; page <= maxPages; page++) {
-        positions.push(calculatePosition(student, page, maxPages))
-      }
-    }
-  } else {
-    // filename-auto: ファイル名から自動判定（将来的な拡張）
-    // とりあえずpage-firstと同じ動作
-    return _generatePlacementOrder(studentCount, maxPages, "page-first")
-  }
-
-  return positions
-}
 
 // ============================================================================
 // データベース保存形式への変換

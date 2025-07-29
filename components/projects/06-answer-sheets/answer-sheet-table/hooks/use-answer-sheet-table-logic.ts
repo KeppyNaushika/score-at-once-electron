@@ -5,7 +5,10 @@ import {
   useTableData,
 } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks"
 import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { AnswerSheetTableProps, UploadModalState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
+import type {
+  AnswerSheetTableProps,
+  UploadModalState,
+} from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
 import type { UploadData } from "@/types/answer-sheet.types"
 import { useCallback, useEffect, useState } from "react"
 
@@ -23,7 +26,6 @@ export function useAnswerSheetTableLogic({
   onUpload,
   onReloadData,
   onUpdatePendingChanges,
-  onResetDragDrop,
   existingAnswerSheets = [],
 }: AnswerSheetTableProps) {
   // ============================================================================
@@ -39,7 +41,6 @@ export function useAnswerSheetTableLogic({
 
   const {
     disabledState,
-    setDisabledState,
     toggleRowDisabled,
     toggleColDisabled,
     togglePositionDisabled,
@@ -69,14 +70,7 @@ export function useAnswerSheetTableLogic({
     allowOverwrite,
   })
 
-  const {
-    sensors,
-    activeFile,
-    handleDragStart,
-    handleDragOver,
-    handleDragEnd,
-    resetToInitialState,
-  } = useDragDrop({
+  const { sensors, activeFile, handleDragStart, handleDragEnd } = useDragDrop({
     files,
     onFilesChange,
     getEnabledFiles,
@@ -101,40 +95,36 @@ export function useAnswerSheetTableLogic({
   // ============================================================================
   // 削除処理
   // ============================================================================
-  
+
   // 答案削除処理
-  const handleDeleteAnswerSheet = useCallback(async (fileId: string) => {
-    try {
-      // UnifiedFileから対応するAnswerSheetのIDを特定
-      // 既存答案の場合はfileIdがAnswerSheetのIDと一致
-      const result = await window.electronAPI.deleteAnswerSheet(fileId)
-      
-      if (result.success) {
-        // 削除成功時はデータを再読み込み
-        if (onReloadData) {
-          onReloadData()
+  const handleDeleteAnswerSheet = useCallback(
+    async (fileId: string) => {
+      try {
+        // UnifiedFileから対応するAnswerSheetのIDを特定
+        // 既存答案の場合はfileIdがAnswerSheetのIDと一致
+        const result = await window.electronAPI.deleteAnswerSheet(fileId)
+
+        if (result.success) {
+          // 削除成功時はデータを再読み込み
+          if (onReloadData) {
+            onReloadData()
+          }
+          // TODO: 成功通知を追加
+        } else {
+          console.error("答案削除エラー:", result.error)
+          // TODO: エラー通知を追加
         }
-        // TODO: 成功通知を追加
-      } else {
-        console.error('答案削除エラー:', result.error)
+      } catch (error) {
+        console.error("答案削除例外:", error)
         // TODO: エラー通知を追加
       }
-    } catch (error) {
-      console.error('答案削除例外:', error)
-      // TODO: エラー通知を追加
-    }
-  }, [onReloadData])
+    },
+    [onReloadData],
+  )
 
   // ============================================================================
   // Effects
   // ============================================================================
-
-  // コールバック関数をプロップとして渡すためのuseEffect
-  useEffect(() => {
-    if (onResetDragDrop) {
-      onResetDragDrop.current = resetToInitialState
-    }
-  }, [onResetDragDrop, resetToInitialState])
 
   // 氏名領域の可用性チェック
   useEffect(() => {
@@ -237,7 +227,6 @@ export function useAnswerSheetTableLogic({
     sensors,
     activeFile,
     handleDragStart,
-    handleDragOver,
     handleDragEnd,
     allowOverwrite,
     setAllowOverwrite,

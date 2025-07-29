@@ -2,18 +2,17 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
-import { ConfirmChangesModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/confirm-changes-modal"
 import { useParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import {
-  LoadingSpinner,
   AnswerSheetsPageHeader,
-  AnswerSheetsTabsNavigation,
   AnswerSheetsTabContent,
+  AnswerSheetsTabsNavigation,
+  LoadingSpinner,
   type AnswerSheetTab,
 } from "./components"
 import { useAnswerSheetsData, usePendingChanges } from "./hooks"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
 
 /**
  * AnswerSheetsPage - Main page component for answer sheet management
@@ -35,13 +34,8 @@ export default function AnswerSheetsPage() {
   const [activeTab, setActiveTab] = useState<AnswerSheetTab>("new-grid")
 
   // Data loading hook
-  const {
-    students,
-    answerSheets,
-    masterImageCount,
-    isLoading,
-    loadData,
-  } = useAnswerSheetsData(projectId)
+  const { students, answerSheets, masterImageCount, isLoading, loadData } =
+    useAnswerSheetsData(projectId)
 
   // Pending changes management hook
   const {
@@ -55,8 +49,7 @@ export default function AnswerSheetsPage() {
     closeConfirmModal,
   } = usePendingChanges(loadData, students, answerSheets)
 
-  // DnD reset function ref
-  const resetDragDropRef = useRef<(() => void) | null>(null)
+  // Reset function will be obtained directly from components
 
   // Load data on mount
   useEffect(() => {
@@ -110,18 +103,12 @@ export default function AnswerSheetsPage() {
               onUploadComplete={handleUploadComplete}
               onAnswerSheetUpdate={handleAnswerSheetUpdate}
               onUpdatePendingChanges={handleUpdatePendingChanges}
-              onResetDragDrop={resetDragDropRef}
+              isConfirmModalOpen={isConfirmModalOpen}
+              onCloseConfirmModal={closeConfirmModal}
+              onApplyChanges={handleApplyChanges}
+              onResetChanges={handleResetChanges}
             />
           </AnswerSheetsTabsNavigation>
-
-          <ConfirmChangesModal
-            isOpen={isConfirmModalOpen}
-            onClose={closeConfirmModal}
-            pendingChanges={pendingChanges}
-            onConfirm={handleApplyChanges}
-            onReset={handleResetChanges}
-            resetDragDropFn={resetDragDropRef.current || undefined}
-          />
         </div>
       </div>
     </ProtectedRoute>
