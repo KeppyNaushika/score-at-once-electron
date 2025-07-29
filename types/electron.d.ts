@@ -5,30 +5,30 @@ import type {
   Class,
   Student,
   Project,
-  MasterImage,
-  // ProjectLayout, // Obsolete: remove
-  LayoutRegion,
-  // TemplateAreaType, // This might be equivalent to LayoutRegionType, check schema
-  // LayoutRegionType, // Removed from Prisma schema
-  QuestionGroup,
-  QuestionGroupItem,
-  SubtotalDefinition,
-  QuestionSubtotalAssignment,
-  ProjectSession, // For collaborator/member tracking
+  ProjectPage,     // New: Central page management
+  PageImage,       // New: Unified image management
+  CropRegion,      // Updated: renamed from LayoutRegion
+  SubtotalGroup,   // Updated: renamed from QuestionGroup
+  Subtotal,        // Updated: renamed from QuestionGroupItem
+  CropSubtotal,    // New: unified from SubtotalDefinition + QuestionSubtotalAssignment
+  UserProject,     // New: many-to-many User-Project
+  ProjectSubtotalGroup, // New: many-to-many Project-SubtotalGroup
   QuestionScore,
-  StudentScore,
   AnswerSheet,
+  ProjectStudent,
+  StudentClassMembership,
 } from "@prisma/client"
 
-// Answer sheet related types
+// Answer sheet related types (updated for new structure)
 export type AnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
   include: {
     student: true
     project: true
     questionScores: {
       include: {
-        layoutRegion: true
+        cropRegion: true  // Updated: renamed from layoutRegion
         scoredByUser: true
+        student: true     // Added: direct student reference
       }
     }
   }
@@ -86,22 +86,25 @@ type StudentClassMembershipWithDetails = Prisma.StudentClassMembershipGetPayload
 type ClassWithStudents = ClassWithMemberships
 type StudentWithClass = StudentWithMemberships
 
-// Project related types
+// Project related types (updated for new structure)
 export type ProjectWithDetails = Prisma.ProjectGetPayload<{
   include: {
-    createdBy: true // User who created the project
-    sessions: { include: { user: true } } // Project sessions with users (members/collaborators)
-    masterImages: { orderBy: { pageNumber: "asc" } }
-    layoutRegions: {
-      include: {
-        subtotalDefinitions: { include: { questionGroupItem: true } }
-        questionSubtotalAssignments: { include: { questionGroupItem: true } }
-        questionScores: true
+    userProjects: { include: { user: true } } // Updated: many-to-many User-Project relation
+    projectPages: { 
+      include: { 
+        pageImages: true
+        cropRegions: {
+          include: {
+            cropSubtotals: { include: { subtotal: true } } // Updated: unified subtotal management
+            questionScores: { include: { student: true, scoredByUser: true } }
+          }
+        }
       }
-      orderBy: { id: "asc" } // Or other preferred order
+      orderBy: { pageNumber: "asc" } 
     }
-    questionGroups: { include: { items: true }; orderBy: { createdAt: "asc" } }
-    answerSheets: { include: { student: true; scores: true } }
+    projectSubtotalGroups: { include: { subtotalGroup: { include: { subtotals: true } } } } // Updated: many-to-many relation
+    answerSheets: { include: { student: true, questionScores: true } }
+    projectStudents: { include: { student: true } }
   }
 }>
 
@@ -120,71 +123,96 @@ export interface UpdateProjectArgs extends Partial<CreateProjectArgs> {
   id: string // Must have id to update
 }
 
-// LayoutRegion related types
-export type LayoutRegionWithDetails = Prisma.LayoutRegionGetPayload<{
+// CropRegion related types (updated from LayoutRegion)
+export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
   include: {
-    project: true
-    masterImage: true
-    subtotalDefinitions: { include: { questionGroupItem: true } }
-    questionSubtotalAssignments: { include: { questionGroupItem: true } }
-    questionScores: true
+    projectPage: { include: { project: true } } // Updated: access project via ProjectPage
+    cropSubtotals: { include: { subtotal: { include: { subtotalGroup: true } } } } // Updated: unified subtotal management
+    questionScores: { include: { student: true, scoredByUser: true } }
   }
 }>
 
-export type SaveLayoutRegionArgs = Omit<
-  Prisma.LayoutRegionUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt" | "projectId" // projectId will be passed separately or part of a batch
-> & { id?: string; masterImageId: string } // id is optional for updates
+export type SaveCropRegionArgs = Omit<
+  Prisma.CropRegionUncheckedCreateInput,
+  "id" | "createdAt" | "updatedAt"
+> & { id?: string; projectPageId: string } // Updated: now references ProjectPage
 
-// QuestionGroup and Item related types
-export type QuestionGroupWithItems = Prisma.QuestionGroupGetPayload<{
-  include: { items: { orderBy: { name: "asc" } }; project: true }
+// Backward compatibility alias
+export type LayoutRegionWithDetails = CropRegionWithDetails
+export type SaveLayoutRegionArgs = SaveCropRegionArgs
+
+// SubtotalGroup and Subtotal related types (updated from QuestionGroup/Item)
+export type SubtotalGroupWithItems = Prisma.SubtotalGroupGetPayload<{
+  include: { 
+    subtotals: { orderBy: { order: "asc" } }
+    projectSubtotalGroups: { include: { project: true } } // Updated: many-to-many relation
+  }
 }>
-export type QuestionGroupItemWithDetails = Prisma.QuestionGroupItemGetPayload<{
+export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
   include: {
-    questionGroup: true
-    subtotalDefinitions: true
-    questionAssignments: true
+    subtotalGroup: true
+    cropSubtotals: { include: { cropRegion: true } } // Updated: unified relation
   }
 }>
 
-export type CreateQuestionGroupArgs = Omit<
-  Prisma.QuestionGroupUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt" | "projectId"
+export type CreateSubtotalGroupArgs = Omit<
+  Prisma.SubtotalGroupUncheckedCreateInput,
+  "id" | "createdAt" | "updatedAt"
 >
-export type UpdateQuestionGroupArgs = Partial<CreateQuestionGroupArgs> & {
+export type UpdateSubtotalGroupArgs = Partial<CreateSubtotalGroupArgs> & {
   id: string
 }
 
-export type CreateQuestionGroupItemArgs = Omit<
-  Prisma.QuestionGroupItemUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt" | "questionGroupId"
+export type CreateSubtotalArgs = Omit<
+  Prisma.SubtotalUncheckedCreateInput,
+  "id" | "createdAt" | "updatedAt" | "subtotalGroupId"
 >
-export type UpdateQuestionGroupItemArgs =
-  Partial<CreateQuestionGroupItemArgs> & { id: string }
+export type UpdateSubtotalArgs = Partial<CreateSubtotalArgs> & { id: string }
 
-// SubtotalDefinition related types
-export type SubtotalDefinitionWithRelations =
-  Prisma.SubtotalDefinitionGetPayload<{
-    include: { layoutRegion: true; questionGroupItem: true }
-  }>
-export type CreateSubtotalDefinitionArgs = Omit<
-  Prisma.SubtotalDefinitionUncheckedCreateInput,
+// Backward compatibility aliases
+export type QuestionGroupWithItems = SubtotalGroupWithItems
+export type QuestionGroupItemWithDetails = SubtotalWithDetails
+export type CreateQuestionGroupArgs = CreateSubtotalGroupArgs
+export type UpdateQuestionGroupArgs = UpdateSubtotalGroupArgs
+export type CreateQuestionGroupItemArgs = CreateSubtotalArgs
+export type UpdateQuestionGroupItemArgs = UpdateSubtotalArgs
+
+// CropSubtotal related types (unified from SubtotalDefinition + QuestionSubtotalAssignment)
+export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
+  include: { 
+    cropRegion: { include: { projectPage: true } }
+    subtotal: { include: { subtotalGroup: true } }
+  }
+}>
+export type CreateCropSubtotalArgs = Omit<
+  Prisma.CropSubtotalUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 >
 
-// QuestionSubtotalAssignment related types
-export type QuestionSubtotalAssignmentWithRelations =
-  Prisma.QuestionSubtotalAssignmentGetPayload<{
-    include: { questionLayoutRegion: true; questionGroupItem: true }
-  }>
-export type CreateQuestionSubtotalAssignmentArgs = Omit<
-  Prisma.QuestionSubtotalAssignmentUncheckedCreateInput,
-  "id" | "createdAt" | "updatedAt"
->
+// Backward compatibility aliases
+export type SubtotalDefinitionWithRelations = CropSubtotalWithRelations
+export type CreateSubtotalDefinitionArgs = CreateCropSubtotalArgs
+export type QuestionSubtotalAssignmentWithRelations = CropSubtotalWithRelations
+export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
 
-// MasterImage related type
-export type MasterImagePayload = MasterImage
+// ProjectPage and PageImage related types (updated from MasterImage)
+export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
+  include: {
+    project: true
+    cropRegions: true
+    pageImages: { include: { student: true } }
+  }
+}>
+
+export type PageImageWithDetails = Prisma.PageImageGetPayload<{
+  include: {
+    projectPage: { include: { project: true } }
+    student: true
+  }
+}>
+
+// Backward compatibility aliases
+export type MasterImagePayload = ProjectPageWithDetails
 
 export interface MyAPI {
   // Project related
@@ -367,19 +395,26 @@ export interface MyAPI {
   endStudentMembership: (membershipId: string, endDate?: Date) => Promise<StudentClassMembershipWithDetails>
   getMembershipsByDateRange: (startDate: Date, endDate?: Date) => Promise<StudentClassMembershipWithDetails[]>
 
-  // MasterImage related
-  uploadMasterImages: (
+  // ProjectPage and PageImage related (updated from MasterImage)
+  createProjectPage: (
+    projectId: string,
+    pageNumber: number
+  ) => Promise<ProjectPageWithDetails>
+  uploadPageImages: (
     projectId: string,
     filesData: {
       name: string
       type: string
       buffer: ArrayBuffer
       path?: string
+      pageNumber: number
+      imageType: 'MASTER' | 'ANSWER'
+      studentId?: string | null
     }[],
-  ) => Promise<MasterImage[]>
-  deleteMasterImage: (imageId: string) => Promise<MasterImage | void>
-  updateMasterImagesOrder: (
-    imageOrders: { id: string; pageNumber: number }[],
+  ) => Promise<PageImageWithDetails[]>
+  deletePageImage: (imageId: string) => Promise<PageImage | void>
+  updateProjectPagesOrder: (
+    pageOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
   readFileAsBase64: (filePath: string) => Promise<{
@@ -394,92 +429,205 @@ export interface MyAPI {
     path: string
     error?: string
   }>
+  getProjectPagesByProjectId: (
+    projectId: string,
+  ) => Promise<ProjectPageWithDetails[]>
+  getPageImagesByProjectId: (
+    projectId: string,
+  ) => Promise<PageImageWithDetails[]>
+  
+  // Backward compatibility aliases
+  uploadMasterImages: (
+    projectId: string,
+    filesData: {
+      name: string
+      type: string
+      buffer: ArrayBuffer
+      path?: string
+    }[],
+  ) => Promise<ProjectPageWithDetails[]>
+  deleteMasterImage: (imageId: string) => Promise<ProjectPageWithDetails | void>
+  updateMasterImagesOrder: (
+    imageOrders: { id: string; pageNumber: number }[],
+  ) => Promise<Prisma.BatchPayload>
   getMasterImagesByProjectId: (
     projectId: string,
-  ) => Promise<MasterImagePayload[]> // Added
+  ) => Promise<ProjectPageWithDetails[]>
 
-  // LayoutRegion related
+  // CropRegion related (updated from LayoutRegion)
+  createCropRegion: (
+    data: Prisma.CropRegionUncheckedCreateInput,
+  ) => Promise<CropRegionWithDetails>
+  createManyCropRegions: (
+    data: Prisma.CropRegionCreateManyInput[],
+  ) => Promise<Prisma.BatchPayload>
+  updateCropRegion: (
+    id: string,
+    data: Prisma.CropRegionUpdateInput,
+  ) => Promise<CropRegionWithDetails>
+  deleteCropRegion: (id: string) => Promise<CropRegion | void>
+  getCropRegionsByProjectId: (
+    projectId: string,
+  ) => Promise<CropRegionWithDetails[]>
+  getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
+  updateCropRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>
+  ) => Promise<CropRegion[]>
+  
+  // Backward compatibility aliases
   createLayoutRegion: (
-    data: Prisma.LayoutRegionUncheckedCreateInput,
-  ) => Promise<LayoutRegionWithDetails>
+    data: Prisma.CropRegionUncheckedCreateInput,
+  ) => Promise<CropRegionWithDetails>
   createManyLayoutRegions: (
-    data: Prisma.LayoutRegionCreateManyInput[],
+    data: Prisma.CropRegionCreateManyInput[],
   ) => Promise<Prisma.BatchPayload>
   updateLayoutRegion: (
     id: string,
-    data: Prisma.LayoutRegionUpdateInput,
-  ) => Promise<LayoutRegionWithDetails>
-  deleteLayoutRegion: (id: string) => Promise<LayoutRegion | void>
+    data: Prisma.CropRegionUpdateInput,
+  ) => Promise<CropRegionWithDetails>
+  deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
   getLayoutRegionsByProjectId: (
     projectId: string,
-  ) => Promise<LayoutRegionWithDetails[]>
-  getLayoutRegionById: (id: string) => Promise<LayoutRegionWithDetails | null>
+  ) => Promise<CropRegionWithDetails[]>
+  getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateLayoutRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>
-  ) => Promise<LayoutRegion[]>
+  ) => Promise<CropRegion[]>
 
-  // QuestionGroup related
+  // SubtotalGroup related (updated from QuestionGroup)
+  createSubtotalGroup: (
+    data: Prisma.SubtotalGroupUncheckedCreateInput,
+  ) => Promise<SubtotalGroupWithItems>
+  updateSubtotalGroup: (
+    id: string,
+    data: Prisma.SubtotalGroupUpdateInput,
+  ) => Promise<SubtotalGroupWithItems>
+  deleteSubtotalGroup: (id: string) => Promise<SubtotalGroup | void>
+  getSubtotalGroupsByProjectId: (
+    projectId: string,
+  ) => Promise<SubtotalGroupWithItems[]>
+  getSubtotalGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
+  
+  // Backward compatibility aliases
   createQuestionGroup: (
-    data: Prisma.QuestionGroupUncheckedCreateInput,
-  ) => Promise<QuestionGroupWithItems>
+    data: Prisma.SubtotalGroupUncheckedCreateInput,
+  ) => Promise<SubtotalGroupWithItems>
   updateQuestionGroup: (
     id: string,
-    data: Prisma.QuestionGroupUpdateInput,
-  ) => Promise<QuestionGroupWithItems>
-  deleteQuestionGroup: (id: string) => Promise<QuestionGroup | void>
+    data: Prisma.SubtotalGroupUpdateInput,
+  ) => Promise<SubtotalGroupWithItems>
+  deleteQuestionGroup: (id: string) => Promise<SubtotalGroup | void>
   getQuestionGroupsByProjectId: (
     projectId: string,
-  ) => Promise<QuestionGroupWithItems[]>
-  getQuestionGroupById: (id: string) => Promise<QuestionGroupWithItems | null>
+  ) => Promise<SubtotalGroupWithItems[]>
+  getQuestionGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
 
-  // QuestionGroupItem related
+  // Subtotal related (updated from QuestionGroupItem)
+  createSubtotal: (
+    data: Prisma.SubtotalUncheckedCreateInput,
+  ) => Promise<SubtotalWithDetails>
+  createManySubtotals: (
+    items: Prisma.SubtotalUncheckedCreateInput[],
+  ) => Promise<Prisma.BatchPayload>
+  updateSubtotal: (
+    id: string,
+    data: Prisma.SubtotalUpdateInput,
+  ) => Promise<SubtotalWithDetails>
+  deleteSubtotal: (id: string) => Promise<Subtotal | void>
+  getSubtotalsByGroupId: (
+    subtotalGroupId: string,
+  ) => Promise<SubtotalWithDetails[]>
+  getSubtotalById: (
+    id: string,
+  ) => Promise<SubtotalWithDetails | null>
+  updateSubtotalOrders: (orders: { id: string; order: number }[]) => Promise<Prisma.BatchPayload>
+  
+  // Backward compatibility aliases
   createQuestionGroupItem: (
-    data: Prisma.QuestionGroupItemUncheckedCreateInput,
-  ) => Promise<QuestionGroupItemWithDetails>
+    data: Prisma.SubtotalUncheckedCreateInput,
+  ) => Promise<SubtotalWithDetails>
   createManyQuestionGroupItems: (
-    items: Prisma.QuestionGroupItemUncheckedCreateInput[],
+    items: Prisma.SubtotalUncheckedCreateInput[],
   ) => Promise<Prisma.BatchPayload>
   updateQuestionGroupItem: (
     id: string,
-    data: Prisma.QuestionGroupItemUpdateInput,
-  ) => Promise<QuestionGroupItemWithDetails>
-  deleteQuestionGroupItem: (id: string) => Promise<QuestionGroupItem | void>
+    data: Prisma.SubtotalUpdateInput,
+  ) => Promise<SubtotalWithDetails>
+  deleteQuestionGroupItem: (id: string) => Promise<Subtotal | void>
   getQuestionGroupItemsByGroupId: (
     questionGroupId: string,
-  ) => Promise<QuestionGroupItemWithDetails[]>
+  ) => Promise<SubtotalWithDetails[]>
   getQuestionGroupItemById: (
     id: string,
-  ) => Promise<QuestionGroupItemWithDetails | null>
+  ) => Promise<SubtotalWithDetails | null>
   updateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) => Promise<Prisma.BatchPayload>
 
-  // SubtotalDefinition related
-  createSubtotalDefinition: (
-    data: Prisma.SubtotalDefinitionUncheckedCreateInput,
-  ) => Promise<SubtotalDefinitionWithRelations>
-  createManySubtotalDefinitions: (
-    definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[],
+  // CropSubtotal related (unified from SubtotalDefinition)
+  createCropSubtotal: (
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => Promise<CropSubtotalWithRelations>
+  createManyCropSubtotals: (
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
   ) => Promise<Prisma.BatchPayload>
-  deleteSubtotalDefinition: (id: string) => Promise<SubtotalDefinition | void>
+  deleteCropSubtotal: (id: string) => Promise<CropSubtotal | void>
+  deleteCropSubtotalsByCropRegionId: (
+    cropRegionId: string,
+  ) => Promise<Prisma.BatchPayload>
+  getCropSubtotalsByCropRegionId: (
+    cropRegionId: string,
+  ) => Promise<CropSubtotalWithRelations[]>
+  getCropSubtotalsBySubtotalId: (
+    subtotalId: string,
+  ) => Promise<CropSubtotalWithRelations[]>
+  
+  // Backward compatibility aliases
+  createSubtotalDefinition: (
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => Promise<CropSubtotalWithRelations>
+  createManySubtotalDefinitions: (
+    definitions: Prisma.CropSubtotalUncheckedCreateInput[],
+  ) => Promise<Prisma.BatchPayload>
+  deleteSubtotalDefinition: (id: string) => Promise<CropSubtotal | void>
   deleteSubtotalDefinitionsByLayoutRegionId: (
     layoutRegionId: string,
   ) => Promise<Prisma.BatchPayload>
   getSubtotalDefinitionsByLayoutRegionId: (
     layoutRegionId: string,
-  ) => Promise<SubtotalDefinitionWithRelations[]>
+  ) => Promise<CropSubtotalWithRelations[]>
   getSubtotalDefinitionsByQuestionGroupItemId: (
     questionGroupItemId: string,
-  ) => Promise<SubtotalDefinitionWithRelations[]>
+  ) => Promise<CropSubtotalWithRelations[]>
 
-  // QuestionSubtotalAssignment related
+  // UserProject and ProjectSubtotalGroup related (new many-to-many relations)
+  createUserProject: (
+    data: Prisma.UserProjectUncheckedCreateInput,
+  ) => Promise<Prisma.UserProjectGetPayload<{ include: { user: true, project: true } }>>
+  deleteUserProject: (id: string) => Promise<UserProject | void>
+  getUserProjectsByUserId: (
+    userId: string,
+  ) => Promise<Prisma.UserProjectGetPayload<{ include: { project: true } }>[]>
+  getUserProjectsByProjectId: (
+    projectId: string,
+  ) => Promise<Prisma.UserProjectGetPayload<{ include: { user: true } }>[]>
+  
+  createProjectSubtotalGroup: (
+    data: Prisma.ProjectSubtotalGroupUncheckedCreateInput,
+  ) => Promise<Prisma.ProjectSubtotalGroupGetPayload<{ include: { project: true, subtotalGroup: true } }>>
+  deleteProjectSubtotalGroup: (id: string) => Promise<ProjectSubtotalGroup | void>
+  getProjectSubtotalGroupsByProjectId: (
+    projectId: string,
+  ) => Promise<Prisma.ProjectSubtotalGroupGetPayload<{ include: { subtotalGroup: { include: { subtotals: true } } } }>[]>
+  
+  // Backward compatibility aliases (redirects to CropSubtotal)
   createQuestionSubtotalAssignment: (
-    data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput,
-  ) => Promise<QuestionSubtotalAssignmentWithRelations>
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => Promise<CropSubtotalWithRelations>
   createManyQuestionSubtotalAssignments: (
-    assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[],
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
   ) => Promise<Prisma.BatchPayload>
   deleteQuestionSubtotalAssignment: (
     id: string,
-  ) => Promise<QuestionSubtotalAssignment | void>
+  ) => Promise<CropSubtotal | void>
   deleteAssignmentsByQuestionLayoutRegionId: (
     questionLayoutRegionId: string,
   ) => Promise<Prisma.BatchPayload>
@@ -488,10 +636,10 @@ export interface MyAPI {
   ) => Promise<Prisma.BatchPayload>
   getAssignmentsByQuestionLayoutRegionId: (
     questionLayoutRegionId: string,
-  ) => Promise<QuestionSubtotalAssignmentWithRelations[]>
+  ) => Promise<CropSubtotalWithRelations[]>
   getAssignmentsByQuestionGroupItemId: (
     questionGroupItemId: string,
-  ) => Promise<QuestionSubtotalAssignmentWithRelations[]>
+  ) => Promise<CropSubtotalWithRelations[]>
 
   // Project-Student relationship
   getStudentsForProject: (projectId: string) => Promise<{
@@ -526,7 +674,6 @@ export interface MyAPI {
       hasData: boolean
       answerSheetCount: number
       questionScoreCount: number
-      scoreRecordCount: number
       totalGradingItems: number
     }>
     error?: string
@@ -544,26 +691,47 @@ export interface MyAPI {
     error?: string
   }>
   createQuestionScore: (data: {
+    cropRegionId: string      // Updated: renamed from layoutRegionId
+    studentId?: string | null // Updated: now references student directly
+    partialScore?: number
+    status: "unscored" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
+    scoredByUserId?: string | null
+  }) => Promise<QuestionScore>
+  
+  // Backward compatibility alias
+  createQuestionScoreLegacy: (data: {
     answerSheetId: string
     layoutRegionId: string
     partialScore?: number
-    status: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
+    status: "unscored" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     scoredByUserId: string
   }) => Promise<QuestionScore>
   updateQuestionScore: (id: string, data: {
     partialScore?: number
-    status?: "ungraded" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
+    status?: "unscored" | "correct" | "incorrect" | "partial" | "pending" | "no_answer" | "proposed" | "final"
     comment?: string
     version?: number
   }, expectedVersion?: number) => Promise<QuestionScore>
   deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
-  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) => Promise<{
+  getQuestionScoreComparison: (cropRegionId: string, studentId: string) => Promise<{
     current?: QuestionScore
     competing?: QuestionScore[]
     needsResolution: boolean
   }>
-  finalizeQuestionScore: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: {
+  finalizeQuestionScore: (cropRegionId: string, studentId: string, scoredByUserId: string, scoreData: {
+    partialScore?: number
+    status: string
+    comments?: string
+  }) => Promise<QuestionScore>
+  
+  // Backward compatibility aliases
+  getQuestionScoreComparisonLegacy: (answerSheetId: string, layoutRegionId: string) => Promise<{
+    current?: QuestionScore
+    competing?: QuestionScore[]
+    needsResolution: boolean
+  }>
+  finalizeQuestionScoreLegacy: (answerSheetId: string, layoutRegionId: string, scoredByUserId: string, scoreData: {
     partialScore?: number
     status: string
     comments?: string
@@ -622,14 +790,14 @@ export interface MyAPI {
     error?: string
     warnings?: {
       noScoringData: string[]
-      ungraded: string[]
+      unscored: string[]
       missingPartialScore: string[]
     }
     validationResult?: {
       hasWarnings: boolean
       warnings: {
         noScoringData: string[]
-        ungraded: string[]
+        unscored: string[]
         missingPartialScore: string[]
       }
     }

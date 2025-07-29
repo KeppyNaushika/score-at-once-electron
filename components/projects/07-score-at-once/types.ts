@@ -1,6 +1,6 @@
 // 採点状態の型定義（hooks/use-scoring-keyboard.tsから移動）
 export type ScoringStatus =
-  | "ungraded"
+  | "unscored"
   | "correct"
   | "incorrect"
   | "partial"
@@ -48,12 +48,12 @@ export interface QuestionRegion {
   y: number
   width: number
   height: number
-  masterImageId: string // masterImageIdを追加
+  projectPageId: string // projectPageIdに変更
 }
 
 // キーボードショートカットの設定（Python版互換）
 export const DEFAULT_SHORTCUTS = {
-  ungraded: "q", // 未採点
+  unscored: "q", // 未採点
   correct: "e", // 正答
   partial: "f", // 部分点
   pending: "j", // 保留

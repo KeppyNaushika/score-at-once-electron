@@ -21,21 +21,21 @@ export default function QuestionGroupPage() {
 
   const {
     project: _project,
-    questionGroups,
-    layoutRegions,
+    subtotalGroups,
+    cropRegions,
     subtotalRegions,
     loading,
     error,
-    selectedQuestionGroupId,
-    setSelectedQuestionGroupId,
+    selectedSubtotalGroupId,
+    setSelectedSubtotalGroupId,
     refreshData,
-    createQuestionGroup,
-    updateQuestionGroup,
-    deleteQuestionGroup,
-    createQuestionGroupItem,
-    updateQuestionGroupItem,
-    deleteQuestionGroupItem,
-    updateQuestionGroupItemOrders,
+    createSubtotalGroup,
+    updateSubtotalGroup,
+    deleteSubtotalGroup,
+    createSubtotal,
+    updateSubtotal,
+    deleteSubtotal,
+    updateSubtotalOrders,
     updateQuestionAssignments,
     updateSubtotalAssignments,
     subtotalData,
@@ -86,51 +86,51 @@ export default function QuestionGroupPage() {
           </CardHeader>
           <CardContent>
             <QuestionGroupManagement
-              questionGroups={questionGroups}
-              selectedQuestionGroupId={selectedQuestionGroupId}
-              setSelectedQuestionGroupId={setSelectedQuestionGroupId}
-              onCreateQuestionGroup={createQuestionGroup}
-              onUpdateQuestionGroup={updateQuestionGroup}
-              onDeleteQuestionGroup={deleteQuestionGroup}
-              onCreateQuestionGroupItem={createQuestionGroupItem}
-              onUpdateQuestionGroupItem={updateQuestionGroupItem}
-              onDeleteQuestionGroupItem={deleteQuestionGroupItem}
-              onUpdateQuestionGroupItemOrders={updateQuestionGroupItemOrders}
+              subtotalGroups={subtotalGroups}
+              selectedSubtotalGroupId={selectedSubtotalGroupId}
+              setSelectedSubtotalGroupId={setSelectedSubtotalGroupId}
+              onCreateSubtotalGroup={createSubtotalGroup}
+              onUpdateSubtotalGroup={updateSubtotalGroup}
+              onDeleteSubtotalGroup={deleteSubtotalGroup}
+              onCreateSubtotal={createSubtotal}
+              onUpdateSubtotal={updateSubtotal}
+              onDeleteSubtotal={deleteSubtotal}
+              onUpdateSubtotalOrders={updateSubtotalOrders}
             />
           </CardContent>
         </Card>
 
-        {/* 設問とグループの関連付け */}
-        {questionGroups.length > 0 && layoutRegions.length > 0 && (
+        {/* 設問とサブトータルの関連付け */}
+        {subtotalGroups.length > 0 && cropRegions.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
-                設問とグループの関連付け
+                設問とサブトータルの関連付け
               </CardTitle>
             </CardHeader>
             <CardContent>
               <QuestionAssignmentMatrix
-                questionGroups={questionGroups}
-                layoutRegions={layoutRegions}
+                subtotalGroups={subtotalGroups}
+                cropRegions={cropRegions}
                 onUpdateAssignments={updateQuestionAssignments}
               />
             </CardContent>
           </Card>
         )}
 
-        {/* 小計点とグループの関連付け */}
-        {questionGroups.length > 0 && subtotalRegions.length > 0 && (
+        {/* 小計点とサブトータルの関連付け */}
+        {subtotalGroups.length > 0 && subtotalRegions.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5" />
-                小計点とグループの関連付け
+                小計点とサブトータルの関連付け
               </CardTitle>
             </CardHeader>
             <CardContent>
               <SubtotalAssignmentMatrix
-                questionGroups={questionGroups}
+                subtotalGroups={subtotalGroups}
                 subtotalRegions={subtotalRegions}
                 onUpdateSubtotalAssignments={updateSubtotalAssignments}
               />
@@ -150,7 +150,7 @@ export default function QuestionGroupPage() {
             <CardContent>
               <SubtotalPreview
                 subtotalData={subtotalData}
-                questionGroups={questionGroups}
+                subtotalGroups={subtotalGroups}
               />
             </CardContent>
           </Card>

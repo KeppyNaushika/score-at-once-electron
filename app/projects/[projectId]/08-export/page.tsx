@@ -18,7 +18,7 @@ export default function ExportPage() {
   const [showWarningModal, setShowWarningModal] = useState(false)
   const [warningData, setWarningData] = useState({
     noScoringData: [] as string[],
-    ungraded: [] as string[],
+    unscored: [] as string[],
     missingPartialScore: [] as string[],
   })
 

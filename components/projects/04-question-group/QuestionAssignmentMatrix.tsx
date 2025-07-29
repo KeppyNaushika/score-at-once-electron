@@ -15,30 +15,30 @@ import {
 } from "@/components/ui/table"
 import { RotateCcw, Grid3X3 } from "lucide-react"
 import {
-  QuestionGroupWithItems,
-  LayoutRegionWithDetails,
+  SubtotalGroupWithItems,
+  CropRegionWithDetails,
 } from "@/types/electron"
 
 interface QuestionAssignmentMatrixProps {
-  questionGroups: QuestionGroupWithItems[]
-  layoutRegions: LayoutRegionWithDetails[]
+  subtotalGroups: SubtotalGroupWithItems[]
+  cropRegions: CropRegionWithDetails[]
   onUpdateAssignments: (
-    questionLayoutRegionId: string,
-    questionGroupItemIds: string[],
+    questionCropRegionId: string,
+    subtotalIds: string[],
   ) => Promise<boolean>
 }
 
 interface AssignmentState {
-  [questionId: string]: Set<string> // questionLayoutRegionId -> Set of questionGroupItemIds
+  [questionId: string]: Set<string> // questionCropRegionId -> Set of subtotalIds
 }
 
 interface OriginalAssignmentState {
-  [questionId: string]: string[] // questionLayoutRegionId -> Array of questionGroupItemIds
+  [questionId: string]: string[] // questionCropRegionId -> Array of subtotalIds
 }
 
 export function QuestionAssignmentMatrix({
-  questionGroups,
-  layoutRegions,
+  subtotalGroups,
+  cropRegions,
   onUpdateAssignments,
 }: QuestionAssignmentMatrixProps) {
   const [assignments, setAssignments] = useState<AssignmentState>({})
@@ -59,7 +59,7 @@ export function QuestionAssignmentMatrix({
       setLoading(true)
       const newAssignments: AssignmentState = {}
 
-      for (const region of layoutRegions) {
+      for (const region of cropRegions) {
         try {
           const result =
             (await window.electronAPI.getAssignmentsByQuestionLayoutRegionId(
@@ -68,7 +68,7 @@ export function QuestionAssignmentMatrix({
           if (result && result.success && result.assignments) {
             newAssignments[region.id] = new Set(
               result.assignments.map(
-                (assignment: any) => assignment.questionGroupItemId,
+                (assignment: any) => assignment.subtotalId,
               ),
             )
           } else {
@@ -91,10 +91,10 @@ export function QuestionAssignmentMatrix({
       setLoading(false)
     }
 
-    if (layoutRegions.length > 0) {
+    if (cropRegions.length > 0) {
       loadAssignments()
     }
-  }, [layoutRegions])
+  }, [cropRegions])
 
   // チェックボックスのドラッグ開始
   const handleMouseDown = (
@@ -289,7 +289,7 @@ export function QuestionAssignmentMatrix({
     )
   }
 
-  if (questionGroups.length === 0) {
+  if (subtotalGroups.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
         <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
@@ -299,7 +299,7 @@ export function QuestionAssignmentMatrix({
     )
   }
 
-  if (layoutRegions.length === 0) {
+  if (cropRegions.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
         <Grid3X3 className="mx-auto mb-4 h-12 w-12 opacity-50" />
@@ -352,8 +352,8 @@ export function QuestionAssignmentMatrix({
               ref={tableRef}
               className="table-fixed" 
               style={{ 
-                minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`,
-                width: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`
+                minWidth: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`,
+                width: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`
               }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -364,12 +364,12 @@ export function QuestionAssignmentMatrix({
                   <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     設問
                   </TableHead>
-                  {questionGroups.map((group) => (
+                  {subtotalGroups.map((group) => (
                     <TableHead 
                       key={group.id} 
                       className="text-center bg-blue-50/50 border-l-2 border-blue-200" 
-                      colSpan={group.items.length}
-                      style={{ width: `${group.items.length * 120}px` }}
+                      colSpan={group.subtotals.length}
+                      style={{ width: `${group.subtotals.length * 120}px` }}
                     >
                       <div className="text-sm font-semibold text-blue-700">
                         {group.name}
@@ -381,15 +381,15 @@ export function QuestionAssignmentMatrix({
                   <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     {/* 空のセル */}
                   </TableHead>
-                  {questionGroups.map((group) => (
-                    group.items.map((item) => (
+                  {subtotalGroups.map((group) => (
+                    group.subtotals.map((subtotal) => (
                       <TableHead 
-                        key={item.id} 
+                        key={subtotal.id} 
                         className="text-center bg-gray-50/50"
                         style={{ width: '120px', minWidth: '120px' }}
                       >
                         <div className="text-muted-foreground text-xs">
-                          {item.name}
+                          {subtotal.name}
                         </div>
                       </TableHead>
                     ))
@@ -397,7 +397,7 @@ export function QuestionAssignmentMatrix({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {layoutRegions.map((region) => (
+                {cropRegions.map((region) => (
                   <TableRow key={region.id}>
                     <TableCell className="bg-white sticky left-0 z-10 border-r-2 border-gray-200">
                       <div className="flex items-center gap-2">
@@ -409,29 +409,29 @@ export function QuestionAssignmentMatrix({
                         </Badge>
                       </div>
                     </TableCell>
-                    {questionGroups.map((group) => (
-                      group.items.map((item) => (
+                    {subtotalGroups.map((group) => (
+                      group.subtotals.map((subtotal) => (
                         <TableCell 
-                          key={item.id} 
+                          key={subtotal.id} 
                           className="text-center"
                           style={{ width: '120px', minWidth: '120px' }}
                           data-checkbox-cell
                           data-question-id={region.id}
-                          data-item-id={item.id}
+                          data-item-id={subtotal.id}
                         >
                           <div className="flex justify-center">
                             <Checkbox
                               checked={
-                                assignments[region.id]?.has(item.id) || false
+                                assignments[region.id]?.has(subtotal.id) || false
                               }
                               onCheckedChange={(checked) =>
                                 handleAssignmentChange(
                                   region.id,
-                                  item.id,
+                                  subtotal.id,
                                   checked as boolean,
                                 )
                               }
-                              onMouseDown={(e) => handleMouseDown(e, region.id, item.id)}
+                              onMouseDown={(e) => handleMouseDown(e, region.id, subtotal.id)}
                               disabled={saving}
                             />
                           </div>

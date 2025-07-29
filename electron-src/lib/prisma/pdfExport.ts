@@ -348,14 +348,18 @@ async function calculateStudentSubtotalScore(
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
+    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByLayoutRegionId is stubbed
     for (const definition of subtotalDefinitions) {
-      const groupId = definition.questionGroupItem?.questionGroupId
+      // Skip processing since function returns empty array
+      if (!definition || typeof definition !== 'object') continue
+      
+      const groupId = (definition as any).subtotal?.subtotalGroupId
       if (!groupId) continue
 
       if (!groupMap.has(groupId)) {
         groupMap.set(groupId, [])
       }
-      groupMap.get(groupId)!.push(definition.questionGroupItemId)
+      groupMap.get(groupId)!.push((definition as any).subtotalId)
     }
 
     if (groupMap.size === 0) {

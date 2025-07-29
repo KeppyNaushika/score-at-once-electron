@@ -11,7 +11,7 @@ import {
 } from "lucide-react"
 
 type ScoringStatus =
-  | "ungraded"
+  | "unscored"
   | "correct"
   | "incorrect"
   | "partial"
@@ -27,7 +27,7 @@ import { getSelectionBorderSettings } from "@/lib/utils"
 
 // 採点状態のアイコンと色を定義
 const SCORE_STATUS_CONFIG = {
-  ungraded: {
+  unscored: {
     icon: Circle,
     borderColor: "border-gray-400",
     bgColor: "bg-gray-50",
@@ -613,7 +613,7 @@ export default function AnswerGridView({
           const config =
             SCORE_STATUS_CONFIG[
               answer.status as keyof typeof SCORE_STATUS_CONFIG
-            ] || SCORE_STATUS_CONFIG.ungraded
+            ] || SCORE_STATUS_CONFIG.unscored
           const Icon = config.icon
           const isSelected = selectedAnswers.has(answer.id)
           const isMaster = answer.isMaster

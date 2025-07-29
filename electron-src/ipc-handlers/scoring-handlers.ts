@@ -30,15 +30,13 @@ export function setupScoringHandlers(): void {
         const serializedScores =
           result.scores?.map((score) => ({
             id: score.id,
-            answerSheetId: score.answerSheetId,
-            layoutRegionId: score.layoutRegionId,
+            cropRegionId: score.cropRegionId,
+            studentId: score.studentId,
             partialScore: score.partialScore
               ? score.partialScore.toString()
               : null,
             status: score.status,
-            comment: score.comment,
             scoredByUserId: score.scoredByUserId,
-            scoreVersion: score.scoreVersion,
             createdAt: score.createdAt.toISOString(),
             updatedAt: score.updatedAt.toISOString(),
           })) || []
@@ -65,15 +63,13 @@ export function setupScoringHandlers(): void {
         const serializedScores =
           result.scores?.map((score) => ({
             id: score.id,
-            answerSheetId: score.answerSheetId,
-            layoutRegionId: score.layoutRegionId,
+            cropRegionId: score.cropRegionId,
+            studentId: score.studentId,
             partialScore: score.partialScore
               ? score.partialScore.toString()
               : null,
             status: score.status,
-            comment: score.comment,
             scoredByUserId: score.scoredByUserId,
-            scoreVersion: score.scoreVersion,
             createdAt: score.createdAt.toISOString(),
             updatedAt: score.updatedAt.toISOString(),
           })) || []
@@ -99,15 +95,13 @@ export function setupScoringHandlers(): void {
         // Create plain serializable object
         const serializedScore = {
           id: result.score.id,
-          answerSheetId: result.score.answerSheetId,
-          layoutRegionId: result.score.layoutRegionId,
+          cropRegionId: result.score.cropRegionId,
+          studentId: result.score.studentId,
           partialScore: result.score.partialScore
             ? result.score.partialScore.toString()
             : null,
           status: result.score.status,
-          comment: result.score.comment,
           scoredByUserId: result.score.scoredByUserId,
-          scoreVersion: result.score.scoreVersion,
           createdAt: result.score.createdAt.toISOString(),
           updatedAt: result.score.updatedAt.toISOString(),
         }
@@ -138,15 +132,13 @@ export function setupScoringHandlers(): void {
         // Create plain serializable object
         const serializedScore = {
           id: result.score.id,
-          answerSheetId: result.score.answerSheetId,
-          layoutRegionId: result.score.layoutRegionId,
+          cropRegionId: result.score.cropRegionId,
+          studentId: result.score.studentId,
           partialScore: result.score.partialScore
             ? result.score.partialScore.toString()
             : null,
           status: result.score.status,
-          comment: result.score.comment,
           scoredByUserId: result.score.scoredByUserId,
-          scoreVersion: result.score.scoreVersion,
           createdAt: result.score.createdAt.toISOString(),
           updatedAt: result.score.updatedAt.toISOString(),
         }
@@ -208,15 +200,13 @@ export function setupScoringHandlers(): void {
         // Create plain serializable object
         const serializedScore = {
           id: result.score.id,
-          answerSheetId: result.score.answerSheetId,
-          layoutRegionId: result.score.layoutRegionId,
+          cropRegionId: result.score.cropRegionId,
+          studentId: result.score.studentId,
           partialScore: result.score.partialScore
             ? result.score.partialScore.toString()
             : null,
           status: result.score.status,
-          comment: result.score.comment,
           scoredByUserId: result.score.scoredByUserId,
-          scoreVersion: result.score.scoreVersion,
           createdAt: result.score.createdAt.toISOString(),
           updatedAt: result.score.updatedAt.toISOString(),
         }

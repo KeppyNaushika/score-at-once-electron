@@ -11,10 +11,17 @@ interface ProjectData {
   subject: string | null
   createdAt: Date
   updatedAt: Date
-  userId: string
-  masterImages?: any[]
-  answerSheets?: any[]
-  layoutRegions?: any[]
+  userProjects?: Array<{
+    user: {
+      id: string
+      name: string
+      role: string
+      username: string
+    }
+  }>
+  projectPages?: any[]
+  projectSubtotalGroups?: any[]
+  projectStudents?: any[]
 }
 
 export function useProjectDetail(projectId: string) {
@@ -88,9 +95,12 @@ export function useProjectDetail(projectId: string) {
     loadProject()
   }, [loadProject])
 
-  const masterImageCount = project?.masterImages?.length || 0
-  const answerSheetCount = project?.answerSheets?.length || 0
-  const layoutRegionCount = project?.layoutRegions?.length || 0
+  const masterImageCount = project?.projectPages?.reduce((count, page) => 
+    count + (page.pageImages?.filter((img: any) => img.imageType === "MASTER")?.length || 0), 0) || 0
+  const answerSheetCount = project?.projectPages?.reduce((count, page) => 
+    count + (page.pageImages?.filter((img: any) => img.imageType === "ANSWER_SHEET")?.length || 0), 0) || 0
+  const layoutRegionCount = project?.projectPages?.reduce((count, page) => 
+    count + (page.cropRegions?.length || 0), 0) || 0
 
   return {
     project,

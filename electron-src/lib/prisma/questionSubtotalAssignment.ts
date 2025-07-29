@@ -1,83 +1,83 @@
-import type { Prisma, QuestionSubtotalAssignment } from "@prisma/client"
+import type { Prisma, CropSubtotal } from "@prisma/client"
 import prisma from "./client"
 
-// QuestionSubtotalAssignment を作成
+// CropSubtotal を作成 (QuestionSubtotalAssignment の新版)
 export const createQuestionSubtotalAssignment = async (
-  data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput, // questionLayoutRegionId と questionGroupItemId を直接含める
+  data: Prisma.CropSubtotalUncheckedCreateInput, // cropRegionId と subtotalId を直接含める
 ) => {
-  return prisma.questionSubtotalAssignment.create({
+  return prisma.cropSubtotal.create({
     data,
     include: {
-      questionLayoutRegion: true,
-      questionGroupItem: true,
+      cropRegion: true,
+      subtotal: true,
     },
   })
 }
 
-// 複数の QuestionSubtotalAssignment を作成
+// 複数の CropSubtotal を作成
 export const createManyQuestionSubtotalAssignments = async (
-  assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[],
+  assignments: Prisma.CropSubtotalUncheckedCreateInput[],
 ) => {
-  return prisma.questionSubtotalAssignment.createMany({
+  return prisma.cropSubtotal.createMany({
     data: assignments,
   })
 }
 
-// QuestionSubtotalAssignment を削除 (IDで)
+// CropSubtotal を削除 (IDで)
 export const deleteQuestionSubtotalAssignment = async (id: string) => {
-  return prisma.questionSubtotalAssignment.delete({
+  return prisma.cropSubtotal.delete({
     where: { id },
   })
 }
 
-// LayoutRegion (問題解答領域) ID で QuestionSubtotalAssignment を削除
+// CropRegion ID で CropSubtotal を削除
 export const deleteAssignmentsByQuestionLayoutRegionId = async (
-  questionLayoutRegionId: string,
+  cropRegionId: string,
 ) => {
-  return prisma.questionSubtotalAssignment.deleteMany({
-    where: { questionLayoutRegionId },
+  return prisma.cropSubtotal.deleteMany({
+    where: { cropRegionId },
   })
 }
 
-// QuestionGroupItem ID で QuestionSubtotalAssignment を削除
+// Subtotal ID で CropSubtotal を削除
 export const deleteAssignmentsByQuestionGroupItemId = async (
-  questionGroupItemId: string,
+  subtotalId: string,
 ) => {
-  return prisma.questionSubtotalAssignment.deleteMany({
-    where: { questionGroupItemId },
+  return prisma.cropSubtotal.deleteMany({
+    where: { subtotalId },
   })
 }
 
-// LayoutRegion (問題解答領域) ID で QuestionSubtotalAssignment を取得
+// CropRegion ID で CropSubtotal を取得
 export const getAssignmentsByQuestionLayoutRegionId = async (
-  questionLayoutRegionId: string,
+  cropRegionId: string,
 ) => {
-  return prisma.questionSubtotalAssignment.findMany({
-    where: { questionLayoutRegionId },
+  return prisma.cropSubtotal.findMany({
+    where: { cropRegionId },
     include: {
-      questionGroupItem: true,
+      subtotal: true,
     },
   })
 }
 
-// QuestionGroupItem ID で QuestionSubtotalAssignment を取得
+// Subtotal ID で CropSubtotal を取得
 export const getAssignmentsByQuestionGroupItemId = async (
-  questionGroupItemId: string,
+  subtotalId: string,
 ) => {
-  return prisma.questionSubtotalAssignment.findMany({
-    where: { questionGroupItemId },
+  return prisma.cropSubtotal.findMany({
+    where: { subtotalId },
     include: {
-      questionLayoutRegion: true,
+      cropRegion: true,
     },
   })
 }
 
 export type QuestionSubtotalAssignmentWithRelations =
-  Prisma.QuestionSubtotalAssignmentGetPayload<{
+  Prisma.CropSubtotalGetPayload<{
     include: {
-      questionLayoutRegion: true
-      questionGroupItem: true
+      cropRegion: true
+      subtotal: true
     }
   }>
 
-export type QuestionSubtotalAssignmentPayload = QuestionSubtotalAssignment
+export type QuestionSubtotalAssignmentPayload = CropSubtotal

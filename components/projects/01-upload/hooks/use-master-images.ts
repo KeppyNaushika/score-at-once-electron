@@ -181,10 +181,22 @@ export function useMasterImages(
           // Get updated project data
           const updatedProject =
             await window.electronAPI.fetchProjectById(projectId)
-          if (updatedProject && updatedProject.masterImages) {
-            const sortedUpdatedImages = sortImagesByPageNumber(
-              updatedProject.masterImages,
-            )
+          if (updatedProject && updatedProject.projectPages) {
+            // Convert projectPages to master images format for compatibility
+            const masterImages = updatedProject.projectPages
+              .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
+              .map(page => {
+                const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+                return {
+                  id: page.id,
+                  projectId: page.projectId,
+                  imagePath: masterImage?.imagePath || '',
+                  pageNumber: page.pageNumber,
+                  createdAt: page.createdAt,
+                  updatedAt: page.updatedAt,
+                }
+              })
+            const sortedUpdatedImages = sortImagesByPageNumber(masterImages)
 
             setState((prev) => ({ ...prev, images: sortedUpdatedImages }))
             onImagesChange(sortedUpdatedImages)

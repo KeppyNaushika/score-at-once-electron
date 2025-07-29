@@ -10,10 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { GripVertical, Trash2 } from "lucide-react"
-import type { LayoutRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/electron"
 import {
-  LAYOUT_REAGION_AREA_TYPES,
-  LayoutRegionAreaType,
+  CROP_REGION_AREA_TYPES,
+  CropRegionAreaType,
 } from "@/types/common.types"
 
 // AreaTypeの日本語表示マッピング
@@ -28,7 +28,7 @@ const areaTypeToJapanese: Record<string, string> = {
   OTHER: "その他",
 }
 
-const typeIcons: Record<LayoutRegionAreaType, string> = {
+const typeIcons: Record<CropRegionAreaType, string> = {
   ["QUESTION_ANSWER"]: "📋",
   ["STUDENT_NAME"]: "📄",
   ["STUDENT_ID"]: "🔢",
@@ -40,7 +40,7 @@ const typeIcons: Record<LayoutRegionAreaType, string> = {
 }
 
 type RegionTableRowProps = {
-  region: LayoutRegionWithDetails
+  region: CropRegionWithDetails
   globalIndex: number
   isSelected: boolean
   isDragged: boolean
@@ -80,8 +80,8 @@ export const RegionTableRow = ({
 }: RegionTableRowProps) => {
   const regionType = region.type
 
-  const isValidType = (type: string): type is LayoutRegionAreaType => 
-    LAYOUT_REAGION_AREA_TYPES.includes(type as LayoutRegionAreaType)
+  const isValidType = (type: string): type is CropRegionAreaType => 
+    CROP_REGION_AREA_TYPES.includes(type as CropRegionAreaType)
   
   const icon = isValidType(regionType)
     ? typeIcons[regionType]
@@ -118,7 +118,7 @@ export const RegionTableRow = ({
       </td>
       <td className="border-border border px-2 py-1 text-center">
         <div className="text-sm text-muted-foreground">
-          {region.masterImage ? region.masterImage.pageNumber : '?'}
+          {region.projectPage ? region.projectPage.pageNumber : '?'}
         </div>
       </td>
       <td className="border-border border px-2 py-1">
@@ -133,7 +133,7 @@ export const RegionTableRow = ({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.values(LAYOUT_REAGION_AREA_TYPES).map(
+            {Object.values(CROP_REGION_AREA_TYPES).map(
               (type) => (
                 <SelectItem key={type} value={type}>
                   {areaTypeToJapanese[type]}

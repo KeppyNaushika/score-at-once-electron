@@ -21,7 +21,7 @@ export const KEY_DISPLAY_NAMES: { [key: string]: string } = {
 export const SHORTCUT_LABELS: {
   [key in keyof typeof DEFAULT_SHORTCUTS]: string
 } = {
-  ungraded: "未採点",
+  unscored: "未採点",
   correct: "正答",
   partial: "部分点",
   pending: "保留",
@@ -56,7 +56,7 @@ export const SHORTCUT_CATEGORIES = {
       "pending",
       "incorrect",
       "no_answer",
-      "ungraded",
+      "unscored",
     ] as const,
     description: "採点状態を設定するキー",
   },

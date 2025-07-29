@@ -1,27 +1,27 @@
-import type { LayoutRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/electron"
 
 export const getGlobalIndex = (
   filteredIndex: number,
-  filteredRegions: LayoutRegionWithDetails[],
-  allRegions: LayoutRegionWithDetails[],
-  selectedMasterImageId?: string,
+  filteredRegions: CropRegionWithDetails[],
+  allRegions: CropRegionWithDetails[],
+  selectedProjectPageId?: string,
 ) => {
-  if (!selectedMasterImageId) return filteredIndex
+  if (!selectedProjectPageId) return filteredIndex
   const filteredRegion = filteredRegions[filteredIndex]
   return allRegions.findIndex(
     (region) =>
       region.id === filteredRegion.id ||
-      (region.masterImageId === filteredRegion.masterImageId &&
+      (region.projectPageId === filteredRegion.projectPageId &&
         region.x === filteredRegion.x &&
         region.y === filteredRegion.y),
   )
 }
 
 export const filterRegionsByPage = (
-  regions: LayoutRegionWithDetails[],
-  selectedMasterImageId?: string,
+  regions: CropRegionWithDetails[],
+  selectedProjectPageId?: string,
 ) => {
-  return selectedMasterImageId
-    ? regions.filter((region) => region.masterImageId === selectedMasterImageId)
+  return selectedProjectPageId
+    ? regions.filter((region) => region.projectPageId === selectedProjectPageId)
     : regions
 }

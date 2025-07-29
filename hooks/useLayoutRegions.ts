@@ -32,7 +32,7 @@ export function useLayoutRegions(projectId?: string) {
       const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
       
       const filteredRegions = masterImageId 
-        ? allRegions.filter(region => region.masterImageId === masterImageId)
+        ? allRegions.filter(region => region.projectPage?.id === masterImageId)
         : allRegions
 
       const formattedRegions: LayoutRegion[] = filteredRegions.map(region => ({
@@ -45,7 +45,7 @@ export function useLayoutRegions(projectId?: string) {
         label: region.label || "",
         points: region.points ? String(region.points) : null,
         orderIndex: region.orderIndex || 1,
-        masterImageId: region.masterImageId || ""
+        masterImageId: region.projectPage?.id || ""
       }))
 
       setRegions(formattedRegions)
@@ -68,8 +68,7 @@ export function useLayoutRegions(projectId?: string) {
         if (!region.masterImageId) return null
 
         const regionData = {
-          projectId,
-          masterImageId: region.masterImageId,
+          projectPageId: region.masterImageId, // masterImageId is actually projectPageId in the new schema
           type: region.type as LayoutRegionAreaType,
           x: region.x,
           y: region.y,
@@ -102,7 +101,7 @@ export function useLayoutRegions(projectId?: string) {
             label: region!.label || "",
             points: region!.points ? String(region!.points) : null,
             orderIndex: region!.orderIndex || 1,
-            masterImageId: region!.masterImageId || "",
+            masterImageId: region!.projectPage?.id || "",
           }))
 
         setRegions(formattedRegions)

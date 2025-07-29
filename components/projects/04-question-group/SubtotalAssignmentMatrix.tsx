@@ -15,29 +15,29 @@ import {
 } from "@/components/ui/table"
 import { RotateCcw, Calculator } from "lucide-react"
 import {
-  QuestionGroupWithItems,
-  LayoutRegionWithDetails,
+  SubtotalGroupWithItems,
+  CropRegionWithDetails,
 } from "@/types/electron"
 
 interface SubtotalAssignmentMatrixProps {
-  questionGroups: QuestionGroupWithItems[]
-  subtotalRegions: LayoutRegionWithDetails[] // SUBTOTAL_SCORE type regions
+  subtotalGroups: SubtotalGroupWithItems[]
+  subtotalRegions: CropRegionWithDetails[] // SUBTOTAL_SCORE type regions
   onUpdateSubtotalAssignments: (
-    subtotalLayoutRegionId: string,
-    questionGroupItemIds: string[],
+    subtotalCropRegionId: string,
+    subtotalIds: string[],
   ) => Promise<boolean>
 }
 
 interface SubtotalAssignmentState {
-  [subtotalRegionId: string]: Set<string> // subtotalLayoutRegionId -> Set of questionGroupItemIds
+  [subtotalRegionId: string]: Set<string> // subtotalCropRegionId -> Set of subtotalIds
 }
 
 interface OriginalSubtotalAssignmentState {
-  [subtotalRegionId: string]: string[] // subtotalLayoutRegionId -> Array of questionGroupItemIds
+  [subtotalRegionId: string]: string[] // subtotalCropRegionId -> Array of subtotalIds
 }
 
 export function SubtotalAssignmentMatrix({
-  questionGroups,
+  subtotalGroups,
   subtotalRegions,
   onUpdateSubtotalAssignments,
 }: SubtotalAssignmentMatrixProps) {
@@ -56,13 +56,13 @@ export function SubtotalAssignmentMatrix({
       for (const region of subtotalRegions) {
         try {
           const result =
-            (await window.electronAPI.getSubtotalDefinitionsByLayoutRegionId(
+            (await window.electronAPI.getCropSubtotalsByCropRegionId(
               region.id,
             )) as any
           
           if (result && Array.isArray(result)) {
             newAssignments[region.id] = new Set(
-              result.map((definition: any) => definition.questionGroupItemId),
+              result.map((definition: any) => definition.subtotalId),
             )
           } else {
             newAssignments[region.id] = new Set()
@@ -183,7 +183,7 @@ export function SubtotalAssignmentMatrix({
     )
   }
 
-  if (questionGroups.length === 0) {
+  if (subtotalGroups.length === 0) {
     return (
       <div className="text-muted-foreground py-8 text-center">
         <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
@@ -245,8 +245,8 @@ export function SubtotalAssignmentMatrix({
             <Table 
               className="table-fixed" 
               style={{ 
-                minWidth: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`,
-                width: `${192 + questionGroups.reduce((sum, group) => sum + group.items.length, 0) * 120}px`
+                minWidth: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`,
+                width: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`
               }}
             >
               <TableHeader>
@@ -254,12 +254,12 @@ export function SubtotalAssignmentMatrix({
                   <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     小計点領域
                   </TableHead>
-                  {questionGroups.map((group) => (
+                  {subtotalGroups.map((group) => (
                     <TableHead 
                       key={group.id} 
                       className="text-center bg-green-50/50 border-l-2 border-green-200" 
-                      colSpan={group.items.length}
-                      style={{ width: `${group.items.length * 120}px` }}
+                      colSpan={group.subtotals.length}
+                      style={{ width: `${group.subtotals.length * 120}px` }}
                     >
                       <div className="text-sm font-semibold text-green-700">
                         {group.name}
@@ -271,15 +271,15 @@ export function SubtotalAssignmentMatrix({
                   <TableHead className="bg-white sticky left-0 z-10 w-48 border-r-2 border-gray-200">
                     {/* 空のセル */}
                   </TableHead>
-                  {questionGroups.map((group) => (
-                    group.items.map((item) => (
+                  {subtotalGroups.map((group) => (
+                    group.subtotals.map((subtotal) => (
                       <TableHead 
-                        key={item.id} 
+                        key={subtotal.id} 
                         className="text-center bg-gray-50/50"
                         style={{ width: '120px', minWidth: '120px' }}
                       >
                         <div className="text-muted-foreground text-xs">
-                          {item.name}
+                          {subtotal.name}
                         </div>
                       </TableHead>
                     ))
@@ -299,22 +299,22 @@ export function SubtotalAssignmentMatrix({
                         </Badge>
                       </div>
                     </TableCell>
-                    {questionGroups.map((group) => (
-                      group.items.map((item) => (
+                    {subtotalGroups.map((group) => (
+                      group.subtotals.map((subtotal) => (
                         <TableCell 
-                          key={item.id} 
+                          key={subtotal.id} 
                           className="text-center"
                           style={{ width: '120px', minWidth: '120px' }}
                         >
                           <div className="flex justify-center">
                             <Checkbox
                               checked={
-                                assignments[region.id]?.has(item.id) || false
+                                assignments[region.id]?.has(subtotal.id) || false
                               }
                               onCheckedChange={(checked) =>
                                 handleAssignmentChange(
                                   region.id,
-                                  item.id,
+                                  subtotal.id,
                                   checked as boolean,
                                 )
                               }

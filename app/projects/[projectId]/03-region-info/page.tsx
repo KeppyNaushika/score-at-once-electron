@@ -4,8 +4,8 @@ import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
-import type { LayoutRegionWithDetails } from "@/types/electron"
-import { MasterImage, User } from "@prisma/client"
+import type { CropRegionWithDetails } from "@/types/electron"
+import { ProjectPage, User } from "@prisma/client"
 import Image from "next/image"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -25,13 +25,13 @@ export default function RegionInfoPage() {
   )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
+  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>(
     [],
   )
 
-  const [masterImages, setMasterImages] = useState<MasterImage[]>([])
-  const [selectedMasterImage, setSelectedMasterImage] =
-    useState<MasterImage | null>(null)
+  const [projectPages, setProjectPages] = useState<ProjectPage[]>([])
+  const [selectedProjectPage, setSelectedProjectPage] =
+    useState<ProjectPage | null>(null)
   const [backgroundImageUrls, setBackgroundImageUrls] = useState<{
     [key: string]: string
   }>({})
@@ -54,49 +54,52 @@ export default function RegionInfoPage() {
         await window.electronAPI.fetchProjectById(projectId)
       if (fetchedProject) {
         if (
-          fetchedProject.masterImages &&
-          fetchedProject.masterImages.length > 0
+          fetchedProject.projectPages &&
+          fetchedProject.projectPages.length > 0
         ) {
-          const sortedMasterImages = [...fetchedProject.masterImages].sort(
+          const sortedProjectPages = [...fetchedProject.projectPages].sort(
             (a, b) => a.pageNumber - b.pageNumber,
           )
-          setMasterImages(sortedMasterImages)
-          setSelectedMasterImage(sortedMasterImages[0])
+          setProjectPages(sortedProjectPages)
+          setSelectedProjectPage(sortedProjectPages[0])
 
           // 全ページの画像URLを取得
           const urls: { [key: string]: string } = {}
-          for (const image of sortedMasterImages) {
-            const url = await window.electronAPI.resolveFileProtocolPath(
-              image.path,
-            )
-            urls[image.id] = url
+          for (const page of sortedProjectPages) {
+            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+            if (masterImage) {
+              const url = await window.electronAPI.resolveFileProtocolPath(
+                masterImage.imagePath,
+              )
+              urls[page.id] = url
+            }
           }
           setBackgroundImageUrls(urls)
         } else {
-          setMasterImages([])
-          setSelectedMasterImage(null)
+          setProjectPages([])
+          setSelectedProjectPage(null)
           setBackgroundImageUrls({})
         }
 
-        // 既存のレイアウト領域を取得
+        // 既存の作物領域を取得
         try {
           const existingRegions =
-            await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+            await window.electronAPI.getCropRegionsByProjectId(projectId)
           if (existingRegions && existingRegions.length > 0) {
-            setLayoutRegions(existingRegions)
+            setCropRegions(existingRegions)
           } else {
-            setLayoutRegions([])
+            setCropRegions([])
           }
         } catch (regionError) {
-          console.error("Failed to load layout regions:", regionError)
-          setLayoutRegions([])
+          console.error("Failed to load crop regions:", regionError)
+          setCropRegions([])
         }
       } else {
         toast.error("プロジェクトが見つかりません。")
-        setMasterImages([])
-        setSelectedMasterImage(null)
+        setProjectPages([])
+        setSelectedProjectPage(null)
         setBackgroundImageUrls({})
-        setLayoutRegions([])
+        setCropRegions([])
       }
     } catch (error) {
       console.error("Failed to load initial data:", error)
@@ -111,16 +114,15 @@ export default function RegionInfoPage() {
   }, [loadInitialData])
 
   const autoSaveRegions = useCallback(
-    async (regions: LayoutRegionWithDetails[]) => {
+    async (regions: CropRegionWithDetails[]) => {
       if (!projectId || !currentUser) return
 
       try {
         const savePromises = regions.map(async (area) => {
-          if (!area.masterImageId) return null
+          if (!area.projectPage?.id) return null
 
           const regionData = {
-            projectId,
-            masterImageId: area.masterImageId,
+            projectPageId: area.projectPage.id,
             type: area.type,
             x: area.x,
             y: area.y,
@@ -132,21 +134,21 @@ export default function RegionInfoPage() {
           }
 
           if (area.id) {
-            return await window.electronAPI.updateLayoutRegion(
+            return await window.electronAPI.updateCropRegion(
               area.id,
               regionData,
             )
           } else {
-            return await window.electronAPI.createLayoutRegion(regionData)
+            return await window.electronAPI.createCropRegion(regionData)
           }
         })
 
         const savedRegions = await Promise.all(savePromises.filter(Boolean))
 
         if (savedRegions.length > 0) {
-          setLayoutRegions(
+          setCropRegions(
             savedRegions.filter(
-              (region): region is LayoutRegionWithDetails => region !== null,
+              (region): region is CropRegionWithDetails => region !== null,
             ),
           )
         }
@@ -160,15 +162,15 @@ export default function RegionInfoPage() {
   const handleRegionsChange = useCallback(
     (
       newRegions:
-        | LayoutRegionWithDetails[]
-        | ((prev: LayoutRegionWithDetails[]) => LayoutRegionWithDetails[]),
+        | CropRegionWithDetails[]
+        | ((prev: CropRegionWithDetails[]) => CropRegionWithDetails[]),
     ) => {
       const updatedRegions =
         typeof newRegions === "function"
-          ? newRegions(layoutRegions)
+          ? newRegions(cropRegions)
           : newRegions
 
-      setLayoutRegions(updatedRegions)
+      setCropRegions(updatedRegions)
 
       // Clear existing timeout
       if (saveTimeoutId) {
@@ -182,7 +184,7 @@ export default function RegionInfoPage() {
 
       setSaveTimeoutId(timeoutId)
     },
-    [saveTimeoutId, autoSaveRegions, layoutRegions],
+    [saveTimeoutId, autoSaveRegions, cropRegions],
   )
 
   if (isLoading) {
@@ -219,14 +221,14 @@ export default function RegionInfoPage() {
         >
           <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
           <div className="space-y-4">
-            {masterImages.map((_, pageIndex) => {
+            {projectPages.map((_, pageIndex) => {
               // 順序は固定（1, 2, 3...）だが、対応する画像は実際のpageNumber順
               const displayPageNumber = pageIndex + 1
-              const correspondingImage = masterImages.find(
+              const correspondingPage = projectPages.find(
                 (img) => img.pageNumber === displayPageNumber,
               )
 
-              if (!correspondingImage) {
+              if (!correspondingPage) {
                 return (
                   <div key={`page-${displayPageNumber}`} className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -246,9 +248,9 @@ export default function RegionInfoPage() {
                 )
               }
 
-              const imageUrl = backgroundImageUrls[correspondingImage.id]
-              const pageRegions = layoutRegions.filter(
-                (region) => region.masterImageId === correspondingImage.id,
+              const imageUrl = backgroundImageUrls[correspondingPage.id]
+              const pageRegions = cropRegions.filter(
+                (region) => region.projectPage?.id === correspondingPage.id,
               )
 
               return (
@@ -271,12 +273,12 @@ export default function RegionInfoPage() {
                         height={600}
                         unoptimized
                         onClick={() => {
-                          setSelectedMasterImage(correspondingImage)
+                          setSelectedProjectPage(correspondingPage)
                         }}
                       />
                       {/* Overlay regions for this page */}
                       {pageRegions.map((area, index) => {
-                        const globalIndex = layoutRegions.findIndex(
+                        const globalIndex = cropRegions.findIndex(
                           (r) => r.id === area.id,
                         )
                         const isSelected = selectedRowIndex === globalIndex
@@ -302,7 +304,7 @@ export default function RegionInfoPage() {
                         )
                       })}
                       {/* Page indicator if this is selected */}
-                      {selectedMasterImage?.id === correspondingImage.id && (
+                      {selectedProjectPage?.id === correspondingPage.id && (
                         <div className="absolute top-2 left-2 rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white">
                           編集中
                         </div>
@@ -323,21 +325,21 @@ export default function RegionInfoPage() {
                 領域情報テーブル（全ページ統一順序）
               </h3>
               <p className="text-muted-foreground text-sm">
-                全ページ {layoutRegions.length}個の領域を統一順序で表示
-                {selectedMasterImage && (
+                全ページ {cropRegions.length}個の領域を統一順序で表示
+                {selectedProjectPage && (
                   <span className="ml-2 text-blue-600">
-                    ※ ページ {selectedMasterImage.pageNumber} を選択中
+                    ※ ページ {selectedProjectPage.pageNumber} を選択中
                   </span>
                 )}
               </p>
             </div>
             <RegionDetailsTable
-              regions={layoutRegions}
+              regions={cropRegions}
               setRegions={handleRegionsChange}
               disabled={isSaving}
               selectedRowIndex={selectedRowIndex}
               setSelectedRowIndex={setSelectedRowIndex}
-              selectedMasterImageId={selectedMasterImage?.id}
+              selectedMasterImageId={selectedProjectPage?.id}
             />
           </div>
         </div>

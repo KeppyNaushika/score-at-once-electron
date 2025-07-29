@@ -36,10 +36,10 @@ export interface UseImageCanvasInteractionProps {
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
-  masterImageId: string | null
+  projectPageId: string | null
   areas: any[]
   onAddAreaByDrag: (
-    type: import("@/types/common.types").LayoutRegionAreaType,
+    type: import("@/types/common.types").CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   onUpdateArea: (

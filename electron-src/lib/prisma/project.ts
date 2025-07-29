@@ -5,16 +5,34 @@ import prisma from "./client"
 export const getProjects = async () => {
   return prisma.project.findMany({
     include: {
-      user: true, // MODIFIED: was createdBy
-      projectSessions: true, // MODIFIED: was sessions
-      masterImages: true,
-      questionGroups: {
+      userProjects: {
         include: {
-          items: true,
+          user: true,
         },
       },
-      layoutRegions: true,
-      projectStudents: true, // ProjectStudent情報を含める
+      projectPages: {
+        include: {
+          pageImages: {
+            include: {
+              student: true,
+            },
+          },
+          cropRegions: true,
+        },
+        orderBy: {
+          pageNumber: "asc",
+        },
+      },
+      projectSubtotalGroups: {
+        include: {
+          subtotalGroup: {
+            include: {
+              subtotals: true,
+            },
+          },
+        },
+      },
+      projectStudents: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -32,35 +50,55 @@ export const getProjectById = async (id: string) => {
   return prisma.project.findUnique({
     where: { id },
     include: {
-      user: true, // MODIFIED: was createdBy
-      projectSessions: {
-        // MODIFIED: was sessions
+      userProjects: {
         include: {
           user: true,
         },
       },
-      masterImages: {
+      projectPages: {
+        include: {
+          pageImages: {
+            include: {
+              student: true,
+            },
+          },
+          cropRegions: {
+            include: {
+              questionScores: {
+                include: {
+                  student: true,
+                  scoredByUser: true,
+                },
+              },
+            },
+            orderBy: {
+              orderIndex: "asc",
+            },
+          },
+        },
         orderBy: {
           pageNumber: "asc",
         },
       },
-      layoutRegions: {
-        orderBy: {
-          id: "asc",
-        },
-      },
-      questionGroups: {
+      projectSubtotalGroups: {
         include: {
-          items: true,
-        },
-        orderBy: {
-          createdAt: "asc",
+          subtotalGroup: {
+            include: {
+              subtotals: {
+                orderBy: {
+                  order: "asc",
+                },
+              },
+            },
+          },
         },
       },
-      answerSheets: {
+      projectStudents: {
         include: {
           student: true,
-          questionScores: true, // MODIFIED: was scores
+        },
+        orderBy: {
+          customOrder: "asc",
         },
       },
     },
@@ -74,27 +112,40 @@ export type ProjectWithDetailsPayload = PrismaTypes.PromiseReturnType<
 
 // Project作成
 export const createProject = async (
-  data: Omit<PrismaTypes.ProjectCreateInput, "user">, // MODIFIED: was createdBy
+  data: Omit<PrismaTypes.ProjectCreateInput, "userProjects">,
   userId: string,
 ) => {
   return prisma.project.create({
     data: {
       ...data,
-      user: {
-        // MODIFIED: was createdBy
-        connect: { id: userId },
+      userProjects: {
+        create: {
+          userId: userId,
+          role: "CREATOR",
+        },
       },
     },
     include: {
-      user: true,
-      projectSessions: true,
-      masterImages: true,
-      questionGroups: {
+      userProjects: {
         include: {
-          items: true,
+          user: true,
         },
       },
-      layoutRegions: true,
+      projectPages: {
+        include: {
+          pageImages: true,
+          cropRegions: true,
+        },
+      },
+      projectSubtotalGroups: {
+        include: {
+          subtotalGroup: {
+            include: {
+              subtotals: true,
+            },
+          },
+        },
+      },
     },
   })
 }
@@ -117,34 +168,3 @@ export const deleteProject = async (id: string) => {
   })
 }
 
-// --- ProjectSession (コラボレーター管理) ---
-// ProjectSessionの作成 (プロジェクトにメンバーを追加)
-export const addMemberToProject = async (projectId: string, userId: string) => {
-  return prisma.projectSession.create({
-    data: {
-      project: {
-        connect: { id: projectId },
-      },
-      user: {
-        connect: { id: userId },
-      },
-    },
-  })
-}
-
-// ProjectSessionの削除 (プロジェクトからメンバーを削除)
-export const removeMemberFromProject = async (projectSessionId: string) => {
-  return prisma.projectSession.delete({
-    where: { id: projectSessionId },
-  })
-}
-
-// 特定のプロジェクトの全メンバー(ProjectSession)を取得
-export const getProjectMembers = async (projectId: string) => {
-  return prisma.projectSession.findMany({
-    where: { projectId },
-    include: {
-      user: true,
-    },
-  })
-}

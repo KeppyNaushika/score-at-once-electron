@@ -11,11 +11,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Calculator, BarChart3 } from "lucide-react"
-import { QuestionGroupWithItems } from "@/types/electron"
+import { SubtotalGroupWithItems } from "@/types/electron"
 
 interface SubtotalData {
-  [questionGroupId: string]: {
-    [questionGroupItemId: string]: {
+  [subtotalGroupId: string]: {
+    [subtotalId: string]: {
       questions: string[]
       totalPoints: number
     }
@@ -24,24 +24,24 @@ interface SubtotalData {
 
 interface SubtotalPreviewProps {
   subtotalData: SubtotalData
-  questionGroups: QuestionGroupWithItems[]
+  subtotalGroups: SubtotalGroupWithItems[]
 }
 
 export function SubtotalPreview({
   subtotalData,
-  questionGroups,
+  subtotalGroups,
 }: SubtotalPreviewProps) {
   // 各グループの合計点数を計算
   const getGroupTotalPoints = (groupId: string) => {
     const groupData = subtotalData[groupId] || {}
     return Object.values(groupData).reduce(
-      (sum, item) => sum + item.totalPoints,
+      (sum, subtotal) => sum + subtotal.totalPoints,
       0,
     )
   }
 
   // 全体の合計点数を計算
-  const totalPoints = questionGroups.reduce(
+  const totalPoints = subtotalGroups.reduce(
     (sum, group) => sum + getGroupTotalPoints(group.id),
     0,
   )
@@ -57,7 +57,7 @@ export function SubtotalPreview({
                 <p className="text-muted-foreground text-sm font-medium">
                   総グループ数
                 </p>
-                <p className="text-2xl font-bold">{questionGroups.length}</p>
+                <p className="text-2xl font-bold">{subtotalGroups.length}</p>
               </div>
               <BarChart3 className="text-muted-foreground h-8 w-8" />
             </div>
@@ -72,8 +72,8 @@ export function SubtotalPreview({
                   総項目数
                 </p>
                 <p className="text-2xl font-bold">
-                  {questionGroups.reduce(
-                    (sum, group) => sum + group.items.length,
+                  {subtotalGroups.reduce(
+                    (sum, group) => sum + group.subtotals.length,
                     0,
                   )}
                 </p>
@@ -107,14 +107,14 @@ export function SubtotalPreview({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {questionGroups.length === 0 ? (
+          {subtotalGroups.length === 0 ? (
             <div className="text-muted-foreground py-8 text-center">
               <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
               <p>小計点がありません</p>
             </div>
           ) : (
             <div className="space-y-6">
-              {questionGroups.map((group) => {
+              {subtotalGroups.map((group) => {
                 const groupData = subtotalData[group.id] || {}
                 const groupTotal = getGroupTotalPoints(group.id)
 
@@ -136,25 +136,25 @@ export function SubtotalPreview({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {group.items.map((item) => {
-                          const itemData = groupData[item.id] || {
+                        {group.subtotals.map((subtotal) => {
+                          const subtotalData = groupData[subtotal.id] || {
                             questions: [],
                             totalPoints: 0,
                           }
 
                           return (
-                            <TableRow key={item.id}>
+                            <TableRow key={subtotal.id}>
                               <TableCell className="font-medium">
-                                {item.name}
+                                {subtotal.name}
                               </TableCell>
                               <TableCell>
-                                {itemData.questions.length === 0 ? (
+                                {subtotalData.questions.length === 0 ? (
                                   <span className="text-muted-foreground">
                                     未設定
                                   </span>
                                 ) : (
                                   <div className="flex flex-wrap gap-1">
-                                    {itemData.questions.map(
+                                    {subtotalData.questions.map(
                                       (question, index) => (
                                         <Badge
                                           key={index}
@@ -169,7 +169,7 @@ export function SubtotalPreview({
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {itemData.totalPoints}点
+                                {subtotalData.totalPoints}点
                               </TableCell>
                             </TableRow>
                           )

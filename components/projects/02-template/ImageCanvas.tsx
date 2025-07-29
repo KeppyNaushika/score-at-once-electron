@@ -19,13 +19,13 @@ import { ZoomControls } from "@/components/projects/02-template/components/zoom-
 import { useImageCanvasInteraction } from "@/components/projects/02-template/hooks/useImageCanvasInteraction"
 import { useZoomControls } from "@/components/projects/02-template/hooks/use-zoom-controls"
 import { useKeyboardShortcuts } from "@/components/projects/02-template/hooks/use-keyboard-shortcuts"
-import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
+import { CropRegionArea, LayoutRegionAreaType } from "@/types/common.types"
 import { useMemo } from "react"
 
 type ImageCanvasProps = {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
-  areas: LayoutRegionArea[]
+  areas: CropRegionArea[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   onAddAreaByDrag: (
@@ -38,7 +38,7 @@ type ImageCanvasProps = {
   ) => void
   onDeleteArea: (index: number) => void
   disabled: boolean
-  masterImageId: string | null
+  projectPageId: string | null
 }
 
 const ImageCanvas = ({
@@ -51,7 +51,7 @@ const ImageCanvas = ({
   onUpdateArea,
   onDeleteArea,
   disabled,
-  masterImageId,
+  projectPageId,
 }: ImageCanvasProps) => {
   // Get zoom controls first
   const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } = useZoomControls()
@@ -67,7 +67,7 @@ const ImageCanvas = ({
     disabled,
     backgroundImageUrl,
     imageDimensions,
-    masterImageId,
+    projectPageId,
     areas,
     onAddAreaByDrag,
     onUpdateArea,

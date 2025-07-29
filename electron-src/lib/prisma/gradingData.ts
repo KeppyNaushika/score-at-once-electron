@@ -4,7 +4,6 @@ export interface GradingDataInfo {
   hasData: boolean
   answerSheetCount: number
   questionScoreCount: number
-  scoreRecordCount: number
   totalGradingItems: number
 }
 
@@ -17,40 +16,36 @@ export const checkGradingDataForStudent = async (
 ): Promise<GradingDataInfo> => {
   try {
     // 答案シート数をカウント
-    const answerSheetCount = await prisma.answerSheet.count({
+    const answerSheetCount = await prisma.pageImage.count({
       where: {
-        projectId,
+        imageType: "ANSWER",
         studentId,
+        projectPage: {
+          projectId,
+        },
       },
     })
 
     // 設問別採点結果数をカウント
     const questionScoreCount = await prisma.questionScore.count({
       where: {
-        answerSheet: {
-          projectId,
-          studentId,
+        studentId,
+        cropRegion: {
+          projectPage: {
+            projectId,
+          },
         },
       },
     })
 
-    // 最終成績記録数をカウント
-    const scoreRecordCount = await prisma.scoreRecord.count({
-      where: {
-        projectId,
-        studentId,
-      },
-    })
 
-    const totalGradingItems =
-      answerSheetCount + questionScoreCount + scoreRecordCount
+    const totalGradingItems = answerSheetCount + questionScoreCount
     const hasData = totalGradingItems > 0
 
     return {
       hasData,
       answerSheetCount,
       questionScoreCount,
-      scoreRecordCount,
       totalGradingItems,
     }
   } catch (error) {
@@ -106,28 +101,26 @@ export const deleteAllGradingDataForStudent = async (
       // 1. 設問別採点結果を削除
       await tx.questionScore.deleteMany({
         where: {
-          answerSheet: {
-            projectId,
-            studentId,
+          studentId,
+          cropRegion: {
+            projectPage: {
+              projectId,
+            },
           },
         },
       })
 
       // 2. 答案シートを削除
-      await tx.answerSheet.deleteMany({
+      await tx.pageImage.deleteMany({
         where: {
-          projectId,
+          imageType: "ANSWER",
           studentId,
+          projectPage: {
+            projectId,
+          },
         },
       })
 
-      // 3. 最終成績記録を削除
-      await tx.scoreRecord.deleteMany({
-        where: {
-          projectId,
-          studentId,
-        },
-      })
     })
   } catch (error) {
     console.error("Failed to delete grading data for student:", error)

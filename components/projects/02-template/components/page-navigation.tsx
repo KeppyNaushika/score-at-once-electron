@@ -9,7 +9,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { MasterImage } from "@prisma/client"
+type MasterImage = {
+  id: string
+  projectId: string
+  imagePath: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
 
 interface PageNavigationProps {
   /** マスター画像の配列 */

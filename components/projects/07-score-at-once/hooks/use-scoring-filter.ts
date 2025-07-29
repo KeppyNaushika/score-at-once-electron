@@ -8,7 +8,7 @@ import type {
 } from "../types"
 
 interface FilterSettings {
-  ungraded: boolean
+  unscored: boolean
   correct: boolean
   incorrect: boolean
   partial: boolean
@@ -37,7 +37,7 @@ export function useScoringFilter({
 }: UseScoringFilterProps) {
   // シンプルなフィルタ設計
   const [filterSettings, setFilterSettings] = useState<FilterSettings>({
-    ungraded: true,
+    unscored: true,
     correct: false,
     incorrect: false,
     partial: false,
@@ -53,12 +53,12 @@ export function useScoringFilter({
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
     (answerSheetId: string, questionId?: string): ScoringStatus => {
-      if (!questionId) return "ungraded"
+      if (!questionId) return "unscored"
 
       const key = `${answerSheetId}-${questionId}`
       const scoreData = scoringData[key]
 
-      if (!scoreData) return "ungraded"
+      if (!scoreData) return "unscored"
       return scoreData.status
     },
     [scoringData],
@@ -75,11 +75,11 @@ export function useScoringFilter({
         return
       }
 
-      // 事前にmasterImageを取得（ループ内での重複検索を避ける）
-      const masterImage = project?.masterImages?.find(
-        (img: any) => img.id === currentQuestion.masterImageId,
+      // 事前にprojectPageを取得（ループ内での重複検索を避ける）
+      const projectPage = project?.projectPages?.find(
+        (page: any) => page.id === currentQuestion.projectPageId,
       )
-      const targetPageNumber = masterImage?.pageNumber || 1
+      const targetPageNumber = projectPage?.pageNumber || 1
 
       // 最適化: ページフィルタリングを先に実行
       for (const sheet of answerSheets) {
@@ -87,7 +87,7 @@ export function useScoringFilter({
 
         const key = `${sheet.id}-${currentQuestion.id}`
         const scoreData = scoringData[key]
-        const status = scoreData?.status || "ungraded"
+        const status = scoreData?.status || "unscored"
 
         // フィルター条件チェック（最近採点答案は強制表示）
         if (activeFilterSettings[status as keyof typeof activeFilterSettings] || recentlyScoredAnswers.has(sheet.id)) {
@@ -161,11 +161,11 @@ export function useScoringFilter({
   const getAllGridAnswerData = useMemo(() => {
     if (!currentQuestion) return []
 
-    // masterImageIdに基づいてmasterImageのpageNumberを取得
-    const masterImage = project?.masterImages?.find(
-      (img: any) => img.id === currentQuestion.masterImageId,
+    // projectPageIdに基づいてprojectPageのpageNumberを取得
+    const projectPage = project?.projectPages?.find(
+      (page: any) => page.id === currentQuestion.projectPageId,
     )
-    const targetPageNumber = masterImage?.pageNumber || 1
+    const targetPageNumber = projectPage?.pageNumber || 1
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
     const pageFilteredSheets = answerSheets.filter(
@@ -205,29 +205,29 @@ export function useScoringFilter({
         imageUrl: `appimg://${sheet.imagePath}`,
         currentScore: scoreData?.score ?? undefined,
         maxScore: currentQuestion.points,
-        status: (scoreData?.status || "ungraded") as ScoringStatus,
+        status: (scoreData?.status || "unscored") as ScoringStatus,
         isSelected: selectedAnswers.has(sheet.id),
         questionRegion: currentQuestion, // 採点領域情報を追加
       }
     })
-  }, [currentQuestion, project?.masterImages, answerSheets, scoringData, selectedAnswers])
+  }, [currentQuestion, project?.projectPages, answerSheets, scoringData, selectedAnswers])
 
   // 模範解答データを取得
   const getMasterAnswerData = useCallback(() => {
-    if (!currentQuestion || !project?.masterImages) return null
+    if (!currentQuestion || !project?.projectPages) return null
 
-    // masterImageIdに基づいてmasterImageを取得
-    const masterImage = project.masterImages.find(
-      (img: any) => img.id === currentQuestion.masterImageId,
+    // projectPageIdに基づいてprojectPageを取得
+    const projectPage = project.projectPages.find(
+      (page: any) => page.id === currentQuestion.projectPageId,
     )
 
-    if (!masterImage) return null
+    if (!projectPage) return null
 
     return {
       id: `master-${currentQuestion.id}`,
       studentId: "MASTER",
       studentName: "模範解答",
-      imageUrl: `appimg://${masterImage.path}`,
+      imageUrl: `appimg://${projectPage.pageImages?.find((img: any) => img.imageType === 'MASTER')?.imagePath || ''}`,
       currentScore: undefined,
       maxScore: currentQuestion.points,
       status: "master" as any, // 特別なステータス
@@ -235,7 +235,7 @@ export function useScoringFilter({
       questionRegion: currentQuestion, // 採点領域情報を追加
       isMaster: true, // 模範解答フラグ
     }
-  }, [currentQuestion, project])
+  }, [currentQuestion, project?.projectPages])
 
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
@@ -288,7 +288,7 @@ export function useScoringFilter({
   const handleToggleFilterByScoreKey = useCallback(
     (scoreKey: string) => {
       const scoreToFilterMap: { [key: string]: keyof typeof filterSettings } = {
-        [DEFAULT_SHORTCUTS.ungraded]: "ungraded",
+        [DEFAULT_SHORTCUTS.unscored]: "unscored",
         [DEFAULT_SHORTCUTS.correct]: "correct",
         [DEFAULT_SHORTCUTS.incorrect]: "incorrect",
         [DEFAULT_SHORTCUTS.partial]: "partial",

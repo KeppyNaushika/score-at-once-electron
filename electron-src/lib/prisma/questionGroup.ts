@@ -1,14 +1,14 @@
-import type { Prisma, QuestionGroup } from "@prisma/client"
+import type { Prisma, SubtotalGroup } from "@prisma/client"
 import prisma from "./client"
 
-// QuestionGroup を作成
+// QuestionGroup を作成 (SubtotalGroup として実装)
 export const createQuestionGroup = async (
-  data: Prisma.QuestionGroupUncheckedCreateInput, // projectId を直接含める
+  data: Prisma.SubtotalGroupUncheckedCreateInput,
 ) => {
-  return prisma.questionGroup.create({
+  return prisma.subtotalGroup.create({
     data,
     include: {
-      items: true, // 作成後にアイテムも返す
+      subtotals: true, // 作成後にsubtotalsも返す
     },
   })
 }
@@ -16,66 +16,107 @@ export const createQuestionGroup = async (
 // QuestionGroup を更新
 export const updateQuestionGroup = async (
   id: string,
-  data: Prisma.QuestionGroupUpdateInput,
+  data: Prisma.SubtotalGroupUpdateInput,
 ) => {
-  return prisma.questionGroup.update({
+  return prisma.subtotalGroup.update({
     where: { id },
     data,
     include: {
-      items: true,
+      subtotals: true,
     },
   })
 }
 
 // QuestionGroup を削除
 export const deleteQuestionGroup = async (id: string) => {
-  // 関連する QuestionGroupItem, SubtotalDefinition, QuestionSubtotalAssignment も削除されるか確認
+  // 関連する Subtotal, CropSubtotal も削除されるか確認
   // (onDelete: Cascade が設定されていれば自動)
-  return prisma.questionGroup.delete({
+  return prisma.subtotalGroup.delete({
     where: { id },
   })
 }
 
 // プロジェクトIDで QuestionGroup を取得
 export const getQuestionGroupsByProjectId = async (projectId: string) => {
-  return prisma.questionGroup.findMany({
+  // ProjectSubtotalGroup経由でSubtotalGroupを取得
+  const projectSubtotalGroups = await prisma.projectSubtotalGroup.findMany({
     where: { projectId },
     include: {
-      items: {
-        orderBy: {
-          // DnD順序に従って表示
-          order: "asc",
+      subtotalGroup: {
+        include: {
+          subtotals: {
+            orderBy: {
+              order: "asc",
+            },
+          },
         },
       },
-      project: true,
     },
     orderBy: {
       createdAt: "asc",
     },
   })
+
+  // SubtotalGroupのリストを返す（互換性のため）
+  return projectSubtotalGroups.map(psg => ({
+    ...psg.subtotalGroup,
+    items: psg.subtotalGroup.subtotals, // 互換性のためitemsという名前でsubtotalsを公開
+    projectId, // 互換性のためprojectIdを追加
+  }))
 }
 
 // IDで QuestionGroup を取得
 export const getQuestionGroupById = async (id: string) => {
-  return prisma.questionGroup.findUnique({
+  const subtotalGroup = await prisma.subtotalGroup.findUnique({
     where: { id },
     include: {
-      items: {
+      subtotals: {
         orderBy: {
-          // DnD順序に従って表示
           order: "asc",
         },
       },
-      project: true,
+      projectSubtotalGroups: {
+        include: {
+          project: true,
+        },
+      },
     },
   })
+
+  if (!subtotalGroup) {
+    return null
+  }
+
+  // 互換性のためitems, projectを含む形式で返す
+  return {
+    ...subtotalGroup,
+    items: subtotalGroup.subtotals,
+    project: subtotalGroup.projectSubtotalGroups[0]?.project || null,
+  }
 }
 
-export type QuestionGroupWithItems = Prisma.QuestionGroupGetPayload<{
-  include: {
-    items: true
-    project: true
-  }
-}>
+export type QuestionGroupWithItems = {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+  items: Array<{
+    id: string
+    name: string
+    maxScore: number
+    order: number
+    subtotalGroupId: string
+    createdAt: Date
+    updatedAt: Date
+  }>
+  project?: {
+    id: string
+    name: string
+    createdAt: Date
+    updatedAt: Date
+    tag?: string | null
+  } | null
+  projectId?: string
+}
 
-export type QuestionGroupPayload = QuestionGroup
+export type QuestionGroupPayload = SubtotalGroup

@@ -44,7 +44,7 @@ const MasterImageViewer = React.memo(
           const urlPromises = masterImages.map(async (image) => {
             try {
               const url = await window.electronAPI.resolveFileProtocolPath(
-                image.path,
+                image.imagePath,
               )
               return { id: image.id, url, success: true }
             } catch (error) {
@@ -119,10 +119,10 @@ const MasterImageViewer = React.memo(
                           alt={`ページ ${image.pageNumber}`}
                           className="h-full w-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.alt = `画像読込エラー: ${image.path}`
+                            e.currentTarget.alt = `画像読込エラー: ${image.imagePath}`
                             console.error(
                               "Failed to load master image:",
-                              image.path,
+                              image.imagePath,
                               "using URL:",
                               imageUrl,
                             )

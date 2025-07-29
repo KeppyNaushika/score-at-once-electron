@@ -2,19 +2,19 @@
 
 import ImageCanvas from "@/components/projects/02-template/ImageCanvas"
 import LayoutRegionList from "@/components/projects/02-template/LayoutRegionList"
-import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
+import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
 import { useState } from "react"
 import { toast } from "sonner"
 
 type LayoutRegionEditorProps = {
-  areas: LayoutRegionArea[]
-  setAreas: React.Dispatch<React.SetStateAction<LayoutRegionArea[]>>
-  onCreateRegion?: (type: LayoutRegionAreaType, coords: { x: number; y: number; width: number; height: number }) => Promise<void>
+  areas: CropRegionArea[]
+  setAreas: React.Dispatch<React.SetStateAction<CropRegionArea[]>>
+  onCreateRegion?: (type: CropRegionAreaType, coords: { x: number; y: number; width: number; height: number }) => Promise<void>
   onUpdateRegion?: (index: number, coords: { x: number; y: number; width: number; height: number }) => Promise<void>
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
-  masterImageId: string | null
+  projectPageId: string | null
 }
 
 const LayoutRegionEditor = ({
@@ -25,7 +25,7 @@ const LayoutRegionEditor = ({
   disabled,
   backgroundImageUrl,
   imageDimensions,
-  masterImageId,
+  projectPageId,
 }: LayoutRegionEditorProps) => {
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null,
@@ -67,10 +67,10 @@ const LayoutRegionEditor = ({
   }
 
   const addArea = async (
-    type: LayoutRegionAreaType,
+    type: CropRegionAreaType,
     customCoords?: { x: number; y: number; width: number; height: number },
   ) => {
-    if (!masterImageId) {
+    if (!projectPageId) {
       toast.error("基準画像が選択されていません。エリアを追加できません。")
       return
     }
@@ -92,7 +92,7 @@ const LayoutRegionEditor = ({
         ...coords,
         points: null,
         label: "",
-        masterImageId: masterImageId,
+        projectPageId: projectPageId,
       }
 
       let newAreaSpecifics = {}
@@ -134,7 +134,7 @@ const LayoutRegionEditor = ({
           newAreaSpecifics = { label: "新規エリア", type: "OTHER" }
       }
 
-      const newArea = { ...newAreaBase, ...newAreaSpecifics } as LayoutRegionArea
+      const newArea = { ...newAreaBase, ...newAreaSpecifics } as CropRegionArea
 
       const newAreasArray = [...areas, newArea]
 
@@ -157,7 +157,7 @@ const LayoutRegionEditor = ({
           onUpdateArea={handleUpdateArea}
           onDeleteArea={handleDeleteArea}
           disabled={disabled}
-          masterImageId={masterImageId}
+          projectPageId={projectPageId}
         />
       </div>
 

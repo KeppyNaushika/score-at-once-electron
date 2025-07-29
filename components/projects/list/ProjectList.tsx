@@ -37,8 +37,8 @@ const File = () => {
   }
 
   const getProjectStatus = (project: ProjectWithDetails) => {
-    const hasImages = project.masterImages && project.masterImages.length > 0
-    const hasLayout = project.layoutRegions && project.layoutRegions.length > 0
+    const hasImages = project.projectPages && project.projectPages.length > 0
+    const hasLayout = project.cropRegions && project.cropRegions.length > 0
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
     const hasStudents =
       project.projectStudents && project.projectStudents.length > 0
@@ -83,7 +83,7 @@ const File = () => {
     // 採点が完了しているかチェック
     // QUESTION_ANSWER領域数 × 答案数 = 全採点すべき数
     const questionAnswerCount =
-      project.layoutRegions?.filter(
+      project.cropRegions?.filter(
         (region) => region.type === "QUESTION_ANSWER",
       ).length || 0
 
@@ -94,7 +94,7 @@ const File = () => {
     const actualScoringCount =
       project.answerSheets?.reduce((total, sheet) => {
         const gradedScores =
-          sheet.questionScores?.filter((score) => score.status !== "unscored")
+          sheet.questionScores?.filter((score: any) => score.status !== "unscored")
             .length || 0
         return total + gradedScores
       }, 0) || 0

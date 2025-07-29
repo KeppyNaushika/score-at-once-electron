@@ -1,0 +1,298 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String                @id @default(uuid())
+  username           String                @unique
+  name               String
+  role               String                @default("teacher")
+  passcode           String?
+  passcodeType       String?               @default("none")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  createdProjects    Project[]             @relation("UserProjects")
+  questionScores     QuestionScore[]
+  userProjects       UserProject[]         // Many-to-many relation
+}
+
+model Class {
+  id            String                   @id @default(uuid())
+  name          String                   @unique
+  classCode     String?
+  grade         Int?
+  description   String?
+  isVisible     Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  memberships   StudentClassMembership[]
+
+  @@map("classes")
+}
+
+model Student {
+  id              String                   @id @default(uuid())
+  studentId       String                   @unique
+  lastName        String
+  firstName       String
+  lastNameKana    String
+  firstNameKana   String
+  enrollmentYear  Int?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  answerSheets    AnswerSheet[]
+  projectStudents ProjectStudent[]
+  memberships     StudentClassMembership[]
+}
+
+model StudentClassMembership {
+  id               String    @id @default(uuid())
+  studentId        String
+  classId          String
+  attendanceNumber Int?
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, classId, startDate])
+  @@index([studentId])
+  @@index([classId])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model MasterImage {
+  id           String        @id @default(uuid())
+  projectId    String
+  imagePath    String
+  pageNumber   Int
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  cropRegions  CropRegion[]  // Renamed from layoutRegions
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, pageNumber])
+  @@index([projectId])
+}
+
+model Project {
+  id                    String                 @id @default(uuid())
+  examName              String
+  examDate              DateTime?
+  subject               String?
+  description           String?
+  userId                String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  answerSheets          AnswerSheet[]
+  cropRegions           CropRegion[]           // Renamed from layoutRegions
+  masterImages          MasterImage[]
+  user                  User                   @relation("UserProjects", fields: [userId], references: [id])
+  projectStudents       ProjectStudent[]
+  subtotalGroups        SubtotalGroup[]        // Renamed from questionGroups
+  userProjects          UserProject[]          // Many-to-many relation
+  projectSubtotalGroups ProjectSubtotalGroup[] // Many-to-many relation
+
+  @@index([userId])
+}
+
+model ProjectStudent {
+  id          String   @id @default(uuid())
+  projectId   String
+  studentId   String
+  status      String   @default("PARTICIPATING")
+  customOrder Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+  @@index([projectId])
+  @@index([studentId])
+  @@index([projectId, customOrder])
+}
+
+// Renamed from LayoutRegion to CropRegion
+model CropRegion {
+  id             String          @id @default(uuid())
+  projectId      String
+  masterImageId  String
+  label          String
+  type           String
+  x              Float
+  y              Float
+  width          Float
+  height         Float
+  points         Int?
+  orderIndex     Int?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  masterImage    MasterImage     @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questionScores QuestionScore[]
+  cropSubtotals  CropSubtotal[]  // Unified relation
+
+  @@index([projectId])
+  @@index([masterImageId])
+}
+
+// Renamed from QuestionGroup to SubtotalGroup
+model SubtotalGroup {
+  id                    String                 @id @default(uuid())
+  name                  String
+  projectId             String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  project               Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subtotals             Subtotal[]             // Renamed from items
+  projectSubtotalGroups ProjectSubtotalGroup[] // Many-to-many relation
+  subjectSubtotalGroups SubjectSubtotalGroup[] // Many-to-many relation
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+// Renamed from QuestionGroupItem to Subtotal
+model Subtotal {
+  id              String         @id @default(uuid())
+  name            String
+  subtotalGroupId String         // Renamed from questionGroupId
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
+  cropSubtotals   CropSubtotal[] // Unified relation
+
+  @@unique([subtotalGroupId, name])
+  @@index([subtotalGroupId])
+  @@index([subtotalGroupId, order])
+}
+
+// Unified table from SubtotalDefinition and QuestionSubtotalAssignment
+model CropSubtotal {
+  id             String        @id @default(uuid())
+  cropRegionId   String        // Renamed from layoutRegionId/questionLayoutRegionId
+  subtotalId     String        // Renamed from questionGroupItemId
+  assignmentType String        // 'SUBTOTAL_DEFINITION' or 'QUESTION_ASSIGNMENT'
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  subtotal       Subtotal      @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
+  cropRegion     CropRegion    @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+
+  @@unique([cropRegionId, subtotalId, assignmentType])
+  @@index([cropRegionId])
+  @@index([subtotalId])
+}
+
+// New: Many-to-many User-Project relation
+model UserProject {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      String   @default("GRADER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId])
+  @@index([projectId])
+}
+
+// New: Subject table
+model Subject {
+  id                    String                 @id @default(uuid())
+  name                  String                 @unique
+  description           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  subjectSubtotalGroups SubjectSubtotalGroup[]
+}
+
+// New: Many-to-many Project-SubtotalGroup relation
+model ProjectSubtotalGroup {
+  id              String        @id @default(uuid())
+  projectId       String
+  subtotalGroupId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, subtotalGroupId])
+  @@index([projectId])
+  @@index([subtotalGroupId])
+}
+
+// New: Many-to-many Subject-SubtotalGroup relation
+model SubjectSubtotalGroup {
+  id              String        @id @default(uuid())
+  subjectId       String
+  subtotalGroupId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  subject         Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, subtotalGroupId])
+  @@index([subjectId])
+  @@index([subtotalGroupId])
+}
+
+model AnswerSheet {
+  id                 String          @id @default(uuid())
+  projectId          String
+  studentId          String?
+  pageNumber         Int
+  originalImagePath  String
+  processedImagePath String?
+  scoredPdfPath      String?
+  isScored           Boolean         @default(false)
+  totalScore         Float?
+  isAbsent           Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  version            Int             @default(1)
+  student            Student?        @relation(fields: [studentId], references: [id])
+  project            Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questionScores     QuestionScore[]
+
+  @@unique([projectId, studentId, pageNumber])
+  @@index([projectId])
+  @@index([studentId])
+  @@index([projectId, pageNumber])
+}
+
+model QuestionScore {
+  id             String      @id @default(uuid())
+  answerSheetId  String
+  cropRegionId   String      // Renamed from layoutRegionId
+  score          Float?
+  isCorrect      Boolean?
+  partialScore   Decimal?
+  status         String      @default("unscored")
+  scoredByUserId String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  version        Int         @default(1)
+  answerSheet    AnswerSheet @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
+  cropRegion     CropRegion  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  scoredByUser   User?       @relation(fields: [scoredByUserId], references: [id])
+
+  @@unique([answerSheetId, cropRegionId, scoredByUserId], name: "unique_final_score")
+  @@index([answerSheetId])
+  @@index([cropRegionId])
+  @@index([scoredByUserId])
+}
