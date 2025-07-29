@@ -1,6 +1,6 @@
 import { toast } from "sonner"
 import { User } from "@prisma/client"
-import { LayoutRegionArea, LayoutRegionAreaType } from "@/types/common.types"
+import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
 
 /**
  * テンプレート保存処理
@@ -16,8 +16,8 @@ export async function saveTemplate(
   projectId: string,
   currentUser: User,
   selectedMasterImageId: string,
-  layoutRegions: LayoutRegionArea[]
-): Promise<{ success: boolean; savedRegions?: LayoutRegionArea[] }> {
+  layoutRegions: CropRegionArea[]
+): Promise<{ success: boolean; savedRegions?: CropRegionArea[] }> {
   if (!projectId || !currentUser || !selectedMasterImageId) {
     toast.error("プロジェクトID、ユーザー情報、基準画像は必須です。")
     return { success: false }
@@ -26,15 +26,15 @@ export async function saveTemplate(
   try {
     // 既存の領域を更新または新規作成
     const savePromises = layoutRegions.map(async (area) => {
-      if (!area.masterImageId) {
+      if (!area.projectPageId) {
         throw new Error(
-          `Layout region ${area.label || "Unnamed"} is missing masterImageId.`
+          `Crop region ${area.label || "Unnamed"} is missing projectPageId.`
         )
       }
 
       const regionData = {
         projectId,
-        masterImageId: area.masterImageId,
+        projectPageId: area.projectPageId,
         type: area.type,
         x: area.x,
         y: area.y,
@@ -46,28 +46,28 @@ export async function saveTemplate(
 
       if (area.id) {
         // 既存の領域を更新
-        return await window.electronAPI.updateLayoutRegion(area.id, regionData)
+        return await window.electronAPI.updateCropRegion(area.id, regionData)
       } else {
         // 新しい領域を作成
-        return await window.electronAPI.createLayoutRegion(regionData)
+        return await window.electronAPI.createCropRegion(regionData)
       }
     })
 
     const savedRegions = await Promise.all(savePromises)
 
     // 保存された領域データを整形
-    const formattedRegions: LayoutRegionArea[] = savedRegions
+    const formattedRegions: CropRegionArea[] = savedRegions
       .filter((region) => region !== null)
       .map((region) => ({
         id: region!.id,
-        type: region!.type as LayoutRegionAreaType,
+        type: region!.type as CropRegionAreaType,
         x: region!.x,
         y: region!.y,
         width: region!.width,
         height: region!.height,
         label: region!.label || "",
         points: region!.points,
-        masterImageId: region!.masterImageId || "",
+        projectPageId: region!.projectPageId || "",
       }))
 
     toast.success(`採点枠を保存しました。`)
@@ -89,7 +89,7 @@ export async function saveTemplate(
  */
 export async function detectLayoutRegions(
   selectedMasterImage: { path?: string } | null
-): Promise<{ success: boolean; detectedRegions?: LayoutRegionArea[] }> {
+): Promise<{ success: boolean; detectedRegions?: CropRegionArea[] }> {
   if (!selectedMasterImage || !selectedMasterImage.path) {
     toast.error(
       "模範解答画像が選択されていないか、パスが無効です。自動検出を実行できません。"
@@ -157,7 +157,7 @@ export function getAdjacentImages(
  * @param region - チェックする領域データ
  * @returns { isValid: boolean, errors: string[] }
  */
-export function validateRegionData(region: LayoutRegionArea): { 
+export function validateRegionData(region: CropRegionArea): { 
   isValid: boolean; 
   errors: string[] 
 } {
@@ -172,8 +172,8 @@ export function validateRegionData(region: LayoutRegionArea): {
     errors.push("ラベルが設定されていません")
   }
   
-  if (!region.masterImageId) {
-    errors.push("マスター画像IDが設定されていません")
+  if (!region.projectPageId) {
+    errors.push("プロジェクトページIDが設定されていません")
   }
 
   // 座標の範囲チェック

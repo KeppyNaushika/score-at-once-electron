@@ -1,12 +1,16 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { Project, MasterImage, LayoutRegion, Prisma } from "@prisma/client"
+import { Project, PageImage, CropRegion, Prisma } from "@prisma/client"
 import { toast } from "sonner"
 
 export type ProjectWithDetails = Project & {
-  masterImages?: MasterImage[]
-  layoutRegions?: LayoutRegion[]
+  projectPages?: Array<{
+    id: string
+    pageNumber: number
+    pageImages: PageImage[]
+  }>
+  cropRegions?: CropRegion[]
 }
 
 export interface ProjectStatus {
@@ -24,8 +28,9 @@ export function useProject(projectId?: string) {
   const [error, setError] = useState<string | null>(null)
 
   const calculateProjectStatus = useCallback((project: ProjectWithDetails): ProjectStatus => {
-    const hasMasterImages = (project.masterImages?.length ?? 0) > 0
-    const hasLayoutRegions = (project.layoutRegions?.length ?? 0) > 0
+    const hasMasterImages = (project.projectPages?.some(page => 
+      page.pageImages.some(img => img.imageType === "MASTER")) ?? false)
+    const hasLayoutRegions = (project.cropRegions?.length ?? 0) > 0
     const hasAnswerSheets = false // TODO: Implement when answer sheets are added
     const isGradingComplete = false // TODO: Implement when grading is added
 

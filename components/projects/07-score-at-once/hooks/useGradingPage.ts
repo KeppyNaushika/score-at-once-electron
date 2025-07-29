@@ -148,7 +148,7 @@ export function useGradingPage() {
           y: region.y,
           width: region.width,
           height: region.height,
-          masterImageId: region.masterImageId || "", // masterImageIdを追加
+          projectPageId: region.projectPageId || "", // projectPageIdを追加
         }))
         setQuestionRegions(questionRegions)
       }

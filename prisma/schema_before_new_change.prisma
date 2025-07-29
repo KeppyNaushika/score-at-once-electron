@@ -1,0 +1,249 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String                @id @default(uuid())
+  username           String                @unique
+  name               String
+  role               String                @default("teacher")
+  passcode           String?
+  passcodeType       String?               @default("none")
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  createdProjects    Project[]             @relation("UserProjects")
+  questionScores     QuestionScore[]
+}
+
+model Class {
+  id            String                   @id @default(uuid())
+  name          String                   @unique
+  classCode     String?
+  grade         Int?
+  description   String?
+  isVisible     Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  memberships   StudentClassMembership[]
+
+  @@map("classes")
+}
+
+model Student {
+  id              String                   @id @default(uuid())
+  studentId       String                   @unique
+  lastName        String
+  firstName       String
+  lastNameKana    String
+  firstNameKana   String
+  enrollmentYear  Int?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  answerSheets    AnswerSheet[]
+  projectStudents ProjectStudent[]
+  memberships     StudentClassMembership[]
+}
+
+model StudentClassMembership {
+  id               String    @id @default(uuid())
+  studentId        String
+  classId          String
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  attendanceNumber Int?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([classId])
+  @@index([startDate, endDate])
+  @@index([classId, attendanceNumber])
+}
+
+model MasterImage {
+  id            String         @id @default(uuid())
+  projectId     String
+  path          String
+  pageNumber    Int
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  layoutRegions LayoutRegion[]
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, pageNumber])
+  @@index([projectId])
+}
+
+model Project {
+  id                 String              @id @default(uuid())
+  examName           String
+  examDate           DateTime?
+  subject            String?
+  description        String?
+  userId             String
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  answerSheets       AnswerSheet[]
+  layoutRegions      LayoutRegion[]
+  masterImages       MasterImage[]
+  user               User                @relation("UserProjects", fields: [userId], references: [id])
+  projectStudents    ProjectStudent[]
+  questionGroups     QuestionGroup[]
+
+  @@index([userId])
+}
+
+model ProjectStudent {
+  id          String   @id @default(uuid())
+  projectId   String
+  studentId   String
+  status      String   @default("PARTICIPATING")
+  customOrder Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+  @@index([projectId])
+  @@index([studentId])
+  @@index([projectId, customOrder])
+}
+
+
+model LayoutRegion {
+  id                          String                       @id @default(uuid())
+  projectId                   String
+  masterImageId               String
+  label                       String
+  type                        String
+  x                           Float
+  y                           Float
+  width                       Float
+  height                      Float
+  points                      Int?
+  orderIndex                  Int?
+  createdAt                   DateTime                     @default(now())
+  updatedAt                   DateTime                     @updatedAt
+  masterImage                 MasterImage                  @relation(fields: [masterImageId], references: [id], onDelete: Cascade)
+  project                     Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questionScores              QuestionScore[]
+  questionSubtotalAssignments QuestionSubtotalAssignment[]
+  subtotalDefinitions         SubtotalDefinition[]
+
+  @@index([projectId])
+  @@index([masterImageId])
+}
+
+model QuestionGroup {
+  id        String              @id @default(uuid())
+  name      String
+  projectId String
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  project   Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items     QuestionGroupItem[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+}
+
+model QuestionGroupItem {
+  id                  String                       @id @default(uuid())
+  name                String
+  questionGroupId     String
+  order               Int                          @default(0)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  questionGroup       QuestionGroup                @relation(fields: [questionGroupId], references: [id], onDelete: Cascade)
+  questionAssignments QuestionSubtotalAssignment[]
+  subtotalDefinitions SubtotalDefinition[]
+
+  @@unique([questionGroupId, name])
+  @@index([questionGroupId])
+  @@index([questionGroupId, order])
+}
+
+model SubtotalDefinition {
+  id                  String            @id @default(uuid())
+  layoutRegionId      String
+  questionGroupItemId String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  questionGroupItem   QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  layoutRegion        LayoutRegion      @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+
+  @@unique([layoutRegionId, questionGroupItemId])
+  @@index([layoutRegionId])
+  @@index([questionGroupItemId])
+}
+
+model QuestionSubtotalAssignment {
+  id                     String            @id @default(uuid())
+  questionLayoutRegionId String
+  questionGroupItemId    String
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  questionGroupItem      QuestionGroupItem @relation(fields: [questionGroupItemId], references: [id], onDelete: Cascade)
+  questionLayoutRegion   LayoutRegion      @relation(fields: [questionLayoutRegionId], references: [id], onDelete: Cascade)
+
+  @@unique([questionLayoutRegionId, questionGroupItemId])
+  @@index([questionLayoutRegionId])
+  @@index([questionGroupItemId])
+}
+
+model AnswerSheet {
+  id                 String                @id @default(uuid())
+  projectId          String
+  studentId          String?
+  pageNumber         Int
+  originalImagePath  String
+  processedImagePath String?
+  scoredPdfPath      String?
+  isScored           Boolean               @default(false)
+  totalScore         Float?
+  isAbsent           Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  version            Int                   @default(1)
+  student            Student?              @relation(fields: [studentId], references: [id])
+  project            Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questionScores     QuestionScore[]
+
+  @@unique([projectId, studentId, pageNumber])
+  @@index([projectId])
+}
+
+
+model QuestionScore {
+  id             String       @id @default(uuid())
+  answerSheetId  String
+  layoutRegionId String
+  partialScore   Decimal?
+  comment        String?
+  scoredByUserId String
+  status         String       @default("proposed")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  scoreVersion   Int          @default(1)
+  scoredByUser   User         @relation(fields: [scoredByUserId], references: [id])
+  layoutRegion   LayoutRegion @relation(fields: [layoutRegionId], references: [id], onDelete: Cascade)
+  answerSheet    AnswerSheet  @relation(fields: [answerSheetId], references: [id], onDelete: Cascade)
+
+  @@unique([answerSheetId, layoutRegionId, scoredByUserId])
+  @@index([answerSheetId, layoutRegionId, status])
+  @@index([layoutRegionId])
+}
+
+
+
+

@@ -7,16 +7,18 @@ import prisma from "./client"
 export const initializeScoringRecords = async (projectId: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
-      // プロジェクトの全ての答案を取得
-      const answerSheets = await tx.answerSheet.findMany({
+      // プロジェクトの全ての生徒を取得
+      const projectStudents = await tx.projectStudent.findMany({
         where: { projectId },
-        select: { id: true }
+        select: { studentId: true }
       })
 
       // プロジェクトの全ての採点領域を取得
-      const questionRegions = await tx.layoutRegion.findMany({
+      const questionRegions = await tx.cropRegion.findMany({
         where: { 
-          projectId,
+          projectPage: {
+            projectId
+          },
           type: "QUESTION_ANSWER"
         },
         select: { id: true }
@@ -30,27 +32,25 @@ export const initializeScoringRecords = async (projectId: string) => {
 
       const scoringRecords = []
 
-      // 全ての答案×採点領域の組み合わせを作成
-      for (const answerSheet of answerSheets) {
+      // 全ての生徒×採点領域の組み合わせを作成
+      for (const projectStudent of projectStudents) {
         for (const region of questionRegions) {
           // 既存レコードをチェック
           const existing = await tx.questionScore.findFirst({
             where: {
-              answerSheetId: answerSheet.id,
-              layoutRegionId: region.id,
+              studentId: projectStudent.studentId,
+              cropRegionId: region.id,
               scoredByUserId: defaultUser.id
             }
           })
 
           if (!existing) {
             scoringRecords.push({
-              answerSheetId: answerSheet.id,
-              layoutRegionId: region.id,
-              score: null,
+              studentId: projectStudent.studentId,
+              cropRegionId: region.id,
+              partialScore: null,
               status: "ungraded",
-              comment: "",
-              scoredByUserId: defaultUser.id,
-              scoreVersion: 1
+              scoredByUserId: defaultUser.id
             })
           }
         }

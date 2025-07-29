@@ -1,4 +1,4 @@
-import { MasterImage, Prisma } from "@prisma/client"
+import { ProjectPage, PageImage, Prisma } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
 import {
@@ -16,12 +16,20 @@ export const uploadMasterImages = async (
     buffer: ArrayBuffer
     path?: string
   }[],
-): Promise<MasterImage[]> => {
-  // This function assumes that the MasterImage model in schema.prisma
-  // is related to the Project model via a 'projectId' foreign key.
+): Promise<(PageImage & { projectPage: ProjectPage })[]> => {
+  // Check if project exists and get existing pages
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { masterImages: true }, // Assumes Project model has 'masterImages' relation
+    include: { 
+      projectPages: { 
+        include: { 
+          pageImages: { 
+            where: { imageType: "MASTER" } 
+          } 
+        },
+        orderBy: { pageNumber: "asc" }
+      } 
+    },
   })
 
   if (!project) {
@@ -29,14 +37,13 @@ export const uploadMasterImages = async (
   }
 
   const highestPageNumber =
-    project.masterImages?.reduce(
-      // Assumes project.masterImages exists
-      (max: number, img: { pageNumber: number }) =>
-        Math.max(max, img.pageNumber),
+    project.projectPages?.reduce(
+      (max: number, page: { pageNumber: number }) =>
+        Math.max(max, page.pageNumber),
       0,
     ) || 0
 
-  const uploadedImages: MasterImage[] = []
+  const uploadedImages: (PageImage & { projectPage: ProjectPage })[] = []
 
   const projectImageDir = getMasterImagesDirectory(projectId)
   await fs.mkdir(projectImageDir, { recursive: true })
@@ -44,25 +51,39 @@ export const uploadMasterImages = async (
   for (const [index, fileData] of filesData.entries()) {
     try {
       const originalFileName = fileData.name
-      const fileBuffer = Buffer.from(fileData.buffer) // ArrayBufferをBufferに変換
+      const fileBuffer = Buffer.from(fileData.buffer)
 
-      // ユニークなファイル名を生成 (タイムスタンプ + インデックス + 元のファイル名)
+      // Generate unique filename
       const uniqueFileName = `${Date.now()}-${index}-${originalFileName}`
       const destinationPath = path.join(projectImageDir, uniqueFileName)
       const relativePath = getRelativePathFromData(destinationPath)
 
-      // ファイルを保存
+      // Save file
       await fs.writeFile(destinationPath, fileBuffer)
 
-      const newImage = await prisma.masterImage.create({
+      const pageNumber = highestPageNumber + 1 + index
+
+      // Create ProjectPage first
+      const projectPage = await prisma.projectPage.create({
         data: {
-          // This assumes MasterImage model has a 'project' relation field
-          // and connects to Project via 'projectId'.
-          project: { connect: { id: projectId } },
-          path: relativePath,
-          pageNumber: highestPageNumber + 1 + index,
+          projectId: projectId,
+          pageNumber: pageNumber,
         },
       })
+
+      // Then create PageImage
+      const newImage = await prisma.pageImage.create({
+        data: {
+          projectPageId: projectPage.id,
+          imagePath: relativePath,
+          imageType: "MASTER",
+          studentId: null, // Master images don't have students
+        },
+        include: {
+          projectPage: true,
+        }
+      })
+
       uploadedImages.push(newImage)
     } catch (error) {
       console.error(`Failed to upload or save image ${fileData.name}:`, error)
@@ -73,16 +94,16 @@ export const uploadMasterImages = async (
 
 export const deleteMasterImage = async (
   imageId: string,
-): Promise<MasterImage | void> => {
-  // This function assumes MasterImage can be deleted by its own 'id'.
-  // If cascading delete from Project is set up in schema.prisma,
-  // deleting a Project might automatically delete its MasterImages.
+): Promise<PageImage | void> => {
   try {
-    const image = await prisma.masterImage.findUnique({
+    const image = await prisma.pageImage.findUnique({
       where: { id: imageId },
+      include: { projectPage: true }
     })
-    if (image) {
-      const filePath = getAbsolutePathFromData(image.path)
+    
+    if (image && image.imageType === "MASTER") {
+      const filePath = getAbsolutePathFromData(image.imagePath)
+      
       try {
         await fs.unlink(filePath)
       } catch (fileError: any) {
@@ -90,7 +111,25 @@ export const deleteMasterImage = async (
           console.warn(`Failed to delete image file ${filePath}:`, fileError)
         }
       }
-      return await prisma.masterImage.delete({ where: { id: imageId } })
+
+      // Delete the PageImage
+      const deletedImage = await prisma.pageImage.delete({ 
+        where: { id: imageId } 
+      })
+
+      // Check if this was the only image for this ProjectPage
+      const remainingImages = await prisma.pageImage.count({
+        where: { projectPageId: image.projectPageId }
+      })
+
+      // If no images remain, delete the ProjectPage
+      if (remainingImages === 0) {
+        await prisma.projectPage.delete({
+          where: { id: image.projectPageId }
+        })
+      }
+
+      return deletedImage
     }
   } catch (error) {
     console.error(`Failed to delete master image ${imageId}:`, error)
@@ -106,52 +145,62 @@ export const updateMasterImagesOrder = async (
   }
 
   try {
-    // 更新対象の画像IDリストを取得
-    const imageIdsToUpdate = imageOrders.map((order) => order.id)
-
-    // 更新対象の画像が属するプロジェクトIDを取得 (最初の画像から取得すると仮定、全画像が同じプロジェクトであるべき)
-    // より堅牢にするには、全画像が同じプロジェクトIDを持つことを検証する
-    const firstImage = await prisma.masterImage.findUnique({
-      where: { id: imageIdsToUpdate[0] },
-      select: { projectId: true },
+    // Get the ProjectPages that correspond to these images
+    const images = await prisma.pageImage.findMany({
+      where: { 
+        id: { in: imageOrders.map(order => order.id) },
+        imageType: "MASTER"
+      },
+      include: { projectPage: true }
     })
 
-    if (!firstImage) {
-      throw new Error("Could not find project for images being reordered.")
+    if (images.length === 0) {
+      throw new Error("No master images found for reordering")
     }
-    const projectId = firstImage.projectId
 
-    // 現在のプロジェクト内の最大のページ番号を取得
-    const maxPageNumberInProject = await prisma.masterImage.aggregate({
+    const projectId = images[0].projectPage.projectId
+
+    // Get current max page number in project
+    const maxPageNumberInProject = await prisma.projectPage.aggregate({
       _max: { pageNumber: true },
       where: { projectId: projectId },
     })
-    const offset =
-      (maxPageNumberInProject._max.pageNumber || 0) + imageOrders.length + 100 // 十分大きなオフセット
+    const offset = (maxPageNumberInProject._max.pageNumber || 0) + imageOrders.length + 100
 
     await prisma.$transaction(async (tx) => {
-      // 1. 更新対象の画像のページ番号を一時的な重複しない値に変更
+      // Create a map of image ID to ProjectPage ID
+      const imageToPageMap = new Map()
+      images.forEach(image => {
+        imageToPageMap.set(image.id, image.projectPageId)
+      })
+
+      // 1. Update ProjectPages to temporary page numbers
       for (let i = 0; i < imageOrders.length; i++) {
-        const imageId = imageOrders[i].id // imageOrders はソートされている前提ではないので、IDで指定
-        await tx.masterImage.update({
-          where: { id: imageId },
-          data: { pageNumber: offset + i }, // 各画像にユニークな一時的ページ番号を割り当て
-        })
+        const imageId = imageOrders[i].id
+        const projectPageId = imageToPageMap.get(imageId)
+        if (projectPageId) {
+          await tx.projectPage.update({
+            where: { id: projectPageId },
+            data: { pageNumber: offset + i },
+          })
+        }
       }
 
-      // 2. 新しい順序でページ番号を再割り当て
+      // 2. Update to final page numbers
       for (const order of imageOrders) {
-        await tx.masterImage.update({
-          where: { id: order.id },
-          data: { pageNumber: order.pageNumber },
-        })
+        const projectPageId = imageToPageMap.get(order.id)
+        if (projectPageId) {
+          await tx.projectPage.update({
+            where: { id: projectPageId },
+            data: { pageNumber: order.pageNumber },
+          })
+        }
       }
     })
 
     return { count: imageOrders.length }
   } catch (error) {
     console.error("Failed to update master images order:", error)
-    // エラーログに詳細情報を追加
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       console.error("Prisma Error Code:", error.code)
       console.error("Prisma Error Meta:", error.meta)
@@ -161,66 +210,169 @@ export const updateMasterImagesOrder = async (
 }
 
 export const getMasterImagesByProjectId = async (projectId: string) => {
-  return prisma.masterImage.findMany({
-    where: { projectId }, // schema.prisma の MasterImage.projectId を参照
-    orderBy: {
-      pageNumber: "asc",
+  const projectPages = await prisma.projectPage.findMany({
+    where: { projectId },
+    include: {
+      pageImages: {
+        where: { imageType: "MASTER" }
+      }
     },
+    orderBy: { pageNumber: "asc" },
   })
+
+  // Flatten to return individual images with their page info
+  const masterImages = []
+  for (const page of projectPages) {
+    for (const image of page.pageImages) {
+      masterImages.push({
+        ...image,
+        pageNumber: page.pageNumber,
+        projectId: page.projectId,
+        // For compatibility with old API
+        path: image.imagePath,
+      })
+    }
+  }
+
+  return masterImages
 }
 
 export const createMasterImage = async (
-  // projectId, path, pageNumber を持つ想定
-  data: Prisma.MasterImageUncheckedCreateInput,
+  data: {
+    projectId: string
+    path: string
+    pageNumber: number
+  },
 ) => {
-  return prisma.masterImage.create({
-    data,
+  // Create ProjectPage first
+  const projectPage = await prisma.projectPage.create({
+    data: {
+      projectId: data.projectId,
+      pageNumber: data.pageNumber,
+    },
+  })
+
+  // Then create PageImage
+  return prisma.pageImage.create({
+    data: {
+      projectPageId: projectPage.id,
+      imagePath: data.path,
+      imageType: "MASTER",
+      studentId: null,
+    },
   })
 }
 
 export const createManyMasterImages = async (
-  // 各要素が projectId, path, pageNumber を持つ想定
-  data: Prisma.MasterImageCreateManyInput[],
+  data: {
+    projectId: string
+    path: string
+    pageNumber: number
+  }[],
 ) => {
-  return prisma.masterImage.createMany({
-    data,
-    // skipDuplicates は createMany の引数として有効な場合があるが、
-    // Prismaのバージョンや設定による。エラーが出る場合は削除も検討。
-    // skipDuplicates: true,
-  })
+  const createdImages = []
+  
+  for (const imageData of data) {
+    const result = await createMasterImage(imageData)
+    createdImages.push(result)
+  }
+  
+  return { count: createdImages.length }
 }
 
 export const updateMasterImage = async (
   id: string,
-  data: Prisma.MasterImageUpdateInput,
+  data: { path?: string; pageNumber?: number },
 ) => {
-  return prisma.masterImage.update({
+  const image = await prisma.pageImage.findUnique({
     where: { id },
-    data,
+    include: { projectPage: true }
+  })
+
+  if (!image || image.imageType !== "MASTER") {
+    throw new Error("Master image not found")
+  }
+
+  // Update PageImage if path is provided
+  if (data.path) {
+    await prisma.pageImage.update({
+      where: { id },
+      data: { imagePath: data.path }
+    })
+  }
+
+  // Update ProjectPage if pageNumber is provided
+  if (data.pageNumber) {
+    await prisma.projectPage.update({
+      where: { id: image.projectPageId },
+      data: { pageNumber: data.pageNumber }
+    })
+  }
+
+  // Return updated data
+  return prisma.pageImage.findUnique({
+    where: { id },
+    include: { projectPage: true }
   })
 }
 
 export const deleteMasterImagesByProjectId = async (projectId: string) => {
-  return prisma.masterImage.deleteMany({
-    where: { projectId }, // schema.prisma の MasterImage.projectId を参照
+  // Delete all master images for the project
+  const deletedImages = await prisma.pageImage.deleteMany({
+    where: { 
+      imageType: "MASTER",
+      projectPage: { projectId }
+    },
   })
+
+  // Delete ProjectPages that have no remaining images
+  const emptyPages = await prisma.projectPage.findMany({
+    where: { 
+      projectId,
+      pageImages: { none: {} }
+    }
+  })
+
+  if (emptyPages.length > 0) {
+    await prisma.projectPage.deleteMany({
+      where: { 
+        id: { in: emptyPages.map(page => page.id) }
+      }
+    })
+  }
+
+  return deletedImages
 }
 
-// 特定のプロジェクトの特定のページ番号のMasterImageを取得する関数 (例)
 export const getMasterImageByPage = async (
   projectId: string,
   pageNumber: number,
 ) => {
-  return prisma.masterImage.findUnique({
-    where: {
-      // schema.prisma で @@unique([projectId, pageNumber]) が定義されている想定
-      projectId_pageNumber: {
-        projectId,
-        pageNumber,
-      },
-    },
+  const projectPage = await prisma.projectPage.findFirst({
+    where: { projectId, pageNumber },
+    include: {
+      pageImages: {
+        where: { imageType: "MASTER" },
+        take: 1
+      }
+    }
   })
+
+  if (projectPage?.pageImages?.[0]) {
+    return {
+      ...projectPage.pageImages[0],
+      pageNumber: projectPage.pageNumber,
+      projectId: projectPage.projectId,
+      path: projectPage.pageImages[0].imagePath,
+    }
+  }
+
+  return null
 }
 
-export type MasterImagePayload = MasterImage
-// 他のMasterImage関連関数 (fetchなど) があればここに記述
+// For compatibility with existing code
+export type MasterImagePayload = PageImage & {
+  pageNumber: number
+  projectId: string
+  path: string
+}

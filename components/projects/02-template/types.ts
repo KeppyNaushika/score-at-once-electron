@@ -1,5 +1,14 @@
-import { MasterImage, Project, User } from "@prisma/client"
-import { LayoutRegionArea } from "@/types/common.types"
+import { Project, User } from "@prisma/client"
+
+type MasterImage = {
+  id: string
+  projectId: string
+  imagePath: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
+import { CropRegionArea } from "@/types/common.types"
 
 /**
  * 採点領域のタイプ定義
@@ -42,7 +51,7 @@ export interface LayoutRegionData {
   height: number
   /** 領域のラベル */
   label: string
-  /** 配点（LayoutRegionArea互換性のため） */
+  /** 配点（CropRegionArea互換性のため） */
   points?: number | string | null
   /** 順序インデックス */
   orderIndex?: number | null
@@ -108,7 +117,7 @@ export interface InitialDataState {
   /** 画像の寸法 */
   imageDimensions: ImageDimensions | null
   /** レイアウト領域一覧 */
-  layoutRegions: LayoutRegionArea[]
+  layoutRegions: CropRegionArea[]
   /** レイアウトID */
   layoutId: string | undefined
 }

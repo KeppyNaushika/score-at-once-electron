@@ -71,23 +71,25 @@ export const getQuestionScoresForProject = async (projectId: string) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        answerSheet: {
-          projectId,
+        cropRegion: {
+          projectPage: {
+            projectId,
+          },
         },
       },
       include: {
-        answerSheet: {
+        student: true,
+        cropRegion: {
           include: {
-            student: true,
+            projectPage: true,
           },
         },
-        layoutRegion: true,
         scoredByUser: true,
       },
       orderBy: [
-        { answerSheet: { student: { lastName: "asc" } } },
-        { answerSheet: { student: { firstName: "asc" } } },
-        { layoutRegion: { orderIndex: "asc" } },
+        { student: { lastName: "asc" } },
+        { student: { firstName: "asc" } },
+        { cropRegion: { orderIndex: "asc" } },
       ],
     })
 
@@ -102,22 +104,22 @@ export const getQuestionScoresForProject = async (projectId: string) => {
 }
 
 /**
- * 特定の答案シートの採点データを取得
+ * 特定の答案シートの採点データを取得 (studentId ベース)
  */
 export const getQuestionScoresForAnswerSheet = async (
-  answerSheetId: string,
+  answerSheetId: string, // 互換性のため、実際はstudentIdとして扱う
 ) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        answerSheetId,
+        studentId: answerSheetId, // answerSheetIdをstudentIdとして扱う
       },
       include: {
-        layoutRegion: true,
+        cropRegion: true,
         scoredByUser: true,
       },
       orderBy: {
-        layoutRegion: { orderIndex: "asc" },
+        cropRegion: { orderIndex: "asc" },
       },
     })
 
@@ -139,8 +141,8 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
     // 同じ答案・設問・採点者の組み合わせで既存レコードをチェック
     const existing = await prisma.questionScore.findFirst({
       where: {
-        answerSheetId: data.answerSheetId,
-        layoutRegionId: data.layoutRegionId,
+        studentId: data.answerSheetId, // answerSheetId -> studentId
+        cropRegionId: data.layoutRegionId, // layoutRegionId -> cropRegionId
         scoredByUserId: data.scoredByUserId,
       },
     })
@@ -155,16 +157,10 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
               ? new Decimal(data.partialScore)
               : null,
           status: data.status,
-          comment: data.comment,
-          scoreVersion: existing.scoreVersion + 1,
         },
         include: {
-          answerSheet: {
-            include: {
-              student: true,
-            },
-          },
-          layoutRegion: true,
+          student: true,
+          cropRegion: true,
           scoredByUser: true,
         },
       })
@@ -173,24 +169,18 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       // 新規作成
       const created = await prisma.questionScore.create({
         data: {
-          answerSheetId: data.answerSheetId,
-          layoutRegionId: data.layoutRegionId,
+          studentId: data.answerSheetId, // answerSheetId -> studentId
+          cropRegionId: data.layoutRegionId, // layoutRegionId -> cropRegionId
           partialScore:
             data.partialScore !== null && data.partialScore !== undefined
               ? new Decimal(data.partialScore)
               : null,
           status: data.status,
-          comment: data.comment,
           scoredByUserId: data.scoredByUserId,
-          scoreVersion: 1,
         },
         include: {
-          answerSheet: {
-            include: {
-              student: true,
-            },
-          },
-          layoutRegion: true,
+          student: true,
+          cropRegion: true,
           scoredByUser: true,
         },
       })
@@ -224,6 +214,9 @@ export const updateQuestionScore = async (
         return { success: false, error: "Question score not found" }
       }
 
+      // Version checking removed - scoreVersion field doesn't exist in new schema
+      // TODO: Implement optimistic locking with a different approach if needed
+      /*
       if (current.scoreVersion !== expectedVersion) {
         return {
           success: false,
@@ -232,6 +225,7 @@ export const updateQuestionScore = async (
           conflictData: current,
         }
       }
+      */
     }
 
     const updated = await prisma.questionScore.update({
@@ -242,16 +236,10 @@ export const updateQuestionScore = async (
             ? new Decimal(data.partialScore)
             : null,
         status: data.status,
-        comment: data.comment,
-        scoreVersion: { increment: 1 },
       },
       include: {
-        answerSheet: {
-          include: {
-            student: true,
-          },
-        },
-        layoutRegion: true,
+        student: true,
+        cropRegion: true,
         scoredByUser: true,
       },
     })
@@ -295,8 +283,8 @@ export const getQuestionScoreComparison = async (
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        answerSheetId,
-        layoutRegionId,
+        studentId: answerSheetId, // answerSheetId -> studentId  
+        cropRegionId: layoutRegionId, // layoutRegionId -> cropRegionId
       },
       include: {
         scoredByUser: true,
@@ -344,8 +332,8 @@ export const finalizeQuestionScore = async (
       // 既存の最終決定レコードを削除
       await tx.questionScore.deleteMany({
         where: {
-          answerSheetId,
-          layoutRegionId,
+          studentId: answerSheetId, // answerSheetId -> studentId
+          cropRegionId: layoutRegionId, // layoutRegionId -> cropRegionId
           status: "final",
         },
       })
@@ -353,25 +341,19 @@ export const finalizeQuestionScore = async (
       // 新しい最終決定レコードを作成
       const finalScore = await tx.questionScore.create({
         data: {
-          answerSheetId,
-          layoutRegionId,
+          studentId: answerSheetId, // answerSheetId -> studentId
+          cropRegionId: layoutRegionId, // layoutRegionId -> cropRegionId
           partialScore:
             scoreData.partialScore !== null &&
             scoreData.partialScore !== undefined
               ? new Decimal(scoreData.partialScore)
               : null,
           status: scoreData.status,
-          comment: scoreData.comment,
           scoredByUserId,
-          scoreVersion: 1,
         },
         include: {
-          answerSheet: {
-            include: {
-              student: true,
-            },
-          },
-          layoutRegion: true,
+          student: true,
+          cropRegion: true,
           scoredByUser: true,
         },
       })
@@ -392,11 +374,22 @@ export const finalizeQuestionScore = async (
  */
 export const getAnswerSheetProgress = async (answerSheetId: string) => {
   try {
-    // この答案シートに関連する全設問を取得
-    const answerSheet = await prisma.answerSheet.findUnique({
+    // TODO: This function needs to be rewritten for new schema
+    // In new schema, there's no direct answerSheet table
+    // Need to get student and project info differently
+    console.warn("getAnswerSheetProgress function needs rewriting for new schema")
+    return {
+      success: false,
+      error: "Function not yet updated for new schema"
+    }
+    
+    /* Old code - needs rewriting:
+    const answerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
       include: {
-        project: {
+        projectPage: {
+          include: {
+            project: {
           include: {
             layoutRegions: {
               where: {
@@ -444,6 +437,7 @@ export const getAnswerSheetProgress = async (answerSheetId: string) => {
           totalQuestions > 0 ? (finalizedQuestions / totalQuestions) * 100 : 0,
       },
     }
+    */
   } catch (error) {
     console.error("Failed to get answer sheet progress:", error)
     return {
@@ -458,79 +452,83 @@ export const getAnswerSheetProgress = async (answerSheetId: string) => {
  */
 export const getProjectProgress = async (projectId: string) => {
   try {
-    // プロジェクトの答案シートと設問を取得
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        answerSheets: true,
-        layoutRegions: {
-          where: {
-            type: "QUESTION_ANSWER",
-          },
-        },
-      },
+    // プロジェクトに参加している生徒数を取得
+    const totalAnswerSheets = await prisma.projectStudent.count({
+      where: { projectId }
     })
 
-    if (!project) {
-      return { success: false, error: "Project not found" }
-    }
-
-    const totalAnswerSheets = project.answerSheets.length
-    const totalQuestions = project.layoutRegions.length
-    const totalItems = totalAnswerSheets * totalQuestions
-
-    if (totalItems === 0) {
+    if (totalAnswerSheets === 0) {
       return {
-        success: true,
-        progress: {
-          totalAnswerSheets,
-          totalQuestions,
-          totalItems: 0,
-          gradedItems: 0,
-          finalizedItems: 0,
-          progressPercentage: 0,
-          finalizedPercentage: 0,
-        },
+        totalAnswerSheets: 0,
+        completedAnswerSheets: 0,
+        percentage: 0
       }
     }
 
-    // 採点済みアイテム数（finalまたはproposedステータス）
-    const gradedItems = await prisma.questionScore.count({
+    // プロジェクトの採点領域数を取得
+    const totalCropRegions = await prisma.cropRegion.count({
       where: {
-        answerSheet: {
-          projectId,
+        projectPage: {
+          projectId
         },
-        OR: [{ status: "final" }, { status: "proposed" }],
-      },
+        type: "QUESTION_ANSWER"
+      }
     })
 
-    // 最終決定済みアイテム数
-    const finalizedItems = await prisma.questionScore.count({
-      where: {
-        answerSheet: {
-          projectId,
-        },
-        status: "final",
-      },
+    if (totalCropRegions === 0) {
+      return {
+        totalAnswerSheets,
+        completedAnswerSheets: 0,
+        percentage: 0
+      }
+    }
+
+    // 各生徒の採点完了状況を確認
+    const projectStudents = await prisma.projectStudent.findMany({
+      where: { projectId },
+      select: { studentId: true }
     })
+
+    let completedAnswerSheets = 0
+
+    for (const projectStudent of projectStudents) {
+      // この生徒の採点済み設問数を取得
+      const completedQuestions = await prisma.questionScore.count({
+        where: {
+          studentId: projectStudent.studentId,
+          cropRegion: {
+            projectPage: {
+              projectId
+            },
+            type: "QUESTION_ANSWER"
+          },
+          OR: [
+            { status: "final" },
+            { status: "proposed" }
+          ]
+        }
+      })
+
+      // 全設問が採点済みの場合、完了とみなす
+      if (completedQuestions >= totalCropRegions) {
+        completedAnswerSheets++
+      }
+    }
+
+    const percentage = totalAnswerSheets > 0 ? (completedAnswerSheets / totalAnswerSheets) * 100 : 0
 
     return {
-      success: true,
-      progress: {
-        totalAnswerSheets,
-        totalQuestions,
-        totalItems,
-        gradedItems,
-        finalizedItems,
-        progressPercentage: (gradedItems / totalItems) * 100,
-        finalizedPercentage: (finalizedItems / totalItems) * 100,
-      },
+      totalAnswerSheets,
+      completedAnswerSheets,
+      percentage: Math.round(percentage * 100) / 100 // 小数点2位まで
     }
   } catch (error) {
-    console.error("Failed to get project progress:", error)
+    console.error("Error getting project progress:", error)
     return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      totalAnswerSheets: 0,
+      completedAnswerSheets: 0,
+      percentage: 0
     }
   }
 }
+

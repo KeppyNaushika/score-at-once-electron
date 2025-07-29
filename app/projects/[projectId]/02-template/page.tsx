@@ -185,7 +185,7 @@ export default function TemplateStepPage() {
             disabled={false}
             backgroundImageUrl={initialData.backgroundImageUrl}
             imageDimensions={initialData.imageDimensions}
-            masterImageId={initialData.selectedMasterImage?.id || null}
+            projectPageId={initialData.selectedMasterImage?.id || null}
           />
         </div>
       </div>

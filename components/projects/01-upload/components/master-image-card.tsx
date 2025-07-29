@@ -49,10 +49,10 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
      * @param e - エラーイベント
      */
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-      e.currentTarget.alt = `画像読込エラー: ${image.path}`
+      e.currentTarget.alt = `画像読込エラー: ${image.imagePath}`
       console.error(
         "Failed to load image:",
-        image.path,
+        image.imagePath,
         "using URL:",
         imageUrl,
       )

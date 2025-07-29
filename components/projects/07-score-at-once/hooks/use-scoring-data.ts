@@ -62,7 +62,7 @@ export function useScoringData({
             status: score.status as ScoringStatus,
             comment: score.comment || "",
             scoredByUserId: score.scoredByUserId,
-            version: score.scoreVersion || 0,
+            version: score.version || 0,
             updatedAt: new Date(score.updatedAt),
           }
         })
@@ -79,12 +79,12 @@ export function useScoringData({
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
     (answerSheetId: string, questionId?: string): ScoringStatus => {
-      if (!questionId) return "ungraded"
+      if (!questionId) return "unscored"
 
       const key = `${answerSheetId}-${questionId}`
       const scoreData = scoringData[key]
 
-      if (!scoreData) return "ungraded"
+      if (!scoreData) return "unscored"
       return scoreData.status
     },
     [scoringData],
@@ -112,7 +112,7 @@ export function useScoringData({
         case "incorrect":
         case "no_answer":
           return 0
-        case "ungraded":
+        case "unscored":
           return null
         case "partial":
         case "pending":
@@ -172,8 +172,8 @@ export function useScoringData({
                   ...prev[key],
                   status: "final",
                   version:
-                    (result as any).score?.scoreVersion ||
-                    (result as any).scoreVersion,
+                    (result as any).score?.version ||
+                    (result as any).version,
                   updatedAt: new Date(
                     (result as any).score?.updatedAt ||
                       (result as any).updatedAt,
@@ -211,9 +211,9 @@ export function useScoringData({
       let status: ScoringStatus = type
 
       switch (type) {
-        case "ungraded":
+        case "unscored":
           newScore = 0
-          status = "ungraded"
+          status = "unscored"
           break
         case "correct":
           newScore = currentQuestion.points
@@ -262,7 +262,7 @@ export function useScoringData({
             currentScore.version,
           )
 
-          if ((result as any).success || result.scoreVersion) {
+          if ((result as any).success || result) {
             setScoringData((prev) => ({
               ...prev,
               [key]: {
@@ -270,7 +270,7 @@ export function useScoringData({
                 score: newScore,
                 status,
                 version:
-                  (result as any).score?.scoreVersion || result.scoreVersion,
+                  (result as any).score?.version || 0,
                 updatedAt: new Date(
                   (result as any).score?.updatedAt || result.updatedAt,
                 ),
@@ -278,7 +278,7 @@ export function useScoringData({
             }))
 
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
-            if (gradingMode === "individual" && type !== "ungraded") {
+            if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
                 if (currentStudentIndex < answerSheets.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
@@ -298,11 +298,10 @@ export function useScoringData({
         } else {
           // Create new score
           const scoreData = {
-            answerSheetId: currentAnswerSheet.id,
-            layoutRegionId: currentQuestion.id,
+            studentId: currentAnswerSheet.studentId,
+            cropRegionId: currentQuestion.id,
             partialScore: newScore !== null ? newScore : undefined,
             status: status,
-            comment: "",
             scoredByUserId: currentUserId,
           }
           const result = await window.electronAPI.createQuestionScore(scoreData)
@@ -319,7 +318,7 @@ export function useScoringData({
                 comment: "",
                 scoredByUserId: currentUserId,
                 version:
-                  (result as any).score?.scoreVersion || result.scoreVersion,
+                  (result as any).score?.version || 0,
                 updatedAt: new Date(
                   (result as any).score?.updatedAt || result.updatedAt,
                 ),
@@ -327,7 +326,7 @@ export function useScoringData({
             }))
 
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
-            if (gradingMode === "individual" && type !== "ungraded") {
+            if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
                 if (currentStudentIndex < answerSheets.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
@@ -392,7 +391,7 @@ export function useScoringData({
         typeof statusOrAnswerIds === "string" &&
         !Array.isArray(statusOrAnswerIds) &&
         [
-          "ungraded",
+          "unscored",
           "correct",
           "incorrect",
           "partial",
@@ -442,9 +441,9 @@ export function useScoringData({
         let scoringStatus: ScoringStatus = status
 
         switch (status) {
-          case "ungraded":
+          case "unscored":
             newScore = null // partialScoreはnullに設定
-            scoringStatus = "ungraded"
+            scoringStatus = "unscored"
             break
           case "correct":
             newScore = null // partialScoreはnullに設定
@@ -488,7 +487,7 @@ export function useScoringData({
               currentScore.version,
             )
 
-            if ((result as any).success || result.scoreVersion) {
+            if ((result as any).success || result) {
               setScoringData((prev) => ({
                 ...prev,
                 [key]: {
@@ -496,7 +495,7 @@ export function useScoringData({
                   score: newScore,
                   status: scoringStatus,
                   version:
-                    (result as any).score?.scoreVersion || result.scoreVersion,
+                    (result as any).score?.version || 0,
                   updatedAt: new Date(
                     (result as any).score?.updatedAt || result.updatedAt,
                   ),
@@ -506,8 +505,8 @@ export function useScoringData({
           } else {
             // Create new score
             const scoreData = {
-              answerSheetId: answerId,
-              layoutRegionId: currentQuestion.id,
+              studentId: answerSheet.studentId,
+              cropRegionId: currentQuestion.id,
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
               comment: "",
@@ -528,7 +527,7 @@ export function useScoringData({
                   comment: "",
                   scoredByUserId: effectiveUserId,
                   version:
-                    (result as any).score?.scoreVersion || result.scoreVersion,
+                    (result as any).score?.version || 0,
                   updatedAt: new Date(
                     (result as any).score?.updatedAt || result.updatedAt,
                   ),
@@ -571,9 +570,9 @@ export function useScoringData({
     } = {}
 
     questionRegions.forEach((question) => {
-      // このLayoutRegionが属するMasterImageのページ番号を取得
-      const questionPageNumber = question.masterImageId
-        ? (question as any).masterImage?.pageNumber
+      // このCropRegionが属するProjectPageのページ番号を取得
+      const questionPageNumber = question.projectPageId
+        ? (question as any).projectPage?.pageNumber
         : undefined
 
       // 同じページ番号のAnswerSheetのみを対象とする
@@ -588,8 +587,8 @@ export function useScoringData({
         const key = `${sheet.id}-${question.id}`
         const scoreData = scoringData[key]
 
-        // 採点済みの状態をチェック（ungradedでない場合は採点済み）
-        if (scoreData && scoreData.status !== "ungraded") {
+        // 採点済みの状態をチェック（unscoredでない場合は採点済み）
+        if (scoreData && scoreData.status !== "unscored") {
           gradedAnswers++
         }
       })

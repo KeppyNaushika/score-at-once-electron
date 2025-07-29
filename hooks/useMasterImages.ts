@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client"
 import { toast } from "sonner"
 import { convertPdfToImages, ConvertedImage } from "@/lib/pdfConverter"
 
-type MasterImage = Prisma.MasterImageGetPayload<{}>
+type MasterImage = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
 
 export interface MasterImagesState {
   images: MasterImage[]
@@ -45,17 +45,17 @@ export function useMasterImages(
 
   // Initialize images and fetch URLs
   useEffect(() => {
-    const sortedImages = [...initialImages].sort((a, b) => a.pageNumber - b.pageNumber)
+    const sortedImages = [...initialImages].sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
     setState(prev => ({ ...prev, images: sortedImages }))
 
     const fetchUrls = async () => {
       const urls: Record<string, string> = {}
       for (const image of sortedImages) {
         try {
-          const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.path)
+          const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
           urls[image.id] = resolvedUrl
         } catch (error) {
-          console.error(`Failed to resolve path for image ${image.id} (${image.path}):`, error)
+          console.error(`Failed to resolve path for image ${image.id} (${image.imagePath}):`, error)
           urls[image.id] = ""
         }
       }
@@ -139,9 +139,14 @@ export function useMasterImages(
         
         // Get updated project data
         const updatedProject = await window.electronAPI.fetchProjectById(projectId)
-        if (updatedProject && updatedProject.masterImages) {
-          const sortedUpdatedImages = [...updatedProject.masterImages].sort(
-            (a, b) => a.pageNumber - b.pageNumber
+        if (updatedProject && updatedProject.projectPages) {
+          // Extract master images from project pages
+          const masterImages = updatedProject.projectPages
+            .flatMap(page => page.pageImages.filter(img => img.imageType === "MASTER")
+            .map(img => ({ ...img, projectPage: page })))
+          
+          const sortedUpdatedImages = [...masterImages].sort(
+            (a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber
           )
           
           setState(prev => ({ ...prev, images: sortedUpdatedImages }))
@@ -151,10 +156,10 @@ export function useMasterImages(
           const newUrls: Record<string, string> = {}
           for (const image of sortedUpdatedImages) {
             try {
-              const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.path)
+              const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
               newUrls[image.id] = resolvedUrl
             } catch (error) {
-              console.error(`Failed to resolve path for image ${image.id} (${image.path}):`, error)
+              console.error(`Failed to resolve path for image ${image.id} (${image.imagePath}):`, error)
               newUrls[image.id] = ""
             }
           }

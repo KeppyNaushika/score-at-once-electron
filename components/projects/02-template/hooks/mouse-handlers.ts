@@ -15,7 +15,7 @@ export function useMouseHandlers({
   disabled,
   backgroundImageUrl,
   imageDimensions,
-  masterImageId,
+  projectPageId,
   areas,
   onAddAreaByDrag,
   onUpdateArea,
@@ -35,10 +35,10 @@ export function useMouseHandlers({
   disabled: boolean
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
-  masterImageId: string | null
+  projectPageId: string | null
   areas: any[]
   onAddAreaByDrag: (
-    type: import("@/types/common.types").LayoutRegionAreaType,
+    type: import("@/types/common.types").CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   onUpdateArea: (
@@ -71,7 +71,7 @@ export function useMouseHandlers({
       !backgroundImageUrl ||
       !imageDimensions ||
       !imageContainerRef.current ||
-      !masterImageId
+      !projectPageId
     )
       return
 

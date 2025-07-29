@@ -16,7 +16,7 @@ interface ExportWarningModalProps {
   onContinue: () => void
   warnings: {
     noScoringData: string[]
-    ungraded: string[]
+    unscored: string[]
     missingPartialScore: string[]
   }
 }
@@ -29,7 +29,7 @@ export default function ExportWarningModal({
 }: ExportWarningModalProps) {
   const hasWarnings =
     warnings.noScoringData.length > 0 ||
-    warnings.ungraded.length > 0 ||
+    warnings.unscored.length > 0 ||
     warnings.missingPartialScore.length > 0
 
   return (
@@ -63,13 +63,13 @@ export default function ExportWarningModal({
           )}
 
           {/* 未採点の設問答案 */}
-          {warnings.ungraded.length > 0 && (
+          {warnings.unscored.length > 0 && (
             <Alert className="border-orange-200 bg-orange-50">
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800">
                 <div className="mb-2 font-medium">次の設問答案が未採点です</div>
                 <div className="space-y-1 text-sm">
-                  {warnings.ungraded.map((item, index) => (
+                  {warnings.unscored.map((item, index) => (
                     <div key={index} className="pl-2">
                       • {item}
                     </div>

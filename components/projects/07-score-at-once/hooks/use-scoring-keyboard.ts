@@ -4,7 +4,7 @@ import type { ScoringStatus } from "../types"
 
 // キーボードショートカットの設定（Python版互換）
 export const DEFAULT_SHORTCUTS = {
-  ungraded: "q", // 未採点
+  unscored: "q", // 未採点
   correct: "e", // 正答
   partial: "f", // 部分点
   pending: "j", // 保留
@@ -241,7 +241,7 @@ export function useScoringKeyboard({
 
           if (
             [
-              shortcuts.ungraded,
+              shortcuts.unscored,
               shortcuts.correct,
               shortcuts.incorrect,
               shortcuts.partial,
@@ -321,7 +321,7 @@ export function useScoringKeyboard({
         // 採点キー（Alt無し）で通常の採点
         if (
           [
-            shortcuts.ungraded,
+            shortcuts.unscored,
             shortcuts.correct,
             shortcuts.incorrect,
             shortcuts.partial,
@@ -349,9 +349,9 @@ export function useScoringKeyboard({
       // 個別採点モードのキーボード処理
       const key = event.key.toLowerCase()
       switch (key) {
-        case shortcuts.ungraded:
+        case shortcuts.unscored:
           event.preventDefault()
-          onSetScore("ungraded")
+          onSetScore("unscored")
           break
         case shortcuts.correct:
           event.preventDefault()

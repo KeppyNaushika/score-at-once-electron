@@ -304,6 +304,35 @@ npx prisma studio
 - 楽観的ロックによる競合制御を実装すること
 - QuestionScoreのunique_final_score制約に注意
 
+#### 🔄 多対多関係の強化（2025年7月29日更新）
+
+**Project-User関係の多対多化**:
+- Projectは複数のUserが参加可能（協調採点の実現）
+- UserProjectテーブルによる中間テーブル管理
+- ユーザーごとのロール・権限管理の準備
+
+**SubtotalGroup-Project関係の多対多化**:
+- SubtotalGroupは複数のProjectで再利用可能
+- ProjectSubtotalGroupテーブルによる中間テーブル管理
+- 同一設問構成の試験における集計設定の統一化
+
+**新規Subject（教科）テーブルの追加**:
+- Subject (id, name) テーブルの新設
+- SubjectSubtotalGroupテーブルによるSubject-SubtotalGroup多対多関係
+- 教科別フィルタリング・分析機能の基盤
+
+#### 🎯 期待される機能向上
+
+**個人成績の横断分析**:
+- 複数Project間でのSubtotal推移追跡
+- 教科別成績分析とフィルタリング表示
+- 長期的な学習進度の可視化
+
+**協調採点機能の完全実現**:
+- 複数教員による同一プロジェクトへの参加
+- 教員間での採点作業分担と競合解決
+- 採点進捗の全体把握と効率的な作業配分
+
 ### UI/UX設計
 
 - キーボード操作を最優先に設計

@@ -10,8 +10,8 @@ export function useNameRegion(projectId: string) {
   // 氏名欄領域の存在確認
   const checkNameRegionAvailability = useCallback(async () => {
     try {
-      const layoutRegions =
-        await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      const cropRegions =
+        await window.electronAPI.getCropRegionsByProjectId(projectId)
       const masterImages =
         await window.electronAPI.getMasterImagesByProjectId(projectId)
 
@@ -19,10 +19,10 @@ export function useNameRegion(projectId: string) {
       const availability: Record<number, boolean> = {}
 
       for (const masterImage of masterImages) {
-        const nameRegion = layoutRegions.find(
+        const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.masterImageId === masterImage.id,
+            region.projectPageId === masterImage.id,
         )
         availability[masterImage.pageNumber] = !!nameRegion
       }
@@ -42,9 +42,9 @@ export function useNameRegion(projectId: string) {
       }
 
       try {
-        // LayoutRegionからSTUDENT_NAME領域を取得
-        const layoutRegions =
-          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        // CropRegionからSTUDENT_NAME領域を取得
+        const cropRegions =
+          await window.electronAPI.getCropRegionsByProjectId(projectId)
 
         // ページ番号に基づいてmasterImageIdを取得
         const masterImages =
@@ -58,10 +58,10 @@ export function useNameRegion(projectId: string) {
           return null
         }
 
-        const nameRegion = layoutRegions.find(
+        const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.masterImageId === masterImage.id,
+            region.projectPageId === masterImage.id,
         )
 
 

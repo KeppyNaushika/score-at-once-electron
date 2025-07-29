@@ -45,12 +45,23 @@ export default function MasterImageStepPage() {
     try {
       const fetchedProject =
         await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
-      if (fetchedProject && fetchedProject.masterImages) {
-        // pageNumber でソートしてセット
-        const sortedImages = [...fetchedProject.masterImages].sort(
-          (a, b) => a.pageNumber - b.pageNumber,
-        )
-        setMasterImages(sortedImages)
+      if (fetchedProject && fetchedProject.projectPages) {
+        // projectPages から master images を抽出してソート
+        const masterImages = fetchedProject.projectPages
+          .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
+          .map(page => {
+            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+            return {
+              id: page.id,
+              projectId: page.projectId,
+              imagePath: masterImage?.imagePath || '',
+              pageNumber: page.pageNumber,
+              createdAt: page.createdAt,
+              updatedAt: page.updatedAt,
+            }
+          })
+          .sort((a, b) => a.pageNumber - b.pageNumber)
+        setMasterImages(masterImages)
       } else {
         setMasterImages([])
       }

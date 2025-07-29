@@ -2,7 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import PageHeader from "@/components/layout/PageHeader"
-import { MasterImage } from "@prisma/client"
+type MasterImage = {
+  id: string
+  projectId: string
+  imagePath: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
 import { LayoutRegionArea } from "@/types/common.types"
 
 interface TemplateHeaderProps {
@@ -29,7 +36,7 @@ export function TemplateHeader({
   // 現在選択中の画像に対応する領域があるかチェック
   const hasRegionsForCurrentImage =
     selectedMasterImage &&
-    layoutRegions.filter((r) => r.masterImageId === selectedMasterImage.id).length > 0
+    layoutRegions.filter((r) => r.projectPageId === selectedMasterImage.id).length > 0
 
   return (
     <PageHeader 

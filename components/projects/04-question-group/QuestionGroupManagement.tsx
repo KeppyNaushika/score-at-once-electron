@@ -13,51 +13,51 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { QuestionGroupWithItems } from "@/types/electron"
+import { SubtotalGroupWithItems } from "@/types/electron"
 import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 interface QuestionGroupManagementProps {
-  questionGroups: QuestionGroupWithItems[]
-  selectedQuestionGroupId: string | null
-  setSelectedQuestionGroupId: (id: string | null) => void
-  onCreateQuestionGroup: (name: string) => Promise<boolean>
-  onUpdateQuestionGroup: (id: string, name: string) => Promise<boolean>
-  onDeleteQuestionGroup: (id: string) => Promise<boolean>
-  onCreateQuestionGroupItem: (
-    questionGroupId: string,
+  subtotalGroups: SubtotalGroupWithItems[]
+  selectedSubtotalGroupId: string | null
+  setSelectedSubtotalGroupId: (id: string | null) => void
+  onCreateSubtotalGroup: (name: string) => Promise<boolean>
+  onUpdateSubtotalGroup: (id: string, name: string) => Promise<boolean>
+  onDeleteSubtotalGroup: (id: string) => Promise<boolean>
+  onCreateSubtotal: (
+    subtotalGroupId: string,
     name: string,
   ) => Promise<boolean>
-  onUpdateQuestionGroupItem: (id: string, name: string) => Promise<boolean>
-  onDeleteQuestionGroupItem: (id: string) => Promise<boolean>
-  onUpdateQuestionGroupItemOrders: (
+  onUpdateSubtotal: (id: string, name: string) => Promise<boolean>
+  onDeleteSubtotal: (id: string) => Promise<boolean>
+  onUpdateSubtotalOrders: (
     orders: { id: string; order: number }[],
   ) => Promise<boolean>
 }
 
 export function QuestionGroupManagement({
-  questionGroups,
-  selectedQuestionGroupId,
-  setSelectedQuestionGroupId,
-  onCreateQuestionGroup,
-  onUpdateQuestionGroup,
-  onDeleteQuestionGroup,
-  onCreateQuestionGroupItem,
-  onUpdateQuestionGroupItem,
-  onDeleteQuestionGroupItem,
-  onUpdateQuestionGroupItemOrders,
+  subtotalGroups,
+  selectedSubtotalGroupId,
+  setSelectedSubtotalGroupId,
+  onCreateSubtotalGroup,
+  onUpdateSubtotalGroup,
+  onDeleteSubtotalGroup,
+  onCreateSubtotal,
+  onUpdateSubtotal,
+  onDeleteSubtotal,
+  onUpdateSubtotalOrders,
 }: QuestionGroupManagementProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [newGroupName, setNewGroupName] = useState("")
   const [editingGroup, setEditingGroup] =
-    useState<QuestionGroupWithItems | null>(null)
+    useState<SubtotalGroupWithItems | null>(null)
   const [editGroupName, setEditGroupName] = useState("")
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return
 
-    const success = await onCreateQuestionGroup(newGroupName.trim())
+    const success = await onCreateSubtotalGroup(newGroupName.trim())
     if (success) {
       setNewGroupName("")
       setShowCreateDialog(false)
@@ -67,7 +67,7 @@ export function QuestionGroupManagement({
   const handleEditGroup = async () => {
     if (!editingGroup || !editGroupName.trim()) return
 
-    const success = await onUpdateQuestionGroup(
+    const success = await onUpdateSubtotalGroup(
       editingGroup.id,
       editGroupName.trim(),
     )
@@ -78,18 +78,18 @@ export function QuestionGroupManagement({
     }
   }
 
-  const handleDeleteGroup = async (group: QuestionGroupWithItems) => {
+  const handleDeleteGroup = async (group: SubtotalGroupWithItems) => {
     if (
       window.confirm(
         `小計点「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`,
       )
     ) {
-      await onDeleteQuestionGroup(group.id)
+      await onDeleteSubtotalGroup(group.id)
     }
   }
 
-  const selectedGroup = questionGroups.find(
-    (g) => g.id === selectedQuestionGroupId,
+  const selectedGroup = subtotalGroups.find(
+    (g) => g.id === selectedSubtotalGroupId,
   )
 
   return (
@@ -133,7 +133,7 @@ export function QuestionGroupManagement({
           </Dialog>
         </div>
 
-        {questionGroups.length === 0 ? (
+        {subtotalGroups.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center">
             <List className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>小計点がありません</p>
@@ -143,22 +143,22 @@ export function QuestionGroupManagement({
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {questionGroups.map((group) => (
+            {subtotalGroups.map((group) => (
               <Card
                 key={group.id}
                 className={`hover:bg-muted/50 cursor-pointer transition-colors ${
-                  selectedQuestionGroupId === group.id
+                  selectedSubtotalGroupId === group.id
                     ? "ring-primary ring-2"
                     : ""
                 }`}
-                onClick={() => setSelectedQuestionGroupId(group.id)}
+                onClick={() => setSelectedSubtotalGroupId(group.id)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">{group.name}</CardTitle>
                     <div className="flex items-center gap-1">
                       <Badge variant="secondary" className="text-xs">
-                        {group.items.length}項目
+                        {group.subtotals.length}項目
                       </Badge>
                       <Button
                         variant="ghost"
@@ -187,17 +187,17 @@ export function QuestionGroupManagement({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1">
-                    {group.items.slice(0, 3).map((item) => (
+                    {group.subtotals.slice(0, 3).map((subtotal) => (
                       <div
-                        key={item.id}
+                        key={subtotal.id}
                         className="text-muted-foreground text-sm"
                       >
-                        • {item.name}
+                        • {subtotal.name}
                       </div>
                     ))}
-                    {group.items.length > 3 && (
+                    {group.subtotals.length > 3 && (
                       <div className="text-muted-foreground text-sm">
-                        ... 他{group.items.length - 3}項目
+                        ... 他{group.subtotals.length - 3}項目
                       </div>
                     )}
                   </div>
@@ -246,11 +246,11 @@ export function QuestionGroupManagement({
             </h3>
           </div>
           <QuestionGroupItemList
-            questionGroup={selectedGroup}
-            onCreateItem={onCreateQuestionGroupItem}
-            onUpdateItem={onUpdateQuestionGroupItem}
-            onDeleteItem={onDeleteQuestionGroupItem}
-            onUpdateItemOrders={onUpdateQuestionGroupItemOrders}
+            subtotalGroup={selectedGroup}
+            onCreateItem={onCreateSubtotal}
+            onUpdateItem={onUpdateSubtotal}
+            onDeleteItem={onDeleteSubtotal}
+            onUpdateItemOrders={onUpdateSubtotalOrders}
           />
         </div>
       )}

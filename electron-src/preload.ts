@@ -2,8 +2,8 @@ import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
 import { CreateProjectArgs } from "../types/electron"
 import {
-  LayoutRegionCreateData,
-  LayoutRegionUpdateData,
+  CropRegionCreateData,
+  CropRegionUpdateData,
   QuestionScoreCreateData,
   QuestionScoreUpdateData,
   ScoringMarkConfig,
@@ -136,7 +136,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Class related
   fetchClasses: () => ipcRenderer.invoke("fetch-classes"),
-  createClass: (classData: Prisma.ClassCreateWithoutClassTeachersInput) =>
+  createClass: (classData: Prisma.ClassCreateInput) =>
     ipcRenderer.invoke("create-class", classData),
   updateClass: (classData: Prisma.ClassUpdateInput & { id: string }) =>
     ipcRenderer.invoke("update-class", classData),
@@ -212,18 +212,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("check-file-exists", relativePath),
   getMasterImagesByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-master-images-by-project-id", projectId),
-  // Layout region functions (moved to new API)
-  createLayoutRegion: (data: LayoutRegionCreateData) =>
-    ipcRenderer.invoke("create-layout-region", data),
-  updateLayoutRegion: (id: string, data: LayoutRegionUpdateData) =>
-    ipcRenderer.invoke("update-layout-region", id, data),
-  deleteLayoutRegion: (id: string) =>
-    ipcRenderer.invoke("delete-layout-region", id),
-  getLayoutRegionsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-layout-regions-by-project-id", projectId),
-  updateLayoutRegionOrders: (
+  // CropRegion functions (renamed from LayoutRegion)
+  createCropRegion: (data: CropRegionCreateData) =>
+    ipcRenderer.invoke("create-crop-region", data),
+  createManyCropRegions: (data: Prisma.CropRegionCreateManyInput[]) =>
+    ipcRenderer.invoke("create-many-crop-regions", data),
+  updateCropRegion: (id: string, data: CropRegionUpdateData) =>
+    ipcRenderer.invoke("update-crop-region", id, data),
+  deleteCropRegion: (id: string) =>
+    ipcRenderer.invoke("delete-crop-region", id),
+  getCropRegionsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
+  getCropRegionById: (id: string) =>
+    ipcRenderer.invoke("get-crop-region-by-id", id),
+  updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>,
-  ) => ipcRenderer.invoke("update-layout-region-orders", updates),
+  ) => ipcRenderer.invoke("update-crop-region-orders", updates),
 
   // Project-Student relationship
   getStudentsForProject: (projectId: string) =>
@@ -272,22 +276,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
   deleteQuestionScore: (id: string) =>
     ipcRenderer.invoke("delete-question-score", id),
-  getQuestionScoreComparison: (answerSheetId: string, layoutRegionId: string) =>
+  getQuestionScoreComparison: (answerSheetId: string, cropRegionId: string) =>
     ipcRenderer.invoke(
       "get-question-score-comparison",
       answerSheetId,
-      layoutRegionId,
+      cropRegionId,
     ),
   finalizeQuestionScore: (
     answerSheetId: string,
-    layoutRegionId: string,
+    cropRegionId: string,
     scoredByUserId: string,
     scoreData: QuestionScoreUpdateData,
   ) =>
     ipcRenderer.invoke(
       "finalize-question-score",
       answerSheetId,
-      layoutRegionId,
+      cropRegionId,
       scoredByUserId,
       scoreData,
     ),
@@ -298,96 +302,144 @@ contextBridge.exposeInMainWorld("electronAPI", {
   initializeScoringRecords: (projectId: string) =>
     ipcRenderer.invoke("initialize-scoring-records", projectId),
 
-  // QuestionGroup related
-  createQuestionGroup: (data: Prisma.QuestionGroupUncheckedCreateInput) =>
-    ipcRenderer.invoke("create-question-group", data),
-  updateQuestionGroup: (id: string, data: Prisma.QuestionGroupUpdateInput) =>
-    ipcRenderer.invoke("update-question-group", id, data),
-  deleteQuestionGroup: (id: string) =>
-    ipcRenderer.invoke("delete-question-group", id),
-  getQuestionGroupsByProjectId: (projectId: string) =>
-    ipcRenderer.invoke("get-question-groups-by-project-id", projectId),
-  getQuestionGroupById: (id: string) =>
-    ipcRenderer.invoke("get-question-group-by-id", id),
+  // SubtotalGroup related (renamed from QuestionGroup)
+  createSubtotalGroup: (data: Prisma.SubtotalGroupUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-subtotal-group", data),
+  updateSubtotalGroup: (id: string, data: Prisma.SubtotalGroupUpdateInput) =>
+    ipcRenderer.invoke("update-subtotal-group", id, data),
+  deleteSubtotalGroup: (id: string) =>
+    ipcRenderer.invoke("delete-subtotal-group", id),
+  getSubtotalGroupsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-subtotal-groups-by-project-id", projectId),
+  getSubtotalGroupById: (id: string) =>
+    ipcRenderer.invoke("get-subtotal-group-by-id", id),
 
-  // QuestionGroupItem related
-  createQuestionGroupItem: (
-    data: Prisma.QuestionGroupItemUncheckedCreateInput,
-  ) => ipcRenderer.invoke("create-question-group-item", data),
-  createManyQuestionGroupItems: (
-    items: Prisma.QuestionGroupItemUncheckedCreateInput[],
-  ) => ipcRenderer.invoke("create-many-question-group-items", items),
-  updateQuestionGroupItem: (
+  // Subtotal related (renamed from QuestionGroupItem)
+  createSubtotal: (
+    data: Prisma.SubtotalUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-subtotal", data),
+  createManySubtotals: (
+    items: Prisma.SubtotalUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-subtotals", items),
+  updateSubtotal: (
     id: string,
-    data: Prisma.QuestionGroupItemUpdateInput,
-  ) => ipcRenderer.invoke("update-question-group-item", id, data),
-  deleteQuestionGroupItem: (id: string) =>
-    ipcRenderer.invoke("delete-question-group-item", id),
-  getQuestionGroupItemsByGroupId: (questionGroupId: string) =>
-    ipcRenderer.invoke("get-question-group-items-by-group-id", questionGroupId),
-  getQuestionGroupItemById: (id: string) =>
-    ipcRenderer.invoke("get-question-group-item-by-id", id),
-  updateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) =>
-    ipcRenderer.invoke("update-question-group-item-orders", orders),
+    data: Prisma.SubtotalUpdateInput,
+  ) => ipcRenderer.invoke("update-subtotal", id, data),
+  deleteSubtotal: (id: string) =>
+    ipcRenderer.invoke("delete-subtotal", id),
+  getSubtotalsByGroupId: (subtotalGroupId: string) =>
+    ipcRenderer.invoke("get-subtotals-by-group-id", subtotalGroupId),
+  getSubtotalById: (id: string) =>
+    ipcRenderer.invoke("get-subtotal-by-id", id),
 
-  // QuestionSubtotalAssignment related
-  createQuestionSubtotalAssignment: (
-    data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput,
-  ) => ipcRenderer.invoke("create-question-subtotal-assignment", data),
-  createManyQuestionSubtotalAssignments: (
-    assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[],
+  // CropSubtotal related (unified from QuestionSubtotalAssignment + SubtotalDefinition)
+  createCropSubtotal: (
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-crop-subtotal", data),
+  createManyCropSubtotals: (
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
   ) =>
     ipcRenderer.invoke(
-      "create-many-question-subtotal-assignments",
+      "create-many-crop-subtotals",
       assignments,
     ),
-  deleteQuestionSubtotalAssignment: (id: string) =>
-    ipcRenderer.invoke("delete-question-subtotal-assignment", id),
-  deleteAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
+  deleteCropSubtotal: (id: string) =>
+    ipcRenderer.invoke("delete-crop-subtotal", id),
+  getCropSubtotalsByCropRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke(
-      "delete-assignments-by-question-layout-region-id",
-      questionLayoutRegionId,
+      "get-crop-subtotals-by-crop-region-id",
+      cropRegionId,
     ),
-  deleteAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
+  getCropSubtotalsBySubtotalId: (subtotalId: string) =>
     ipcRenderer.invoke(
-      "delete-assignments-by-question-group-item-id",
-      questionGroupItemId,
-    ),
-  getAssignmentsByQuestionLayoutRegionId: (questionLayoutRegionId: string) =>
-    ipcRenderer.invoke(
-      "get-assignments-by-question-layout-region-id",
-      questionLayoutRegionId,
-    ),
-  getAssignmentsByQuestionGroupItemId: (questionGroupItemId: string) =>
-    ipcRenderer.invoke(
-      "get-assignments-by-question-group-item-id",
-      questionGroupItemId,
+      "get-crop-subtotals-by-subtotal-id",
+      subtotalId,
     ),
 
-  // SubtotalDefinition related
+  // 互換性関数（旧SubtotalDefinition用、CropSubtotalでの統合エイリアス）
+  getSubtotalDefinitionsByCropRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke(
+      "get-subtotal-definitions-by-crop-region-id",
+      cropRegionId,
+    ),
+
+  // 互換性関数（段階的移行のため古い名前も残す）
+  createLayoutRegion: (data: CropRegionCreateData) =>
+    ipcRenderer.invoke("create-crop-region", data),
+  updateLayoutRegion: (id: string, data: CropRegionUpdateData) =>
+    ipcRenderer.invoke("update-crop-region", id, data),
+  deleteLayoutRegion: (id: string) =>
+    ipcRenderer.invoke("delete-crop-region", id),
+  getLayoutRegionsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
+  updateLayoutRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>,
+  ) => ipcRenderer.invoke("update-crop-region-orders", updates),
+
+  createQuestionGroup: (data: Prisma.SubtotalGroupUncheckedCreateInput) =>
+    ipcRenderer.invoke("create-subtotal-group", data),
+  updateQuestionGroup: (id: string, data: Prisma.SubtotalGroupUpdateInput) =>
+    ipcRenderer.invoke("update-subtotal-group", id, data),
+  deleteQuestionGroup: (id: string) =>
+    ipcRenderer.invoke("delete-subtotal-group", id),
+  getQuestionGroupsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-subtotal-groups-by-project-id", projectId),
+  getQuestionGroupById: (id: string) =>
+    ipcRenderer.invoke("get-subtotal-group-by-id", id),
+
+  createQuestionGroupItem: (
+    data: Prisma.SubtotalUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-subtotal", data),
+  createManyQuestionGroupItems: (
+    items: Prisma.SubtotalUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-subtotals", items),
+  updateQuestionGroupItem: (
+    id: string,
+    data: Prisma.SubtotalUpdateInput,
+  ) => ipcRenderer.invoke("update-subtotal", id, data),
+  deleteQuestionGroupItem: (id: string) =>
+    ipcRenderer.invoke("delete-subtotal", id),
+  getQuestionGroupItemsByGroupId: (subtotalGroupId: string) =>
+    ipcRenderer.invoke("get-subtotals-by-group-id", subtotalGroupId),
+  getQuestionGroupItemById: (id: string) =>
+    ipcRenderer.invoke("get-subtotal-by-id", id),
+  updateQuestionGroupItemOrders: (orders: { id: string; order: number }[]) =>
+    ipcRenderer.invoke("update-subtotal-orders", orders),
+
+  createQuestionSubtotalAssignment: (
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-crop-subtotal", data),
+  createManyQuestionSubtotalAssignments: (
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
+  deleteQuestionSubtotalAssignment: (id: string) =>
+    ipcRenderer.invoke("delete-crop-subtotal", id),
+  deleteAssignmentsByQuestionLayoutRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+  deleteAssignmentsByQuestionGroupItemId: (subtotalId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
+  getAssignmentsByQuestionLayoutRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+  getAssignmentsByQuestionGroupItemId: (subtotalId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
+
   createSubtotalDefinition: (
-    data: Prisma.SubtotalDefinitionUncheckedCreateInput,
-  ) => ipcRenderer.invoke("create-subtotal-definition", data),
+    data: Prisma.CropSubtotalUncheckedCreateInput,
+  ) => ipcRenderer.invoke("create-crop-subtotal", data),
   createManySubtotalDefinitions: (
-    definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[],
-  ) => ipcRenderer.invoke("create-many-subtotal-definitions", definitions),
+    definitions: Prisma.CropSubtotalUncheckedCreateInput[],
+  ) => ipcRenderer.invoke("create-many-crop-subtotals", definitions),
   deleteSubtotalDefinition: (id: string) =>
-    ipcRenderer.invoke("delete-subtotal-definition", id),
-  deleteSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
+    ipcRenderer.invoke("delete-crop-subtotal", id),
+  deleteSubtotalDefinitionsByLayoutRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+  getSubtotalDefinitionsByLayoutRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke(
-      "delete-subtotal-definitions-by-layout-region-id",
-      layoutRegionId,
+      "get-subtotal-definitions-by-crop-region-id",
+      cropRegionId,
     ),
-  getSubtotalDefinitionsByLayoutRegionId: (layoutRegionId: string) =>
-    ipcRenderer.invoke(
-      "get-subtotal-definitions-by-layout-region-id",
-      layoutRegionId,
-    ),
-  getSubtotalDefinitionsByQuestionGroupItemId: (questionGroupItemId: string) =>
-    ipcRenderer.invoke(
-      "get-subtotal-definitions-by-question-group-item-id",
-      questionGroupItemId,
-    ),
+  getSubtotalDefinitionsByQuestionGroupItemId: (subtotalId: string) =>
+    ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
 
   // PDF Export related
   exportScoredAnswersPDF: (options: {

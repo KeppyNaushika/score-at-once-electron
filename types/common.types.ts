@@ -87,7 +87,7 @@ export interface Score {
   points: number | null
 }
 
-export const LAYOUT_REAGION_AREA_TYPES = [
+export const CROP_REGION_AREA_TYPES = [
   "QUESTION_ANSWER",
   "STUDENT_NAME",
   "STUDENT_ID",
@@ -98,14 +98,17 @@ export const LAYOUT_REAGION_AREA_TYPES = [
   "OTHER",
 ] as const
 
-export type LayoutRegionAreaType = (typeof LAYOUT_REAGION_AREA_TYPES)[number]
+export type CropRegionAreaType = (typeof CROP_REGION_AREA_TYPES)[number]
 
-export interface LayoutRegionArea {
+// 互換性のための旧名前
+export const LAYOUT_REAGION_AREA_TYPES = CROP_REGION_AREA_TYPES
+export type LayoutRegionAreaType = CropRegionAreaType
+
+export interface CropRegionArea {
   id?: string
-  projectId?: string
-  masterImageId?: string
+  projectPageId?: string  // Updated: now references ProjectPage instead of projectId and masterImageId
   label: string
-  type: LayoutRegionAreaType
+  type: CropRegionAreaType
   x: number
   y: number
   width: number
@@ -115,6 +118,9 @@ export interface LayoutRegionArea {
   createdAt?: Date
   updatedAt?: Date
 }
+
+// 互換性のためのエイリアス（段階的移行用）
+export type LayoutRegionArea = CropRegionArea
 
 export type EditableTableRow = Record<string, string | number | boolean | null>
 
@@ -139,15 +145,15 @@ export interface ProjectWithDetails {
   examDate: Date | null
   subject?: string
   description?: string
-  userId: string
   createdAt: Date
   updatedAt: Date
-  masterImages?: MasterImageData[]
-  layoutRegions?: LayoutRegionArea[]
-  answerSheets?: AnswerSheetData[]
+  projectPages?: ProjectPageData[]  // Updated: now uses ProjectPage instead of masterImages
+  pageImages?: PageImageData[]     // Updated: unified image management
+  cropRegions?: CropRegionArea[]   // Updated: renamed from layoutRegions
   tags?: TagData[]
   projectStudents?: ProjectStudentData[]
-  questions?: QuestionData[]
+  userProjects?: UserProjectData[] // Added: many-to-many User-Project relation
+  answerSheets?: any[]             // Added: answer sheets for project status checking
 }
 
 export interface ProjectStudentData {
@@ -160,43 +166,61 @@ export interface ProjectStudentData {
   updatedAt: Date
 }
 
+// Updated: MasterImageData replaced by ProjectPageData and PageImageData
+export interface ProjectPageData {
+  id: string
+  projectId: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+  cropRegions?: CropRegionArea[]
+  pageImages?: PageImageData[]
+}
+
+export interface PageImageData {
+  id: string
+  projectPageId: string
+  studentId?: string | null  // NULL for master images, student ID for answer images
+  imagePath: string
+  imageType: 'MASTER' | 'ANSWER'
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Backward compatibility alias
 export interface MasterImageData {
   id: string
   projectId: string
-  path: string
+  imagePath: string
   pageNumber: number
   createdAt: Date
   updatedAt: Date
 }
 
+// Updated: AnswerSheetData simplified to match new schema
 export interface AnswerSheetData {
   id: string
   projectId: string
   studentId?: string
   pageNumber: number
-  originalImagePath: string
-  processedImagePath?: string
-  scoredPdfPath?: string
-  isScored: boolean
-  totalScore?: number
-  isAbsent: boolean
+  originalImagePath: string  // Main path field retained
   createdAt: Date
   updatedAt: Date
-  version: number
   questionScores?: QuestionScoreData[]
+  // Removed fields: processedImagePath, scoredPdfPath, isScored, totalScore, isAbsent, version
 }
 
+// Updated: QuestionScoreData simplified to match new schema
 export interface QuestionScoreData {
   id: string
-  answerSheetId: string
-  layoutRegionId: string
-  partialScore: string | null
-  status: string
-  comment?: string
-  scoredByUserId: string
-  scoreVersion: number
+  cropRegionId: string      // Updated: renamed from layoutRegionId
+  studentId?: string | null // Updated: now references student directly
+  partialScore: number | null  // Updated: simplified from string to number
+  status: string            // unscored, correct, incorrect, partial, no_answer
+  scoredByUserId?: string | null
   createdAt: Date
   updatedAt: Date
+  // Removed fields: answerSheetId, comment, scoreVersion
 }
 
 export interface TagData {
@@ -214,9 +238,8 @@ export interface StudentData {
   updatedAt: Date
 }
 
-export interface LayoutRegionCreateData {
-  projectId: string
-  masterImageId?: string
+export interface CropRegionCreateData {
+  projectPageId: string  // Updated: now references ProjectPage instead of projectId and masterImageId
   label: string
   type:
     | "QUESTION_ANSWER"
@@ -235,7 +258,7 @@ export interface LayoutRegionCreateData {
   points?: number
 }
 
-export interface LayoutRegionUpdateData {
+export interface CropRegionUpdateData {
   label?: string
   type?:
     | "QUESTION_ANSWER"
@@ -255,19 +278,23 @@ export interface LayoutRegionUpdateData {
 }
 
 export interface QuestionScoreCreateData {
-  answerSheetId: string
-  layoutRegionId: string
-  partialScore?: number | null  // Decimal型をnumberとして扱う
-  comment?: string
-  scoredByUserId: string
-  status?: string
+  cropRegionId: string         // Updated: primary reference
+  studentId?: string | null    // Updated: now references student directly
+  partialScore?: number | null // Decimal型をnumberとして扱う
+  scoredByUserId?: string | null
+  status?: string             // unscored, correct, incorrect, partial, no_answer
+  // Removed: answerSheetId, comment
 }
 
 export interface QuestionScoreUpdateData {
   partialScore?: number | null  // Decimal型をnumberとして扱う
-  comment?: string
-  status?: string
+  status?: string              // unscored, correct, incorrect, partial, no_answer
+  // Removed: comment
 }
+
+// 互換性のためのエイリアス（段階的移行用）
+export type LayoutRegionCreateData = CropRegionCreateData
+export type LayoutRegionUpdateData = CropRegionUpdateData
 
 export interface ScoringMarkConfig {
   position:
@@ -286,86 +313,49 @@ export interface ScoringMarkConfig {
   showPartial: boolean
 }
 
+// Updated: New type definitions for refactored database structure
+
+export interface UserProjectData {
+  id: string
+  userId: string
+  projectId: string
+  role: string  // 'OWNER', 'GRADER', etc.
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SubtotalGroupData {
+  id: string
+  name: string
+  createdAt: Date
+  updatedAt: Date
+  subtotals?: SubtotalData[]
+}
+
+export interface SubtotalData {
+  id: string
+  name: string
+  subtotalGroupId: string
+  order: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CropSubtotalData {
+  id: string
+  cropRegionId: string
+  subtotalId: string
+  assignmentType: 'SUBTOTAL_DEFINITION' | 'QUESTION_ASSIGNMENT'
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ProjectSubtotalGroupData {
+  id: string
+  projectId: string
+  subtotalGroupId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 // 新しいQuestion管理システムの型定義
-export interface QuestionData {
-  id: string
-  projectId: string
-  title: string
-  description?: string
-  maxScore: number
-  orderIndex: number
-  createdAt: Date
-  updatedAt: Date
-  questionParts?: QuestionPartData[]
-  questionScores?: QuestionScoreData[]
-}
-
-export interface QuestionPartData {
-  id: string
-  questionId: string
-  layoutRegionId: string
-  partLabel: string
-  partScore: number
-  orderIndex: number
-  createdAt: Date
-  updatedAt: Date
-  partScores?: QuestionPartScoreData[]
-  layoutRegion?: LayoutRegionArea
-}
-
-export interface QuestionPartScoreData {
-  id: string
-  questionPartId: string
-  answerSheetId: string
-  score: number | null
-  comment?: string
-  scoredByUserId: string
-  status: string
-  createdAt: Date
-  updatedAt: Date
-  scoreVersion: number
-}
-
-export interface QuestionCreateData {
-  projectId: string
-  title: string
-  description?: string
-  maxScore: number
-  orderIndex: number
-}
-
-export interface QuestionUpdateData {
-  title?: string
-  description?: string
-  maxScore?: number
-  orderIndex?: number
-}
-
-export interface QuestionPartCreateData {
-  questionId: string
-  layoutRegionId: string
-  partLabel: string
-  partScore: number
-  orderIndex: number
-}
-
-export interface QuestionPartUpdateData {
-  partLabel?: string
-  partScore?: number
-  orderIndex?: number
-}
-
-export interface QuestionPartScoreCreateData {
-  questionPartId: string
-  answerSheetId: string
-  score?: number | null
-  comment?: string
-  scoredByUserId: string
-  status?: string
-}
-
-export interface QuestionPartScoreUpdateData {
-  score?: number | null
-  comment?: string
-  status?: string
-}

@@ -1,20 +1,20 @@
-import type { Prisma, QuestionGroupItem } from "@prisma/client"
+import type { Prisma, Subtotal } from "@prisma/client"
 import prisma from "./client"
 
-// QuestionGroupItem を作成
+// QuestionGroupItem を作成 (Subtotal として実装)
 export const createQuestionGroupItem = async (
-  data: Prisma.QuestionGroupItemUncheckedCreateInput, // questionGroupId を直接含める
+  data: Prisma.SubtotalUncheckedCreateInput, // subtotalGroupId を直接含める
 ) => {
-  return prisma.questionGroupItem.create({
+  return prisma.subtotal.create({
     data,
   })
 }
 
 // 複数の QuestionGroupItem を作成 (特定の QuestionGroup に対して)
 export const createManyQuestionGroupItems = async (
-  items: Prisma.QuestionGroupItemUncheckedCreateInput[],
+  items: Prisma.SubtotalUncheckedCreateInput[],
 ) => {
-  return prisma.questionGroupItem.createMany({
+  return prisma.subtotal.createMany({
     data: items,
   })
 }
@@ -22,9 +22,9 @@ export const createManyQuestionGroupItems = async (
 // QuestionGroupItem を更新
 export const updateQuestionGroupItem = async (
   id: string,
-  data: Prisma.QuestionGroupItemUpdateInput,
+  data: Prisma.SubtotalUpdateInput,
 ) => {
-  return prisma.questionGroupItem.update({
+  return prisma.subtotal.update({
     where: { id },
     data,
   })
@@ -32,18 +32,18 @@ export const updateQuestionGroupItem = async (
 
 // QuestionGroupItem を削除
 export const deleteQuestionGroupItem = async (id: string) => {
-  // 関連する SubtotalDefinition, QuestionSubtotalAssignment も削除されるか確認
-  return prisma.questionGroupItem.delete({
+  // 関連する CropSubtotal も削除されるか確認
+  return prisma.subtotal.delete({
     where: { id },
   })
 }
 
 // QuestionGroup ID で QuestionGroupItem を取得
 export const getQuestionGroupItemsByGroupId = async (
-  questionGroupId: string,
+  questionGroupId: string, // 実際はsubtotalGroupId
 ) => {
-  return prisma.questionGroupItem.findMany({
-    where: { questionGroupId },
+  return prisma.subtotal.findMany({
+    where: { subtotalGroupId: questionGroupId },
     orderBy: {
       order: "asc",
     },
@@ -52,21 +52,19 @@ export const getQuestionGroupItemsByGroupId = async (
 
 // IDで QuestionGroupItem を取得
 export const getQuestionGroupItemById = async (id: string) => {
-  return prisma.questionGroupItem.findUnique({
+  return prisma.subtotal.findUnique({
     where: { id },
     include: {
-      questionGroup: true, // 親の QuestionGroup も取得
-      subtotalDefinitions: true, // 関連する SubtotalDefinition も取得
-      questionAssignments: true, // 関連する QuestionSubtotalAssignment も取得
+      subtotalGroup: true, // 親の SubtotalGroup も取得
+      cropSubtotals: true, // 関連する CropSubtotal も取得
     },
   })
 }
 
-export type QuestionGroupItemWithDetails = Prisma.QuestionGroupItemGetPayload<{
+export type QuestionGroupItemWithDetails = Prisma.SubtotalGetPayload<{
   include: {
-    questionGroup: true
-    subtotalDefinitions: true
-    questionAssignments: true
+    subtotalGroup: true
+    cropSubtotals: true
   }
 }>
 
@@ -77,7 +75,7 @@ export const updateQuestionGroupItemOrders = async (
   console.log("🔄 DB: updateQuestionGroupItemOrders called with:", orders)
 
   const updates = orders.map(({ id, order }) =>
-    prisma.questionGroupItem.update({
+    prisma.subtotal.update({
       where: { id },
       data: { order },
     }),
@@ -93,4 +91,4 @@ export const updateQuestionGroupItemOrders = async (
   return batchResult
 }
 
-export type QuestionGroupItemPayload = QuestionGroupItem
+export type QuestionGroupItemPayload = Subtotal

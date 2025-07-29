@@ -6,10 +6,12 @@ import { PasswordDialog } from "@/components/ui/password-dialog"
 import { useMasterImages } from "@/hooks/useMasterImages"
 import { Prisma } from "@prisma/client"
 
+type MasterImage = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
+
 interface MasterImageManagerProps {
   projectId: string
-  initialMasterImages: Prisma.MasterImageGetPayload<{}>[]
-  onMasterImagesChange: (images: Prisma.MasterImageGetPayload<{}>[]) => void
+  initialMasterImages: MasterImage[]
+  onMasterImagesChange: (images: MasterImage[]) => void
 }
 
 export default function MasterImageManager({

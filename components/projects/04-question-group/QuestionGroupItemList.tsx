@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2, Tag, GripVertical } from "lucide-react"
-import { QuestionGroupWithItems } from "@/types/electron"
+import { SubtotalGroupWithItems } from "@/types/electron"
 import {
   DndContext,
   closestCenter,
@@ -36,8 +36,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 
 interface QuestionGroupItemListProps {
-  questionGroup: QuestionGroupWithItems
-  onCreateItem: (questionGroupId: string, name: string) => Promise<boolean>
+  subtotalGroup: SubtotalGroupWithItems
+  onCreateItem: (subtotalGroupId: string, name: string) => Promise<boolean>
   onUpdateItem: (id: string, name: string) => Promise<boolean>
   onDeleteItem: (id: string) => Promise<boolean>
   onUpdateItemOrders: (orders: { id: string; order: number }[]) => Promise<boolean>
@@ -106,7 +106,7 @@ function SortableItem({ item, index, onEdit, onDelete }: SortableItemProps) {
 }
 
 export function QuestionGroupItemList({
-  questionGroup,
+  subtotalGroup,
   onCreateItem,
   onUpdateItem,
   onDeleteItem,
@@ -117,12 +117,12 @@ export function QuestionGroupItemList({
   const [newItemName, setNewItemName] = useState("")
   const [editingItem, setEditingItem] = useState<any>(null)
   const [editItemName, setEditItemName] = useState("")
-  const [items, setItems] = useState(questionGroup.items)
+  const [items, setItems] = useState(subtotalGroup.subtotals)
 
-  // Sync local items with props when questionGroup changes
+  // Sync local items with props when subtotalGroup changes
   useEffect(() => {
-    setItems(questionGroup.items)
-  }, [questionGroup.items])
+    setItems(subtotalGroup.subtotals)
+  }, [subtotalGroup.subtotals])
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -154,7 +154,7 @@ export function QuestionGroupItemList({
   const handleCreateItem = async () => {
     if (!newItemName.trim()) return
 
-    const success = await onCreateItem(questionGroup.id, newItemName.trim())
+    const success = await onCreateItem(subtotalGroup.id, newItemName.trim())
     if (success) {
       setNewItemName("")
       setShowCreateDialog(false)
@@ -226,7 +226,7 @@ export function QuestionGroupItemList({
         </div>
       </CardHeader>
       <CardContent>
-        {questionGroup.items.length === 0 ? (
+        {subtotalGroup.subtotals.length === 0 ? (
           <div className="text-muted-foreground py-8 text-center">
             <Tag className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>項目がありません</p>

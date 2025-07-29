@@ -2,7 +2,7 @@ import { useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { User } from "@prisma/client"
 import { AreaType, DatabaseOperation, RegionCoordinates } from "../types"
-import { LayoutRegionArea } from "@/types/common.types"
+import { CropRegionArea } from "@/types/common.types"
 
 /**
  * 領域保存処理を担当するカスタムフック
@@ -27,22 +27,21 @@ export function useRegionSave(
    * @returns Promise<any | null> 保存結果
    */
   const saveRegion = useCallback(
-    async (region: LayoutRegionArea, operation: DatabaseOperation): Promise<any | null> => {
+    async (region: CropRegionArea, operation: DatabaseOperation): Promise<any | null> => {
       if (!projectId || !currentUser) {
         console.warn("Missing projectId or currentUser for saveRegion")
         return null
       }
 
       try {
-        if (!region.masterImageId) {
+        if (!region.projectPageId) {
           throw new Error(
-            `Layout region ${region.label || "Unnamed"} is missing masterImageId.`
+            `Layout region ${region.label || "Unnamed"} is missing projectPageId.`
           )
         }
 
         const regionData = {
-          projectId,
-          masterImageId: region.masterImageId,
+          projectPageId: region.projectPageId,
           type: region.type,
           x: region.x,
           y: region.y,
@@ -55,10 +54,10 @@ export function useRegionSave(
 
         if (operation === 'update' && region.id) {
           // 既存領域の更新
-          return await window.electronAPI.updateLayoutRegion(region.id, regionData)
+          return await window.electronAPI.updateCropRegion(region.id, regionData)
         } else if (operation === 'create') {
           // 新規領域の作成
-          return await window.electronAPI.createLayoutRegion(regionData)
+          return await window.electronAPI.createCropRegion(regionData)
         } else {
           throw new Error(`Invalid operation: ${operation} for region with ID: ${region.id}`)
         }
@@ -78,7 +77,7 @@ export function useRegionSave(
    * @returns Promise<void>
    */
   const autoSaveRegions = useCallback(
-    async (regions: LayoutRegionArea[]): Promise<void> => {
+    async (regions: CropRegionArea[]): Promise<void> => {
       if (!projectId || !currentUser || isSavingRef.current) return
 
       isSavingRef.current = true
@@ -92,14 +91,14 @@ export function useRegionSave(
         // 順次処理で確実にID管理
         for (let i = 0; i < regions.length; i++) {
           const area = regions[i]
-          if (!area.masterImageId) {
+          if (!area.projectPageId) {
             saveResults.push({ originalIndex: i, result: null, wasUpdate: false })
             continue
           }
 
           const regionData = {
             projectId,
-            masterImageId: area.masterImageId,
+            projectPageId: area.projectPageId,
             type: area.type,
             x: area.x,
             y: area.y,
@@ -138,7 +137,7 @@ export function useRegionSave(
    * 
    * @param type - 作成する領域のタイプ
    * @param coords - 領域の座標
-   * @param masterImageId - 関連するマスター画像のID
+   * @param projectPageId - 関連するプロジェクトページのID
    * @param existingRegions - 既存の領域データ（ラベル番号計算用）
    * @returns Promise<LayoutRegionData | null> 作成された領域データ
    */
@@ -146,9 +145,9 @@ export function useRegionSave(
     async (
       type: AreaType, 
       coords: RegionCoordinates,
-      masterImageId: string,
-      existingRegions: LayoutRegionArea[]
-    ): Promise<LayoutRegionArea | null> => {
+      projectPageId: string,
+      existingRegions: CropRegionArea[]
+    ): Promise<CropRegionArea | null> => {
       // タイプに応じたラベルと配点を設定
       let label = ""
       let points = null
@@ -178,7 +177,7 @@ export function useRegionSave(
 
       // 新規領域オブジェクトを作成（orderIndexを設定）
       const nextOrderIndex = existingRegions.length
-      const newRegion: LayoutRegionArea = {
+      const newRegion: CropRegionArea = {
         type,
         x: coords.x,
         y: coords.y,
@@ -186,7 +185,7 @@ export function useRegionSave(
         height: coords.height,
         label,
         points,
-        masterImageId,
+        projectPageId,
         orderIndex: nextOrderIndex,
       }
 
@@ -221,9 +220,9 @@ export function useRegionSave(
    */
   const updateRegion = useCallback(
     async (
-      region: LayoutRegionArea, 
+      region: CropRegionArea, 
       coords: RegionCoordinates
-    ): Promise<LayoutRegionArea | null> => {
+    ): Promise<CropRegionArea | null> => {
       if (!region.id) {
         console.warn("Cannot update region without ID")
         return null

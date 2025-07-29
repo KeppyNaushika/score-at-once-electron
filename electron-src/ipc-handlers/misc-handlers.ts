@@ -197,15 +197,8 @@ export function setupMiscHandlers(): void {
           return { success: false, error: result.error }
         }
         const serializedAnswerSheets = (result.answerSheets || []).map(
-          (sheet) => ({
+          (sheet: any) => ({
             ...sheet,
-            questionScores:
-              sheet.questionScores?.map((score) => ({
-                ...score,
-                partialScore: score.partialScore
-                  ? score.partialScore.toString()
-                  : null,
-              })) || [],
           }),
         )
         return { success: true, answerSheets: serializedAnswerSheets }
@@ -266,13 +259,6 @@ export function setupMiscHandlers(): void {
         if (!result.answerSheet) return null
         return {
           ...result.answerSheet,
-          questionScores:
-            result.answerSheet.questionScores?.map((score) => ({
-              ...score,
-              partialScore: score.partialScore
-                ? score.partialScore.toString()
-                : null,
-            })) || [],
         }
       } catch (err) {
         console.error("Error fetching answer sheet by ID:", err)
@@ -300,13 +286,6 @@ export function setupMiscHandlers(): void {
         }
         return {
           ...result.answerSheet,
-          questionScores:
-            result.answerSheet?.questionScores?.map((score) => ({
-              ...score,
-              partialScore: score.partialScore
-                ? score.partialScore.toString()
-                : null,
-            })) || [],
         }
       } catch (err) {
         console.error("Error updating answer sheet placement:", err)
@@ -330,13 +309,6 @@ export function setupMiscHandlers(): void {
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,
-            questionScores:
-              sheet.questionScores?.map((score) => ({
-                ...score,
-                partialScore: score.partialScore
-                  ? score.partialScore.toString()
-                  : null,
-              })) || [],
           }))
       } catch (err) {
         console.error("Error swapping answer sheet placements:", err)
@@ -360,13 +332,6 @@ export function setupMiscHandlers(): void {
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,
-            questionScores:
-              sheet.questionScores?.map((score) => ({
-                ...score,
-                partialScore: score.partialScore
-                  ? score.partialScore.toString()
-                  : null,
-              })) || [],
           }))
       } catch (err) {
         console.error(
@@ -415,7 +380,7 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle(
     "create-class",
-    async (_event, classData: Prisma.ClassCreateWithoutClassTeachersInput) => {
+    async (_event, classData: Prisma.ClassCreateInput) => {
       try {
         return await createClass(classData)
       } catch (err) {
@@ -562,7 +527,7 @@ export function setupMiscHandlers(): void {
     async (_event, projectId: string) => {
       try {
         const masterImages = await getMasterImagesByProjectId(projectId)
-        return masterImages.map((image) => ({
+        return masterImages.map((image: any) => ({
           ...image,
           createdAt: image.createdAt.toISOString(),
           updatedAt: image.updatedAt.toISOString(),

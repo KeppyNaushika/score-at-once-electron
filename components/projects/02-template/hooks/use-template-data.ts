@@ -1,12 +1,19 @@
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import { MasterImage } from "@prisma/client"
+type MasterImage = {
+  id: string
+  projectId: string
+  imagePath: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
 import { 
   AreaType, 
   InitialDataState, 
   ImageDimensions 
 } from "../types"
-import { LayoutRegionArea } from "@/types/common.types"
+import { CropRegionArea } from "@/types/common.types"
 
 /**
  * テンプレートページの初期データ読み込みと状態管理を担当するカスタムフック
@@ -91,23 +98,37 @@ export function useTemplateData(projectId: string | undefined) {
       let backgroundUrl: string | null = null
       let dimensions: ImageDimensions | null = null
 
-      if (fetchedProject.masterImages && fetchedProject.masterImages.length > 0) {
-        processedMasterImages = [...fetchedProject.masterImages].sort(
-          (a, b) => a.pageNumber - b.pageNumber
-        )
+      if (fetchedProject.projectPages && fetchedProject.projectPages.length > 0) {
+        // projectPagesからmaster imagesを抽出してソート
+        const masterImages = fetchedProject.projectPages
+          .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
+          .map(page => {
+            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+            return {
+              id: page.id,
+              projectId: page.projectId,
+              imagePath: masterImage?.imagePath || '',
+              pageNumber: page.pageNumber,
+              createdAt: page.createdAt,
+              updatedAt: page.updatedAt,
+            }
+          })
+          .sort((a, b) => a.pageNumber - b.pageNumber)
+        
+        processedMasterImages = masterImages
         selectedImage = processedMasterImages[0]
         
         // 最初の画像のURLと寸法を取得
-        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(selectedImage.path)
+        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(selectedImage.imagePath)
         dimensions = await loadImageDimensions(backgroundUrl)
       }
 
       // 既存のレイアウト領域を取得
-      let regions: LayoutRegionArea[] = []
+      let regions: CropRegionArea[] = []
       let layoutIdValue: string | undefined
 
       try {
-        const existingRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        const existingRegions = await window.electronAPI.getCropRegionsByProjectId(projectId)
         
         if (existingRegions && existingRegions.length > 0) {
           layoutIdValue = "existing"
@@ -115,7 +136,7 @@ export function useTemplateData(projectId: string | undefined) {
           // 最初のマスター画像に対応する領域のみをフィルター
           const firstMasterImageId = selectedImage?.id
           const currentImageRegions = firstMasterImageId
-            ? existingRegions.filter(region => region.masterImageId === firstMasterImageId)
+            ? existingRegions.filter(region => region.projectPage?.id === firstMasterImageId)
             : []
 
           regions = currentImageRegions.map(region => ({
@@ -127,7 +148,7 @@ export function useTemplateData(projectId: string | undefined) {
             height: region.height,
             label: region.label || "",
             points: region.points ? String(region.points) : null,
-            masterImageId: region.masterImageId || "",
+            projectPageId: region.projectPage?.id || "",
           }))
         }
       } catch (regionError) {
@@ -168,16 +189,16 @@ export function useTemplateData(projectId: string | undefined) {
 
     try {
       // 新しい画像のURLと寸法を取得
-      const url = await window.electronAPI.resolveFileProtocolPath(image.path)
+      const url = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
       const dimensions = await loadImageDimensions(url)
 
       // 新しいページの領域を読み込む
-      const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      const allRegions = await window.electronAPI.getCropRegionsByProjectId(projectId)
       const currentImageRegions = allRegions.filter(
-        region => region.masterImageId === image.id
+        region => region.projectPage?.id === image.id
       )
 
-      const mappedRegions: LayoutRegionArea[] = currentImageRegions.length > 0
+      const mappedRegions: CropRegionArea[] = currentImageRegions.length > 0
         ? currentImageRegions.map(region => ({
             id: region.id,
             type: region.type as AreaType,
@@ -187,7 +208,7 @@ export function useTemplateData(projectId: string | undefined) {
             height: region.height,
             label: region.label || "",
             points: region.points ? String(region.points) : null,
-            masterImageId: region.masterImageId || "",
+            projectPageId: region.projectPage?.id || "",
           }))
         : []
 
@@ -211,7 +232,7 @@ export function useTemplateData(projectId: string | undefined) {
    * 
    * @param regions - 新しい領域データ
    */
-  const updateLayoutRegions = useCallback((regions: LayoutRegionArea[]) => {
+  const updateLayoutRegions = useCallback((regions: CropRegionArea[]) => {
     setInitialData(prev => ({
       ...prev,
       layoutRegions: regions,

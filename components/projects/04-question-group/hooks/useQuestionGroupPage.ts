@@ -1,14 +1,14 @@
 "use client"
 
 import {
-  LayoutRegionWithDetails,
-  QuestionGroupWithItems,
+  CropRegionWithDetails,
+  SubtotalGroupWithItems,
 } from "@/types/electron"
 import { useCallback, useEffect, useState } from "react"
 
 interface SubtotalData {
-  [questionGroupId: string]: {
-    [questionGroupItemId: string]: {
+  [subtotalGroupId: string]: {
+    [subtotalId: string]: {
       questions: string[]
       totalPoints: number
     }
@@ -17,18 +17,18 @@ interface SubtotalData {
 
 export function useQuestionGroupPage(projectId: string) {
   const [project, setProject] = useState<any>(null)
-  const [questionGroups, setQuestionGroups] = useState<
-    QuestionGroupWithItems[]
+  const [subtotalGroups, setSubtotalGroups] = useState<
+    SubtotalGroupWithItems[]
   >([])
-  const [layoutRegions, setLayoutRegions] = useState<LayoutRegionWithDetails[]>(
+  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>(
     [],
   )
   const [subtotalRegions, setSubtotalRegions] = useState<
-    LayoutRegionWithDetails[]
+    CropRegionWithDetails[]
   >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedQuestionGroupId, setSelectedQuestionGroupId] = useState<
+  const [selectedSubtotalGroupId, setSelectedSubtotalGroupId] = useState<
     string | null
   >(null)
   const [subtotalData, setSubtotalData] = useState<SubtotalData | null>(null)
@@ -40,23 +40,23 @@ export function useQuestionGroupPage(projectId: string) {
       setLoading(true)
       setError(null)
 
-      const [projectResponse, questionGroupsResponse, layoutRegionsResponse] =
+      const [projectResponse, subtotalGroupsResponse, cropRegionsResponse] =
         await Promise.all([
           window.electronAPI.fetchProjectById(projectId),
-          window.electronAPI.getQuestionGroupsByProjectId(projectId),
-          window.electronAPI.getLayoutRegionsByProjectId(projectId),
+          window.electronAPI.getSubtotalGroupsByProjectId(projectId),
+          window.electronAPI.getCropRegionsByProjectId(projectId),
         ])
 
-      console.log("📊 questionGroupsResponse:", questionGroupsResponse)
+      console.log("📊 subtotalGroupsResponse:", subtotalGroupsResponse)
 
       // 各グループの詳細を確認
-      if (questionGroupsResponse && questionGroupsResponse.length > 0) {
-        questionGroupsResponse.forEach((group: any, groupIndex: number) => {
+      if (subtotalGroupsResponse && subtotalGroupsResponse.length > 0) {
+        subtotalGroupsResponse.forEach((group: any, groupIndex: number) => {
           console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
-          if (group.items && group.items.length > 0) {
-            group.items.forEach((item: any, itemIndex: number) => {
+          if (group.subtotals && group.subtotals.length > 0) {
+            group.subtotals.forEach((subtotal: any, subtotalIndex: number) => {
               console.log(
-                `  📝 Item ${itemIndex + 1}: ${item.name} (order: ${item.order})`,
+                `  📝 Subtotal ${subtotalIndex + 1}: ${subtotal.name} (order: ${subtotal.order})`,
               )
             })
           }
@@ -67,24 +67,24 @@ export function useQuestionGroupPage(projectId: string) {
         setProject(projectResponse)
       }
 
-      if (questionGroupsResponse) {
-        setQuestionGroups(questionGroupsResponse)
-        if (questionGroupsResponse.length > 0 && !selectedQuestionGroupId) {
-          setSelectedQuestionGroupId(questionGroupsResponse[0].id)
+      if (subtotalGroupsResponse) {
+        setSubtotalGroups(subtotalGroupsResponse)
+        if (subtotalGroupsResponse.length > 0 && !selectedSubtotalGroupId) {
+          setSelectedSubtotalGroupId(subtotalGroupsResponse[0].id)
         }
       }
 
-      if (layoutRegionsResponse) {
+      if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
-        const questionRegions = layoutRegionsResponse.filter(
-          (region: LayoutRegionWithDetails) =>
+        const questionRegions = cropRegionsResponse.filter(
+          (region: CropRegionWithDetails) =>
             region.type === "QUESTION_ANSWER",
         )
-        setLayoutRegions(questionRegions)
+        setCropRegions(questionRegions)
 
         // 小計点タイプの領域のみフィルタリング
-        const subtotalRegions = layoutRegionsResponse.filter(
-          (region: LayoutRegionWithDetails) => region.type === "SUBTOTAL_SCORE",
+        const subtotalRegions = cropRegionsResponse.filter(
+          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE",
         )
         setSubtotalRegions(subtotalRegions)
       }
@@ -98,24 +98,24 @@ export function useQuestionGroupPage(projectId: string) {
     } finally {
       setLoading(false)
     }
-  }, [projectId, selectedQuestionGroupId])
+  }, [projectId, selectedSubtotalGroupId])
 
   // 小計データを計算
   const calculateSubtotalData = useCallback(async () => {
-    if (questionGroups.length === 0) return
+    if (subtotalGroups.length === 0) return
 
     try {
       const data: SubtotalData = {}
 
-      for (const group of questionGroups) {
+      for (const group of subtotalGroups) {
         data[group.id] = {}
 
-        for (const item of group.items) {
-          // この item に関連付けられた設問を取得
+        for (const subtotal of group.subtotals) {
+          // この subtotal に関連付けられた設問を取得
           try {
             const assignmentsResult =
               (await window.electronAPI.getAssignmentsByQuestionGroupItemId(
-                item.id,
+                subtotal.id,
               )) as any
 
             if (
@@ -137,18 +137,18 @@ export function useQuestionGroupPage(projectId: string) {
                 0,
               )
 
-              data[group.id][item.id] = {
+              data[group.id][subtotal.id] = {
                 questions: questionLabels,
                 totalPoints,
               }
             } else {
-              data[group.id][item.id] = {
+              data[group.id][subtotal.id] = {
                 questions: [],
                 totalPoints: 0,
               }
             }
           } catch (error) {
-            data[group.id][item.id] = {
+            data[group.id][subtotal.id] = {
               questions: [],
               totalPoints: 0,
             }
@@ -160,15 +160,14 @@ export function useQuestionGroupPage(projectId: string) {
     } catch (err) {
       console.error("小計データの計算に失敗しました:", err)
     }
-  }, [questionGroups])
+  }, [subtotalGroups])
 
-  // QuestionGroup作成
-  const createQuestionGroup = useCallback(
+  // SubtotalGroup作成
+  const createSubtotalGroup = useCallback(
     async (name: string) => {
       try {
         const result = await window.electronAPI.createQuestionGroup({
           name,
-          projectId,
         })
 
         if (result) {
@@ -186,8 +185,8 @@ export function useQuestionGroupPage(projectId: string) {
     [projectId, loadData],
   )
 
-  // QuestionGroup更新
-  const updateQuestionGroup = useCallback(
+  // SubtotalGroup更新
+  const updateSubtotalGroup = useCallback(
     async (id: string, name: string) => {
       try {
         const result = await window.electronAPI.updateQuestionGroup(id, {
@@ -209,15 +208,15 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
-  // QuestionGroup削除
-  const deleteQuestionGroup = useCallback(
+  // SubtotalGroup削除
+  const deleteSubtotalGroup = useCallback(
     async (id: string) => {
       try {
         await window.electronAPI.deleteQuestionGroup(id)
         await loadData()
 
-        if (selectedQuestionGroupId === id) {
-          setSelectedQuestionGroupId(null)
+        if (selectedSubtotalGroupId === id) {
+          setSelectedSubtotalGroupId(null)
         }
 
         return true
@@ -228,16 +227,16 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       }
     },
-    [selectedQuestionGroupId, loadData],
+    [selectedSubtotalGroupId, loadData],
   )
 
-  // QuestionGroupItem作成
-  const createQuestionGroupItem = useCallback(
-    async (questionGroupId: string, name: string) => {
+  // Subtotal作成
+  const createSubtotal = useCallback(
+    async (subtotalGroupId: string, name: string) => {
       try {
         const result = await window.electronAPI.createQuestionGroupItem({
           name,
-          questionGroupId,
+          subtotalGroupId,
         })
 
         if (result) {
@@ -255,8 +254,8 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
-  // QuestionGroupItem更新
-  const updateQuestionGroupItem = useCallback(
+  // Subtotal更新
+  const updateSubtotal = useCallback(
     async (id: string, name: string) => {
       try {
         const result = await window.electronAPI.updateQuestionGroupItem(id, {
@@ -278,8 +277,8 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
-  // QuestionGroupItem削除
-  const deleteQuestionGroupItem = useCallback(
+  // Subtotal削除
+  const deleteSubtotal = useCallback(
     async (id: string) => {
       try {
         await window.electronAPI.deleteQuestionGroupItem(id)
@@ -295,8 +294,8 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
-  // QuestionGroupItem順序更新
-  const updateQuestionGroupItemOrders = useCallback(
+  // Subtotal順序更新
+  const updateSubtotalOrders = useCallback(
     async (orders: { id: string; order: number }[]) => {
       try {
         console.log("🔄 updateQuestionGroupItemOrders called with:", orders)
@@ -320,21 +319,22 @@ export function useQuestionGroupPage(projectId: string) {
     [loadData],
   )
 
-  // 設問とグループの関連付け更新
+  // 設問とサブトータルの関連付け更新
   const updateQuestionAssignments = useCallback(
-    async (questionLayoutRegionId: string, questionGroupItemIds: string[]) => {
+    async (questionCropRegionId: string, subtotalIds: string[]) => {
       try {
         // 既存の関連付けを削除
         await window.electronAPI.deleteAssignmentsByQuestionLayoutRegionId(
-          questionLayoutRegionId,
+          questionCropRegionId,
         )
 
         // 新しい関連付けを作成
-        if (questionGroupItemIds.length > 0) {
-          const assignments = questionGroupItemIds.map(
-            (questionGroupItemId) => ({
-              questionLayoutRegionId,
-              questionGroupItemId,
+        if (subtotalIds.length > 0) {
+          const assignments = subtotalIds.map(
+            (subtotalId) => ({
+              cropRegionId: questionCropRegionId,
+              subtotalId,
+              assignmentType: 'QUESTION_SUBTOTAL' as const,
             }),
           )
 
@@ -355,25 +355,26 @@ export function useQuestionGroupPage(projectId: string) {
     [calculateSubtotalData],
   )
 
-  // 小計点とグループの関連付け更新
+  // 小計点とサブトータルの関連付け更新
   const updateSubtotalAssignments = useCallback(
-    async (subtotalLayoutRegionId: string, questionGroupItemIds: string[]) => {
+    async (subtotalCropRegionId: string, subtotalIds: string[]) => {
       try {
         // 既存の関連付けを削除
-        await window.electronAPI.deleteSubtotalDefinitionsByLayoutRegionId(
-          subtotalLayoutRegionId,
+        await window.electronAPI.deleteCropSubtotalsByCropRegionId(
+          subtotalCropRegionId,
         )
 
         // 新しい関連付けを作成
-        if (questionGroupItemIds.length > 0) {
-          const definitions = questionGroupItemIds.map(
-            (questionGroupItemId) => ({
-              layoutRegionId: subtotalLayoutRegionId,
-              questionGroupItemId,
+        if (subtotalIds.length > 0) {
+          const cropSubtotals = subtotalIds.map(
+            (subtotalId) => ({
+              cropRegionId: subtotalCropRegionId,
+              subtotalId,
+              assignmentType: 'SUBTOTAL_DEFINITION' as const,
             }),
           )
 
-          await window.electronAPI.createManySubtotalDefinitions(definitions)
+          await window.electronAPI.createManyCropSubtotals(cropSubtotals)
         }
 
         return true
@@ -396,28 +397,28 @@ export function useQuestionGroupPage(projectId: string) {
 
   // 小計データの計算
   useEffect(() => {
-    if (questionGroups.length > 0) {
+    if (subtotalGroups.length > 0) {
       calculateSubtotalData()
     }
-  }, [questionGroups, calculateSubtotalData])
+  }, [subtotalGroups, calculateSubtotalData])
 
   return {
     project,
-    questionGroups,
-    layoutRegions,
+    subtotalGroups,
+    cropRegions,
     subtotalRegions,
     loading,
     error,
-    selectedQuestionGroupId,
-    setSelectedQuestionGroupId,
+    selectedSubtotalGroupId,
+    setSelectedSubtotalGroupId,
     refreshData: loadData,
-    createQuestionGroup,
-    updateQuestionGroup,
-    deleteQuestionGroup,
-    createQuestionGroupItem,
-    updateQuestionGroupItem,
-    deleteQuestionGroupItem,
-    updateQuestionGroupItemOrders,
+    createSubtotalGroup,
+    updateSubtotalGroup,
+    deleteSubtotalGroup,
+    createSubtotal,
+    updateSubtotal,
+    deleteSubtotal,
+    updateSubtotalOrders,
     updateQuestionAssignments,
     updateSubtotalAssignments,
     subtotalData,

@@ -27,7 +27,7 @@ interface ScoringToolbarProps {
     points: number
   }
   filterSettings: {
-    ungraded: boolean
+    unscored: boolean
     correct: boolean
     incorrect: boolean
     partial: boolean
@@ -44,8 +44,8 @@ interface ScoringToolbarProps {
 // 採点ボタン設定
 const SCORING_BUTTONS = [
   {
-    status: "ungraded" as ScoringStatus,
-    shortcutKey: "ungraded",
+    status: "unscored" as ScoringStatus,
+    shortcutKey: "unscored",
     label: "未採点",
     icon: Circle,
     color: "bg-gray-100 text-gray-700 hover:bg-gray-200",
@@ -96,9 +96,9 @@ const SCORING_BUTTONS = [
 // フィルターボタン設定
 const FILTER_BUTTONS = [
   {
-    key: "ungraded",
-    filterKey: "ungraded",
-    shortcutKey: "ungraded",
+    key: "unscored",
+    filterKey: "unscored",
+    shortcutKey: "unscored",
     label: "未採点",
     icon: Circle,
     color: "border-gray-400 text-gray-600",

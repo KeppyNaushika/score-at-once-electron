@@ -4,7 +4,14 @@ import { Prisma } from "@prisma/client"
  * マスター画像の型定義
  * プロジェクトの模範解答画像データを表す
  */
-export type MasterImage = Prisma.MasterImageGetPayload<{}>
+export type MasterImage = {
+  id: string
+  projectId: string
+  imagePath: string
+  pageNumber: number
+  createdAt: Date
+  updatedAt: Date
+}
 
 /**
  * マスター画像管理コンポーネントのProps

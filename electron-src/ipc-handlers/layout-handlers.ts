@@ -46,7 +46,7 @@ export function setupLayoutHandlers(): void {
   // --- LayoutRegion Handlers ---
   ipcMain.handle(
     "create-layout-region",
-    async (_event, data: Prisma.LayoutRegionUncheckedCreateInput) => {
+    async (_event, data: Prisma.CropRegionUncheckedCreateInput) => {
       try {
         return await dbCreateLayoutRegion(data)
       } catch (err) {
@@ -58,7 +58,7 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle(
     "update-layout-region",
-    async (_event, id: string, data: Prisma.LayoutRegionUpdateInput) => {
+    async (_event, id: string, data: Prisma.CropRegionUpdateInput) => {
       try {
         return await dbUpdateLayoutRegion(id, data)
       } catch (err) {
@@ -82,40 +82,38 @@ export function setupLayoutHandlers(): void {
     async (_event, projectId: string) => {
       try {
         const layoutRegions = await dbGetLayoutRegionsByProjectId(projectId)
-        return layoutRegions.map((region) => ({
+        return layoutRegions.map((region: any) => ({
           ...region,
           createdAt: region.createdAt.toISOString(),
           updatedAt: region.updatedAt.toISOString(),
           subtotalDefinitions:
-            region.subtotalDefinitions?.map((def) => ({
+            region.cropSubtotals?.filter((subtotal: any) => subtotal.assignmentType === 'SUBTOTAL_DEFINITION')?.map((def: any) => ({
               ...def,
               createdAt: def.createdAt.toISOString(),
               updatedAt: def.updatedAt.toISOString(),
-              questionGroupItem: def.questionGroupItem
+              questionGroupItem: def.subtotal
                 ? {
-                    ...def.questionGroupItem,
-                    createdAt: def.questionGroupItem.createdAt.toISOString(),
-                    updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+                    ...def.subtotal,
+                    createdAt: def.subtotal.createdAt.toISOString(),
+                    updatedAt: def.subtotal.updatedAt.toISOString(),
                   }
                 : null,
             })) || [],
           questionSubtotalAssignments:
-            region.questionSubtotalAssignments?.map((assignment) => ({
+            region.cropSubtotals?.filter((subtotal: any) => subtotal.assignmentType === 'QUESTION_ASSIGNMENT')?.map((assignment: any) => ({
               ...assignment,
               createdAt: assignment.createdAt.toISOString(),
               updatedAt: assignment.updatedAt.toISOString(),
-              questionGroupItem: assignment.questionGroupItem
+              questionGroupItem: assignment.subtotal
                 ? {
-                    ...assignment.questionGroupItem,
-                    createdAt:
-                      assignment.questionGroupItem.createdAt.toISOString(),
-                    updatedAt:
-                      assignment.questionGroupItem.updatedAt.toISOString(),
+                    ...assignment.subtotal,
+                    createdAt: assignment.subtotal.createdAt.toISOString(),
+                    updatedAt: assignment.subtotal.updatedAt.toISOString(),
                   }
                 : null,
             })) || [],
           questionScores:
-            region.questionScores?.map((score) => ({
+            region.questionScores?.map((score: any) => ({
               ...score,
               partialScore: score.partialScore
                 ? score.partialScore.toString()
@@ -140,35 +138,33 @@ export function setupLayoutHandlers(): void {
         createdAt: region.createdAt.toISOString(),
         updatedAt: region.updatedAt.toISOString(),
         subtotalDefinitions:
-          region.subtotalDefinitions?.map((def) => ({
+          region.cropSubtotals?.filter((subtotal: any) => subtotal.assignmentType === 'SUBTOTAL_DEFINITION')?.map((def: any) => ({
             ...def,
             createdAt: def.createdAt.toISOString(),
             updatedAt: def.updatedAt.toISOString(),
-            questionGroupItem: def.questionGroupItem
+            questionGroupItem: def.subtotal
               ? {
-                  ...def.questionGroupItem,
-                  createdAt: def.questionGroupItem.createdAt.toISOString(),
-                  updatedAt: def.questionGroupItem.updatedAt.toISOString(),
+                  ...def.subtotal,
+                  createdAt: def.subtotal.createdAt.toISOString(),
+                  updatedAt: def.subtotal.updatedAt.toISOString(),
                 }
               : null,
           })) || [],
         questionSubtotalAssignments:
-          region.questionSubtotalAssignments?.map((assignment) => ({
+          region.cropSubtotals?.filter((subtotal: any) => subtotal.assignmentType === 'QUESTION_ASSIGNMENT')?.map((assignment: any) => ({
             ...assignment,
             createdAt: assignment.createdAt.toISOString(),
             updatedAt: assignment.updatedAt.toISOString(),
-            questionGroupItem: assignment.questionGroupItem
+            questionGroupItem: assignment.subtotal
               ? {
-                  ...assignment.questionGroupItem,
-                  createdAt:
-                    assignment.questionGroupItem.createdAt.toISOString(),
-                  updatedAt:
-                    assignment.questionGroupItem.updatedAt.toISOString(),
+                  ...assignment.subtotal,
+                  createdAt: assignment.subtotal.createdAt.toISOString(),
+                  updatedAt: assignment.subtotal.updatedAt.toISOString(),
                 }
               : null,
           })) || [],
         questionScores:
-          region.questionScores?.map((score) => ({
+          region.questionScores?.map((score: any) => ({
             ...score,
             partialScore: score.partialScore
               ? score.partialScore.toString()
@@ -185,7 +181,7 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle(
     "create-many-layout-regions",
-    async (_event, data: Prisma.LayoutRegionCreateManyInput[]) => {
+    async (_event, data: Prisma.CropRegionCreateManyInput[]) => {
       try {
         return await dbCreateManyLayoutRegions(data)
       } catch (err) {
@@ -210,7 +206,7 @@ export function setupLayoutHandlers(): void {
   // --- QuestionGroup Handlers ---
   ipcMain.handle(
     "create-question-group",
-    async (_event, data: Prisma.QuestionGroupUncheckedCreateInput) => {
+    async (_event, data: Prisma.SubtotalGroupUncheckedCreateInput) => {
       try {
         return await dbCreateQuestionGroup(data)
       } catch (err) {
@@ -222,7 +218,7 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle(
     "update-question-group",
-    async (_event, id: string, data: Prisma.QuestionGroupUpdateInput) => {
+    async (_event, id: string, data: Prisma.SubtotalGroupUpdateInput) => {
       try {
         return await dbUpdateQuestionGroup(id, data)
       } catch (err) {
@@ -265,7 +261,7 @@ export function setupLayoutHandlers(): void {
   // --- QuestionGroupItem Handlers ---
   ipcMain.handle(
     "create-question-group-item",
-    async (_event, data: Prisma.QuestionGroupItemUncheckedCreateInput) => {
+    async (_event, data: Prisma.SubtotalUncheckedCreateInput) => {
       try {
         return await dbCreateQuestionGroupItem(data)
       } catch (err) {
@@ -277,7 +273,7 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle(
     "update-question-group-item",
-    async (_event, id: string, data: Prisma.QuestionGroupItemUpdateInput) => {
+    async (_event, id: string, data: Prisma.SubtotalUpdateInput) => {
       try {
         return await dbUpdateQuestionGroupItem(id, data)
       } catch (err) {
@@ -322,7 +318,7 @@ export function setupLayoutHandlers(): void {
 
   ipcMain.handle(
     "create-many-question-group-items",
-    async (_event, items: Prisma.QuestionGroupItemUncheckedCreateInput[]) => {
+    async (_event, items: Prisma.SubtotalUncheckedCreateInput[]) => {
       try {
         return await dbCreateManyQuestionGroupItems(items)
       } catch (err) {
@@ -335,9 +331,9 @@ export function setupLayoutHandlers(): void {
   // --- SubtotalDefinition Handlers ---
   ipcMain.handle(
     "create-subtotal-definition",
-    async (_event, data: Prisma.SubtotalDefinitionUncheckedCreateInput) => {
+    async (_event, data: Prisma.CropSubtotalUncheckedCreateInput) => {
       try {
-        return await dbCreateSubtotalDefinition(data)
+        return await dbCreateQuestionSubtotalAssignment(data)
       } catch (err) {
         console.error("Error creating subtotal definition:", err)
         throw err
@@ -349,10 +345,10 @@ export function setupLayoutHandlers(): void {
     "create-many-subtotal-definitions",
     async (
       _event,
-      definitions: Prisma.SubtotalDefinitionUncheckedCreateInput[],
+      definitions: Prisma.CropSubtotalUncheckedCreateInput[],
     ) => {
       try {
-        return await dbCreateManySubtotalDefinitions(definitions)
+        return await dbCreateManyQuestionSubtotalAssignments(definitions)
       } catch (err) {
         console.error("Error creating many subtotal definitions:", err)
         throw err
@@ -419,7 +415,7 @@ export function setupLayoutHandlers(): void {
     "create-question-subtotal-assignment",
     async (
       _event,
-      data: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput,
+      data: Prisma.CropSubtotalUncheckedCreateInput,
     ) => {
       try {
         return await dbCreateQuestionSubtotalAssignment(data)
@@ -434,7 +430,7 @@ export function setupLayoutHandlers(): void {
     "create-many-question-subtotal-assignments",
     async (
       _event,
-      assignments: Prisma.QuestionSubtotalAssignmentUncheckedCreateInput[],
+      assignments: Prisma.CropSubtotalUncheckedCreateInput[],
     ) => {
       try {
         return await dbCreateManyQuestionSubtotalAssignments(assignments)

@@ -22,10 +22,10 @@ export const generateImageUrls = async (
   
   for (const image of images) {
     try {
-      const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.path)
+      const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
       urls[image.id] = resolvedUrl
     } catch (error) {
-      console.error(`Failed to resolve path for image ${image.id} (${image.path}):`, error)
+      console.error(`Failed to resolve path for image ${image.id} (${image.imagePath}):`, error)
       urls[image.id] = ""
     }
   }

@@ -8,7 +8,8 @@ import { ArrowLeft, ArrowRight, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React from "react"
 
-type MasterImage = Prisma.MasterImageGetPayload<{}>
+// Updated MasterImage type for new schema
+type MasterImage = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
 
 interface MasterImageGalleryProps {
   images: MasterImage[]
@@ -111,16 +112,16 @@ const MasterImageCard = React.memo(
       <div className="group relative flex h-48 w-40 shrink-0 overflow-hidden rounded-md border">
         <Image
           src={imageUrl}
-          alt={`ページ ${image.pageNumber}`}
+          alt={`ページ ${image.projectPage.pageNumber}`}
           className="h-full w-full object-cover"
           width={160}
           height={192}
           unoptimized
           onError={(e) => {
-            e.currentTarget.alt = `画像読込エラー: ${image.path}`
+            e.currentTarget.alt = `画像読込エラー: ${image.imagePath}`
             console.error(
               "Failed to load image:",
-              image.path,
+              image.imagePath,
               "using URL:",
               imageUrl,
             )
@@ -143,7 +144,7 @@ const MasterImageCard = React.memo(
           }`}
         >
           <p className="text-sm font-semibold text-white">
-            ページ {image.pageNumber}
+            ページ {image.projectPage.pageNumber}
           </p>
           <div className="mt-2 flex space-x-1">
             <Button
