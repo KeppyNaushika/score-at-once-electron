@@ -4,12 +4,12 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
-  DialogFooter 
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Calculator, Plus, Search, Trash2 } from "lucide-react"
@@ -33,30 +33,36 @@ export function SubtotalGroupSelector({
   const [searchTerm, setSearchTerm] = useState("")
 
   // 利用可能な小計点グループを取得
-  const fetchAvailableGroups = async () => {
-    setLoading(true)
-    try {
-      const result = await window.electronAPI.getAvailableSubtotalGroupsForProject(projectId)
-      if (result.success && result.subtotalGroups) {
-        setAvailableGroups(result.subtotalGroups)
-      }
-    } catch (error) {
-      console.error("Error fetching available subtotal groups:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
     if (showSelector) {
+      const fetchAvailableGroups = async () => {
+        setLoading(true)
+        try {
+          const result =
+            await window.electronAPI.getAvailableSubtotalGroupsForProject(
+              projectId,
+            )
+          if (result.success && result.subtotalGroups) {
+            setAvailableGroups(result.subtotalGroups)
+          }
+        } catch (error) {
+          console.error("Error fetching available subtotal groups:", error)
+        } finally {
+          setLoading(false)
+        }
+      }
       fetchAvailableGroups()
     }
-  }, [showSelector, projectId])
+  }, [showSelector, projectId, setAvailableGroups])
 
   // 小計点グループをプロジェクトに追加
   const handleAddGroup = async (groupId: string) => {
     try {
-      const result = await window.electronAPI.addSubtotalGroupToProject(projectId, groupId)
+      const result = await window.electronAPI.addSubtotalGroupToProject(
+        projectId,
+        groupId,
+      )
       if (result.success) {
         setShowSelector(false)
         onRefresh()
@@ -71,12 +77,19 @@ export function SubtotalGroupSelector({
 
   // 小計点グループをプロジェクトから削除
   const handleRemoveGroup = async (groupId: string) => {
-    if (!confirm("この小計点グループをプロジェクトから削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。")) {
+    if (
+      !confirm(
+        "この小計点グループをプロジェクトから削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。",
+      )
+    ) {
       return
     }
 
     try {
-      const result = await window.electronAPI.removeSubtotalGroupFromProject(projectId, groupId)
+      const result = await window.electronAPI.removeSubtotalGroupFromProject(
+        projectId,
+        groupId,
+      )
       if (result.success) {
         onRefresh()
       } else {
@@ -89,8 +102,8 @@ export function SubtotalGroupSelector({
   }
 
   // 検索フィルタリング
-  const filteredGroups = availableGroups.filter(group =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGroups = availableGroups.filter((group) =>
+    group.name.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   return (
@@ -109,23 +122,30 @@ export function SubtotalGroupSelector({
       </CardHeader>
       <CardContent>
         {activeSubtotalGroups.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <div className="text-muted-foreground py-8 text-center">
+            <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>有効化された小計点グループがありません</p>
-            <p className="text-sm mt-2">「グループを追加」ボタンで既存のグループを有効化できます</p>
+            <p className="mt-2 text-sm">
+              「グループを追加」ボタンで既存のグループを有効化できます
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
             {activeSubtotalGroups.map((group) => {
               return (
-                <div key={group.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={group.id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="mb-1 flex items-center gap-2">
                       <h4 className="font-medium">{group.name}</h4>
-                      <Badge variant="secondary">{group.subtotals.length}項目</Badge>
+                      <Badge variant="secondary">
+                        {group.subtotals.length}項目
+                      </Badge>
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      項目: {group.subtotals.map(s => s.name).join(", ")}
+                    <div className="text-muted-foreground mt-1 text-xs">
+                      項目: {group.subtotals.map((s) => s.name).join(", ")}
                     </div>
                   </div>
                   <Button
@@ -145,7 +165,7 @@ export function SubtotalGroupSelector({
 
       {/* 小計点グループ選択モーダル */}
       <Dialog open={showSelector} onOpenChange={setShowSelector}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>小計点グループを選択</DialogTitle>
           </DialogHeader>
@@ -153,7 +173,7 @@ export function SubtotalGroupSelector({
           <div className="space-y-4">
             {/* 検索 */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
               <Input
                 placeholder="グループ名、説明で検索..."
                 value={searchTerm}
@@ -168,12 +188,19 @@ export function SubtotalGroupSelector({
                 <LoadingSpinner />
               </div>
             ) : filteredGroups.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>{searchTerm ? "検索結果が見つかりません" : "利用可能なグループがありません"}</p>
+              <div className="text-muted-foreground py-8 text-center">
+                <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                <p>
+                  {searchTerm
+                    ? "検索結果が見つかりません"
+                    : "利用可能なグループがありません"}
+                </p>
                 {!searchTerm && (
-                  <p className="text-sm mt-2">
-                    <a href="/subtotal-groups" className="text-blue-600 hover:underline">
+                  <p className="mt-2 text-sm">
+                    <a
+                      href="/subtotal-groups"
+                      className="text-blue-600 hover:underline"
+                    >
                       小計点管理ページ
                     </a>
                     で新しいグループを作成できます
@@ -181,18 +208,28 @@ export function SubtotalGroupSelector({
                 )}
               </div>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              <div className="max-h-96 space-y-3 overflow-y-auto">
                 {filteredGroups.map((group) => {
                   return (
-                    <div key={group.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50">
+                    <div
+                      key={group.id}
+                      className="hover:bg-accent/50 flex items-center justify-between rounded-lg border p-3"
+                    >
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="mb-1 flex items-center gap-2">
                           <h4 className="font-medium">{group.name}</h4>
-                          <Badge variant="secondary">{group.subtotals.length}項目</Badge>
+                          <Badge variant="secondary">
+                            {group.subtotals.length}項目
+                          </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          項目: {group.subtotals.slice(0, 3).map(s => s.name).join(", ")}
-                          {group.subtotals.length > 3 && ` 他${group.subtotals.length - 3}項目`}
+                        <div className="text-muted-foreground mt-1 text-xs">
+                          項目:{" "}
+                          {group.subtotals
+                            .slice(0, 3)
+                            .map((s) => s.name)
+                            .join(", ")}
+                          {group.subtotals.length > 3 &&
+                            ` 他${group.subtotals.length - 3}項目`}
                         </div>
                       </div>
                       <Button

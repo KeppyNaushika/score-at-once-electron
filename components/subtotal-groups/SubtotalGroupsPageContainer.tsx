@@ -29,9 +29,9 @@ export function SubtotalGroupsPageContainer() {
         setFilteredGroups([])
         return
       }
-      
+
       setIpcError(null)
-      
+
       const result = await window.electronAPI.getSubtotalGroups()
       if (result.success && result.subtotalGroups) {
         setSubtotalGroups(result.subtotalGroups)
@@ -50,19 +50,19 @@ export function SubtotalGroupsPageContainer() {
 
   useEffect(() => {
     fetchSubtotalGroups()
-  }, [])
+  }, [fetchSubtotalGroups])
 
   // キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // モーダルが開いている時は無視
       if (showModal) return
-      
+
       if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
         event.preventDefault()
         handleCreate()
       }
-      
+
       if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
         event.preventDefault()
         fetchSubtotalGroups()
@@ -71,7 +71,7 @@ export function SubtotalGroupsPageContainer() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [showModal])
+  }, [fetchSubtotalGroups, showModal])
 
   // 検索フィルタリング（グループ名と小計項目名で検索）
   useEffect(() => {
@@ -82,12 +82,12 @@ export function SubtotalGroupsPageContainer() {
       const filtered = subtotalGroups.filter((group) => {
         // グループ名で検索
         const matchesGroupName = group.name.toLowerCase().includes(searchLower)
-        
+
         // 小計項目名で検索
         const matchesSubtotalName = group.subtotals.some(subtotal =>
           subtotal.name.toLowerCase().includes(searchLower)
         )
-        
+
         return matchesGroupName || matchesSubtotalName
       })
       setFilteredGroups(filtered)
@@ -110,7 +110,7 @@ export function SubtotalGroupsPageContainer() {
   const handleDelete = async (groupId: string) => {
     const group = subtotalGroups.find(g => g.id === groupId)
     const groupName = group?.name || "不明なグループ"
-    
+
     if (
       !confirm(
         `小計点グループ「${groupName}」を削除しますか？\n\n注意：設問との関連付けがある場合は削除できません。\n削除前に04-question-groupページで関連付けを解除してください。`
@@ -177,10 +177,10 @@ export function SubtotalGroupsPageContainer() {
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <div className="text-red-800 font-medium mb-2">接続エラー</div>
           <div className="text-red-700 text-sm">{ipcError}</div>
-          <Button 
-            onClick={fetchSubtotalGroups} 
-            className="mt-3" 
-            variant="outline" 
+          <Button
+            onClick={fetchSubtotalGroups}
+            className="mt-3"
+            variant="outline"
             size="sm"
           >
             再試行
