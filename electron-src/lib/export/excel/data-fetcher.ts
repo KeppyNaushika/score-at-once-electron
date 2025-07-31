@@ -51,7 +51,7 @@ export async function fetchExportData(
       return { success: false, error: "生徒データの取得に失敗しました" }
     }
 
-    const layoutRegions = await getCropRegionsByProjectId(projectId)
+    const cropRegions = await getCropRegionsByProjectId(projectId)
     const questionScores = await getQuestionScoresForProject(projectId)
 
     // 選択された生徒のフィルタリングとソート
@@ -70,7 +70,7 @@ export async function fetchExportData(
     }
 
     // 設問領域と小計領域の分離・ソート
-    const questionRegions = layoutRegions
+    const questionRegions = cropRegions
       .filter((region: any) => region.type === "QUESTION_ANSWER")
       .sort((a: any, b: any) => {
         if (Math.abs(a.y - b.y) < 0.01) {
@@ -79,7 +79,7 @@ export async function fetchExportData(
         return a.y - b.y
       })
 
-    const subtotalRegions = layoutRegions
+    const subtotalRegions = cropRegions
       .filter((region: any) => region.type === "SUBTOTAL_SCORE")
       .sort((a: any, b: any) => {
         if (Math.abs(a.y - b.y) < 0.01) {
