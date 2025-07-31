@@ -18,7 +18,7 @@ export const calculateActualScore = (
     case "incorrect":
     case "no_answer":
       return 0 // 誤答・無答は 0/配点 と表示
-    case "ungraded":
+    case "unscored":
       return null // 未採点は null を返して -/配点 と表示
     case "partial":
     case "pending":
@@ -33,11 +33,11 @@ export const calculateActualScore = (
 
 // 採点データの型定義
 export interface CreateQuestionScoreData {
-  answerSheetId: string
+  studentId: string
   cropRegionId: string
   partialScore?: number // 部分点・保留時のみ使用
   status:
-    | "ungraded"
+    | "unscored"
     | "correct"
     | "incorrect"
     | "partial"
@@ -52,7 +52,7 @@ export interface CreateQuestionScoreData {
 export interface UpdateQuestionScoreData {
   partialScore?: number // 部分点・保留時のみ使用
   status?:
-    | "ungraded"
+    | "unscored"
     | "correct"
     | "incorrect"
     | "partial"
@@ -104,15 +104,13 @@ export const getQuestionScoresForProject = async (projectId: string) => {
 }
 
 /**
- * 特定の答案シートの採点データを取得 (studentId ベース)
+ * 特定の生徒の採点データを取得
  */
-export const getQuestionScoresForAnswerSheet = async (
-  answerSheetId: string, // 互換性のため、実際はstudentIdとして扱う
-) => {
+export const getQuestionScoresForStudent = async (studentId: string) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        studentId: answerSheetId, // answerSheetIdをstudentIdとして扱う
+        studentId: studentId,
       },
       include: {
         cropRegion: true,
@@ -125,7 +123,7 @@ export const getQuestionScoresForAnswerSheet = async (
 
     return { success: true, scores }
   } catch (error) {
-    console.error("Failed to get question scores for answer sheet:", error)
+    console.error("Failed to get question scores for student:", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -133,15 +131,16 @@ export const getQuestionScoresForAnswerSheet = async (
   }
 }
 
+
 /**
  * 採点データを作成
  */
 export const createQuestionScore = async (data: CreateQuestionScoreData) => {
   try {
-    // 同じ答案・設問・採点者の組み合わせで既存レコードをチェック
+    // 同じ生徒・設問・採点者の組み合わせで既存レコードをチェック
     const existing = await prisma.questionScore.findFirst({
       where: {
-        studentId: data.answerSheetId, // answerSheetId -> studentId
+        studentId: data.studentId,
         cropRegionId: data.cropRegionId,
         scoredByUserId: data.scoredByUserId,
       },
@@ -169,7 +168,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       // 新規作成
       const created = await prisma.questionScore.create({
         data: {
-          studentId: data.answerSheetId, // answerSheetId -> studentId
+          studentId: data.studentId,
           cropRegionId: data.cropRegionId,
           partialScore:
             data.partialScore !== null && data.partialScore !== undefined
@@ -194,6 +193,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
     }
   }
 }
+
 
 /**
  * 採点データを更新（楽観的ロック対応）
@@ -277,13 +277,13 @@ export const deleteQuestionScore = async (id: string) => {
  * 複数教員の採点結果を比較するためのデータを取得
  */
 export const getQuestionScoreComparison = async (
-  answerSheetId: string,
+  studentId: string,
   cropRegionId: string,
 ) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
-        studentId: answerSheetId, // answerSheetId -> studentId  
+        studentId: studentId,
         cropRegionId: cropRegionId,
       },
       include: {
@@ -318,7 +318,7 @@ export const getQuestionScoreComparison = async (
  * 採点結果を最終決定として確定
  */
 export const finalizeQuestionScore = async (
-  answerSheetId: string,
+  studentId: string,
   cropRegionId: string,
   scoredByUserId: string,
   scoreData: {
@@ -332,7 +332,7 @@ export const finalizeQuestionScore = async (
       // 既存の最終決定レコードを削除
       await tx.questionScore.deleteMany({
         where: {
-          studentId: answerSheetId, // answerSheetId -> studentId
+          studentId: studentId,
           cropRegionId: cropRegionId,
           status: "final",
         },
@@ -341,7 +341,7 @@ export const finalizeQuestionScore = async (
       // 新しい最終決定レコードを作成
       const finalScore = await tx.questionScore.create({
         data: {
-          studentId: answerSheetId, // answerSheetId -> studentId
+          studentId: studentId,
           cropRegionId: cropRegionId,
           partialScore:
             scoreData.partialScore !== null &&

@@ -214,22 +214,7 @@ export function setupQuestionGroupHandlers(): void {
     }
   })
 
-  ipcMain.handle(
-    "delete-assignments-by-question-layout-region-id",
-    async (_event, questionLayoutRegionId) => {
-      try {
-        return await deleteAssignmentsByQuestionLayoutRegionId(
-          questionLayoutRegionId,
-        )
-      } catch (err) {
-        console.error(
-          "Error deleting assignments by question layout region id:",
-          err,
-        )
-        throw err
-      }
-    },
-  )
+  // Note: delete-assignments-by-question-crop-region-id handler moved to crop-region-handlers.ts
 
   ipcMain.handle(
     "delete-assignments-by-question-group-item-id",
@@ -246,29 +231,7 @@ export function setupQuestionGroupHandlers(): void {
     },
   )
 
-  ipcMain.handle(
-    "get-assignments-by-question-layout-region-id",
-    async (_event, questionLayoutRegionId) => {
-      try {
-        const assignments = await getAssignmentsByQuestionLayoutRegionId(
-          questionLayoutRegionId,
-        )
-        return {
-          success: true,
-          assignments,
-        }
-      } catch (err) {
-        console.error(
-          "Error getting assignments by question layout region id:",
-          err,
-        )
-        return {
-          success: false,
-          error: err instanceof Error ? err.message : "Unknown error",
-        }
-      }
-    },
-  )
+  // Note: get-assignments-by-question-crop-region-id handler moved to crop-region-handlers.ts
 
   ipcMain.handle(
     "get-assignments-by-question-group-item-id",

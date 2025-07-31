@@ -61,13 +61,13 @@ export function QuestionAssignmentMatrix({
       for (const region of cropRegions) {
         try {
           const result =
-            (await window.electronAPI.getAssignmentsByQuestionCropRegionId(
+            (await window.electronAPI.getCropSubtotalsByCropRegionId(
               region.id,
             )) as any
-          if (result && result.success && result.assignments) {
+          if (result && Array.isArray(result)) {
             newAssignments[region.id] = new Set(
-              result.assignments.map(
-                (assignment: any) => assignment.subtotalId,
+              result.map(
+                (cropSubtotal: any) => cropSubtotal.subtotalId,
               ),
             )
           } else {

@@ -10,8 +10,7 @@ import {
   calculateActualScore,
   getQuestionScoresForProject,
 } from "./questionScore"
-import { getAssignmentsByQuestionGroupItemId } from "./questionSubtotalAssignment"
-import { getSubtotalDefinitionsByCropRegionId } from "./cropSubtotal"
+import { getCropSubtotalsBySubtotalId, getCropSubtotalsByCropRegionId } from "./cropSubtotal"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -334,16 +333,16 @@ async function calculateStudentSubtotalScore(
     )
 
     // 小計点領域に関連付けられたグループ項目を取得
-    const subtotalDefinitions =
-      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
+    const cropSubtotals =
+      await getCropSubtotalsByCropRegionId(subtotalRegionId)
     console.log(
-      `Found ${subtotalDefinitions?.length || 0} subtotal definitions`,
+      `Found ${cropSubtotals?.length || 0} crop subtotals`,
     )
 
     // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
-    if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
+    if (!cropSubtotals || cropSubtotals.length === 0) {
       console.log(
-        `No subtotal definitions found for region ${subtotalRegionId}, calculating total of all questions for student`,
+        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`,
       )
       return calculateStudentTotalScore(
         studentId,
@@ -355,18 +354,16 @@ async function calculateStudentSubtotalScore(
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
-    for (const definition of subtotalDefinitions) {
-      // Skip processing since function returns empty array
-      if (!definition || typeof definition !== 'object') continue
+    for (const cropSubtotal of cropSubtotals) {
+      if (!cropSubtotal || typeof cropSubtotal !== 'object') continue
       
-      const groupId = (definition as any).subtotal?.subtotalGroupId
+      const groupId = (cropSubtotal as any).subtotal?.subtotalGroupId
       if (!groupId) continue
 
       if (!groupMap.has(groupId)) {
         groupMap.set(groupId, [])
       }
-      groupMap.get(groupId)!.push((definition as any).subtotalId)
+      groupMap.get(groupId)!.push((cropSubtotal as any).subtotalId)
     }
 
     if (groupMap.size === 0) {
@@ -389,14 +386,16 @@ async function calculateStudentSubtotalScore(
       // 各項目に関連付けられた設問を取得
       for (const itemId of itemIds) {
         try {
-          const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
-          if (assignments && assignments.length > 0) {
-            assignments.forEach((assignment: any) => {
-              groupQuestionIds.add(assignment.questionCropRegionId)
+          const cropSubtotals = await getCropSubtotalsBySubtotalId(itemId)
+          if (cropSubtotals && cropSubtotals.length > 0) {
+            cropSubtotals.forEach((cropSubtotal: any) => {
+              if (cropSubtotal.assignmentType === "QUESTION_ASSIGNMENT") {
+                groupQuestionIds.add(cropSubtotal.cropRegionId)
+              }
             })
           }
         } catch (error) {
-          console.error(`Error getting assignments for item ${itemId}:`, error)
+          console.error(`Error getting crop subtotals for item ${itemId}:`, error)
         }
       }
 

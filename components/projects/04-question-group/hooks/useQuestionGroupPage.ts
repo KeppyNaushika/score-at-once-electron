@@ -119,26 +119,22 @@ export function useQuestionGroupPage(projectId: string) {
           // この subtotal に関連付けられた設問を取得
           try {
             const assignmentsResult =
-              (await window.electronAPI.getAssignmentsByQuestionGroupItemId(
+              (await window.electronAPI.getCropSubtotalsBySubtotalId(
                 subtotal.id,
               )) as any
 
-            if (
-              assignmentsResult &&
-              assignmentsResult.success &&
-              assignmentsResult.assignments
-            ) {
-              const questionLabels = assignmentsResult.assignments
+            if (assignmentsResult && Array.isArray(assignmentsResult)) {
+              const questionLabels = assignmentsResult
                 .map(
-                  (assignment: any) =>
-                    assignment.questionLayoutRegion?.label ||
-                    `問${assignment.questionLayoutRegion?.orderIndex || 1}`,
+                  (cropSubtotal: any) =>
+                    cropSubtotal.cropRegion?.label ||
+                    `問${cropSubtotal.cropRegion?.orderIndex || 1}`,
                 )
                 .filter(Boolean)
 
-              const totalPoints = assignmentsResult.assignments.reduce(
-                (sum: number, assignment: any) =>
-                  sum + (assignment.questionLayoutRegion?.points || 0),
+              const totalPoints = assignmentsResult.reduce(
+                (sum: number, cropSubtotal: any) =>
+                  sum + (cropSubtotal.cropRegion?.points || 0),
                 0,
               )
 
@@ -329,7 +325,7 @@ export function useQuestionGroupPage(projectId: string) {
     async (questionCropRegionId: string, subtotalIds: string[]) => {
       try {
         // 既存の関連付けを削除
-        await window.electronAPI.deleteAssignmentsByQuestionCropRegionId(
+        await window.electronAPI.deleteCropSubtotalsByCropRegionId(
           questionCropRegionId,
         )
 
@@ -338,10 +334,10 @@ export function useQuestionGroupPage(projectId: string) {
           const assignments = subtotalIds.map((subtotalId) => ({
             cropRegionId: questionCropRegionId,
             subtotalId,
-            assignmentType: "QUESTION_SUBTOTAL" as const,
+            assignmentType: "QUESTION_ASSIGNMENT" as const,
           }))
 
-          await window.electronAPI.createManyQuestionSubtotalAssignments(
+          await window.electronAPI.createManyCropSubtotals(
             assignments,
           )
         }

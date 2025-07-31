@@ -1,5 +1,4 @@
-import { getAssignmentsByQuestionGroupItemId } from "../../prisma/questionSubtotalAssignment"
-import { getSubtotalDefinitionsByCropRegionId } from "../../prisma/cropSubtotal"
+import { getCropSubtotalsByCropRegionId } from "../../prisma/cropSubtotal"
 
 // 小計点計算で使用する型定義
 export interface SubtotalScoreDetail {
@@ -27,77 +26,23 @@ export async function checkIfQuestionIsInSubtotal(
   subtotalRegionId: string,
 ): Promise<boolean> {
   try {
-    // 小計点領域に関連付けられたグループ項目を取得
-    const subtotalDefinitions =
-      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
+    // 小計点領域に関連付けられた定義を取得
+    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
 
-    if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
+    if (!cropSubtotals || cropSubtotals.length === 0) {
       return false
     }
 
-    // グループ別に項目をまとめる
-    const groupMap = new Map<string, string[]>()
+    // 簡略化されたロジック：直接的な関係をチェック
+    // CropSubtotalテーブルはcropRegionIdとsubtotalIdの関係を定義している
+    // 実際の実装では、subtotalに関連するcropRegionをチェック
+    // 現在のところ、小計の計算対象となる設問の特定は別の方法が必要
 
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
-    for (const definition of subtotalDefinitions) {
-      // Skip processing since function returns empty array
-      if (!definition || typeof definition !== 'object') continue
-      
-      const groupId = (definition as any).subtotal?.subtotalGroupId
-      if (!groupId) continue
-
-      if (!groupMap.has(groupId)) {
-        groupMap.set(groupId, [])
-      }
-      groupMap.get(groupId)!.push((definition as any).subtotalId)
-    }
-
-    if (groupMap.size === 0) {
-      return false
-    }
-
-    // 各グループで該当する設問を取得（GROUP内OR）
-    const groupQuestionSets: Set<string>[] = []
-
-    for (const [, itemIds] of groupMap) {
-      const groupQuestionIds = new Set<string>()
-
-      // 各項目に関連付けられた設問を取得
-      for (const itemId of itemIds) {
-        try {
-          const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
-          if (assignments && assignments.length > 0) {
-            assignments.forEach((assignment: any) => {
-              groupQuestionIds.add(assignment.questionLayoutRegionId)
-            })
-          }
-        } catch (error) {
-          console.error(`Error getting assignments for item ${itemId}:`, error)
-        }
-      }
-
-      groupQuestionSets.push(groupQuestionIds)
-    }
-
-    // GROUP間AND：全てのグループに共通する設問を取得
-    let finalQuestionIds: Set<string>
-    if (groupQuestionSets.length === 1) {
-      finalQuestionIds = groupQuestionSets[0]
-    } else {
-      finalQuestionIds = new Set()
-      const firstGroup = groupQuestionSets[0]
-
-      for (const qId of firstGroup) {
-        const existsInAllGroups = groupQuestionSets.every((group) =>
-          group.has(qId),
-        )
-        if (existsInAllGroups) {
-          finalQuestionIds.add(qId)
-        }
-      }
-    }
-
-    return finalQuestionIds.has(questionId)
+    // TODO: 新しいスキーマでの設問-小計関係の特定方法を実装
+    // 現在は、設問が小計に含まれるかのチェックは未実装
+    console.warn(`checkIfQuestionIsInSubtotal not fully implemented for new schema: ${questionId} -> ${subtotalRegionId}`)
+    
+    return false
   } catch (error) {
     console.error(
       `Error checking if question ${questionId} is in subtotal ${subtotalRegionId}:`,
@@ -115,91 +60,22 @@ export async function calculateSubtotalScore(
   studentScores: SubtotalScoreDetail[],
 ): Promise<SubtotalResult> {
   try {
-    // 小計点領域に関連付けられたグループ項目を取得
-    const subtotalDefinitions =
-      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
+    // 小計点領域に関連付けられた定義を取得
+    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
 
-    if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
+    if (!cropSubtotals || cropSubtotals.length === 0) {
       // フォールバック: 小計定義がない場合は全設問の合計を返す
       const totalScore = studentScores.reduce((sum, score) => sum + (score.score || 0), 0)
       const totalMaxScore = studentScores.reduce((sum, score) => sum + score.maxScore, 0)
       return { score: totalScore, maxScore: totalMaxScore }
     }
 
-    // グループ別に項目をまとめる
-    const groupMap = new Map<string, string[]>()
-
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
-    for (const definition of subtotalDefinitions) {
-      // Skip processing since function returns empty array
-      if (!definition || typeof definition !== 'object') continue
-      
-      const groupId = (definition as any).subtotal?.subtotalGroupId
-      if (!groupId) continue
-
-      if (!groupMap.has(groupId)) {
-        groupMap.set(groupId, [])
-      }
-      groupMap.get(groupId)!.push((definition as any).subtotalId)
-    }
-
-    if (groupMap.size === 0) {
-      return { score: 0, maxScore: 0 }
-    }
-
-    // 各グループで該当する設問を取得（GROUP内OR）
-    const groupQuestionSets: Set<string>[] = []
-
-    for (const [, itemIds] of groupMap) {
-      const groupQuestionIds = new Set<string>()
-
-      // 各項目に関連付けられた設問を取得
-      for (const itemId of itemIds) {
-        try {
-          const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
-          if (assignments && assignments.length > 0) {
-            assignments.forEach((assignment: any) => {
-              groupQuestionIds.add(assignment.questionLayoutRegionId)
-            })
-          }
-        } catch (error) {
-          console.error(`Error getting assignments for item ${itemId}:`, error)
-        }
-      }
-
-      groupQuestionSets.push(groupQuestionIds)
-    }
-
-    // GROUP間AND：全てのグループに共通する設問を取得
-    let finalQuestionIds: Set<string>
-    if (groupQuestionSets.length === 1) {
-      finalQuestionIds = groupQuestionSets[0]
-    } else {
-      finalQuestionIds = new Set()
-      const firstGroup = groupQuestionSets[0]
-
-      for (const questionId of firstGroup) {
-        const existsInAllGroups = groupQuestionSets.every((group) =>
-          group.has(questionId),
-        )
-        if (existsInAllGroups) {
-          finalQuestionIds.add(questionId)
-        }
-      }
-    }
-
-    // 該当する設問の点数を合計
-    let totalScore = 0
-    let totalMaxScore = 0
-
-    for (const questionId of finalQuestionIds) {
-      const scoreDetail = studentScores.find((s) => s.questionId === questionId)
-      if (scoreDetail) {
-        totalScore += scoreDetail.score || 0
-        totalMaxScore += scoreDetail.maxScore
-      }
-    }
-
+    // TODO: 新しいスキーマでの小計計算ロジックを実装
+    // 現在は簡略化されたフォールバック動作
+    console.warn(`calculateSubtotalScore using fallback logic for region: ${subtotalRegionId}`)
+    
+    const totalScore = studentScores.reduce((sum, score) => sum + (score.score || 0), 0)
+    const totalMaxScore = studentScores.reduce((sum, score) => sum + score.maxScore, 0)
     return { score: totalScore, maxScore: totalMaxScore }
   } catch (error) {
     console.error(

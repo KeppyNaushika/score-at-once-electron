@@ -1,7 +1,7 @@
 import { ipcMain } from "electron"
 import {
   getQuestionScoresForProject,
-  getQuestionScoresForAnswerSheet,
+  getQuestionScoresForStudent,
   createQuestionScore,
   updateQuestionScore,
   deleteQuestionScore,
@@ -50,10 +50,10 @@ export function setupScoringHandlers(): void {
   )
 
   ipcMain.handle(
-    "get-question-scores-for-answer-sheet",
-    async (_event, answerSheetId: string) => {
+    "get-question-scores-for-student",
+    async (_event, studentId: string) => {
       try {
-        const result = await getQuestionScoresForAnswerSheet(answerSheetId)
+        const result = await getQuestionScoresForStudent(studentId)
 
         if (!result.success) {
           return result
@@ -76,11 +76,12 @@ export function setupScoringHandlers(): void {
 
         return { success: true, scores: serializedScores }
       } catch (err) {
-        console.error("Error getting question scores for answer sheet:", err)
+        console.error("Error getting question scores for student:", err)
         throw err
       }
     },
   )
+
 
   ipcMain.handle(
     "create-question-score",
@@ -113,6 +114,7 @@ export function setupScoringHandlers(): void {
       }
     },
   )
+
 
   ipcMain.handle(
     "update-question-score",
@@ -162,9 +164,9 @@ export function setupScoringHandlers(): void {
 
   ipcMain.handle(
     "get-question-score-comparison",
-    async (_event, answerSheetId: string, cropRegionId: string) => {
+    async (_event, studentId: string, cropRegionId: string) => {
       try {
-        return await getQuestionScoreComparison(answerSheetId, cropRegionId)
+        return await getQuestionScoreComparison(studentId, cropRegionId)
       } catch (err) {
         console.error("Error getting question score comparison:", err)
         throw err
@@ -176,7 +178,7 @@ export function setupScoringHandlers(): void {
     "finalize-question-score",
     async (
       _event,
-      answerSheetId: string,
+      studentId: string,
       cropRegionId: string,
       scoredByUserId: string,
       scoreData: {
@@ -187,7 +189,7 @@ export function setupScoringHandlers(): void {
     ) => {
       try {
         const result = await finalizeQuestionScore(
-          answerSheetId,
+          studentId,
           cropRegionId,
           scoredByUserId,
           scoreData,

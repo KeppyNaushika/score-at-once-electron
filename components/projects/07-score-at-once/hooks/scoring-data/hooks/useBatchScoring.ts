@@ -197,6 +197,13 @@ export function useBatchScoring({
               setScoringData,
             )
           }
+
+          // TODO: Add subtotal score recalculation here
+          // After individual question scoring, we should:
+          // 1. Identify all subtotal regions that depend on this question
+          // 2. Recalculate those subtotal scores
+          // 3. Save the updated subtotal scores to database
+          // 4. Update the local scoring data state
         } catch (error) {
           console.error("Error in batch scoring:", error)
           toast.error(
