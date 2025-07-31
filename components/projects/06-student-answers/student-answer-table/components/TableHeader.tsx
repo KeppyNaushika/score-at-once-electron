@@ -1,6 +1,6 @@
 "use client"
 
-import type { TableHeaderProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type { TableHeaderProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import { Button } from "@/components/ui/button"
 import { CardHeader, CardTitle } from "@/components/ui/card"
 import {

@@ -2,7 +2,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 /**
  * 現在のファイル配列を新しい配置戦略に基づいて再配置する

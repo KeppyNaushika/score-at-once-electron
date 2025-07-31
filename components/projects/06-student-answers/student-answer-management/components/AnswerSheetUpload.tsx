@@ -1,15 +1,15 @@
 "use client"
 
-import { FileUploadZone } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/FileUploadZone"
-import { useAnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useAnswerSheetUpload"
-import type { AnswerSheetUploadProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import { FileUploadZone } from "@/components/projects/06-student-answers/student-answer-management/components/FileUploadZone"
+import { useAnswerSheetUpload } from "@/components/projects/06-student-answers/student-answer-management/hooks/useAnswerSheetUpload"
+import type { AnswerSheetUploadProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import {
   buildOrderedFileArrayFromAnswerSheets,
   reorderFilesByStrategy,
-} from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/reorderFilesByStrategy"
-import { AnswerSheetTable } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/AnswerSheetTable"
+} from "@/components/projects/06-student-answers/student-answer-management/utils/reorderFilesByStrategy"
+import { AnswerSheetTable } from "@/components/projects/06-student-answers/student-answer-table/components/AnswerSheetTable"
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import type { PlacementStrategy } from "@/types/answer-sheet.types"
+import type { PlacementStrategy } from "@/types/student-answer.types"
 import { useCallback, useEffect } from "react"
 
 export function AnswerSheetUpload({

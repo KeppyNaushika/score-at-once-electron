@@ -1,9 +1,9 @@
-import { useDragDropHandlers } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useDragDropHandlers"
-import { useDragDropState } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useDragDropState"
+import { useDragDropHandlers } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDropHandlers"
+import { useDragDropState } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDropState"
 import type {
   UseDragDropParams,
   UseDragDropReturn,
-} from "@/components/projects/06-answer-sheets/answer-sheet-table/types/drag-drop-types"
+} from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 
 /**

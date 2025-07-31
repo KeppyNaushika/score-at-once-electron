@@ -1,9 +1,9 @@
-import type { FileState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/drag-drop-types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 /**
  * 3つ組からDnD配列を構築する関数（戦略ベース順序）

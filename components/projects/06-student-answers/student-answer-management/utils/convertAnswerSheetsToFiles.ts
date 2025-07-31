@@ -1,9 +1,9 @@
-import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
-import type { UnifiedFile } from "@/types/answer-sheet.types"
+import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
+import type { UnifiedFile } from "@/types/student-answer.types"
 
 // For backward compatibility, support both processed and raw formats
 type AnswerSheetInput =
-  | ProcessedAnswerSheet
+  | ProcessedStudentAnswer
   | {
       // Raw Prisma format
       id: string

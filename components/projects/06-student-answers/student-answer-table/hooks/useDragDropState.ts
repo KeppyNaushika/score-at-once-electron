@@ -1,13 +1,13 @@
-import type { FileState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/drag-drop-types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import {
   buildDnDArrayFromFileStates,
   updateFileStatesFromDnDArray,
-} from "@/components/projects/06-answer-sheets/answer-sheet-table/utils/drag-drop-utils"
+} from "@/components/projects/06-student-answers/student-answer-table/utils/drag-drop-utils"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 interface UseDragDropStateParams {

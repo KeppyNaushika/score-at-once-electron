@@ -1,11 +1,11 @@
 "use client"
 
-import { GridHeader } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/GridHeader"
-import { StudentGridRow } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/StudentGridRow"
+import { GridHeader } from "@/components/projects/06-student-answers/student-answer-management/components/GridHeader"
+import { StudentGridRow } from "@/components/projects/06-student-answers/student-answer-management/components/StudentGridRow"
 import type {
   UnifiedFile,
   UnifiedStudent,
-} from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+} from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,7 +53,7 @@ export function AnswerSheetGridManager({
     const loadMasterImages = async () => {
       try {
         const images =
-          await window.electronAPI.getMasterImagesByProjectId(projectId)
+          await window.electronAPI.getProjectPagesByProjectId(projectId)
         setMasterImages(images || [])
       } catch (error) {
         console.error("Failed to load master images:", error)

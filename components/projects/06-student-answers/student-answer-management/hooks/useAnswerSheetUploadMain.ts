@@ -4,10 +4,10 @@ import {
   CropRegion,
   ProjectPage,
   UseAnswerSheetUploadProps,
-} from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
-import { useFileProcessing } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useFileProcessing"
-import { useStudentManagement } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useStudentManagement"
-import type { UploadAnswerSheetFileData } from "@/types/electron"
+} from "@/components/projects/06-student-answers/student-answer-management/hooks/types"
+import { useFileProcessing } from "@/components/projects/06-student-answers/student-answer-management/hooks/useFileProcessing"
+import { useStudentManagement } from "@/components/projects/06-student-answers/student-answer-management/hooks/useStudentManagement"
+import type { UploadStudentAnswerFileData } from "@/types/electron"
 import { DragEndEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
@@ -70,7 +70,7 @@ export function useAnswerSheetUploadMain({
         return
       }
 
-      const uploadData: UploadAnswerSheetFileData[] = []
+      const uploadData: UploadStudentAnswerFileData[] = []
 
       // ファイルと学生の関連付け処理
       for (let i = 0; i < selectedFiles.length; i++) {
@@ -91,7 +91,7 @@ export function useAnswerSheetUploadMain({
       }
 
       // ElectronAPI呼び出し
-      const result = await window.electronAPI.uploadAnswerSheets(
+      const result = await window.electronAPI.uploadStudentAnswers(
         projectId,
         uploadData,
       )

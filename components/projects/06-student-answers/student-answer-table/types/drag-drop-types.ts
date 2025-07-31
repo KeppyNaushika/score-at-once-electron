@@ -2,7 +2,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 // ファイル状態管理用の型定義
 export interface FileState {

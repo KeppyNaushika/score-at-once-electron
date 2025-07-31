@@ -1,4 +1,4 @@
-import type { UnifiedFile } from "@/types/answer-sheet.types"
+import type { UnifiedFile } from "@/types/student-answer.types"
 import { useCallback, useRef, useState } from "react"
 
 export function useNameRegion(projectId: string) {

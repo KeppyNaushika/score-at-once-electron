@@ -6,7 +6,7 @@ import { useDropzone } from "react-dropzone"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import type { FileUploadZoneProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import type { FileUploadZoneProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 
 export function FileUploadZone({
   onDrop,

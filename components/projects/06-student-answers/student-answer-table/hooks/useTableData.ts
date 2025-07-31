@@ -1,5 +1,5 @@
-import { useTableDataGeneration } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useTableDataGeneration"
-import type { ExtendedDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import { useTableDataGeneration } from "@/components/projects/06-student-answers/student-answer-table/hooks/useTableDataGeneration"
+import type { ExtendedDisabledState } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
   calculateDynamicDisabledPositions,
   calculatePositionsWithExistingAnswers,
@@ -7,12 +7,12 @@ import {
   getEnabledFiles,
   getFileColor,
   sortStudentsByCustomOrder,
-} from "@/components/projects/06-answer-sheets/answer-sheet-table/utils/table-data-utils"
+} from "@/components/projects/06-student-answers/student-answer-table/utils/table-data-utils"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 import { useCallback, useMemo } from "react"
 
 interface UseTableDataParams {

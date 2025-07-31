@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
 import { useState } from "react"
 

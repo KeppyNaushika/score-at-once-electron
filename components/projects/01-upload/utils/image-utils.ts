@@ -14,26 +14,26 @@ export const sortImagesByPageNumber = (
 
 /**
  * 画像URLマップを生成する
- * @param {MasterImage[]} images - 画像リスト
- * @returns {Promise<Record<string, string>>} 画像IDとURLのマッピング
+ * @param {MasterAnswer[]} answers - 解答リスト
+ * @returns {Promise<Record<string, string>>} 解答IDとURLのマッピング
  */
 export const generateImageUrls = async (
-  images: MasterImage[],
+  answers: MasterAnswer[],
 ): Promise<Record<string, string>> => {
   const urls: Record<string, string> = {}
 
-  for (const image of images) {
+  for (const answer of answers) {
     try {
       const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(
-        image.imagePath,
+        answer.imagePath,
       )
-      urls[image.id] = resolvedUrl
+      urls[answer.id] = resolvedUrl
     } catch (error) {
       console.error(
-        `Failed to resolve path for image ${image.id} (${image.imagePath}):`,
+        `Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`,
         error,
       )
-      urls[image.id] = ""
+      urls[answer.id] = ""
     }
   }
 
@@ -89,40 +89,40 @@ export const generateUploadSuccessMessage = (
 }
 
 /**
- * 画像の移動操作を実行する
- * @param {MasterImage[]} images - 現在の画像リスト
+ * 解答の移動操作を実行する
+ * @param {MasterAnswer[]} answers - 現在の解答リスト
  * @param {number} fromIndex - 移動元のインデックス
  * @param {"left" | "right"} direction - 移動方向
- * @returns {MasterImage[] | null} 移動後の画像リスト（移動不可の場合はnull）
+ * @returns {MasterAnswer[] | null} 移動後の解答リスト（移動不可の場合はnull）
  */
 export const moveImageInList = (
-  images: MasterImage[],
+  answers: MasterAnswer[],
   fromIndex: number,
   direction: "left" | "right",
-): MasterImage[] | null => {
+): MasterAnswer[] | null => {
   const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
 
-  if (toIndex < 0 || toIndex >= images.length) {
+  if (toIndex < 0 || toIndex >= answers.length) {
     return null
   }
 
-  const newImages = [...images]
-  const [movedImage] = newImages.splice(fromIndex, 1)
-  newImages.splice(toIndex, 0, movedImage)
+  const newAnswers = [...answers]
+  const [movedAnswer] = newAnswers.splice(fromIndex, 1)
+  newAnswers.splice(toIndex, 0, movedAnswer)
 
-  return newImages
+  return newAnswers
 }
 
 /**
- * 画像移動用のページ番号更新リクエストを生成する
- * @param {MasterImage[]} images - 画像リスト
+ * 解答移動用のページ番号更新リクエストを生成する
+ * @param {MasterAnswer[]} answers - 解答リスト
  * @returns {Array<{id: string, pageNumber: number}>} 更新リクエスト配列
  */
 export const generatePageNumberUpdateRequests = (
-  images: MasterImage[],
+  answers: MasterAnswer[],
 ): Array<{ id: string; pageNumber: number }> => {
-  return images.map((image, index) => ({
-    id: image.id,
+  return answers.map((answer, index) => ({
+    id: answer.id,
     pageNumber: index + 1,
   }))
 }

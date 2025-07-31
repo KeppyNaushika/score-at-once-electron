@@ -1,6 +1,6 @@
 "use client"
 
-import type { AnswerCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import type { AnswerCellProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Button } from "@/components/ui/button"
 import { TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"

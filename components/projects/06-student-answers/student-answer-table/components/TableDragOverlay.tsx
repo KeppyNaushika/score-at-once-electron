@@ -1,6 +1,6 @@
-import { FilePreviewCell } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/FilePreviewCell"
-import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { UnifiedFile } from "@/types/answer-sheet.types"
+import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"
+import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
+import type { UnifiedFile } from "@/types/student-answer.types"
 import { DragOverlay } from "@dnd-kit/core"
 
 interface TableDragOverlayProps {

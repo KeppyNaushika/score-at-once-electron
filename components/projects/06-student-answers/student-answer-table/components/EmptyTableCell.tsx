@@ -1,6 +1,6 @@
 "use client"
 
-import type { EmptyTableCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type { EmptyTableCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
   ContextMenu,
   ContextMenuContent,

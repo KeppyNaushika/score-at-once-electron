@@ -1,6 +1,6 @@
 "use client"
 
-import type { PlacementStrategySelectorProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type { PlacementStrategySelectorProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import { Button } from "@/components/ui/button"
 
 export function PlacementStrategySelector({

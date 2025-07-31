@@ -1,6 +1,6 @@
 "use client"
 
-import { ConvertedFile } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
+import { ConvertedFile } from "@/components/projects/06-student-answers/student-answer-management/hooks/types"
 import { convertPdfToImages } from "@/lib/pdfConverter"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"

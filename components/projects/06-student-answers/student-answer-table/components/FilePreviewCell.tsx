@@ -1,7 +1,7 @@
 "use client"
 
-import { loadAnswerSheetImage } from "@/components/projects/06-answer-sheets/answer-sheet-management/utils/convertAnswerSheetsToFiles"
-import type { FilePreviewCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import { loadAnswerSheetImage } from "@/components/projects/06-student-answers/student-answer-management/utils/convertAnswerSheetsToFiles"
+import type { FilePreviewCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"

@@ -7,7 +7,7 @@ import {
 import prisma from "./client"
 
 // 答案画像のアップロード
-export async function uploadAnswerSheets(
+export async function uploadStudentAnswers(
   projectId: string,
   filesData: {
     name: string
@@ -86,7 +86,7 @@ export async function uploadAnswerSheets(
 }
 
 // プロジェクトの答案一覧を取得
-export async function getAnswerSheetsByProjectId(projectId: string) {
+export async function getStudentAnswersByProjectId(projectId: string) {
   try {
     const answerSheets = await prisma.pageImage.findMany({
       where: { 
@@ -155,7 +155,7 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
 }
 
 // 答案の削除
-export async function deleteAnswerSheet(answerSheetId: string) {
+export async function deleteStudentAnswer(answerSheetId: string) {
   try {
     const answerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
@@ -192,7 +192,7 @@ export async function deleteAnswerSheet(answerSheetId: string) {
 }
 
 // 答案と生徒の関連付け
-export async function associateAnswerSheetWithStudent(
+export async function associateStudentAnswerWithStudent(
   answerSheetId: string,
   studentId: string,
 ) {
@@ -224,7 +224,7 @@ export async function associateAnswerSheetWithStudent(
 }
 
 // 答案の欠席状態を設定
-export async function setAnswerSheetAbsent(
+export async function setStudentAnswerAbsent(
   answerSheetId: string,
   isAbsent: boolean,
 ) {
@@ -257,7 +257,7 @@ export async function setAnswerSheetAbsent(
 }
 
 // 答案の詳細情報を取得
-export async function getAnswerSheetById(answerSheetId: string) {
+export async function getStudentAnswerById(answerSheetId: string) {
   try {
     const answerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
@@ -296,7 +296,7 @@ export async function getAnswerSheetById(answerSheetId: string) {
 }
 
 // 答案の配置情報を更新（生徒ID・ページ番号）
-export async function updateAnswerSheetPlacement(
+export async function updateStudentAnswerPlacement(
   answerSheetId: string,
   studentId: string | null,
   pageNumber: number,
@@ -354,7 +354,7 @@ export async function updateAnswerSheetPlacement(
 }
 
 // 2つの答案の配置を交換（ユニーク制約を考慮した安全な交換）
-export async function swapAnswerSheetPlacements(
+export async function swapStudentAnswerPlacements(
   answerSheetId1: string,
   answerSheetId2: string,
 ) {
@@ -480,7 +480,7 @@ export async function swapAnswerSheetPlacements(
 }
 
 // 複数の答案の配置を一括で変更（採点情報の移行も対応）
-export async function batchUpdateAnswerSheetPlacements(
+export async function batchUpdateStudentAnswerPlacements(
   moves: Array<{
     fileId: string
     finalStudentId: string | null
@@ -605,7 +605,7 @@ export async function batchUpdateAnswerSheetPlacements(
 }
 
 // 2つの答案の配置を交換（採点情報も一緒に入れ替え）
-export async function swapAnswerSheetPlacementsWithScoring(
+export async function swapStudentAnswerPlacementsWithScoring(
   answerSheetId1: string,
   answerSheetId2: string,
 ) {

@@ -1,6 +1,6 @@
 "use client"
 
-import type { GridHeaderProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import type { GridHeaderProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { TableHead, TableRow } from "@/components/ui/table"
 import { FileText, User } from "lucide-react"
 

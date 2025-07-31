@@ -1,8 +1,8 @@
-import { EmptyTableCell } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/EmptyTableCell"
-import { FilePreviewCell } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/FilePreviewCell"
-import { SortableTableCell } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/SortableTableCell"
-import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import type { DisabledReason } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
+import { EmptyTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/EmptyTableCell"
+import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"
+import { SortableTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/SortableTableCell"
+import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
+import type { DisabledReason } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
 import {
   Table,
   TableBody,
@@ -10,7 +10,7 @@ import {
   TableRow,
   TableHeader as UITableHeader,
 } from "@/components/ui/table"
-import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/student-answer.types"
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 
 interface TableContentProps {

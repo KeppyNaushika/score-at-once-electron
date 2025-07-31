@@ -2,7 +2,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UploadData,
-} from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+} from "@/components/projects/06-student-answers/student-answer-management/types"
 import { convertPdfToImages } from "@/lib/pdfConverter"
 import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -197,7 +197,7 @@ export function useAnswerSheetUpload(
 
         for (let i = 0; i < uploadData.length; i++) {
           const data = uploadData[i]
-          const result = await window.electronAPI.uploadAnswerSheets(
+          const result = await window.electronAPI.uploadStudentAnswers(
             projectId,
             [data],
           )

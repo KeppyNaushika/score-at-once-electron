@@ -1,6 +1,6 @@
 "use client"
 
-import type { StudentCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import type { StudentCellProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Badge } from "@/components/ui/badge"
 import { TableCell } from "@/components/ui/table"
 import { UserCheck, UserMinus, UserX } from "lucide-react"

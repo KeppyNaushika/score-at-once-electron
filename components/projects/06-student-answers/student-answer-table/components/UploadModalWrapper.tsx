@@ -1,5 +1,5 @@
-import { UploadToCellModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/UploadToCellModal"
-import type { UploadModalState } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
+import { UploadToCellModal } from "@/components/projects/06-student-answers/student-answer-table/components/UploadToCellModal"
+import type { UploadModalState } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
 
 interface UploadModalWrapperProps {
   uploadModalState: UploadModalState

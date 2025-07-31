@@ -1,13 +1,13 @@
 import type {
   CellData,
   ExtendedDisabledState,
-} from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
-import { getEnabledFiles } from "@/components/projects/06-answer-sheets/answer-sheet-table/utils/table-data-utils"
+} from "@/components/projects/06-student-answers/student-answer-table/types"
+import { getEnabledFiles } from "@/components/projects/06-student-answers/student-answer-table/utils/table-data-utils"
 import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 import { useMemo } from "react"
 
 interface UseTableDataGenerationParams {

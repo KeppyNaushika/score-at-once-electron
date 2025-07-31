@@ -40,7 +40,7 @@ export interface AnswerSheetUploadProps {
   students: UnifiedStudent[]
   masterImageCount: number
   onUploadComplete?: () => void
-  existingAnswerSheets?: ProcessedAnswerSheet[]
+  existingAnswerSheets?: ProcessedStudentAnswer[]
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）

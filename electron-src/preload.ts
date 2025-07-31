@@ -73,8 +73,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   clearAuthToken: () => ipcRenderer.invoke("auth:clearToken"),
   getAuthStoreStatus: () => ipcRenderer.invoke("auth:getStoreStatus"),
 
-  // Answer sheet related
-  uploadAnswerSheets: (
+  // Student answer related
+  uploadStudentAnswers: (
     projectId: string,
     filesData: {
       name: string
@@ -84,21 +84,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
       pageNumber?: number
     }[],
   ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
-  getAnswerSheetsByProjectId: (projectId: string) =>
+  getStudentAnswersByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
-  deleteAnswerSheet: (answerSheetId: string) =>
+  deleteStudentAnswer: (answerSheetId: string) =>
     ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
-  associateAnswerSheetWithStudent: (answerSheetId: string, studentId: string) =>
+  associateStudentAnswerWithStudent: (answerSheetId: string, studentId: string) =>
     ipcRenderer.invoke(
       "associate-answer-sheet-with-student",
       answerSheetId,
       studentId,
     ),
-  setAnswerSheetAbsent: (answerSheetId: string, isAbsent: boolean) =>
+  setStudentAnswerAbsent: (answerSheetId: string, isAbsent: boolean) =>
     ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
-  getAnswerSheetById: (answerSheetId: string) =>
+  getStudentAnswerById: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-by-id", answerSheetId),
-  updateAnswerSheetPlacement: (
+  updateStudentAnswerPlacement: (
     answerSheetId: string,
     studentId: string | null,
     pageNumber: number,
@@ -109,13 +109,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       studentId,
       pageNumber,
     ),
-  swapAnswerSheetPlacements: (answerSheetId1: string, answerSheetId2: string) =>
+  swapStudentAnswerPlacements: (answerSheetId1: string, answerSheetId2: string) =>
     ipcRenderer.invoke(
       "swap-answer-sheet-placements",
       answerSheetId1,
       answerSheetId2,
     ),
-  swapAnswerSheetPlacementsWithScoring: (
+  swapStudentAnswerPlacementsWithScoring: (
     answerSheetId1: string,
     answerSheetId2: string,
   ) =>
@@ -124,7 +124,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       answerSheetId1,
       answerSheetId2,
     ),
-  batchUpdateAnswerSheetPlacements: (
+  batchUpdateStudentAnswerPlacements: (
     moves: Array<{
       fileId: string
       finalStudentId: string | null

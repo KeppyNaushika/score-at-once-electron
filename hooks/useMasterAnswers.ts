@@ -346,7 +346,7 @@ export function useMasterAnswers(
         isDeleting: { ...prev.isDeleting, [answerId]: false }
       }))
     }
-  }, [state.answers, onMasterAnswersChange])
+  }, [state.answers, onAnswersChange])
 
   const moveAnswer = useCallback(async (fromIndex: number, direction: "left" | "right") => {
     const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
@@ -374,7 +374,7 @@ export function useMasterAnswers(
     } finally {
       setState(prev => ({ ...prev, isMoving: false }))
     }
-  }, [state.answers, onMasterAnswersChange])
+  }, [state.answers, onAnswersChange])
 
   return {
     ...state,

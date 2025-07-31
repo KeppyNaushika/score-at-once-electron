@@ -2,7 +2,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"

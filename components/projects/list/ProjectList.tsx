@@ -77,7 +77,7 @@ const File = () => {
         step: 5,
         action: "upload-answers",
         text: "5. 生徒解答をアップロード",
-        url: `/projects/${project.id}/06-answer-sheets`,
+        url: `/projects/${project.id}/06-student-answers`,
       }
 
     // 採点が完了しているかチェック

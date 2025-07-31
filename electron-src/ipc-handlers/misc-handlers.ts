@@ -196,7 +196,7 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           return { success: false, error: result.error }
         }
-        const serializedStudentAnswers = (result.studentAnswers || []).map(
+        const serializedStudentAnswers = (result.answerSheets || []).map(
           (answer: any) => ({
             ...answer,
           }),
@@ -256,9 +256,9 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           throw new Error(result.error)
         }
-        if (!result.studentAnswer) return null
+        if (!result.answerSheet) return null
         return {
-          ...result.studentAnswer,
+          ...result.answerSheet,
         }
       } catch (err) {
         console.error("Error fetching answer sheet by ID:", err)
@@ -285,7 +285,7 @@ export function setupMiscHandlers(): void {
           throw new Error(result.error)
         }
         return {
-          ...result.studentAnswer,
+          ...result.answerSheet,
         }
       } catch (err) {
         console.error("Error updating answer sheet placement:", err)
@@ -305,7 +305,7 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           throw new Error(result.error)
         }
-        return (result.studentAnswers || [])
+        return (result.answerSheets || [])
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,
@@ -328,7 +328,7 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           throw new Error(result.error)
         }
-        return (result.studentAnswers || [])
+        return (result.answerSheets || [])
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,

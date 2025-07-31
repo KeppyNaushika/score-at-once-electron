@@ -67,7 +67,7 @@ export function ProjectStudentsPageContainer() {
           <StudentManagementHelp />
           <Button
             onClick={() =>
-              router.push(`/projects/${projectId}/06-answer-sheets`)
+              router.push(`/projects/${projectId}/06-student-answers`)
             }
           >
             次へ: 答案アップロード

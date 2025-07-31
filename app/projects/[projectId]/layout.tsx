@@ -21,7 +21,7 @@ const workflowSteps = [
   { id: "03-region-info", label: "3. 領域情報", path: "03-region-info" },
   { id: "04-question-group", label: "4. 小計点", path: "04-question-group" },
   { id: "05-students", label: "5. 受験生徒", path: "05-students" },
-  { id: "06-answer-sheets", label: "6. 生徒解答", path: "06-answer-sheets" },
+  { id: "06-student-answers", label: "6. 生徒解答", path: "06-student-answers" },
   { id: "07-score-at-once", label: "7. 採点", path: "07-score-at-once" },
   { id: "08-export", label: "8. 結果", path: "08-export" },
 ]
@@ -96,7 +96,7 @@ export default function ProjectWorkflowLayout({
             {/* 戻るボタン（採点画面でのみ表示） */}
             {pathname.includes("07-score-at-once") && (
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/projects/${projectId}/06-answer-sheets`}>
+                <Link href={`/projects/${projectId}/06-student-answers`}>
                   戻る
                 </Link>
               </Button>

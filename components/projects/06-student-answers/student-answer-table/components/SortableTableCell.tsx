@@ -1,7 +1,7 @@
 "use client"
 
-import { DeleteConfirmationModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/DeleteConfirmationModal"
-import type { SortableTableCellProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import { DeleteConfirmationModal } from "@/components/projects/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
+import type { SortableTableCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
   ContextMenu,
   ContextMenuContent,

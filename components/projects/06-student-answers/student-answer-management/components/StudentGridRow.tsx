@@ -1,8 +1,8 @@
 "use client"
 
-import { AnswerCell } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/AnswerCell"
-import { StudentCell } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/StudentCell"
-import type { StudentGridRowProps } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+import { AnswerCell } from "@/components/projects/06-student-answers/student-answer-management/components/AnswerCell"
+import { StudentCell } from "@/components/projects/06-student-answers/student-answer-management/components/StudentCell"
+import type { StudentGridRowProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { TableRow } from "@/components/ui/table"
 
 export function StudentGridRow({

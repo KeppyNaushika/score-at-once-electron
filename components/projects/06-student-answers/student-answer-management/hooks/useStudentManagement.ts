@@ -1,6 +1,6 @@
 "use client"
 
-import { StudentWithAnswers } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
+import { StudentWithAnswers } from "@/components/projects/06-student-answers/student-answer-management/hooks/types"
 import { useCallback, useEffect, useState } from "react"
 
 interface UseStudentManagementProps {

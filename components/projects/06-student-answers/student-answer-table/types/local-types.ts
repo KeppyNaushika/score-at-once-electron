@@ -4,7 +4,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 // ============================================================================
 // AnswerSheetTable専用の型定義

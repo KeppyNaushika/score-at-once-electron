@@ -118,7 +118,7 @@ export default function WorkflowSteps({
         </Link>
 
         {/* Step 6: 答案アップロード */}
-        <Link href={`/projects/${projectId}/06-answer-sheets`}>
+        <Link href={`/projects/${projectId}/06-student-answers`}>
           <Button
             variant="outline"
             className="w-full justify-between"

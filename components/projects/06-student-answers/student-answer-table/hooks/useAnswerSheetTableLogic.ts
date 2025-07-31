@@ -1,13 +1,13 @@
-import { useDisabledState } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useDisabledState"
-import { useDragDrop } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useDragDrop"
-import { useNameRegion } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useNameRegion"
-import { useTableData } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useTableData"
-import type { PreviewMode } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import { useDisabledState } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDisabledState"
+import { useDragDrop } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDrop"
+import { useNameRegion } from "@/components/projects/06-student-answers/student-answer-table/hooks/useNameRegion"
+import { useTableData } from "@/components/projects/06-student-answers/student-answer-table/hooks/useTableData"
+import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
 import type {
   AnswerSheetTableProps,
   UploadModalState,
-} from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
-import type { UploadData } from "@/types/answer-sheet.types"
+} from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
+import type { UploadData } from "@/types/student-answer.types"
 import { useCallback, useEffect, useState } from "react"
 
 /**
@@ -100,7 +100,7 @@ export function useAnswerSheetTableLogic({
       try {
         // UnifiedFileから対応するAnswerSheetのIDを特定
         // 既存答案の場合はfileIdがAnswerSheetのIDと一致
-        const result = await window.electronAPI.deleteAnswerSheet(fileId)
+        const result = await window.electronAPI.deleteStudentAnswer(fileId)
 
         if (result.success) {
           // 削除成功時はデータを再読み込み
