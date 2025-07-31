@@ -3,12 +3,12 @@ import fs from "fs/promises"
 import path from "path"
 import {
   getAbsolutePathFromData,
-  getMasterImagesDirectory,
+  getMasterAnswersDirectory,
   getRelativePathFromData,
 } from "../dataManager"
 import prisma from "./client"
 
-export const uploadMasterImages = async (
+export const uploadMasterAnswers = async (
   projectId: string,
   filesData: {
     name: string
@@ -33,7 +33,7 @@ export const uploadMasterImages = async (
   })
 
   if (!project) {
-    throw new Error("Project not found for master image upload")
+    throw new Error("Project not found for master answer upload")
   }
 
   const highestPageNumber =
@@ -43,10 +43,10 @@ export const uploadMasterImages = async (
       0,
     ) || 0
 
-  const uploadedImages: (PageImage & { projectPage: ProjectPage })[] = []
+  const uploadedAnswers: (PageImage & { projectPage: ProjectPage })[] = []
 
-  const projectImageDir = getMasterImagesDirectory(projectId)
-  await fs.mkdir(projectImageDir, { recursive: true })
+  const projectAnswerDir = getMasterAnswersDirectory(projectId)
+  await fs.mkdir(projectAnswerDir, { recursive: true })
 
   for (const [index, fileData] of filesData.entries()) {
     try {
@@ -55,7 +55,7 @@ export const uploadMasterImages = async (
 
       // Generate unique filename
       const uniqueFileName = `${Date.now()}-${index}-${originalFileName}`
-      const destinationPath = path.join(projectImageDir, uniqueFileName)
+      const destinationPath = path.join(projectAnswerDir, uniqueFileName)
       const relativePath = getRelativePathFromData(destinationPath)
 
       // Save file
@@ -77,107 +77,107 @@ export const uploadMasterImages = async (
           projectPageId: projectPage.id,
           imagePath: relativePath,
           imageType: "MASTER",
-          studentId: null, // Master images don't have students
+          studentId: null, // Master answers don't have students
         },
         include: {
           projectPage: true,
         }
       })
 
-      uploadedImages.push(newImage)
+      uploadedAnswers.push(newImage)
     } catch (error) {
-      console.error(`Failed to upload or save image ${fileData.name}:`, error)
+      console.error(`Failed to upload or save answer ${fileData.name}:`, error)
     }
   }
-  return uploadedImages
+  return uploadedAnswers
 }
 
-export const deleteMasterImage = async (
-  imageId: string,
+export const deleteMasterAnswer = async (
+  answerId: string,
 ): Promise<PageImage | void> => {
   try {
-    const image = await prisma.pageImage.findUnique({
-      where: { id: imageId },
+    const answer = await prisma.pageImage.findUnique({
+      where: { id: answerId },
       include: { projectPage: true }
     })
     
-    if (image && image.imageType === "MASTER") {
-      const filePath = getAbsolutePathFromData(image.imagePath)
+    if (answer && answer.imageType === "MASTER") {
+      const filePath = getAbsolutePathFromData(answer.imagePath)
       
       try {
         await fs.unlink(filePath)
       } catch (fileError: any) {
         if (fileError.code !== "ENOENT") {
-          console.warn(`Failed to delete image file ${filePath}:`, fileError)
+          console.warn(`Failed to delete answer file ${filePath}:`, fileError)
         }
       }
 
       // Delete the PageImage
-      const deletedImage = await prisma.pageImage.delete({ 
-        where: { id: imageId } 
+      const deletedAnswer = await prisma.pageImage.delete({ 
+        where: { id: answerId } 
       })
 
-      // Check if this was the only image for this ProjectPage
-      const remainingImages = await prisma.pageImage.count({
-        where: { projectPageId: image.projectPageId }
+      // Check if this was the only answer for this ProjectPage
+      const remainingAnswers = await prisma.pageImage.count({
+        where: { projectPageId: answer.projectPageId }
       })
 
-      // If no images remain, delete the ProjectPage
-      if (remainingImages === 0) {
+      // If no answers remain, delete the ProjectPage
+      if (remainingAnswers === 0) {
         await prisma.projectPage.delete({
-          where: { id: image.projectPageId }
+          where: { id: answer.projectPageId }
         })
       }
 
-      return deletedImage
+      return deletedAnswer
     }
   } catch (error) {
-    console.error(`Failed to delete master image ${imageId}:`, error)
+    console.error(`Failed to delete master answer ${answerId}:`, error)
     throw error
   }
 }
 
-export const updateMasterImagesOrder = async (
-  imageOrders: { id: string; pageNumber: number }[],
+export const updateMasterAnswersOrder = async (
+  answerOrders: { id: string; pageNumber: number }[],
 ): Promise<Prisma.BatchPayload> => {
-  if (!imageOrders || imageOrders.length === 0) {
+  if (!answerOrders || answerOrders.length === 0) {
     return { count: 0 }
   }
 
   try {
-    // Get the ProjectPages that correspond to these images
-    const images = await prisma.pageImage.findMany({
+    // Get the ProjectPages that correspond to these answers
+    const answers = await prisma.pageImage.findMany({
       where: { 
-        id: { in: imageOrders.map(order => order.id) },
+        id: { in: answerOrders.map(order => order.id) },
         imageType: "MASTER"
       },
       include: { projectPage: true }
     })
 
-    if (images.length === 0) {
-      throw new Error("No master images found for reordering")
+    if (answers.length === 0) {
+      throw new Error("No master answers found for reordering")
     }
 
-    const projectId = images[0].projectPage.projectId
+    const projectId = answers[0].projectPage.projectId
 
     // Get current max page number in project
     const maxPageNumberInProject = await prisma.projectPage.aggregate({
       _max: { pageNumber: true },
       where: { projectId: projectId },
     })
-    const offset = (maxPageNumberInProject._max.pageNumber || 0) + imageOrders.length + 100
+    const offset = (maxPageNumberInProject._max.pageNumber || 0) + answerOrders.length + 100
 
     await prisma.$transaction(async (tx) => {
-      // Create a map of image ID to ProjectPage ID
-      const imageToPageMap = new Map()
-      images.forEach(image => {
-        imageToPageMap.set(image.id, image.projectPageId)
+      // Create a map of answer ID to ProjectPage ID
+      const answerToPageMap = new Map()
+      answers.forEach(answer => {
+        answerToPageMap.set(answer.id, answer.projectPageId)
       })
 
       // 1. Update ProjectPages to temporary page numbers
-      for (let i = 0; i < imageOrders.length; i++) {
-        const imageId = imageOrders[i].id
-        const projectPageId = imageToPageMap.get(imageId)
+      for (let i = 0; i < answerOrders.length; i++) {
+        const answerId = answerOrders[i].id
+        const projectPageId = answerToPageMap.get(answerId)
         if (projectPageId) {
           await tx.projectPage.update({
             where: { id: projectPageId },
@@ -187,8 +187,8 @@ export const updateMasterImagesOrder = async (
       }
 
       // 2. Update to final page numbers
-      for (const order of imageOrders) {
-        const projectPageId = imageToPageMap.get(order.id)
+      for (const order of answerOrders) {
+        const projectPageId = answerToPageMap.get(order.id)
         if (projectPageId) {
           await tx.projectPage.update({
             where: { id: projectPageId },
@@ -198,9 +198,9 @@ export const updateMasterImagesOrder = async (
       }
     })
 
-    return { count: imageOrders.length }
+    return { count: answerOrders.length }
   } catch (error) {
-    console.error("Failed to update master images order:", error)
+    console.error("Failed to update master answers order:", error)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       console.error("Prisma Error Code:", error.code)
       console.error("Prisma Error Meta:", error.meta)
@@ -209,7 +209,7 @@ export const updateMasterImagesOrder = async (
   }
 }
 
-export const getMasterImagesByProjectId = async (projectId: string) => {
+export const getMasterAnswersByProjectId = async (projectId: string) => {
   const projectPages = await prisma.projectPage.findMany({
     where: { projectId },
     include: {
@@ -220,24 +220,24 @@ export const getMasterImagesByProjectId = async (projectId: string) => {
     orderBy: { pageNumber: "asc" },
   })
 
-  // Flatten to return individual images with their page info
-  const masterImages = []
+  // Flatten to return individual answers with their page info
+  const masterAnswers = []
   for (const page of projectPages) {
-    for (const image of page.pageImages) {
-      masterImages.push({
-        ...image,
+    for (const answer of page.pageImages) {
+      masterAnswers.push({
+        ...answer,
         pageNumber: page.pageNumber,
         projectId: page.projectId,
         // For compatibility with old API
-        path: image.imagePath,
+        path: answer.imagePath,
       })
     }
   }
 
-  return masterImages
+  return masterAnswers
 }
 
-export const createMasterImage = async (
+export const createMasterAnswer = async (
   data: {
     projectId: string
     path: string
@@ -263,34 +263,34 @@ export const createMasterImage = async (
   })
 }
 
-export const createManyMasterImages = async (
+export const createManyMasterAnswers = async (
   data: {
     projectId: string
     path: string
     pageNumber: number
   }[],
 ) => {
-  const createdImages = []
+  const createdAnswers = []
   
-  for (const imageData of data) {
-    const result = await createMasterImage(imageData)
-    createdImages.push(result)
+  for (const answerData of data) {
+    const result = await createMasterAnswer(answerData)
+    createdAnswers.push(result)
   }
   
-  return { count: createdImages.length }
+  return { count: createdAnswers.length }
 }
 
-export const updateMasterImage = async (
+export const updateMasterAnswer = async (
   id: string,
   data: { path?: string; pageNumber?: number },
 ) => {
-  const image = await prisma.pageImage.findUnique({
+  const answer = await prisma.pageImage.findUnique({
     where: { id },
     include: { projectPage: true }
   })
 
-  if (!image || image.imageType !== "MASTER") {
-    throw new Error("Master image not found")
+  if (!answer || answer.imageType !== "MASTER") {
+    throw new Error("Master answer not found")
   }
 
   // Update PageImage if path is provided
@@ -304,7 +304,7 @@ export const updateMasterImage = async (
   // Update ProjectPage if pageNumber is provided
   if (data.pageNumber) {
     await prisma.projectPage.update({
-      where: { id: image.projectPageId },
+      where: { id: answer.projectPageId },
       data: { pageNumber: data.pageNumber }
     })
   }
@@ -316,9 +316,9 @@ export const updateMasterImage = async (
   })
 }
 
-export const deleteMasterImagesByProjectId = async (projectId: string) => {
-  // Delete all master images for the project
-  const deletedImages = await prisma.pageImage.deleteMany({
+export const deleteMasterAnswersByProjectId = async (projectId: string) => {
+  // Delete all master answers for the project
+  const deletedAnswers = await prisma.pageImage.deleteMany({
     where: { 
       imageType: "MASTER",
       projectPage: { projectId }
@@ -341,10 +341,10 @@ export const deleteMasterImagesByProjectId = async (projectId: string) => {
     })
   }
 
-  return deletedImages
+  return deletedAnswers
 }
 
-export const getMasterImageByPage = async (
+export const getMasterAnswerByPage = async (
   projectId: string,
   pageNumber: number,
 ) => {
@@ -371,7 +371,7 @@ export const getMasterImageByPage = async (
 }
 
 // For compatibility with existing code
-export type MasterImagePayload = PageImage & {
+export type MasterAnswerPayload = PageImage & {
   pageNumber: number
   projectId: string
   path: string

@@ -1,15 +1,15 @@
 import { ConvertedImage } from "@/lib/pdfConverter"
-import { MasterImage } from "@/components/projects/01-upload/types"
+import { MasterAnswer } from "@/components/projects/01-upload/types"
 
 /**
  * 画像リストをページ番号順にソートする
- * @param {MasterImage[]} images - ソート対象の画像リスト
- * @returns {MasterImage[]} ページ番号順にソートされた画像リスト
+ * @param {MasterAnswer[]} answers - ソート対象の解答リスト
+ * @returns {MasterAnswer[]} ページ番号順にソートされた解答リスト
  */
 export const sortImagesByPageNumber = (
-  images: MasterImage[],
-): MasterImage[] => {
-  return [...images].sort((a, b) => a.pageNumber - b.pageNumber)
+  answers: MasterAnswer[],
+): MasterAnswer[] => {
+  return [...answers].sort((a, b) => a.pageNumber - b.pageNumber)
 }
 
 /**

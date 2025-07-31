@@ -3,11 +3,11 @@
  * table-dnd-kit-test統合版
  */
 
-import type { UnifiedFile, UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedFile, UnifiedStudent } from "@/types/student-answer.types"
 import {
   convertToUnifiedStudent,
   convertToUploadData,
-} from "@/utils/answerSheetConverter"
+} from "@/utils/studentAnswerConverter"
 import { sortStudentsForTable } from "@/utils/studentOrderUtils"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
@@ -117,7 +117,7 @@ export function useAnswerSheetGrid({
         }, 100)
 
         // ElectronAPIを呼び出し
-        const result = await window.electronAPI.uploadAnswerSheets(
+        const result = await window.electronAPI.uploadStudentAnswers(
           projectId,
           uploadData,
         )

@@ -3,7 +3,7 @@
  * 05-studentsと同じソート論理を実装
  */
 
-import type { UnifiedStudent } from "@/types/answer-sheet.types"
+import type { UnifiedStudent } from "@/types/student-answer.types"
 
 /**
  * 受験生徒を適切な順序でソートする

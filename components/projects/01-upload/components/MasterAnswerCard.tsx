@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowRight, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React from "react"
-import type { MasterImageCardProps } from "@/components/projects/01-upload/types"
+import type { MasterAnswerCardProps } from "@/components/projects/01-upload/types"
 
 /**
- * MasterImageCard - 個別の模範解答画像カードコンポーネント
+ * MasterAnswerCard - 個別の模範解答画像カードコンポーネント
  *
  * 機能:
  * - 模範解答画像の表示
@@ -16,7 +16,7 @@ import type { MasterImageCardProps } from "@/components/projects/01-upload/types
  * - 読み込み中・処理中の状態表示
  * - エラー処理
  *
- * @param image - 模範解答画像データ
+ * @param answer - 模範解答画像データ
  * @param imageUrl - 画像のURL
  * @param index - 配列内のインデックス
  * @param totalImages - 全画像数
@@ -27,12 +27,12 @@ import type { MasterImageCardProps } from "@/components/projects/01-upload/types
  * @param onMoveRight - 右移動のコールバック関数
  * @returns 模範解答画像カードコンポーネント
  */
-const MasterImageCard = React.memo<MasterImageCardProps>(
+const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
   ({
-    image,
+    answer,
     imageUrl,
     index,
-    totalImages,
+    totalAnswers,
     isDeleting,
     isMoving,
     onDelete,
@@ -41,7 +41,7 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
   }) => {
     // 移動可能性の判定
     const canMoveLeft = index > 0
-    const canMoveRight = index < totalImages - 1
+    const canMoveRight = index < totalAnswers - 1
     const isDisabled = isDeleting || isMoving
 
     /**
@@ -49,10 +49,10 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
      * @param e - エラーイベント
      */
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-      e.currentTarget.alt = `画像読込エラー: ${image.imagePath}`
+      e.currentTarget.alt = `画像読込エラー: ${answer.imagePath}`
       console.error(
         "Failed to load image:",
-        image.imagePath,
+        answer.imagePath,
         "using URL:",
         imageUrl,
       )
@@ -62,7 +62,7 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
       <div className="group relative flex h-48 w-40 shrink-0 overflow-hidden rounded-md border">
         <Image
           src={imageUrl}
-          alt={`ページ ${image.pageNumber}`}
+          alt={`ページ ${answer.pageNumber}`}
           className="h-full w-full object-cover"
           width={160}
           height={192}
@@ -86,7 +86,7 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
           }`}
         >
           <p className="text-sm font-semibold text-white">
-            ページ {image.pageNumber}
+            ページ {answer.pageNumber}
           </p>
           <div className="mt-2 flex space-x-1">
             <Button
@@ -130,6 +130,6 @@ const MasterImageCard = React.memo<MasterImageCardProps>(
   },
 )
 
-MasterImageCard.displayName = "MasterImageCard"
+MasterAnswerCard.displayName = "MasterAnswerCard"
 
-export { MasterImageCard }
+export { MasterAnswerCard }

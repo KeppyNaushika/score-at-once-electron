@@ -1,13 +1,13 @@
 "use client"
 
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import { useMasterImages } from "../hooks/useMasterImages"
-import type { MasterImageManagerProps } from "@/components/projects/01-upload/types"
+import { useMasterAnswers } from "../hooks/useMasterAnswers"
+import type { MasterAnswerManagerProps } from "@/components/projects/01-upload/types"
 import { FileUploadDropzone } from "./FileUploadDropzone"
-import { MasterImageGallery } from "./MasterImageGallery"
+import { MasterAnswerGallery } from "./MasterAnswerGallery"
 
 /**
- * MasterImageManager - 模範解答画像管理のメインコンポーネント
+ * MasterAnswerManager - 模範解答画像管理のメインコンポーネント
  *
  * 機能:
  * - ファイルアップロード機能
@@ -17,35 +17,35 @@ import { MasterImageGallery } from "./MasterImageGallery"
  * - 画像URL管理
  *
  * @param projectId - プロジェクトID
- * @param initialMasterImages - 初期画像データ
- * @param onMasterImagesChange - 画像データ変更時のコールバック関数
+ * @param initialMasterAnswers - 初期画像データ
+ * @param onMasterAnswersChange - 画像データ変更時のコールバック関数
  * @returns 模範解答画像管理コンポーネント
  */
-export function MasterImageManager({
+export function MasterAnswerManager({
   projectId,
-  initialMasterImages,
-  onMasterImagesChange,
-}: MasterImageManagerProps) {
+  initialMasterAnswers,
+  onMasterAnswersChange,
+}: MasterAnswerManagerProps) {
   const {
-    images,
+    answers,
     imageUrls,
     isUploading,
     uploadProgress,
     isDeleting,
     isMoving,
     passwordDialog,
-    uploadImages,
-    deleteImage,
-    moveImage,
+    uploadAnswers,
+    deleteAnswer,
+    moveAnswer,
     handlePasswordSubmit,
     handlePasswordCancel,
-  } = useMasterImages(projectId, initialMasterImages, onMasterImagesChange)
+  } = useMasterAnswers(projectId, initialMasterAnswers, onMasterAnswersChange)
 
   return (
     <div className="space-y-6">
       {/* ファイルアップロードエリア */}
       <FileUploadDropzone
-        onFilesSelected={uploadImages}
+        onFilesSelected={uploadAnswers}
         isUploading={isUploading}
         uploadProgress={uploadProgress}
         accept=".pdf,.png,.jpg,.jpeg"
@@ -53,13 +53,13 @@ export function MasterImageManager({
       />
 
       {/* 画像一覧表示 */}
-      <MasterImageGallery
-        images={images}
+      <MasterAnswerGallery
+        answers={answers}
         imageUrls={imageUrls}
         isDeleting={isDeleting}
         isMoving={isMoving}
-        onDeleteImage={deleteImage}
-        onMoveImage={moveImage}
+        onDeleteAnswer={deleteAnswer}
+        onMoveAnswer={moveAnswer}
       />
 
       {/* パスワード入力ダイアログ */}

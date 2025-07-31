@@ -35,11 +35,11 @@ export function useScoringDataLoader(
 
         // 答案データの読み込み
         const answersResult =
-          await window.electronAPI.getAnswerSheetsByProjectId(projectId)
+          await window.electronAPI.getStudentAnswersByProjectId(projectId)
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
-        setAnswerSheets(answersResult.answerSheets || [])
+        setAnswerSheets(answersResult.studentAnswers || [])
 
         // 設問領域データの読み込み
         const regionsResult =

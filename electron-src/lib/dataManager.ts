@@ -59,9 +59,9 @@ export const getAnswerSheetsDirectory = (projectId: string): string => {
   return path.join(getProjectDirectory(projectId), "answer-sheets")
 }
 
-// マスター画像保存ディレクトリのパス
-export const getMasterImagesDirectory = (projectId: string): string => {
-  return path.join(getProjectDirectory(projectId), "master-images")
+// マスター解答保存ディレクトリのパス
+export const getMasterAnswersDirectory = (projectId: string): string => {
+  return path.join(getProjectDirectory(projectId), "master-answers")
 }
 
 // 出力ディレクトリのパス

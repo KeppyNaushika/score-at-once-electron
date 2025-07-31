@@ -3,7 +3,7 @@ import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument, rgb } from "pdf-lib"
 import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
-import { getAnswerSheetsByProjectId } from "./answerSheet"
+import { getStudentAnswersByProjectId } from "./studentAnswer"
 import { getCropRegionsByProjectId } from "./cropRegion"
 import { getStudentsForProject } from "./projectStudent"
 import {
@@ -513,8 +513,8 @@ export async function exportScoredAnswersPDF(
 
     reportProgress(20, 100, "答案データを取得中...", 2)
 
-    const answerSheetsResult = await getAnswerSheetsByProjectId(projectId)
-    if (!answerSheetsResult.success || !answerSheetsResult.answerSheets) {
+    const studentAnswersResult = await getStudentAnswersByProjectId(projectId)
+    if (!studentAnswersResult.success || !studentAnswersResult.studentAnswers) {
       throw new Error("答案データの取得に失敗しました")
     }
 
@@ -548,7 +548,7 @@ export async function exportScoredAnswersPDF(
     const studentAnswerSheetMap = new Map()
 
     for (const student of selectedStudents) {
-      const studentAnswerSheets = answerSheetsResult.answerSheets.filter(
+      const studentAnswerSheets = studentAnswersResult.studentAnswers.filter(
         (sheet) => sheet.student?.id === student.id,
       )
       studentAnswerSheetMap.set(student.id, studentAnswerSheets)

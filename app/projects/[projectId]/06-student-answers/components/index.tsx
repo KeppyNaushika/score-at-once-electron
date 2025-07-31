@@ -4,15 +4,15 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import PageHeader from "@/components/layout/PageHeader"
-import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/AnswerSheetUpload"
-import { ConfirmChangesModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/ConfirmChangesModal"
+import { AnswerSheetUpload as StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/AnswerSheetUpload"
+import { ConfirmChangesModal } from "@/components/projects/06-student-answers/student-answer-table/components/ConfirmChangesModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/answer-sheet.types"
-import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+} from "@/types/student-answer.types"
+import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Eye, FileEdit, Grid3X3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -124,7 +124,7 @@ interface AnswerSheetsTabContentProps {
   projectId: string
   students: StudentData[]
   masterImageCount: number
-  answerSheets: ProcessedAnswerSheet[]
+  answerSheets: ProcessedStudentAnswer[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>
   onUploadComplete: () => void
@@ -157,7 +157,7 @@ export function AnswerSheetsTabContent({
   return (
     <>
       <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
-        <AnswerSheetUpload
+        <StudentAnswerUpload
           projectId={projectId}
           students={students}
           masterImageCount={masterImageCount}
@@ -168,7 +168,7 @@ export function AnswerSheetsTabContent({
       </TabsContent>
 
       <TabsContent value="current" className="mt-3 min-h-0 flex-1 p-3">
-        <AnswerSheetUpload
+        <StudentAnswerUpload
           projectId={projectId}
           students={students}
           masterImageCount={masterImageCount}

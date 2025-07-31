@@ -2,9 +2,9 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { MasterImageManager } from "@/components/projects/01-upload/components/MasterImageManager"
+import { MasterAnswerManager } from "@/components/projects/01-upload/components/MasterAnswerManager"
 import { Button } from "@/components/ui/button"
-import type { MasterImageData } from "@/types/common.types"
+import type { MasterAnswerData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -22,7 +22,7 @@ import { toast } from "sonner"
  *
  * @returns 模範解答アップロードページコンポーネント
  */
-export default function MasterImageStepPage() {
+export default function MasterAnswerStepPage() {
   const params = useParams()
   const router = useRouter()
   const { helpButton } = usePageHelp()
@@ -30,7 +30,7 @@ export default function MasterImageStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [masterImages, setMasterImages] = useState<MasterImageData[]>([])
+  const [masterAnswers, setMasterAnswers] = useState<MasterAnswerData[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   /**
@@ -39,44 +39,44 @@ export default function MasterImageStepPage() {
    * プロジェクトIDから模範解答画像のリストを取得し、
    * ページ番号順にソートして状態を更新します。
    */
-  const loadMasterImages = useCallback(async () => {
+  const loadMasterAnswers = useCallback(async () => {
     if (!projectId) return
     setIsLoading(true)
     try {
       const fetchedProject =
         await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
       if (fetchedProject && fetchedProject.projectPages) {
-        // projectPages から master images を抽出してソート
-        const masterImages = fetchedProject.projectPages
+        // projectPages から master answers を抽出してソート
+        const masterAnswers = fetchedProject.projectPages
           .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
           .map(page => {
-            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+            const masterAnswer = page.pageImages?.find(img => img.imageType === 'MASTER')
             return {
               id: page.id,
               projectId: page.projectId,
-              imagePath: masterImage?.imagePath || '',
+              imagePath: masterAnswer?.imagePath || '',
               pageNumber: page.pageNumber,
               createdAt: page.createdAt,
               updatedAt: page.updatedAt,
             }
           })
           .sort((a, b) => a.pageNumber - b.pageNumber)
-        setMasterImages(masterImages)
+        setMasterAnswers(masterAnswers)
       } else {
-        setMasterImages([])
+        setMasterAnswers([])
       }
     } catch (error) {
-      console.error("Failed to load master images:", error)
+      console.error("Failed to load master answers:", error)
       toast.error("模範解答画像の読み込みに失敗しました。")
-      setMasterImages([]) // エラー時は空にする
+      setMasterAnswers([]) // エラー時は空にする
     } finally {
       setIsLoading(false)
     }
   }, [projectId])
 
   useEffect(() => {
-    loadMasterImages()
-  }, [loadMasterImages])
+    loadMasterAnswers()
+  }, [loadMasterAnswers])
 
   /**
    * 画像データ変更時のハンドラー
@@ -86,13 +86,13 @@ export default function MasterImageStepPage() {
    *
    * @param updatedImages - 更新された画像データリスト
    */
-  const handleImagesChange = useCallback((updatedImages: MasterImageData[]) => {
+  const handleAnswersChange = useCallback((updatedAnswers: MasterAnswerData[]) => {
     // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
     // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
     // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
     // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
     // その通知されたリストをそのまま使うのがシンプル。
-    setMasterImages(updatedImages) // MasterImageManagerからの最新のリストで状態を更新
+    setMasterAnswers(updatedAnswers) // MasterAnswerManagerからの最新のリストで状態を更新
     toast("模範解答更新", {
       description: "模範解答リストが更新されました。",
     })
@@ -108,7 +108,7 @@ export default function MasterImageStepPage() {
   const goToNextStep = async () => {
     if (!projectId) return
 
-    if (masterImages.length === 0) {
+    if (masterAnswers.length === 0) {
       toast("確認", {
         description: "模範解答が1枚も登録されていません。このまま進みますか？",
         action: {
@@ -145,7 +145,7 @@ export default function MasterImageStepPage() {
         description=""
         helpButton={helpButton}
       >
-        {masterImages.length > 0 && (
+        {masterAnswers.length > 0 && (
           <Button onClick={goToNextStep} disabled={isLoading}>
             次へ: 採点領域作成
           </Button>
@@ -154,10 +154,10 @@ export default function MasterImageStepPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden p-6">
-        <MasterImageManager
+        <MasterAnswerManager
           projectId={projectId}
-          initialMasterImages={masterImages}
-          onMasterImagesChange={handleImagesChange}
+          initialMasterAnswers={masterAnswers}
+          onMasterAnswersChange={handleAnswersChange}
         />
       </div>
     </div>

@@ -82,10 +82,10 @@ export function useGradingPage() {
   const loadAnswerSheets = useCallback(async () => {
     try {
       const response =
-        await window.electronAPI.getAnswerSheetsByProjectId(projectId)
-      if (response && response.success && response.answerSheets) {
-        // 型変換: ProcessedAnswerSheet型からAnswerSheet型へ
-        const answerSheets = response.answerSheets.map(
+        await window.electronAPI.getStudentAnswersByProjectId(projectId)
+      if (response && response.success && response.studentAnswers) {
+        // 型変換: ProcessedStudentAnswer型からAnswerSheet型へ
+        const answerSheets = response.studentAnswers.map(
           (sheet: {
             id: string
             studentId: string | null

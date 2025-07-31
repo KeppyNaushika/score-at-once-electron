@@ -2,54 +2,54 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { MasterImageData } from "@/types/common.types"
+import { MasterAnswerData } from "@/types/common.types"
 import Image from "next/image"
 import React, { useEffect, useState } from "react"
 
 /**
- * MasterImageViewer - Displays master (reference) answer images in the scoring interface
+ * MasterAnswerViewer - Displays master (reference) answer images in the scoring interface
  *
  * Features:
- * - Shows all master images sorted by page number
- * - Highlights the current question's corresponding master image
+ * - Shows all master answer images sorted by page number
+ * - Highlights the current question's corresponding master answer image
  * - Horizontal scrollable layout with thumbnails
  * - Asynchronous image loading with loading states
  * - Error handling for failed image loads
  */
-interface MasterImageViewerProps {
-  masterImages: MasterImageData[]
-  currentQuestionMasterImageId?: string
+interface MasterAnswerViewerProps {
+  masterAnswers: MasterAnswerData[]
+  currentQuestionMasterAnswerId?: string
   className?: string
 }
 
-const MasterImageViewer = React.memo(
+const MasterAnswerViewer = React.memo(
   ({
-    masterImages,
-    currentQuestionMasterImageId,
+    masterAnswers,
+    currentQuestionMasterAnswerId,
     className,
-  }: MasterImageViewerProps) => {
+  }: MasterAnswerViewerProps) => {
     const [imageUrls, setImageUrls] = useState<Record<string, string>>({})
     const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set())
 
-    // Load image URLs when master images change
+    // Load image URLs when master answers change
     useEffect(() => {
       const loadImageUrls = async () => {
-        if (!masterImages.length) return
+        if (!masterAnswers.length) return
 
         const newLoadingImages = new Set<string>()
-        masterImages.forEach((image) => newLoadingImages.add(image.id))
+        masterAnswers.forEach((answer) => newLoadingImages.add(answer.id))
         setLoadingImages(newLoadingImages)
 
         try {
-          const urlPromises = masterImages.map(async (image) => {
+          const urlPromises = masterAnswers.map(async (answer) => {
             try {
               const url = await window.electronAPI.resolveFileProtocolPath(
-                image.imagePath,
+                answer.imagePath,
               )
-              return { id: image.id, url, success: true }
+              return { id: answer.id, url, success: true }
             } catch (error) {
-              console.error(`Failed to load master image ${image.id}:`, error)
-              return { id: image.id, url: null, success: false }
+              console.error(`Failed to load master answer ${answer.id}:`, error)
+              return { id: answer.id, url: null, success: false }
             }
           })
 
@@ -69,20 +69,20 @@ const MasterImageViewer = React.memo(
 
           setImageUrls((prev) => ({ ...prev, ...newImageUrls }))
         } catch (error) {
-          console.error("Failed to load master image URLs:", error)
+          console.error("Failed to load master answer URLs:", error)
           setLoadingImages(new Set())
         }
       }
 
       loadImageUrls()
-    }, [masterImages])
+    }, [masterAnswers])
 
-    if (!masterImages.length) {
+    if (!masterAnswers.length) {
       return null
     }
 
-    // Sort images by page number
-    const sortedImages = [...masterImages].sort(
+    // Sort answers by page number
+    const sortedAnswers = [...masterAnswers].sort(
       (a, b) => a.pageNumber - b.pageNumber,
     )
 
@@ -90,39 +90,39 @@ const MasterImageViewer = React.memo(
       <Card className={className}>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">
-            模範解答 ({sortedImages.length}ページ)
+            模範解答 ({sortedAnswers.length}ページ)
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
           <ScrollArea className="w-full rounded-md border">
             <div className="flex space-x-3 p-3">
-              {sortedImages.map((image) => {
-                const imageUrl = imageUrls[image.id]
-                const isLoading = loadingImages.has(image.id)
+              {sortedAnswers.map((answer) => {
+                const imageUrl = imageUrls[answer.id]
+                const isLoading = loadingImages.has(answer.id)
                 const isCurrentQuestion =
-                  image.id === currentQuestionMasterImageId
+                  answer.id === currentQuestionMasterAnswerId
 
                 return (
                   <div
-                    key={image.id}
+                    key={answer.id}
                     className={`relative flex h-32 w-24 shrink-0 overflow-hidden rounded-md border-2 ${
                       isCurrentQuestion
                         ? "border-blue-500 shadow-md"
                         : "border-gray-200"
                     }`}
-                    title={`ページ ${image.pageNumber}${isCurrentQuestion ? " (現在の設問に対応)" : ""}`}
+                    title={`ページ ${answer.pageNumber}${isCurrentQuestion ? " (現在の設問に対応)" : ""}`}
                   >
                     {imageUrl && !isLoading ? (
                       <>
                         <Image
                           src={imageUrl}
-                          alt={`ページ ${image.pageNumber}`}
+                          alt={`ページ ${answer.pageNumber}`}
                           className="h-full w-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.alt = `画像読込エラー: ${image.imagePath}`
+                            e.currentTarget.alt = `画像読込エラー: ${answer.imagePath}`
                             console.error(
-                              "Failed to load master image:",
-                              image.imagePath,
+                              "Failed to load master answer:",
+                              answer.imagePath,
                               "using URL:",
                               imageUrl,
                             )
@@ -133,7 +133,7 @@ const MasterImageViewer = React.memo(
                         />
                         <div className="absolute right-0 bottom-0 left-0 bg-black/70 px-1 py-0.5">
                           <p className="text-center text-xs font-medium text-white">
-                            ページ {image.pageNumber}
+                            ページ {answer.pageNumber}
                           </p>
                         </div>
                         {isCurrentQuestion && (
@@ -165,6 +165,6 @@ const MasterImageViewer = React.memo(
   },
 )
 
-MasterImageViewer.displayName = "MasterImageViewer"
+MasterAnswerViewer.displayName = "MasterAnswerViewer"
 
-export default MasterImageViewer
+export default MasterAnswerViewer

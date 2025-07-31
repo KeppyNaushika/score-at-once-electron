@@ -5,15 +5,15 @@
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/answer-sheet.types"
-import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
+} from "@/types/student-answer.types"
+import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { StudentData } from "../components"
 
 export function useAnswerSheetsData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
-  const [answerSheets, setAnswerSheets] = useState<ProcessedAnswerSheet[]>([])
+  const [answerSheets, setAnswerSheets] = useState<ProcessedStudentAnswer[]>([])
   const [masterImageCount, setMasterImageCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -66,24 +66,24 @@ export function useAnswerSheetsData(projectId: string) {
         setStudents(sortedStudents)
       }
 
-      // Load answer sheets
-      const answerSheetsResult =
-        await window.electronAPI.getAnswerSheetsByProjectId(projectId)
-      if (answerSheetsResult.success && answerSheetsResult.answerSheets) {
-        setAnswerSheets(answerSheetsResult.answerSheets)
+      // Load student answers
+      const studentAnswersResult =
+        await window.electronAPI.getStudentAnswersByProjectId(projectId)
+      if (studentAnswersResult.success && studentAnswersResult.studentAnswers) {
+        setAnswerSheets(studentAnswersResult.studentAnswers)
       }
 
-      // Load master image count
+      // Load master answer count
       try {
-        const masterImages =
-          await window.electronAPI.getMasterImagesByProjectId(projectId)
+        const masterAnswers =
+          await window.electronAPI.getProjectPagesByProjectId(projectId)
         const maxPages =
-          masterImages && masterImages.length > 0
-            ? Math.max(...masterImages.map((img: any) => img.pageNumber))
+          masterAnswers && masterAnswers.length > 0
+            ? Math.max(...masterAnswers.map((page: any) => page.pageNumber))
             : 0
         setMasterImageCount(maxPages)
       } catch (error) {
-        console.error("Failed to load master image count:", error)
+        console.error("Failed to load master answer count:", error)
         setMasterImageCount(0)
       }
     } catch (error) {
@@ -106,7 +106,7 @@ export function useAnswerSheetsData(projectId: string) {
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
   students?: StudentData[],
-  answerSheets?: ProcessedAnswerSheet[],
+  answerSheets?: ProcessedStudentAnswer[],
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())

@@ -13,8 +13,8 @@ import type {
   TableCell,
   DisabledState,
   PlacementStrategy,
-} from "@/types/answer-sheet.types"
-import type { AnswerSheetWithDetails } from "@/types/electron"
+} from "@/types/student-answer.types"
+import type { StudentAnswerWithDetails } from "@/types/electron"
 import { sortStudentsForTable, calculatePosition } from "./studentOrderUtils"
 
 // ============================================================================
@@ -52,10 +52,10 @@ export function convertToUnifiedStudent(studentData: {
 }
 
 /**
- * 既存のAnswerSheetWithDetailsからExistingAnswerSheetに変換
+ * 既存のStudentAnswerWithDetailsからExistingAnswerSheetに変換
  */
 export function convertToExistingAnswerSheet(
-  answerSheet: AnswerSheetWithDetails,
+  answerSheet: StudentAnswerWithDetails,
 ): ExistingAnswerSheet {
   return {
     id: answerSheet.id,

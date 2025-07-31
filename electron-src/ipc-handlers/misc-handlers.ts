@@ -7,23 +7,23 @@ import {
   updateClass,
 } from "../lib/prisma/class"
 import {
-  deleteMasterImage,
-  uploadMasterImages,
-  updateMasterImagesOrder,
-  getMasterImagesByProjectId,
-} from "../lib/prisma/masterImage"
+  deleteMasterAnswer,
+  uploadMasterAnswers,
+  updateMasterAnswersOrder,
+  getMasterAnswersByProjectId,
+} from "../lib/prisma/masterAnswer"
 import {
-  uploadAnswerSheets,
-  getAnswerSheetsByProjectId,
-  deleteAnswerSheet,
-  associateAnswerSheetWithStudent,
-  setAnswerSheetAbsent,
-  getAnswerSheetById,
-  updateAnswerSheetPlacement,
-  swapAnswerSheetPlacements,
-  swapAnswerSheetPlacementsWithScoring,
-  batchUpdateAnswerSheetPlacements,
-} from "../lib/prisma/answerSheet"
+  uploadStudentAnswers,
+  getStudentAnswersByProjectId,
+  deleteStudentAnswer,
+  associateStudentAnswerWithStudent,
+  setStudentAnswerAbsent,
+  getStudentAnswerById,
+  updateStudentAnswerPlacement,
+  swapStudentAnswerPlacements,
+  swapStudentAnswerPlacementsWithScoring,
+  batchUpdateStudentAnswerPlacements,
+} from "../lib/prisma/studentAnswer"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
 import {
   loginUser,
@@ -180,7 +180,7 @@ export function setupMiscHandlers(): void {
       }[],
     ) => {
       try {
-        return await uploadAnswerSheets(projectId, filesData)
+        return await uploadStudentAnswers(projectId, filesData)
       } catch (err) {
         console.error("Error uploading answer sheets:", err)
         throw err
@@ -192,16 +192,16 @@ export function setupMiscHandlers(): void {
     "get-answer-sheets-by-project-id",
     async (_event, projectId: string) => {
       try {
-        const result = await getAnswerSheetsByProjectId(projectId)
+        const result = await getStudentAnswersByProjectId(projectId)
         if (!result.success) {
           return { success: false, error: result.error }
         }
-        const serializedAnswerSheets = (result.answerSheets || []).map(
-          (sheet: any) => ({
-            ...sheet,
+        const serializedStudentAnswers = (result.studentAnswers || []).map(
+          (answer: any) => ({
+            ...answer,
           }),
         )
-        return { success: true, answerSheets: serializedAnswerSheets }
+        return { success: true, studentAnswers: serializedStudentAnswers }
       } catch (err) {
         console.error("Error fetching answer sheets:", err)
         return {
@@ -216,7 +216,7 @@ export function setupMiscHandlers(): void {
     "delete-answer-sheet",
     async (_event, answerSheetId: string) => {
       try {
-        return await deleteAnswerSheet(answerSheetId)
+        return await deleteStudentAnswer(answerSheetId)
       } catch (err) {
         console.error("Error deleting answer sheet:", err)
         throw err
@@ -228,7 +228,7 @@ export function setupMiscHandlers(): void {
     "associate-answer-sheet-with-student",
     async (_event, answerSheetId: string, studentId: string) => {
       try {
-        return await associateAnswerSheetWithStudent(answerSheetId, studentId)
+        return await associateStudentAnswerWithStudent(answerSheetId, studentId)
       } catch (err) {
         console.error("Error associating answer sheet with student:", err)
         throw err
@@ -240,7 +240,7 @@ export function setupMiscHandlers(): void {
     "set-answer-sheet-absent",
     async (_event, answerSheetId: string, isAbsent: boolean) => {
       try {
-        return await setAnswerSheetAbsent(answerSheetId, isAbsent)
+        return await setStudentAnswerAbsent(answerSheetId, isAbsent)
       } catch (err) {
         console.error("Error setting answer sheet absent status:", err)
         throw err
@@ -252,13 +252,13 @@ export function setupMiscHandlers(): void {
     "get-answer-sheet-by-id",
     async (_event, answerSheetId: string) => {
       try {
-        const result = await getAnswerSheetById(answerSheetId)
+        const result = await getStudentAnswerById(answerSheetId)
         if (!result.success) {
           throw new Error(result.error)
         }
-        if (!result.answerSheet) return null
+        if (!result.studentAnswer) return null
         return {
-          ...result.answerSheet,
+          ...result.studentAnswer,
         }
       } catch (err) {
         console.error("Error fetching answer sheet by ID:", err)
@@ -276,7 +276,7 @@ export function setupMiscHandlers(): void {
       pageNumber: number,
     ) => {
       try {
-        const result = await updateAnswerSheetPlacement(
+        const result = await updateStudentAnswerPlacement(
           answerSheetId,
           studentId,
           pageNumber,
@@ -285,7 +285,7 @@ export function setupMiscHandlers(): void {
           throw new Error(result.error)
         }
         return {
-          ...result.answerSheet,
+          ...result.studentAnswer,
         }
       } catch (err) {
         console.error("Error updating answer sheet placement:", err)
@@ -298,14 +298,14 @@ export function setupMiscHandlers(): void {
     "swap-answer-sheet-placements",
     async (_event, answerSheetId1: string, answerSheetId2: string) => {
       try {
-        const result = await swapAnswerSheetPlacements(
+        const result = await swapStudentAnswerPlacements(
           answerSheetId1,
           answerSheetId2,
         )
         if (!result.success) {
           throw new Error(result.error)
         }
-        return (result.answerSheets || [])
+        return (result.studentAnswers || [])
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,
@@ -321,14 +321,14 @@ export function setupMiscHandlers(): void {
     "swap-answer-sheet-placements-with-scoring",
     async (_event, answerSheetId1: string, answerSheetId2: string) => {
       try {
-        const result = await swapAnswerSheetPlacementsWithScoring(
+        const result = await swapStudentAnswerPlacementsWithScoring(
           answerSheetId1,
           answerSheetId2,
         )
         if (!result.success) {
           throw new Error(result.error)
         }
-        return (result.answerSheets || [])
+        return (result.studentAnswers || [])
           .filter((sheet) => sheet !== null)
           .map((sheet) => ({
             ...sheet,
@@ -355,7 +355,7 @@ export function setupMiscHandlers(): void {
       withScoring: boolean = false
     ) => {
       try {
-        const result = await batchUpdateAnswerSheetPlacements(moves, withScoring)
+        const result = await batchUpdateStudentAnswerPlacements(moves, withScoring)
         if (!result.success) {
           const errorMessage = "error" in result ? result.error : "Unknown error"
           throw new Error(errorMessage)
@@ -425,7 +425,7 @@ export function setupMiscHandlers(): void {
       }[],
     ) => {
       try {
-        return await uploadMasterImages(projectId, filesData)
+        return await uploadMasterAnswers(projectId, filesData)
       } catch (err) {
         console.error("Error in IPC upload-master-images:", err)
         throw err
@@ -435,7 +435,7 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle("delete-master-image", async (_event, imageId: string) => {
     try {
-      return await deleteMasterImage(imageId)
+      return await deleteMasterAnswer(imageId)
     } catch (err) {
       console.error("Error in IPC delete-master-image:", err)
       throw err
@@ -446,7 +446,7 @@ export function setupMiscHandlers(): void {
     "update-master-images-order",
     async (_event, imageOrders: { id: string; pageNumber: number }[]) => {
       try {
-        return await updateMasterImagesOrder(imageOrders)
+        return await updateMasterAnswersOrder(imageOrders)
       } catch (err) {
         console.error("Error in IPC update-master-images-order:", err)
         throw err
@@ -526,11 +526,11 @@ export function setupMiscHandlers(): void {
     "get-master-images-by-project-id",
     async (_event, projectId: string) => {
       try {
-        const masterImages = await getMasterImagesByProjectId(projectId)
-        return masterImages.map((image: any) => ({
-          ...image,
-          createdAt: image.createdAt.toISOString(),
-          updatedAt: image.updatedAt.toISOString(),
+        const masterAnswers = await getMasterAnswersByProjectId(projectId)
+        return masterAnswers.map((answer: any) => ({
+          ...answer,
+          createdAt: answer.createdAt.toISOString(),
+          updatedAt: answer.updatedAt.toISOString(),
         }))
       } catch (err) {
         console.error("Error getting master images by project ID:", err)

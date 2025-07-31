@@ -1,8 +1,8 @@
 /**
- * マスター画像の型定義
+ * マスター解答の型定義
  * プロジェクトの模範解答画像データを表す
  */
-export type MasterImage = {
+export type MasterAnswer = {
   id: string
   projectId: string
   imagePath: string
@@ -12,55 +12,55 @@ export type MasterImage = {
 }
 
 /**
- * マスター画像管理コンポーネントのProps
- * @interface MasterImageManagerProps
+ * マスター解答管理コンポーネントのProps
+ * @interface MasterAnswerManagerProps
  * @property {string} projectId - プロジェクトID
- * @property {MasterImage[]} initialMasterImages - 初期マスター画像リスト
- * @property {function} onMasterImagesChange - マスター画像変更時のコールバック関数
+ * @property {MasterAnswer[]} initialMasterAnswers - 初期マスター解答リスト
+ * @property {function} onMasterAnswersChange - マスター解答変更時のコールバック関数
  */
-export interface MasterImageManagerProps {
+export interface MasterAnswerManagerProps {
   projectId: string
-  initialMasterImages: MasterImage[]
-  onMasterImagesChange: (images: MasterImage[]) => void
+  initialMasterAnswers: MasterAnswer[]
+  onMasterAnswersChange: (answers: MasterAnswer[]) => void
 }
 
 /**
- * マスター画像ギャラリーのProps
- * @interface MasterImageGalleryProps
- * @property {MasterImage[]} images - 表示する画像リスト
+ * マスター解答ギャラリーのProps
+ * @interface MasterAnswerGalleryProps
+ * @property {MasterAnswer[]} answers - 表示する解答リスト
  * @property {Record<string, string>} imageUrls - 画像IDとURLのマッピング
- * @property {Record<string, boolean>} isDeleting - 削除中の画像IDマップ
+ * @property {Record<string, boolean>} isDeleting - 削除中の解答IDマップ
  * @property {boolean} isMoving - 移動処理中かどうか
- * @property {function} onDeleteImage - 画像削除ハンドラー
- * @property {function} onMoveImage - 画像移動ハンドラー
+ * @property {function} onDeleteAnswer - 解答削除ハンドラー
+ * @property {function} onMoveAnswer - 解答移動ハンドラー
  */
-export interface MasterImageGalleryProps {
-  images: MasterImage[]
+export interface MasterAnswerGalleryProps {
+  answers: MasterAnswer[]
   imageUrls: Record<string, string>
   isDeleting: Record<string, boolean>
   isMoving: boolean
-  onDeleteImage: (imageId: string) => void
-  onMoveImage: (fromIndex: number, direction: "left" | "right") => void
+  onDeleteAnswer: (answerId: string) => void
+  onMoveAnswer: (fromIndex: number, direction: "left" | "right") => void
 }
 
 /**
- * 個別マスター画像カードのProps
- * @interface MasterImageCardProps
- * @property {MasterImage} image - 画像データ
+ * 個別マスター解答カードのProps
+ * @interface MasterAnswerCardProps
+ * @property {MasterAnswer} answer - 解答データ
  * @property {string} imageUrl - 画像URL
  * @property {number} index - 配列内のインデックス
- * @property {number} totalImages - 総画像数
+ * @property {number} totalAnswers - 総解答数
  * @property {boolean} isDeleting - 削除中かどうか
  * @property {boolean} isMoving - 移動中かどうか
  * @property {function} onDelete - 削除ハンドラー
  * @property {function} onMoveLeft - 左移動ハンドラー
  * @property {function} onMoveRight - 右移動ハンドラー
  */
-export interface MasterImageCardProps {
-  image: MasterImage
+export interface MasterAnswerCardProps {
+  answer: MasterAnswer
   imageUrl: string
   index: number
-  totalImages: number
+  totalAnswers: number
   isDeleting: boolean
   isMoving: boolean
   onDelete: () => void
@@ -86,17 +86,17 @@ export interface PasswordDialogState {
 }
 
 /**
- * マスター画像管理の状態
- * @interface MasterImagesState
- * @property {MasterImage[]} images - 画像リスト
+ * マスター解答管理の状態
+ * @interface MasterAnswersState
+ * @property {MasterAnswer[]} answers - 解答リスト
  * @property {Record<string, string>} imageUrls - 画像URLマップ
  * @property {boolean} isUploading - アップロード中かどうか
  * @property {Record<string, boolean>} isDeleting - 削除中マップ
  * @property {boolean} isMoving - 移動中かどうか
  * @property {PasswordDialogState} passwordDialog - パスワードダイアログ状態
  */
-export interface MasterImagesState {
-  images: MasterImage[]
+export interface MasterAnswersState {
+  answers: MasterAnswer[]
   imageUrls: Record<string, string>
   isUploading: boolean
   uploadProgress: number
@@ -125,14 +125,14 @@ export interface FileUploadDropzoneProps {
 }
 
 /**
- * マスター画像ページの状態管理Props
- * @interface MasterImagePageState
- * @property {MasterImage[]} masterImages - マスター画像リスト
+ * マスター解答ページの状態管理Props
+ * @interface MasterAnswerPageState
+ * @property {MasterAnswer[]} masterAnswers - マスター解答リスト
  * @property {boolean} isLoading - ローディング状態
  * @property {any} project - プロジェクトデータ
  */
-export interface MasterImagePageState {
-  masterImages: MasterImage[]
+export interface MasterAnswerPageState {
+  masterAnswers: MasterAnswer[]
   isLoading: boolean
   project: any
 }

@@ -2,11 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import type { MasterImageGalleryProps } from "@/components/projects/01-upload/types"
-import { MasterImageCard } from "./MasterImageCard"
+import type { MasterAnswerGalleryProps } from "@/components/projects/01-upload/types"
+import { MasterAnswerCard } from "./MasterAnswerCard"
 
 /**
- * MasterImageGallery - 模範解答画像一覧を表示するコンポーネント
+ * MasterAnswerGallery - 模範解答画像一覧を表示するコンポーネント
  *
  * 機能:
  * - 模範解答画像の一覧表示
@@ -22,16 +22,16 @@ import { MasterImageCard } from "./MasterImageCard"
  * @param onMoveImage - 画像移動のコールバック関数
  * @returns 模範解答画像一覧コンポーネント。画像がない場合はnullを返す
  */
-export function MasterImageGallery({
-  images,
+export function MasterAnswerGallery({
+  answers,
   imageUrls,
   isDeleting,
   isMoving,
-  onDeleteImage,
-  onMoveImage,
-}: MasterImageGalleryProps) {
+  onDeleteAnswer,
+  onMoveAnswer,
+}: MasterAnswerGalleryProps) {
   // 画像がない場合は何も表示しない
-  if (images.length === 0) {
+  if (answers.length === 0) {
     return null
   }
 
@@ -39,32 +39,32 @@ export function MasterImageGallery({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>模範解答 ({images.length}ページ)</span>
+          <span>模範解答 ({answers.length}ページ)</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <ScrollArea className="w-full rounded-md border whitespace-nowrap">
           <div className="flex space-x-4 p-4">
-            {images.map((image, index) => {
-              const imageUrl = imageUrls[image.id]
-              const currentImageIsDeleting = isDeleting[image.id]
+            {answers.map((answer, index) => {
+              const imageUrl = imageUrls[answer.id]
+              const currentAnswerIsDeleting = isDeleting[answer.id]
 
               return imageUrl ? (
-                <MasterImageCard
-                  key={image.id}
-                  image={image}
+                <MasterAnswerCard
+                  key={answer.id}
+                  answer={answer}
                   imageUrl={imageUrl}
                   index={index}
-                  totalImages={images.length}
-                  isDeleting={currentImageIsDeleting}
+                  totalAnswers={answers.length}
+                  isDeleting={currentAnswerIsDeleting}
                   isMoving={isMoving}
-                  onDelete={() => onDeleteImage(image.id)}
-                  onMoveLeft={() => onMoveImage(index, "left")}
-                  onMoveRight={() => onMoveImage(index, "right")}
+                  onDelete={() => onDeleteAnswer(answer.id)}
+                  onMoveLeft={() => onMoveAnswer(index, "left")}
+                  onMoveRight={() => onMoveAnswer(index, "right")}
                 />
               ) : (
                 <div
-                  key={image.id}
+                  key={answer.id}
                   className="group relative flex h-48 w-40 shrink-0 items-center justify-center overflow-hidden rounded-md border"
                 >
                   <p className="text-muted-foreground text-xs">画像準備中...</p>

@@ -5,10 +5,10 @@ import { Prisma } from "@prisma/client"
 import { toast } from "sonner"
 import { convertPdfToImages, ConvertedImage } from "@/lib/pdfConverter"
 
-type MasterImage = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
+type MasterAnswer = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
 
-export interface MasterImagesState {
-  images: MasterImage[]
+export interface MasterAnswersState {
+  answers: MasterAnswer[]
   imageUrls: Record<string, string>
   isUploading: boolean
   isDeleting: Record<string, boolean>
@@ -22,13 +22,13 @@ export interface MasterImagesState {
   }
 }
 
-export function useMasterImages(
+export function useMasterAnswers(
   projectId: string,
-  initialImages: MasterImage[],
-  onImagesChange: (images: MasterImage[]) => void
+  initialAnswers: MasterAnswer[],
+  onAnswersChange: (answers: MasterAnswer[]) => void
 ) {
-  const [state, setState] = useState<MasterImagesState>({
-    images: [],
+  const [state, setState] = useState<MasterAnswersState>({
+    answers: [],
     imageUrls: {},
     isUploading: false,
     isDeleting: {},
@@ -43,38 +43,38 @@ export function useMasterImages(
   })
 
 
-  // Initialize images and fetch URLs
+  // Initialize answers and fetch URLs
   useEffect(() => {
-    const sortedImages = [...initialImages].sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
-    setState(prev => ({ ...prev, images: sortedImages }))
+    const sortedAnswers = [...initialAnswers].sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
+    setState(prev => ({ ...prev, answers: sortedAnswers }))
 
     const fetchUrls = async () => {
       const urls: Record<string, string> = {}
-      for (const image of sortedImages) {
+      for (const answer of sortedAnswers) {
         try {
-          const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
-          urls[image.id] = resolvedUrl
+          const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(answer.imagePath)
+          urls[answer.id] = resolvedUrl
         } catch (error) {
-          console.error(`Failed to resolve path for image ${image.id} (${image.imagePath}):`, error)
-          urls[image.id] = ""
+          console.error(`Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`, error)
+          urls[answer.id] = ""
         }
       }
       setState(prev => ({ ...prev, imageUrls: urls }))
     }
 
-    if (sortedImages.length > 0) {
+    if (sortedAnswers.length > 0) {
       fetchUrls()
     } else {
       setState(prev => ({ ...prev, imageUrls: {} }))
     }
-  }, [initialImages])
+  }, [initialAnswers])
 
   // パスワード処理用の状態
   const [_pendingFiles, setPendingFiles] = useState<File[]>([])
   const [_currentFileIndex, setCurrentFileIndex] = useState(0)
   const [_currentPassword, setCurrentPassword] = useState<string>("")
 
-  const uploadImages = useCallback(async (files: File[]) => {
+  const uploadAnswers = useCallback(async (files: File[]) => {
     if (!projectId) {
       toast.error("プロジェクトIDが指定されていません。")
       return
@@ -121,7 +121,7 @@ export function useMasterImages(
         }
       }
 
-      const result = await window.electronAPI.uploadMasterImages(projectId, allFilesData)
+      const result = await window.electronAPI.uploadMasterAnswers(projectId, allFilesData)
       
       if (result) {
         const totalPages = allFilesData.length
@@ -140,27 +140,27 @@ export function useMasterImages(
         // Get updated project data
         const updatedProject = await window.electronAPI.fetchProjectById(projectId)
         if (updatedProject && updatedProject.projectPages) {
-          // Extract master images from project pages
-          const masterImages = updatedProject.projectPages
+          // Extract master answers from project pages
+          const masterAnswers = updatedProject.projectPages
             .flatMap(page => page.pageImages.filter(img => img.imageType === "MASTER")
             .map(img => ({ ...img, projectPage: page })))
           
-          const sortedUpdatedImages = [...masterImages].sort(
+          const sortedUpdatedAnswers = [...masterAnswers].sort(
             (a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber
           )
           
-          setState(prev => ({ ...prev, images: sortedUpdatedImages }))
-          onImagesChange(sortedUpdatedImages)
+          setState(prev => ({ ...prev, answers: sortedUpdatedAnswers }))
+          onAnswersChange(sortedUpdatedAnswers)
           
-          // Update image URLs
+          // Update answer URLs
           const newUrls: Record<string, string> = {}
-          for (const image of sortedUpdatedImages) {
+          for (const answer of sortedUpdatedAnswers) {
             try {
-              const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
-              newUrls[image.id] = resolvedUrl
+              const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(answer.imagePath)
+              newUrls[answer.id] = resolvedUrl
             } catch (error) {
-              console.error(`Failed to resolve path for image ${image.id} (${image.imagePath}):`, error)
-              newUrls[image.id] = ""
+              console.error(`Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`, error)
+              newUrls[answer.id] = ""
             }
           }
           setState(prev => ({ ...prev, imageUrls: newUrls }))
@@ -175,7 +175,7 @@ export function useMasterImages(
       setCurrentFileIndex(0)
       setCurrentPassword("")
     }
-  }, [projectId, onImagesChange])
+  }, [projectId, onAnswersChange])
 
   // パスワード付きPDF変換処理
   const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
@@ -201,9 +201,9 @@ export function useMasterImages(
           }))
           
           // グローバルスコープで解決関数を保存
-          ;(window as any).__masterImagePasswordResolve = resolve
-          ;(window as any).__masterImagePasswordReject = reject
-          ;(window as any).__masterImagePasswordFile = file
+          ;(window as any).__masterAnswerPasswordResolve = resolve
+          ;(window as any).__masterAnswerPasswordReject = reject
+          ;(window as any).__masterAnswerPasswordFile = file
         })
       } else {
         // その他のエラーはそのまま投げる
@@ -214,9 +214,9 @@ export function useMasterImages(
 
   // パスワード送信処理
   const handlePasswordSubmit = useCallback(async (password: string) => {
-    const file = (window as any).__masterImagePasswordFile
-    const resolve = (window as any).__masterImagePasswordResolve
-    const reject = (window as any).__masterImagePasswordReject
+    const file = (window as any).__masterAnswerPasswordFile
+    const resolve = (window as any).__masterAnswerPasswordResolve
+    const reject = (window as any).__masterAnswerPasswordReject
     
     if (!file || !resolve || !reject) {
       return
@@ -247,9 +247,9 @@ export function useMasterImages(
       }))
       
       // グローバル変数をクリア
-      ;(window as any).__masterImagePasswordResolve = null
-      ;(window as any).__masterImagePasswordReject = null
-      ;(window as any).__masterImagePasswordFile = null
+      ;(window as any).__masterAnswerPasswordResolve = null
+      ;(window as any).__masterAnswerPasswordReject = null
+      ;(window as any).__masterAnswerPasswordFile = null
       
       resolve(pdfImages)
     } catch (error) {
@@ -277,9 +277,9 @@ export function useMasterImages(
         }))
         
         // グローバル変数をクリア
-        ;(window as any).__masterImagePasswordResolve = null
-        ;(window as any).__masterImagePasswordReject = null
-        ;(window as any).__masterImagePasswordFile = null
+        ;(window as any).__masterAnswerPasswordResolve = null
+        ;(window as any).__masterAnswerPasswordReject = null
+        ;(window as any).__masterAnswerPasswordFile = null
         
         reject(error)
       }
@@ -288,7 +288,7 @@ export function useMasterImages(
 
   // パスワードダイアログを閉じる
   const handlePasswordCancel = useCallback(() => {
-    const reject = (window as any).__masterImagePasswordReject
+    const reject = (window as any).__masterAnswerPasswordReject
     
     setState(prev => ({
       ...prev,
@@ -303,9 +303,9 @@ export function useMasterImages(
     }))
     
     // グローバル変数をクリア
-    ;(window as any).__masterImagePasswordResolve = null
-    ;(window as any).__masterImagePasswordReject = null
-    ;(window as any).__masterImagePasswordFile = null
+    ;(window as any).__masterAnswerPasswordResolve = null
+    ;(window as any).__masterAnswerPasswordReject = null
+    ;(window as any).__masterAnswerPasswordFile = null
     
     // Promise を拒否
     if (reject) {
@@ -317,70 +317,70 @@ export function useMasterImages(
     setCurrentPassword("")
   }, [])
 
-  const deleteImage = useCallback(async (imageId: string) => {
+  const deleteAnswer = useCallback(async (answerId: string) => {
     setState(prev => ({
       ...prev,
-      isDeleting: { ...prev.isDeleting, [imageId]: true }
+      isDeleting: { ...prev.isDeleting, [answerId]: true }
     }))
 
     try {
-      await window.electronAPI.deleteMasterImage(imageId)
-      const updatedImages = state.images.filter((img) => img.id !== imageId)
+      await window.electronAPI.deleteMasterAnswer(answerId)
+      const updatedAnswers = state.answers.filter((answer) => answer.id !== answerId)
       
       setState(prev => ({
         ...prev,
-        images: updatedImages,
-        isDeleting: { ...prev.isDeleting, [imageId]: false },
+        answers: updatedAnswers,
+        isDeleting: { ...prev.isDeleting, [answerId]: false },
         imageUrls: Object.fromEntries(
-          Object.entries(prev.imageUrls).filter(([id]) => id !== imageId)
+          Object.entries(prev.imageUrls).filter(([id]) => id !== answerId)
         )
       }))
       
-      onImagesChange(updatedImages)
+      onAnswersChange(updatedAnswers)
       toast.success("画像を削除しました。")
     } catch (error) {
       console.error("Failed to delete image:", error)
       toast.error("画像の削除に失敗しました。")
       setState(prev => ({
         ...prev,
-        isDeleting: { ...prev.isDeleting, [imageId]: false }
+        isDeleting: { ...prev.isDeleting, [answerId]: false }
       }))
     }
-  }, [state.images, onImagesChange])
+  }, [state.answers, onMasterAnswersChange])
 
-  const moveImage = useCallback(async (fromIndex: number, direction: "left" | "right") => {
+  const moveAnswer = useCallback(async (fromIndex: number, direction: "left" | "right") => {
     const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
-    if (toIndex < 0 || toIndex >= state.images.length) return
+    if (toIndex < 0 || toIndex >= state.answers.length) return
 
     setState(prev => ({ ...prev, isMoving: true }))
 
     try {
-      const newImages = [...state.images]
-      const [movedImage] = newImages.splice(fromIndex, 1)
-      newImages.splice(toIndex, 0, movedImage)
+      const newAnswers = [...state.answers]
+      const [movedAnswer] = newAnswers.splice(fromIndex, 1)
+      newAnswers.splice(toIndex, 0, movedAnswer)
 
-      const updateRequests = newImages.map((image, index) => ({
-        id: image.id,
+      const updateRequests = newAnswers.map((answer, index) => ({
+        id: answer.id,
         pageNumber: index + 1,
       }))
 
-      await window.electronAPI.updateMasterImagesOrder(updateRequests)
+      await window.electronAPI.updateMasterAnswersOrder(updateRequests)
 
-      setState(prev => ({ ...prev, images: newImages }))
-      onImagesChange(newImages)
+      setState(prev => ({ ...prev, answers: newAnswers }))
+      onAnswersChange(newAnswers)
     } catch (error) {
       console.error("Failed to move image:", error)
       toast.error("画像の移動に失敗しました。")
     } finally {
       setState(prev => ({ ...prev, isMoving: false }))
     }
-  }, [state.images, onImagesChange])
+  }, [state.answers, onMasterAnswersChange])
 
   return {
     ...state,
-    uploadImages,
-    deleteImage,
-    moveImage,
+    uploadAnswers,
+    deleteAnswer,
+    moveAnswer,
     handlePasswordSubmit,
     handlePasswordCancel
   }

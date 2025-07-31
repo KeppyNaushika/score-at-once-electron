@@ -18,9 +18,9 @@ import type {
   StudentClassMembership,
 } from "@prisma/client"
 
-// Answer sheet related types (updated for new structure)
+// Student answer related types (updated for new structure)
 // New: Based on PageImage instead of AnswerSheet
-export type AnswerSheetWithDetails = Prisma.PageImageGetPayload<{
+export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
   include: {
     student: {
       include: {
@@ -40,7 +40,7 @@ export type AnswerSheetWithDetails = Prisma.PageImageGetPayload<{
 }>
 
 // Legacy AnswerSheet type for backward compatibility
-export type LegacyAnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
+export type LegacyStudentAnswerWithDetails = Prisma.AnswerSheetGetPayload<{
   include: {
     student: true
     project: true
@@ -54,7 +54,7 @@ export type LegacyAnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
   }
 }>
 
-export interface UploadAnswerSheetFileData {
+export interface UploadStudentAnswerFileData {
   name: string
   fileName: string
   originalFileName: string
@@ -126,7 +126,7 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
     projectSubtotalGroups: {
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
-    answerSheets: { include: { student: true; questionScores: true } }
+    studentAnswers: { include: { student: true; questionScores: true } }
     projectStudents: { include: { student: true } }
   }
 }>
@@ -214,7 +214,7 @@ export type CreateSubtotalDefinitionArgs = CreateCropSubtotalArgs
 export type QuestionSubtotalAssignmentWithRelations = CropSubtotalWithRelations
 export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
 
-// ProjectPage and PageImage related types (updated from MasterImage)
+// ProjectPage and PageImage related types (updated from MasterAnswer)
 export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
   include: {
     project: true
@@ -231,7 +231,7 @@ export type PageImageWithDetails = Prisma.PageImageGetPayload<{
 }>
 
 // Backward compatibility aliases
-export type MasterImagePayload = ProjectPageWithDetails
+export type MasterAnswerPayload = ProjectPageWithDetails
 
 export interface MyAPI {
   fetchProjects: () => Promise<ProjectWithDetails[]>
@@ -305,18 +305,18 @@ export interface MyAPI {
     error?: string
   }>
 
-  // Answer sheet related
-  uploadAnswerSheets: (
+  // Student answer related
+  uploadStudentAnswers: (
     projectId: string,
-    filesData: UploadAnswerSheetFileData[],
+    filesData: UploadStudentAnswerFileData[],
   ) => Promise<{
     success: boolean
-    answerSheets?: AnswerSheetWithDetails[]
+    studentAnswers?: StudentAnswerWithDetails[]
     error?: string
   }>
-  getAnswerSheetsByProjectId: (projectId: string) => Promise<{
+  getStudentAnswersByProjectId: (projectId: string) => Promise<{
     success: boolean
-    answerSheets?: Array<{
+    studentAnswers?: Array<{
       id: string
       studentId: string | null
       pageNumber: number
@@ -335,7 +335,7 @@ export interface MyAPI {
     }>
     error?: string
   }>
-  deleteAnswerSheet: (answerSheetId: string) => Promise<{
+  deleteStudentAnswer: (studentAnswerId: string) => Promise<{
     success: boolean
     error?: string
   }>
@@ -475,7 +475,7 @@ export interface MyAPI {
     endDate?: Date,
   ) => Promise<StudentClassMembershipWithDetails[]>
 
-  // ProjectPage and PageImage related (updated from MasterImage)
+  // ProjectPage and PageImage related (updated from MasterAnswer)
   createProjectPage: (
     projectId: string,
     pageNumber: number,
@@ -517,7 +517,7 @@ export interface MyAPI {
   ) => Promise<PageImageWithDetails[]>
 
   // Backward compatibility aliases
-  uploadMasterImages: (
+  uploadMasterAnswers: (
     projectId: string,
     filesData: {
       name: string
@@ -526,11 +526,11 @@ export interface MyAPI {
       path?: string
     }[],
   ) => Promise<ProjectPageWithDetails[]>
-  deleteMasterImage: (imageId: string) => Promise<ProjectPageWithDetails | void>
-  updateMasterImagesOrder: (
-    imageOrders: { id: string; pageNumber: number }[],
+  deleteMasterAnswer: (answerId: string) => Promise<ProjectPageWithDetails | void>
+  updateMasterAnswersOrder: (
+    answerOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>
-  getMasterImagesByProjectId: (
+  getMasterAnswersByProjectId: (
     projectId: string,
   ) => Promise<ProjectPageWithDetails[]>
   getProjectPagesByProjectId: (

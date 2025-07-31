@@ -3,7 +3,7 @@
 import { ConvertedImage } from "@/lib/pdfConverter"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { MasterImage, MasterImagesState } from "@/components/projects/01-upload/types"
+import { MasterAnswer, MasterAnswersState } from "@/components/projects/01-upload/types"
 import {
   createUploadData,
   generateImageUrls,
@@ -24,20 +24,20 @@ import {
 } from "../utils/password-utils"
 
 /**
- * マスター画像管理フック
+ * マスター解答管理フック
  * @param {string} projectId - プロジェクトID
- * @param {MasterImage[]} initialImages - 初期画像リスト
- * @param {function} onImagesChange - 画像変更時のコールバック
- * @returns {object} マスター画像管理の状態と操作関数
+ * @param {MasterAnswer[]} initialAnswers - 初期解答リスト
+ * @param {function} onAnswersChange - 解答変更時のコールバック
+ * @returns {object} マスター解答管理の状態と操作関数
  */
-export function useMasterImages(
+export function useMasterAnswers(
   projectId: string,
-  initialImages: MasterImage[],
-  onImagesChange: (images: MasterImage[]) => void,
+  initialAnswers: MasterAnswer[],
+  onAnswersChange: (answers: MasterAnswer[]) => void,
 ) {
   // 状態管理
-  const [state, setState] = useState<MasterImagesState>({
-    images: [],
+  const [state, setState] = useState<MasterAnswersState>({
+    answers: [],
     imageUrls: {},
     isUploading: false,
     uploadProgress: 0,
@@ -49,15 +49,15 @@ export function useMasterImages(
   // パスワード処理用の状態（削除済み - 未使用のため）
 
   /**
-   * 初期画像とURLの設定
+   * 初期解答とURLの設定
    */
   useEffect(() => {
-    const sortedImages = sortImagesByPageNumber(initialImages)
-    setState((prev) => ({ ...prev, images: sortedImages }))
+    const sortedAnswers = sortImagesByPageNumber(initialAnswers)
+    setState((prev) => ({ ...prev, answers: sortedAnswers }))
 
     const fetchUrls = async () => {
-      if (sortedImages.length > 0) {
-        const urls = await generateImageUrls(sortedImages)
+      if (sortedAnswers.length > 0) {
+        const urls = await generateImageUrls(sortedAnswers)
         setState((prev) => ({ ...prev, imageUrls: urls }))
       } else {
         setState((prev) => ({ ...prev, imageUrls: {} }))
@@ -65,7 +65,7 @@ export function useMasterImages(
     }
 
     fetchUrls()
-  }, [initialImages])
+  }, [initialAnswers])
 
   /**
    * パスワード付きPDF変換処理
@@ -115,7 +115,7 @@ export function useMasterImages(
    * 画像アップロード処理
    * @param {File[]} files - アップロード対象のファイルリスト
    */
-  const uploadImages = useCallback(
+  const uploadAnswers = useCallback(
     async (files: File[]) => {
       if (!projectId) {
         toast.error("プロジェクトIDが指定されていません。")
@@ -159,7 +159,7 @@ export function useMasterImages(
           }
         }
 
-        const result = await window.electronAPI.uploadMasterImages(
+        const result = await window.electronAPI.uploadMasterAnswers(
           projectId,
           allFilesData,
         )
@@ -182,31 +182,31 @@ export function useMasterImages(
           const updatedProject =
             await window.electronAPI.fetchProjectById(projectId)
           if (updatedProject && updatedProject.projectPages) {
-            // Convert projectPages to master images format for compatibility
-            const masterImages = updatedProject.projectPages
+            // Convert projectPages to master answers format for compatibility
+            const masterAnswers = updatedProject.projectPages
               .filter((page) =>
                 page.pageImages?.some((img) => img.imageType === "MASTER"),
               )
               .map((page) => {
-                const masterImage = page.pageImages?.find(
+                const masterAnswer = page.pageImages?.find(
                   (img) => img.imageType === "MASTER",
                 )
                 return {
                   id: page.id,
                   projectId: page.projectId,
-                  imagePath: masterImage?.imagePath || "",
+                  imagePath: masterAnswer?.imagePath || "",
                   pageNumber: page.pageNumber,
                   createdAt: page.createdAt,
                   updatedAt: page.updatedAt,
                 }
               })
-            const sortedUpdatedImages = sortImagesByPageNumber(masterImages)
+            const sortedUpdatedAnswers = sortImagesByPageNumber(masterAnswers)
 
-            setState((prev) => ({ ...prev, images: sortedUpdatedImages }))
-            onImagesChange(sortedUpdatedImages)
+            setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))
+            onAnswersChange(sortedUpdatedAnswers)
 
-            // Update image URLs
-            const newUrls = await generateImageUrls(sortedUpdatedImages)
+            // Update answer URLs
+            const newUrls = await generateImageUrls(sortedUpdatedAnswers)
             setState((prev) => ({ ...prev, imageUrls: newUrls }))
           }
         }
@@ -217,7 +217,7 @@ export function useMasterImages(
         setState((prev) => ({ ...prev, isUploading: false }))
       }
     },
-    [projectId, onImagesChange, convertPdfToImagesWithPassword],
+    [projectId, onAnswersChange, convertPdfToImagesWithPassword],
   )
 
   /**
@@ -291,73 +291,73 @@ export function useMasterImages(
    * 画像削除処理
    * @param {string} imageId - 削除対象の画像ID
    */
-  const deleteImage = useCallback(
-    async (imageId: string) => {
+  const deleteAnswer = useCallback(
+    async (answerId: string) => {
       setState((prev) => ({
         ...prev,
-        isDeleting: { ...prev.isDeleting, [imageId]: true },
+        isDeleting: { ...prev.isDeleting, [answerId]: true },
       }))
 
       try {
-        await window.electronAPI.deleteMasterImage(imageId)
-        const updatedImages = state.images.filter((img) => img.id !== imageId)
+        await window.electronAPI.deleteMasterAnswer(answerId)
+        const updatedAnswers = state.answers.filter((answer) => answer.id !== answerId)
 
         setState((prev) => ({
           ...prev,
-          images: updatedImages,
-          isDeleting: { ...prev.isDeleting, [imageId]: false },
+          answers: updatedAnswers,
+          isDeleting: { ...prev.isDeleting, [answerId]: false },
           imageUrls: Object.fromEntries(
-            Object.entries(prev.imageUrls).filter(([id]) => id !== imageId),
+            Object.entries(prev.imageUrls).filter(([id]) => id !== answerId),
           ),
         }))
 
-        onImagesChange(updatedImages)
+        onAnswersChange(updatedAnswers)
         toast.success("画像を削除しました。")
       } catch (error) {
         console.error("Failed to delete image:", error)
         toast.error("画像の削除に失敗しました。")
         setState((prev) => ({
           ...prev,
-          isDeleting: { ...prev.isDeleting, [imageId]: false },
+          isDeleting: { ...prev.isDeleting, [answerId]: false },
         }))
       }
     },
-    [state.images, onImagesChange],
+    [state.answers, onAnswersChange],
   )
 
   /**
-   * 画像移動処理
+   * 解答移動処理
    * @param {number} fromIndex - 移動元のインデックス
    * @param {"left" | "right"} direction - 移動方向
    */
-  const moveImage = useCallback(
+  const moveAnswer = useCallback(
     async (fromIndex: number, direction: "left" | "right") => {
-      const newImages = moveImageInList(state.images, fromIndex, direction)
-      if (!newImages) return
+      const newAnswers = moveImageInList(state.answers, fromIndex, direction)
+      if (!newAnswers) return
 
       setState((prev) => ({ ...prev, isMoving: true }))
 
       try {
-        const updateRequests = generatePageNumberUpdateRequests(newImages)
-        await window.electronAPI.updateMasterImagesOrder(updateRequests)
+        const updateRequests = generatePageNumberUpdateRequests(newAnswers)
+        await window.electronAPI.updateMasterAnswersOrder(updateRequests)
 
-        setState((prev) => ({ ...prev, images: newImages }))
-        onImagesChange(newImages)
+        setState((prev) => ({ ...prev, answers: newAnswers }))
+        onAnswersChange(newAnswers)
       } catch (error) {
         console.error("Failed to move image:", error)
-        toast.error("画像の移動に失敗しました。")
+        toast.error("解答の移動に失敗しました。")
       } finally {
         setState((prev) => ({ ...prev, isMoving: false }))
       }
     },
-    [state.images, onImagesChange],
+    [state.answers, onAnswersChange],
   )
 
   return {
     ...state,
-    uploadImages,
-    deleteImage,
-    moveImage,
+    uploadAnswers,
+    deleteAnswer,
+    moveAnswer,
     handlePasswordSubmit,
     handlePasswordCancel,
   }

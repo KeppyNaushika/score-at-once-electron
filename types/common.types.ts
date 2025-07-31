@@ -166,7 +166,7 @@ export interface ProjectStudentData {
   updatedAt: Date
 }
 
-// Updated: MasterImageData replaced by ProjectPageData and PageImageData
+// Updated: MasterAnswerData replaced by ProjectPageData and PageImageData
 export interface ProjectPageData {
   id: string
   projectId: string
@@ -188,7 +188,7 @@ export interface PageImageData {
 }
 
 // Backward compatibility alias
-export interface MasterImageData {
+export interface MasterAnswerData {
   id: string
   projectId: string
   imagePath: string
@@ -197,8 +197,8 @@ export interface MasterImageData {
   updatedAt: Date
 }
 
-// Updated: AnswerSheetData simplified to match new schema
-export interface AnswerSheetData {
+// Updated: StudentAnswerData simplified to match new schema
+export interface StudentAnswerData {
   id: string
   projectId: string
   studentId?: string

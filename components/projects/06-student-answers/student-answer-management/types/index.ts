@@ -5,7 +5,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
-} from "@/types/answer-sheet.types"
+} from "@/types/student-answer.types"
 
 export type {
   PendingChange,
@@ -15,8 +15,8 @@ export type {
   UploadData,
 }
 
-// Processed answer sheet format for component compatibility
-export interface ProcessedAnswerSheet {
+// Processed student answer format for component compatibility
+export interface ProcessedStudentAnswer {
   id: string
   studentId: string | null
   pageNumber: number
