@@ -11,6 +11,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 import {
+  Calculator,
   ChevronsLeft,
   ChevronsRight,
   Home,
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/dashboard", label: "プロジェクト", icon: Home },
   { href: "/students", label: "生徒管理", icon: Users },
   { href: "/classes", label: "学級管理", icon: School },
+  { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
   { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
   { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
   { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },

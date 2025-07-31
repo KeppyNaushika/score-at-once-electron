@@ -19,6 +19,7 @@ import { HelpContent05Students as StudentsHelpContent } from "@/components/help/
 import { HelpContent06AnswerSheets as AnswerSheetsHelpContent } from "@/components/help/page-specific/HelpContent-06-answer-sheets"
 import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent-07-scoring"
 import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent-08-export"
+import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContent-subtotal-groups"
 
 // ページごとのヘルプコンポーネント
 const pageHelpComponents: {
@@ -31,6 +32,7 @@ const pageHelpComponents: {
   "06-answer-sheets": AnswerSheetsHelpContent,
   "07-score-at-once": ScoringHelpContent,
   "08-export": ExportHelpContent,
+  "subtotal-groups": SubtotalGroupsHelpContent,
 }
 
 export function usePageHelp() {
@@ -41,6 +43,12 @@ export function usePageHelp() {
   const getCurrentPageId = () => {
     const pathSegments = pathname.split("/")
     const lastSegment = pathSegments[pathSegments.length - 1]
+    
+    // 特別なページパスを処理
+    if (pathname.includes("subtotal-groups")) {
+      return "subtotal-groups"
+    }
+    
     return Object.keys(pageHelpComponents).find((key) =>
       lastSegment.includes(key.split("-")[1]),
     )
@@ -61,6 +69,7 @@ export function usePageHelp() {
       "06-answer-sheets": "答案アップロード",
       "07-score-at-once": "一括採点",
       "08-export": "結果出力",
+      "subtotal-groups": "小計点グループ管理",
     }
     return currentPageId ? titles[currentPageId] : "ヘルプ"
   }
