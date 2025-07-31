@@ -13,12 +13,12 @@
 
 "use client"
 
-import { AreaRenderer } from "@/components/projects/02-template/AreaRenderer"
-import { DragPreview } from "@/components/projects/02-template/DragPreview"
-import { ZoomControls } from "@/components/projects/02-template/components/ZoomControls"
-import { useImageCanvasInteraction } from "@/components/projects/02-template/hooks/useImageCanvasInteraction"
-import { useZoomControls } from "@/components/projects/02-template/hooks/useZoomControls"
-import { useKeyboardShortcuts } from "@/components/projects/02-template/hooks/useKeyboardShortcuts"
+import { AreaRenderer } from "./AreaRenderer"
+import { DragPreview } from "./DragPreview"
+import { ZoomControls } from "./ZoomControls"
+import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
+import { useZoomControls } from "../hooks/useZoomControls"
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
 import { CropRegionArea, LayoutRegionAreaType } from "@/types/common.types"
 import { useMemo } from "react"
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { usePageHelp } from "@/components/help/usePageHelp"
-import LayoutRegionEditor from "@/components/projects/02-template/LayoutRegionEditor"
+import { LayoutRegionEditor } from "@/components/projects/02-template"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 

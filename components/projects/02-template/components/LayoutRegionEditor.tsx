@@ -1,7 +1,7 @@
 "use client"
 
-import ImageCanvas from "@/components/projects/02-template/ImageCanvas"
-import LayoutRegionList from "@/components/projects/02-template/LayoutRegionList"
+import ImageCanvas from "./ImageCanvas"
+import LayoutRegionList from "./LayoutRegionList"
 import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
 import { useState } from "react"
 import { toast } from "sonner"
