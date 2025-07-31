@@ -61,7 +61,7 @@ export function QuestionAssignmentMatrix({
       for (const region of cropRegions) {
         try {
           const result =
-            (await window.electronAPI.getAssignmentsByQuestionLayoutRegionId(
+            (await window.electronAPI.getAssignmentsByQuestionCropRegionId(
               region.id,
             )) as any
           if (result && result.success && result.assignments) {
@@ -361,8 +361,8 @@ export function QuestionAssignmentMatrix({
             >
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 w-48 border-r-2 border-gray-200 bg-white">
-                    設問
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
+                    <div className="truncate">設問</div>
                   </TableHead>
                   {subtotalGroups.map((group) => (
                     <TableHead
@@ -371,14 +371,14 @@ export function QuestionAssignmentMatrix({
                       colSpan={group.subtotals.length}
                       style={{ width: `${group.subtotals.length * 120}px` }}
                     >
-                      <div className="text-sm font-semibold text-blue-700">
+                      <div className="text-sm font-semibold text-blue-700 truncate">
                         {group.name}
                       </div>
                     </TableHead>
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 w-48 border-r-2 border-gray-200 bg-white">
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
                     {/* 空のセル */}
                   </TableHead>
                   {subtotalGroups.map((group) =>
@@ -388,7 +388,7 @@ export function QuestionAssignmentMatrix({
                         className="bg-gray-50/50 text-center"
                         style={{ width: "120px", minWidth: "120px" }}
                       >
-                        <div className="text-muted-foreground text-xs">
+                        <div className="text-muted-foreground text-xs truncate">
                           {subtotal.name}
                         </div>
                       </TableHead>
@@ -399,12 +399,12 @@ export function QuestionAssignmentMatrix({
               <TableBody>
                 {cropRegions.map((region) => (
                   <TableRow key={region.id}>
-                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">
+                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="font-medium truncate flex-1">
                           {region.label || `問${region.orderIndex || 1}`}
                         </div>
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs flex-shrink-0">
                           {region.points || 0}点
                         </Badge>
                       </div>

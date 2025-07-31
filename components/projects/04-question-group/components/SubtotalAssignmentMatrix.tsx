@@ -262,8 +262,8 @@ export function SubtotalAssignmentMatrix({
             >
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 w-48 border-r-2 border-gray-200 bg-white">
-                    小計点領域
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
+                    <div className="truncate">小計点領域</div>
                   </TableHead>
                   {subtotalGroups.map((group) => (
                     <TableHead
@@ -272,14 +272,14 @@ export function SubtotalAssignmentMatrix({
                       colSpan={group.subtotals.length}
                       style={{ width: `${group.subtotals.length * 120}px` }}
                     >
-                      <div className="text-sm font-semibold text-green-700">
+                      <div className="text-sm font-semibold text-green-700 truncate">
                         {group.name}
                       </div>
                     </TableHead>
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 w-48 border-r-2 border-gray-200 bg-white">
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
                     {/* 空のセル */}
                   </TableHead>
                   {subtotalGroups.map((group) =>
@@ -289,7 +289,7 @@ export function SubtotalAssignmentMatrix({
                         className="bg-gray-50/50 text-center"
                         style={{ width: "120px", minWidth: "120px" }}
                       >
-                        <div className="text-muted-foreground text-xs">
+                        <div className="text-muted-foreground text-xs truncate">
                           {subtotal.name}
                         </div>
                       </TableHead>
@@ -300,14 +300,14 @@ export function SubtotalAssignmentMatrix({
               <TableBody>
                 {subtotalRegions.map((region) => (
                   <TableRow key={region.id}>
-                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white">
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">
+                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="font-medium truncate flex-1">
                           {region.label || `小計${region.orderIndex || 1}`}
                         </div>
                         <Badge
                           variant="outline"
-                          className="bg-green-50 text-xs text-green-700"
+                          className="bg-green-50 text-xs text-green-700 flex-shrink-0"
                         >
                           小計点
                         </Badge>
