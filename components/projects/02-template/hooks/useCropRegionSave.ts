@@ -7,12 +7,12 @@ import { CropRegionArea } from "@/types/common.types"
 /**
  * 領域保存処理を担当するカスタムフック
  * 個別保存とバッチ保存の両方をサポート
- * 
+ *
  * @param projectId - プロジェクトID
  * @param currentUser - 現在のユーザー
  * @returns 領域保存に関する関数群
  */
-export function useRegionSave(
+export function useCropRegionSave(
   projectId: string | undefined,
   currentUser: User | null
 ) {
@@ -21,7 +21,7 @@ export function useRegionSave(
   /**
    * 個別領域の保存処理
    * 新規作成または更新を効率的に実行する
-   * 
+   *
    * @param region - 保存する領域データ
    * @param operation - 実行する操作（'create' | 'update'）
    * @returns Promise<any | null> 保存結果
@@ -72,7 +72,7 @@ export function useRegionSave(
   /**
    * 複数領域の一括保存処理（互換性のため維持）
    * 効率性を向上させるため、個別保存への移行を推奨
-   * 
+   *
    * @param regions - 保存する領域データの配列
    * @returns Promise<void>
    */
@@ -87,7 +87,7 @@ export function useRegionSave(
           result: any
           wasUpdate: boolean
         }> = []
-        
+
         // 順次処理で確実にID管理
         for (let i = 0; i < regions.length; i++) {
           const area = regions[i]
@@ -134,7 +134,7 @@ export function useRegionSave(
   /**
    * 新規領域作成のハンドラー
    * タイプに応じて適切なラベルと配点を自動設定
-   * 
+   *
    * @param type - 作成する領域のタイプ
    * @param coords - 領域の座標
    * @param projectPageId - 関連するプロジェクトページのID
@@ -143,7 +143,7 @@ export function useRegionSave(
    */
   const createRegion = useCallback(
     async (
-      type: AreaType, 
+      type: AreaType,
       coords: RegionCoordinates,
       projectPageId: string,
       existingRegions: CropRegionArea[]
@@ -151,7 +151,7 @@ export function useRegionSave(
       // タイプに応じたラベルと配点を設定
       let label = ""
       let points = null
-      
+
       switch (type) {
         case "STUDENT_NAME":
           label = "氏名"
@@ -192,7 +192,7 @@ export function useRegionSave(
       try {
         // データベースに保存
         const savedRegion = await saveRegion(newRegion, 'create')
-        
+
         if (savedRegion) {
           // IDを付与して返す
           return {
@@ -213,14 +213,14 @@ export function useRegionSave(
   /**
    * 領域更新のハンドラー
    * 座標情報を更新し、データベースに反映
-   * 
+   *
    * @param region - 更新する領域データ
    * @param coords - 新しい座標情報
    * @returns Promise<LayoutRegionData | null> 更新された領域データ
    */
   const updateRegion = useCallback(
     async (
-      region: CropRegionArea, 
+      region: CropRegionArea,
       coords: RegionCoordinates
     ): Promise<CropRegionArea | null> => {
       if (!region.id) {

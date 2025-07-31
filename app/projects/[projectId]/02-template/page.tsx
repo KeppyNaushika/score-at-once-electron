@@ -13,7 +13,7 @@ import {
   RegionCoordinates,
   TemplateHeader,
   TemplateStatus,
-  useRegionSave,
+  useCropRegionSave,
   useTemplateData,
 } from "@/components/projects/02-template"
 import { LayoutRegionArea } from "@/types/common.types"
@@ -37,7 +37,7 @@ export default function TemplateStepPage() {
     updateLayoutId,
   } = useTemplateData(projectId)
 
-  const { autoSaveRegions, createRegion, updateRegion } = useRegionSave(
+  const { autoSaveRegions, createRegion, updateRegion } = useCropRegionSave(
     projectId,
     initialData.currentUser,
   )

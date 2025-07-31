@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import type { MasterImageGalleryProps } from "../types"
-import { MasterImageCard } from "./master-image-card"
+import { MasterImageCard } from "./MasterImageCard"
 
 /**
  * MasterImageGallery - 模範解答画像一覧を表示するコンポーネント

@@ -1,20 +1,27 @@
 "use client"
 
-import FileUploadDropzone from "@/components/common/FileUploadDropzone"
-import MasterImageGallery from "@/components/projects/01-upload/MasterImageGallery"
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import { useMasterImages } from "@/hooks/useMasterImages"
-import { Prisma } from "@prisma/client"
+import type { MasterImageManagerProps } from "../types"
+import { useMasterImages } from "../hooks/useMasterImages"
+import { FileUploadDropzone } from "./FileUploadDropzone"
+import { MasterImageGallery } from "./MasterImageGallery"
 
-type MasterImage = Prisma.PageImageGetPayload<{ include: { projectPage: true } }>
-
-interface MasterImageManagerProps {
-  projectId: string
-  initialMasterImages: MasterImage[]
-  onMasterImagesChange: (images: MasterImage[]) => void
-}
-
-export default function MasterImageManager({
+/**
+ * MasterImageManager - 模範解答画像管理のメインコンポーネント
+ *
+ * 機能:
+ * - ファイルアップロード機能
+ * - 模範解答画像一覧表示
+ * - 画像の削除・順序変更
+ * - パスワード保護PDFの処理
+ * - 画像URL管理
+ *
+ * @param projectId - プロジェクトID
+ * @param initialMasterImages - 初期画像データ
+ * @param onMasterImagesChange - 画像データ変更時のコールバック関数
+ * @returns 模範解答画像管理コンポーネント
+ */
+export function MasterImageManager({
   projectId,
   initialMasterImages,
   onMasterImagesChange,
@@ -23,6 +30,7 @@ export default function MasterImageManager({
     images,
     imageUrls,
     isUploading,
+    uploadProgress,
     isDeleting,
     isMoving,
     passwordDialog,
@@ -35,19 +43,16 @@ export default function MasterImageManager({
 
   return (
     <div className="space-y-6">
+      {/* ファイルアップロードエリア */}
       <FileUploadDropzone
         onFilesSelected={uploadImages}
-        accept={{
-          "image/*": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff"],
-          "application/pdf": [".pdf"],
-        }}
-        multiple={true}
         isUploading={isUploading}
-        title="ファイルをドロップまたはクリックして選択"
-        description="PDF または画像ファイル (PNG, JPG) をアップロードできます"
-        additionalInfo="PDF の場合、各ページが自動的に画像として分割されます"
+        uploadProgress={uploadProgress}
+        accept=".pdf,.png,.jpg,.jpeg"
+        maxFileSize={50 * 1024 * 1024} // 50MB
       />
 
+      {/* 画像一覧表示 */}
       <MasterImageGallery
         images={images}
         imageUrls={imageUrls}
@@ -57,6 +62,7 @@ export default function MasterImageManager({
         onMoveImage={moveImage}
       />
 
+      {/* パスワード入力ダイアログ */}
       <PasswordDialog
         isOpen={passwordDialog.isOpen}
         onClose={handlePasswordCancel}

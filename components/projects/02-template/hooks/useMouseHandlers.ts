@@ -3,11 +3,11 @@
  */
 
 import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
-import { DragState, ResizeState, MoveState } from "./interaction-types"
+import { DragState, ResizeState, MoveState } from "../types"
 
 /**
  * Custom hook for handling mouse events on the canvas
- * 
+ *
  * @param params - Configuration parameters for mouse handling
  * @returns Object containing mouse event handlers
  */
@@ -45,7 +45,11 @@ export function useMouseHandlers({
     index: number,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
-  getRelativeCoords: (clientX: number, clientY: number, ref: React.RefObject<HTMLDivElement>) => { x: number; y: number }
+  getRelativeCoords: (
+    clientX: number,
+    clientY: number,
+    ref: React.RefObject<HTMLDivElement>,
+  ) => { x: number; y: number }
   imageContainerRef: React.RefObject<HTMLDivElement>
   dragging: boolean
   dragStartCoords: DragState | null
@@ -62,10 +66,12 @@ export function useMouseHandlers({
 
   /**
    * Handle mouse down events for starting drag operations
-   * 
+   *
    * @param event - React mouse event
    */
-  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement, MouseEvent>) => {
+  const handleMouseDown = (
+    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+  ) => {
     if (
       disabled ||
       !backgroundImageUrl ||
@@ -75,8 +81,12 @@ export function useMouseHandlers({
     )
       return
 
-    const coords = getRelativeCoords(event.clientX, event.clientY, imageContainerRef)
-    
+    const coords = getRelativeCoords(
+      event.clientX,
+      event.clientY,
+      imageContainerRef,
+    )
+
     setDragStartCoords(coords)
     setDragCurrentCoords(coords)
     setDragging(true)
@@ -84,7 +94,7 @@ export function useMouseHandlers({
 
   /**
    * Handle mouse down events for starting resize operations
-   * 
+   *
    * @param event - React mouse event
    * @param areaIndex - Index of the area being resized
    * @param handle - Which resize handle was clicked
@@ -97,7 +107,11 @@ export function useMouseHandlers({
     event.stopPropagation()
     if (!imageContainerRef.current) return
 
-    const coords = getRelativeCoords(event.clientX, event.clientY, imageContainerRef)
+    const coords = getRelativeCoords(
+      event.clientX,
+      event.clientY,
+      imageContainerRef,
+    )
     const area = areas[areaIndex]
 
     setResizing({
@@ -115,7 +129,7 @@ export function useMouseHandlers({
 
   /**
    * Handle mouse down events for starting move operations
-   * 
+   *
    * @param event - React mouse event
    * @param areaIndex - Index of the area being moved
    */
@@ -126,7 +140,11 @@ export function useMouseHandlers({
     event.stopPropagation()
     if (!imageContainerRef.current) return
 
-    const coords = getRelativeCoords(event.clientX, event.clientY, imageContainerRef)
+    const coords = getRelativeCoords(
+      event.clientX,
+      event.clientY,
+      imageContainerRef,
+    )
     const area = areas[areaIndex]
 
     setMoving({
@@ -143,67 +161,89 @@ export function useMouseHandlers({
 
   /**
    * Handle mouse move events for drag, resize, and move operations
-   * 
+   *
    * @param event - Mouse event
    */
-  const handleMouseMove = useCallback((event: MouseEvent) => {
-    if (!imageContainerRef.current) return
+  const handleMouseMove = useCallback(
+    (event: MouseEvent) => {
+      if (!imageContainerRef.current) return
 
-    const coords = getRelativeCoords(event.clientX, event.clientY, imageContainerRef)
+      const coords = getRelativeCoords(
+        event.clientX,
+        event.clientY,
+        imageContainerRef,
+      )
 
-    if (dragging && dragStartCoords) {
-      setDragCurrentCoords(coords)
-    } else if (resizing) {
-      const { areaIndex, handle, startCoords, originalArea } = resizing
-      const deltaX = coords.x - startCoords.x
-      const deltaY = coords.y - startCoords.y
+      if (dragging && dragStartCoords) {
+        setDragCurrentCoords(coords)
+      } else if (resizing) {
+        const { areaIndex, handle, startCoords, originalArea } = resizing
+        const deltaX = coords.x - startCoords.x
+        const deltaY = coords.y - startCoords.y
 
-      let newArea = { ...originalArea }
+        let newArea = { ...originalArea }
 
-      switch (handle) {
-        case "nw":
-          newArea.x = originalArea.x + deltaX
-          newArea.y = originalArea.y + deltaY
-          newArea.width = originalArea.width - deltaX
-          newArea.height = originalArea.height - deltaY
-          break
-        case "ne":
-          newArea.y = originalArea.y + deltaY
-          newArea.width = originalArea.width + deltaX
-          newArea.height = originalArea.height - deltaY
-          break
-        case "sw":
-          newArea.x = originalArea.x + deltaX
-          newArea.width = originalArea.width - deltaX
-          newArea.height = originalArea.height + deltaY
-          break
-        case "se":
-          newArea.width = originalArea.width + deltaX
-          newArea.height = originalArea.height + deltaY
-          break
+        switch (handle) {
+          case "nw":
+            newArea.x = originalArea.x + deltaX
+            newArea.y = originalArea.y + deltaY
+            newArea.width = originalArea.width - deltaX
+            newArea.height = originalArea.height - deltaY
+            break
+          case "ne":
+            newArea.y = originalArea.y + deltaY
+            newArea.width = originalArea.width + deltaX
+            newArea.height = originalArea.height - deltaY
+            break
+          case "sw":
+            newArea.x = originalArea.x + deltaX
+            newArea.width = originalArea.width - deltaX
+            newArea.height = originalArea.height + deltaY
+            break
+          case "se":
+            newArea.width = originalArea.width + deltaX
+            newArea.height = originalArea.height + deltaY
+            break
+        }
+
+        // Ensure minimum size and bounds
+        newArea.width = Math.max(0.02, newArea.width)
+        newArea.height = Math.max(0.02, newArea.height)
+        newArea.x = Math.max(0, Math.min(1 - newArea.width, newArea.x))
+        newArea.y = Math.max(0, Math.min(1 - newArea.height, newArea.y))
+
+        onUpdateArea(areaIndex, newArea)
+      } else if (moving) {
+        const { areaIndex, startCoords, originalArea } = moving
+        const deltaX = coords.x - startCoords.x
+        const deltaY = coords.y - startCoords.y
+
+        const newArea = {
+          ...originalArea,
+          x: Math.max(
+            0,
+            Math.min(1 - originalArea.width, originalArea.x + deltaX),
+          ),
+          y: Math.max(
+            0,
+            Math.min(1 - originalArea.height, originalArea.y + deltaY),
+          ),
+        }
+
+        onUpdateArea(areaIndex, newArea)
       }
-
-      // Ensure minimum size and bounds
-      newArea.width = Math.max(0.02, newArea.width)
-      newArea.height = Math.max(0.02, newArea.height)
-      newArea.x = Math.max(0, Math.min(1 - newArea.width, newArea.x))
-      newArea.y = Math.max(0, Math.min(1 - newArea.height, newArea.y))
-
-      onUpdateArea(areaIndex, newArea)
-    } else if (moving) {
-      const { areaIndex, startCoords, originalArea } = moving
-      const deltaX = coords.x - startCoords.x
-      const deltaY = coords.y - startCoords.y
-
-      const newArea = {
-        ...originalArea,
-        x: Math.max(0, Math.min(1 - originalArea.width, originalArea.x + deltaX)),
-        y: Math.max(0, Math.min(1 - originalArea.height, originalArea.y + deltaY)),
-      }
-
-      onUpdateArea(areaIndex, newArea)
-    }
-  }, [dragging, dragStartCoords, resizing, moving, getRelativeCoords, onUpdateArea, imageContainerRef, setDragCurrentCoords])
+    },
+    [
+      dragging,
+      dragStartCoords,
+      resizing,
+      moving,
+      getRelativeCoords,
+      onUpdateArea,
+      imageContainerRef,
+      setDragCurrentCoords,
+    ],
+  )
 
   /**
    * Handle mouse up events to complete drag, resize, and move operations
@@ -250,7 +290,17 @@ export function useMouseHandlers({
 
     setResizing(null)
     setMoving(null)
-  }, [dragging, dragStartCoords, dragCurrentCoords, onAddAreaByDrag, setDragCurrentCoords, setDragStartCoords, setDragging, setMoving, setResizing])
+  }, [
+    dragging,
+    dragStartCoords,
+    dragCurrentCoords,
+    onAddAreaByDrag,
+    setDragCurrentCoords,
+    setDragStartCoords,
+    setDragging,
+    setMoving,
+    setResizing,
+  ])
 
   return {
     handleMouseDown,

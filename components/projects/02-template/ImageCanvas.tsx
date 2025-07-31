@@ -1,12 +1,12 @@
 /**
  * ImageCanvas - Main canvas component for layout region editing
- * 
+ *
  * Features:
  * - Drag to create new regions
  * - Zoom and pan functionality
  * - Keyboard shortcuts for area management
  * - Area rendering and interaction
- * 
+ *
  * @param props - Configuration properties for the canvas
  * @returns JSX component for the image canvas
  */
@@ -15,10 +15,10 @@
 
 import { AreaRenderer } from "@/components/projects/02-template/AreaRenderer"
 import { DragPreview } from "@/components/projects/02-template/DragPreview"
-import { ZoomControls } from "@/components/projects/02-template/components/zoom-controls"
+import { ZoomControls } from "@/components/projects/02-template/components/ZoomControls"
 import { useImageCanvasInteraction } from "@/components/projects/02-template/hooks/useImageCanvasInteraction"
-import { useZoomControls } from "@/components/projects/02-template/hooks/use-zoom-controls"
-import { useKeyboardShortcuts } from "@/components/projects/02-template/hooks/use-keyboard-shortcuts"
+import { useZoomControls } from "@/components/projects/02-template/hooks/useZoomControls"
+import { useKeyboardShortcuts } from "@/components/projects/02-template/hooks/useKeyboardShortcuts"
 import { CropRegionArea, LayoutRegionAreaType } from "@/types/common.types"
 import { useMemo } from "react"
 
@@ -54,7 +54,8 @@ const ImageCanvas = ({
   projectPageId,
 }: ImageCanvasProps) => {
   // Get zoom controls first
-  const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } = useZoomControls()
+  const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } =
+    useZoomControls()
 
   const {
     dragging,
@@ -74,18 +75,21 @@ const ImageCanvas = ({
     zoom,
     imageContainerRef: imageContainerRef as React.RefObject<HTMLDivElement>,
   })
-  
+
   useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)
 
   // Calculate image dimensions based on zoom
-  const imageDimensionsWithZoom = useMemo(() => ({
-    width: imageDimensions ? imageDimensions.width * zoom : 0,
-    height: imageDimensions ? imageDimensions.height * zoom : 0,
-  }), [imageDimensions, zoom])
+  const imageDimensionsWithZoom = useMemo(
+    () => ({
+      width: imageDimensions ? imageDimensions.width * zoom : 0,
+      height: imageDimensions ? imageDimensions.height * zoom : 0,
+    }),
+    [imageDimensions, zoom],
+  )
 
   return (
     <div className="relative h-full w-full bg-gray-100">
-      <ZoomControls 
+      <ZoomControls
         zoom={zoom}
         showZoomHelp={showZoomHelp}
         onToggleHelp={setShowZoomHelp}

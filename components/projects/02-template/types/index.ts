@@ -1,4 +1,13 @@
+/**
+ * 02-template (採点領域作成) 関連の型定義統合ファイル
+ */
+
 import { Project, User } from "@prisma/client"
+import { CropRegionArea } from "@/types/common.types"
+
+// ============================================================================
+// Core Type Definitions
+// ============================================================================
 
 type MasterImage = {
   id: string
@@ -8,7 +17,6 @@ type MasterImage = {
   createdAt: Date
   updatedAt: Date
 }
-import { CropRegionArea } from "@/types/common.types"
 
 /**
  * 採点領域のタイプ定義
@@ -100,6 +108,10 @@ export interface TemplatePageProps {
  */
 export type DatabaseOperation = 'create' | 'update'
 
+// ============================================================================
+// State Management Types
+// ============================================================================
+
 /**
  * 初期データ読み込みの状態
  */
@@ -134,4 +146,55 @@ export interface UIState {
   isSaving: boolean
   /** 検出中フラグ */
   isDetecting: boolean
+}
+
+// ============================================================================
+// Canvas Interaction Types
+// ============================================================================
+
+/**
+ * State for tracking drag operations
+ */
+export interface DragState {
+  x: number
+  y: number
+}
+
+/**
+ * State for tracking resize operations
+ */
+export interface ResizeState {
+  areaIndex: number
+  handle: "nw" | "ne" | "sw" | "se"
+  startCoords: { x: number; y: number }
+  originalArea: { x: number; y: number; width: number; height: number }
+}
+
+/**
+ * State for tracking move operations
+ */
+export interface MoveState {
+  areaIndex: number
+  startCoords: { x: number; y: number }
+  originalArea: { x: number; y: number; width: number; height: number }
+}
+
+/**
+ * Props for the image canvas interaction hook
+ */
+export interface UseImageCanvasInteractionProps {
+  disabled: boolean
+  backgroundImageUrl: string | null
+  imageDimensions: { width: number; height: number } | null
+  projectPageId: string | null
+  areas: any[]
+  onAddAreaByDrag: (
+    type: import("@/types/common.types").CropRegionAreaType,
+    coords: { x: number; y: number; width: number; height: number },
+  ) => void
+  onUpdateArea: (
+    index: number,
+    coords: { x: number; y: number; width: number; height: number },
+  ) => void
+  zoom: number
 }

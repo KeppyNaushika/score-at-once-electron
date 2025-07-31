@@ -1,6 +1,6 @@
 /**
  * 01-upload モジュールの統合エクスポート
- * 
+ *
  * このファイルは01-uploadページの全機能を統合エクスポートします。
  * 他のページやコンポーネントから使用する際は、このファイルから
  * インポートしてください。
@@ -10,7 +10,7 @@
 export * from "./components"
 
 // カスタムフック
-export { useMasterImages } from "./hooks/use-master-images"
+export { useMasterImages } from "./hooks/useMasterImages"
 
 // ユーティリティ関数
 export * from "./utils/image-utils"
