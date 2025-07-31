@@ -131,7 +131,7 @@ export const deleteCropSubtotal = async (id: string) => {
   })
 }
 
-// CropRegion ID で関連する CropSubtotal を全て削除
+// CropRegion ID で CropSubtotal をすべて削除
 export const deleteCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
   return prisma.cropSubtotal.deleteMany({
     where: { cropRegionId },

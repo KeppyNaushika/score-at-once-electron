@@ -133,7 +133,7 @@ async function buildScoringData(
     selectedStudents.map(async (student) => {
       const studentScores = questionScores.success
         ? questionScores.scores?.filter(
-            (score: any) => score.answerSheet?.studentId === student.id,
+            (score: any) => score.studentId === student.id,
           ) || []
         : []
 

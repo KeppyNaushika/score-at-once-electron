@@ -29,11 +29,34 @@ export function createMainWindow(): BrowserWindow {
 
   Menu.setApplicationMenu(menu(app, mainWindow, "home"))
 
-  if (isDev) {
+  // DevToolsは手動で開く（自動開放はクラッシュの原因）
+  // 必要な場合: mainWindow.webContents.openDevTools()
+  if (isDev && process.env.ENABLE_DEVTOOLS === 'true') {
     mainWindow.webContents.openDevTools()
   }
 
   console.log("Main window created, waiting for Next.js server...")
+  
+  // webContentsのクラッシュイベントをキャッチ
+  mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
+    console.error('❌ Render process gone:', details)
+  })
+  
+  mainWindow.webContents.on('unresponsive', () => {
+    console.error('❌ WebContents became unresponsive')
+  })
+  
+  mainWindow.webContents.on('responsive', () => {
+    console.log('✅ WebContents became responsive again')
+  })
+  
+  mainWindow.webContents.on('did-finish-load', () => {
+    console.log('✅ Page finished loading')
+  })
+  
+  mainWindow.webContents.on('dom-ready', () => {
+    console.log('✅ DOM ready')
+  })
   
   // Windowsでは即座にウィンドウを表示（デバッグ用）
   if (process.platform === "win32") {
@@ -73,9 +96,34 @@ export function createMainWindow(): BrowserWindow {
         
         if (await checkServer()) {
           console.log("Next.js server is ready, loading URL...")
-          await mainWindow.loadURL(url)
-          mainWindow.show() // サーバー準備完了後にウィンドウを表示
-          console.log("Main window displayed")
+          
+          // より詳細なロードイベントを監視
+          mainWindow.webContents.once('did-start-loading', () => {
+            console.log('🔄 Started loading URL')
+          })
+          
+          mainWindow.webContents.once('did-stop-loading', () => {
+            console.log('⏹ Stopped loading URL')
+          })
+          
+          mainWindow.webContents.once('did-fail-load', (event, errorCode, errorDescription) => {
+            console.error('❌ Failed to load URL:', { errorCode, errorDescription })
+          })
+          
+          try {
+            await mainWindow.loadURL(url)
+            console.log("✅ loadURL completed successfully")
+            
+            // 少し遅延を追加してから表示
+            setTimeout(() => {
+              mainWindow.show()
+              console.log("Main window displayed")
+            }, 1000)
+          } catch (error) {
+            console.error("❌ Error during loadURL:", error)
+            throw error
+          }
+          
           return
         }
         

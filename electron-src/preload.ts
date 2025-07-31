@@ -390,6 +390,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-crop-region", id),
   getLayoutRegionsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
+  getLayoutRegionById: (id: string) =>
+    ipcRenderer.invoke("get-crop-region-by-id", id),
   updateLayoutRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>,
   ) => ipcRenderer.invoke("update-crop-region-orders", updates),
@@ -432,11 +434,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
   deleteQuestionSubtotalAssignment: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
-  deleteAssignmentsByQuestionLayoutRegionId: (cropRegionId: string) =>
-    ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+  deleteAssignmentsByQuestionCropRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("delete-crop-subtotals-by-crop-region-id", cropRegionId),
   deleteAssignmentsByQuestionGroupItemId: (subtotalId: string) =>
     ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
-  getAssignmentsByQuestionLayoutRegionId: (cropRegionId: string) =>
+  getAssignmentsByQuestionCropRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
   getAssignmentsByQuestionGroupItemId: (subtotalId: string) =>
     ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
@@ -450,10 +452,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   deleteSubtotalDefinition: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
   deleteSubtotalDefinitionsByLayoutRegionId: (cropRegionId: string) =>
-    ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
+    ipcRenderer.invoke("delete-crop-subtotals-by-crop-region-id", cropRegionId),
   getSubtotalDefinitionsByLayoutRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke(
-      "get-subtotal-definitions-by-crop-region-id",
+      "get-crop-subtotals-by-crop-region-id",
       cropRegionId,
     ),
   getSubtotalDefinitionsByQuestionGroupItemId: (subtotalId: string) =>

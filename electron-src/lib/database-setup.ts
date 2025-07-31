@@ -143,13 +143,17 @@ export class DatabaseSetup {
       }
 
       // サンプル小計グループの作成
-      const mathSubtotalGroup = await this.prisma.subtotalGroup.upsert({
-        where: { name: '数学小計グループ' },
-        update: {},
-        create: {
-          name: '数学小計グループ'
-        }
+      let mathSubtotalGroup = await this.prisma.subtotalGroup.findFirst({
+        where: { name: '数学小計グループ' }
       })
+      
+      if (!mathSubtotalGroup) {
+        mathSubtotalGroup = await this.prisma.subtotalGroup.create({
+          data: {
+            name: '数学小計グループ'
+          }
+        })
+      }
       console.log('✅ Math subtotal group created:', mathSubtotalGroup.name)
 
       // サンプル小計項目の作成

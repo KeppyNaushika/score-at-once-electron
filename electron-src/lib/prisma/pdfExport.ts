@@ -11,7 +11,7 @@ import {
   getQuestionScoresForProject,
 } from "./questionScore"
 import { getAssignmentsByQuestionGroupItemId } from "./questionSubtotalAssignment"
-import { getSubtotalDefinitionsByCropRegionId } from "./subtotalDefinition"
+import { getSubtotalDefinitionsByCropRegionId } from "./cropSubtotal"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -265,7 +265,7 @@ function calculateTextPosition(
 function calculateStudentTotalScore(
   studentId: string,
   allQuestionScores: any,
-  layoutRegions: any[],
+  cropRegions: any[],
 ): number {
   try {
     let totalScore = 0
@@ -284,12 +284,12 @@ function calculateStudentTotalScore(
     console.log(`Found ${studentScores.length} scores for student ${studentId}`)
 
     for (const scoreData of studentScores) {
-      const layoutRegion = layoutRegions.find(
+      const cropRegion = cropRegions.find(
         (r) => r.id === scoreData.cropRegionId,
       )
       // 設問領域のみを対象とする（小計点・合計点領域は除外）
-      if (layoutRegion && layoutRegion.type === "QUESTION_ANSWER") {
-        const maxScore = layoutRegion?.points || 10
+      if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
+        const maxScore = cropRegion?.points || 10
         const actualScore = calculateActualScore(scoreData, maxScore)
         console.log(
           `Question ${scoreData.cropRegionId}: score ${actualScore}`,
@@ -316,7 +316,7 @@ async function calculateStudentSubtotalScore(
   studentId: string,
   subtotalRegionId: string,
   allQuestionScores: any,
-  layoutRegions: any[],
+  cropRegions: any[],
 ): Promise<number> {
   try {
     console.log(
@@ -348,14 +348,14 @@ async function calculateStudentSubtotalScore(
       return calculateStudentTotalScore(
         studentId,
         allQuestionScores,
-        layoutRegions,
+        cropRegions,
       )
     }
 
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByLayoutRegionId is stubbed
+    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
     for (const definition of subtotalDefinitions) {
       // Skip processing since function returns empty array
       if (!definition || typeof definition !== 'object') continue
@@ -376,7 +376,7 @@ async function calculateStudentSubtotalScore(
       return calculateStudentTotalScore(
         studentId,
         allQuestionScores,
-        layoutRegions,
+        cropRegions,
       )
     }
 
@@ -392,7 +392,7 @@ async function calculateStudentSubtotalScore(
           const assignments = await getAssignmentsByQuestionGroupItemId(itemId)
           if (assignments && assignments.length > 0) {
             assignments.forEach((assignment: any) => {
-              groupQuestionIds.add(assignment.questionLayoutRegionId)
+              groupQuestionIds.add(assignment.questionCropRegionId)
             })
           }
         } catch (error) {
@@ -432,8 +432,8 @@ async function calculateStudentSubtotalScore(
         (s: any) => s.cropRegionId === questionId,
       )
       if (scoreData) {
-        const layoutRegion = layoutRegions.find((r) => r.id === questionId)
-        const maxScore = layoutRegion?.points || 10
+        const cropRegion = cropRegions.find((r) => r.id === questionId)
+        const maxScore = cropRegion?.points || 10
         const actualScore = calculateActualScore(scoreData, maxScore)
         console.log(`Question ${questionId}: score ${actualScore}`)
         totalScore += actualScore || 0
@@ -522,21 +522,7 @@ export async function exportScoredAnswersPDF(
     reportProgress(30, 100, "採点データを取得中...", 3)
 
     const questionScores = await getQuestionScoresForProject(projectId)
-    console.log(`📊 Retrieved ${questionScores.length} question scores for project ${projectId}`)
-    
-    // デバッグ: 採点データのサンプルを表示
-    if (questionScores.length > 0) {
-      console.log(`📝 Sample question score:`, {
-        id: questionScores[0].id,
-        cropRegionId: questionScores[0].cropRegionId,
-        studentId: questionScores[0].studentId,
-        status: questionScores[0].status,
-        partialScore: questionScores[0].partialScore,
-      })
-    }
-    
-    const layoutRegions = await getCropRegionsByProjectId(projectId)
-    console.log(`🎯 Retrieved ${layoutRegions.length} layout regions for project ${projectId}`)
+    const cropRegions = await getCropRegionsByProjectId(projectId)
 
     // 選択された生徒のデータをフィルタリングして順序を保持
     const selectedStudents = studentsResult.students
@@ -629,7 +615,7 @@ export async function exportScoredAnswersPDF(
                 answerImagePath,
                 answerSheet,
                 questionScores,
-                layoutRegions,
+                cropRegions,
                 scoringMarkConfig,
                 options.pdfOrientation || "portrait",
                 student,
@@ -725,7 +711,7 @@ async function addAnswerSheetToPDF(
   imagePath: string,
   answerSheet: any,
   questionScores: any,
-  layoutRegions: any[],
+  cropRegions: any[],
   scoringMarkConfig?: ScoringMarkConfig,
   pdfOrientation?: "portrait" | "landscape",
   _currentStudent?: any,
@@ -813,25 +799,24 @@ async function addAnswerSheetToPDF(
 
     progressCallback?.("採点情報を重ね合わせ中...")
 
-    // 採点情報を重ね合わせ
-    const relevantScores = Array.isArray(questionScores)
-      ? questionScores.filter(
-          (score: any) => score.studentId === studentData.id,
-        )
-      : questionScores.success && questionScores.scores
+    // 採点情報を重ね合わせ（生徒ID + ページIDでフィルタ）
+    const relevantScores =
+      questionScores.success && questionScores.scores
         ? questionScores.scores.filter(
-            (score: any) => score.studentId === studentData.id,
+            (score: any) => 
+              score.studentId === answerSheet.studentId &&
+              score.cropRegion?.projectPage?.id === answerSheet.projectPageId
           )
         : []
     
-    console.log(`👤 Found ${relevantScores.length} relevant scores for student ${studentData.id}`)
+    console.log(`👤 Found ${relevantScores.length} relevant scores for student ${answerSheet.studentId}`)
 
     // 採点データを適切に処理
     const processedScores = relevantScores.map((score: any) => {
-      const layoutRegion = layoutRegions.find(
+      const cropRegion = cropRegions.find(
         (region) => region.id === score.cropRegionId,
       )
-      const maxScore = layoutRegion?.points || 10
+      const maxScore = cropRegion?.points || 10
       const actualScore = calculateActualScore(score, maxScore)
 
       return {
@@ -893,11 +878,10 @@ async function addAnswerSheetToPDF(
     console.log(`📊 Processing ${processedScores.length} scores for drawing marks and scores`)
     
     for (const score of processedScores) {
-      const layoutRegion = layoutRegions.find(
+      const cropRegion = cropRegions.find(
         (region) => region.id === score.cropRegionId,
       )
-      if (!layoutRegion) {
-        console.warn(`⚠️  Layout region not found for score: ${score.cropRegionId}`)
+      if (!cropRegion) {
         continue
       }
 
@@ -912,12 +896,12 @@ async function addAnswerSheetToPDF(
       }
 
       // 採点枠の位置をPDF座標系に変換
-      // layoutRegionの座標が正規化されている場合 (0.0-1.0)
+      // cropRegionの座標が正規化されている場合 (0.0-1.0)
       const isNormalized =
-        layoutRegion.x <= 1.0 &&
-        layoutRegion.y <= 1.0 &&
-        layoutRegion.width <= 1.0 &&
-        layoutRegion.height <= 1.0
+        cropRegion.x <= 1.0 &&
+        cropRegion.y <= 1.0 &&
+        cropRegion.width <= 1.0 &&
+        cropRegion.height <= 1.0
 
       let regionXOnImage,
         regionYOnImage,
@@ -926,24 +910,24 @@ async function addAnswerSheetToPDF(
 
       if (isNormalized) {
         // 正規化座標の場合 (0.0-1.0)
-        regionXOnImage = layoutRegion.x * imageWidth + imageX
+        regionXOnImage = cropRegion.x * imageWidth + imageX
         // PDF座標系（Y軸が下から上）に変換: 画像の上端から下端への座標を下端から上端に変換
         regionYOnImage =
           imageY +
           imageHeight -
-          (layoutRegion.y + layoutRegion.height) * imageHeight
-        regionWidthOnImage = layoutRegion.width * imageWidth
-        regionHeightOnImage = layoutRegion.height * imageHeight
+          (cropRegion.y + cropRegion.height) * imageHeight
+        regionWidthOnImage = cropRegion.width * imageWidth
+        regionHeightOnImage = cropRegion.height * imageHeight
       } else {
         // ピクセル座標の場合
-        regionXOnImage = (layoutRegion.x / image.width) * imageWidth + imageX
+        regionXOnImage = (cropRegion.x / image.width) * imageWidth + imageX
         // PDF座標系（Y軸が下から上）に変換: 画像の上端から下端への座標を下端から上端に変換
         regionYOnImage =
           imageY +
           imageHeight -
-          ((layoutRegion.y + layoutRegion.height) / image.height) * imageHeight
-        regionWidthOnImage = (layoutRegion.width / image.width) * imageWidth
-        regionHeightOnImage = (layoutRegion.height / image.height) * imageHeight
+          ((cropRegion.y + cropRegion.height) / image.height) * imageHeight
+        regionWidthOnImage = (cropRegion.width / image.width) * imageWidth
+        regionHeightOnImage = (cropRegion.height / image.height) * imageHeight
       }
 
       // Calculate region coordinates on PDF
@@ -1045,11 +1029,11 @@ async function addAnswerSheetToPDF(
 
     // この答案ページに属する小計点領域のみを処理
     const currentPageNumber = answerSheet.pageNumber
-    const currentPageSubtotalRegions = layoutRegions.filter(
+    const currentPageSubtotalRegions = cropRegions.filter(
       (region) =>
         region.type === "SUBTOTAL_SCORE" &&
-        region.masterImage &&
-        region.masterImage.pageNumber === currentPageNumber,
+        region.projectPage &&
+        region.projectPage.pageNumber === currentPageNumber,
     )
     console.log(
       `Found ${currentPageSubtotalRegions.length} subtotal regions on page ${currentPageNumber}:`,
@@ -1057,14 +1041,14 @@ async function addAnswerSheetToPDF(
         id: r.id,
         label: r.label,
         type: r.type,
-        page: r.masterImage?.pageNumber,
+        page: r.projectPage?.pageNumber,
       })),
     )
 
     for (const subtotalRegion of currentPageSubtotalRegions) {
       try {
         // 生徒IDを取得
-        const studentId = answerSheet.student?.id
+        const studentId = answerSheet.studentId
         if (!studentId) {
           console.log(`No student ID found for answer sheet`)
           continue
@@ -1075,7 +1059,7 @@ async function addAnswerSheetToPDF(
           studentId,
           subtotalRegion.id,
           questionScores,
-          layoutRegions,
+          cropRegions,
         )
         console.log(
           `Calculated subtotal score for student ${studentId}, region ${subtotalRegion.id} (${subtotalRegion.label}): ${subtotalScore}`,
@@ -1158,11 +1142,11 @@ async function addAnswerSheetToPDF(
     progressCallback?.("合計点を計算中...")
 
     // この答案ページに属する合計点領域のみを処理
-    const currentPageTotalScoreRegions = layoutRegions.filter(
+    const currentPageTotalScoreRegions = cropRegions.filter(
       (region) =>
         region.type === "TOTAL_SCORE" &&
-        region.masterImage &&
-        region.masterImage.pageNumber === currentPageNumber,
+        region.projectPage &&
+        region.projectPage.pageNumber === currentPageNumber,
     )
     console.log(
       `Found ${currentPageTotalScoreRegions.length} total score regions on page ${currentPageNumber}:`,
@@ -1170,14 +1154,14 @@ async function addAnswerSheetToPDF(
         id: r.id,
         label: r.label,
         type: r.type,
-        page: r.masterImage?.pageNumber,
+        page: r.projectPage?.pageNumber,
       })),
     )
 
     for (const totalScoreRegion of currentPageTotalScoreRegions) {
       try {
         // 生徒IDを取得
-        const studentId = answerSheet.student?.id
+        const studentId = answerSheet.studentId
         if (!studentId) {
           console.log(`No student ID found for answer sheet`)
           continue
@@ -1187,7 +1171,7 @@ async function addAnswerSheetToPDF(
         const totalScore = calculateStudentTotalScore(
           studentId,
           questionScores,
-          layoutRegions,
+          cropRegions,
         )
         console.log(
           `Calculated total score for student ${studentId}, region ${totalScoreRegion.id} (${totalScoreRegion.label}): ${totalScore}`,

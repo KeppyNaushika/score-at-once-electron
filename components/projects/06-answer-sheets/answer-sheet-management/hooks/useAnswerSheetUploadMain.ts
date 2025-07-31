@@ -40,7 +40,7 @@ export function useAnswerSheetUploadMain({
   >("natural")
 
   // データ
-  const [layoutRegions, setCropRegions] = useState<CropRegion[]>([])
+  const [cropRegions, setCropRegions] = useState<CropRegion[]>([])
   const [masterImages, setProjectPages] = useState<ProjectPage[]>([])
   const [isClient, setIsClient] = useState(false)
 
@@ -246,7 +246,7 @@ export function useAnswerSheetUploadMain({
     setSortMode,
 
     // Data
-    layoutRegions,
+    cropRegions,
     setCropRegions,
     masterImages,
     setProjectPages,

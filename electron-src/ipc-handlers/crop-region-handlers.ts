@@ -25,6 +25,7 @@ import {
   getCropSubtotalsBySubtotalId as dbGetCropSubtotalsBySubtotalId,
   createManyCropSubtotals as dbCreateManyCropSubtotals,
   getCropSubtotalsByCropRegionId as dbGetCropSubtotalsByCropRegionId,
+  deleteCropSubtotalsByCropRegionId as dbDeleteCropSubtotalsByCropRegionId,
 } from "../lib/prisma/cropSubtotal"
 
 export function setupCropRegionHandlers(): void {
@@ -308,6 +309,18 @@ export function setupCropRegionHandlers(): void {
       return result
     } catch (error) {
       console.error("❌ IPC: get-crop-subtotals-by-subtotal-id error:", error)
+      throw error
+    }
+  })
+
+  ipcMain.handle("delete-crop-subtotals-by-crop-region-id", async (_event, cropRegionId: string) => {
+    try {
+      console.log("🔄 IPC: delete-crop-subtotals-by-crop-region-id called with cropRegionId:", cropRegionId)
+      const result = await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
+      console.log("✅ IPC: delete-crop-subtotals-by-crop-region-id result:", result)
+      return result
+    } catch (error) {
+      console.error("❌ IPC: delete-crop-subtotals-by-crop-region-id error:", error)
       throw error
     }
   })

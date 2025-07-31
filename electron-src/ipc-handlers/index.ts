@@ -13,7 +13,7 @@ export function setupAllIPCHandlers(): void {
   
   setupProjectHandlers()
   setupStudentHandlers()
-  setupCropRegionHandlers()
+  setupCropRegionHandlers() // CropRegion handlers
   setupScoringHandlers()
   setupExportHandlers()
   setupMiscHandlers()

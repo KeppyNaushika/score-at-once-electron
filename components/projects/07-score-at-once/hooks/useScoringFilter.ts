@@ -219,7 +219,7 @@ export function useScoringFilter({
         id: sheet.id,
         studentId: sheet.student.studentId,
         studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
-        imageUrl: `appimg://${sheet.imagePath}`,
+        imageUrl: sheet.imagePath ? `appimg://${sheet.imagePath}` : "",
         currentScore: scoreData?.score ?? undefined,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "unscored") as ScoringStatus,
@@ -246,11 +246,14 @@ export function useScoringFilter({
 
     if (!projectPage) return null
 
+    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MASTER")
+    const masterImagePath = masterImage?.imagePath
+
     return {
       id: `master-${currentQuestion.id}`,
       studentId: "MASTER",
       studentName: "模範解答",
-      imageUrl: `appimg://${projectPage.pageImages?.find((img: any) => img.imageType === "MASTER")?.imagePath || ""}`,
+      imageUrl: masterImagePath ? `appimg://${masterImagePath}` : "",
       currentScore: undefined,
       maxScore: currentQuestion.points,
       status: "master" as any, // 特別なステータス

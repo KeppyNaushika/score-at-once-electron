@@ -126,6 +126,8 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
           id: sheet.id,
           studentId: sheet.studentId,
           pageNumber: sheet.projectPage.pageNumber,
+          projectPageId: sheet.projectPage.id, // Add projectPageId for page filtering
+          imagePath: sheet.imagePath, // Keep imagePath for UI compatibility
           originalImagePath: sheet.imagePath, // Map imagePath to originalImagePath for backward compatibility
           isAbsent: isAbsent, // Properly determined from ProjectStudent.status
           student: sheet.student ? {

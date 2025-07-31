@@ -1,5 +1,5 @@
 import { getAssignmentsByQuestionGroupItemId } from "../../prisma/questionSubtotalAssignment"
-import { getSubtotalDefinitionsByCropRegionId } from "../../prisma/subtotalDefinition"
+import { getSubtotalDefinitionsByCropRegionId } from "../../prisma/cropSubtotal"
 
 // 小計点計算で使用する型定義
 export interface SubtotalScoreDetail {
@@ -120,7 +120,10 @@ export async function calculateSubtotalScore(
       await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
 
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
-      return { score: 0, maxScore: 0 }
+      // フォールバック: 小計定義がない場合は全設問の合計を返す
+      const totalScore = studentScores.reduce((sum, score) => sum + (score.score || 0), 0)
+      const totalMaxScore = studentScores.reduce((sum, score) => sum + score.maxScore, 0)
+      return { score: totalScore, maxScore: totalMaxScore }
     }
 
     // グループ別に項目をまとめる

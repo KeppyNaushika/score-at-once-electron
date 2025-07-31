@@ -569,11 +569,11 @@ export interface MyAPI {
     data: Prisma.CropRegionUpdateInput,
   ) => Promise<CropRegionWithDetails>
   deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
-  getLayoutRegionsByProjectId: (
+  getCropRegionsByProjectId: (
     projectId: string,
   ) => Promise<CropRegionWithDetails[]>
-  getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
-  updateLayoutRegionOrders: (
+  getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
+  updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>,
   ) => Promise<CropRegion[]>
 
@@ -750,7 +750,7 @@ export interface MyAPI {
   deleteSubtotalDefinitionsByLayoutRegionId: (
     cropRegionId: string,
   ) => Promise<Prisma.BatchPayload>
-  getSubtotalDefinitionsByLayoutRegionId: (
+  getSubtotalDefinitionsByCropRegionId: (
     cropRegionId: string,
   ) => Promise<CropSubtotalWithRelations[]>
   getSubtotalDefinitionsByQuestionGroupItemId: (
