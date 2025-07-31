@@ -42,7 +42,10 @@
     "github:prerelease:alpha": "node scripts/github-release.js patch alpha",
     "github:prerelease:beta": "node scripts/github-release.js patch beta",
     "github:prerelease:rc": "node scripts/github-release.js patch rc",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:seed": "node prisma/seed.js",
+    "db:setup": "prisma migrate dev && npm run db:seed",
+    "db:reset": "prisma migrate reset --force && npm run db:seed"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -142,5 +145,8 @@
   },
   "overrides": {
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }

@@ -20,8 +20,8 @@ export interface CropRegion {
 // 後方互換性のためのエイリアス
 export type LayoutRegion = CropRegion
 
-export function useLayoutRegions(projectId?: string) {
-  const [regions, setRegions] = useState<LayoutRegion[]>([])
+export function useCropRegions(projectId?: string) {
+  const [regions, setRegions] = useState<CropRegion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -38,7 +38,7 @@ export function useLayoutRegions(projectId?: string) {
         ? allRegions.filter(region => region.projectPage?.id === masterImageId)
         : allRegions
 
-      const formattedRegions: LayoutRegion[] = filteredRegions.map(region => ({
+      const formattedRegions: CropRegion[] = filteredRegions.map(region => ({
         id: region.id,
         type: region.type as CropRegionAreaType,
         x: region.x,
@@ -61,7 +61,7 @@ export function useLayoutRegions(projectId?: string) {
     }
   }, [projectId])
 
-  const saveRegions = useCallback(async (regionsToSave: LayoutRegion[]) => {
+  const saveRegions = useCallback(async (regionsToSave: CropRegion[]) => {
     if (!projectId || isSavingRef.current) return
 
     isSavingRef.current = true
@@ -92,7 +92,7 @@ export function useLayoutRegions(projectId?: string) {
       const savedRegions = await Promise.all(savePromises.filter(Boolean))
       
       if (savedRegions.length > 0) {
-        const formattedRegions: LayoutRegion[] = savedRegions
+        const formattedRegions: CropRegion[] = savedRegions
           .filter(region => region !== null)
           .map((region) => ({
             id: region!.id,
@@ -120,7 +120,7 @@ export function useLayoutRegions(projectId?: string) {
     }
   }, [projectId])
 
-  const autoSaveRegions = useCallback((regionsToSave: LayoutRegion[], delay = 1000) => {
+  const autoSaveRegions = useCallback((regionsToSave: CropRegion[], delay = 1000) => {
     // Clear existing timeout
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
@@ -133,7 +133,7 @@ export function useLayoutRegions(projectId?: string) {
   }, [saveRegions])
 
   const updateRegions = useCallback((
-    newRegions: LayoutRegion[] | ((prev: LayoutRegion[]) => LayoutRegion[]),
+    newRegions: CropRegion[] | ((prev: CropRegion[]) => CropRegion[]),
     autoSave = true
   ) => {
     const updatedRegions = typeof newRegions === 'function' 
@@ -147,8 +147,8 @@ export function useLayoutRegions(projectId?: string) {
     }
   }, [regions, autoSaveRegions])
 
-  const addRegion = useCallback((region: Omit<LayoutRegion, 'id'>) => {
-    const newRegion: LayoutRegion = {
+  const addRegion = useCallback((region: Omit<CropRegion, 'id'>) => {
+    const newRegion: CropRegion = {
       ...region,
       id: undefined // Will be assigned by backend
     }
@@ -156,7 +156,7 @@ export function useLayoutRegions(projectId?: string) {
     updateRegions(prev => [...prev, newRegion])
   }, [updateRegions])
 
-  const updateRegion = useCallback((index: number, updates: Partial<LayoutRegion>) => {
+  const updateRegion = useCallback((index: number, updates: Partial<CropRegion>) => {
     updateRegions(prev => prev.map((region, i) => 
       i === index ? { ...region, ...updates } : region
     ))
@@ -196,3 +196,6 @@ export function useLayoutRegions(projectId?: string) {
     cleanup
   }
 }
+
+// 後方互換性のためのエイリアス
+export const useLayoutRegions = useCropRegions

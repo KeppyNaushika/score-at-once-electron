@@ -122,7 +122,7 @@ export const initializeDatabase = async (): Promise<boolean> => {
 
         console.log("Running direct SQL migration...")
 
-        // マイグレーションSQLを直接実行
+        // 現在のスキーマに合わせたマイグレーションSQL
         const migrationSQL = `
 -- CreateTable
 CREATE TABLE "User" (
@@ -166,25 +166,14 @@ CREATE TABLE "StudentClassMembership" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "studentId" TEXT NOT NULL,
     "classId" TEXT NOT NULL,
+    "attendanceNumber" INTEGER,
     "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endDate" DATETIME,
-    "attendanceNumber" INTEGER,
     "notes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "MasterImage" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
-    "path" TEXT NOT NULL,
-    "pageNumber" INTEGER NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "MasterImage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -194,10 +183,8 @@ CREATE TABLE "Project" (
     "examDate" DATETIME,
     "subject" TEXT,
     "description" TEXT,
-    "userId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
@@ -214,21 +201,32 @@ CREATE TABLE "ProjectStudent" (
 );
 
 -- CreateTable
-CREATE TABLE "GradingAssignment" (
+CREATE TABLE "ProjectPage" (
+    "id" TEXT NOT NULL PRIMARY KEY,
     "projectId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "assignedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    PRIMARY KEY ("projectId", "userId"),
-    CONSTRAINT "GradingAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "GradingAssignment_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "pageNumber" INTEGER NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "ProjectPage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "LayoutRegion" (
+CREATE TABLE "PageImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
-    "masterImageId" TEXT NOT NULL,
+    "projectPageId" TEXT NOT NULL,
+    "studentId" TEXT,
+    "imagePath" TEXT NOT NULL,
+    "imageType" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "PageImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "PageImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "CropRegion" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectPageId" TEXT NOT NULL,
     "label" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "x" REAL NOT NULL,
@@ -239,238 +237,115 @@ CREATE TABLE "LayoutRegion" (
     "orderIndex" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "LayoutRegion_masterImageId_fkey" FOREIGN KEY ("masterImageId") REFERENCES "MasterImage" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "LayoutRegion_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "CropRegion_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "QuestionGroup" (
+CREATE TABLE "SubtotalGroup" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "QuestionGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL
 );
 
 -- CreateTable
-CREATE TABLE "QuestionGroupItem" (
+CREATE TABLE "Subtotal" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "questionGroupId" TEXT NOT NULL,
+    "subtotalGroupId" TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "QuestionGroupItem_questionGroupId_fkey" FOREIGN KEY ("questionGroupId") REFERENCES "QuestionGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "Subtotal_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "SubtotalDefinition" (
+CREATE TABLE "CropSubtotal" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "layoutRegionId" TEXT NOT NULL,
-    "questionGroupItemId" TEXT NOT NULL,
+    "cropRegionId" TEXT NOT NULL,
+    "subtotalId" TEXT NOT NULL,
+    "assignmentType" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "SubtotalDefinition_questionGroupItemId_fkey" FOREIGN KEY ("questionGroupItemId") REFERENCES "QuestionGroupItem" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "SubtotalDefinition_layoutRegionId_fkey" FOREIGN KEY ("layoutRegionId") REFERENCES "LayoutRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "CropSubtotal_subtotalId_fkey" FOREIGN KEY ("subtotalId") REFERENCES "Subtotal" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "CropSubtotal_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "QuestionSubtotalAssignment" (
+CREATE TABLE "UserProject" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "questionLayoutRegionId" TEXT NOT NULL,
-    "questionGroupItemId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "role" TEXT NOT NULL DEFAULT 'GRADER',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "QuestionSubtotalAssignment_questionGroupItemId_fkey" FOREIGN KEY ("questionGroupItemId") REFERENCES "QuestionGroupItem" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionSubtotalAssignment_questionLayoutRegionId_fkey" FOREIGN KEY ("questionLayoutRegionId") REFERENCES "LayoutRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "UserProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
-CREATE TABLE "AnswerSheet" (
+CREATE TABLE "ProjectSubtotalGroup" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "projectId" TEXT NOT NULL,
-    "studentId" TEXT,
-    "pageNumber" INTEGER NOT NULL,
-    "originalImagePath" TEXT NOT NULL,
-    "processedImagePath" TEXT,
-    "scoredPdfPath" TEXT,
-    "isScored" BOOLEAN NOT NULL DEFAULT false,
-    "totalScore" REAL,
-    "isAbsent" BOOLEAN NOT NULL DEFAULT false,
+    "subtotalGroupId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    "version" INTEGER NOT NULL DEFAULT 1,
-    CONSTRAINT "AnswerSheet_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "AnswerSheet_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "Question" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "maxScore" INTEGER NOT NULL DEFAULT 0,
-    "orderIndex" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Question_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "QuestionPart" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "questionId" TEXT NOT NULL,
-    "layoutRegionId" TEXT NOT NULL,
-    "partLabel" TEXT NOT NULL DEFAULT '',
-    "partScore" INTEGER NOT NULL DEFAULT 0,
-    "orderIndex" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "QuestionPart_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "Question" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionPart_layoutRegionId_fkey" FOREIGN KEY ("layoutRegionId") REFERENCES "LayoutRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "QuestionPartScore" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "questionPartId" TEXT NOT NULL,
-    "answerSheetId" TEXT NOT NULL,
-    "score" DECIMAL,
-    "comment" TEXT,
-    "scoredByUserId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'proposed',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    "scoreVersion" INTEGER NOT NULL DEFAULT 1,
-    CONSTRAINT "QuestionPartScore_questionPartId_fkey" FOREIGN KEY ("questionPartId") REFERENCES "QuestionPart" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionPartScore_answerSheetId_fkey" FOREIGN KEY ("answerSheetId") REFERENCES "AnswerSheet" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionPartScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "ProjectSubtotalGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ProjectSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "QuestionScore" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "questionId" TEXT,
-    "answerSheetId" TEXT NOT NULL,
-    "layoutRegionId" TEXT NOT NULL,
+    "cropRegionId" TEXT NOT NULL,
+    "studentId" TEXT,
     "partialScore" DECIMAL,
-    "comment" TEXT,
-    "scoredByUserId" TEXT NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'proposed',
+    "status" TEXT NOT NULL DEFAULT 'unscored',
+    "scoredByUserId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    "scoreVersion" INTEGER NOT NULL DEFAULT 1,
-    CONSTRAINT "QuestionScore_questionId_fkey" FOREIGN KEY ("questionId") REFERENCES "Question" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "QuestionScore_layoutRegionId_fkey" FOREIGN KEY ("layoutRegionId") REFERENCES "LayoutRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionScore_answerSheetId_fkey" FOREIGN KEY ("answerSheetId") REFERENCES "AnswerSheet" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "ScoreRecord" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "studentId" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
-    "totalScore" REAL NOT NULL,
-    "excelOutputPath" TEXT,
-    "pdfOutputPath" TEXT,
-    "finalizedByUserId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ScoreRecord_finalizedByUserId_fkey" FOREIGN KEY ("finalizedByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT "ScoreRecord_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ScoreRecord_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "ProjectSession" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "machineIdentifier" TEXT,
-    "sessionStartedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "sessionEndedAt" DATETIME,
-    CONSTRAINT "ProjectSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "ProjectSession_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "locks" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "lockedResourceId" TEXT NOT NULL,
-    "resourceType" TEXT NOT NULL,
-    "lockedByUserId" TEXT NOT NULL,
-    "lockedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" DATETIME,
-    CONSTRAINT "locks_lockedByUserId_fkey" FOREIGN KEY ("lockedByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
--- CreateTable
-CREATE TABLE "_ClassTeachers" (
-    "A" TEXT NOT NULL,
-    "B" TEXT NOT NULL,
-    CONSTRAINT "_ClassTeachers_B_fkey" FOREIGN KEY ("B") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "_ClassTeachers_A_fkey" FOREIGN KEY ("A") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "QuestionScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "QuestionScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
         `
 
-        // インデックス作成SQL
+        // 現在のスキーマに合わせたインデックス作成SQL
         const indexSQL = `
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "classes_name_key" ON "classes"("name");
 CREATE UNIQUE INDEX "Student_studentId_key" ON "Student"("studentId");
+CREATE UNIQUE INDEX "StudentClassMembership_studentId_classId_startDate_key" ON "StudentClassMembership"("studentId", "classId", "startDate");
 CREATE INDEX "StudentClassMembership_studentId_idx" ON "StudentClassMembership"("studentId");
 CREATE INDEX "StudentClassMembership_classId_idx" ON "StudentClassMembership"("classId");
-CREATE INDEX "StudentClassMembership_startDate_endDate_idx" ON "StudentClassMembership"("startDate", "endDate");
-CREATE INDEX "StudentClassMembership_classId_attendanceNumber_idx" ON "StudentClassMembership"("classId", "attendanceNumber");
-CREATE INDEX "MasterImage_projectId_idx" ON "MasterImage"("projectId");
-CREATE UNIQUE INDEX "MasterImage_projectId_pageNumber_key" ON "MasterImage"("projectId", "pageNumber");
-CREATE INDEX "Project_userId_idx" ON "Project"("userId");
+CREATE INDEX "StudentClassMembership_startDate_idx" ON "StudentClassMembership"("startDate");
+CREATE INDEX "StudentClassMembership_endDate_idx" ON "StudentClassMembership"("endDate");
+CREATE UNIQUE INDEX "ProjectPage_projectId_pageNumber_key" ON "ProjectPage"("projectId", "pageNumber");
+CREATE INDEX "ProjectPage_projectId_idx" ON "ProjectPage"("projectId");
+CREATE INDEX "PageImage_projectPageId_idx" ON "PageImage"("projectPageId");
+CREATE INDEX "PageImage_studentId_idx" ON "PageImage"("studentId");
+CREATE INDEX "CropRegion_projectPageId_idx" ON "CropRegion"("projectPageId");
+CREATE UNIQUE INDEX "Subtotal_subtotalGroupId_name_key" ON "Subtotal"("subtotalGroupId", "name");
+CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
+CREATE INDEX "Subtotal_subtotalGroupId_order_idx" ON "Subtotal"("subtotalGroupId", "order");
+CREATE UNIQUE INDEX "CropSubtotal_cropRegionId_subtotalId_assignmentType_key" ON "CropSubtotal"("cropRegionId", "subtotalId", "assignmentType");
+CREATE INDEX "CropSubtotal_cropRegionId_idx" ON "CropSubtotal"("cropRegionId");
+CREATE INDEX "CropSubtotal_subtotalId_idx" ON "CropSubtotal"("subtotalId");
+CREATE UNIQUE INDEX "UserProject_userId_projectId_key" ON "UserProject"("userId", "projectId");
+CREATE INDEX "UserProject_userId_idx" ON "UserProject"("userId");
+CREATE INDEX "UserProject_projectId_idx" ON "UserProject"("projectId");
+CREATE UNIQUE INDEX "ProjectSubtotalGroup_projectId_subtotalGroupId_key" ON "ProjectSubtotalGroup"("projectId", "subtotalGroupId");
+CREATE INDEX "ProjectSubtotalGroup_projectId_idx" ON "ProjectSubtotalGroup"("projectId");
+CREATE INDEX "ProjectSubtotalGroup_subtotalGroupId_idx" ON "ProjectSubtotalGroup"("subtotalGroupId");
 CREATE INDEX "ProjectStudent_projectId_idx" ON "ProjectStudent"("projectId");
 CREATE INDEX "ProjectStudent_studentId_idx" ON "ProjectStudent"("studentId");
 CREATE INDEX "ProjectStudent_projectId_customOrder_idx" ON "ProjectStudent"("projectId", "customOrder");
 CREATE UNIQUE INDEX "ProjectStudent_projectId_studentId_key" ON "ProjectStudent"("projectId", "studentId");
-CREATE INDEX "GradingAssignment_userId_idx" ON "GradingAssignment"("userId");
-CREATE INDEX "LayoutRegion_projectId_idx" ON "LayoutRegion"("projectId");
-CREATE INDEX "LayoutRegion_masterImageId_idx" ON "LayoutRegion"("masterImageId");
-CREATE INDEX "QuestionGroup_projectId_idx" ON "QuestionGroup"("projectId");
-CREATE UNIQUE INDEX "QuestionGroup_projectId_name_key" ON "QuestionGroup"("projectId", "name");
-CREATE INDEX "QuestionGroupItem_questionGroupId_idx" ON "QuestionGroupItem"("questionGroupId");
-CREATE INDEX "QuestionGroupItem_questionGroupId_order_idx" ON "QuestionGroupItem"("questionGroupId", "order");
-CREATE UNIQUE INDEX "QuestionGroupItem_questionGroupId_name_key" ON "QuestionGroupItem"("questionGroupId", "name");
-CREATE INDEX "SubtotalDefinition_layoutRegionId_idx" ON "SubtotalDefinition"("layoutRegionId");
-CREATE INDEX "SubtotalDefinition_questionGroupItemId_idx" ON "SubtotalDefinition"("questionGroupItemId");
-CREATE UNIQUE INDEX "SubtotalDefinition_layoutRegionId_questionGroupItemId_key" ON "SubtotalDefinition"("layoutRegionId", "questionGroupItemId");
-CREATE INDEX "QuestionSubtotalAssignment_questionLayoutRegionId_idx" ON "QuestionSubtotalAssignment"("questionLayoutRegionId");
-CREATE INDEX "QuestionSubtotalAssignment_questionGroupItemId_idx" ON "QuestionSubtotalAssignment"("questionGroupItemId");
-CREATE UNIQUE INDEX "QuestionSubtotalAssignment_questionLayoutRegionId_questionGroupItemId_key" ON "QuestionSubtotalAssignment"("questionLayoutRegionId", "questionGroupItemId");
-CREATE INDEX "AnswerSheet_projectId_idx" ON "AnswerSheet"("projectId");
-CREATE UNIQUE INDEX "AnswerSheet_projectId_studentId_pageNumber_key" ON "AnswerSheet"("projectId", "studentId", "pageNumber");
-CREATE INDEX "Question_projectId_idx" ON "Question"("projectId");
-CREATE INDEX "Question_projectId_orderIndex_idx" ON "Question"("projectId", "orderIndex");
-CREATE INDEX "QuestionPart_questionId_idx" ON "QuestionPart"("questionId");
-CREATE INDEX "QuestionPart_layoutRegionId_idx" ON "QuestionPart"("layoutRegionId");
-CREATE INDEX "QuestionPart_questionId_orderIndex_idx" ON "QuestionPart"("questionId", "orderIndex");
-CREATE UNIQUE INDEX "QuestionPart_questionId_layoutRegionId_key" ON "QuestionPart"("questionId", "layoutRegionId");
-CREATE INDEX "QuestionPartScore_questionPartId_idx" ON "QuestionPartScore"("questionPartId");
-CREATE INDEX "QuestionPartScore_answerSheetId_idx" ON "QuestionPartScore"("answerSheetId");
-CREATE INDEX "QuestionPartScore_scoredByUserId_idx" ON "QuestionPartScore"("scoredByUserId");
-CREATE UNIQUE INDEX "QuestionPartScore_questionPartId_answerSheetId_scoredByUserId_key" ON "QuestionPartScore"("questionPartId", "answerSheetId", "scoredByUserId");
-CREATE INDEX "QuestionScore_answerSheetId_layoutRegionId_status_idx" ON "QuestionScore"("answerSheetId", "layoutRegionId", "status");
-CREATE INDEX "QuestionScore_layoutRegionId_idx" ON "QuestionScore"("layoutRegionId");
-CREATE INDEX "QuestionScore_questionId_idx" ON "QuestionScore"("questionId");
-CREATE UNIQUE INDEX "QuestionScore_answerSheetId_layoutRegionId_scoredByUserId_key" ON "QuestionScore"("answerSheetId", "layoutRegionId", "scoredByUserId");
-CREATE INDEX "ScoreRecord_projectId_idx" ON "ScoreRecord"("projectId");
-CREATE UNIQUE INDEX "ScoreRecord_studentId_projectId_key" ON "ScoreRecord"("studentId", "projectId");
-CREATE INDEX "ProjectSession_projectId_idx" ON "ProjectSession"("projectId");
-CREATE INDEX "ProjectSession_userId_idx" ON "ProjectSession"("userId");
-CREATE UNIQUE INDEX "locks_lockedResourceId_key" ON "locks"("lockedResourceId");
-CREATE INDEX "locks_lockedResourceId_resourceType_idx" ON "locks"("lockedResourceId", "resourceType");
-CREATE INDEX "_ClassTeachers_B_index" ON "_ClassTeachers"("B");
-CREATE UNIQUE INDEX "_ClassTeachers_AB_unique" ON "_ClassTeachers"("A", "B");
+CREATE UNIQUE INDEX "QuestionScore_cropRegionId_studentId_scoredByUserId_key" ON "QuestionScore"("cropRegionId", "studentId", "scoredByUserId");
+CREATE INDEX "QuestionScore_cropRegionId_idx" ON "QuestionScore"("cropRegionId");
+CREATE INDEX "QuestionScore_studentId_idx" ON "QuestionScore"("studentId");
+CREATE INDEX "QuestionScore_scoredByUserId_idx" ON "QuestionScore"("scoredByUserId");
         `
 
         // SQLを複数のステートメントに分割して実行

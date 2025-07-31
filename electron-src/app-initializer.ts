@@ -17,14 +17,17 @@ export async function initializeApp(): Promise<void> {
     console.log("Initializing data directory...")
     await initializeDataDirectory()
 
-    // データベースの初期化
+    // データベースの初期化とセットアップ
     console.log("Initializing database...")
-    const dbInitialized = await initializeDatabase()
+    const { DatabaseSetup } = await import("./lib/database-setup")
+    const dbSetup = new DatabaseSetup()
     
-    if (dbInitialized) {
-      console.log("Database initialized successfully")
+    const wasSetupRequired = await dbSetup.setupIfNeeded()
+    
+    if (wasSetupRequired) {
+      console.log("Database initialized and seeded successfully")
     } else {
-      console.log("Database already exists")
+      console.log("Database already exists and is ready")
     }
 
     // 共有ドライブ用の最適化
