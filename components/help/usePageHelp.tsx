@@ -12,15 +12,13 @@ import {
 import { Info } from "lucide-react"
 import { usePathname } from "next/navigation"
 import React, { useState } from "react"
-import {
-  UploadHelpContent,
-  TemplateHelpContent,
-  RegionInfoHelpContent,
-  StudentsHelpContent,
-  AnswerSheetsHelpContent,
-  ScoringHelpContent,
-  ExportHelpContent,
-} from "./PageHelpContent"
+import { HelpContent01Upload as UploadHelpContent } from "@/components/help/page-specific/HelpContent-01-upload"
+import { HelpContent02Template as TemplateHelpContent } from "@/components/help/page-specific/HelpContent-02-template"
+import { HelpContent03RegionInfo as RegionInfoHelpContent } from "@/components/help/page-specific/HelpContent-03-region-info"
+import { HelpContent05Students as StudentsHelpContent } from "@/components/help/page-specific/HelpContent-05-students"
+import { HelpContent06AnswerSheets as AnswerSheetsHelpContent } from "@/components/help/page-specific/HelpContent-06-answer-sheets"
+import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent-07-scoring"
+import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent-08-export"
 
 // ページごとのヘルプコンポーネント
 const pageHelpComponents: {

@@ -4,10 +4,6 @@ import type {
   UnifiedStudent,
 } from "@/types/answer-sheet.types"
 
-// Re-export local types
-export type { AnswerSheetTableProps, DisabledReason, UploadModalState } from "./local-types"
-export type { FileState, UseDragDropParams, UseDragDropReturn } from "./drag-drop-types"
-
 // Preview mode for different display options
 export type PreviewMode = "full" | "name-only"
 

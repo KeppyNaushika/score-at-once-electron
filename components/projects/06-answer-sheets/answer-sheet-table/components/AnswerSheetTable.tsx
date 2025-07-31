@@ -5,7 +5,7 @@ import { TableDragOverlay } from "@/components/projects/06-answer-sheets/answer-
 import { TableHeader } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/TableHeader"
 import { UploadModalWrapper } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/UploadModalWrapper"
 import { useAnswerSheetTableLogic } from "@/components/projects/06-answer-sheets/answer-sheet-table/hooks/useAnswerSheetTableLogic"
-import type { AnswerSheetTableProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types"
+import type { AnswerSheetTableProps } from "@/components/projects/06-answer-sheets/answer-sheet-table/types/local-types"
 import { Card, CardContent } from "@/components/ui/card"
 import { closestCenter, DndContext } from "@dnd-kit/core"
 import { FileImage } from "lucide-react"
