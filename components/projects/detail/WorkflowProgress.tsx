@@ -10,7 +10,7 @@ import {
 
 interface WorkflowProgressProps {
   masterImageCount: number
-  layoutRegionCount: number
+  cropRegionCount: number
   questionRegionCount: number
   studentCount: number
   answerSheetCount: number
@@ -18,7 +18,7 @@ interface WorkflowProgressProps {
 
 export default function WorkflowProgress({
   masterImageCount,
-  layoutRegionCount,
+  cropRegionCount,
   questionRegionCount,
   studentCount,
   answerSheetCount,
@@ -35,16 +35,16 @@ export default function WorkflowProgress({
     {
       title: "採点領域の作成",
       description: "各設問の採点範囲を設定します",
-      completed: layoutRegionCount > 0,
+      completed: cropRegionCount > 0,
       canStart: masterImageCount > 0,
-      count: layoutRegionCount,
+      count: cropRegionCount,
       countLabel: "領域作成済み",
     },
     {
       title: "領域情報の編集",
       description: "各領域の種類、配点、ラベルを設定します",
       completed: questionRegionCount > 0,
-      canStart: layoutRegionCount > 0,
+      canStart: cropRegionCount > 0,
       count: questionRegionCount,
       countLabel: "設問定義済み",
     },

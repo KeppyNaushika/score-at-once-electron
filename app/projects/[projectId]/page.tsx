@@ -28,7 +28,7 @@ export default function ProjectDetailPage() {
     questionRegionCount,
     masterImageCount,
     answerSheetCount,
-    layoutRegionCount,
+    cropRegionCount,
     updateProject,
   } = useProjectDetail(projectId)
 
@@ -91,7 +91,7 @@ export default function ProjectDetailPage() {
 
           <ProjectStats
             masterImageCount={masterImageCount}
-            layoutRegionCount={layoutRegionCount}
+            cropRegionCount={cropRegionCount}
             questionRegionCount={questionRegionCount}
             studentCount={studentCount}
             answerSheetCount={answerSheetCount}
@@ -101,7 +101,7 @@ export default function ProjectDetailPage() {
             <WorkflowSteps
               projectId={projectId}
               masterImageCount={masterImageCount}
-              layoutRegionCount={layoutRegionCount}
+              cropRegionCount={cropRegionCount}
               questionRegionCount={questionRegionCount}
               studentCount={studentCount}
               answerSheetCount={answerSheetCount}
@@ -110,7 +110,7 @@ export default function ProjectDetailPage() {
             <AdditionalActions
               projectId={projectId}
               masterImageCount={masterImageCount}
-              layoutRegionCount={layoutRegionCount}
+              cropRegionCount={cropRegionCount}
               questionRegionCount={questionRegionCount}
               studentCount={studentCount}
               answerSheetCount={answerSheetCount}
@@ -119,7 +119,7 @@ export default function ProjectDetailPage() {
 
           <WorkflowProgress
             masterImageCount={masterImageCount}
-            layoutRegionCount={layoutRegionCount}
+            cropRegionCount={cropRegionCount}
             questionRegionCount={questionRegionCount}
             studentCount={studentCount}
             answerSheetCount={answerSheetCount}

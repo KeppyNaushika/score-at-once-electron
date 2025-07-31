@@ -10,13 +10,6 @@ import {
   updateCropRegionOrders as dbUpdateCropRegionOrders,
 } from "../lib/prisma/cropRegion"
 import {
-  createSubtotalGroup as dbCreateSubtotalGroup,
-  updateSubtotalGroup as dbUpdateSubtotalGroup,
-  deleteSubtotalGroup as dbDeleteSubtotalGroup,
-  getSubtotalGroupsByProjectId as dbGetSubtotalGroupsByProjectId,
-  getSubtotalGroupById as dbGetSubtotalGroupById,
-} from "../lib/prisma/subtotalGroup"
-import {
   createSubtotal as dbCreateSubtotal,
   updateSubtotal as dbUpdateSubtotal,
   deleteSubtotal as dbDeleteSubtotal,
@@ -27,6 +20,7 @@ import {
 import {
   createCropSubtotal as dbCreateCropSubtotal,
   deleteCropSubtotal as dbDeleteCropSubtotal,
+  deleteCropSubtotalsByCropRegionId as dbDeleteCropSubtotalsByCropRegionId,
   getSubtotalDefinitionsByCropRegionId as dbGetSubtotalDefsByCropRegionId,
   getCropSubtotalsBySubtotalId as dbGetCropSubtotalsBySubtotalId,
   createManyCropSubtotals as dbCreateManyCropSubtotals,
@@ -135,72 +129,6 @@ export function setupCropRegionHandlers(): void {
     }
   })
 
-  // --- SubtotalGroup Handlers ---
-  ipcMain.handle(
-    "create-subtotal-group",
-    async (_event, data: Prisma.SubtotalGroupUncheckedCreateInput) => {
-      try {
-        console.log("🔄 IPC: create-subtotal-group called with data:", data)
-        const result = await dbCreateSubtotalGroup(data)
-        console.log("✅ IPC: create-subtotal-group result:", result)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: create-subtotal-group error:", error)
-        throw error
-      }
-    },
-  )
-
-  ipcMain.handle(
-    "update-subtotal-group",
-    async (_event, id: string, data: Prisma.SubtotalGroupUpdateInput) => {
-      try {
-        console.log("🔄 IPC: update-subtotal-group called with id:", id, "data:", data)
-        const result = await dbUpdateSubtotalGroup(id, data)
-        console.log("✅ IPC: update-subtotal-group result:", result)
-        return result
-      } catch (error) {
-        console.error("❌ IPC: update-subtotal-group error:", error)
-        throw error
-      }
-    },
-  )
-
-  ipcMain.handle("delete-subtotal-group", async (_event, id: string) => {
-    try {
-      console.log("🔄 IPC: delete-subtotal-group called with id:", id)
-      const result = await dbDeleteSubtotalGroup(id)
-      console.log("✅ IPC: delete-subtotal-group result:", result)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: delete-subtotal-group error:", error)
-      throw error
-    }
-  })
-
-  ipcMain.handle("get-subtotal-groups-by-project-id", async (_event, projectId: string) => {
-    try {
-      console.log("🔄 IPC: get-subtotal-groups-by-project-id called with projectId:", projectId)
-      const result = await dbGetSubtotalGroupsByProjectId(projectId)
-      console.log("✅ IPC: get-subtotal-groups-by-project-id result:", result?.length, "groups")
-      return result
-    } catch (error) {
-      console.error("❌ IPC: get-subtotal-groups-by-project-id error:", error)
-      throw error
-    }
-  })
-
-  ipcMain.handle("get-subtotal-group-by-id", async (_event, id: string) => {
-    try {
-      console.log("🔄 IPC: get-subtotal-group-by-id called with id:", id)
-      const result = await dbGetSubtotalGroupById(id)
-      console.log("✅ IPC: get-subtotal-group-by-id result:", result)
-      return result
-    } catch (error) {
-      console.error("❌ IPC: get-subtotal-group-by-id error:", error)
-      throw error
-    }
-  })
 
   // --- Subtotal Handlers ---
   ipcMain.handle(
@@ -327,6 +255,18 @@ export function setupCropRegionHandlers(): void {
     }
   })
 
+  ipcMain.handle("delete-crop-subtotals-by-crop-region-id", async (_event, cropRegionId: string) => {
+    try {
+      console.log("🔄 IPC: delete-crop-subtotals-by-crop-region-id called with cropRegionId:", cropRegionId)
+      const result = await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
+      console.log("✅ IPC: delete-crop-subtotals-by-crop-region-id result:", result)
+      return result
+    } catch (error) {
+      console.error("❌ IPC: delete-crop-subtotals-by-crop-region-id error:", error)
+      throw error
+    }
+  })
+
   ipcMain.handle("get-crop-subtotals-by-crop-region-id", async (_event, cropRegionId: string) => {
     try {
       console.log("🔄 IPC: get-crop-subtotals-by-crop-region-id called with cropRegionId:", cropRegionId)
@@ -336,6 +276,27 @@ export function setupCropRegionHandlers(): void {
     } catch (error) {
       console.error("❌ IPC: get-crop-subtotals-by-crop-region-id error:", error)
       throw error
+    }
+  })
+
+  // 互換性のあるレスポンス形式での取得（QuestionAssignmentMatrix専用）
+  ipcMain.handle("get-assignments-by-question-crop-region-id", async (_event, cropRegionId: string) => {
+    try {
+      console.log("🔄 IPC: get-assignments-by-question-crop-region-id called with cropRegionId:", cropRegionId)
+      const assignments = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
+      console.log("✅ IPC: get-assignments-by-question-crop-region-id result:", assignments?.length, "assignments")
+      
+      return {
+        success: true,
+        assignments: assignments || []
+      }
+    } catch (error) {
+      console.error("❌ IPC: get-assignments-by-question-crop-region-id error:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        assignments: []
+      }
     }
   })
 

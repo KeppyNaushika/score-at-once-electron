@@ -80,9 +80,9 @@ model Project {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   projectStudents       ProjectStudent[]
-  projectPages          ProjectPage[]         // Pages in this project
-  userProjects          UserProject[]         // Many-to-many relation
-  projectSubtotalGroups ProjectSubtotalGroup[] // Many-to-many relation
+  projectPages          ProjectPage[]
+  userProjects          UserProject[]
+  projectSubtotalGroups ProjectSubtotalGroup[]
 }
 
 model ProjectStudent {
@@ -110,8 +110,8 @@ model ProjectPage {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  cropRegions CropRegion[] // Crop regions on this page
-  pageImages  PageImage[]  // Images for this page
+  cropRegions CropRegion[]
+  pageImages  PageImage[]
 
   @@unique([projectId, pageNumber])
   @@index([projectId])
@@ -136,7 +136,7 @@ model PageImage {
 // Optimized CropRegion (removed redundant projectId)
 model CropRegion {
   id             String          @id @default(uuid())
-  projectPageId  String          // Only reference to ProjectPage
+  projectPageId  String
   label          String
   type           String
   x              Float
@@ -148,8 +148,8 @@ model CropRegion {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   projectPage    ProjectPage     @relation(fields: [projectPageId], references: [id], onDelete: Cascade)
-  questionScores QuestionScore[] // Scores for this crop region
-  cropSubtotals  CropSubtotal[]  // Subtotal assignments
+  questionScores QuestionScore[]
+  cropSubtotals  CropSubtotal[]
 
   @@index([projectPageId])
 }
@@ -159,8 +159,8 @@ model SubtotalGroup {
   name                  String
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
-  subtotals             Subtotal[]             // Items in this group
-  projectSubtotalGroups ProjectSubtotalGroup[] // Many-to-many relation
+  subtotals             Subtotal[]
+  projectSubtotalGroups ProjectSubtotalGroup[]
 }
 
 model Subtotal {
@@ -171,7 +171,7 @@ model Subtotal {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
-  cropSubtotals   CropSubtotal[] // Crop region assignments
+  cropSubtotals   CropSubtotal[]
 
   @@unique([subtotalGroupId, name])
   @@index([subtotalGroupId])

@@ -17,6 +17,9 @@ export function useQuestionGroupPage(projectId: string) {
   const [subtotalGroups, setSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
+  const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
+    SubtotalGroupWithItems[]
+  >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
   const [subtotalRegions, setSubtotalRegions] = useState<
     CropRegionWithDetails[]
@@ -35,10 +38,11 @@ export function useQuestionGroupPage(projectId: string) {
       setLoading(true)
       setError(null)
 
-      const [projectResponse, subtotalGroupsResponse, cropRegionsResponse] =
+      const [projectResponse, subtotalGroupsResponse, activeSubtotalGroupsResponse, cropRegionsResponse] =
         await Promise.all([
           window.electronAPI.fetchProjectById(projectId),
           window.electronAPI.getSubtotalGroupsByProjectId(projectId),
+          window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
           window.electronAPI.getCropRegionsByProjectId(projectId),
         ])
 
@@ -67,6 +71,13 @@ export function useQuestionGroupPage(projectId: string) {
         if (subtotalGroupsResponse.length > 0 && !selectedSubtotalGroupId) {
           setSelectedSubtotalGroupId(subtotalGroupsResponse[0].id)
         }
+      }
+
+      if (activeSubtotalGroupsResponse && activeSubtotalGroupsResponse.success) {
+        const activeGroups = activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
+          (psg: any) => psg.subtotalGroup
+        ) || []
+        setActiveSubtotalGroups(activeGroups)
       }
 
       if (cropRegionsResponse) {
@@ -318,7 +329,7 @@ export function useQuestionGroupPage(projectId: string) {
     async (questionCropRegionId: string, subtotalIds: string[]) => {
       try {
         // 既存の関連付けを削除
-        await window.electronAPI.deleteAssignmentsByQuestionLayoutRegionId(
+        await window.electronAPI.deleteAssignmentsByQuestionCropRegionId(
           questionCropRegionId,
         )
 
@@ -395,6 +406,7 @@ export function useQuestionGroupPage(projectId: string) {
   return {
     project,
     subtotalGroups,
+    activeSubtotalGroups,
     cropRegions,
     subtotalRegions,
     loading,

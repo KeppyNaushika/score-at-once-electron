@@ -162,9 +162,9 @@ export function setupScoringHandlers(): void {
 
   ipcMain.handle(
     "get-question-score-comparison",
-    async (_event, answerSheetId: string, layoutRegionId: string) => {
+    async (_event, answerSheetId: string, cropRegionId: string) => {
       try {
-        return await getQuestionScoreComparison(answerSheetId, layoutRegionId)
+        return await getQuestionScoreComparison(answerSheetId, cropRegionId)
       } catch (err) {
         console.error("Error getting question score comparison:", err)
         throw err
@@ -177,7 +177,7 @@ export function setupScoringHandlers(): void {
     async (
       _event,
       answerSheetId: string,
-      layoutRegionId: string,
+      cropRegionId: string,
       scoredByUserId: string,
       scoreData: {
         partialScore?: number
@@ -188,7 +188,7 @@ export function setupScoringHandlers(): void {
       try {
         const result = await finalizeQuestionScore(
           answerSheetId,
-          layoutRegionId,
+          cropRegionId,
           scoredByUserId,
           scoreData,
         )

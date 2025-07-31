@@ -26,7 +26,8 @@ module.exports = {
       /^\/temp-prisma-backup/
     ],
     extraResource: [
-      ".next"
+      ".next",
+      "public"
     ]
   },
   rebuildConfig: {

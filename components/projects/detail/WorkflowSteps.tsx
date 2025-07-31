@@ -22,7 +22,7 @@ import Link from "next/link"
 interface WorkflowStepsProps {
   projectId: string
   masterImageCount: number
-  layoutRegionCount: number
+  cropRegionCount: number
   questionRegionCount: number
   studentCount: number
   answerSheetCount: number
@@ -31,7 +31,7 @@ interface WorkflowStepsProps {
 export default function WorkflowSteps({
   projectId,
   masterImageCount,
-  layoutRegionCount,
+  cropRegionCount,
   questionRegionCount,
   studentCount,
   answerSheetCount,
@@ -82,10 +82,10 @@ export default function WorkflowSteps({
           <Button
             variant="outline"
             className="w-full justify-between"
-            disabled={layoutRegionCount === 0}
+            disabled={cropRegionCount === 0}
           >
             <span
-              className={`flex items-center ${layoutRegionCount === 0 ? "opacity-50" : ""}`}
+              className={`flex items-center ${cropRegionCount === 0 ? "opacity-50" : ""}`}
             >
               <span className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-xs font-medium text-indigo-600">
                 3
