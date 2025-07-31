@@ -38,27 +38,27 @@ export function useAsync<T>(
     try {
       setLoading(true)
       setError(null)
-      
+
       const result = await asyncFn(...args)
       setData(result)
-      
+
       if (onSuccess) {
         onSuccess(result)
       }
-      
+
       return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "不明なエラーが発生しました"
       setError(errorMessage)
-      
+
       if (showErrorToast) {
         toast.error(errorToastMessage || errorMessage)
       }
-      
+
       if (onError) {
         onError(err instanceof Error ? err : new Error(errorMessage))
       }
-      
+
       return null
     } finally {
       setLoading(false)
@@ -75,7 +75,7 @@ export function useAsync<T>(
     if (immediate) {
       execute()
     }
-  }, [execute, immediate, ...deps])
+  }, [execute, immediate, deps])
 
   return {
     data,
