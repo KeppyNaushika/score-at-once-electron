@@ -28,8 +28,8 @@ import {
   createSubtotalDefinition,
   createManySubtotalDefinitions,
   deleteSubtotalDefinition,
-  deleteSubtotalDefinitionsByLayoutRegionId,
-  getSubtotalDefinitionsByLayoutRegionId,
+  deleteSubtotalDefinitionsByCropRegionId,
+  getSubtotalDefinitionsByCropRegionId,
   getSubtotalDefinitionsByQuestionGroupItemId,
 } from "../lib/prisma/subtotalDefinition"
 
@@ -57,8 +57,8 @@ export function setupQuestionGroupHandlers(): void {
   ipcMain.removeHandler("create-subtotal-definition")
   ipcMain.removeHandler("create-many-subtotal-definitions")
   ipcMain.removeHandler("delete-subtotal-definition")
-  ipcMain.removeHandler("delete-subtotal-definitions-by-layout-region-id")
-  ipcMain.removeHandler("get-subtotal-definitions-by-layout-region-id")
+  ipcMain.removeHandler("delete-subtotal-definitions-by-crop-region-id")
+  ipcMain.removeHandler("get-subtotal-definitions-by-crop-region-id")
   ipcMain.removeHandler("get-subtotal-definitions-by-question-group-item-id")
 
   // QuestionGroup handlers
@@ -325,10 +325,10 @@ export function setupQuestionGroupHandlers(): void {
   })
 
   ipcMain.handle(
-    "delete-subtotal-definitions-by-layout-region-id",
-    async (_event, layoutRegionId) => {
+    "delete-subtotal-definitions-by-crop-region-id",
+    async (_event, cropRegionId) => {
       try {
-        return await deleteSubtotalDefinitionsByLayoutRegionId(layoutRegionId)
+        return await deleteSubtotalDefinitionsByCropRegionId(cropRegionId)
       } catch (err) {
         console.error(
           "Error deleting subtotal definitions by layout region id:",
@@ -339,20 +339,6 @@ export function setupQuestionGroupHandlers(): void {
     },
   )
 
-  ipcMain.handle(
-    "get-subtotal-definitions-by-layout-region-id",
-    async (_event, layoutRegionId) => {
-      try {
-        return await getSubtotalDefinitionsByLayoutRegionId(layoutRegionId)
-      } catch (err) {
-        console.error(
-          "Error getting subtotal definitions by layout region id:",
-          err,
-        )
-        throw err
-      }
-    },
-  )
 
   ipcMain.handle(
     "get-subtotal-definitions-by-question-group-item-id",

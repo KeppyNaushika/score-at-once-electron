@@ -164,7 +164,7 @@ export function useTemplateData(projectId: string | undefined) {
           }))
         }
       } catch (regionError) {
-        console.error("Failed to load layout regions:", regionError)
+        console.error("Failed to load crop regions:", regionError)
         layoutIdValue = undefined
         regions = []
       }

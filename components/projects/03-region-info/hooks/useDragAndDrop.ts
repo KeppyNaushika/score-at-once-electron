@@ -1,4 +1,4 @@
-import type { LayoutRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/electron"
 import { useState } from "react"
 
 type DragState = {
@@ -7,8 +7,8 @@ type DragState = {
 }
 
 type UseDragAndDropProps = {
-  regions: LayoutRegionWithDetails[]
-  setRegions: React.Dispatch<React.SetStateAction<LayoutRegionWithDetails[]>>
+  regions: CropRegionWithDetails[]
+  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithDetails[]>>
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
 }

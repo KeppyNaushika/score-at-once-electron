@@ -47,7 +47,7 @@ export function useProjectDetail(projectId: string) {
         }
 
         // 設問領域数を取得
-        const regionsResult = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        const regionsResult = await window.electronAPI.getCropRegionsByProjectId(projectId)
         if (Array.isArray(regionsResult)) {
           const questionRegions = regionsResult.filter(
             region => region.type === "QUESTION_ANSWER" && (region.orderIndex || region.label)
@@ -99,7 +99,7 @@ export function useProjectDetail(projectId: string) {
     count + (page.pageImages?.filter((img: any) => img.imageType === "MASTER")?.length || 0), 0) || 0
   const answerSheetCount = project?.projectPages?.reduce((count, page) => 
     count + (page.pageImages?.filter((img: any) => img.imageType === "ANSWER_SHEET")?.length || 0), 0) || 0
-  const layoutRegionCount = project?.projectPages?.reduce((count, page) => 
+  const cropRegionCount = project?.projectPages?.reduce((count, page) => 
     count + (page.cropRegions?.length || 0), 0) || 0
 
   return {
@@ -109,7 +109,7 @@ export function useProjectDetail(projectId: string) {
     questionRegionCount,
     masterImageCount,
     answerSheetCount,
-    layoutRegionCount,
+    cropRegionCount,
     loadProject,
     updateProject,
   }

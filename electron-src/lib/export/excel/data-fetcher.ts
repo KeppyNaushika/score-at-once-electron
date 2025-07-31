@@ -1,4 +1,4 @@
-import { getLayoutRegionsByProjectId } from "../../prisma/layoutRegion"
+import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
 import { getProjectById } from "../../prisma/project"
 import { getStudentsForProject } from "../../prisma/projectStudent"
 import {
@@ -51,7 +51,7 @@ export async function fetchExportData(
       return { success: false, error: "生徒データの取得に失敗しました" }
     }
 
-    const layoutRegions = await getLayoutRegionsByProjectId(projectId)
+    const layoutRegions = await getCropRegionsByProjectId(projectId)
     const questionScores = await getQuestionScoresForProject(projectId)
 
     // 選択された生徒のフィルタリングとソート
@@ -178,7 +178,7 @@ function buildScoreDetails(
 ): ScoreDetail[] {
   return questionRegions.map((region: any) => {
     const scoreRecord = studentScores.find(
-      (score: any) => score.layoutRegionId === region.id,
+      (score: any) => score.cropRegionId === region.id,
     )
     const actualScore = scoreRecord
       ? calculateActualScore(

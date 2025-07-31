@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // Subtotal を作成
 export const createSubtotalDefinition = async (
-  data: Prisma.SubtotalUncheckedCreateInput, // layoutRegionId と questionGroupItemId を直接含める
+  data: Prisma.SubtotalUncheckedCreateInput, // cropRegionId と subtotalId を直接含める
 ) => {
   return prisma.subtotal.create({
     data,
@@ -30,10 +30,10 @@ export const deleteSubtotalDefinition = async (id: string) => {
   })
 }
 
-// LayoutRegion ID で Subtotal を削除 (特定のレイアウト領域の定義をすべて削除)
+// CropRegion ID で Subtotal を削除 (特定の採点領域の定義をすべて削除)
 // TODO: This function needs to be rewritten for new schema
-export const deleteSubtotalDefinitionsByLayoutRegionId = async (
-  layoutRegionId: string,
+export const deleteSubtotalDefinitionsByCropRegionId = async (
+  cropRegionId: string,
 ) => {
   console.warn("deleteSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
   return { count: 0 }
@@ -48,10 +48,10 @@ export const getSubtotalDefinitionsByQuestionGroupItemId = async (
   return []
 }
 
-// LayoutRegion ID で Subtotal を取得 (特定のレイアウト領域が持つ集計定義を取得)
+// CropRegion ID で Subtotal を取得 (特定の採点領域が持つ集計定義を取得)
 // TODO: This function needs to be rewritten for new schema
-export const getSubtotalDefinitionsByLayoutRegionId = async (
-  layoutRegionId: string,
+export const getSubtotalDefinitionsByCropRegionId = async (
+  cropRegionId: string,
 ) => {
   console.warn("getSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
   return []

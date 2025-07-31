@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { LayoutRegionAreaType } from "@/types/common.types"
+import { CropRegionAreaType } from "@/types/common.types"
 import { toast } from "sonner"
 
-export interface LayoutRegion {
+export interface CropRegion {
   id?: string
-  type: LayoutRegionAreaType
+  type: CropRegionAreaType
   x: number
   y: number
   width: number
@@ -16,6 +16,9 @@ export interface LayoutRegion {
   orderIndex: number
   masterImageId: string
 }
+
+// 後方互換性のためのエイリアス
+export type LayoutRegion = CropRegion
 
 export function useLayoutRegions(projectId?: string) {
   const [regions, setRegions] = useState<LayoutRegion[]>([])
@@ -29,7 +32,7 @@ export function useLayoutRegions(projectId?: string) {
 
     setIsLoading(true)
     try {
-      const allRegions = await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+      const allRegions = await window.electronAPI.getCropRegionsByProjectId(projectId)
       
       const filteredRegions = masterImageId 
         ? allRegions.filter(region => region.projectPage?.id === masterImageId)
@@ -37,7 +40,7 @@ export function useLayoutRegions(projectId?: string) {
 
       const formattedRegions: LayoutRegion[] = filteredRegions.map(region => ({
         id: region.id,
-        type: region.type as LayoutRegionAreaType,
+        type: region.type as CropRegionAreaType,
         x: region.x,
         y: region.y,
         width: region.width,
@@ -69,7 +72,7 @@ export function useLayoutRegions(projectId?: string) {
 
         const regionData = {
           projectPageId: region.masterImageId, // masterImageId is actually projectPageId in the new schema
-          type: region.type as LayoutRegionAreaType,
+          type: region.type as CropRegionAreaType,
           x: region.x,
           y: region.y,
           width: region.width,
@@ -80,9 +83,9 @@ export function useLayoutRegions(projectId?: string) {
         }
 
         if (region.id) {
-          return await window.electronAPI.updateLayoutRegion(region.id, regionData)
+          return await window.electronAPI.updateCropRegion(region.id, regionData)
         } else {
-          return await window.electronAPI.createLayoutRegion(regionData)
+          return await window.electronAPI.createCropRegion(regionData)
         }
       })
 
@@ -93,7 +96,7 @@ export function useLayoutRegions(projectId?: string) {
           .filter(region => region !== null)
           .map((region) => ({
             id: region!.id,
-            type: region!.type as LayoutRegionAreaType,
+            type: region!.type as CropRegionAreaType,
             x: region!.x,
             y: region!.y,
             width: region!.width,

@@ -1,8 +1,8 @@
-import type { LayoutRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/electron"
 import { useRef } from "react"
 
 type UseKeyboardNavigationProps = {
-  filteredRegions: LayoutRegionWithDetails[]
+  filteredRegions: CropRegionWithDetails[]
 }
 
 export const useKeyboardNavigation = ({

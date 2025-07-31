@@ -3,10 +3,18 @@ import prisma from "./client"
 
 // CropRegion を作成
 export const createCropRegion = async (
-  data: Prisma.CropRegionUncheckedCreateInput, // projectId を直接含めるため Unchecked を使用
+  data: Prisma.CropRegionUncheckedCreateInput,
 ) => {
   return prisma.cropRegion.create({
     data,
+    include: {
+      projectPage: true,
+      cropSubtotals: {
+        include: {
+          subtotal: true,
+        },
+      },
+    },
   })
 }
 
@@ -28,7 +36,6 @@ export const updateCropRegion = async (
     where: { id },
     data,
     include: {
-      // 更新後に必要な関連データも返す
       projectPage: true,
       cropSubtotals: {
         include: {
@@ -39,23 +46,8 @@ export const updateCropRegion = async (
   })
 }
 
-// 複数の CropRegion の順序を一括更新
-export const updateCropRegionOrders = async (
-  updates: Array<{ id: string; orderIndex: number }>,
-) => {
-  const updatePromises = updates.map((update) =>
-    prisma.cropRegion.update({
-      where: { id: update.id },
-      data: { orderIndex: update.orderIndex },
-    }),
-  )
-
-  return Promise.all(updatePromises)
-}
-
 // CropRegion を削除
 export const deleteCropRegion = async (id: string) => {
-  // 関連する CropSubtotal も削除される（onDelete: Cascade 設定済み）
   return prisma.cropRegion.delete({
     where: { id },
   })
@@ -70,7 +62,7 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
       }
     },
     include: {
-      projectPage: true, // masterImage情報を追加
+      projectPage: true, // projectPage情報を追加
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -104,10 +96,10 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
     // 更新後のデータを再取得
     return await prisma.cropRegion.findMany({
       where: { 
-      projectPage: {
-        projectId: projectId
-      }
-    },
+        projectPage: {
+          projectId: projectId
+        }
+      },
       include: {
         projectPage: true,
         cropSubtotals: {
@@ -143,6 +135,20 @@ export const getCropRegionById = async (id: string) => {
       questionScores: true,
     },
   })
+}
+
+// 複数の CropRegion の順序を一括更新
+export const updateCropRegionOrders = async (
+  updates: Array<{ id: string; orderIndex: number }>,
+) => {
+  const updatePromises = updates.map((update) =>
+    prisma.cropRegion.update({
+      where: { id: update.id },
+      data: { orderIndex: update.orderIndex },
+    }),
+  )
+
+  return Promise.all(updatePromises)
 }
 
 export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{

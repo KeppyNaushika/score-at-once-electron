@@ -5,7 +5,7 @@ import { Edit, FileImage, Settings, Upload, Users } from "lucide-react"
 
 interface ProjectStatsProps {
   masterImageCount: number
-  layoutRegionCount: number
+  cropRegionCount: number
   questionRegionCount: number
   studentCount: number
   answerSheetCount: number
@@ -13,7 +13,7 @@ interface ProjectStatsProps {
 
 export default function ProjectStats({
   masterImageCount,
-  layoutRegionCount,
+  cropRegionCount,
   questionRegionCount,
   studentCount,
   answerSheetCount,
@@ -43,9 +43,9 @@ export default function ProjectStats({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{layoutRegionCount}</div>
+          <div className="text-2xl font-bold">{cropRegionCount}</div>
           <p className="text-muted-foreground text-xs">
-            {layoutRegionCount > 0 ? "領域定義済み" : "未設定"}
+            {cropRegionCount > 0 ? "領域定義済み" : "未設定"}
           </p>
         </CardContent>
       </Card>

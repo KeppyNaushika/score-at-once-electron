@@ -1,5 +1,5 @@
 import { getAssignmentsByQuestionGroupItemId } from "../../prisma/questionSubtotalAssignment"
-import { getSubtotalDefinitionsByLayoutRegionId } from "../../prisma/subtotalDefinition"
+import { getSubtotalDefinitionsByCropRegionId } from "../../prisma/subtotalDefinition"
 
 // 小計点計算で使用する型定義
 export interface SubtotalScoreDetail {
@@ -29,7 +29,7 @@ export async function checkIfQuestionIsInSubtotal(
   try {
     // 小計点領域に関連付けられたグループ項目を取得
     const subtotalDefinitions =
-      await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
 
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
       return false
@@ -38,7 +38,7 @@ export async function checkIfQuestionIsInSubtotal(
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByLayoutRegionId is stubbed
+    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
     for (const definition of subtotalDefinitions) {
       // Skip processing since function returns empty array
       if (!definition || typeof definition !== 'object') continue
@@ -117,7 +117,7 @@ export async function calculateSubtotalScore(
   try {
     // 小計点領域に関連付けられたグループ項目を取得
     const subtotalDefinitions =
-      await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
 
     if (!subtotalDefinitions || subtotalDefinitions.length === 0) {
       return { score: 0, maxScore: 0 }
@@ -126,7 +126,7 @@ export async function calculateSubtotalScore(
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
-    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByLayoutRegionId is stubbed
+    // TODO: This section needs rewriting for new schema since getSubtotalDefinitionsByCropRegionId is stubbed
     for (const definition of subtotalDefinitions) {
       // Skip processing since function returns empty array
       if (!definition || typeof definition !== 'object') continue

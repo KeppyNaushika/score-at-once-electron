@@ -136,9 +136,9 @@ export function useGradingPage() {
   const loadQuestionRegions = useCallback(async () => {
     try {
       const regions =
-        await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+        await window.electronAPI.getCropRegionsByProjectId(projectId)
       if (regions && Array.isArray(regions)) {
-        // 型変換: LayoutRegion から QuestionRegion へ
+        // 型変換: CropRegion から QuestionRegion へ
         const questionRegions = regions.map((region) => ({
           id: region.id,
           label: region.label,

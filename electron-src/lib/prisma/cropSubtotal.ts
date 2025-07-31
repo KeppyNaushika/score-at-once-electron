@@ -5,6 +5,48 @@ import prisma from "./client"
 export const createCropSubtotal = async (
   data: Prisma.CropSubtotalUncheckedCreateInput,
 ) => {
+  // データ整合性チェック
+  const cropRegion = await prisma.cropRegion.findUnique({
+    where: { id: data.cropRegionId },
+    include: {
+      projectPage: {
+        select: { projectId: true },
+      },
+    },
+  })
+
+  if (!cropRegion) {
+    throw new Error("指定された設問領域が見つかりません")
+  }
+
+  const subtotal = await prisma.subtotal.findUnique({
+    where: { id: data.subtotalId },
+    include: {
+      subtotalGroup: {
+        include: {
+          projectSubtotalGroups: {
+            where: {
+              projectId: cropRegion.projectPage.projectId,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  if (!subtotal) {
+    throw new Error("指定された小計項目が見つかりません")
+  }
+
+  // 小計項目がプロジェクトで有効化されているかチェック
+  const isSubtotalActiveInProject = subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+
+  if (!isSubtotalActiveInProject) {
+    throw new Error(
+      `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、このプロジェクトで有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
+    )
+  }
+
   return prisma.cropSubtotal.create({
     data,
     include: {
@@ -18,6 +60,50 @@ export const createCropSubtotal = async (
 export const createManyCropSubtotals = async (
   data: Prisma.CropSubtotalUncheckedCreateInput[],
 ) => {
+  // 各CropSubtotalについてデータ整合性をチェック
+  for (const item of data) {
+    const cropRegion = await prisma.cropRegion.findUnique({
+      where: { id: item.cropRegionId },
+      include: {
+        projectPage: {
+          select: { projectId: true },
+        },
+      },
+    })
+
+    if (!cropRegion) {
+      throw new Error(`指定された設問領域が見つかりません: ${item.cropRegionId}`)
+    }
+
+    const subtotal = await prisma.subtotal.findUnique({
+      where: { id: item.subtotalId },
+      include: {
+        subtotalGroup: {
+          include: {
+            projectSubtotalGroups: {
+              where: {
+                projectId: cropRegion.projectPage.projectId,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!subtotal) {
+      throw new Error(`指定された小計項目が見つかりません: ${item.subtotalId}`)
+    }
+
+    // 小計項目がプロジェクトで有効化されているかチェック
+    const isSubtotalActiveInProject = subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+
+    if (!isSubtotalActiveInProject) {
+      throw new Error(
+        `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、このプロジェクトで有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
+      )
+    }
+  }
+
   return prisma.cropSubtotal.createMany({
     data,
   })
@@ -42,6 +128,13 @@ export const updateCropSubtotal = async (
 export const deleteCropSubtotal = async (id: string) => {
   return prisma.cropSubtotal.delete({
     where: { id },
+  })
+}
+
+// CropRegion ID で関連する CropSubtotal を全て削除
+export const deleteCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
+  return prisma.cropSubtotal.deleteMany({
+    where: { cropRegionId },
   })
 }
 

@@ -304,10 +304,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   initializeScoringRecords: (projectId: string) =>
     ipcRenderer.invoke("initialize-scoring-records", projectId),
 
-  // SubtotalGroup related (renamed from QuestionGroup)
-  createSubtotalGroup: (data: Prisma.SubtotalGroupUncheckedCreateInput) =>
+  // SubtotalGroup related (new management API with correct parameter format)
+  createSubtotalGroup: (data: { name: string; subtotals: { name: string; order: number }[] }) =>
     ipcRenderer.invoke("create-subtotal-group", data),
-  updateSubtotalGroup: (id: string, data: Prisma.SubtotalGroupUpdateInput) =>
+  updateSubtotalGroup: (id: string, data: { name: string; subtotals: { name: string; order: number }[] }) =>
     ipcRenderer.invoke("update-subtotal-group", id, data),
   deleteSubtotalGroup: (id: string) =>
     ipcRenderer.invoke("delete-subtotal-group", id),
@@ -315,6 +315,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-subtotal-groups-by-project-id", projectId),
   getSubtotalGroupById: (id: string) =>
     ipcRenderer.invoke("get-subtotal-group-by-id", id),
+
+  // New SubtotalGroup management API
+  getSubtotalGroups: () =>
+    ipcRenderer.invoke("get-subtotal-groups"),
+  getAvailableSubtotalGroupsForProject: (projectId: string) =>
+    ipcRenderer.invoke("get-available-subtotal-groups-for-project", projectId),
+  getActiveSubtotalGroupsForProject: (projectId: string) =>
+    ipcRenderer.invoke("get-active-subtotal-groups-for-project", projectId),
+  addSubtotalGroupToProject: (projectId: string, subtotalGroupId: string) =>
+    ipcRenderer.invoke("add-subtotal-group-to-project", projectId, subtotalGroupId),
+  removeSubtotalGroupFromProject: (projectId: string, subtotalGroupId: string) =>
+    ipcRenderer.invoke("remove-subtotal-group-from-project", projectId, subtotalGroupId),
 
   // Subtotal related (renamed from QuestionGroupItem)
   createSubtotal: (
@@ -347,6 +359,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ),
   deleteCropSubtotal: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
+  deleteCropSubtotalsByCropRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("delete-crop-subtotals-by-crop-region-id", cropRegionId),
   getCropSubtotalsByCropRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke(
       "get-crop-subtotals-by-crop-region-id",
@@ -366,6 +380,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ),
 
   // 互換性関数（段階的移行のため古い名前も残す）
+  getAssignmentsByQuestionCropRegionId: (cropRegionId: string) =>
+    ipcRenderer.invoke("get-assignments-by-question-crop-region-id", cropRegionId),
   createLayoutRegion: (data: CropRegionCreateData) =>
     ipcRenderer.invoke("create-crop-region", data),
   updateLayoutRegion: (id: string, data: CropRegionUpdateData) =>

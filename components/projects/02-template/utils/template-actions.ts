@@ -9,14 +9,14 @@ import { toast } from "sonner"
  * @param projectId - プロジェクトID
  * @param currentUser - 現在のユーザー
  * @param selectedMasterImageId - 選択中のマスター画像ID
- * @param layoutRegions - 保存する領域データ配列
+ * @param cropRegions - 保存する領域データ配列
  * @returns Promise<{ success: boolean, savedRegions?: CropRegionData[] }>
  */
 export async function saveTemplate(
   projectId: string,
   currentUser: User,
   selectedMasterImageId: string,
-  layoutRegions: CropRegionArea[],
+  cropRegions: CropRegionArea[],
 ): Promise<{ success: boolean; savedRegions?: CropRegionArea[] }> {
   if (!projectId || !currentUser || !selectedMasterImageId) {
     toast.error("プロジェクトID、ユーザー情報、基準画像は必須です。")
@@ -25,7 +25,7 @@ export async function saveTemplate(
 
   try {
     // 既存の領域を更新または新規作成
-    const savePromises = layoutRegions.map(async (area) => {
+    const savePromises = cropRegions.map(async (area) => {
       if (!area.projectPageId) {
         throw new Error(
           `Crop region ${area.label || "Unnamed"} is missing projectPageId.`,
@@ -87,7 +87,7 @@ export async function saveTemplate(
  * @param selectedMasterImage - 選択中のマスター画像
  * @returns Promise<{ success: boolean, detectedRegions?: CropRegionData[] }>
  */
-export async function detectLayoutRegions(
+export async function detectCropRegions(
   selectedMasterImage: { path?: string } | null,
 ): Promise<{ success: boolean; detectedRegions?: CropRegionArea[] }> {
   if (!selectedMasterImage || !selectedMasterImage.path) {
@@ -102,7 +102,7 @@ export async function detectLayoutRegions(
     toast.info("自動検出機能は現在開発中です。手動で領域を設定してください。")
     return { success: false }
   } catch (error) {
-    console.error("Failed to detect layout regions:", error)
+    console.error("Failed to detect crop regions:", error)
     toast.error(
       `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
     )

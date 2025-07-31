@@ -4,14 +4,14 @@ import path from "path"
 import { PageSizes, PDFDocument, rgb } from "pdf-lib"
 import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
 import { getAnswerSheetsByProjectId } from "./answerSheet"
-import { getLayoutRegionsByProjectId } from "./layoutRegion"
+import { getCropRegionsByProjectId } from "./cropRegion"
 import { getStudentsForProject } from "./projectStudent"
 import {
   calculateActualScore,
   getQuestionScoresForProject,
 } from "./questionScore"
 import { getAssignmentsByQuestionGroupItemId } from "./questionSubtotalAssignment"
-import { getSubtotalDefinitionsByLayoutRegionId } from "./subtotalDefinition"
+import { getSubtotalDefinitionsByCropRegionId } from "./subtotalDefinition"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -26,7 +26,8 @@ try {
 
 // 採点状態の型定義（フロントエンドと統一）
 type ScoringStatus =
-  | "ungraded" // 未採点
+  | "unscored" // 未採点 (DBではunscored、画像ファイルではunscored)
+  | "ungraded" // 未採点 (別名)
   | "correct" // 正答
   | "partial" // 部分点
   | "pending" // 保留
@@ -87,10 +88,16 @@ function getMarkImagePath(
   status: ScoringStatus,
   useTransparent: boolean,
 ): string {
-  const publicDir = path.join(getAppRootPath(), "public")
+  // パッケージ化されたアプリでは app.getAppPath() を使用
+  const { app } = require("electron")
+  const publicDir = app.isPackaged 
+    ? path.join(app.getAppPath(), "public")
+    : path.join(getAppRootPath(), "public")
+  
   const prefix = useTransparent ? "tranceparent_" : ""
 
   switch (status) {
+    case "unscored":
     case "ungraded":
       return path.join(publicDir, "score-assets", `${prefix}unscored.png`)
     case "correct":
@@ -271,21 +278,21 @@ function calculateStudentTotalScore(
 
     // この生徒の全採点データを取得
     const studentScores = allQuestionScores.scores.filter(
-      (score: any) => score.answerSheet?.student?.id === studentId,
+      (score: any) => score.studentId === studentId,
     )
 
     console.log(`Found ${studentScores.length} scores for student ${studentId}`)
 
     for (const scoreData of studentScores) {
       const layoutRegion = layoutRegions.find(
-        (r) => r.id === scoreData.layoutRegionId,
+        (r) => r.id === scoreData.cropRegionId,
       )
       // 設問領域のみを対象とする（小計点・合計点領域は除外）
       if (layoutRegion && layoutRegion.type === "QUESTION_ANSWER") {
         const maxScore = layoutRegion?.points || 10
         const actualScore = calculateActualScore(scoreData, maxScore)
         console.log(
-          `Question ${scoreData.layoutRegionId}: score ${actualScore}`,
+          `Question ${scoreData.cropRegionId}: score ${actualScore}`,
         )
         totalScore += actualScore || 0
       }
@@ -323,12 +330,12 @@ async function calculateStudentSubtotalScore(
 
     // この生徒の全採点データを取得
     const studentScores = allQuestionScores.scores.filter(
-      (score: any) => score.answerSheet?.student?.id === studentId,
+      (score: any) => score.studentId === studentId,
     )
 
     // 小計点領域に関連付けられたグループ項目を取得
     const subtotalDefinitions =
-      await getSubtotalDefinitionsByLayoutRegionId(subtotalRegionId)
+      await getSubtotalDefinitionsByCropRegionId(subtotalRegionId)
     console.log(
       `Found ${subtotalDefinitions?.length || 0} subtotal definitions`,
     )
@@ -422,7 +429,7 @@ async function calculateStudentSubtotalScore(
 
     for (const questionId of finalQuestionIds) {
       const scoreData = studentScores.find(
-        (s: any) => s.layoutRegionId === questionId,
+        (s: any) => s.cropRegionId === questionId,
       )
       if (scoreData) {
         const layoutRegion = layoutRegions.find((r) => r.id === questionId)
@@ -515,7 +522,21 @@ export async function exportScoredAnswersPDF(
     reportProgress(30, 100, "採点データを取得中...", 3)
 
     const questionScores = await getQuestionScoresForProject(projectId)
-    const layoutRegions = await getLayoutRegionsByProjectId(projectId)
+    console.log(`📊 Retrieved ${questionScores.length} question scores for project ${projectId}`)
+    
+    // デバッグ: 採点データのサンプルを表示
+    if (questionScores.length > 0) {
+      console.log(`📝 Sample question score:`, {
+        id: questionScores[0].id,
+        cropRegionId: questionScores[0].cropRegionId,
+        studentId: questionScores[0].studentId,
+        status: questionScores[0].status,
+        partialScore: questionScores[0].partialScore,
+      })
+    }
+    
+    const layoutRegions = await getCropRegionsByProjectId(projectId)
+    console.log(`🎯 Retrieved ${layoutRegions.length} layout regions for project ${projectId}`)
 
     // 選択された生徒のデータをフィルタリングして順序を保持
     const selectedStudents = studentsResult.students
@@ -793,17 +814,22 @@ async function addAnswerSheetToPDF(
     progressCallback?.("採点情報を重ね合わせ中...")
 
     // 採点情報を重ね合わせ
-    const relevantScores =
-      questionScores.success && questionScores.scores
+    const relevantScores = Array.isArray(questionScores)
+      ? questionScores.filter(
+          (score: any) => score.studentId === studentData.id,
+        )
+      : questionScores.success && questionScores.scores
         ? questionScores.scores.filter(
-            (score: any) => score.answerSheet?.id === answerSheet.id,
+            (score: any) => score.studentId === studentData.id,
           )
         : []
+    
+    console.log(`👤 Found ${relevantScores.length} relevant scores for student ${studentData.id}`)
 
     // 採点データを適切に処理
     const processedScores = relevantScores.map((score: any) => {
       const layoutRegion = layoutRegions.find(
-        (region) => region.id === score.layoutRegionId,
+        (region) => region.id === score.cropRegionId,
       )
       const maxScore = layoutRegion?.points || 10
       const actualScore = calculateActualScore(score, maxScore)
@@ -820,7 +846,8 @@ async function addAnswerSheetToPDF(
     // デフォルト設定
     const defaultConfig: ScoringMarkConfig = {
       showMarkForStatus: {
-        ungraded: true, // 未採点も表示してテストするため
+        unscored: true, // 未採点も表示してテストするため
+        ungraded: true, // 互換性のため両方対応
         correct: true,
         partial: true,
         pending: true,
@@ -828,6 +855,7 @@ async function addAnswerSheetToPDF(
         no_answer: true,
       },
       showScoreForStatus: {
+        unscored: false,
         ungraded: false,
         correct: true,
         partial: true,
@@ -862,19 +890,24 @@ async function addAnswerSheetToPDF(
       },
     }
 
+    console.log(`📊 Processing ${processedScores.length} scores for drawing marks and scores`)
+    
     for (const score of processedScores) {
       const layoutRegion = layoutRegions.find(
-        (region) => region.id === score.layoutRegionId,
+        (region) => region.id === score.cropRegionId,
       )
       if (!layoutRegion) {
+        console.warn(`⚠️  Layout region not found for score: ${score.cropRegionId}`)
         continue
       }
 
       // 採点状態を判定（statusを直接使用）
       const scoringStatus = score.status as ScoringStatus
+      console.log(`📝 Processing score: cropRegionId=${score.cropRegionId}, status=${scoringStatus}, score=${score.score}`)
 
       // この状態のマークを表示するかチェック
       if (!config.showMarkForStatus[scoringStatus]) {
+        console.log(`🚫 Skipping mark display for status: ${scoringStatus} (config disabled)`)
         continue
       }
 
@@ -929,9 +962,10 @@ async function addAnswerSheetToPDF(
 
       // Mark position calculated
 
+      let markImagePath: string | undefined
       try {
         // 採点マーク画像を読み込んで描画
-        const markImagePath = getMarkImagePath(
+        markImagePath = getMarkImagePath(
           scoringStatus,
           config.useTransparent,
         )
@@ -946,8 +980,12 @@ async function addAnswerSheetToPDF(
             width: config.markSize,
             height: config.markSize,
           })
+          console.log(`✅ Successfully drew scoring mark: ${markImagePath}`)
+        } else {
+          console.warn(`⚠️  Scoring mark image not found: ${markImagePath}`)
         }
       } catch (markError) {
+        console.error(`❌ Failed to draw scoring mark: ${markImagePath || 'unknown path'}`, markError)
         // マーク描画に失敗しても続行
       }
 

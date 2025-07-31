@@ -4,12 +4,12 @@ import { DeleteConfirmModal } from "@/components/projects/03-region-info/compone
 import { RegionTableRow } from "@/components/projects/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/projects/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/projects/03-region-info/hooks/useKeyboardNavigation"
-import type { LayoutRegionWithDetails } from "@/types/electron"
+import type { CropRegionWithDetails } from "@/types/electron"
 import { useState } from "react"
 
 type RegionDetailsTableProps = {
-  regions: LayoutRegionWithDetails[]
-  setRegions: React.Dispatch<React.SetStateAction<LayoutRegionWithDetails[]>>
+  regions: CropRegionWithDetails[]
+  setRegions: React.Dispatch<React.SetStateAction<CropRegionWithDetails[]>>
   disabled: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
@@ -78,7 +78,7 @@ const RegionDetailsTable = ({
       try {
         // データベースから削除（IDがある場合のみ）
         if (regionToDeleteData?.id) {
-          await window.electronAPI.deleteLayoutRegion(regionToDeleteData.id)
+          await window.electronAPI.deleteCropRegion(regionToDeleteData.id)
         }
 
         // UI状態を更新

@@ -15,10 +15,10 @@ export type ProjectWithDetails = Project & {
 
 export interface ProjectStatus {
   hasMasterImages: boolean
-  hasLayoutRegions: boolean
+  hasCropRegions: boolean
   hasAnswerSheets: boolean
   isGradingComplete: boolean
-  nextStep: "master-images" | "layout-regions" | "answer-sheets" | "grading" | "complete"
+  nextStep: "master-images" | "crop-regions" | "answer-sheets" | "grading" | "complete"
   progress: number
 }
 
@@ -30,7 +30,7 @@ export function useProject(projectId?: string) {
   const calculateProjectStatus = useCallback((project: ProjectWithDetails): ProjectStatus => {
     const hasMasterImages = (project.projectPages?.some(page => 
       page.pageImages.some(img => img.imageType === "MASTER")) ?? false)
-    const hasLayoutRegions = (project.cropRegions?.length ?? 0) > 0
+    const hasCropRegions = (project.cropRegions?.length ?? 0) > 0
     const hasAnswerSheets = false // TODO: Implement when answer sheets are added
     const isGradingComplete = false // TODO: Implement when grading is added
 
@@ -40,8 +40,8 @@ export function useProject(projectId?: string) {
     if (!hasMasterImages) {
       nextStep = "master-images"
       progress = 0
-    } else if (!hasLayoutRegions) {
-      nextStep = "layout-regions"
+    } else if (!hasCropRegions) {
+      nextStep = "crop-regions"
       progress = 25
     } else if (!hasAnswerSheets) {
       nextStep = "answer-sheets"
@@ -56,7 +56,7 @@ export function useProject(projectId?: string) {
 
     return {
       hasMasterImages,
-      hasLayoutRegions,
+      hasCropRegions,
       hasAnswerSheets,
       isGradingComplete,
       nextStep,

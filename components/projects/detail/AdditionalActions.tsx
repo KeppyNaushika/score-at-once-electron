@@ -14,7 +14,7 @@ import Link from "next/link"
 interface AdditionalActionsProps {
   projectId: string
   masterImageCount: number
-  layoutRegionCount: number
+  cropRegionCount: number
   questionRegionCount: number
   studentCount: number
   answerSheetCount: number
@@ -23,16 +23,16 @@ interface AdditionalActionsProps {
 export default function AdditionalActions({
   projectId,
   masterImageCount,
-  layoutRegionCount,
+  cropRegionCount,
   questionRegionCount,
   studentCount,
   answerSheetCount,
 }: AdditionalActionsProps) {
   const getNextStepMessage = () => {
     if (masterImageCount === 0) return "まず模範解答をアップロードしてください"
-    if (masterImageCount > 0 && layoutRegionCount === 0)
+    if (masterImageCount > 0 && cropRegionCount === 0)
       return "採点領域を作成してください"
-    if (layoutRegionCount > 0 && questionRegionCount === 0)
+    if (cropRegionCount > 0 && questionRegionCount === 0)
       return "領域情報を編集してください"
     if (questionRegionCount > 0 && studentCount === 0)
       return "受験生徒を登録してください"

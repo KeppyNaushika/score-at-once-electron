@@ -5,6 +5,7 @@ import ProjectProgressCard from "@/components/projects/07-score-at-once/componen
 import QuestionNavigator from "@/components/projects/07-score-at-once/components/QuestionNavigator"
 import ScoringToolbar from "@/components/projects/07-score-at-once/components/ScoringToolbar"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/components/scoring-main/types/scoring-main-types"
+import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 
 interface ScoringSidePanelProps {
   projectId: string
@@ -14,12 +15,16 @@ interface ScoringSidePanelProps {
   onQuestionChange: (index: number) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
-  questionProgress: any
+  questionProgress: QuestionProgress
   // Scoring Toolbar props
   selectedAnswersCount: number
   currentQuestion?: any
   filterSettings: any
-  onScore: (statusOrAnswerIds: any, statusOrPartialScore?: any, partialScore?: any) => void
+  onScore: (
+    statusOrAnswerIds: any,
+    statusOrPartialScore?: any,
+    partialScore?: any,
+  ) => void
   onToggleFilter: (filterId: string) => void
   onRefreshFilter: () => void
   partialScoreInput: string
