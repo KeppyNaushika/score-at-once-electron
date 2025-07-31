@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
-import { getDatabasePath } from "./prisma/databaseInitializer"
+import { getDatabasePath, createSharedPrismaClient } from "./prisma/databaseInitializer"
 
 /**
  * データベースセットアップユーティリティ
@@ -11,7 +11,8 @@ export class DatabaseSetup {
   private dbPath: string
 
   constructor() {
-    this.prisma = new PrismaClient()
+    // パッケージ化環境対応のPrismaクライアントを使用
+    this.prisma = createSharedPrismaClient()
     this.dbPath = getDatabasePath()
   }
 
@@ -166,19 +167,22 @@ export class DatabaseSetup {
       ]
 
       for (const subtotalData of mathSubtotals) {
-        await this.prisma.subtotal.upsert({
+        // 既存チェック後に作成（新しいスキーマではユニーク制約名が変更）
+        const existingSubtotal = await this.prisma.subtotal.findFirst({
           where: {
-            subtotalGroupId_name: {
-              subtotalGroupId: mathSubtotalGroup.id,
-              name: subtotalData.name
-            }
-          },
-          update: {},
-          create: {
-            ...subtotalData,
-            subtotalGroupId: mathSubtotalGroup.id
+            subtotalGroupId: mathSubtotalGroup.id,
+            name: subtotalData.name
           }
         })
+        
+        if (!existingSubtotal) {
+          await this.prisma.subtotal.create({
+            data: {
+              ...subtotalData,
+              subtotalGroupId: mathSubtotalGroup.id
+            }
+          })
+        }
         console.log(`✅ Math subtotal created: ${subtotalData.name}`)
       }
 
@@ -196,22 +200,34 @@ export class DatabaseSetup {
   async setupIfNeeded(): Promise<boolean> {
     try {
       const dbExists = this.isDatabaseExists()
-      let needsSetup = false
+      let setupPerformed = false
 
       if (!dbExists) {
-        console.log('🏗️ Database file not found, using existing initialization system...')
-        return false // 既存のdatabaseInitializerに任せる
+        console.log('🏗️ Database file not found, creating and initializing...')
+        // データベースディレクトリを確保
+        this.ensureDatabaseDirectory()
+        
+        // databaseInitializerを使用してスキーマを作成
+        const { initializeDatabase } = await import('./prisma/databaseInitializer')
+        const wasCreated = await initializeDatabase()
+        
+        if (wasCreated) {
+          console.log('✅ Database schema created successfully')
+          // 新しく作成されたDBにシードデータを投入
+          await this.runSeed()
+          setupPerformed = true
+        }
       } else {
         const isEmpty = await this.isDatabaseEmpty()
         if (isEmpty) {
-          console.log('📭 Database is empty, running seed...')
+          console.log('📭 Database exists but is empty, running seed...')
           await this.runSeed()
-          return true
+          setupPerformed = true
         }
       }
 
       console.log('✅ Database setup check completed')
-      return false
+      return setupPerformed
     } catch (error) {
       console.error('❌ Database setup failed:', error)
       throw error
