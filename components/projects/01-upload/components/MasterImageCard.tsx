@@ -4,18 +4,18 @@ import { Button } from "@/components/ui/button"
 import { ArrowLeft, ArrowRight, Loader2, Trash2 } from "lucide-react"
 import Image from "next/image"
 import React from "react"
-import type { MasterImageCardProps } from "../types"
+import type { MasterImageCardProps } from "@/components/projects/01-upload/types"
 
 /**
  * MasterImageCard - 個別の模範解答画像カードコンポーネント
- * 
+ *
  * 機能:
  * - 模範解答画像の表示
  * - 画像の削除操作
  * - 画像の順序変更（左右移動）
  * - 読み込み中・処理中の状態表示
  * - エラー処理
- * 
+ *
  * @param image - 模範解答画像データ
  * @param imageUrl - 画像のURL
  * @param index - 配列内のインデックス

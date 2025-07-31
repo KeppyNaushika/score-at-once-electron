@@ -15,11 +15,11 @@
 
 import { useEffect, useState } from "react"
 import {
-  UseImageCanvasInteractionProps,
   DragState,
-  ResizeState,
   MoveState,
-} from "../types"
+  ResizeState,
+  UseImageCanvasInteractionProps,
+} from "@/components/projects/02-template/types"
 import { useCanvasCoordinates } from "./useCanvasCoordinates"
 import { useMouseHandlers } from "./useMouseHandlers"
 

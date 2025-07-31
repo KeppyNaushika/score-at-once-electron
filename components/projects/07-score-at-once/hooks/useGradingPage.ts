@@ -3,8 +3,8 @@
 import type { ProjectWithDetails } from "@/types/electron"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { GradingMode } from "../GradingModeToggle"
-import { AnswerSheet, QuestionRegion, ScoringData } from "../types"
+import { GradingMode } from "@/components/projects/07-score-at-once/components/GradingModeToggle"
+import { AnswerSheet, QuestionRegion, ScoringData } from "@/components/projects/07-score-at-once/types"
 
 export function useGradingPage() {
   const params = useParams()

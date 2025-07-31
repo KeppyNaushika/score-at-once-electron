@@ -2,8 +2,8 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { Project, User } from "@prisma/client"
 import { CropRegionArea } from "@/types/common.types"
+import { Project, User } from "@prisma/client"
 
 // ============================================================================
 // Core Type Definitions
@@ -29,20 +29,20 @@ type MasterImage = {
  * - COMMENT: コメント欄
  * - OTHER: その他
  */
-export type AreaType = 
-  | "QUESTION_ANSWER" 
-  | "STUDENT_NAME" 
-  | "STUDENT_ID" 
-  | "TOTAL_SCORE" 
-  | "SUBTOTAL_SCORE" 
-  | "MARK" 
-  | "COMMENT" 
+export type AreaType =
+  | "QUESTION_ANSWER"
+  | "STUDENT_NAME"
+  | "STUDENT_ID"
+  | "TOTAL_SCORE"
+  | "SUBTOTAL_SCORE"
+  | "MARK"
+  | "COMMENT"
   | "OTHER"
 
 /**
- * レイアウト領域の基本情報
+ * 採点領域の基本情報
  */
-export interface LayoutRegionData {
+export interface CropRegionData {
   /** データベースID（新規作成時は未定義） */
   id?: string
   /** プロジェクトID */
@@ -106,7 +106,7 @@ export interface TemplatePageProps {
 /**
  * データベース操作のタイプ
  */
-export type DatabaseOperation = 'create' | 'update'
+export type DatabaseOperation = "create" | "update"
 
 // ============================================================================
 // State Management Types
@@ -128,8 +128,8 @@ export interface InitialDataState {
   backgroundImageUrl: string | null
   /** 画像の寸法 */
   imageDimensions: ImageDimensions | null
-  /** レイアウト領域一覧 */
-  layoutRegions: CropRegionArea[]
+  /** 採点領域一覧 */
+  cropRegions: CropRegionArea[]
   /** レイアウトID */
   layoutId: string | undefined
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutRegionArea } from "@/types/common.types"
+import { CropRegionArea } from "@/types/common.types"
 import {
   MouseEvent as ReactMouseEvent,
   RefObject,
@@ -102,7 +102,7 @@ export function AreaRenderer({
     return null
   }
 
-  const getAreaTypeColor = (type: LayoutRegionArea["type"]) => {
+  const getAreaTypeColor = (type: CropRegionArea["type"]) => {
     switch (type) {
       case "QUESTION_ANSWER":
         return "rgba(0, 255, 0, 0.3)"

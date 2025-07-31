@@ -1,5 +1,6 @@
 "use client"
 
+import type { Student } from "@/components/projects/05-students/types"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -8,8 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-import type { Student } from "../utils/studentTypes"
 
 interface StudentStatsProps {
   filteredStudents: Student[]

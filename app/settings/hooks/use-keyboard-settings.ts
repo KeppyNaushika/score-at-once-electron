@@ -3,7 +3,7 @@ import {
   getKeyboardShortcuts,
   getModifierKeyLabel,
   saveKeyboardShortcuts,
-} from "@/components/projects/07-score-at-once/hooks/use-scoring-keyboard"
+} from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 

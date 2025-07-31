@@ -1,11 +1,11 @@
 /**
  * ZoomControls - Zoom functionality component for image canvas
- * 
+ *
  * Features:
  * - Visual zoom level display
  * - Help overlay with keyboard shortcuts
  * - Zoom reset functionality
- * 
+ *
  * @param zoom - Current zoom level (0.1 to 5.0)
  * @param showZoomHelp - Whether to show the help overlay
  * @param onToggleHelp - Callback to toggle help visibility
@@ -18,7 +18,11 @@ interface ZoomControlsProps {
   onToggleHelp: (show: boolean) => void
 }
 
-export function ZoomControls({ zoom, showZoomHelp, onToggleHelp }: ZoomControlsProps) {
+export function ZoomControls({
+  zoom,
+  showZoomHelp,
+  onToggleHelp,
+}: ZoomControlsProps) {
   return (
     <>
       {/* ズーム操作のヘルプ表示 */}

@@ -3,7 +3,7 @@
 import { ConvertedImage } from "@/lib/pdfConverter"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { MasterImage, MasterImagesState } from "../types"
+import { MasterImage, MasterImagesState } from "@/components/projects/01-upload/types"
 import {
   createUploadData,
   generateImageUrls,
@@ -184,13 +184,17 @@ export function useMasterImages(
           if (updatedProject && updatedProject.projectPages) {
             // Convert projectPages to master images format for compatibility
             const masterImages = updatedProject.projectPages
-              .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
-              .map(page => {
-                const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+              .filter((page) =>
+                page.pageImages?.some((img) => img.imageType === "MASTER"),
+              )
+              .map((page) => {
+                const masterImage = page.pageImages?.find(
+                  (img) => img.imageType === "MASTER",
+                )
                 return {
                   id: page.id,
                   projectId: page.projectId,
-                  imagePath: masterImage?.imagePath || '',
+                  imagePath: masterImage?.imagePath || "",
                   pageNumber: page.pageNumber,
                   createdAt: page.createdAt,
                   updatedAt: page.updatedAt,

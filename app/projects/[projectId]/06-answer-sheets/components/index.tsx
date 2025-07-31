@@ -4,8 +4,8 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import PageHeader from "@/components/layout/PageHeader"
-import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management"
-import { ConfirmChangesModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/confirm-changes-modal"
+import { AnswerSheetUpload } from "@/components/projects/06-answer-sheets/answer-sheet-management/components/AnswerSheetUpload"
+import { ConfirmChangesModal } from "@/components/projects/06-answer-sheets/answer-sheet-table/components/ConfirmChangesModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {

@@ -1,16 +1,15 @@
-import { useState } from "react"
+import type { Student } from "@/components/projects/05-students/types"
 import {
+  closestCenter,
   DragEndEvent,
   DragStartEvent,
+  KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
-  KeyboardSensor,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-
-import type { Student } from "../utils/studentTypes"
+import { useState } from "react"
 
 interface UseDragAndDropProps {
   students: Student[]

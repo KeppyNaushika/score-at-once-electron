@@ -2,7 +2,7 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import RegionDetailsTable from "@/components/projects/03-region-info/RegionDetailsTable"
+import RegionDetailsTable from "@/components/projects/03-region-info/components/RegionDetailsTable"
 import { Button } from "@/components/ui/button"
 import type { CropRegionWithDetails } from "@/types/electron"
 import { ProjectPage, User } from "@prisma/client"

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import type { MasterImageGalleryProps } from "../types"
+import type { MasterImageGalleryProps } from "@/components/projects/01-upload/types"
 import { MasterImageCard } from "./MasterImageCard"
 
 /**

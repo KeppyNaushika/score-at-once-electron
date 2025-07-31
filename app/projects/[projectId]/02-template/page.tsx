@@ -1,22 +1,19 @@
 "use client"
 
 import { usePageHelp } from "@/components/help/usePageHelp"
-import { LayoutRegionEditor } from "@/components/projects/02-template"
+import CropRegionEditor from "@/components/projects/02-template/components/CropRegionEditor"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 
 // Refactored imports
-import {
-  AreaType,
-  canProceedToNextStep,
-  PageNavigation,
-  RegionCoordinates,
-  TemplateHeader,
-  TemplateStatus,
-  useCropRegionSave,
-  useTemplateData,
-} from "@/components/projects/02-template"
-import { LayoutRegionArea } from "@/types/common.types"
+import { AreaType, RegionCoordinates } from "@/components/projects/02-template/types"
+import { canProceedToNextStep } from "@/components/projects/02-template/utils/template-actions"
+import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
+import { TemplateHeader } from "@/components/projects/02-template/components/TemplateHeader"
+import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
+import { useCropRegionSave } from "@/components/projects/02-template/hooks/useCropRegionSave"
+import { useTemplateData } from "@/components/projects/02-template/hooks/useTemplateData"
+import { CropRegionArea } from "@/types/common.types"
 
 export default function TemplateStepPage() {
   const params = useParams()
@@ -33,7 +30,7 @@ export default function TemplateStepPage() {
     isLoading,
     loadInitialData,
     handleMasterImageChange,
-    updateLayoutRegions,
+    updateCropRegions,
     updateLayoutId,
   } = useTemplateData(projectId)
 
@@ -52,17 +49,17 @@ export default function TemplateStepPage() {
     async (imageId: string) => {
       // 現在の領域を保存
       if (
-        initialData.layoutRegions.length > 0 &&
+        initialData.cropRegions.length > 0 &&
         initialData.selectedMasterImage
       ) {
-        await autoSaveRegions(initialData.layoutRegions)
+        await autoSaveRegions(initialData.cropRegions)
       }
 
       // 新しいページに変更
       await handleMasterImageChange(imageId)
     },
     [
-      initialData.layoutRegions,
+      initialData.cropRegions,
       initialData.selectedMasterImage,
       autoSaveRegions,
       handleMasterImageChange,
@@ -73,21 +70,21 @@ export default function TemplateStepPage() {
   const handleRegionsChange = useCallback(
     async (
       newRegions:
-        | LayoutRegionArea[]
-        | ((prev: LayoutRegionArea[]) => LayoutRegionArea[]),
+        | CropRegionArea[]
+        | ((prev: CropRegionArea[]) => CropRegionArea[]),
     ) => {
       const finalRegions =
         typeof newRegions === "function"
-          ? newRegions(initialData.layoutRegions)
+          ? newRegions(initialData.cropRegions)
           : newRegions
 
       // React状態を即座に更新
-      updateLayoutRegions(finalRegions)
+      updateCropRegions(finalRegions)
 
       // 互換性のためのautoSaveRegions
       await autoSaveRegions(finalRegions)
     },
-    [initialData.layoutRegions, updateLayoutRegions, autoSaveRegions],
+    [initialData.cropRegions, updateCropRegions, autoSaveRegions],
   )
 
   // 新規領域作成ハンドラー
@@ -102,19 +99,19 @@ export default function TemplateStepPage() {
         type,
         coords,
         initialData.selectedMasterImage.id,
-        initialData.layoutRegions,
+        initialData.cropRegions,
       )
 
       if (newRegion) {
-        updateLayoutRegions([...initialData.layoutRegions, newRegion])
+        updateCropRegions([...initialData.cropRegions, newRegion])
         updateLayoutId("saved")
       }
     },
     [
       initialData.selectedMasterImage,
-      initialData.layoutRegions,
+      initialData.cropRegions,
       createRegion,
-      updateLayoutRegions,
+      updateCropRegions,
       updateLayoutId,
     ],
   )
@@ -122,24 +119,24 @@ export default function TemplateStepPage() {
   // 領域更新ハンドラー
   const handleUpdateRegion = useCallback(
     async (index: number, coords: RegionCoordinates) => {
-      const regionToUpdate = initialData.layoutRegions[index]
+      const regionToUpdate = initialData.cropRegions[index]
       if (!regionToUpdate) return
 
       // React状態を即座に更新
-      const updatedRegions = [...initialData.layoutRegions]
+      const updatedRegions = [...initialData.cropRegions]
       updatedRegions[index] = { ...regionToUpdate, ...coords }
-      updateLayoutRegions(updatedRegions)
+      updateCropRegions(updatedRegions)
 
       // データベースに保存
       if (regionToUpdate.id) {
         const updatedRegion = await updateRegion(regionToUpdate, coords)
         if (!updatedRegion) {
           // エラー時は元の状態に戻す
-          updateLayoutRegions(initialData.layoutRegions)
+          updateCropRegions(initialData.cropRegions)
         }
       }
     },
-    [initialData.layoutRegions, updateRegion, updateLayoutRegions],
+    [initialData.cropRegions, updateRegion, updateCropRegions],
   )
 
   // 次のステップへの遷移
@@ -160,7 +157,7 @@ export default function TemplateStepPage() {
       <TemplateHeader
         helpButton={helpButton}
         selectedMasterImage={initialData.selectedMasterImage}
-        layoutRegions={initialData.layoutRegions}
+        cropRegions={initialData.cropRegions}
         onNextStep={goToNextStep}
       />
 
@@ -177,8 +174,8 @@ export default function TemplateStepPage() {
 
         {/* レイアウトエディター */}
         <div className="min-h-0 flex-1">
-          <LayoutRegionEditor
-            areas={initialData.layoutRegions}
+          <CropRegionEditor
+            areas={initialData.cropRegions}
             setAreas={handleRegionsChange}
             onCreateRegion={handleCreateRegion}
             onUpdateRegion={handleUpdateRegion}

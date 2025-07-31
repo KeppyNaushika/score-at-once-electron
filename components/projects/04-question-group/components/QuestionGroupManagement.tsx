@@ -1,0 +1,256 @@
+"use client"
+
+import { QuestionGroupItemList } from "@/components/projects/04-question-group/components/QuestionGroupItemList"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { SubtotalGroupWithItems } from "@/types/electron"
+import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
+import { useState } from "react"
+
+interface QuestionGroupManagementProps {
+  subtotalGroups: SubtotalGroupWithItems[]
+  selectedSubtotalGroupId: string | null
+  setSelectedSubtotalGroupId: (id: string | null) => void
+  onCreateSubtotalGroup: (name: string) => Promise<boolean>
+  onUpdateSubtotalGroup: (id: string, name: string) => Promise<boolean>
+  onDeleteSubtotalGroup: (id: string) => Promise<boolean>
+  onCreateSubtotal: (subtotalGroupId: string, name: string) => Promise<boolean>
+  onUpdateSubtotal: (id: string, name: string) => Promise<boolean>
+  onDeleteSubtotal: (id: string) => Promise<boolean>
+  onUpdateSubtotalOrders: (
+    orders: { id: string; order: number }[],
+  ) => Promise<boolean>
+}
+
+export function QuestionGroupManagement({
+  subtotalGroups,
+  selectedSubtotalGroupId,
+  setSelectedSubtotalGroupId,
+  onCreateSubtotalGroup,
+  onUpdateSubtotalGroup,
+  onDeleteSubtotalGroup,
+  onCreateSubtotal,
+  onUpdateSubtotal,
+  onDeleteSubtotal,
+  onUpdateSubtotalOrders,
+}: QuestionGroupManagementProps) {
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
+  const [editingGroup, setEditingGroup] =
+    useState<SubtotalGroupWithItems | null>(null)
+  const [editGroupName, setEditGroupName] = useState("")
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return
+
+    const success = await onCreateSubtotalGroup(newGroupName.trim())
+    if (success) {
+      setNewGroupName("")
+      setShowCreateDialog(false)
+    }
+  }
+
+  const handleEditGroup = async () => {
+    if (!editingGroup || !editGroupName.trim()) return
+
+    const success = await onUpdateSubtotalGroup(
+      editingGroup.id,
+      editGroupName.trim(),
+    )
+    if (success) {
+      setEditingGroup(null)
+      setEditGroupName("")
+      setShowEditDialog(false)
+    }
+  }
+
+  const handleDeleteGroup = async (group: SubtotalGroupWithItems) => {
+    if (
+      window.confirm(
+        `小計点「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`,
+      )
+    ) {
+      await onDeleteSubtotalGroup(group.id)
+    }
+  }
+
+  const selectedGroup = subtotalGroups.find(
+    (g) => g.id === selectedSubtotalGroupId,
+  )
+
+  return (
+    <div className="space-y-6">
+      {/* 小計点一覧 */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">小計点</h3>
+          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                新しい小計点
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>新しい小計点を作成</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="groupName">小計点名</Label>
+                  <Input
+                    id="groupName"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    placeholder="例: 大問1, 読解, 計算問題"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCreateDialog(false)}
+                  >
+                    キャンセル
+                  </Button>
+                  <Button onClick={handleCreateGroup}>作成</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {subtotalGroups.length === 0 ? (
+          <div className="text-muted-foreground py-8 text-center">
+            <List className="mx-auto mb-4 h-12 w-12 opacity-50" />
+            <p>小計点がありません</p>
+            <p className="text-sm">
+              「新しい小計点」ボタンから作成してください
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {subtotalGroups.map((group) => (
+              <Card
+                key={group.id}
+                className={`hover:bg-muted/50 cursor-pointer transition-colors ${
+                  selectedSubtotalGroupId === group.id
+                    ? "ring-primary ring-2"
+                    : ""
+                }`}
+                onClick={() => setSelectedSubtotalGroupId(group.id)}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">{group.name}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {group.subtotals.length}項目
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingGroup(group)
+                          setEditGroupName(group.name)
+                          setShowEditDialog(true)
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteGroup(group)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1">
+                    {group.subtotals.slice(0, 3).map((subtotal) => (
+                      <div
+                        key={subtotal.id}
+                        className="text-muted-foreground text-sm"
+                      >
+                        • {subtotal.name}
+                      </div>
+                    ))}
+                    {group.subtotals.length > 3 && (
+                      <div className="text-muted-foreground text-sm">
+                        ... 他{group.subtotals.length - 3}項目
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 編集ダイアログ */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>小計点を編集</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="editGroupName">小計点名</Label>
+              <Input
+                id="editGroupName"
+                value={editGroupName}
+                onChange={(e) => setEditGroupName(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+              >
+                キャンセル
+              </Button>
+              <Button onClick={handleEditGroup}>更新</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 選択中の小計点の項目管理 */}
+      {selectedGroup && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            <h3 className="text-lg font-semibold">
+              「{selectedGroup.name}」の項目管理
+            </h3>
+          </div>
+          <QuestionGroupItemList
+            subtotalGroup={selectedGroup}
+            onCreateItem={onCreateSubtotal}
+            onUpdateItem={onUpdateSubtotal}
+            onDeleteItem={onDeleteSubtotal}
+            onUpdateItemOrders={onUpdateSubtotalOrders}
+          />
+        </div>
+      )}
+    </div>
+  )
+}

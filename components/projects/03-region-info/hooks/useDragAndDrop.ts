@@ -1,5 +1,5 @@
-import { useState } from "react"
 import type { LayoutRegionWithDetails } from "@/types/electron"
+import { useState } from "react"
 
 type DragState = {
   draggedIndex: number | null
@@ -50,21 +50,21 @@ export const useDragAndDrop = ({
       newRegions.splice(draggedIndex, 1)
       newRegions.splice(dropIndex, 0, draggedItem)
       setRegions(newRegions)
-      
+
       // orderIndexを更新（データベースに反映）
       try {
         const updates = newRegions.map((region, index) => ({
           id: region.id,
           orderIndex: index, // 0から始まる連番
         }))
-        
+
         if ((window as any).electronAPI?.updateLayoutRegionOrders) {
           await (window as any).electronAPI.updateLayoutRegionOrders(updates)
         }
       } catch (error) {
         console.error("Failed to update region order:", error)
       }
-      
+
       if (selectedRowIndex === draggedIndex) {
         setSelectedRowIndex(dropIndex)
       } else if (selectedRowIndex !== null) {

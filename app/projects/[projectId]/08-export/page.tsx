@@ -6,11 +6,11 @@ import PageHeader from "@/components/layout/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Download } from "lucide-react"
-import { ExportOptionsCard } from "@/components/projects/08-export/ExportOptionsCard"
-import ExportProgressModal from "@/components/projects/08-export/ExportProgressModal"
-import ExportWarningModal from "@/components/projects/08-export/ExportWarningModal"
+import { ExportOptionsCard } from "@/components/projects/08-export/components/ExportOptionsCard"
+import ExportProgressModal from "@/components/projects/08-export/components/ExportProgressModal"
+import ExportWarningModal from "@/components/projects/08-export/components/ExportWarningModal"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
-import { StudentSelectionCard } from "@/components/projects/08-export/StudentSelectionCard"
+import { StudentSelectionCard } from "@/components/projects/08-export/components/StudentSelectionCard"
 import { useState } from "react"
 
 export default function ExportPage() {
@@ -179,88 +179,88 @@ export default function ExportPage() {
       />
 
       <div className="container mx-auto space-y-6 px-4 py-6">
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <StudentSelectionCard
-              students={students} // 受験生徒順（customOrder）でソート済み
-              availableClasses={availableClasses}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              selectedClasses={selectedClasses}
-              setSelectedClasses={setSelectedClasses}
-              selectedStatuses={selectedStatuses}
-              setSelectedStatuses={setSelectedStatuses}
-              selectedStudents={selectedStudents}
-              setSelectedStudents={setSelectedStudents}
-            />
-
-            <ExportOptionsCard
-              exportOptions={exportOptions}
-              setExportOptions={setExportOptions}
-              scoringMarkConfig={scoringMarkConfig}
-              setScoringMarkConfig={setScoringMarkConfig}
-            />
-          </div>
-
-          {/* 出力実行 */}
-          <Card>
-            <CardHeader>
-              <CardTitle>出力実行</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-muted-foreground text-sm">
-                    {selectedStudents.size}人の生徒を選択しています
-                  </p>
-                </div>
-                <div className="flex justify-center gap-4">
-                  <Button
-                    onClick={handleExportScoredAnswers}
-                    disabled={selectedStudents.size === 0 || isExporting}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    採点済み答案PDF
-                  </Button>
-                  <Button
-                    onClick={handleExportGradingData}
-                    disabled={selectedStudents.size === 0 || isExporting}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    採点データExcel
-                  </Button>
-                  <Button
-                    onClick={handleExportIndividualReports}
-                    disabled={true}
-                    variant="outline"
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    個人成績表PDF
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* プログレスモーダル */}
-          <ExportProgressModal
-            isOpen={showProgressModal}
-            onClose={() => setShowProgressModal(false)}
-            progress={exportProgress}
-            status={exportStatus}
-            currentStep={currentStep}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <StudentSelectionCard
+            students={students} // 受験生徒順（customOrder）でソート済み
+            availableClasses={availableClasses}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            selectedClasses={selectedClasses}
+            setSelectedClasses={setSelectedClasses}
+            selectedStatuses={selectedStatuses}
+            setSelectedStatuses={setSelectedStatuses}
+            selectedStudents={selectedStudents}
+            setSelectedStudents={setSelectedStudents}
           />
 
-          {/* 警告モーダル */}
-          <ExportWarningModal
-            isOpen={showWarningModal}
-            onClose={() => setShowWarningModal(false)}
-            onContinue={handleContinueExport}
-            warnings={warningData}
+          <ExportOptionsCard
+            exportOptions={exportOptions}
+            setExportOptions={setExportOptions}
+            scoringMarkConfig={scoringMarkConfig}
+            setScoringMarkConfig={setScoringMarkConfig}
           />
         </div>
+
+        {/* 出力実行 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>出力実行</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-muted-foreground text-sm">
+                  {selectedStudents.size}人の生徒を選択しています
+                </p>
+              </div>
+              <div className="flex justify-center gap-4">
+                <Button
+                  onClick={handleExportScoredAnswers}
+                  disabled={selectedStudents.size === 0 || isExporting}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  採点済み答案PDF
+                </Button>
+                <Button
+                  onClick={handleExportGradingData}
+                  disabled={selectedStudents.size === 0 || isExporting}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  採点データExcel
+                </Button>
+                <Button
+                  onClick={handleExportIndividualReports}
+                  disabled={true}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  個人成績表PDF
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* プログレスモーダル */}
+        <ExportProgressModal
+          isOpen={showProgressModal}
+          onClose={() => setShowProgressModal(false)}
+          progress={exportProgress}
+          status={exportStatus}
+          currentStep={currentStep}
+        />
+
+        {/* 警告モーダル */}
+        <ExportWarningModal
+          isOpen={showWarningModal}
+          onClose={() => setShowWarningModal(false)}
+          onContinue={handleContinueExport}
+          warnings={warningData}
+        />
       </div>
+    </div>
   )
 }

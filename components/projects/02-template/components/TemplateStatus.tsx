@@ -11,7 +11,10 @@ interface TemplateStatusProps {
  * テンプレートページの状態表示コンポーネント
  * 読み込み中とエラー状態を表示
  */
-export function TemplateStatus({ isLoading, hasProjectId }: TemplateStatusProps) {
+export function TemplateStatus({
+  isLoading,
+  hasProjectId,
+}: TemplateStatusProps) {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">

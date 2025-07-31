@@ -1,13 +1,13 @@
-import { convertPdfToImages, ConvertedImage } from "@/lib/pdfConverter"
-import { PasswordDialogState } from "../types"
+import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
+import { PasswordDialogState } from "@/components/projects/01-upload/types"
 
 /**
  * グローバル変数のキー定義
  */
 const GLOBAL_KEYS = {
-  RESOLVE: '__masterImagePasswordResolve',
-  REJECT: '__masterImagePasswordReject',
-  FILE: '__masterImagePasswordFile',
+  RESOLVE: "__masterImagePasswordResolve",
+  REJECT: "__masterImagePasswordReject",
+  FILE: "__masterImagePasswordFile",
 } as const
 
 /**
@@ -29,7 +29,7 @@ export const clearPasswordGlobals = (): void => {
 export const setPasswordGlobals = (
   resolve: (value: ConvertedImage[]) => void,
   reject: (reason?: any) => void,
-  file: File
+  file: File,
 ): void => {
   const win = window as any
   win[GLOBAL_KEYS.RESOLVE] = resolve
@@ -63,14 +63,17 @@ export const getPasswordGlobals = (): {
  */
 export const convertPdfWithPassword = async (
   file: File,
-  password?: string
+  password?: string,
 ): Promise<ConvertedImage[]> => {
   try {
     return await convertPdfToImages(file, password)
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    
-    if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
+
+    if (
+      errorMessage === "password-required" ||
+      errorMessage === "invalid-password"
+    ) {
       // パスワードが必要な場合、専用のエラーを投げる
       throw new Error(errorMessage)
     } else {
@@ -90,7 +93,7 @@ export const convertPdfWithPassword = async (
 export const createPasswordDialogState = (
   fileName: string,
   isInvalidPassword: boolean = false,
-  currentAttempts: number = 0
+  currentAttempts: number = 0,
 ): PasswordDialogState => {
   return {
     isOpen: true,
@@ -121,7 +124,7 @@ export const createClosedPasswordDialogState = (): PasswordDialogState => {
  * @returns {PasswordDialogState} ローディング状態
  */
 export const createPasswordLoadingState = (
-  currentState: PasswordDialogState
+  currentState: PasswordDialogState,
 ): PasswordDialogState => {
   return {
     ...currentState,
@@ -136,7 +139,7 @@ export const createPasswordLoadingState = (
  * @returns {PasswordDialogState} エラー状態
  */
 export const createPasswordErrorState = (
-  currentState: PasswordDialogState
+  currentState: PasswordDialogState,
 ): PasswordDialogState => {
   return {
     ...currentState,

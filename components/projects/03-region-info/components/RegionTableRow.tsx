@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { GripVertical, Trash2 } from "lucide-react"
-import type { CropRegionWithDetails } from "@/types/electron"
 import {
   CROP_REGION_AREA_TYPES,
   CropRegionAreaType,
 } from "@/types/common.types"
+import type { CropRegionWithDetails } from "@/types/electron"
+import { GripVertical, Trash2 } from "lucide-react"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {
@@ -47,7 +47,11 @@ type RegionTableRowProps = {
   isDraggedOver: boolean
   disabled: boolean
   onRegionChange: (globalIndex: number, field: string, value: any) => void
-  onKeyDown: (e: React.KeyboardEvent, rowIndex: number, fieldName: string) => void
+  onKeyDown: (
+    e: React.KeyboardEvent,
+    rowIndex: number,
+    fieldName: string,
+  ) => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
   onDelete: (globalIndex: number) => void
@@ -80,9 +84,9 @@ export const RegionTableRow = ({
 }: RegionTableRowProps) => {
   const regionType = region.type
 
-  const isValidType = (type: string): type is CropRegionAreaType => 
+  const isValidType = (type: string): type is CropRegionAreaType =>
     CROP_REGION_AREA_TYPES.includes(type as CropRegionAreaType)
-  
+
   const icon = isValidType(regionType)
     ? typeIcons[regionType]
     : typeIcons["OTHER"]
@@ -111,35 +115,29 @@ export const RegionTableRow = ({
       <td className="border-border border px-2 py-1">
         <div className="flex items-center space-x-2">
           <span className="text-lg">{icon}</span>
-          <span className="text-sm font-medium">
-            {globalIndex + 1}
-          </span>
+          <span className="text-sm font-medium">{globalIndex + 1}</span>
         </div>
       </td>
       <td className="border-border border px-2 py-1 text-center">
-        <div className="text-sm text-muted-foreground">
-          {region.projectPage ? region.projectPage.pageNumber : '?'}
+        <div className="text-muted-foreground text-sm">
+          {region.projectPage ? region.projectPage.pageNumber : "?"}
         </div>
       </td>
       <td className="border-border border px-2 py-1">
         <Select
           value={region.type}
-          onValueChange={(value) =>
-            onRegionChange(globalIndex, "type", value)
-          }
+          onValueChange={(value) => onRegionChange(globalIndex, "type", value)}
           disabled={disabled}
         >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {Object.values(CROP_REGION_AREA_TYPES).map(
-              (type) => (
-                <SelectItem key={type} value={type}>
-                  {areaTypeToJapanese[type]}
-                </SelectItem>
-              ),
-            )}
+            {Object.values(CROP_REGION_AREA_TYPES).map((type) => (
+              <SelectItem key={type} value={type}>
+                {areaTypeToJapanese[type]}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </td>
@@ -148,16 +146,8 @@ export const RegionTableRow = ({
           data-row={globalIndex}
           data-field="label"
           value={region.label || ""}
-          onChange={(e) =>
-            onRegionChange(
-              globalIndex,
-              "label",
-              e.target.value,
-            )
-          }
-          onKeyDown={(e) =>
-            onKeyDown(e, globalIndex, "label")
-          }
+          onChange={(e) => onRegionChange(globalIndex, "label", e.target.value)}
+          onKeyDown={(e) => onKeyDown(e, globalIndex, "label")}
           onCompositionStart={onCompositionStart}
           onCompositionEnd={onCompositionEnd}
           disabled={disabled}
@@ -173,15 +163,9 @@ export const RegionTableRow = ({
             type="number"
             value={region.points ?? ""}
             onChange={(e) =>
-              onRegionChange(
-                globalIndex,
-                "points",
-                e.target.value,
-              )
+              onRegionChange(globalIndex, "points", e.target.value)
             }
-            onKeyDown={(e) =>
-              onKeyDown(e, globalIndex, "points")
-            }
+            onKeyDown={(e) => onKeyDown(e, globalIndex, "points")}
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
             disabled={disabled}

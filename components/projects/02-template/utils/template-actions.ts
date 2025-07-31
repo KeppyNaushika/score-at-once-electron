@@ -1,22 +1,22 @@
-import { toast } from "sonner"
-import { User } from "@prisma/client"
 import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { User } from "@prisma/client"
+import { toast } from "sonner"
 
 /**
  * テンプレート保存処理
  * 現在の全領域をデータベースに保存する
- * 
+ *
  * @param projectId - プロジェクトID
  * @param currentUser - 現在のユーザー
  * @param selectedMasterImageId - 選択中のマスター画像ID
  * @param layoutRegions - 保存する領域データ配列
- * @returns Promise<{ success: boolean, savedRegions?: LayoutRegionData[] }>
+ * @returns Promise<{ success: boolean, savedRegions?: CropRegionData[] }>
  */
 export async function saveTemplate(
   projectId: string,
   currentUser: User,
   selectedMasterImageId: string,
-  layoutRegions: CropRegionArea[]
+  layoutRegions: CropRegionArea[],
 ): Promise<{ success: boolean; savedRegions?: CropRegionArea[] }> {
   if (!projectId || !currentUser || !selectedMasterImageId) {
     toast.error("プロジェクトID、ユーザー情報、基準画像は必須です。")
@@ -28,7 +28,7 @@ export async function saveTemplate(
     const savePromises = layoutRegions.map(async (area) => {
       if (!area.projectPageId) {
         throw new Error(
-          `Crop region ${area.label || "Unnamed"} is missing projectPageId.`
+          `Crop region ${area.label || "Unnamed"} is missing projectPageId.`,
         )
       }
 
@@ -41,7 +41,8 @@ export async function saveTemplate(
         width: area.width,
         height: area.height,
         label: area.label,
-        points: typeof area.points === 'string' ? parseInt(area.points) : area.points,
+        points:
+          typeof area.points === "string" ? parseInt(area.points) : area.points,
       }
 
       if (area.id) {
@@ -72,7 +73,6 @@ export async function saveTemplate(
 
     toast.success(`採点枠を保存しました。`)
     return { success: true, savedRegions: formattedRegions }
-
   } catch (error) {
     console.error("Failed to save layout:", error)
     toast.error("採点枠の保存に失敗しました。")
@@ -83,16 +83,16 @@ export async function saveTemplate(
 /**
  * 自動レイアウト検出処理
  * 将来実装予定の機能（現在は開発中メッセージを表示）
- * 
+ *
  * @param selectedMasterImage - 選択中のマスター画像
- * @returns Promise<{ success: boolean, detectedRegions?: LayoutRegionData[] }>
+ * @returns Promise<{ success: boolean, detectedRegions?: CropRegionData[] }>
  */
 export async function detectLayoutRegions(
-  selectedMasterImage: { path?: string } | null
+  selectedMasterImage: { path?: string } | null,
 ): Promise<{ success: boolean; detectedRegions?: CropRegionArea[] }> {
   if (!selectedMasterImage || !selectedMasterImage.path) {
     toast.error(
-      "模範解答画像が選択されていないか、パスが無効です。自動検出を実行できません。"
+      "模範解答画像が選択されていないか、パスが無効です。自動検出を実行できません。",
     )
     return { success: false }
   }
@@ -104,7 +104,7 @@ export async function detectLayoutRegions(
   } catch (error) {
     console.error("Failed to detect layout regions:", error)
     toast.error(
-      `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`
+      `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
     )
     return { success: false }
   }
@@ -113,7 +113,7 @@ export async function detectLayoutRegions(
 /**
  * 次のステップへの遷移チェック
  * レイアウトが保存されているかを確認
- * 
+ *
  * @param layoutId - レイアウトの保存状態ID
  * @returns boolean - 次のステップに進めるかどうか
  */
@@ -128,24 +128,29 @@ export function canProceedToNextStep(layoutId: string | undefined): boolean {
 /**
  * マスター画像の順序管理ユーティリティ
  * 現在選択中の画像の前後の画像を取得
- * 
+ *
  * @param masterImages - マスター画像の配列
  * @param selectedImageId - 現在選択中の画像ID
  * @returns 前後の画像の情報
  */
 export function getAdjacentImages(
   masterImages: Array<{ id: string; pageNumber: number }>,
-  selectedImageId: string | undefined
+  selectedImageId: string | undefined,
 ) {
   if (!selectedImageId) {
     return { previousImage: null, nextImage: null, currentIndex: -1 }
   }
 
-  const currentIndex = masterImages.findIndex(img => img.id === selectedImageId)
-  
+  const currentIndex = masterImages.findIndex(
+    (img) => img.id === selectedImageId,
+  )
+
   return {
     previousImage: currentIndex > 0 ? masterImages[currentIndex - 1] : null,
-    nextImage: currentIndex < masterImages.length - 1 ? masterImages[currentIndex + 1] : null,
+    nextImage:
+      currentIndex < masterImages.length - 1
+        ? masterImages[currentIndex + 1]
+        : null,
     currentIndex,
   }
 }
@@ -153,13 +158,13 @@ export function getAdjacentImages(
 /**
  * 領域データのバリデーション
  * 領域データが有効かどうかをチェック
- * 
+ *
  * @param region - チェックする領域データ
  * @returns { isValid: boolean, errors: string[] }
  */
-export function validateRegionData(region: CropRegionArea): { 
-  isValid: boolean; 
-  errors: string[] 
+export function validateRegionData(region: CropRegionArea): {
+  isValid: boolean
+  errors: string[]
 } {
   const errors: string[] = []
 
@@ -167,11 +172,11 @@ export function validateRegionData(region: CropRegionArea): {
   if (!region.type) {
     errors.push("領域タイプが設定されていません")
   }
-  
+
   if (!region.label) {
     errors.push("ラベルが設定されていません")
   }
-  
+
   if (!region.projectPageId) {
     errors.push("プロジェクトページIDが設定されていません")
   }
@@ -180,15 +185,15 @@ export function validateRegionData(region: CropRegionArea): {
   if (region.x < 0 || region.x > 1) {
     errors.push("X座標が有効範囲外です (0-1)")
   }
-  
+
   if (region.y < 0 || region.y > 1) {
     errors.push("Y座標が有効範囲外です (0-1)")
   }
-  
+
   if (region.width <= 0 || region.width > 1) {
     errors.push("幅が有効範囲外です (0-1)")
   }
-  
+
   if (region.height <= 0 || region.height > 1) {
     errors.push("高さが有効範囲外です (0-1)")
   }
@@ -197,7 +202,7 @@ export function validateRegionData(region: CropRegionArea): {
   if (region.x + region.width > 1) {
     errors.push("領域が画像の右端を超えています")
   }
-  
+
   if (region.y + region.height > 1) {
     errors.push("領域が画像の下端を超えています")
   }

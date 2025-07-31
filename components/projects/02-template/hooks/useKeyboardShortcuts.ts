@@ -1,10 +1,10 @@
 /**
  * Custom hook for handling keyboard shortcuts in the image canvas
- * 
+ *
  * Features:
  * - Delete/Backspace keys for area deletion
  * - Integration with area selection
- * 
+ *
  * @param selectedAreaIndex - Index of currently selected area
  * @param onDeleteArea - Callback to delete an area
  * @returns Void (sets up event listeners)
@@ -14,7 +14,7 @@ import { useEffect } from "react"
 
 export function useKeyboardShortcuts(
   selectedAreaIndex: number | null,
-  onDeleteArea: (index: number) => void
+  onDeleteArea: (index: number) => void,
 ) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

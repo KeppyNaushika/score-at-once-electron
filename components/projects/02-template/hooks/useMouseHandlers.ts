@@ -3,7 +3,7 @@
  */
 
 import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
-import { DragState, ResizeState, MoveState } from "../types"
+import { DragState, MoveState, ResizeState } from "@/components/projects/02-template/types"
 
 /**
  * Custom hook for handling mouse events on the canvas

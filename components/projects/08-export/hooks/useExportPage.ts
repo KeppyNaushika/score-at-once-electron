@@ -7,7 +7,7 @@ import {
 import {
   ScoringMarkConfig,
   defaultScoringMarkConfig,
-} from "@/components/projects/08-export/ScoringMarkSettings"
+} from "@/components/projects/08-export/components/ScoringMarkSettings"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 

@@ -2,7 +2,7 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { MasterImageManager } from "@/components/projects/01-upload"
+import { MasterImageManager } from "@/components/projects/01-upload/components/MasterImageManager"
 import { Button } from "@/components/ui/button"
 import type { MasterImageData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"

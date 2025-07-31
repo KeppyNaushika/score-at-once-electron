@@ -1,8 +1,8 @@
 "use client"
 
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import type { MasterImageManagerProps } from "../types"
 import { useMasterImages } from "../hooks/useMasterImages"
+import type { MasterImageManagerProps } from "@/components/projects/01-upload/types"
 import { FileUploadDropzone } from "./FileUploadDropzone"
 import { MasterImageGallery } from "./MasterImageGallery"
 

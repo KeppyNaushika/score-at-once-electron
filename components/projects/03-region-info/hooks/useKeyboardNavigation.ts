@@ -1,11 +1,13 @@
-import { useRef } from "react"
 import type { LayoutRegionWithDetails } from "@/types/electron"
+import { useRef } from "react"
 
 type UseKeyboardNavigationProps = {
   filteredRegions: LayoutRegionWithDetails[]
 }
 
-export const useKeyboardNavigation = ({ filteredRegions }: UseKeyboardNavigationProps) => {
+export const useKeyboardNavigation = ({
+  filteredRegions,
+}: UseKeyboardNavigationProps) => {
   const isComposingRef = useRef(false)
 
   const handleCompositionStart = () => {
@@ -118,9 +120,9 @@ export const useKeyboardNavigation = ({ filteredRegions }: UseKeyboardNavigation
     }
   }
 
-  return { 
+  return {
     handleKeyDown,
     handleCompositionStart,
-    handleCompositionEnd
+    handleCompositionEnd,
   }
 }

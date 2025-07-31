@@ -48,7 +48,7 @@ export function PageNavigation({
   }
 
   const currentIndex = masterImages.findIndex(
-    (img) => img.id === selectedMasterImage?.id
+    (img) => img.id === selectedMasterImage?.id,
   )
 
   /**
@@ -107,9 +107,7 @@ export function PageNavigation({
           size="sm"
           onClick={goToNextPage}
           disabled={
-            isLoading || 
-            isSaving || 
-            currentIndex === masterImages.length - 1
+            isLoading || isSaving || currentIndex === masterImages.length - 1
           }
           aria-label="次のページ"
         >

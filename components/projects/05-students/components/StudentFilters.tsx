@@ -1,5 +1,9 @@
 "use client"
 
+import type {
+  ClassGroup,
+  StudentStatus,
+} from "@/components/projects/05-students/types"
 import {
   Card,
   CardContent,
@@ -17,8 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Search } from "lucide-react"
-
-import type { ClassGroup, StudentStatus } from "../utils/studentTypes"
 
 interface StudentFiltersProps {
   classes: ClassGroup[]

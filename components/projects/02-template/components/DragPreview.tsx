@@ -31,28 +31,35 @@ export function DragPreview({
 
     // Convert relative coordinates to display coordinates
     if (!imageDimensions || !containerRef.current) return null
-    
+
     // 標準スクロール方式：ズームのみ考慮した座標計算
     const scaledImageWidth = imageDimensions.width * zoom
     const scaledImageHeight = imageDimensions.height * zoom
-    
+
     return {
       left: x * scaledImageWidth,
       top: y * scaledImageHeight,
       width: width * scaledImageWidth,
       height: height * scaledImageHeight,
     }
-  }, [dragging, dragStartCoords, dragCurrentCoords, imageDimensions, containerRef, zoom])
+  }, [
+    dragging,
+    dragStartCoords,
+    dragCurrentCoords,
+    imageDimensions,
+    containerRef,
+    zoom,
+  ])
 
   const displayCoords = calculateDisplayCoords()
-  
+
   if (!displayCoords) {
     return null
   }
 
   return (
     <div
-      className="absolute border-2 border-red-500 border-dashed bg-red-200 bg-opacity-30 pointer-events-none"
+      className="bg-opacity-30 pointer-events-none absolute border-2 border-dashed border-red-500 bg-red-200"
       style={{
         left: `${displayCoords.left}px`,
         top: `${displayCoords.top}px`,

@@ -1,5 +1,7 @@
+import { CropRegionArea } from "@/types/common.types"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
+import { AreaType, ImageDimensions, InitialDataState } from "@/components/projects/02-template/types"
 type MasterImage = {
   id: string
   projectId: string
@@ -8,16 +10,10 @@ type MasterImage = {
   createdAt: Date
   updatedAt: Date
 }
-import { 
-  AreaType, 
-  InitialDataState, 
-  ImageDimensions 
-} from "../types"
-import { CropRegionArea } from "@/types/common.types"
 
 /**
  * テンプレートページの初期データ読み込みと状態管理を担当するカスタムフック
- * 
+ *
  * @param projectId - プロジェクトID
  * @returns 初期データ読み込み関連の状態と関数
  */
@@ -30,7 +26,7 @@ export function useTemplateData(projectId: string | undefined) {
     selectedMasterImage: null,
     backgroundImageUrl: null,
     imageDimensions: null,
-    layoutRegions: [],
+    cropRegions: [],
     layoutId: undefined,
   })
 
@@ -38,25 +34,28 @@ export function useTemplateData(projectId: string | undefined) {
 
   /**
    * 画像の寸法を取得する補助関数
-   * 
+   *
    * @param imageUrl - 画像のURL
    * @returns Promise<ImageDimensions | null> 画像の寸法情報
    */
-  const loadImageDimensions = useCallback((imageUrl: string): Promise<ImageDimensions | null> => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => {
-        resolve({
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-        })
-      }
-      img.onerror = () => {
-        resolve(null)
-      }
-      img.src = imageUrl
-    })
-  }, [])
+  const loadImageDimensions = useCallback(
+    (imageUrl: string): Promise<ImageDimensions | null> => {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          resolve({
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+          })
+        }
+        img.onerror = () => {
+          resolve(null)
+        }
+        img.src = imageUrl
+      })
+    },
+    [],
+  )
 
   /**
    * 初期データの読み込み処理
@@ -73,13 +72,14 @@ export function useTemplateData(projectId: string | undefined) {
     try {
       // ユーザー情報を取得
       const user = await window.electronAPI.getCurrentUser()
-      
+
       // プロジェクト情報を取得
-      const fetchedProject = await window.electronAPI.fetchProjectById(projectId)
-      
+      const fetchedProject =
+        await window.electronAPI.fetchProjectById(projectId)
+
       if (!fetchedProject) {
         toast.error("プロジェクトが見つかりません。")
-        setInitialData(prev => ({
+        setInitialData((prev) => ({
           ...prev,
           project: null,
           currentUser: user,
@@ -87,7 +87,7 @@ export function useTemplateData(projectId: string | undefined) {
           selectedMasterImage: null,
           backgroundImageUrl: null,
           imageDimensions: null,
-          layoutRegions: [],
+          cropRegions: [],
         }))
         return
       }
@@ -98,28 +98,37 @@ export function useTemplateData(projectId: string | undefined) {
       let backgroundUrl: string | null = null
       let dimensions: ImageDimensions | null = null
 
-      if (fetchedProject.projectPages && fetchedProject.projectPages.length > 0) {
+      if (
+        fetchedProject.projectPages &&
+        fetchedProject.projectPages.length > 0
+      ) {
         // projectPagesからmaster imagesを抽出してソート
         const masterImages = fetchedProject.projectPages
-          .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
-          .map(page => {
-            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+          .filter((page) =>
+            page.pageImages?.some((img) => img.imageType === "MASTER"),
+          )
+          .map((page) => {
+            const masterImage = page.pageImages?.find(
+              (img) => img.imageType === "MASTER",
+            )
             return {
               id: page.id,
               projectId: page.projectId,
-              imagePath: masterImage?.imagePath || '',
+              imagePath: masterImage?.imagePath || "",
               pageNumber: page.pageNumber,
               createdAt: page.createdAt,
               updatedAt: page.updatedAt,
             }
           })
           .sort((a, b) => a.pageNumber - b.pageNumber)
-        
+
         processedMasterImages = masterImages
         selectedImage = processedMasterImages[0]
-        
+
         // 最初の画像のURLと寸法を取得
-        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(selectedImage.imagePath)
+        backgroundUrl = await window.electronAPI.resolveFileProtocolPath(
+          selectedImage.imagePath,
+        )
         dimensions = await loadImageDimensions(backgroundUrl)
       }
 
@@ -128,18 +137,21 @@ export function useTemplateData(projectId: string | undefined) {
       let layoutIdValue: string | undefined
 
       try {
-        const existingRegions = await window.electronAPI.getCropRegionsByProjectId(projectId)
-        
+        const existingRegions =
+          await window.electronAPI.getCropRegionsByProjectId(projectId)
+
         if (existingRegions && existingRegions.length > 0) {
           layoutIdValue = "existing"
-          
+
           // 最初のマスター画像に対応する領域のみをフィルター
           const firstMasterImageId = selectedImage?.id
           const currentImageRegions = firstMasterImageId
-            ? existingRegions.filter(region => region.projectPage?.id === firstMasterImageId)
+            ? existingRegions.filter(
+                (region) => region.projectPage?.id === firstMasterImageId,
+              )
             : []
 
-          regions = currentImageRegions.map(region => ({
+          regions = currentImageRegions.map((region) => ({
             id: region.id,
             type: region.type as AreaType,
             x: region.x,
@@ -165,10 +177,9 @@ export function useTemplateData(projectId: string | undefined) {
         selectedMasterImage: selectedImage,
         backgroundImageUrl: backgroundUrl,
         imageDimensions: dimensions,
-        layoutRegions: regions,
+        cropRegions: regions,
         layoutId: layoutIdValue,
       })
-
     } catch (error) {
       console.error("Failed to load initial data:", error)
       toast.error("初期データの読み込みに失敗しました。")
@@ -180,72 +191,78 @@ export function useTemplateData(projectId: string | undefined) {
   /**
    * マスター画像の変更処理
    * 選択された画像に対応する領域データを読み込む
-   * 
+   *
    * @param imageId - 選択する画像のID
    */
-  const handleMasterImageChange = useCallback(async (imageId: string) => {
-    const image = initialData.masterImages.find(img => img.id === imageId)
-    if (!image || !projectId) return
+  const handleMasterImageChange = useCallback(
+    async (imageId: string) => {
+      const image = initialData.masterImages.find((img) => img.id === imageId)
+      if (!image || !projectId) return
 
-    try {
-      // 新しい画像のURLと寸法を取得
-      const url = await window.electronAPI.resolveFileProtocolPath(image.imagePath)
-      const dimensions = await loadImageDimensions(url)
+      try {
+        // 新しい画像のURLと寸法を取得
+        const url = await window.electronAPI.resolveFileProtocolPath(
+          image.imagePath,
+        )
+        const dimensions = await loadImageDimensions(url)
 
-      // 新しいページの領域を読み込む
-      const allRegions = await window.electronAPI.getCropRegionsByProjectId(projectId)
-      const currentImageRegions = allRegions.filter(
-        region => region.projectPage?.id === image.id
-      )
+        // 新しいページの領域を読み込む
+        const allRegions =
+          await window.electronAPI.getCropRegionsByProjectId(projectId)
+        const currentImageRegions = allRegions.filter(
+          (region) => region.projectPage?.id === image.id,
+        )
 
-      const mappedRegions: CropRegionArea[] = currentImageRegions.length > 0
-        ? currentImageRegions.map(region => ({
-            id: region.id,
-            type: region.type as AreaType,
-            x: region.x,
-            y: region.y,
-            width: region.width,
-            height: region.height,
-            label: region.label || "",
-            points: region.points ? String(region.points) : null,
-            projectPageId: region.projectPage?.id || "",
-          }))
-        : []
+        const mappedRegions: CropRegionArea[] =
+          currentImageRegions.length > 0
+            ? currentImageRegions.map((region) => ({
+                id: region.id,
+                type: region.type as AreaType,
+                x: region.x,
+                y: region.y,
+                width: region.width,
+                height: region.height,
+                label: region.label || "",
+                points: region.points ? String(region.points) : null,
+                projectPageId: region.projectPage?.id || "",
+              }))
+            : []
 
-      // 状態を更新
-      setInitialData(prev => ({
-        ...prev,
-        selectedMasterImage: image,
-        backgroundImageUrl: url,
-        imageDimensions: dimensions,
-        layoutRegions: mappedRegions,
-      }))
-
-    } catch (error) {
-      toast.error("背景画像の読み込みに失敗しました。")
-      console.error("Failed to change master image:", error)
-    }
-  }, [initialData.masterImages, projectId, loadImageDimensions])
+        // 状態を更新
+        setInitialData((prev) => ({
+          ...prev,
+          selectedMasterImage: image,
+          backgroundImageUrl: url,
+          imageDimensions: dimensions,
+          cropRegions: mappedRegions,
+        }))
+      } catch (error) {
+        toast.error("背景画像の読み込みに失敗しました。")
+        console.error("Failed to change master image:", error)
+      }
+    },
+    [initialData.masterImages, projectId, loadImageDimensions],
+  )
 
   /**
    * レイアウト領域の状態を更新する
-   * 
+   *
    * @param regions - 新しい領域データ
    */
-  const updateLayoutRegions = useCallback((regions: CropRegionArea[]) => {
-    setInitialData(prev => ({
+  const updateCropRegions = useCallback((regions: CropRegionArea[]) => {
+    setInitialData((prev) => ({
       ...prev,
-      layoutRegions: regions,
+      cropRegions: regions,
     }))
   }, [])
 
   /**
    * レイアウトIDの状態を更新する
-   * 
+   *
    * @param layoutId - 新しいレイアウトID
    */
   const updateLayoutId = useCallback((layoutId: string | undefined) => {
-    setInitialData(prev => ({
+    setInitialData((prev) => ({
       ...prev,
       layoutId,
     }))
@@ -256,7 +273,7 @@ export function useTemplateData(projectId: string | undefined) {
     isLoading,
     loadInitialData,
     handleMasterImageChange,
-    updateLayoutRegions,
+    updateCropRegions,
     updateLayoutId,
   }
 }

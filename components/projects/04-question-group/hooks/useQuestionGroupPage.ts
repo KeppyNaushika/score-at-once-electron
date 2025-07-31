@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  CropRegionWithDetails,
-  SubtotalGroupWithItems,
-} from "@/types/electron"
+import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
 import { useCallback, useEffect, useState } from "react"
 
 interface SubtotalData {
@@ -20,9 +17,7 @@ export function useQuestionGroupPage(projectId: string) {
   const [subtotalGroups, setSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
-  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>(
-    [],
-  )
+  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
   const [subtotalRegions, setSubtotalRegions] = useState<
     CropRegionWithDetails[]
   >([])
@@ -77,8 +72,7 @@ export function useQuestionGroupPage(projectId: string) {
       if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
         const questionRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) =>
-            region.type === "QUESTION_ANSWER",
+          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER",
         )
         setCropRegions(questionRegions)
 
@@ -182,7 +176,7 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       }
     },
-    [projectId, loadData],
+    [loadData],
   )
 
   // SubtotalGroup更新
@@ -330,13 +324,11 @@ export function useQuestionGroupPage(projectId: string) {
 
         // 新しい関連付けを作成
         if (subtotalIds.length > 0) {
-          const assignments = subtotalIds.map(
-            (subtotalId) => ({
-              cropRegionId: questionCropRegionId,
-              subtotalId,
-              assignmentType: 'QUESTION_SUBTOTAL' as const,
-            }),
-          )
+          const assignments = subtotalIds.map((subtotalId) => ({
+            cropRegionId: questionCropRegionId,
+            subtotalId,
+            assignmentType: "QUESTION_SUBTOTAL" as const,
+          }))
 
           await window.electronAPI.createManyQuestionSubtotalAssignments(
             assignments,
@@ -366,13 +358,11 @@ export function useQuestionGroupPage(projectId: string) {
 
         // 新しい関連付けを作成
         if (subtotalIds.length > 0) {
-          const cropSubtotals = subtotalIds.map(
-            (subtotalId) => ({
-              cropRegionId: subtotalCropRegionId,
-              subtotalId,
-              assignmentType: 'SUBTOTAL_DEFINITION' as const,
-            }),
-          )
+          const cropSubtotals = subtotalIds.map((subtotalId) => ({
+            cropRegionId: subtotalCropRegionId,
+            subtotalId,
+            assignmentType: "SUBTOTAL_DEFINITION" as const,
+          }))
 
           await window.electronAPI.createManyCropSubtotals(cropSubtotals)
         }

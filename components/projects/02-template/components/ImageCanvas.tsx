@@ -13,14 +13,14 @@
 
 "use client"
 
+import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { useMemo } from "react"
+import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
+import { useZoomControls } from "../hooks/useZoomControls"
 import { AreaRenderer } from "./AreaRenderer"
 import { DragPreview } from "./DragPreview"
 import { ZoomControls } from "./ZoomControls"
-import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
-import { useZoomControls } from "../hooks/useZoomControls"
-import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
-import { CropRegionArea, LayoutRegionAreaType } from "@/types/common.types"
-import { useMemo } from "react"
 
 type ImageCanvasProps = {
   backgroundImageUrl: string | null
@@ -29,7 +29,7 @@ type ImageCanvasProps = {
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   onAddAreaByDrag: (
-    type: LayoutRegionAreaType,
+    type: CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },
   ) => void
   onUpdateArea: (

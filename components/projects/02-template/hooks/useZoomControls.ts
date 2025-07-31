@@ -1,16 +1,16 @@
 /**
  * Custom hook for managing zoom functionality
- * 
+ *
  * Features:
  * - Keyboard zoom controls (Ctrl + +/-, Ctrl + 0)
  * - Mouse wheel zoom with Ctrl key
  * - Zoom level management (0.1 to 5.0 range)
- * 
+ *
  * @param imageContainerRef - Reference to the image container element
  * @returns Object containing zoom state and handlers
  */
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export function useZoomControls() {
   const imageContainerRef = useRef<HTMLDivElement>(null)

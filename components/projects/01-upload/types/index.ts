@@ -1,5 +1,3 @@
-import { Prisma } from "@prisma/client"
-
 /**
  * マスター画像の型定義
  * プロジェクトの模範解答画像データを表す
