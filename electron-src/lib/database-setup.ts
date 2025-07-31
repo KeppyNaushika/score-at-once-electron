@@ -121,23 +121,25 @@ export class DatabaseSetup {
           create: studentData
         })
 
-        // 学級への所属を作成
-        await this.prisma.studentClassMembership.upsert({
+        // 学級への所属を作成（既存チェック後に作成）
+        const existingMembership = await this.prisma.studentClassMembership.findFirst({
           where: {
-            studentId_classId_startDate: {
-              studentId: student.id,
-              classId: sampleClass.id,
-              startDate: new Date()
-            }
-          },
-          update: {},
-          create: {
             studentId: student.id,
             classId: sampleClass.id,
-            attendanceNumber: index + 1,
-            startDate: new Date()
+            endDate: null // 現在有効な所属のみ
           }
         })
+
+        if (!existingMembership) {
+          await this.prisma.studentClassMembership.create({
+            data: {
+              studentId: student.id,
+              classId: sampleClass.id,
+              attendanceNumber: index + 1,
+              startDate: new Date()
+            }
+          })
+        }
         
         console.log(`✅ Sample student created: ${student.lastName} ${student.firstName}`)
       }

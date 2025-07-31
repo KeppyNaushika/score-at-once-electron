@@ -122,18 +122,18 @@ export const initializeDatabase = async (): Promise<boolean> => {
 
         console.log("Running direct SQL migration...")
 
-        // 現在のスキーマに合わせたマイグレーションSQL
+        // 現在のPrismaスキーマに完全準拠したマイグレーションSQL（introspection結果に基づく）
         const migrationSQL = `
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "username" TEXT NOT NULL,
+    "passcode" TEXT,
     "name" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'teacher',
-    "passcode" TEXT,
-    "passcodeType" TEXT DEFAULT 'none',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL,
+    "passcodeType" TEXT DEFAULT 'none'
 );
 
 -- CreateTable
@@ -166,14 +166,14 @@ CREATE TABLE "StudentClassMembership" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "studentId" TEXT NOT NULL,
     "classId" TEXT NOT NULL,
-    "attendanceNumber" INTEGER,
     "startDate" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "endDate" DATETIME,
+    "attendanceNumber" INTEGER,
     "notes" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "StudentClassMembership_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "StudentClassMembership_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -184,7 +184,7 @@ CREATE TABLE "Project" (
     "subject" TEXT,
     "description" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -206,8 +206,8 @@ CREATE TABLE "ProjectPage" (
     "projectId" TEXT NOT NULL,
     "pageNumber" INTEGER NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectPage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ProjectPage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -218,9 +218,9 @@ CREATE TABLE "PageImage" (
     "imagePath" TEXT NOT NULL,
     "imageType" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "PageImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "PageImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PageImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT "PageImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -236,8 +236,8 @@ CREATE TABLE "CropRegion" (
     "points" INTEGER,
     "orderIndex" INTEGER,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CropRegion_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CropRegion_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -245,7 +245,7 @@ CREATE TABLE "SubtotalGroup" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateTable
@@ -255,8 +255,8 @@ CREATE TABLE "Subtotal" (
     "subtotalGroupId" TEXT NOT NULL,
     "order" INTEGER NOT NULL DEFAULT 0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "Subtotal_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "Subtotal_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -266,9 +266,9 @@ CREATE TABLE "CropSubtotal" (
     "subtotalId" TEXT NOT NULL,
     "assignmentType" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "CropSubtotal_subtotalId_fkey" FOREIGN KEY ("subtotalId") REFERENCES "Subtotal" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "CropSubtotal_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CropSubtotal_subtotalId_fkey" FOREIGN KEY ("subtotalId") REFERENCES "Subtotal" ("id") ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT "CropSubtotal_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -278,9 +278,9 @@ CREATE TABLE "UserProject" (
     "projectId" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'GRADER',
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "UserProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "UserProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -289,9 +289,9 @@ CREATE TABLE "ProjectSubtotalGroup" (
     "projectId" TEXT NOT NULL,
     "subtotalGroupId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "ProjectSubtotalGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "ProjectSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ProjectSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT "ProjectSubtotalGroup_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
 
 -- CreateTable
@@ -303,49 +303,30 @@ CREATE TABLE "QuestionScore" (
     "status" TEXT NOT NULL DEFAULT 'unscored',
     "scoredByUserId" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
-    CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "QuestionScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "QuestionScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT "QuestionScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE RESTRICT,
+    CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE RESTRICT
 );
         `
 
-        // 現在のスキーマに合わせたインデックス作成SQL
+        // 現在のスキーマに完全準拠したインデックス作成SQL（introspection結果に基づく）
         const indexSQL = `
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "classes_name_key" ON "classes"("name");
 CREATE UNIQUE INDEX "Student_studentId_key" ON "Student"("studentId");
-CREATE UNIQUE INDEX "StudentClassMembership_studentId_classId_startDate_key" ON "StudentClassMembership"("studentId", "classId", "startDate");
 CREATE INDEX "StudentClassMembership_studentId_idx" ON "StudentClassMembership"("studentId");
 CREATE INDEX "StudentClassMembership_classId_idx" ON "StudentClassMembership"("classId");
-CREATE INDEX "StudentClassMembership_startDate_idx" ON "StudentClassMembership"("startDate");
-CREATE INDEX "StudentClassMembership_endDate_idx" ON "StudentClassMembership"("endDate");
-CREATE UNIQUE INDEX "ProjectPage_projectId_pageNumber_key" ON "ProjectPage"("projectId", "pageNumber");
-CREATE INDEX "ProjectPage_projectId_idx" ON "ProjectPage"("projectId");
-CREATE INDEX "PageImage_projectPageId_idx" ON "PageImage"("projectPageId");
-CREATE INDEX "PageImage_studentId_idx" ON "PageImage"("studentId");
-CREATE INDEX "CropRegion_projectPageId_idx" ON "CropRegion"("projectPageId");
-CREATE UNIQUE INDEX "Subtotal_subtotalGroupId_name_key" ON "Subtotal"("subtotalGroupId", "name");
-CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
-CREATE INDEX "Subtotal_subtotalGroupId_order_idx" ON "Subtotal"("subtotalGroupId", "order");
-CREATE UNIQUE INDEX "CropSubtotal_cropRegionId_subtotalId_assignmentType_key" ON "CropSubtotal"("cropRegionId", "subtotalId", "assignmentType");
-CREATE INDEX "CropSubtotal_cropRegionId_idx" ON "CropSubtotal"("cropRegionId");
-CREATE INDEX "CropSubtotal_subtotalId_idx" ON "CropSubtotal"("subtotalId");
-CREATE UNIQUE INDEX "UserProject_userId_projectId_key" ON "UserProject"("userId", "projectId");
-CREATE INDEX "UserProject_userId_idx" ON "UserProject"("userId");
-CREATE INDEX "UserProject_projectId_idx" ON "UserProject"("projectId");
-CREATE UNIQUE INDEX "ProjectSubtotalGroup_projectId_subtotalGroupId_key" ON "ProjectSubtotalGroup"("projectId", "subtotalGroupId");
-CREATE INDEX "ProjectSubtotalGroup_projectId_idx" ON "ProjectSubtotalGroup"("projectId");
-CREATE INDEX "ProjectSubtotalGroup_subtotalGroupId_idx" ON "ProjectSubtotalGroup"("subtotalGroupId");
+CREATE INDEX "StudentClassMembership_classId_attendanceNumber_idx" ON "StudentClassMembership"("classId", "attendanceNumber");
+CREATE INDEX "StudentClassMembership_startDate_endDate_idx" ON "StudentClassMembership"("startDate", "endDate");
+CREATE UNIQUE INDEX "ProjectStudent_projectId_studentId_key" ON "ProjectStudent"("projectId", "studentId");
 CREATE INDEX "ProjectStudent_projectId_idx" ON "ProjectStudent"("projectId");
 CREATE INDEX "ProjectStudent_studentId_idx" ON "ProjectStudent"("studentId");
 CREATE INDEX "ProjectStudent_projectId_customOrder_idx" ON "ProjectStudent"("projectId", "customOrder");
-CREATE UNIQUE INDEX "ProjectStudent_projectId_studentId_key" ON "ProjectStudent"("projectId", "studentId");
-CREATE UNIQUE INDEX "QuestionScore_cropRegionId_studentId_scoredByUserId_key" ON "QuestionScore"("cropRegionId", "studentId", "scoredByUserId");
-CREATE INDEX "QuestionScore_cropRegionId_idx" ON "QuestionScore"("cropRegionId");
-CREATE INDEX "QuestionScore_studentId_idx" ON "QuestionScore"("studentId");
-CREATE INDEX "QuestionScore_scoredByUserId_idx" ON "QuestionScore"("scoredByUserId");
+CREATE UNIQUE INDEX "Subtotal_subtotalGroupId_name_key" ON "Subtotal"("subtotalGroupId", "name");
+CREATE INDEX "Subtotal_subtotalGroupId_idx" ON "Subtotal"("subtotalGroupId");
+CREATE INDEX "Subtotal_subtotalGroupId_order_idx" ON "Subtotal"("subtotalGroupId", "order");
         `
 
         // SQLを複数のステートメントに分割して実行

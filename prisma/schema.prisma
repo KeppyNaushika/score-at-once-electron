@@ -11,14 +11,14 @@ datasource db {
 model User {
   id             String          @id @default(uuid())
   username       String          @unique
+  passcode       String?
   name           String
   role           String          @default("teacher")
-  passcode       String?
-  passcodeType   String?         @default("none")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+  passcodeType   String?         @default("none")
   questionScores QuestionScore[]
-  userProjects   UserProject[]   // Many-to-many relation
+  userProjects   UserProject[]
 }
 
 model Class {
@@ -45,30 +45,29 @@ model Student {
   enrollmentYear  Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
+  pageImages      PageImage[]
   projectStudents ProjectStudent[]
+  questionScores  QuestionScore[]
   memberships     StudentClassMembership[]
-  pageImages      PageImage[]             // Images associated with this student
-  questionScores  QuestionScore[]         // Scores for this student
 }
 
 model StudentClassMembership {
   id               String    @id @default(uuid())
   studentId        String
   classId          String
-  attendanceNumber Int?
   startDate        DateTime  @default(now())
   endDate          DateTime?
+  attendanceNumber Int?
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, classId, startDate])
   @@index([studentId])
   @@index([classId])
-  @@index([startDate])
-  @@index([endDate])
+  @@index([classId, attendanceNumber])
+  @@index([startDate, endDate])
 }
 
 model Project {
@@ -78,11 +77,11 @@ model Project {
   subject               String?
   description           String?
   createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  projectStudents       ProjectStudent[]
+  updatedAt             DateTime               @default(now()) @updatedAt
   projectPages          ProjectPage[]
-  userProjects          UserProject[]
+  projectStudents       ProjectStudent[]
   projectSubtotalGroups ProjectSubtotalGroup[]
+  userProjects          UserProject[]
 }
 
 model ProjectStudent {
@@ -102,38 +101,29 @@ model ProjectStudent {
   @@index([projectId, customOrder])
 }
 
-// New: Central page management
 model ProjectPage {
   id          String       @id @default(uuid())
   projectId   String
   pageNumber  Int
   createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime     @default(now()) @updatedAt
   cropRegions CropRegion[]
   pageImages  PageImage[]
-
-  @@unique([projectId, pageNumber])
-  @@index([projectId])
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-// New: Unified image management (master and answer images)
 model PageImage {
   id            String      @id @default(uuid())
   projectPageId String
-  studentId     String?     // NULL for master images, student ID for answer images
+  studentId     String?
   imagePath     String
-  imageType     String      // 'MASTER' or 'ANSWER'
+  imageType     String
   createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade)
-  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@index([projectPageId])
-  @@index([studentId])
+  updatedAt     DateTime    @default(now()) @updatedAt
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-// Optimized CropRegion (removed redundant projectId)
 model CropRegion {
   id             String          @id @default(uuid())
   projectPageId  String
@@ -146,21 +136,19 @@ model CropRegion {
   points         Int?
   orderIndex     Int?
   createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  projectPage    ProjectPage     @relation(fields: [projectPageId], references: [id], onDelete: Cascade)
-  questionScores QuestionScore[]
+  updatedAt      DateTime        @default(now()) @updatedAt
+  projectPage    ProjectPage     @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   cropSubtotals  CropSubtotal[]
-
-  @@index([projectPageId])
+  questionScores QuestionScore[]
 }
 
 model SubtotalGroup {
   id                    String                 @id @default(uuid())
   name                  String
   createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  subtotals             Subtotal[]
+  updatedAt             DateTime               @default(now()) @updatedAt
   projectSubtotalGroups ProjectSubtotalGroup[]
+  subtotals             Subtotal[]
 }
 
 model Subtotal {
@@ -169,78 +157,55 @@ model Subtotal {
   subtotalGroupId String
   order           Int            @default(0)
   createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
+  updatedAt       DateTime       @default(now()) @updatedAt
   cropSubtotals   CropSubtotal[]
+  subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([subtotalGroupId, name])
-  @@index([subtotalGroupId])
-  @@index([subtotalGroupId, order])
+  @@unique([subtotalGroupId, name], map: "sqlite_autoindex_Subtotal_2")
 }
 
-// Unified table from SubtotalDefinition and QuestionSubtotalAssignment
 model CropSubtotal {
   id             String     @id @default(uuid())
   cropRegionId   String
   subtotalId     String
-  assignmentType String     // 'SUBTOTAL_DEFINITION' or 'QUESTION_ASSIGNMENT'
+  assignmentType String
   createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
-  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
-
-  @@unique([cropRegionId, subtotalId, assignmentType])
-  @@index([cropRegionId])
-  @@index([subtotalId])
+  updatedAt      DateTime   @default(now()) @updatedAt
+  subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-// Many-to-many User-Project relation
 model UserProject {
   id        String   @id @default(uuid())
   userId    String
   projectId String
   role      String   @default("GRADER")
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, projectId])
-  @@index([userId])
-  @@index([projectId])
+  updatedAt DateTime @default(now()) @updatedAt
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-// Many-to-many Project-SubtotalGroup relation
 model ProjectSubtotalGroup {
   id              String        @id @default(uuid())
   projectId       String
   subtotalGroupId String
   createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, subtotalGroupId])
-  @@index([projectId])
-  @@index([subtotalGroupId])
+  updatedAt       DateTime      @default(now()) @updatedAt
+  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-// Simplified and optimized QuestionScore
 model QuestionScore {
   id             String     @id @default(uuid())
   cropRegionId   String
-  studentId      String?    // Student being scored (nullable for master templates)
-  partialScore   Decimal?   // Actual score value (NULL = unscored)
-  status         String     @default("unscored") // unscored, correct, incorrect, partial, no_answer
+  studentId      String?
+  partialScore   Decimal?
+  status         String     @default("unscored")
   scoredByUserId String?
   createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
-  student        Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  scoredByUser   User?      @relation(fields: [scoredByUserId], references: [id])
-
-  @@unique([cropRegionId, studentId, scoredByUserId])
-  @@index([cropRegionId])
-  @@index([studentId])
-  @@index([scoredByUserId])
+  updatedAt      DateTime   @default(now()) @updatedAt
+  scoredByUser   User?      @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student        Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
