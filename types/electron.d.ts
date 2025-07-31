@@ -110,7 +110,7 @@ type StudentWithClass = StudentWithMemberships
 // Project related types (updated for new structure)
 export type ProjectWithDetails = Prisma.ProjectGetPayload<{
   include: {
-    userProjects: { include: { user: true } } //
+    userProjects: { include: { user: true } }
     projectPages: {
       include: {
         pageImages: true
@@ -234,25 +234,18 @@ export type PageImageWithDetails = Prisma.PageImageGetPayload<{
 export type MasterImagePayload = ProjectPageWithDetails
 
 export interface MyAPI {
-  // Project related
   fetchProjects: () => Promise<ProjectWithDetails[]>
   fetchProjectById: (projectId: string) => Promise<ProjectWithDetails | null>
   createProject: (
     projectData: CreateProjectArgs,
     userId: string,
-  ) => Promise<ProjectWithDetails> // userId for createdBy
+  ) => Promise<ProjectWithDetails>
   updateProject: (
     projectId: string,
     data: Prisma.ProjectUpdateInput,
   ) => Promise<ProjectWithDetails>
-  deleteProject: (projectId: string) => Promise<Project | void> // Prisma.Project or void
+  deleteProject: (projectId: string) => Promise<Project | void>
 
-  // Tag related - temporarily disabled
-  // createTag: (tagText: string) => Promise<Tag>
-  // updateTag: (tagId: string, newText: string) => Promise<Tag>
-  // deleteTag: (tagId: string) => Promise<Tag | void>
-
-  // User related
   fetchUsers: () => Promise<User[]>
   getCurrentUser: () => Promise<User | null>
   createUser: (userData: {
@@ -564,6 +557,26 @@ export interface MyAPI {
     updates: Array<{ id: string; orderIndex: number }>,
   ) => Promise<CropRegion[]>
 
+  // Backward compatibility aliases
+  createLayoutRegion: (
+    data: Prisma.CropRegionUncheckedCreateInput,
+  ) => Promise<CropRegionWithDetails>
+  createManyLayoutRegions: (
+    data: Prisma.CropRegionCreateManyInput[],
+  ) => Promise<Prisma.BatchPayload>
+  updateLayoutRegion: (
+    id: string,
+    data: Prisma.CropRegionUpdateInput,
+  ) => Promise<CropRegionWithDetails>
+  deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
+  getLayoutRegionsByProjectId: (
+    projectId: string,
+  ) => Promise<CropRegionWithDetails[]>
+  getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
+  updateLayoutRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>,
+  ) => Promise<CropRegion[]>
+
 
   // SubtotalGroup related (updated from QuestionGroup)
   getSubtotalGroups: () => Promise<{
@@ -732,6 +745,14 @@ export interface MyAPI {
   getSubtotalDefinitionsByCropRegionId: (
     cropRegionId: string,
   ) => Promise<CropSubtotalWithRelations[]>
+  
+  // Backward compatibility aliases
+  deleteSubtotalDefinitionsByLayoutRegionId: (
+    cropRegionId: string,
+  ) => Promise<Prisma.BatchPayload>
+  getSubtotalDefinitionsByLayoutRegionId: (
+    cropRegionId: string,
+  ) => Promise<CropSubtotalWithRelations[]>
   getSubtotalDefinitionsByQuestionGroupItemId: (
     questionGroupItemId: string,
   ) => Promise<CropSubtotalWithRelations[]>
@@ -776,6 +797,11 @@ export interface MyAPI {
   deleteQuestionSubtotalAssignment: (id: string) => Promise<CropSubtotal | void>
   deleteAssignmentsByQuestionCropRegionId: (
     questionCropRegionId: string,
+  ) => Promise<Prisma.BatchPayload>
+  
+  // Backward compatibility alias
+  deleteAssignmentsByQuestionLayoutRegionId: (
+    questionLayoutRegionId: string,
   ) => Promise<Prisma.BatchPayload>
   deleteAssignmentsByQuestionGroupItemId: (
     questionGroupItemId: string,
@@ -874,7 +900,7 @@ export interface MyAPI {
   // Backward compatibility alias
   createQuestionScoreLegacy: (data: {
     answerSheetId: string
-    layoutRegionId: string
+    cropRegionId: string
     partialScore?: number
     status:
       | "unscored"

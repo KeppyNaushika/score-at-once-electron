@@ -9,7 +9,7 @@ interface DeleteProjectModalProps {
   project: Project & {
     masterImages?: any[]
     answerSheets?: any[]
-    layoutRegions?: any[]
+    cropRegions?: any[]
   }
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -26,11 +26,11 @@ export default function DeleteProjectModal({
   const [projectData, setProjectData] = useState<{
     masterImageCount: number
     answerSheetCount: number
-    layoutRegionCount: number
+    cropRegionCount: number
   }>({
     masterImageCount: 0,
     answerSheetCount: 0,
-    layoutRegionCount: 0,
+    cropRegionCount: 0,
   })
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function DeleteProjectModal({
       setProjectData({
         masterImageCount: project.masterImages?.length || 0,
         answerSheetCount: project.answerSheets?.length || 0,
-        layoutRegionCount: project.layoutRegions?.length || 0,
+        cropRegionCount: project.cropRegions?.length || 0,
       })
     }
   }, [project])
@@ -63,7 +63,7 @@ export default function DeleteProjectModal({
   const hasData =
     projectData.masterImageCount > 0 ||
     projectData.answerSheetCount > 0 ||
-    projectData.layoutRegionCount > 0
+    projectData.cropRegionCount > 0
 
   // プロジェクト情報をアイテムとして構成
   const projectItems = project
@@ -100,7 +100,7 @@ export default function DeleteProjectModal({
       ? [
           {
             type: "warning" as const,
-            message: `削除されるデータ: 模範解答${projectData.masterImageCount}件、採点領域${projectData.layoutRegionCount}件、答案${projectData.answerSheetCount}件`,
+            message: `削除されるデータ: 模範解答${projectData.masterImageCount}件、採点領域${projectData.cropRegionCount}件、答案${projectData.answerSheetCount}件`,
           },
         ]
       : []),
