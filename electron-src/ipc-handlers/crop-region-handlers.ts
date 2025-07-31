@@ -112,7 +112,9 @@ export function setupCropRegionHandlers(): void {
       console.log("🔄 IPC: get-crop-regions-by-project-id called with projectId:", projectId)
       const result = await dbGetCropRegionsByProjectId(projectId)
       console.log("✅ IPC: get-crop-regions-by-project-id result:", result?.length, "regions")
-      return result
+      
+      // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
+      return JSON.parse(JSON.stringify(result))
     } catch (error) {
       console.error("❌ IPC: get-crop-regions-by-project-id error:", error)
       throw error
@@ -124,7 +126,9 @@ export function setupCropRegionHandlers(): void {
       console.log("🔄 IPC: get-crop-region-by-id called with id:", id)
       const result = await dbGetCropRegionById(id)
       console.log("✅ IPC: get-crop-region-by-id result:", result)
-      return result
+      
+      // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
+      return result ? JSON.parse(JSON.stringify(result)) : null
     } catch (error) {
       console.error("❌ IPC: get-crop-region-by-id error:", error)
       throw error

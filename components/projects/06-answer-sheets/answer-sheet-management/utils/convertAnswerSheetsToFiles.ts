@@ -1,13 +1,12 @@
-import type { AnswerSheetWithDetails } from "@/types/electron"
+import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
 import type { UnifiedFile } from "@/types/answer-sheet.types"
 
-// Temporary interface to handle serialized answer sheets
-interface SerializedAnswerSheet {
+// For backward compatibility, support both processed and raw formats
+type AnswerSheetInput = ProcessedAnswerSheet | {
+  // Raw Prisma format
   id: string
   studentId: string | null
-  pageNumber: number
-  originalImagePath: string | null
-  isAbsent?: boolean
+  imagePath: string
   student: {
     id: string
     lastName: string
@@ -16,6 +15,9 @@ interface SerializedAnswerSheet {
     firstNameKana: string
     studentId: string
   } | null
+  projectPage: {
+    pageNumber: number
+  }
 }
 
 /**
@@ -24,24 +26,31 @@ interface SerializedAnswerSheet {
  * @returns UnifiedFile配列
  */
 export function convertAnswerSheetsToFiles(
-  answerSheets: AnswerSheetWithDetails[] | SerializedAnswerSheet[]
+  answerSheets: AnswerSheetInput[]
 ): UnifiedFile[] {
   return answerSheets.map((answerSheet) => {
-    // 正しいプロパティ名を使用（originalImagePath）
-    const imagePath = answerSheet.originalImagePath
+    // Handle both processed format (originalImagePath) and raw format (imagePath)
+    const imagePath = ('originalImagePath' in answerSheet) 
+      ? answerSheet.originalImagePath
+      : answerSheet.imagePath
+    
+    // Handle both processed format (pageNumber) and raw format (projectPage.pageNumber)
+    const pageNumber = ('pageNumber' in answerSheet) 
+      ? answerSheet.pageNumber
+      : answerSheet.projectPage.pageNumber
     
     return {
       id: answerSheet.id,
-      name: `${answerSheet.studentId || 'unknown'}_page${answerSheet.pageNumber}`,
+      name: `${answerSheet.studentId || 'unknown'}_page${pageNumber}`,
       type: imagePath?.split('.').pop() || 'image',
       size: 0, // 既存ファイルのサイズは取得不可
       buffer: new ArrayBuffer(0), // 既存ファイルのバッファは遅延読み込み
       preview: undefined, // 遅延読み込みでBase64データを設定
       studentId: answerSheet.studentId || undefined,
-      pageNumber: answerSheet.pageNumber || 1,
+      pageNumber: pageNumber || 1,
       isSelected: false,
       originalFileName: `答案_${answerSheet.id}`,
-      pageLabel: `ページ${answerSheet.pageNumber}`,
+      pageLabel: `ページ${pageNumber}`,
       
       // 既存画像の場合は遅延読み込み用のパス情報を保持
       imagePath: imagePath,

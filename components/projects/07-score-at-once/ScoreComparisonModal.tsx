@@ -60,8 +60,8 @@ interface ScoreComparison {
 interface ScoreComparisonModalProps {
   isOpen: boolean
   onClose: () => void
-  answerSheetId: string
-  layoutRegionId: string
+  studentId: string
+  cropRegionId: string
   questionLabel: string
   maxScore: number
   studentName: string
@@ -71,8 +71,8 @@ interface ScoreComparisonModalProps {
 export default function ScoreComparisonModal({
   isOpen,
   onClose,
-  answerSheetId,
-  layoutRegionId,
+  studentId,
+  cropRegionId,
   questionLabel,
   maxScore,
   studentName,
@@ -86,13 +86,13 @@ export default function ScoreComparisonModal({
 
   // 採点比較データを取得
   const fetchComparison = useCallback(async () => {
-    if (!answerSheetId || !layoutRegionId) return
+    if (!studentId || !cropRegionId) return
 
     setLoading(true)
     try {
       const result = await window.electronAPI.getQuestionScoreComparison(
-        answerSheetId,
-        layoutRegionId,
+        studentId,
+        cropRegionId,
       )
 
       if (result && typeof result === "object") {
@@ -115,7 +115,7 @@ export default function ScoreComparisonModal({
     } finally {
       setLoading(false)
     }
-  }, [answerSheetId, layoutRegionId])
+  }, [studentId, cropRegionId])
 
   // モーダルが開かれたときにデータを取得
   useEffect(() => {
@@ -126,7 +126,7 @@ export default function ScoreComparisonModal({
 
   // 採点結果を最終決定
   const handleFinalize = async () => {
-    if (!answerSheetId || !layoutRegionId) return
+    if (!studentId || !cropRegionId) return
 
     setFinalizing(true)
     try {
@@ -136,8 +136,8 @@ export default function ScoreComparisonModal({
         comments: finalComment,
       }
       const result = await window.electronAPI.finalizeQuestionScore(
-        answerSheetId,
-        layoutRegionId,
+        studentId,
+        cropRegionId,
         "current-user", // TODO: 認証システムと連携
         finalizeData,
       )

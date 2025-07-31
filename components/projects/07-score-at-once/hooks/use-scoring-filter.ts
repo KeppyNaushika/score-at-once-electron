@@ -52,10 +52,10 @@ export function useScoringFilter({
 
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
-    (answerSheetId: string, questionId?: string): ScoringStatus => {
+    (studentId: string, questionId?: string): ScoringStatus => {
       if (!questionId) return "unscored"
 
-      const key = `${answerSheetId}-${questionId}`
+      const key = `${studentId}-${questionId}`
       const scoreData = scoringData[key]
 
       if (!scoreData) return "unscored"
@@ -85,7 +85,7 @@ export function useScoringFilter({
       for (const sheet of answerSheets) {
         if (sheet.pageNumber !== targetPageNumber) continue
 
-        const key = `${sheet.id}-${currentQuestion.id}`
+        const key = `${sheet.studentId}-${currentQuestion.id}`
         const scoreData = scoringData[key]
         const status = scoreData?.status || "unscored"
 
@@ -97,7 +97,7 @@ export function useScoringFilter({
 
       setVisibleAnswers(newVisibleAnswers)
     },
-    [answerSheets, currentQuestion, filterSettings, project?.masterImages, scoringData, recentlyScoredAnswers],
+    [answerSheets, currentQuestion, filterSettings, project?.projectPages, scoringData, recentlyScoredAnswers],
   )
 
   // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
@@ -195,7 +195,7 @@ export function useScoringFilter({
     })
 
     return sortedAnswerSheets.map((sheet) => {
-      const key = `${sheet.id}-${currentQuestion.id}`
+      const key = `${sheet.studentId}-${currentQuestion.id}`
       const scoreData = scoringData[key]
 
       return {

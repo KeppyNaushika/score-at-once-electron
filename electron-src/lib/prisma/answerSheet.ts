@@ -93,14 +93,15 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
         imageType: "ANSWER",
         projectPage: {
           projectId: projectId
-        }
+        },
+        studentId: { not: null } // Only include images with assigned students
       },
       include: {
         student: {
           include: {
             projectStudents: {
               where: { projectId },
-              select: { customOrder: true },
+              select: { customOrder: true, status: true }, // Include status to determine if absent
             },
           },
         },
@@ -113,10 +114,32 @@ export async function getAnswerSheetsByProjectId(projectId: string) {
       orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
     })
 
-    // Return the sheets as-is since PageImage already has imagePath
-    const processedAnswerSheets = answerSheets.map((sheet) => ({
-      ...sheet,
-    }))
+    // Transform PageImage data to legacy format for backward compatibility
+    const processedAnswerSheets = answerSheets
+      .filter(sheet => sheet.student) // Ensure student exists
+      .map((sheet) => {
+        // Get ProjectStudent status to determine if absent
+        const projectStudent = sheet.student?.projectStudents?.[0]
+        const isAbsent = projectStudent?.status === "ABSENT"
+        
+        return {
+          id: sheet.id,
+          studentId: sheet.studentId,
+          pageNumber: sheet.projectPage.pageNumber,
+          originalImagePath: sheet.imagePath, // Map imagePath to originalImagePath for backward compatibility
+          isAbsent: isAbsent, // Properly determined from ProjectStudent.status
+          student: sheet.student ? {
+            id: sheet.student.id,
+            lastName: sheet.student.lastName,
+            firstName: sheet.student.firstName,
+            lastNameKana: sheet.student.lastNameKana,
+            firstNameKana: sheet.student.firstNameKana,
+            studentId: sheet.student.studentId,
+          } : null,
+          projectId: sheet.projectPage.project.id,
+          status: "ready" as const,
+        }
+      })
 
     return { success: true, answerSheets: processedAnswerSheets }
   } catch (error) {

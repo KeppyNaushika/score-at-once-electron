@@ -84,38 +84,38 @@ export function useGradingPage() {
       const response =
         await window.electronAPI.getAnswerSheetsByProjectId(projectId)
       if (response && response.success && response.answerSheets) {
-        // 型変換: Prismaの型からAnswerSheet型へ
+        // 型変換: ProcessedAnswerSheet型からAnswerSheet型へ
         const answerSheets = response.answerSheets.map(
           (sheet: {
             id: string
-            studentId?: string | null
+            studentId: string | null
             projectId: string
-            originalImagePath?: string | null
-            processedImagePath?: string | null
+            originalImagePath: string | null
             pageNumber: number
-            isScored: boolean
-            student?: {
+            isAbsent: boolean
+            status: "ready"
+            student: {
               id: string
-              studentId: string
               lastName: string
               firstName: string
-              customOrder?: number | null
+              lastNameKana: string
+              firstNameKana: string
+              studentId: string
             } | null
           }) => ({
             id: sheet.id,
             studentId: sheet.studentId || "",
             projectId: sheet.projectId,
-            imagePath:
-              sheet.originalImagePath || sheet.processedImagePath || "",
+            imagePath: sheet.originalImagePath || "",
             pageNumber: sheet.pageNumber,
-            status: sheet.isScored ? ("graded" as const) : ("ready" as const),
+            status: sheet.status as "ready", // Use the status from processed format
             student: sheet.student
               ? {
                   id: sheet.student.id,
                   studentId: sheet.student.studentId,
                   lastName: sheet.student.lastName,
                   firstName: sheet.student.firstName,
-                  customOrder: sheet.student.customOrder,
+                  customOrder: null, // ProcessedAnswerSheet doesn't include this
                 }
               : {
                   id: "",

@@ -625,8 +625,8 @@ export default function ScoringMainView() {
         <ScoreComparisonModal
           isOpen={showScoreComparison}
           onClose={() => setShowScoreComparison(false)}
-          answerSheetId={currentAnswerSheet?.id || ""}
-          layoutRegionId={currentQuestion?.id || ""}
+          studentId={currentAnswerSheet?.studentId || ""}
+          cropRegionId={currentQuestion?.id || ""}
           questionLabel={
             currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`
           }

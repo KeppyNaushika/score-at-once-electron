@@ -212,6 +212,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("check-file-exists", relativePath),
   getMasterImagesByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-master-images-by-project-id", projectId),
+  getProjectPagesByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-project-pages-by-project-id", projectId),
   // CropRegion functions (renamed from LayoutRegion)
   createCropRegion: (data: CropRegionCreateData) =>
     ipcRenderer.invoke("create-crop-region", data),

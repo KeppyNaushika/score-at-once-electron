@@ -6,14 +6,14 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/types/answer-sheet.types"
-import type { AnswerSheetWithDetails } from "@/types/electron"
+import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { StudentData } from "../components"
 
 export function useAnswerSheetsData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
-  const [answerSheets, setAnswerSheets] = useState<AnswerSheetWithDetails[]>([])
+  const [answerSheets, setAnswerSheets] = useState<ProcessedAnswerSheet[]>([])
   const [masterImageCount, setMasterImageCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -106,7 +106,7 @@ export function useAnswerSheetsData(projectId: string) {
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
   students?: StudentData[],
-  answerSheets?: AnswerSheetWithDetails[],
+  answerSheets?: ProcessedAnswerSheet[],
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())

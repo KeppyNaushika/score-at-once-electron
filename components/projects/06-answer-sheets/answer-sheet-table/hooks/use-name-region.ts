@@ -12,19 +12,19 @@ export function useNameRegion(projectId: string) {
     try {
       const cropRegions =
         await window.electronAPI.getCropRegionsByProjectId(projectId)
-      const masterImages =
-        await window.electronAPI.getMasterImagesByProjectId(projectId)
+      const projectPages =
+        await window.electronAPI.getProjectPagesByProjectId(projectId)
 
 
       const availability: Record<number, boolean> = {}
 
-      for (const masterImage of masterImages) {
+      for (const projectPage of projectPages) {
         const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.projectPageId === masterImage.id,
+            region.projectPageId === projectPage.id,
         )
-        availability[masterImage.pageNumber] = !!nameRegion
+        availability[projectPage.pageNumber] = !!nameRegion
       }
 
       setNameRegionAvailable(availability)
@@ -46,22 +46,22 @@ export function useNameRegion(projectId: string) {
         const cropRegions =
           await window.electronAPI.getCropRegionsByProjectId(projectId)
 
-        // ページ番号に基づいてmasterImageIdを取得
-        const masterImages =
-          await window.electronAPI.getMasterImagesByProjectId(projectId)
-        const masterImage = masterImages.find(
-          (img) => img.pageNumber === pageNumber,
+        // ページ番号に基づいてprojectPageIdを取得
+        const projectPages =
+          await window.electronAPI.getProjectPagesByProjectId(projectId)
+        const projectPage = projectPages.find(
+          (page) => page.pageNumber === pageNumber,
         )
 
 
-        if (!masterImage) {
+        if (!projectPage) {
           return null
         }
 
         const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.projectPageId === masterImage.id,
+            region.projectPageId === projectPage.id,
         )
 
 

@@ -53,12 +53,12 @@ export function useScoringData({
 
         const scoringData: Record<string, ScoringData> = {}
         scores.forEach((score: any) => {
-          const key = `${score.answerSheetId}-${score.layoutRegionId}`
+          const key = `${score.studentId}-${score.cropRegionId}`
           scoringData[key] = {
             id: score.id,
-            questionId: score.layoutRegionId,
+            questionId: score.cropRegionId,
             score: score.partialScore ? Number(score.partialScore) : null, // partialScoreを直接格納
-            maxScore: 0, // We'll need to get this from the layout region
+            maxScore: 0, // We'll need to get this from the crop region
             status: score.status as ScoringStatus,
             comment: score.comment || "",
             scoredByUserId: score.scoredByUserId,
@@ -78,10 +78,10 @@ export function useScoringData({
 
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
-    (answerSheetId: string, questionId?: string): ScoringStatus => {
+    (studentId: string, questionId?: string): ScoringStatus => {
       if (!questionId) return "unscored"
 
-      const key = `${answerSheetId}-${questionId}`
+      const key = `${studentId}-${questionId}`
       const scoreData = scoringData[key]
 
       if (!scoreData) return "unscored"
@@ -93,13 +93,13 @@ export function useScoringData({
   // 実際の得点を計算する関数
   const getActualScore = useCallback(
     (
-      answerSheetId: string,
+      studentId: string,
       questionId?: string,
       maxScore: number = 0,
     ): number | null => {
       if (!questionId) return null
 
-      const key = `${answerSheetId}-${questionId}`
+      const key = `${studentId}-${questionId}`
       const scoreData = scoringData[key]
 
       if (!scoreData) return null
@@ -127,13 +127,13 @@ export function useScoringData({
 
   // Auto-finalization logic for collaborative grading
   const checkForAutoFinalization = useCallback(
-    async (answerSheetId: string, layoutRegionId: string) => {
+    async (studentId: string, cropRegionId: string) => {
       if (!currentUserId) return
 
       try {
         const comparison = await window.electronAPI.getQuestionScoreComparison(
-          answerSheetId,
-          layoutRegionId,
+          studentId,
+          cropRegionId,
         )
 
         if (
@@ -157,15 +157,15 @@ export function useScoringData({
               comments: firstScore.comment || "",
             }
             const result = await window.electronAPI.finalizeQuestionScore(
-              answerSheetId,
-              layoutRegionId,
+              studentId,
+              cropRegionId,
               currentUserId,
               finalizeData,
             )
 
             if ((result as any).success) {
               // Update local scoring data to reflect finalization
-              const key = `${answerSheetId}-${layoutRegionId}`
+              const key = `${studentId}-${cropRegionId}`
               setScoringData((prev) => ({
                 ...prev,
                 [key]: {
@@ -351,7 +351,7 @@ export function useScoringData({
         // Check for auto-finalization in collaborative mode
         if (status === "proposed") {
           await checkForAutoFinalization(
-            currentAnswerSheet.id,
+            currentAnswerSheet.studentId,
             currentQuestion.id,
           )
         }
@@ -433,7 +433,7 @@ export function useScoringData({
         const answerSheet = answerSheets.find((sheet) => sheet.id === answerId)
         if (!answerSheet) continue
 
-        const key = `${answerId}-${currentQuestion.id}`
+        const key = `${answerSheet.studentId}-${currentQuestion.id}`
         const currentScore = scoringData[key]
 
         let newScore: number | null = 0
@@ -538,7 +538,7 @@ export function useScoringData({
 
           // Check for auto-finalization in collaborative mode
           if (scoringStatus === "proposed") {
-            await checkForAutoFinalization(answerId, currentQuestion.id)
+            await checkForAutoFinalization(answerSheet.studentId, currentQuestion.id)
           }
         } catch (error) {
           console.error("Error in batch scoring:", error)
@@ -584,7 +584,7 @@ export function useScoringData({
       let gradedAnswers = 0
 
       relevantAnswerSheets.forEach((sheet) => {
-        const key = `${sheet.id}-${question.id}`
+        const key = `${sheet.studentId}-${question.id}`
         const scoreData = scoringData[key]
 
         // 採点済みの状態をチェック（unscoredでない場合は採点済み）

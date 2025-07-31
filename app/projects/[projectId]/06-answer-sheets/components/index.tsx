@@ -12,7 +12,7 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/types/answer-sheet.types"
-import type { AnswerSheetWithDetails } from "@/types/electron"
+import type { ProcessedAnswerSheet } from "@/components/projects/06-answer-sheets/answer-sheet-management/types"
 import { Eye, FileEdit, Grid3X3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -124,7 +124,7 @@ interface AnswerSheetsTabContentProps {
   projectId: string
   students: StudentData[]
   masterImageCount: number
-  answerSheets: AnswerSheetWithDetails[]
+  answerSheets: ProcessedAnswerSheet[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>
   onUploadComplete: () => void
@@ -154,7 +154,6 @@ export function AnswerSheetsTabContent({
   onApplyChanges,
   onResetChanges,
 }: AnswerSheetsTabContentProps) {
-  // resetFnは不要！リセットも反映もDB再読み込みで解決
   return (
     <>
       <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">

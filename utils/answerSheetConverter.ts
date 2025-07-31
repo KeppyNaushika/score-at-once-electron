@@ -15,10 +15,7 @@ import type {
   PlacementStrategy,
 } from "@/types/answer-sheet.types"
 import type { AnswerSheetWithDetails } from "@/types/electron"
-import {
-  sortStudentsForTable,
-  calculatePosition,
-} from "./studentOrderUtils"
+import { sortStudentsForTable, calculatePosition } from "./studentOrderUtils"
 
 // ============================================================================
 // 既存データからUnified形式への変換
@@ -63,9 +60,9 @@ export function convertToExistingAnswerSheet(
   return {
     id: answerSheet.id,
     studentId: answerSheet.studentId,
-    pageNumber: answerSheet.pageNumber,
+    pageNumber: answerSheet.projectPage.pageNumber, // Access through projectPage
     createdAt: new Date(answerSheet.createdAt),
-    isAbsent: answerSheet.isAbsent,
+    isAbsent: false, // Default value - this field doesn't exist in new schema directly
     student: answerSheet.student
       ? {
           id: answerSheet.student.id,
@@ -256,7 +253,7 @@ export function autoPlaceFiles(
     }
 
     return [...files.filter((f) => f.studentId), ...result]
-  } else if (strategy === "student-first") {
+  } else {
     // 生徒優先配置（列優先と同じ）
     const result: UnifiedFile[] = []
 
@@ -291,19 +288,8 @@ export function autoPlaceFiles(
     }
 
     return [...files.filter((f) => f.studentId), ...result]
-  } else {
-    // filename-auto: ファイル名から自動判定（将来的な拡張）
-    // とりあえずpage-firstと同じ動作
-    return autoPlaceFiles(
-      files,
-      students,
-      disabledState,
-      "page-first",
-      maxPages,
-    )
   }
 }
-
 
 // ============================================================================
 // データベース保存形式への変換

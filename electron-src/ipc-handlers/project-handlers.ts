@@ -7,6 +7,7 @@ import {
   getProjects as dbFetchProjects,
   updateProject as dbUpdateProject,
 } from "../lib/prisma/project"
+import { getProjectPagesByProjectId as dbGetProjectPagesByProjectId } from "../lib/prisma/projectPage"
 
 export function setupProjectHandlers(): void {
   ipcMain.handle("fetch-projects", async () => {
@@ -335,6 +336,35 @@ export function setupProjectHandlers(): void {
       return serializedProject
     } catch (err) {
       console.error("Error deleting project:", err)
+      throw err
+    }
+  })
+
+  ipcMain.handle("get-project-pages-by-project-id", async (_event, projectId: string) => {
+    try {
+      const projectPages = await dbGetProjectPagesByProjectId(projectId)
+      
+      // Create serializable objects
+      const serializedPages = projectPages.map((page) => ({
+        id: page.id,
+        projectId: page.projectId,
+        pageNumber: page.pageNumber,
+        createdAt: page.createdAt.toISOString(),
+        updatedAt: page.updatedAt.toISOString(),
+        pageImages: page.pageImages?.map((image) => ({
+          id: image.id,
+          projectPageId: image.projectPageId,
+          studentId: image.studentId,
+          imagePath: image.imagePath,
+          imageType: image.imageType,
+          createdAt: image.createdAt.toISOString(),
+          updatedAt: image.updatedAt.toISOString(),
+        })) || [],
+      }))
+
+      return serializedPages
+    } catch (err) {
+      console.error("Error fetching project pages by project ID:", err)
       throw err
     }
   })

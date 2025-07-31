@@ -12,7 +12,7 @@ export interface ConvertedFile {
   pageLabel?: string
 }
 
-export interface LayoutRegion {
+export interface CropRegion {
   id: string
   type: string
   x: number
@@ -20,13 +20,13 @@ export interface LayoutRegion {
   width: number
   height: number
   label: string
-  masterImageId?: string | null
+  projectPageId?: string | null
 }
 
-export interface MasterImage {
+export interface ProjectPage {
   id: string
   pageNumber: number
-  path: string
+  projectId: string
 }
 
 export interface StudentWithAnswers {

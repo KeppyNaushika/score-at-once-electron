@@ -20,7 +20,28 @@ import type {
 } from "@prisma/client"
 
 // Answer sheet related types (updated for new structure)
-export type AnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
+// New: Based on PageImage instead of AnswerSheet
+export type AnswerSheetWithDetails = Prisma.PageImageGetPayload<{
+  include: {
+    student: {
+      include: {
+        projectStudents: {
+          select: {
+            customOrder: true
+          }
+        }
+      }
+    }
+    projectPage: {
+      include: {
+        project: true
+      }
+    }
+  }
+}>
+
+// Legacy AnswerSheet type for backward compatibility
+export type LegacyAnswerSheetWithDetails = Prisma.AnswerSheetGetPayload<{
   include: {
     student: true
     project: true
@@ -280,7 +301,23 @@ export interface MyAPI {
   }>
   getAnswerSheetsByProjectId: (projectId: string) => Promise<{
     success: boolean
-    answerSheets?: AnswerSheetWithDetails[]
+    answerSheets?: Array<{
+      id: string
+      studentId: string | null
+      pageNumber: number
+      originalImagePath: string | null
+      isAbsent: boolean
+      student: {
+        id: string
+        lastName: string
+        firstName: string
+        lastNameKana: string
+        firstNameKana: string
+        studentId: string
+      } | null
+      projectId: string
+      status: "ready"
+    }>
     error?: string
   }>
   deleteAnswerSheet: (answerSheetId: string) => Promise<{
@@ -451,6 +488,9 @@ export interface MyAPI {
     imageOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>
   getMasterImagesByProjectId: (
+    projectId: string,
+  ) => Promise<ProjectPageWithDetails[]>
+  getProjectPagesByProjectId: (
     projectId: string,
   ) => Promise<ProjectPageWithDetails[]>
 

@@ -15,27 +15,32 @@ export type {
   UploadData,
 }
 
+// Processed answer sheet format for component compatibility
+export interface ProcessedAnswerSheet {
+  id: string
+  studentId: string | null
+  pageNumber: number
+  originalImagePath: string | null
+  isAbsent: boolean
+  student: {
+    id: string
+    lastName: string
+    firstName: string
+    lastNameKana: string
+    firstNameKana: string
+    studentId: string
+  } | null
+  projectId: string
+  status: "ready"
+}
+
 // Local component-specific types
 export interface AnswerSheetUploadProps {
   projectId: string
   students: UnifiedStudent[]
   masterImageCount: number
   onUploadComplete?: () => void
-  existingAnswerSheets?: Array<{
-    id: string
-    studentId: string | null
-    pageNumber: number
-    originalImagePath: string | null
-    isAbsent: boolean
-    student: {
-      id: string
-      lastName: string
-      firstName: string
-      lastNameKana: string
-      firstNameKana: string
-      studentId: string
-    } | null
-  }>
+  existingAnswerSheets?: ProcessedAnswerSheet[]
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）

@@ -43,7 +43,7 @@ export function useScoringDataLoader(
 
         // 設問領域データの読み込み
         const regionsResult =
-          await window.electronAPI.getLayoutRegionsByProjectId(projectId)
+          await window.electronAPI.getCropRegionsByProjectId(projectId)
         if (!regionsResult || !Array.isArray(regionsResult)) {
           throw new Error("設問領域データの読み込みに失敗しました")
         }

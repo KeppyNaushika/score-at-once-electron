@@ -1,8 +1,8 @@
 "use client"
 
 import {
-  LayoutRegion,
-  MasterImage,
+  CropRegion,
+  ProjectPage,
   UseAnswerSheetUploadProps,
 } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/types"
 import { useFileProcessing } from "@/components/projects/06-answer-sheets/answer-sheet-management/hooks/useFileProcessing"
@@ -40,8 +40,8 @@ export function useAnswerSheetUploadMain({
   >("natural")
 
   // データ
-  const [layoutRegions, setLayoutRegions] = useState<LayoutRegion[]>([])
-  const [masterImages, setMasterImages] = useState<MasterImage[]>([])
+  const [layoutRegions, setCropRegions] = useState<CropRegion[]>([])
+  const [masterImages, setProjectPages] = useState<ProjectPage[]>([])
   const [isClient, setIsClient] = useState(false)
 
   // クライアントサイド判定
@@ -247,9 +247,9 @@ export function useAnswerSheetUploadMain({
 
     // Data
     layoutRegions,
-    setLayoutRegions,
+    setCropRegions,
     masterImages,
-    setMasterImages,
+    setProjectPages,
     isClient,
 
     // Actions
