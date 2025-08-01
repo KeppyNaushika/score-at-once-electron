@@ -6,7 +6,7 @@
   "private": true,
   "main": "main/electron-src/index.js",
   "productName": "一括採点",
-  "version": "0.1.1-alpha.0",
+  "version": "0.1.2-alpha.0",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "prisma generate && next build && tsc -p electron-src",
