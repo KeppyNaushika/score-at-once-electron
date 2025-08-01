@@ -13,10 +13,14 @@ export const createSharedPrismaClient = (): PrismaClient => {
   const databasePath = getDatabasePath()
   // パッケージ化されたアプリでは絶対パスを使用
   const absolutePath = path.resolve(databasePath)
-  const databaseUrl = `file:${absolutePath.replace(/\\/g, "/")}`
+  
+  // Windowsパスの正規化（バックスラッシュをスラッシュに）
+  const normalizedPath = absolutePath.replace(/\\/g, "/")
+  const databaseUrl = `file:${normalizedPath}`
 
   console.log(`Creating Prisma client with database URL: ${databaseUrl}`)
   console.log(`Resolved database path: ${absolutePath}`)
+  console.log(`Normalized path: ${normalizedPath}`)
 
   // 環境変数を動的にオーバーライド
   process.env.DATABASE_URL = databaseUrl
@@ -27,8 +31,9 @@ export const createSharedPrismaClient = (): PrismaClient => {
         url: databaseUrl,
       },
     },
-    // パッケージ化されたアプリでの設定
-    log: ["error", "warn"],
+    // パッケージ化されたアプリでの設定を強化
+    log: ["error", "warn", "info"],
+    errorFormat: "pretty",
   })
 }
 
@@ -72,46 +77,44 @@ export const initializeDatabase = async (): Promise<boolean> => {
         // Prismaクライアントを使用してスキーマを直接作成
         console.log("Connecting to database...")
 
-        // Prisma接続にタイムアウトを設定（Windows対応）
-        console.log("Attempting database connection with timeout...")
+        // Prisma接続にタイムアウトを設定（プラットフォーム対応改善）
+        console.log("Attempting database connection with enhanced timeout...")
         let connectionSuccessful = false
+        const maxRetries = 3
+        let attempt = 0
 
-        try {
-          const connectPromise = prisma.$connect()
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(
-              () =>
-                reject(
-                  new Error("Database connection timeout after 15 seconds"),
-                ),
-              15000,
-            )
-          })
-
-          await Promise.race([connectPromise, timeoutPromise])
-          connectionSuccessful = true
-          console.log("Database connection successful")
-        } catch (connectError) {
-          console.error("Database connection failed:", connectError)
-
-          // Windowsでの接続失敗時は別の方法を試行
-          if (process.platform === "win32") {
-            console.log("Attempting Windows-specific connection method...")
-            try {
-              // 短時間待機後に再試行
-              await new Promise((resolve) => setTimeout(resolve, 2000))
-              await prisma.$connect()
-              connectionSuccessful = true
-              console.log("Windows-specific connection successful")
-            } catch (winError) {
-              console.error(
-                "Windows-specific connection also failed:",
-                winError,
+        while (attempt < maxRetries && !connectionSuccessful) {
+          attempt++
+          console.log(`Connection attempt ${attempt}/${maxRetries}`)
+          
+          try {
+            const connectPromise = prisma.$connect()
+            const timeoutPromise = new Promise((_, reject) => {
+              setTimeout(
+                () =>
+                  reject(
+                    new Error(`Database connection timeout after 20 seconds (attempt ${attempt})`),
+                  ),
+                20000, // タイムアウトを20秒に延長
               )
-              throw winError
+            })
+
+            await Promise.race([connectPromise, timeoutPromise])
+            connectionSuccessful = true
+            console.log(`Database connection successful on attempt ${attempt}`)
+            break
+          } catch (connectError) {
+            console.error(`Connection attempt ${attempt} failed:`, connectError)
+
+            if (attempt < maxRetries) {
+              const waitTime = attempt * 2000 // 2秒、4秒と段階的に延長
+              console.log(`Waiting ${waitTime}ms before retry...`)
+              await new Promise((resolve) => setTimeout(resolve, waitTime))
+            } else {
+              // 最後の試行失敗時
+              console.error("All connection attempts failed")
+              throw new Error(`Database connection failed after ${maxRetries} attempts: ${connectError instanceof Error ? connectError.message : connectError}`)
             }
-          } else {
-            throw connectError
           }
         }
 

@@ -72,15 +72,54 @@ export const getExportsDirectory = (): string => {
 // データディレクトリの初期化
 export const initializeDataDirectory = async (): Promise<void> => {
   const dataDir = getDataDirectory()
+  console.log(`Initializing data directory: ${dataDir}`)
 
   try {
-    // 必要なディレクトリを作成
-    await fs.mkdir(dataDir, { recursive: true })
-    await fs.mkdir(path.join(dataDir, "projects"), { recursive: true })
-    await fs.mkdir(getExportsDirectory(), { recursive: true })
+    // 親ディレクトリの存在確認と作成
+    const parentDir = path.dirname(dataDir)
+    console.log(`Ensuring parent directory exists: ${parentDir}`)
+    await fs.mkdir(parentDir, { recursive: true, mode: 0o755 })
+
+    // データディレクトリの作成
+    console.log(`Creating data directory: ${dataDir}`)
+    await fs.mkdir(dataDir, { recursive: true, mode: 0o755 })
+    
+    // 作成確認
+    const stats = await fs.stat(dataDir)
+    console.log(`Data directory created successfully, isDirectory: ${stats.isDirectory()}`)
+
+    // サブディレクトリの作成
+    const projectsDir = path.join(dataDir, "projects")
+    const exportsDir = getExportsDirectory()
+    
+    console.log(`Creating projects directory: ${projectsDir}`)
+    await fs.mkdir(projectsDir, { recursive: true, mode: 0o755 })
+    
+    console.log(`Creating exports directory: ${exportsDir}`)
+    await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
+
+    // 作成確認
+    const projectStats = await fs.stat(projectsDir)
+    const exportStats = await fs.stat(exportsDir)
+    
+    console.log(`Projects directory verified: ${projectStats.isDirectory()}`)
+    console.log(`Exports directory verified: ${exportStats.isDirectory()}`)
+    
+    console.log("Data directory initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
-    throw error
+    console.error("Data directory path:", dataDir)
+    console.error("Process platform:", process.platform)
+    console.error("App is packaged:", app.isPackaged)
+    
+    // より詳細なエラー情報
+    if (error instanceof Error) {
+      console.error("Error name:", error.name)
+      console.error("Error message:", error.message)
+      console.error("Error stack:", error.stack)
+    }
+    
+    throw new Error(`Data directory initialization failed: ${error instanceof Error ? error.message : error}`)
   }
 }
 

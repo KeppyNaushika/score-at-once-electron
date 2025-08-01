@@ -21,9 +21,21 @@ export class DatabaseSetup {
    */
   isDatabaseExists(): boolean {
     const absolutePath = path.resolve(this.dbPath)
-    const exists = fs.existsSync(absolutePath)
-    console.log(`🔍 Database check: ${absolutePath} - ${exists ? 'EXISTS' : 'NOT FOUND'}`)
-    return exists
+    try {
+      const exists = fs.existsSync(absolutePath)
+      console.log(`🔍 Database check: ${absolutePath} - ${exists ? 'EXISTS' : 'NOT FOUND'}`)
+      
+      if (exists) {
+        // ファイルの詳細情報もログ出力
+        const stats = fs.statSync(absolutePath)
+        console.log(`📄 Database file info: size=${stats.size} bytes, writable=${!!(stats.mode & parseInt('200', 8))}`)
+      }
+      
+      return exists
+    } catch (error) {
+      console.error(`❌ Error checking database existence:`, error)
+      return false
+    }
   }
 
   /**
@@ -47,9 +59,20 @@ export class DatabaseSetup {
    */
   ensureDatabaseDirectory(): void {
     const dbDir = path.dirname(path.resolve(this.dbPath))
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true })
-      console.log(`📁 Created database directory: ${dbDir}`)
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 })
+        console.log(`📁 Created database directory: ${dbDir}`)
+        
+        // 作成確認
+        const stats = fs.statSync(dbDir)
+        console.log(`📁 Directory verified: isDirectory=${stats.isDirectory()}, mode=${stats.mode.toString(8)}`)
+      } else {
+        console.log(`📁 Database directory already exists: ${dbDir}`)
+      }
+    } catch (error) {
+      console.error(`❌ Failed to create database directory: ${dbDir}`, error)
+      throw new Error(`Database directory creation failed: ${error instanceof Error ? error.message : error}`)
     }
   }
 

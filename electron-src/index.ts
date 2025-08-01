@@ -11,13 +11,26 @@ if (process.platform === "win32" && app.isPackaged) {
   // Windowsでコンソールを割り当て
   if (process.platform === "win32") {
     try {
-      const { spawn: _spawn } = require("child_process")
-      // コンソール出力をファイルにリダイレクト
-      const logPath = require("path").join(process.cwd(), "debug.log")
+      const path = require("path")
+      const fs = require("fs")
+      
+      // データディレクトリにログファイルを配置
+      const { getDataDirectory } = require("./lib/dataManager")
+      const dataDir = getDataDirectory()
+      
+      // データディレクトリが存在しない場合は作成
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 })
+      }
+      
+      const logPath = path.join(dataDir, "debug.log")
       console.log = (...args) => {
-        const fs = require("fs")
         const message = args.join(" ") + "\n"
-        fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}`)
+        try {
+          fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}`)
+        } catch (logError) {
+          // ログ書き込みエラーでもアプリを止めない
+        }
       }
       console.error = console.log
       console.warn = console.log

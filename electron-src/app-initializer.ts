@@ -19,15 +19,20 @@ export async function initializeApp(): Promise<void> {
 
     // データベースの初期化とセットアップ
     console.log("Initializing database...")
-    const { DatabaseSetup } = await import("./lib/database-setup")
-    const dbSetup = new DatabaseSetup()
-    
-    const wasSetupRequired = await dbSetup.setupIfNeeded()
-    
-    if (wasSetupRequired) {
-      console.log("Database initialized and seeded successfully")
-    } else {
-      console.log("Database already exists and is ready")
+    try {
+      const { DatabaseSetup } = await import("./lib/database-setup")
+      const dbSetup = new DatabaseSetup()
+      
+      const wasSetupRequired = await dbSetup.setupIfNeeded()
+      
+      if (wasSetupRequired) {
+        console.log("Database initialized and seeded successfully")
+      } else {
+        console.log("Database already exists and is ready")
+      }
+    } catch (dbError) {
+      console.error("Database setup failed:", dbError)
+      throw new Error(`Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`)
     }
 
     // 共有ドライブ用の最適化
