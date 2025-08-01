@@ -26,7 +26,7 @@ export default function ProjectDetailPage() {
     isLoading,
     studentCount,
     questionRegionCount,
-    masterImageCount,
+    modelAnswerCount,
     answerSheetCount,
     cropRegionCount,
     updateProject,
@@ -90,7 +90,7 @@ export default function ProjectDetailPage() {
           />
 
           <ProjectStats
-            masterImageCount={masterImageCount}
+            masterImageCount={modelAnswerCount}
             cropRegionCount={cropRegionCount}
             questionRegionCount={questionRegionCount}
             studentCount={studentCount}
@@ -100,7 +100,7 @@ export default function ProjectDetailPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <WorkflowSteps
               projectId={projectId}
-              masterImageCount={masterImageCount}
+              masterImageCount={modelAnswerCount}
               cropRegionCount={cropRegionCount}
               questionRegionCount={questionRegionCount}
               studentCount={studentCount}
@@ -109,7 +109,7 @@ export default function ProjectDetailPage() {
 
             <AdditionalActions
               projectId={projectId}
-              masterImageCount={masterImageCount}
+              masterImageCount={modelAnswerCount}
               cropRegionCount={cropRegionCount}
               questionRegionCount={questionRegionCount}
               studentCount={studentCount}
@@ -118,7 +118,7 @@ export default function ProjectDetailPage() {
           </div>
 
           <WorkflowProgress
-            masterImageCount={masterImageCount}
+            masterImageCount={modelAnswerCount}
             cropRegionCount={cropRegionCount}
             questionRegionCount={questionRegionCount}
             studentCount={studentCount}

@@ -18,7 +18,7 @@ export interface UseDragDropParams {
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
   students?: UnifiedStudent[]
-  masterImageCount?: number
+  modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
   onReloadData?: () => void

@@ -18,12 +18,12 @@ import { useCallback, useMemo } from "react"
 interface UseTableDataParams {
   files: UnifiedFile[]
   students: UnifiedStudent[]
-  masterImageCount: number
+  modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   isPositionDisabled: (studentIndex: number, pageIndex: number) => boolean
   mode?: "upload" | "view"
-  existingAnswerSheets?: Array<{
+  existingStudentAnswers?: Array<{
     id: string
     studentId: string | null
     pageNumber: number
@@ -37,12 +37,12 @@ interface UseTableDataParams {
 export function useTableData({
   files,
   students,
-  masterImageCount,
+  modelAnswerCount,
   fileOrder,
   disabledState,
   isPositionDisabled,
   mode,
-  existingAnswerSheets,
+  existingStudentAnswers,
   allowOverwrite = false,
 }: UseTableDataParams) {
   // 生徒のソート（customOrder準拠）
@@ -55,16 +55,16 @@ export function useTableData({
     return calculateDynamicDisabledPositions(
       files,
       sortedStudents,
-      masterImageCount,
+      modelAnswerCount,
       disabledState,
       mode,
     )
-  }, [files, sortedStudents, masterImageCount, disabledState, mode])
+  }, [files, sortedStudents, modelAnswerCount, disabledState, mode])
 
   // 拡張されたisPositionDisabled関数
   const enhancedIsPositionDisabled = useCallback(
     (studentIndex: number, pageIndex: number) => {
-      const position = studentIndex * masterImageCount + pageIndex
+      const position = studentIndex * modelAnswerCount + pageIndex
 
       // 元の無効化チェック
       if (isPositionDisabled(studentIndex, pageIndex)) return true
@@ -72,7 +72,7 @@ export function useTableData({
       // 動的無効化チェック
       return dynamicDisabledPositions.has(position)
     },
-    [isPositionDisabled, masterImageCount, dynamicDisabledPositions],
+    [isPositionDisabled, modelAnswerCount, dynamicDisabledPositions],
   )
 
   // 既存答案がある位置の計算（警告オーバーレイ用）
@@ -80,18 +80,18 @@ export function useTableData({
     return calculatePositionsWithExistingAnswers(
       files,
       sortedStudents,
-      masterImageCount,
+      modelAnswerCount,
       disabledState,
       mode,
-      existingAnswerSheets,
+      existingStudentAnswers,
     )
   }, [
     files,
     sortedStudents,
-    masterImageCount,
+    modelAnswerCount,
     disabledState,
     mode,
-    existingAnswerSheets,
+    existingStudentAnswers,
   ])
 
   // 有効/無効ファイルの取得
@@ -112,13 +112,13 @@ export function useTableData({
   const { tableData } = useTableDataGeneration({
     files,
     sortedStudents,
-    masterImageCount,
+    modelAnswerCount,
     fileOrder,
     disabledState,
     mode,
     enhancedIsPositionDisabled,
     allowOverwrite,
-    existingAnswerSheets,
+    existingStudentAnswers,
   })
 
   return {

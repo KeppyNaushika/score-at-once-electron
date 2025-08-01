@@ -153,7 +153,7 @@ export interface ProjectWithDetails {
   tags?: TagData[]
   projectStudents?: ProjectStudentData[]
   userProjects?: UserProjectData[] // Added: many-to-many User-Project relation
-  answerSheets?: any[]             // Added: answer sheets for project status checking
+  studentAnswers?: any[]           // Added: student answers for project status checking
 }
 
 export interface ProjectStudentData {
@@ -182,7 +182,7 @@ export interface PageImageData {
   projectPageId: string
   studentId?: string | null  // NULL for master images, student ID for answer images
   imagePath: string
-  imageType: 'MASTER' | 'ANSWER'
+  imageType: 'MODEL_ANSWER' | 'STUDENT_ANSWER'
   createdAt: Date
   updatedAt: Date
 }
@@ -220,7 +220,7 @@ export interface QuestionScoreData {
   scoredByUserId?: string | null
   createdAt: Date
   updatedAt: Date
-  // Removed fields: answerSheetId, comment, scoreVersion
+  // Removed fields: studentAnswerId, comment, scoreVersion
 }
 
 export interface TagData {
@@ -283,7 +283,7 @@ export interface QuestionScoreCreateData {
   partialScore?: number | null // Decimal型をnumberとして扱う
   scoredByUserId?: string | null
   status?: string             // unscored, correct, incorrect, partial, no_answer
-  // Removed: answerSheetId, comment
+  // Removed: studentAnswerId, comment
 }
 
 export interface QuestionScoreUpdateData {

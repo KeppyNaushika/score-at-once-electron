@@ -67,11 +67,11 @@ export function convertAnswerSheetsToFiles(
 }
 
 /**
- * 答案画像の遅延読み込み用関数
+ * 生徒答案画像の遅延読み込み用関数
  * @param file UnifiedFileオブジェクト
  * @returns Base64エンコードされた画像データURL
  */
-export async function loadAnswerSheetImage(file: UnifiedFile): Promise<string> {
+export async function loadStudentAnswerImage(file: UnifiedFile): Promise<string> {
   // 新規ファイル（メモリ内）の場合はpreviewを返す
   if (file.preview && !file.imagePath) {
     return file.preview

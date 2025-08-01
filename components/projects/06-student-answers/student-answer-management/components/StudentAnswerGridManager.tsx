@@ -16,7 +16,7 @@ import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 
-interface AnswerSheetGridManagerProps {
+interface StudentAnswerGridManagerProps {
   projectId: string
   students: UnifiedStudent[]
   files: UnifiedFile[]
@@ -29,7 +29,7 @@ interface AnswerSheetGridManagerProps {
   ) => void
 }
 
-export function AnswerSheetGridManager({
+export function StudentAnswerGridManager({
   projectId,
   students,
   files,
@@ -38,7 +38,7 @@ export function AnswerSheetGridManager({
   onFileOrderChange,
   onFilesReorder,
   onUpload,
-}: AnswerSheetGridManagerProps) {
+}: StudentAnswerGridManagerProps) {
   // State管理
   const [masterImages, setMasterImages] = useState<
     Array<{ id: string; pageNumber: number }>

@@ -48,7 +48,7 @@ export async function uploadStudentAnswers(
       //   where: {
       //     projectPageId: projectPageId,
       //     studentId: fileData.studentId,
-      //     imageType: "ANSWER"
+      //     imageType: "STUDENT_ANSWER"
       //   },
       // })
 
@@ -59,7 +59,7 @@ export async function uploadStudentAnswers(
           projectPageId: projectId, // TODO: This needs to be a proper projectPageId
           studentId: fileData.studentId,
           imagePath: relativePath,
-          imageType: "ANSWER",
+          imageType: "STUDENT_ANSWER",
         },
       })
 
@@ -90,7 +90,7 @@ export async function getStudentAnswersByProjectId(projectId: string) {
   try {
     const answerSheets = await prisma.pageImage.findMany({
       where: { 
-        imageType: "ANSWER",
+        imageType: "STUDENT_ANSWER",
         projectPage: {
           projectId: projectId
         },

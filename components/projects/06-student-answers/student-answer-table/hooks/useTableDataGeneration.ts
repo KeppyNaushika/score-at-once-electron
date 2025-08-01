@@ -13,7 +13,7 @@ import { useMemo } from "react"
 interface UseTableDataGenerationParams {
   files: UnifiedFile[]
   sortedStudents: UnifiedStudent[]
-  masterImageCount: number
+  modelAnswerCount: number
   fileOrder: PlacementStrategy
   disabledState: ExtendedDisabledState
   mode?: "upload" | "view"
@@ -22,7 +22,7 @@ interface UseTableDataGenerationParams {
     pageIndex: number,
   ) => boolean
   allowOverwrite?: boolean
-  existingAnswerSheets?: Array<{
+  existingStudentAnswers?: Array<{
     id: string
     studentId: string | null
     pageNumber: number
@@ -35,13 +35,13 @@ interface UseTableDataGenerationParams {
 export function useTableDataGeneration({
   files,
   sortedStudents,
-  masterImageCount,
+  modelAnswerCount,
   fileOrder,
   disabledState,
   mode,
   enhancedIsPositionDisabled,
   allowOverwrite = false,
-  existingAnswerSheets = [],
+  existingStudentAnswers = [],
 }: UseTableDataGenerationParams) {
   const tableData = useMemo(() => {
     const enabledFiles = getEnabledFiles(files, disabledState)
@@ -59,7 +59,7 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
-        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
           if (!enhancedIsPositionDisabled(studentIndex, pageIndex)) {
             validPositions.push({ studentIndex, pageIndex })
           }
@@ -104,8 +104,8 @@ export function useTableDataGeneration({
         const student = sortedStudents[studentIndex]
         const row: CellData[] = []
 
-        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-          const position = studentIndex * masterImageCount + pageIndex
+        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
+          const position = studentIndex * modelAnswerCount + pageIndex
           const isDisabled = enhancedIsPositionDisabled(studentIndex, pageIndex)
 
           if (isDisabled) {
@@ -147,8 +147,8 @@ export function useTableDataGeneration({
 
       // 既存答案がある位置を特定（上書き無効時にスキップするため）
       const existingAnswerPositions = new Set<string>()
-      if (!allowOverwrite && existingAnswerSheets) {
-        existingAnswerSheets.forEach((answerSheet) => {
+      if (!allowOverwrite && existingStudentAnswers) {
+        existingStudentAnswers.forEach((answerSheet) => {
           if (answerSheet.studentId && answerSheet.pageNumber) {
             // 既存答案の学生IDとページ番号から位置を特定
             const studentIndex = sortedStudents.findIndex(
@@ -170,8 +170,8 @@ export function useTableDataGeneration({
         studentIndex < sortedStudents.length;
         studentIndex++
       ) {
-        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-          const position = studentIndex * masterImageCount + pageIndex
+        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
+          const position = studentIndex * modelAnswerCount + pageIndex
           const positionKey = `${studentIndex}-${pageIndex}`
 
           const isManuallyDisabled =
@@ -235,8 +235,8 @@ export function useTableDataGeneration({
         const student = sortedStudents[studentIndex]
         const row: CellData[] = []
 
-        for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
-          const position = studentIndex * masterImageCount + pageIndex
+        for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
+          const position = studentIndex * modelAnswerCount + pageIndex
           const pageNumber = pageIndex + 1
 
           // 位置無効化チェック（手動無効化のみ）
@@ -300,13 +300,13 @@ export function useTableDataGeneration({
   }, [
     files,
     sortedStudents,
-    masterImageCount,
+    modelAnswerCount,
     fileOrder,
     disabledState,
     mode,
     enhancedIsPositionDisabled,
     allowOverwrite,
-    existingAnswerSheets,
+    existingStudentAnswers,
   ])
 
   return { tableData }

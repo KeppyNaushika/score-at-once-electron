@@ -174,7 +174,7 @@ export function setupProjectHandlers(): void {
           })) || [],
         answerImages:
           project.projectPages?.reduce((allImages: any[], page) => {
-            const answerImages = page.pageImages?.filter(image => image.imageType === "ANSWER").map((image) => ({
+            const answerImages = page.pageImages?.filter(image => image.imageType === "STUDENT_ANSWER").map((image) => ({
               id: image.id,
               projectPageId: image.projectPageId,
               studentId: image.studentId,

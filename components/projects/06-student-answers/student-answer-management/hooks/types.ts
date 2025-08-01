@@ -44,7 +44,7 @@ export interface StudentWithAnswers {
   attendanceNumber?: number | null
 }
 
-export interface UseAnswerSheetUploadProps {
+export interface UseStudentAnswerUploadProps {
   projectId: string
   students: Array<{
     id: string

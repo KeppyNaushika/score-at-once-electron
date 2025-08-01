@@ -8,7 +8,7 @@ import type {
   UnifiedStudent,
   UnifiedFile,
   UploadData,
-  ExistingAnswerSheet,
+  ExistingStudentAnswer,
   TableData,
   TableCell,
   DisabledState,
@@ -23,7 +23,7 @@ import { sortStudentsForTable, calculatePosition } from "./studentOrderUtils"
 
 /**
  * 既存のStudentDataをUnifiedStudentに変換
- * 06-answer-sheets/page.tsxの形式から変換
+ * 06-student-answers/page.tsxの形式から変換
  */
 export function convertToUnifiedStudent(studentData: {
   id: string
@@ -52,11 +52,11 @@ export function convertToUnifiedStudent(studentData: {
 }
 
 /**
- * 既存のStudentAnswerWithDetailsからExistingAnswerSheetに変換
+ * 既存のStudentAnswerWithDetailsからExistingStudentAnswerに変換
  */
-export function convertToExistingAnswerSheet(
+export function convertToExistingStudentAnswer(
   answerSheet: StudentAnswerWithDetails,
-): ExistingAnswerSheet {
+): ExistingStudentAnswer {
   return {
     id: answerSheet.id,
     studentId: answerSheet.studentId,

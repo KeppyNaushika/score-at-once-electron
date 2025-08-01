@@ -139,6 +139,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
+  getAssetPath: (assetPath: string) =>
+    ipcRenderer.invoke("get-asset-path", assetPath),
 
   // Class related
   fetchClasses: () => ipcRenderer.invoke("fetch-classes"),

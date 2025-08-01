@@ -105,11 +105,11 @@ export function useTemplateData(projectId: string | undefined) {
         // projectPagesからmaster imagesを抽出してソート
         const masterImages = fetchedProject.projectPages
           .filter((page) =>
-            page.pageImages?.some((img) => img.imageType === "MASTER"),
+            page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER"),
           )
           .map((page) => {
             const masterImage = page.pageImages?.find(
-              (img) => img.imageType === "MASTER",
+              (img) => img.imageType === "MODEL_ANSWER",
             )
             return {
               id: page.id,

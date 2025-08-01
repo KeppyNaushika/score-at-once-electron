@@ -66,7 +66,7 @@ export default function RegionInfoPage() {
           // 全ページの画像URLを取得
           const urls: { [key: string]: string } = {}
           for (const page of sortedProjectPages) {
-            const masterImage = page.pageImages?.find(img => img.imageType === 'MASTER')
+            const masterImage = page.pageImages?.find(img => img.imageType === 'MODEL_ANSWER')
             if (masterImage) {
               const url = await window.electronAPI.resolveFileProtocolPath(
                 masterImage.imagePath,

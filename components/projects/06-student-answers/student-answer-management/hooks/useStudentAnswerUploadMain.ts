@@ -3,7 +3,7 @@
 import {
   CropRegion,
   ProjectPage,
-  UseAnswerSheetUploadProps,
+  UseStudentAnswerUploadProps,
 } from "@/components/projects/06-student-answers/student-answer-management/hooks/types"
 import { useFileProcessing } from "@/components/projects/06-student-answers/student-answer-management/hooks/useFileProcessing"
 import { useStudentManagement } from "@/components/projects/06-student-answers/student-answer-management/hooks/useStudentManagement"
@@ -13,11 +13,11 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-export function useAnswerSheetUploadMain({
+export function useStudentAnswerUploadMain({
   projectId,
   students,
   onUploadComplete,
-}: UseAnswerSheetUploadProps) {
+}: UseStudentAnswerUploadProps) {
   // 子フックの利用
   const fileProcessing = useFileProcessing()
   const studentManagement = useStudentManagement({ students })

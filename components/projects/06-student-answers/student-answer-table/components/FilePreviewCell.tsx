@@ -1,6 +1,6 @@
 "use client"
 
-import { loadAnswerSheetImage } from "@/components/projects/06-student-answers/student-answer-management/utils/convertAnswerSheetsToFiles"
+import { loadStudentAnswerImage } from "@/components/projects/06-student-answers/student-answer-management/utils/convertStudentAnswersToFiles"
 import type { FilePreviewCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import Image from "next/image"
@@ -36,7 +36,7 @@ export function FilePreviewCell({
   useEffect(() => {
     if (!imagePreview && file.imagePath && !isImageLoading) {
       setIsImageLoading(true)
-      loadAnswerSheetImage(file)
+      loadStudentAnswerImage(file)
         .then((dataUrl) => {
           setImagePreview(dataUrl)
           setIsImageLoading(false)

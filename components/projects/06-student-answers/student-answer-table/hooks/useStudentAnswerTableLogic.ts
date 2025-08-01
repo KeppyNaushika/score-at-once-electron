@@ -4,28 +4,28 @@ import { useNameRegion } from "@/components/projects/06-student-answers/student-
 import { useTableData } from "@/components/projects/06-student-answers/student-answer-table/hooks/useTableData"
 import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
 import type {
-  AnswerSheetTableProps,
+  StudentAnswerTableProps,
   UploadModalState,
 } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
 import type { UploadData } from "@/types/student-answer.types"
 import { useCallback, useEffect, useState } from "react"
 
 /**
- * AnswerSheetTableのメインロジックを管理するカスタムフック
+ * StudentAnswerTableのメインロジックを管理するカスタムフック
  */
-export function useAnswerSheetTableLogic({
+export function useStudentAnswerTableLogic({
   projectId,
   students,
   files,
-  masterImageCount,
+  modelAnswerCount,
   fileOrder = "page-first",
   mode = "upload",
   onFilesChange,
   onUpload,
   onReloadData,
   onUpdatePendingChanges,
-  existingAnswerSheets = [],
-}: AnswerSheetTableProps) {
+  existingStudentAnswers = [],
+}: StudentAnswerTableProps) {
   // ============================================================================
   // カスタムフック
   // ============================================================================
@@ -59,12 +59,12 @@ export function useAnswerSheetTableLogic({
   } = useTableData({
     files,
     students,
-    masterImageCount,
+    modelAnswerCount,
     fileOrder,
     disabledState,
     isPositionDisabled,
     mode,
-    existingAnswerSheets,
+    existingStudentAnswers,
     allowOverwrite,
   })
 
@@ -74,7 +74,7 @@ export function useAnswerSheetTableLogic({
     getEnabledFiles,
     getDisabledFiles,
     students,
-    masterImageCount,
+    modelAnswerCount,
     mode,
     fileOrder,
     onReloadData,
@@ -202,7 +202,7 @@ export function useAnswerSheetTableLogic({
   // 計算済みプロパティ
   // ============================================================================
 
-  const maxPages = masterImageCount
+  const maxPages = modelAnswerCount
   const trashFiles = getDisabledFiles()
   const hasNameRegion = Object.values(nameRegionAvailable).some(Boolean)
 

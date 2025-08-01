@@ -185,11 +185,11 @@ export function useMasterAnswers(
             // Convert projectPages to master answers format for compatibility
             const masterAnswers = updatedProject.projectPages
               .filter((page) =>
-                page.pageImages?.some((img) => img.imageType === "MASTER"),
+                page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER"),
               )
               .map((page) => {
                 const masterAnswer = page.pageImages?.find(
-                  (img) => img.imageType === "MASTER",
+                  (img) => img.imageType === "MODEL_ANSWER",
                 )
                 return {
                   id: page.id,

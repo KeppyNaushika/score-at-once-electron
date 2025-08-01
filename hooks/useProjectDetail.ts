@@ -95,10 +95,10 @@ export function useProjectDetail(projectId: string) {
     loadProject()
   }, [loadProject])
 
-  const masterImageCount = project?.projectPages?.reduce((count, page) => 
-    count + (page.pageImages?.filter((img: any) => img.imageType === "MASTER")?.length || 0), 0) || 0
+  const modelAnswerCount = project?.projectPages?.reduce((count, page) => 
+    count + (page.pageImages?.filter((img: any) => img.imageType === "MODEL_ANSWER")?.length || 0), 0) || 0
   const answerSheetCount = project?.projectPages?.reduce((count, page) => 
-    count + (page.pageImages?.filter((img: any) => img.imageType === "ANSWER_SHEET")?.length || 0), 0) || 0
+    count + (page.pageImages?.filter((img: any) => img.imageType === "STUDENT_ANSWER")?.length || 0), 0) || 0
   const cropRegionCount = project?.projectPages?.reduce((count, page) => 
     count + (page.cropRegions?.length || 0), 0) || 0
 
@@ -107,7 +107,7 @@ export function useProjectDetail(projectId: string) {
     isLoading,
     studentCount,
     questionRegionCount,
-    masterImageCount,
+    modelAnswerCount,
     answerSheetCount,
     cropRegionCount,
     loadProject,

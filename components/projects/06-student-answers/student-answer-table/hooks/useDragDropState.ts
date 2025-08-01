@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 interface UseDragDropStateParams {
   files: UnifiedFile[]
   students?: UnifiedStudent[]
-  masterImageCount?: number
+  modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
   onFilesChange: (files: UnifiedFile[]) => void
@@ -25,7 +25,7 @@ interface UseDragDropStateParams {
 export function useDragDropState({
   files,
   students,
-  masterImageCount,
+  modelAnswerCount,
   mode,
   fileOrder,
   onFilesChange,
@@ -41,16 +41,16 @@ export function useDragDropState({
   // 3つ組からDnD配列を構築する関数（メモ化）
   const buildDnDArray = useCallback(
     (fileStates: FileState[], strategy: PlacementStrategy): UnifiedFile[] => {
-      if (!students || !masterImageCount) return []
+      if (!students || !modelAnswerCount) return []
       return buildDnDArrayFromFileStates(
         fileStates,
         strategy,
         students,
-        masterImageCount,
+        modelAnswerCount,
         files,
       )
     },
-    [students, masterImageCount, files],
+    [students, modelAnswerCount, files],
   )
 
   // DnD配列から3つ組を更新する関数（メモ化）

@@ -6,36 +6,36 @@ import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import {
-  AnswerSheetsPageHeader,
-  AnswerSheetsTabContent,
-  AnswerSheetsTabsNavigation,
+  StudentAnswersPageHeader,
+  StudentAnswersTabContent,
+  StudentAnswersTabsNavigation,
   LoadingSpinner,
-  type AnswerSheetTab,
+  type StudentAnswerTab,
 } from "./components"
-import { useAnswerSheetsData, usePendingChanges } from "./hooks"
+import { useStudentAnswersData, usePendingChanges } from "./hooks"
 
 /**
- * AnswerSheetsPage - Main page component for answer sheet management
+ * StudentAnswersPage - Main page component for student answer management
  *
  * Features:
- * - Upload and manage answer sheets
- * - Associate answer sheets with students
- * - Optimistic updates for answer sheet placement changes
- * - Tabbed interface for new uploads and existing sheets
+ * - Upload and manage student answers
+ * - Associate student answers with students
+ * - Optimistic updates for student answer placement changes
+ * - Tabbed interface for new uploads and existing answers
  *
- * @returns JSX component for answer sheets page
+ * @returns JSX component for student answers page
  */
 
-export default function AnswerSheetsPage() {
+export default function StudentAnswersPage() {
   const params = useParams()
   const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
-  const [activeTab, setActiveTab] = useState<AnswerSheetTab>("new-grid")
+  const [activeTab, setActiveTab] = useState<StudentAnswerTab>("new-grid")
 
   // Data loading hook
-  const { students, answerSheets, masterImageCount, isLoading, loadData } =
-    useAnswerSheetsData(projectId)
+  const { students, studentAnswers, modelAnswerCount, isLoading, loadData } =
+    useStudentAnswersData(projectId)
 
   // Pending changes management hook
   const {
@@ -47,7 +47,7 @@ export default function AnswerSheetsPage() {
     handleResetChanges,
     openConfirmModal,
     closeConfirmModal,
-  } = usePendingChanges(loadData, students, answerSheets)
+  } = usePendingChanges(loadData, students, studentAnswers)
 
   // Reset function will be obtained directly from components
 
@@ -64,9 +64,9 @@ export default function AnswerSheetsPage() {
   }, [loadData])
 
   /**
-   * Handles answer sheet updates in view mode
+   * Handles student answer updates in view mode
    */
-  const handleAnswerSheetUpdate = useCallback(() => {
+  const handleStudentAnswerUpdate = useCallback(() => {
     toast.info("変更が保存されました", {
       description: "「変更を反映」ボタンで最新データを確認してください",
     })
@@ -80,7 +80,7 @@ export default function AnswerSheetsPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-full flex-col overflow-y-auto">
-        <AnswerSheetsPageHeader
+        <StudentAnswersPageHeader
           projectId={projectId}
           pendingChangesCount={pendingChanges.length}
           helpButton={helpButton}
@@ -88,27 +88,27 @@ export default function AnswerSheetsPage() {
         />
 
         <div className="min-h-0 flex-1 overflow-hidden p-3">
-          <AnswerSheetsTabsNavigation
+          <StudentAnswersTabsNavigation
             activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as AnswerSheetTab)}
+            onTabChange={(tab) => setActiveTab(tab as StudentAnswerTab)}
           >
-            <AnswerSheetsTabContent
+            <StudentAnswersTabContent
               activeTab={activeTab}
               projectId={projectId}
               students={students}
-              masterImageCount={masterImageCount}
-              answerSheets={answerSheets}
+              modelAnswerCount={modelAnswerCount}
+              studentAnswers={studentAnswers}
               pendingChanges={pendingChanges}
               affectedCells={affectedCells}
               onUploadComplete={handleUploadComplete}
-              onAnswerSheetUpdate={handleAnswerSheetUpdate}
+              onStudentAnswerUpdate={handleStudentAnswerUpdate}
               onUpdatePendingChanges={handleUpdatePendingChanges}
               isConfirmModalOpen={isConfirmModalOpen}
               onCloseConfirmModal={closeConfirmModal}
               onApplyChanges={handleApplyChanges}
               onResetChanges={handleResetChanges}
             />
-          </AnswerSheetsTabsNavigation>
+          </StudentAnswersTabsNavigation>
         </div>
       </div>
     </ProtectedRoute>

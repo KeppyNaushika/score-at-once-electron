@@ -1,28 +1,30 @@
 "use client"
 
 import { FileUploadZone } from "@/components/projects/06-student-answers/student-answer-management/components/FileUploadZone"
-import { useAnswerSheetUpload } from "@/components/projects/06-student-answers/student-answer-management/hooks/useAnswerSheetUpload"
-import type { AnswerSheetUploadProps } from "@/components/projects/06-student-answers/student-answer-management/types"
+import { useStudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload"
+import type { StudentAnswerUploadProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import {
-  buildOrderedFileArrayFromAnswerSheets,
+  buildOrderedFileArrayFromStudentAnswers,
   reorderFilesByStrategy,
 } from "@/components/projects/06-student-answers/student-answer-management/utils/reorderFilesByStrategy"
-import { AnswerSheetTable } from "@/components/projects/06-student-answers/student-answer-table/components/AnswerSheetTable"
+import { StudentAnswerTable } from "@/components/projects/06-student-answers/student-answer-table/components/StudentAnswerTable"
 import { PasswordDialog } from "@/components/ui/password-dialog"
 import type { PlacementStrategy } from "@/types/student-answer.types"
 import { useCallback, useEffect } from "react"
 
-export function AnswerSheetUpload({
+export function StudentAnswerUpload({
   projectId,
   students,
-  masterImageCount,
+  modelAnswerCount,
   onUploadComplete,
-  existingAnswerSheets,
+  existingStudentAnswers,
   mode = "upload",
   pendingChanges,
   affectedCells,
   onUpdatePendingChanges,
-}: AnswerSheetUploadProps) {
+}: StudentAnswerUploadProps) {
+  const finalModelAnswerCount = modelAnswerCount
+  const finalExistingAnswers = existingStudentAnswers
   const {
     // State
     isUploading,
@@ -38,26 +40,26 @@ export function AnswerSheetUpload({
     setFileOrder,
     handleDrop,
     handleUpload,
-  } = useAnswerSheetUpload(projectId, onUploadComplete)
+  } = useStudentAnswerUpload(projectId, onUploadComplete)
 
   // 確認モード用の初期化処理
   useEffect(() => {
-    if (mode === "view" && existingAnswerSheets && files.length === 0) {
+    if (mode === "view" && finalExistingAnswers && files.length === 0) {
       // 初回のみ既存答案を配置戦略に基づいて配列構築
-      const initialFiles = buildOrderedFileArrayFromAnswerSheets(
-        existingAnswerSheets,
+      const initialFiles = buildOrderedFileArrayFromStudentAnswers(
+        finalExistingAnswers,
         students,
-        masterImageCount,
+        finalModelAnswerCount,
         fileOrder,
       )
       setFiles(initialFiles)
     }
   }, [
     mode,
-    existingAnswerSheets,
+    finalExistingAnswers,
     files.length,
     students,
-    masterImageCount,
+    finalModelAnswerCount,
     fileOrder,
     setFiles,
   ])
@@ -70,24 +72,24 @@ export function AnswerSheetUpload({
         const reorderedFiles = reorderFilesByStrategy(
           files,
           students,
-          masterImageCount,
+          finalModelAnswerCount,
           newFileOrder,
         )
         setFiles(reorderedFiles)
       }
       setFileOrder(newFileOrder)
     },
-    [mode, files, students, masterImageCount, setFiles, setFileOrder],
+    [mode, files, students, finalModelAnswerCount, setFiles, setFileOrder],
   )
 
   // 表示モードでは既存の答案をテーブル表示
-  if (mode === "view" && existingAnswerSheets) {
+  if (mode === "view" && finalExistingAnswers) {
     return (
-      <AnswerSheetTable
+      <StudentAnswerTable
         projectId={projectId}
         students={students}
         files={files}
-        masterImageCount={masterImageCount}
+        modelAnswerCount={finalModelAnswerCount}
         fileOrder={fileOrder}
         isUploading={false} // 確認モードではアップロード不可
         onFileOrderChange={handleFileOrderChangeInViewMode}
@@ -99,7 +101,7 @@ export function AnswerSheetUpload({
         pendingChanges={pendingChanges}
         affectedCells={affectedCells}
         onUpdatePendingChanges={onUpdatePendingChanges}
-        existingAnswerSheets={existingAnswerSheets}
+        existingStudentAnswers={finalExistingAnswers}
       />
     )
   }
@@ -111,17 +113,17 @@ export function AnswerSheetUpload({
         onDrop={handleDrop}
         isConverting={isConverting}
         disabled={isUploading}
-        masterImageCount={masterImageCount}
+        modelAnswerCount={finalModelAnswerCount}
         pdfProcessingProgress={pdfProcessingProgress}
       />
 
       {/* 答案配置テーブル */}
       <div className="min-h-0 flex-1">
-        <AnswerSheetTable
+        <StudentAnswerTable
           projectId={projectId}
           students={students}
           files={files}
-          masterImageCount={masterImageCount}
+          modelAnswerCount={finalModelAnswerCount}
           fileOrder={fileOrder}
           isUploading={isUploading}
           onFileOrderChange={setFileOrder}
@@ -130,7 +132,7 @@ export function AnswerSheetUpload({
           observerRef={observerRef}
           mode={mode}
           onReloadData={onUploadComplete}
-          existingAnswerSheets={existingAnswerSheets}
+          existingStudentAnswers={finalExistingAnswers}
         />
       </div>
 

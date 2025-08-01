@@ -47,7 +47,7 @@ export function saveConfigToStorage(config: ScoringMarkConfig) {
 }
 
 // マーク画像パスを取得
-export function getMarkImagePath(status: ScoringStatus, useTransparent: boolean) {
+export function getMarkImagePath(status: ScoringStatus, useTransparent: boolean): string {
   const prefix = useTransparent ? "tranceparent_" : ""
   switch (status) {
     case "unscored":

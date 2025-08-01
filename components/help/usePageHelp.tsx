@@ -16,7 +16,7 @@ import { HelpContent01Upload as UploadHelpContent } from "@/components/help/page
 import { HelpContent02Template as TemplateHelpContent } from "@/components/help/page-specific/HelpContent-02-template"
 import { HelpContent03RegionInfo as RegionInfoHelpContent } from "@/components/help/page-specific/HelpContent-03-region-info"
 import { HelpContent05Students as StudentsHelpContent } from "@/components/help/page-specific/HelpContent-05-students"
-import { HelpContent06AnswerSheets as AnswerSheetsHelpContent } from "@/components/help/page-specific/HelpContent-06-answer-sheets"
+import { HelpContent06StudentAnswers as StudentAnswersHelpContent } from "@/components/help/page-specific/HelpContent-06-student-answers"
 import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent-07-scoring"
 import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent-08-export"
 import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContent-subtotal-groups"
@@ -29,7 +29,7 @@ const pageHelpComponents: {
   "02-template": TemplateHelpContent,
   "03-region-info": RegionInfoHelpContent,
   "05-students": StudentsHelpContent,
-  "06-student-answers": AnswerSheetsHelpContent,
+  "06-student-answers": StudentAnswersHelpContent,
   "07-score-at-once": ScoringHelpContent,
   "08-export": ExportHelpContent,
   "subtotal-groups": SubtotalGroupsHelpContent,

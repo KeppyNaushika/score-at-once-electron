@@ -246,7 +246,7 @@ export function useScoringFilter({
 
     if (!projectPage) return null
 
-    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MASTER")
+    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MODEL_ANSWER")
     const masterImagePath = masterImage?.imagePath
 
     return {

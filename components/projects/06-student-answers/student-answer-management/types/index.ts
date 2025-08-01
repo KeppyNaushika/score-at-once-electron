@@ -1,4 +1,4 @@
-// Import and re-export from answer-sheet.types for consistency
+// Import and re-export from student-answer.types for consistency
 import type {
   PendingChange,
   PlacementStrategy,
@@ -35,12 +35,12 @@ export interface ProcessedStudentAnswer {
 }
 
 // Local component-specific types
-export interface AnswerSheetUploadProps {
+export interface StudentAnswerUploadProps {
   projectId: string
   students: UnifiedStudent[]
-  masterImageCount: number
+  modelAnswerCount: number
   onUploadComplete?: () => void
-  existingAnswerSheets?: ProcessedStudentAnswer[]
+  existingStudentAnswers?: ProcessedStudentAnswer[]
   mode?: "upload" | "view"
 
   // 変更状態管理用（確認モードのみ）
@@ -51,11 +51,12 @@ export interface AnswerSheetUploadProps {
   ) => void
 }
 
+
 export interface FileUploadZoneProps {
   onDrop: (files: File[]) => void
   isConverting: boolean
   disabled?: boolean
-  masterImageCount: number
+  modelAnswerCount: number
   pdfProcessingProgress: number
 }
 

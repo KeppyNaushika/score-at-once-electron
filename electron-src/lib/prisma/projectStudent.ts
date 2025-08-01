@@ -124,7 +124,7 @@ export async function removeStudentsFromProject(
     // 関連するAnswerSheetを削除 (PageImageから)
     await prisma.pageImage.deleteMany({
       where: {
-        imageType: "ANSWER",
+        imageType: "STUDENT_ANSWER",
         studentId: {
           in: studentIds,
         },

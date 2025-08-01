@@ -1,7 +1,7 @@
 /**
  * table-dnd-kit-test準拠の型定義
- * 06-answer-sheetsページ専用の統一型定義
- * レポート分析に基づき6つのStudent型と4つのAnswerSheet型を1つに統合
+ * 06-student-answersページ専用の統一型定義
+ * レポート分析に基づき6つのStudent型と4つのStudentAnswer型を1つに統合
  */
 
 // ============================================================================
@@ -98,10 +98,10 @@ export interface UploadData {
 }
 
 /**
- * 既存のAnswerSheetWithDetailsから必要な部分を抽出
+ * 既存のStudentAnswerWithDetailsから必要な部分を抽出
  * 表示用の最小限の情報
  */
-export interface ExistingAnswerSheet {
+export interface ExistingStudentAnswer {
   id: string
   studentId: string | null
   pageNumber: number

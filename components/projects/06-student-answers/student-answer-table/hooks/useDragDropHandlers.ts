@@ -19,7 +19,7 @@ interface UseDragDropHandlersParams {
   getEnabledFiles: () => UnifiedFile[]
   getDisabledFiles: () => UnifiedFile[]
   students?: UnifiedStudent[]
-  masterImageCount?: number
+  modelAnswerCount?: number
   mode?: "upload" | "view"
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
@@ -41,7 +41,7 @@ export function useDragDropHandlers({
   getEnabledFiles,
   getDisabledFiles,
   students,
-  masterImageCount,
+  modelAnswerCount,
   mode,
   onUpdatePendingChanges,
   setActiveFile,
@@ -141,7 +141,7 @@ export function useDragDropHandlers({
           if (
             mode === "view" &&
             students &&
-            masterImageCount &&
+            modelAnswerCount &&
             onUpdatePendingChanges &&
             initialFileStatesRef.current.length > 0
           ) {
@@ -183,7 +183,7 @@ export function useDragDropHandlers({
       getDisabledFiles,
       mode,
       students,
-      masterImageCount,
+      modelAnswerCount,
       onUpdatePendingChanges,
       setActiveFile,
       setIsDraggingFromTrash,

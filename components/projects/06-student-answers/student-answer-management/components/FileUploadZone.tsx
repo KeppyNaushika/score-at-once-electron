@@ -12,7 +12,7 @@ export function FileUploadZone({
   onDrop,
   isConverting,
   disabled = false,
-  masterImageCount,
+  modelAnswerCount,
   pdfProcessingProgress,
 }: FileUploadZoneProps) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -31,9 +31,9 @@ export function FileUploadZone({
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
           ファイルアップロード
-          {masterImageCount > 0 && (
+          {modelAnswerCount > 0 && (
             <Badge variant="secondary">
-              模範解答: {masterImageCount}ページ
+              模範解答: {modelAnswerCount}ページ
             </Badge>
           )}
         </CardTitle>
@@ -75,9 +75,9 @@ export function FileUploadZone({
                 <p className="text-muted-foreground text-sm">
                   PDF、PNG、JPEG、TIFF、BMP ファイルに対応
                 </p>
-                {masterImageCount > 0 && (
+                {modelAnswerCount > 0 && (
                   <p className="text-xs text-blue-600">
-                    ヒント: {masterImageCount}ページの模範解答が設定されています
+                    ヒント: {modelAnswerCount}ページの模範解答が設定されています
                   </p>
                 )}
               </div>

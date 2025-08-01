@@ -7,7 +7,7 @@ import { convertPdfToImages } from "@/lib/pdfConverter"
 import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 
-export function useAnswerSheetUpload(
+export function useStudentAnswerUpload(
   projectId: string,
   onUploadComplete?: () => void,
 ) {

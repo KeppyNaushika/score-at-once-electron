@@ -48,9 +48,9 @@ export default function MasterAnswerStepPage() {
       if (fetchedProject && fetchedProject.projectPages) {
         // projectPages から master answers を抽出してソート
         const masterAnswers = fetchedProject.projectPages
-          .filter(page => page.pageImages?.some(img => img.imageType === 'MASTER'))
+          .filter(page => page.pageImages?.some(img => img.imageType === 'MODEL_ANSWER'))
           .map(page => {
-            const masterAnswer = page.pageImages?.find(img => img.imageType === 'MASTER')
+            const masterAnswer = page.pageImages?.find(img => img.imageType === 'MODEL_ANSWER')
             return {
               id: page.id,
               projectId: page.projectId,

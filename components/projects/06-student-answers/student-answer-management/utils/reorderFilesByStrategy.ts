@@ -10,7 +10,7 @@ import type {
 export function reorderFilesByStrategy(
   currentFiles: UnifiedFile[],
   students: UnifiedStudent[],
-  masterImageCount: number,
+  modelAnswerCount: number,
   newFileOrder: PlacementStrategy,
 ): UnifiedFile[] {
   // 1. 実際のファイル（空でないもの）を抽出
@@ -33,7 +33,7 @@ export function reorderFilesByStrategy(
 
   if (newFileOrder === "page-first") {
     // ページ順: ページごとに全生徒
-    for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+    for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
       for (
         let studentIndex = 0;
         studentIndex < sortedStudents.length;
@@ -49,7 +49,7 @@ export function reorderFilesByStrategy(
       studentIndex < sortedStudents.length;
       studentIndex++
     ) {
-      for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+      for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
         newIdealPositions.push({ studentIndex, pageIndex })
       }
     }
@@ -81,15 +81,15 @@ export function reorderFilesByStrategy(
 /**
  * 既存の答案データから配置戦略に基づく統一ファイル配列を構築
  */
-export function buildOrderedFileArrayFromAnswerSheets(
-  answerSheets: any[],
+export function buildOrderedFileArrayFromStudentAnswers(
+  studentAnswers: any[],
   students: UnifiedStudent[],
-  masterImageCount: number,
+  modelAnswerCount: number,
   fileOrder: PlacementStrategy,
 ): UnifiedFile[] {
   // 基本的なファイル変換を取得
-  const { convertAnswerSheetsToFiles } = require("./convertAnswerSheetsToFiles")
-  const basicFiles: UnifiedFile[] = convertAnswerSheetsToFiles(answerSheets)
+  const { convertStudentAnswersToFiles } = require("./convertStudentAnswersToFiles")
+  const basicFiles: UnifiedFile[] = convertStudentAnswersToFiles(studentAnswers)
 
   // 生徒のソート（受験生徒順：customOrder準拠）
   const sortedStudents = [...students].sort((a, b) => {
@@ -103,7 +103,7 @@ export function buildOrderedFileArrayFromAnswerSheets(
 
   if (fileOrder === "page-first") {
     // ページ順: ページごとに全生徒
-    for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+    for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
       for (
         let studentIndex = 0;
         studentIndex < sortedStudents.length;
@@ -119,7 +119,7 @@ export function buildOrderedFileArrayFromAnswerSheets(
       studentIndex < sortedStudents.length;
       studentIndex++
     ) {
-      for (let pageIndex = 0; pageIndex < masterImageCount; pageIndex++) {
+      for (let pageIndex = 0; pageIndex < modelAnswerCount; pageIndex++) {
         idealPositions.push({ studentIndex, pageIndex })
       }
     }

@@ -42,7 +42,7 @@ const File = () => {
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
     const hasStudents =
       project.projectStudents && project.projectStudents.length > 0
-    const hasAnswers = project.answerSheets && project.answerSheets.length > 0
+    const hasAnswers = project.studentAnswers && project.studentAnswers.length > 0
 
     if (!hasImages)
       return {
@@ -87,12 +87,12 @@ const File = () => {
         (region) => region.type === "QUESTION_ANSWER",
       ).length || 0
 
-    const answerSheetCount = project.answerSheets?.length || 0
+    const answerSheetCount = project.studentAnswers?.length || 0
     const expectedScoringCount = questionAnswerCount * answerSheetCount
 
     // ungraded以外のquestionScoresの個数を取得
     const actualScoringCount =
-      project.answerSheets?.reduce((total, sheet) => {
+      project.studentAnswers?.reduce((total, sheet) => {
         const gradedScores =
           sheet.questionScores?.filter((score: any) => score.status !== "unscored")
             .length || 0

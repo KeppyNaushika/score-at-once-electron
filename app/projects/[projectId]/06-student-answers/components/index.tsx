@@ -1,10 +1,10 @@
 /**
- * Components for 06-answer-sheets page - quick inline version
+ * Components for 06-student-answers page - quick inline version
  */
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import PageHeader from "@/components/layout/PageHeader"
-import { AnswerSheetUpload as StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/AnswerSheetUpload"
+import { StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import { ConfirmChangesModal } from "@/components/projects/06-student-answers/student-answer-table/components/ConfirmChangesModal"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,7 +17,7 @@ import { Eye, FileEdit, Grid3X3 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 // Types
-export type AnswerSheetTab = "new-grid" | "current"
+export type StudentAnswerTab = "new-grid" | "current"
 
 export interface StudentData {
   id: string
@@ -45,19 +45,19 @@ export function LoadingSpinner() {
   )
 }
 
-interface AnswerSheetsPageHeaderProps {
+interface StudentAnswersPageHeaderProps {
   projectId: string
   pendingChangesCount: number
   helpButton: React.ReactNode
   onPendingChangesClick: () => void
 }
 
-export function AnswerSheetsPageHeader({
+export function StudentAnswersPageHeader({
   projectId,
   pendingChangesCount,
   helpButton,
   onPendingChangesClick,
-}: AnswerSheetsPageHeaderProps) {
+}: StudentAnswersPageHeaderProps) {
   const router = useRouter()
 
   return (
@@ -87,17 +87,17 @@ export function AnswerSheetsPageHeader({
   )
 }
 
-interface AnswerSheetsTabsNavigationProps {
-  activeTab: AnswerSheetTab
+interface StudentAnswersTabsNavigationProps {
+  activeTab: StudentAnswerTab
   onTabChange: (tab: string) => void
   children: React.ReactNode
 }
 
-export function AnswerSheetsTabsNavigation({
+export function StudentAnswersTabsNavigation({
   activeTab,
   onTabChange,
   children,
-}: AnswerSheetsTabsNavigationProps) {
+}: StudentAnswersTabsNavigationProps) {
   return (
     <Tabs
       value={activeTab}
@@ -119,16 +119,16 @@ export function AnswerSheetsTabsNavigation({
   )
 }
 
-interface AnswerSheetsTabContentProps {
-  activeTab: AnswerSheetTab
+interface StudentAnswersTabContentProps {
+  activeTab: StudentAnswerTab
   projectId: string
   students: StudentData[]
-  masterImageCount: number
-  answerSheets: ProcessedStudentAnswer[]
+  modelAnswerCount: number
+  studentAnswers: ProcessedStudentAnswer[]
   pendingChanges: PendingChange[]
   affectedCells: Set<string>
   onUploadComplete: () => void
-  onAnswerSheetUpdate: () => void
+  onStudentAnswerUpdate: () => void
   onUpdatePendingChanges: (
     changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
   ) => void
@@ -138,32 +138,32 @@ interface AnswerSheetsTabContentProps {
   onResetChanges: () => Promise<void>
 }
 
-export function AnswerSheetsTabContent({
+export function StudentAnswersTabContent({
   activeTab: _activeTab,
   projectId,
   students,
-  masterImageCount,
-  answerSheets,
+  modelAnswerCount,
+  studentAnswers,
   pendingChanges,
   affectedCells,
   onUploadComplete,
-  onAnswerSheetUpdate,
+  onStudentAnswerUpdate,
   onUpdatePendingChanges,
   isConfirmModalOpen,
   onCloseConfirmModal,
   onApplyChanges,
   onResetChanges,
-}: AnswerSheetsTabContentProps) {
+}: StudentAnswersTabContentProps) {
   return (
     <>
       <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
         <StudentAnswerUpload
           projectId={projectId}
           students={students}
-          masterImageCount={masterImageCount}
+          modelAnswerCount={modelAnswerCount}
           onUploadComplete={onUploadComplete}
           mode="upload"
-          existingAnswerSheets={answerSheets}
+          existingStudentAnswers={studentAnswers}
         />
       </TabsContent>
 
@@ -171,9 +171,9 @@ export function AnswerSheetsTabContent({
         <StudentAnswerUpload
           projectId={projectId}
           students={students}
-          masterImageCount={masterImageCount}
-          onUploadComplete={onAnswerSheetUpdate}
-          existingAnswerSheets={answerSheets}
+          modelAnswerCount={modelAnswerCount}
+          onUploadComplete={onStudentAnswerUpdate}
+          existingStudentAnswers={studentAnswers}
           mode="view"
           pendingChanges={pendingChanges}
           affectedCells={affectedCells}

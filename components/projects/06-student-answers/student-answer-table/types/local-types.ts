@@ -7,7 +7,7 @@ import type {
 } from "@/types/student-answer.types"
 
 // ============================================================================
-// AnswerSheetTable専用の型定義
+// StudentAnswerTable専用の型定義
 // ============================================================================
 
 export interface UploadModalState {
@@ -17,11 +17,11 @@ export interface UploadModalState {
   pageNumber?: number
 }
 
-export interface AnswerSheetTableProps {
+export interface StudentAnswerTableProps {
   projectId: string
   students: UnifiedStudent[]
   files: UnifiedFile[]
-  masterImageCount: number
+  modelAnswerCount: number
   fileOrder?: PlacementStrategy
   isUploading?: boolean
   onFileOrderChange?: (order: PlacementStrategy) => void
@@ -40,7 +40,7 @@ export interface AnswerSheetTableProps {
   ) => void
 
   // 上書き制御用（アップロードモードでの既存答案情報）
-  existingAnswerSheets?: Array<{
+  existingStudentAnswers?: Array<{
     id: string
     studentId: string | null
     pageNumber: number

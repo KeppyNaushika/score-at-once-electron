@@ -1,5 +1,5 @@
 /**
- * Hooks for 06-answer-sheets page - quick inline version
+ * Hooks for 06-student-answers page - quick inline version
  */
 
 import type {
@@ -11,10 +11,10 @@ import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { StudentData } from "../components"
 
-export function useAnswerSheetsData(projectId: string) {
+export function useStudentAnswersData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
-  const [answerSheets, setAnswerSheets] = useState<ProcessedStudentAnswer[]>([])
-  const [masterImageCount, setMasterImageCount] = useState<number>(0)
+  const [studentAnswers, setStudentAnswers] = useState<ProcessedStudentAnswer[]>([])
+  const [modelAnswerCount, setModelAnswerCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadData = useCallback(async () => {
@@ -70,21 +70,21 @@ export function useAnswerSheetsData(projectId: string) {
       const studentAnswersResult =
         await window.electronAPI.getStudentAnswersByProjectId(projectId)
       if (studentAnswersResult.success && studentAnswersResult.studentAnswers) {
-        setAnswerSheets(studentAnswersResult.studentAnswers)
+        setStudentAnswers(studentAnswersResult.studentAnswers)
       }
 
-      // Load master answer count
+      // Load model answer count
       try {
-        const masterAnswers =
+        const modelAnswers =
           await window.electronAPI.getProjectPagesByProjectId(projectId)
         const maxPages =
-          masterAnswers && masterAnswers.length > 0
-            ? Math.max(...masterAnswers.map((page: any) => page.pageNumber))
+          modelAnswers && modelAnswers.length > 0
+            ? Math.max(...modelAnswers.map((page: any) => page.pageNumber))
             : 0
-        setMasterImageCount(maxPages)
+        setModelAnswerCount(maxPages)
       } catch (error) {
-        console.error("Failed to load master answer count:", error)
-        setMasterImageCount(0)
+        console.error("Failed to load model answer count:", error)
+        setModelAnswerCount(0)
       }
     } catch (error) {
       console.error("Error loading data:", error)
@@ -96,8 +96,8 @@ export function useAnswerSheetsData(projectId: string) {
 
   return {
     students,
-    answerSheets,
-    masterImageCount,
+    studentAnswers,
+    modelAnswerCount,
     isLoading,
     loadData,
   }
@@ -106,7 +106,7 @@ export function useAnswerSheetsData(projectId: string) {
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
   students?: StudentData[],
-  answerSheets?: ProcessedStudentAnswer[],
+  studentAnswers?: ProcessedStudentAnswer[],
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
@@ -129,8 +129,8 @@ export function usePendingChanges(
           const toStudent = students?.find((s) => s.id === toState.studentId)
 
           // 移動先にある既存ファイルを特定
-          // answerSheetsから移動先位置(toState.studentId, toState.pageNumber)にあるファイルを検索
-          const targetFile = answerSheets?.find(
+          // studentAnswersから移動先位置(toState.studentId, toState.pageNumber)にあるファイルを検索
+          const targetFile = studentAnswers?.find(
             (sheet) =>
               sheet.studentId === toState.studentId &&
               sheet.pageNumber === toState.pageNumber &&
@@ -147,7 +147,7 @@ export function usePendingChanges(
                   pageNumber: targetFile.pageNumber,
                 }
               : null,
-            totalAnswerSheets: answerSheets?.length || 0,
+            totalStudentAnswers: studentAnswers?.length || 0,
           })
 
           const change: PendingChange = {
@@ -178,7 +178,7 @@ export function usePendingChanges(
       setPendingChanges(newPendingChanges)
       setAffectedCells(new Set(changedFiles.map(({ fileId }) => fileId)))
     },
-    [students, answerSheets],
+    [students, studentAnswers],
   )
 
   const handleApplyChanges = useCallback(
@@ -211,7 +211,7 @@ export function usePendingChanges(
         // 一括移動処理：トランザクション内で全ての移動を同時実行
         console.log("📝 Calling batch placement update...")
         const result =
-          await window.electronAPI.batchUpdateAnswerSheetPlacements(
+          await window.electronAPI.batchUpdateStudentAnswerPlacements(
             allMoves,
             option === "with-scoring",
           )

@@ -42,20 +42,20 @@ export default function ProjectProgressCard({
 
       if (result && typeof result.percentage === "number") {
         setProgress({
-          totalAnswerSheets: result.totalAnswerSheets,
+          totalAnswerSheets: result.totalStudentAnswers,
           totalQuestions: 0,
-          totalItems: result.totalAnswerSheets,
-          gradedItems: result.completedAnswerSheets,
-          finalizedItems: result.completedAnswerSheets,
+          totalItems: result.totalStudentAnswers,
+          gradedItems: result.completedStudentAnswers,
+          finalizedItems: result.completedStudentAnswers,
           progressPercentage: result.percentage,
           finalizedPercentage: result.percentage,
         })
         onProgressUpdate?.({
-          totalAnswerSheets: result.totalAnswerSheets,
+          totalAnswerSheets: result.totalStudentAnswers,
           totalQuestions: 0,
-          totalItems: result.totalAnswerSheets,
-          gradedItems: result.completedAnswerSheets,
-          finalizedItems: result.completedAnswerSheets,
+          totalItems: result.totalStudentAnswers,
+          gradedItems: result.completedStudentAnswers,
+          finalizedItems: result.completedStudentAnswers,
           progressPercentage: result.percentage,
           finalizedPercentage: result.percentage,
         })

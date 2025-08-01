@@ -4,13 +4,13 @@ import { TableContent } from "@/components/projects/06-student-answers/student-a
 import { TableDragOverlay } from "@/components/projects/06-student-answers/student-answer-table/components/TableDragOverlay"
 import { TableHeader } from "@/components/projects/06-student-answers/student-answer-table/components/TableHeader"
 import { UploadModalWrapper } from "@/components/projects/06-student-answers/student-answer-table/components/UploadModalWrapper"
-import { useAnswerSheetTableLogic } from "@/components/projects/06-student-answers/student-answer-table/hooks/useAnswerSheetTableLogic"
-import type { AnswerSheetTableProps } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
+import { useStudentAnswerTableLogic } from "@/components/projects/06-student-answers/student-answer-table/hooks/useStudentAnswerTableLogic"
+import type { StudentAnswerTableProps } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
 import { Card, CardContent } from "@/components/ui/card"
 import { closestCenter, DndContext } from "@dnd-kit/core"
 import { FileImage } from "lucide-react"
 
-export function AnswerSheetTable(props: AnswerSheetTableProps) {
+export function StudentAnswerTable(props: StudentAnswerTableProps) {
   const {
     imageLoadStates = {},
     observerRef,
@@ -50,7 +50,7 @@ export function AnswerSheetTable(props: AnswerSheetTableProps) {
     trashFiles,
     hasNameRegion,
     nameRegionAvailable,
-  } = useAnswerSheetTableLogic(props)
+  } = useStudentAnswerTableLogic(props)
 
   // 模範解答が存在しない場合
   if (maxPages === 0) {

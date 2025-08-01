@@ -658,4 +658,27 @@ export function setupMiscHandlers(): void {
       }
     }
   })
+
+  // アセットパス解決ハンドラー
+  ipcMain.handle("get-asset-path", async (_event, assetPath: string) => {
+    try {
+      const { app } = require("electron")
+      const path = require("path")
+      
+      // パッケージ化されたアプリかどうかで分岐
+      const publicDir = app.isPackaged 
+        ? path.join(app.getAppPath(), "public")
+        : path.join(process.cwd(), "public")
+      
+      const fullPath = path.join(publicDir, assetPath)
+      
+      // file:// プロトコルを使用してパスを返す
+      return { success: true, path: `file://${fullPath}` }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }
+    }
+  })
 }

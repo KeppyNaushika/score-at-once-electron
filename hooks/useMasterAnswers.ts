@@ -142,7 +142,7 @@ export function useMasterAnswers(
         if (updatedProject && updatedProject.projectPages) {
           // Extract master answers from project pages
           const masterAnswers = updatedProject.projectPages
-            .flatMap(page => page.pageImages.filter(img => img.imageType === "MASTER")
+            .flatMap(page => page.pageImages.filter(img => img.imageType === "MODEL_ANSWER")
             .map(img => ({ ...img, projectPage: page })))
           
           const sortedUpdatedAnswers = [...masterAnswers].sort(

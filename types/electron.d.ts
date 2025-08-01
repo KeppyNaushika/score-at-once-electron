@@ -13,13 +13,13 @@ import type {
   UserProject,
   ProjectSubtotalGroup,
   QuestionScore,
-  AnswerSheet,
+  StudentAnswer,
   ProjectStudent,
   StudentClassMembership,
 } from "@prisma/client"
 
 // Student answer related types (updated for new structure)
-// New: Based on PageImage instead of AnswerSheet
+// New: Based on PageImage instead of StudentAnswer
 export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
   include: {
     student: {
@@ -39,8 +39,8 @@ export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
   }
 }>
 
-// Legacy AnswerSheet type for backward compatibility
-export type LegacyStudentAnswerWithDetails = Prisma.AnswerSheetGetPayload<{
+// Legacy StudentAnswer type for backward compatibility
+export type LegacyStudentAnswerWithDetails = Prisma.StudentAnswerGetPayload<{
   include: {
     student: true
     project: true
@@ -339,29 +339,29 @@ export interface MyAPI {
     success: boolean
     error?: string
   }>
-  associateAnswerSheetWithStudent: (
-    answerSheetId: string,
+  associateStudentAnswerWithStudent: (
+    studentAnswerId: string,
     studentId: string,
   ) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
-  setAnswerSheetAbsent: (
-    answerSheetId: string,
+  setStudentAnswerAbsent: (
+    studentAnswerId: string,
     isAbsent: boolean,
   ) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
-  getAnswerSheetById: (answerSheetId: string) => Promise<{
+  getStudentAnswerById: (studentAnswerId: string) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
-  updateAnswerSheetPlacement: (
-    answerSheetId: string,
+  updateStudentAnswerPlacement: (
+    studentAnswerId: string,
     studentId: string | null,
     pageNumber: number,
   ) => Promise<{
@@ -369,23 +369,23 @@ export interface MyAPI {
     answerSheet?: AnswerSheetWithDetails
     error?: string
   }>
-  swapAnswerSheetPlacements: (
-    answerSheetId1: string,
-    answerSheetId2: string,
+  swapStudentAnswerPlacements: (
+    studentAnswerId1: string,
+    studentAnswerId2: string,
   ) => Promise<{
     success: boolean
     answerSheets?: AnswerSheetWithDetails[]
     error?: string
   }>
-  swapAnswerSheetPlacementsWithScoring: (
-    answerSheetId1: string,
-    answerSheetId2: string,
+  swapStudentAnswerPlacementsWithScoring: (
+    studentAnswerId1: string,
+    studentAnswerId2: string,
   ) => Promise<{
     success: boolean
     answerSheets?: AnswerSheetWithDetails[]
     error?: string
   }>
-  batchUpdateAnswerSheetPlacements: (
+  batchUpdateStudentAnswerPlacements: (
     moves: Array<{
       fileId: string
       finalStudentId: string | null
@@ -399,6 +399,11 @@ export interface MyAPI {
   getImageData: (relativePath: string) => Promise<{
     success: boolean
     data?: string
+    error?: string
+  }>
+  getAssetPath: (assetPath: string) => Promise<{
+    success: boolean
+    path?: string
     error?: string
   }>
 
@@ -488,7 +493,7 @@ export interface MyAPI {
       buffer: ArrayBuffer
       path?: string
       pageNumber: number
-      imageType: "MASTER" | "ANSWER"
+      imageType: "MODEL_ANSWER" | "STUDENT_ANSWER"
       studentId?: string | null
     }[],
   ) => Promise<PageImageWithDetails[]>
@@ -862,7 +867,7 @@ export interface MyAPI {
       string,
       {
         hasData: boolean
-        answerSheetCount: number
+        studentAnswerCount: number
         questionScoreCount: number
         totalGradingItems: number
       }
@@ -876,7 +881,7 @@ export interface MyAPI {
     scores?: QuestionScore[]
     error?: string
   }>
-  getQuestionScoresForAnswerSheet: (answerSheetId: string) => Promise<{
+  getQuestionScoresForStudentAnswer: (studentAnswerId: string) => Promise<{
     success: boolean
     scores?: QuestionScore[]
     error?: string
@@ -899,7 +904,7 @@ export interface MyAPI {
 
   // Backward compatibility alias
   createQuestionScoreLegacy: (data: {
-    answerSheetId: string
+    studentAnswerId: string
     cropRegionId: string
     partialScore?: number
     status:
@@ -954,7 +959,7 @@ export interface MyAPI {
 
   // Backward compatibility aliases
   getQuestionScoreComparisonLegacy: (
-    answerSheetId: string,
+    studentAnswerId: string,
     layoutRegionId: string,
   ) => Promise<{
     current?: QuestionScore
@@ -962,7 +967,7 @@ export interface MyAPI {
     needsResolution: boolean
   }>
   finalizeQuestionScoreLegacy: (
-    answerSheetId: string,
+    studentAnswerId: string,
     layoutRegionId: string,
     scoredByUserId: string,
     scoreData: {
@@ -971,14 +976,14 @@ export interface MyAPI {
       comments?: string
     },
   ) => Promise<QuestionScore>
-  getAnswerSheetProgress: (answerSheetId: string) => Promise<{
+  getStudentAnswerProgress: (studentAnswerId: string) => Promise<{
     totalQuestions: number
     completedQuestions: number
     percentage: number
   }>
   getProjectProgress: (projectId: string) => Promise<{
-    totalAnswerSheets: number
-    completedAnswerSheets: number
+    totalStudentAnswers: number
+    completedStudentAnswers: number
     percentage: number
   }>
   initializeScoringRecords: (projectId: string) => Promise<{
