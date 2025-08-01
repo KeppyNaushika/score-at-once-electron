@@ -413,7 +413,7 @@ export function setupMiscHandlers(): void {
 
   // Master image handlers
   ipcMain.handle(
-    "upload-master-images",
+    "upload-master-answers",
     async (
       _event,
       projectId: string,
@@ -433,22 +433,22 @@ export function setupMiscHandlers(): void {
     },
   )
 
-  ipcMain.handle("delete-master-image", async (_event, imageId: string) => {
+  ipcMain.handle("delete-master-answer", async (_event, answerId: string) => {
     try {
-      return await deleteMasterAnswer(imageId)
+      return await deleteMasterAnswer(answerId)
     } catch (err) {
-      console.error("Error in IPC delete-master-image:", err)
+      console.error("Error in IPC delete-master-answer:", err)
       throw err
     }
   })
 
   ipcMain.handle(
-    "update-master-images-order",
-    async (_event, imageOrders: { id: string; pageNumber: number }[]) => {
+    "update-master-answers-order",
+    async (_event, answerOrders: { id: string; pageNumber: number }[]) => {
       try {
-        return await updateMasterAnswersOrder(imageOrders)
+        return await updateMasterAnswersOrder(answerOrders)
       } catch (err) {
-        console.error("Error in IPC update-master-images-order:", err)
+        console.error("Error in IPC update-master-answers-order:", err)
         throw err
       }
     },
