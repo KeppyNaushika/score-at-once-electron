@@ -200,16 +200,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getMembershipsByDateRange: (startDate: Date, endDate?: Date) =>
     ipcRenderer.invoke("get-memberships-by-date-range", startDate, endDate),
 
-  // MasterImage related
-  uploadMasterImages: (
+  // MasterAnswer related
+  uploadMasterAnswers: (
     projectId: string,
-    filesData: { name: string; type: string; buffer: ArrayBuffer }[], // Updated signature
-  ) => ipcRenderer.invoke("upload-master-images", projectId, filesData),
-  deleteMasterImage: (imageId: string) =>
-    ipcRenderer.invoke("delete-master-image", imageId),
-  updateMasterImagesOrder: (
-    imageOrders: { id: string; pageNumber: number }[],
-  ) => ipcRenderer.invoke("update-master-images-order", imageOrders),
+    filesData: { name: string; type: string; buffer: ArrayBuffer }[],
+  ) => ipcRenderer.invoke("upload-master-answers", projectId, filesData),
+  deleteMasterAnswer: (answerId: string) =>
+    ipcRenderer.invoke("delete-master-answer", answerId),
+  updateMasterAnswersOrder: (
+    answerOrders: { id: string; pageNumber: number }[],
+  ) => ipcRenderer.invoke("update-master-answers-order", answerOrders),
 
   // New API to resolve file path for display
   resolveFileProtocolPath: (relativePath: string) =>
