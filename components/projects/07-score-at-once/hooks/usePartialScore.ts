@@ -1,12 +1,12 @@
 import type {
-  QuestionRegion,
+  CropRegionWithProjectPage,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types/shared.types"
 import { useCallback, useState } from "react"
 
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>
-  currentQuestion: QuestionRegion | undefined
+  currentCropRegion: CropRegionWithProjectPage | undefined | null
   onBatchScore: (
     status: ScoringStatus,
     score?: number | null,
@@ -18,7 +18,7 @@ interface UsePartialScoreProps {
 
 export function usePartialScore({
   selectedAnswers,
-  currentQuestion,
+  currentCropRegion,
   onBatchScore,
   onAutoAdvance,
 }: UsePartialScoreProps) {
@@ -29,7 +29,7 @@ export function usePartialScore({
   // 部分点入力開始（数字キー・小数点対応）
   const handlePartialScoreInput = useCallback(
     (key: string) => {
-      if (selectedAnswers.size === 0 || !currentQuestion) return
+      if (selectedAnswers.size === 0 || !currentCropRegion) return
 
       // モーダルが表示されていない場合は開く
       if (!showPartialScoreModal) {
@@ -60,7 +60,7 @@ export function usePartialScore({
       // 数値の妥当性チェック（小数点のみの場合は一旦スキップ）
       if (!newInput.endsWith(".")) {
         const numericValue = parseFloat(newInput)
-        const maxPoints = currentQuestion.points || 10
+        const maxPoints = currentCropRegion.points || 10
 
         // 不正な値や最大点数超過の場合は無視
         if (isNaN(numericValue) || numericValue > maxPoints) {
@@ -72,7 +72,7 @@ export function usePartialScore({
     },
     [
       selectedAnswers,
-      currentQuestion,
+      currentCropRegion,
       partialScoreInput,
       showPartialScoreModal,
     ],
@@ -91,7 +91,7 @@ export function usePartialScore({
       }
 
       const finalValue = parseFloat(finalInput)
-      const maxPoints = currentQuestion?.points || 10
+      const maxPoints = currentCropRegion?.points || 10
 
       // 値の妥当性チェック
       if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
@@ -118,7 +118,7 @@ export function usePartialScore({
       showPartialScoreModal,
       selectedAnswers,
       partialScoreInput,
-      currentQuestion,
+      currentCropRegion,
       onBatchScore,
       onAutoAdvance,
     ],
@@ -143,7 +143,7 @@ export function usePartialScore({
   // 直接入力変更ハンドラー
   const handlePartialScoreChange = useCallback(
     (value: string) => {
-      const maxPoints = currentQuestion?.points || 10
+      const maxPoints = currentCropRegion?.points || 10
 
       // 空文字、数値のみ、または小数点を含む数値のみ許可
       if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
@@ -166,7 +166,7 @@ export function usePartialScore({
         setPartialScoreInput(value)
       }
     },
-    [currentQuestion],
+    [currentCropRegion],
   )
 
   return {

@@ -2,7 +2,11 @@ import type { GradingMode } from "@/components/projects/07-score-at-once/Scoring
 
 export type { GradingMode }
 
-export type LayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
+export type LayoutDirection =
+  | "right-down"
+  | "left-down"
+  | "down-right"
+  | "down-left"
 
 export type ViewMode = "question" | "full"
 
@@ -16,7 +20,7 @@ export interface ScoringMainViewState {
   selectedAnswers: Set<string>
   layoutDirection: LayoutDirection
   currentStudentIndex: number
-  currentQuestionIndex: number
+  currentCropRegionId: string | null
   showKeyboardHelp: boolean
   showScoreComparison: boolean
   showSidePanel: boolean

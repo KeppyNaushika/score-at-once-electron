@@ -5,42 +5,59 @@ interface UseScoringNavigationProps {
   cropRegionsLength: number
   currentStudentIndex: number
   setCurrentStudentIndex: (index: number) => void
-  currentQuestionIndex: number
-  setCurrentQuestionIndex: (index: number) => void
-  selectedAnswers: Set<string>
-  setSelectedAnswers: (answers: Set<string>) => void
+  currentCropRegionId: string | null
+  setCurrentCropRegionId: (id: string | null) => void
+  selectedPageImageIds: Set<string>
+  setSelectedPageImageIds: (answers: Set<string>) => void
   layoutDirection: "right-down" | "left-down" | "down-right" | "down-left"
   getGridAnswerData: () => any[]
   effectiveColumns?: number // 実際の表示数（行あたり/列あたり）
+  cropRegions?: any[] // ナビゲーション用のcropRegions配列
 }
 
 export function useScoringNavigation({
   answerSheetsLength,
-  cropRegionsLength,
   currentStudentIndex,
   setCurrentStudentIndex,
-  currentQuestionIndex,
-  setCurrentQuestionIndex,
-  selectedAnswers,
-  setSelectedAnswers,
+  currentCropRegionId,
+  setCurrentCropRegionId,
+  selectedPageImageIds,
+  setSelectedPageImageIds,
   layoutDirection,
   getGridAnswerData,
   effectiveColumns,
+  cropRegions = [],
 }: UseScoringNavigationProps) {
   const [viewMode, setViewMode] = useState<"question" | "full">("question") // 設問拡大 or 全体表示
 
   // ナビゲーション関数
   const handleNextQuestion = useCallback(() => {
-    if (currentQuestionIndex < cropRegionsLength - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1)
+    if (!currentCropRegionId || !cropRegions.length) return
+
+    const currentIndex = cropRegions.findIndex(
+      (region) => region.id === currentCropRegionId,
+    )
+    if (currentIndex === -1 || currentIndex >= cropRegions.length - 1) return
+
+    const nextRegion = cropRegions[currentIndex + 1]
+    if (nextRegion) {
+      setCurrentCropRegionId(nextRegion.id)
     }
-  }, [currentQuestionIndex, cropRegionsLength, setCurrentQuestionIndex])
+  }, [currentCropRegionId, cropRegions, setCurrentCropRegionId])
 
   const handlePrevQuestion = useCallback(() => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1)
+    if (!currentCropRegionId || !cropRegions.length) return
+
+    const currentIndex = cropRegions.findIndex(
+      (region) => region.id === currentCropRegionId,
+    )
+    if (currentIndex <= 0) return
+
+    const prevRegion = cropRegions[currentIndex - 1]
+    if (prevRegion) {
+      setCurrentCropRegionId(prevRegion.id)
     }
-  }, [currentQuestionIndex, setCurrentQuestionIndex])
+  }, [currentCropRegionId, cropRegions, setCurrentCropRegionId])
 
   const handleNextStudent = useCallback(() => {
     if (currentStudentIndex < answerSheetsLength - 1) {
@@ -124,8 +141,8 @@ export function useScoringNavigation({
 
       // 現在選択されている答案のインデックスを取得
       let currentIndex = -1
-      if (selectedAnswers.size >= 1) {
-        const selectedId = Array.from(selectedAnswers)[0]
+      if (selectedPageImageIds.size >= 1) {
+        const selectedId = Array.from(selectedPageImageIds)[0]
         currentIndex = gridAnswers.findIndex(
           (answer) => answer.id === selectedId,
         )
@@ -135,7 +152,7 @@ export function useScoringNavigation({
       if (currentIndex === -1) {
         const firstValidIndex = findNextValidAnswer(0, 1, gridAnswers)
         if (firstValidIndex !== -1) {
-          setSelectedAnswers(new Set([gridAnswers[firstValidIndex].id]))
+          setSelectedPageImageIds(new Set([gridAnswers[firstValidIndex].id]))
         }
         return
       }
@@ -251,7 +268,7 @@ export function useScoringNavigation({
       ) {
         const targetAnswer = gridAnswers[newIndex]
         if (targetAnswer && !targetAnswer.id.startsWith("master-")) {
-          setSelectedAnswers(new Set([targetAnswer.id]))
+          setSelectedPageImageIds(new Set([targetAnswer.id]))
         } else {
           // 模範解答の場合、方向に応じて次の有効な答案を探す
           const direction = newIndex > currentIndex ? 1 : -1
@@ -261,7 +278,7 @@ export function useScoringNavigation({
             gridAnswers,
           )
           if (validIndex !== -1) {
-            setSelectedAnswers(new Set([gridAnswers[validIndex].id]))
+            setSelectedPageImageIds(new Set([gridAnswers[validIndex].id]))
           }
         }
       }
@@ -269,8 +286,8 @@ export function useScoringNavigation({
     [
       answerSheetsLength,
       getGridAnswerData,
-      selectedAnswers,
-      setSelectedAnswers,
+      selectedPageImageIds,
+      setSelectedPageImageIds,
       layoutDirection,
       findNextValidAnswer,
       effectiveColumns,

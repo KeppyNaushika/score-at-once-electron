@@ -1,13 +1,13 @@
-import { Badge } from "@/components/ui/badge"
-import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/components/CroppedAnswerImage"
 import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
 import type {
-  AnswerItem,
+  GridAnswerItem,
   GridLayoutDirection,
 } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/components/CroppedAnswerImage"
+import { Badge } from "@/components/ui/badge"
 
 interface GridCellProps {
-  answer: AnswerItem
+  answer: GridAnswerItem
   isSelected: boolean
   showStudentNames: boolean
   layoutDirection: GridLayoutDirection

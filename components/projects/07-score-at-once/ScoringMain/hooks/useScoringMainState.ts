@@ -1,18 +1,22 @@
-import { useState, useEffect, useCallback } from "react"
-import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
 import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
 import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
+import { useCallback, useEffect, useState } from "react"
 
 export function useScoringMainState() {
   // 採点モード状態
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
-  const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set())
+  const [selectedPageImageIds, setSelectedPageImageIds] = useState<Set<string>>(
+    new Set(),
+  )
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(
     DEFAULT_LAYOUT_DIRECTION,
   )
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [currentCropRegionId, setCurrentCropRegionId] = useState<string | null>(
+    null,
+  )
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [showScoreComparison, setShowScoreComparison] = useState(false)
   const [showSidePanel, setShowSidePanel] = useState(true)
@@ -25,19 +29,19 @@ export function useScoringMainState() {
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = useCallback(
-    (answerId: string, isSelected: boolean, answerSheets: any[]) => {
+    (answerId: string, isSelected: boolean, pageImages: any[]) => {
       // 模範解答は選択対象外
       if (answerId.startsWith("master-")) {
         return
       }
 
       // 答案が実際に存在するかチェック
-      const answerExists = answerSheets.some((sheet) => sheet.id === answerId)
+      const answerExists = pageImages.some((sheet) => sheet.id === answerId)
       if (!answerExists) {
         return
       }
 
-      setSelectedAnswers((prev) => {
+      setSelectedPageImageIds((prev) => {
         const newSet = new Set(prev)
         if (isSelected) {
           newSet.add(answerId)
@@ -53,20 +57,20 @@ export function useScoringMainState() {
   return {
     // 個別の状態
     gradingMode,
-    selectedAnswers,
+    selectedPageImageIds,
     layoutDirection,
     currentStudentIndex,
-    currentQuestionIndex,
+    currentCropRegionId,
     showKeyboardHelp,
     showScoreComparison,
     showSidePanel,
     modifierKeyLabel,
     // アクション関数
     setGradingMode,
-    setSelectedAnswers,
+    setSelectedPageImageIds,
     setLayoutDirection,
     setCurrentStudentIndex,
-    setCurrentQuestionIndex,
+    setCurrentCropRegionId,
     setShowKeyboardHelp,
     setShowScoreComparison,
     setShowSidePanel,

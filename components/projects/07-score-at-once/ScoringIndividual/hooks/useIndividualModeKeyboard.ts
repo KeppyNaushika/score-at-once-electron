@@ -1,21 +1,35 @@
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
 import { useEffect } from "react"
 import type { ScoringBehavior } from "../components/ScoringBehaviorSelector"
 
+interface Student {
+  id: string
+  name: string
+}
+
+type ScoreStatus =
+  | "CORRECT"
+  | "INCORRECT"
+  | "PARTIAL"
+  | "BLANK"
+  | "PENDING"
+  | "SKIP"
+
 interface UseIndividualModeKeyboardProps {
   // 基本データ
-  cropRegions: any[]
-  students: any[]
-  currentQuestionIndex: number
+  cropRegions: CropRegionWithProjectPage[]
+  students: Student[]
+  currentCropRegionId: string | null
   currentStudentId: string
   scoringBehavior: ScoringBehavior
   enabled?: boolean // 個別表示モードでのみ有効にするフラグ
 
   // ナビゲーション関数
-  onQuestionChange: (index: number) => void
+  onQuestionChange: (id: string | null) => void
   onStudentChange: (studentId: string) => void
 
   // 採点関数
-  onSetScore: (status: any) => void
+  onSetScore: (status: ScoreStatus) => void
 
   // その他のアクション
   onNextQuestion: () => void
@@ -27,7 +41,7 @@ interface UseIndividualModeKeyboardProps {
 export function useIndividualModeKeyboard({
   cropRegions,
   students,
-  currentQuestionIndex,
+  currentCropRegionId,
   currentStudentId,
   scoringBehavior,
   enabled = true,
@@ -61,7 +75,10 @@ export function useIndividualModeKeyboard({
 
         if (keyIndex !== -1 && keyIndex < cropRegions.length) {
           e.preventDefault()
-          onQuestionChange(keyIndex)
+          const targetCropRegion = cropRegions[keyIndex]
+          if (targetCropRegion) {
+            onQuestionChange(targetCropRegion.id)
+          }
           return
         }
       }
@@ -69,7 +86,7 @@ export function useIndividualModeKeyboard({
       // 採点キー（Q, E, F, J, O, P）
       if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
         const key = e.key.toLowerCase()
-        let scoreStatus: any = null
+        let scoreStatus: ScoreStatus | null = null
 
         switch (key) {
           case "q":
@@ -148,7 +165,7 @@ export function useIndividualModeKeyboard({
     enabled,
     cropRegions,
     students,
-    currentQuestionIndex,
+    currentCropRegionId,
     currentStudentId,
     scoringBehavior,
     onQuestionChange,

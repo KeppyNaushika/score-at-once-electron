@@ -58,20 +58,20 @@ export default function ScoringMainView() {
   const {
     // 個別の状態
     gradingMode,
-    selectedAnswers,
+    selectedPageImageIds,
     layoutDirection,
     currentStudentIndex,
-    currentQuestionIndex,
+    currentCropRegionId,
     showKeyboardHelp,
     showScoreComparison,
     showSidePanel,
     modifierKeyLabel,
     // アクション関数
     setGradingMode,
-    setSelectedAnswers,
+    setSelectedPageImageIds,
     setLayoutDirection,
     setCurrentStudentIndex,
-    setCurrentQuestionIndex,
+    setCurrentCropRegionId,
     setShowKeyboardHelp,
     setShowScoreComparison,
     setShowSidePanel,
@@ -80,27 +80,29 @@ export default function ScoringMainView() {
     handleAnswerSelect,
   } = useScoringMainState()
 
-  // 個別表示モードに切り替え時、selectedAnswersを単一選択に制限
+  // 個別表示モードに切り替え時、selectedPageImageIdsを単一選択に制限
   useEffect(() => {
-    if (gradingMode === "individual" && selectedAnswers.size > 1) {
+    if (gradingMode === "individual" && selectedPageImageIds.size > 1) {
       // 複数選択されている場合は最初の1つだけを残す
-      const firstSelected = Array.from(selectedAnswers)[0]
-      setSelectedAnswers(new Set([firstSelected]))
+      const firstSelected = Array.from(selectedPageImageIds)[0]
+      setSelectedPageImageIds(new Set([firstSelected]))
     }
-  }, [gradingMode, selectedAnswers, setSelectedAnswers])
+  }, [gradingMode, selectedPageImageIds, setSelectedPageImageIds])
 
   // 現在の答案と設問
   const currentAnswerSheet = useMemo(() => {
-    if (gradingMode === "individual" && selectedAnswers.size > 0) {
+    if (gradingMode === "individual" && selectedPageImageIds.size > 0) {
       // 個別表示モードでは選択された答案を使用
-      const selectedAnswerId = Array.from(selectedAnswers)[0]
+      const selectedAnswerId = Array.from(selectedPageImageIds)[0]
       return pageImages.find((sheet) => sheet.id === selectedAnswerId)
     }
     // 一覧表示モードでは従来通り
     return pageImages[currentStudentIndex]
-  }, [gradingMode, selectedAnswers, pageImages, currentStudentIndex])
+  }, [gradingMode, selectedPageImageIds, pageImages, currentStudentIndex])
 
-  const currentQuestion = cropRegions[currentQuestionIndex]
+  const currentCropRegion = cropRegions.find(
+    (r) => r.id === currentCropRegionId,
+  )
 
   // 個別表示用の生徒データは後で定義（allScoringDataが必要なため）
 
@@ -113,7 +115,7 @@ export default function ScoringMainView() {
       )
       if (studentSheets.length > 0) {
         // 個別表示では単一選択なので、最初の答案のみを選択
-        setSelectedAnswers(new Set([studentSheets[0].id]))
+        setSelectedPageImageIds(new Set([studentSheets[0].id]))
 
         // currentStudentIndex も更新
         const studentIndex = pageImages.findIndex(
@@ -124,7 +126,7 @@ export default function ScoringMainView() {
         }
       }
     },
-    [pageImages, setSelectedAnswers, setCurrentStudentIndex],
+    [pageImages, setSelectedPageImageIds, setCurrentStudentIndex],
   )
 
   // Individual navigation callbacks and effects will be defined after students is available
@@ -143,8 +145,8 @@ export default function ScoringMainView() {
     gradingMode: gradingMode,
     currentStudentIndex: currentStudentIndex,
     setCurrentStudentIndex: setCurrentStudentIndex,
-    currentQuestionIndex: currentQuestionIndex,
-    setCurrentQuestionIndex: setCurrentQuestionIndex,
+    currentCropRegionId: currentCropRegionId,
+    setCurrentCropRegionId: setCurrentCropRegionId,
     pageImages: pageImages,
     cropRegions,
   })
@@ -167,10 +169,10 @@ export default function ScoringMainView() {
   } = useScoringFilter({
     pageImages,
     cropRegions,
-    currentQuestionIndex: currentQuestionIndex,
+    currentCropRegionId: currentCropRegionId,
     scoringData,
-    selectedAnswers: selectedAnswers,
-    setSelectedAnswers: setSelectedAnswers,
+    selectedPageImageIds: selectedPageImageIds,
+    setSelectedPageImageIds: setSelectedPageImageIds,
     project,
   })
 
@@ -204,19 +206,19 @@ export default function ScoringMainView() {
     if (
       gradingMode === "individual" &&
       students.length > 0 &&
-      selectedAnswers.size === 0
+      selectedPageImageIds.size === 0
     ) {
       const sortedStudents = [...students].sort(
         (a, b) => a.customOrder - b.customOrder,
       )
       handleStudentChange(sortedStudents[0].id)
     }
-  }, [gradingMode, students, selectedAnswers.size, handleStudentChange])
+  }, [gradingMode, students, selectedPageImageIds.size, handleStudentChange])
 
   const handleIndividualNextStudent = useCallback(() => {
-    if (selectedAnswers.size === 0) return
+    if (selectedPageImageIds.size === 0) return
 
-    const currentAnswerId = Array.from(selectedAnswers)[0]
+    const currentAnswerId = Array.from(selectedPageImageIds)[0]
     const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
     if (!currentAnswer) return
 
@@ -224,23 +226,23 @@ export default function ScoringMainView() {
       (a, b) => a.customOrder - b.customOrder,
     )
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student.id,
+      (s) => s.id === currentAnswer.student?.id,
     )
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
       const nextStudentAnswer = pageImages.find(
-        (a: any) => a.student.id === nextStudent.id,
+        (a: any) => a.student?.id === nextStudent.id,
       )
       if (nextStudentAnswer) {
-        setSelectedAnswers(new Set([nextStudentAnswer.id]))
+        setSelectedPageImageIds(new Set([nextStudentAnswer.id]))
       }
     }
-  }, [students, selectedAnswers, pageImages, setSelectedAnswers])
+  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds])
 
   const handleIndividualPrevStudent = useCallback(() => {
-    if (selectedAnswers.size === 0) return
+    if (selectedPageImageIds.size === 0) return
 
-    const currentAnswerId = Array.from(selectedAnswers)[0]
+    const currentAnswerId = Array.from(selectedPageImageIds)[0]
     const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
     if (!currentAnswer) return
 
@@ -248,18 +250,18 @@ export default function ScoringMainView() {
       (a, b) => a.customOrder - b.customOrder,
     )
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student.id,
+      (s) => s.id === currentAnswer.student?.id,
     )
     if (currentIndex > 0) {
       const prevStudent = sortedStudents[currentIndex - 1]
       const prevStudentAnswer = pageImages.find(
-        (a: any) => a.student.id === prevStudent.id,
+        (a: any) => a.student?.id === prevStudent.id,
       )
       if (prevStudentAnswer) {
-        setSelectedAnswers(new Set([prevStudentAnswer.id]))
+        setSelectedPageImageIds(new Set([prevStudentAnswer.id]))
       }
     }
-  }, [students, selectedAnswers, pageImages, setSelectedAnswers])
+  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds])
 
   // ナビゲーション管理hook
   const {
@@ -279,24 +281,25 @@ export default function ScoringMainView() {
     cropRegionsLength: cropRegions.length,
     currentStudentIndex: currentStudentIndex,
     setCurrentStudentIndex: setCurrentStudentIndex,
-    currentQuestionIndex: currentQuestionIndex,
-    setCurrentQuestionIndex: setCurrentQuestionIndex,
-    selectedAnswers: selectedAnswers,
-    setSelectedAnswers: setSelectedAnswers,
+    currentCropRegionId: currentCropRegionId,
+    setCurrentCropRegionId: setCurrentCropRegionId,
+    selectedPageImageIds: selectedPageImageIds,
+    setSelectedPageImageIds: setSelectedPageImageIds,
     layoutDirection: layoutDirection,
     getGridAnswerData,
     effectiveColumns: itemsPerLine[0],
+    cropRegions: cropRegions,
   })
 
   // バッチ採点と自動進行
   const { handleBatchScoreWithProgress, handleAutoAdvance } =
     useBatchScoringWithProgress({
-      selectedAnswers: selectedAnswers,
+      selectedAnswers: selectedPageImageIds,
       gradingMode: gradingMode,
       setRecentlyScoredAnswers,
       handleBatchScore,
       getGridAnswerData,
-      setSelectedAnswers: setSelectedAnswers,
+      setSelectedAnswers: setSelectedPageImageIds,
       handleGridNavigation,
       handleNextStudent,
     })
@@ -316,8 +319,8 @@ export default function ScoringMainView() {
     handlePartialScoreBackspace,
     handlePartialScoreChange,
   } = usePartialScore({
-    selectedAnswers: selectedAnswers,
-    currentQuestion,
+    selectedAnswers: selectedPageImageIds,
+    currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
     onAutoAdvance: handleAutoAdvance,
   })
@@ -325,7 +328,7 @@ export default function ScoringMainView() {
   // キーボードハンドリングhook
   useScoringKeyboard({
     gradingMode: gradingMode,
-    selectedAnswers: selectedAnswers,
+    selectedAnswers: selectedPageImageIds,
     onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
     onSetScore: handleSetScore,
     onNextQuestion: handleNextQuestion,
@@ -348,29 +351,53 @@ export default function ScoringMainView() {
     onToggleStudentNames: handleToggleStudentNames,
   })
 
-  // selectedAnswersから現在の生徒IDを取得
+  // selectedPageImageIdsから現在の生徒IDを取得
   const currentStudentId = useMemo(() => {
-    if (selectedAnswers.size > 0) {
-      const selectedAnswerId = Array.from(selectedAnswers)[0]
+    if (selectedPageImageIds.size > 0) {
+      const selectedAnswerId = Array.from(selectedPageImageIds)[0]
       const selectedAnswer = pageImages.find(
         (a: any) => a.id === selectedAnswerId,
       )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedAnswers, pageImages])
+  }, [selectedPageImageIds, pageImages])
+
+  // スコア状態の変換関数（ScoreStatus → ScoringStatus）
+  const convertScoreStatus = useCallback(
+    (
+      status:
+        | "CORRECT"
+        | "INCORRECT"
+        | "PARTIAL"
+        | "BLANK"
+        | "PENDING"
+        | "SKIP",
+    ) => {
+      const statusMap = {
+        CORRECT: "correct",
+        INCORRECT: "incorrect",
+        PARTIAL: "partial",
+        BLANK: "no_answer",
+        PENDING: "pending",
+        SKIP: "proposed",
+      } as const
+      return statusMap[status] as any
+    },
+    [],
+  )
 
   // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
   useIndividualModeKeyboard({
     cropRegions,
     students,
-    currentQuestionIndex: currentQuestionIndex,
+    currentCropRegionId: currentCropRegionId,
     currentStudentId: currentStudentId,
     scoringBehavior,
     enabled: gradingMode === "individual", // 個別表示モードでのみ有効
-    onQuestionChange: setCurrentQuestionIndex,
+    onQuestionChange: setCurrentCropRegionId,
     onStudentChange: handleStudentChange,
-    onSetScore: handleSetScore,
+    onSetScore: (status) => handleSetScore(convertScoreStatus(status)),
     onNextQuestion: handleNextQuestion,
     onPrevQuestion: handlePrevQuestion,
     onNextStudent: handleIndividualNextStudent,
@@ -454,13 +481,14 @@ export default function ScoringMainView() {
           allScoringData={allScoringData}
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
-          currentQuestion={currentQuestion}
-          allAnswerSheets={pageImages}
+          currentCropRegionId={currentCropRegionId}
+          currentCropRegion={currentCropRegion}
+          cropRegions={cropRegions}
+          pageImages={pageImages}
           onScoringDataSelect={(dataId, isSelected) =>
             handleAnswerSelect(dataId, isSelected, pageImages)
           }
           onScoringDataScore={handleBatchScoreWithProgress}
-          currentQuestionIndex={currentQuestionIndex}
           layoutDirection={layoutDirection}
           itemsPerLine={itemsPerLine}
           autoScroll={autoScroll}
@@ -472,13 +500,14 @@ export default function ScoringMainView() {
           <ScoringSidePanel
             projectId={projectId}
             cropRegions={cropRegions}
-            currentQuestionIndex={currentQuestionIndex}
-            onQuestionChange={setCurrentQuestionIndex}
+            currentCropRegionId={currentCropRegionId}
+            onCropRegionChange={setCurrentCropRegionId}
             onPrevQuestion={handlePrevQuestion}
             onNextQuestion={handleNextQuestion}
             questionProgress={questionProgress}
-            selectedAnswersCount={selectedAnswers.size}
-            currentQuestion={currentQuestion}
+            selectedPageImageIds={selectedPageImageIds}
+            selectedAnswersCount={selectedPageImageIds.size}
+            currentCropRegion={currentCropRegion}
             filterSettings={filterSettings}
             onScore={handleBatchScoreWithProgress}
             onToggleFilter={handleToggleFilter}
@@ -498,10 +527,9 @@ export default function ScoringMainView() {
             gradingMode={gradingMode}
             students={students}
             onStudentChange={handleStudentChange}
-            selectedAnswers={selectedAnswers}
-            allAnswerSheets={pageImages}
+            pageImages={pageImages}
             scoringBehavior={scoringBehavior}
-            onScoringBehaviorChange={setScoringBehavior}
+            onScoringBehaviorChange={(behavior) => setScoringBehavior(behavior)}
           />
         )}
       </div>
@@ -510,7 +538,7 @@ export default function ScoringMainView() {
       <ScoringModals
         showPartialScoreModal={showPartialScoreModal}
         partialScoreInput={partialScoreInput}
-        currentQuestion={currentQuestion}
+        currentCropRegion={currentCropRegion}
         onPartialScoreClose={handlePartialScoreCancel}
         onPartialScoreChange={handlePartialScoreChange}
         showScoreComparison={showScoreComparison}

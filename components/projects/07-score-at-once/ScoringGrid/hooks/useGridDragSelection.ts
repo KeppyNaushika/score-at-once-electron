@@ -1,11 +1,11 @@
+import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
 import { RefObject } from "react"
-import type { AnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
 
 interface UseGridDragSelectionProps {
   gridRef: RefObject<HTMLDivElement | null>
   onAnswerSelect: (id: string, isSelected: boolean) => void
   selectedAnswers: Set<string>
-  sortedAnswers: () => AnswerItem[]
+  sortedAnswers: () => GridAnswerItem[]
 }
 
 export function useGridDragSelection({

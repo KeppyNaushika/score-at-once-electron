@@ -1,5 +1,6 @@
 "use client"
 
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -11,10 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
-import type {
-  DrawingTool,
-  QuestionRegion,
-} from "../types/answer-individual-types"
+import type { DrawingTool } from "../types/answer-individual-types"
 import { LineToolPopover } from "./LineToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
 
@@ -24,7 +22,7 @@ interface DrawingToolPaletteProps {
   onZoomOut: () => void
   onMaximizeView: () => void
   onCropView: () => void
-  currentQuestion?: QuestionRegion
+  currentCropRegion?: CropRegionWithProjectPage
 
   // Tool selection
   currentTool: DrawingTool
@@ -44,7 +42,7 @@ export function DrawingToolPalette({
   onZoomOut,
   onMaximizeView,
   onCropView,
-  currentQuestion,
+  currentCropRegion,
   currentTool,
   onToolChange,
   strokeColor,
@@ -83,7 +81,7 @@ export function DrawingToolPalette({
             variant="ghost"
             onClick={onCropView}
             title="設問表示 - 設問領域をフィット"
-            disabled={!currentQuestion}
+            disabled={!currentCropRegion}
           >
             <Crop className="h-4 w-4" />
           </Button>

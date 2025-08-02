@@ -7,7 +7,7 @@ interface ScoringModalsProps {
   // Partial Score Modal props
   showPartialScoreModal: boolean
   partialScoreInput: string
-  currentQuestion?: any
+  currentCropRegion?: any
   onPartialScoreClose: () => void
   onPartialScoreChange: (value: string) => void
   // Score Comparison Modal props
@@ -19,7 +19,7 @@ interface ScoringModalsProps {
 export function ScoringModals({
   showPartialScoreModal,
   partialScoreInput,
-  currentQuestion,
+  currentCropRegion,
   onPartialScoreClose,
   onPartialScoreChange,
   showScoreComparison,
@@ -32,9 +32,9 @@ export function ScoringModals({
       <PartialScoreModal
         isOpen={showPartialScoreModal}
         value={partialScoreInput}
-        maxPoints={currentQuestion?.points || 0}
+        maxPoints={currentCropRegion?.points || 0}
         questionLabel={
-          currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`
+          currentCropRegion?.label || `問${currentCropRegion?.orderIndex || 1}`
         }
         onClose={onPartialScoreClose}
         onChange={onPartialScoreChange}
@@ -45,11 +45,11 @@ export function ScoringModals({
         isOpen={showScoreComparison}
         onClose={onScoreComparisonClose}
         studentId={currentAnswerSheet?.studentId || ""}
-        cropRegionId={currentQuestion?.id || ""}
+        cropRegionId={currentCropRegion?.id || ""}
         questionLabel={
-          currentQuestion?.label || `問${currentQuestion?.orderIndex || 1}`
+          currentCropRegion?.label || `問${currentCropRegion?.orderIndex || 1}`
         }
-        maxScore={currentQuestion?.points || 0}
+        maxScore={currentCropRegion?.points || 0}
         studentName={
           currentAnswerSheet
             ? `${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`

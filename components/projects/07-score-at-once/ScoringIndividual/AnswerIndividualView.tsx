@@ -2,42 +2,48 @@
 "use client"
 
 import { useCallback } from "react"
+import { DrawingToolPalette } from "./components/DrawingToolPalette"
+import { TextInputModal } from "./components/TextInputModal"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/useDrawingState"
 import { useImageCanvas } from "./hooks/useImageCanvas"
 import { useImageNavigation } from "./hooks/useImageNavigation"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
-import { DrawingToolPalette } from "./components/DrawingToolPalette"
-import { TextInputModal } from "./components/TextInputModal"
 
 export default function AnswerIndividualView({
-  allScoringData,
+  scoringData,
   currentScoringDataId,
-  currentQuestionIndex,
-  currentQuestion,
+  cropRegions,
+  currentCropRegionId,
   onScoringDataScore,
-  allAnswerSheets,
+  pageImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
-  const { zoom, position, onZoomChange, onPositionChange } = useImageNavigation()
+  const { zoom, position, onZoomChange, onPositionChange } =
+    useImageNavigation()
 
   // 描画状態管理
   const drawingState = useDrawingState()
 
   // 現在表示中の採点データを取得（簡潔に）
-  const answerSheet = currentScoringDataId 
-    ? allScoringData.find(data => data.id === currentScoringDataId)
+  const answerSheet = currentScoringDataId
+    ? scoringData.find((data: any) => data.id === currentScoringDataId)
+    : null
+
+  // 現在の設問領域をcropRegionsから取得
+  const currentCropRegion = currentCropRegionId
+    ? cropRegions.find((region) => region.id === currentCropRegionId)
     : null
 
   // 画像とキャンバス管理
   const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =
     useImageCanvas({
       answerSheet,
-      currentQuestion,
-      allAnswerSheets,
+      currentCropRegion,
+      pageImages,
       zoom,
       position,
       drawingElements: drawingState.drawingElements,
@@ -241,7 +247,7 @@ export default function AnswerIndividualView({
   // 設問表示
   const handleCropView = useCallback(() => {
     if (
-      !currentQuestion ||
+      !currentCropRegion ||
       !containerRef.current ||
       !imageLoaded ||
       loadedImages.length === 0
@@ -256,10 +262,10 @@ export default function AnswerIndividualView({
       containerSize: { width: availableWidth, height: availableHeight },
       loadedImagesCount: loadedImages.length,
       questionRegion: {
-        x: currentQuestion.x,
-        y: currentQuestion.y,
-        width: currentQuestion.width,
-        height: currentQuestion.height,
+        x: currentCropRegion.x,
+        y: currentCropRegion.y,
+        width: currentCropRegion.width,
+        height: currentCropRegion.height,
       },
     })
 
@@ -269,7 +275,7 @@ export default function AnswerIndividualView({
     const effectiveHeight = availableHeight - padding
 
     // 設問が属するページの画像を使用
-    const questionPageNumber = currentQuestion.projectPage?.pageNumber || 1
+    const questionPageNumber = currentCropRegion.projectPage?.pageNumber || 1
     const questionPageIndex = questionPageNumber - 1 // 1ベース→0ベースに変換
 
     const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
@@ -279,8 +285,8 @@ export default function AnswerIndividualView({
     }
 
     // 設問領域の実際のサイズ（ピクセル）
-    const questionWidth = currentQuestion.width * questionImg.naturalWidth
-    const questionHeight = currentQuestion.height * questionImg.naturalHeight
+    const questionWidth = currentCropRegion.width * questionImg.naturalWidth
+    const questionHeight = currentCropRegion.height * questionImg.naturalHeight
 
     console.log("設問領域サイズ:", {
       questionPageNumber,
@@ -309,9 +315,10 @@ export default function AnswerIndividualView({
 
     // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
     const questionCenterX =
-      (currentQuestion.x + currentQuestion.width / 2) * questionImg.naturalWidth
+      (currentCropRegion.x + currentCropRegion.width / 2) *
+      questionImg.naturalWidth
     const questionCenterY =
-      (currentQuestion.y + currentQuestion.height / 2) *
+      (currentCropRegion.y + currentCropRegion.height / 2) *
       questionImg.naturalHeight
 
     // 複数ページ表示の場合、設問が属するページのオフセットを計算
@@ -371,7 +378,7 @@ export default function AnswerIndividualView({
     onZoomChange(newZoom)
     onPositionChange({ x: newX, y: newY })
   }, [
-    currentQuestion,
+    currentCropRegion,
     containerRef,
     imageLoaded,
     loadedImages,
@@ -454,7 +461,7 @@ export default function AnswerIndividualView({
         onZoomOut={handleZoomOut}
         onMaximizeView={handleMaximizeView}
         onCropView={handleCropView}
-        currentQuestion={currentQuestion}
+        currentCropRegion={currentCropRegion || undefined}
         currentTool={drawingState.currentTool}
         onToolChange={drawingState.setCurrentTool}
         strokeColor={drawingState.strokeColor}

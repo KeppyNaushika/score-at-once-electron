@@ -20,20 +20,20 @@ interface FilterSettings {
 interface UseScoringFilterProps {
   pageImages: PageImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
-  currentQuestionIndex: number
+  currentCropRegionId: string | null
   scoringData: Record<string, ClientQuestionScore>
-  selectedAnswers: Set<string>
-  setSelectedAnswers: (answers: Set<string>) => void
+  selectedPageImageIds: Set<string>
+  setSelectedPageImageIds: (answers: Set<string>) => void
   project: any
 }
 
 export function useScoringFilter({
   pageImages,
   cropRegions,
-  currentQuestionIndex,
+  currentCropRegionId,
   scoringData,
-  selectedAnswers,
-  setSelectedAnswers,
+  selectedPageImageIds,
+  setSelectedPageImageIds,
   project,
 }: UseScoringFilterProps) {
   // シンプルなフィルタ設計
@@ -51,7 +51,9 @@ export function useScoringFilter({
     Set<string>
   >(new Set())
 
-  const currentCropRegion = cropRegions[currentQuestionIndex]
+  const currentCropRegion = cropRegions.find(
+    (r) => r.id === currentCropRegionId,
+  )
 
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
@@ -119,16 +121,21 @@ export function useScoringFilter({
       // 表示対象を更新（選択はクリアしない）
       updateVisibleAnswers()
     }
-  }, [pageImages.length, cropRegions.length, updateVisibleAnswers])
+  }, [
+    pageImages.length,
+    cropRegions.length,
+    currentCropRegionId,
+    updateVisibleAnswers,
+  ])
 
   // 選択状態の管理用ref
-  const selectedAnswersRef = useRef<Set<string>>(new Set())
+  const selectedPageImageIdsRef = useRef<Set<string>>(new Set())
   const lastVisibleAnswersRef = useRef<Set<string>>(new Set())
 
-  // selectedAnswersが変更されたらrefも更新
+  // selectedPageImageIdsが変更されたらrefも更新
   useEffect(() => {
-    selectedAnswersRef.current = selectedAnswers
-  }, [selectedAnswers])
+    selectedPageImageIdsRef.current = selectedPageImageIds
+  }, [selectedPageImageIds])
 
   // visibleAnswersが更新されたら適切な答案選択を行う（最適化版）
   useEffect(() => {
@@ -151,7 +158,7 @@ export function useScoringFilter({
     if (visibleAnswers.size === 0) return
 
     // 現在の選択状態をrefから取得（最新の状態）
-    const currentSelection = selectedAnswersRef.current
+    const currentSelection = selectedPageImageIdsRef.current
     if (currentSelection.size > 0) {
       // 高速な有効性チェック（Set.hasは高速）
       for (const selectedId of currentSelection) {
@@ -164,11 +171,11 @@ export function useScoringFilter({
     // 選択が空か無効な場合のみ、最初の学生答案を選択
     for (const answerId of visibleAnswers) {
       if (!answerId.startsWith("master-")) {
-        setSelectedAnswers(new Set([answerId]))
+        setSelectedPageImageIds(new Set([answerId]))
         return // 見つかったらすぐ終了
       }
     }
-  }, [visibleAnswers, setSelectedAnswers])
+  }, [visibleAnswers, setSelectedPageImageIds])
 
   // 模範解答データを取得
   const getMasterAnswerData = useCallback((): ScoringData | null => {
@@ -275,9 +282,9 @@ export function useScoringFilter({
   const getAllGridAnswerData = useMemo(() => {
     return allScoringData.map((data) => ({
       ...data,
-      isSelected: selectedAnswers.has(data.id),
+      isSelected: selectedPageImageIds.has(data.id),
     }))
-  }, [allScoringData, selectedAnswers])
+  }, [allScoringData, selectedPageImageIds])
 
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
@@ -359,7 +366,7 @@ export function useScoringFilter({
     // 新しいデータ構造
     allScoringData,
     filteredScoringDataIds: visibleAnswers,
-    selectedScoringDataIds: selectedAnswers,
+    selectedScoringDataIds: selectedPageImageIds,
 
     // 従来の互換性維持
     filterSettings,

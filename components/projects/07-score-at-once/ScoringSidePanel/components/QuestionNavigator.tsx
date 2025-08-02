@@ -1,5 +1,6 @@
 "use client"
 
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,7 +16,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { SidePanelSection } from "./SidePanelSection"
 import {
   AlertCircle,
   CheckCircle,
@@ -23,18 +23,12 @@ import {
   ChevronRight,
   FileText,
 } from "lucide-react"
-
-interface QuestionRegion {
-  id: string
-  label: string
-  orderIndex?: number
-  points: number
-}
+import { SidePanelSection } from "./SidePanelSection"
 
 interface QuestionNavigatorProps {
-  questionRegions: QuestionRegion[]
-  currentQuestionIndex: number
-  onQuestionChange: (index: number) => void
+  questionRegions: CropRegionWithProjectPage[]
+  currentCropRegionId: string | null
+  onCropRegionChange: (id: string | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress?: {
@@ -48,12 +42,15 @@ interface QuestionNavigatorProps {
 
 export default function QuestionNavigator({
   questionRegions,
-  currentQuestionIndex,
-  onQuestionChange,
+  currentCropRegionId,
+  onCropRegionChange,
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
 }: QuestionNavigatorProps) {
+  const currentIndex = questionRegions.findIndex(
+    (q) => q.id === currentCropRegionId,
+  )
   return (
     <TooltipProvider delayDuration={300}>
       <SidePanelSection icon={FileText} title="設問">
@@ -65,7 +62,7 @@ export default function QuestionNavigator({
                 variant="outline"
                 size="sm"
                 onClick={onPrevQuestion}
-                disabled={currentQuestionIndex === 0}
+                disabled={currentIndex === 0 || currentIndex === -1}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -84,8 +81,8 @@ export default function QuestionNavigator({
           </Tooltip>
 
           <Select
-            value={currentQuestionIndex.toString()}
-            onValueChange={(value) => onQuestionChange(parseInt(value))}
+            value={currentCropRegionId || ""}
+            onValueChange={(value) => onCropRegionChange(value || null)}
           >
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="設問を選択" />
@@ -96,13 +93,13 @@ export default function QuestionNavigator({
                 return (
                   <SelectItem
                     key={question.id}
-                    value={index.toString()}
+                    value={question.id}
                     className="flex items-center justify-between"
                   >
                     <div className="flex items-center gap-2">
                       <span>{question.label || question.orderIndex || 1}</span>
                       <Badge variant="outline" className="text-xs">
-                        {question.points}点
+                        {question.points || 0}点
                       </Badge>
                     </div>
                     {progress && (
@@ -129,7 +126,10 @@ export default function QuestionNavigator({
                 variant="outline"
                 size="sm"
                 onClick={onNextQuestion}
-                disabled={currentQuestionIndex === questionRegions.length - 1}
+                disabled={
+                  currentIndex === questionRegions.length - 1 ||
+                  currentIndex === -1
+                }
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -156,7 +156,7 @@ export default function QuestionNavigator({
           <div className="flex flex-wrap gap-2">
             {questionRegions.map((question, index) => {
               const progress = questionProgress?.[question.id]
-              const isActive = index === currentQuestionIndex
+              const isActive = question.id === currentCropRegionId
               return (
                 <Tooltip key={question.id}>
                   <TooltipTrigger asChild>
@@ -166,7 +166,7 @@ export default function QuestionNavigator({
                       className={`relative h-8 px-2 ${
                         isActive ? "" : "hover:bg-gray-50"
                       }`}
-                      onClick={() => onQuestionChange(index)}
+                      onClick={() => onCropRegionChange(question.id)}
                     >
                       <span className="text-xs">
                         {question.label || question.orderIndex || 1}
@@ -189,7 +189,7 @@ export default function QuestionNavigator({
                         {question.label}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {question.points}点
+                        {question.points || 0}点
                       </div>
                       {progress && (
                         <div className="mt-1 text-xs text-gray-400">

@@ -1,15 +1,12 @@
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
 import { useCallback, useEffect, useRef, useState } from "react"
-import type {
-  StudentAnswer,
-  QuestionRegion,
-  DrawingElement,
-} from "../types/answer-individual-types"
+import type { DrawingElement } from "../types/answer-individual-types"
 import { useDrawingUtils } from "./useDrawingUtils"
 
 interface UseImageCanvasProps {
-  answerSheet: StudentAnswer
-  currentQuestion?: QuestionRegion
-  allAnswerSheets?: StudentAnswer[]
+  answerSheet: any // ScoringData やPageImageWithProjectStudentsへの統一予定
+  currentCropRegion?: CropRegionWithProjectPage | null
+  pageImages?: any[] // PageImageWithProjectStudents[] - 統一予定
   zoom: number
   position: { x: number; y: number }
   drawingElements: DrawingElement[]
@@ -27,8 +24,8 @@ interface UseImageCanvasProps {
 
 export function useImageCanvas({
   answerSheet,
-  currentQuestion,
-  allAnswerSheets,
+  currentCropRegion,
+  pageImages,
   zoom,
   position,
   drawingElements,
@@ -114,14 +111,15 @@ export function useImageCanvas({
       setTotalCanvasHeight(currentY - (images.length > 1 ? spacing : 0))
 
       // 設問枠描画
-      if (currentQuestion && images.length > 0) {
+      if (currentCropRegion && images.length > 0) {
         // 設問が属するページを特定（pageNumberから0ベースのインデックスに変換）
-        const questionPageNumber = currentQuestion.projectPage?.pageNumber || 1
+        const questionPageNumber =
+          currentCropRegion.projectPage?.pageNumber || 1
         const questionPageIndex = questionPageNumber - 1 // 1ベース→0ベースに変換
 
         console.log("設問枠描画:", {
-          questionId: currentQuestion.id,
-          questionLabel: currentQuestion.label,
+          questionId: currentCropRegion.id,
+          questionLabel: currentCropRegion.label,
           pageNumber: questionPageNumber,
           pageIndex: questionPageIndex,
           totalPages: images.length,
@@ -147,10 +145,10 @@ export function useImageCanvas({
             const offsetX = (canvas.width - displayWidth) / 2 - position.x
             const offsetY = pageOffsetY - position.y
 
-            const questionX = currentQuestion.x * displayWidth + offsetX
-            const questionY = currentQuestion.y * displayHeight + offsetY
-            const questionWidth = currentQuestion.width * displayWidth
-            const questionHeight = currentQuestion.height * displayHeight
+            const questionX = currentCropRegion.x * displayWidth + offsetX
+            const questionY = currentCropRegion.y * displayHeight + offsetY
+            const questionWidth = currentCropRegion.width * displayWidth
+            const questionHeight = currentCropRegion.height * displayHeight
 
             console.log("設問枠座標:", {
               questionX,
@@ -170,7 +168,7 @@ export function useImageCanvas({
             // 設問ラベル
             ctx.fillStyle = "#22c55e"
             ctx.font = "14px sans-serif"
-            ctx.fillText(currentQuestion.label, questionX, questionY - 5)
+            ctx.fillText(currentCropRegion.label, questionX, questionY - 5)
           }
         } else {
           console.warn("設問のページが読み込まれた画像の範囲外です:", {
@@ -373,19 +371,20 @@ export function useImageCanvas({
       }
     },
     [
+      pageSpacing,
+      currentCropRegion,
       zoom,
-      position,
-      currentQuestion,
+      position.x,
+      position.y,
       drawingElements,
-      currentDrawing,
       isDrawing,
-      isCreatingTextBox,
-      strokeColor,
-      strokeWidth,
-      lineStyle,
-      isShiftPressed,
+      currentDrawing,
       selectedElementId,
       drawLineWithStyle,
+      strokeColor,
+      strokeWidth,
+      isCreatingTextBox,
+      lineStyle,
     ],
   )
 
@@ -408,15 +407,15 @@ export function useImageCanvas({
 
       console.log("画像読み込み処理開始:", {
         showMultiplePages,
-        allAnswerSheetsCount: allAnswerSheets?.length || 0,
+        pageImagesCount: pageImages?.length || 0,
         currentStudentId: answerSheet.studentId,
       })
 
-      if (showMultiplePages && allAnswerSheets) {
+      if (showMultiplePages && pageImages) {
         // 複数ページ表示：同一生徒の全ページを取得
         console.log(
           "全答案シート:",
-          allAnswerSheets.map((sheet) => ({
+          pageImages.map((sheet) => ({
             id: sheet.id,
             studentId: sheet.studentId,
             pageNumber: sheet.pageNumber,
@@ -424,7 +423,7 @@ export function useImageCanvas({
           })),
         )
 
-        const studentAnswerSheets = allAnswerSheets
+        const studentAnswerSheets = pageImages
           .filter((sheet) => sheet.studentId === answerSheet.studentId)
           .sort((a, b) => a.pageNumber - b.pageNumber)
 
@@ -516,7 +515,7 @@ export function useImageCanvas({
     if (answerSheet) {
       loadAnswerImages()
     }
-  }, [answerSheet, allAnswerSheets, showMultiplePages, drawCanvas])
+  }, [answerSheet, pageImages, showMultiplePages, drawCanvas])
 
   // Canvas再描画
   useEffect(() => {

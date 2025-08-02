@@ -1,11 +1,16 @@
+import {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types/shared.types"
+import { ProjectWithDetails } from "@/types/common.types"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface ScoringDataLoaderResult {
   loading: boolean
-  project: any
-  pageImages: any[]
-  cropRegions: any[]
+  project: ProjectWithDetails | null
+  pageImages: PageImageWithProjectStudents[]
+  cropRegions: CropRegionWithProjectPage[]
   currentUserId: string | null
   error: string | null
 }
@@ -14,9 +19,13 @@ export function useScoringDataLoader(
   projectId: string,
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
-  const [project, setProject] = useState<any>(null)
-  const [pageImages, setPageImages] = useState<any[]>([])
-  const [cropRegions, setCropRegions] = useState<any[]>([])
+  const [project, setProject] = useState<ProjectWithDetails | null>(null)
+  const [pageImages, setPageImages] = useState<PageImageWithProjectStudents[]>(
+    [],
+  )
+  const [cropRegions, setCropRegions] = useState<CropRegionWithProjectPage[]>(
+    [],
+  )
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -31,7 +40,7 @@ export function useScoringDataLoader(
         if (!projectData) {
           throw new Error("プロジェクトが見つかりません")
         }
-        setProject(projectData)
+        setProject(projectData as ProjectWithDetails)
 
         // 答案データの読み込み
         const answersResult =
@@ -39,7 +48,10 @@ export function useScoringDataLoader(
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
-        setPageImages(answersResult.studentAnswers || [])
+        setPageImages(
+          (answersResult.studentAnswers ||
+            []) as unknown as PageImageWithProjectStudents[],
+        )
 
         // 設問領域データの読み込み
         const regionsResult =
@@ -50,7 +62,7 @@ export function useScoringDataLoader(
 
         const cropRegions = regionsResult.filter(
           (region: any) => region.type === "QUESTION_ANSWER",
-        )
+        ) as CropRegionWithProjectPage[]
         setCropRegions(cropRegions)
 
         // ユーザーIDの取得

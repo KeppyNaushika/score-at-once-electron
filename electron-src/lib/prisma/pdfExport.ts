@@ -1,16 +1,20 @@
+import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
 import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument, rgb } from "pdf-lib"
 import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
-import { getStudentAnswersByProjectId } from "./studentAnswer"
 import { getCropRegionsByProjectId } from "./cropRegion"
+import {
+  getCropSubtotalsByCropRegionId,
+  getCropSubtotalsBySubtotalId,
+} from "./cropSubtotal"
 import { getStudentsForProject } from "./projectStudent"
 import {
   calculateActualScore,
   getQuestionScoresForProject,
 } from "./questionScore"
-import { getCropSubtotalsBySubtotalId, getCropSubtotalsByCropRegionId } from "./cropSubtotal"
+import { getStudentAnswersByProjectId } from "./studentAnswer"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -89,10 +93,10 @@ function getMarkImagePath(
 ): string {
   // パッケージ化されたアプリでは app.getAppPath() を使用
   const { app } = require("electron")
-  const publicDir = app.isPackaged 
+  const publicDir = app.isPackaged
     ? path.join(app.getAppPath(), "public")
     : path.join(getAppRootPath(), "public")
-  
+
   const prefix = useTransparent ? "tranceparent_" : ""
 
   switch (status) {
@@ -264,7 +268,7 @@ function calculateTextPosition(
 function calculateStudentTotalScore(
   studentId: string,
   allQuestionScores: any,
-  cropRegions: any[],
+  cropRegions: CropRegionWithProjectPage[],
 ): number {
   try {
     let totalScore = 0
@@ -290,9 +294,7 @@ function calculateStudentTotalScore(
       if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
         const maxScore = cropRegion?.points || 10
         const actualScore = calculateActualScore(scoreData, maxScore)
-        console.log(
-          `Question ${scoreData.cropRegionId}: score ${actualScore}`,
-        )
+        console.log(`Question ${scoreData.cropRegionId}: score ${actualScore}`)
         totalScore += actualScore || 0
       }
     }
@@ -315,7 +317,7 @@ async function calculateStudentSubtotalScore(
   studentId: string,
   subtotalRegionId: string,
   allQuestionScores: any,
-  cropRegions: any[],
+  cropRegions: CropRegionWithProjectPage[],
 ): Promise<number> {
   try {
     console.log(
@@ -333,11 +335,8 @@ async function calculateStudentSubtotalScore(
     )
 
     // 小計点領域に関連付けられたグループ項目を取得
-    const cropSubtotals =
-      await getCropSubtotalsByCropRegionId(subtotalRegionId)
-    console.log(
-      `Found ${cropSubtotals?.length || 0} crop subtotals`,
-    )
+    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
+    console.log(`Found ${cropSubtotals?.length || 0} crop subtotals`)
 
     // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!cropSubtotals || cropSubtotals.length === 0) {
@@ -355,8 +354,8 @@ async function calculateStudentSubtotalScore(
     const groupMap = new Map<string, string[]>()
 
     for (const cropSubtotal of cropSubtotals) {
-      if (!cropSubtotal || typeof cropSubtotal !== 'object') continue
-      
+      if (!cropSubtotal || typeof cropSubtotal !== "object") continue
+
       const groupId = (cropSubtotal as any).subtotal?.subtotalGroupId
       if (!groupId) continue
 
@@ -395,7 +394,10 @@ async function calculateStudentSubtotalScore(
             })
           }
         } catch (error) {
-          console.error(`Error getting crop subtotals for item ${itemId}:`, error)
+          console.error(
+            `Error getting crop subtotals for item ${itemId}:`,
+            error,
+          )
         }
       }
 
@@ -710,7 +712,7 @@ async function addAnswerSheetToPDF(
   imagePath: string,
   answerSheet: any,
   questionScores: any,
-  cropRegions: any[],
+  cropRegions: CropRegionWithProjectPage[],
   scoringMarkConfig?: ScoringMarkConfig,
   pdfOrientation?: "portrait" | "landscape",
   _currentStudent?: any,
@@ -802,13 +804,15 @@ async function addAnswerSheetToPDF(
     const relevantScores =
       questionScores.success && questionScores.scores
         ? questionScores.scores.filter(
-            (score: any) => 
+            (score: any) =>
               score.studentId === answerSheet.studentId &&
-              score.cropRegion?.projectPage?.id === answerSheet.projectPageId
+              score.cropRegion?.projectPage?.id === answerSheet.projectPageId,
           )
         : []
-    
-    console.log(`👤 Found ${relevantScores.length} relevant scores for student ${answerSheet.studentId}`)
+
+    console.log(
+      `👤 Found ${relevantScores.length} relevant scores for student ${answerSheet.studentId}`,
+    )
 
     // 採点データを適切に処理
     const processedScores = relevantScores.map((score: any) => {
@@ -874,8 +878,10 @@ async function addAnswerSheetToPDF(
       },
     }
 
-    console.log(`📊 Processing ${processedScores.length} scores for drawing marks and scores`)
-    
+    console.log(
+      `📊 Processing ${processedScores.length} scores for drawing marks and scores`,
+    )
+
     for (const score of processedScores) {
       const cropRegion = cropRegions.find(
         (region) => region.id === score.cropRegionId,
@@ -886,11 +892,15 @@ async function addAnswerSheetToPDF(
 
       // 採点状態を判定（statusを直接使用）
       const scoringStatus = score.status as ScoringStatus
-      console.log(`📝 Processing score: cropRegionId=${score.cropRegionId}, status=${scoringStatus}, score=${score.score}`)
+      console.log(
+        `📝 Processing score: cropRegionId=${score.cropRegionId}, status=${scoringStatus}, score=${score.score}`,
+      )
 
       // この状態のマークを表示するかチェック
       if (!config.showMarkForStatus[scoringStatus]) {
-        console.log(`🚫 Skipping mark display for status: ${scoringStatus} (config disabled)`)
+        console.log(
+          `🚫 Skipping mark display for status: ${scoringStatus} (config disabled)`,
+        )
         continue
       }
 
@@ -948,10 +958,7 @@ async function addAnswerSheetToPDF(
       let markImagePath: string | undefined
       try {
         // 採点マーク画像を読み込んで描画
-        markImagePath = getMarkImagePath(
-          scoringStatus,
-          config.useTransparent,
-        )
+        markImagePath = getMarkImagePath(scoringStatus, config.useTransparent)
 
         if (fs.existsSync(markImagePath)) {
           const markImageBuffer = fs.readFileSync(markImagePath)
@@ -968,7 +975,10 @@ async function addAnswerSheetToPDF(
           console.warn(`⚠️  Scoring mark image not found: ${markImagePath}`)
         }
       } catch (markError) {
-        console.error(`❌ Failed to draw scoring mark: ${markImagePath || 'unknown path'}`, markError)
+        console.error(
+          `❌ Failed to draw scoring mark: ${markImagePath || "unknown path"}`,
+          markError,
+        )
         // マーク描画に失敗しても続行
       }
 

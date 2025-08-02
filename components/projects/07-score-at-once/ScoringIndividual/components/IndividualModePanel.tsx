@@ -1,8 +1,11 @@
 "use client"
 
-import { StudentAnswerPanel } from "./StudentAnswerPanel"
-import { ScoringBehaviorSelector, type ScoringBehavior } from "./ScoringBehaviorSelector"
 import { useMemo } from "react"
+import {
+  ScoringBehaviorSelector,
+  type ScoringBehavior,
+} from "./ScoringBehaviorSelector"
+import { StudentAnswerPanel } from "./StudentAnswerPanel"
 
 interface Student {
   id: string
@@ -14,8 +17,8 @@ interface Student {
 
 interface IndividualModePanelProps {
   students: Student[]
-  selectedAnswers?: Set<string>
-  allAnswerSheets?: any[]
+  selectedAnswers?: Set<string> // TODO: selectedPageImageIdsに統一予定
+  pageImages?: any[] // PageImageWithProjectStudents[]
   onStudentChange: (studentId: string) => void
   scoringBehavior: ScoringBehavior
   onScoringBehaviorChange: (behavior: ScoringBehavior) => void
@@ -24,7 +27,7 @@ interface IndividualModePanelProps {
 export function IndividualModePanel({
   students,
   selectedAnswers,
-  allAnswerSheets,
+  pageImages,
   onStudentChange,
   scoringBehavior,
   onScoringBehaviorChange,
@@ -33,11 +36,13 @@ export function IndividualModePanel({
   const currentStudentId = useMemo(() => {
     if (selectedAnswers && selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      const selectedAnswer = allAnswerSheets?.find((a: any) => a.id === selectedAnswerId)
+      const selectedAnswer = pageImages?.find(
+        (a: any) => a.id === selectedAnswerId,
+      )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedAnswers, allAnswerSheets])
+  }, [selectedAnswers, pageImages])
   return (
     <>
       <StudentAnswerPanel
@@ -45,7 +50,7 @@ export function IndividualModePanel({
         currentStudentId={currentStudentId}
         onStudentChange={onStudentChange}
       />
-      
+
       <ScoringBehaviorSelector
         behavior={scoringBehavior}
         onBehaviorChange={onScoringBehaviorChange}

@@ -18,8 +18,8 @@ export function useScoringDataContainer({
   gradingMode,
   currentStudentIndex,
   setCurrentStudentIndex,
-  currentQuestionIndex,
-  setCurrentQuestionIndex,
+  currentCropRegionId,
+  setCurrentCropRegionId,
   pageImages,
   cropRegions,
 }: UseScoringDataProps) {
@@ -30,12 +30,12 @@ export function useScoringDataContainer({
     pageImages,
     cropRegions,
     currentStudentIndex,
-    currentQuestionIndex,
+    currentCropRegionId,
     currentUserId,
     scoringData,
     gradingMode,
     setCurrentStudentIndex,
-    setCurrentQuestionIndex,
+    setCurrentCropRegionId,
     setScoringData,
   })
 
@@ -43,7 +43,7 @@ export function useScoringDataContainer({
   const { handleBatchScore } = useBatchScoring({
     pageImages,
     cropRegions,
-    currentQuestionIndex,
+    currentCropRegionId,
     currentUserId,
     setCurrentUserId,
     scoringData,

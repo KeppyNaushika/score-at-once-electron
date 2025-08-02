@@ -24,9 +24,9 @@ import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringToolbarProps {
   selectedAnswersCount: number
-  currentQuestion?: {
-    points: number
-  }
+  currentCropRegion?: {
+    points: number | null
+  } | null
   filterSettings?: {
     unscored: boolean
     correct: boolean

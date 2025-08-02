@@ -7,24 +7,35 @@ import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringS
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/components/QuestionNavigator"
 import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringToolbar"
 import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
+import type {
+  CropRegionWithProjectPage,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 
 interface ScoringSidePanelProps {
   projectId: string
   // Question Navigator props
-  cropRegions: any[]
-  currentQuestionIndex: number
-  onQuestionChange: (index: number) => void
+  cropRegions: CropRegionWithProjectPage[]
+  currentCropRegionId: string | null
+  onCropRegionChange: (id: string | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
   // Scoring Toolbar props
   selectedAnswersCount: number
-  currentQuestion?: any
-  filterSettings: any
+  currentCropRegion?: CropRegionWithProjectPage | null
+  filterSettings: {
+    unscored: boolean
+    correct: boolean
+    incorrect: boolean
+    partial: boolean
+    pending: boolean
+    no_answer: boolean
+  }
   onScore: (
-    statusOrAnswerIds: any,
-    statusOrPartialScore?: any,
-    partialScore?: any,
+    statusOrAnswerIds: ScoringStatus | string | string[],
+    statusOrPartialScore?: ScoringStatus | number | null,
+    partialScore?: number | null,
   ) => void
   onToggleFilter: (filterId: string) => void
   onRefreshFilter: () => void
@@ -43,24 +54,32 @@ interface ScoringSidePanelProps {
   onAutoScrollChange: (enabled: boolean) => void
   gradingMode: "grid" | "individual"
   // Individual mode props
-  students?: any[]
+  students?: {
+    id: string
+    studentId: string
+    lastName: string
+    firstName: string
+    customOrder: number
+  }[]
   onStudentChange?: (studentId: string) => void
-  selectedAnswers?: Set<string>
-  allAnswerSheets?: any[]
-  scoringBehavior?: any
-  onScoringBehaviorChange?: (behavior: any) => void
+  selectedPageImageIds?: Set<string>
+  pageImages?: any[] // PageImageWithProjectStudents[] - 具体的な型に変更予定
+  scoringBehavior?: "next-student" | "next-question" | "stay"
+  onScoringBehaviorChange?: (
+    behavior: "next-student" | "next-question" | "stay",
+  ) => void
 }
 
 export function ScoringSidePanel({
   projectId,
   cropRegions,
-  currentQuestionIndex,
-  onQuestionChange,
+  currentCropRegionId,
+  onCropRegionChange,
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
   selectedAnswersCount,
-  currentQuestion,
+  currentCropRegion,
   filterSettings,
   onScore,
   onToggleFilter,
@@ -80,8 +99,8 @@ export function ScoringSidePanel({
   gradingMode,
   students,
   onStudentChange,
-  selectedAnswers,
-  allAnswerSheets,
+  selectedPageImageIds,
+  pageImages,
   scoringBehavior,
   onScoringBehaviorChange,
 }: ScoringSidePanelProps) {
@@ -90,8 +109,8 @@ export function ScoringSidePanel({
       {/* 設問ナビゲーター */}
       <QuestionNavigator
         questionRegions={cropRegions}
-        currentQuestionIndex={currentQuestionIndex}
-        onQuestionChange={onQuestionChange}
+        currentCropRegionId={currentCropRegionId}
+        onCropRegionChange={onCropRegionChange}
         onPrevQuestion={onPrevQuestion}
         onNextQuestion={onNextQuestion}
         questionProgress={questionProgress}
@@ -100,7 +119,7 @@ export function ScoringSidePanel({
       {/* 採点ツールバー */}
       <ScoringToolbar
         selectedAnswersCount={selectedAnswersCount}
-        currentQuestion={currentQuestion}
+        currentCropRegion={currentCropRegion}
         filterSettings={filterSettings}
         onScore={onScore}
         onToggleFilter={onToggleFilter}
@@ -114,11 +133,12 @@ export function ScoringSidePanel({
       {gradingMode === "individual" &&
         students &&
         onStudentChange &&
-        onScoringBehaviorChange && (
+        onScoringBehaviorChange &&
+        scoringBehavior && (
           <IndividualModePanel
             students={students}
-            selectedAnswers={selectedAnswers}
-            allAnswerSheets={allAnswerSheets}
+            selectedAnswers={selectedPageImageIds}
+            pageImages={pageImages}
             onStudentChange={onStudentChange}
             scoringBehavior={scoringBehavior}
             onScoringBehaviorChange={onScoringBehaviorChange}

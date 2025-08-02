@@ -12,12 +12,12 @@ interface UseIndividualScoringProps {
   pageImages: PageImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
   currentStudentIndex: number
-  currentQuestionIndex: number
+  currentCropRegionId: string | null
   currentUserId: string | null
   scoringData: ScoringDataRecord
   gradingMode: "grid" | "individual"
   setCurrentStudentIndex: (index: number) => void
-  setCurrentQuestionIndex: (index: number) => void
+  setCurrentCropRegionId: (id: string | null) => void
   setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>
 }
 
@@ -25,18 +25,20 @@ export function useIndividualScoring({
   pageImages,
   cropRegions,
   currentStudentIndex,
-  currentQuestionIndex,
+  currentCropRegionId,
   currentUserId,
   scoringData,
   gradingMode,
   setCurrentStudentIndex,
-  setCurrentQuestionIndex,
+  setCurrentCropRegionId,
   setScoringData,
 }: UseIndividualScoringProps) {
   const handleSetScore = useCallback(
     async (type: ScoringStatus) => {
       const currentPageImage = pageImages[currentStudentIndex]
-      const currentCropRegion = cropRegions[currentQuestionIndex]
+      const currentCropRegion = cropRegions.find(
+        (r) => r.id === currentCropRegionId,
+      )
 
       if (!currentPageImage || !currentCropRegion || !currentUserId) {
         if (!currentUserId) {
@@ -125,11 +127,13 @@ export function useIndividualScoring({
                 if (currentStudentIndex < pageImages.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
+                  // TODO: IDベースのナビゲーションを実装予定
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
-                  if (currentQuestionIndex < cropRegions.length - 1) {
-                    setCurrentQuestionIndex(currentQuestionIndex + 1)
-                    setCurrentStudentIndex(0)
-                  }
+                  // const nextCropRegionId = findNextCropRegionId(currentCropRegionId, cropRegions)
+                  // if (nextCropRegionId) {
+                  //   setCurrentCropRegionId(nextCropRegionId)
+                  //   setCurrentStudentIndex(0)
+                  // }
                 }
               }, 300) // 300ms後に移動（採点状態を確認する時間を与える）
             }
@@ -170,11 +174,13 @@ export function useIndividualScoring({
                 if (currentStudentIndex < pageImages.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
+                  // TODO: IDベースのナビゲーションを実装予定
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
-                  if (currentQuestionIndex < cropRegions.length - 1) {
-                    setCurrentQuestionIndex(currentQuestionIndex + 1)
-                    setCurrentStudentIndex(0)
-                  }
+                  // const nextCropRegionId = findNextCropRegionId(currentCropRegionId, cropRegions)
+                  // if (nextCropRegionId) {
+                  //   setCurrentCropRegionId(nextCropRegionId)
+                  //   setCurrentStudentIndex(0)
+                  // }
                 }
               }, 300) // 300ms後に移動（採点状態を確認する時間を与える）
             }
@@ -205,12 +211,11 @@ export function useIndividualScoring({
       pageImages,
       cropRegions,
       currentStudentIndex,
-      currentQuestionIndex,
+      currentCropRegionId,
       currentUserId,
       scoringData,
       gradingMode,
       setCurrentStudentIndex,
-      setCurrentQuestionIndex,
       setScoringData,
     ],
   )

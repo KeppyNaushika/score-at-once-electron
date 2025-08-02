@@ -1,11 +1,11 @@
-import { useCallback, useMemo } from "react"
 import type {
-  AnswerItem,
+  GridAnswerItem,
   GridLayoutDirection,
 } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import { useCallback, useMemo } from "react"
 
 interface UseGridLayoutProps {
-  answers: AnswerItem[]
+  answers: GridAnswerItem[]
   layoutDirection: GridLayoutDirection
   itemsPerRow: number[]
 }

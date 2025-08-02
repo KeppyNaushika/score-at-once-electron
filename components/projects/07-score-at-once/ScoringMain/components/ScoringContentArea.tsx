@@ -4,7 +4,10 @@ import AnswerGridView from "@/components/projects/07-score-at-once/ScoringGrid/A
 import AnswerIndividualView from "@/components/projects/07-score-at-once/ScoringIndividual/AnswerIndividualView"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
-import type { GradingMode } from "@/components/projects/07-score-at-once/types/shared.types"
+import type {
+  CropRegionWithProjectPage,
+  GradingMode,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -15,8 +18,9 @@ interface ScoringContentAreaProps {
   selectedScoringDataIds: Set<string>
 
   // 共通設問情報（両View共通）
-  currentQuestionIndex: number
-  currentQuestion?: any
+  currentCropRegionId: string | null
+  currentCropRegion?: CropRegionWithProjectPage
+  cropRegions: CropRegionWithProjectPage[]
 
   // 操作関数（両View共通）
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
@@ -33,7 +37,7 @@ interface ScoringContentAreaProps {
   showStudentNames: boolean
 
   // IndividualView設定
-  allAnswerSheets?: any[] // Individual表示の複数ページ表示用（後で整理予定）
+  pageImages?: any[] // PageImageWithProjectStudents[] - Individual表示の複数ページ表示用
 
   // 生徒データコールバック（個別表示でサイドパネルに渡すため）
   onStudentsExtracted?: (students: any[]) => void
@@ -44,15 +48,16 @@ export function ScoringContentArea({
   allScoringData,
   filteredScoringDataIds,
   selectedScoringDataIds,
-  currentQuestionIndex,
-  currentQuestion,
+  currentCropRegionId,
+  currentCropRegion,
+  cropRegions,
   onScoringDataSelect,
   onScoringDataScore,
   layoutDirection,
   itemsPerLine,
   autoScroll,
   showStudentNames,
-  allAnswerSheets,
+  pageImages,
 }: ScoringContentAreaProps) {
   // 個別表示時：selectedの最初の要素、または存在しないときはallの最初の要素
   const currentScoringDataId =
@@ -69,11 +74,11 @@ export function ScoringContentArea({
       {gradingMode === "individual" ? (
         <div className="p-6">
           <AnswerIndividualView
-            allScoringData={allScoringData}
+            scoringData={allScoringData}
             currentScoringDataId={currentScoringDataId}
-            currentQuestionIndex={currentQuestionIndex}
-            currentQuestion={currentQuestion}
-            allAnswerSheets={allAnswerSheets}
+            currentCropRegionId={currentCropRegionId}
+            cropRegions={cropRegions}
+            pageImages={pageImages}
             onScoringDataScore={(
               statusOrAnswerIds,
               statusOrPartialScore,
@@ -96,7 +101,7 @@ export function ScoringContentArea({
             allScoringData={allScoringData}
             filteredScoringDataIds={filteredScoringDataIds}
             selectedScoringDataIds={selectedScoringDataIds}
-            currentQuestionIndex={currentQuestionIndex}
+            currentCropRegionId={currentCropRegionId}
             layoutDirection={layoutDirection}
             onScoringDataSelect={onScoringDataSelect}
             onScoringDataScore={onScoringDataScore}

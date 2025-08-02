@@ -85,13 +85,6 @@ export interface StudentAnswer {
 }
 
 /**
- * 将来のPrisma移行用型（現在は使用しない）
- * TODO: 段階的にこちらに移行予定
- */
-export type FuturePageImageType = PageImageWithProjectStudents
-export type FutureCropRegionType = CropRegionWithProjectPage
-
-/**
  * クライアントサイド用のQuestionScore型
  * partialScoreをDecimalからnumberに変更（UI状態管理用）
  */

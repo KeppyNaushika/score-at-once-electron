@@ -11,8 +11,8 @@ export interface UseScoringDataProps {
   gradingMode: "grid" | "individual"
   currentStudentIndex: number
   setCurrentStudentIndex: (index: number) => void
-  currentQuestionIndex: number
-  setCurrentQuestionIndex: (index: number) => void
+  currentCropRegionId: string | null
+  setCurrentCropRegionId: (id: string | null) => void
   pageImages: PageImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
 }

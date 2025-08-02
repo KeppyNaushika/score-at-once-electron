@@ -11,7 +11,7 @@ import { toast } from "sonner"
 interface UseBatchScoringProps {
   pageImages: PageImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
-  currentQuestionIndex: number
+  currentCropRegionId: string | null
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
   scoringData: ScoringDataRecord
@@ -21,7 +21,7 @@ interface UseBatchScoringProps {
 export function useBatchScoring({
   pageImages,
   cropRegions,
-  currentQuestionIndex,
+  currentCropRegionId,
   currentUserId,
   setCurrentUserId,
   scoringData,
@@ -77,7 +77,9 @@ export function useBatchScoring({
       }
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
-      const currentCropRegion = cropRegions[currentQuestionIndex]
+      const currentCropRegion = cropRegions.find(
+        (r) => r.id === currentCropRegionId,
+      )
 
       if (!currentCropRegion) return
 
@@ -213,7 +215,7 @@ export function useBatchScoring({
     [
       pageImages,
       cropRegions,
-      currentQuestionIndex,
+      currentCropRegionId,
       currentUserId,
       setCurrentUserId,
       scoringData,

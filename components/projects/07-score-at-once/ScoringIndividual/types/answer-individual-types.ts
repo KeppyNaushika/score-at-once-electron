@@ -1,32 +1,8 @@
-// 答案表示の型定義
-export interface StudentAnswer {
-  id: string
-  studentId: string
-  imagePath: string
-  pageNumber: number
-  student: {
-    id: string
-    studentId: string
-    lastName: string
-    firstName: string
-  }
-}
-
-// 設問領域の型定義
-export interface QuestionRegion {
-  id: string
-  label: string
-  orderIndex?: number
-  points: number
-  x: number // 0.0 - 1.0 (画像全体に対する割合)
-  y: number // 0.0 - 1.0
-  width: number // 0.0 - 1.0
-  height: number // 0.0 - 1.0
-  projectPageId: string // ProjectPageとの関連付け
-  projectPage?: {
-    pageNumber: number
-  }
-}
+// Prisma型をインポート
+import type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 
 // 線種の型定義
 export type LineStyle = "solid" | "wave" | "zigzag" | "double"
@@ -63,22 +39,22 @@ export type RectangleEditMode = "move" | "resize" | null
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
   // Individual表示専用データ引数（単一データの詳細表示）
-  allScoringData: any[] // ScoringData[] - 全データ（生徒選択のため）
+  scoringData: any[] // ScoringData[] - 全データ（生徒選択のため）
   currentScoringDataId: string | null // 現在表示中のデータID（selectedの最初の要素）
-  
+
   // 設問情報
-  currentQuestionIndex: number
-  currentQuestion?: QuestionRegion
-  
+  cropRegions: CropRegionWithProjectPage[] // 全設問領域
+  currentCropRegionId: string | null // 現在の設問領域ID
+
   // 操作関数
   onScoringDataScore?: (
     statusOrAnswerIds: any,
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => void
-  
+
   // Individual表示固有設定
-  allAnswerSheets?: any[] // 全答案データ（既存のデータから適切な画像を検索するため）
+  pageImages?: PageImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
   pageSpacing?: number // ページ間の余白（ピクセル）
 }
@@ -118,7 +94,7 @@ export interface DrawingActions {
   removeDrawingElement: (id: string) => void
   setSelectedElementId: (id: string | null) => void
   clearDrawing: () => void
-  
+
   // Internal state updaters
   setIsDrawing: (drawing: boolean) => void
   setCurrentDrawing: (drawing: Partial<DrawingElement> | null) => void

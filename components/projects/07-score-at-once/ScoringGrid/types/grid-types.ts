@@ -7,31 +7,7 @@ export type GridLayoutDirection =
   | "down-right"
   | "down-left"
 
-export interface QuestionRegion {
-  id: string
-  label: string
-  orderIndex?: number
-  points: number
-  x: number // 0.0 - 1.0 (画像全体に対する割合)
-  y: number // 0.0 - 1.0
-  width: number // 0.0 - 1.0
-  height: number // 0.0 - 1.0
-}
-
-export interface AnswerItem {
-  id: string
-  studentId: string
-  studentName: string
-  imageUrl: string
-  currentScore?: number
-  maxScore: number
-  status: ScoringStatus | "master"
-  isSelected?: boolean
-  questionRegion: QuestionRegion // not null（データフローで保証される）
-  isMaster?: boolean
-}
-
-// ScoringDataとAnswerItemの互換性を確保（将来的にAnswerItemはScoringDataに統一予定）
+// CropRegionWithProjectPage, PageImageWithProjectStudents を使用
 export type GridAnswerItem = ScoringData & { isSelected?: boolean }
 
 export interface AnswerGridViewProps {
@@ -39,9 +15,7 @@ export interface AnswerGridViewProps {
   allScoringData: ScoringData[]
   filteredScoringDataIds: Set<string>
   selectedScoringDataIds: Set<string>
-
-  // 設問情報
-  currentQuestionIndex: number
+  currentCropRegionId: string | null
 
   // 操作関数
   onScoringDataSelect: (id: string, isSelected: boolean) => void
