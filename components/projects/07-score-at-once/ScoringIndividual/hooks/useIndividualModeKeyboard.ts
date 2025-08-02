@@ -1,4 +1,4 @@
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useEffect } from "react"
 import type { ScoringBehavior } from "../components/ScoringBehaviorSelector"
 

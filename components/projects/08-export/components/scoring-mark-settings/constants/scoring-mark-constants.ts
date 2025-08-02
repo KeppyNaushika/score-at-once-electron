@@ -9,17 +9,17 @@ export const defaultConfig: ScoringMarkConfig = {
   showMarkForStatus: {
     unscored: false,
     correct: true,
-    partial: true,
-    hold: true,
     incorrect: true,
+    partial: true,
+    pending: true,
     no_answer: true,
   },
   showScoreForStatus: {
     unscored: false,
     correct: true,
-    partial: true,
-    hold: true,
     incorrect: true,
+    partial: true,
+    pending: true,
     no_answer: true,
   },
   // 採点マーク設定
@@ -60,8 +60,8 @@ export const positionLabels: Record<MarkPosition, string> = {
 export const statusLabels: Record<ScoringStatus, string> = {
   unscored: "未採点",
   correct: "正答",
-  partial: "部分点",
-  hold: "保留",
   incorrect: "誤答",
+  partial: "部分点",
+  pending: "処理中",
   no_answer: "無答",
 }

@@ -4,7 +4,7 @@ import type {
   PageImageWithProjectStudents,
   ScoringDataRecord,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -189,7 +189,7 @@ export function useBatchScoring({
           }
 
           // Check for auto-finalization in collaborative mode
-          if (scoringStatus === "proposed" && pageImage.studentId) {
+          if (scoringStatus === "pending" && pageImage.studentId) {
             await checkForAutoFinalization(
               pageImage.studentId,
               currentCropRegion.id,

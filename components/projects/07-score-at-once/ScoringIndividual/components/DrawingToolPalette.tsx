@@ -1,6 +1,6 @@
 "use client"
 
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"

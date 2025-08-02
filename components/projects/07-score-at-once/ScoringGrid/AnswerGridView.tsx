@@ -9,14 +9,36 @@ import { useGridLayout } from "@/components/projects/07-score-at-once/ScoringGri
 import { useGridNavigation } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridSelection"
 import { useSelectionBorder } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
-import type { AnswerGridViewProps } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import type {
+  LayoutDirection,
+  ScoringData,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types"
 import { useRef } from "react"
+
+export interface AnswerGridViewProps {
+  // 統一されたデータ引数
+  allScoringData: ScoringData[]
+  filteredScoringDataIds: Set<string>
+  selectedScoringDataIds: Set<string>
+  // Grid表示では設問情報不要
+
+  // 操作関数
+  onScoringDataSelect: (id: string, isSelected: boolean) => void
+  onScoringDataScore: (id: string | string[], status: ScoringStatus) => void
+
+  // 表示設定
+  layoutDirection: LayoutDirection
+  itemsPerRow?: number[] // 外部からの1行/列あたり表示件数
+  autoScroll?: boolean // 自動スクロール設定
+  showStudentNames?: boolean // 生徒名表示設定
+  className?: string
+}
 
 export default function AnswerGridView({
   allScoringData,
   filteredScoringDataIds,
   selectedScoringDataIds,
-  currentCropRegionId,
   onScoringDataSelect,
   onScoringDataScore,
   layoutDirection,

@@ -2,9 +2,9 @@
 export type ScoringStatus =
   | "unscored" // 未採点
   | "correct" // 正答
-  | "partial" // 部分点
-  | "hold" // 保留
   | "incorrect" // 誤答
+  | "partial" // 部分点
+  | "pending" // 処理中
   | "no_answer" // 無答
 
 // 位置の型定義

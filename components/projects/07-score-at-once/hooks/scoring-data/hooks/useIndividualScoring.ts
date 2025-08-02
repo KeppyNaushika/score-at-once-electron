@@ -4,7 +4,7 @@ import type {
   PageImageWithProjectStudents,
   ScoringDataRecord,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -194,7 +194,7 @@ export function useIndividualScoring({
         }
 
         // Check for auto-finalization in collaborative mode
-        if (status === "proposed" && currentPageImage.studentId) {
+        if (status === "pending" && currentPageImage.studentId) {
           await checkForAutoFinalization(
             currentPageImage.studentId,
             currentCropRegion.id,

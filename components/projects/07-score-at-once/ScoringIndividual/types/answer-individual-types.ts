@@ -1,8 +1,10 @@
 // Prisma型をインポート
+import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types"
 
 // 線種の型定義
 export type LineStyle = "solid" | "wave" | "zigzag" | "double"
@@ -39,18 +41,17 @@ export type RectangleEditMode = "move" | "resize" | null
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
   // Individual表示専用データ引数（単一データの詳細表示）
-  scoringData: any[] // ScoringData[] - 全データ（生徒選択のため）
+  scoringData: ScoringData[] // 全データ（生徒選択のため）
   currentScoringDataId: string | null // 現在表示中のデータID（selectedの最初の要素）
 
-  // 設問情報
-  cropRegions: CropRegionWithProjectPage[] // 全設問領域
-  currentCropRegionId: string | null // 現在の設問領域ID
+  // 設問情報（派生済みオブジェクト）
+  currentCropRegion?: CropRegionWithProjectPage | null // 現在の設問領域
 
   // 操作関数
   onScoringDataScore?: (
-    statusOrAnswerIds: any,
-    statusOrPartialScore?: any,
-    partialScore?: any,
+    statusOrAnswerIds: string | string[],
+    statusOrPartialScore?: ScoringStatus | number,
+    partialScore?: number,
   ) => void
 
   // Individual表示固有設定

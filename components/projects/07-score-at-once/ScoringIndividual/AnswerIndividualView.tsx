@@ -14,8 +14,7 @@ import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
 export default function AnswerIndividualView({
   scoringData,
   currentScoringDataId,
-  cropRegions,
-  currentCropRegionId,
+  currentCropRegion,
   onScoringDataScore,
   pageImages,
   showMultiplePages = true, // 常に複数ページ表示
@@ -33,10 +32,7 @@ export default function AnswerIndividualView({
     ? scoringData.find((data: any) => data.id === currentScoringDataId)
     : null
 
-  // 現在の設問領域をcropRegionsから取得
-  const currentCropRegion = currentCropRegionId
-    ? cropRegions.find((region) => region.id === currentCropRegionId)
-    : null
+  // currentCropRegionはすでにpropsで渡されている（派生済み）
 
   // 画像とキャンバス管理
   const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =

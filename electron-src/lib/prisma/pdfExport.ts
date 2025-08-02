@@ -1,4 +1,4 @@
-import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
+import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { dialog } from "electron"
 import fs from "fs"
 import path from "path"

@@ -1,7 +1,7 @@
 import {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 import { ProjectWithDetails } from "@/types/common.types"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"

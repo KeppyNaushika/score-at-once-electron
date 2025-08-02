@@ -6,6 +6,7 @@ import {
   Minus,
   X,
 } from "lucide-react"
+
 // 採点状態のアイコンと色を定義
 export const SCORE_STATUS_CONFIG = {
   unscored: {
@@ -55,22 +56,6 @@ export const SCORE_STATUS_CONFIG = {
     selectedBgColor: "bg-purple-100",
     textColor: "text-purple-600",
     key: "p",
-  },
-  proposed: {
-    icon: AlertTriangle,
-    borderColor: "border-orange-500",
-    bgColor: "bg-orange-50",
-    selectedBgColor: "bg-orange-100",
-    textColor: "text-orange-700",
-    key: "",
-  },
-  final: {
-    icon: CheckCircle,
-    borderColor: "border-green-600",
-    bgColor: "bg-green-100",
-    selectedBgColor: "bg-green-200",
-    textColor: "text-green-800",
-    key: "",
   },
   master: {
     icon: CheckCircle,

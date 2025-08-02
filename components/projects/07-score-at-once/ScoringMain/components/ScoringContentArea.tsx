@@ -2,12 +2,12 @@
 
 import AnswerGridView from "@/components/projects/07-score-at-once/ScoringGrid/AnswerGridView"
 import AnswerIndividualView from "@/components/projects/07-score-at-once/ScoringIndividual/AnswerIndividualView"
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
-import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
+import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import type {
   CropRegionWithProjectPage,
   GradingMode,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+  LayoutDirection,
+} from "@/components/projects/07-score-at-once/types"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
@@ -17,10 +17,8 @@ interface ScoringContentAreaProps {
   filteredScoringDataIds: Set<string>
   selectedScoringDataIds: Set<string>
 
-  // 共通設問情報（両View共通）
-  currentCropRegionId: string | null
+  // 設問情報（Individual表示のみ必要）
   currentCropRegion?: CropRegionWithProjectPage
-  cropRegions: CropRegionWithProjectPage[]
 
   // 操作関数（両View共通）
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
@@ -48,9 +46,7 @@ export function ScoringContentArea({
   allScoringData,
   filteredScoringDataIds,
   selectedScoringDataIds,
-  currentCropRegionId,
   currentCropRegion,
-  cropRegions,
   onScoringDataSelect,
   onScoringDataScore,
   layoutDirection,
@@ -76,8 +72,7 @@ export function ScoringContentArea({
           <AnswerIndividualView
             scoringData={allScoringData}
             currentScoringDataId={currentScoringDataId}
-            currentCropRegionId={currentCropRegionId}
-            cropRegions={cropRegions}
+            currentCropRegion={currentCropRegion}
             pageImages={pageImages}
             onScoringDataScore={(
               statusOrAnswerIds,
@@ -101,7 +96,7 @@ export function ScoringContentArea({
             allScoringData={allScoringData}
             filteredScoringDataIds={filteredScoringDataIds}
             selectedScoringDataIds={selectedScoringDataIds}
-            currentCropRegionId={currentCropRegionId}
+            // Grid表示では設問情報不要
             layoutDirection={layoutDirection}
             onScoringDataSelect={onScoringDataSelect}
             onScoringDataScore={onScoringDataScore}

@@ -1,11 +1,11 @@
 import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
-import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
+import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import type {
   ClientQuestionScore,
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface FilterSettings {

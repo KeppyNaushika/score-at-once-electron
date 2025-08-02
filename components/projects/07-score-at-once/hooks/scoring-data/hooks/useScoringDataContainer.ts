@@ -9,7 +9,7 @@ import {
   loadExistingScoringData,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/data-loader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/progress-calculator"
-import { calculateActualScore } from "@/components/projects/07-score-at-once/types/shared.types"
+import { calculateActualScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useState } from "react"
 
 export function useScoringDataContainer({

@@ -3,7 +3,7 @@ import type {
   QuestionScore,
   ScoringDataRecord,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 
 /**
  * 既存の採点データを読み込む関数

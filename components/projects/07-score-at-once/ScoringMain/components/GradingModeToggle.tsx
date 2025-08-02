@@ -1,9 +1,8 @@
 "use client"
 
+import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { Grid, User } from "lucide-react"
-
-export type GradingMode = "individual" | "grid"
 
 interface GradingModeToggleProps {
   mode: GradingMode

@@ -54,13 +54,15 @@ export function getMarkImagePath(status: ScoringStatus, useTransparent: boolean)
       return `/score-assets/${prefix}unscored.png`
     case "correct":
       return `/score-assets/${prefix}correct.png`
-    case "partial":
-      return `/score-assets/${prefix}partial.png`
-    case "hold":
-      return `/score-assets/${prefix}hold.png`
     case "incorrect":
       return `/score-assets/${prefix}incorrect.png`
+    case "partial":
+      return `/score-assets/${prefix}partial.png`
+    case "pending":
+      return `/score-assets/${prefix}partial.png` // 処理中は部分点マークを使用
     case "no_answer":
       return `/score-assets/${prefix}incorrect.png` // 無答も誤答マークを使用
+    default:
+      return `/score-assets/${prefix}unscored.png`
   }
 }

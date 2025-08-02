@@ -1,9 +1,9 @@
-import { useEffect, RefObject } from "react"
-import type { GridLayoutDirection } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
+import { RefObject, useEffect } from "react"
 
 interface UseAutoScrollProps {
   selectedAnswers: Set<string>
-  layoutDirection: GridLayoutDirection
+  layoutDirection: LayoutDirection
   autoScroll: boolean
   gridRef: RefObject<HTMLDivElement | null>
 }

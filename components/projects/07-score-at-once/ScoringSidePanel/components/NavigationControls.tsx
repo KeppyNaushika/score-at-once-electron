@@ -1,5 +1,6 @@
 "use client"
 
+import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -31,18 +31,12 @@ import {
 } from "lucide-react"
 import { SidePanelSection } from "./SidePanelSection"
 
-type GridLayoutDirection =
-  | "right-down"
-  | "left-down"
-  | "down-right"
-  | "down-left"
-
 interface NavigationControlsProps {
-  layoutDirection: GridLayoutDirection
+  layoutDirection: LayoutDirection
   selectedAnswersCount: number
   visibleAnswersCount: number
   totalAnswersCount: number
-  onLayoutDirectionChange: (direction: GridLayoutDirection) => void
+  onLayoutDirectionChange: (direction: LayoutDirection) => void
   onGridNavigation: (direction: string) => void
   onRefreshView: () => void
   currentPosition?: { row: number; col: number }
@@ -102,8 +96,7 @@ export default function NavigationControls({
         <SidePanelSection
           icon={Sliders}
           title={
-            layoutDirection === "down-right" ||
-            layoutDirection === "down-left"
+            layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "1列あたりの表示件数"
               : "1行あたりの表示件数"
           }
@@ -130,10 +123,7 @@ export default function NavigationControls({
           icon={Settings}
           title="自動スクロール"
           rightElement={
-            <Switch
-              checked={autoScroll}
-              onCheckedChange={onAutoScrollChange}
-            />
+            <Switch checked={autoScroll} onCheckedChange={onAutoScrollChange} />
           }
         >
           <p className="text-xs text-gray-500">
@@ -148,7 +138,7 @@ export default function NavigationControls({
           <Select
             value={layoutDirection}
             onValueChange={(value) =>
-              onLayoutDirectionChange(value as GridLayoutDirection)
+              onLayoutDirectionChange(value as LayoutDirection)
             }
           >
             <SelectTrigger>

@@ -1,7 +1,6 @@
 "use client"
 
 import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/components/IndividualModePanel"
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/components/NavigationControls"
 import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ProjectProgressCard"
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/components/QuestionNavigator"
@@ -9,21 +8,22 @@ import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePa
 import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import type {
   CropRegionWithProjectPage,
+  LayoutDirection,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 
 interface ScoringSidePanelProps {
   projectId: string
   // Question Navigator props
   cropRegions: CropRegionWithProjectPage[]
-  currentCropRegionId: string | null
-  onCropRegionChange: (id: string | null) => void
+  currentCropRegion?: CropRegionWithProjectPage | null
+  onCropRegionChange: (cropRegion: CropRegionWithProjectPage | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress: QuestionProgress
   // Scoring Toolbar props
   selectedAnswersCount: number
-  currentCropRegion?: CropRegionWithProjectPage | null
+  // currentCropRegion は上記で統一済み
   filterSettings: {
     unscored: boolean
     correct: boolean
@@ -73,13 +73,12 @@ interface ScoringSidePanelProps {
 export function ScoringSidePanel({
   projectId,
   cropRegions,
-  currentCropRegionId,
+  currentCropRegion,
   onCropRegionChange,
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
   selectedAnswersCount,
-  currentCropRegion,
   filterSettings,
   onScore,
   onToggleFilter,
@@ -109,7 +108,7 @@ export function ScoringSidePanel({
       {/* 設問ナビゲーター */}
       <QuestionNavigator
         questionRegions={cropRegions}
-        currentCropRegionId={currentCropRegionId}
+        currentCropRegion={currentCropRegion}
         onCropRegionChange={onCropRegionChange}
         onPrevQuestion={onPrevQuestion}
         onNextQuestion={onNextQuestion}

@@ -1,5 +1,5 @@
 /**
- * 07-score-at-once 共通型定義
+ * 07-score-at-once 統合型定義
  * 複数の機能で使用される型をここに統一
  */
 
@@ -20,8 +20,6 @@ export type ScoringStatus =
   | "partial"
   | "pending"
   | "no_answer"
-  | "proposed"
-  | "final"
 
 /**
  * PageImageを学生とProjectStudents情報で拡張したPrisma生成型
@@ -54,35 +52,13 @@ export type CropRegionWithProjectPage = Prisma.CropRegionGetPayload<{
 export type GradingMode = "grid" | "individual"
 
 /**
- * 現在使用中の型定義（既存コードとの互換性を保持）
- * 将来的にPrisma型への移行を検討
+ * レイアウト方向
  */
-export interface QuestionRegion {
-  id: string
-  label: string
-  points: number // null安全性のためnon-null
-  x: number
-  y: number
-  width: number
-  height: number
-  projectPageId: string
-}
-
-export interface StudentAnswer {
-  id: string
-  studentId: string
-  projectId: string // 既存コードで必要
-  imagePath: string
-  pageNumber: number // 既存コードで必要
-  status: "uploaded" | "processing" | "ready" | "graded"
-  student: {
-    id: string
-    studentId: string
-    lastName: string
-    firstName: string
-    projectStudents?: { customOrder: number }[]
-  }
-}
+export type LayoutDirection =
+  | "right-down"
+  | "left-down"
+  | "down-right"
+  | "down-left"
 
 /**
  * クライアントサイド用のQuestionScore型
@@ -112,7 +88,6 @@ export function calculateActualScore(
 
   switch (score.status) {
     case "correct":
-    case "final":
       return maxScore // cropRegion.points を返す
     case "incorrect":
     case "no_answer":
@@ -121,9 +96,42 @@ export function calculateActualScore(
       return null
     case "partial":
     case "pending":
-    case "proposed":
       return score.partialScore // DBから取得した値をそのまま使用
     default:
       return null
   }
+}
+
+/**
+ * 採点データの基本インターフェース
+ * QuestionScore + Student + CropRegion + PageImage の結合データから変換されたもの
+ */
+export interface ScoringData {
+  id: string // PageImage.id または master用の生成ID
+  studentId: string // Student.studentId または "MASTER"
+  studentName: string // "${lastName} ${firstName}" または "模範解答"
+  imageUrl: string // "appimg://${imagePath}"
+  currentScore?: number // QuestionScore.partialScore
+  maxScore: number // CropRegion.points
+  status: ScoringStatus | "master" // QuestionScore.status または "master"
+  questionRegion: CropRegionWithProjectPage // CropRegion データ（設問領域情報）
+  isMaster?: boolean // 模範解答フラグ
+}
+
+/**
+ * 学生の採点データ（模範解答以外）
+ */
+export interface StudentScoringData extends ScoringData {
+  isMaster?: never // 学生データでは常にundefined
+}
+
+/**
+ * 模範解答の採点データ
+ */
+export interface MasterScoringData extends Omit<ScoringData, "status"> {
+  studentId: "MASTER"
+  studentName: "模範解答"
+  currentScore: undefined
+  status: "master"
+  isMaster: true
 }

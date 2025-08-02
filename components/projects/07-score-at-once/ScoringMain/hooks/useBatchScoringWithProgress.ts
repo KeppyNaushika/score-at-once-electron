@@ -1,15 +1,17 @@
+import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
-import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
 
 interface UseBatchScoringWithProgressParams {
   selectedAnswers: Set<string>
   gradingMode: GradingMode
-  setRecentlyScoredAnswers: (callback: (prev: Set<string>) => Set<string>) => void
+  setRecentlyScoredAnswers: (
+    callback: (prev: Set<string>) => Set<string>,
+  ) => void
   handleBatchScore: (
     statusOrAnswerIds: any,
     statusOrPartialScore?: any,
     partialScore?: any,
-    selectedAnswers?: Set<string>
+    selectedAnswers?: Set<string>,
   ) => Promise<void>
   getGridAnswerData: () => any[]
   setSelectedAnswers: (answers: Set<string>) => void

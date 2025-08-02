@@ -3,7 +3,7 @@ import type {
   PageImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 
 export interface UseScoringDataProps {
   currentUserId: string | null
@@ -29,7 +29,7 @@ export interface QuestionProgress {
 export type {
   ClientQuestionScore,
   ScoringDataRecord,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 
 export interface ScoreUpdateData {
   partialScore?: number

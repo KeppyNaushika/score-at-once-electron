@@ -481,9 +481,7 @@ export default function ScoringMainView() {
           allScoringData={allScoringData}
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
-          currentCropRegionId={currentCropRegionId}
           currentCropRegion={currentCropRegion}
-          cropRegions={cropRegions}
           pageImages={pageImages}
           onScoringDataSelect={(dataId, isSelected) =>
             handleAnswerSelect(dataId, isSelected, pageImages)
@@ -500,14 +498,15 @@ export default function ScoringMainView() {
           <ScoringSidePanel
             projectId={projectId}
             cropRegions={cropRegions}
-            currentCropRegionId={currentCropRegionId}
-            onCropRegionChange={setCurrentCropRegionId}
+            currentCropRegion={currentCropRegion}
+            onCropRegionChange={(cropRegion) => {
+              setCurrentCropRegionId(cropRegion?.id || null)
+            }}
             onPrevQuestion={handlePrevQuestion}
             onNextQuestion={handleNextQuestion}
             questionProgress={questionProgress}
             selectedPageImageIds={selectedPageImageIds}
             selectedAnswersCount={selectedPageImageIds.size}
-            currentCropRegion={currentCropRegion}
             filterSettings={filterSettings}
             onScore={handleBatchScoreWithProgress}
             onToggleFilter={handleToggleFilter}

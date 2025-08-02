@@ -1,4 +1,4 @@
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { DrawingElement } from "../types/answer-individual-types"
 import { useDrawingUtils } from "./useDrawingUtils"

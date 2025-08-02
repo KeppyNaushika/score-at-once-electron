@@ -1,6 +1,6 @@
 "use client"
 
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types/shared.types"
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,8 +27,8 @@ import { SidePanelSection } from "./SidePanelSection"
 
 interface QuestionNavigatorProps {
   questionRegions: CropRegionWithProjectPage[]
-  currentCropRegionId: string | null
-  onCropRegionChange: (id: string | null) => void
+  currentCropRegion?: CropRegionWithProjectPage | null
+  onCropRegionChange: (cropRegion: CropRegionWithProjectPage | null) => void
   onPrevQuestion: () => void
   onNextQuestion: () => void
   questionProgress?: {
@@ -42,15 +42,15 @@ interface QuestionNavigatorProps {
 
 export default function QuestionNavigator({
   questionRegions,
-  currentCropRegionId,
+  currentCropRegion,
   onCropRegionChange,
   onPrevQuestion,
   onNextQuestion,
   questionProgress,
 }: QuestionNavigatorProps) {
-  const currentIndex = questionRegions.findIndex(
-    (q) => q.id === currentCropRegionId,
-  )
+  const currentIndex = currentCropRegion
+    ? questionRegions.findIndex((q) => q.id === currentCropRegion.id)
+    : -1
   return (
     <TooltipProvider delayDuration={300}>
       <SidePanelSection icon={FileText} title="設問">
@@ -81,8 +81,12 @@ export default function QuestionNavigator({
           </Tooltip>
 
           <Select
-            value={currentCropRegionId || ""}
-            onValueChange={(value) => onCropRegionChange(value || null)}
+            value={currentCropRegion?.id || ""}
+            onValueChange={(value) => {
+              const selectedRegion =
+                questionRegions.find((q) => q.id === value) || null
+              onCropRegionChange(selectedRegion)
+            }}
           >
             <SelectTrigger className="flex-1">
               <SelectValue placeholder="設問を選択" />
@@ -156,7 +160,7 @@ export default function QuestionNavigator({
           <div className="flex flex-wrap gap-2">
             {questionRegions.map((question, index) => {
               const progress = questionProgress?.[question.id]
-              const isActive = question.id === currentCropRegionId
+              const isActive = question.id === currentCropRegion?.id
               return (
                 <Tooltip key={question.id}>
                   <TooltipTrigger asChild>
@@ -166,7 +170,7 @@ export default function QuestionNavigator({
                       className={`relative h-8 px-2 ${
                         isActive ? "" : "hover:bg-gray-50"
                       }`}
-                      onClick={() => onCropRegionChange(question.id)}
+                      onClick={() => onCropRegionChange(question)}
                     >
                       <span className="text-xs">
                         {question.label || question.orderIndex || 1}

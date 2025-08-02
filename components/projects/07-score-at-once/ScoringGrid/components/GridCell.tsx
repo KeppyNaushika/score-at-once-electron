@@ -1,16 +1,14 @@
 import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
-import type {
-  GridAnswerItem,
-  GridLayoutDirection,
-} from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
 import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/components/CroppedAnswerImage"
+import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 
 interface GridCellProps {
   answer: GridAnswerItem
   isSelected: boolean
   showStudentNames: boolean
-  layoutDirection: GridLayoutDirection
+  layoutDirection: LayoutDirection
   itemsPerRow: number
   selectionBorderSettings: {
     tailwindClass: string
@@ -34,7 +32,7 @@ export function GridCell({
   const isMaster = answer.isMaster
 
   const getScoreDisplay = () => {
-    if (answer.status === "correct" || answer.status === "final") {
+    if (answer.status === "correct") {
       return `${answer.maxScore}/${answer.maxScore}`
     }
     if (answer.status === "incorrect" || answer.status === "no_answer") {
@@ -44,9 +42,6 @@ export function GridCell({
       return answer.currentScore !== null && answer.currentScore !== undefined
         ? `${answer.currentScore}/${answer.maxScore}`
         : `-/${answer.maxScore}`
-    }
-    if (answer.status === "proposed") {
-      return "提案中"
     }
     return "採点中"
   }
@@ -70,7 +65,7 @@ export function GridCell({
       {/* 答案画像 */}
       <CroppedAnswerImage
         imageUrl={answer.imageUrl}
-        questionRegion={answer.questionRegion}
+        cropRegion={answer.questionRegion}
         alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
         className={
           layoutDirection === "down-right" || layoutDirection === "down-left"

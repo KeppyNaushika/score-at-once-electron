@@ -1,7 +1,9 @@
 import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
-import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
 import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
+import type {
+  GradingMode,
+  LayoutDirection,
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useState } from "react"
 
 export function useScoringMainState() {

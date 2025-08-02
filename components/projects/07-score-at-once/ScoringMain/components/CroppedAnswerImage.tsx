@@ -1,5 +1,6 @@
 "use client"
 
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useEffect, useRef, useState } from "react"
 
 /**
@@ -23,20 +24,9 @@ import { useEffect, useRef, useState } from "react"
  *    - Next.jsの画像最適化機能がElectronアプリで正常に動作しない場合がある
  */
 
-interface QuestionRegion {
-  id: string
-  label: string
-  orderIndex?: number
-  points: number
-  x: number // 0.0 - 1.0 (画像全体に対する割合)
-  y: number // 0.0 - 1.0
-  width: number // 0.0 - 1.0
-  height: number // 0.0 - 1.0
-}
-
 interface CroppedAnswerImageProps {
   imageUrl: string
-  questionRegion: QuestionRegion // not null（呼び出し元で保証）
+  cropRegion: CropRegionWithProjectPage // not null（呼び出し元で保証）
   alt: string
   className?: string
   isColumnLayout?: boolean
@@ -47,7 +37,7 @@ interface CroppedAnswerImageProps {
 // 採点領域をクロップして表示するコンポーネント
 export default function CroppedAnswerImage({
   imageUrl,
-  questionRegion,
+  cropRegion,
   alt,
   className = "",
   isColumnLayout = false,
@@ -67,8 +57,8 @@ export default function CroppedAnswerImage({
     if (!ctx) return
 
     // 採点領域のアスペクト比を計算
-    const sourceWidth = questionRegion.width * imageElement.naturalWidth
-    const sourceHeight = questionRegion.height * imageElement.naturalHeight
+    const sourceWidth = cropRegion.width * imageElement.naturalWidth
+    const sourceHeight = cropRegion.height * imageElement.naturalHeight
     const aspectRatio = sourceWidth / sourceHeight
 
     // コンテナサイズを取得
@@ -86,8 +76,8 @@ export default function CroppedAnswerImage({
     }
 
     // 採点領域をクロップして描画
-    const sourceX = questionRegion.x * imageElement.naturalWidth
-    const sourceY = questionRegion.y * imageElement.naturalHeight
+    const sourceX = cropRegion.x * imageElement.naturalWidth
+    const sourceY = cropRegion.y * imageElement.naturalHeight
 
     // 採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
     ctx.drawImage(
@@ -101,7 +91,7 @@ export default function CroppedAnswerImage({
       canvas.width,
       canvas.height,
     )
-  }, [imageLoaded, questionRegion, isColumnLayout, itemsPerRow])
+  }, [imageLoaded, cropRegion, isColumnLayout, itemsPerRow])
 
   const handleImageLoad = () => {
     setImageLoaded(true)

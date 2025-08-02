@@ -1,7 +1,7 @@
 import type {
   GradingMode,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types/shared.types"
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useState } from "react"
 
 // キーボードショートカットの設定（Python版互換）
