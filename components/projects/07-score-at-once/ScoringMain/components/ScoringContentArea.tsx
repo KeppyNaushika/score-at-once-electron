@@ -4,7 +4,6 @@ import AnswerIndividualView from "@/components/projects/07-score-at-once/Scoring
 import AnswerGridView from "@/components/projects/07-score-at-once/ScoringGrid/AnswerGridView"
 import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
 import type {
-  ImagePosition,
   LayoutDirection,
 } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 
@@ -14,10 +13,6 @@ interface ScoringContentAreaProps {
   currentAnswerSheet?: any
   currentQuestion?: any
   allAnswerSheets?: any[] // 複数ページ表示用
-  imageZoom: number
-  imagePosition: ImagePosition
-  onZoomChange: (zoom: number) => void
-  onPositionChange: (position: ImagePosition) => void
   // Grid mode props
   getGridAnswerData: () => any[]
   currentQuestionIndex: number
@@ -39,10 +34,6 @@ export function ScoringContentArea({
   currentAnswerSheet,
   currentQuestion,
   allAnswerSheets,
-  imageZoom,
-  imagePosition,
-  onZoomChange,
-  onPositionChange,
   getGridAnswerData,
   currentQuestionIndex,
   layoutDirection,
@@ -62,10 +53,6 @@ export function ScoringContentArea({
               answerSheet={currentAnswerSheet}
               currentQuestion={currentQuestion}
               allAnswerSheets={allAnswerSheets}
-              zoom={imageZoom}
-              position={imagePosition}
-              onZoomChange={onZoomChange}
-              onPositionChange={onPositionChange}
               selectedAnswers={selectedAnswers}
               onAnswerScore={(
                 statusOrAnswerIds,

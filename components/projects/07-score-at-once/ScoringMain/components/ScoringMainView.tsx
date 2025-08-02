@@ -245,10 +245,6 @@ export default function ScoringMainView() {
 
   // ナビゲーション管理hook
   const {
-    imageZoom,
-    setImageZoom,
-    imagePosition,
-    setImagePosition,
     viewMode,
     setViewMode,
     handleNextQuestion,
@@ -440,10 +436,6 @@ export default function ScoringMainView() {
           currentAnswerSheet={currentAnswerSheet}
           currentQuestion={currentQuestion}
           allAnswerSheets={answerSheets}
-          imageZoom={imageZoom}
-          imagePosition={imagePosition}
-          onZoomChange={setImageZoom}
-          onPositionChange={setImagePosition}
           selectedAnswers={selectedAnswers}
           getGridAnswerData={getGridAnswerData}
           currentQuestionIndex={currentQuestionIndex}

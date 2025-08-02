@@ -60,14 +60,10 @@ export type LineEditMode = "move" | "start" | "end" | null
 // 矩形の編集モード
 export type RectangleEditMode = "move" | "resize" | null
 
-// AnswerIndividualViewのプロパティ
+// AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
   answerSheet: StudentAnswer
   currentQuestion?: QuestionRegion
-  zoom: number
-  position: { x: number; y: number }
-  onZoomChange: (zoom: number) => void
-  onPositionChange: (position: { x: number; y: number }) => void
   // 全答案データ（既存のデータから適切な画像を検索するため）
   allAnswerSheets?: StudentAnswer[]
   // 複数画像の縦並び表示設定

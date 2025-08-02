@@ -27,9 +27,6 @@ export function useScoringNavigation({
   getGridAnswerData,
   effectiveColumns,
 }: UseScoringNavigationProps) {
-  // 画像表示関連の状態
-  const [imageZoom, setImageZoom] = useState(1.0)
-  const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 })
   const [viewMode, setViewMode] = useState<"question" | "full">("question") // 設問拡大 or 全体表示
 
   // ナビゲーション関数
@@ -57,58 +54,22 @@ export function useScoringNavigation({
     }
   }, [currentStudentIndex, setCurrentStudentIndex])
 
-  // 画像表示関連の関数（表示されている部分の中央を基準）
+  // プレースホルダー関数（Individual View内で実装される）
   const handleZoomIn = useCallback(() => {
-    setImageZoom((prevZoom) => {
-      const newZoom = Math.min(prevZoom * 1.2, 5.0)
-      const zoomRatio = newZoom / prevZoom
-      
-      // 中央を基準にした位置調整（仮想的な表示領域の中央座標使用）
-      const viewportCenterX = 400 // 仮想的な表示領域幅の半分
-      const viewportCenterY = 300 // 仮想的な表示領域高さの半分
-      
-      const centerAdjustX = viewportCenterX * (1 - zoomRatio)
-      const centerAdjustY = viewportCenterY * (1 - zoomRatio)
-      
-      setImagePosition(prevPos => ({
-        x: prevPos.x * zoomRatio + centerAdjustX,
-        y: prevPos.y * zoomRatio + centerAdjustY,
-      }))
-      
-      return newZoom
-    })
+    // Individual View内で実装される
   }, [])
 
   const handleZoomOut = useCallback(() => {
-    setImageZoom((prevZoom) => {
-      const newZoom = Math.max(prevZoom / 1.2, 0.1)
-      const zoomRatio = newZoom / prevZoom
-      
-      // 中央を基準にした位置調整（仮想的な表示領域の中央座標使用）
-      const viewportCenterX = 400 // 仮想的な表示領域幅の半分
-      const viewportCenterY = 300 // 仮想的な表示領域高さの半分
-      
-      const centerAdjustX = viewportCenterX * (1 - zoomRatio)
-      const centerAdjustY = viewportCenterY * (1 - zoomRatio)
-      
-      setImagePosition(prevPos => ({
-        x: prevPos.x * zoomRatio + centerAdjustX,
-        y: prevPos.y * zoomRatio + centerAdjustY,
-      }))
-      
-      return newZoom
-    })
+    // Individual View内で実装される
   }, [])
 
   const handleResetZoom = useCallback(() => {
-    setImageZoom(1.0)
-    setImagePosition({ x: 0, y: 0 })
+    // Individual View内で実装される
   }, [])
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === "question" ? "full" : "question"))
-    handleResetZoom()
-  }, [handleResetZoom])
+  }, [])
 
   // 模範解答をスキップして次の有効な答案を見つける関数
   const findNextValidAnswer = useCallback(
@@ -317,10 +278,6 @@ export function useScoringNavigation({
   )
 
   return {
-    imageZoom,
-    setImageZoom,
-    imagePosition,
-    setImagePosition,
     viewMode,
     setViewMode,
     handleNextQuestion,
