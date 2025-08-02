@@ -2,6 +2,18 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
+import type { ScoringBehavior } from "@/components/projects/07-score-at-once/components/individual-mode/ScoringBehaviorSelector"
+import { ScoringContentArea } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringContentArea"
+import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringHeaderControls"
+import { ScoringModals } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringModals"
+import { ScoringSidePanel } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringSidePanel"
+import {
+  ScoringErrorState,
+  ScoringLoadingState,
+} from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringStates"
+import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/components/scoring-main/hooks/useBatchScoringWithProgress"
+import { useScoringMainState } from "@/components/projects/07-score-at-once/components/scoring-main/hooks/useScoringMainState"
+import { useIndividualModeKeyboard } from "@/components/projects/07-score-at-once/hooks/useIndividualModeKeyboard"
 import { usePartialScore } from "@/components/projects/07-score-at-once/hooks/usePartialScore"
 import { useScoringData } from "@/components/projects/07-score-at-once/hooks/useScoringData"
 import { useScoringDataLoader } from "@/components/projects/07-score-at-once/hooks/useScoringDataLoader"
@@ -9,20 +21,12 @@ import { useScoringFilter } from "@/components/projects/07-score-at-once/hooks/u
 import { useScoringKeyboard } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
 import { useScoringNavigation } from "@/components/projects/07-score-at-once/hooks/useScoringNavigation"
 import { useScoringSettings } from "@/components/projects/07-score-at-once/hooks/useScoringSettings"
-import { ScoringContentArea } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringContentArea"
-import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringHeaderControls"
-import { ScoringModals } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringModals"
-import { ScoringSidePanel } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringSidePanel"
-import { ScoringLoadingState, ScoringErrorState } from "@/components/projects/07-score-at-once/components/scoring-main/components/ScoringStates"
-import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/components/scoring-main/hooks/useBatchScoringWithProgress"
-import { useScoringMainState } from "@/components/projects/07-score-at-once/components/scoring-main/hooks/useScoringMainState"
 import Head from "next/head"
-import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect } from "react"
+import { useParams } from "next/navigation"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 export default function ScoringMainContainer() {
   const params = useParams()
-  const router = useRouter()
   const projectId = params.projectId as string
   const { helpButton } = usePageHelp()
 
@@ -46,12 +50,79 @@ export default function ScoringMainContainer() {
     setShowStudentNames,
   } = useScoringSettings()
 
+  // 個別表示用の状態
+  const [currentStudentId, setCurrentStudentId] = useState<string>("")
+  const [scoringBehavior, setScoringBehavior] =
+    useState<ScoringBehavior>("next-student")
+
   // メイン状態管理
   const { state, actions, gridSize, handleAnswerSelect } = useScoringMainState()
 
   // 現在の答案と設問
   const currentAnswerSheet = answerSheets[state.currentStudentIndex]
   const currentQuestion = questionRegions[state.currentQuestionIndex]
+
+  // 個別表示用の生徒データ（useMemoで安定化）
+  const students = useMemo(() => {
+    return (
+      project?.projectStudents?.map((ps: any) => ({
+        id: ps.student.id,
+        studentId: ps.student.studentId,
+        lastName: ps.student.lastName,
+        firstName: ps.student.firstName,
+        customOrder: ps.customOrder || 0,
+      })) || []
+    )
+  }, [project?.projectStudents])
+
+  // 現在の生徒IDを初期化
+  useEffect(() => {
+    if (students.length > 0 && !currentStudentId) {
+      const sortedStudents = [...students].sort(
+        (a, b) => a.customOrder - b.customOrder,
+      )
+      setCurrentStudentId(sortedStudents[0].id)
+    }
+  }, [students, currentStudentId])
+
+  // 個別表示用のナビゲーション関数
+  const handleStudentChange = useCallback(
+    (studentId: string) => {
+      setCurrentStudentId(studentId)
+      // state.currentStudentIndex も更新
+      const studentIndex = answerSheets.findIndex(
+        (sheet: any) => sheet.student.id === studentId,
+      )
+      if (studentIndex !== -1) {
+        actions.setCurrentStudentIndex(studentIndex)
+      }
+    },
+    [answerSheets, actions],
+  )
+
+  const handleIndividualNextStudent = useCallback(() => {
+    const sortedStudents = [...students].sort(
+      (a, b) => a.customOrder - b.customOrder,
+    )
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentStudentId,
+    )
+    if (currentIndex < sortedStudents.length - 1) {
+      handleStudentChange(sortedStudents[currentIndex + 1].id)
+    }
+  }, [students, currentStudentId, handleStudentChange])
+
+  const handleIndividualPrevStudent = useCallback(() => {
+    const sortedStudents = [...students].sort(
+      (a, b) => a.customOrder - b.customOrder,
+    )
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentStudentId,
+    )
+    if (currentIndex > 0) {
+      handleStudentChange(sortedStudents[currentIndex - 1].id)
+    }
+  }, [students, currentStudentId, handleStudentChange])
 
   // 採点データ管理hook
   const {
@@ -125,16 +196,17 @@ export default function ScoringMainContainer() {
   })
 
   // バッチ採点と自動進行
-  const { handleBatchScoreWithProgress, handleAutoAdvance } = useBatchScoringWithProgress({
-    selectedAnswers: state.selectedAnswers,
-    gradingMode: state.gradingMode,
-    setRecentlyScoredAnswers,
-    handleBatchScore,
-    getGridAnswerData,
-    setSelectedAnswers: actions.setSelectedAnswers,
-    handleGridNavigation,
-    handleNextStudent,
-  })
+  const { handleBatchScoreWithProgress, handleAutoAdvance } =
+    useBatchScoringWithProgress({
+      selectedAnswers: state.selectedAnswers,
+      gradingMode: state.gradingMode,
+      setRecentlyScoredAnswers,
+      handleBatchScore,
+      getGridAnswerData,
+      setSelectedAnswers: actions.setSelectedAnswers,
+      handleGridNavigation,
+      handleNextStudent,
+    })
 
   // 生徒名表示設定の変更
   const handleToggleStudentNames = useCallback(() => {
@@ -181,6 +253,23 @@ export default function ScoringMainContainer() {
     showPartialScoreModal,
     onToggleFilter: handleToggleFilter,
     onToggleStudentNames: handleToggleStudentNames,
+  })
+
+  // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
+  useIndividualModeKeyboard({
+    questionRegions,
+    students,
+    currentQuestionIndex: state.currentQuestionIndex,
+    currentStudentId,
+    scoringBehavior,
+    enabled: state.gradingMode === "individual", // 個別表示モードでのみ有効
+    onQuestionChange: actions.setCurrentQuestionIndex,
+    onStudentChange: handleStudentChange,
+    onSetScore: handleSetScore,
+    onNextQuestion: handleNextQuestion,
+    onPrevQuestion: handlePrevQuestion,
+    onNextStudent: handleIndividualNextStudent,
+    onPrevStudent: handleIndividualPrevStudent,
   })
 
   // 採点データの初期化
@@ -266,6 +355,12 @@ export default function ScoringMainContainer() {
           gradingMode={state.gradingMode}
           currentAnswerSheet={currentAnswerSheet}
           currentQuestion={currentQuestion}
+          allAnswerSheets={answerSheets}
+          students={students}
+          currentStudentId={currentStudentId}
+          onStudentChange={handleStudentChange}
+          scoringBehavior={scoringBehavior}
+          onScoringBehaviorChange={setScoringBehavior}
           viewMode={viewMode}
           imageZoom={imageZoom}
           imagePosition={imagePosition}
@@ -276,7 +371,9 @@ export default function ScoringMainContainer() {
           currentQuestionIndex={state.currentQuestionIndex}
           layoutDirection={state.layoutDirection}
           gridSize={gridSize}
-          onAnswerSelect={(answerId, isSelected) => handleAnswerSelect(answerId, isSelected, answerSheets)}
+          onAnswerSelect={(answerId, isSelected) =>
+            handleAnswerSelect(answerId, isSelected, answerSheets)
+          }
           onAnswerScore={handleBatchScoreWithProgress}
           selectedAnswers={state.selectedAnswers}
           onEffectiveColumnsChange={actions.setEffectiveColumns}
