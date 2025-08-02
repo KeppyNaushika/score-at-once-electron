@@ -1,6 +1,7 @@
 "use client"
 
-import GradingModeToggle, { GradingMode } from "@/components/projects/07-score-at-once/components/GradingModeToggle"
+import GradingModeToggle from "@/components/projects/07-score-at-once/components/GradingModeToggle"
+import type { GradingMode } from "../types/scoring-main-types"
 import { Button } from "@/components/ui/button"
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
 import { KeyboardHelpDialog } from "@/components/projects/07-score-at-once/components/scoring-main/components/KeyboardHelpDialog"
@@ -30,7 +31,7 @@ export function ScoringHeaderControls({
     <div className="flex items-center space-x-2">
       {/* 採点モード切り替え */}
       <div className="flex items-center space-x-2">
-        <span className="text-sm font-medium text-gray-700">採点モード:</span>
+        <span className="text-sm text-muted-foreground">採点モード:</span>
         <GradingModeToggle mode={gradingMode} onModeChange={onGradingModeChange} />
       </div>
 
