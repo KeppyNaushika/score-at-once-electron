@@ -293,11 +293,19 @@ export default function AnswerDisplayContainer({
 
     // パン量を計算（設問中心がコンテナ中心に来るように）
     // Canvas描画と同じ座標系を使用
+    // 注意: Canvas描画では各ページが個別に中央揃えされるため、
+    // 最初のページ（または設問が属するページ）の表示サイズを基準とする
     const displayWidth = questionImg.naturalWidth * newZoom
+    const displayHeight = questionImg.naturalHeight * newZoom
 
     // Canvasでの画像配置：(canvas.width - displayWidth) / 2 - position.x
-    // 設問中心がコンテナ中心に来るように position を設定
-    const newX = questionCenterScreenX - containerCenterX
+    // 設問が属するページの画像サイズで中央揃え計算
+    const imageCenterOffsetX = (availableWidth - displayWidth) / 2
+    
+    // 設問中心をコンテナ中心に配置するためのパン位置
+    // Canvas描画と同じ座標系: offsetX = imageCenterOffsetX - position.x
+    // 設問中心がコンテナ中心に来るように: position.x を設定
+    const newX = imageCenterOffsetX + questionCenterScreenX - containerCenterX
     const newY = questionCenterScreenY - containerCenterY
 
     console.log("最終設問表示:", {
