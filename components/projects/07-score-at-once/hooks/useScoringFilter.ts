@@ -288,18 +288,14 @@ export function useScoringFilter({
 
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
-    const filteredAnswers = getAllGridAnswerData.filter((answer) =>
-      visibleAnswers.has(answer.id),
-    )
-
-    // 模範解答を最初に追加
-    const masterAnswer = getMasterAnswerData()
-    if (masterAnswer) {
-      return [masterAnswer, ...filteredAnswers]
-    }
+    // allScoringData に既に模範解答が含まれているため、重複追加を避ける
+    const filteredAnswers = getAllGridAnswerData.filter((answer) => {
+      // 模範解答は常に表示し、学生答案はvisibleAnswersでフィルタリング
+      return answer.isMaster || visibleAnswers.has(answer.id)
+    })
 
     return filteredAnswers
-  }, [getAllGridAnswerData, visibleAnswers, getMasterAnswerData])
+  }, [getAllGridAnswerData, visibleAnswers])
 
   // フィルタリング関連ハンドラー（Rキー押下時およびフィルター変更時）
   const handleRefreshFilter = useCallback(() => {
@@ -376,7 +372,6 @@ export function useScoringFilter({
     setRecentlyScoredAnswers,
     getAllGridAnswerData,
     getGridAnswerData,
-    getMasterAnswerData,
     handleRefreshFilter,
     handleToggleFilter,
     handleToggleFilterByScoreKey,
