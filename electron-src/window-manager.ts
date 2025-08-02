@@ -6,10 +6,22 @@ import menu from "./menu"
 const isDev = !app.isPackaged
 
 export function createMainWindow(): BrowserWindow {
-  // アイコンのパスを設定
-  const iconPath = isDev 
-    ? join(__dirname, "../public/一括採点アイコン.png")
-    : join(process.resourcesPath, "app.asar/public/一括採点アイコン.png")
+  // アイコンのパスを設定（プラットフォーム別）
+  const getIconPath = () => {
+    if (process.platform === 'darwin') {
+      // macOSの場合は.icnsファイルを使用
+      return isDev 
+        ? join(__dirname, "../public/icons/icon.icns")
+        : join(process.resourcesPath, "app.asar/public/icons/icon.icns")
+    } else {
+      // Windows/Linuxの場合はPNGファイルを使用
+      return isDev 
+        ? join(__dirname, "../public/icons/icon-win.png")
+        : join(process.resourcesPath, "app.asar/public/icons/icon-win.png")
+    }
+  }
+  
+  const iconPath = getIconPath()
   
   const mainWindow = new BrowserWindow({
     width: 1200,

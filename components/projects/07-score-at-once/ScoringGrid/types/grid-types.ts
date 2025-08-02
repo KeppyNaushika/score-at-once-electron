@@ -1,4 +1,5 @@
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
+import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
 
 export type GridLayoutDirection =
   | "right-down"
@@ -30,8 +31,11 @@ export interface AnswerItem {
   isMaster?: boolean
 }
 
+// ScoringDataとAnswerItemの互換性を確保（将来的にAnswerItemはScoringDataに統一予定）
+export type GridAnswerItem = ScoringData & { isSelected?: boolean }
+
 export interface AnswerGridViewProps {
-  answers: AnswerItem[]
+  answers: GridAnswerItem[]
   currentQuestionIndex: number
   layoutDirection: GridLayoutDirection
   onAnswerSelect: (id: string, isSelected: boolean) => void

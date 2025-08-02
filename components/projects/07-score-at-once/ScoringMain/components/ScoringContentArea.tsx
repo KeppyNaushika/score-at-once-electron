@@ -6,24 +6,31 @@ import type { GradingMode } from "@/components/projects/07-score-at-once/Scoring
 import type {
   LayoutDirection,
 } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
+import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
 
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
-  // Individual mode props
-  currentAnswerSheet?: any
+  
+  // 採点データ管理
+  allScoringData: ScoringData[]
+  filteredScoringDataIds: Set<string>
+  selectedScoringDataIds: Set<string>
+  
+  // 共通設問情報
   currentQuestion?: any
-  allAnswerSheets?: any[] // 複数ページ表示用
-  // Grid mode props
-  getGridAnswerData: () => any[]
-  currentQuestionIndex: number
-  layoutDirection: LayoutDirection
-  onAnswerSelect: (answerId: string, isSelected: boolean) => void
-  onAnswerScore: (
+  allAnswerSheets?: any[] // Individual表示の複数ページ表示用（後で整理予定）
+  
+  // 操作関数
+  onScoringDataSelect: (dataId: string, isSelected: boolean) => void
+  onScoringDataScore: (
     statusOrAnswerIds: any,
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => void
-  selectedAnswers: Set<string>
+  
+  // Grid表示設定
+  currentQuestionIndex: number
+  layoutDirection: LayoutDirection
   itemsPerLine: number[]
   autoScroll: boolean
   showStudentNames: boolean
@@ -31,44 +38,57 @@ interface ScoringContentAreaProps {
 
 export function ScoringContentArea({
   gradingMode,
-  currentAnswerSheet,
+  allScoringData,
+  filteredScoringDataIds,
+  selectedScoringDataIds,
   currentQuestion,
   allAnswerSheets,
-  getGridAnswerData,
+  onScoringDataSelect,
+  onScoringDataScore,
   currentQuestionIndex,
   layoutDirection,
-  onAnswerSelect,
-  onAnswerScore,
-  selectedAnswers,
   itemsPerLine,
   autoScroll,
   showStudentNames,
 }: ScoringContentAreaProps) {
+  // 現在選択中の採点データを取得（Individual表示用）
+  const currentScoringData = selectedScoringDataIds.size > 0 
+    ? allScoringData.find(data => selectedScoringDataIds.has(data.id))
+    : null
+
+  // フィルタリングされた採点データを取得（Grid表示用）
+  const filteredScoringData = allScoringData
+    .filter(data => filteredScoringDataIds.has(data.id))
+    .map(data => ({
+      ...data,
+      isSelected: selectedScoringDataIds.has(data.id)
+    }))
+
   return (
     <div className="min-h-0 flex-1">
       {gradingMode === "individual" ? (
         <div className="p-6">
-          {currentAnswerSheet ? (
+          {currentScoringData ? (
             <AnswerIndividualView
-              answerSheet={currentAnswerSheet}
+              answerSheet={currentScoringData}
               currentQuestion={currentQuestion}
               allAnswerSheets={allAnswerSheets}
-              selectedAnswers={selectedAnswers}
+              selectedAnswers={selectedScoringDataIds}
               onAnswerScore={(
                 statusOrAnswerIds,
                 statusOrPartialScore,
                 partialScore,
               ) => {
                 // 個別表示モードでは選択されている答案のみを対象にする
-                if (gradingMode === "individual" && selectedAnswers.size > 0) {
-                  const selectedAnswerId = Array.from(selectedAnswers)[0]
-                  onAnswerScore(
+                if (gradingMode === "individual" && selectedScoringDataIds.size > 0) {
+                  const selectedAnswerId = Array.from(selectedScoringDataIds)[0]
+                  onScoringDataScore(
                     [selectedAnswerId],
                     statusOrPartialScore,
                     partialScore,
                   )
                 } else {
-                  onAnswerScore(
+                  onScoringDataScore(
                     statusOrAnswerIds,
                     statusOrPartialScore,
                     partialScore,
@@ -85,12 +105,12 @@ export function ScoringContentArea({
       ) : (
         <div className="p-6">
           <AnswerGridView
-            answers={getGridAnswerData()}
+            answers={filteredScoringData}
             currentQuestionIndex={currentQuestionIndex}
             layoutDirection={layoutDirection}
-            onAnswerSelect={onAnswerSelect}
-            onAnswerScore={onAnswerScore}
-            selectedAnswers={selectedAnswers}
+            onAnswerSelect={onScoringDataSelect}
+            onAnswerScore={onScoringDataScore}
+            selectedAnswers={selectedScoringDataIds}
             itemsPerRow={itemsPerLine}
             autoScroll={autoScroll}
             showStudentNames={showStudentNames}

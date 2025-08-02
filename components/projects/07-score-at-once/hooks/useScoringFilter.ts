@@ -3,9 +3,10 @@ import { useCallback, useEffect, useState, useMemo, useRef } from "react"
 import type {
   AnswerSheet,
   QuestionRegion,
-  ScoringData,
+  ScoringData as OldScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/ScoringMain/types"
+import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
 
 interface FilterSettings {
   unscored: boolean
@@ -20,7 +21,7 @@ interface UseScoringFilterProps {
   answerSheets: AnswerSheet[]
   questionRegions: QuestionRegion[]
   currentQuestionIndex: number
-  scoringData: Record<string, ScoringData>
+  scoringData: Record<string, OldScoringData>
   selectedAnswers: Set<string>
   setSelectedAnswers: (answers: Set<string>) => void
   project: any
@@ -174,8 +175,35 @@ export function useScoringFilter({
     }
   }, [visibleAnswers, setSelectedAnswers])
 
-  // 基本的なグリッドデータ取得（フィルタリングなし）
-  const getAllGridAnswerData = useMemo(() => {
+  // 模範解答データを取得
+  const getMasterAnswerData = useCallback((): ScoringData | null => {
+    if (!currentQuestion || !project?.projectPages) return null
+
+    // projectPageIdに基づいてprojectPageを取得
+    const projectPage = project.projectPages.find(
+      (page: any) => page.id === currentQuestion.projectPageId,
+    )
+
+    if (!projectPage) return null
+
+    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MODEL_ANSWER")
+    const masterImagePath = masterImage?.imagePath
+
+    return {
+      id: `master-${currentQuestion.id}`,
+      studentId: "MASTER",
+      studentName: "模範解答",
+      imageUrl: masterImagePath ? `appimg://${masterImagePath}` : "",
+      currentScore: undefined,
+      maxScore: currentQuestion.points,
+      status: "master" as any, // 特別なステータス
+      questionRegion: currentQuestion, // 採点領域情報を追加
+      isMaster: true, // 模範解答フラグ
+    }
+  }, [currentQuestion, project?.projectPages])
+
+  // 全採点データを取得（新しいScoringData型として）
+  const allScoringData = useMemo((): ScoringData[] => {
     if (!currentQuestion) return []
 
     // projectPageIdに基づいてprojectPageのpageNumberを取得
@@ -211,7 +239,7 @@ export function useScoringFilter({
       return aOrder - bOrder
     })
 
-    return sortedAnswerSheets.map((sheet) => {
+    const studentScoringData: ScoringData[] = sortedAnswerSheets.map((sheet) => {
       const key = `${sheet.studentId}-${currentQuestion.id}`
       const scoreData = scoringData[key]
 
@@ -223,45 +251,32 @@ export function useScoringFilter({
         currentScore: scoreData?.score ?? undefined,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "unscored") as ScoringStatus,
-        isSelected: selectedAnswers.has(sheet.id),
         questionRegion: currentQuestion, // 採点領域情報を追加
       }
     })
+
+    // 模範解答データも追加
+    const masterAnswer = getMasterAnswerData()
+    if (masterAnswer) {
+      return [masterAnswer, ...studentScoringData]
+    }
+
+    return studentScoringData
   }, [
     currentQuestion,
     project?.projectPages,
     answerSheets,
     scoringData,
-    selectedAnswers,
+    getMasterAnswerData,
   ])
 
-  // 模範解答データを取得
-  const getMasterAnswerData = useCallback(() => {
-    if (!currentQuestion || !project?.projectPages) return null
-
-    // projectPageIdに基づいてprojectPageを取得
-    const projectPage = project.projectPages.find(
-      (page: any) => page.id === currentQuestion.projectPageId,
-    )
-
-    if (!projectPage) return null
-
-    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MODEL_ANSWER")
-    const masterImagePath = masterImage?.imagePath
-
-    return {
-      id: `master-${currentQuestion.id}`,
-      studentId: "MASTER",
-      studentName: "模範解答",
-      imageUrl: masterImagePath ? `appimg://${masterImagePath}` : "",
-      currentScore: undefined,
-      maxScore: currentQuestion.points,
-      status: "master" as any, // 特別なステータス
-      isSelected: false,
-      questionRegion: currentQuestion, // 採点領域情報を追加
-      isMaster: true, // 模範解答フラグ
-    }
-  }, [currentQuestion, project?.projectPages])
+  // 基本的なグリッドデータ取得（後方互換性のため残す）
+  const getAllGridAnswerData = useMemo(() => {
+    return allScoringData.map(data => ({
+      ...data,
+      isSelected: selectedAnswers.has(data.id),
+    }))
+  }, [allScoringData, selectedAnswers])
 
   // 表示用のグリッドデータ（visibleAnswersを使用）
   const getGridAnswerData = useCallback(() => {
@@ -340,6 +355,12 @@ export function useScoringFilter({
   )
 
   return {
+    // 新しいデータ構造
+    allScoringData,
+    filteredScoringDataIds: visibleAnswers,
+    selectedScoringDataIds: selectedAnswers,
+    
+    // 従来の互換性維持
     filterSettings,
     setFilterSettings,
     visibleAnswers,

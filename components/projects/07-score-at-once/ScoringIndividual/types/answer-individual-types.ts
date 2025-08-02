@@ -62,7 +62,7 @@ export type RectangleEditMode = "move" | "resize" | null
 
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
-  answerSheet: StudentAnswer
+  answerSheet: StudentAnswer | any // ScoringDataとの互換性のため一時的にanyを許可
   currentQuestion?: QuestionRegion
   // 全答案データ（既存のデータから適切な画像を検索するため）
   allAnswerSheets?: StudentAnswer[]

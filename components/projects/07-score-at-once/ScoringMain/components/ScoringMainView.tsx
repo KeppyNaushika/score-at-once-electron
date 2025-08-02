@@ -226,6 +226,12 @@ export default function ScoringMainView() {
 
   // フィルタリング管理hook
   const {
+    // 新しいデータ構造
+    allScoringData,
+    filteredScoringDataIds,
+    selectedScoringDataIds,
+    
+    // 従来の互換性維持
     filterSettings,
     visibleAnswers,
     setRecentlyScoredAnswers,
@@ -433,17 +439,17 @@ export default function ScoringMainView() {
       <div className="flex min-h-0 flex-1">
         <ScoringContentArea
           gradingMode={gradingMode}
-          currentAnswerSheet={currentAnswerSheet}
+          allScoringData={allScoringData}
+          filteredScoringDataIds={filteredScoringDataIds}
+          selectedScoringDataIds={selectedScoringDataIds}
           currentQuestion={currentQuestion}
           allAnswerSheets={answerSheets}
-          selectedAnswers={selectedAnswers}
-          getGridAnswerData={getGridAnswerData}
+          onScoringDataSelect={(dataId, isSelected) =>
+            handleAnswerSelect(dataId, isSelected, answerSheets)
+          }
+          onScoringDataScore={handleBatchScoreWithProgress}
           currentQuestionIndex={currentQuestionIndex}
           layoutDirection={layoutDirection}
-          onAnswerSelect={(answerId, isSelected) =>
-            handleAnswerSelect(answerId, isSelected, answerSheets)
-          }
-          onAnswerScore={handleBatchScoreWithProgress}
           itemsPerLine={itemsPerLine}
           autoScroll={autoScroll}
           showStudentNames={showStudentNames}
