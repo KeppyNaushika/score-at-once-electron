@@ -12,17 +12,25 @@ import { DrawingToolPalette } from "./components/DrawingToolPalette"
 import { TextInputModal } from "./components/TextInputModal"
 
 export default function AnswerIndividualView({
-  answerSheet,
+  allScoringData,
+  currentScoringDataId,
+  currentQuestionIndex,
   currentQuestion,
+  onScoringDataScore,
   allAnswerSheets,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
-}: Omit<AnswerIndividualViewProps, 'zoom' | 'position' | 'onZoomChange' | 'onPositionChange'>) {
+}: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } = useImageNavigation()
-  
+
   // 描画状態管理
   const drawingState = useDrawingState()
+
+  // 現在表示中の採点データを取得（簡潔に）
+  const answerSheet = currentScoringDataId 
+    ? allScoringData.find(data => data.id === currentScoringDataId)
+    : null
 
   // 画像とキャンバス管理
   const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =
@@ -398,6 +406,15 @@ export default function AnswerIndividualView({
     drawingState.setTextInputValue("")
     drawingState.setCurrentDrawing(null)
   }, [drawingState])
+
+  // 答案が選択されていない場合の早期リターン
+  if (!answerSheet) {
+    return (
+      <div className="flex h-full items-center justify-center bg-gray-50 text-gray-500">
+        答案を選択してください
+      </div>
+    )
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden">

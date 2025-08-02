@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronDown, ChevronUp } from "lucide-react"
-import { useState } from "react"
+import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/SidePanelSection"
+import { Users } from "lucide-react"
 
 interface Student {
   id: string
@@ -24,8 +24,6 @@ export function StudentAnswerPanel({
   currentStudentId,
   onStudentChange,
 }: StudentAnswerPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(true)
-
   // 受験生徒順にソート
   const sortedStudents = [...students].sort((a, b) => a.customOrder - b.customOrder)
   const currentStudent = sortedStudents.find(s => s.id === currentStudentId)
@@ -45,66 +43,48 @@ export function StudentAnswerPanel({
   }
 
   return (
-    <div className="border rounded-lg bg-white">
-      <div 
-        className="flex items-center justify-between p-3 cursor-pointer hover:bg-gray-50"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <h3 className="font-medium">生徒答案</h3>
-        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    <SidePanelSection icon={Users} title="生徒答案">
+      {/* ナビゲーションコントロール */}
+      <div className="mb-4 flex items-center gap-2">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handlePrevStudent}
+          disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === 0}
+        >
+          ←
+        </Button>
+        <Select value={currentStudentId} onValueChange={onStudentChange}>
+          <SelectTrigger className="flex-1">
+            <SelectValue>
+              {currentStudent ? 
+                `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentId})` : 
+                "生徒を選択"
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {sortedStudents.map((student) => (
+              <SelectItem key={student.id} value={student.id}>
+                {student.lastName} {student.firstName} ({student.studentId})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleNextStudent}
+          disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === sortedStudents.length - 1}
+        >
+          →
+        </Button>
       </div>
-      
-      {isExpanded && (
-        <div className="p-3 border-t space-y-3">
-          {/* 生徒選択プルダウン */}
-          <div>
-            <Select value={currentStudentId} onValueChange={onStudentChange}>
-              <SelectTrigger className="w-full">
-                <SelectValue>
-                  {currentStudent ? 
-                    `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentId})` : 
-                    "生徒を選択"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {sortedStudents.map((student) => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.lastName} {student.firstName} ({student.studentId})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* 前/次ボタン */}
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handlePrevStudent}
-              disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === 0}
-              className="flex-1"
-            >
-              前の生徒
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleNextStudent}
-              disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === sortedStudents.length - 1}
-              className="flex-1"
-            >
-              次の生徒
-            </Button>
-          </div>
-
-          {/* 現在の位置表示 */}
-          <div className="text-sm text-gray-600 text-center">
-            {sortedStudents.findIndex(s => s.id === currentStudentId) + 1} / {sortedStudents.length}
-          </div>
-        </div>
-      )}
-    </div>
+      {/* 現在の位置表示 */}
+      <div className="text-center text-xs text-gray-500">
+        {sortedStudents.findIndex(s => s.id === currentStudentId) + 1} / {sortedStudents.length}
+      </div>
+    </SidePanelSection>
   )
 }

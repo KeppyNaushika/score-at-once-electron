@@ -108,6 +108,7 @@ export function ScoringSidePanel({
         onRefreshFilter={onRefreshFilter}
         partialScoreInput={partialScoreInput}
         modifierKeyLabel={modifierKeyLabel}
+        gradingMode={gradingMode}
       />
 
       {/* 個別表示モード時：生徒選択パネル */}

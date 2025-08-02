@@ -1,7 +1,7 @@
 import type {
-  AnswerSheet,
+  StudentAnswer,
   QuestionRegion,
-  ScoringData,
+  QuestionScore,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/ScoringMain/types"
 
@@ -13,7 +13,7 @@ export interface UseScoringDataProps {
   setCurrentStudentIndex: (index: number) => void
   currentQuestionIndex: number
   setCurrentQuestionIndex: (index: number) => void
-  answerSheets: AnswerSheet[]
+  studentAnswers: StudentAnswer[]
   questionRegions: QuestionRegion[]
 }
 
@@ -25,8 +25,16 @@ export interface QuestionProgress {
   }
 }
 
+/**
+ * クライアントサイド用のQuestionScore型
+ * partialScoreをDecimalからnumberに変更（UI状態管理用）
+ */
+export interface ClientQuestionScore extends Omit<QuestionScore, 'partialScore'> {
+  partialScore: number | null
+}
+
 export interface ScoringDataRecord {
-  [key: string]: ScoringData
+  [key: string]: ClientQuestionScore
 }
 
 export interface ScoreUpdateData {
@@ -44,4 +52,4 @@ export interface ScoreCreateData {
   scoredByUserId: string
 }
 
-export type { AnswerSheet, QuestionRegion, ScoringData, ScoringStatus }
+export type { StudentAnswer, QuestionRegion, QuestionScore, ScoringStatus }

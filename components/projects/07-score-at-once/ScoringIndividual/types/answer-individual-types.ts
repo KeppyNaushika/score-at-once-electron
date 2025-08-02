@@ -62,20 +62,25 @@ export type RectangleEditMode = "move" | "resize" | null
 
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
-  answerSheet: StudentAnswer | any // ScoringDataとの互換性のため一時的にanyを許可
+  // Individual表示専用データ引数（単一データの詳細表示）
+  allScoringData: any[] // ScoringData[] - 全データ（生徒選択のため）
+  currentScoringDataId: string | null // 現在表示中のデータID（selectedの最初の要素）
+  
+  // 設問情報
+  currentQuestionIndex: number
   currentQuestion?: QuestionRegion
-  // 全答案データ（既存のデータから適切な画像を検索するため）
-  allAnswerSheets?: StudentAnswer[]
-  // 複数画像の縦並び表示設定
-  showMultiplePages?: boolean
-  pageSpacing?: number // ページ間の余白（ピクセル）
-  // 採点機能統合
-  selectedAnswers?: Set<string>
-  onAnswerScore?: (
+  
+  // 操作関数
+  onScoringDataScore?: (
     statusOrAnswerIds: any,
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => void
+  
+  // Individual表示固有設定
+  allAnswerSheets?: any[] // 全答案データ（既存のデータから適切な画像を検索するため）
+  showMultiplePages?: boolean // 複数画像の縦並び表示設定
+  pageSpacing?: number // ページ間の余白（ピクセル）
 }
 
 // 描画状態管理用のインターフェース

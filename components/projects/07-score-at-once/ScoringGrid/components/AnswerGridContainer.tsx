@@ -13,16 +13,34 @@ import { useGridDragSelection } from "@/components/projects/07-score-at-once/Sco
 import type { AnswerGridViewProps } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
 
 export default function AnswerGridContainer({
-  answers,
+  allScoringData,
+  filteredScoringDataIds,
+  selectedScoringDataIds,
+  currentQuestionIndex,
+  onScoringDataSelect,
+  onScoringDataScore,
   layoutDirection,
-  onAnswerSelect,
-  onAnswerScore,
-  selectedAnswers,
-  className = "",
   itemsPerRow: externalItemsPerRow,
   autoScroll = true,
   showStudentNames = true,
+  className = "",
 }: AnswerGridViewProps) {
+  // フィルタリングされた採点データを取得（模範解答を先頭に追加）
+  const masterAnswers = allScoringData
+    .filter(data => data.isMaster)
+    .map(data => ({
+      ...data,
+      isSelected: selectedScoringDataIds.has(data.id)
+    }))
+  
+  const studentAnswers = allScoringData
+    .filter(data => filteredScoringDataIds.has(data.id))
+    .map(data => ({
+      ...data,
+      isSelected: selectedScoringDataIds.has(data.id)
+    }))
+  
+  const answers = [...masterAnswers, ...studentAnswers]
   const gridRef = useRef<HTMLDivElement>(null)
 
   // Custom hooks
@@ -44,17 +62,17 @@ export default function AnswerGridContainer({
   const { handleMouseDown, getDragSelectionRect, handleDragSelection } =
     useGridDragSelection({
       gridRef,
-      onAnswerSelect,
-      selectedAnswers,
+      onAnswerSelect: onScoringDataSelect,
+      selectedAnswers: selectedScoringDataIds,
       sortedAnswers,
     })
 
   // Keyboard shortcuts
-  useGridKeyboard({ selectedAnswers, onAnswerScore })
+  useGridKeyboard({ selectedAnswers: selectedScoringDataIds, onAnswerScore: onScoringDataScore })
 
   // Auto scroll
   useAutoScroll({
-    selectedAnswers,
+    selectedAnswers: selectedScoringDataIds,
     layoutDirection,
     autoScroll,
     gridRef,
@@ -152,7 +170,7 @@ export default function AnswerGridContainer({
         {sortedAnswers().map((answer) => {
           if (!answer) return <div key="empty" />
 
-          const isSelected = selectedAnswers.has(answer.id)
+          const isSelected = selectedScoringDataIds.has(answer.id)
 
           return (
             <GridCell

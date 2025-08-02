@@ -9,21 +9,11 @@ export type ScoringStatus =
   | "proposed"
   | "final"
 
-// 採点データの型定義
-export interface ScoringData {
-  id?: string
-  questionId: string
-  score: number | null // partialScoreを直接格納（nullableに変更）
-  maxScore: number
-  status: ScoringStatus
-  comment: string
-  scoredByUserId: string
-  version: number
-  updatedAt: Date
-}
+// 採点データの型定義はPrismaのQuestionScoreを使用
+export type { QuestionScore } from "@prisma/client"
 
-// 答案の型定義
-export interface AnswerSheet {
+// 答案の型定義（旧AnswerSheetからStudentAnswerにリネーム）
+export interface StudentAnswer {
   id: string
   studentId: string
   projectId: string

@@ -20,14 +20,14 @@ export function useScoringDataContainer({
   setCurrentStudentIndex,
   currentQuestionIndex,
   setCurrentQuestionIndex,
-  answerSheets,
+  studentAnswers,
   questionRegions,
 }: UseScoringDataProps) {
   const [scoringData, setScoringData] = useState<ScoringDataRecord>({})
 
   // Individual scoring hook
   const { handleSetScore } = useIndividualScoring({
-    answerSheets,
+    studentAnswers,
     questionRegions,
     currentStudentIndex,
     currentQuestionIndex,
@@ -41,7 +41,7 @@ export function useScoringDataContainer({
 
   // Batch scoring hook
   const { handleBatchScore } = useBatchScoring({
-    answerSheets,
+    studentAnswers,
     questionRegions,
     currentQuestionIndex,
     currentUserId,
@@ -75,8 +75,8 @@ export function useScoringDataContainer({
 
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {
-    return calculateQuestionProgress(questionRegions, answerSheets, scoringData)
-  }, [answerSheets, questionRegions, scoringData])
+    return calculateQuestionProgress(questionRegions, studentAnswers, scoringData)
+  }, [studentAnswers, questionRegions, scoringData])
 
   return {
     scoringData,

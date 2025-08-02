@@ -4,7 +4,7 @@ import type { ProjectWithDetails } from "@/types/electron"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
-import { AnswerSheet, QuestionRegion, ScoringData } from "@/components/projects/07-score-at-once/ScoringMain/types"
+import { StudentAnswer, QuestionRegion, QuestionScore } from "@/components/projects/07-score-at-once/ScoringMain/types"
 
 export function useGradingPage() {
   const params = useParams()
@@ -13,7 +13,7 @@ export function useGradingPage() {
   // 基本状態
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<ProjectWithDetails | null>(null)
-  const [answerSheets, setAnswerSheets] = useState<AnswerSheet[]>([])
+  const [answerSheets, setAnswerSheets] = useState<StudentAnswer[]>([])
   const [questionRegions, setQuestionRegions] = useState<QuestionRegion[]>([])
 
   // UI状態
@@ -59,7 +59,7 @@ export function useGradingPage() {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [scoringData, setScoringData] = useState<{
-    [key: string]: ScoringData
+    [key: string]: QuestionScore
   }>({})
   const [showSidePanel, setShowSidePanel] = useState(true)
   const [autoAdvance, setAutoAdvance] = useState(true)
@@ -84,7 +84,7 @@ export function useGradingPage() {
       const response =
         await window.electronAPI.getStudentAnswersByProjectId(projectId)
       if (response && response.success && response.studentAnswers) {
-        // 型変換: ProcessedStudentAnswer型からAnswerSheet型へ
+        // 型変換: ProcessedStudentAnswer型からStudentAnswer型へ
         const answerSheets = response.studentAnswers.map(
           (sheet: {
             id: string

@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { SidePanelSection } from "./SidePanelSection"
 import {
   AlertCircle,
   CheckCircle,
@@ -55,13 +56,7 @@ export default function QuestionNavigator({
 }: QuestionNavigatorProps) {
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="mb-4 bg-white p-4">
-        {/* 設問ラベル */}
-        <div className="mb-2 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">設問</span>
-        </div>
-
+      <SidePanelSection icon={FileText} title="設問">
         {/* ナビゲーション: [前] [設問プルダウン] [次] */}
         <div className="mb-4 flex items-center gap-2">
           <Tooltip>
@@ -208,7 +203,7 @@ export default function QuestionNavigator({
             })}
           </div>
         </div>
-      </div>
+      </SidePanelSection>
     </TooltipProvider>
   )
 }

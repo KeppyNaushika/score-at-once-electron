@@ -1,15 +1,16 @@
 import { useCallback } from "react"
 import { toast } from "sonner"
+import { Decimal } from "@prisma/client/runtime/library"
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type {
-  AnswerSheet,
+  StudentAnswer,
   QuestionRegion,
   ScoringDataRecord,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 
 interface UseBatchScoringProps {
-  answerSheets: AnswerSheet[]
+  studentAnswers: StudentAnswer[]
   questionRegions: QuestionRegion[]
   currentQuestionIndex: number
   currentUserId: string | null
@@ -19,7 +20,7 @@ interface UseBatchScoringProps {
 }
 
 export function useBatchScoring({
-  answerSheets,
+  studentAnswers,
   questionRegions,
   currentQuestionIndex,
   currentUserId,
@@ -82,7 +83,7 @@ export function useBatchScoring({
       if (!currentQuestion) return
 
       for (const answerId of ids) {
-        const answerSheet = answerSheets.find((sheet) => sheet.id === answerId)
+        const answerSheet = studentAnswers.find((sheet) => sheet.id === answerId)
         if (!answerSheet) continue
 
         const key = `${answerSheet.studentId}-${currentQuestion.id}`
@@ -110,7 +111,7 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.score || null
+              newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : null
             }
             break
           case "pending":
@@ -119,7 +120,7 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.score || null
+              newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : null
             }
             break
         }
@@ -131,12 +132,10 @@ export function useBatchScoring({
             const updateData = {
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
-              comment: currentScore.comment || "",
             }
             const result = await window.electronAPI.updateQuestionScore(
               currentScore.id,
               updateData,
-              currentScore.version,
             )
 
             if ((result as any).success || result) {
@@ -144,12 +143,10 @@ export function useBatchScoring({
                 ...prev,
                 [key]: {
                   ...currentScore,
-                  score: newScore,
+                  partialScore: newScore !== null ? newScore : null,
                   status: scoringStatus,
-                  version:
-                    (result as any).score?.version || 0,
                   updatedAt: new Date(
-                    (result as any).score?.updatedAt || result.updatedAt,
+                    (result as any).score?.updatedAt || result.updatedAt || Date.now(),
                   ),
                 },
               }))
@@ -161,28 +158,24 @@ export function useBatchScoring({
               cropRegionId: currentQuestion.id,
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
-              comment: "",
               scoredByUserId: effectiveUserId,
             }
             const result =
               await window.electronAPI.createQuestionScore(scoreData)
 
             if ((result as any).success || result.id) {
+              const createdScore = (result as any).score || result
               setScoringData((prev) => ({
                 ...prev,
                 [key]: {
-                  id: (result as any).score?.id || result.id,
-                  questionId: currentQuestion.id,
-                  score: newScore,
-                  maxScore: currentQuestion.points,
+                  id: createdScore.id,
+                  cropRegionId: currentQuestion.id,
+                  studentId: answerSheet.studentId,
+                  partialScore: newScore !== null ? newScore : null,
                   status: scoringStatus,
-                  comment: "",
                   scoredByUserId: effectiveUserId,
-                  version:
-                    (result as any).score?.version || 0,
-                  updatedAt: new Date(
-                    (result as any).score?.updatedAt || result.updatedAt,
-                  ),
+                  createdAt: new Date(createdScore.createdAt || Date.now()),
+                  updatedAt: new Date(createdScore.updatedAt || Date.now()),
                 },
               }))
             }
@@ -213,7 +206,7 @@ export function useBatchScoring({
       }
     },
     [
-      answerSheets,
+      studentAnswers,
       questionRegions,
       currentQuestionIndex,
       currentUserId,

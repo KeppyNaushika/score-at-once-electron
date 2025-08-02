@@ -4,7 +4,7 @@ import { toast } from "sonner"
 interface ScoringDataLoaderResult {
   loading: boolean
   project: any
-  answerSheets: any[]
+  studentAnswers: any[]
   questionRegions: any[]
   currentUserId: string | null
   error: string | null
@@ -15,7 +15,7 @@ export function useScoringDataLoader(
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<any>(null)
-  const [answerSheets, setAnswerSheets] = useState<any[]>([])
+  const [studentAnswers, setStudentAnswers] = useState<any[]>([])
   const [questionRegions, setQuestionRegions] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +39,7 @@ export function useScoringDataLoader(
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
-        setAnswerSheets(answersResult.studentAnswers || [])
+        setStudentAnswers(answersResult.studentAnswers || [])
 
         // 設問領域データの読み込み
         const regionsResult =
@@ -80,7 +80,7 @@ export function useScoringDataLoader(
   return {
     loading,
     project,
-    answerSheets,
+    studentAnswers,
     questionRegions,
     currentUserId,
     error,

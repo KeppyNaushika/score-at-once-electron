@@ -35,14 +35,22 @@ export interface AnswerItem {
 export type GridAnswerItem = ScoringData & { isSelected?: boolean }
 
 export interface AnswerGridViewProps {
-  answers: GridAnswerItem[]
+  // 統一されたデータ引数
+  allScoringData: ScoringData[]
+  filteredScoringDataIds: Set<string>
+  selectedScoringDataIds: Set<string>
+  
+  // 設問情報
   currentQuestionIndex: number
+  
+  // 操作関数
+  onScoringDataSelect: (id: string, isSelected: boolean) => void
+  onScoringDataScore: (id: string | string[], status: ScoringStatus) => void
+  
+  // 表示設定
   layoutDirection: GridLayoutDirection
-  onAnswerSelect: (id: string, isSelected: boolean) => void
-  onAnswerScore: (id: string | string[], status: ScoringStatus) => void
-  selectedAnswers: Set<string>
-  className?: string
   itemsPerRow?: number[] // 外部からの1行/列あたり表示件数
   autoScroll?: boolean // 自動スクロール設定
   showStudentNames?: boolean // 生徒名表示設定
+  className?: string
 }

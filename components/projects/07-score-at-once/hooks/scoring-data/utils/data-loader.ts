@@ -1,5 +1,8 @@
-import type { ScoringData, ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
-import type { ScoringDataRecord } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
+import type { QuestionScore, ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
+import type { 
+  ScoringDataRecord, 
+  ClientQuestionScore 
+} from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 
 /**
  * 既存の採点データを読み込む関数
@@ -21,19 +24,14 @@ export async function loadExistingScoringData(
     }
 
     const scoringData: ScoringDataRecord = {}
-    scores.forEach((score: any) => {
+    scores.forEach((score: QuestionScore) => {
       const key = `${score.studentId}-${score.cropRegionId}`
-      scoringData[key] = {
-        id: score.id,
-        questionId: score.cropRegionId,
-        score: score.partialScore ? Number(score.partialScore) : null, // partialScoreを直接格納
-        maxScore: 0, // We'll need to get this from the crop region
-        status: score.status as ScoringStatus,
-        comment: score.comment || "",
-        scoredByUserId: score.scoredByUserId,
-        version: score.version || 0,
-        updatedAt: new Date(score.updatedAt),
+      // PrismaのQuestionScore（Decimal）をClientQuestionScore（number）に変換
+      const clientScore: ClientQuestionScore = {
+        ...score,
+        partialScore: score.partialScore ? Number(score.partialScore) : null
       }
+      scoringData[key] = clientScore
     })
 
     return scoringData
@@ -49,15 +47,15 @@ export async function loadExistingScoringData(
 export function getScoringStatus(
   scoringData: ScoringDataRecord,
   studentId: string,
-  questionId?: string
+  cropRegionId?: string
 ): ScoringStatus {
-  if (!questionId) return "unscored"
+  if (!cropRegionId) return "unscored"
 
-  const key = `${studentId}-${questionId}`
+  const key = `${studentId}-${cropRegionId}`
   const scoreData = scoringData[key]
 
   if (!scoreData) return "unscored"
-  return scoreData.status
+  return scoreData.status as ScoringStatus
 }
 
 /**
@@ -66,17 +64,17 @@ export function getScoringStatus(
 export function getActualScore(
   scoringData: ScoringDataRecord,
   studentId: string,
-  questionId?: string,
+  cropRegionId?: string,
   maxScore: number = 0
 ): number | null {
-  if (!questionId) return null
+  if (!cropRegionId) return null
 
-  const key = `${studentId}-${questionId}`
+  const key = `${studentId}-${cropRegionId}`
   const scoreData = scoringData[key]
 
   if (!scoreData) return null
 
-  // calculateActualScoreと同じロジック
+  // calculateActualScoreと同じロジック（ClientQuestionScoreのフィールドを使用）
   switch (scoreData.status) {
     case "correct":
     case "final":
@@ -89,7 +87,8 @@ export function getActualScore(
     case "partial":
     case "pending":
     case "proposed":
-      return scoreData.score
+      // partialScoreは既にnumber型なので、そのまま返す
+      return scoreData.partialScore
     default:
       return 0
   }

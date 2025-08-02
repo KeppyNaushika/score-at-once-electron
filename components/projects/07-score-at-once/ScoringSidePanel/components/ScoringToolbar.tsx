@@ -18,15 +18,17 @@ import {
   Clock,
   Minus,
   RefreshCw,
+  Target,
   X,
 } from "lucide-react"
+import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringToolbarProps {
   selectedAnswersCount: number
   currentQuestion?: {
     points: number
   }
-  filterSettings: {
+  filterSettings?: {
     unscored: boolean
     correct: boolean
     incorrect: boolean
@@ -35,10 +37,11 @@ interface ScoringToolbarProps {
     no_answer: boolean
   }
   onScore: (status: ScoringStatus) => void
-  onToggleFilter: (key: string) => void
-  onRefreshFilter: () => void
+  onToggleFilter?: (key: string) => void
+  onRefreshFilter?: () => void
   partialScoreInput: string
   modifierKeyLabel: string
+  gradingMode?: "grid" | "individual" // 採点モード
 }
 
 // 採点ボタン設定
@@ -159,77 +162,74 @@ export default function ScoringToolbar({
   onRefreshFilter,
   partialScoreInput,
   modifierKeyLabel,
+  gradingMode = "grid",
 }: ScoringToolbarProps) {
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="mb-4 space-y-4 bg-white p-4">
-        {/* 採点ボタン群 */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-sm font-medium text-gray-700">採点</h3>
-            {selectedAnswersCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {selectedAnswersCount}件
-              </Badge>
-            )}
-            {partialScoreInput && (
-              <Badge
-                variant="outline"
-                className="border-yellow-300 bg-yellow-50 text-xs"
-              >
-                入力中: {partialScoreInput}
-                {partialScoreInput.endsWith(".") ? "●" : ""}
-              </Badge>
-            )}
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {SCORING_BUTTONS.map((button) => {
-              const Icon = button.icon
-              const shortcuts = getKeyboardShortcuts() // 動的に取得
-              return (
-                <Tooltip key={button.status}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`${button.color} flex h-12 flex-col gap-1 border-2 ${
-                        selectedAnswersCount === 0
-                          ? "cursor-not-allowed opacity-50"
-                          : ""
-                      }`}
-                      onClick={() => onScore(button.status)}
-                      disabled={selectedAnswersCount === 0}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <div className="text-xs">{button.label}</div>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">{button.description}</div>
-                      <div className="mt-1 text-xs text-gray-400">
-                        キー:{" "}
-                        <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                          {shortcuts[
-                            button.shortcutKey as keyof typeof shortcuts
-                          ]?.toUpperCase() || "キー"}
-                        </kbd>
-                      </div>
+      {/* 採点セクション */}
+      <SidePanelSection
+        icon={Target}
+        title="採点"
+        badge={selectedAnswersCount > 0 ? `${selectedAnswersCount}件` : undefined}
+        rightElement={
+          partialScoreInput ? (
+            <Badge
+              variant="outline"
+              className="border-yellow-300 bg-yellow-50 text-xs"
+            >
+              入力中: {partialScoreInput}
+              {partialScoreInput.endsWith(".") ? "●" : ""}
+            </Badge>
+          ) : undefined
+        }
+      >
+        <div className="grid grid-cols-3 gap-2">
+          {SCORING_BUTTONS.map((button) => {
+            const Icon = button.icon
+            const shortcuts = getKeyboardShortcuts() // 動的に取得
+            return (
+              <Tooltip key={button.status}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`${button.color} flex h-12 flex-col gap-1 border-2 ${
+                      selectedAnswersCount === 0
+                        ? "cursor-not-allowed opacity-50"
+                        : ""
+                    }`}
+                    onClick={() => onScore(button.status)}
+                    disabled={selectedAnswersCount === 0}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <div className="text-xs">{button.label}</div>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-center">
+                    <div className="font-medium">{button.description}</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                        {shortcuts[
+                          button.shortcutKey as keyof typeof shortcuts
+                        ]?.toUpperCase() || "キー"}
+                      </kbd>
                     </div>
-                  </TooltipContent>
-                </Tooltip>
-              )
-            })}
-          </div>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
         </div>
+      </SidePanelSection>
 
-        <Separator />
-
-        {/* フィルターボタン群 */}
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <h3 className="text-sm font-medium text-gray-700">フィルター</h3>
+      {/* フィルターセクション - グリッド表示時のみ */}
+      {gradingMode === "grid" && filterSettings && onToggleFilter && onRefreshFilter && (
+        <SidePanelSection
+          icon={RefreshCw}
+          title="フィルター"
+          rightElement={
             <Button
               variant="outline"
               size="sm"
@@ -239,8 +239,8 @@ export default function ScoringToolbar({
               <RefreshCw className="mr-1 h-3 w-3" />
               更新
             </Button>
-          </div>
-
+          }
+        >
           <div className="grid grid-cols-3 gap-2">
             {FILTER_BUTTONS.map((button) => {
               const Icon = button.icon
@@ -282,8 +282,8 @@ export default function ScoringToolbar({
               )
             })}
           </div>
-        </div>
-      </div>
+        </SidePanelSection>
+      )}
     </TooltipProvider>
   )
 }

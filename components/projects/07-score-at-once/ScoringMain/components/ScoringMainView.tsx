@@ -34,7 +34,7 @@ export default function ScoringMainView() {
   const {
     loading,
     project,
-    answerSheets,
+    studentAnswers,
     questionRegions,
     currentUserId,
     error: _error,
@@ -94,40 +94,29 @@ export default function ScoringMainView() {
     if (gradingMode === "individual" && selectedAnswers.size > 0) {
       // 個別表示モードでは選択された答案を使用
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      return answerSheets.find((sheet) => sheet.id === selectedAnswerId)
+      return studentAnswers.find((sheet) => sheet.id === selectedAnswerId)
     }
     // 一覧表示モードでは従来通り
-    return answerSheets[currentStudentIndex]
-  }, [gradingMode, selectedAnswers, answerSheets, currentStudentIndex])
+    return studentAnswers[currentStudentIndex]
+  }, [gradingMode, selectedAnswers, studentAnswers, currentStudentIndex])
 
   const currentQuestion = questionRegions[currentQuestionIndex]
 
-  // 個別表示用の生徒データ（useMemoで安定化）
-  const students = useMemo(() => {
-    return (
-      project?.projectStudents?.map((ps: any) => ({
-        id: ps.student.id,
-        studentId: ps.student.studentId,
-        lastName: ps.student.lastName,
-        firstName: ps.student.firstName,
-        customOrder: ps.customOrder || 0,
-      })) || []
-    )
-  }, [project?.projectStudents])
+  // 個別表示用の生徒データは後で定義（allScoringDataが必要なため）
 
   // 個別表示用のナビゲーション関数
   const handleStudentChange = useCallback(
     (studentId: string) => {
       // 該当する生徒の答案を選択状態にする
-      const studentAnswers = answerSheets.filter(
+      const studentSheets = studentAnswers.filter(
         (sheet: any) => sheet.student.id === studentId,
       )
-      if (studentAnswers.length > 0) {
+      if (studentSheets.length > 0) {
         // 個別表示では単一選択なので、最初の答案のみを選択
-        setSelectedAnswers(new Set([studentAnswers[0].id]))
+        setSelectedAnswers(new Set([studentSheets[0].id]))
 
         // currentStudentIndex も更新
-        const studentIndex = answerSheets.findIndex(
+        const studentIndex = studentAnswers.findIndex(
           (sheet: any) => sheet.student.id === studentId,
         )
         if (studentIndex !== -1) {
@@ -135,74 +124,10 @@ export default function ScoringMainView() {
         }
       }
     },
-    [answerSheets, setSelectedAnswers, setCurrentStudentIndex],
+    [studentAnswers, setSelectedAnswers, setCurrentStudentIndex],
   )
 
-  // 個別表示モードで最初の生徒を自動選択
-  useEffect(() => {
-    if (
-      gradingMode === "individual" &&
-      students.length > 0 &&
-      selectedAnswers.size === 0
-    ) {
-      const sortedStudents = [...students].sort(
-        (a, b) => a.customOrder - b.customOrder,
-      )
-      handleStudentChange(sortedStudents[0].id)
-    }
-  }, [gradingMode, students, selectedAnswers.size, handleStudentChange])
-
-  const handleIndividualNextStudent = useCallback(() => {
-    if (selectedAnswers.size === 0) return
-
-    const currentAnswerId = Array.from(selectedAnswers)[0]
-    const currentAnswer = answerSheets.find(
-      (a: any) => a.id === currentAnswerId,
-    )
-    if (!currentAnswer) return
-
-    const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder,
-    )
-    const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student.id,
-    )
-    if (currentIndex < sortedStudents.length - 1) {
-      const nextStudent = sortedStudents[currentIndex + 1]
-      const nextStudentAnswer = answerSheets.find(
-        (a: any) => a.student.id === nextStudent.id,
-      )
-      if (nextStudentAnswer) {
-        setSelectedAnswers(new Set([nextStudentAnswer.id]))
-      }
-    }
-  }, [students, selectedAnswers, answerSheets, setSelectedAnswers])
-
-  const handleIndividualPrevStudent = useCallback(() => {
-    if (selectedAnswers.size === 0) return
-
-    const currentAnswerId = Array.from(selectedAnswers)[0]
-    const currentAnswer = answerSheets.find(
-      (a: any) => a.id === currentAnswerId,
-    )
-    if (!currentAnswer) return
-
-    const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder,
-    )
-    const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student.id,
-    )
-    if (currentIndex > 0) {
-      const prevStudent = sortedStudents[currentIndex - 1]
-      const prevStudentAnswer = answerSheets.find(
-        (a: any) => a.student.id === prevStudent.id,
-      )
-      if (prevStudentAnswer) {
-        setSelectedAnswers(new Set([prevStudentAnswer.id]))
-      }
-    }
-  }, [students, selectedAnswers, answerSheets, setSelectedAnswers])
+  // Individual navigation callbacks and effects will be defined after students is available
 
   // 採点データ管理hook
   const {
@@ -220,7 +145,7 @@ export default function ScoringMainView() {
     setCurrentStudentIndex: setCurrentStudentIndex,
     currentQuestionIndex: currentQuestionIndex,
     setCurrentQuestionIndex: setCurrentQuestionIndex,
-    answerSheets,
+    studentAnswers: studentAnswers,
     questionRegions,
   })
 
@@ -240,7 +165,7 @@ export default function ScoringMainView() {
     handleToggleFilter,
     handleToggleFilterByScoreKey,
   } = useScoringFilter({
-    answerSheets,
+    studentAnswers,
     questionRegions,
     currentQuestionIndex: currentQuestionIndex,
     scoringData,
@@ -248,6 +173,97 @@ export default function ScoringMainView() {
     setSelectedAnswers: setSelectedAnswers,
     project,
   })
+
+  // 個別表示用の生徒データ（studentAnswersから抽出、useMemoで安定化）
+  const students = useMemo(() => {
+    if (!studentAnswers || studentAnswers.length === 0) return []
+    
+    // studentAnswersから重複を除いた生徒データを抽出
+    const uniqueStudents = new Map()
+    
+    studentAnswers.forEach(sheet => {
+      if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
+        uniqueStudents.set(sheet.student.id, {
+          id: sheet.student.id,
+          studentId: sheet.student.studentId,
+          lastName: sheet.student.lastName,
+          firstName: sheet.student.firstName,
+          customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
+        })
+      }
+    })
+    
+    // customOrderでソートして配列に変換
+    return Array.from(uniqueStudents.values()).sort(
+      (a, b) => a.customOrder - b.customOrder
+    )
+  }, [studentAnswers])
+
+  // 個別表示モードで最初の生徒を自動選択
+  useEffect(() => {
+    if (
+      gradingMode === "individual" &&
+      students.length > 0 &&
+      selectedAnswers.size === 0
+    ) {
+      const sortedStudents = [...students].sort(
+        (a, b) => a.customOrder - b.customOrder,
+      )
+      handleStudentChange(sortedStudents[0].id)
+    }
+  }, [gradingMode, students, selectedAnswers.size, handleStudentChange])
+
+  const handleIndividualNextStudent = useCallback(() => {
+    if (selectedAnswers.size === 0) return
+
+    const currentAnswerId = Array.from(selectedAnswers)[0]
+    const currentAnswer = studentAnswers.find(
+      (a: any) => a.id === currentAnswerId,
+    )
+    if (!currentAnswer) return
+
+    const sortedStudents = [...students].sort(
+      (a, b) => a.customOrder - b.customOrder,
+    )
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentAnswer.student.id,
+    )
+    if (currentIndex < sortedStudents.length - 1) {
+      const nextStudent = sortedStudents[currentIndex + 1]
+      const nextStudentAnswer = studentAnswers.find(
+        (a: any) => a.student.id === nextStudent.id,
+      )
+      if (nextStudentAnswer) {
+        setSelectedAnswers(new Set([nextStudentAnswer.id]))
+      }
+    }
+  }, [students, selectedAnswers, studentAnswers, setSelectedAnswers])
+
+  const handleIndividualPrevStudent = useCallback(() => {
+    if (selectedAnswers.size === 0) return
+
+    const currentAnswerId = Array.from(selectedAnswers)[0]
+    const currentAnswer = studentAnswers.find(
+      (a: any) => a.id === currentAnswerId,
+    )
+    if (!currentAnswer) return
+
+    const sortedStudents = [...students].sort(
+      (a, b) => a.customOrder - b.customOrder,
+    )
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentAnswer.student.id,
+    )
+    if (currentIndex > 0) {
+      const prevStudent = sortedStudents[currentIndex - 1]
+      const prevStudentAnswer = studentAnswers.find(
+        (a: any) => a.student.id === prevStudent.id,
+      )
+      if (prevStudentAnswer) {
+        setSelectedAnswers(new Set([prevStudentAnswer.id]))
+      }
+    }
+  }, [students, selectedAnswers, studentAnswers, setSelectedAnswers])
 
   // ナビゲーション管理hook
   const {
@@ -263,7 +279,7 @@ export default function ScoringMainView() {
     toggleViewMode,
     handleGridNavigation,
   } = useScoringNavigation({
-    answerSheetsLength: answerSheets.length,
+    answerSheetsLength: studentAnswers.length,
     questionRegionsLength: questionRegions.length,
     currentStudentIndex: currentStudentIndex,
     setCurrentStudentIndex: setCurrentStudentIndex,
@@ -340,13 +356,13 @@ export default function ScoringMainView() {
   const currentStudentId = useMemo(() => {
     if (selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      const selectedAnswer = answerSheets.find(
+      const selectedAnswer = studentAnswers.find(
         (a: any) => a.id === selectedAnswerId,
       )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedAnswers, answerSheets])
+  }, [selectedAnswers, studentAnswers])
 
   // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
   useIndividualModeKeyboard({
@@ -400,11 +416,11 @@ export default function ScoringMainView() {
   }
 
   // エラー状態
-  if (!project || answerSheets.length === 0 || questionRegions.length === 0) {
+  if (!project || studentAnswers.length === 0 || questionRegions.length === 0) {
     return (
       <ScoringErrorState
         project={project}
-        answerSheetsLength={answerSheets.length}
+        answerSheetsLength={studentAnswers.length}
         questionRegionsLength={questionRegions.length}
         projectId={projectId}
       />
@@ -443,9 +459,9 @@ export default function ScoringMainView() {
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
           currentQuestion={currentQuestion}
-          allAnswerSheets={answerSheets}
+          allAnswerSheets={studentAnswers}
           onScoringDataSelect={(dataId, isSelected) =>
-            handleAnswerSelect(dataId, isSelected, answerSheets)
+            handleAnswerSelect(dataId, isSelected, studentAnswers)
           }
           onScoringDataScore={handleBatchScoreWithProgress}
           currentQuestionIndex={currentQuestionIndex}
@@ -475,7 +491,7 @@ export default function ScoringMainView() {
             modifierKeyLabel={modifierKeyLabel}
             layoutDirection={layoutDirection}
             visibleAnswersCount={visibleAnswers.size}
-            totalAnswersCount={answerSheets.length}
+            totalAnswersCount={studentAnswers.length}
             onLayoutDirectionChange={setLayoutDirection}
             onGridNavigation={handleGridNavigation}
             onRefreshView={handleRefreshFilter}
@@ -487,7 +503,7 @@ export default function ScoringMainView() {
             students={students}
             onStudentChange={handleStudentChange}
             selectedAnswers={selectedAnswers}
-            allAnswerSheets={answerSheets}
+            allAnswerSheets={studentAnswers}
             scoringBehavior={scoringBehavior}
             onScoringBehaviorChange={setScoringBehavior}
           />

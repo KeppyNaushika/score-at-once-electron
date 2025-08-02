@@ -2,14 +2,14 @@ import { useCallback } from "react"
 import { toast } from "sonner"
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type {
-  AnswerSheet,
+  StudentAnswer,
   QuestionRegion,
   ScoringDataRecord,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 
 interface UseIndividualScoringProps {
-  answerSheets: AnswerSheet[]
+  studentAnswers: StudentAnswer[]
   questionRegions: QuestionRegion[]
   currentStudentIndex: number
   currentQuestionIndex: number
@@ -22,7 +22,7 @@ interface UseIndividualScoringProps {
 }
 
 export function useIndividualScoring({
-  answerSheets,
+  studentAnswers,
   questionRegions,
   currentStudentIndex,
   currentQuestionIndex,
@@ -35,7 +35,7 @@ export function useIndividualScoring({
 }: UseIndividualScoringProps) {
   const handleSetScore = useCallback(
     async (type: ScoringStatus) => {
-      const currentAnswerSheet = answerSheets[currentStudentIndex]
+      const currentAnswerSheet = studentAnswers[currentStudentIndex]
       const currentQuestion = questionRegions[currentQuestionIndex]
 
       if (!currentAnswerSheet || !currentQuestion || !currentUserId) {
@@ -70,7 +70,7 @@ export function useIndividualScoring({
           // 部分点の場合は入力ダイアログを表示（簡易実装）
           const inputScore = prompt(
             `部分点を入力してください (0-${currentQuestion.points}):`,
-            currentScore?.score?.toString() || "0",
+            currentScore?.partialScore?.toString() || "0",
           )
           if (inputScore === null) return
           const parsedScore = parseInt(inputScore)
@@ -85,7 +85,7 @@ export function useIndividualScoring({
           newScore = parsedScore
           break
         case "pending":
-          newScore = currentScore?.score || 0
+          newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : 0
           break
       }
 
@@ -96,12 +96,10 @@ export function useIndividualScoring({
           const updateData = {
             partialScore: newScore !== null ? newScore : undefined,
             status: status,
-            comment: currentScore.comment || "",
           }
           const result = await window.electronAPI.updateQuestionScore(
             currentScore.id,
             updateData,
-            currentScore.version,
           )
 
           if ((result as any).success || result) {
@@ -109,12 +107,10 @@ export function useIndividualScoring({
               ...prev,
               [key]: {
                 ...currentScore,
-                score: newScore,
+                partialScore: newScore !== null ? newScore : null,
                 status,
-                version:
-                  (result as any).score?.version || 0,
                 updatedAt: new Date(
-                  (result as any).score?.updatedAt || result.updatedAt,
+                  (result as any).score?.updatedAt || result.updatedAt || Date.now(),
                 ),
               },
             }))
@@ -122,7 +118,7 @@ export function useIndividualScoring({
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
             if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
-                if (currentStudentIndex < answerSheets.length - 1) {
+                if (currentStudentIndex < studentAnswers.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
@@ -149,28 +145,25 @@ export function useIndividualScoring({
           const result = await window.electronAPI.createQuestionScore(scoreData)
 
           if ((result as any).success || result.id) {
+            const createdScore = (result as any).score || result
             setScoringData((prev) => ({
               ...prev,
               [key]: {
-                id: (result as any).score?.id || result.id,
-                questionId: currentQuestion.id,
-                score: newScore,
-                maxScore: currentQuestion.points,
+                id: createdScore.id,
+                cropRegionId: currentQuestion.id,
+                studentId: currentAnswerSheet.studentId,
+                partialScore: newScore !== null ? newScore : null,
                 status,
-                comment: "",
                 scoredByUserId: currentUserId,
-                version:
-                  (result as any).score?.version || 0,
-                updatedAt: new Date(
-                  (result as any).score?.updatedAt || result.updatedAt,
-                ),
+                createdAt: new Date(createdScore.createdAt || Date.now()),
+                updatedAt: new Date(createdScore.updatedAt || Date.now()),
               },
             }))
 
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
             if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
-                if (currentStudentIndex < answerSheets.length - 1) {
+                if (currentStudentIndex < studentAnswers.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
@@ -205,7 +198,7 @@ export function useIndividualScoring({
       }
     },
     [
-      answerSheets,
+      studentAnswers,
       questionRegions,
       currentStudentIndex,
       currentQuestionIndex,

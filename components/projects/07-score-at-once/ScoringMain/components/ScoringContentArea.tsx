@@ -11,16 +11,16 @@ import type { ScoringData } from "@/components/projects/07-score-at-once/types/s
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
   
-  // 採点データ管理
+  // 採点データ管理（両View共通）
   allScoringData: ScoringData[]
   filteredScoringDataIds: Set<string>
   selectedScoringDataIds: Set<string>
   
-  // 共通設問情報
+  // 共通設問情報（両View共通）
+  currentQuestionIndex: number
   currentQuestion?: any
-  allAnswerSheets?: any[] // Individual表示の複数ページ表示用（後で整理予定）
   
-  // 操作関数
+  // 操作関数（両View共通）
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
   onScoringDataScore: (
     statusOrAnswerIds: any,
@@ -28,12 +28,17 @@ interface ScoringContentAreaProps {
     partialScore?: any,
   ) => void
   
-  // Grid表示設定
-  currentQuestionIndex: number
+  // GridView設定
   layoutDirection: LayoutDirection
   itemsPerLine: number[]
   autoScroll: boolean
   showStudentNames: boolean
+  
+  // IndividualView設定
+  allAnswerSheets?: any[] // Individual表示の複数ページ表示用（後で整理予定）
+  
+  // 生徒データコールバック（個別表示でサイドパネルに渡すため）
+  onStudentsExtracted?: (students: any[]) => void
 }
 
 export function ScoringContentArea({
@@ -41,76 +46,61 @@ export function ScoringContentArea({
   allScoringData,
   filteredScoringDataIds,
   selectedScoringDataIds,
+  currentQuestionIndex,
   currentQuestion,
-  allAnswerSheets,
   onScoringDataSelect,
   onScoringDataScore,
-  currentQuestionIndex,
   layoutDirection,
   itemsPerLine,
   autoScroll,
   showStudentNames,
+  allAnswerSheets,
 }: ScoringContentAreaProps) {
-  // 現在選択中の採点データを取得（Individual表示用）
-  const currentScoringData = selectedScoringDataIds.size > 0 
-    ? allScoringData.find(data => selectedScoringDataIds.has(data.id))
+  // 個別表示時：selectedの最初の要素、または存在しないときはallの最初の要素
+  const currentScoringDataId = gradingMode === "individual"
+    ? (selectedScoringDataIds.size > 0 
+        ? Array.from(selectedScoringDataIds)[0]
+        : allScoringData.length > 0 
+          ? allScoringData[0].id 
+          : null)
     : null
-
-  // フィルタリングされた採点データを取得（Grid表示用）
-  const filteredScoringData = allScoringData
-    .filter(data => filteredScoringDataIds.has(data.id))
-    .map(data => ({
-      ...data,
-      isSelected: selectedScoringDataIds.has(data.id)
-    }))
 
   return (
     <div className="min-h-0 flex-1">
       {gradingMode === "individual" ? (
         <div className="p-6">
-          {currentScoringData ? (
-            <AnswerIndividualView
-              answerSheet={currentScoringData}
-              currentQuestion={currentQuestion}
-              allAnswerSheets={allAnswerSheets}
-              selectedAnswers={selectedScoringDataIds}
-              onAnswerScore={(
-                statusOrAnswerIds,
-                statusOrPartialScore,
-                partialScore,
-              ) => {
-                // 個別表示モードでは選択されている答案のみを対象にする
-                if (gradingMode === "individual" && selectedScoringDataIds.size > 0) {
-                  const selectedAnswerId = Array.from(selectedScoringDataIds)[0]
-                  onScoringDataScore(
-                    [selectedAnswerId],
-                    statusOrPartialScore,
-                    partialScore,
-                  )
-                } else {
-                  onScoringDataScore(
-                    statusOrAnswerIds,
-                    statusOrPartialScore,
-                    partialScore,
-                  )
-                }
-              }}
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gray-50 text-gray-500">
-              生徒を選択してください
-            </div>
-          )}
+          <AnswerIndividualView
+            allScoringData={allScoringData}
+            currentScoringDataId={currentScoringDataId}
+            currentQuestionIndex={currentQuestionIndex}
+            currentQuestion={currentQuestion}
+            allAnswerSheets={allAnswerSheets}
+            onScoringDataScore={(
+              statusOrAnswerIds,
+              statusOrPartialScore,
+              partialScore,
+            ) => {
+              // 個別表示モードでは現在の答案のみを対象にする
+              if (currentScoringDataId) {
+                onScoringDataScore(
+                  [currentScoringDataId],
+                  statusOrPartialScore,
+                  partialScore,
+                )
+              }
+            }}
+          />
         </div>
       ) : (
         <div className="p-6">
           <AnswerGridView
-            answers={filteredScoringData}
+            allScoringData={allScoringData}
+            filteredScoringDataIds={filteredScoringDataIds}
+            selectedScoringDataIds={selectedScoringDataIds}
             currentQuestionIndex={currentQuestionIndex}
             layoutDirection={layoutDirection}
-            onAnswerSelect={onScoringDataSelect}
-            onAnswerScore={onScoringDataScore}
-            selectedAnswers={selectedScoringDataIds}
+            onScoringDataSelect={onScoringDataSelect}
+            onScoringDataScore={onScoringDataScore}
             itemsPerRow={itemsPerLine}
             autoScroll={autoScroll}
             showStudentNames={showStudentNames}

@@ -39,7 +39,7 @@ export function IndividualModePanel({
     return ""
   }, [selectedAnswers, allAnswerSheets])
   return (
-    <div className="w-80 bg-gray-50 border-l p-4 space-y-4">
+    <>
       <StudentAnswerPanel
         students={students}
         currentStudentId={currentStudentId}
@@ -50,6 +50,6 @@ export function IndividualModePanel({
         behavior={scoringBehavior}
         onBehaviorChange={onScoringBehaviorChange}
       />
-    </div>
+    </>
   )
 }

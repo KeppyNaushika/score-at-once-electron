@@ -1,5 +1,5 @@
 import type {
-  AnswerSheet,
+  StudentAnswer,
   QuestionRegion,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import type {
@@ -12,7 +12,7 @@ import type {
  */
 export function calculateQuestionProgress(
   questionRegions: QuestionRegion[],
-  answerSheets: AnswerSheet[],
+  studentAnswers: StudentAnswer[],
   scoringData: ScoringDataRecord
 ): QuestionProgress {
   const progress: QuestionProgress = {}
@@ -23,15 +23,15 @@ export function calculateQuestionProgress(
       ? (question as any).projectPage?.pageNumber
       : undefined
 
-    // 同じページ番号のAnswerSheetのみを対象とする
-    const relevantAnswerSheets = answerSheets.filter(
+    // 同じページ番号のStudentAnswerのみを対象とする
+    const relevantStudentAnswers = studentAnswers.filter(
       (sheet) => sheet.pageNumber === questionPageNumber,
     )
 
-    const totalAnswers = relevantAnswerSheets.length
+    const totalAnswers = relevantStudentAnswers.length
     let gradedAnswers = 0
 
-    relevantAnswerSheets.forEach((sheet) => {
+    relevantStudentAnswers.forEach((sheet) => {
       const key = `${sheet.studentId}-${question.id}`
       const scoreData = scoringData[key]
 

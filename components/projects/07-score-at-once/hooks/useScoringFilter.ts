@@ -1,12 +1,12 @@
 import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
 import { useCallback, useEffect, useState, useMemo, useRef } from "react"
 import type {
-  AnswerSheet,
+  StudentAnswer,
   QuestionRegion,
-  ScoringData as OldScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
+import type { ClientQuestionScore } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 
 interface FilterSettings {
   unscored: boolean
@@ -18,17 +18,17 @@ interface FilterSettings {
 }
 
 interface UseScoringFilterProps {
-  answerSheets: AnswerSheet[]
+  studentAnswers: StudentAnswer[]
   questionRegions: QuestionRegion[]
   currentQuestionIndex: number
-  scoringData: Record<string, OldScoringData>
+  scoringData: Record<string, ClientQuestionScore>
   selectedAnswers: Set<string>
   setSelectedAnswers: (answers: Set<string>) => void
   project: any
 }
 
 export function useScoringFilter({
-  answerSheets,
+  studentAnswers,
   questionRegions,
   currentQuestionIndex,
   scoringData,
@@ -62,7 +62,7 @@ export function useScoringFilter({
       const scoreData = scoringData[key]
 
       if (!scoreData) return "unscored"
-      return scoreData.status
+      return scoreData.status as ScoringStatus
     },
     [scoringData],
   )
@@ -85,7 +85,7 @@ export function useScoringFilter({
       const targetPageNumber = projectPage?.pageNumber || 1
 
       // 最適化: ページフィルタリングを先に実行
-      for (const sheet of answerSheets) {
+      for (const sheet of studentAnswers) {
         if (sheet.pageNumber !== targetPageNumber) continue
 
         const key = `${sheet.studentId}-${currentQuestion.id}`
@@ -104,7 +104,7 @@ export function useScoringFilter({
       setVisibleAnswers(newVisibleAnswers)
     },
     [
-      answerSheets,
+      studentAnswers,
       currentQuestion,
       filterSettings,
       project?.projectPages,
@@ -115,12 +115,12 @@ export function useScoringFilter({
 
   // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
   useEffect(() => {
-    if (answerSheets.length > 0 && questionRegions.length > 0) {
+    if (studentAnswers.length > 0 && questionRegions.length > 0) {
       // 表示対象を更新（選択はクリアしない）
       updateVisibleAnswers()
     }
   }, [
-    answerSheets.length,
+    studentAnswers.length,
     questionRegions.length,
     currentQuestionIndex,
     updateVisibleAnswers,
@@ -213,7 +213,7 @@ export function useScoringFilter({
     const targetPageNumber = projectPage?.pageNumber || 1
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
-    const pageFilteredSheets = answerSheets.filter(
+    const pageFilteredSheets = studentAnswers.filter(
       (sheet) => sheet.pageNumber === targetPageNumber,
     )
 
@@ -248,7 +248,7 @@ export function useScoringFilter({
         studentId: sheet.student.studentId,
         studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
         imageUrl: sheet.imagePath ? `appimg://${sheet.imagePath}` : "",
-        currentScore: scoreData?.score ?? undefined,
+        currentScore: scoreData?.partialScore ? Number(scoreData.partialScore) : undefined,
         maxScore: currentQuestion.points,
         status: (scoreData?.status || "unscored") as ScoringStatus,
         questionRegion: currentQuestion, // 採点領域情報を追加
@@ -265,7 +265,7 @@ export function useScoringFilter({
   }, [
     currentQuestion,
     project?.projectPages,
-    answerSheets,
+    studentAnswers,
     scoringData,
     getMasterAnswerData,
   ])
