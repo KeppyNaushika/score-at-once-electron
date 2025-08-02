@@ -1,6 +1,6 @@
 import { useCallback } from "react"
 import { toast } from "sonner"
-import type { ScoringStatus } from "@/components/projects/07-score-at-once/types"
+import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type {
   AnswerSheet,
   QuestionRegion,

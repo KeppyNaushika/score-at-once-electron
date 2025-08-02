@@ -1,4 +1,4 @@
-import type { ScoringData, ScoringStatus } from "@/components/projects/07-score-at-once/types"
+import type { ScoringData, ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type { ScoringDataRecord } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 
 /**

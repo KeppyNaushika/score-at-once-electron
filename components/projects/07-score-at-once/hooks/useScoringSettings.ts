@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 
 export function useScoringSettings() {
-  const [itemsPerRow, setItemsPerRow] = useState([5])
+  const [itemsPerLine, setItemsPerLine] = useState([5])
   const [autoScroll, setAutoScroll] = useState(true)
   const [showStudentNames, setShowStudentNames] = useState(true)
 
@@ -9,9 +9,9 @@ export function useScoringSettings() {
   useEffect(() => {
     const loadSettings = () => {
       try {
-        const savedItemsPerRow = localStorage.getItem("scoring-itemsPerRow")
-        if (savedItemsPerRow) {
-          setItemsPerRow(JSON.parse(savedItemsPerRow))
+        const savedItemsPerLine = localStorage.getItem("scoring-itemsPerLine")
+        if (savedItemsPerLine) {
+          setItemsPerLine(JSON.parse(savedItemsPerLine))
         }
 
         const savedAutoScroll = localStorage.getItem("scoring-autoScroll")
@@ -34,9 +34,9 @@ export function useScoringSettings() {
   }, [])
 
   // 設定を保存する関数
-  const saveItemsPerRow = (value: number[]) => {
-    setItemsPerRow(value)
-    localStorage.setItem("scoring-itemsPerRow", JSON.stringify(value))
+  const saveItemsPerLine = (value: number[]) => {
+    setItemsPerLine(value)
+    localStorage.setItem("scoring-itemsPerLine", JSON.stringify(value))
   }
 
   const saveAutoScroll = (value: boolean) => {
@@ -50,10 +50,10 @@ export function useScoringSettings() {
   }
 
   return {
-    itemsPerRow,
+    itemsPerLine,
     autoScroll,
     showStudentNames,
-    setItemsPerRow: saveItemsPerRow,
+    setItemsPerLine: saveItemsPerLine,
     setAutoScroll: saveAutoScroll,
     setShowStudentNames: saveShowStudentNames,
   }

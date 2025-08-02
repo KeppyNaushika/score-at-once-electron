@@ -9,10 +9,9 @@ interface UseScoringNavigationProps {
   setCurrentQuestionIndex: (index: number) => void
   selectedAnswers: Set<string>
   setSelectedAnswers: (answers: Set<string>) => void
-  gridSize: { columns: number; rows: number }
   layoutDirection: "right-down" | "left-down" | "down-right" | "down-left"
   getGridAnswerData: () => any[]
-  effectiveColumns?: number // 実際の表示列数
+  effectiveColumns?: number // 実際の表示数（行あたり/列あたり）
 }
 
 export function useScoringNavigation({
@@ -24,7 +23,6 @@ export function useScoringNavigation({
   setCurrentQuestionIndex,
   selectedAnswers,
   setSelectedAnswers,
-  gridSize,
   layoutDirection,
   getGridAnswerData,
   effectiveColumns,
@@ -59,13 +57,47 @@ export function useScoringNavigation({
     }
   }, [currentStudentIndex, setCurrentStudentIndex])
 
-  // 画像表示関連の関数
+  // 画像表示関連の関数（表示されている部分の中央を基準）
   const handleZoomIn = useCallback(() => {
-    setImageZoom((prev) => Math.min(prev * 1.2, 5.0))
+    setImageZoom((prevZoom) => {
+      const newZoom = Math.min(prevZoom * 1.2, 5.0)
+      const zoomRatio = newZoom / prevZoom
+      
+      // 中央を基準にした位置調整（仮想的な表示領域の中央座標使用）
+      const viewportCenterX = 400 // 仮想的な表示領域幅の半分
+      const viewportCenterY = 300 // 仮想的な表示領域高さの半分
+      
+      const centerAdjustX = viewportCenterX * (1 - zoomRatio)
+      const centerAdjustY = viewportCenterY * (1 - zoomRatio)
+      
+      setImagePosition(prevPos => ({
+        x: prevPos.x * zoomRatio + centerAdjustX,
+        y: prevPos.y * zoomRatio + centerAdjustY,
+      }))
+      
+      return newZoom
+    })
   }, [])
 
   const handleZoomOut = useCallback(() => {
-    setImageZoom((prev) => Math.max(prev / 1.2, 0.1))
+    setImageZoom((prevZoom) => {
+      const newZoom = Math.max(prevZoom / 1.2, 0.1)
+      const zoomRatio = newZoom / prevZoom
+      
+      // 中央を基準にした位置調整（仮想的な表示領域の中央座標使用）
+      const viewportCenterX = 400 // 仮想的な表示領域幅の半分
+      const viewportCenterY = 300 // 仮想的な表示領域高さの半分
+      
+      const centerAdjustX = viewportCenterX * (1 - zoomRatio)
+      const centerAdjustY = viewportCenterY * (1 - zoomRatio)
+      
+      setImagePosition(prevPos => ({
+        x: prevPos.x * zoomRatio + centerAdjustX,
+        y: prevPos.y * zoomRatio + centerAdjustY,
+      }))
+      
+      return newZoom
+    })
   }, [])
 
   const handleResetZoom = useCallback(() => {
@@ -102,13 +134,13 @@ export function useScoringNavigation({
 
       if (totalAnswers === 0) return
 
-      // effectiveColumnsから実際の1行あたりの表示件数を取得
-      let actualColumns = effectiveColumns || gridSize.columns
+      // effectiveColumnsから実際の1行/列あたりの表示件数を取得
+      let actualItemsPerLine = effectiveColumns || 4
 
       // effectiveColumnsが正しく設定されていない場合のフォールバック
       if (!effectiveColumns || effectiveColumns <= 0) {
         try {
-          const stored = localStorage.getItem("scoring-itemsPerRow")
+          const stored = localStorage.getItem("scoring-itemsPerLine")
           if (stored) {
             const parsed = JSON.parse(stored)
             if (
@@ -118,16 +150,16 @@ export function useScoringNavigation({
               parsed[0] >= 1 &&
               parsed[0] <= 10
             ) {
-              actualColumns = parsed[0]
+              actualItemsPerLine = parsed[0]
             }
           }
         } catch (error) {
           // localStorageエラーの場合はfallback値を使用
-          actualColumns = gridSize.columns
+          actualItemsPerLine = 4
         }
       }
 
-      const cols = Math.max(1, actualColumns) // 実際の表示列数を使用、最低1列は確保
+      const cols = Math.max(1, actualItemsPerLine) // 実際の表示数を使用、最低1は確保
 
       // 現在選択されている答案のインデックスを取得
       let currentIndex = -1
@@ -200,8 +232,8 @@ export function useScoringNavigation({
           break
 
         case "down-right": // 下→右方向
-          // 列表示では1列あたりの表示件数（effectiveColumns）が実際の列の高さ（行数）となる
-          const columnsForDownRight = actualColumns // 1列あたりの表示件数
+          // 列表示では1列あたりの表示件数が実際の列の高さ（行数）となる
+          const columnsForDownRight = actualItemsPerLine // 1列あたりの表示件数
           switch (key) {
             case "a": // 左に移動（前の列、列境界を超えて移動可能）
               newIndex = currentIndex - columnsForDownRight
@@ -225,8 +257,8 @@ export function useScoringNavigation({
           break
 
         case "down-left": // 下→左方向
-          // 列表示では1列あたりの表示件数（effectiveColumns）が実際の列の高さ（行数）となる
-          const columnsForDownLeft = actualColumns // 1列あたりの表示件数
+          // 列表示では1列あたりの表示件数が実際の列の高さ（行数）となる
+          const columnsForDownLeft = actualItemsPerLine // 1列あたりの表示件数
           switch (key) {
             case "d": // 右に移動（下→左では前の列、境界を超えて移動可能）
               newIndex = currentIndex - columnsForDownLeft
@@ -276,7 +308,6 @@ export function useScoringNavigation({
     [
       answerSheetsLength,
       getGridAnswerData,
-      gridSize,
       selectedAnswers,
       setSelectedAnswers,
       layoutDirection,

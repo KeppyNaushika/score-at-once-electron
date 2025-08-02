@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import type { QuestionRegion, ScoringStatus } from "@/components/projects/07-score-at-once/types"
+import type { QuestionRegion, ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>

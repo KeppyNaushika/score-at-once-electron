@@ -5,7 +5,7 @@ import type {
   QuestionRegion,
   ScoringData,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/types"
+} from "@/components/projects/07-score-at-once/ScoringMain/types"
 
 interface FilterSettings {
   unscored: boolean
