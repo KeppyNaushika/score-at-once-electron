@@ -51,6 +51,14 @@ export default function QuestionNavigator({
   const currentIndex = currentCropRegion
     ? questionRegions.findIndex((q) => q.id === currentCropRegion.id)
     : -1
+
+  // デバッグ情報を追加
+  console.log("QuestionNavigator Debug:", {
+    questionRegionsLength: questionRegions?.length,
+    currentCropRegionId: currentCropRegion?.id,
+    questionProgress: questionProgress,
+    currentIndex
+  })
   return (
     <TooltipProvider delayDuration={300}>
       <SidePanelSection icon={FileText} title="設問">

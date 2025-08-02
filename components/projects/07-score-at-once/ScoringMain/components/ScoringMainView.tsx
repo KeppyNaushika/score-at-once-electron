@@ -433,6 +433,15 @@ export default function ScoringMainView() {
   // 設問別進捗を計算
   const questionProgress = calculateQuestionProgress()
 
+  // デバッグ情報を追加
+  console.log("ScoringMainView Debug Info:", {
+    pageImagesLength: pageImages?.length,
+    cropRegionsLength: cropRegions?.length,
+    scoringDataKeys: Object.keys(scoringData || {}).length,
+    currentCropRegionId: currentCropRegionId,
+    questionProgress: questionProgress,
+  })
+
   // ローディング状態
   if (loading) {
     return <ScoringLoadingState />

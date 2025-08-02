@@ -87,7 +87,7 @@ export function useBatchScoring({
         const pageImage = pageImages.find((image) => image.id === answerId)
         if (!pageImage) continue
 
-        const key = `${pageImage.studentId}-${currentCropRegion.id}`
+        const key = `${pageImage.student?.studentId || ""}-${currentCropRegion.id}`
         const currentScore = scoringData[key]
 
         let newScore: number | null = 0

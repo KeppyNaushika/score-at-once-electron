@@ -87,19 +87,19 @@ export function useScoringFilter({
       const targetPageNumber = projectPage?.pageNumber || 1
 
       // 最適化: ページフィルタリングを先に実行
-      for (const sheet of pageImages) {
-        if (sheet.projectPage?.pageNumber !== targetPageNumber) continue
+      for (const pageImage of pageImages) {
+        if (pageImage.projectPage?.pageNumber !== targetPageNumber) continue
 
-        const key = `${sheet.studentId}-${currentCropRegion.id}`
+        const key = `${pageImage.student?.studentId || ""}-${currentCropRegion.id}`
         const scoreData = scoringData[key]
         const status = scoreData?.status || "unscored"
 
         // フィルター条件チェック（最近採点答案は強制表示）
         if (
           activeFilterSettings[status as keyof typeof activeFilterSettings] ||
-          recentlyScoredAnswers.has(sheet.id)
+          recentlyScoredAnswers.has(pageImage.id)
         ) {
-          newVisibleAnswers.add(sheet.id)
+          newVisibleAnswers.add(pageImage.id)
         }
       }
 
@@ -218,7 +218,7 @@ export function useScoringFilter({
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
     const pageFilteredSheets = pageImages.filter(
-      (sheet) => sheet.projectPage?.pageNumber === targetPageNumber,
+      (pageImage) => pageImage.projectPage?.pageNumber === targetPageNumber,
     )
 
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
@@ -244,15 +244,17 @@ export function useScoringFilter({
     })
 
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
-      (sheet) => {
-        const key = `${sheet.studentId}-${currentCropRegion.id}`
+      (pageImage) => {
+        const key = `${pageImage.student?.studentId || ""}-${currentCropRegion.id}`
         const scoreData = scoringData[key]
 
         return {
-          id: sheet.id,
-          studentId: sheet.student?.studentId || "",
-          studentName: `${sheet.student?.lastName || ""} ${sheet.student?.firstName || ""}`,
-          imageUrl: sheet.imagePath ? `appimg://${sheet.imagePath}` : "",
+          id: pageImage.id,
+          studentId: pageImage.student?.studentId || "",
+          studentName: `${pageImage.student?.lastName || ""} ${pageImage.student?.firstName || ""}`,
+          imageUrl: pageImage.imagePath
+            ? `appimg://${pageImage.imagePath}`
+            : "",
           currentScore: scoreData?.partialScore
             ? Number(scoreData.partialScore)
             : undefined,

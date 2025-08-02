@@ -48,10 +48,21 @@ export function useScoringDataLoader(
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
-        setPageImages(
-          (answersResult.studentAnswers ||
-            []) as unknown as PageImageWithProjectStudents[],
-        )
+        
+        const pageImagesData = (answersResult.studentAnswers ||
+          []) as unknown as PageImageWithProjectStudents[]
+        
+        console.log("useScoringDataLoader - pageImages loaded:", {
+          success: answersResult.success,
+          length: pageImagesData.length,
+          sampleData: pageImagesData.slice(0, 2).map(pi => ({
+            id: pi.id,
+            studentId: pi.studentId,
+            pageNumber: pi.projectPage?.pageNumber
+          }))
+        })
+        
+        setPageImages(pageImagesData)
 
         // 設問領域データの読み込み
         const regionsResult =
@@ -63,6 +74,18 @@ export function useScoringDataLoader(
         const cropRegions = regionsResult.filter(
           (region: any) => region.type === "QUESTION_ANSWER",
         ) as CropRegionWithProjectPage[]
+        
+        console.log("useScoringDataLoader - cropRegions loaded:", {
+          totalRegions: regionsResult.length,
+          questionAnswerRegions: cropRegions.length,
+          sampleRegions: cropRegions.slice(0, 2).map(cr => ({
+            id: cr.id,
+            label: cr.label,
+            type: cr.type,
+            pageNumber: cr.projectPage?.pageNumber
+          }))
+        })
+        
         setCropRegions(cropRegions)
 
         // ユーザーIDの取得

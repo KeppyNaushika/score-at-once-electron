@@ -15,13 +15,32 @@ export function calculateQuestionProgress(
 ): QuestionProgress {
   const progress: QuestionProgress = {}
 
+  // デバッグ情報を追加
+  console.log("calculateQuestionProgress input:", {
+    cropRegionsLength: cropRegions?.length || 0,
+    pageImagesLength: pageImages?.length || 0,
+    scoringDataKeys: Object.keys(scoringData || {}).length,
+    cropRegions: cropRegions?.map(cr => ({
+      id: cr.id,
+      label: cr.label,
+      pageNumber: cr.projectPage?.pageNumber
+    })),
+    pageImages: pageImages?.map(pi => ({
+      id: pi.id,
+      studentId: pi.studentId,
+      pageNumber: pi.projectPage?.pageNumber
+    })),
+  })
+
   cropRegions.forEach((cropRegion) => {
     // このCropRegionが属するProjectPageのページ番号を取得
     const cropRegionPageNumber = cropRegion.projectPage?.pageNumber
 
-    // 同じページ番号のPageImageのみを対象とする
+    // 同じページ番号のPageImageのみを対象とする（studentIdが有効なもののみ）
     const relevantPageImages = pageImages.filter(
-      (pageImage) => pageImage.projectPage?.pageNumber === cropRegionPageNumber,
+      (pageImage) => 
+        pageImage.projectPage?.pageNumber === cropRegionPageNumber &&
+        pageImage.studentId // studentIdが存在する場合のみ
     )
 
     const totalAnswers = relevantPageImages.length
@@ -45,7 +64,22 @@ export function calculateQuestionProgress(
       gradedAnswers,
       percentage,
     }
+
+    // 各設問の詳細ログ
+    console.log(`Question ${cropRegion.label || cropRegion.id}:`, {
+      cropRegionPageNumber,
+      relevantPageImagesCount: relevantPageImages.length,
+      totalAnswers,
+      gradedAnswers,
+      percentage,
+      keys: relevantPageImages.map(pi => `${pi.studentId}-${cropRegion.id}`),
+      scoreDataForKeys: relevantPageImages.map(pi => {
+        const key = `${pi.studentId}-${cropRegion.id}`
+        return { key, scoreData: scoringData[key] }
+      })
+    })
   })
 
+  console.log("calculateQuestionProgress result:", progress)
   return progress
 }
