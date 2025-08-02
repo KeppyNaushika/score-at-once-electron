@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import type { ScoringBehavior } from "../individual-mode/ScoringBehaviorSelector"
+import type { ScoringBehavior } from "../components/ScoringBehaviorSelector"
 
 interface UseIndividualModeKeyboardProps {
   // 基本データ
