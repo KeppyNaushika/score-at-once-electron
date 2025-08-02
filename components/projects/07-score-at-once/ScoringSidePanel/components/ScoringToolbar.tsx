@@ -1,10 +1,9 @@
 "use client"
 
-import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 import { getKeyboardShortcuts } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import type { ScoringStatus } from "@/components/projects/07-score-at-once/types/shared.types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
   TooltipContent,
@@ -170,7 +169,9 @@ export default function ScoringToolbar({
       <SidePanelSection
         icon={Target}
         title="採点"
-        badge={selectedAnswersCount > 0 ? `${selectedAnswersCount}件` : undefined}
+        badge={
+          selectedAnswersCount > 0 ? `${selectedAnswersCount}件` : undefined
+        }
         rightElement={
           partialScoreInput ? (
             <Badge
@@ -225,65 +226,70 @@ export default function ScoringToolbar({
       </SidePanelSection>
 
       {/* フィルターセクション - グリッド表示時のみ */}
-      {gradingMode === "grid" && filterSettings && onToggleFilter && onRefreshFilter && (
-        <SidePanelSection
-          icon={RefreshCw}
-          title="フィルター"
-          rightElement={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRefreshFilter}
-              className="h-6 px-2 text-xs"
-            >
-              <RefreshCw className="mr-1 h-3 w-3" />
-              更新
-            </Button>
-          }
-        >
-          <div className="grid grid-cols-3 gap-2">
-            {FILTER_BUTTONS.map((button) => {
-              const Icon = button.icon
-              const isActive =
-                filterSettings[button.filterKey as keyof typeof filterSettings]
-              const shortcuts = getKeyboardShortcuts() // 動的に取得
-              return (
-                <Tooltip key={button.key}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`flex h-10 items-center gap-2 border-2 ${
-                        isActive ? button.activeColor : button.color
-                      }`}
-                      onClick={() => onToggleFilter(button.key)}
-                    >
-                      <Icon className="h-3 w-3" />
-                      <div className="text-xs">{button.label}</div>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <div className="text-center">
-                      <div className="font-medium">
-                        {button.label}を{isActive ? "非表示" : "表示"}
+      {gradingMode === "grid" &&
+        filterSettings &&
+        onToggleFilter &&
+        onRefreshFilter && (
+          <SidePanelSection
+            icon={RefreshCw}
+            title="フィルター"
+            rightElement={
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefreshFilter}
+                className="h-6 px-2 text-xs"
+              >
+                <RefreshCw className="mr-1 h-3 w-3" />
+                更新
+              </Button>
+            }
+          >
+            <div className="grid grid-cols-3 gap-2">
+              {FILTER_BUTTONS.map((button) => {
+                const Icon = button.icon
+                const isActive =
+                  filterSettings[
+                    button.filterKey as keyof typeof filterSettings
+                  ]
+                const shortcuts = getKeyboardShortcuts() // 動的に取得
+                return (
+                  <Tooltip key={button.key}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`flex h-10 items-center gap-2 border-2 ${
+                          isActive ? button.activeColor : button.color
+                        }`}
+                        onClick={() => onToggleFilter(button.key)}
+                      >
+                        <Icon className="h-3 w-3" />
+                        <div className="text-xs">{button.label}</div>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="text-center">
+                        <div className="font-medium">
+                          {button.label}を{isActive ? "非表示" : "表示"}
+                        </div>
+                        <div className="mt-1 text-xs text-gray-400">
+                          キー:{" "}
+                          <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
+                            {modifierKeyLabel}+
+                            {shortcuts[
+                              button.shortcutKey as keyof typeof shortcuts
+                            ]?.toUpperCase() || "キー"}
+                          </kbd>
+                        </div>
                       </div>
-                      <div className="mt-1 text-xs text-gray-400">
-                        キー:{" "}
-                        <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                          {modifierKeyLabel}+
-                          {shortcuts[
-                            button.shortcutKey as keyof typeof shortcuts
-                          ]?.toUpperCase() || "キー"}
-                        </kbd>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              )
-            })}
-          </div>
-        </SidePanelSection>
-      )}
+                    </TooltipContent>
+                  </Tooltip>
+                )
+              })}
+            </div>
+          </SidePanelSection>
+        )}
     </TooltipProvider>
   )
 }

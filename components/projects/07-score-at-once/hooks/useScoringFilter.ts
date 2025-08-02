@@ -1,12 +1,12 @@
 import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
-import { useCallback, useEffect, useState, useMemo, useRef } from "react"
-import type {
-  StudentAnswer,
-  QuestionRegion,
-  ScoringStatus,
-} from "@/components/projects/07-score-at-once/ScoringMain/types"
 import type { ScoringData } from "@/components/projects/07-score-at-once/types/scoring-data.types"
-import type { ClientQuestionScore } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
+import type {
+  ClientQuestionScore,
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types/shared.types"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 interface FilterSettings {
   unscored: boolean
@@ -18,8 +18,8 @@ interface FilterSettings {
 }
 
 interface UseScoringFilterProps {
-  studentAnswers: StudentAnswer[]
-  questionRegions: QuestionRegion[]
+  pageImages: PageImageWithProjectStudents[]
+  cropRegions: CropRegionWithProjectPage[]
   currentQuestionIndex: number
   scoringData: Record<string, ClientQuestionScore>
   selectedAnswers: Set<string>
@@ -28,8 +28,8 @@ interface UseScoringFilterProps {
 }
 
 export function useScoringFilter({
-  studentAnswers,
-  questionRegions,
+  pageImages,
+  cropRegions,
   currentQuestionIndex,
   scoringData,
   selectedAnswers,
@@ -51,7 +51,7 @@ export function useScoringFilter({
     Set<string>
   >(new Set())
 
-  const currentQuestion = questionRegions[currentQuestionIndex]
+  const currentCropRegion = cropRegions[currentQuestionIndex]
 
   // 採点状況を取得する関数
   const getScoringStatus = useCallback(
@@ -73,22 +73,22 @@ export function useScoringFilter({
       const activeFilterSettings = customFilterSettings || filterSettings
       const newVisibleAnswers = new Set<string>()
 
-      if (!currentQuestion) {
+      if (!currentCropRegion) {
         setVisibleAnswers(newVisibleAnswers)
         return
       }
 
       // 事前にprojectPageを取得（ループ内での重複検索を避ける）
       const projectPage = project?.projectPages?.find(
-        (page: any) => page.id === currentQuestion.projectPageId,
+        (page: any) => page.id === currentCropRegion.projectPageId,
       )
       const targetPageNumber = projectPage?.pageNumber || 1
 
       // 最適化: ページフィルタリングを先に実行
-      for (const sheet of studentAnswers) {
-        if (sheet.pageNumber !== targetPageNumber) continue
+      for (const sheet of pageImages) {
+        if (sheet.projectPage?.pageNumber !== targetPageNumber) continue
 
-        const key = `${sheet.studentId}-${currentQuestion.id}`
+        const key = `${sheet.studentId}-${currentCropRegion.id}`
         const scoreData = scoringData[key]
         const status = scoreData?.status || "unscored"
 
@@ -104,8 +104,8 @@ export function useScoringFilter({
       setVisibleAnswers(newVisibleAnswers)
     },
     [
-      studentAnswers,
-      currentQuestion,
+      pageImages,
+      currentCropRegion,
       filterSettings,
       project?.projectPages,
       scoringData,
@@ -115,16 +115,11 @@ export function useScoringFilter({
 
   // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
   useEffect(() => {
-    if (studentAnswers.length > 0 && questionRegions.length > 0) {
+    if (pageImages.length > 0 && cropRegions.length > 0) {
       // 表示対象を更新（選択はクリアしない）
       updateVisibleAnswers()
     }
-  }, [
-    studentAnswers.length,
-    questionRegions.length,
-    currentQuestionIndex,
-    updateVisibleAnswers,
-  ])
+  }, [pageImages.length, cropRegions.length, updateVisibleAnswers])
 
   // 選択状態の管理用ref
   const selectedAnswersRef = useRef<Set<string>>(new Set())
@@ -177,83 +172,89 @@ export function useScoringFilter({
 
   // 模範解答データを取得
   const getMasterAnswerData = useCallback((): ScoringData | null => {
-    if (!currentQuestion || !project?.projectPages) return null
+    if (!currentCropRegion || !project?.projectPages) return null
 
     // projectPageIdに基づいてprojectPageを取得
     const projectPage = project.projectPages.find(
-      (page: any) => page.id === currentQuestion.projectPageId,
+      (page: any) => page.id === currentCropRegion.projectPageId,
     )
 
     if (!projectPage) return null
 
-    const masterImage = projectPage.pageImages?.find((img: any) => img.imageType === "MODEL_ANSWER")
+    const masterImage = projectPage.pageImages?.find(
+      (img: any) => img.imageType === "MODEL_ANSWER",
+    )
     const masterImagePath = masterImage?.imagePath
 
     return {
-      id: `master-${currentQuestion.id}`,
+      id: `master-${currentCropRegion.id}`,
       studentId: "MASTER",
       studentName: "模範解答",
       imageUrl: masterImagePath ? `appimg://${masterImagePath}` : "",
       currentScore: undefined,
-      maxScore: currentQuestion.points,
+      maxScore: currentCropRegion.points || 0,
       status: "master" as any, // 特別なステータス
-      questionRegion: currentQuestion, // 採点領域情報を追加
+      questionRegion: currentCropRegion, // 採点領域情報を追加
       isMaster: true, // 模範解答フラグ
     }
-  }, [currentQuestion, project?.projectPages])
+  }, [currentCropRegion, project?.projectPages])
 
   // 全採点データを取得（新しいScoringData型として）
   const allScoringData = useMemo((): ScoringData[] => {
-    if (!currentQuestion) return []
+    if (!currentCropRegion) return []
 
     // projectPageIdに基づいてprojectPageのpageNumberを取得
     const projectPage = project?.projectPages?.find(
-      (page: any) => page.id === currentQuestion.projectPageId,
+      (page: any) => page.id === currentCropRegion.projectPageId,
     )
     const targetPageNumber = projectPage?.pageNumber || 1
 
     // pageNumberでフィルタリングしてから受験生徒順でソート
-    const pageFilteredSheets = studentAnswers.filter(
-      (sheet) => sheet.pageNumber === targetPageNumber,
+    const pageFilteredSheets = pageImages.filter(
+      (sheet) => sheet.projectPage?.pageNumber === targetPageNumber,
     )
 
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
       const aOrder =
-        a.student.projectStudents?.[0]?.customOrder !== undefined
+        a.student?.projectStudents?.[0]?.customOrder !== undefined
           ? a.student.projectStudents[0].customOrder
           : 999999
       const bOrder =
-        b.student.projectStudents?.[0]?.customOrder !== undefined
+        b.student?.projectStudents?.[0]?.customOrder !== undefined
           ? b.student.projectStudents[0].customOrder
           : 999999
 
       // customOrderが同じ場合は姓名でソート
       if (aOrder === bOrder) {
-        const aName = `${a.student.lastName}${a.student.firstName}`
-        const bName = `${b.student.lastName}${b.student.firstName}`
+        const aName = `${a.student?.lastName || ""}${a.student?.firstName || ""}`
+        const bName = `${b.student?.lastName || ""}${b.student?.firstName || ""}`
         return aName.localeCompare(bName, "ja")
       }
 
-      return aOrder - bOrder
+      return (aOrder || 0) - (bOrder || 0)
     })
 
-    const studentScoringData: ScoringData[] = sortedAnswerSheets.map((sheet) => {
-      const key = `${sheet.studentId}-${currentQuestion.id}`
-      const scoreData = scoringData[key]
+    const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
+      (sheet) => {
+        const key = `${sheet.studentId}-${currentCropRegion.id}`
+        const scoreData = scoringData[key]
 
-      return {
-        id: sheet.id,
-        studentId: sheet.student.studentId,
-        studentName: `${sheet.student.lastName} ${sheet.student.firstName}`,
-        imageUrl: sheet.imagePath ? `appimg://${sheet.imagePath}` : "",
-        currentScore: scoreData?.partialScore ? Number(scoreData.partialScore) : undefined,
-        maxScore: currentQuestion.points,
-        status: (scoreData?.status || "unscored") as ScoringStatus,
-        questionRegion: currentQuestion, // 採点領域情報を追加
-      }
-    })
+        return {
+          id: sheet.id,
+          studentId: sheet.student?.studentId || "",
+          studentName: `${sheet.student?.lastName || ""} ${sheet.student?.firstName || ""}`,
+          imageUrl: sheet.imagePath ? `appimg://${sheet.imagePath}` : "",
+          currentScore: scoreData?.partialScore
+            ? Number(scoreData.partialScore)
+            : undefined,
+          maxScore: currentCropRegion.points || 0,
+          status: (scoreData?.status || "unscored") as ScoringStatus,
+          questionRegion: currentCropRegion, // 採点領域情報を追加
+        }
+      },
+    )
 
     // 模範解答データも追加
     const masterAnswer = getMasterAnswerData()
@@ -263,16 +264,16 @@ export function useScoringFilter({
 
     return studentScoringData
   }, [
-    currentQuestion,
+    currentCropRegion,
     project?.projectPages,
-    studentAnswers,
+    pageImages,
     scoringData,
     getMasterAnswerData,
   ])
 
   // 基本的なグリッドデータ取得（後方互換性のため残す）
   const getAllGridAnswerData = useMemo(() => {
-    return allScoringData.map(data => ({
+    return allScoringData.map((data) => ({
       ...data,
       isSelected: selectedAnswers.has(data.id),
     }))
@@ -359,7 +360,7 @@ export function useScoringFilter({
     allScoringData,
     filteredScoringDataIds: visibleAnswers,
     selectedScoringDataIds: selectedAnswers,
-    
+
     // 従来の互換性維持
     filterSettings,
     setFilterSettings,

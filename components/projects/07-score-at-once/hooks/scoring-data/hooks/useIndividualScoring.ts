@@ -1,16 +1,16 @@
+import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
+import type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+  ScoringDataRecord,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 import { useCallback } from "react"
 import { toast } from "sonner"
-import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
-import type {
-  StudentAnswer,
-  QuestionRegion,
-  ScoringDataRecord,
-} from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 
 interface UseIndividualScoringProps {
-  studentAnswers: StudentAnswer[]
-  questionRegions: QuestionRegion[]
+  pageImages: PageImageWithProjectStudents[]
+  cropRegions: CropRegionWithProjectPage[]
   currentStudentIndex: number
   currentQuestionIndex: number
   currentUserId: string | null
@@ -22,8 +22,8 @@ interface UseIndividualScoringProps {
 }
 
 export function useIndividualScoring({
-  studentAnswers,
-  questionRegions,
+  pageImages,
+  cropRegions,
   currentStudentIndex,
   currentQuestionIndex,
   currentUserId,
@@ -35,17 +35,17 @@ export function useIndividualScoring({
 }: UseIndividualScoringProps) {
   const handleSetScore = useCallback(
     async (type: ScoringStatus) => {
-      const currentAnswerSheet = studentAnswers[currentStudentIndex]
-      const currentQuestion = questionRegions[currentQuestionIndex]
+      const currentPageImage = pageImages[currentStudentIndex]
+      const currentCropRegion = cropRegions[currentQuestionIndex]
 
-      if (!currentAnswerSheet || !currentQuestion || !currentUserId) {
+      if (!currentPageImage || !currentCropRegion || !currentUserId) {
         if (!currentUserId) {
           toast.warning("ユーザー情報の取得中です。しばらくお待ちください。")
         }
         return
       }
 
-      const key = `${currentAnswerSheet.id}-${currentQuestion.id}`
+      const key = `${currentPageImage.id}-${currentCropRegion.id}`
       const currentScore = scoringData[key]
 
       let newScore = 0
@@ -58,7 +58,7 @@ export function useIndividualScoring({
           status = "unscored"
           break
         case "correct":
-          newScore = currentQuestion.points
+          newScore = currentCropRegion.points || 0
           break
         case "incorrect":
           newScore = 0
@@ -69,7 +69,7 @@ export function useIndividualScoring({
         case "partial":
           // 部分点の場合は入力ダイアログを表示（簡易実装）
           const inputScore = prompt(
-            `部分点を入力してください (0-${currentQuestion.points}):`,
+            `部分点を入力してください (0-${currentCropRegion.points}):`,
             currentScore?.partialScore?.toString() || "0",
           )
           if (inputScore === null) return
@@ -77,7 +77,7 @@ export function useIndividualScoring({
           if (
             isNaN(parsedScore) ||
             parsedScore < 0 ||
-            parsedScore > currentQuestion.points
+            parsedScore > (currentCropRegion.points || 0)
           ) {
             toast.error("無効な点数です")
             return
@@ -85,7 +85,9 @@ export function useIndividualScoring({
           newScore = parsedScore
           break
         case "pending":
-          newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : 0
+          newScore = currentScore?.partialScore
+            ? Number(currentScore.partialScore)
+            : 0
           break
       }
 
@@ -110,7 +112,9 @@ export function useIndividualScoring({
                 partialScore: newScore !== null ? newScore : null,
                 status,
                 updatedAt: new Date(
-                  (result as any).score?.updatedAt || result.updatedAt || Date.now(),
+                  (result as any).score?.updatedAt ||
+                    result.updatedAt ||
+                    Date.now(),
                 ),
               },
             }))
@@ -118,11 +122,11 @@ export function useIndividualScoring({
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
             if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
-                if (currentStudentIndex < studentAnswers.length - 1) {
+                if (currentStudentIndex < pageImages.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
-                  if (currentQuestionIndex < questionRegions.length - 1) {
+                  if (currentQuestionIndex < cropRegions.length - 1) {
                     setCurrentQuestionIndex(currentQuestionIndex + 1)
                     setCurrentStudentIndex(0)
                   }
@@ -136,8 +140,8 @@ export function useIndividualScoring({
         } else {
           // Create new score
           const scoreData = {
-            studentId: currentAnswerSheet.studentId,
-            cropRegionId: currentQuestion.id,
+            studentId: currentPageImage.studentId,
+            cropRegionId: currentCropRegion.id,
             partialScore: newScore !== null ? newScore : undefined,
             status: status,
             scoredByUserId: currentUserId,
@@ -150,8 +154,8 @@ export function useIndividualScoring({
               ...prev,
               [key]: {
                 id: createdScore.id,
-                cropRegionId: currentQuestion.id,
-                studentId: currentAnswerSheet.studentId,
+                cropRegionId: currentCropRegion.id,
+                studentId: currentPageImage.studentId,
                 partialScore: newScore !== null ? newScore : null,
                 status,
                 scoredByUserId: currentUserId,
@@ -163,11 +167,11 @@ export function useIndividualScoring({
             // 個別採点モードの場合、採点後に自動的に次の答案に移動
             if (gradingMode === "individual" && type !== "unscored") {
               setTimeout(() => {
-                if (currentStudentIndex < studentAnswers.length - 1) {
+                if (currentStudentIndex < pageImages.length - 1) {
                   setCurrentStudentIndex(currentStudentIndex + 1)
                 } else {
                   // 最後の生徒の場合、次の設問の最初の生徒に移動
-                  if (currentQuestionIndex < questionRegions.length - 1) {
+                  if (currentQuestionIndex < cropRegions.length - 1) {
                     setCurrentQuestionIndex(currentQuestionIndex + 1)
                     setCurrentStudentIndex(0)
                   }
@@ -184,10 +188,10 @@ export function useIndividualScoring({
         }
 
         // Check for auto-finalization in collaborative mode
-        if (status === "proposed") {
+        if (status === "proposed" && currentPageImage.studentId) {
           await checkForAutoFinalization(
-            currentAnswerSheet.studentId,
-            currentQuestion.id,
+            currentPageImage.studentId,
+            currentCropRegion.id,
             currentUserId,
             setScoringData,
           )
@@ -198,8 +202,8 @@ export function useIndividualScoring({
       }
     },
     [
-      studentAnswers,
-      questionRegions,
+      pageImages,
+      cropRegions,
       currentStudentIndex,
       currentQuestionIndex,
       currentUserId,

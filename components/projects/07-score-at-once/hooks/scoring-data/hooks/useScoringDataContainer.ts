@@ -1,16 +1,16 @@
-import { useCallback, useState } from "react"
+import { useBatchScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useBatchScoring"
+import { useIndividualScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useIndividualScoring"
 import type {
-  UseScoringDataProps,
   ScoringDataRecord,
+  UseScoringDataProps,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import {
-  loadExistingScoringData,
   getScoringStatus,
-  getActualScore,
+  loadExistingScoringData,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/data-loader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/progress-calculator"
-import { useIndividualScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useIndividualScoring"
-import { useBatchScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useBatchScoring"
+import { calculateActualScore } from "@/components/projects/07-score-at-once/types/shared.types"
+import { useCallback, useState } from "react"
 
 export function useScoringDataContainer({
   currentUserId,
@@ -20,15 +20,15 @@ export function useScoringDataContainer({
   setCurrentStudentIndex,
   currentQuestionIndex,
   setCurrentQuestionIndex,
-  studentAnswers,
-  questionRegions,
+  pageImages,
+  cropRegions,
 }: UseScoringDataProps) {
   const [scoringData, setScoringData] = useState<ScoringDataRecord>({})
 
   // Individual scoring hook
   const { handleSetScore } = useIndividualScoring({
-    studentAnswers,
-    questionRegions,
+    pageImages,
+    cropRegions,
     currentStudentIndex,
     currentQuestionIndex,
     currentUserId,
@@ -41,8 +41,8 @@ export function useScoringDataContainer({
 
   // Batch scoring hook
   const { handleBatchScore } = useBatchScoring({
-    studentAnswers,
-    questionRegions,
+    pageImages,
+    cropRegions,
     currentQuestionIndex,
     currentUserId,
     setCurrentUserId,
@@ -68,15 +68,18 @@ export function useScoringDataContainer({
 
   const getActualScoreCallback = useCallback(
     (studentId: string, questionId?: string, maxScore: number = 0) => {
-      return getActualScore(scoringData, studentId, questionId, maxScore)
+      if (!questionId) return null
+      const key = `${studentId}-${questionId}`
+      const scoreData = scoringData[key]
+      return calculateActualScore(scoreData || null, maxScore)
     },
     [scoringData],
   )
 
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {
-    return calculateQuestionProgress(questionRegions, studentAnswers, scoringData)
-  }, [studentAnswers, questionRegions, scoringData])
+    return calculateQuestionProgress(cropRegions, pageImages, scoringData)
+  }, [pageImages, cropRegions, scoringData])
 
   return {
     scoringData,

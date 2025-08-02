@@ -1,17 +1,16 @@
+import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
+import type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+  ScoringDataRecord,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 import { useCallback } from "react"
 import { toast } from "sonner"
-import { Decimal } from "@prisma/client/runtime/library"
-import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
-import type {
-  StudentAnswer,
-  QuestionRegion,
-  ScoringDataRecord,
-} from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 
 interface UseBatchScoringProps {
-  studentAnswers: StudentAnswer[]
-  questionRegions: QuestionRegion[]
+  pageImages: PageImageWithProjectStudents[]
+  cropRegions: CropRegionWithProjectPage[]
   currentQuestionIndex: number
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
@@ -20,8 +19,8 @@ interface UseBatchScoringProps {
 }
 
 export function useBatchScoring({
-  studentAnswers,
-  questionRegions,
+  pageImages,
+  cropRegions,
   currentQuestionIndex,
   currentUserId,
   setCurrentUserId,
@@ -78,15 +77,15 @@ export function useBatchScoring({
       }
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
-      const currentQuestion = questionRegions[currentQuestionIndex]
+      const currentCropRegion = cropRegions[currentQuestionIndex]
 
-      if (!currentQuestion) return
+      if (!currentCropRegion) return
 
       for (const answerId of ids) {
-        const answerSheet = studentAnswers.find((sheet) => sheet.id === answerId)
-        if (!answerSheet) continue
+        const pageImage = pageImages.find((image) => image.id === answerId)
+        if (!pageImage) continue
 
-        const key = `${answerSheet.studentId}-${currentQuestion.id}`
+        const key = `${pageImage.studentId}-${currentCropRegion.id}`
         const currentScore = scoringData[key]
 
         let newScore: number | null = 0
@@ -111,7 +110,9 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : null
+              newScore = currentScore?.partialScore
+                ? Number(currentScore.partialScore)
+                : null
             }
             break
           case "pending":
@@ -120,7 +121,9 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.partialScore ? Number(currentScore.partialScore) : null
+              newScore = currentScore?.partialScore
+                ? Number(currentScore.partialScore)
+                : null
             }
             break
         }
@@ -146,7 +149,9 @@ export function useBatchScoring({
                   partialScore: newScore !== null ? newScore : null,
                   status: scoringStatus,
                   updatedAt: new Date(
-                    (result as any).score?.updatedAt || result.updatedAt || Date.now(),
+                    (result as any).score?.updatedAt ||
+                      result.updatedAt ||
+                      Date.now(),
                   ),
                 },
               }))
@@ -154,8 +159,8 @@ export function useBatchScoring({
           } else {
             // Create new score
             const scoreData = {
-              studentId: answerSheet.studentId,
-              cropRegionId: currentQuestion.id,
+              studentId: pageImage.studentId,
+              cropRegionId: currentCropRegion.id,
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
               scoredByUserId: effectiveUserId,
@@ -169,8 +174,8 @@ export function useBatchScoring({
                 ...prev,
                 [key]: {
                   id: createdScore.id,
-                  cropRegionId: currentQuestion.id,
-                  studentId: answerSheet.studentId,
+                  cropRegionId: currentCropRegion.id,
+                  studentId: pageImage.studentId,
                   partialScore: newScore !== null ? newScore : null,
                   status: scoringStatus,
                   scoredByUserId: effectiveUserId,
@@ -182,10 +187,10 @@ export function useBatchScoring({
           }
 
           // Check for auto-finalization in collaborative mode
-          if (scoringStatus === "proposed") {
+          if (scoringStatus === "proposed" && pageImage.studentId) {
             await checkForAutoFinalization(
-              answerSheet.studentId,
-              currentQuestion.id,
+              pageImage.studentId,
+              currentCropRegion.id,
               currentUserId,
               setScoringData,
             )
@@ -200,14 +205,14 @@ export function useBatchScoring({
         } catch (error) {
           console.error("Error in batch scoring:", error)
           toast.error(
-            `採点中にエラーが発生しました: ${answerSheet.student.lastName}`,
+            `採点中にエラーが発生しました: ${pageImage.student?.lastName || "不明な生徒"}`,
           )
         }
       }
     },
     [
-      studentAnswers,
-      questionRegions,
+      pageImages,
+      cropRegions,
       currentQuestionIndex,
       currentUserId,
       setCurrentUserId,

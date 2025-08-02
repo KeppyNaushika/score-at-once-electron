@@ -6,17 +6,6 @@ import {
   Minus,
   X,
 } from "lucide-react"
-
-export type ScoringStatus =
-  | "unscored"
-  | "correct"
-  | "incorrect"
-  | "partial"
-  | "pending"
-  | "no_answer"
-  | "proposed"
-  | "final"
-
 // 採点状態のアイコンと色を定義
 export const SCORE_STATUS_CONFIG = {
   unscored: {

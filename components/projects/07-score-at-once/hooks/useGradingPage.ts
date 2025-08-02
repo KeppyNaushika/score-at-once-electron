@@ -1,10 +1,14 @@
 "use client"
 
+import type {
+  GradingMode,
+  QuestionRegion,
+  QuestionScore,
+  StudentAnswer,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 import type { ProjectWithDetails } from "@/types/electron"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
-import { StudentAnswer, QuestionRegion, QuestionScore } from "@/components/projects/07-score-at-once/ScoringMain/types"
 
 export function useGradingPage() {
   const params = useParams()

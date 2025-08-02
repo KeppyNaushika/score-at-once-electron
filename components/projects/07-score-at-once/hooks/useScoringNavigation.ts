@@ -2,7 +2,7 @@ import { useCallback, useState } from "react"
 
 interface UseScoringNavigationProps {
   answerSheetsLength: number
-  questionRegionsLength: number
+  cropRegionsLength: number
   currentStudentIndex: number
   setCurrentStudentIndex: (index: number) => void
   currentQuestionIndex: number
@@ -16,7 +16,7 @@ interface UseScoringNavigationProps {
 
 export function useScoringNavigation({
   answerSheetsLength,
-  questionRegionsLength,
+  cropRegionsLength,
   currentStudentIndex,
   setCurrentStudentIndex,
   currentQuestionIndex,
@@ -31,10 +31,10 @@ export function useScoringNavigation({
 
   // ナビゲーション関数
   const handleNextQuestion = useCallback(() => {
-    if (currentQuestionIndex < questionRegionsLength - 1) {
+    if (currentQuestionIndex < cropRegionsLength - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1)
     }
-  }, [currentQuestionIndex, questionRegionsLength, setCurrentQuestionIndex])
+  }, [currentQuestionIndex, cropRegionsLength, setCurrentQuestionIndex])
 
   const handlePrevQuestion = useCallback(() => {
     if (currentQuestionIndex > 0) {

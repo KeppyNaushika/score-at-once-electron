@@ -1,18 +1,17 @@
 "use client"
 
 import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/components/IndividualModePanel"
+import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/components/NavigationControls"
 import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ProjectProgressCard"
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/components/QuestionNavigator"
 import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringToolbar"
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import { useMemo } from "react"
 
 interface ScoringSidePanelProps {
   projectId: string
   // Question Navigator props
-  questionRegions: any[]
+  cropRegions: any[]
   currentQuestionIndex: number
   onQuestionChange: (index: number) => void
   onPrevQuestion: () => void
@@ -54,7 +53,7 @@ interface ScoringSidePanelProps {
 
 export function ScoringSidePanel({
   projectId,
-  questionRegions,
+  cropRegions,
   currentQuestionIndex,
   onQuestionChange,
   onPrevQuestion,
@@ -90,7 +89,7 @@ export function ScoringSidePanel({
     <div className="w-96 overflow-y-auto border-l border-gray-200 bg-gray-50 p-4">
       {/* 設問ナビゲーター */}
       <QuestionNavigator
-        questionRegions={questionRegions}
+        questionRegions={cropRegions}
         currentQuestionIndex={currentQuestionIndex}
         onQuestionChange={onQuestionChange}
         onPrevQuestion={onPrevQuestion}

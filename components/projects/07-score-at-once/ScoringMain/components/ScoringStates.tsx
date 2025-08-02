@@ -8,7 +8,7 @@ interface ScoringStatesProps {
   loading: boolean
   project?: any
   answerSheetsLength: number
-  questionRegionsLength: number
+  cropRegionsLength: number
   projectId: string
 }
 
@@ -22,12 +22,15 @@ export function ScoringLoadingState() {
   )
 }
 
-export function ScoringErrorState({ 
-  project, 
-  answerSheetsLength, 
-  questionRegionsLength, 
-  projectId 
-}: Pick<ScoringStatesProps, 'project' | 'answerSheetsLength' | 'questionRegionsLength' | 'projectId'>) {
+export function ScoringErrorState({
+  project,
+  answerSheetsLength,
+  cropRegionsLength,
+  projectId,
+}: Pick<
+  ScoringStatesProps,
+  "project" | "answerSheetsLength" | "cropRegionsLength" | "projectId"
+>) {
   const router = useRouter()
 
   return (
@@ -42,9 +45,7 @@ export function ScoringErrorState({
             {answerSheetsLength === 0 && (
               <p>• 答案がアップロードされていません</p>
             )}
-            {questionRegionsLength === 0 && (
-              <p>• 採点領域が設定されていません</p>
-            )}
+            {cropRegionsLength === 0 && <p>• 採点領域が設定されていません</p>}
           </div>
           <Button
             onClick={() => router.push(`/projects/${projectId}`)}

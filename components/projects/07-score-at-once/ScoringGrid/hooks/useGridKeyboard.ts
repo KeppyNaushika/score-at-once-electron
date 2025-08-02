@@ -1,8 +1,6 @@
+import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
+import type { ScoringStatus } from "@/components/projects/07-score-at-once/types/shared.types"
 import { useEffect } from "react"
-import {
-  SCORE_STATUS_CONFIG,
-  type ScoringStatus,
-} from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
 
 interface UseGridKeyboardProps {
   selectedAnswers: Set<string>

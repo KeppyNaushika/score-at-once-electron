@@ -1,9 +1,9 @@
 import type {
-  StudentAnswer,
-  QuestionRegion,
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
-} from "@/components/projects/07-score-at-once/ScoringMain/types"
+} from "@/components/projects/07-score-at-once/types/shared.types"
 
 export interface UseScoringDataProps {
   currentUserId: string | null
@@ -13,8 +13,8 @@ export interface UseScoringDataProps {
   setCurrentStudentIndex: (index: number) => void
   currentQuestionIndex: number
   setCurrentQuestionIndex: (index: number) => void
-  studentAnswers: StudentAnswer[]
-  questionRegions: QuestionRegion[]
+  pageImages: PageImageWithProjectStudents[]
+  cropRegions: CropRegionWithProjectPage[]
 }
 
 export interface QuestionProgress {
@@ -25,17 +25,11 @@ export interface QuestionProgress {
   }
 }
 
-/**
- * クライアントサイド用のQuestionScore型
- * partialScoreをDecimalからnumberに変更（UI状態管理用）
- */
-export interface ClientQuestionScore extends Omit<QuestionScore, 'partialScore'> {
-  partialScore: number | null
-}
-
-export interface ScoringDataRecord {
-  [key: string]: ClientQuestionScore
-}
+// ClientQuestionScore と ScoringDataRecord は shared.types から使用
+export type {
+  ClientQuestionScore,
+  ScoringDataRecord,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 
 export interface ScoreUpdateData {
   partialScore?: number
@@ -52,4 +46,9 @@ export interface ScoreCreateData {
   scoredByUserId: string
 }
 
-export type { StudentAnswer, QuestionRegion, QuestionScore, ScoringStatus }
+export type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+  QuestionScore,
+  ScoringStatus,
+}

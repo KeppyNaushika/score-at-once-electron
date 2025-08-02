@@ -3,17 +3,17 @@
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/components/ScoringBehaviorSelector"
+import { useIndividualModeKeyboard } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useIndividualModeKeyboard"
 import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringHeaderControls"
 import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringModals"
-import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringSidePanel"
 import {
   ScoringErrorState,
   ScoringLoadingState,
 } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringStates"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
-import { useIndividualModeKeyboard } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useIndividualModeKeyboard"
+import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringSidePanel"
 import { usePartialScore } from "@/components/projects/07-score-at-once/hooks/usePartialScore"
 import { useScoringData } from "@/components/projects/07-score-at-once/hooks/useScoringData"
 import { useScoringDataLoader } from "@/components/projects/07-score-at-once/hooks/useScoringDataLoader"
@@ -34,8 +34,8 @@ export default function ScoringMainView() {
   const {
     loading,
     project,
-    studentAnswers,
-    questionRegions,
+    pageImages,
+    cropRegions,
     currentUserId,
     error: _error,
   } = useScoringDataLoader(projectId)
@@ -94,13 +94,13 @@ export default function ScoringMainView() {
     if (gradingMode === "individual" && selectedAnswers.size > 0) {
       // 個別表示モードでは選択された答案を使用
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      return studentAnswers.find((sheet) => sheet.id === selectedAnswerId)
+      return pageImages.find((sheet) => sheet.id === selectedAnswerId)
     }
     // 一覧表示モードでは従来通り
-    return studentAnswers[currentStudentIndex]
-  }, [gradingMode, selectedAnswers, studentAnswers, currentStudentIndex])
+    return pageImages[currentStudentIndex]
+  }, [gradingMode, selectedAnswers, pageImages, currentStudentIndex])
 
-  const currentQuestion = questionRegions[currentQuestionIndex]
+  const currentQuestion = cropRegions[currentQuestionIndex]
 
   // 個別表示用の生徒データは後で定義（allScoringDataが必要なため）
 
@@ -108,7 +108,7 @@ export default function ScoringMainView() {
   const handleStudentChange = useCallback(
     (studentId: string) => {
       // 該当する生徒の答案を選択状態にする
-      const studentSheets = studentAnswers.filter(
+      const studentSheets = pageImages.filter(
         (sheet: any) => sheet.student.id === studentId,
       )
       if (studentSheets.length > 0) {
@@ -116,7 +116,7 @@ export default function ScoringMainView() {
         setSelectedAnswers(new Set([studentSheets[0].id]))
 
         // currentStudentIndex も更新
-        const studentIndex = studentAnswers.findIndex(
+        const studentIndex = pageImages.findIndex(
           (sheet: any) => sheet.student.id === studentId,
         )
         if (studentIndex !== -1) {
@@ -124,7 +124,7 @@ export default function ScoringMainView() {
         }
       }
     },
-    [studentAnswers, setSelectedAnswers, setCurrentStudentIndex],
+    [pageImages, setSelectedAnswers, setCurrentStudentIndex],
   )
 
   // Individual navigation callbacks and effects will be defined after students is available
@@ -145,8 +145,8 @@ export default function ScoringMainView() {
     setCurrentStudentIndex: setCurrentStudentIndex,
     currentQuestionIndex: currentQuestionIndex,
     setCurrentQuestionIndex: setCurrentQuestionIndex,
-    studentAnswers: studentAnswers,
-    questionRegions,
+    pageImages: pageImages,
+    cropRegions,
   })
 
   // フィルタリング管理hook
@@ -155,7 +155,7 @@ export default function ScoringMainView() {
     allScoringData,
     filteredScoringDataIds,
     selectedScoringDataIds,
-    
+
     // 従来の互換性維持
     filterSettings,
     visibleAnswers,
@@ -165,8 +165,8 @@ export default function ScoringMainView() {
     handleToggleFilter,
     handleToggleFilterByScoreKey,
   } = useScoringFilter({
-    studentAnswers,
-    questionRegions,
+    pageImages,
+    cropRegions,
     currentQuestionIndex: currentQuestionIndex,
     scoringData,
     selectedAnswers: selectedAnswers,
@@ -174,14 +174,14 @@ export default function ScoringMainView() {
     project,
   })
 
-  // 個別表示用の生徒データ（studentAnswersから抽出、useMemoで安定化）
+  // 個別表示用の生徒データ（pageImagesから抽出、useMemoで安定化）
   const students = useMemo(() => {
-    if (!studentAnswers || studentAnswers.length === 0) return []
-    
-    // studentAnswersから重複を除いた生徒データを抽出
+    if (!pageImages || pageImages.length === 0) return []
+
+    // pageImagesから重複を除いた生徒データを抽出
     const uniqueStudents = new Map()
-    
-    studentAnswers.forEach(sheet => {
+
+    pageImages.forEach((sheet) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
         uniqueStudents.set(sheet.student.id, {
           id: sheet.student.id,
@@ -192,12 +192,12 @@ export default function ScoringMainView() {
         })
       }
     })
-    
+
     // customOrderでソートして配列に変換
     return Array.from(uniqueStudents.values()).sort(
-      (a, b) => a.customOrder - b.customOrder
+      (a, b) => a.customOrder - b.customOrder,
     )
-  }, [studentAnswers])
+  }, [pageImages])
 
   // 個別表示モードで最初の生徒を自動選択
   useEffect(() => {
@@ -217,9 +217,7 @@ export default function ScoringMainView() {
     if (selectedAnswers.size === 0) return
 
     const currentAnswerId = Array.from(selectedAnswers)[0]
-    const currentAnswer = studentAnswers.find(
-      (a: any) => a.id === currentAnswerId,
-    )
+    const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
@@ -230,22 +228,20 @@ export default function ScoringMainView() {
     )
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
-      const nextStudentAnswer = studentAnswers.find(
+      const nextStudentAnswer = pageImages.find(
         (a: any) => a.student.id === nextStudent.id,
       )
       if (nextStudentAnswer) {
         setSelectedAnswers(new Set([nextStudentAnswer.id]))
       }
     }
-  }, [students, selectedAnswers, studentAnswers, setSelectedAnswers])
+  }, [students, selectedAnswers, pageImages, setSelectedAnswers])
 
   const handleIndividualPrevStudent = useCallback(() => {
     if (selectedAnswers.size === 0) return
 
     const currentAnswerId = Array.from(selectedAnswers)[0]
-    const currentAnswer = studentAnswers.find(
-      (a: any) => a.id === currentAnswerId,
-    )
+    const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
@@ -256,14 +252,14 @@ export default function ScoringMainView() {
     )
     if (currentIndex > 0) {
       const prevStudent = sortedStudents[currentIndex - 1]
-      const prevStudentAnswer = studentAnswers.find(
+      const prevStudentAnswer = pageImages.find(
         (a: any) => a.student.id === prevStudent.id,
       )
       if (prevStudentAnswer) {
         setSelectedAnswers(new Set([prevStudentAnswer.id]))
       }
     }
-  }, [students, selectedAnswers, studentAnswers, setSelectedAnswers])
+  }, [students, selectedAnswers, pageImages, setSelectedAnswers])
 
   // ナビゲーション管理hook
   const {
@@ -279,8 +275,8 @@ export default function ScoringMainView() {
     toggleViewMode,
     handleGridNavigation,
   } = useScoringNavigation({
-    answerSheetsLength: studentAnswers.length,
-    questionRegionsLength: questionRegions.length,
+    answerSheetsLength: pageImages.length,
+    cropRegionsLength: cropRegions.length,
     currentStudentIndex: currentStudentIndex,
     setCurrentStudentIndex: setCurrentStudentIndex,
     currentQuestionIndex: currentQuestionIndex,
@@ -356,17 +352,17 @@ export default function ScoringMainView() {
   const currentStudentId = useMemo(() => {
     if (selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      const selectedAnswer = studentAnswers.find(
+      const selectedAnswer = pageImages.find(
         (a: any) => a.id === selectedAnswerId,
       )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedAnswers, studentAnswers])
+  }, [selectedAnswers, pageImages])
 
   // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
   useIndividualModeKeyboard({
-    questionRegions,
+    cropRegions,
     students,
     currentQuestionIndex: currentQuestionIndex,
     currentStudentId: currentStudentId,
@@ -416,12 +412,12 @@ export default function ScoringMainView() {
   }
 
   // エラー状態
-  if (!project || studentAnswers.length === 0 || questionRegions.length === 0) {
+  if (!project || pageImages.length === 0 || cropRegions.length === 0) {
     return (
       <ScoringErrorState
         project={project}
-        answerSheetsLength={studentAnswers.length}
-        questionRegionsLength={questionRegions.length}
+        answerSheetsLength={pageImages.length}
+        cropRegionsLength={cropRegions.length}
         projectId={projectId}
       />
     )
@@ -459,9 +455,9 @@ export default function ScoringMainView() {
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
           currentQuestion={currentQuestion}
-          allAnswerSheets={studentAnswers}
+          allAnswerSheets={pageImages}
           onScoringDataSelect={(dataId, isSelected) =>
-            handleAnswerSelect(dataId, isSelected, studentAnswers)
+            handleAnswerSelect(dataId, isSelected, pageImages)
           }
           onScoringDataScore={handleBatchScoreWithProgress}
           currentQuestionIndex={currentQuestionIndex}
@@ -475,7 +471,7 @@ export default function ScoringMainView() {
         {showSidePanel && (
           <ScoringSidePanel
             projectId={projectId}
-            questionRegions={questionRegions}
+            cropRegions={cropRegions}
             currentQuestionIndex={currentQuestionIndex}
             onQuestionChange={setCurrentQuestionIndex}
             onPrevQuestion={handlePrevQuestion}
@@ -491,7 +487,7 @@ export default function ScoringMainView() {
             modifierKeyLabel={modifierKeyLabel}
             layoutDirection={layoutDirection}
             visibleAnswersCount={visibleAnswers.size}
-            totalAnswersCount={studentAnswers.length}
+            totalAnswersCount={pageImages.length}
             onLayoutDirectionChange={setLayoutDirection}
             onGridNavigation={handleGridNavigation}
             onRefreshView={handleRefreshFilter}
@@ -503,7 +499,7 @@ export default function ScoringMainView() {
             students={students}
             onStudentChange={handleStudentChange}
             selectedAnswers={selectedAnswers}
-            allAnswerSheets={studentAnswers}
+            allAnswerSheets={pageImages}
             scoringBehavior={scoringBehavior}
             onScoringBehaviorChange={setScoringBehavior}
           />

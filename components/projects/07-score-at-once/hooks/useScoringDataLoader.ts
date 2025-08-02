@@ -4,8 +4,8 @@ import { toast } from "sonner"
 interface ScoringDataLoaderResult {
   loading: boolean
   project: any
-  studentAnswers: any[]
-  questionRegions: any[]
+  pageImages: any[]
+  cropRegions: any[]
   currentUserId: string | null
   error: string | null
 }
@@ -15,8 +15,8 @@ export function useScoringDataLoader(
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<any>(null)
-  const [studentAnswers, setStudentAnswers] = useState<any[]>([])
-  const [questionRegions, setQuestionRegions] = useState<any[]>([])
+  const [pageImages, setPageImages] = useState<any[]>([])
+  const [cropRegions, setCropRegions] = useState<any[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,7 +39,7 @@ export function useScoringDataLoader(
         if (!answersResult.success) {
           throw new Error("答案データの読み込みに失敗しました")
         }
-        setStudentAnswers(answersResult.studentAnswers || [])
+        setPageImages(answersResult.studentAnswers || [])
 
         // 設問領域データの読み込み
         const regionsResult =
@@ -48,10 +48,10 @@ export function useScoringDataLoader(
           throw new Error("設問領域データの読み込みに失敗しました")
         }
 
-        const questionRegions = regionsResult.filter(
+        const cropRegions = regionsResult.filter(
           (region: any) => region.type === "QUESTION_ANSWER",
         )
-        setQuestionRegions(questionRegions)
+        setCropRegions(cropRegions)
 
         // ユーザーIDの取得
         const userData = await window.electronAPI.getCurrentUser()
@@ -80,8 +80,8 @@ export function useScoringDataLoader(
   return {
     loading,
     project,
-    studentAnswers,
-    questionRegions,
+    pageImages,
+    cropRegions,
     currentUserId,
     error,
   }

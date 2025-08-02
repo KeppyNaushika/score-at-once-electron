@@ -1,6 +1,8 @@
+import type {
+  GradingMode,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types/shared.types"
 import { useCallback, useEffect, useState } from "react"
-import type { GradingMode } from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
-import type { ScoringStatus } from "@/components/projects/07-score-at-once/ScoringMain/types"
 
 // キーボードショートカットの設定（Python版互換）
 export const DEFAULT_SHORTCUTS = {
