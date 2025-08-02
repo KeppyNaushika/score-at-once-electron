@@ -2,9 +2,9 @@
 
 import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/components/IndividualModePanel"
 import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/components/NavigationControls"
-import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringMain/components/ProjectProgressCard"
+import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ProjectProgressCard"
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/components/QuestionNavigator"
-import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringToolbar"
+import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringToolbar"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/ScoringMain/types/scoring-main-types"
 import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
 import { useMemo } from "react"

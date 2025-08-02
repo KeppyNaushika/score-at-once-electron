@@ -6,7 +6,7 @@ import type { ScoringBehavior } from "@/components/projects/07-score-at-once/Sco
 import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringHeaderControls"
 import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringModals"
-import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringSidePanel"
+import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringSidePanel"
 import {
   ScoringErrorState,
   ScoringLoadingState,
