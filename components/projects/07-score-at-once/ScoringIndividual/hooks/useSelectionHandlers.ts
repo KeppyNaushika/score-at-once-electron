@@ -132,8 +132,6 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     (imageCoords: { x: number; y: number }) => {
       if (props.currentTool !== "select") return false
 
-      console.log("🔽 handleSelectionMouseDown開始:", imageCoords)
-
       // 選択された要素がある場合、まずリサイズハンドルをチェック
       if (props.selectedElementIds.length > 0) {
         const selectedElement = props.drawingElements.find((el) =>
@@ -148,11 +146,6 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
           )
 
           if (resizeCursor) {
-            console.log("🔄 リサイズ開始:", {
-              elementId: selectedElement.id,
-              direction: resizeCursor,
-            })
-
             // リサイズモード開始
             setIsResizing(true)
             setResizeDirection(resizeCursor)
@@ -179,30 +172,14 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
       const { elementSelected, clickedElement, clickedCoords } =
         handleElementSelection(imageCoords)
 
-      console.log("🔄 handleElementSelection結果:", {
-        elementSelected,
-        clickedElement: clickedElement?.id,
-        currentTool: props.currentTool,
-        imageCoords,
-        drawingElementsCount: props.drawingElements.length,
-      })
-
       // If no element was selected, start rectangle selection
       if (!elementSelected) {
-        console.log("📐 長方形選択を開始します - 要素選択に失敗")
         // 長方形選択開始時にクロスヘアカーソルを設定
         setCursor("crosshair")
         startRectangleSelection(imageCoords)
       } else {
-        console.log("✅ 要素が選択されました - 即座に移動開始セットアップ")
         // 要素が選択された場合、即座に移動開始のセットアップを行う
         if (clickedElement && clickedCoords) {
-          console.log("🚀 選択と同時に移動開始セットアップ:", {
-            elementId: clickedElement.id,
-            coords: clickedCoords,
-            elementPos: { x: clickedElement.x, y: clickedElement.y },
-          })
-
           // 移動開始状態をセット
           props.setIsDraggingElement(true)
           const dragOffsetX = clickedCoords.x - clickedElement.x
@@ -271,11 +248,6 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
         resizeOriginalBounds &&
         resizeDirection
       ) {
-        console.log("🔄 リサイズ中:", {
-          direction: resizeDirection,
-          coords: imageCoords,
-        })
-
         const deltaX = imageCoords.x - resizeStartCoords.x
         const deltaY = imageCoords.y - resizeStartCoords.y
 
@@ -405,22 +377,12 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
 
   // Main mouse up handler
   const handleSelectionMouseUp = useCallback(() => {
-    console.log("🔼 handleSelectionMouseUp開始:", {
-      currentTool: props.currentTool,
-      isDrawingSelection: props.isDrawingSelection,
-      isResizing,
-    })
-
-    if (props.currentTool !== "select") {
-      console.log("❌ 選択ツールではない - mouseup処理をスキップ")
-      return false
-    }
+    if (props.currentTool !== "select") return false
 
     let handled = false
 
     // リサイズ終了処理
     if (isResizing) {
-      console.log("✅ リサイズ完了:", { elementId: resizeElementId })
       setIsResizing(false)
       setResizeDirection(null)
       setResizeElementId(null)
@@ -441,16 +403,9 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
 
     // ドラッグ終了時はカーソルをリセット（成功・失敗に関係なく）
     if (wasDrawingSelection) {
-      console.log("🖱️ ドラッグ終了 - カーソルリセット実行")
       resetCursor()
-    } else {
-      console.log("ℹ️ ドラッグしていなかった - カーソルリセットはスキップ")
     }
 
-    console.log("🔼 handleSelectionMouseUp完了:", {
-      handled,
-      wasDrawingSelection,
-    })
     return handled
   }, [
     props.currentTool,
@@ -459,7 +414,6 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     completeRectangleSelection,
     resetCursor,
     isResizing,
-    resizeElementId,
   ])
 
   return {

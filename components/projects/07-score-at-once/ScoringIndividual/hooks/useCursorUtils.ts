@@ -23,7 +23,6 @@ export function useCursorUtils({ canvasRef }: UseCursorUtilsProps) {
       const canvas = canvasRef.current
       if (canvas) {
         canvas.style.cursor = cursorStyle
-        console.log(`🖱️ カーソル変更: ${cursorStyle}`)
       }
     },
     [canvasRef],

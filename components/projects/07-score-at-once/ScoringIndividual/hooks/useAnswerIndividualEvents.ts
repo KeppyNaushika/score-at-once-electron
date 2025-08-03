@@ -248,15 +248,10 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   )
 
   const handleMouseUp = useCallback(() => {
-    console.log("🔼 メインmouseUp開始 - 全ハンドラー呼び出し")
     // Call all handlers - they will check their own conditions
-    console.log("👆 handツールmouseUp呼び出し")
     handleHandToolMouseUp()
-    console.log("👆 選択ツールmouseUp呼び出し")
     handleSelectionMouseUp()
-    console.log("👆 描画ツールmouseUp呼び出し")
     handleDrawingMouseUp()
-    console.log("🔼 メインmouseUp完了")
   }, [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp])
 
   return {

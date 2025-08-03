@@ -67,16 +67,17 @@ export default function AnswerIndividualView({
     })
 
   // テキスト再編集処理（useAnswerIndividualEventsより前に定義）
-  const handleTextElementReClick = useCallback((element: any) => {
-    console.log("✏️ テキスト要素再編集開始:", element)
-    
-    // 既存のテキスト内容と色でエディターを開く
-    drawingState.setTextInputValue(element.text || "")
-    drawingState.setStrokeColor(element.color)
-    drawingState.setIsEditingExistingText(true)
-    drawingState.setEditingTextElementId(element.id)
-    drawingState.setShowTextInput(true)
-  }, [drawingState])
+  const handleTextElementReClick = useCallback(
+    (element: any) => {
+      // 既存のテキスト内容と色でエディターを開く
+      drawingState.setTextInputValue(element.text || "")
+      drawingState.setStrokeColor(element.color)
+      drawingState.setIsEditingExistingText(true)
+      drawingState.setEditingTextElementId(element.id)
+      drawingState.setShowTextInput(true)
+    },
+    [drawingState],
+  )
 
   // イベントハンドリング
   const { handleMouseDown, handleMouseMove, handleMouseUp } =
@@ -348,15 +349,6 @@ export default function AnswerIndividualView({
       const scrollLeft = questionCenterScreenX - containerCenterX
       const scrollTop = questionCenterScreenY - containerCenterY
 
-      console.log("🎯 設問表示デバッグ:", {
-        zoom: newZoom,
-        questionCenter: { questionCenterX, questionCenterY },
-        screenCenter: { questionCenterScreenX, questionCenterScreenY },
-        containerCenter: { containerCenterX, containerCenterY },
-        scroll: { scrollLeft, scrollTop },
-        offsets: { imageOffsetX, pageOffsetY },
-      })
-
       // スクロール位置を設定
       container.scrollTo(scrollLeft, scrollTop)
     })
@@ -386,19 +378,16 @@ export default function AnswerIndividualView({
       return
     }
 
-    if (drawingState.isEditingExistingText && drawingState.editingTextElementId) {
+    if (
+      drawingState.isEditingExistingText &&
+      drawingState.editingTextElementId
+    ) {
       // 既存テキストの編集
-      console.log("✏️ 既存テキスト更新:", {
-        id: drawingState.editingTextElementId,
-        text: drawingState.textInputValue,
-        color: drawingState.strokeColor,
-      })
-      
       drawingState.updateDrawingElement(drawingState.editingTextElementId, {
         text: drawingState.textInputValue,
         color: drawingState.strokeColor,
       })
-      
+
       drawingState.setShowTextInput(false)
       drawingState.setTextInputValue("")
       drawingState.setIsEditingExistingText(false)
@@ -557,7 +546,9 @@ export default function AnswerIndividualView({
         onColorChange={drawingState.setStrokeColor}
         onSubmit={handleTextSubmit}
         onCancel={handleTextCancel}
-        title={drawingState.isEditingExistingText ? "テキスト編集" : "テキスト入力"}
+        title={
+          drawingState.isEditingExistingText ? "テキスト編集" : "テキスト入力"
+        }
       />
 
       {/* 隠しimg要素（Canvas描画用） */}
@@ -568,12 +559,6 @@ export default function AnswerIndividualView({
         draggable={false}
         onLoad={(e) => {
           const img = e.target as HTMLImageElement
-          console.log("🖼️ Hidden img element loaded:", {
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight,
-            src: img.src,
-            complete: img.complete,
-          })
         }}
         onError={(e) => {
           console.error("🚫 Hidden img element failed to load:", e)

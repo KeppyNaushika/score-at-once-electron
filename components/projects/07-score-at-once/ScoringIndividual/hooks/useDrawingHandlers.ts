@@ -140,11 +140,11 @@ export function useDrawingHandlers({
         // テキストボックスのサイズ調整
         const width = Math.abs(imageCoords.x - currentDrawing.x)
         const height = Math.abs(imageCoords.y - currentDrawing.y)
-        
+
         // 表示用の左上角座標を計算（開始地点は固定のまま）
         const displayX = Math.min(currentDrawing.x, imageCoords.x)
         const displayY = Math.min(currentDrawing.y, imageCoords.y)
-        
+
         setCurrentDrawing({
           ...currentDrawing,
           // 開始地点は変更せず、表示用座標を別途保存
@@ -172,14 +172,6 @@ export function useDrawingHandlers({
             // 垂直線（X座標を固定）
             endX = currentDrawing.x
           }
-
-          console.log(`📏 線分縦横制限:`, {
-            deltaX,
-            deltaY,
-            direction: deltaX > deltaY ? "水平" : "垂直",
-            start: { x: currentDrawing.x, y: currentDrawing.y },
-            end: { x: endX, y: endY },
-          })
         }
 
         setCurrentDrawing({
@@ -215,7 +207,7 @@ export function useDrawingHandlers({
         if (isShiftPressed) {
           const minSize = Math.min(Math.abs(width), Math.abs(height))
           width = width >= 0 ? minSize : -minSize
-          height = width  // 高さを幅と同じにする
+          height = width // 高さを幅と同じにする
         }
 
         setCurrentDrawing({
@@ -243,7 +235,10 @@ export function useDrawingHandlers({
 
     if (currentDrawing.type === "text" && isCreatingTextBox) {
       // テキストボックス作成完了時に座標を正規化
-      if (currentDrawing.displayX !== undefined && currentDrawing.displayY !== undefined) {
+      if (
+        currentDrawing.displayX !== undefined &&
+        currentDrawing.displayY !== undefined
+      ) {
         // 表示用座標を正式な座標として設定
         setCurrentDrawing({
           ...currentDrawing,
@@ -254,7 +249,7 @@ export function useDrawingHandlers({
           displayY: undefined,
         })
       }
-      
+
       // テキストボックス作成完了
       setIsCreatingTextBox(false)
       setIsDrawing(false)

@@ -42,13 +42,6 @@ export function useRectangleSelection({
     (imageCoords: { x: number; y: number }) => {
       if (currentTool !== "select") return false
 
-      console.log("📐 長方形選択開始:", imageCoords)
-      console.log("📐 現在の状態:", {
-        isCtrlPressed,
-        selectedElementIds: selectedElementIds.length,
-        isDrawingSelection,
-      })
-
       // 何も選択されなかった場合は選択範囲ドラッグを開始
       if (!isCtrlPressed) {
         clearSelection()
@@ -70,8 +63,6 @@ export function useRectangleSelection({
     [
       currentTool,
       isCtrlPressed,
-      selectedElementIds.length,
-      isDrawingSelection,
       setIsDrawingSelection,
       setSelectionRectangle,
       setLineEditMode,
@@ -124,8 +115,6 @@ export function useRectangleSelection({
         Math.abs(selectionRectangle.width) > 0.01 ||
         Math.abs(selectionRectangle.height) > 0.01
       ) {
-        console.log("📐 長方形選択完了:", selectionRectangle)
-
         // Ctrl/Cmdキーで追加選択
         if (isCtrlPressed) {
           const elementsInRect = drawingElements

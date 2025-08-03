@@ -7,11 +7,6 @@ export function useHitTestUtils() {
   const hitTestElement = useCallback(
     (element: DrawingElement, testX: number, testY: number): boolean => {
       const tolerance = DRAWING_TOLERANCES.hitTest
-      console.log(`🎯 ヒットテスト実行 ${element.type}[${element.id}]:`, {
-        element: { x: element.x, y: element.y, endX: element.endX, endY: element.endY, width: element.width, height: element.height },
-        testCoords: { testX, testY },
-        tolerance
-      })
 
       switch (element.type) {
         case "text":
@@ -20,27 +15,22 @@ export function useHitTestUtils() {
             element.textBoxHeight !== undefined
           ) {
             // テキストボックスの場合
-            const textBoxResult = (
+            const textBoxResult =
               testX >= element.x &&
               testX <= element.x + element.textBoxWidth &&
               testY >= element.y &&
               testY <= element.y + element.textBoxHeight
-            )
-            console.log(`📝 テキストボックス判定:`, { result: textBoxResult, bounds: { left: element.x, right: element.x + element.textBoxWidth, top: element.y, bottom: element.y + element.textBoxHeight } })
             return textBoxResult
           } else {
             // 通常のテキストの場合（点判定）
-            const textResult = (
+            const textResult =
               Math.abs(element.x - testX) < tolerance &&
               Math.abs(element.y - testY) < tolerance
-            )
-            console.log(`📝 テキスト点判定:`, { result: textResult, distance: { x: Math.abs(element.x - testX), y: Math.abs(element.y - testY) } })
             return textResult
           }
 
         case "line":
           if (element.endX === undefined || element.endY === undefined) {
-            console.log(`📏 線判定: endX/endY未定義`)
             return false
           }
 
@@ -50,22 +40,15 @@ export function useHitTestUtils() {
           const lineTop = Math.min(element.y, element.endY) - tolerance
           const lineBottom = Math.max(element.y, element.endY) + tolerance
 
-          const lineResult = (
-            testX >= lineLeft && testX <= lineRight && 
-            testY >= lineTop && testY <= lineBottom
-          )
-          
-          console.log(`📏 線長方形判定:`, { 
-            result: lineResult, 
-            bounds: { left: lineLeft, right: lineRight, top: lineTop, bottom: lineBottom },
-            testPoint: { testX, testY },
-            tolerance
-          })
+          const lineResult =
+            testX >= lineLeft &&
+            testX <= lineRight &&
+            testY >= lineTop &&
+            testY <= lineBottom
           return lineResult
 
         case "rectangle":
           if (element.width === undefined || element.height === undefined) {
-            console.log(`⬜ 矩形判定: width/height未定義`)
             return false
           }
 
@@ -74,14 +57,11 @@ export function useHitTestUtils() {
           const top = Math.min(element.y, element.y + element.height)
           const bottom = Math.max(element.y, element.y + element.height)
 
-          const rectangleResult = (
+          const rectangleResult =
             testX >= left && testX <= right && testY >= top && testY <= bottom
-          )
-          console.log(`⬜ 矩形判定:`, { result: rectangleResult, bounds: { left, right, top, bottom } })
           return rectangleResult
 
         default:
-          console.log(`❓ 未知の要素タイプ: ${element.type}`)
           return false
       }
     },

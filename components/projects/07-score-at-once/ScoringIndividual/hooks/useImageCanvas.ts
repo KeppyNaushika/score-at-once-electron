@@ -189,9 +189,15 @@ export function useImageCanvas({
 
           drawingElements.forEach((element) => {
             // テキストボックスの場合、表示用座標があればそれを使用
-            const displayX = element.type === 'text' && element.displayX !== undefined ? element.displayX : element.x
-            const displayY = element.type === 'text' && element.displayY !== undefined ? element.displayY : element.y
-            
+            const displayX =
+              element.type === "text" && element.displayX !== undefined
+                ? element.displayX
+                : element.x
+            const displayY =
+              element.type === "text" && element.displayY !== undefined
+                ? element.displayY
+                : element.y
+
             const currentX = displayX * baseImg.naturalWidth + offsetX
             const currentY = displayY * baseImg.naturalHeight + offsetY
 
@@ -545,9 +551,17 @@ export function useImageCanvas({
           // 現在描画中の要素（リアルタイムプレビュー）
           if (isDrawing && currentDrawing) {
             // テキストボックスの場合、表示用座標があればそれを使用
-            const drawingDisplayX = currentDrawing.type === 'text' && currentDrawing.displayX !== undefined ? currentDrawing.displayX : currentDrawing.x
-            const drawingDisplayY = currentDrawing.type === 'text' && currentDrawing.displayY !== undefined ? currentDrawing.displayY : currentDrawing.y
-            
+            const drawingDisplayX =
+              currentDrawing.type === "text" &&
+              currentDrawing.displayX !== undefined
+                ? currentDrawing.displayX
+                : currentDrawing.x
+            const drawingDisplayY =
+              currentDrawing.type === "text" &&
+              currentDrawing.displayY !== undefined
+                ? currentDrawing.displayY
+                : currentDrawing.y
+
             const currentX =
               (drawingDisplayX || 0) * baseImg.naturalWidth + offsetX
             const currentY =
@@ -776,11 +790,6 @@ export function useImageCanvas({
         if (loadedImageArray.length > 0 && imageRef.current) {
           const firstImage = loadedImageArray[0]
           imageRef.current.src = firstImage.src
-          console.log("🖼️ Setting hidden img src:", {
-            src: firstImage.src,
-            naturalWidth: firstImage.naturalWidth,
-            naturalHeight: firstImage.naturalHeight,
-          })
         }
 
         drawCanvas(loadedImageArray)
@@ -803,11 +812,6 @@ export function useImageCanvas({
           if (successfulImages.length > 0 && imageRef.current) {
             const firstImage = successfulImages[0]
             imageRef.current.src = firstImage.src
-            console.log("🖼️ Setting hidden img src (partial load):", {
-              src: firstImage.src,
-              naturalWidth: firstImage.naturalWidth,
-              naturalHeight: firstImage.naturalHeight,
-            })
           }
 
           drawCanvas(successfulImages)

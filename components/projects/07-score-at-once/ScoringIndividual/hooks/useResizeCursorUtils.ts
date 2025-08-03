@@ -30,16 +30,6 @@ export function useResizeCursorUtils({
           let degrees = (Math.abs(angle) * 180) / Math.PI
           if (degrees > 90) degrees = 180 - degrees
 
-          console.log(`📏 線分リサイズカーソル判定:`, {
-            deltaX,
-            deltaY,
-            angle,
-            degrees,
-            start: { x: element.x, y: element.y },
-            end: { x: element.endX, y: element.endY },
-            handle,
-          })
-
           // 角度に基づいてカーソルを決定（±5度で水平・垂直判定）
           if (degrees <= 5) {
             return "ew-resize" // 水平（0-5度）
@@ -52,11 +42,6 @@ export function useResizeCursorUtils({
 
         case "rectangle":
         case "text":
-          console.log(`⬜ 矩形リサイズカーソル判定:`, {
-            handle,
-            element: element.type,
-          })
-
           // 矩形の角・辺に基づいてカーソルを決定
           switch (handle) {
             case "top-left":
@@ -89,13 +74,6 @@ export function useResizeCursorUtils({
 
       if (handle) {
         const cursor = getResizeCursor(element, handle)
-        console.log(`🎯 リサイズハンドル検出:`, {
-          elementType: element.type,
-          elementId: element.id,
-          handle,
-          cursor,
-          testPoint: { testX, testY },
-        })
         return cursor
       }
 

@@ -39,19 +39,11 @@ export function useElementMovement({
   // 要素移動の開始チェック（マウスダウン時のみ実行される想定）
   const checkMovementStart = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      console.log("🔍 移動開始チェック:", {
-        currentTool,
-        isDraggingElement,
-        selectedElementIds: selectedElementIds.length,
-        imageCoords,
-      })
-
       if (
         currentTool !== "select" ||
         isDraggingElement ||
         selectedElementIds.length === 0
       ) {
-        console.log("❌ 移動開始条件に合わない")
         return false
       }
 
@@ -64,13 +56,6 @@ export function useElementMovement({
           selectedElement &&
           hitTestElement(selectedElement, imageCoords.x, imageCoords.y)
         ) {
-          // 選択された要素内でマウスが移動した場合、移動開始
-          console.log("🚀 移動開始:", {
-            elementId: selectedId,
-            imageCoords,
-            elementPos: { x: selectedElement.x, y: selectedElement.y },
-          })
-
           setIsDraggingElement(true)
           const dragOffsetX = imageCoords.x - selectedElement.x
           const dragOffsetY = imageCoords.y - selectedElement.y
@@ -81,7 +66,6 @@ export function useElementMovement({
           return true
         }
       }
-      console.log("❌ 選択要素に当たらない")
       return false
     },
     [
@@ -105,12 +89,6 @@ export function useElementMovement({
       ) {
         return false
       }
-
-      console.log("🚀 ドラッグ移動中:", {
-        selectedElementIds,
-        imageCoords,
-        dragElementOffset,
-      })
 
       const firstElementId = selectedElementIds[0]
       const firstElement = drawingElements.find(
@@ -141,13 +119,6 @@ export function useElementMovement({
                 // 垂直線（X座標を固定）
                 newX = firstElement.endX
               }
-
-              console.log(`📏 線分端点リサイズ縦横制限:`, {
-                mode: "start",
-                deltaX,
-                deltaY,
-                direction: deltaX > deltaY ? "水平" : "垂直",
-              })
             }
 
             updateDrawingElement(firstElementId, {
@@ -171,13 +142,6 @@ export function useElementMovement({
                 // 垂直線（X座標を固定）
                 newEndX = firstElement.x
               }
-
-              console.log(`📏 線分端点リサイズ縦横制限:`, {
-                mode: "end",
-                deltaX,
-                deltaY,
-                direction: deltaX > deltaY ? "水平" : "垂直",
-              })
             }
 
             updateDrawingElement(firstElementId, {
@@ -257,39 +221,23 @@ export function useElementMovement({
 
   // 要素移動終了処理
   const handleMovementEnd = useCallback(() => {
-    console.log("🔄 handleMovementEnd呼び出し:", {
-      currentTool,
-      isDraggingElement,
-      selectedElementIds: selectedElementIds.length,
-    })
-
     if (currentTool !== "select") {
-      console.log("❌ 選択ツールではない - movement end処理をスキップ")
       return false
     }
 
     let handled = false
     if (isDraggingElement) {
-      console.log("🏁 要素ドラッグ終了 - 状態リセット:", {
-        selectedElementIds,
-        isDraggingElement,
-        dragElementOffset,
-      })
       setIsDraggingElement(false)
       setDragElementOffset({ x: 0, y: 0 }) // オフセットもリセット
       setLineEditMode(null)
       setRectangleEditMode(null)
       handled = true
-      console.log("✅ 要素ドラッグ状態リセット完了")
     } else {
-      console.log("ℹ️ ドラッグしていなかった - movement end処理をスキップ")
     }
     return handled
   }, [
     currentTool,
     isDraggingElement,
-    selectedElementIds,
-    dragElementOffset,
     setIsDraggingElement,
     setDragElementOffset,
     setLineEditMode,
