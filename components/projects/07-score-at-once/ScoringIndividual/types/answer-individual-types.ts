@@ -41,7 +41,7 @@ export type RectangleEditMode = "move" | "resize" | null
 // AnswerIndividualViewのプロパティ（画像操作関連は内部管理）
 export interface AnswerIndividualViewProps {
   // Individual表示専用データ引数（単一データの詳細表示）
-  scoringData: ScoringData[] // 全データ（生徒選択のため）
+  scoringDatas: ScoringData[] // 全データ（生徒選択のため）
   currentScoringDataId: string | null // 現在表示中のデータID（selectedの最初の要素）
 
   // 設問情報（派生済みオブジェクト）

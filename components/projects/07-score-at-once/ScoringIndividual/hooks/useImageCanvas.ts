@@ -1,12 +1,16 @@
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
+import type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+  ScoringData,
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { DrawingElement } from "../types/answer-individual-types"
 import { useDrawingUtils } from "./useDrawingUtils"
 
 interface UseImageCanvasProps {
-  answerSheet: any // ScoringData やPageImageWithProjectStudentsへの統一予定
+  currentScoringData: ScoringData | null // 現在選択中の採点データ
   currentCropRegion?: CropRegionWithProjectPage | null
-  pageImages?: any[] // PageImageWithProjectStudents[] - 統一予定
+  pageImages?: PageImageWithProjectStudents[] // 複数ページ表示用の全データ
   zoom: number
   position: { x: number; y: number }
   drawingElements: DrawingElement[]
@@ -23,7 +27,7 @@ interface UseImageCanvasProps {
 }
 
 export function useImageCanvas({
-  answerSheet,
+  currentScoringData,
   currentCropRegion,
   pageImages,
   zoom,
@@ -68,18 +72,9 @@ export function useImageCanvas({
       // 画像描画をクリア
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      console.log("=== Canvas描画処理 ===", {
-        imagesLength: images.length,
-        imagesSources: images.map((img) =>
-          img.src?.substring(img.src.lastIndexOf("/") + 1),
-        ),
-      })
-
       // 常に複数ページ表示処理（1ページでも縦並び表示として扱う）
       let currentY = 0
       const spacing = pageSpacing || 20
-
-      console.log("ページ描画開始", { pageCount: images.length, spacing })
 
       images.forEach((img, index) => {
         const displayWidth = img.naturalWidth * zoom
@@ -117,14 +112,6 @@ export function useImageCanvas({
           currentCropRegion.projectPage?.pageNumber || 1
         const questionPageIndex = questionPageNumber - 1 // 1ベース→0ベースに変換
 
-        console.log("設問枠描画:", {
-          questionId: currentCropRegion.id,
-          questionLabel: currentCropRegion.label,
-          pageNumber: questionPageNumber,
-          pageIndex: questionPageIndex,
-          totalPages: images.length,
-        })
-
         // 指定されたページが読み込まれた画像の範囲内かチェック
         if (questionPageIndex >= 0 && questionPageIndex < images.length) {
           const img = images[questionPageIndex]
@@ -149,16 +136,6 @@ export function useImageCanvas({
             const questionY = currentCropRegion.y * displayHeight + offsetY
             const questionWidth = currentCropRegion.width * displayWidth
             const questionHeight = currentCropRegion.height * displayHeight
-
-            console.log("設問枠座標:", {
-              questionX,
-              questionY,
-              questionWidth,
-              questionHeight,
-              offsetX,
-              offsetY,
-              pageOffsetY,
-            })
 
             ctx.strokeStyle = "#22c55e"
             ctx.lineWidth = 2
@@ -388,70 +365,35 @@ export function useImageCanvas({
     ],
   )
 
-  // 複数ページ画像の読み込み処理
+  // 画像読み込み処理（Grid Viewと同じロジックを使用）
   useEffect(() => {
     const loadAnswerImages = async () => {
-      console.log("=== Loading answer images ===", {
-        answerSheetId: answerSheet?.id,
-        studentId: answerSheet?.studentId,
-        showMultiplePages,
-        timestamp: new Date().toISOString(),
-      })
-
-      if (!answerSheet?.studentId) {
-        console.warn("AnswerIndividualView: No student ID provided")
+      if (!currentScoringData) {
+        console.warn("AnswerIndividualView: No currentScoringData provided")
+        setImageLoaded(false)
         return
       }
 
       let imagesToLoad: { path: string; pageNumber: number }[] = []
 
-      console.log("画像読み込み処理開始:", {
-        showMultiplePages,
-        pageImagesCount: pageImages?.length || 0,
-        currentStudentId: answerSheet.studentId,
-      })
-
       if (showMultiplePages && pageImages) {
         // 複数ページ表示：同一生徒の全ページを取得
-        console.log(
-          "全答案シート:",
-          pageImages.map((sheet) => ({
-            id: sheet.id,
-            studentId: sheet.studentId,
-            pageNumber: sheet.pageNumber,
-            imagePath: sheet.imagePath,
-          })),
-        )
-
         const studentAnswerSheets = pageImages
-          .filter((sheet) => sheet.studentId === answerSheet.studentId)
-          .sort((a, b) => a.pageNumber - b.pageNumber)
-
-        console.log(
-          "同一生徒の答案シート:",
-          studentAnswerSheets.map((sheet) => ({
-            id: sheet.id,
-            pageNumber: sheet.pageNumber,
-            imagePath: sheet.imagePath,
-          })),
-        )
+          .filter((sheet) => sheet.studentId === currentScoringData.studentId)
+          .sort(
+            (a, b) =>
+              (a.projectPage?.pageNumber || 1) -
+              (b.projectPage?.pageNumber || 1),
+          )
 
         imagesToLoad = studentAnswerSheets.map((sheet) => ({
           path: sheet.imagePath,
-          pageNumber: sheet.pageNumber,
+          pageNumber: sheet.projectPage?.pageNumber || 1,
         }))
-
-        console.log("Loading multiple pages for student:", {
-          studentId: answerSheet.studentId,
-          pageCount: imagesToLoad.length,
-          pages: imagesToLoad.map((img) => img.pageNumber),
-        })
       } else {
-        // 単一ページ表示：現在の答案のみ
-        imagesToLoad = [
-          { path: answerSheet.imagePath, pageNumber: answerSheet.pageNumber },
-        ]
-        console.log("Loading single page:", imagesToLoad[0])
+        // 単一ページ表示：ScoringDataのimageUrlを使用（Grid Viewと同じ）
+        const imagePath = currentScoringData.imageUrl.replace("appimg://", "")
+        imagesToLoad = [{ path: imagePath, pageNumber: 1 }]
       }
 
       // 画像を並列読み込み
@@ -512,15 +454,33 @@ export function useImageCanvas({
       }
     }
 
-    if (answerSheet) {
+    if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [answerSheet, pageImages, showMultiplePages, drawCanvas])
+  }, [currentScoringData, pageImages, showMultiplePages, drawCanvas])
 
   // Canvas再描画
   useEffect(() => {
     if (imageLoaded && loadedImages.length > 0) {
       drawCanvas(loadedImages)
+    }
+  }, [imageLoaded, loadedImages, drawCanvas])
+
+  // コンテナリサイズの監視とCanvas再描画
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (imageLoaded && loadedImages.length > 0) {
+        drawCanvas(loadedImages)
+      }
+    })
+
+    resizeObserver.observe(container)
+
+    return () => {
+      resizeObserver.disconnect()
     }
   }, [imageLoaded, loadedImages, drawCanvas])
 

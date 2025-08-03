@@ -2,11 +2,12 @@
 
 import AnswerGridView from "@/components/projects/07-score-at-once/ScoringGrid/AnswerGridView"
 import AnswerIndividualView from "@/components/projects/07-score-at-once/ScoringIndividual/AnswerIndividualView"
-import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import type {
   CropRegionWithProjectPage,
   GradingMode,
   LayoutDirection,
+  PageImageWithProjectStudents,
+  ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 
 interface ScoringContentAreaProps {
@@ -14,6 +15,7 @@ interface ScoringContentAreaProps {
 
   // 採点データ管理（両View共通）
   allScoringData: ScoringData[]
+  masterAnswerData: any // Grid表示用の模範解答データ
   filteredScoringDataIds: Set<string>
   selectedScoringDataIds: Set<string>
 
@@ -35,7 +37,7 @@ interface ScoringContentAreaProps {
   showStudentNames: boolean
 
   // IndividualView設定
-  pageImages?: any[] // PageImageWithProjectStudents[] - Individual表示の複数ページ表示用
+  pageImages?: PageImageWithProjectStudents[]
 
   // 生徒データコールバック（個別表示でサイドパネルに渡すため）
   onStudentsExtracted?: (students: any[]) => void
@@ -44,6 +46,7 @@ interface ScoringContentAreaProps {
 export function ScoringContentArea({
   gradingMode,
   allScoringData,
+  masterAnswerData,
   filteredScoringDataIds,
   selectedScoringDataIds,
   currentCropRegion,
@@ -68,32 +71,32 @@ export function ScoringContentArea({
   return (
     <div className="min-h-0 flex-1">
       {gradingMode === "individual" ? (
-        <div className="p-6">
-          <AnswerIndividualView
-            scoringData={allScoringData}
-            currentScoringDataId={currentScoringDataId}
-            currentCropRegion={currentCropRegion}
-            pageImages={pageImages}
-            onScoringDataScore={(
-              statusOrAnswerIds,
-              statusOrPartialScore,
-              partialScore,
-            ) => {
-              // 個別表示モードでは現在の答案のみを対象にする
-              if (currentScoringDataId) {
-                onScoringDataScore(
-                  [currentScoringDataId],
-                  statusOrPartialScore,
-                  partialScore,
-                )
-              }
-            }}
-          />
-        </div>
+        // 個別表示はフルサイズ表示（paddingなし）
+        <AnswerIndividualView
+          scoringDatas={allScoringData}
+          currentScoringDataId={currentScoringDataId}
+          currentCropRegion={currentCropRegion}
+          pageImages={pageImages}
+          onScoringDataScore={(
+            statusOrAnswerIds,
+            statusOrPartialScore,
+            partialScore,
+          ) => {
+            // 個別表示モードでは現在の答案のみを対象にする
+            if (currentScoringDataId) {
+              onScoringDataScore(
+                [currentScoringDataId],
+                statusOrPartialScore,
+                partialScore,
+              )
+            }
+          }}
+        />
       ) : (
-        <div className="p-6">
+        <div className="min-h-0 flex-1 overflow-hidden p-6">
           <AnswerGridView
             allScoringData={allScoringData}
+            masterAnswerData={masterAnswerData}
             filteredScoringDataIds={filteredScoringDataIds}
             selectedScoringDataIds={selectedScoringDataIds}
             // Grid表示では設問情報不要

@@ -94,7 +94,7 @@ export default function ScoringMainView() {
     if (cropRegions.length > 0 && !currentCropRegionId) {
       // 設問タイプ'QUESTION_ANSWER'の最初の設問を自動選択
       const firstQuestionRegion = cropRegions.find(
-        (region) => region.type === "QUESTION_ANSWER"
+        (region) => region.type === "QUESTION_ANSWER",
       )
       if (firstQuestionRegion) {
         setCurrentCropRegionId(firstQuestionRegion.id)
@@ -168,6 +168,7 @@ export default function ScoringMainView() {
   const {
     // 新しいデータ構造
     allScoringData,
+    masterAnswerData,
     filteredScoringDataIds,
     selectedScoringDataIds,
 
@@ -454,25 +455,37 @@ export default function ScoringMainView() {
     questionScoresLength: questionScores?.length || 0,
     currentCropRegionId: currentCropRegionId,
   })
-  
-  console.log("Question progress summary:", Object.entries(questionProgress || {}).map(([id, progress]) => ({
-    questionId: id,
-    display: `${progress.gradedAnswers}/${progress.totalAnswers}`,
-    percentage: progress.percentage
-  })))
-  
-  // 0/0の問題をチェック
-  const problematicQuestions = Object.entries(questionProgress || {}).filter(([_, progress]) => 
-    progress.totalAnswers === 0
+
+  console.log(
+    "Question progress summary:",
+    Object.entries(questionProgress || {}).map(([id, progress]) => ({
+      questionId: id,
+      display: `${progress.gradedAnswers}/${progress.totalAnswers}`,
+      percentage: progress.percentage,
+    })),
   )
-  
+
+  // 0/0の問題をチェック
+  const problematicQuestions = Object.entries(questionProgress || {}).filter(
+    ([_, progress]) => progress.totalAnswers === 0,
+  )
+
   if (problematicQuestions.length > 0) {
-    console.error("🚨 ScoringMainView: Questions with 0 total answers detected:", problematicQuestions)
+    console.error(
+      "🚨 ScoringMainView: Questions with 0 total answers detected:",
+      problematicQuestions,
+    )
   }
-  
+
   // データの不整合をチェック
-  if (pageImages?.length > 0 && cropRegions?.length > 0 && Object.keys(questionProgress || {}).length === 0) {
-    console.error("🚨 Data inconsistency: Have pageImages and cropRegions but no questionProgress")
+  if (
+    pageImages?.length > 0 &&
+    cropRegions?.length > 0 &&
+    Object.keys(questionProgress || {}).length === 0
+  ) {
+    console.error(
+      "🚨 Data inconsistency: Have pageImages and cropRegions but no questionProgress",
+    )
   }
 
   // ローディング状態
@@ -521,6 +534,7 @@ export default function ScoringMainView() {
         <ScoringContentArea
           gradingMode={gradingMode}
           allScoringData={allScoringData}
+          masterAnswerData={masterAnswerData}
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
           currentCropRegion={currentCropRegion}

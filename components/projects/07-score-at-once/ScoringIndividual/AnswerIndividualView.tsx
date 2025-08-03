@@ -12,7 +12,7 @@ import { useImageNavigation } from "./hooks/useImageNavigation"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
 
 export default function AnswerIndividualView({
-  scoringData,
+  scoringDatas,
   currentScoringDataId,
   currentCropRegion,
   onScoringDataScore,
@@ -28,16 +28,17 @@ export default function AnswerIndividualView({
   const drawingState = useDrawingState()
 
   // 現在表示中の採点データを取得（簡潔に）
-  const answerSheet = currentScoringDataId
-    ? scoringData.find((data: any) => data.id === currentScoringDataId)
-    : null
+  const currentScoringData =
+    scoringDatas.find(
+      (scoringData) => scoringData.id === currentScoringDataId,
+    ) ?? null
 
   // currentCropRegionはすでにpropsで渡されている（派生済み）
 
   // 画像とキャンバス管理
   const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =
     useImageCanvas({
-      answerSheet,
+      currentScoringData,
       currentCropRegion,
       pageImages,
       zoom,
@@ -410,11 +411,11 @@ export default function AnswerIndividualView({
     drawingState.setCurrentDrawing(null)
   }, [drawingState])
 
-  // 答案が選択されていない場合の早期リターン
-  if (!answerSheet) {
+  // 採点データが選択されていない場合の早期リターン
+  if (!currentScoringData) {
     return (
       <div className="flex h-full items-center justify-center bg-gray-50 text-gray-500">
-        答案を選択してください
+        採点データを選択してください
       </div>
     )
   }

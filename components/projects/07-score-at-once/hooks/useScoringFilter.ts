@@ -1,10 +1,10 @@
 import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
-import type { 
-  ScoringData,
+import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-  ScoringStatus,
   QuestionScore,
+  ScoringData,
+  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -75,7 +75,11 @@ export function useScoringFilter({
 
       console.log("=== updateVisibleAnswers DEBUG START ===")
       console.log("activeFilterSettings:", activeFilterSettings)
-      console.log("currentCropRegion:", currentCropRegion?.id, currentCropRegion?.label)
+      console.log(
+        "currentCropRegion:",
+        currentCropRegion?.id,
+        currentCropRegion?.label,
+      )
 
       if (!currentCropRegion) {
         console.log("No currentCropRegion, returning empty set")
@@ -90,28 +94,37 @@ export function useScoringFilter({
       // 最適化: ProjectPageIDでフィルタリングを先に実行
       for (const pageImage of pageImages) {
         totalProcessed++
-        
-        if (pageImage.projectPageId !== currentCropRegion.projectPageId) continue
+
+        if (pageImage.projectPageId !== currentCropRegion.projectPageId)
+          continue
         matchingPage++
 
         if (!pageImage.studentId) continue // studentIdがnullの場合はスキップ
-        
-        const score = findQuestionScore(questionScores, pageImage.studentId, currentCropRegion.id)
+
+        const score = findQuestionScore(
+          questionScores,
+          pageImage.studentId,
+          currentCropRegion.id,
+        )
         const status = (score?.status as ScoringStatus) || "unscored"
 
-        const matchesFilter = activeFilterSettings[status as keyof typeof activeFilterSettings]
+        const matchesFilter =
+          activeFilterSettings[status as keyof typeof activeFilterSettings]
         const isRecentlyScored = recentlyScoredAnswers.has(pageImage.id)
 
-        console.log(`PageImage ${pageImage.id} (${pageImage.student?.lastName} ${pageImage.student?.firstName}):`, {
-          studentId: pageImage.studentId,
-          cropRegionId: currentCropRegion.id,
-          status,
-          hasScore: !!score,
-          partialScore: score?.partialScore || null,
-          matchesFilter,
-          isRecentlyScored,
-          willBeVisible: matchesFilter || isRecentlyScored
-        })
+        console.log(
+          `PageImage ${pageImage.id} (${pageImage.student?.lastName} ${pageImage.student?.firstName}):`,
+          {
+            studentId: pageImage.studentId,
+            cropRegionId: currentCropRegion.id,
+            status,
+            hasScore: !!score,
+            partialScore: score?.partialScore || null,
+            matchesFilter,
+            isRecentlyScored,
+            willBeVisible: matchesFilter || isRecentlyScored,
+          },
+        )
 
         // フィルター条件チェック（最近採点答案は強制表示）
         if (matchesFilter || isRecentlyScored) {
@@ -125,7 +138,7 @@ export function useScoringFilter({
         matchingPage,
         addedToVisible,
         visibleAnswersSize: newVisibleAnswers.size,
-        recentlyScoredSize: recentlyScoredAnswers.size
+        recentlyScoredSize: recentlyScoredAnswers.size,
       })
       console.log("=== updateVisibleAnswers DEBUG END ===")
 
@@ -135,7 +148,6 @@ export function useScoringFilter({
       pageImages,
       currentCropRegion,
       filterSettings,
-      project?.projectPages,
       questionScores,
       recentlyScoredAnswers,
     ],
@@ -203,8 +215,8 @@ export function useScoringFilter({
     }
   }, [visibleAnswers, setSelectedPageImageIds])
 
-  // 模範解答データを取得
-  const getMasterAnswerData = useCallback((): ScoringData | null => {
+  // 模範解答データを取得（Grid表示用）
+  const getMasterAnswerData = useCallback((): any | null => {
     if (!currentCropRegion || !project?.projectPages) return null
 
     // projectPageIdに基づいてprojectPageを取得
@@ -238,7 +250,8 @@ export function useScoringFilter({
 
     // projectPageIdでフィルタリングしてから受験生徒順でソート
     const pageFilteredSheets = pageImages.filter(
-      (pageImage) => pageImage.projectPageId === currentCropRegion.projectPageId,
+      (pageImage) =>
+        pageImage.projectPageId === currentCropRegion.projectPageId,
     )
 
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
@@ -271,20 +284,25 @@ export function useScoringFilter({
             id: pageImage.id,
             studentId: "",
             studentName: "不明",
-            imageUrl: pageImage.imagePath ? `appimg://${pageImage.imagePath}` : "",
+            imageUrl: pageImage.imagePath
+              ? `appimg://${pageImage.imagePath}`
+              : "",
             currentScore: undefined,
             maxScore: currentCropRegion.points || 0,
             status: "unscored" as ScoringStatus,
             questionRegion: currentCropRegion,
-            isMaster: false,
           }
         }
 
-        const score = findQuestionScore(questionScores, pageImage.studentId, currentCropRegion.id)
+        const score = findQuestionScore(
+          questionScores,
+          pageImage.studentId,
+          currentCropRegion.id,
+        )
 
         return {
           id: pageImage.id,
-          studentId: pageImage.student?.studentId || "",
+          studentId: pageImage.studentId, // Student.id (UUID) を使用
           studentName: `${pageImage.student?.lastName || ""} ${pageImage.student?.firstName || ""}`,
           imageUrl: pageImage.imagePath
             ? `appimg://${pageImage.imagePath}`
@@ -295,25 +313,13 @@ export function useScoringFilter({
           maxScore: currentCropRegion.points || 0,
           status: (score?.status as ScoringStatus) || "unscored",
           questionRegion: currentCropRegion, // 採点領域情報を追加
-          isMaster: false, // 学生データなのでfalse
         }
       },
     )
 
-    // 模範解答データも追加
-    const masterAnswer = getMasterAnswerData()
-    if (masterAnswer) {
-      return [masterAnswer, ...studentScoringData]
-    }
-
+    // 学生の採点データのみを返す（模範解答は別途管理）
     return studentScoringData
-  }, [
-    currentCropRegion,
-    project?.projectPages,
-    pageImages,
-    questionScores,
-    getMasterAnswerData,
-  ])
+  }, [currentCropRegion, pageImages, questionScores])
 
   // 基本的なグリッドデータ取得（後方互換性のため残す）
   const getAllGridAnswerData = useMemo(() => {
@@ -323,12 +329,11 @@ export function useScoringFilter({
     }))
   }, [allScoringData, selectedPageImageIds])
 
-  // 表示用のグリッドデータ（visibleAnswersを使用）
+  // 表示用のグリッドデータ（学生データのみをフィルタリング）
   const getGridAnswerData = useCallback(() => {
-    // allScoringData に既に模範解答が含まれているため、重複追加を避ける
+    // 学生答案のみをvisibleAnswersでフィルタリング
     const filteredAnswers = getAllGridAnswerData.filter((answer) => {
-      // 模範解答は常に表示し、学生答案はvisibleAnswersでフィルタリング
-      return answer.isMaster || visibleAnswers.has(answer.id)
+      return visibleAnswers.has(answer.id)
     })
 
     return filteredAnswers
@@ -398,6 +403,7 @@ export function useScoringFilter({
   return {
     // 新しいデータ構造
     allScoringData,
+    masterAnswerData: getMasterAnswerData(), // Grid表示用の模範解答データ
     filteredScoringDataIds: visibleAnswers,
     selectedScoringDataIds: selectedPageImageIds,
 

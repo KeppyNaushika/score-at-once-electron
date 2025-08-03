@@ -105,17 +105,17 @@ export function calculateActualScore(
 /**
  * 採点データの基本インターフェース
  * QuestionScore + Student + CropRegion + PageImage の結合データから変換されたもの
+ * 注意: 学生データのみを管理し、模範解答は別途管理する
  */
 export interface ScoringData {
-  id: string // PageImage.id または master用の生成ID
-  studentId: string // Student.studentId または "MASTER"
-  studentName: string // "${lastName} ${firstName}" または "模範解答"
+  id: string // PageImage.id
+  studentId: string // Student.id (UUID)
+  studentName: string // "${lastName} ${firstName}"
   imageUrl: string // "appimg://${imagePath}"
   currentScore?: number // QuestionScore.partialScore
   maxScore: number // CropRegion.points
-  status: ScoringStatus | "master" // QuestionScore.status または "master"
+  status: ScoringStatus // QuestionScore.status
   questionRegion: CropRegionWithProjectPage // CropRegion データ（設問領域情報）
-  isMaster?: boolean // 模範解答フラグ
 }
 
 /**

@@ -29,7 +29,7 @@ export function GridCell({
     SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG] ||
     SCORE_STATUS_CONFIG.unscored
   const Icon = config.icon
-  const isMaster = answer.isMaster
+  const isMaster = answer.studentId === "MASTER" || answer.studentName === "模範解答"
 
   const getScoreDisplay = () => {
     if (answer.status === "correct") {

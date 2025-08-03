@@ -19,6 +19,7 @@ import { useRef } from "react"
 export interface AnswerGridViewProps {
   // 統一されたデータ引数
   allScoringData: ScoringData[]
+  masterAnswerData: any // 模範解答データ
   filteredScoringDataIds: Set<string>
   selectedScoringDataIds: Set<string>
   // Grid表示では設問情報不要
@@ -37,6 +38,7 @@ export interface AnswerGridViewProps {
 
 export default function AnswerGridView({
   allScoringData,
+  masterAnswerData,
   filteredScoringDataIds,
   selectedScoringDataIds,
   onScoringDataSelect,
@@ -47,13 +49,11 @@ export default function AnswerGridView({
   showStudentNames = true,
   className = "",
 }: AnswerGridViewProps) {
-  // フィルタリングされた採点データを取得（模範解答を先頭に追加）
-  const masterAnswers = allScoringData
-    .filter((data) => data.isMaster)
-    .map((data) => ({
-      ...data,
-      isSelected: selectedScoringDataIds.has(data.id),
-    }))
+  // フィルタリングされた採点データを取得（模範解答 + 学生データ）
+  const masterAnswers = masterAnswerData ? [{
+    ...masterAnswerData,
+    isSelected: selectedScoringDataIds.has(masterAnswerData.id),
+  }] : []
 
   const studentAnswers = allScoringData
     .filter((data) => filteredScoringDataIds.has(data.id))
