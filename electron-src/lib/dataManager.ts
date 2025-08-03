@@ -37,7 +37,8 @@ export const getAppRootPath = (): string => {
   } else {
     // 開発環境の場合
     const rootPath = process.cwd()
-    console.log(`Development root path: ${rootPath}`)
+    // 開発環境でのログ出力を削減（必要時のみ有効化）
+    // console.log(`Development root path: ${rootPath}`)
     return rootPath
   }
 }
@@ -45,7 +46,8 @@ export const getAppRootPath = (): string => {
 // データディレクトリのパス
 export const getDataDirectory = (): string => {
   const dataPath = path.join(getAppRootPath(), "data")
-  console.log(`Data directory path: ${dataPath}`)
+  // 開発環境でのログ出力を削減（必要時のみ有効化）
+  // console.log(`Data directory path: ${dataPath}`)
   return dataPath
 }
 

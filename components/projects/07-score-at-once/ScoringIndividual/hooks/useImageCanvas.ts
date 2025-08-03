@@ -49,9 +49,9 @@ export function useImageCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
-  const [totalCanvasHeight, setTotalCanvasHeight] = useState(0)
 
   const { drawLineWithStyle } = useDrawingUtils()
+
 
   // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
@@ -75,11 +75,26 @@ export function useImageCanvas({
         0,
       )
 
+      // Canvas内部解像度の設定
       canvas.width = canvasWidth
       canvas.height = totalHeight
+      
+      // Canvas size debug removed for cleaner output
 
       // 画像描画をクリア
       ctx.clearRect(0, 0, canvas.width, canvas.height)
+      
+      // デバッグ: Canvas可視化のため薄い背景色を設定
+      ctx.fillStyle = "rgba(255, 255, 0, 0.1)" // 薄い黄色
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      
+      // Canvas Context設定を強制リセット
+      ctx.globalCompositeOperation = "source-over"
+      ctx.globalAlpha = 1.0
+      ctx.lineCap = "butt"
+      ctx.lineJoin = "miter"
+      ctx.miterLimit = 10
+      ctx.setLineDash([])
 
       // 常に複数ページ表示処理（1ページでも縦並び表示として扱う）
       let currentY = 0
@@ -109,7 +124,6 @@ export function useImageCanvas({
         currentY += img.naturalHeight + (images.length > 1 ? spacing : 0)
       })
 
-      setTotalCanvasHeight(currentY - (images.length > 1 ? spacing : 0))
 
       // 設問枠描画（CSS scale方式）
       if (currentCropRegion && images.length > 0) {
@@ -140,33 +154,6 @@ export function useImageCanvas({
             const questionWidth = currentCropRegion.width * img.naturalWidth
             const questionHeight = currentCropRegion.height * img.naturalHeight
 
-            console.log("🎯 設問枠描画デバッグ:", {
-              cropRegion: {
-                x: currentCropRegion.x,
-                y: currentCropRegion.y,
-                width: currentCropRegion.width,
-                height: currentCropRegion.height,
-                label: currentCropRegion.label
-              },
-              pageInfo: {
-                questionPageNumber,
-                questionPageIndex,
-                pageOffsetY
-              },
-              imageInfo: {
-                canvasWidth,
-                imgNaturalWidth: img.naturalWidth,
-                imgNaturalHeight: img.naturalHeight,
-                offsetX,
-                offsetY
-              },
-              calculatedPos: {
-                questionX,
-                questionY,
-                questionWidth,
-                questionHeight
-              }
-            })
 
             ctx.strokeStyle = "#22c55e"
             ctx.lineWidth = 2
@@ -295,90 +282,34 @@ export function useImageCanvas({
             }
           })
 
-          // 現在描画中の要素（CSS scale方式）
+          // 現在描画中の要素（描画頻度を制限）
           if (isDrawing && currentDrawing) {
-            const currentX =
-              (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
-            const currentY =
-              (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
+            const currentX = (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
+            const currentY = (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
 
-            ctx.strokeStyle = currentDrawing.color || strokeColor
-            ctx.lineWidth = currentDrawing.strokeWidth || strokeWidth
+            ctx.save()
+            ctx.strokeStyle = "#ff0000" // 強制的に赤色で確認
+            ctx.lineWidth = 5
+            ctx.globalAlpha = 1
+            ctx.lineCap = "round"
             ctx.setLineDash([])
 
             switch (currentDrawing.type) {
               case "line":
-                if (
-                  currentDrawing.endX !== undefined &&
-                  currentDrawing.endY !== undefined
-                ) {
-                  const currentEndX =
-                    currentDrawing.endX * baseImg.naturalWidth + offsetX
-                  const currentEndY =
-                    currentDrawing.endY * baseImg.naturalHeight + offsetY
+                if (currentDrawing.endX !== undefined && currentDrawing.endY !== undefined) {
+                  const currentEndX = currentDrawing.endX * baseImg.naturalWidth + offsetX
+                  const currentEndY = currentDrawing.endY * baseImg.naturalHeight + offsetY
 
-                  // 通常の自由線
-                  drawLineWithStyle(
-                    ctx,
-                    currentX,
-                    currentY,
-                    currentEndX,
-                    currentEndY,
-                    lineStyle as any,
-                    strokeWidth,
-                  )
-                }
-                break
-              case "rectangle":
-                if (
-                  currentDrawing.x !== undefined &&
-                  currentDrawing.y !== undefined &&
-                  currentDrawing.width !== undefined &&
-                  currentDrawing.height !== undefined
-                ) {
-                  const currentWidth =
-                    currentDrawing.width * baseImg.naturalWidth
-                  const currentHeight =
-                    currentDrawing.height * baseImg.naturalHeight
-                  ctx.strokeRect(
-                    currentX,
-                    currentY,
-                    currentWidth,
-                    currentHeight,
-                  )
-                }
-                break
-              case "text":
-                if (
-                  isCreatingTextBox &&
-                  currentDrawing.x !== undefined &&
-                  currentDrawing.y !== undefined &&
-                  currentDrawing.textBoxWidth !== undefined &&
-                  currentDrawing.textBoxHeight !== undefined
-                ) {
-                  // テキストボックス作成中のプレビュー表示（CSS scale方式）
-                  const currentWidth =
-                    currentDrawing.textBoxWidth * baseImg.naturalWidth
-                  const currentHeight =
-                    currentDrawing.textBoxHeight * baseImg.naturalHeight
-                  ctx.strokeStyle = currentDrawing.color || strokeColor
-                  ctx.lineWidth = 1
-                  ctx.setLineDash([5, 5])
-                  ctx.strokeRect(
-                    currentX,
-                    currentY,
-                    currentWidth,
-                    currentHeight,
-                  )
+                  ctx.beginPath()
+                  ctx.moveTo(currentX, currentY)
+                  ctx.lineTo(currentEndX, currentEndY)
+                  ctx.stroke()
 
-                  // "Text Box" プレビューテキスト
-                  ctx.setLineDash([])
-                  ctx.font = "14px sans-serif"
-                  ctx.fillStyle = currentDrawing.color || strokeColor
-                  ctx.fillText("Text Box", currentX + 5, currentY + 20)
+                  // Line drawing confirmed
                 }
                 break
             }
+            ctx.restore()
           }
         }
       }
@@ -387,14 +318,12 @@ export function useImageCanvas({
       pageSpacing,
       currentCropRegion,
       drawingElements,
-      isDrawing,
-      currentDrawing,
       selectedElementId,
       drawLineWithStyle,
       strokeColor,
       strokeWidth,
       isCreatingTextBox,
-      lineStyle,
+      // isDrawing と currentDrawing は描画パフォーマンス最適化のため部分的に処理
     ],
   )
 
@@ -465,6 +394,18 @@ export function useImageCanvas({
         const loadedImageArray = await Promise.all(loadPromises)
         setLoadedImages(loadedImageArray)
         setImageLoaded(true)
+        
+        // 隠しimg要素に最初の画像のsrcを設定（座標計算用）
+        if (loadedImageArray.length > 0 && imageRef.current) {
+          const firstImage = loadedImageArray[0]
+          imageRef.current.src = firstImage.src
+          console.log("🖼️ Setting hidden img src:", {
+            src: firstImage.src,
+            naturalWidth: firstImage.naturalWidth,
+            naturalHeight: firstImage.naturalHeight
+          })
+        }
+        
         drawCanvas(loadedImageArray)
       } catch (error) {
         console.error("Failed to load some images:", error)
@@ -480,6 +421,18 @@ export function useImageCanvas({
         if (successfulImages.length > 0) {
           setLoadedImages(successfulImages)
           setImageLoaded(true)
+          
+          // 隠しimg要素に最初の画像のsrcを設定（部分読み込みの場合）
+          if (successfulImages.length > 0 && imageRef.current) {
+            const firstImage = successfulImages[0]
+            imageRef.current.src = firstImage.src
+            console.log("🖼️ Setting hidden img src (partial load):", {
+              src: firstImage.src,
+              naturalWidth: firstImage.naturalWidth,
+              naturalHeight: firstImage.naturalHeight
+            })
+          }
+          
           drawCanvas(successfulImages)
         } else {
           setImageLoaded(false)
@@ -490,14 +443,26 @@ export function useImageCanvas({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, pageImages, showMultiplePages, drawCanvas])
+  }, [currentScoringData, pageImages, showMultiplePages]) // drawCanvasを依存配列から除外
 
-  // Canvas再描画
+  // Canvas再描画（ベース要素のみ）
   useEffect(() => {
     if (imageLoaded && loadedImages.length > 0) {
       drawCanvas(loadedImages)
     }
-  }, [imageLoaded, loadedImages, drawCanvas])
+  }, [imageLoaded, loadedImages, drawingElements, selectedElementId, strokeColor, strokeWidth, isCreatingTextBox])
+
+  // 現在描画中の要素の軽量更新（全体再描画を避ける）
+  useEffect(() => {
+    if (imageLoaded && loadedImages.length > 0 && isDrawing && currentDrawing) {
+      // 最後の描画から短時間の場合はスキップ（デバウンス効果）
+      const timeoutId = setTimeout(() => {
+        drawCanvas(loadedImages)
+      }, 16) // 60FPS相当の制限
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [imageLoaded, loadedImages, isDrawing, currentDrawing])
 
   // コンテナリサイズの監視とCanvas再描画
   useEffect(() => {

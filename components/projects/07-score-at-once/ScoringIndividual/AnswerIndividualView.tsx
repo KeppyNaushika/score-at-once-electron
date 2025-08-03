@@ -57,7 +57,7 @@ export default function AnswerIndividualView({
     })
 
   // イベントハンドリング
-  const { handleWheel, handleMouseDown, handleMouseMove, handleMouseUp } =
+  const { handleMouseDown, handleMouseMove, handleMouseUp } =
     useAnswerIndividualEvents({
       canvasRef,
       containerRef,
@@ -369,7 +369,6 @@ export default function AnswerIndividualView({
         style={{
           cursor: drawingState.currentTool === "hand" ? "grab" : "crosshair",
         }}
-        onWheel={handleWheel}
       >
         <div
           className="relative grid place-items-center"
@@ -430,6 +429,8 @@ export default function AnswerIndividualView({
                       ) * zoom
                     }px`
                   : `${600 * zoom}px`,
+              imageRendering: "pixelated", // 拡大時のぼけを防止
+              transform: "translateZ(0)", // ハードウェアアクセラレーション有効化
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
@@ -482,6 +483,18 @@ export default function AnswerIndividualView({
         className="hidden"
         alt="Answer sheet for canvas drawing"
         draggable={false}
+        onLoad={(e) => {
+          const img = e.target as HTMLImageElement
+          console.log("🖼️ Hidden img element loaded:", {
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight,
+            src: img.src,
+            complete: img.complete
+          })
+        }}
+        onError={(e) => {
+          console.error("🚫 Hidden img element failed to load:", e)
+        }}
       />
     </div>
   )

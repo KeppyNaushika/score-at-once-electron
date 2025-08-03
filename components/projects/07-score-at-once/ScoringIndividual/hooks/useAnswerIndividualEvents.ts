@@ -163,11 +163,13 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   // マウスダウン処理（CSS scale + scroll 方式）
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      console.log("🖱️ MouseDown triggered:", { currentTool, imageLoaded })
       if (!imageLoaded || !canvasRef.current || !containerRef.current) return
 
       const canvas = canvasRef.current
       const container = containerRef.current
       const img = imageRef.current
+      console.log("🖱️ Refs check:", { canvas: !!canvas, container: !!container, img: !!img })
       if (!img) return
 
       const rect = canvas.getBoundingClientRect()
@@ -186,15 +188,59 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       const canvasWidth = canvasElement.width
       const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
 
+      // 画像が読み込まれていない場合は処理をスキップ
+      if (!img.naturalWidth || !img.naturalHeight) {
+        console.warn("🚫 Image not loaded properly in MouseDown:", {
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          src: img.src,
+          complete: img.complete
+        })
+        return
+      }
+
       // 実際の画像座標に変換（中央配置オフセットを引く）
       const imageX = actualX - imageOffsetX
       const imageY = actualY
 
-      // 画像サイズで正規化（0-1の範囲、NaN防止）
+      // 画像サイズで正規化（0-1の範囲）
       const imageCoords = {
-        x: img.naturalWidth ? imageX / img.naturalWidth : 0,
-        y: img.naturalHeight ? imageY / img.naturalHeight : 0,
+        x: imageX / img.naturalWidth,
+        y: imageY / img.naturalHeight,
       }
+
+      console.log("🖱️ Detailed coordinate calculation:", {
+        mouse: { clientX: e.clientX, clientY: e.clientY },
+        canvas: { 
+          canvasX, 
+          canvasY,
+          rect: {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height
+          }
+        },
+        actual: { actualX, actualY },
+        image: { 
+          imageX, 
+          imageY,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight
+        },
+        canvasElement: {
+          width: canvasElement.width,
+          height: canvasElement.height,
+          canvasWidth
+        },
+        offsets: { imageOffsetX },
+        imageCoords: { x: imageCoords.x, y: imageCoords.y },
+        currentTool,
+        calculations: {
+          "actualX - imageOffsetX": actualX - imageOffsetX,
+          "imageX / img.naturalWidth": img.naturalWidth ? imageX / img.naturalWidth : "NaN - naturalWidth is 0"
+        }
+      })
 
       // 選択ツールの場合
       if (currentTool === "select") {
@@ -257,12 +303,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
           fontSize: 16,
         })
       } else if (currentTool === "line") {
-        console.log("🖊️ 直線描画開始:", {
-          imageCoords: { x: imageCoords.x, y: imageCoords.y },
-          strokeColor,
-          strokeWidth,
-          lineStyle
-        })
+        console.log("🖊️ Line tool detected, starting draw")
         setIsDrawing(true)
         setCurrentDrawing({
           id: Math.random().toString(36).substr(2, 9),
@@ -323,7 +364,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         !imageRef.current
       )
         return
-
+      
       const canvas = canvasRef.current
       const container = containerRef.current
       const img = imageRef.current
@@ -331,6 +372,17 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       const rect = canvas.getBoundingClientRect()
       const canvasX = e.clientX - rect.left
       const canvasY = e.clientY - rect.top
+
+      // デバッグ: ドラッグ中のみログ出力
+      if (isDrawing) {
+        console.log("🖱️ MouseMove during drawing:", { 
+          currentTool, 
+          isDrawing,
+          mouse: { clientX: e.clientX, clientY: e.clientY },
+          canvas: { canvasX, canvasY },
+          naturalSize: { width: img?.naturalWidth, height: img?.naturalHeight }
+        })
+      }
 
       // CSS scale方式：Canvas要素自体がzoom倍サイズなので座標変換不要
       const actualX = canvasX
@@ -344,14 +396,25 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       const canvasWidth = canvasElement.width
       const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
 
+      // 画像が読み込まれていない場合は処理をスキップ
+      if (!img.naturalWidth || !img.naturalHeight) {
+        console.warn("🚫 Image not loaded properly in MouseMove:", {
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight,
+          src: img.src,
+          complete: img.complete
+        })
+        return
+      }
+
       // 実際の画像座標に変換（中央配置オフセットを引く）
       const imageX = actualX - imageOffsetX
       const imageY = actualY
 
-      // 画像サイズで正規化（0-1の範囲、NaN防止）
+      // 画像サイズで正規化（0-1の範囲）
       const imageCoords = {
-        x: img.naturalWidth ? imageX / img.naturalWidth : 0,
-        y: img.naturalHeight ? imageY / img.naturalHeight : 0,
+        x: imageX / img.naturalWidth,
+        y: imageY / img.naturalHeight,
       }
 
       // 要素のドラッグ処理
@@ -408,6 +471,11 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
           // 線の描画
           let endX = imageCoords.x
           let endY = imageCoords.y
+          
+          console.log("🖊️ Line drawing update:", {
+            start: { x: currentDrawing.x, y: currentDrawing.y },
+            end: { x: endX, y: endY }
+          })
 
           // Shift+ドラッグで垂直・水平線の判定
           if (isShiftPressed) {
