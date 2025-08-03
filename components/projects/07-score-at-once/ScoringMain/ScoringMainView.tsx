@@ -488,8 +488,14 @@ export default function ScoringMainView() {
         />
       </PageHeader>
 
-      {/* 採点エリア */}
-      <div className="flex min-h-0 flex-1">
+      {/* 採点エリア - Grid Layout */}
+      <div 
+        className="grid h-full min-h-0 flex-1"
+        style={{
+          gridTemplateColumns: showSidePanel ? "1fr 24rem" : "1fr",
+          gridTemplateRows: "1fr"
+        }}
+      >
         <ScoringContentArea
           gradingMode={gradingMode}
           allScoringData={allScoringData}

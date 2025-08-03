@@ -68,47 +68,43 @@ export function ScoringContentArea({
           : null
       : null
 
-  return (
-    <div className="min-h-0 flex-1">
-      {gradingMode === "individual" ? (
-        // 個別表示はフルサイズ表示（paddingなし）
-        <AnswerIndividualView
-          scoringDatas={allScoringData}
-          currentScoringDataId={currentScoringDataId}
-          currentCropRegion={currentCropRegion}
-          pageImages={pageImages}
-          onScoringDataScore={(
-            statusOrAnswerIds,
+  // Grid layoutでは不要な階層を削除し、直接表示
+  return gradingMode === "individual" ? (
+    // 個別表示はフルサイズ表示
+    <AnswerIndividualView
+      scoringDatas={allScoringData}
+      currentScoringDataId={currentScoringDataId}
+      currentCropRegion={currentCropRegion}
+      pageImages={pageImages}
+      onScoringDataScore={(
+        statusOrAnswerIds,
+        statusOrPartialScore,
+        partialScore,
+      ) => {
+        // 個別表示モードでは現在の答案のみを対象にする
+        if (currentScoringDataId) {
+          onScoringDataScore(
+            [currentScoringDataId],
             statusOrPartialScore,
             partialScore,
-          ) => {
-            // 個別表示モードでは現在の答案のみを対象にする
-            if (currentScoringDataId) {
-              onScoringDataScore(
-                [currentScoringDataId],
-                statusOrPartialScore,
-                partialScore,
-              )
-            }
-          }}
-        />
-      ) : (
-        <div className="min-h-0 flex-1 p-6">
-          <AnswerGridView
-            allScoringData={allScoringData}
-            masterAnswerData={masterAnswerData}
-            filteredScoringDataIds={filteredScoringDataIds}
-            selectedScoringDataIds={selectedScoringDataIds}
-            // Grid表示では設問情報不要
-            layoutDirection={layoutDirection}
-            onScoringDataSelect={onScoringDataSelect}
-            onScoringDataScore={onScoringDataScore}
-            itemsPerRow={itemsPerLine}
-            autoScroll={autoScroll}
-            showStudentNames={showStudentNames}
-          />
-        </div>
-      )}
-    </div>
+          )
+        }
+      }}
+    />
+  ) : (
+    // Grid表示：paddingとスクロールを統合
+    <AnswerGridView
+      allScoringData={allScoringData}
+      masterAnswerData={masterAnswerData}
+      filteredScoringDataIds={filteredScoringDataIds}
+      selectedScoringDataIds={selectedScoringDataIds}
+      layoutDirection={layoutDirection}
+      onScoringDataSelect={onScoringDataSelect}
+      onScoringDataScore={onScoringDataScore}
+      itemsPerRow={itemsPerLine}
+      autoScroll={autoScroll}
+      showStudentNames={showStudentNames}
+      className="p-6"
+    />
   )
 }
