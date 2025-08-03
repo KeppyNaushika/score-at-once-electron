@@ -20,9 +20,9 @@ export const DEFAULT_DRAWING_SETTINGS = {
 
 // 描画時の許容誤差
 export const DRAWING_TOLERANCES = {
-  hitTest: 0.03,
-  lineDistance: 0.02,
-  rectangleEdge: 0.02,
+  hitTest: 0.04,        // 汎用的な当たり判定を少し拡大
+  lineDistance: 0.035,  // 線の当たり判定を大幅に拡大（移動しやすく）
+  rectangleEdge: 0.03,  // 矩形の辺の判定も少し拡大
 } as const
 
 // ズーム設定

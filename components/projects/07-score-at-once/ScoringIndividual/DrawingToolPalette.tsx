@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import type { DrawingTool } from "./types/answer-individual-types"
 import { LineToolPopover } from "./LineToolPopover"
+import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
 
 interface DrawingToolPaletteProps {
@@ -116,6 +117,15 @@ export function DrawingToolPalette({
             onStrokeColorChange={onStrokeColorChange}
             onStrokeWidthChange={onStrokeWidthChange}
             onLineStyleChange={onLineStyleChange}
+          />
+
+          <RectangleToolPopover
+            currentTool={currentTool}
+            onToolChange={onToolChange}
+            strokeColor={strokeColor}
+            strokeWidth={strokeWidth}
+            onStrokeColorChange={onStrokeColorChange}
+            onStrokeWidthChange={onStrokeWidthChange}
           />
 
           <TextToolPopover

@@ -133,6 +133,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     isCtrlPressed: props.isCtrlPressed,
     lineEditMode: props.lineEditMode,
     dragElementOffset: props.dragElementOffset,
+    canvasRef, // Canvas ref for cursor management
     toggleSelection: props.toggleSelection,
     setSelectedElementIds: props.setSelectedElementIds,
     clearSelection: props.clearSelection,
@@ -213,11 +214,14 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       if (!imageCoords) return
 
       // Delegate to appropriate handler based on current tool and state
-      if (props.isDraggingElement && props.currentTool === "hand") {
-        handleHandToolMouseMove(e)
-      } else if (props.currentTool === "select") {
+      if (props.currentTool === "select") {
+        // 選択ツールでの操作（要素移動・選択範囲ドラッグ）
         if (handleSelectionMouseMove(imageCoords)) return
+      } else if (props.currentTool === "hand" && props.isDraggingElement) {
+        // handツールでのドラッグ（パン操作）
+        handleHandToolMouseMove(e)
       } else {
+        // 描画ツールでの操作
         handleDrawingMouseMove(imageCoords)
       }
     },
@@ -233,10 +237,15 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   )
 
   const handleMouseUp = useCallback(() => {
+    console.log("🔼 メインmouseUp開始 - 全ハンドラー呼び出し")
     // Call all handlers - they will check their own conditions
+    console.log("👆 handツールmouseUp呼び出し")
     handleHandToolMouseUp()
+    console.log("👆 選択ツールmouseUp呼び出し")
     handleSelectionMouseUp()
+    console.log("👆 描画ツールmouseUp呼び出し")
     handleDrawingMouseUp()
+    console.log("🔼 メインmouseUp完了")
   }, [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp])
 
   return {

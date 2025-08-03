@@ -94,6 +94,19 @@ export function useDrawingHandlers({
           strokeWidth,
         })
         return true
+      } else if (currentTool === "rectangle-horizontal") {
+        setIsDrawing(true)
+        setCurrentDrawing({
+          id: Math.random().toString(36).substring(2, 11),
+          type: "rectangle",
+          x: imageCoords.x,
+          y: imageCoords.y,
+          width: 0,
+          height: 0,
+          color: strokeColor,
+          strokeWidth,
+        })
+        return true
       }
 
       return false
@@ -157,8 +170,17 @@ export function useDrawingHandlers({
         return true
       } else if (currentDrawing.type === "rectangle") {
         // 矩形の描画
-        const width = imageCoords.x - currentDrawing.x
-        const height = imageCoords.y - currentDrawing.y
+        let width = imageCoords.x - currentDrawing.x
+        let height = imageCoords.y - currentDrawing.y
+        
+        // rectangle-horizontalの場合は横長に制限
+        if (currentTool === "rectangle-horizontal") {
+          const maxHeight = Math.abs(width) * 0.3 // 高さを幅の30%に制限
+          if (Math.abs(height) > maxHeight) {
+            height = height > 0 ? maxHeight : -maxHeight
+          }
+        }
+        
         setCurrentDrawing({
           ...currentDrawing,
           width,

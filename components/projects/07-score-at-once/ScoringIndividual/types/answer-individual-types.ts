@@ -30,7 +30,7 @@ export interface DrawingElement {
 }
 
 // 描画ツールの型定義
-export type DrawingTool = "hand" | "text" | "line" | "rectangle" | "select"
+export type DrawingTool = "hand" | "text" | "line" | "rectangle" | "rectangle-horizontal" | "select"
 
 // 線の編集モード
 export type LineEditMode = "move" | "start" | "end" | null

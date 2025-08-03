@@ -1,3 +1,7 @@
+import { useCursorUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useCursorUtils"
+import { useElementMovement } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useElementMovement"
+import { useElementSelection } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useElementSelection"
+import { useRectangleSelection } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useRectangleSelection"
 import type {
   DrawingElement,
   SelectionRectangle,
@@ -14,6 +18,9 @@ interface UseSelectionHandlersProps {
   isCtrlPressed: boolean
   lineEditMode: any
   dragElementOffset: { x: number; y: number }
+
+  // Canvas ref for cursor management
+  canvasRef: React.RefObject<HTMLCanvasElement | null>
 
   // Actions
   toggleSelection: (id: string) => void
@@ -34,376 +41,217 @@ interface UseSelectionHandlersProps {
   getRectangleEditMode: (element: any, x: number, y: number) => any
 }
 
-export function useSelectionHandlers({
-  currentTool,
-  drawingElements,
-  selectedElementIds,
-  isDraggingElement,
-  isDrawingSelection,
-  selectionRectangle,
-  isCtrlPressed,
-  lineEditMode,
-  dragElementOffset,
-  toggleSelection,
-  setSelectedElementIds,
-  clearSelection,
-  setIsDrawingSelection,
-  setSelectionRectangle,
-  selectElementsInRectangle,
-  setIsDraggingElement,
-  setDragElementOffset,
-  setLineEditMode,
-  setRectangleEditMode,
-  updateDrawingElement,
-  hitTestElement,
-  getLineEditMode,
-  getRectangleEditMode,
-}: UseSelectionHandlersProps) {
-  // 選択ツールのマウスダウン処理
+export function useSelectionHandlers(props: UseSelectionHandlersProps) {
+  // Initialize cursor utilities
+  const { setCursor, resetCursor } = useCursorUtils({
+    canvasRef: props.canvasRef,
+  })
+
+  // Initialize specialized handlers
+  const { handleElementSelection } = useElementSelection({
+    currentTool: props.currentTool,
+    drawingElements: props.drawingElements,
+    selectedElementIds: props.selectedElementIds,
+    isCtrlPressed: props.isCtrlPressed,
+    toggleSelection: props.toggleSelection,
+    setSelectedElementIds: props.setSelectedElementIds,
+    clearSelection: props.clearSelection,
+    setLineEditMode: props.setLineEditMode,
+    setRectangleEditMode: props.setRectangleEditMode,
+    hitTestElement: props.hitTestElement,
+    getLineEditMode: props.getLineEditMode,
+    getRectangleEditMode: props.getRectangleEditMode,
+  })
+
+  const { checkMovementStart, handleElementMovement, handleMovementEnd } =
+    useElementMovement({
+      currentTool: props.currentTool,
+      drawingElements: props.drawingElements,
+      selectedElementIds: props.selectedElementIds,
+      isDraggingElement: props.isDraggingElement,
+      lineEditMode: props.lineEditMode,
+      dragElementOffset: props.dragElementOffset,
+      setIsDraggingElement: props.setIsDraggingElement,
+      setDragElementOffset: props.setDragElementOffset,
+      setLineEditMode: props.setLineEditMode,
+      setRectangleEditMode: props.setRectangleEditMode,
+      updateDrawingElement: props.updateDrawingElement,
+      hitTestElement: props.hitTestElement,
+    })
+
+  const {
+    startRectangleSelection,
+    updateRectangleSelection,
+    completeRectangleSelection,
+  } = useRectangleSelection({
+    currentTool: props.currentTool,
+    drawingElements: props.drawingElements,
+    selectedElementIds: props.selectedElementIds,
+    isDrawingSelection: props.isDrawingSelection,
+    selectionRectangle: props.selectionRectangle,
+    isCtrlPressed: props.isCtrlPressed,
+    clearSelection: props.clearSelection,
+    setIsDrawingSelection: props.setIsDrawingSelection,
+    setSelectionRectangle: props.setSelectionRectangle,
+    selectElementsInRectangle: props.selectElementsInRectangle,
+    setSelectedElementIds: props.setSelectedElementIds,
+    setLineEditMode: props.setLineEditMode,
+    setRectangleEditMode: props.setRectangleEditMode,
+  })
+
+  // Main mouse down handler
   const handleSelectionMouseDown = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      if (currentTool !== "select") return false
+      if (props.currentTool !== "select") return false
 
-      // 既存要素の選択チェック
-      let elementSelected = false
-      let clickedElement: any = null
+      console.log("🔽 handleSelectionMouseDown開始:", imageCoords)
 
-      for (let i = drawingElements.length - 1; i >= 0; i--) {
-        const element = drawingElements[i]
-        if (hitTestElement(element, imageCoords.x, imageCoords.y)) {
-          clickedElement = element
-          elementSelected = true
-          break
-        }
-      }
+      // Try element selection first
+      const { elementSelected, clickedElement, clickedCoords } =
+        handleElementSelection(imageCoords)
 
-      if (elementSelected && clickedElement) {
-        // Ctrl/Cmdキーが押されている場合は複数選択
-        if (isCtrlPressed) {
-          toggleSelection(clickedElement.id)
-        } else {
-          // 既に選択されている要素をクリックした場合はそのまま維持
-          if (selectedElementIds.includes(clickedElement.id)) {
-            // 何もしない（現在の選択を維持）
-          } else {
-            // 新しい要素を単独選択
-            setSelectedElementIds([clickedElement.id])
-          }
-        }
+      console.log("🔄 handleElementSelection結果:", {
+        elementSelected,
+        clickedElement: clickedElement?.id,
+        currentTool: props.currentTool,
+        imageCoords,
+        drawingElementsCount: props.drawingElements.length,
+      })
 
-        // 編集モードの判定（最初の選択要素のみ）
-        const firstSelectedId = selectedElementIds[0] || clickedElement.id
-        const firstSelectedElement = drawingElements.find(
-          (el) => el.id === firstSelectedId,
-        )
-
-        if (firstSelectedElement?.type === "line") {
-          const editMode = getLineEditMode(
-            firstSelectedElement,
-            imageCoords.x,
-            imageCoords.y,
-          )
-          setLineEditMode(editMode)
-        } else if (firstSelectedElement?.type === "rectangle") {
-          const editMode = getRectangleEditMode(
-            firstSelectedElement,
-            imageCoords.x,
-            imageCoords.y,
-          )
-          setRectangleEditMode(editMode)
-        }
-
-        // ドラッグ開始
-        setIsDraggingElement(true)
-        setDragElementOffset({
-          x: imageCoords.x - clickedElement.x,
-          y: imageCoords.y - clickedElement.y,
-        })
+      // If no element was selected, start rectangle selection
+      if (!elementSelected) {
+        console.log("📐 長方形選択を開始します - 要素選択に失敗")
+        // 長方形選択開始時にクロスヘアカーソルを設定
+        setCursor("crosshair")
+        startRectangleSelection(imageCoords)
       } else {
-        // 何も選択されなかった場合は選択範囲ドラッグを開始
-        if (!isCtrlPressed) {
-          clearSelection()
-        }
+        console.log("✅ 要素が選択されました - 即座に移動開始セットアップ")
+        // 要素が選択された場合、即座に移動開始のセットアップを行う
+        if (clickedElement && clickedCoords) {
+          console.log("🚀 選択と同時に移動開始セットアップ:", {
+            elementId: clickedElement.id,
+            coords: clickedCoords,
+            elementPos: { x: clickedElement.x, y: clickedElement.y },
+          })
 
-        // 選択範囲ドラッグ開始
-        setIsDrawingSelection(true)
-        setSelectionRectangle({
-          x: imageCoords.x,
-          y: imageCoords.y,
-          width: 0,
-          height: 0,
-        })
-        setLineEditMode(null)
-        setRectangleEditMode(null)
+          // 移動開始状態をセット
+          props.setIsDraggingElement(true)
+          const dragOffsetX = clickedCoords.x - clickedElement.x
+          const dragOffsetY = clickedCoords.y - clickedElement.y
+          props.setDragElementOffset({
+            x: dragOffsetX,
+            y: dragOffsetY,
+          })
+        }
       }
+
       return true
     },
-    [
-      currentTool,
-      drawingElements,
-      selectedElementIds,
-      isCtrlPressed,
-      hitTestElement,
-      toggleSelection,
-      setSelectedElementIds,
-      clearSelection,
-      setIsDrawingSelection,
-      setSelectionRectangle,
-      getLineEditMode,
-      setLineEditMode,
-      getRectangleEditMode,
-      setRectangleEditMode,
-      setIsDraggingElement,
-      setDragElementOffset,
-    ],
+    [props, handleElementSelection, setCursor, startRectangleSelection],
   )
 
-  // 選択ツールのマウス移動処理
+  // Check if mouse is over any element (for cursor styling)
+  const checkElementHover = useCallback(
+    (imageCoords: { x: number; y: number }) => {
+      if (props.currentTool !== "select") return false
+
+      // Check if any element is under the cursor
+      for (let i = props.drawingElements.length - 1; i >= 0; i--) {
+        const element = props.drawingElements[i]
+        if (props.hitTestElement(element, imageCoords.x, imageCoords.y)) {
+          return true
+        }
+      }
+      return false
+    },
+    [props],
+  )
+
+  // Main mouse move handler
   const handleSelectionMouseMove = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      if (currentTool !== "select") return false
-
-      // 要素のドラッグ処理（複数選択対応）
-      if (isDraggingElement && selectedElementIds.length > 0) {
-        const firstElementId = selectedElementIds[0]
-        const firstElement = drawingElements.find(
-          (el) => el.id === firstElementId,
-        )
-
-        if (firstElement) {
-          if (firstElement.type === "line" && lineEditMode) {
-            // 線の編集（最初の要素のみ）
-            if (lineEditMode === "start") {
-              updateDrawingElement(firstElementId, {
-                x: imageCoords.x,
-                y: imageCoords.y,
-              })
-            } else if (lineEditMode === "end") {
-              updateDrawingElement(firstElementId, {
-                endX: imageCoords.x,
-                endY: imageCoords.y,
-              })
-            } else if (lineEditMode === "move") {
-              const deltaX =
-                imageCoords.x - dragElementOffset.x - firstElement.x
-              const deltaY =
-                imageCoords.y - dragElementOffset.y - firstElement.y
-
-              // 全選択要素を同じ量だけ移動
-              selectedElementIds.forEach((elementId) => {
-                const element = drawingElements.find(
-                  (el) => el.id === elementId,
-                )
-                if (element) {
-                  if (
-                    element.type === "line" &&
-                    element.endX !== undefined &&
-                    element.endY !== undefined
-                  ) {
-                    updateDrawingElement(elementId, {
-                      x: element.x + deltaX,
-                      y: element.y + deltaY,
-                      endX: element.endX + deltaX,
-                      endY: element.endY + deltaY,
-                    })
-                  } else {
-                    updateDrawingElement(elementId, {
-                      x: element.x + deltaX,
-                      y: element.y + deltaY,
-                    })
-                  }
-                }
-              })
-            }
-          } else {
-            // 通常の移動（全選択要素を移動）
-            const deltaX = imageCoords.x - dragElementOffset.x - firstElement.x
-            const deltaY = imageCoords.y - dragElementOffset.y - firstElement.y
-
-            selectedElementIds.forEach((elementId) => {
-              const element = drawingElements.find((el) => el.id === elementId)
-              if (element) {
-                if (
-                  element.type === "line" &&
-                  element.endX !== undefined &&
-                  element.endY !== undefined
-                ) {
-                  updateDrawingElement(elementId, {
-                    x: element.x + deltaX,
-                    y: element.y + deltaY,
-                    endX: element.endX + deltaX,
-                    endY: element.endY + deltaY,
-                  })
-                } else {
-                  updateDrawingElement(elementId, {
-                    x: element.x + deltaX,
-                    y: element.y + deltaY,
-                  })
-                }
-              }
-            })
-          }
-        }
-        return true
+      if (props.currentTool !== "select") {
+        resetCursor()
+        return false
       }
 
-      // 選択範囲ドラッグ処理
-      if (isDrawingSelection && selectionRectangle) {
-        const width = imageCoords.x - selectionRectangle.x
-        const height = imageCoords.y - selectionRectangle.y
-
-        setSelectionRectangle({
-          ...selectionRectangle,
-          width,
-          height,
-        })
-        return true
+      // Update cursor based on current state
+      if (props.isDrawingSelection) {
+        // 長方形選択描画中はクロスヘアカーソル
+        setCursor("crosshair")
+      } else if (props.isDraggingElement) {
+        // 要素ドラッグ中は移動カーソル
+        setCursor("move")
+      } else if (checkElementHover(imageCoords)) {
+        // 要素の上にある場合は移動カーソル
+        setCursor("move")
+      } else {
+        // それ以外は通常カーソル
+        setCursor("normal")
       }
+
+      // Handle element movement (only when already dragging)
+      if (handleElementMovement(imageCoords)) return true
+
+      // Handle rectangle selection update
+      if (updateRectangleSelection(imageCoords)) return true
 
       return false
     },
     [
-      currentTool,
-      isDraggingElement,
-      selectedElementIds,
-      drawingElements,
-      lineEditMode,
-      dragElementOffset.x,
-      dragElementOffset.y,
-      updateDrawingElement,
-      isDrawingSelection,
-      selectionRectangle,
-      setSelectionRectangle,
+      props.currentTool,
+      props.isDrawingSelection,
+      props.isDraggingElement,
+      setCursor,
+      resetCursor,
+      checkElementHover,
+      handleElementMovement,
+      updateRectangleSelection,
     ],
   )
 
-  // 選択ツールのマウスアップ処理
+  // Main mouse up handler
   const handleSelectionMouseUp = useCallback(() => {
-    if (currentTool !== "select") return false
+    console.log("🔼 handleSelectionMouseUp開始:", {
+      currentTool: props.currentTool,
+      isDrawingSelection: props.isDrawingSelection,
+    })
+
+    if (props.currentTool !== "select") {
+      console.log("❌ 選択ツールではない - mouseup処理をスキップ")
+      return false
+    }
 
     let handled = false
 
-    if (isDraggingElement) {
-      setIsDraggingElement(false)
-      setLineEditMode(null)
-      setRectangleEditMode(null)
-      handled = true
+    // 長方形選択状態を事前に保存（completeRectangleSelectionがfalseに変更する前に）
+    const wasDrawingSelection = props.isDrawingSelection
+
+    // Handle movement end
+    if (handleMovementEnd()) handled = true
+
+    // Handle rectangle selection completion
+    if (completeRectangleSelection()) handled = true
+
+    // ドラッグ終了時はカーソルをリセット（成功・失敗に関係なく）
+    if (wasDrawingSelection) {
+      console.log("🖱️ ドラッグ終了 - カーソルリセット実行")
+      resetCursor()
+    } else {
+      console.log("ℹ️ ドラッグしていなかった - カーソルリセットはスキップ")
     }
 
-    // 選択範囲ドラッグ完了処理
-    if (isDrawingSelection && selectionRectangle) {
-      setIsDrawingSelection(false)
-
-      // 選択範囲に含まれる要素を選択
-      if (
-        Math.abs(selectionRectangle.width) > 0.01 ||
-        Math.abs(selectionRectangle.height) > 0.01
-      ) {
-        // Ctrl/Cmdキーで追加選択
-        if (isCtrlPressed) {
-          const elementsInRect = drawingElements
-            .filter((element) => {
-              // Use the same overlap detection logic as in the drawing state
-              let elementLeft = element.x
-              let elementTop = element.y
-              let elementRight = element.x
-              let elementBottom = element.y
-
-              switch (element.type) {
-                case "line":
-                  if (
-                    element.endX !== undefined &&
-                    element.endY !== undefined
-                  ) {
-                    elementLeft = Math.min(element.x, element.endX)
-                    elementTop = Math.min(element.y, element.endY)
-                    elementRight = Math.max(element.x, element.endX)
-                    elementBottom = Math.max(element.y, element.endY)
-                  }
-                  break
-                case "rectangle":
-                  if (
-                    element.width !== undefined &&
-                    element.height !== undefined
-                  ) {
-                    elementRight = element.x + element.width
-                    elementBottom = element.y + element.height
-                  }
-                  break
-                case "text":
-                  if (
-                    element.textBoxWidth !== undefined &&
-                    element.textBoxHeight !== undefined
-                  ) {
-                    elementRight = element.x + element.textBoxWidth
-                    elementBottom = element.y + element.textBoxHeight
-                  } else {
-                    elementRight = element.x + 0.05
-                    elementBottom = element.y + 0.03
-                  }
-                  break
-              }
-
-              const rectLeft = Math.min(
-                selectionRectangle.x,
-                selectionRectangle.x + selectionRectangle.width,
-              )
-              const rectTop = Math.min(
-                selectionRectangle.y,
-                selectionRectangle.y + selectionRectangle.height,
-              )
-              const rectRight = Math.max(
-                selectionRectangle.x,
-                selectionRectangle.x + selectionRectangle.width,
-              )
-              const rectBottom = Math.max(
-                selectionRectangle.y,
-                selectionRectangle.y + selectionRectangle.height,
-              )
-
-              return !(
-                elementRight < rectLeft ||
-                elementLeft > rectRight ||
-                elementBottom < rectTop ||
-                elementTop > rectBottom
-              )
-            })
-            .map((element) => element.id)
-
-          // 現在の選択に追加
-          const newSelection = [...selectedElementIds]
-          elementsInRect.forEach((id) => {
-            if (!newSelection.includes(id)) {
-              newSelection.push(id)
-            }
-          })
-          setSelectedElementIds(newSelection)
-        } else {
-          // 通常の選択範囲選択
-          selectElementsInRectangle(selectionRectangle)
-        }
-      }
-
-      setSelectionRectangle(null)
-      handled = true
-    }
-
+    console.log("🔼 handleSelectionMouseUp完了:", {
+      handled,
+      wasDrawingSelection,
+    })
     return handled
   }, [
-    currentTool,
-    isDraggingElement,
-    isDrawingSelection,
-    selectionRectangle,
-    selectedElementIds,
-    isCtrlPressed,
-    drawingElements,
-    setIsDraggingElement,
-    setLineEditMode,
-    setRectangleEditMode,
-    setIsDrawingSelection,
-    setSelectedElementIds,
-    selectElementsInRectangle,
-    setSelectionRectangle,
+    props.currentTool,
+    props.isDrawingSelection,
+    handleMovementEnd,
+    completeRectangleSelection,
+    resetCursor,
   ])
 
   return {

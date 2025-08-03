@@ -18,11 +18,13 @@ export function useCoordinateUtils({
       const img = imageRef.current
 
       if (!canvas || !img) {
+        console.warn("⚠️ Canvas または Image が null です")
         return null
       }
 
       // 画像が読み込まれていない場合は処理をスキップ
       if (!img.naturalWidth || !img.naturalHeight) {
+        console.warn("⚠️ 画像が読み込まれていません")
         return null
       }
 
@@ -45,11 +47,38 @@ export function useCoordinateUtils({
       const imageX = actualX - imageOffsetX
       const imageY = actualY
 
+      // デバッグログ（詳細な座標情報）
+      const coordinates = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        canvasX,
+        canvasY,
+        actualX,
+        actualY,
+        imageOffsetX,
+        imageX,
+        imageY,
+        zoom,
+        canvasWidth,
+        imgNaturalWidth: img.naturalWidth,
+        imgNaturalHeight: img.naturalHeight,
+      }
+
       // 画像サイズで正規化（0-1の範囲）
-      return {
+      const normalizedCoords = {
         x: imageX / img.naturalWidth,
         y: imageY / img.naturalHeight,
       }
+
+      // 範囲外の座標の場合は警告
+      if (
+        normalizedCoords.x < -0.1 || normalizedCoords.x > 1.1 ||
+        normalizedCoords.y < -0.1 || normalizedCoords.y > 1.1
+      ) {
+        console.warn("⚠️ 座標が画像範囲外:", coordinates, normalizedCoords)
+      }
+
+      return normalizedCoords
     },
     [canvasRef, imageRef, zoom],
   )

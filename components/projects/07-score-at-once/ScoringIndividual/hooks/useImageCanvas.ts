@@ -673,7 +673,7 @@ export function useImageCanvas({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, drawCanvas, pageImages, showMultiplePages])
+  }, [currentScoringData, pageImages, showMultiplePages])
 
   // Canvas再描画（全ての要素を統合）
   useEffect(() => {
