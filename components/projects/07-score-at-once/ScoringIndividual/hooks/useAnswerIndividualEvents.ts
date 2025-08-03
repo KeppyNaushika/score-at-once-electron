@@ -104,15 +104,15 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     screenToImageCoords,
   } = useDrawingUtils()
 
-  // ホイール操作（CSS scale + scroll 方式）
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
+  // Passive event listener回避のためのwheel処理
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheelCapture = (e: WheelEvent) => {
       // Ctrl + ホイール: ズーム（マウス位置を基準）
       if (e.ctrlKey || e.metaKey) {
-        e.preventDefault() // ズーム時のみpreventDefault
-
-        const container = containerRef.current
-        if (!container) return
+        e.preventDefault() // passive: falseなので動作する
 
         const rect = container.getBoundingClientRect()
         const mouseX = e.clientX - rect.left
@@ -129,7 +129,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         // マウス位置を基準とした座標計算
         const currentScrollMouseX = container.scrollLeft + mouseX
         const currentScrollMouseY = container.scrollTop + mouseY
-        
+
         // スケール前の画像上の座標
         const imageMouseX = currentScrollMouseX / zoom
         const imageMouseY = currentScrollMouseY / zoom
@@ -143,21 +143,22 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         const newScrollTop = newScrollMouseY - mouseY
 
         onZoomChange(newZoom)
-        
+
         // スクロール位置を調整（次のフレームで実行）
         requestAnimationFrame(() => {
           container.scrollTo(newScrollLeft, newScrollTop)
         })
-        return
       }
+      // その他のホイール操作はネイティブスクロールに委ねる（preventDefault不要）
+    }
 
-      // その他のホイール操作: ネイティブスクロールに委ねる
-      // Shift + ホイール = 横スクロール（macOS/ブラウザ標準）
-      // 通常のホイール = 縦スクロール（ブラウザ標準）
-      // preventDefault() しないことで、ブラウザの最適化されたスクロールを使用
-    },
-    [containerRef, zoom, onZoomChange],
-  )
+    // passive: false を明示指定
+    container.addEventListener("wheel", handleWheelCapture, { passive: false })
+
+    return () => {
+      container.removeEventListener("wheel", handleWheelCapture)
+    }
+  }, [containerRef, zoom, onZoomChange])
 
   // マウスダウン処理（CSS scale + scroll 方式）
   const handleMouseDown = useCallback(
@@ -184,7 +185,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
 
       const canvasWidth = canvasElement.width
       const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
-      
+
       // 実際の画像座標に変換（中央配置オフセットを引く）
       const imageX = actualX - imageOffsetX
       const imageY = actualY
@@ -192,7 +193,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       // 画像サイズで正規化（0-1の範囲、NaN防止）
       const imageCoords = {
         x: img.naturalWidth ? imageX / img.naturalWidth : 0,
-        y: img.naturalHeight ? imageY / img.naturalHeight : 0
+        y: img.naturalHeight ? imageY / img.naturalHeight : 0,
       }
 
       // 選択ツールの場合
@@ -256,6 +257,12 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
           fontSize: 16,
         })
       } else if (currentTool === "line") {
+        console.log("🖊️ 直線描画開始:", {
+          imageCoords: { x: imageCoords.x, y: imageCoords.y },
+          strokeColor,
+          strokeWidth,
+          lineStyle
+        })
         setIsDrawing(true)
         setCurrentDrawing({
           id: Math.random().toString(36).substr(2, 9),
@@ -287,10 +294,6 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       canvasRef,
       containerRef,
       imageRef,
-      zoom,
-      position.x,
-      position.y,
-      screenToImageCoords,
       currentTool,
       drawingElements,
       hitTestElement,
@@ -313,7 +316,13 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   // マウス移動処理（CSS scale + scroll 方式）
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!imageLoaded || !canvasRef.current || !containerRef.current || !imageRef.current) return
+      if (
+        !imageLoaded ||
+        !canvasRef.current ||
+        !containerRef.current ||
+        !imageRef.current
+      )
+        return
 
       const canvas = canvasRef.current
       const container = containerRef.current
@@ -334,7 +343,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
 
       const canvasWidth = canvasElement.width
       const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
-      
+
       // 実際の画像座標に変換（中央配置オフセットを引く）
       const imageX = actualX - imageOffsetX
       const imageY = actualY
@@ -342,7 +351,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       // 画像サイズで正規化（0-1の範囲、NaN防止）
       const imageCoords = {
         x: img.naturalWidth ? imageX / img.naturalWidth : 0,
-        y: img.naturalHeight ? imageY / img.naturalHeight : 0
+        y: img.naturalHeight ? imageY / img.naturalHeight : 0,
       }
 
       // 要素のドラッグ処理
@@ -434,11 +443,8 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     [
       imageLoaded,
       canvasRef,
+      containerRef,
       imageRef,
-      zoom,
-      position.x,
-      position.y,
-      screenToImageCoords,
       isDraggingElement,
       selectedElementId,
       currentTool,
@@ -482,20 +488,22 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
             // 画像上の座標をスクリーン座標に変換（NaN防止）
             const imageX = (currentDrawing.x || 0) * (img.naturalWidth || 800)
             const imageY = (currentDrawing.y || 0) * (img.naturalHeight || 600)
-            
+
             const safeZoom = zoom || 1
             const scrollX = container.scrollLeft || 0
             const scrollY = container.scrollTop || 0
-            
+
             // Canvas中央配置オフセットを考慮
             const canvasElement = canvasRef.current
-            const canvasWidth = canvasElement ? canvasElement.width : (img.naturalWidth || 800)
+            const canvasWidth = canvasElement
+              ? canvasElement.width
+              : img.naturalWidth || 800
             const imageOffsetX = (canvasWidth - (img.naturalWidth || 800)) / 2
-            
+
             // 実際のスクリーン座標計算
             const actualX = imageX + imageOffsetX
             const actualY = imageY
-            
+
             // CSS scale + scroll を考慮したスクリーン座標
             const screenX = actualX * safeZoom - scrollX
             const screenY = actualY * safeZoom - scrollY
@@ -578,7 +586,6 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   ])
 
   return {
-    handleWheel,
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
