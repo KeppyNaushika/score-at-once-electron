@@ -33,6 +33,9 @@ export interface DrawingElement {
   // テキストボックス用
   textBoxWidth?: number // 0.0 - 1.0
   textBoxHeight?: number // 0.0 - 1.0
+  // テキストボックス表示用座標（逆方向ドラッグ対応）
+  displayX?: number // 0.0 - 1.0
+  displayY?: number // 0.0 - 1.0
 }
 
 // 描画ツールの型定義

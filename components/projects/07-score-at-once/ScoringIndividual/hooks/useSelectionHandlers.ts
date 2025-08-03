@@ -7,7 +7,7 @@ import type {
   DrawingElement,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 
 interface UseSelectionHandlersProps {
   currentTool: string
@@ -48,6 +48,21 @@ interface UseSelectionHandlersProps {
 }
 
 export function useSelectionHandlers(props: UseSelectionHandlersProps) {
+  // リサイズ状態管理
+  const [isResizing, setIsResizing] = useState(false)
+  const [resizeDirection, setResizeDirection] = useState<string | null>(null)
+  const [resizeElementId, setResizeElementId] = useState<string | null>(null)
+  const [resizeStartCoords, setResizeStartCoords] = useState<{
+    x: number
+    y: number
+  } | null>(null)
+  const [resizeOriginalBounds, setResizeOriginalBounds] = useState<{
+    x: number
+    y: number
+    width: number
+    height: number
+  } | null>(null)
+
   // Initialize cursor utilities
   const { setCursor, resetCursor } = useCursorUtils({
     canvasRef: props.canvasRef,
@@ -119,6 +134,47 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
 
       console.log("🔽 handleSelectionMouseDown開始:", imageCoords)
 
+      // 選択された要素がある場合、まずリサイズハンドルをチェック
+      if (props.selectedElementIds.length > 0) {
+        const selectedElement = props.drawingElements.find((el) =>
+          props.selectedElementIds.includes(el.id),
+        )
+
+        if (selectedElement) {
+          const resizeCursor = checkResizeHandle(
+            selectedElement,
+            imageCoords.x,
+            imageCoords.y,
+          )
+
+          if (resizeCursor) {
+            console.log("🔄 リサイズ開始:", {
+              elementId: selectedElement.id,
+              direction: resizeCursor,
+            })
+
+            // リサイズモード開始
+            setIsResizing(true)
+            setResizeDirection(resizeCursor)
+            setResizeElementId(selectedElement.id)
+            setResizeStartCoords(imageCoords)
+
+            // 元のサイズと位置を保存
+            const bounds = {
+              x: selectedElement.x,
+              y: selectedElement.y,
+              width: selectedElement.textBoxWidth || selectedElement.width || 0,
+              height:
+                selectedElement.textBoxHeight || selectedElement.height || 0,
+            }
+            setResizeOriginalBounds(bounds)
+
+            setCursor(resizeCursor as any)
+            return true
+          }
+        }
+      }
+
       // Try element selection first
       const { elementSelected, clickedElement, clickedCoords } =
         handleElementSelection(imageCoords)
@@ -160,7 +216,13 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
 
       return true
     },
-    [props, handleElementSelection, setCursor, startRectangleSelection],
+    [
+      props,
+      handleElementSelection,
+      setCursor,
+      startRectangleSelection,
+      checkResizeHandle,
+    ],
   )
 
   // Check if mouse is over any element (for cursor styling)
@@ -201,6 +263,98 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
         return false
       }
 
+      // リサイズ中の処理
+      if (
+        isResizing &&
+        resizeElementId &&
+        resizeStartCoords &&
+        resizeOriginalBounds &&
+        resizeDirection
+      ) {
+        console.log("🔄 リサイズ中:", {
+          direction: resizeDirection,
+          coords: imageCoords,
+        })
+
+        const deltaX = imageCoords.x - resizeStartCoords.x
+        const deltaY = imageCoords.y - resizeStartCoords.y
+
+        let newX = resizeOriginalBounds.x
+        let newY = resizeOriginalBounds.y
+        let newWidth = resizeOriginalBounds.width
+        let newHeight = resizeOriginalBounds.height
+
+        // リサイズ方向に応じて座標とサイズを更新
+        switch (resizeDirection) {
+          case "nw-resize": // 左上
+            newX = resizeOriginalBounds.x + deltaX
+            newY = resizeOriginalBounds.y + deltaY
+            newWidth = resizeOriginalBounds.width - deltaX
+            newHeight = resizeOriginalBounds.height - deltaY
+            break
+          case "ne-resize": // 右上
+            newY = resizeOriginalBounds.y + deltaY
+            newWidth = resizeOriginalBounds.width + deltaX
+            newHeight = resizeOriginalBounds.height - deltaY
+            break
+          case "sw-resize": // 左下
+            newX = resizeOriginalBounds.x + deltaX
+            newWidth = resizeOriginalBounds.width - deltaX
+            newHeight = resizeOriginalBounds.height + deltaY
+            break
+          case "se-resize": // 右下
+            newWidth = resizeOriginalBounds.width + deltaX
+            newHeight = resizeOriginalBounds.height + deltaY
+            break
+          case "nwse-resize": // 左上右下 (fallback)
+            newWidth = resizeOriginalBounds.width + deltaX
+            newHeight = resizeOriginalBounds.height + deltaY
+            break
+          case "nesw-resize": // 右上左下 (fallback)
+            newX = resizeOriginalBounds.x + deltaX
+            newY = resizeOriginalBounds.y + deltaY
+            newWidth = resizeOriginalBounds.width - deltaX
+            newHeight = resizeOriginalBounds.height - deltaY
+            break
+        }
+
+        // 最小サイズ制限
+        const minSize = 20
+        if (newWidth < minSize) {
+          newWidth = minSize
+          if (resizeDirection.includes("w")) {
+            newX = resizeOriginalBounds.x + resizeOriginalBounds.width - minSize
+          }
+        }
+        if (newHeight < minSize) {
+          newHeight = minSize
+          if (resizeDirection.includes("n")) {
+            newY =
+              resizeOriginalBounds.y + resizeOriginalBounds.height - minSize
+          }
+        }
+
+        // 要素を更新
+        const updates: any = {
+          x: newX,
+          y: newY,
+        }
+
+        const element = props.drawingElements.find(
+          (el) => el.id === resizeElementId,
+        )
+        if (element?.type === "text") {
+          updates.textBoxWidth = newWidth
+          updates.textBoxHeight = newHeight
+        } else {
+          updates.width = newWidth
+          updates.height = newHeight
+        }
+
+        props.updateDrawingElement(resizeElementId, updates)
+        return true
+      }
+
       // Update cursor based on current state
       if (props.isDrawingSelection) {
         // 長方形選択描画中はクロスヘアカーソル
@@ -235,14 +389,17 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
       return false
     },
     [
-      props.currentTool,
-      props.isDrawingSelection,
-      props.isDraggingElement,
-      setCursor,
-      resetCursor,
-      checkElementHover,
+      props,
+      isResizing,
+      resizeElementId,
+      resizeStartCoords,
+      resizeOriginalBounds,
+      resizeDirection,
       handleElementMovement,
       updateRectangleSelection,
+      resetCursor,
+      setCursor,
+      checkElementHover,
     ],
   )
 
@@ -251,6 +408,7 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     console.log("🔼 handleSelectionMouseUp開始:", {
       currentTool: props.currentTool,
       isDrawingSelection: props.isDrawingSelection,
+      isResizing,
     })
 
     if (props.currentTool !== "select") {
@@ -259,6 +417,18 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     }
 
     let handled = false
+
+    // リサイズ終了処理
+    if (isResizing) {
+      console.log("✅ リサイズ完了:", { elementId: resizeElementId })
+      setIsResizing(false)
+      setResizeDirection(null)
+      setResizeElementId(null)
+      setResizeStartCoords(null)
+      setResizeOriginalBounds(null)
+      resetCursor()
+      return true
+    }
 
     // 長方形選択状態を事前に保存（completeRectangleSelectionがfalseに変更する前に）
     const wasDrawingSelection = props.isDrawingSelection
@@ -288,6 +458,8 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     handleMovementEnd,
     completeRectangleSelection,
     resetCursor,
+    isResizing,
+    resizeElementId,
   ])
 
   return {

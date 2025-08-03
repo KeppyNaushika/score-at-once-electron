@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useRef, useEffect } from 'react'
-import { renderMarkdownToCanvas, calculateOptimalFontSize, type TextDimensions } from '../utils/canvasTextRenderer'
+import { renderMarkdownToCanvas, calculateOptimalFontSize, type TextDimensions } from '../utils/canvasTextRendererHybrid'
 import type { DrawingElement } from '../types/answer-individual-types'
 
 interface CachedTextRender {

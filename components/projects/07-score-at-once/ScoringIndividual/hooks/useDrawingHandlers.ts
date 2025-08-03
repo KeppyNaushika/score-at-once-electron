@@ -141,14 +141,15 @@ export function useDrawingHandlers({
         const width = Math.abs(imageCoords.x - currentDrawing.x)
         const height = Math.abs(imageCoords.y - currentDrawing.y)
         
-        // 下から上、右から左にドラッグした場合の座標修正
-        const minX = Math.min(currentDrawing.x, imageCoords.x)
-        const minY = Math.min(currentDrawing.y, imageCoords.y)
+        // 表示用の左上角座標を計算（開始地点は固定のまま）
+        const displayX = Math.min(currentDrawing.x, imageCoords.x)
+        const displayY = Math.min(currentDrawing.y, imageCoords.y)
         
         setCurrentDrawing({
           ...currentDrawing,
-          x: minX,
-          y: minY,
+          // 開始地点は変更せず、表示用座標を別途保存
+          displayX,
+          displayY,
           textBoxWidth: width,
           textBoxHeight: height,
         })
@@ -241,6 +242,19 @@ export function useDrawingHandlers({
     if (!isDrawing || !currentDrawing) return false
 
     if (currentDrawing.type === "text" && isCreatingTextBox) {
+      // テキストボックス作成完了時に座標を正規化
+      if (currentDrawing.displayX !== undefined && currentDrawing.displayY !== undefined) {
+        // 表示用座標を正式な座標として設定
+        setCurrentDrawing({
+          ...currentDrawing,
+          x: currentDrawing.displayX,
+          y: currentDrawing.displayY,
+          // displayX/displayYは一時的なので削除
+          displayX: undefined,
+          displayY: undefined,
+        })
+      }
+      
       // テキストボックス作成完了
       setIsCreatingTextBox(false)
       setIsDrawing(false)

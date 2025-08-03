@@ -1,6 +1,6 @@
 import { useDrawingUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingUtils"
 import { useTextRenderCache } from "./useTextRenderCache"
-import { calculateOptimalFontSize } from "../utils/canvasTextRenderer"
+import { calculateOptimalFontSize } from "../utils/canvasTextRendererHybrid"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import type {
   CropRegionWithProjectPage,
@@ -188,8 +188,12 @@ export function useImageCanvas({
           const offsetY = 0
 
           drawingElements.forEach((element) => {
-            const currentX = element.x * baseImg.naturalWidth + offsetX
-            const currentY = element.y * baseImg.naturalHeight + offsetY
+            // テキストボックスの場合、表示用座標があればそれを使用
+            const displayX = element.type === 'text' && element.displayX !== undefined ? element.displayX : element.x
+            const displayY = element.type === 'text' && element.displayY !== undefined ? element.displayY : element.y
+            
+            const currentX = displayX * baseImg.naturalWidth + offsetX
+            const currentY = displayY * baseImg.naturalHeight + offsetY
 
             ctx.strokeStyle = element.color
             ctx.fillStyle = element.color
@@ -540,10 +544,14 @@ export function useImageCanvas({
 
           // 現在描画中の要素（リアルタイムプレビュー）
           if (isDrawing && currentDrawing) {
+            // テキストボックスの場合、表示用座標があればそれを使用
+            const drawingDisplayX = currentDrawing.type === 'text' && currentDrawing.displayX !== undefined ? currentDrawing.displayX : currentDrawing.x
+            const drawingDisplayY = currentDrawing.type === 'text' && currentDrawing.displayY !== undefined ? currentDrawing.displayY : currentDrawing.y
+            
             const currentX =
-              (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
+              (drawingDisplayX || 0) * baseImg.naturalWidth + offsetX
             const currentY =
-              (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
+              (drawingDisplayY || 0) * baseImg.naturalHeight + offsetY
 
             ctx.save()
             ctx.strokeStyle = currentDrawing.color || strokeColor
