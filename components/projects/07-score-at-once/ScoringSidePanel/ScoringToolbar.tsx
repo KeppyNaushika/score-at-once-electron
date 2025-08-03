@@ -1,6 +1,6 @@
 "use client"
 
-import { getKeyboardShortcuts } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import { getKeyboardShortcuts } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"

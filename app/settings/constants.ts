@@ -1,4 +1,4 @@
-import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 
 // キーの表示名マッピング
 export const KEY_DISPLAY_NAMES: { [key: string]: string } = {

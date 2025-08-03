@@ -1,4 +1,4 @@
-import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
 import type {
   GradingMode,

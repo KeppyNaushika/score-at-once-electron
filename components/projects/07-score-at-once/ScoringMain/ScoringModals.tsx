@@ -1,7 +1,7 @@
 "use client"
 
-import PartialScoreModal from "@/components/projects/07-score-at-once/ScoringMain/components/PartialScoreModal"
-import ScoreComparisonModal from "@/components/projects/07-score-at-once/ScoringMain/components/ScoreComparisonModal"
+import PartialScoreModal from "@/components/projects/07-score-at-once/ScoringMain/PartialScoreModal"
+import ScoreComparisonModal from "@/components/projects/07-score-at-once/ScoringMain/ScoreComparisonModal"
 
 interface ScoringModalsProps {
   // Partial Score Modal props

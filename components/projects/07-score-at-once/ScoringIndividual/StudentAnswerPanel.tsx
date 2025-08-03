@@ -1,8 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/SidePanelSection"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Users } from "lucide-react"
 
 interface Student {
@@ -25,18 +31,24 @@ export function StudentAnswerPanel({
   onStudentChange,
 }: StudentAnswerPanelProps) {
   // 受験生徒順にソート
-  const sortedStudents = [...students].sort((a, b) => a.customOrder - b.customOrder)
-  const currentStudent = sortedStudents.find(s => s.id === currentStudentId)
+  const sortedStudents = [...students].sort(
+    (a, b) => a.customOrder - b.customOrder,
+  )
+  const currentStudent = sortedStudents.find((s) => s.id === currentStudentId)
 
   const handlePrevStudent = () => {
-    const currentIndex = sortedStudents.findIndex(s => s.id === currentStudentId)
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentStudentId,
+    )
     if (currentIndex > 0) {
       onStudentChange(sortedStudents[currentIndex - 1].id)
     }
   }
 
   const handleNextStudent = () => {
-    const currentIndex = sortedStudents.findIndex(s => s.id === currentStudentId)
+    const currentIndex = sortedStudents.findIndex(
+      (s) => s.id === currentStudentId,
+    )
     if (currentIndex < sortedStudents.length - 1) {
       onStudentChange(sortedStudents[currentIndex + 1].id)
     }
@@ -46,21 +58,22 @@ export function StudentAnswerPanel({
     <SidePanelSection icon={Users} title="生徒答案">
       {/* ナビゲーションコントロール */}
       <div className="mb-4 flex items-center gap-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handlePrevStudent}
-          disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === 0}
+          disabled={
+            sortedStudents.findIndex((s) => s.id === currentStudentId) === 0
+          }
         >
           ←
         </Button>
         <Select value={currentStudentId} onValueChange={onStudentChange}>
           <SelectTrigger className="flex-1">
             <SelectValue>
-              {currentStudent ? 
-                `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentId})` : 
-                "生徒を選択"
-              }
+              {currentStudent
+                ? `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentId})`
+                : "生徒を選択"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -71,11 +84,14 @@ export function StudentAnswerPanel({
             ))}
           </SelectContent>
         </Select>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleNextStudent}
-          disabled={sortedStudents.findIndex(s => s.id === currentStudentId) === sortedStudents.length - 1}
+          disabled={
+            sortedStudents.findIndex((s) => s.id === currentStudentId) ===
+            sortedStudents.length - 1
+          }
         >
           →
         </Button>
@@ -83,7 +99,8 @@ export function StudentAnswerPanel({
 
       {/* 現在の位置表示 */}
       <div className="text-center text-xs text-gray-500">
-        {sortedStudents.findIndex(s => s.id === currentStudentId) + 1} / {sortedStudents.length}
+        {sortedStudents.findIndex((s) => s.id === currentStudentId) + 1} /{" "}
+        {sortedStudents.length}
       </div>
     </SidePanelSection>
   )

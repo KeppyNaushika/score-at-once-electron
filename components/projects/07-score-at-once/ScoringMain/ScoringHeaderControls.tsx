@@ -1,7 +1,7 @@
 "use client"
 
-import GradingModeToggle from "@/components/projects/07-score-at-once/ScoringMain/components/GradingModeToggle"
-import { KeyboardHelpDialog } from "@/components/projects/07-score-at-once/ScoringMain/components/KeyboardHelpDialog"
+import GradingModeToggle from "@/components/projects/07-score-at-once/ScoringMain/GradingModeToggle"
+import { KeyboardHelpDialog } from "@/components/projects/07-score-at-once/ScoringMain/KeyboardHelpDialog"
 import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { PanelRightClose, PanelRightOpen } from "lucide-react"

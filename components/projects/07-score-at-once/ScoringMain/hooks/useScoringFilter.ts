@@ -1,4 +1,4 @@
-import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
+import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,

@@ -1,4 +1,4 @@
-import type { ScoringDataRecord } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
+import type { ScoringDataRecord } from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
 
 /**
  * Auto-finalization logic for collaborative grading
@@ -7,7 +7,7 @@ export async function checkForAutoFinalization(
   studentId: string,
   cropRegionId: string,
   currentUserId: string | null,
-  setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>
+  setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>,
 ): Promise<void> {
   if (!currentUserId) return
 
@@ -53,11 +53,9 @@ export async function checkForAutoFinalization(
               ...prev[key],
               status: "final",
               version:
-                (result as any).score?.version ||
-                (result as any).version,
+                (result as any).score?.version || (result as any).version,
               updatedAt: new Date(
-                (result as any).score?.updatedAt ||
-                  (result as any).updatedAt,
+                (result as any).score?.updatedAt || (result as any).updatedAt,
               ),
             },
           }))

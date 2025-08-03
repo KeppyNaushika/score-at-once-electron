@@ -12,7 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
-import type { DrawingTool } from "../types/answer-individual-types"
+import type { DrawingTool } from "./types/answer-individual-types"
 import { LineToolPopover } from "./LineToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
 

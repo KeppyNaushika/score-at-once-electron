@@ -1,11 +1,11 @@
 "use client"
 
-import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/components/IndividualModePanel"
-import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/components/NavigationControls"
-import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ProjectProgressCard"
-import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/components/QuestionNavigator"
-import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringToolbar"
-import { QuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
+import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/IndividualModePanel"
+import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/NavigationControls"
+import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/ProjectProgressCard"
+import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/QuestionNavigator"
+import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringToolbar"
+import { QuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,

@@ -8,8 +8,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Type } from "lucide-react"
-import { COLOR_PALETTE } from "../constants/drawing-constants"
-import type { DrawingTool } from "../types/answer-individual-types"
+import { COLOR_PALETTE } from "./constants/drawing-constants"
+import type { DrawingTool } from "./types/answer-individual-types"
 
 interface TextToolPopoverProps {
   currentTool: DrawingTool

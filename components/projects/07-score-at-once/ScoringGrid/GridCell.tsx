@@ -1,6 +1,6 @@
 import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
 import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
-import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/components/CroppedAnswerImage"
+import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/CroppedAnswerImage"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 
@@ -29,7 +29,8 @@ export function GridCell({
     SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG] ||
     SCORE_STATUS_CONFIG.unscored
   const Icon = config.icon
-  const isMaster = answer.studentId === "MASTER" || answer.studentName === "模範解答"
+  const isMaster =
+    answer.studentId === "MASTER" || answer.studentName === "模範解答"
 
   const getScoreDisplay = () => {
     if (answer.status === "correct") {

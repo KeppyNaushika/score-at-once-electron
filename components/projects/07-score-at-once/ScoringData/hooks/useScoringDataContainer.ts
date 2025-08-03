@@ -1,11 +1,9 @@
-import { useBatchScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useBatchScoring"
-import { useIndividualScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useIndividualScoring"
-import type {
-  UseScoringDataProps,
-} from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import { loadQuestionScores } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/data-loader"
-import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/progress-calculator"
-import { 
+import { useBatchScoring } from "@/components/projects/07-score-at-once/ScoringData/hooks/useBatchScoring"
+import { useIndividualScoring } from "@/components/projects/07-score-at-once/ScoringData/hooks/useIndividualScoring"
+import type { UseScoringDataProps } from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
+import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/data-loader"
+import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progress-calculator"
+import {
   calculateActualScore,
   findQuestionScore,
   getScoringStatusFromArray,
@@ -52,12 +50,9 @@ export function useScoringDataContainer({
   })
 
   // Data loading function wrapper
-  const loadQuestionScoresCallback = useCallback(
-    async (projectId: string) => {
-      return await loadQuestionScores(projectId)
-    },
-    [],
-  )
+  const loadQuestionScoresCallback = useCallback(async (projectId: string) => {
+    return await loadQuestionScores(projectId)
+  }, [])
 
   // Status and score getter functions
   const getScoringStatusCallback = useCallback(

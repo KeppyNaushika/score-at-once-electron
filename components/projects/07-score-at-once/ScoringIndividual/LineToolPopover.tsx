@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { Ruler } from "lucide-react"
-import { COLOR_PALETTE } from "../constants/drawing-constants"
-import type { DrawingTool } from "../types/answer-individual-types"
+import { COLOR_PALETTE } from "./constants/drawing-constants"
+import type { DrawingTool } from "./types/answer-individual-types"
 
 interface LineToolPopoverProps {
   currentTool: DrawingTool

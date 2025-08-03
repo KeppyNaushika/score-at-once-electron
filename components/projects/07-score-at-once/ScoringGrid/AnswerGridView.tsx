@@ -1,7 +1,7 @@
 "use client"
 
-import { DragSelectionOverlay } from "@/components/projects/07-score-at-once/ScoringGrid/components/DragSelectionOverlay"
-import { GridCell } from "@/components/projects/07-score-at-once/ScoringGrid/components/GridCell"
+import { DragSelectionOverlay } from "@/components/projects/07-score-at-once/ScoringGrid/DragSelectionOverlay"
+import { GridCell } from "@/components/projects/07-score-at-once/ScoringGrid/GridCell"
 import { useAutoScroll } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useAutoScroll"
 import { useGridDragSelection } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridDragSelection"
 import { useGridKeyboard } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridKeyboard"

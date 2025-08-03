@@ -2,8 +2,11 @@ import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
   QuestionProgress,
-} from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import { findQuestionScore, type QuestionScore } from "@/components/projects/07-score-at-once/types"
+} from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
+import {
+  findQuestionScore,
+  type QuestionScore,
+} from "@/components/projects/07-score-at-once/types"
 
 /**
  * 設問別進捗を計算する関数
@@ -128,8 +131,12 @@ export function calculateQuestionProgress(
     console.log("Checking scoring data for each student:")
     relevantPageImages.forEach((pageImage, index) => {
       if (!pageImage.studentId) return // studentIdがnullの場合はスキップ
-      
-      const score = findQuestionScore(questionScores, pageImage.studentId, cropRegion.id)
+
+      const score = findQuestionScore(
+        questionScores,
+        pageImage.studentId,
+        cropRegion.id,
+      )
       const isGraded = score && score.status !== "unscored"
 
       console.log(

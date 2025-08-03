@@ -2,8 +2,8 @@
 "use client"
 
 import { useCallback } from "react"
-import { DrawingToolPalette } from "./components/DrawingToolPalette"
-import { TextInputModal } from "./components/TextInputModal"
+import { DrawingToolPalette } from "./DrawingToolPalette"
+import { TextInputModal } from "./TextInputModal"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/useDrawingState"

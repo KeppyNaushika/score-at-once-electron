@@ -2,25 +2,25 @@
 
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/components/ScoringBehaviorSelector"
+import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import { useIndividualModeKeyboard } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useIndividualModeKeyboard"
-import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringContentArea"
-import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringHeaderControls"
-import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringModals"
+import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/ScoringContentArea"
+import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/ScoringHeaderControls"
+import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/ScoringModals"
 import {
   ScoringErrorState,
   ScoringLoadingState,
-} from "@/components/projects/07-score-at-once/ScoringMain/components/ScoringStates"
+} from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
-import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/components/ScoringSidePanel"
-import { usePartialScore } from "@/components/projects/07-score-at-once/hooks/usePartialScore"
-import { useScoringData } from "@/components/projects/07-score-at-once/hooks/useScoringData"
-import { useScoringDataLoader } from "@/components/projects/07-score-at-once/hooks/useScoringDataLoader"
-import { useScoringFilter } from "@/components/projects/07-score-at-once/hooks/useScoringFilter"
-import { useScoringKeyboard } from "@/components/projects/07-score-at-once/hooks/useScoringKeyboard"
-import { useScoringNavigation } from "@/components/projects/07-score-at-once/hooks/useScoringNavigation"
-import { useScoringSettings } from "@/components/projects/07-score-at-once/hooks/useScoringSettings"
+import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
+import { usePartialScore } from "@/components/projects/07-score-at-once/ScoringMain/hooks/usePartialScore"
+import { useScoringData } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringData"
+import { useScoringDataLoader } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
+import { useScoringFilter } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringFilter"
+import { useScoringKeyboard } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
+import { useScoringNavigation } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
+import { useScoringSettings } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -446,7 +446,6 @@ export default function ScoringMainView() {
 
   // 設問別進捗を計算
   const questionProgress = calculateQuestionProgress()
-
 
   // ローディング状態
   if (loading) {
