@@ -12,15 +12,15 @@ import {
   ScoringLoadingState,
 } from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
-import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
-import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
 import { usePartialScore } from "@/components/projects/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringData } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringData"
 import { useScoringDataLoader } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
 import { useScoringFilter } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringFilter"
 import { useScoringKeyboard } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
+import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringNavigation } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringSettings } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringSettings"
+import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
 import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -489,11 +489,11 @@ export default function ScoringMainView() {
       </PageHeader>
 
       {/* 採点エリア - Grid Layout */}
-      <div 
+      <div
         className="grid h-full min-h-0 flex-1"
         style={{
           gridTemplateColumns: showSidePanel ? "1fr 24rem" : "1fr",
-          gridTemplateRows: "1fr"
+          gridTemplateRows: "1fr",
         }}
       >
         <ScoringContentArea

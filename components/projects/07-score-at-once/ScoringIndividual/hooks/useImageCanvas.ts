@@ -8,9 +8,9 @@ import type { DrawingElement } from "../types/answer-individual-types"
 import { useDrawingUtils } from "./useDrawingUtils"
 
 interface UseImageCanvasProps {
-  currentScoringData: ScoringData | null // 現在選択中の採点データ
+  currentScoringData: ScoringData | null
   currentCropRegion?: CropRegionWithProjectPage | null
-  pageImages?: PageImageWithProjectStudents[] // 複数ページ表示用の全データ
+  pageImages?: PageImageWithProjectStudents[]
   zoom: number
   position: { x: number; y: number }
   drawingElements: DrawingElement[]
@@ -53,7 +53,7 @@ export function useImageCanvas({
 
   const { drawLineWithStyle } = useDrawingUtils()
 
-  // Canvas描画処理
+  // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
     (images: HTMLImageElement[]) => {
       const canvas = canvasRef.current
@@ -62,12 +62,21 @@ export function useImageCanvas({
       const ctx = canvas.getContext("2d")
       if (!ctx) return
 
-      const container = containerRef.current
-      if (!container) return
+      if (images.length === 0) return
 
-      // キャンバスサイズをコンテナに合わせる
-      canvas.width = container.offsetWidth
-      canvas.height = container.offsetHeight
+      // キャンバスサイズを最初の画像サイズに固定（CSS scaleが拡大を担当）
+      const firstImg = images[0]
+      const canvasWidth = firstImg.naturalWidth
+      const totalHeight = images.reduce(
+        (total, img, index) =>
+          total +
+          img.naturalHeight +
+          (index < images.length - 1 ? pageSpacing || 20 : 0),
+        0,
+      )
+
+      canvas.width = canvasWidth
+      canvas.height = totalHeight
 
       // 画像描画をクリア
       ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -77,22 +86,19 @@ export function useImageCanvas({
       const spacing = pageSpacing || 20
 
       images.forEach((img, index) => {
-        const displayWidth = img.naturalWidth * zoom
-        const displayHeight = img.naturalHeight * zoom
+        // 画像を Canvas幅の中央に配置
+        const offsetX = (canvasWidth - img.naturalWidth) / 2
+        const offsetY = currentY
 
-        // 各ページの位置計算（中央揃え + パン位置）
-        const offsetX = (canvas.width - displayWidth) / 2 - position.x
-        const offsetY = currentY - position.y
-
-        // 画像描画
-        ctx.drawImage(img, offsetX, offsetY, displayWidth, displayHeight)
+        // 画像描画（純粋等倍描画、拡大はCSSが担当）
+        ctx.drawImage(img, offsetX, offsetY)
 
         // ページ間の境界線（複数ページの場合のみ）
         if (images.length > 1 && index < images.length - 1) {
           ctx.strokeStyle = "#e5e7eb"
           ctx.lineWidth = 1
           ctx.setLineDash([5, 5])
-          const borderY = offsetY + displayHeight + spacing / 2
+          const borderY = offsetY + img.naturalHeight + spacing / 2
           ctx.beginPath()
           ctx.moveTo(0, borderY)
           ctx.lineTo(canvas.width, borderY)
@@ -100,12 +106,12 @@ export function useImageCanvas({
           ctx.setLineDash([])
         }
 
-        currentY += displayHeight + (images.length > 1 ? spacing : 0)
+        currentY += img.naturalHeight + (images.length > 1 ? spacing : 0)
       })
 
       setTotalCanvasHeight(currentY - (images.length > 1 ? spacing : 0))
 
-      // 設問枠描画
+      // 設問枠描画（CSS scale方式）
       if (currentCropRegion && images.length > 0) {
         // 設問が属するページを特定（pageNumberから0ベースのインデックスに変換）
         const questionPageNumber =
@@ -117,25 +123,22 @@ export function useImageCanvas({
           const img = images[questionPageIndex]
 
           if (img) {
-            const displayWidth = img.naturalWidth * zoom
-            const displayHeight = img.naturalHeight * zoom
-
             // 設問位置計算（指定ページまでのオフセットを計算）
             const spacing = pageSpacing || 20
             let pageOffsetY = 0
             for (let i = 0; i < questionPageIndex; i++) {
               pageOffsetY +=
-                images[i].naturalHeight * zoom +
-                (images.length > 1 ? spacing : 0)
+                images[i].naturalHeight + (images.length > 1 ? spacing : 0)
             }
 
-            const offsetX = (canvas.width - displayWidth) / 2 - position.x
-            const offsetY = pageOffsetY - position.y
+            // 画像の中央配置に合わせてオフセット調整
+            const offsetX = (canvasWidth - img.naturalWidth) / 2
+            const offsetY = pageOffsetY
 
-            const questionX = currentCropRegion.x * displayWidth + offsetX
-            const questionY = currentCropRegion.y * displayHeight + offsetY
-            const questionWidth = currentCropRegion.width * displayWidth
-            const questionHeight = currentCropRegion.height * displayHeight
+            const questionX = currentCropRegion.x * img.naturalWidth + offsetX
+            const questionY = currentCropRegion.y * img.naturalHeight + offsetY
+            const questionWidth = currentCropRegion.width * img.naturalWidth
+            const questionHeight = currentCropRegion.height * img.naturalHeight
 
             ctx.strokeStyle = "#22c55e"
             ctx.lineWidth = 2
@@ -155,19 +158,17 @@ export function useImageCanvas({
         }
       }
 
-      // 描画要素の描画
+      // 描画要素の描画（CSS scale方式）
       if (images.length > 0) {
-        const img = images[0]
-        if (img) {
-          const displayWidth = img.naturalWidth * zoom
-          const displayHeight = img.naturalHeight * zoom
-
-          const offsetX = (canvas.width - displayWidth) / 2 - position.x
-          const offsetY = -position.y
+        const baseImg = images[0]
+        if (baseImg) {
+          // 画像の中央配置に合わせてオフセット調整
+          const offsetX = (canvasWidth - baseImg.naturalWidth) / 2
+          const offsetY = 0
 
           drawingElements.forEach((element) => {
-            const currentX = element.x * displayWidth + offsetX
-            const currentY = element.y * displayHeight + offsetY
+            const currentX = element.x * baseImg.naturalWidth + offsetX
+            const currentY = element.y * baseImg.naturalHeight + offsetY
 
             ctx.strokeStyle = element.color
             ctx.fillStyle = element.color
@@ -187,9 +188,10 @@ export function useImageCanvas({
                     element.textBoxWidth !== undefined &&
                     element.textBoxHeight !== undefined
                   ) {
-                    // テキストボックス
-                    const boxWidth = element.textBoxWidth * displayWidth
-                    const boxHeight = element.textBoxHeight * displayHeight
+                    // テキストボックス（CSS scale方式）
+                    const boxWidth = element.textBoxWidth * baseImg.naturalWidth
+                    const boxHeight =
+                      element.textBoxHeight * baseImg.naturalHeight
 
                     // ボックス枠描画
                     if (isSelected) {
@@ -225,8 +227,10 @@ export function useImageCanvas({
                 break
               case "line":
                 if (element.endX !== undefined && element.endY !== undefined) {
-                  const currentEndX = element.endX * displayWidth + offsetX
-                  const currentEndY = element.endY * displayHeight + offsetY
+                  const currentEndX =
+                    element.endX * baseImg.naturalWidth + offsetX
+                  const currentEndY =
+                    element.endY * baseImg.naturalHeight + offsetY
 
                   // 通常の自由線
                   drawLineWithStyle(
@@ -245,8 +249,8 @@ export function useImageCanvas({
                   element.width !== undefined &&
                   element.height !== undefined
                 ) {
-                  const currentWidth = element.width * displayWidth
-                  const currentHeight = element.height * displayHeight
+                  const currentWidth = element.width * baseImg.naturalWidth
+                  const currentHeight = element.height * baseImg.naturalHeight
                   ctx.strokeRect(
                     currentX,
                     currentY,
@@ -263,10 +267,12 @@ export function useImageCanvas({
             }
           })
 
-          // 現在描画中の要素
+          // 現在描画中の要素（CSS scale方式）
           if (isDrawing && currentDrawing) {
-            const currentX = (currentDrawing.x || 0) * displayWidth + offsetX
-            const currentY = (currentDrawing.y || 0) * displayHeight + offsetY
+            const currentX =
+              (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
+            const currentY =
+              (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
 
             ctx.strokeStyle = currentDrawing.color || strokeColor
             ctx.lineWidth = currentDrawing.strokeWidth || strokeWidth
@@ -279,9 +285,9 @@ export function useImageCanvas({
                   currentDrawing.endY !== undefined
                 ) {
                   const currentEndX =
-                    currentDrawing.endX * displayWidth + offsetX
+                    currentDrawing.endX * baseImg.naturalWidth + offsetX
                   const currentEndY =
-                    currentDrawing.endY * displayHeight + offsetY
+                    currentDrawing.endY * baseImg.naturalHeight + offsetY
 
                   // 通常の自由線
                   drawLineWithStyle(
@@ -302,8 +308,10 @@ export function useImageCanvas({
                   currentDrawing.width !== undefined &&
                   currentDrawing.height !== undefined
                 ) {
-                  const currentWidth = currentDrawing.width * displayWidth
-                  const currentHeight = currentDrawing.height * displayHeight
+                  const currentWidth =
+                    currentDrawing.width * baseImg.naturalWidth
+                  const currentHeight =
+                    currentDrawing.height * baseImg.naturalHeight
                   ctx.strokeRect(
                     currentX,
                     currentY,
@@ -320,11 +328,11 @@ export function useImageCanvas({
                   currentDrawing.textBoxWidth !== undefined &&
                   currentDrawing.textBoxHeight !== undefined
                 ) {
-                  // テキストボックス作成中のプレビュー表示
+                  // テキストボックス作成中のプレビュー表示（CSS scale方式）
                   const currentWidth =
-                    currentDrawing.textBoxWidth * displayWidth
+                    currentDrawing.textBoxWidth * baseImg.naturalWidth
                   const currentHeight =
-                    currentDrawing.textBoxHeight * displayHeight
+                    currentDrawing.textBoxHeight * baseImg.naturalHeight
                   ctx.strokeStyle = currentDrawing.color || strokeColor
                   ctx.lineWidth = 1
                   ctx.setLineDash([5, 5])
@@ -350,9 +358,6 @@ export function useImageCanvas({
     [
       pageSpacing,
       currentCropRegion,
-      zoom,
-      position.x,
-      position.y,
       drawingElements,
       isDrawing,
       currentDrawing,

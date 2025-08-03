@@ -104,19 +104,19 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     screenToImageCoords,
   } = useDrawingUtils()
 
-  // ホイール操作（ズーム・スクロール）
+  // ホイール操作（CSS scale + scroll 方式）
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
-      e.preventDefault()
-
-      // Ctrl + ホイール: ズーム（表示されている部分の中央を基準）
+      // Ctrl + ホイール: ズーム（マウス位置を基準）
       if (e.ctrlKey || e.metaKey) {
-        const canvas = canvasRef.current
-        if (!canvas) return
+        e.preventDefault() // ズーム時のみpreventDefault
 
-        // 現在の表示領域の中央座標を取得
-        const viewportCenterX = canvas.width / 2
-        const viewportCenterY = canvas.height / 2
+        const container = containerRef.current
+        if (!container) return
+
+        const rect = container.getBoundingClientRect()
+        const mouseX = e.clientX - rect.left
+        const mouseY = e.clientY - rect.top
 
         // ズーム適用
         const zoomDelta =
@@ -126,74 +126,79 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
           ZOOM_SETTINGS.max,
         )
 
-        // ズーム比率を計算
-        const zoomRatio = newZoom / zoom
+        // マウス位置を基準とした座標計算
+        const currentScrollMouseX = container.scrollLeft + mouseX
+        const currentScrollMouseY = container.scrollTop + mouseY
+        
+        // スケール前の画像上の座標
+        const imageMouseX = currentScrollMouseX / zoom
+        const imageMouseY = currentScrollMouseY / zoom
 
-        // 中央を基準にした位置調整
-        // 新しい位置 = 現在の位置 * ズーム比率 + 中央調整
-        const centerAdjustX = viewportCenterX * (1 - zoomRatio)
-        const centerAdjustY = viewportCenterY * (1 - zoomRatio)
+        // 新しいズームでの同じ画像位置の画面座標
+        const newScrollMouseX = imageMouseX * newZoom
+        const newScrollMouseY = imageMouseY * newZoom
 
-        const newPosition = {
-          x: position.x * zoomRatio + centerAdjustX,
-          y: position.y * zoomRatio + centerAdjustY,
-        }
+        // マウス位置を維持するための新しいスクロール位置
+        const newScrollLeft = newScrollMouseX - mouseX
+        const newScrollTop = newScrollMouseY - mouseY
 
         onZoomChange(newZoom)
-        onPositionChange(newPosition)
+        
+        // スクロール位置を調整（次のフレームで実行）
+        requestAnimationFrame(() => {
+          container.scrollTo(newScrollLeft, newScrollTop)
+        })
         return
       }
 
-      // Shift + ホイール: 横スクロール
-      if (e.shiftKey) {
-        // macOSではShift+ホイールでdeltaXが設定される
-        // deltaXが0の場合はdeltaYを使用（フォールバック）
-        const deltaX = e.deltaX !== 0 ? e.deltaX : e.deltaY
-        const newPosition = {
-          x: position.x + deltaX,
-          y: position.y,
-        }
-        onPositionChange(newPosition)
-        return
-      }
-
-      // 通常のホイール: 縦・横スクロール
-      const newPosition = {
-        x: position.x + e.deltaX,
-        y: position.y + e.deltaY,
-      }
-      onPositionChange(newPosition)
+      // その他のホイール操作: ネイティブスクロールに委ねる
+      // Shift + ホイール = 横スクロール（macOS/ブラウザ標準）
+      // 通常のホイール = 縦スクロール（ブラウザ標準）
+      // preventDefault() しないことで、ブラウザの最適化されたスクロールを使用
     },
-    [position.x, position.y, onPositionChange, canvasRef, zoom, onZoomChange],
+    [containerRef, zoom, onZoomChange],
   )
 
-  // マウスダウン処理
+  // マウスダウン処理（CSS scale + scroll 方式）
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (!imageLoaded || !canvasRef.current || !containerRef.current) return
 
       const canvas = canvasRef.current
-      const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
-      // 画像相対座標に変換
+      const container = containerRef.current
       const img = imageRef.current
       if (!img) return
 
-      const displayWidth = img.naturalWidth * zoom
-      const displayHeight = img.naturalHeight * zoom
-      const offsetX = (canvas.width - displayWidth) / 2 - position.x
-      const offsetY = (canvas.height - displayHeight) / 2 - position.y
+      const rect = canvas.getBoundingClientRect()
+      const canvasX = e.clientX - rect.left
+      const canvasY = e.clientY - rect.top
 
-      const imageCoords = screenToImageCoords(
-        x,
-        y,
-        displayWidth,
-        displayHeight,
-        offsetX,
-        offsetY,
-      )
+      // CSS scale + scroll 座標変換（NaN防止）
+      const scrollX = container.scrollLeft || 0
+      const scrollY = container.scrollTop || 0
+      const safeZoom = zoom || 1
+
+      // スクロール位置を加算してスケール前の座標を取得
+      const actualX = (canvasX + scrollX) / safeZoom
+      const actualY = (canvasY + scrollY) / safeZoom
+
+      // Canvasでの画像中央配置オフセットを考慮
+      // Canvas幅は全画像の最大幅、個別画像は中央配置される
+      const canvasElement = canvasRef.current
+      if (!canvasElement) return
+
+      const canvasWidth = canvasElement.width
+      const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
+      
+      // 実際の画像座標に変換（中央配置オフセットを引く）
+      const imageX = actualX - imageOffsetX
+      const imageY = actualY
+
+      // 画像サイズで正規化（0-1の範囲、NaN防止）
+      const imageCoords = {
+        x: img.naturalWidth ? imageX / img.naturalWidth : 0,
+        y: img.naturalHeight ? imageY / img.naturalHeight : 0
+      }
 
       // 選択ツールの場合
       if (currentTool === "select") {
@@ -310,30 +315,45 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     ],
   )
 
-  // マウス移動処理
+  // マウス移動処理（CSS scale + scroll 方式）
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!imageLoaded || !canvasRef.current || !imageRef.current) return
+      if (!imageLoaded || !canvasRef.current || !containerRef.current || !imageRef.current) return
 
       const canvas = canvasRef.current
-      const rect = canvas.getBoundingClientRect()
-      const x = e.clientX - rect.left
-      const y = e.clientY - rect.top
-
+      const container = containerRef.current
       const img = imageRef.current
-      const displayWidth = img.naturalWidth * zoom
-      const displayHeight = img.naturalHeight * zoom
-      const offsetX = (canvas.width - displayWidth) / 2 - position.x
-      const offsetY = (canvas.height - displayHeight) / 2 - position.y
 
-      const imageCoords = screenToImageCoords(
-        x,
-        y,
-        displayWidth,
-        displayHeight,
-        offsetX,
-        offsetY,
-      )
+      const rect = canvas.getBoundingClientRect()
+      const canvasX = e.clientX - rect.left
+      const canvasY = e.clientY - rect.top
+
+      // CSS scale + scroll 座標変換（NaN防止）
+      const scrollX = container.scrollLeft || 0
+      const scrollY = container.scrollTop || 0
+      const safeZoom = zoom || 1
+
+      // スクロール位置を加算してスケール前の座標を取得
+      const actualX = (canvasX + scrollX) / safeZoom
+      const actualY = (canvasY + scrollY) / safeZoom
+
+      // Canvasでの画像中央配置オフセットを考慮
+      // Canvas幅は全画像の最大幅、個別画像は中央配置される
+      const canvasElement = canvasRef.current
+      if (!canvasElement) return
+
+      const canvasWidth = canvasElement.width
+      const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
+      
+      // 実際の画像座標に変換（中央配置オフセットを引く）
+      const imageX = actualX - imageOffsetX
+      const imageY = actualY
+
+      // 画像サイズで正規化（0-1の範囲、NaN防止）
+      const imageCoords = {
+        x: img.naturalWidth ? imageX / img.naturalWidth : 0,
+        y: img.naturalHeight ? imageY / img.naturalHeight : 0
+      }
 
       // 要素のドラッグ処理
       if (isDraggingElement && selectedElementId && currentTool === "select") {
@@ -459,25 +479,42 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         setIsCreatingTextBox(false)
         setIsDrawing(false)
 
-        // テキスト入力モーダルを表示
+        // テキスト入力モーダルを表示（CSS scale + scroll 方式）
         if (
           canvasRef.current &&
+          containerRef.current &&
           currentDrawing.x !== undefined &&
           currentDrawing.y !== undefined
         ) {
           const img = imageRef.current
+          const container = containerRef.current
           if (img) {
-            const displayWidth = img.naturalWidth * zoom
-            const displayHeight = img.naturalHeight * zoom
-            const offsetX =
-              (canvasRef.current.width - displayWidth) / 2 - position.x
-            const offsetY =
-              (canvasRef.current.height - displayHeight) / 2 - position.y
+            // 画像上の座標をスクリーン座標に変換（NaN防止）
+            const imageX = (currentDrawing.x || 0) * (img.naturalWidth || 800)
+            const imageY = (currentDrawing.y || 0) * (img.naturalHeight || 600)
+            
+            const safeZoom = zoom || 1
+            const scrollX = container.scrollLeft || 0
+            const scrollY = container.scrollTop || 0
+            
+            // Canvas中央配置オフセットを考慮
+            const canvasElement = canvasRef.current
+            const canvasWidth = canvasElement ? canvasElement.width : (img.naturalWidth || 800)
+            const imageOffsetX = (canvasWidth - (img.naturalWidth || 800)) / 2
+            
+            // 実際のスクリーン座標計算
+            const actualX = imageX + imageOffsetX
+            const actualY = imageY
+            
+            // CSS scale + scroll を考慮したスクリーン座標
+            const screenX = actualX * safeZoom - scrollX
+            const screenY = actualY * safeZoom - scrollY
 
-            const screenX = currentDrawing.x * displayWidth + offsetX
-            const screenY = currentDrawing.y * displayHeight + offsetY
+            // NaNチェック
+            const validX = isNaN(screenX) ? 100 : screenX
+            const validY = isNaN(screenY) ? 100 : screenY
 
-            setTextInputPosition({ x: screenX, y: screenY })
+            setTextInputPosition({ x: validX, y: validY })
             setShowTextInput(true)
             setTextInputValue("")
           }
@@ -502,10 +539,9 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     setIsCreatingTextBox,
     setIsDrawing,
     canvasRef,
+    containerRef,
     imageRef,
     zoom,
-    position.x,
-    position.y,
     setTextInputPosition,
     setShowTextInput,
     setTextInputValue,

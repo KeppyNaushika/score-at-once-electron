@@ -101,11 +101,10 @@ export default function AnswerIndividualView({
       removeDrawingElement: drawingState.removeDrawingElement,
     })
 
-  // ズーム操作（表示されている部分の中央を基準）
+  // ズーム操作（CSS scale + scroll 方式）
   const handleZoomIn = useCallback(() => {
     if (!containerRef.current) return
 
-    // 現在の表示領域の中央座標を取得
     const container = containerRef.current
     const viewportCenterX = container.offsetWidth / 2
     const viewportCenterY = container.offsetHeight / 2
@@ -115,133 +114,69 @@ export default function AnswerIndividualView({
       ZOOM_SETTINGS.max,
     )
 
-    // ズーム比率を計算
-    const zoomRatio = newZoom / zoom
+    // 現在のスクロール位置から、ビューポート中心の画像上の座標を計算
+    const currentScrollCenterX = container.scrollLeft + viewportCenterX
+    const currentScrollCenterY = container.scrollTop + viewportCenterY
 
-    // 中央を基準にした位置調整
-    const centerAdjustX = viewportCenterX * (1 - zoomRatio)
-    const centerAdjustY = viewportCenterY * (1 - zoomRatio)
+    // スケール前の画像上の座標（zoom倍される前の実座標）
+    const imageCenterX = currentScrollCenterX / zoom
+    const imageCenterY = currentScrollCenterY / zoom
 
-    const newPosition = {
-      x: position.x * zoomRatio + centerAdjustX,
-      y: position.y * zoomRatio + centerAdjustY,
-    }
+    // 新しいズームでの同じ画像位置の画面座標
+    const newScrollCenterX = imageCenterX * newZoom
+    const newScrollCenterY = imageCenterY * newZoom
+
+    // ビューポート中心を維持するための新しいスクロール位置
+    const newScrollLeft = newScrollCenterX - viewportCenterX
+    const newScrollTop = newScrollCenterY - viewportCenterY
 
     onZoomChange(newZoom)
-    onPositionChange(newPosition)
-  }, [zoom, position, onZoomChange, onPositionChange, containerRef])
+
+    // スクロール位置を調整（次のフレームで実行）
+    requestAnimationFrame(() => {
+      container.scrollTo(newScrollLeft, newScrollTop)
+    })
+  }, [zoom, onZoomChange, containerRef])
 
   const handleZoomOut = useCallback(() => {
     if (!containerRef.current) return
 
-    // 現在の表示領域の中央座標を取得
     const container = containerRef.current
     const viewportCenterX = container.offsetWidth / 2
     const viewportCenterY = container.offsetHeight / 2
 
     const newZoom = Math.max(zoom * ZOOM_SETTINGS.wheelDelta, ZOOM_SETTINGS.min)
 
-    // ズーム比率を計算
-    const zoomRatio = newZoom / zoom
+    // 現在のスクロール位置から、ビューポート中心の画像上の座標を計算
+    const currentScrollCenterX = container.scrollLeft + viewportCenterX
+    const currentScrollCenterY = container.scrollTop + viewportCenterY
 
-    // 中央を基準にした位置調整
-    const centerAdjustX = viewportCenterX * (1 - zoomRatio)
-    const centerAdjustY = viewportCenterY * (1 - zoomRatio)
+    // スケール前の画像上の座標（zoom倍される前の実座標）
+    const imageCenterX = currentScrollCenterX / zoom
+    const imageCenterY = currentScrollCenterY / zoom
 
-    const newPosition = {
-      x: position.x * zoomRatio + centerAdjustX,
-      y: position.y * zoomRatio + centerAdjustY,
-    }
+    // 新しいズームでの同じ画像位置の画面座標
+    const newScrollCenterX = imageCenterX * newZoom
+    const newScrollCenterY = imageCenterY * newZoom
+
+    // ビューポート中心を維持するための新しいスクロール位置
+    const newScrollLeft = newScrollCenterX - viewportCenterX
+    const newScrollTop = newScrollCenterY - viewportCenterY
 
     onZoomChange(newZoom)
-    onPositionChange(newPosition)
-  }, [zoom, position, onZoomChange, onPositionChange, containerRef])
 
-  // 全体表示
+    // スクロール位置を調整（次のフレームで実行）
+    requestAnimationFrame(() => {
+      container.scrollTo(newScrollLeft, newScrollTop)
+    })
+  }, [zoom, onZoomChange, containerRef])
+
+  // 全体表示（CSS側に委任）
   const handleMaximizeView = useCallback(() => {
-    if (!containerRef.current || !imageLoaded || loadedImages.length === 0)
-      return
+    // Canvas側ではズーム制御しない - 上位コンポーネントに委任
+  }, [])
 
-    const container = containerRef.current
-    const availableWidth = container.offsetWidth
-    const availableHeight = container.offsetHeight
-
-    console.log("=== 全体表示計算 ===", {
-      containerSize: { width: availableWidth, height: availableHeight },
-      loadedImagesCount: loadedImages.length,
-    })
-
-    // パディングを考慮（実際の表示領域）
-    const padding = 40 // 上下左右20pxずつ
-    const effectiveWidth = availableWidth - padding
-    const effectiveHeight = availableHeight - padding
-
-    console.log("有効表示領域:", { effectiveWidth, effectiveHeight })
-
-    // 実際に読み込まれた画像を使用
-    const firstImg = loadedImages[0]
-    if (!firstImg) {
-      console.log("画像が読み込まれていません")
-      return
-    }
-
-    let newZoom: number
-
-    if (loadedImages.length > 1) {
-      // 複数ページの場合：総高さを計算
-      const spacing = pageSpacing || 20
-      const totalHeight =
-        loadedImages.length * firstImg.naturalHeight +
-        (loadedImages.length - 1) * spacing
-
-      console.log("画像情報:", {
-        naturalWidth: firstImg.naturalWidth,
-        naturalHeight: firstImg.naturalHeight,
-        pageCount: loadedImages.length,
-        spacing,
-        totalHeight,
-      })
-
-      // 幅基準と高さ基準のズームを計算
-      const zoomByWidth = effectiveWidth / firstImg.naturalWidth
-      const zoomByHeight = effectiveHeight / totalHeight
-
-      console.log("ズーム計算:", { zoomByWidth, zoomByHeight })
-
-      // 小さい方を採用（全体が入るように）
-      newZoom = Math.min(zoomByWidth, zoomByHeight)
-      console.log("選択されたズーム（制限前）:", newZoom)
-    } else {
-      // 1ページのみの場合
-      const zoomByWidth = effectiveWidth / firstImg.naturalWidth
-      const zoomByHeight = effectiveHeight / firstImg.naturalHeight
-      console.log("単一ページ計算:", { zoomByWidth, zoomByHeight })
-      newZoom = Math.min(zoomByWidth, zoomByHeight)
-    }
-
-    // ズーム制限を適用
-    const finalZoom = Math.min(newZoom, ZOOM_SETTINGS.max)
-    const clampedZoom = Math.max(finalZoom, ZOOM_SETTINGS.min)
-
-    console.log("最終ズーム:", {
-      計算値: newZoom,
-      max制限後: finalZoom,
-      min制限後: clampedZoom,
-      制限値: { min: ZOOM_SETTINGS.min, max: ZOOM_SETTINGS.max },
-    })
-
-    onZoomChange(clampedZoom)
-    onPositionChange({ x: 0, y: 0 })
-  }, [
-    containerRef,
-    imageLoaded,
-    loadedImages,
-    onZoomChange,
-    onPositionChange,
-    pageSpacing,
-  ])
-
-  // 設問表示
+  // 設問表示（CSS scale + scroll 方式）
   const handleCropView = useCallback(() => {
     if (
       !currentCropRegion ||
@@ -255,17 +190,6 @@ export default function AnswerIndividualView({
     const availableWidth = container.offsetWidth
     const availableHeight = container.offsetHeight
 
-    console.log("=== 設問表示計算 ===", {
-      containerSize: { width: availableWidth, height: availableHeight },
-      loadedImagesCount: loadedImages.length,
-      questionRegion: {
-        x: currentCropRegion.x,
-        y: currentCropRegion.y,
-        width: currentCropRegion.width,
-        height: currentCropRegion.height,
-      },
-    })
-
     // パディングを考慮
     const padding = 40
     const effectiveWidth = availableWidth - padding
@@ -277,7 +201,6 @@ export default function AnswerIndividualView({
 
     const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
     if (!questionImg) {
-      console.log("設問ページの画像が読み込まれていません")
       return
     }
 
@@ -285,26 +208,10 @@ export default function AnswerIndividualView({
     const questionWidth = currentCropRegion.width * questionImg.naturalWidth
     const questionHeight = currentCropRegion.height * questionImg.naturalHeight
 
-    console.log("設問領域サイズ:", {
-      questionPageNumber,
-      questionPageIndex,
-      imageSize: {
-        width: questionImg.naturalWidth,
-        height: questionImg.naturalHeight,
-      },
-      questionPixelSize: { width: questionWidth, height: questionHeight },
-    })
-
     // 設問領域をコンテナに収めるためのズームを計算
     const zoomByWidth = effectiveWidth / questionWidth
     const zoomByHeight = effectiveHeight / questionHeight
     let newZoom = Math.min(zoomByWidth, zoomByHeight)
-
-    console.log("設問ズーム計算:", {
-      zoomByWidth,
-      zoomByHeight,
-      selectedZoom: newZoom,
-    })
 
     // ズーム制限を適用
     newZoom = Math.min(newZoom, ZOOM_SETTINGS.max)
@@ -321,66 +228,40 @@ export default function AnswerIndividualView({
     // 複数ページ表示の場合、設問が属するページのオフセットを計算
     let pageOffsetY = 0
 
-    console.log("設問表示 - ページ計算:", {
-      questionPageNumber,
-      questionPageIndex,
-      totalPages: loadedImages.length,
-    })
-
     if (loadedImages.length > 1) {
       const spacing = pageSpacing || 20
 
       for (let i = 0; i < questionPageIndex; i++) {
         if (i < loadedImages.length) {
-          pageOffsetY += loadedImages[i].naturalHeight * newZoom + spacing
+          pageOffsetY += loadedImages[i].naturalHeight + spacing
         }
       }
     }
 
-    // 設問中心をコンテナ中心に配置するためのパン位置を計算
+    // CSS scale方式での設問中心スクロール位置計算
     const questionCenterScreenX = questionCenterX * newZoom
-    const questionCenterScreenY = questionCenterY * newZoom + pageOffsetY
+    const questionCenterScreenY = (questionCenterY + pageOffsetY) * newZoom
 
     // コンテナ中心座標
     const containerCenterX = availableWidth / 2
     const containerCenterY = availableHeight / 2
 
-    // パン量を計算（設問中心がコンテナ中心に来るように）
-    // Canvas描画と同じ座標系を使用
-    // 注意: Canvas描画では各ページが個別に中央揃えされるため、
-    // 最初のページ（または設問が属するページ）の表示サイズを基準とする
-    const displayWidth = questionImg.naturalWidth * newZoom
-    const displayHeight = questionImg.naturalHeight * newZoom
-
-    // Canvasでの画像配置：(canvas.width - displayWidth) / 2 - position.x
-    // 設問が属するページの画像サイズで中央揃え計算
-    const imageCenterOffsetX = (availableWidth - displayWidth) / 2
-
-    // 設問中心をコンテナ中心に配置するためのパン位置
-    // Canvas描画と同じ座標系: offsetX = imageCenterOffsetX - position.x
-    // 設問中心がコンテナ中心に来るように: position.x を設定
-    const newX = imageCenterOffsetX + questionCenterScreenX - containerCenterX
-    const newY = questionCenterScreenY - containerCenterY
-
-    console.log("最終設問表示:", {
-      zoom: newZoom,
-      panPosition: { x: newX, y: newY },
-      questionCenter: { x: questionCenterX, y: questionCenterY },
-      screenCenter: { x: questionCenterScreenX, y: questionCenterScreenY },
-      pageOffsetY,
-      displayWidth,
-      containerCenter: { x: containerCenterX, y: containerCenterY },
-    })
+    // 設問中心をコンテナ中心に配置するためのスクロール位置
+    const scrollLeft = questionCenterScreenX - containerCenterX
+    const scrollTop = questionCenterScreenY - containerCenterY
 
     onZoomChange(newZoom)
-    onPositionChange({ x: newX, y: newY })
+
+    // スクロール位置を設定（次のフレームで実行）
+    requestAnimationFrame(() => {
+      container.scrollTo(scrollLeft, scrollTop)
+    })
   }, [
     currentCropRegion,
     containerRef,
     imageLoaded,
     loadedImages,
     onZoomChange,
-    onPositionChange,
     pageSpacing,
   ])
 
@@ -422,24 +303,59 @@ export default function AnswerIndividualView({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* メインキャンバス */}
+      {/* CSS スクロール + scale 方式のメインキャンバス */}
       <div
         ref={containerRef}
-        className={`h-full w-full ${
-          drawingState.currentTool === "hand"
-            ? "cursor-grab"
-            : "cursor-crosshair"
-        }`}
+        className="h-full w-full overflow-auto"
+        style={{
+          cursor: drawingState.currentTool === "hand" ? "grab" : "crosshair",
+        }}
+        onWheel={handleWheel}
       >
-        <canvas
-          ref={canvasRef}
-          className="h-full w-full"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onWheel={handleWheel}
-        />
+        <div
+          className="relative"
+          style={{
+            width:
+              loadedImages.length > 0
+                ? `${loadedImages[0].naturalWidth * zoom}px`
+                : `${800 * zoom}px`,
+            height:
+              loadedImages.length > 0
+                ? `${
+                    loadedImages.reduce(
+                      (total, img, index) =>
+                        total +
+                        img.naturalHeight +
+                        (index < loadedImages.length - 1
+                          ? pageSpacing || 20
+                          : 0),
+                      0,
+                    ) * zoom
+                  }px`
+                : `${600 * zoom}px`,
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
+            height={
+              loadedImages.length > 0
+                ? loadedImages.reduce(
+                    (total, img, index) =>
+                      total +
+                      img.naturalHeight +
+                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+                    0,
+                  )
+                : 600
+            }
+            className="block"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          />
+        </div>
       </div>
 
       {/* 画像が読み込まれていない場合 */}

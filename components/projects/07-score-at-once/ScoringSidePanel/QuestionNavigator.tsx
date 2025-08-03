@@ -52,30 +52,6 @@ export default function QuestionNavigator({
     ? questionRegions.findIndex((q) => q.id === currentCropRegion.id)
     : -1
 
-  // デバッグ情報を追加
-  console.log("=== QuestionNavigator DEBUG ===")
-  console.log("Props received:", {
-    questionRegionsLength: questionRegions?.length,
-    currentCropRegionId: currentCropRegion?.id,
-    currentIndex,
-    hasQuestionProgress: !!questionProgress,
-    questionProgressKeys: Object.keys(questionProgress || {}).length,
-  })
-
-  // questionProgressの詳細
-  console.log(
-    "Question progress details:",
-    Object.entries(questionProgress || {}).map(([id, progress]) => {
-      const region = questionRegions.find((r) => r.id === id)
-      return {
-        questionId: id,
-        questionLabel: region?.label || region?.orderIndex || "Unknown",
-        display: `${progress.gradedAnswers}/${progress.totalAnswers}`,
-        percentage: progress.percentage,
-      }
-    }),
-  )
-
   // 0/0の設問を特定
   const zeroProgressQuestions = Object.entries(questionProgress || {}).filter(
     ([_, progress]) =>
