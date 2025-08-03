@@ -1,6 +1,6 @@
+import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useEffect } from "react"
-import type { ScoringBehavior } from "../ScoringBehaviorSelector"
 
 interface Student {
   id: string

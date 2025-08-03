@@ -1,11 +1,11 @@
+import { useDrawingUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingUtils"
+import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { DrawingElement } from "../types/answer-individual-types"
-import { useDrawingUtils } from "./useDrawingUtils"
 
 interface UseImageCanvasProps {
   currentScoringData: ScoringData | null
@@ -21,7 +21,9 @@ interface UseImageCanvasProps {
   strokeWidth: number
   lineStyle: string
   isShiftPressed: boolean
-  selectedElementId: string | null
+  selectedElementIds: string[]
+  isDrawingSelection: boolean
+  selectionRectangle: any
   showMultiplePages?: boolean
   pageSpacing?: number
 }
@@ -40,7 +42,9 @@ export function useImageCanvas({
   strokeWidth,
   lineStyle,
   isShiftPressed,
-  selectedElementId,
+  selectedElementIds,
+  isDrawingSelection,
+  selectionRectangle,
   showMultiplePages,
   pageSpacing,
 }: UseImageCanvasProps) {
@@ -51,7 +55,6 @@ export function useImageCanvas({
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
 
   const { drawLineWithStyle } = useDrawingUtils()
-
 
   // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
@@ -78,16 +81,16 @@ export function useImageCanvas({
       // Canvas内部解像度の設定
       canvas.width = canvasWidth
       canvas.height = totalHeight
-      
+
       // Canvas size debug removed for cleaner output
 
       // 画像描画をクリア
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      
+
       // デバッグ: Canvas可視化のため薄い背景色を設定
       ctx.fillStyle = "rgba(255, 255, 0, 0.1)" // 薄い黄色
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-      
+
       // Canvas Context設定を強制リセット
       ctx.globalCompositeOperation = "source-over"
       ctx.globalAlpha = 1.0
@@ -124,7 +127,6 @@ export function useImageCanvas({
         currentY += img.naturalHeight + (images.length > 1 ? spacing : 0)
       })
 
-
       // 設問枠描画（CSS scale方式）
       if (currentCropRegion && images.length > 0) {
         // 設問が属するページを特定（pageNumberから0ベースのインデックスに変換）
@@ -154,15 +156,15 @@ export function useImageCanvas({
             const questionWidth = currentCropRegion.width * img.naturalWidth
             const questionHeight = currentCropRegion.height * img.naturalHeight
 
-
             ctx.strokeStyle = "#22c55e"
             ctx.lineWidth = 2
             ctx.setLineDash([])
             ctx.strokeRect(questionX, questionY, questionWidth, questionHeight)
 
-            // 設問ラベル
+            // 設問ラベル（ズーム対応）
             ctx.fillStyle = "#22c55e"
-            ctx.font = "14px sans-serif"
+            const labelFontSize = Math.max(12, 14 / zoom) // 最小12px、ズームで調整
+            ctx.font = `${labelFontSize}px sans-serif`
             ctx.fillText(currentCropRegion.label, questionX, questionY - 5)
           }
         } else {
@@ -190,7 +192,7 @@ export function useImageCanvas({
             ctx.lineWidth = element.strokeWidth
 
             // 選択中の要素をハイライト
-            const isSelected = element.id === selectedElementId
+            const isSelected = selectedElementIds.includes(element.id)
             if (isSelected) {
               ctx.shadowColor = element.color
               ctx.shadowBlur = 10
@@ -282,33 +284,257 @@ export function useImageCanvas({
             }
           })
 
-          // 現在描画中の要素（描画頻度を制限）
+          // 選択された要素のハンドル（編集点）を描画
+          if (selectedElementIds.length > 0) {
+            ctx.save()
+            ctx.fillStyle = "#3b82f6" // 青色のハンドル
+            ctx.strokeStyle = "#ffffff" // 白い縁取り
+            ctx.lineWidth = 2
+
+            // ズーム倍率に応じてハンドルサイズを調整（表示サイズで一定になるように）
+            const baseHandleSize = 8
+            const handleSize = baseHandleSize / zoom // zoomで割ることで見た目サイズを一定に
+            const halfHandle = handleSize / 2
+
+            // 複数選択の場合は全選択要素にハンドルを描画
+            selectedElementIds.forEach((selectedElementId) => {
+              const selectedElement = drawingElements.find(
+                (el) => el.id === selectedElementId,
+              )
+              if (selectedElement) {
+                switch (selectedElement.type) {
+                  case "line":
+                    if (
+                      selectedElement.endX !== undefined &&
+                      selectedElement.endY !== undefined
+                    ) {
+                      // 開始点ハンドル
+                      const startX =
+                        selectedElement.x * baseImg.naturalWidth + offsetX
+                      const startY =
+                        selectedElement.y * baseImg.naturalHeight + offsetY
+                      ctx.fillRect(
+                        startX - halfHandle,
+                        startY - halfHandle,
+                        handleSize,
+                        handleSize,
+                      )
+                      ctx.strokeRect(
+                        startX - halfHandle,
+                        startY - halfHandle,
+                        handleSize,
+                        handleSize,
+                      )
+
+                      // 終了点ハンドル
+                      const endX =
+                        selectedElement.endX * baseImg.naturalWidth + offsetX
+                      const endY =
+                        selectedElement.endY * baseImg.naturalHeight + offsetY
+                      ctx.fillRect(
+                        endX - halfHandle,
+                        endY - halfHandle,
+                        handleSize,
+                        handleSize,
+                      )
+                      ctx.strokeRect(
+                        endX - halfHandle,
+                        endY - halfHandle,
+                        handleSize,
+                        handleSize,
+                      )
+                    }
+                    break
+                  case "rectangle":
+                    if (
+                      selectedElement.width !== undefined &&
+                      selectedElement.height !== undefined
+                    ) {
+                      const rectX =
+                        selectedElement.x * baseImg.naturalWidth + offsetX
+                      const rectY =
+                        selectedElement.y * baseImg.naturalHeight + offsetY
+                      const rectWidth =
+                        selectedElement.width * baseImg.naturalWidth
+                      const rectHeight =
+                        selectedElement.height * baseImg.naturalHeight
+
+                      // 4つの角にハンドルを描画
+                      const corners = [
+                        { x: rectX, y: rectY }, // 左上
+                        { x: rectX + rectWidth, y: rectY }, // 右上
+                        { x: rectX, y: rectY + rectHeight }, // 左下
+                        { x: rectX + rectWidth, y: rectY + rectHeight }, // 右下
+                      ]
+
+                      corners.forEach((corner) => {
+                        ctx.fillRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                        ctx.strokeRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                      })
+                    }
+                    break
+                  case "text":
+                    if (
+                      selectedElement.textBoxWidth !== undefined &&
+                      selectedElement.textBoxHeight !== undefined
+                    ) {
+                      const textX =
+                        selectedElement.x * baseImg.naturalWidth + offsetX
+                      const textY =
+                        selectedElement.y * baseImg.naturalHeight + offsetY
+                      const textWidth =
+                        selectedElement.textBoxWidth * baseImg.naturalWidth
+                      const textHeight =
+                        selectedElement.textBoxHeight * baseImg.naturalHeight
+
+                      // テキストボックスの4つの角にハンドル
+                      const corners = [
+                        { x: textX, y: textY }, // 左上
+                        { x: textX + textWidth, y: textY }, // 右上
+                        { x: textX, y: textY + textHeight }, // 左下
+                        { x: textX + textWidth, y: textY + textHeight }, // 右下
+                      ]
+
+                      corners.forEach((corner) => {
+                        ctx.fillRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                        ctx.strokeRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                      })
+                    }
+                    break
+                }
+              }
+            })
+            ctx.restore()
+          }
+
+          // 現在描画中の要素（リアルタイムプレビュー）
           if (isDrawing && currentDrawing) {
-            const currentX = (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
-            const currentY = (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
+            const currentX =
+              (currentDrawing.x || 0) * baseImg.naturalWidth + offsetX
+            const currentY =
+              (currentDrawing.y || 0) * baseImg.naturalHeight + offsetY
 
             ctx.save()
-            ctx.strokeStyle = "#ff0000" // 強制的に赤色で確認
-            ctx.lineWidth = 5
-            ctx.globalAlpha = 1
+            ctx.strokeStyle = currentDrawing.color || strokeColor
+            ctx.lineWidth = currentDrawing.strokeWidth || strokeWidth
+            ctx.globalAlpha = 0.8 // 少し透明にしてプレビュー感を演出
             ctx.lineCap = "round"
             ctx.setLineDash([])
 
             switch (currentDrawing.type) {
               case "line":
-                if (currentDrawing.endX !== undefined && currentDrawing.endY !== undefined) {
-                  const currentEndX = currentDrawing.endX * baseImg.naturalWidth + offsetX
-                  const currentEndY = currentDrawing.endY * baseImg.naturalHeight + offsetY
+                if (
+                  currentDrawing.endX !== undefined &&
+                  currentDrawing.endY !== undefined
+                ) {
+                  const currentEndX =
+                    currentDrawing.endX * baseImg.naturalWidth + offsetX
+                  const currentEndY =
+                    currentDrawing.endY * baseImg.naturalHeight + offsetY
 
                   ctx.beginPath()
                   ctx.moveTo(currentX, currentY)
                   ctx.lineTo(currentEndX, currentEndY)
                   ctx.stroke()
+                }
+                break
+              case "rectangle":
+                if (
+                  currentDrawing.width !== undefined &&
+                  currentDrawing.height !== undefined
+                ) {
+                  const currentWidth =
+                    currentDrawing.width * baseImg.naturalWidth
+                  const currentHeight =
+                    currentDrawing.height * baseImg.naturalHeight
+                  ctx.strokeRect(
+                    currentX,
+                    currentY,
+                    currentWidth,
+                    currentHeight,
+                  )
+                }
+                break
+              case "text":
+                if (
+                  isCreatingTextBox &&
+                  currentDrawing.textBoxWidth !== undefined &&
+                  currentDrawing.textBoxHeight !== undefined
+                ) {
+                  // テキストボックス作成中のプレビュー表示
+                  const currentWidth =
+                    currentDrawing.textBoxWidth * baseImg.naturalWidth
+                  const currentHeight =
+                    currentDrawing.textBoxHeight * baseImg.naturalHeight
 
-                  // Line drawing confirmed
+                  ctx.strokeStyle = currentDrawing.color || strokeColor
+                  ctx.lineWidth = 2
+                  ctx.setLineDash([5, 5])
+                  ctx.strokeRect(
+                    currentX,
+                    currentY,
+                    currentWidth,
+                    currentHeight,
+                  )
+
+                  // "Text Box" プレビューテキスト（ズーム対応）
+                  ctx.setLineDash([])
+                  const previewFontSize = Math.max(12, 16 / zoom) // 最小12px、ズームで調整
+                  ctx.font = `${previewFontSize}px sans-serif`
+                  ctx.fillStyle = currentDrawing.color || strokeColor
+                  ctx.globalAlpha = 0.6
+                  const textOffset = Math.max(3, 5 / zoom) // テキストオフセットもズーム対応
+                  ctx.fillText(
+                    "Text Box",
+                    currentX + textOffset,
+                    currentY + textOffset * 4,
+                  )
                 }
                 break
             }
+            ctx.restore()
+          }
+
+          // 選択範囲矩形の描画
+          if (isDrawingSelection && selectionRectangle) {
+            ctx.save()
+            ctx.strokeStyle = "#2563eb" // 青色の選択範囲
+            ctx.setLineDash([5, 5]) // 点線
+            ctx.lineWidth = 1
+            ctx.globalAlpha = 0.6
+
+            const rectX = selectionRectangle.x * baseImg.naturalWidth + offsetX
+            const rectY = selectionRectangle.y * baseImg.naturalHeight + offsetY
+            const rectWidth = selectionRectangle.width * baseImg.naturalWidth
+            const rectHeight = selectionRectangle.height * baseImg.naturalHeight
+
+            ctx.strokeRect(rectX, rectY, rectWidth, rectHeight)
+
+            // 選択範囲の背景（薄い青色）
+            ctx.fillStyle = "#2563eb"
+            ctx.globalAlpha = 0.1
+            ctx.fillRect(rectX, rectY, rectWidth, rectHeight)
+
             ctx.restore()
           }
         }
@@ -317,13 +543,17 @@ export function useImageCanvas({
     [
       pageSpacing,
       currentCropRegion,
+      zoom,
       drawingElements,
-      selectedElementId,
+      selectedElementIds,
+      isDrawing,
+      currentDrawing,
+      isDrawingSelection,
+      selectionRectangle,
       drawLineWithStyle,
       strokeColor,
       strokeWidth,
       isCreatingTextBox,
-      // isDrawing と currentDrawing は描画パフォーマンス最適化のため部分的に処理
     ],
   )
 
@@ -394,7 +624,7 @@ export function useImageCanvas({
         const loadedImageArray = await Promise.all(loadPromises)
         setLoadedImages(loadedImageArray)
         setImageLoaded(true)
-        
+
         // 隠しimg要素に最初の画像のsrcを設定（座標計算用）
         if (loadedImageArray.length > 0 && imageRef.current) {
           const firstImage = loadedImageArray[0]
@@ -402,10 +632,10 @@ export function useImageCanvas({
           console.log("🖼️ Setting hidden img src:", {
             src: firstImage.src,
             naturalWidth: firstImage.naturalWidth,
-            naturalHeight: firstImage.naturalHeight
+            naturalHeight: firstImage.naturalHeight,
           })
         }
-        
+
         drawCanvas(loadedImageArray)
       } catch (error) {
         console.error("Failed to load some images:", error)
@@ -421,7 +651,7 @@ export function useImageCanvas({
         if (successfulImages.length > 0) {
           setLoadedImages(successfulImages)
           setImageLoaded(true)
-          
+
           // 隠しimg要素に最初の画像のsrcを設定（部分読み込みの場合）
           if (successfulImages.length > 0 && imageRef.current) {
             const firstImage = successfulImages[0]
@@ -429,10 +659,10 @@ export function useImageCanvas({
             console.log("🖼️ Setting hidden img src (partial load):", {
               src: firstImage.src,
               naturalWidth: firstImage.naturalWidth,
-              naturalHeight: firstImage.naturalHeight
+              naturalHeight: firstImage.naturalHeight,
             })
           }
-          
+
           drawCanvas(successfulImages)
         } else {
           setImageLoaded(false)
@@ -443,26 +673,14 @@ export function useImageCanvas({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, pageImages, showMultiplePages]) // drawCanvasを依存配列から除外
+  }, [currentScoringData, drawCanvas, pageImages, showMultiplePages])
 
-  // Canvas再描画（ベース要素のみ）
+  // Canvas再描画（全ての要素を統合）
   useEffect(() => {
     if (imageLoaded && loadedImages.length > 0) {
       drawCanvas(loadedImages)
     }
-  }, [imageLoaded, loadedImages, drawingElements, selectedElementId, strokeColor, strokeWidth, isCreatingTextBox])
-
-  // 現在描画中の要素の軽量更新（全体再描画を避ける）
-  useEffect(() => {
-    if (imageLoaded && loadedImages.length > 0 && isDrawing && currentDrawing) {
-      // 最後の描画から短時間の場合はスキップ（デバウンス効果）
-      const timeoutId = setTimeout(() => {
-        drawCanvas(loadedImages)
-      }, 16) // 60FPS相当の制限
-      
-      return () => clearTimeout(timeoutId)
-    }
-  }, [imageLoaded, loadedImages, isDrawing, currentDrawing])
+  }, [imageLoaded, loadedImages, drawCanvas])
 
   // コンテナリサイズの監視とCanvas再描画
   useEffect(() => {

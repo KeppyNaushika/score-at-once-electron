@@ -1,14 +1,15 @@
-import { useState, useCallback } from "react"
+import { DEFAULT_DRAWING_SETTINGS } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
 import type {
-  DrawingState,
   DrawingActions,
   DrawingElement,
+  DrawingState,
   DrawingTool,
-  LineStyle,
   LineEditMode,
+  LineStyle,
   RectangleEditMode,
-} from "../types/answer-individual-types"
-import { DEFAULT_DRAWING_SETTINGS } from "../constants/drawing-constants"
+  SelectionRectangle,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import { useCallback, useState } from "react"
 
 export function useDrawingState(): DrawingState & DrawingActions {
   // 基本的な描画設定
@@ -30,17 +31,24 @@ export function useDrawingState(): DrawingState & DrawingActions {
   const [currentDrawing, setCurrentDrawing] =
     useState<Partial<DrawingElement> | null>(null)
 
-  // 選択とドラッグ
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(
-    null,
-  )
+  // 選択とドラッグ（複数選択システム）
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([])
   const [isDraggingElement, setIsDraggingElement] = useState(false)
   const [dragElementOffset, setDragElementOffset] = useState({ x: 0, y: 0 })
+
+  // 選択範囲ドラッグ
+  const [isDrawingSelection, setIsDrawingSelection] = useState(false)
+  const [selectionRectangle, setSelectionRectangle] =
+    useState<SelectionRectangle | null>(null)
 
   // 編集モード
   const [lineEditMode, setLineEditMode] = useState<LineEditMode>(null)
   const [rectangleEditMode, setRectangleEditMode] =
     useState<RectangleEditMode>(null)
+
+  // ハンドル編集
+  const [isDraggingHandle, setIsDraggingHandle] = useState(false)
+  const [currentHandle, setCurrentHandle] = useState<string | null>(null)
 
   // テキスト入力
   const [isCreatingTextBox, setIsCreatingTextBox] = useState(false)
@@ -50,6 +58,7 @@ export function useDrawingState(): DrawingState & DrawingActions {
 
   // キーボード状態
   const [isShiftPressed, setIsShiftPressed] = useState(false)
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false)
 
   // 描画要素操作
   const addDrawingElement = useCallback((element: DrawingElement) => {
@@ -67,21 +76,115 @@ export function useDrawingState(): DrawingState & DrawingActions {
     [],
   )
 
-  const removeDrawingElement = useCallback(
-    (id: string) => {
-      setDrawingElements((prev) => prev.filter((element) => element.id !== id))
-      if (selectedElementId === id) {
-        setSelectedElementId(null)
+  const removeDrawingElement = useCallback((id: string) => {
+    setDrawingElements((prev) => prev.filter((element) => element.id !== id))
+    // 複数選択からも削除
+    setSelectedElementIds((prev) =>
+      prev.filter((elementId) => elementId !== id),
+    )
+  }, [])
+
+  // 複数選択操作
+  const addToSelection = useCallback((id: string) => {
+    setSelectedElementIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+  }, [])
+
+  const removeFromSelection = useCallback((id: string) => {
+    setSelectedElementIds((prev) =>
+      prev.filter((elementId) => elementId !== id),
+    )
+  }, [])
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedElementIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((elementId) => elementId !== id)
+      } else {
+        return [...prev, id]
+      }
+    })
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedElementIds([])
+  }, [])
+
+  // 重複判定：矩形と図形が重なっているかを判定する
+  const isElementInRectangle = useCallback(
+    (element: DrawingElement, rect: SelectionRectangle): boolean => {
+      // 要素の境界ボックスを取得
+      let elementLeft = element.x
+      let elementTop = element.y
+      let elementRight = element.x
+      let elementBottom = element.y
+
+      switch (element.type) {
+        case "line":
+          if (element.endX !== undefined && element.endY !== undefined) {
+            elementLeft = Math.min(element.x, element.endX)
+            elementTop = Math.min(element.y, element.endY)
+            elementRight = Math.max(element.x, element.endX)
+            elementBottom = Math.max(element.y, element.endY)
+          }
+          break
+        case "rectangle":
+          if (element.width !== undefined && element.height !== undefined) {
+            elementRight = element.x + element.width
+            elementBottom = element.y + element.height
+          }
+          break
+        case "text":
+          if (
+            element.textBoxWidth !== undefined &&
+            element.textBoxHeight !== undefined
+          ) {
+            elementRight = element.x + element.textBoxWidth
+            elementBottom = element.y + element.textBoxHeight
+          } else {
+            // テキストの場合、小さな矩形として扱う
+            elementRight = element.x + 0.05
+            elementBottom = element.y + 0.03
+          }
+          break
+      }
+
+      // 選択範囲の境界ボックス
+      const rectLeft = Math.min(rect.x, rect.x + rect.width)
+      const rectTop = Math.min(rect.y, rect.y + rect.height)
+      const rectRight = Math.max(rect.x, rect.x + rect.width)
+      const rectBottom = Math.max(rect.y, rect.y + rect.height)
+
+      // 重複判定（境界も含む）
+      return !(
+        elementRight < rectLeft ||
+        elementLeft > rectRight ||
+        elementBottom < rectTop ||
+        elementTop > rectBottom
+      )
+    },
+    [],
+  )
+
+  const selectElementsInRectangle = useCallback(
+    (rect: SelectionRectangle) => {
+      const elementsInRect = drawingElements
+        .filter((element) => isElementInRectangle(element, rect))
+        .map((element) => element.id)
+
+      if (elementsInRect.length > 0) {
+        setSelectedElementIds(elementsInRect)
       }
     },
-    [selectedElementId],
+    [drawingElements, isElementInRectangle],
   )
 
   const clearDrawing = useCallback(() => {
     setDrawingElements([])
-    setSelectedElementId(null)
+    setSelectedElementIds([])
     setCurrentDrawing(null)
     setIsDrawing(false)
+    setIsDrawingSelection(false)
+    setSelectionRectangle(null)
   }, [])
 
   return {
@@ -94,9 +197,14 @@ export function useDrawingState(): DrawingState & DrawingActions {
     drawingElements,
     isDrawing,
     currentDrawing,
-    selectedElementId,
+    // 複数選択システム
+    selectedElementIds,
     isDraggingElement,
     dragElementOffset,
+    // 選択範囲ドラッグ
+    isDrawingSelection,
+    selectionRectangle,
+    // その他
     lineEditMode,
     rectangleEditMode,
     isCreatingTextBox,
@@ -104,6 +212,9 @@ export function useDrawingState(): DrawingState & DrawingActions {
     textInputPosition,
     textInputValue,
     isShiftPressed,
+    isCtrlPressed,
+    isDraggingHandle,
+    currentHandle,
 
     // Actions
     setCurrentTool,
@@ -115,7 +226,16 @@ export function useDrawingState(): DrawingState & DrawingActions {
     addDrawingElement,
     updateDrawingElement,
     removeDrawingElement,
-    setSelectedElementId,
+    // 複数選択システム
+    setSelectedElementIds,
+    addToSelection,
+    removeFromSelection,
+    toggleSelection,
+    clearSelection,
+    // 選択範囲
+    setIsDrawingSelection,
+    setSelectionRectangle,
+    selectElementsInRectangle,
     clearDrawing,
 
     // Internal state updaters (for hooks that need direct access)
@@ -130,5 +250,8 @@ export function useDrawingState(): DrawingState & DrawingActions {
     setTextInputPosition,
     setTextInputValue,
     setIsShiftPressed,
+    setIsCtrlPressed,
+    setIsDraggingHandle,
+    setCurrentHandle,
   }
 }

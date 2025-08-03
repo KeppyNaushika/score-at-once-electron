@@ -51,7 +51,9 @@ export default function AnswerIndividualView({
       strokeWidth: drawingState.strokeWidth,
       lineStyle: drawingState.lineStyle,
       isShiftPressed: drawingState.isShiftPressed,
-      selectedElementId: drawingState.selectedElementId,
+      selectedElementIds: drawingState.selectedElementIds,
+      isDrawingSelection: drawingState.isDrawingSelection,
+      selectionRectangle: drawingState.selectionRectangle,
       showMultiplePages,
       pageSpacing,
     })
@@ -69,7 +71,8 @@ export default function AnswerIndividualView({
       imageLoaded,
       currentTool: drawingState.currentTool,
       drawingElements: drawingState.drawingElements,
-      selectedElementId: drawingState.selectedElementId,
+      // 複数選択システム
+      selectedElementIds: drawingState.selectedElementIds,
       isDraggingElement: drawingState.isDraggingElement,
       isDrawing: drawingState.isDrawing,
       currentDrawing: drawingState.currentDrawing,
@@ -77,14 +80,31 @@ export default function AnswerIndividualView({
       strokeWidth: drawingState.strokeWidth,
       lineStyle: drawingState.lineStyle,
       isShiftPressed: drawingState.isShiftPressed,
+      isCtrlPressed: drawingState.isCtrlPressed,
       dragElementOffset: drawingState.dragElementOffset,
+      // 選択範囲ドラッグ
+      isDrawingSelection: drawingState.isDrawingSelection,
+      selectionRectangle: drawingState.selectionRectangle,
+      // その他
       lineEditMode: drawingState.lineEditMode,
       rectangleEditMode: drawingState.rectangleEditMode,
       isCreatingTextBox: drawingState.isCreatingTextBox,
       showTextInput: drawingState.showTextInput,
       textInputPosition: drawingState.textInputPosition,
       textInputValue: drawingState.textInputValue,
-      setSelectedElementId: drawingState.setSelectedElementId,
+      isDraggingHandle: drawingState.isDraggingHandle,
+      currentHandle: drawingState.currentHandle,
+      // 複数選択アクション
+      setSelectedElementIds: drawingState.setSelectedElementIds,
+      addToSelection: drawingState.addToSelection,
+      removeFromSelection: drawingState.removeFromSelection,
+      toggleSelection: drawingState.toggleSelection,
+      clearSelection: drawingState.clearSelection,
+      // 選択範囲アクション
+      setIsDrawingSelection: drawingState.setIsDrawingSelection,
+      setSelectionRectangle: drawingState.setSelectionRectangle,
+      selectElementsInRectangle: drawingState.selectElementsInRectangle,
+      // その他のアクション
       setIsDraggingElement: drawingState.setIsDraggingElement,
       setIsDrawing: drawingState.setIsDrawing,
       setCurrentDrawing: drawingState.setCurrentDrawing,
@@ -96,6 +116,9 @@ export default function AnswerIndividualView({
       setTextInputPosition: drawingState.setTextInputPosition,
       setTextInputValue: drawingState.setTextInputValue,
       setIsShiftPressed: drawingState.setIsShiftPressed,
+      setIsCtrlPressed: drawingState.setIsCtrlPressed,
+      setIsDraggingHandle: drawingState.setIsDraggingHandle,
+      setCurrentHandle: drawingState.setCurrentHandle,
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
       removeDrawingElement: drawingState.removeDrawingElement,
@@ -367,7 +390,12 @@ export default function AnswerIndividualView({
         ref={containerRef}
         className="grid h-full w-full overflow-auto"
         style={{
-          cursor: drawingState.currentTool === "hand" ? "grab" : "crosshair",
+          cursor: 
+            drawingState.currentTool === "hand" 
+              ? (drawingState.isDraggingElement ? "grabbing" : "grab")
+              : drawingState.currentTool === "select" 
+              ? (drawingState.isDraggingElement ? "move" : "default")
+              : "crosshair",
         }}
       >
         <div

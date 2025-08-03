@@ -60,6 +60,14 @@ export interface AnswerIndividualViewProps {
   pageSpacing?: number // ページ間の余白（ピクセル）
 }
 
+// 選択範囲矩形の型定義
+export interface SelectionRectangle {
+  x: number // 0.0 - 1.0 (画像全体に対する割合)
+  y: number // 0.0 - 1.0
+  width: number // 0.0 - 1.0
+  height: number // 0.0 - 1.0
+}
+
 // 描画状態管理用のインターフェース
 export interface DrawingState {
   currentTool: DrawingTool
@@ -70,9 +78,14 @@ export interface DrawingState {
   drawingElements: DrawingElement[]
   isDrawing: boolean
   currentDrawing: Partial<DrawingElement> | null
-  selectedElementId: string | null
+  // 複数選択システム
+  selectedElementIds: string[] // 選択された要素IDの配列
   isDraggingElement: boolean
   dragElementOffset: { x: number; y: number }
+  // 選択範囲ドラッグ
+  isDrawingSelection: boolean // 選択範囲を描画中かどうか
+  selectionRectangle: SelectionRectangle | null // 選択範囲矩形
+  // その他の状態
   lineEditMode: LineEditMode
   rectangleEditMode: RectangleEditMode
   isCreatingTextBox: boolean
@@ -80,6 +93,9 @@ export interface DrawingState {
   textInputPosition: { x: number; y: number }
   textInputValue: string
   isShiftPressed: boolean
+  isCtrlPressed: boolean // Ctrl/Cmd修飾キー状態
+  isDraggingHandle: boolean
+  currentHandle: string | null
 }
 
 // 描画アクション
@@ -93,7 +109,16 @@ export interface DrawingActions {
   addDrawingElement: (element: DrawingElement) => void
   updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
   removeDrawingElement: (id: string) => void
-  setSelectedElementId: (id: string | null) => void
+  // 複数選択システム
+  setSelectedElementIds: (ids: string[]) => void
+  addToSelection: (id: string) => void
+  removeFromSelection: (id: string) => void
+  toggleSelection: (id: string) => void
+  clearSelection: () => void
+  // 選択範囲
+  setIsDrawingSelection: (drawing: boolean) => void
+  setSelectionRectangle: (rect: SelectionRectangle | null) => void
+  selectElementsInRectangle: (rect: SelectionRectangle) => void
   clearDrawing: () => void
 
   // Internal state updaters
@@ -108,4 +133,7 @@ export interface DrawingActions {
   setTextInputPosition: (position: { x: number; y: number }) => void
   setTextInputValue: (value: string) => void
   setIsShiftPressed: (pressed: boolean) => void
+  setIsCtrlPressed: (pressed: boolean) => void
+  setIsDraggingHandle: (dragging: boolean) => void
+  setCurrentHandle: (handle: string | null) => void
 }

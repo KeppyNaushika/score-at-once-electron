@@ -90,6 +90,23 @@ export function DrawingToolPalette({
           <Separator className="my-1" />
 
           {/* ツール選択 */}
+          <Button
+            size="sm"
+            variant={currentTool === "hand" ? "default" : "ghost"}
+            onClick={() => onToolChange("hand")}
+            title="ハンドツール - ドラッグで移動"
+          >
+            <Hand className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant={currentTool === "select" ? "default" : "ghost"}
+            onClick={() => onToolChange("select")}
+            title="選択ツール - 図形を選択・移動・削除"
+          >
+            <MousePointer2 className="h-4 w-4" />
+          </Button>
+
           <LineToolPopover
             currentTool={currentTool}
             onToolChange={onToolChange}
@@ -107,23 +124,6 @@ export function DrawingToolPalette({
             strokeColor={strokeColor}
             onStrokeColorChange={onStrokeColorChange}
           />
-
-          <Button
-            size="sm"
-            variant={currentTool === "select" ? "default" : "ghost"}
-            onClick={() => onToolChange("select")}
-            title="選択ツール - 図形を選択・移動・削除"
-          >
-            <MousePointer2 className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant={currentTool === "hand" ? "default" : "ghost"}
-            onClick={() => onToolChange("hand")}
-            title="ハンドツール - ドラッグで移動"
-          >
-            <Hand className="h-4 w-4" />
-          </Button>
         </div>
       </Card>
     </div>
