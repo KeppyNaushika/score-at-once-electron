@@ -93,7 +93,7 @@ export function ScoringContentArea({
           }}
         />
       ) : (
-        <div className="min-h-0 flex-1 overflow-hidden p-6">
+        <div className="min-h-0 flex-1 p-6">
           <AnswerGridView
             allScoringData={allScoringData}
             masterAnswerData={masterAnswerData}

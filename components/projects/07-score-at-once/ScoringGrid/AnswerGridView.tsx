@@ -144,15 +144,11 @@ export default function AnswerGridView({
   }
 
   return (
-    <div className={`flex h-full min-w-0 flex-col ${className}`}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${className}`}>
       {/* 答案グリッド */}
       <div
         ref={gridRef}
-        className={`relative grid min-w-0 gap-2 p-1 select-none ${
-          layoutDirection === "down-right" || layoutDirection === "down-left"
-            ? "h-full"
-            : "h-auto"
-        }`}
+        className="relative grid min-w-0 gap-2 p-1 select-none"
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
@@ -171,22 +167,8 @@ export default function AnswerGridView({
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "column"
               : "row",
-          width:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "auto" // 列表示: 内容に応じて幅を拡張
-              : "100%", // 行表示: 幅100%
-          maxWidth:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "none" // 列表示: 最大幅制限なし
-              : "100%", // 行表示: 最大幅100%
-          overflowX:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "auto"
-              : "hidden",
-          overflowY:
-            layoutDirection === "right-down" || layoutDirection === "left-down"
-              ? "auto"
-              : "hidden",
+          width: "100%",
+          height: "max-content", // 内容に応じた高さ
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

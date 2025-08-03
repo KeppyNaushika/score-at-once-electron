@@ -73,31 +73,15 @@ export function useScoringFilter({
       const activeFilterSettings = customFilterSettings || filterSettings
       const newVisibleAnswers = new Set<string>()
 
-      console.log("=== updateVisibleAnswers DEBUG START ===")
-      console.log("activeFilterSettings:", activeFilterSettings)
-      console.log(
-        "currentCropRegion:",
-        currentCropRegion?.id,
-        currentCropRegion?.label,
-      )
-
       if (!currentCropRegion) {
-        console.log("No currentCropRegion, returning empty set")
         setVisibleAnswers(newVisibleAnswers)
         return
       }
 
-      let totalProcessed = 0
-      let matchingPage = 0
-      let addedToVisible = 0
-
       // 最適化: ProjectPageIDでフィルタリングを先に実行
       for (const pageImage of pageImages) {
-        totalProcessed++
-
         if (pageImage.projectPageId !== currentCropRegion.projectPageId)
           continue
-        matchingPage++
 
         if (!pageImage.studentId) continue // studentIdがnullの場合はスキップ
 
@@ -112,35 +96,11 @@ export function useScoringFilter({
           activeFilterSettings[status as keyof typeof activeFilterSettings]
         const isRecentlyScored = recentlyScoredAnswers.has(pageImage.id)
 
-        console.log(
-          `PageImage ${pageImage.id} (${pageImage.student?.lastName} ${pageImage.student?.firstName}):`,
-          {
-            studentId: pageImage.studentId,
-            cropRegionId: currentCropRegion.id,
-            status,
-            hasScore: !!score,
-            partialScore: score?.partialScore || null,
-            matchesFilter,
-            isRecentlyScored,
-            willBeVisible: matchesFilter || isRecentlyScored,
-          },
-        )
-
         // フィルター条件チェック（最近採点答案は強制表示）
         if (matchesFilter || isRecentlyScored) {
           newVisibleAnswers.add(pageImage.id)
-          addedToVisible++
         }
       }
-
-      console.log("Filter summary:", {
-        totalProcessed,
-        matchingPage,
-        addedToVisible,
-        visibleAnswersSize: newVisibleAnswers.size,
-        recentlyScoredSize: recentlyScoredAnswers.size,
-      })
-      console.log("=== updateVisibleAnswers DEBUG END ===")
 
       setVisibleAnswers(newVisibleAnswers)
     },
