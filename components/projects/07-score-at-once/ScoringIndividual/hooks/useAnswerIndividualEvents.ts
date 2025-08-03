@@ -173,14 +173,9 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       const canvasX = e.clientX - rect.left
       const canvasY = e.clientY - rect.top
 
-      // CSS scale + scroll 座標変換（NaN防止）
-      const scrollX = container.scrollLeft || 0
-      const scrollY = container.scrollTop || 0
-      const safeZoom = zoom || 1
-
-      // スクロール位置を加算してスケール前の座標を取得
-      const actualX = (canvasX + scrollX) / safeZoom
-      const actualY = (canvasY + scrollY) / safeZoom
+      // CSS scale方式：Canvas要素自体がzoom倍サイズなので座標変換不要
+      const actualX = canvasX
+      const actualY = canvasY
 
       // Canvasでの画像中央配置オフセットを考慮
       // Canvas幅は全画像の最大幅、個別画像は中央配置される
@@ -328,14 +323,9 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       const canvasX = e.clientX - rect.left
       const canvasY = e.clientY - rect.top
 
-      // CSS scale + scroll 座標変換（NaN防止）
-      const scrollX = container.scrollLeft || 0
-      const scrollY = container.scrollTop || 0
-      const safeZoom = zoom || 1
-
-      // スクロール位置を加算してスケール前の座標を取得
-      const actualX = (canvasX + scrollX) / safeZoom
-      const actualY = (canvasY + scrollY) / safeZoom
+      // CSS scale方式：Canvas要素自体がzoom倍サイズなので座標変換不要
+      const actualX = canvasX
+      const actualY = canvasY
 
       // Canvasでの画像中央配置オフセットを考慮
       // Canvas幅は全画像の最大幅、個別画像は中央配置される

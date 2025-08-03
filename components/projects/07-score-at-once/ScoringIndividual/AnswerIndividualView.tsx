@@ -171,10 +171,55 @@ export default function AnswerIndividualView({
     })
   }, [zoom, onZoomChange, containerRef])
 
-  // 全体表示（CSS側に委任）
+  // 全体表示（CSS scale + scroll 方式）
   const handleMaximizeView = useCallback(() => {
-    // Canvas側ではズーム制御しない - 上位コンポーネントに委任
-  }, [])
+    if (!containerRef.current || !imageLoaded || loadedImages.length === 0)
+      return
+
+    const container = containerRef.current
+    const availableWidth = container.offsetWidth
+    const availableHeight = container.offsetHeight
+
+    // パディングを考慮
+    const padding = 40
+    const effectiveWidth = availableWidth - padding
+    const effectiveHeight = availableHeight - padding
+
+    // 全画像の合計サイズを計算
+    const firstImg = loadedImages[0]
+    const totalWidth = firstImg.naturalWidth
+    const totalHeight = loadedImages.reduce(
+      (total, img, index) =>
+        total +
+        img.naturalHeight +
+        (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+      0,
+    )
+
+    // 全体をコンテナに収めるためのズームを計算
+    const zoomByWidth = effectiveWidth / totalWidth
+    const zoomByHeight = effectiveHeight / totalHeight
+    const newZoom = Math.min(zoomByWidth, zoomByHeight)
+
+    // ズーム制限を適用
+    const constrainedZoom = Math.min(
+      Math.max(newZoom, ZOOM_SETTINGS.min),
+      ZOOM_SETTINGS.max,
+    )
+
+    onZoomChange(constrainedZoom)
+
+    // 中央に配置するためのスクロール位置を計算
+    const scaledWidth = totalWidth * constrainedZoom
+    const scaledHeight = totalHeight * constrainedZoom
+    const scrollLeft = (scaledWidth - availableWidth) / 2
+    const scrollTop = (scaledHeight - availableHeight) / 2
+
+    // スクロール位置を設定（次のフレームで実行）
+    requestAnimationFrame(() => {
+      container.scrollTo(Math.max(0, scrollLeft), Math.max(0, scrollTop))
+    })
+  }, [containerRef, imageLoaded, loadedImages, pageSpacing, onZoomChange])
 
   // 設問表示（CSS scale + scroll 方式）
   const handleCropView = useCallback(() => {
@@ -238,22 +283,36 @@ export default function AnswerIndividualView({
       }
     }
 
-    // CSS scale方式での設問中心スクロール位置計算
-    const questionCenterScreenX = questionCenterX * newZoom
-    const questionCenterScreenY = (questionCenterY + pageOffsetY) * newZoom
-
-    // コンテナ中心座標
-    const containerCenterX = availableWidth / 2
-    const containerCenterY = availableHeight / 2
-
-    // 設問中心をコンテナ中心に配置するためのスクロール位置
-    const scrollLeft = questionCenterScreenX - containerCenterX
-    const scrollTop = questionCenterScreenY - containerCenterY
+    // 画像の中央配置オフセットを考慮（Canvas幅は最初の画像幅）
+    const canvasWidth = loadedImages[0].naturalWidth
+    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
 
     onZoomChange(newZoom)
 
-    // スクロール位置を設定（次のフレームで実行）
+    // ズーム変更後に正しいCanvas座標で再計算（次のフレームで実行）
     requestAnimationFrame(() => {
+      // 設問の実際のCanvas上での位置（ズーム適用後）
+      const questionCenterScreenX = (questionCenterX + imageOffsetX) * newZoom
+      const questionCenterScreenY = (questionCenterY + pageOffsetY) * newZoom
+
+      // コンテナ中心座標（現在のコンテナサイズを使用）
+      const containerCenterX = container.offsetWidth / 2
+      const containerCenterY = container.offsetHeight / 2
+
+      // 設問中心をコンテナ中心に配置するためのスクロール位置
+      const scrollLeft = questionCenterScreenX - containerCenterX
+      const scrollTop = questionCenterScreenY - containerCenterY
+
+      console.log("🎯 設問表示デバッグ:", {
+        zoom: newZoom,
+        questionCenter: { questionCenterX, questionCenterY },
+        screenCenter: { questionCenterScreenX, questionCenterScreenY },
+        containerCenter: { containerCenterX, containerCenterY },
+        scroll: { scrollLeft, scrollTop },
+        offsets: { imageOffsetX, pageOffsetY },
+      })
+
+      // スクロール位置を設定
       container.scrollTo(scrollLeft, scrollTop)
     })
   }, [
@@ -306,14 +365,14 @@ export default function AnswerIndividualView({
       {/* CSS スクロール + scale 方式のメインキャンバス */}
       <div
         ref={containerRef}
-        className="h-full w-full overflow-auto flex items-center justify-center"
+        className="grid h-full w-full overflow-auto"
         style={{
           cursor: drawingState.currentTool === "hand" ? "grab" : "crosshair",
         }}
         onWheel={handleWheel}
       >
         <div
-          className="relative"
+          className="relative grid place-items-center"
           style={{
             width:
               loadedImages.length > 0
@@ -333,6 +392,8 @@ export default function AnswerIndividualView({
                     ) * zoom
                   }px`
                 : `${600 * zoom}px`,
+            minWidth: "100%",
+            minHeight: "100%",
           }}
         >
           <canvas
@@ -351,18 +412,24 @@ export default function AnswerIndividualView({
             }
             className="block"
             style={{
-              width: loadedImages.length > 0 
-                ? `${loadedImages[0].naturalWidth * zoom}px`
-                : `${800 * zoom}px`,
-              height: loadedImages.length > 0
-                ? `${loadedImages.reduce(
-                    (total, img, index) =>
-                      total +
-                      img.naturalHeight +
-                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0,
-                  ) * zoom}px`
-                : `${600 * zoom}px`
+              width:
+                loadedImages.length > 0
+                  ? `${loadedImages[0].naturalWidth * zoom}px`
+                  : `${800 * zoom}px`,
+              height:
+                loadedImages.length > 0
+                  ? `${
+                      loadedImages.reduce(
+                        (total, img, index) =>
+                          total +
+                          img.naturalHeight +
+                          (index < loadedImages.length - 1
+                            ? pageSpacing || 20
+                            : 0),
+                        0,
+                      ) * zoom
+                    }px`
+                  : `${600 * zoom}px`,
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}

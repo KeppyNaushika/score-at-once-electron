@@ -131,7 +131,7 @@ export function useImageCanvas({
                 images[i].naturalHeight + (images.length > 1 ? spacing : 0)
             }
 
-            // 画像の中央配置に合わせてオフセット調整
+            // 画像の中央配置に合わせてオフセット調整（Canvas幅基準）
             const offsetX = (canvasWidth - img.naturalWidth) / 2
             const offsetY = pageOffsetY
 
@@ -139,6 +139,34 @@ export function useImageCanvas({
             const questionY = currentCropRegion.y * img.naturalHeight + offsetY
             const questionWidth = currentCropRegion.width * img.naturalWidth
             const questionHeight = currentCropRegion.height * img.naturalHeight
+
+            console.log("🎯 設問枠描画デバッグ:", {
+              cropRegion: {
+                x: currentCropRegion.x,
+                y: currentCropRegion.y,
+                width: currentCropRegion.width,
+                height: currentCropRegion.height,
+                label: currentCropRegion.label
+              },
+              pageInfo: {
+                questionPageNumber,
+                questionPageIndex,
+                pageOffsetY
+              },
+              imageInfo: {
+                canvasWidth,
+                imgNaturalWidth: img.naturalWidth,
+                imgNaturalHeight: img.naturalHeight,
+                offsetX,
+                offsetY
+              },
+              calculatedPos: {
+                questionX,
+                questionY,
+                questionWidth,
+                questionHeight
+              }
+            })
 
             ctx.strokeStyle = "#22c55e"
             ctx.lineWidth = 2
