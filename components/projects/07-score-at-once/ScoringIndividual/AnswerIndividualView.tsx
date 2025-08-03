@@ -306,7 +306,7 @@ export default function AnswerIndividualView({
       {/* CSS スクロール + scale 方式のメインキャンバス */}
       <div
         ref={containerRef}
-        className="h-full w-full overflow-auto"
+        className="h-full w-full overflow-auto flex items-center justify-center"
         style={{
           cursor: drawingState.currentTool === "hand" ? "grab" : "crosshair",
         }}
@@ -350,6 +350,20 @@ export default function AnswerIndividualView({
                 : 600
             }
             className="block"
+            style={{
+              width: loadedImages.length > 0 
+                ? `${loadedImages[0].naturalWidth * zoom}px`
+                : `${800 * zoom}px`,
+              height: loadedImages.length > 0
+                ? `${loadedImages.reduce(
+                    (total, img, index) =>
+                      total +
+                      img.naturalHeight +
+                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+                    0,
+                  ) * zoom}px`
+                : `${600 * zoom}px`
+            }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
