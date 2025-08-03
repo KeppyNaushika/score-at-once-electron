@@ -89,6 +89,19 @@ export default function ScoringMainView() {
     }
   }, [gradingMode, selectedPageImageIds, setSelectedPageImageIds])
 
+  // 設問が未選択時の自動選択
+  useEffect(() => {
+    if (cropRegions.length > 0 && !currentCropRegionId) {
+      // 設問タイプ'QUESTION_ANSWER'の最初の設問を自動選択
+      const firstQuestionRegion = cropRegions.find(
+        (region) => region.type === "QUESTION_ANSWER"
+      )
+      if (firstQuestionRegion) {
+        setCurrentCropRegionId(firstQuestionRegion.id)
+      }
+    }
+  }, [cropRegions, currentCropRegionId, setCurrentCropRegionId])
+
   // 現在の答案と設問
   const currentAnswerSheet = useMemo(() => {
     if (gradingMode === "individual" && selectedPageImageIds.size > 0) {
@@ -133,9 +146,9 @@ export default function ScoringMainView() {
 
   // 採点データ管理hook
   const {
-    scoringData,
-    setScoringData,
-    loadExistingScoringData,
+    questionScores,
+    setQuestionScores,
+    loadQuestionScores,
     handleSetScore,
     handleBatchScore,
     calculateQuestionProgress,
@@ -170,7 +183,7 @@ export default function ScoringMainView() {
     pageImages,
     cropRegions,
     currentCropRegionId: currentCropRegionId,
-    scoringData,
+    questionScores,
     selectedPageImageIds: selectedPageImageIds,
     setSelectedPageImageIds: setSelectedPageImageIds,
     project,
@@ -410,8 +423,8 @@ export default function ScoringMainView() {
       if (!loading && project) {
         try {
           // 既存の採点データを読み込み
-          const existingScores = await loadExistingScoringData(projectId)
-          setScoringData(existingScores)
+          const existingScores = await loadQuestionScores(projectId)
+          setQuestionScores(existingScores)
         } catch (error) {
           console.error("Failed to initialize grading data:", error)
         }
@@ -419,7 +432,7 @@ export default function ScoringMainView() {
     }
 
     initializeGradingData()
-  }, [projectId, loading, project, loadExistingScoringData, setScoringData])
+  }, [projectId, loading, project, loadQuestionScores, setQuestionScores])
 
   // 設定変更ハンドラー
   const handleItemsPerLineChange = (value: number[]) => {
@@ -434,13 +447,33 @@ export default function ScoringMainView() {
   const questionProgress = calculateQuestionProgress()
 
   // デバッグ情報を追加
-  console.log("ScoringMainView Debug Info:", {
+  console.log("=== ScoringMainView DEBUG INFO ===")
+  console.log("Basic data overview:", {
     pageImagesLength: pageImages?.length,
     cropRegionsLength: cropRegions?.length,
-    scoringDataKeys: Object.keys(scoringData || {}).length,
+    questionScoresLength: questionScores?.length || 0,
     currentCropRegionId: currentCropRegionId,
-    questionProgress: questionProgress,
   })
+  
+  console.log("Question progress summary:", Object.entries(questionProgress || {}).map(([id, progress]) => ({
+    questionId: id,
+    display: `${progress.gradedAnswers}/${progress.totalAnswers}`,
+    percentage: progress.percentage
+  })))
+  
+  // 0/0の問題をチェック
+  const problematicQuestions = Object.entries(questionProgress || {}).filter(([_, progress]) => 
+    progress.totalAnswers === 0
+  )
+  
+  if (problematicQuestions.length > 0) {
+    console.error("🚨 ScoringMainView: Questions with 0 total answers detected:", problematicQuestions)
+  }
+  
+  // データの不整合をチェック
+  if (pageImages?.length > 0 && cropRegions?.length > 0 && Object.keys(questionProgress || {}).length === 0) {
+    console.error("🚨 Data inconsistency: Have pageImages and cropRegions but no questionProgress")
+  }
 
   // ローディング状態
   if (loading) {

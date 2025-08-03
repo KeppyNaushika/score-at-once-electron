@@ -1,15 +1,16 @@
 import { useBatchScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useBatchScoring"
 import { useIndividualScoring } from "@/components/projects/07-score-at-once/hooks/scoring-data/hooks/useIndividualScoring"
 import type {
-  ScoringDataRecord,
   UseScoringDataProps,
 } from "@/components/projects/07-score-at-once/hooks/scoring-data/types/scoring-data-types"
-import {
-  getScoringStatus,
-  loadExistingScoringData,
-} from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/data-loader"
+import { loadQuestionScores } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/data-loader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/progress-calculator"
-import { calculateActualScore } from "@/components/projects/07-score-at-once/types"
+import { 
+  calculateActualScore,
+  findQuestionScore,
+  getScoringStatusFromArray,
+  type QuestionScore,
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useState } from "react"
 
 export function useScoringDataContainer({
@@ -23,7 +24,7 @@ export function useScoringDataContainer({
   pageImages,
   cropRegions,
 }: UseScoringDataProps) {
-  const [scoringData, setScoringData] = useState<ScoringDataRecord>({})
+  const [questionScores, setQuestionScores] = useState<QuestionScore[]>([])
 
   // Individual scoring hook
   const { handleSetScore } = useIndividualScoring({
@@ -32,11 +33,11 @@ export function useScoringDataContainer({
     currentStudentIndex,
     currentCropRegionId,
     currentUserId,
-    scoringData,
+    questionScores,
     gradingMode,
     setCurrentStudentIndex,
     setCurrentCropRegionId,
-    setScoringData,
+    setQuestionScores,
   })
 
   // Batch scoring hook
@@ -46,14 +47,14 @@ export function useScoringDataContainer({
     currentCropRegionId,
     currentUserId,
     setCurrentUserId,
-    scoringData,
-    setScoringData,
+    questionScores,
+    setQuestionScores,
   })
 
   // Data loading function wrapper
-  const loadExistingScoringDataCallback = useCallback(
+  const loadQuestionScoresCallback = useCallback(
     async (projectId: string) => {
-      return await loadExistingScoringData(projectId)
+      return await loadQuestionScores(projectId)
     },
     [],
   )
@@ -61,30 +62,31 @@ export function useScoringDataContainer({
   // Status and score getter functions
   const getScoringStatusCallback = useCallback(
     (studentId: string, questionId?: string) => {
-      return getScoringStatus(scoringData, studentId, questionId)
+      return getScoringStatusFromArray(questionScores, studentId, questionId)
     },
-    [scoringData],
+    [questionScores],
   )
 
   const getActualScoreCallback = useCallback(
     (studentId: string, questionId?: string, maxScore: number = 0) => {
       if (!questionId) return null
-      const key = `${studentId}-${questionId}`
-      const scoreData = scoringData[key]
-      return calculateActualScore(scoreData || null, maxScore)
+      const score = findQuestionScore(questionScores, studentId, questionId)
+      // QuestionScoreの場合はpartialScoreが既にnumberに変換されているので、そのまま使用
+      if (!score) return null
+      return score.partialScore !== null ? score.partialScore : null
     },
-    [scoringData],
+    [questionScores],
   )
 
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {
-    return calculateQuestionProgress(cropRegions, pageImages, scoringData)
-  }, [pageImages, cropRegions, scoringData])
+    return calculateQuestionProgress(cropRegions, pageImages, questionScores)
+  }, [pageImages, cropRegions, questionScores])
 
   return {
-    scoringData,
-    setScoringData,
-    loadExistingScoringData: loadExistingScoringDataCallback,
+    questionScores,
+    setQuestionScores,
+    loadQuestionScores: loadQuestionScoresCallback,
     getScoringStatus: getScoringStatusCallback,
     getActualScore: getActualScoreCallback,
     handleSetScore,

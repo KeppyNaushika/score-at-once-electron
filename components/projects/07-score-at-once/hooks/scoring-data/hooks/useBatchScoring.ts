@@ -1,10 +1,11 @@
-import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
+// import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-  ScoringDataRecord,
   ScoringStatus,
+  QuestionScore,
 } from "@/components/projects/07-score-at-once/types"
+import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
 import { toast } from "sonner"
 
@@ -14,8 +15,8 @@ interface UseBatchScoringProps {
   currentCropRegionId: string | null
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
-  scoringData: ScoringDataRecord
-  setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>
+  questionScores: QuestionScore[]
+  setQuestionScores: React.Dispatch<React.SetStateAction<QuestionScore[]>>
 }
 
 export function useBatchScoring({
@@ -24,8 +25,8 @@ export function useBatchScoring({
   currentCropRegionId,
   currentUserId,
   setCurrentUserId,
-  scoringData,
-  setScoringData,
+  questionScores,
+  setQuestionScores,
 }: UseBatchScoringProps) {
   const handleBatchScore = useCallback(
     async (
@@ -87,8 +88,13 @@ export function useBatchScoring({
         const pageImage = pageImages.find((image) => image.id === answerId)
         if (!pageImage) continue
 
-        const key = `${pageImage.student?.studentId || ""}-${currentCropRegion.id}`
-        const currentScore = scoringData[key]
+        if (!pageImage.studentId) continue // studentIdがnullの場合はスキップ
+
+        const currentScore = findQuestionScore(
+          questionScores,
+          pageImage.studentId,
+          currentCropRegion.id,
+        )
 
         let newScore: number | null = 0
         // Use the actual status type from the scoring action
@@ -144,19 +150,22 @@ export function useBatchScoring({
             )
 
             if ((result as any).success || result) {
-              setScoringData((prev) => ({
-                ...prev,
-                [key]: {
-                  ...currentScore,
-                  partialScore: newScore !== null ? newScore : null,
-                  status: scoringStatus,
-                  updatedAt: new Date(
-                    (result as any).score?.updatedAt ||
-                      result.updatedAt ||
-                      Date.now(),
-                  ),
-                },
-              }))
+              setQuestionScores((prev) =>
+                prev.map((score) =>
+                  score.id === currentScore.id
+                    ? ({
+                        ...score,
+                        partialScore: newScore !== null ? newScore : null,
+                        status: scoringStatus,
+                        updatedAt: new Date(
+                          (result as any).score?.updatedAt ||
+                            result.updatedAt ||
+                            Date.now(),
+                        ),
+                      } as QuestionScore)
+                    : score,
+                ),
+              )
             }
           } else {
             // Create new score
@@ -172,31 +181,31 @@ export function useBatchScoring({
 
             if ((result as any).success || result.id) {
               const createdScore = (result as any).score || result
-              setScoringData((prev) => ({
-                ...prev,
-                [key]: {
-                  id: createdScore.id,
-                  cropRegionId: currentCropRegion.id,
-                  studentId: pageImage.studentId,
-                  partialScore: newScore !== null ? newScore : null,
-                  status: scoringStatus,
-                  scoredByUserId: effectiveUserId,
-                  createdAt: new Date(createdScore.createdAt || Date.now()),
-                  updatedAt: new Date(createdScore.updatedAt || Date.now()),
-                },
-              }))
+              const newQuestionScore = {
+                id: createdScore.id,
+                cropRegionId: currentCropRegion.id,
+                studentId: pageImage.studentId,
+                partialScore: newScore !== null ? newScore : null,
+                status: scoringStatus,
+                scoredByUserId: effectiveUserId,
+                createdAt: new Date(createdScore.createdAt || Date.now()),
+                updatedAt: new Date(createdScore.updatedAt || Date.now()),
+              } as QuestionScore
+
+              setQuestionScores((prev) => [...prev, newQuestionScore])
             }
           }
 
-          // Check for auto-finalization in collaborative mode
-          if (scoringStatus === "pending" && pageImage.studentId) {
-            await checkForAutoFinalization(
-              pageImage.studentId,
-              currentCropRegion.id,
-              currentUserId,
-              setScoringData,
-            )
-          }
+          // TODO: Check for auto-finalization in collaborative mode
+          // Temporarily disabled during QuestionScore array migration
+          // if (scoringStatus === "pending" && pageImage.studentId) {
+          //   await checkForAutoFinalization(
+          //     pageImage.studentId,
+          //     currentCropRegion.id,
+          //     currentUserId,
+          //     setQuestionScores,
+          //   )
+          // }
 
           // TODO: Add subtotal score recalculation here
           // After individual question scoring, we should:
@@ -213,13 +222,13 @@ export function useBatchScoring({
       }
     },
     [
-      pageImages,
-      cropRegions,
-      currentCropRegionId,
       currentUserId,
+      cropRegions,
       setCurrentUserId,
-      scoringData,
-      setScoringData,
+      currentCropRegionId,
+      pageImages,
+      questionScores,
+      setQuestionScores,
     ],
   )
 

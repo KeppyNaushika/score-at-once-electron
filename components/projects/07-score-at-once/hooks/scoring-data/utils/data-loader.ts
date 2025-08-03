@@ -1,16 +1,15 @@
 import type {
-  ClientQuestionScore,
   QuestionScore,
-  ScoringDataRecord,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
+import { decimalToNumber } from "@/components/projects/07-score-at-once/types"
 
 /**
- * 既存の採点データを読み込む関数
+ * 既存の採点データを読み込む関数（QuestionScore配列で返す）
  */
-export async function loadExistingScoringData(
+export async function loadQuestionScores(
   projectId: string,
-): Promise<ScoringDataRecord> {
+): Promise<QuestionScore[]> {
   try {
     const result =
       await window.electronAPI.getQuestionScoresForProject(projectId)
@@ -22,42 +21,18 @@ export async function loadExistingScoringData(
     } else if (result?.success && Array.isArray(result.scores)) {
       scores = result.scores
     } else {
-      return {}
+      return []
     }
 
-    const scoringData: ScoringDataRecord = {}
-    scores.forEach((score: QuestionScore) => {
-      const key = `${score.studentId}-${score.cropRegionId}`
-      // PrismaのQuestionScore（Decimal）をClientQuestionScore（number）に変換
-      const clientScore: ClientQuestionScore = {
-        ...score,
-        partialScore: score.partialScore ? Number(score.partialScore) : null,
-      }
-      scoringData[key] = clientScore
-    })
-
-    return scoringData
+    // Prisma.DecimalをNumberに変換してQuestionScore配列として返す
+    return scores.map((score: any) => ({
+      ...score,
+      partialScore: decimalToNumber(score.partialScore),
+    })) as QuestionScore[]
   } catch (error) {
-    console.error("Failed to load existing scoring data:", error)
-    return {}
+    console.error("Failed to load question scores:", error)
+    return []
   }
-}
-
-/**
- * 採点状況を取得する関数
- */
-export function getScoringStatus(
-  scoringData: ScoringDataRecord,
-  studentId: string,
-  cropRegionId?: string,
-): ScoringStatus {
-  if (!cropRegionId) return "unscored"
-
-  const key = `${studentId}-${cropRegionId}`
-  const scoreData = scoringData[key]
-
-  if (!scoreData) return "unscored"
-  return scoreData.status as ScoringStatus
 }
 
 // getActualScore関数は削除 - shared.types.tsのcalculateActualScoreを使用

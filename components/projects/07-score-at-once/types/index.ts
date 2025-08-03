@@ -119,19 +119,37 @@ export interface ScoringData {
 }
 
 /**
- * 学生の採点データ（模範解答以外）
+ * QuestionScore配列からの検索ユーティリティ関数
+ * シンプルな線形検索でscoringDataオブジェクトを置き換え
  */
-export interface StudentScoringData extends ScoringData {
-  isMaster?: never // 学生データでは常にundefined
+export function findQuestionScore(
+  questionScores: QuestionScore[],
+  studentId: string,
+  cropRegionId: string
+): QuestionScore | undefined {
+  return questionScores.find(
+    score => score.studentId === studentId && score.cropRegionId === cropRegionId
+  )
 }
 
 /**
- * 模範解答の採点データ
+ * QuestionScore配列から採点状況を取得
  */
-export interface MasterScoringData extends Omit<ScoringData, "status"> {
-  studentId: "MASTER"
-  studentName: "模範解答"
-  currentScore: undefined
-  status: "master"
-  isMaster: true
+export function getScoringStatusFromArray(
+  questionScores: QuestionScore[],
+  studentId: string,
+  cropRegionId?: string
+): ScoringStatus {
+  if (!cropRegionId) return "unscored"
+  
+  const score = findQuestionScore(questionScores, studentId, cropRegionId)
+  return (score?.status as ScoringStatus) || "unscored"
+}
+
+/**
+ * Prisma.Decimalを安全にnumberに変換
+ */
+export function decimalToNumber(decimal: any): number | null {
+  if (decimal === null || decimal === undefined) return null
+  return Number(decimal.toString())
 }
