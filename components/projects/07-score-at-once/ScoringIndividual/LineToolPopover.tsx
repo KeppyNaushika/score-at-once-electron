@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { Ruler } from "lucide-react"
+import { useState } from "react"
 import { COLOR_PALETTE } from "./constants/drawing-constants"
 import type { DrawingTool } from "./types/answer-individual-types"
 
@@ -33,21 +34,41 @@ export function LineToolPopover({
   onStrokeWidthChange,
   onLineStyleChange,
 }: LineToolPopoverProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleClick = () => {
+    if (currentTool === "line") {
+      // 既に選択されている場合はPopoverをトグル
+      setIsOpen(!isOpen)
+    } else {
+      // 違うツールの場合はツールを選択
+      onToolChange("line")
+      setIsOpen(false)
+    }
+  }
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           size="sm"
           variant={currentTool === "line" ? "default" : "ghost"}
-          onClick={() => onToolChange("line")}
+          onClick={handleClick}
           title="自由線ツール - Shift+ドラッグで鉛直・水平線"
+          style={{
+            backgroundColor: currentTool === "line" ? strokeColor : undefined,
+            borderColor: currentTool === "line" ? strokeColor : undefined,
+          }}
         >
-          <Ruler className="h-4 w-4" />
+          <Ruler
+            className="h-4 w-4"
+            style={{ color: currentTool === "line" ? "white" : undefined }}
+          />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" side="right">
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">線の設定</h4>
+          <h4 className="text-sm font-medium">線分ツール</h4>
 
           {/* 線種選択 */}
           <div>
@@ -85,6 +106,22 @@ export function LineToolPopover({
               >
                 二重線
               </Button>
+              <Button
+                size="sm"
+                variant={lineStyle === "arrow" ? "default" : "outline"}
+                onClick={() => onLineStyleChange("arrow")}
+                className="h-8 text-xs"
+              >
+                矢印 →
+              </Button>
+              <Button
+                size="sm"
+                variant={lineStyle === "both_arrow" ? "default" : "outline"}
+                onClick={() => onLineStyleChange("both_arrow")}
+                className="h-8 text-xs"
+              >
+                両矢印 ↔
+              </Button>
             </div>
           </div>
 
@@ -97,7 +134,7 @@ export function LineToolPopover({
               step={1}
               value={[strokeWidth]}
               onValueChange={(value) => onStrokeWidthChange(value[0])}
-              className="mt-1"
+              className="mt-2"
             />
           </div>
 

@@ -56,6 +56,10 @@ export function useDrawingState(): DrawingState & DrawingActions {
   const [textInputPosition, setTextInputPosition] = useState({ x: 0, y: 0 })
   const [textInputValue, setTextInputValue] = useState("")
 
+  // テキスト再編集
+  const [isEditingExistingText, setIsEditingExistingText] = useState(false)
+  const [editingTextElementId, setEditingTextElementId] = useState<string | null>(null)
+
   // キーボード状態
   const [isShiftPressed, setIsShiftPressed] = useState(false)
   const [isCtrlPressed, setIsCtrlPressed] = useState(false)
@@ -211,6 +215,9 @@ export function useDrawingState(): DrawingState & DrawingActions {
     showTextInput,
     textInputPosition,
     textInputValue,
+    // テキスト再編集
+    isEditingExistingText,
+    editingTextElementId,
     isShiftPressed,
     isCtrlPressed,
     isDraggingHandle,
@@ -249,6 +256,9 @@ export function useDrawingState(): DrawingState & DrawingActions {
     setShowTextInput,
     setTextInputPosition,
     setTextInputValue,
+    // テキスト再編集用
+    setIsEditingExistingText,
+    setEditingTextElementId,
     setIsShiftPressed,
     setIsCtrlPressed,
     setIsDraggingHandle,

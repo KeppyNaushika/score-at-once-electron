@@ -18,6 +18,20 @@ export function useKeyboardHandlers({
   // キーボードイベント
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // テキスト入力モード中は修飾キーのみ処理し、他のショートカットは無効化
+      if (showTextInput) {
+        // Shift/Ctrl/Metaの状態のみ追跡（書式設定で必要）
+        if (e.key === "Shift") {
+          setIsShiftPressed(true)
+        }
+        if (e.key === "Control" || e.key === "Meta") {
+          setIsCtrlPressed(true)
+        }
+        // テキスト入力中は他のキーイベントを無視
+        return
+      }
+
+      // 通常モード時のキーボード処理
       if (e.key === "Shift") {
         setIsShiftPressed(true)
       }
@@ -29,8 +43,7 @@ export function useKeyboardHandlers({
       // Delete/Backspaceで選択要素を削除（複数選択対応）
       if (
         (e.key === "Delete" || e.key === "Backspace") &&
-        selectedElementIds.length > 0 &&
-        !showTextInput
+        selectedElementIds.length > 0
       ) {
         e.preventDefault()
         selectedElementIds.forEach((id) => {
@@ -40,6 +53,7 @@ export function useKeyboardHandlers({
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // 修飾キーのリリースは常に処理（テキスト入力中でも必要）
       if (e.key === "Shift") {
         setIsShiftPressed(false)
       }

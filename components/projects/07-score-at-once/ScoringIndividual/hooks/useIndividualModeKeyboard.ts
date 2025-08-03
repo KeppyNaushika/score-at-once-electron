@@ -23,6 +23,7 @@ interface UseIndividualModeKeyboardProps {
   currentStudentId: string
   scoringBehavior: ScoringBehavior
   enabled?: boolean // 個別表示モードでのみ有効にするフラグ
+  showTextInput?: boolean // テキスト入力モード中はショートカット無効化
 
   // ナビゲーション関数
   onQuestionChange: (id: string | null) => void
@@ -45,6 +46,7 @@ export function useIndividualModeKeyboard({
   currentStudentId,
   scoringBehavior,
   enabled = true,
+  showTextInput = false,
   onQuestionChange,
   onStudentChange,
   onSetScore,
@@ -57,6 +59,11 @@ export function useIndividualModeKeyboard({
     if (!enabled) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // テキスト入力モード中はショートカットを無効化
+      if (showTextInput) {
+        return
+      }
+
       // 入力フィールドにフォーカスがある場合はスキップ
       if (
         e.target instanceof HTMLInputElement ||
@@ -163,6 +170,7 @@ export function useIndividualModeKeyboard({
     }
   }, [
     enabled,
+    showTextInput,
     cropRegions,
     students,
     currentCropRegionId,

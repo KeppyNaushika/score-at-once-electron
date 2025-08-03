@@ -1,5 +1,5 @@
-import { useCallback } from "react"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import { useCallback } from "react"
 
 interface UseElementMovementProps {
   currentTool: string
@@ -8,14 +8,15 @@ interface UseElementMovementProps {
   isDraggingElement: boolean
   lineEditMode: any
   dragElementOffset: { x: number; y: number }
-  
+  isShiftPressed: boolean
+
   // Actions
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: any) => void
   setRectangleEditMode: (mode: any) => void
   updateDrawingElement: (id: string, updates: any) => void
-  
+
   // Utils
   hitTestElement: (element: any, x: number, y: number) => boolean
 }
@@ -27,6 +28,7 @@ export function useElementMovement({
   isDraggingElement,
   lineEditMode,
   dragElementOffset,
+  isShiftPressed,
   setIsDraggingElement,
   setDragElementOffset,
   setLineEditMode,
@@ -34,7 +36,6 @@ export function useElementMovement({
   updateDrawingElement,
   hitTestElement,
 }: UseElementMovementProps) {
-  
   // 要素移動の開始チェック（マウスダウン時のみ実行される想定）
   const checkMovementStart = useCallback(
     (imageCoords: { x: number; y: number }) => {
@@ -42,25 +43,34 @@ export function useElementMovement({
         currentTool,
         isDraggingElement,
         selectedElementIds: selectedElementIds.length,
-        imageCoords
+        imageCoords,
       })
-      
-      if (currentTool !== "select" || isDraggingElement || selectedElementIds.length === 0) {
+
+      if (
+        currentTool !== "select" ||
+        isDraggingElement ||
+        selectedElementIds.length === 0
+      ) {
         console.log("❌ 移動開始条件に合わない")
         return false
       }
 
       // 選択された要素の当たり判定をチェック
       for (const selectedId of selectedElementIds) {
-        const selectedElement = drawingElements.find(el => el.id === selectedId)
-        if (selectedElement && hitTestElement(selectedElement, imageCoords.x, imageCoords.y)) {
+        const selectedElement = drawingElements.find(
+          (el) => el.id === selectedId,
+        )
+        if (
+          selectedElement &&
+          hitTestElement(selectedElement, imageCoords.x, imageCoords.y)
+        ) {
           // 選択された要素内でマウスが移動した場合、移動開始
           console.log("🚀 移動開始:", {
             elementId: selectedId,
             imageCoords,
             elementPos: { x: selectedElement.x, y: selectedElement.y },
           })
-          
+
           setIsDraggingElement(true)
           const dragOffsetX = imageCoords.x - selectedElement.x
           const dragOffsetY = imageCoords.y - selectedElement.y
@@ -88,7 +98,11 @@ export function useElementMovement({
   // 要素移動処理
   const handleElementMovement = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      if (currentTool !== "select" || !isDraggingElement || selectedElementIds.length === 0) {
+      if (
+        currentTool !== "select" ||
+        !isDraggingElement ||
+        selectedElementIds.length === 0
+      ) {
         return false
       }
 
@@ -99,28 +113,84 @@ export function useElementMovement({
       })
 
       const firstElementId = selectedElementIds[0]
-      const firstElement = drawingElements.find(el => el.id === firstElementId)
+      const firstElement = drawingElements.find(
+        (el) => el.id === firstElementId,
+      )
 
       if (firstElement) {
         if (firstElement.type === "line" && lineEditMode) {
           // 線の編集（最初の要素のみ）
           if (lineEditMode === "start") {
+            let newX = imageCoords.x
+            let newY = imageCoords.y
+
+            // Shiftキーが押されている場合は縦横制限
+            if (
+              isShiftPressed &&
+              firstElement.endX !== undefined &&
+              firstElement.endY !== undefined
+            ) {
+              const deltaX = Math.abs(newX - firstElement.endX)
+              const deltaY = Math.abs(newY - firstElement.endY)
+
+              // 水平・垂直のどちらに近いかを判定
+              if (deltaX > deltaY) {
+                // 水平線（Y座標を固定）
+                newY = firstElement.endY
+              } else {
+                // 垂直線（X座標を固定）
+                newX = firstElement.endX
+              }
+
+              console.log(`📏 線分端点リサイズ縦横制限:`, {
+                mode: "start",
+                deltaX,
+                deltaY,
+                direction: deltaX > deltaY ? "水平" : "垂直",
+              })
+            }
+
             updateDrawingElement(firstElementId, {
-              x: imageCoords.x,
-              y: imageCoords.y,
+              x: newX,
+              y: newY,
             })
           } else if (lineEditMode === "end") {
+            let newEndX = imageCoords.x
+            let newEndY = imageCoords.y
+
+            // Shiftキーが押されている場合は縦横制限
+            if (isShiftPressed) {
+              const deltaX = Math.abs(newEndX - firstElement.x)
+              const deltaY = Math.abs(newEndY - firstElement.y)
+
+              // 水平・垂直のどちらに近いかを判定
+              if (deltaX > deltaY) {
+                // 水平線（Y座標を固定）
+                newEndY = firstElement.y
+              } else {
+                // 垂直線（X座標を固定）
+                newEndX = firstElement.x
+              }
+
+              console.log(`📏 線分端点リサイズ縦横制限:`, {
+                mode: "end",
+                deltaX,
+                deltaY,
+                direction: deltaX > deltaY ? "水平" : "垂直",
+              })
+            }
+
             updateDrawingElement(firstElementId, {
-              endX: imageCoords.x,
-              endY: imageCoords.y,
+              endX: newEndX,
+              endY: newEndY,
             })
           } else if (lineEditMode === "move") {
             const deltaX = imageCoords.x - dragElementOffset.x - firstElement.x
             const deltaY = imageCoords.y - dragElementOffset.y - firstElement.y
-            
+
             // 全選択要素を同じ量だけ移動
             selectedElementIds.forEach((elementId) => {
-              const element = drawingElements.find(el => el.id === elementId)
+              const element = drawingElements.find((el) => el.id === elementId)
               if (element) {
                 if (
                   element.type === "line" &&
@@ -180,6 +250,7 @@ export function useElementMovement({
       drawingElements,
       lineEditMode,
       dragElementOffset,
+      isShiftPressed,
       updateDrawingElement,
     ],
   )
@@ -189,9 +260,9 @@ export function useElementMovement({
     console.log("🔄 handleMovementEnd呼び出し:", {
       currentTool,
       isDraggingElement,
-      selectedElementIds: selectedElementIds.length
+      selectedElementIds: selectedElementIds.length,
     })
-    
+
     if (currentTool !== "select") {
       console.log("❌ 選択ツールではない - movement end処理をスキップ")
       return false
@@ -202,7 +273,7 @@ export function useElementMovement({
       console.log("🏁 要素ドラッグ終了 - 状態リセット:", {
         selectedElementIds,
         isDraggingElement,
-        dragElementOffset
+        dragElementOffset,
       })
       setIsDraggingElement(false)
       setDragElementOffset({ x: 0, y: 0 }) // オフセットもリセット

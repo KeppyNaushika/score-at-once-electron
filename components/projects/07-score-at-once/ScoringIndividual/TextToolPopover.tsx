@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Type } from "lucide-react"
+import { useState } from "react"
 import { COLOR_PALETTE } from "./constants/drawing-constants"
 import type { DrawingTool } from "./types/answer-individual-types"
 
@@ -24,21 +25,41 @@ export function TextToolPopover({
   strokeColor,
   onStrokeColorChange,
 }: TextToolPopoverProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  const handleClick = () => {
+    if (currentTool === "text") {
+      // 既に選択されている場合はPopoverをトグル
+      setIsOpen(!isOpen)
+    } else {
+      // 違うツールの場合はツールを選択
+      onToolChange("text")
+      setIsOpen(false)
+    }
+  }
+
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           size="sm"
           variant={currentTool === "text" ? "default" : "ghost"}
-          onClick={() => onToolChange("text")}
+          onClick={handleClick}
           title="テキストツール - クリックでテキスト入力"
+          style={{
+            backgroundColor: currentTool === "text" ? strokeColor : undefined,
+            borderColor: currentTool === "text" ? strokeColor : undefined,
+          }}
         >
-          <Type className="h-4 w-4" />
+          <Type 
+            className="h-4 w-4" 
+            style={{ color: currentTool === "text" ? "white" : undefined }}
+          />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" side="right">
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">テキストボックスの設定</h4>
+          <h4 className="text-sm font-medium">テキストツール</h4>
 
           <div className="text-xs text-gray-600">
             ドラッグしてテキストボックスを作成後、テキストを入力してください。

@@ -8,12 +8,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
-import { RectangleHorizontal } from "lucide-react"
+import { Circle } from "lucide-react"
 import { useState } from "react"
 import { COLOR_PALETTE } from "./constants/drawing-constants"
 import type { DrawingTool } from "./types/answer-individual-types"
 
-interface RectangleToolPopoverProps {
+interface EllipseToolPopoverProps {
   currentTool: DrawingTool
   onToolChange: (tool: DrawingTool) => void
   strokeColor: string
@@ -22,23 +22,23 @@ interface RectangleToolPopoverProps {
   onStrokeWidthChange: (width: number) => void
 }
 
-export function RectangleToolPopover({
+export function EllipseToolPopover({
   currentTool,
   onToolChange,
   strokeColor,
   strokeWidth,
   onStrokeColorChange,
   onStrokeWidthChange,
-}: RectangleToolPopoverProps) {
+}: EllipseToolPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const handleClick = () => {
-    if (currentTool === "rectangle") {
+    if (currentTool === "ellipse") {
       // 既に選択されている場合はPopoverをトグル
       setIsOpen(!isOpen)
     } else {
       // 違うツールの場合はツールを選択
-      onToolChange("rectangle")
+      onToolChange("ellipse")
       setIsOpen(false)
     }
   }
@@ -48,23 +48,23 @@ export function RectangleToolPopover({
       <PopoverTrigger asChild>
         <Button
           size="sm"
-          variant={currentTool === "rectangle" ? "default" : "ghost"}
+          variant={currentTool === "ellipse" ? "default" : "ghost"}
           onClick={handleClick}
-          title="矩形ツール - Shift+ドラッグで正方形"
+          title="楕円ツール - Shift+ドラッグで正円"
           style={{
-            backgroundColor: currentTool === "rectangle" ? strokeColor : undefined,
-            borderColor: currentTool === "rectangle" ? strokeColor : undefined,
+            backgroundColor: currentTool === "ellipse" ? strokeColor : undefined,
+            borderColor: currentTool === "ellipse" ? strokeColor : undefined,
           }}
         >
-          <RectangleHorizontal
+          <Circle
             className="h-4 w-4"
-            style={{ color: currentTool === "rectangle" ? "white" : undefined }}
+            style={{ color: currentTool === "ellipse" ? "white" : undefined }}
           />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" side="right">
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">長方形ツール</h4>
+          <h4 className="text-sm font-medium">楕円ツール</h4>
 
           {/* 線幅 */}
           <div>

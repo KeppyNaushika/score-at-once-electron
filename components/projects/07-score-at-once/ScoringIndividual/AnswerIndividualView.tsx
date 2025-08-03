@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
-import { TextInputModal } from "./TextInputModal"
+import { RichTextEditorModal } from "./RichTextEditorModal"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/useDrawingState"
@@ -19,6 +19,7 @@ export default function AnswerIndividualView({
   pageImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
+  onTextInputStateChange,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } =
@@ -26,6 +27,13 @@ export default function AnswerIndividualView({
 
   // 描画状態管理
   const drawingState = useDrawingState()
+
+  // テキスト入力状態変更の通知
+  useEffect(() => {
+    if (onTextInputStateChange) {
+      onTextInputStateChange(drawingState.showTextInput)
+    }
+  }, [drawingState.showTextInput, onTextInputStateChange])
 
   // 現在表示中の採点データを取得（簡潔に）
   const currentScoringData =
@@ -57,6 +65,18 @@ export default function AnswerIndividualView({
       showMultiplePages,
       pageSpacing,
     })
+
+  // テキスト再編集処理（useAnswerIndividualEventsより前に定義）
+  const handleTextElementReClick = useCallback((element: any) => {
+    console.log("✏️ テキスト要素再編集開始:", element)
+    
+    // 既存のテキスト内容と色でエディターを開く
+    drawingState.setTextInputValue(element.text || "")
+    drawingState.setStrokeColor(element.color)
+    drawingState.setIsEditingExistingText(true)
+    drawingState.setEditingTextElementId(element.id)
+    drawingState.setShowTextInput(true)
+  }, [drawingState])
 
   // イベントハンドリング
   const { handleMouseDown, handleMouseMove, handleMouseUp } =
@@ -122,6 +142,8 @@ export default function AnswerIndividualView({
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
       removeDrawingElement: drawingState.removeDrawingElement,
+      // テキスト再編集
+      onTextElementReClick: handleTextElementReClick,
     })
 
   // ズーム操作（CSS scale + scroll 方式）
@@ -347,32 +369,58 @@ export default function AnswerIndividualView({
     pageSpacing,
   ])
 
-  // テキスト送信処理
-  const handleTextSubmit = useCallback(() => {
-    if (!drawingState.currentDrawing || !drawingState.textInputValue.trim()) {
-      drawingState.setShowTextInput(false)
-      drawingState.setTextInputValue("")
-      drawingState.setCurrentDrawing(null)
-      return
-    }
-
-    const textElement = {
-      ...drawingState.currentDrawing,
-      text: drawingState.textInputValue,
-    }
-
-    drawingState.addDrawingElement(textElement as any)
-    drawingState.setShowTextInput(false)
-    drawingState.setTextInputValue("")
-    drawingState.setCurrentDrawing(null)
-  }, [drawingState])
-
-  // テキストキャンセル処理
+  // テキストキャンセル処理（先に定義）
   const handleTextCancel = useCallback(() => {
     drawingState.setShowTextInput(false)
     drawingState.setTextInputValue("")
     drawingState.setCurrentDrawing(null)
+    drawingState.setIsEditingExistingText(false)
+    drawingState.setEditingTextElementId(null)
   }, [drawingState])
+
+  // テキスト送信処理
+  const handleTextSubmit = useCallback(() => {
+    if (!drawingState.textInputValue.trim()) {
+      // 空のテキストの場合はキャンセル処理
+      handleTextCancel()
+      return
+    }
+
+    if (drawingState.isEditingExistingText && drawingState.editingTextElementId) {
+      // 既存テキストの編集
+      console.log("✏️ 既存テキスト更新:", {
+        id: drawingState.editingTextElementId,
+        text: drawingState.textInputValue,
+        color: drawingState.strokeColor,
+      })
+      
+      drawingState.updateDrawingElement(drawingState.editingTextElementId, {
+        text: drawingState.textInputValue,
+        color: drawingState.strokeColor,
+      })
+      
+      drawingState.setShowTextInput(false)
+      drawingState.setTextInputValue("")
+      drawingState.setIsEditingExistingText(false)
+      drawingState.setEditingTextElementId(null)
+    } else {
+      // 新規テキストの作成
+      if (!drawingState.currentDrawing) {
+        handleTextCancel()
+        return
+      }
+
+      const textElement = {
+        ...drawingState.currentDrawing,
+        text: drawingState.textInputValue,
+      }
+
+      drawingState.addDrawingElement(textElement as any)
+      drawingState.setShowTextInput(false)
+      drawingState.setTextInputValue("")
+      drawingState.setCurrentDrawing(null)
+    }
+  }, [drawingState, handleTextCancel])
 
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
@@ -390,12 +438,16 @@ export default function AnswerIndividualView({
         ref={containerRef}
         className="grid h-full w-full overflow-auto"
         style={{
-          cursor: 
-            drawingState.currentTool === "hand" 
-              ? (drawingState.isDraggingElement ? "grabbing" : "grab")
-              : drawingState.currentTool === "select" 
-              ? (drawingState.isDraggingElement ? "move" : "default")
-              : "crosshair",
+          cursor:
+            drawingState.currentTool === "hand"
+              ? drawingState.isDraggingElement
+                ? "grabbing"
+                : "grab"
+              : drawingState.currentTool === "select"
+                ? drawingState.isDraggingElement
+                  ? "move"
+                  : "default"
+                : "crosshair",
         }}
       >
         <div
@@ -495,14 +547,17 @@ export default function AnswerIndividualView({
         onLineStyleChange={(style) => drawingState.setLineStyle(style as any)}
       />
 
-      {/* テキスト入力モーダル */}
-      <TextInputModal
-        show={drawingState.showTextInput}
-        position={drawingState.textInputPosition}
+      {/* リッチテキストエディターモーダル */}
+      <RichTextEditorModal
+        open={drawingState.showTextInput}
+        onOpenChange={drawingState.setShowTextInput}
         value={drawingState.textInputValue}
         onValueChange={drawingState.setTextInputValue}
+        color={drawingState.strokeColor}
+        onColorChange={drawingState.setStrokeColor}
         onSubmit={handleTextSubmit}
         onCancel={handleTextCancel}
+        title={drawingState.isEditingExistingText ? "テキスト編集" : "テキスト入力"}
       />
 
       {/* 隠しimg要素（Canvas描画用） */}
@@ -517,7 +572,7 @@ export default function AnswerIndividualView({
             naturalWidth: img.naturalWidth,
             naturalHeight: img.naturalHeight,
             src: img.src,
-            complete: img.complete
+            complete: img.complete,
           })
         }}
         onError={(e) => {

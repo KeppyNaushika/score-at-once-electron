@@ -41,6 +41,9 @@ interface ScoringContentAreaProps {
 
   // 生徒データコールバック（個別表示でサイドパネルに渡すため）
   onStudentsExtracted?: (students: any[]) => void
+  
+  // テキスト入力状態変更のコールバック（個別表示でキーボードショートカット制御のため）
+  onTextInputStateChange?: (showTextInput: boolean) => void
 }
 
 export function ScoringContentArea({
@@ -57,6 +60,8 @@ export function ScoringContentArea({
   autoScroll,
   showStudentNames,
   pageImages,
+  onStudentsExtracted,
+  onTextInputStateChange,
 }: ScoringContentAreaProps) {
   // 個別表示時：selectedの最初の要素、または存在しないときはallの最初の要素
   const currentScoringDataId =
@@ -90,6 +95,7 @@ export function ScoringContentArea({
           )
         }
       }}
+      onTextInputStateChange={onTextInputStateChange}
     />
   ) : (
     // Grid表示：paddingとスクロールを統合

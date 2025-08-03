@@ -71,6 +71,9 @@ interface UseAnswerDisplayEventsProps {
   addDrawingElement: (element: any) => void
   updateDrawingElement: (id: string, updates: any) => void
   removeDrawingElement: (id: string) => void
+
+  // テキスト再編集
+  onTextElementReClick?: (element: any) => void
 }
 
 export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
@@ -78,8 +81,12 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     props
 
   // Initialize drawing utilities
-  const { hitTestElement, getLineEditMode, getRectangleEditMode } =
-    useDrawingUtils()
+  const {
+    hitTestElement,
+    hitTestHandle,
+    getLineEditMode,
+    getRectangleEditMode,
+  } = useDrawingUtils()
 
   // Initialize coordinate utilities
   const { getImageCoordinatesFromEvent, getScreenCoordinatesFromEvent } =
@@ -131,6 +138,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     isDrawingSelection: props.isDrawingSelection,
     selectionRectangle: props.selectionRectangle,
     isCtrlPressed: props.isCtrlPressed,
+    isShiftPressed: props.isShiftPressed,
     lineEditMode: props.lineEditMode,
     dragElementOffset: props.dragElementOffset,
     canvasRef, // Canvas ref for cursor management
@@ -147,8 +155,11 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     updateDrawingElement: props.updateDrawingElement,
     // Drawing utils
     hitTestElement,
+    hitTestHandle,
     getLineEditMode,
     getRectangleEditMode,
+    // テキスト再編集
+    onTextElementReClick: props.onTextElementReClick,
   })
 
   const {

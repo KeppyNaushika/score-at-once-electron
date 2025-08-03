@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useRef } from "react"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 
 interface UseElementSelectionProps {
@@ -18,6 +18,9 @@ interface UseElementSelectionProps {
   hitTestElement: (element: any, x: number, y: number) => boolean
   getLineEditMode: (element: any, x: number, y: number) => any
   getRectangleEditMode: (element: any, x: number, y: number) => any
+  
+  // Optional callback for text element re-click
+  onTextElementReClick?: (element: DrawingElement) => void
 }
 
 export function useElementSelection({
@@ -33,7 +36,15 @@ export function useElementSelection({
   hitTestElement,
   getLineEditMode,
   getRectangleEditMode,
+  onTextElementReClick,
 }: UseElementSelectionProps) {
+  
+  // ダブルクリック検出用の状態
+  const lastClickRef = useRef<{ elementId: string | null; timestamp: number }>({
+    elementId: null,
+    timestamp: 0,
+  })
+  const DOUBLE_CLICK_THRESHOLD = 300 // ミリ秒
   
   // 要素選択処理
   const handleElementSelection = useCallback(
@@ -90,14 +101,37 @@ export function useElementSelection({
         // Ctrl/Cmdキーが押されている場合は複数選択
         if (isCtrlPressed) {
           toggleSelection(clickedElement.id)
+          // 複数選択時はクリック状態をリセット
+          lastClickRef.current = { elementId: null, timestamp: 0 }
         } else {
-          // 既に選択されている要素をクリックした場合はそのまま維持
+          // 既に選択されている要素をクリックした場合
           if (selectedElementIds.includes(clickedElement.id)) {
             console.log("📌 選択維持:", clickedElement.id)
+            
+            // テキスト要素の場合、ダブルクリックをチェック
+            if (clickedElement.type === "text" && onTextElementReClick) {
+              const currentTime = Date.now()
+              const lastClick = lastClickRef.current
+              
+              if (
+                lastClick.elementId === clickedElement.id &&
+                currentTime - lastClick.timestamp < DOUBLE_CLICK_THRESHOLD
+              ) {
+                console.log("✏️ テキスト要素ダブルクリック:", clickedElement.id)
+                onTextElementReClick(clickedElement)
+                // ダブルクリック検出後はリセット
+                lastClickRef.current = { elementId: null, timestamp: 0 }
+              } else {
+                // 単一クリックの記録
+                lastClickRef.current = { elementId: clickedElement.id, timestamp: currentTime }
+              }
+            }
           } else {
             // 新しい要素を単独選択
             console.log("✨ 新規選択:", clickedElement.id)
             setSelectedElementIds([clickedElement.id])
+            // 新しい要素を選択したのでクリック状態をリセット
+            lastClickRef.current = { elementId: null, timestamp: 0 }
           }
         }
 
@@ -152,6 +186,7 @@ export function useElementSelection({
       setLineEditMode,
       getRectangleEditMode,
       setRectangleEditMode,
+      onTextElementReClick,
     ],
   )
 

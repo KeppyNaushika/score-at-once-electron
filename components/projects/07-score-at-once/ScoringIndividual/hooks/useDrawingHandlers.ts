@@ -1,4 +1,7 @@
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type {
+  DrawingElement,
+  LineStyle,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback } from "react"
 
 interface UseDrawingHandlersProps {
@@ -9,7 +12,7 @@ interface UseDrawingHandlersProps {
   isShiftPressed: boolean
   strokeColor: string
   strokeWidth: number
-  lineStyle: any
+  lineStyle: LineStyle
 
   // Actions
   setIsCreatingTextBox: (creating: boolean) => void
@@ -94,11 +97,11 @@ export function useDrawingHandlers({
           strokeWidth,
         })
         return true
-      } else if (currentTool === "rectangle-horizontal") {
+      } else if (currentTool === "ellipse") {
         setIsDrawing(true)
         setCurrentDrawing({
           id: Math.random().toString(36).substring(2, 11),
-          type: "rectangle",
+          type: "ellipse",
           x: imageCoords.x,
           y: imageCoords.y,
           width: 0,
@@ -137,8 +140,15 @@ export function useDrawingHandlers({
         // テキストボックスのサイズ調整
         const width = Math.abs(imageCoords.x - currentDrawing.x)
         const height = Math.abs(imageCoords.y - currentDrawing.y)
+        
+        // 下から上、右から左にドラッグした場合の座標修正
+        const minX = Math.min(currentDrawing.x, imageCoords.x)
+        const minY = Math.min(currentDrawing.y, imageCoords.y)
+        
         setCurrentDrawing({
           ...currentDrawing,
+          x: minX,
+          y: minY,
           textBoxWidth: width,
           textBoxHeight: height,
         })
@@ -148,18 +158,27 @@ export function useDrawingHandlers({
         let endX = imageCoords.x
         let endY = imageCoords.y
 
-        // Shift+ドラッグで垂直・水平線の判定
+        // Shift+ドラッグで縦横制限（水平・垂直のみ）
         if (isShiftPressed) {
           const deltaX = Math.abs(endX - currentDrawing.x)
           const deltaY = Math.abs(endY - currentDrawing.y)
 
+          // 水平・垂直のどちらに近いかを判定
           if (deltaX > deltaY) {
-            // 水平線
+            // 水平線（Y座標を固定）
             endY = currentDrawing.y
           } else {
-            // 垂直線
+            // 垂直線（X座標を固定）
             endX = currentDrawing.x
           }
+
+          console.log(`📏 線分縦横制限:`, {
+            deltaX,
+            deltaY,
+            direction: deltaX > deltaY ? "水平" : "垂直",
+            start: { x: currentDrawing.x, y: currentDrawing.y },
+            end: { x: endX, y: endY },
+          })
         }
 
         setCurrentDrawing({
@@ -172,15 +191,32 @@ export function useDrawingHandlers({
         // 矩形の描画
         let width = imageCoords.x - currentDrawing.x
         let height = imageCoords.y - currentDrawing.y
-        
-        // rectangle-horizontalの場合は横長に制限
-        if (currentTool === "rectangle-horizontal") {
-          const maxHeight = Math.abs(width) * 0.3 // 高さを幅の30%に制限
-          if (Math.abs(height) > maxHeight) {
-            height = height > 0 ? maxHeight : -maxHeight
-          }
+
+        // Shiftキーが押されている場合は正方形に制限
+        if (isShiftPressed) {
+          const minSize = Math.min(Math.abs(width), Math.abs(height))
+          width = width >= 0 ? minSize : -minSize
+          height = height >= 0 ? minSize : -minSize
         }
-        
+
+        setCurrentDrawing({
+          ...currentDrawing,
+          width,
+          height,
+        })
+        return true
+      } else if (currentDrawing.type === "ellipse") {
+        // 楕円の描画
+        let width = imageCoords.x - currentDrawing.x
+        let height = imageCoords.y - currentDrawing.y
+
+        // Shiftキーが押されている場合は正円に制限
+        if (isShiftPressed) {
+          const minSize = Math.min(Math.abs(width), Math.abs(height))
+          width = width >= 0 ? minSize : -minSize
+          height = width  // 高さを幅と同じにする
+        }
+
         setCurrentDrawing({
           ...currentDrawing,
           width,

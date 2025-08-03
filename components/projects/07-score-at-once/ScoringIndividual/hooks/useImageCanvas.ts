@@ -1,4 +1,6 @@
 import { useDrawingUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingUtils"
+import { useTextRenderCache } from "./useTextRenderCache"
+import { calculateOptimalFontSize } from "../utils/canvasTextRenderer"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import type {
   CropRegionWithProjectPage,
@@ -55,6 +57,8 @@ export function useImageCanvas({
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
 
   const { drawLineWithStyle } = useDrawingUtils()
+  // テキストレンダリングキャッシュ
+  const { getCachedText, preRenderElements } = useTextRenderCache()
 
   // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
@@ -218,27 +222,68 @@ export function useImageCanvas({
                       ctx.strokeRect(currentX, currentY, boxWidth, boxHeight)
                     }
 
-                    // テキスト描画（ボックスに合わせてスケール）
+                    // リッチテキスト描画（html2canvas + キャッシュ）
                     ctx.setLineDash([])
-                    const scaleFactor = Math.min(
-                      boxWidth / (element.text.length * 10),
-                      boxHeight / 20,
-                    )
-                    const actualFontSize = Math.max(
-                      12,
-                      (element.fontSize || 16) * scaleFactor,
-                    )
-                    ctx.font = `${actualFontSize}px sans-serif`
 
-                    // テキストを中央揃えで描画
-                    const textMetrics = ctx.measureText(element.text)
-                    const textX = currentX + (boxWidth - textMetrics.width) / 2
-                    const textY = currentY + boxHeight / 2 + actualFontSize / 3
-                    ctx.fillText(element.text, textX, textY)
+                    // キャッシュされたリッチテキストを取得
+                    const cachedText = getCachedText(
+                      element,
+                      boxWidth,
+                      boxHeight,
+                    )
+
+                    if (cachedText) {
+                      // キャッシュされたCanvasを描画（中央揃え）
+                      const textX =
+                        currentX + (boxWidth - cachedText.dimensions.width) / 2
+                      const textY =
+                        currentY +
+                        (boxHeight - cachedText.dimensions.height) / 2
+                      ctx.drawImage(cachedText.canvas, textX, textY)
+                    } else {
+                      // フォールバック：最適化されたシンプルテキスト描画
+                      const optimalFontSize = calculateOptimalFontSize(
+                        element.text,
+                        boxWidth,
+                        boxHeight,
+                        element.fontSize || 16,
+                      )
+
+                      ctx.font = `${optimalFontSize}px sans-serif`
+                      ctx.fillStyle = element.color
+
+                      // 改行対応の描画
+                      const lines = element.text.split("\n")
+                      const lineHeight = optimalFontSize * 1.4
+                      const totalHeight = lines.length * lineHeight
+                      const startY =
+                        currentY +
+                        (boxHeight - totalHeight) / 2 +
+                        optimalFontSize
+
+                      lines.forEach((line, index) => {
+                        const textMetrics = ctx.measureText(line)
+                        const textX =
+                          currentX + (boxWidth - textMetrics.width) / 2
+                        const textY = startY + index * lineHeight
+                        ctx.fillText(line, textX, textY)
+                      })
+                    }
                   } else {
-                    // 通常のテキスト
+                    // 通常のテキスト（改行対応）
                     ctx.font = `${element.fontSize || 16}px sans-serif`
-                    ctx.fillText(element.text, currentX, currentY)
+                    ctx.fillStyle = element.color
+
+                    const lines = element.text.split("\n")
+                    const lineHeight = (element.fontSize || 16) * 1.4
+
+                    lines.forEach((line, index) => {
+                      ctx.fillText(
+                        line,
+                        currentX,
+                        currentY + index * lineHeight,
+                      )
+                    })
                   }
                 }
                 break
@@ -274,6 +319,31 @@ export function useImageCanvas({
                     currentWidth,
                     currentHeight,
                   )
+                }
+                break
+              case "ellipse":
+                if (
+                  element.width !== undefined &&
+                  element.height !== undefined
+                ) {
+                  const currentWidth = element.width * baseImg.naturalWidth
+                  const currentHeight = element.height * baseImg.naturalHeight
+                  const centerX = currentX + currentWidth / 2
+                  const centerY = currentY + currentHeight / 2
+                  const radiusX = Math.abs(currentWidth) / 2
+                  const radiusY = Math.abs(currentHeight) / 2
+
+                  ctx.beginPath()
+                  ctx.ellipse(
+                    centerX,
+                    centerY,
+                    radiusX,
+                    radiusY,
+                    0,
+                    0,
+                    2 * Math.PI,
+                  )
+                  ctx.stroke()
                 }
                 break
             }
@@ -365,6 +435,47 @@ export function useImageCanvas({
                         { x: rectX + rectWidth, y: rectY }, // 右上
                         { x: rectX, y: rectY + rectHeight }, // 左下
                         { x: rectX + rectWidth, y: rectY + rectHeight }, // 右下
+                      ]
+
+                      corners.forEach((corner) => {
+                        ctx.fillRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                        ctx.strokeRect(
+                          corner.x - halfHandle,
+                          corner.y - halfHandle,
+                          handleSize,
+                          handleSize,
+                        )
+                      })
+                    }
+                    break
+                  case "ellipse":
+                    if (
+                      selectedElement.width !== undefined &&
+                      selectedElement.height !== undefined
+                    ) {
+                      const ellipseX =
+                        selectedElement.x * baseImg.naturalWidth + offsetX
+                      const ellipseY =
+                        selectedElement.y * baseImg.naturalHeight + offsetY
+                      const ellipseWidth =
+                        selectedElement.width * baseImg.naturalWidth
+                      const ellipseHeight =
+                        selectedElement.height * baseImg.naturalHeight
+
+                      // 楕円の4つの角にハンドルを描画（矩形と同じ位置）
+                      const corners = [
+                        { x: ellipseX, y: ellipseY }, // 左上
+                        { x: ellipseX + ellipseWidth, y: ellipseY }, // 右上
+                        { x: ellipseX, y: ellipseY + ellipseHeight }, // 左下
+                        {
+                          x: ellipseX + ellipseWidth,
+                          y: ellipseY + ellipseHeight,
+                        }, // 右下
                       ]
 
                       corners.forEach((corner) => {
@@ -475,6 +586,33 @@ export function useImageCanvas({
                   )
                 }
                 break
+              case "ellipse":
+                if (
+                  currentDrawing.width !== undefined &&
+                  currentDrawing.height !== undefined
+                ) {
+                  const currentWidth =
+                    currentDrawing.width * baseImg.naturalWidth
+                  const currentHeight =
+                    currentDrawing.height * baseImg.naturalHeight
+                  const centerX = currentX + currentWidth / 2
+                  const centerY = currentY + currentHeight / 2
+                  const radiusX = Math.abs(currentWidth) / 2
+                  const radiusY = Math.abs(currentHeight) / 2
+
+                  ctx.beginPath()
+                  ctx.ellipse(
+                    centerX,
+                    centerY,
+                    radiusX,
+                    radiusY,
+                    0,
+                    0,
+                    2 * Math.PI,
+                  )
+                  ctx.stroke()
+                }
+                break
               case "text":
                 if (
                   isCreatingTextBox &&
@@ -550,6 +688,7 @@ export function useImageCanvas({
       currentDrawing,
       isDrawingSelection,
       selectionRectangle,
+      getCachedText,
       drawLineWithStyle,
       strokeColor,
       strokeWidth,
@@ -673,7 +812,7 @@ export function useImageCanvas({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, pageImages, showMultiplePages])
+  }, [currentScoringData, drawCanvas, pageImages, showMultiplePages])
 
   // Canvas再描画（全ての要素を統合）
   useEffect(() => {
@@ -699,6 +838,23 @@ export function useImageCanvas({
       resizeObserver.disconnect()
     }
   }, [imageLoaded, loadedImages, drawCanvas])
+
+  // テキスト要素の事前レンダリング（キャッシュ生成）
+  useEffect(() => {
+    if (imageLoaded && loadedImages.length > 0 && drawingElements.length > 0) {
+      const baseImg = loadedImages[0]
+      if (baseImg) {
+        // テキスト要素のみを抽出して事前レンダリング
+        preRenderElements(
+          drawingElements,
+          baseImg.naturalWidth,
+          baseImg.naturalHeight,
+        ).catch((error) => {
+          console.warn("Text pre-rendering failed:", error)
+        })
+      }
+    }
+  }, [drawingElements, imageLoaded, loadedImages, preRenderElements])
 
   return {
     canvasRef,

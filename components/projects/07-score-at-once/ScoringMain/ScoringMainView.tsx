@@ -401,6 +401,9 @@ export default function ScoringMainView() {
     [],
   )
 
+  // テキスト入力状態管理（キーボードショートカット制御用）
+  const [showTextInput, setShowTextInput] = useState(false)
+
   // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
   useIndividualModeKeyboard({
     cropRegions,
@@ -408,6 +411,7 @@ export default function ScoringMainView() {
     currentCropRegionId: currentCropRegionId,
     currentStudentId: currentStudentId,
     scoringBehavior,
+    showTextInput,
     enabled: gradingMode === "individual", // 個別表示モードでのみ有効
     onQuestionChange: setCurrentCropRegionId,
     onStudentChange: handleStudentChange,
@@ -512,6 +516,7 @@ export default function ScoringMainView() {
           itemsPerLine={itemsPerLine}
           autoScroll={autoScroll}
           showStudentNames={showStudentNames}
+          onTextInputStateChange={setShowTextInput}
         />
 
         {/* 右側サイドパネル */}

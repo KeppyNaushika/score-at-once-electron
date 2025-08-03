@@ -12,10 +12,11 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
-import type { DrawingTool } from "./types/answer-individual-types"
+import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
+import type { DrawingTool } from "./types/answer-individual-types"
 
 interface DrawingToolPaletteProps {
   // View controls
@@ -120,6 +121,15 @@ export function DrawingToolPalette({
           />
 
           <RectangleToolPopover
+            currentTool={currentTool}
+            onToolChange={onToolChange}
+            strokeColor={strokeColor}
+            strokeWidth={strokeWidth}
+            onStrokeColorChange={onStrokeColorChange}
+            onStrokeWidthChange={onStrokeWidthChange}
+          />
+
+          <EllipseToolPopover
             currentTool={currentTool}
             onToolChange={onToolChange}
             strokeColor={strokeColor}

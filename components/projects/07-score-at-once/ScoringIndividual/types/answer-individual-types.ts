@@ -1,18 +1,24 @@
 // Prisma型をインポート
-import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
+  ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
 // 線種の型定義
-export type LineStyle = "solid" | "wave" | "zigzag" | "double"
+export type LineStyle =
+  | "solid"
+  | "wave"
+  | "zigzag"
+  | "double"
+  | "arrow"
+  | "both_arrow"
 
 // 描画要素の型定義
 export interface DrawingElement {
   id: string
-  type: "text" | "line" | "vline" | "hline" | "rectangle"
+  type: "text" | "line" | "vline" | "hline" | "rectangle" | "ellipse"
   x: number // 0.0 - 1.0 (画像全体に対する割合)
   y: number // 0.0 - 1.0
   width?: number // 0.0 - 1.0
@@ -30,7 +36,7 @@ export interface DrawingElement {
 }
 
 // 描画ツールの型定義
-export type DrawingTool = "hand" | "text" | "line" | "rectangle" | "rectangle-horizontal" | "select"
+export type DrawingTool = "hand" | "text" | "line" | "rectangle" | "ellipse" | "select"
 
 // 線の編集モード
 export type LineEditMode = "move" | "start" | "end" | null
@@ -58,6 +64,9 @@ export interface AnswerIndividualViewProps {
   pageImages?: PageImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
   pageSpacing?: number // ページ間の余白（ピクセル）
+  
+  // テキスト入力状態変更のコールバック
+  onTextInputStateChange?: (showTextInput: boolean) => void
 }
 
 // 選択範囲矩形の型定義
@@ -92,6 +101,9 @@ export interface DrawingState {
   showTextInput: boolean
   textInputPosition: { x: number; y: number }
   textInputValue: string
+  // テキスト再編集用
+  isEditingExistingText: boolean
+  editingTextElementId: string | null
   isShiftPressed: boolean
   isCtrlPressed: boolean // Ctrl/Cmd修飾キー状態
   isDraggingHandle: boolean
@@ -132,6 +144,9 @@ export interface DrawingActions {
   setShowTextInput: (show: boolean) => void
   setTextInputPosition: (position: { x: number; y: number }) => void
   setTextInputValue: (value: string) => void
+  // テキスト再編集用
+  setIsEditingExistingText: (editing: boolean) => void
+  setEditingTextElementId: (id: string | null) => void
   setIsShiftPressed: (pressed: boolean) => void
   setIsCtrlPressed: (pressed: boolean) => void
   setIsDraggingHandle: (dragging: boolean) => void

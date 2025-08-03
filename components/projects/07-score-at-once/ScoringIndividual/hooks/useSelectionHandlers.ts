@@ -2,6 +2,7 @@ import { useCursorUtils } from "@/components/projects/07-score-at-once/ScoringIn
 import { useElementMovement } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useElementMovement"
 import { useElementSelection } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useElementSelection"
 import { useRectangleSelection } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useRectangleSelection"
+import { useResizeCursorUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useResizeCursorUtils"
 import type {
   DrawingElement,
   SelectionRectangle,
@@ -16,6 +17,7 @@ interface UseSelectionHandlersProps {
   isDrawingSelection: boolean
   selectionRectangle: SelectionRectangle | null
   isCtrlPressed: boolean
+  isShiftPressed: boolean
   lineEditMode: any
   dragElementOffset: { x: number; y: number }
 
@@ -37,14 +39,23 @@ interface UseSelectionHandlersProps {
 
   // Utils
   hitTestElement: (element: any, x: number, y: number) => boolean
+  hitTestHandle: (element: any, x: number, y: number) => string | null
   getLineEditMode: (element: any, x: number, y: number) => any
   getRectangleEditMode: (element: any, x: number, y: number) => any
+
+  // テキスト再編集
+  onTextElementReClick?: (element: any) => void
 }
 
 export function useSelectionHandlers(props: UseSelectionHandlersProps) {
   // Initialize cursor utilities
   const { setCursor, resetCursor } = useCursorUtils({
     canvasRef: props.canvasRef,
+  })
+
+  // Initialize resize cursor utilities
+  const { checkResizeHandle } = useResizeCursorUtils({
+    hitTestHandle: props.hitTestHandle,
   })
 
   // Initialize specialized handlers
@@ -61,6 +72,7 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
     hitTestElement: props.hitTestElement,
     getLineEditMode: props.getLineEditMode,
     getRectangleEditMode: props.getRectangleEditMode,
+    onTextElementReClick: props.onTextElementReClick,
   })
 
   const { checkMovementStart, handleElementMovement, handleMovementEnd } =
@@ -71,6 +83,7 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
       isDraggingElement: props.isDraggingElement,
       lineEditMode: props.lineEditMode,
       dragElementOffset: props.dragElementOffset,
+      isShiftPressed: props.isShiftPressed,
       setIsDraggingElement: props.setIsDraggingElement,
       setDragElementOffset: props.setDragElementOffset,
       setLineEditMode: props.setLineEditMode,
@@ -153,18 +166,31 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
   // Check if mouse is over any element (for cursor styling)
   const checkElementHover = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      if (props.currentTool !== "select") return false
+      if (props.currentTool !== "select")
+        return { hasElement: false, resizeCursor: null }
 
       // Check if any element is under the cursor
       for (let i = props.drawingElements.length - 1; i >= 0; i--) {
         const element = props.drawingElements[i]
+
+        // まずリサイズハンドルをチェック（優先度高）
+        const resizeCursor = checkResizeHandle(
+          element,
+          imageCoords.x,
+          imageCoords.y,
+        )
+        if (resizeCursor) {
+          return { hasElement: true, resizeCursor: resizeCursor }
+        }
+
+        // 次に要素本体をチェック
         if (props.hitTestElement(element, imageCoords.x, imageCoords.y)) {
-          return true
+          return { hasElement: true, resizeCursor: null }
         }
       }
-      return false
+      return { hasElement: false, resizeCursor: null }
     },
-    [props],
+    [props, checkResizeHandle],
   )
 
   // Main mouse move handler
@@ -182,12 +208,22 @@ export function useSelectionHandlers(props: UseSelectionHandlersProps) {
       } else if (props.isDraggingElement) {
         // 要素ドラッグ中は移動カーソル
         setCursor("move")
-      } else if (checkElementHover(imageCoords)) {
-        // 要素の上にある場合は移動カーソル
-        setCursor("move")
       } else {
-        // それ以外は通常カーソル
-        setCursor("normal")
+        // 要素ホバー判定
+        const hoverResult = checkElementHover(imageCoords)
+
+        if (hoverResult.hasElement) {
+          if (hoverResult.resizeCursor) {
+            // リサイズハンドルの上にある場合はリサイズカーソル
+            setCursor(hoverResult.resizeCursor as any)
+          } else {
+            // 要素の上にある場合は移動カーソル（選択可能）
+            setCursor("move")
+          }
+        } else {
+          // 要素がない場所はクロスヘアカーソル（長方形選択可能）
+          setCursor("crosshair")
+        }
       }
 
       // Handle element movement (only when already dragging)
