@@ -24,6 +24,15 @@ interface TextCacheKey {
 export function useTextRenderCache() {
   const cacheRef = useRef<Map<string, CachedTextRender>>(new Map())
   
+  // LaTeX記法をMarkdown記法に変換（RichTextEditorModalと同じ処理）
+  const convertLatexToMarkdown = useCallback((text: string): string => {
+    return text
+      .replace(/\\\(/g, '$')     // \( を $ に
+      .replace(/\\\)/g, '$')     // \) を $ に
+      .replace(/\\\[/g, '$$')    // \[ を $$ に
+      .replace(/\\\]/g, '$$')    // \] を $$ に
+  }, [])
+  
   // キャッシュキーを生成
   const generateCacheKey = useCallback((key: TextCacheKey): string => {
     return `${key.text}|${key.color}|${key.fontSize}|${key.boxWidth}|${key.boxHeight}`
@@ -33,16 +42,19 @@ export function useTextRenderCache() {
   const preRenderText = useCallback(async (element: DrawingElement, boxWidth: number, boxHeight: number) => {
     if (!element.text) return null
     
-    // 最適なフォントサイズを計算
+    // LaTeX記法をMarkdown記法に変換
+    const processedText = convertLatexToMarkdown(element.text)
+    
+    // 最適なフォントサイズを計算（変換後のテキストで）
     const optimalFontSize = calculateOptimalFontSize(
-      element.text,
+      processedText,
       boxWidth,
       boxHeight,
       element.fontSize || 16
     )
     
     const cacheKey = generateCacheKey({
-      text: element.text,
+      text: processedText,
       color: element.color,
       fontSize: optimalFontSize,
       boxWidth,
@@ -55,9 +67,9 @@ export function useTextRenderCache() {
     }
     
     try {
-      // リッチテキストをレンダリング
+      // リッチテキストをレンダリング（変換後のテキストで）
       const result = await renderMarkdownToCanvas({
-        text: element.text,
+        text: processedText,
         color: element.color,
         fontSize: optimalFontSize,
         maxWidth: boxWidth,
@@ -76,24 +88,26 @@ export function useTextRenderCache() {
       
       return cachedRender
     } catch (error) {
-      console.error('Failed to render text:', error)
       return null
     }
-  }, [generateCacheKey])
+  }, [generateCacheKey, convertLatexToMarkdown])
   
   // キャッシュされたテキストを取得
   const getCachedText = useCallback((element: DrawingElement, boxWidth: number, boxHeight: number): CachedTextRender | null => {
     if (!element.text) return null
     
+    // LaTeX記法をMarkdown記法に変換
+    const processedText = convertLatexToMarkdown(element.text)
+    
     const optimalFontSize = calculateOptimalFontSize(
-      element.text,
+      processedText,
       boxWidth,
       boxHeight,
       element.fontSize || 16
     )
     
     const cacheKey = generateCacheKey({
-      text: element.text,
+      text: processedText,
       color: element.color,
       fontSize: optimalFontSize,
       boxWidth,
@@ -101,20 +115,20 @@ export function useTextRenderCache() {
     })
     
     return cacheRef.current.get(cacheKey) || null
-  }, [generateCacheKey])
+  }, [generateCacheKey, convertLatexToMarkdown])
   
   // テキスト要素を事前レンダリング（バッチ処理）
   const preRenderElements = useCallback(async (elements: DrawingElement[], baseWidth: number, baseHeight: number) => {
-    const renderPromises = elements
-      .filter(element => element.type === 'text' && element.text)
-      .map(async element => {
-        if (element.textBoxWidth !== undefined && element.textBoxHeight !== undefined) {
-          const boxWidth = element.textBoxWidth * baseWidth
-          const boxHeight = element.textBoxHeight * baseHeight
-          return await preRenderText(element, boxWidth, boxHeight)
-        }
-        return null
-      })
+    const textElements = elements.filter(element => element.type === 'text' && element.text)
+    
+    const renderPromises = textElements.map(async element => {
+      if (element.textBoxWidth !== undefined && element.textBoxHeight !== undefined) {
+        const boxWidth = element.textBoxWidth * baseWidth
+        const boxHeight = element.textBoxHeight * baseHeight
+        return await preRenderText(element, boxWidth, boxHeight)
+      }
+      return null
+    })
     
     await Promise.all(renderPromises)
   }, [preRenderText])

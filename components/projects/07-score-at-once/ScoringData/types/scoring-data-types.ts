@@ -5,17 +5,7 @@ import type {
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
-export interface UseScoringDataProps {
-  currentUserId: string | null
-  setCurrentUserId: (userId: string) => void
-  gradingMode: "grid" | "individual"
-  currentStudentIndex: number
-  setCurrentStudentIndex: (index: number) => void
-  currentCropRegionId: string | null
-  setCurrentCropRegionId: (id: string | null) => void
-  pageImages: PageImageWithProjectStudents[]
-  cropRegions: CropRegionWithProjectPage[]
-}
+
 
 export interface QuestionProgress {
   [questionId: string]: {

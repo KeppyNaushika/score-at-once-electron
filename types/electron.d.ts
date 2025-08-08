@@ -1068,5 +1068,7 @@ export interface MyAPI {
 declare global {
   interface Window {
     electronAPI: MyAPI
+    mathJaxReady?: boolean
+    MathJax?: any
   }
 }

@@ -20,9 +20,12 @@ import {
   Plus,
   Minus,
 } from "lucide-react"
-import { useState, useCallback, useEffect } from "react"
+import React, { useState, useCallback, useEffect, useRef } from "react"
 import { COLOR_PALETTE } from "./constants/drawing-constants"
-import { MarkdownPreview } from "./MarkdownPreview"
+import ReactMarkdown from "react-markdown"
+import remarkMath from "remark-math"
+import rehypeMathjax from "rehype-mathjax/svg"
+import { createRoot } from "react-dom/client"
 
 interface RichTextEditorModalProps {
   open: boolean
@@ -54,6 +57,10 @@ export function RichTextEditorModal({
 
   // テキストエリアの参照
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null)
+  
+  // SVGプレビュー状態（textbox-on-canvasと同じロジック）
+  const [svgPreviewUrl, setSvgPreviewUrl] = useState<string | null>(null)
+  const [isPreviewRendering, setIsPreviewRendering] = useState(false)
 
   // モーダルが開いたときにフォーカス
   useEffect(() => {
@@ -120,6 +127,331 @@ export function RichTextEditorModal({
   const handleFontSizeDecrease = useCallback(() => {
     setFontSize(prev => Math.max(prev - 2, 8))
   }, [])
+
+  /**
+   * textbox-on-canvasのconvertTextToSvg関数を完全移植
+   */
+  const convertTextToSvg = useCallback(
+    async (text: string): Promise<SVGSVGElement | null> => {
+      if (!text.trim()) return null
+
+      /**
+       * textbox-on-canvasと完全に同じDOM容器作成
+       */
+      const createTempPreviewContainer = (): HTMLDivElement => {
+        const tempPreviewDiv = document.createElement("div")
+        tempPreviewDiv.style.cssText = `
+          position: absolute;
+          left: -9999px;
+          top: -9999px;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", "Hiragino Kaku Gothic ProN", "ヒラギノ角ゴ ProN W3", Arial, sans-serif;
+          font-size: ${fontSize}px;
+          line-height: 1.6;
+          color: ${color};
+          background: white;
+          padding: 0;
+          margin: 0;
+          border: 0;
+          width: max-content;
+          height: max-content;
+          display: block;
+        `
+        document.body.appendChild(tempPreviewDiv)
+        return tempPreviewDiv
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じReactMarkdownレンダリング
+       */
+      const renderReactMarkdown = (container: HTMLDivElement) => {
+        const root = createRoot(container)
+        root.render(
+          React.createElement(
+            ReactMarkdown,
+            {
+              remarkPlugins: [remarkMath],
+              rehypePlugins: [rehypeMathjax],
+            },
+            text,
+          ),
+        )
+        return root
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じブラウザ描画完了待機
+       */
+      const waitForRenderingComplete = async (frames: number = 2): Promise<void> => {
+        for (let i = 0; i < frames; i++) {
+          await new Promise((resolve) => requestAnimationFrame(resolve))
+        }
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じMathJax処理
+       */
+      const processMathJax = async (container: HTMLDivElement): Promise<void> => {
+        const MJ = (window as any).MathJax
+        if (MJ && MJ.typesetPromise) {
+          try {
+            await MJ.typesetPromise([container])
+            await waitForRenderingComplete()
+          } catch (mathError) {
+            // MathJax処理失敗時も継続
+          }
+        }
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じ要素スタイルクリーンアップ
+       */
+      const cleanupElementStyles = (container: HTMLDivElement): void => {
+        const allElements = container.querySelectorAll("*")
+        allElements.forEach((el) => {
+          const element = el as HTMLElement
+          element.style.margin = "0"
+          element.style.padding = "0"
+          element.style.border = "0"
+        })
+
+        // textbox-on-canvasと同じ特別クリーンアップ
+        const pElements = container.querySelectorAll("p")
+        const mjxElements = container.querySelectorAll("mjx-container")
+
+        pElements.forEach((p) => {
+          p.style.margin = "0"
+          p.style.padding = "0"
+          p.style.lineHeight = "1.6"
+        })
+
+        mjxElements.forEach((mjx) => {
+          const mjxEl = mjx as HTMLElement
+          mjxEl.style.margin = "0"
+          mjxEl.style.padding = "0"
+        })
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じ寸法測定
+       */
+      const measureContentDimensions = (container: HTMLDivElement): { width: number; height: number } => {
+        // Initial measurement (for reference, not used)
+        container.getBoundingClientRect()
+        container.scrollWidth
+        container.scrollHeight
+
+        // Optimize for content size
+        container.style.width = "max-content"
+        container.style.height = "max-content"
+
+        // Final measurement
+        const finalRect = container.getBoundingClientRect()
+        const finalScrollWidth = container.scrollWidth
+        const finalScrollHeight = container.scrollHeight
+
+        const actualWidth = Math.max(finalScrollWidth, finalRect.width) + 20
+        const actualHeight = Math.max(finalScrollHeight, finalRect.height)
+
+        return { width: actualWidth, height: actualHeight }
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じSVG作成
+       */
+      const createSvgFromHtml = (htmlContent: string, width: number, height: number): SVGSVGElement => {
+        const svgString = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+            <foreignObject x="0" y="0" width="${width}" height="${height}">
+              <div xmlns="http://www.w3.org/1999/xhtml" style="">
+                <div style="font-size: ${fontSize}px; line-height: 1.6; color: ${color};">
+                  ${htmlContent}
+                </div>
+              </div>
+            </foreignObject>
+          </svg>
+        `
+
+        const parser = new DOMParser()
+        const svgDoc = parser.parseFromString(svgString, "image/svg+xml")
+        return svgDoc.documentElement as unknown as SVGSVGElement
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じクリーンアップ処理
+       */
+      const performCleanup = (root: any, container: HTMLDivElement): void => {
+        try {
+          root.unmount()
+          document.body.removeChild(container)
+        } catch (cleanupError) {
+          // クリーンアップ失敗時も継続
+        }
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じDOM変更検出
+       */
+      const hasSignificantChanges = (mutations: MutationRecord[]): boolean => {
+        return mutations.some(
+          (mutation) =>
+            mutation.type === "childList" &&
+            (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0),
+        )
+      }
+
+      /**
+       * textbox-on-canvasと完全に同じレンダリング後処理
+       */
+      const processRenderedContent = async (
+        container: HTMLDivElement,
+        root: any,
+        resolve: (value: SVGSVGElement | null) => void
+      ): Promise<void> => {
+        try {
+          console.log('🔄 描画完了待機中...')
+          await waitForRenderingComplete()
+          
+          console.log('🧮 MathJax処理中...')
+          await processMathJax(container)
+          
+          console.log('🧹 スタイルクリーンアップ中...')
+          cleanupElementStyles(container)
+          await waitForRenderingComplete(1)
+
+          console.log('📏 寸法測定中...')
+          const dimensions = measureContentDimensions(container)
+          console.log('📐 測定結果:', dimensions)
+          
+          const htmlContent = container.innerHTML
+          console.log('📄 HTML内容:', htmlContent.substring(0, 200))
+          
+          console.log('🖼️ SVG作成中...')
+          const svgElement = createSvgFromHtml(htmlContent, dimensions.width, dimensions.height)
+          console.log('✅ SVG作成完了:', !!svgElement)
+          
+          performCleanup(root, container)
+          
+          resolve(svgElement)
+        } catch (error) {
+          console.error('❌ processRenderedContentエラー:', error)
+          performCleanup(root, container)
+          resolve(null)
+        }
+      }
+
+      try {
+        console.log('🏗️ DOM容器作成中...')
+        const tempPreviewDiv = createTempPreviewContainer()
+        console.log('⚛️ ReactMarkdown描画中...')
+        const root = renderReactMarkdown(tempPreviewDiv)
+
+        return new Promise((resolve) => {
+          let renderingComplete = false
+
+          const observer = new MutationObserver(async (mutations) => {
+            console.log('🔍 MutationObserver発火:', { 
+              mutationsCount: mutations.length, 
+              hasChanges: hasSignificantChanges(mutations),
+              childrenCount: tempPreviewDiv.children.length 
+            })
+
+            if (renderingComplete) return
+
+            if (hasSignificantChanges(mutations) && tempPreviewDiv.children.length > 0) {
+              console.log('✨ 描画完了検出、SVG生成開始...')
+              renderingComplete = true
+              observer.disconnect()
+              await processRenderedContent(tempPreviewDiv, root, resolve)
+            }
+          })
+
+          observer.observe(tempPreviewDiv, {
+            childList: true,
+            subtree: true,
+            attributes: false,
+            characterData: false,
+          })
+          
+          console.log('👀 MutationObserver開始')
+
+          // 初期状態をチェック（デバッグ用）
+          setTimeout(() => {
+            console.log('🔍 1秒後のコンテナ状態:', {
+              childrenCount: tempPreviewDiv.children.length,
+              innerHTML: tempPreviewDiv.innerHTML.substring(0, 100),
+              textContent: tempPreviewDiv.textContent?.substring(0, 100)
+            })
+          }, 1000)
+
+          // textbox-on-canvasと同じフォールバックタイムアウト
+          setTimeout(() => {
+            if (!renderingComplete) {
+              console.log('⏰ タイムアウト発生（10秒）')
+              console.log('💀 最終コンテナ状態:', {
+                childrenCount: tempPreviewDiv.children.length,
+                innerHTML: tempPreviewDiv.innerHTML.substring(0, 200)
+              })
+              observer.disconnect()
+              performCleanup(root, tempPreviewDiv)
+              resolve(null)
+            }
+          }, 10000)
+        })
+      } catch (error) {
+        console.error('💥 convertTextToSvg全体エラー:', error)
+        return null
+      }
+    },
+    [], // 依存関係を空に（fontSize, colorは関数内で直接参照）
+  )
+
+  // LaTeX記法をMarkdown記法に変換
+  const convertLatexToMarkdown = useCallback((text: string): string => {
+    return text
+      .replace(/\\\(/g, '$')     // \( を $ に
+      .replace(/\\\)/g, '$')     // \) を $ に
+      .replace(/\\\[/g, '$$')    // \[ を $$ に
+      .replace(/\\\]/g, '$$')    // \] を $$ に
+  }, [])
+
+  // SVGプレビュー更新（textbox-on-canvasと同じロジック + LaTeX変換）
+  useEffect(() => {
+    console.log('🔄 SVGプレビュー更新開始:', { value: value.substring(0, 50), isEmpty: !value.trim() })
+    
+    if (!value.trim()) {
+      setSvgPreviewUrl(null)
+      return
+    }
+
+    setIsPreviewRendering(true)
+
+    const updatePreview = async () => {
+      try {
+        // LaTeX記法をMarkdown記法に変換
+        const processedText = convertLatexToMarkdown(value)
+        console.log('⏳ convertTextToSvg開始:', processedText.substring(0, 50))
+        const svgElement = await convertTextToSvg(processedText)
+        console.log('✅ convertTextToSvg完了:', { svgElement: !!svgElement })
+        
+        if (svgElement) {
+          const svgData = new XMLSerializer().serializeToString(svgElement)
+          const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`
+          console.log('🖼️ SVG URL生成完了:', svgDataUrl.substring(0, 100))
+          setSvgPreviewUrl(svgDataUrl)
+        } else {
+          console.log('❌ SVG生成失敗')
+          setSvgPreviewUrl(null)
+        }
+        setIsPreviewRendering(false)
+      } catch (error) {
+        console.error('❌ SVGプレビューエラー:', error)
+        setSvgPreviewUrl(null)
+        setIsPreviewRendering(false)
+      }
+    }
+
+    updatePreview()
+  }, [value, fontSize, color, convertLatexToMarkdown])
 
   // キーボードショートカット
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -271,17 +603,23 @@ export function RichTextEditorModal({
             />
           </div>
 
-          {/* プレビュー */}
+          {/* SVGプレビュー（textbox-on-canvasと同じロジック） */}
           <div>
             <Label className="text-sm font-medium">プレビュー</Label>
-            <MarkdownPreview
-              content={value}
-              className="mt-2 p-3 border rounded-md bg-white min-h-16 prose-sm"
-              style={{
-                fontSize: `${fontSize}px`,
-                color: color,
-              }}
-            />
+            <div className="mt-2 p-3 border rounded-md bg-white min-h-16 flex items-center justify-center">
+              {isPreviewRendering ? (
+                <div className="text-gray-400 text-sm">レンダリング中...</div>
+              ) : svgPreviewUrl ? (
+                <img
+                  src={svgPreviewUrl}
+                  alt="Preview"
+                  className="max-w-full h-auto"
+                  style={{ display: "block" }}
+                />
+              ) : (
+                <div className="text-gray-400 text-sm">テキストを入力するとプレビューが表示されます</div>
+              )}
+            </div>
           </div>
 
           {/* ヘルプテキスト */}

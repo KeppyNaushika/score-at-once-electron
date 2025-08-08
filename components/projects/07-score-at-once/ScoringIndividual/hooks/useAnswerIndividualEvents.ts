@@ -188,9 +188,9 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     setTextInputValue: props.setTextInputValue,
   })
 
-  // Main mouse event handlers that delegate to appropriate tool handlers
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  // Main pointer event handlers that delegate to appropriate tool handlers
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
       if (!imageLoaded) return
 
       const imageCoords = getImageCoordinatesFromEvent(e)
@@ -201,7 +201,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         const screenCoords = getScreenCoordinatesFromEvent(e)
         handleHandToolMouseDown(screenCoords)
       } else if (props.currentTool === "select") {
-        if (handleSelectionMouseDown(imageCoords)) return
+        if (handleSelectionMouseDown(imageCoords, e.nativeEvent)) return
       } else {
         handleDrawingMouseDown(imageCoords)
       }
@@ -217,8 +217,8 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     ],
   )
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
       if (!imageLoaded) return
 
       const imageCoords = getImageCoordinatesFromEvent(e)
@@ -247,16 +247,16 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     ],
   )
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
     // Call all handlers - they will check their own conditions
     handleHandToolMouseUp()
-    handleSelectionMouseUp()
+    handleSelectionMouseUp(e.nativeEvent)
     handleDrawingMouseUp()
   }, [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp])
 
   return {
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
   }
 }

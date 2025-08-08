@@ -79,7 +79,6 @@ interface UseScoringKeyboardProps {
   gradingMode: GradingMode
   selectedAnswers: Set<string>
   onBatchScore: (status: ScoringStatus) => void
-  onSetScore: (status: ScoringStatus) => void
   onNextQuestion: () => void
   onPrevQuestion: () => void
   onNextStudent: () => void
@@ -134,7 +133,6 @@ export function useScoringKeyboard({
   gradingMode,
   selectedAnswers,
   onBatchScore,
-  onSetScore,
   onNextQuestion,
   onPrevQuestion,
   onNextStudent,
@@ -347,73 +345,13 @@ export function useScoringKeyboard({
         // グリッドモードではその他のキーはグリッドコンポーネントに委譲
         return
       }
-
-      // 個別採点モードのキーボード処理
-      const key = event.key.toLowerCase()
-      switch (key) {
-        case shortcuts.unscored:
-          event.preventDefault()
-          onSetScore("unscored")
-          break
-        case shortcuts.correct:
-          event.preventDefault()
-          onSetScore("correct")
-          break
-        case shortcuts.partial:
-          event.preventDefault()
-          onSetScore("partial")
-          break
-        case shortcuts.pending:
-          event.preventDefault()
-          onSetScore("pending")
-          break
-        case shortcuts.incorrect:
-          event.preventDefault()
-          onSetScore("incorrect")
-          break
-        case shortcuts.no_answer:
-          event.preventDefault()
-          onSetScore("no_answer")
-          break
-        case "ArrowDown":
-          event.preventDefault()
-          onNextStudent()
-          break
-        case "ArrowUp":
-          event.preventDefault()
-          onPrevStudent()
-          break
-        case shortcuts.zoomIn:
-          event.preventDefault()
-          onZoomIn()
-          break
-        case shortcuts.zoomOut:
-          event.preventDefault()
-          onZoomOut()
-          break
-        case shortcuts.resetZoom:
-          event.preventDefault()
-          onResetZoom()
-          break
-        case shortcuts.fullView:
-          event.preventDefault()
-          onToggleViewMode()
-          break
-      }
     },
     [
       gradingMode,
       selectedAnswers,
       onBatchScore,
-      onSetScore,
       onNextQuestion,
       onPrevQuestion,
-      onNextStudent,
-      onPrevStudent,
-      onZoomIn,
-      onZoomOut,
-      onResetZoom,
-      onToggleViewMode,
       onGridNavigation,
       onToggleFilterByScoreKey,
       onRefreshFilter,

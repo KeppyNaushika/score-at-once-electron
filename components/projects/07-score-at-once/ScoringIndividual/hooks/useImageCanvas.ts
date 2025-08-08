@@ -55,10 +55,26 @@ export function useImageCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
+  const isPreRenderingRef = useRef(false)
 
   const { drawLineWithStyle } = useDrawingUtils()
   // テキストレンダリングキャッシュ
   const { getCachedText, preRenderElements } = useTextRenderCache()
+
+  // テキスト要素の事前レンダリング（キャッシュ生成）- 需要時のみ実行
+  const handleTextPreRender = useCallback(async (textElements: any[], baseImg: HTMLImageElement) => {
+    if (isPreRenderingRef.current) return
+    
+    isPreRenderingRef.current = true
+    
+    try {
+      await preRenderElements(textElements, baseImg.naturalWidth, baseImg.naturalHeight)
+    } catch (error) {
+      // Pre-rendering failed, continue with fallback
+    } finally {
+      isPreRenderingRef.current = false
+    }
+  }, [preRenderElements])
 
   // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
@@ -172,10 +188,7 @@ export function useImageCanvas({
             ctx.fillText(currentCropRegion.label, questionX, questionY - 5)
           }
         } else {
-          console.warn("設問のページが読み込まれた画像の範囲外です:", {
-            questionPageIndex,
-            totalPages: images.length,
-          })
+          // Question page is outside loaded image range
         }
       }
 
@@ -205,12 +218,8 @@ export function useImageCanvas({
             ctx.fillStyle = element.color
             ctx.lineWidth = element.strokeWidth
 
-            // 選択中の要素をハイライト
+            // 選択中の要素をハイライト（シャドウではなく背景色で表示）
             const isSelected = selectedElementIds.includes(element.id)
-            if (isSelected) {
-              ctx.shadowColor = element.color
-              ctx.shadowBlur = 10
-            }
 
             switch (element.type) {
               case "text":
@@ -242,6 +251,7 @@ export function useImageCanvas({
                       boxHeight,
                     )
 
+
                     if (cachedText) {
                       // キャッシュされたCanvasを描画（中央揃え）
                       const textX =
@@ -249,8 +259,22 @@ export function useImageCanvas({
                       const textY =
                         currentY +
                         (boxHeight - cachedText.dimensions.height) / 2
+                      
+                      // console.log('✅ Drawing cached canvas:', {
+                      //   textX, textY,
+                      //   cachedWidth: cachedText.dimensions.width,
+                      //   cachedHeight: cachedText.dimensions.height
+                      // })
+                      
                       ctx.drawImage(cachedText.canvas, textX, textY)
                     } else {
+                      // キャッシュがない場合、需要時事前レンダリングを試行（一度だけ）
+                      // console.log('⏳ Cache not found, triggering on-demand pre-render:', {
+                      //   text: element.text?.substring(0, 30)
+                      // })
+                      
+                      // 非同期で事前レンダリング（状態変更なし）
+                      handleTextPreRender([element], baseImg)
                       // フォールバック：最適化されたシンプルテキスト描画
                       const optimalFontSize = calculateOptimalFontSize(
                         element.text,
@@ -358,10 +382,7 @@ export function useImageCanvas({
                 break
             }
 
-            // シャドウをリセット
-            if (isSelected) {
-              ctx.shadowBlur = 0
-            }
+            // 選択中の要素には追加の視覚的フィードバックを提供（ハンドルが表示される）
           })
 
           // 選択された要素のハンドル（編集点）を描画
@@ -715,6 +736,7 @@ export function useImageCanvas({
       strokeColor,
       strokeWidth,
       isCreatingTextBox,
+      handleTextPreRender,
     ],
   )
 
@@ -851,28 +873,12 @@ export function useImageCanvas({
     }
   }, [imageLoaded, loadedImages, drawCanvas])
 
-  // テキスト要素の事前レンダリング（キャッシュ生成）
-  useEffect(() => {
-    if (imageLoaded && loadedImages.length > 0 && drawingElements.length > 0) {
-      const baseImg = loadedImages[0]
-      if (baseImg) {
-        // テキスト要素のみを抽出して事前レンダリング
-        preRenderElements(
-          drawingElements,
-          baseImg.naturalWidth,
-          baseImg.naturalHeight,
-        ).catch((error) => {
-          console.warn("Text pre-rendering failed:", error)
-        })
-      }
-    }
-  }, [drawingElements, imageLoaded, loadedImages, preRenderElements])
-
   return {
     canvasRef,
     imageRef,
     containerRef,
     imageLoaded,
     loadedImages,
+    handleTextPreRender,
   }
 }

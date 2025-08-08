@@ -22,6 +22,7 @@ import {
   TestTube2,
   User,
   Users,
+  FlaskConical,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -34,6 +35,10 @@ const navItems = [
   { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
   { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
   { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
+  { href: "/test-mathjax-on-canvas", label: "MathJax Canvas", icon: FlaskConical },
+  { href: "/test-rehype-mathjax-on-canvas", label: "Rehype MathJax Canvas", icon: FlaskConical },
+  { href: "/textbox-on-canvas", label: "Textbox Canvas", icon: FlaskConical },
+  { href: "/test-resize-element-on-canvas", label: "Resize Test Canvas", icon: FlaskConical },
   { href: "/settings", label: "設定", icon: Settings },
 ]
 

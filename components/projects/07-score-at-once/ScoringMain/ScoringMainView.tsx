@@ -3,7 +3,6 @@
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
-import { useIndividualModeKeyboard } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useIndividualModeKeyboard"
 import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/ScoringContentArea"
 import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/ScoringHeaderControls"
 import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/ScoringModals"
@@ -149,18 +148,13 @@ export default function ScoringMainView() {
     questionScores,
     setQuestionScores,
     loadQuestionScores,
-    handleSetScore,
     handleBatchScore,
     calculateQuestionProgress,
   } = useScoringData({
     currentUserId,
     setCurrentUserId: () => {}, // データローダーで管理するため空関数
-    gradingMode: gradingMode,
-    currentStudentIndex: currentStudentIndex,
-    setCurrentStudentIndex: setCurrentStudentIndex,
-    currentCropRegionId: currentCropRegionId,
-    setCurrentCropRegionId: setCurrentCropRegionId,
-    pageImages: pageImages,
+    currentCropRegionId,
+    pageImages,
     cropRegions,
   })
 
@@ -343,8 +337,7 @@ export default function ScoringMainView() {
   useScoringKeyboard({
     gradingMode: gradingMode,
     selectedAnswers: selectedPageImageIds,
-    onBatchScore: handleBatchScoreWithProgress, // 自動進行機能付きに変更
-    onSetScore: handleSetScore,
+    onBatchScore: handleBatchScoreWithProgress,
     onNextQuestion: handleNextQuestion,
     onPrevQuestion: handlePrevQuestion,
     onNextStudent: handleNextStudent,
@@ -403,24 +396,6 @@ export default function ScoringMainView() {
 
   // テキスト入力状態管理（キーボードショートカット制御用）
   const [showTextInput, setShowTextInput] = useState(false)
-
-  // 個別表示用のキーボードハンドリング（個別表示モードでのみ有効）
-  useIndividualModeKeyboard({
-    cropRegions,
-    students,
-    currentCropRegionId: currentCropRegionId,
-    currentStudentId: currentStudentId,
-    scoringBehavior,
-    showTextInput,
-    enabled: gradingMode === "individual", // 個別表示モードでのみ有効
-    onQuestionChange: setCurrentCropRegionId,
-    onStudentChange: handleStudentChange,
-    onSetScore: (status) => handleSetScore(convertScoreStatus(status)),
-    onNextQuestion: handleNextQuestion,
-    onPrevQuestion: handlePrevQuestion,
-    onNextStudent: handleIndividualNextStudent,
-    onPrevStudent: handleIndividualPrevStudent,
-  })
 
   // 採点データの初期化
   useEffect(() => {

@@ -11,9 +11,9 @@ export function useCoordinateUtils({
   imageRef,
   zoom,
 }: UseCoordinateUtilsProps) {
-  // マウスイベントから画像座標（正規化）を取得
+  // ポインターイベントから画像座標（正規化）を取得
   const getImageCoordinatesFromEvent = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent | React.PointerEvent) => {
       const canvas = canvasRef.current
       const img = imageRef.current
 
@@ -84,7 +84,7 @@ export function useCoordinateUtils({
   )
 
   // スクリーン座標を取得（handツール用）
-  const getScreenCoordinatesFromEvent = useCallback((e: React.MouseEvent) => {
+  const getScreenCoordinatesFromEvent = useCallback((e: React.MouseEvent | React.PointerEvent) => {
     return {
       x: e.clientX,
       y: e.clientY,

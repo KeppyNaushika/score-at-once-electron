@@ -80,7 +80,7 @@ export default function AnswerIndividualView({
   )
 
   // イベントハンドリング
-  const { handleMouseDown, handleMouseMove, handleMouseUp } =
+  const { handlePointerDown, handlePointerMove, handlePointerUp } =
     useAnswerIndividualEvents({
       canvasRef,
       containerRef,
@@ -370,6 +370,15 @@ export default function AnswerIndividualView({
     drawingState.setEditingTextElementId(null)
   }, [drawingState])
 
+  // LaTeX記法をMarkdown記法に変換（RichTextEditorModalと同じ処理）
+  const convertLatexToMarkdown = useCallback((text: string): string => {
+    return text
+      .replace(/\\\(/g, '$')     // \( を $ に
+      .replace(/\\\)/g, '$')     // \) を $ に
+      .replace(/\\\[/g, '$$')    // \[ を $$ に
+      .replace(/\\\]/g, '$$')    // \] を $$ に
+  }, [])
+
   // テキスト送信処理
   const handleTextSubmit = useCallback(() => {
     if (!drawingState.textInputValue.trim()) {
@@ -378,13 +387,16 @@ export default function AnswerIndividualView({
       return
     }
 
+    // LaTeX記法をMarkdown記法に変換
+    const processedText = convertLatexToMarkdown(drawingState.textInputValue)
+
     if (
       drawingState.isEditingExistingText &&
       drawingState.editingTextElementId
     ) {
       // 既存テキストの編集
       drawingState.updateDrawingElement(drawingState.editingTextElementId, {
-        text: drawingState.textInputValue,
+        text: processedText,
         color: drawingState.strokeColor,
       })
 
@@ -401,7 +413,7 @@ export default function AnswerIndividualView({
 
       const textElement = {
         ...drawingState.currentDrawing,
-        text: drawingState.textInputValue,
+        text: processedText,
       }
 
       drawingState.addDrawingElement(textElement as any)
@@ -409,7 +421,7 @@ export default function AnswerIndividualView({
       drawingState.setTextInputValue("")
       drawingState.setCurrentDrawing(null)
     }
-  }, [drawingState, handleTextCancel])
+  }, [drawingState, handleTextCancel, convertLatexToMarkdown])
 
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
@@ -500,11 +512,12 @@ export default function AnswerIndividualView({
                   : `${600 * zoom}px`,
               imageRendering: "pixelated", // 拡大時のぼけを防止
               transform: "translateZ(0)", // ハードウェアアクセラレーション有効化
+              touchAction: "none", // ポインターイベント用タッチアクション無効化
             }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           />
         </div>
       </div>

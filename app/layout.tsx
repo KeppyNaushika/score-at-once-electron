@@ -21,6 +21,39 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+                  displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+                  processEscapes: true,
+                  processEnvironments: true
+                },
+                svg: {
+                  fontCache: 'global'
+                },
+                startup: {
+                  ready: () => {
+                    console.log('🔥 MathJax initialized successfully');
+                    MathJax.startup.defaultReady();
+                    // 初期化完了をグローバルに通知
+                    window.mathJaxReady = true;
+                    window.dispatchEvent(new Event('mathjax-ready'));
+                  }
+                }
+              };
+            `,
+          }}
+        />
+        <script
+          id="MathJax-script"
+          async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+        />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <AppShell>{children}</AppShell>

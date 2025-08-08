@@ -3,6 +3,7 @@ import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/types/student-answer.types"
+import { convertAnswerSheetsToFiles } from "./convertStudentAnswersToFiles"
 
 /**
  * 現在のファイル配列を新しい配置戦略に基づいて再配置する
@@ -87,9 +88,8 @@ export function buildOrderedFileArrayFromStudentAnswers(
   modelAnswerCount: number,
   fileOrder: PlacementStrategy,
 ): UnifiedFile[] {
-  // 基本的なファイル変換を取得
-  const { convertStudentAnswersToFiles } = require("./convertStudentAnswersToFiles")
-  const basicFiles: UnifiedFile[] = convertStudentAnswersToFiles(studentAnswers)
+  // 基本的なファイル変換を実行
+  const basicFiles: UnifiedFile[] = convertAnswerSheetsToFiles(studentAnswers)
 
   // 生徒のソート（受験生徒順：customOrder準拠）
   const sortedStudents = [...students].sort((a, b) => {
