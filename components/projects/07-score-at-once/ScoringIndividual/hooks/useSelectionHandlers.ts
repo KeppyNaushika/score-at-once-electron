@@ -809,17 +809,25 @@ export function useSelectionHandlers({
         y: Math.min(0, newY) + Math.max(0, (newY + newHeight) - 1),
       }
       
-      // オーバーフローが発生している場合は記録
-      if (overflow.x !== 0 || overflow.y !== 0) {
-        setResizeOverflow(overflow)
-        console.log("🚨 Boundary overflow detected, but resize continues:", {
-          overflow,
-          rawBounds,
-          isResizingStillActive: isResizing, // これが true のまま維持される
-          resizeDirection,
+      // オーバーフローが発生している場合は記録（状態変化時のみ更新）
+      const hasOverflow = overflow.x !== 0 || overflow.y !== 0
+      if (hasOverflow) {
+        // 前回と異なる場合のみ更新（不必要なre-renderを防ぐ）
+        setResizeOverflow(prev => {
+          if (!prev || prev.x !== overflow.x || prev.y !== overflow.y) {
+            console.log("🚨 Boundary overflow detected, but resize continues:", {
+              overflow,
+              rawBounds,
+              isResizingStillActive: isResizing, // これが true のまま維持される
+              resizeDirection,
+            })
+            return overflow
+          }
+          return prev
         })
       } else {
-        setResizeOverflow(null)
+        // オーバーフローなし - 前回がnullでなければnullに設定
+        setResizeOverflow(prev => prev !== null ? null : prev)
       }
 
       // 正規化座標系での境界制限を適用
@@ -868,7 +876,7 @@ export function useSelectionHandlers({
       }
       updateDrawingElement(elementId, updates)
     },
-    [applyNormalizedBounds, updateDrawingElement, setResizeOverflow, isResizing],
+    [applyNormalizedBounds, updateDrawingElement, isResizing],
   )
 
   // Main mouse down handler（pointer events対応）
@@ -1039,7 +1047,6 @@ export function useSelectionHandlers({
           deltaY,
           normalizedCoords: imageCoords,
           isOutOfBounds: imageCoords.x < 0 || imageCoords.x > 1 || imageCoords.y < 0 || imageCoords.y > 1,
-          resizeOverflow, // オーバーフロー状態を表示
           originalBounds: resizeOriginalBounds,
           elementType: element.type,
           isResizingFlag: isResizing, // isResizing状態を監視
@@ -1098,7 +1105,6 @@ export function useSelectionHandlers({
       resizeStartCoords,
       resizeOriginalBounds,
       resizeHandle,
-      resizeOverflow,
       isDrawingSelection,
       isDraggingElement,
       handleElementMovement,
@@ -1121,8 +1127,6 @@ export function useSelectionHandlers({
     if (isResizing) {
       console.log("🏁 Ending resize operation (Mouse Up):", {
         resizeElementId,
-        resizeOverflow,
-        wasAtBoundary: resizeOverflow !== null,
         reason: "Mouse up detected - normal completion"
       })
 
@@ -1173,8 +1177,6 @@ export function useSelectionHandlers({
     handleMovementEnd,
     completeRectangleSelection,
     resizeElementId,
-    resizeOverflow,
-    setResizeOverflow,
     stopPointerCapture,
     resetCursor,
     drawingElements,
@@ -1262,7 +1264,6 @@ export function useSelectionHandlers({
         isResizingActive: isResizing, // これが false になっていないか確認
         isGlobalCaptureActive,
         isOutOfBounds: normalizedCoords.x < 0 || normalizedCoords.x > 1 || normalizedCoords.y < 0 || normalizedCoords.y > 1,
-        resizeOverflow, // オーバーフロー状態の確認
       })
 
       // リサイズ処理を継続（境界に達してもfalseにならないよう確認）
@@ -1305,7 +1306,6 @@ export function useSelectionHandlers({
   }, [
     isGlobalCaptureActive,
     isResizing,
-    resizeOverflow,
     convertScreenToNormalizedCoords,
     handleSelectionMouseMove,
     handleSelectionMouseUp,
