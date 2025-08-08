@@ -811,22 +811,26 @@ export function useSelectionHandlers({
       
       // オーバーフローが発生している場合は記録（状態変化時のみ更新）
       const hasOverflow = overflow.x !== 0 || overflow.y !== 0
+      
+      // オーバーフロー検出ログ（state更新の外で実行）
       if (hasOverflow) {
-        // 前回と異なる場合のみ更新（不必要なre-renderを防ぐ）
+        console.log("🚨 Boundary overflow detected, but resize continues:", {
+          overflow,
+          rawBounds,
+          resizeDirection,
+          hasOverflow: true,
+        })
+      }
+      
+      // 状態更新（ログなしでシンプルに）
+      if (hasOverflow) {
         setResizeOverflow(prev => {
           if (!prev || prev.x !== overflow.x || prev.y !== overflow.y) {
-            console.log("🚨 Boundary overflow detected, but resize continues:", {
-              overflow,
-              rawBounds,
-              isResizingStillActive: isResizing, // これが true のまま維持される
-              resizeDirection,
-            })
             return overflow
           }
           return prev
         })
       } else {
-        // オーバーフローなし - 前回がnullでなければnullに設定
         setResizeOverflow(prev => prev !== null ? null : prev)
       }
 
@@ -874,7 +878,15 @@ export function useSelectionHandlers({
         updates.width = finalWidth
         updates.height = finalHeight
       }
+      
       updateDrawingElement(elementId, updates)
+      
+      console.log("✅ handleStandardElementResize completed:", {
+        elementId,
+        resizeDirection,
+        finalBounds: { x: finalX, y: finalY, width: finalWidth, height: finalHeight },
+        hadOverflow: hasOverflow,
+      })
     },
     [applyNormalizedBounds, updateDrawingElement, isResizing],
   )
@@ -1062,6 +1074,7 @@ export function useSelectionHandlers({
           resizeElementId,
         )
 
+        console.log("🔄 handleSelectionMouseMove completed resize processing")
         return true
       }
 
@@ -1267,10 +1280,23 @@ export function useSelectionHandlers({
       })
 
       // リサイズ処理を継続（境界に達してもfalseにならないよう確認）
-      const resizeProcessed = handleSelectionMouseMove(normalizedCoords)
-      
-      if (!resizeProcessed) {
-        console.warn("🚨 Document-level resize processing failed - check if isResizing became false")
+      try {
+        const resizeProcessed = handleSelectionMouseMove(normalizedCoords)
+        console.log("📋 Document-level capture result:", {
+          resizeProcessed,
+          isResizing,
+          normalizedCoords,
+        })
+        
+        if (!resizeProcessed) {
+          console.warn("🚨 Document-level resize processing returned false:", {
+            isResizing,
+            isGlobalCaptureActive,
+            normalizedCoords,
+          })
+        }
+      } catch (error) {
+        console.error("💥 Exception in document-level resize processing:", error)
       }
       
       // Prevent default behavior
