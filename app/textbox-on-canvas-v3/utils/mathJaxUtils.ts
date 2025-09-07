@@ -167,7 +167,15 @@ export function createOptimizedSVG(
           <div style="font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
                      line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
                      color: ${FONT_SETTINGS.DEFAULT_COLOR};
-                     overflow: visible;">
+                     overflow: visible;
+                     text-align: left;
+                     text-justify: none;
+                     word-break: normal;
+                     white-space: normal;
+                     text-decoration: none;
+                     letter-spacing: normal;
+                     word-spacing: normal;
+                     text-rendering: optimizeSpeed;">
             <style>${DOM_STYLES.MATHJAX_OVERFLOW_CSS}</style>
             ${htmlContent}
           </div>

@@ -104,6 +104,8 @@ export function createTextBoxFromDrag(
     height: rect.height,
     text,
     isSelected: false,
+    horizontalAlign: 'left',
+    verticalAlign: 'top',
   }
 }
 

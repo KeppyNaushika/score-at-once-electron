@@ -20,6 +20,8 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { AlignLeft, AlignCenter, AlignRight, AlignVerticalSpaceAround, AlignVerticalSpaceBetween } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 // 型定義とインターフェース
@@ -126,40 +128,98 @@ export default function TextboxCanvasPage() {
       const canvas = canvasRef.current
       if (!canvas || !text.trim()) return
 
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-
       try {
         setStatus("数式を描画中...")
 
-        // ReactMarkdown + MathJaxでSVG変換
-        const svgElement = await convertTextToSvg(text, width, height)
+        // 対応するテキストボックスを座標とテキストで検索（より確実）
+        const currentTextBox = textBoxes.find(tb => 
+          tb.text === text && 
+          Math.abs(tb.x - x) < 1 && 
+          Math.abs(tb.y - y) < 1
+        )
+        const horizontalAlign = currentTextBox?.horizontalAlign || 'left'
+        const verticalAlign = currentTextBox?.verticalAlign || 'top'
+
+        console.log('描画設定:', { text, horizontalAlign, verticalAlign, textBoxId: currentTextBox?.id })
+
+        // SVG生成（プレビューで正常確認済み）
+        const svgElement = await convertTextToSvg(text, width, height, horizontalAlign, verticalAlign)
 
         if (svgElement) {
-          // SVG描画を試行（高品質レンダリング）
-          const result = await renderSvgToCanvas(
-            svgElement,
-            ctx,
-            x,
-            y,
-            width,
-            height,
-          )
-
-          if (result.width > 0 && result.height > 0) {
-            setStatus("描画完了")
-            return // 成功した場合は終了
-          }
+          // SVG→Canvas変換を回避して、DOM要素として直接配置
+          await renderSvgAsOverlay(svgElement, x, y, width, height)
+          setStatus("描画完了")
+        } else {
+          setStatus("SVG生成失敗")
         }
-
-        // フォールバック処理は省略（通常は上記で成功）
-        setStatus("描画失敗")
       } catch (error) {
         console.error("テキスト描画エラー:", error)
         setStatus("描画エラー")
       }
     },
-    [],
+    [textBoxes],
+  )
+
+  /**
+   * SVGをCanvasの上に絶対位置で配置する
+   * @param svgElement 配置するSVG要素
+   * @param x X座標
+   * @param y Y座標
+   * @param width 幅
+   * @param height 高さ
+   */
+  const renderSvgAsOverlay = useCallback(
+    async (
+      svgElement: SVGSVGElement,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ): Promise<void> => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      // Canvasの位置とスケールを取得
+      const canvasRect = canvas.getBoundingClientRect()
+      const canvasStyle = window.getComputedStyle(canvas)
+      const transform = canvasStyle.transform
+      
+      // スケール値を抽出（zoom設定から）
+      const scaleMatch = transform.match(/matrix\(([^,]+)/)
+      const scale = scaleMatch ? parseFloat(scaleMatch[1]) : zoom
+
+      // SVGの実際のサイズを取得（結合SVGの場合は独自サイズ）
+      const svgWidth = parseFloat(svgElement.getAttribute('width') || width.toString())
+      const svgHeight = parseFloat(svgElement.getAttribute('height') || height.toString())
+
+      // SVG要素を複製してオーバーレイとして配置
+      const overlayId = `svg-overlay-${Date.now()}`
+      const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
+      
+      clonedSvg.id = overlayId
+      clonedSvg.style.position = 'absolute'
+      clonedSvg.style.left = `${canvasRect.left + x * scale}px`
+      clonedSvg.style.top = `${canvasRect.top + y * scale}px`
+      clonedSvg.style.width = `${svgWidth * scale}px`
+      clonedSvg.style.height = `${svgHeight * scale}px`
+      clonedSvg.style.pointerEvents = 'none'
+      clonedSvg.style.zIndex = '10'
+
+      // デバッグ用：SVGサイズをコンソールに出力
+      console.log('SVGオーバーレイ:', {
+        original: { width, height },
+        svg: { width: svgWidth, height: svgHeight },
+        position: { x: x * scale, y: y * scale }
+      })
+
+      // 既存のオーバーレイを削除
+      const existingOverlays = document.querySelectorAll('[id^="svg-overlay-"]')
+      existingOverlays.forEach(overlay => overlay.remove())
+
+      // 新しいオーバーレイを追加
+      document.body.appendChild(clonedSvg)
+    },
+    [zoom]
   )
 
   /**
@@ -441,6 +501,16 @@ export default function TextboxCanvasPage() {
                 </div>
               </div>
 
+              {/* SVG変換後のプレビュー */}
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                <div className="mb-2 text-sm font-medium text-blue-800">🎨 SVG変換後のプレビュー</div>
+                <div id="svg-preview-container" className="space-y-2">
+                  <div className="text-gray-400 italic text-sm">
+                    テキストボックスにテキストを入力してCanvasに描画するとSVGが表示されます
+                  </div>
+                </div>
+              </div>
+
               {/* Red Border Debug Information */}
               <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-gray-600">
                 <div className="mb-2 font-medium">🔴 赤枠サイズ情報</div>
@@ -497,6 +567,73 @@ export default function TextboxCanvasPage() {
                           }
                         }}
                       />
+                      {/* 配置設定 */}
+                      <div className="space-y-4 border-t pt-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">水平方向の配置</label>
+                          <ToggleGroup
+                            type="single"
+                            value={selectedTextBoxId ? textBoxes.find(tb => tb.id === selectedTextBoxId)?.horizontalAlign || 'left' : 'left'}
+                            onValueChange={(value) => {
+                              if (value && selectedTextBoxId) {
+                                setTextBoxes(prev => 
+                                  prev.map(tb => 
+                                    tb.id === selectedTextBoxId 
+                                      ? { ...tb, horizontalAlign: value as 'left' | 'center' | 'right' }
+                                      : tb
+                                  )
+                                )
+                                // Canvas再描画をトリガー
+                                setTimeout(() => redrawCanvas(), 100)
+                              }
+                            }}
+                            className="justify-start"
+                          >
+                            <ToggleGroupItem value="left" aria-label="左揃え">
+                              <AlignLeft className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                              <AlignCenter className="h-4 w-4" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="right" aria-label="右揃え">
+                              <AlignRight className="h-4 w-4" />
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">垂直方向の配置</label>
+                          <ToggleGroup
+                            type="single"
+                            value={selectedTextBoxId ? textBoxes.find(tb => tb.id === selectedTextBoxId)?.verticalAlign || 'top' : 'top'}
+                            onValueChange={(value) => {
+                              if (value && selectedTextBoxId) {
+                                setTextBoxes(prev => 
+                                  prev.map(tb => 
+                                    tb.id === selectedTextBoxId 
+                                      ? { ...tb, verticalAlign: value as 'top' | 'center' | 'bottom' }
+                                      : tb
+                                  )
+                                )
+                                // Canvas再描画をトリガー
+                                setTimeout(() => redrawCanvas(), 100)
+                              }
+                            }}
+                            className="justify-start"
+                          >
+                            <ToggleGroupItem value="top" aria-label="上揃え">
+                              <AlignVerticalSpaceAround className="h-4 w-4 rotate-180" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                              <AlignVerticalSpaceBetween className="h-4 w-4 rotate-90" />
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="bottom" aria-label="下揃え">
+                              <AlignVerticalSpaceAround className="h-4 w-4" />
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+                      </div>
+
                       <div className="flex space-x-2">
                         <Button onClick={handleTextSubmit}>
                           確定 (Ctrl+Enter)

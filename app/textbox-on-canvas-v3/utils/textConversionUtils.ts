@@ -239,6 +239,10 @@ async function convertContainerToSvg(
 
     // SVG生成
     const svgElement = await createMathJaxSVG(processedHtml, 200, 50)
+    
+    // SVGプレビューに表示（デバッグ用）
+    displaySvgPreview(svgElement)
+    
     return svgElement
   } catch (error) {
     console.error("SVG変換エラー:", error)
@@ -247,12 +251,29 @@ async function convertContainerToSvg(
 }
 
 /**
- * Discord Markdown + LaTeX記法テキストを高品質なSVG要素に変換する (V3版)
- * @param text 変換対象のテキスト（Discord Markdown + LaTeX記法対応）
- * @param _width 幅（互換性のため保持、実際は動的測定）
- * @param _height 高さ（互換性のため保持、実際は動的測定）
- * @returns Promise<SVGSVGElement | null> 変換されたSVG要素またはnull
+ * SVG変換結果をプレビュー表示する
+ * @param svgElement 表示するSVG要素
  */
+function displaySvgPreview(svgElement: SVGSVGElement | null): void {
+  const previewContainer = document.getElementById('svg-preview-container')
+  if (!previewContainer) return
+
+  if (svgElement) {
+    // 既存の内容をクリア
+    previewContainer.innerHTML = ''
+    
+    // SVGをクローンして表示
+    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
+    clonedSvg.style.border = '1px solid #007acc'
+    clonedSvg.style.backgroundColor = 'white'
+    clonedSvg.style.margin = '4px'
+    
+    previewContainer.appendChild(clonedSvg)
+  } else {
+    previewContainer.innerHTML = '<div class="text-red-500 text-sm">SVG生成失敗</div>'
+  }
+}
+
 /**
  * 安全な文字列置換のテスト用関数
  * @param text テスト対象のテキスト
@@ -274,26 +295,188 @@ export async function convertTextToSvg(
   text: string,
   _width: number,
   _height: number,
+  horizontalAlign: 'left' | 'center' | 'right' = 'left',
+  verticalAlign: 'top' | 'center' | 'bottom' = 'top'
 ): Promise<SVGSVGElement | null> {
   if (!text.trim()) {
     return null
   }
 
   try {
-    // 1. テキストをHTMLに変換
-    const htmlContent = parseTextWithMath(text)
+    // 1. \nで改行分割
+    const lines = text.split('\n').filter(line => line.trim() !== '')
+    
+    if (lines.length === 0) {
+      return null
+    }
 
-    // 2. 共通のMathJax処理コンテナを取得
-    const container = getSharedMathJaxContainer()
+    // 2. 各行をSVGに変換
+    const lineSvgs: SVGSVGElement[] = []
+    
+    for (const line of lines) {
+      const lineSvg = await convertSingleLineToSvg(line.trim())
+      if (lineSvg) {
+        lineSvgs.push(lineSvg)
+      }
+    }
 
-    // 3. MathJax処理を実行（DIVプレビューと同じロジック）
-    await processMathJaxContent(container, htmlContent)
+    if (lineSvgs.length === 0) {
+      return null
+    }
 
-    // 4. 処理済みコンテナをSVGに変換
-    return await convertContainerToSvg(container)
+    // 3. 複数行SVGを結合（5px間隔）し、テキストボックスサイズに拡大縮小
+    return combineLineSvgs(lineSvgs, 5, _width, _height, horizontalAlign, verticalAlign)
 
   } catch (error) {
     console.error("テキストからSVG変換エラー:", error)
     return null
   }
+}
+
+/**
+ * 単一行をSVGに変換（改行なし）
+ * @param lineText 単一行のテキスト
+ * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
+ */
+async function convertSingleLineToSvg(lineText: string): Promise<SVGSVGElement | null> {
+  if (!lineText.trim()) {
+    return null
+  }
+
+  try {
+    // 1. テキストをHTMLに変換
+    const htmlContent = parseTextWithMath(lineText)
+
+    // 2. 共通のMathJax処理コンテナを取得
+    const container = getSharedMathJaxContainer()
+
+    // 3. MathJax処理を実行（単一行、overflow: hidden）
+    await processSingleLineMathJax(container, htmlContent)
+
+    // 4. 処理済みコンテナをSVGに変換
+    return await convertContainerToSvg(container)
+
+  } catch (error) {
+    console.error("単一行SVG変換エラー:", error)
+    return null
+  }
+}
+
+/**
+ * 単一行用MathJax処理（改行禁止）
+ * @param container 処理対象のDOM要素
+ * @param htmlContent 処理するHTML内容
+ */
+async function processSingleLineMathJax(
+  container: HTMLDivElement,
+  htmlContent: string,
+): Promise<void> {
+  // 1. HTML内容を設定（改行禁止スタイル適用）
+  container.innerHTML = `<div style="white-space: nowrap; overflow: hidden;">${htmlContent}</div>`
+
+  // 2. レンダリング完了まで待機
+  await waitForRenderingComplete()
+
+  // 3. MathJax処理
+  await processMathJax(container)
+
+  // 4. スタイルクリーンアップ
+  cleanupElementStyles(container)
+  await waitForRenderingComplete(1)
+}
+
+/**
+ * 複数行SVGを縦に結合
+ * @param lineSvgs 結合する行SVG配列
+ * @param spacing 行間スペース（px）
+ * @param targetWidth 目標幅（使用されない - 互換性のため残存）
+ * @param targetHeight 目標高さ（使用されない - 互換性のため残存）
+ * @param horizontalAlign 水平方向の配置
+ * @param verticalAlign 垂直方向の配置
+ * @returns SVGSVGElement 結合されたSVG
+ */
+function combineLineSvgs(
+  lineSvgs: SVGSVGElement[], 
+  spacing: number, 
+  targetWidth?: number, 
+  targetHeight?: number,
+  horizontalAlign: 'left' | 'center' | 'right' = 'left',
+  verticalAlign: 'top' | 'center' | 'bottom' = 'top'
+): SVGSVGElement {
+  // 各行のサイズを取得
+  const lineInfos = lineSvgs.map(svg => ({
+    svg,
+    width: parseFloat(svg.getAttribute('width') || '0'),
+    height: parseFloat(svg.getAttribute('height') || '0')
+  }))
+
+  // 自然サイズを計算（拡大縮小なし）
+  const naturalWidth = Math.max(...lineInfos.map(info => info.width))
+  const naturalHeight = lineInfos.reduce((sum, info) => sum + info.height, 0) + 
+                        (lineInfos.length - 1) * spacing
+
+  // Flexboxを使用した配置のためのCSS変数
+  const justifyContent = horizontalAlign === 'left' ? 'flex-start' : 
+                        horizontalAlign === 'center' ? 'center' : 'flex-end'
+  const alignItems = verticalAlign === 'top' ? 'flex-start' : 
+                    verticalAlign === 'center' ? 'center' : 'flex-end'
+
+  // コンテンツを行ごとに収集
+  const contentLines: string[] = []
+  lineInfos.forEach(({ svg }) => {
+    const foreignObject = svg.querySelector('foreignObject')
+    const innerDiv = foreignObject?.querySelector('div > div')
+    const divContent = innerDiv?.innerHTML || ''
+    contentLines.push(divContent)
+  })
+
+  // Flexbox構造でSVG生成（自然サイズを使用）
+  const combinedSvgContent = `
+    <svg xmlns="http://www.w3.org/2000/svg"
+         width="${naturalWidth}"
+         height="${naturalHeight}"
+         viewBox="0 0 ${naturalWidth} ${naturalHeight}">
+      <foreignObject x="0" y="0" width="${naturalWidth}" height="${naturalHeight}" overflow="visible">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="
+          width: 100%;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: ${alignItems};
+          align-items: ${justifyContent};
+          gap: 5px;
+          padding: 0;
+          margin: 0;
+          box-sizing: border-box;
+        ">
+          ${contentLines.map(content => `
+            <div style="
+              font-size: 24px;
+              line-height: 1;
+              color: #000000;
+              text-align: left;
+              text-justify: none;
+              word-break: normal;
+              white-space: nowrap;
+              text-decoration: none;
+              letter-spacing: normal;
+              word-spacing: normal;
+              text-rendering: optimizeSpeed;
+              overflow: hidden;
+            ">
+              <style>
+                mjx-container[jax="SVG"] > svg { overflow: visible !important; }
+                mjx-container svg { overflow: visible !important; }
+              </style>
+              ${content}
+            </div>
+          `).join('')}
+        </div>
+      </foreignObject>
+    </svg>
+  `
+
+  const parser = new DOMParser()
+  const svgDoc = parser.parseFromString(combinedSvgContent, "image/svg+xml")
+  return svgDoc.documentElement as unknown as SVGSVGElement
 }

@@ -21,6 +21,10 @@ export interface TextBox {
   text: string
   /** 選択状態 */
   isSelected: boolean
+  /** 水平方向の配置 */
+  horizontalAlign: 'left' | 'center' | 'right'
+  /** 垂直方向の配置 */
+  verticalAlign: 'top' | 'center' | 'bottom'
 }
 
 /**
