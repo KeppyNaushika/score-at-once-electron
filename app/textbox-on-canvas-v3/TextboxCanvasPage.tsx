@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /**
  * @fileoverview メインのTextbox Canvas ページコンポーネント
  * @description 数学式対応テキストボックスCanvasシステムのメインコンポーネント
@@ -17,35 +18,34 @@
 
 "use client"
 
-import React, { useRef, useEffect, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 
 // 型定義とインターフェース
-import type { TextBox, Point, DragState } from "./types"
+import type { DragState, TextBox } from "./types"
 
 // 定数
 import { SAMPLE_IMAGE_URL } from "./constants"
 
 // ユーティリティ関数群
-import { convertTextToSvg } from "./utils/textConversionUtils"
 import {
-  renderSvgToCanvas,
-  setupDebugPreview,
-  drawTextBoxBorder,
-  drawCreatingTextBox,
   drawBackgroundImage,
+  drawCreatingTextBox,
+  drawTextBoxBorder,
+  renderSvgToCanvas,
   type DebugPreviewState,
 } from "./utils/canvasUtils"
 import {
-  getCanvasCoordinates,
-  findTextBoxAtPoint,
   createTextBoxFromDrag,
-  updateTextBoxSelection,
-  updateTextBoxContent,
+  findTextBoxAtPoint,
+  getCanvasCoordinates,
   isValidDragForTextBox,
+  updateTextBoxContent,
+  updateTextBoxSelection,
 } from "./utils/coordinateUtils"
+import { convertTextToSvg } from "./utils/textConversionUtils"
 
 /**
  * テキストボックス Canvas ページのメインコンポーネント
@@ -344,42 +344,49 @@ export default function TextboxCanvasPage() {
               </div>
 
               {/* Element Information List */}
-              <div className="text-xs text-gray-600 bg-gray-50 rounded-md p-3 border">
-                <div className="font-medium mb-2">要素情報リスト ({textBoxes.length}個)</div>
+              <div className="rounded-md border bg-gray-50 p-3 text-xs text-gray-600">
+                <div className="mb-2 font-medium">
+                  要素情報リスト ({textBoxes.length}個)
+                </div>
                 {textBoxes.length === 0 ? (
-                  <div className="text-gray-400 italic">テキストボックスが作成されていません</div>
+                  <div className="text-gray-400 italic">
+                    テキストボックスが作成されていません
+                  </div>
                 ) : (
                   <div className="space-y-1">
                     {textBoxes.map((textBox) => (
                       <div
                         key={textBox.id}
-                        className={`flex items-center justify-between p-2 rounded ${
-                          textBox.isSelected 
-                            ? 'bg-blue-100 border border-blue-200' 
-                            : 'bg-white border border-gray-200'
+                        className={`flex items-center justify-between rounded p-2 ${
+                          textBox.isSelected
+                            ? "border border-blue-200 bg-blue-100"
+                            : "border border-gray-200 bg-white"
                         }`}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-mono text-xs text-gray-500 mb-1">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 font-mono text-xs text-gray-500">
                             ID: {textBox.id.substring(0, 8)}...
                           </div>
                           <div className="text-xs">
-                            <span className="inline-block mr-3">
-                              位置: ({Math.round(textBox.x)}, {Math.round(textBox.y)})
+                            <span className="mr-3 inline-block">
+                              位置: ({Math.round(textBox.x)},{" "}
+                              {Math.round(textBox.y)})
                             </span>
                             <span className="inline-block">
-                              サイズ: {Math.round(textBox.width)} × {Math.round(textBox.height)}
+                              サイズ: {Math.round(textBox.width)} ×{" "}
+                              {Math.round(textBox.height)}
                             </span>
                           </div>
                           {textBox.text && (
-                            <div className="text-xs text-gray-700 mt-1 truncate">
-                              内容: {textBox.text.substring(0, 50)}{textBox.text.length > 50 ? '...' : ''}
+                            <div className="mt-1 truncate text-xs text-gray-700">
+                              内容: {textBox.text.substring(0, 50)}
+                              {textBox.text.length > 50 ? "..." : ""}
                             </div>
                           )}
                         </div>
-                        <div className="flex-shrink-0 ml-2">
+                        <div className="ml-2 flex-shrink-0">
                           {textBox.isSelected && (
-                            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                            <span className="rounded bg-blue-500 px-2 py-1 text-xs text-white">
                               選択中
                             </span>
                           )}
@@ -391,26 +398,12 @@ export default function TextboxCanvasPage() {
               </div>
 
               {/* Red Border Debug Information */}
-              <div className="text-xs text-gray-600 bg-red-50 rounded-md p-3 border border-red-200">
-                <div className="font-medium mb-2">🔴 赤枠サイズ情報</div>
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-gray-600">
+                <div className="mb-2 font-medium">🔴 赤枠サイズ情報</div>
                 <div id="red-border-display" className="space-y-2">
-                  <div className="text-gray-400 italic">テキストボックスにテキストを入力すると赤枠サイズが表示されます</div>
-                </div>
-              </div>
-
-              {/* Font Metrics Debug Information */}
-              <div className="text-xs text-gray-600 bg-yellow-50 rounded-md p-3 border border-yellow-200">
-                <div className="font-medium mb-2">📐 フォントメトリクス詳細</div>
-                <div id="font-metrics-display" className="space-y-2">
-                  <div className="text-gray-400 italic">テキストボックスを作成・編集するとメトリクスが表示されます</div>
-                </div>
-              </div>
-
-              {/* SVG getBBox Debug Information */}
-              <div className="text-xs text-gray-600 bg-purple-50 rounded-md p-3 border border-purple-200">
-                <div className="font-medium mb-2">📐 SVG getBBox() デバッグ</div>
-                <div id="svg-bbox-display" className="space-y-2">
-                  <div className="text-gray-400 italic">MathJax処理が完了するとSVG getBBox情報が表示されます</div>
+                  <div className="text-gray-400 italic">
+                    テキストボックスにテキストを入力すると赤枠サイズが表示されます
+                  </div>
                 </div>
               </div>
 
