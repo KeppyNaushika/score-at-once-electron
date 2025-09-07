@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 /**
  * @fileoverview メインのTextbox Canvas ページコンポーネント
  * @description 数学式対応テキストボックスCanvasシステムのメインコンポーネント
@@ -35,7 +34,6 @@ import {
   drawCreatingTextBox,
   drawTextBoxBorder,
   renderSvgToCanvas,
-  type DebugPreviewState,
 } from "./utils/canvasUtils"
 import {
   createTextBoxFromDrag,
@@ -66,18 +64,6 @@ export default function TextboxCanvasPage() {
   const [textInputValue, setTextInputValue] = useState<string>("")
   const [zoom, setZoom] = useState<number>(1)
   const [status, setStatus] = useState<string>("")
-
-  // デバッグプレビュー状態
-  const [debugSvgDataUrl, setDebugSvgDataUrl] = useState<string | null>(null)
-  const [debugSvgInfo, setDebugSvgInfo] = useState<string>("")
-
-  /**
-   * デバッグ状態管理オブジェクト
-   */
-  const debugState: DebugPreviewState = {
-    setSvgDataUrl: setDebugSvgDataUrl,
-    setSvgInfo: setDebugSvgInfo,
-  }
 
   /**
    * テキストをCanvas上にレンダリングする（MathJax対応）
@@ -463,36 +449,13 @@ export default function TextboxCanvasPage() {
                       </div>
                       <div className="text-xs text-gray-500">
                         <p>
-                          <strong>数式記法:</strong> インライン数式: $x^2$,
-                          ブロック数式: $$\int x dx$$
+                          <strong>数式記法:</strong> $x^2$ または \(x^2\) (インライン),
+                          $$\int x dx$$ または \[\int x dx\] (ブロック)
                         </p>
                         <p>
-                          <strong>書式:</strong> **太字**, *斜体*,
-                          リスト記法も利用可能
+                          <strong>書式:</strong> **太字**, *斜体*, __下線__, ~~取り消し線~~
                         </p>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* デバッグプレビュー */}
-              {debugSvgDataUrl && (
-                <Card className="border-green-200 bg-green-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      生成されたSVGプレビュー
-                    </CardTitle>
-                    <p className="text-sm text-green-700">{debugSvgInfo}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="rounded border-2 border-green-200 bg-white p-4">
-                      <img
-                        src={debugSvgDataUrl}
-                        alt="Generated SVG Preview"
-                        className="max-w-full"
-                        style={{ display: "block" }}
-                      />
                     </div>
                   </CardContent>
                 </Card>

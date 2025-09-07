@@ -1,13 +1,7 @@
 /**
- * @fileoverview テキスト変換ユーティリティ (V3版)
- * @description ReactMarkdownとMathJaxを使用したテキスト→SVG変換の高度な機能を提供
+ * @fileoverview テキスト変換ユーティリティ (V3版 - Discord Markdown + LaTeX記法)
+ * @description Discord Markdownスタイル記法とMathJaxを使用したテキスト→SVG変換機能を提供
  */
-
-import React from "react"
-import { createRoot } from "react-dom/client"
-import ReactMarkdown from "react-markdown"
-import rehypeMathjax from "rehype-mathjax/svg"
-import remarkMath from "remark-math"
 
 import { FONT_SETTINGS } from "../constants"
 import {
@@ -18,20 +12,106 @@ import {
 } from "./mathJaxUtils"
 
 /**
- * MutationObserverで使用する変更検出の重要度判定
- * @param mutations 変更記録の配列
- * @returns boolean 重要な変更があるかどうか
+ * セキュリティチェック: 危険なパターンを検出
+ * @param text チェック対象のテキスト
+ * @returns boolean 危険なパターンが含まれている場合はtrue
  */
-function hasSignificantChanges(mutations: MutationRecord[]): boolean {
-  return mutations.some(
-    (mutation) =>
-      mutation.type === "childList" &&
-      (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0),
+function isDangerous(text: string): boolean {
+  const dangerousPatterns = [
+    /javascript:/i,
+    /<script/i,
+    /on\w+\s*=/i,
+    /eval\s*\(/i,
+    /<iframe/i,
+    /<object/i,
+    /<embed/i,
+  ]
+  return dangerousPatterns.some((pattern) => pattern.test(text))
+}
+
+/**
+ * 数式内容のサニタイゼーション（LaTeX記法用）
+ * @param content サニタイゼーション対象の数式内容
+ * @returns string サニタイゼーション済みの内容
+ */
+function sanitizeMathContent(content: string): string {
+  // 数学記号、英数字、基本的なLaTeX記号のみ許可
+  return content.replace(
+    /[^a-zA-Z0-9\s+\-*/=(){}[\]^_\\{|}.,\u03B1-\u03C9\u0391-\u03A9]/g,
+    "",
   )
 }
 
 /**
- * 一時的なDOM容器を作成する（ReactMarkdown用）
+ * LaTeX記法を$記法に正規化（\( \) → $...$, \[ \] → $$...$$）
+ * @param text 変換対象のテキスト
+ * @returns string 正規化されたテキスト
+ */
+function preprocessMathSyntax(text: string): string {
+  // セキュリティチェック
+  if (isDangerous(text)) {
+    console.warn("危険なパターンが検出されました")
+    return text
+  }
+
+  // \( \) → $...$ 変換（インライン数式）
+  text = text.replace(/\\[(]\s*(.*?)\s*\\[)]/g, (_match, content) => {
+    const safeContent = sanitizeMathContent(content)
+    return `$${safeContent}$`
+  })
+
+  // \[ \] → $$...$$ 変換（ディスプレイ数式）
+  text = text.replace(/\\[\[]\s*(.*?)\s*\\[\]]/g, (_match, content) => {
+    const safeContent = sanitizeMathContent(content)
+    return `$$${safeContent}$$`
+  })
+
+  return text
+}
+
+/**
+ * Discord Markdown記法をHTMLに変換（数式保護機能付き）
+ * @param text 変換対象のテキスト
+ * @returns string HTML変換されたテキスト
+ */
+function parseDiscordMarkdown(text: string): string {
+  // 1. MathJax構文を一時保護（プレースホルダーを変更）
+  const mathParts: string[] = []
+  let protectedText = text.replace(/\$\$.*?\$\$|\$.*?\$/g, (match) => {
+    mathParts.push(match)
+    return `<MATHPROTECT>${mathParts.length - 1}</MATHPROTECT>`
+  })
+
+  // 2. Discord Markdown → HTML変換
+  protectedText = protectedText
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // 太字
+    .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, "<em>$1</em>") // 斜体（前後に*がない場合のみ）
+    .replace(/__(.+?)__/g, "<u>$1</u>") // 下線
+    .replace(/~~(.+?)~~/g, "<del>$1</del>") // 取り消し線
+
+  // 3. MathJax構文を復元
+  mathParts.forEach((math, index) => {
+    protectedText = protectedText.replace(`<MATHPROTECT>${index}</MATHPROTECT>`, math)
+  })
+
+  return protectedText
+}
+
+/**
+ * テキストをDiscord Markdown + LaTeX記法で解析してHTMLに変換
+ * @param text 変換対象のテキスト
+ * @returns string 変換されたHTML
+ */
+function parseTextWithMath(text: string): string {
+  // 1. LaTeX記法を$記法に正規化
+  const normalizedText = preprocessMathSyntax(text)
+
+  // 2. Discord Markdown処理
+  return parseDiscordMarkdown(normalizedText)
+}
+
+/**
+ * 一時的なDOM容器を作成する（Discord Markdown用）
  * @returns 作成された一時的なDIV要素
  */
 function createTempPreviewContainer(): HTMLDivElement {
@@ -57,40 +137,10 @@ function createTempPreviewContainer(): HTMLDivElement {
 }
 
 /**
- * ReactMarkdownコンテンツを指定されたコンテナにレンダリングする
- * @param container レンダリング先のコンテナ
- * @param text レンダリングするMarkdownテキスト
- * @returns Reactのルート（クリーンアップ用）
- */
-function renderReactMarkdown(container: HTMLDivElement, text: string) {
-  const root = createRoot(container)
-  root.render(
-    React.createElement(
-      ReactMarkdown,
-      {
-        remarkPlugins: [remarkMath],
-        rehypePlugins: [rehypeMathjax],
-      },
-      text,
-    ),
-  )
-  return root
-}
-
-/**
- * クリーンアップ処理を実行する
- * @param root React Root インスタンス
+ * DOM要素をクリーンアップする
  * @param container 削除するコンテナ要素
  */
-function performCleanup(root: any, container: HTMLDivElement): void {
-  try {
-    if (root) {
-      root.unmount()
-    }
-  } catch (cleanupError) {
-    // クリーンアップエラーは無視
-  }
-
+function performCleanup(container: HTMLDivElement): void {
   try {
     if (document.body.contains(container)) {
       document.body.removeChild(container)
@@ -103,12 +153,10 @@ function performCleanup(root: any, container: HTMLDivElement): void {
 /**
  * レンダリング完了後のコンテンツ処理
  * @param container レンダリングされたコンテナ
- * @param root React Root インスタンス
  * @param resolve Promise解決関数
  */
 async function processRenderedContent(
   container: HTMLDivElement,
-  root: any,
   resolve: (value: SVGSVGElement | null) => void,
 ): Promise<void> {
   try {
@@ -129,44 +177,18 @@ async function processRenderedContent(
     const svgElement = await createMathJaxSVG(htmlContent, 200, 50)
 
     // クリーンアップ
-    performCleanup(root, container)
+    performCleanup(container)
 
     resolve(svgElement)
   } catch (error) {
-    performCleanup(root, container)
+    performCleanup(container)
     resolve(null)
   }
 }
 
 /**
- * MutationObserverのコールバック処理
- * @param mutations 変更記録の配列
- * @param container 監視対象のコンテナ
- * @param root React Root インスタンス
- * @param resolve Promise解決関数
- * @param renderingComplete レンダリング完了フラグ
- * @param observer MutationObserverインスタンス
- */
-async function handleMutationObserver(
-  mutations: MutationRecord[],
-  container: HTMLDivElement,
-  root: any,
-  resolve: (value: SVGSVGElement | null) => void,
-  renderingComplete: { current: boolean },
-  observer: MutationObserver,
-): Promise<void> {
-  if (renderingComplete.current) return
-
-  if (hasSignificantChanges(mutations) && container.children.length > 0) {
-    renderingComplete.current = true
-    observer.disconnect()
-    await processRenderedContent(container, root, resolve)
-  }
-}
-
-/**
- * Markdownテキストを高品質なSVG要素に変換する (V3版)
- * @param text 変換対象のMarkdownテキスト
+ * Discord Markdown + LaTeX記法テキストを高品質なSVG要素に変換する (V3版)
+ * @param text 変換対象のテキスト（Discord Markdown + LaTeX記法対応）
  * @param _width 幅（互換性のため保持、実際は動的測定）
  * @param _height 高さ（互換性のため保持、実際は動的測定）
  * @returns Promise<SVGSVGElement | null> 変換されたSVG要素またはnull
@@ -181,37 +203,19 @@ export async function convertTextToSvg(
   }
 
   try {
+    // 1. Discord Markdown + LaTeX記法を解析してHTMLに変換
+    const htmlContent = parseTextWithMath(text)
+
+    // 2. DOM容器を作成してHTMLを配置
     const tempPreviewDiv = createTempPreviewContainer()
-    const root = renderReactMarkdown(tempPreviewDiv, text)
+    tempPreviewDiv.innerHTML = htmlContent
 
+    // 3. MathJax処理とSVG生成を実行
     return new Promise<SVGSVGElement | null>((resolve) => {
-      const renderingComplete = { current: false }
-
-      const observer = new MutationObserver(async (mutations) => {
-        await handleMutationObserver(
-          mutations,
-          tempPreviewDiv,
-          root,
-          resolve,
-          renderingComplete,
-          observer,
-        )
-      })
-
-      observer.observe(tempPreviewDiv, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-      })
-
-      // タイムアウト設定（10秒）
+      // 短時間待機後に処理開始（DOM配置完了を確保）
       setTimeout(async () => {
-        if (!renderingComplete.current) {
-          observer.disconnect()
-          performCleanup(root, tempPreviewDiv)
-          resolve(null)
-        }
-      }, 10000)
+        await processRenderedContent(tempPreviewDiv, resolve)
+      }, 10)
     })
   } catch (error) {
     return null

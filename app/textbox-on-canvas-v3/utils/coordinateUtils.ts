@@ -3,7 +3,7 @@
  * @description Canvas座標系とマウス座標系の変換、テキストボックス操作
  */
 
-import type { Point, TextBox, DragState } from '../types'
+import type { DragState, Point, TextBox } from "../types"
 
 /**
  * マウス座標をCanvas座標に変換する
@@ -17,12 +17,12 @@ export function getCanvasCoordinates(
   clientX: number,
   clientY: number,
   canvas: HTMLCanvasElement,
-  zoom: number
+  zoom: number,
 ): Point {
   const rect = canvas.getBoundingClientRect()
   const x = (clientX - rect.left) / zoom
   const y = (clientY - rect.top) / zoom
-  
+
   return { x, y }
 }
 
@@ -34,7 +34,7 @@ export function getCanvasCoordinates(
  */
 export function isPointInRect(
   point: Point,
-  rect: { x: number; y: number; width: number; height: number }
+  rect: { x: number; y: number; width: number; height: number },
 ): boolean {
   return (
     point.x >= rect.x &&
@@ -52,11 +52,9 @@ export function isPointInRect(
  */
 export function findTextBoxAtPoint(
   textBoxes: TextBox[],
-  point: Point
+  point: Point,
 ): TextBox | null {
-  return textBoxes.find(textBox => 
-    isPointInRect(point, textBox)
-  ) || null
+  return textBoxes.find((textBox) => isPointInRect(point, textBox)) || null
 }
 
 /**
@@ -74,7 +72,7 @@ export function createRectFromDrag(dragState: DragState): {
   const y = Math.min(dragState.startY, dragState.currentY)
   const width = Math.abs(dragState.currentX - dragState.startX)
   const height = Math.abs(dragState.currentY - dragState.startY)
-  
+
   return { x, y, width, height }
 }
 
@@ -94,10 +92,10 @@ export function generateTextBoxId(): string {
  */
 export function createTextBoxFromDrag(
   dragState: DragState,
-  text: string = ''
+  text: string = "",
 ): TextBox {
   const rect = createRectFromDrag(dragState)
-  
+
   return {
     id: generateTextBoxId(),
     x: rect.x,
@@ -105,7 +103,7 @@ export function createTextBoxFromDrag(
     width: rect.width,
     height: rect.height,
     text,
-    isSelected: false
+    isSelected: false,
   }
 }
 
@@ -117,11 +115,11 @@ export function createTextBoxFromDrag(
  */
 export function updateTextBoxSelection(
   textBoxes: TextBox[],
-  selectedId: string | null
+  selectedId: string | null,
 ): TextBox[] {
-  return textBoxes.map(textBox => ({
+  return textBoxes.map((textBox) => ({
     ...textBox,
-    isSelected: textBox.id === selectedId
+    isSelected: textBox.id === selectedId,
   }))
 }
 
@@ -135,12 +133,10 @@ export function updateTextBoxSelection(
 export function updateTextBoxContent(
   textBoxes: TextBox[],
   id: string,
-  newText: string
+  newText: string,
 ): TextBox[] {
-  return textBoxes.map(textBox =>
-    textBox.id === id
-      ? { ...textBox, text: newText }
-      : textBox
+  return textBoxes.map((textBox) =>
+    textBox.id === id ? { ...textBox, text: newText } : textBox,
   )
 }
 
@@ -150,11 +146,8 @@ export function updateTextBoxContent(
  * @param id 削除するテキストボックスのID
  * @returns 更新されたテキストボックス配列
  */
-export function removeTextBox(
-  textBoxes: TextBox[],
-  id: string
-): TextBox[] {
-  return textBoxes.filter(textBox => textBox.id !== id)
+export function removeTextBox(textBoxes: TextBox[], id: string): TextBox[] {
+  return textBoxes.filter((textBox) => textBox.id !== id)
 }
 
 /**
@@ -167,7 +160,7 @@ export function removeTextBox(
 export function isValidTextBoxSize(
   rect: { width: number; height: number },
   minWidth: number = 10,
-  minHeight: number = 10
+  minHeight: number = 10,
 ): boolean {
   return rect.width >= minWidth && rect.height >= minHeight
 }
@@ -182,7 +175,7 @@ export function isValidTextBoxSize(
 export function isValidDragForTextBox(
   dragState: DragState,
   minWidth: number = 10,
-  minHeight: number = 10
+  minHeight: number = 10,
 ): boolean {
   const rect = createRectFromDrag(dragState)
   return isValidTextBoxSize(rect, minWidth, minHeight)

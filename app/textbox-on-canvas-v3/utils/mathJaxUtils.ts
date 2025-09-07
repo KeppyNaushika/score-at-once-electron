@@ -3,15 +3,22 @@
  * @description MathJax数式処理とSVG生成の高度な機能を提供
  */
 
-import { MATHJAX_SETTINGS, FONT_SETTINGS, DOM_STYLES, SVG_SETTINGS } from '../constants'
-import type { MeasuredSize, MathJaxProcessingOptions } from '../types'
+import {
+  DOM_STYLES,
+  FONT_SETTINGS,
+  MATHJAX_SETTINGS,
+  SVG_SETTINGS,
+} from "../constants"
+import type { MeasuredSize } from "../types"
 
 /**
  * ブラウザの描画完了を待機する
  * @param frames 待機するフレーム数（デフォルト: 2）
  * @returns Promise<void>
  */
-export async function waitForRenderingComplete(frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES): Promise<void> {
+export async function waitForRenderingComplete(
+  frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES,
+): Promise<void> {
   for (let i = 0; i < frames; i++) {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   }
@@ -24,7 +31,7 @@ export async function waitForRenderingComplete(frames: number = MATHJAX_SETTINGS
  */
 export async function processMathJax(container: HTMLElement): Promise<void> {
   const MathJax = (window as any).MathJax
-  
+
   if (!MathJax || !MathJax.typesetPromise) {
     return
   }
@@ -33,7 +40,7 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
     await MathJax.typesetPromise([container])
     await waitForRenderingComplete()
   } catch (error) {
-    console.error('MathJax処理エラー:', error)
+    console.error("MathJax処理エラー:", error)
   }
 }
 
@@ -43,30 +50,30 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
  */
 export function cleanupElementStyles(container: HTMLElement): void {
   // 全要素のマージン・パディング・ボーダーをリセット
-  const allElements = container.querySelectorAll('*')
+  const allElements = container.querySelectorAll("*")
   allElements.forEach((element) => {
     const htmlElement = element as HTMLElement
-    htmlElement.style.margin = '0'
-    htmlElement.style.padding = '0'
-    htmlElement.style.border = '0'
+    htmlElement.style.margin = "0"
+    htmlElement.style.padding = "0"
+    htmlElement.style.border = "0"
   })
 
   // 段落要素の特別処理
-  const paragraphs = container.querySelectorAll('p')
+  const paragraphs = container.querySelectorAll("p")
   paragraphs.forEach((p) => {
     const htmlP = p as HTMLElement
-    htmlP.style.margin = '0'
-    htmlP.style.padding = '0'
+    htmlP.style.margin = "0"
+    htmlP.style.padding = "0"
     htmlP.style.lineHeight = FONT_SETTINGS.DEFAULT_LINE_HEIGHT.toString()
   })
 
   // MathJax要素のベースライン配置処理
-  const mjxElements = container.querySelectorAll('mjx-container')
+  const mjxElements = container.querySelectorAll("mjx-container")
   mjxElements.forEach((mjx) => {
     const htmlMjx = mjx as HTMLElement
-    htmlMjx.style.margin = '0'
-    htmlMjx.style.padding = '0'
-    htmlMjx.style.verticalAlign = 'baseline' // ベースライン配置
+    htmlMjx.style.margin = "0"
+    htmlMjx.style.padding = "0"
+    htmlMjx.style.verticalAlign = "baseline" // ベースライン配置
   })
 }
 
@@ -80,10 +87,10 @@ export function cleanupElementStyles(container: HTMLElement): void {
 export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number
+  initialHeight: number,
 ): Promise<MeasuredSize> {
   // 一時的なDOM要素を作成（scrollWidth/scrollHeight専用設定）
-  const tempDiv = document.createElement('div')
+  const tempDiv = document.createElement("div")
   tempDiv.style.cssText = `
     position: absolute;
     left: -9999px;
@@ -105,7 +112,7 @@ export async function measureMathJaxContentSize(
 
   let measuredSize: MeasuredSize = {
     width: initialWidth,
-    height: initialHeight
+    height: initialHeight,
   }
 
   try {
@@ -116,18 +123,16 @@ export async function measureMathJaxContentSize(
     // ScrollWidth/ScrollHeightのみで測定（V3専用ロジック）
     const scrollSize = {
       width: tempDiv.scrollWidth,
-      height: tempDiv.scrollHeight
+      height: tempDiv.scrollHeight,
     }
 
     // 最小サイズを確保してscrollWidth/scrollHeightのみ採用
     measuredSize = {
       width: Math.max(20, scrollSize.width),
-      height: Math.max(20, scrollSize.height)
+      height: Math.max(20, scrollSize.height),
     }
-
-
   } catch (error) {
-    console.error('MathJax測定エラー:', error)
+    console.error("MathJax測定エラー:", error)
   } finally {
     // 必ずクリーンアップする
     if (document.body.contains(tempDiv)) {
@@ -144,21 +149,24 @@ export async function measureMathJaxContentSize(
  * @param measuredSize 測定されたサイズ
  * @returns 生成されたSVG要素
  */
-export function createOptimizedSVG(htmlContent: string, measuredSize: MeasuredSize): SVGSVGElement {
+export function createOptimizedSVG(
+  htmlContent: string,
+  measuredSize: MeasuredSize,
+): SVGSVGElement {
   const svgString = `
-    <svg xmlns="${SVG_SETTINGS.NAMESPACE}" 
-         width="${measuredSize.width}" 
-         height="${measuredSize.height}" 
-         viewBox="0 0 ${measuredSize.width} ${measuredSize.height}" 
+    <svg xmlns="${SVG_SETTINGS.NAMESPACE}"
+         width="${measuredSize.width}"
+         height="${measuredSize.height}"
+         viewBox="0 0 ${measuredSize.width} ${measuredSize.height}"
          overflow="${SVG_SETTINGS.DEFAULT_OVERFLOW}">
-      <foreignObject x="0" y="0" 
-                     width="${measuredSize.width}" 
-                     height="${measuredSize.height}" 
+      <foreignObject x="0" y="0"
+                     width="${measuredSize.width}"
+                     height="${measuredSize.height}"
                      overflow="${SVG_SETTINGS.DEFAULT_OVERFLOW}">
         <div xmlns="${SVG_SETTINGS.XHTML_NAMESPACE}">
-          <div style="font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px; 
-                     line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT}; 
-                     color: ${FONT_SETTINGS.DEFAULT_COLOR}; 
+          <div style="font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+                     line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
+                     color: ${FONT_SETTINGS.DEFAULT_COLOR};
                      overflow: visible;">
             <style>${DOM_STYLES.MATHJAX_OVERFLOW_CSS}</style>
             ${htmlContent}
@@ -169,7 +177,7 @@ export function createOptimizedSVG(htmlContent: string, measuredSize: MeasuredSi
   `
 
   const parser = new DOMParser()
-  const svgDoc = parser.parseFromString(svgString, 'image/svg+xml')
+  const svgDoc = parser.parseFromString(svgString, "image/svg+xml")
   return svgDoc.documentElement as unknown as SVGSVGElement
 }
 
@@ -183,11 +191,15 @@ export function createOptimizedSVG(htmlContent: string, measuredSize: MeasuredSi
 export async function createMathJaxSVG(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number
+  initialHeight: number,
 ): Promise<SVGSVGElement> {
   // MathJax処理後の正確なサイズを測定
-  const measuredSize = await measureMathJaxContentSize(htmlContent, initialWidth, initialHeight)
-  
+  const measuredSize = await measureMathJaxContentSize(
+    htmlContent,
+    initialWidth,
+    initialHeight,
+  )
+
   // 測定結果に基づいて最適なSVGを生成
   return createOptimizedSVG(htmlContent, measuredSize)
 }
