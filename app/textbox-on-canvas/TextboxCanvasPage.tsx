@@ -406,6 +406,14 @@ export default function TextboxCanvasPage() {
                 </div>
               </div>
 
+              {/* SVG getBBox Debug Information */}
+              <div className="text-xs text-gray-600 bg-purple-50 rounded-md p-3 border border-purple-200">
+                <div className="font-medium mb-2">📐 SVG getBBox() デバッグ</div>
+                <div id="svg-bbox-display" className="space-y-2">
+                  <div className="text-gray-400 italic">MathJax処理が完了するとSVG getBBox情報が表示されます</div>
+                </div>
+              </div>
+
               {/* コントロールパネル */}
               <div className="flex items-center space-x-4">
                 <Button

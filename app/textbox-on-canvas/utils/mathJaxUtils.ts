@@ -155,6 +155,82 @@ export async function measureMathJaxContentSize(
     // tempDiv自体にも紫色の枠を表示
     tempDiv.style.border = '3px solid purple'
     tempDiv.style.boxSizing = 'border-box'
+    // MathJax要素の詳細測定とSVG getBBox デバッグデータ収集
+    const mjxContainers = tempDiv.querySelectorAll('mjx-container')
+    let maxMathJaxHeight = 0
+    let svgBBoxData: any[] = []
+    
+    mjxContainers.forEach((mjx, index) => {
+      const mjxRect = mjx.getBoundingClientRect()
+      const htmlMjx = mjx as HTMLElement
+      htmlMjx.style.border = '2px solid darkviolet'
+      htmlMjx.style.boxSizing = 'border-box'
+      
+      // SVG要素のgetBBox()を試行
+      const svgElement = htmlMjx.querySelector('svg')
+      
+      if (svgElement) {
+        try {
+          const bbox = svgElement.getBBox()
+          const bboxInfo = {
+            width: bbox.width,
+            height: bbox.height,
+            x: bbox.x,
+            y: bbox.y
+          }
+          
+          // SVG自体の属性も取得
+          const svgWidth = svgElement.getAttribute('width')
+          const svgHeight = svgElement.getAttribute('height')
+          const viewBox = svgElement.getAttribute('viewBox')
+          
+          svgBBoxData.push({
+            index: index + 1,
+            tagName: htmlMjx.tagName,
+            getBBox: bboxInfo,
+            svgAttributes: {
+              width: svgWidth,
+              height: svgHeight,
+              viewBox: viewBox
+            },
+            boundingClientRect: {
+              width: mjxRect.width,
+              height: mjxRect.height
+            },
+            difference: {
+              width: mjxRect.width - bbox.width,
+              height: mjxRect.height - bbox.height
+            }
+          })
+        } catch (error) {
+          svgBBoxData.push({
+            index: index + 1,
+            tagName: htmlMjx.tagName,
+            error: (error as Error).message,
+            boundingClientRect: {
+              width: mjxRect.width,
+              height: mjxRect.height
+            }
+          })
+        }
+      }
+      
+      console.log(`🧮 MathJax要素${index + 1}:`, {
+        boundingRect: { 
+          width: mjxRect.width, 
+          height: mjxRect.height,
+          left: mjxRect.left,
+          top: mjxRect.top
+        },
+        scrollSize: {
+          width: htmlMjx.scrollWidth,
+          height: htmlMjx.scrollHeight
+        }
+      })
+      
+      maxMathJaxHeight = Math.max(maxMathJaxHeight, mjxRect.height)
+    })
+
     // フォントメトリクス詳細測定
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')!
@@ -212,7 +288,41 @@ export async function measureMathJaxContentSize(
             <div>最終: <span class="font-bold text-red-800">${Math.max(initialWidth, Math.ceil(Math.max(boundingRect.width, scrollSize.width)))}×${Math.max(initialHeight, Math.ceil(Math.max(boundingRect.height, scrollSize.height)))}px</span></div>
           </div>
         </div>
+        
       `
+    }
+
+    // SVG getBBox情報を別のDIVに表示
+    const svgBBoxDisplay = document.getElementById('svg-bbox-display')
+    if (svgBBoxDisplay) {
+      svgBBoxDisplay.innerHTML = svgBBoxData.length === 0 ? 
+        '<div class="text-gray-400 italic text-sm">MathJax SVG要素が見つかりません</div>' : 
+        svgBBoxData.map(data => `
+          <div class="mb-3 p-2 bg-white rounded border text-xs">
+            <div class="font-medium text-purple-800 mb-1">MathJax要素 ${data.index} (${data.tagName})</div>
+            ${data.error ? 
+              `<div class="text-red-600">エラー: ${data.error}</div>` :
+              `<div class="grid grid-cols-2 gap-2">
+                <div>
+                  <div class="font-medium text-blue-700">getBBox()</div>
+                  <div>幅: ${data.getBBox.width.toFixed(2)}px</div>
+                  <div>高さ: ${data.getBBox.height.toFixed(2)}px</div>
+                  <div>x: ${data.getBBox.x.toFixed(2)}, y: ${data.getBBox.y.toFixed(2)}</div>
+                </div>
+                <div>
+                  <div class="font-medium text-red-700">getBoundingClientRect()</div>
+                  <div>幅: ${data.boundingClientRect.width.toFixed(2)}px</div>
+                  <div>高さ: ${data.boundingClientRect.height.toFixed(2)}px</div>
+                  <div class="text-orange-600">差異: ${data.difference.width.toFixed(2)}×${data.difference.height.toFixed(2)}</div>
+                </div>
+              </div>
+              <div class="mt-2 text-gray-600">
+                <div>SVG属性: ${data.svgAttributes.width}×${data.svgAttributes.height}</div>
+                <div>viewBox: ${data.svgAttributes.viewBox || 'なし'}</div>
+              </div>`
+            }
+          </div>
+        `).join('')
     }
 
     console.log('📐 フォントメトリクス詳細:', {
@@ -222,35 +332,6 @@ export async function measureMathJaxContentSize(
       difference: diffVisual.toFixed(1)
     })
 
-    // MathJax要素の詳細測定
-    const mjxContainers = tempDiv.querySelectorAll('mjx-container')
-    let maxMathJaxHeight = 0
-    
-    mjxContainers.forEach((mjx, index) => {
-      const mjxRect = mjx.getBoundingClientRect()
-      const htmlMjx = mjx as HTMLElement
-      htmlMjx.style.border = '2px solid darkviolet'
-      htmlMjx.style.boxSizing = 'border-box'
-      
-      console.log(`🧮 MathJax要素${index + 1}:`, {
-        boundingRect: { 
-          width: mjxRect.width, 
-          height: mjxRect.height,
-          left: mjxRect.left,
-          top: mjxRect.top
-        },
-        scrollSize: {
-          width: htmlMjx.scrollWidth,
-          height: htmlMjx.scrollHeight
-        },
-        offsetSize: {
-          width: htmlMjx.offsetWidth,
-          height: htmlMjx.offsetHeight
-        }
-      })
-      
-      maxMathJaxHeight = Math.max(maxMathJaxHeight, mjxRect.height)
-    })
 
     // 最大値を採用（完璧な測定のため余白なし）
     measuredSize = {
