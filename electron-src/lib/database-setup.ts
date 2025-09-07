@@ -22,16 +22,7 @@ export class DatabaseSetup {
   isDatabaseExists(): boolean {
     const absolutePath = path.resolve(this.dbPath)
     try {
-      const exists = fs.existsSync(absolutePath)
-      console.log(`🔍 Database check: ${absolutePath} - ${exists ? 'EXISTS' : 'NOT FOUND'}`)
-      
-      if (exists) {
-        // ファイルの詳細情報もログ出力
-        const stats = fs.statSync(absolutePath)
-        console.log(`📄 Database file info: size=${stats.size} bytes, writable=${!!(stats.mode & parseInt('200', 8))}`)
-      }
-      
-      return exists
+      return fs.existsSync(absolutePath)
     } catch (error) {
       console.error(`❌ Error checking database existence:`, error)
       return false
@@ -45,9 +36,7 @@ export class DatabaseSetup {
     try {
       const userCount = await this.prisma.user.count()
       const classCount = await this.prisma.class.count()
-      const isEmpty = userCount === 0 && classCount === 0
-      console.log(`📊 Database content check: Users=${userCount}, Classes=${classCount} - ${isEmpty ? 'EMPTY' : 'HAS DATA'}`)
-      return isEmpty
+      return userCount === 0 && classCount === 0
     } catch (error) {
       console.log('❌ Database content check failed:', error)
       return true // エラーの場合は空とみなす
@@ -62,13 +51,6 @@ export class DatabaseSetup {
     try {
       if (!fs.existsSync(dbDir)) {
         fs.mkdirSync(dbDir, { recursive: true, mode: 0o755 })
-        console.log(`📁 Created database directory: ${dbDir}`)
-        
-        // 作成確認
-        const stats = fs.statSync(dbDir)
-        console.log(`📁 Directory verified: isDirectory=${stats.isDirectory()}, mode=${stats.mode.toString(8)}`)
-      } else {
-        console.log(`📁 Database directory already exists: ${dbDir}`)
       }
     } catch (error) {
       console.error(`❌ Failed to create database directory: ${dbDir}`, error)
@@ -84,7 +66,7 @@ export class DatabaseSetup {
       console.log('🌱 Starting integrated seed...')
 
       // デフォルトユーザーの作成
-      const defaultUser = await this.prisma.user.upsert({
+      await this.prisma.user.upsert({
         where: { username: 'admin' },
         update: {},
         create: {
@@ -94,7 +76,6 @@ export class DatabaseSetup {
           passcodeType: 'none'
         }
       })
-      console.log('✅ Default user created:', defaultUser.name)
 
       // サンプル学級の作成
       const sampleClass = await this.prisma.class.upsert({
@@ -108,7 +89,6 @@ export class DatabaseSetup {
           isVisible: true
         }
       })
-      console.log('✅ Sample class created:', sampleClass.name)
 
       // サンプル生徒の作成
       const sampleStudents = [
@@ -164,8 +144,6 @@ export class DatabaseSetup {
             }
           })
         }
-        
-        console.log(`✅ Sample student created: ${student.lastName} ${student.firstName}`)
       }
 
       // サンプル小計グループの作成
@@ -180,7 +158,6 @@ export class DatabaseSetup {
           }
         })
       }
-      console.log('✅ Math subtotal group created:', mathSubtotalGroup.name)
 
       // サンプル小計項目の作成
       const mathSubtotals = [
@@ -206,7 +183,6 @@ export class DatabaseSetup {
             }
           })
         }
-        console.log(`✅ Math subtotal created: ${subtotalData.name}`)
       }
 
       console.log('🎉 Integrated seed completed successfully!')
@@ -226,7 +202,6 @@ export class DatabaseSetup {
       let setupPerformed = false
 
       if (!dbExists) {
-        console.log('🏗️ Database file not found, creating and initializing...')
         // データベースディレクトリを確保
         this.ensureDatabaseDirectory()
         
@@ -235,7 +210,6 @@ export class DatabaseSetup {
         const wasCreated = await initializeDatabase()
         
         if (wasCreated) {
-          console.log('✅ Database schema created successfully')
           // 新しく作成されたDBにシードデータを投入
           await this.runSeed()
           setupPerformed = true
@@ -243,13 +217,11 @@ export class DatabaseSetup {
       } else {
         const isEmpty = await this.isDatabaseEmpty()
         if (isEmpty) {
-          console.log('📭 Database exists but is empty, running seed...')
           await this.runSeed()
           setupPerformed = true
         }
       }
 
-      console.log('✅ Database setup check completed')
       return setupPerformed
     } catch (error) {
       console.error('❌ Database setup failed:', error)

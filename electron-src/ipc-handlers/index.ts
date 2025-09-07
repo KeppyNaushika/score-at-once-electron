@@ -9,8 +9,6 @@ import { setupAuthHandlers } from "./auth-handlers"
 import { setupSubtotalGroupHandlers } from "./subtotal-group-handlers"
 
 export function setupAllIPCHandlers(): void {
-  console.log("🔄 Setting up all IPC handlers...")
-  
   setupProjectHandlers()
   setupStudentHandlers()
   setupCropRegionHandlers() // CropRegion handlers

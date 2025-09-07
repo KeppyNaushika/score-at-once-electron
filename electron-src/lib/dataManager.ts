@@ -7,28 +7,25 @@ export const getAppRootPath = (): string => {
   if (app.isPackaged) {
     // パッケージ化されている場合
     const exePath = app.getPath("exe")
-    console.log(`Packaged app exe path: ${exePath}`)
-
     // macOSの場合、.appと同階層にdataフォルダを作成
     if (process.platform === "darwin" && exePath.includes(".app/")) {
       // /path/to/Score at Once.app/Contents/MacOS/score-at-once
       // から /path/to/ を取得
       const appPath = exePath.substring(0, exePath.indexOf(".app/") + 4)
       const rootPath = path.dirname(appPath)
-      console.log(`macOS app root path: ${rootPath}`)
       return rootPath
     }
 
     // Windows等その他のプラットフォーム
     const rootPath = path.dirname(exePath)
-    console.log(`Windows platform exe path: ${exePath}`)
-    console.log(`Windows platform root path: ${rootPath}`)
 
     // Windowsでファイルパスが適切に解決されるかチェック
     try {
       const fs = require("fs")
       const exists = fs.existsSync(rootPath)
-      console.log(`Windows root path exists: ${exists}`)
+      if (!exists) {
+        console.error(`Windows root path does not exist: ${rootPath}`)
+      }
     } catch (error) {
       console.error(`Error checking Windows root path:`, error)
     }
@@ -37,17 +34,13 @@ export const getAppRootPath = (): string => {
   } else {
     // 開発環境の場合
     const rootPath = process.cwd()
-    // 開発環境でのログ出力を削減（必要時のみ有効化）
-    // console.log(`Development root path: ${rootPath}`)
-    return rootPath
+        return rootPath
   }
 }
 
 // データディレクトリのパス
 export const getDataDirectory = (): string => {
   const dataPath = path.join(getAppRootPath(), "data")
-  // 開発環境でのログ出力を削減（必要時のみ有効化）
-  // console.log(`Data directory path: ${dataPath}`)
   return dataPath
 }
 
@@ -74,38 +67,21 @@ export const getExportsDirectory = (): string => {
 // データディレクトリの初期化
 export const initializeDataDirectory = async (): Promise<void> => {
   const dataDir = getDataDirectory()
-  console.log(`Initializing data directory: ${dataDir}`)
 
   try {
     // 親ディレクトリの存在確認と作成
     const parentDir = path.dirname(dataDir)
-    console.log(`Ensuring parent directory exists: ${parentDir}`)
     await fs.mkdir(parentDir, { recursive: true, mode: 0o755 })
 
     // データディレクトリの作成
-    console.log(`Creating data directory: ${dataDir}`)
     await fs.mkdir(dataDir, { recursive: true, mode: 0o755 })
-    
-    // 作成確認
-    const stats = await fs.stat(dataDir)
-    console.log(`Data directory created successfully, isDirectory: ${stats.isDirectory()}`)
 
     // サブディレクトリの作成
     const projectsDir = path.join(dataDir, "projects")
     const exportsDir = getExportsDirectory()
     
-    console.log(`Creating projects directory: ${projectsDir}`)
     await fs.mkdir(projectsDir, { recursive: true, mode: 0o755 })
-    
-    console.log(`Creating exports directory: ${exportsDir}`)
     await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
-
-    // 作成確認
-    const projectStats = await fs.stat(projectsDir)
-    const exportStats = await fs.stat(exportsDir)
-    
-    console.log(`Projects directory verified: ${projectStats.isDirectory()}`)
-    console.log(`Exports directory verified: ${exportStats.isDirectory()}`)
     
     console.log("Data directory initialization completed successfully")
   } catch (error) {
@@ -113,13 +89,6 @@ export const initializeDataDirectory = async (): Promise<void> => {
     console.error("Data directory path:", dataDir)
     console.error("Process platform:", process.platform)
     console.error("App is packaged:", app.isPackaged)
-    
-    // より詳細なエラー情報
-    if (error instanceof Error) {
-      console.error("Error name:", error.name)
-      console.error("Error message:", error.message)
-      console.error("Error stack:", error.stack)
-    }
     
     throw new Error(`Data directory initialization failed: ${error instanceof Error ? error.message : error}`)
   }

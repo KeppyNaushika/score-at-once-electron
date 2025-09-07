@@ -5,20 +5,15 @@ import {
   initializeDataDirectory,
 } from "./lib/dataManager"
 import {
-  initializeDatabase,
   optimizeDatabaseForSharedDrive,
 } from "./lib/prisma/databaseInitializer"
 
 export async function initializeApp(): Promise<void> {
   try {
-    console.log("Starting application initialization...")
-    
     // データディレクトリの初期化
-    console.log("Initializing data directory...")
     await initializeDataDirectory()
 
     // データベースの初期化とセットアップ
-    console.log("Initializing database...")
     try {
       const { DatabaseSetup } = await import("./lib/database-setup")
       const dbSetup = new DatabaseSetup()
@@ -36,11 +31,9 @@ export async function initializeApp(): Promise<void> {
     }
 
     // 共有ドライブ用の最適化
-    console.log("Optimizing database for shared drive...")
     await optimizeDatabaseForSharedDrive()
 
     // データベース接続テスト
-    console.log("Testing database connection...")
     const { checkDatabaseHealth } = await import("./lib/prisma/databaseInitializer")
     const isHealthy = await checkDatabaseHealth()
     
@@ -48,7 +41,6 @@ export async function initializeApp(): Promise<void> {
       throw new Error("Database health check failed")
     }
     
-    console.log("Database connection test passed")
     console.log("Application initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize application:", error)

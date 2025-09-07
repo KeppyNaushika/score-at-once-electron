@@ -47,7 +47,6 @@ export function createMainWindow(): BrowserWindow {
     mainWindow.webContents.openDevTools()
   }
 
-  console.log("Main window created, waiting for Next.js server...")
   
   // webContentsのクラッシュイベントをキャッチ
   mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
@@ -62,18 +61,9 @@ export function createMainWindow(): BrowserWindow {
     console.log('✅ WebContents became responsive again')
   })
   
-  mainWindow.webContents.on('did-finish-load', () => {
-    console.log('✅ Page finished loading')
-  })
-  
-  mainWindow.webContents.on('dom-ready', () => {
-    console.log('✅ DOM ready')
-  })
-  
   // Windowsでは即座にウィンドウを表示（デバッグ用）
   if (process.platform === "win32") {
     setTimeout(() => {
-      console.log("Showing window immediately for Windows debugging")
       mainWindow.show()
     }, 2000)
   }
@@ -104,32 +94,17 @@ export function createMainWindow(): BrowserWindow {
     
     const waitForServer = async (): Promise<void> => {
       while (attempts < maxAttempts) {
-        console.log(`Checking Next.js server... attempt ${attempts + 1}/${maxAttempts}`)
-        
         if (await checkServer()) {
-          console.log("Next.js server is ready, loading URL...")
-          
-          // より詳細なロードイベントを監視
-          mainWindow.webContents.once('did-start-loading', () => {
-            console.log('🔄 Started loading URL')
-          })
-          
-          mainWindow.webContents.once('did-stop-loading', () => {
-            console.log('⏹ Stopped loading URL')
-          })
-          
           mainWindow.webContents.once('did-fail-load', (event, errorCode, errorDescription) => {
             console.error('❌ Failed to load URL:', { errorCode, errorDescription })
           })
           
           try {
             await mainWindow.loadURL(url)
-            console.log("✅ loadURL completed successfully")
             
             // 少し遅延を追加してから表示
             setTimeout(() => {
               mainWindow.show()
-              console.log("Main window displayed")
             }, 1000)
           } catch (error) {
             console.error("❌ Error during loadURL:", error)

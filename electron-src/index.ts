@@ -41,36 +41,26 @@ if (process.platform === "win32" && app.isPackaged) {
 }
 
 app.on("ready", async () => {
-  console.log("Electron app ready event triggered")
-
   try {
-    console.log("Starting application initialization...")
     // アプリケーションの初期化
     await initializeApp()
-    console.log("Application initialization completed")
 
-    console.log("Starting Next.js server...")
     // Next.jsサーバーの起動（プロダクションのみ）
     try {
       await startEmbeddedNextServer()
-      console.log("Next.js server started successfully")
     } catch (error) {
       console.error("Failed to start Next.js server:", error)
       throw error
     }
 
-    console.log("Creating main window...")
     // メインウィンドウの作成
     const mainWindow = createMainWindow()
-    console.log("Main window created")
 
     // ウィンドウイベントの設定
     setupWindowEvents(mainWindow)
-    console.log("Window events setup completed")
 
     // IPCハンドラーの設定
     setupAllIPCHandlers()
-    console.log("IPC handlers setup completed")
 
     console.log("Application startup completed successfully")
   } catch (error) {
