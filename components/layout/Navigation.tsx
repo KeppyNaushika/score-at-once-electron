@@ -35,14 +35,11 @@ const navItems = [
   { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
   { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
   { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
-  { href: "/test-mathjax-on-canvas", label: "MathJax Canvas", icon: FlaskConical },
-  { href: "/test-rehype-mathjax-on-canvas", label: "Rehype MathJax Canvas", icon: FlaskConical },
-  { href: "/textbox-on-canvas", label: "Textbox Canvas", icon: FlaskConical },
-  { href: "/textbox-on-canvas-v2", label: "Textbox Canvas V2", icon: FlaskConical },
-  { href: "/textbox-on-canvas-v3", label: "Textbox Canvas V3", icon: FlaskConical },
-  { href: "/test-resize-element-on-canvas", label: "Resize Test Canvas", icon: FlaskConical },
-  { href: "/test-mathjax-svg-renderer", label: "MathJax SVG テスト", icon: FlaskConical },
-  { href: "/mathjax-svg-explanation", label: "MathJax SVG 解説", icon: FlaskConical },
+  {
+    href: "/textbox-on-canvas-v3",
+    label: "Textbox Canvas V3",
+    icon: FlaskConical,
+  },
   { href: "/settings", label: "設定", icon: Settings },
 ]
 
