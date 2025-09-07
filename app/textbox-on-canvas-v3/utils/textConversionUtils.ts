@@ -70,31 +70,90 @@ function preprocessMathSyntax(text: string): string {
 }
 
 /**
+ * 指定された位置が数式コンテキスト内にあるかチェック
+ * @param text 全体のテキスト
+ * @param position チェックする位置
+ * @returns boolean 数式内の場合はtrue
+ */
+function isInMathContext(text: string, position: number): boolean {
+  // 数式区切り文字のパターン
+  const mathPatterns = [
+    /\$\$[\s\S]*?\$\$/g,  // $$...$$
+    /\$[^$\n]*?\$/g,      // $...$
+    /\\[\[]([\s\S]*?)\\[\]]/g,  // \[...\]
+    /\\[(]([\s\S]*?)\\[)]/g     // \(...\)
+  ]
+
+  for (const pattern of mathPatterns) {
+    let match
+    pattern.lastIndex = 0 // Reset regex state
+    while ((match = pattern.exec(text)) !== null) {
+      if (position >= match.index && position < match.index + match[0].length) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * 数式コンテキストを考慮した安全な文字列置換
+ * @param text 対象テキスト
+ * @param searchRegex 検索パターン
+ * @param replacement 置換文字列または関数
+ * @returns string 置換後のテキスト
+ */
+function safeReplace(
+  text: string,
+  searchRegex: RegExp,
+  replacement: string | ((match: string, ...args: any[]) => string)
+): string {
+  let result = text
+  let match
+  let offset = 0
+
+  // グローバルフラグを確保
+  const globalRegex = new RegExp(searchRegex.source, searchRegex.flags.includes('g') ? searchRegex.flags : searchRegex.flags + 'g')
+
+  while ((match = globalRegex.exec(text)) !== null) {
+    const matchPosition = match.index
+
+    // 数式コンテキスト内でない場合のみ置換
+    if (!isInMathContext(text, matchPosition)) {
+      const replacementText = typeof replacement === 'function'
+        ? replacement(match[0], ...match.slice(1))
+        : replacement
+
+      // 実際の置換位置を計算（これまでの置換によるオフセットを考慮）
+      const actualPosition = matchPosition + offset
+      const actualLength = match[0].length
+
+      result = result.slice(0, actualPosition) + replacementText + result.slice(actualPosition + actualLength)
+
+      // オフセットを更新
+      offset += replacementText.length - match[0].length
+    }
+  }
+
+  return result
+}
+
+/**
  * Discord Markdown記法をHTMLに変換（数式保護機能付き）
  * @param text 変換対象のテキスト
  * @returns string HTML変換されたテキスト
  */
 function parseDiscordMarkdown(text: string): string {
-  // 1. MathJax構文を一時保護（プレースホルダーを変更）
-  const mathParts: string[] = []
-  let protectedText = text.replace(/\$\$.*?\$\$|\$.*?\$/g, (match) => {
-    mathParts.push(match)
-    return `<MATHPROTECT>${mathParts.length - 1}</MATHPROTECT>`
-  })
+  let result = text
 
-  // 2. Discord Markdown → HTML変換
-  protectedText = protectedText
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") // 太字
-    .replace(/(?<!\*)\*([^*\n]+?)\*(?!\*)/g, "<em>$1</em>") // 斜体（前後に*がない場合のみ）
-    .replace(/__(.+?)__/g, "<u>$1</u>") // 下線
-    .replace(/~~(.+?)~~/g, "<del>$1</del>") // 取り消し線
+  // Discord Markdown → HTML変換（数式コンテキストを考慮）
+  result = safeReplace(result, /\*\*(.+?)\*\*/g, "<strong>$1</strong>") // 太字
+  result = safeReplace(result, /(?<!\*)\*([^*\n]+?)\*(?!\*)/g, "<em>$1</em>") // 斜体
+  result = safeReplace(result, /__(.+?)__/g, "<u>$1</u>") // 下線
+  result = safeReplace(result, /~~(.+?)~~/g, "<del>$1</del>") // 取り消し線
 
-  // 3. MathJax構文を復元
-  mathParts.forEach((math, index) => {
-    protectedText = protectedText.replace(`<MATHPROTECT>${index}</MATHPROTECT>`, math)
-  })
-
-  return protectedText
+  return result
 }
 
 /**
@@ -102,7 +161,7 @@ function parseDiscordMarkdown(text: string): string {
  * @param text 変換対象のテキスト
  * @returns string 変換されたHTML
  */
-function parseTextWithMath(text: string): string {
+export function parseTextWithMath(text: string): string {
   // 1. LaTeX記法を$記法に正規化
   const normalizedText = preprocessMathSyntax(text)
 
@@ -110,79 +169,80 @@ function parseTextWithMath(text: string): string {
   return parseDiscordMarkdown(normalizedText)
 }
 
-/**
- * 一時的なDOM容器を作成する（Discord Markdown用）
- * @returns 作成された一時的なDIV要素
- */
-function createTempPreviewContainer(): HTMLDivElement {
-  const tempDiv = document.createElement("div")
-  tempDiv.style.cssText = `
-    position: absolute;
-    left: -9999px;
-    top: -9999px;
-    font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
-    font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
-    line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
-    color: ${FONT_SETTINGS.DEFAULT_COLOR};
-    background: white;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    width: max-content;
-    height: max-content;
-    display: block;
-  `
-  document.body.appendChild(tempDiv)
-  return tempDiv
-}
+// MathJax処理用の永続的なDOM容器
+let sharedMathJaxContainer: HTMLDivElement | null = null
 
 /**
- * DOM要素をクリーンアップする
- * @param container 削除するコンテナ要素
+ * MathJax処理用の永続的なDOM容器を取得または作成する
+ * DIVプレビューとSVG変換で共通のDOM管理方式を使用
+ * @returns 永続的なDIV要素
  */
-function performCleanup(container: HTMLDivElement): void {
-  try {
-    if (document.body.contains(container)) {
-      document.body.removeChild(container)
-    }
-  } catch (removeError) {
-    // 削除エラーは無視
+function getSharedMathJaxContainer(): HTMLDivElement {
+  if (!sharedMathJaxContainer || !document.body.contains(sharedMathJaxContainer)) {
+    sharedMathJaxContainer = document.createElement("div")
+    sharedMathJaxContainer.style.cssText = `
+      position: absolute;
+      left: -9999px;
+      top: -9999px;
+      font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
+      font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+      line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
+      color: ${FONT_SETTINGS.DEFAULT_COLOR};
+      background: white;
+      padding: 0;
+      margin: 0;
+      border: 0;
+      width: max-content;
+      height: max-content;
+      display: block;
+    `
+    document.body.appendChild(sharedMathJaxContainer)
   }
+  return sharedMathJaxContainer
 }
 
 /**
- * レンダリング完了後のコンテンツ処理
- * @param container レンダリングされたコンテナ
- * @param resolve Promise解決関数
+ * MathJax処理を実行する共通ロジック
+ * DIVプレビューとSVG変換で共通使用
+ * @param container 処理対象のDOM要素
+ * @param htmlContent 処理するHTML内容
  */
-async function processRenderedContent(
+export async function processMathJaxContent(
   container: HTMLDivElement,
-  resolve: (value: SVGSVGElement | null) => void,
+  htmlContent: string,
 ): Promise<void> {
+  // 1. HTML内容を設定
+  container.innerHTML = htmlContent
+
+  // 2. レンダリング完了まで待機
+  await waitForRenderingComplete()
+
+  // 3. MathJax処理
+  await processMathJax(container)
+
+  // 4. スタイルクリーンアップ
+  cleanupElementStyles(container)
+  await waitForRenderingComplete(1)
+}
+
+/**
+ * SVG変換のための処理
+ * @param container 処理済みのDOM要素
+ * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
+ */
+async function convertContainerToSvg(
+  container: HTMLDivElement,
+): Promise<SVGSVGElement | null> {
   try {
-    // レンダリング完了まで待機
-    await waitForRenderingComplete()
+    // MathJax処理済みのHTML内容を取得
+    const processedHtml = container.innerHTML
 
-    // MathJax処理
-    await processMathJax(container)
-
-    // スタイルクリーンアップ
-    cleanupElementStyles(container)
-    await waitForRenderingComplete(1)
-
-    // HTML内容を取得してSVG生成
-    const htmlContent = container.innerHTML
-
-    // MathJax対応の高品質SVG生成
-    const svgElement = await createMathJaxSVG(htmlContent, 200, 50)
-
-    // クリーンアップ
-    performCleanup(container)
-
-    resolve(svgElement)
+    // SVG生成
+    const svgElement = await createMathJaxSVG(processedHtml, 200, 50)
+    return svgElement
   } catch (error) {
-    performCleanup(container)
-    resolve(null)
+    console.error("SVG変換エラー:", error)
+    return null
   }
 }
 
@@ -193,6 +253,23 @@ async function processRenderedContent(
  * @param _height 高さ（互換性のため保持、実際は動的測定）
  * @returns Promise<SVGSVGElement | null> 変換されたSVG要素またはnull
  */
+/**
+ * 安全な文字列置換のテスト用関数
+ * @param text テスト対象のテキスト
+ * @returns string 処理結果のデバッグ情報
+ */
+export function testSafeReplace(text: string): string {
+  console.log("=== 安全な文字列置換テスト ===")
+  console.log("入力:", text)
+
+  const result = parseDiscordMarkdown(text)
+
+  console.log("出力:", result)
+  console.log("============================")
+
+  return result
+}
+
 export async function convertTextToSvg(
   text: string,
   _width: number,
@@ -203,21 +280,20 @@ export async function convertTextToSvg(
   }
 
   try {
-    // 1. Discord Markdown + LaTeX記法を解析してHTMLに変換
+    // 1. テキストをHTMLに変換
     const htmlContent = parseTextWithMath(text)
 
-    // 2. DOM容器を作成してHTMLを配置
-    const tempPreviewDiv = createTempPreviewContainer()
-    tempPreviewDiv.innerHTML = htmlContent
+    // 2. 共通のMathJax処理コンテナを取得
+    const container = getSharedMathJaxContainer()
 
-    // 3. MathJax処理とSVG生成を実行
-    return new Promise<SVGSVGElement | null>((resolve) => {
-      // 短時間待機後に処理開始（DOM配置完了を確保）
-      setTimeout(async () => {
-        await processRenderedContent(tempPreviewDiv, resolve)
-      }, 10)
-    })
+    // 3. MathJax処理を実行（DIVプレビューと同じロジック）
+    await processMathJaxContent(container, htmlContent)
+
+    // 4. 処理済みコンテナをSVGに変換
+    return await convertContainerToSvg(container)
+
   } catch (error) {
+    console.error("テキストからSVG変換エラー:", error)
     return null
   }
 }

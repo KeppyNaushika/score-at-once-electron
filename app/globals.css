@@ -123,6 +123,22 @@
   mjx-container svg {
     display: inline;
   }
+
+  /* MathJax DIVプレビュー用スタイル */
+  .math-preview mjx-container {
+    display: inline-block !important;
+    margin: 0 2px;
+  }
+  
+  .math-preview mjx-container[jax="CHTML"][display="true"] {
+    display: block !important;
+    text-align: center !important;
+    margin: 8px 0;
+  }
+  
+  .math-preview mjx-container[jax="CHTML"] mjx-math {
+    font-size: 1.1em;
+  }
 }
 
 /* カスタムスクロールバー設定 */

@@ -25,6 +25,48 @@ import React, { useCallback, useEffect, useRef, useState } from "react"
 // 型定義とインターフェース
 import type { DragState, TextBox } from "./types"
 
+/**
+ * TextboxのプレビューコンポーネントでMathJax処理を実行
+ * SVG変換と完全に同じロジックを使用
+ */
+function TextboxPreview({ textBox }: { textBox: TextBox }) {
+  const previewRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (previewRef.current && textBox.text) {
+      const processPreview = async () => {
+        try {
+          // テキストをHTMLに変換
+          const htmlContent = parseTextWithMath(textBox.text)
+
+          // SVG変換と完全に同じMathJax処理を実行
+          await processMathJaxContent(previewRef.current!, htmlContent)
+
+        } catch (error) {
+          console.error("DIVプレビュー処理エラー:", error)
+        }
+      }
+
+      processPreview()
+    }
+  }, [textBox.text])
+
+  return (
+    <div className="border border-green-300 rounded p-2 bg-white">
+      <div className="text-xs text-gray-500 mb-1">
+        ID: {textBox.id.substring(0, 8)}... | 位置: ({Math.round(textBox.x)}, {Math.round(textBox.y)})
+      </div>
+      <div 
+        ref={previewRef}
+        className="text-sm math-preview"
+      />
+      <div className="text-xs text-gray-400 mt-1">
+        生テキスト: {textBox.text}
+      </div>
+    </div>
+  )
+}
+
 // 定数
 import { SAMPLE_IMAGE_URL } from "./constants"
 
@@ -43,7 +85,7 @@ import {
   updateTextBoxContent,
   updateTextBoxSelection,
 } from "./utils/coordinateUtils"
-import { convertTextToSvg } from "./utils/textConversionUtils"
+import { convertTextToSvg, processMathJaxContent, parseTextWithMath } from "./utils/textConversionUtils"
 
 /**
  * テキストボックス Canvas ページのメインコンポーネント
@@ -381,6 +423,22 @@ export default function TextboxCanvasPage() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* SVG変換前のDIVプレビュー */}
+              <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                <div className="mb-2 text-sm font-medium text-green-800">📝 SVG変換前のDIVプレビュー</div>
+                <div id="div-preview-container" className="space-y-2">
+                  {textBoxes.length === 0 || !textBoxes.some(tb => tb.text) ? (
+                    <div className="text-gray-400 italic text-sm">
+                      テキストボックスにテキストを入力するとプレビューが表示されます
+                    </div>
+                  ) : (
+                    textBoxes.filter(tb => tb.text).map((textBox) => (
+                      <TextboxPreview key={textBox.id} textBox={textBox} />
+                    ))
+                  )}
+                </div>
               </div>
 
               {/* Red Border Debug Information */}
