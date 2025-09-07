@@ -156,6 +156,21 @@ function drawDebugBorder(
   ctx.lineWidth = CANVAS_SETTINGS.DEBUG_BORDER_WIDTH
   ctx.setLineDash([])
   ctx.strokeRect(x, y, width, height)
+  
+  // DIVに赤枠サイズを表示
+  const redBorderDisplay = document.getElementById('red-border-display')
+  if (redBorderDisplay) {
+    redBorderDisplay.innerHTML = `
+      <div class="bg-red-50 p-2 rounded border border-red-200">
+        <div class="font-medium text-red-700 mb-1">🔴 実際の赤枠サイズ</div>
+        <div class="text-sm">
+          <div>位置: (${Math.round(x)}, ${Math.round(y)})</div>
+          <div>サイズ: <span class="font-bold text-red-800">${Math.round(width)} × ${Math.round(height)}px</span></div>
+        </div>
+      </div>
+    `
+  }
+  
   ctx.restore()
 }
 

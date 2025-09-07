@@ -343,6 +343,69 @@ export default function TextboxCanvasPage() {
                 />
               </div>
 
+              {/* Element Information List */}
+              <div className="text-xs text-gray-600 bg-gray-50 rounded-md p-3 border">
+                <div className="font-medium mb-2">要素情報リスト ({textBoxes.length}個)</div>
+                {textBoxes.length === 0 ? (
+                  <div className="text-gray-400 italic">テキストボックスが作成されていません</div>
+                ) : (
+                  <div className="space-y-1">
+                    {textBoxes.map((textBox) => (
+                      <div
+                        key={textBox.id}
+                        className={`flex items-center justify-between p-2 rounded ${
+                          textBox.isSelected 
+                            ? 'bg-blue-100 border border-blue-200' 
+                            : 'bg-white border border-gray-200'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono text-xs text-gray-500 mb-1">
+                            ID: {textBox.id.substring(0, 8)}...
+                          </div>
+                          <div className="text-xs">
+                            <span className="inline-block mr-3">
+                              位置: ({Math.round(textBox.x)}, {Math.round(textBox.y)})
+                            </span>
+                            <span className="inline-block">
+                              サイズ: {Math.round(textBox.width)} × {Math.round(textBox.height)}
+                            </span>
+                          </div>
+                          {textBox.text && (
+                            <div className="text-xs text-gray-700 mt-1 truncate">
+                              内容: {textBox.text.substring(0, 50)}{textBox.text.length > 50 ? '...' : ''}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0 ml-2">
+                          {textBox.isSelected && (
+                            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded">
+                              選択中
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Red Border Debug Information */}
+              <div className="text-xs text-gray-600 bg-red-50 rounded-md p-3 border border-red-200">
+                <div className="font-medium mb-2">🔴 赤枠サイズ情報</div>
+                <div id="red-border-display" className="space-y-2">
+                  <div className="text-gray-400 italic">テキストボックスにテキストを入力すると赤枠サイズが表示されます</div>
+                </div>
+              </div>
+
+              {/* Font Metrics Debug Information */}
+              <div className="text-xs text-gray-600 bg-yellow-50 rounded-md p-3 border border-yellow-200">
+                <div className="font-medium mb-2">📐 フォントメトリクス詳細</div>
+                <div id="font-metrics-display" className="space-y-2">
+                  <div className="text-gray-400 italic">テキストボックスを作成・編集するとメトリクスが表示されます</div>
+                </div>
+              </div>
+
               {/* コントロールパネル */}
               <div className="flex items-center space-x-4">
                 <Button

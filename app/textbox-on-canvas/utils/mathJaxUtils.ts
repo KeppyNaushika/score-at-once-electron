@@ -125,12 +125,130 @@ export async function measureMathJaxContentSize(
       height: tempDiv.scrollHeight
     }
 
+    // デバッグ用: 全要素に紫色の枠を表示
+    const allElements = tempDiv.querySelectorAll('*')
+    allElements.forEach((element, index) => {
+      const htmlElement = element as HTMLElement
+      const rect = htmlElement.getBoundingClientRect()
+      htmlElement.style.border = '2px solid purple'
+      htmlElement.style.boxSizing = 'border-box'
+      
+      console.log(`🔍 要素${index + 1} (${htmlElement.tagName}):`, {
+        boundingRect: { 
+          width: rect.width, 
+          height: rect.height,
+          left: rect.left,
+          top: rect.top
+        },
+        scrollSize: {
+          width: htmlElement.scrollWidth,
+          height: htmlElement.scrollHeight
+        },
+        offsetSize: {
+          width: htmlElement.offsetWidth,
+          height: htmlElement.offsetHeight
+        },
+        innerHTML: htmlElement.innerHTML.substring(0, 50)
+      })
+    })
+
+    // tempDiv自体にも紫色の枠を表示
+    tempDiv.style.border = '3px solid purple'
+    tempDiv.style.boxSizing = 'border-box'
+    // フォントメトリクス詳細測定
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    ctx.font = `${FONT_SETTINGS.DEFAULT_SIZE}px ${FONT_SETTINGS.DEFAULT_FAMILY}`
+    
+    // Canvas APIによるテキストメトリクス取得
+    const metrics = ctx.measureText(tempDiv.textContent || '')
+    
+    // DIVに表示するためのフォントメトリクス情報
+    const visualHeight = metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent
+    const fontHeight = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent
+    const diffVisual = boundingRect.height - visualHeight
+    const diffFont = boundingRect.height - fontHeight
+
+    const metricsDisplay = document.getElementById('font-metrics-display')
+    if (metricsDisplay) {
+      metricsDisplay.innerHTML = `
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white p-2 rounded border">
+            <div className="font-medium text-blue-700 mb-2">Canvas APIメトリクス</div>
+            <div>幅: ${metrics.width.toFixed(1)}px</div>
+            <div>Ascent (実際): ${metrics.actualBoundingBoxAscent.toFixed(1)}px</div>
+            <div>Descent (実際): ${metrics.actualBoundingBoxDescent.toFixed(1)}px</div>
+            <div>視覚的高さ: ${visualHeight.toFixed(1)}px</div>
+            <div className="mt-1 text-gray-600">
+              <div>Ascent (フォント): ${metrics.fontBoundingBoxAscent.toFixed(1)}px</div>
+              <div>Descent (フォント): ${metrics.fontBoundingBoxDescent.toFixed(1)}px</div>
+              <div>フォント高さ: ${fontHeight.toFixed(1)}px</div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-2 rounded border">
+            <div className="font-medium text-red-700 mb-2">DOM測定結果</div>
+            <div>boundingRect高さ: ${boundingRect.height.toFixed(1)}px</div>
+            <div>scrollHeight: ${scrollSize.height.toFixed(1)}px</div>
+            <div>offsetHeight: ${tempDiv.offsetHeight.toFixed(1)}px</div>
+            <div className="mt-2 border-t pt-2">
+              <div className="font-medium text-purple-700">差異分析</div>
+              <div>vs 視覚的高さ: ${diffVisual > 0 ? '+' : ''}${diffVisual.toFixed(1)}px</div>
+              <div>vs フォント高さ: ${diffFont > 0 ? '+' : ''}${diffFont.toFixed(1)}px</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-3 p-2 bg-white rounded border">
+          <div className="font-medium text-green-700 mb-1">測定対象テキスト</div>
+          <div className="font-mono text-gray-800">"${(tempDiv.textContent || '').substring(0, 100)}${(tempDiv.textContent || '').length > 100 ? '...' : ''}"</div>
+        </div>
+        
+        <div className="mt-3 p-2 bg-red-50 rounded border border-red-200">
+          <div className="font-medium text-red-700 mb-1">🔴 赤枠サイズ（最終測定結果）</div>
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div>初期: ${initialWidth}×${initialHeight}px</div>
+            <div>測定: ${Math.ceil(Math.max(boundingRect.width, scrollSize.width))}×${Math.ceil(Math.max(boundingRect.height, scrollSize.height))}px</div>
+            <div>最終: <span class="font-bold text-red-800">${Math.max(initialWidth, Math.ceil(Math.max(boundingRect.width, scrollSize.width)))}×${Math.max(initialHeight, Math.ceil(Math.max(boundingRect.height, scrollSize.height)))}px</span></div>
+          </div>
+        </div>
+      `
+    }
+
+    console.log('📐 フォントメトリクス詳細:', {
+      visualHeight: visualHeight.toFixed(1),
+      fontHeight: fontHeight.toFixed(1),
+      boundingRectHeight: boundingRect.height.toFixed(1),
+      difference: diffVisual.toFixed(1)
+    })
+
     // MathJax要素の詳細測定
     const mjxContainers = tempDiv.querySelectorAll('mjx-container')
     let maxMathJaxHeight = 0
     
-    mjxContainers.forEach((mjx) => {
+    mjxContainers.forEach((mjx, index) => {
       const mjxRect = mjx.getBoundingClientRect()
+      const htmlMjx = mjx as HTMLElement
+      htmlMjx.style.border = '2px solid darkviolet'
+      htmlMjx.style.boxSizing = 'border-box'
+      
+      console.log(`🧮 MathJax要素${index + 1}:`, {
+        boundingRect: { 
+          width: mjxRect.width, 
+          height: mjxRect.height,
+          left: mjxRect.left,
+          top: mjxRect.top
+        },
+        scrollSize: {
+          width: htmlMjx.scrollWidth,
+          height: htmlMjx.scrollHeight
+        },
+        offsetSize: {
+          width: htmlMjx.offsetWidth,
+          height: htmlMjx.offsetHeight
+        }
+      })
+      
       maxMathJaxHeight = Math.max(maxMathJaxHeight, mjxRect.height)
     })
 
