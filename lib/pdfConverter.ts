@@ -11,8 +11,8 @@ const initializePdfjs = async () => {
   
   if (!pdfjsLib) {
     pdfjsLib = await import('pdfjs-dist')
-    // Set up PDF.js worker
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`
+    // Set up PDF.js worker - use local static file instead of CDN
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.mjs'
   }
   
   return pdfjsLib

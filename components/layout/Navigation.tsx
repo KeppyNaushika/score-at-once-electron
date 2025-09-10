@@ -40,6 +40,11 @@ const navItems = [
     label: "Textbox Canvas V3",
     icon: FlaskConical,
   },
+  {
+    href: "/textbox-on-canvas-v4",
+    label: "Textbox Canvas V4",
+    icon: FlaskConical,
+  },
   { href: "/settings", label: "設定", icon: Settings },
 ]
 
