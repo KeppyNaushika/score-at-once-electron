@@ -1063,6 +1063,69 @@ export interface MyAPI {
       totalSteps?: number
     }) => void,
   ) => () => void
+
+  // Drawing Annotation related
+  drawing: {
+    create: (data: import('./drawing-annotation.types').DrawingCreateData) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation
+      error?: string
+    }>
+    getByQuestionScore: (
+      questionScoreId: string,
+      type?: import('./drawing-annotation.types').DrawingType
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      error?: string
+    }>
+    update: (
+      id: string,
+      data: import('./drawing-annotation.types').DrawingUpdateData
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation
+      error?: string
+    }>
+    delete: (id: string) => Promise<{
+      success: boolean
+      error?: string
+    }>
+    deleteByQuestionScore: (
+      questionScoreId: string,
+      type?: import('./drawing-annotation.types').DrawingType
+    ) => Promise<{
+      success: boolean
+      error?: string
+    }>
+    batchCreate: (
+      annotations: import('./drawing-annotation.types').DrawingCreateData[]
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      error?: string
+    }>
+    batchUpdate: (
+      updates: Array<{
+        id: string
+        data: import('./drawing-annotation.types').DrawingUpdateData
+      }>
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      error?: string
+    }>
+    getStats: (questionScoreId: string) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotationStats
+      error?: string
+    }>
+    getById: (id: string) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation | null
+      error?: string
+    }>
+  }
 }
 
 declare global {

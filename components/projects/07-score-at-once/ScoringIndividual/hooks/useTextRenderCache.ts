@@ -4,12 +4,12 @@
  */
 
 import { useCallback, useRef, useEffect } from 'react'
-import { renderMarkdownToCanvas, calculateOptimalFontSize, type TextDimensions } from '../utils/canvasTextRendererHybrid'
+import { renderMarkdownToCanvasV3, calculateOptimalFontSizeV3, type TextDimensionsV3 } from '../utils/canvasTextRendererV3'
 import type { DrawingElement } from '../types/answer-individual-types'
 
 interface CachedTextRender {
   canvas: HTMLCanvasElement
-  dimensions: TextDimensions
+  dimensions: TextDimensionsV3
   hash: string
 }
 
@@ -24,14 +24,7 @@ interface TextCacheKey {
 export function useTextRenderCache() {
   const cacheRef = useRef<Map<string, CachedTextRender>>(new Map())
   
-  // LaTeX記法をMarkdown記法に変換（RichTextEditorModalと同じ処理）
-  const convertLatexToMarkdown = useCallback((text: string): string => {
-    return text
-      .replace(/\\\(/g, '$')     // \( を $ に
-      .replace(/\\\)/g, '$')     // \) を $ に
-      .replace(/\\\[/g, '$$')    // \[ を $$ に
-      .replace(/\\\]/g, '$$')    // \] を $$ に
-  }, [])
+  // V3統合: LaTeX処理はtextbox-on-canvas-v3内で自動実行される
   
   // キャッシュキーを生成
   const generateCacheKey = useCallback((key: TextCacheKey): string => {
@@ -42,11 +35,11 @@ export function useTextRenderCache() {
   const preRenderText = useCallback(async (element: DrawingElement, boxWidth: number, boxHeight: number) => {
     if (!element.text) return null
     
-    // LaTeX記法をMarkdown記法に変換
-    const processedText = convertLatexToMarkdown(element.text)
+    // V3統合: LaTeX処理は内部で自動実行
+    const processedText = element.text
     
-    // 最適なフォントサイズを計算（変換後のテキストで）
-    const optimalFontSize = calculateOptimalFontSize(
+    // V3統合: 最適なフォントサイズを計算（変換後のテキストで）
+    const optimalFontSize = calculateOptimalFontSizeV3(
       processedText,
       boxWidth,
       boxHeight,
@@ -67,8 +60,8 @@ export function useTextRenderCache() {
     }
     
     try {
-      // リッチテキストをレンダリング（変換後のテキストで）
-      const result = await renderMarkdownToCanvas({
+      // V3統合: リッチテキストをレンダリング（変換後のテキストで）
+      const result = await renderMarkdownToCanvasV3({
         text: processedText,
         color: element.color,
         fontSize: optimalFontSize,
@@ -90,16 +83,16 @@ export function useTextRenderCache() {
     } catch (error) {
       return null
     }
-  }, [generateCacheKey, convertLatexToMarkdown])
+  }, [generateCacheKey])
   
   // キャッシュされたテキストを取得
   const getCachedText = useCallback((element: DrawingElement, boxWidth: number, boxHeight: number): CachedTextRender | null => {
     if (!element.text) return null
     
-    // LaTeX記法をMarkdown記法に変換
-    const processedText = convertLatexToMarkdown(element.text)
+    // V3統合: LaTeX処理は内部で自動実行
+    const processedText = element.text
     
-    const optimalFontSize = calculateOptimalFontSize(
+    const optimalFontSize = calculateOptimalFontSizeV3(
       processedText,
       boxWidth,
       boxHeight,
@@ -115,7 +108,7 @@ export function useTextRenderCache() {
     })
     
     return cacheRef.current.get(cacheKey) || null
-  }, [generateCacheKey, convertLatexToMarkdown])
+  }, [generateCacheKey])
   
   // テキスト要素を事前レンダリング（バッチ処理）
   const preRenderElements = useCallback(async (elements: DrawingElement[], baseWidth: number, baseHeight: number) => {

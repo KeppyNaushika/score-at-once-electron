@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
-import { RichTextEditorModal } from "./RichTextEditorModal"
+import { RichTextEditorModalV3 } from "./RichTextEditorModalV3"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/useDrawingState"
@@ -25,8 +25,17 @@ export default function AnswerIndividualView({
   const { zoom, position, onZoomChange, onPositionChange } =
     useImageNavigation()
 
-  // 描画状態管理
-  const drawingState = useDrawingState()
+  // 現在表示中の採点データを取得
+  const currentScoringData =
+    scoringDatas.find(
+      (scoringData) => scoringData.id === currentScoringDataId,
+    ) ?? null
+
+  // 描画状態管理（データベース統合対応）
+  const drawingState = useDrawingState(
+    currentScoringData?.id || null, // questionScoreIdとして使用
+    true // データベース永続化を有効化
+  )
 
   // テキスト入力状態変更の通知
   useEffect(() => {
@@ -34,12 +43,6 @@ export default function AnswerIndividualView({
       onTextInputStateChange(drawingState.showTextInput)
     }
   }, [drawingState.showTextInput, onTextInputStateChange])
-
-  // 現在表示中の採点データを取得（簡潔に）
-  const currentScoringData =
-    scoringDatas.find(
-      (scoringData) => scoringData.id === currentScoringDataId,
-    ) ?? null
 
   // currentCropRegionはすでにpropsで渡されている（派生済み）
 
@@ -550,7 +553,7 @@ export default function AnswerIndividualView({
       />
 
       {/* リッチテキストエディターモーダル */}
-      <RichTextEditorModal
+      <RichTextEditorModalV3
         open={drawingState.showTextInput}
         onOpenChange={drawingState.setShowTextInput}
         value={drawingState.textInputValue}

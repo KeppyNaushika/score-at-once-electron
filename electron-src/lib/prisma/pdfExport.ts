@@ -15,6 +15,7 @@ import {
   getQuestionScoresForProject,
 } from "./questionScore"
 import { getStudentAnswersByProjectId } from "./studentAnswer"
+import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -76,6 +77,7 @@ interface ExportScoredAnswersOptions {
   outputPath?: string
   scoringMarkConfig?: ScoringMarkConfig
   pdfOrientation?: "portrait" | "landscape"
+  includeDrawingAnnotations?: boolean // 描画アノテーションを含めるかどうか
   progressCallback?: (progress: {
     current: number
     total: number
@@ -116,6 +118,282 @@ function getMarkImagePath(
     default:
       return path.join(publicDir, "score-assets", `${prefix}unscored.png`)
   }
+}
+
+/**
+ * 描画アノテーションをPDFページにレンダリングする
+ */
+async function renderDrawingAnnotations(
+  page: any, // PDFページ
+  questionScoreId: string,
+  imageWidth: number,
+  imageHeight: number,
+  pdfDoc: PDFDocument
+): Promise<void> {
+  try {
+    // 該当QuestionScoreの描画アノテーションを取得
+    const annotations = await getDrawingAnnotationsByQuestionScore(questionScoreId)
+    
+    if (!annotations || annotations.length === 0) {
+      return
+    }
+
+    console.log(`描画アノテーション ${annotations.length}件をレンダリング開始`)
+
+    // 各アノテーションをレンダリング
+    for (const annotation of annotations) {
+      await renderSingleAnnotation(page, annotation, imageWidth, imageHeight, pdfDoc)
+    }
+  } catch (error) {
+    console.error('描画アノテーション レンダリングエラー:', error)
+  }
+}
+
+/**
+ * 単一の描画アノテーションをPDFページにレンダリングする
+ */
+async function renderSingleAnnotation(
+  page: any,
+  annotation: any, // DrawingAnnotation型
+  imageWidth: number,
+  imageHeight: number,
+  pdfDoc: PDFDocument
+): Promise<void> {
+  switch (annotation.type) {
+    case 'line':
+      renderLineAnnotation(page, annotation, imageWidth, imageHeight)
+      break
+    case 'rectangle':
+      renderRectangleAnnotation(page, annotation, imageWidth, imageHeight)
+      break
+    case 'ellipse':
+      renderEllipseAnnotation(page, annotation, imageWidth, imageHeight)
+      break
+    case 'text':
+      await renderTextAnnotation(page, annotation, imageWidth, imageHeight, pdfDoc)
+      break
+    default:
+      console.warn('未対応の描画アノテーションタイプ:', annotation.type)
+  }
+}
+
+/**
+ * 直線アノテーションのレンダリング
+ */
+function renderLineAnnotation(
+  page: any,
+  annotation: any,
+  imageWidth: number,
+  imageHeight: number
+): void {
+  const startX = annotation.x * imageWidth
+  const startY = (1 - annotation.y) * imageHeight
+  const endX = annotation.endX * imageWidth
+  const endY = (1 - annotation.endY) * imageHeight
+
+  const color = parseColor(annotation.color)
+  
+  // 基本直線を描画
+  page.drawLine({
+    start: { x: startX, y: startY },
+    end: { x: endX, y: endY },
+    thickness: annotation.strokeWidth,
+    color,
+  })
+
+  // 線スタイルに応じた追加描画
+  switch (annotation.lineStyle) {
+    case 'double':
+      // 二重線
+      const offset = annotation.strokeWidth + 2
+      const angle = Math.atan2(endY - startY, endX - startX)
+      const perpX = Math.cos(angle + Math.PI / 2) * offset
+      const perpY = Math.sin(angle + Math.PI / 2) * offset
+      
+      page.drawLine({
+        start: { x: startX + perpX, y: startY + perpY },
+        end: { x: endX + perpX, y: endY + perpY },
+        thickness: annotation.strokeWidth,
+        color,
+      })
+      break
+      
+    case 'arrow':
+    case 'both_arrow':
+      // 矢印頭部を描画
+      drawArrowHead(page, startX, startY, endX, endY, annotation.strokeWidth, color, annotation.lineStyle === 'both_arrow')
+      break
+  }
+}
+
+/**
+ * 長方形アノテーションのレンダリング
+ */
+function renderRectangleAnnotation(
+  page: any,
+  annotation: any,
+  imageWidth: number,
+  imageHeight: number
+): void {
+  const x = annotation.displayX * imageWidth
+  const y = (1 - annotation.displayY - annotation.height) * imageHeight // PDFは下からの座標系
+  const width = annotation.width * imageWidth
+  const height = annotation.height * imageHeight
+
+  const color = parseColor(annotation.color)
+  
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    borderColor: color,
+    borderWidth: annotation.strokeWidth,
+  })
+}
+
+/**
+ * 楕円アノテーションのレンダリング
+ */
+function renderEllipseAnnotation(
+  page: any,
+  annotation: any,
+  imageWidth: number,
+  imageHeight: number
+): void {
+  const centerX = (annotation.displayX + annotation.width / 2) * imageWidth
+  const centerY = (1 - annotation.displayY - annotation.height / 2) * imageHeight
+  const radiusX = (annotation.width / 2) * imageWidth
+  const radiusY = (annotation.height / 2) * imageHeight
+
+  const color = parseColor(annotation.color)
+  
+  page.drawEllipse({
+    x: centerX,
+    y: centerY,
+    xScale: radiusX,
+    yScale: radiusY,
+    borderColor: color,
+    borderWidth: annotation.strokeWidth,
+  })
+}
+
+/**
+ * テキストアノテーションのレンダリング（MathJax対応）
+ */
+async function renderTextAnnotation(
+  page: any,
+  annotation: any,
+  imageWidth: number,
+  imageHeight: number,
+  pdfDoc: PDFDocument
+): Promise<void> {
+  if (!annotation.text || annotation.text.trim() === '') {
+    return
+  }
+
+  const x = annotation.displayX * imageWidth
+  const y = (1 - annotation.displayY) * imageHeight // テキストベースライン
+  const color = parseColor(annotation.color)
+
+  // 簡単なMathJax記法（$...$）のチェック
+  const isMathJax = annotation.text.includes('$')
+  
+  if (isMathJax) {
+    // MathJax処理は複雑なため、プレーンテキストとして描画
+    // TODO: 将来的にはSVG→PNG変換によるMathJax描画を実装
+    console.warn('MathJax テキストは現在プレーンテキストとして描画されます:', annotation.text)
+  }
+
+  // テキスト描画（フォールバック対応）
+  try {
+    page.drawText(annotation.text.replace(/\$/g, ''), { // MathJax記号を削除
+      x,
+      y,
+      size: annotation.fontSize,
+      color,
+    })
+  } catch (error) {
+    console.error('テキスト描画エラー:', error)
+  }
+}
+
+/**
+ * 矢印頭部の描画
+ */
+function drawArrowHead(
+  page: any,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  strokeWidth: number,
+  color: any,
+  bothEnds: boolean = false
+): void {
+  const angle = Math.atan2(endY - startY, endX - startX)
+  const arrowLength = Math.max(10, strokeWidth * 3)
+  const arrowAngle = Math.PI / 6
+
+  // 終点の矢印
+  const arrowX1 = endX - arrowLength * Math.cos(angle - arrowAngle)
+  const arrowY1 = endY - arrowLength * Math.sin(angle - arrowAngle)
+  const arrowX2 = endX - arrowLength * Math.cos(angle + arrowAngle)
+  const arrowY2 = endY - arrowLength * Math.sin(angle + arrowAngle)
+
+  page.drawLine({
+    start: { x: endX, y: endY },
+    end: { x: arrowX1, y: arrowY1 },
+    thickness: strokeWidth,
+    color,
+  })
+  
+  page.drawLine({
+    start: { x: endX, y: endY },
+    end: { x: arrowX2, y: arrowY2 },
+    thickness: strokeWidth,
+    color,
+  })
+
+  // 両端矢印の場合、始点にも矢印を描画
+  if (bothEnds) {
+    const reverseAngle = angle + Math.PI
+    const startArrowX1 = startX - arrowLength * Math.cos(reverseAngle - arrowAngle)
+    const startArrowY1 = startY - arrowLength * Math.sin(reverseAngle - arrowAngle)
+    const startArrowX2 = startX - arrowLength * Math.cos(reverseAngle + arrowAngle)
+    const startArrowY2 = startY - arrowLength * Math.sin(reverseAngle + arrowAngle)
+
+    page.drawLine({
+      start: { x: startX, y: startY },
+      end: { x: startArrowX1, y: startArrowY1 },
+      thickness: strokeWidth,
+      color,
+    })
+    
+    page.drawLine({
+      start: { x: startX, y: startY },
+      end: { x: startArrowX2, y: startArrowY2 },
+      thickness: strokeWidth,
+      color,
+    })
+  }
+}
+
+/**
+ * 色文字列をPDF-libのRGBカラーに変換
+ */
+function parseColor(colorString: string): any {
+  // #RRGGBB形式を想定
+  if (colorString.startsWith('#')) {
+    const hex = colorString.slice(1)
+    const r = parseInt(hex.slice(0, 2), 16) / 255
+    const g = parseInt(hex.slice(2, 4), 16) / 255
+    const b = parseInt(hex.slice(4, 6), 16) / 255
+    return rgb(r, g, b)
+  }
+  
+  // デフォルトは赤色
+  return rgb(1, 0, 0)
 }
 
 // マーク位置を計算する関数
@@ -465,6 +743,7 @@ export async function exportScoredAnswersPDF(
       selectedStudentIds,
       scoringMarkConfig,
       progressCallback,
+      includeDrawingAnnotations = false,
     } = options
 
     // 進捗レポート関数
@@ -629,6 +908,7 @@ export async function exportScoredAnswersPDF(
                     6,
                   )
                 },
+                includeDrawingAnnotations,
               )
             } else {
               // Answer image not found, skip
@@ -718,6 +998,7 @@ async function addAnswerSheetToPDF(
   _currentStudent?: any,
   _allSelectedStudents?: any[],
   progressCallback?: (step: string) => void,
+  includeDrawingAnnotations: boolean = false,
 ): Promise<void> {
   try {
     progressCallback?.("画像を読み込み中...")
@@ -973,6 +1254,22 @@ async function addAnswerSheetToPDF(
           console.log(`✅ Successfully drew scoring mark: ${markImagePath}`)
         } else {
           console.warn(`⚠️  Scoring mark image not found: ${markImagePath}`)
+        }
+
+        // 描画アノテーションのレンダリング
+        if (includeDrawingAnnotations) {
+          try {
+            await renderDrawingAnnotations(
+              page,
+              score.id,
+              regionWidthOnImage,
+              regionHeightOnImage,
+              pdfDoc
+            )
+            console.log(`✅ 描画アノテーションをレンダリング完了: ${score.id}`)
+          } catch (annotationError) {
+            console.error('描画アノテーションレンダリングエラー:', annotationError)
+          }
         }
       } catch (markError) {
         console.error(

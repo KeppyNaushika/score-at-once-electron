@@ -9,16 +9,17 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(uuid())
-  username       String          @unique
-  passcode       String?
-  name           String
-  role           String          @default("teacher")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  passcodeType   String?         @default("none")
-  questionScores QuestionScore[]
-  userProjects   UserProject[]
+  id                 String              @id @default(uuid())
+  username           String              @unique
+  passcode           String?
+  name               String
+  role               String              @default("teacher")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  passcodeType       String?             @default("none")
+  questionScores     QuestionScore[]
+  userProjects       UserProject[]
+  drawingAnnotations DrawingAnnotation[]
 }
 
 model Class {
@@ -197,15 +198,62 @@ model ProjectSubtotalGroup {
 }
 
 model QuestionScore {
-  id             String     @id @default(uuid())
-  cropRegionId   String
-  studentId      String?
-  partialScore   Decimal?
-  status         String     @default("unscored")
-  scoredByUserId String?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @default(now()) @updatedAt
-  scoredByUser   User?      @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  student        Student?   @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 String              @id @default(uuid())
+  cropRegionId       String
+  studentId          String?
+  partialScore       Decimal?
+  status             String              @default("unscored")
+  scoredByUserId     String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+  scoredByUser       User?               @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student            Student?            @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  drawingAnnotations DrawingAnnotation[]
+}
+
+model DrawingAnnotation {
+  id               String        @id @default(uuid())
+  questionScoreId  String        // QuestionScore.idに紐づけ
+  
+  // 基本プロパティ（全要素共通）
+  type            String        // "text", "line", "rectangle", "ellipse"
+  x               Float         // 0.0 - 1.0 相対座標
+  y               Float         // 0.0 - 1.0
+  color           String        @default("#ef4444")
+  strokeWidth     Int           @default(3)
+  
+  // サイズ（長方形・楕円・テキストボックス）
+  width           Float         @default(0.0)     // 0.0 - 1.0
+  height          Float         @default(0.0)     // 0.0 - 1.0
+  
+  // 直線専用プロパティ
+  endX            Float         @default(0.0)     // 0.0 - 1.0 (直線終点)
+  endY            Float         @default(0.0)     // 0.0 - 1.0
+  lineStyle       String        @default("solid") // "solid", "wave", "zigzag", "double", "arrow", "both_arrow"
+  
+  // テキスト専用プロパティ
+  text            String        @default("")      // テキスト内容（MathJax対応）
+  fontSize        Int           @default(16)
+  textBoxWidth    Float         @default(0.0)     // 0.0 - 1.0 (テキストボックス境界)
+  textBoxHeight   Float         @default(0.0)     // 0.0 - 1.0
+  horizontalAlign String        @default("left")  // "left", "center", "right"
+  verticalAlign   String        @default("top")   // "top", "center", "bottom"
+  
+  // 表示プロパティ（逆ドラッグ対応）
+  displayX        Float         @default(0.0)     // 0.0 - 1.0
+  displayY        Float         @default(0.0)     // 0.0 - 1.0
+  
+  // メタデータ
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdByUserId String?
+  
+  // リレーション
+  questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+  createdByUser   User?         @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  
+  @@index([questionScoreId])
+  @@index([type])
+  @@index([createdAt])
 }

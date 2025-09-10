@@ -489,6 +489,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("export-progress", (_event, progress) => callback(progress))
     return () => ipcRenderer.removeAllListeners("export-progress")
   },
+
+  // Drawing Annotation related
+  drawing: {
+    create: (data: any) => ipcRenderer.invoke("drawing:create", data),
+    getByQuestionScore: (questionScoreId: string, type?: string) => 
+      ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
+    update: (id: string, data: any) => ipcRenderer.invoke("drawing:update", id, data),
+    delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
+    deleteByQuestionScore: (questionScoreId: string, type?: string) => 
+      ipcRenderer.invoke("drawing:deleteByQuestionScore", questionScoreId, type),
+    batchCreate: (annotations: any[]) => ipcRenderer.invoke("drawing:batchCreate", annotations),
+    batchUpdate: (updates: any[]) => ipcRenderer.invoke("drawing:batchUpdate", updates),
+    getStats: (questionScoreId: string) => ipcRenderer.invoke("drawing:getStats", questionScoreId),
+    getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
+  },
 })
 
 process.once("loaded", () => {

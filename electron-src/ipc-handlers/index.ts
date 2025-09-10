@@ -7,6 +7,7 @@ import { setupMiscHandlers } from "./misc-handlers"
 import { setupQuestionGroupHandlers } from "./question-group-handlers"
 import { setupAuthHandlers } from "./auth-handlers"
 import { setupSubtotalGroupHandlers } from "./subtotal-group-handlers"
+import { setupDrawingHandlers } from "./drawing-handlers"
 
 export function setupAllIPCHandlers(): void {
   setupProjectHandlers()
@@ -18,6 +19,7 @@ export function setupAllIPCHandlers(): void {
   setupQuestionGroupHandlers() // 互換性のため一時的に残す
   setupAuthHandlers()
   setupSubtotalGroupHandlers()
+  setupDrawingHandlers() // 描画アノテーション handlers
   
   console.log("✅ All IPC handlers setup completed")
 }

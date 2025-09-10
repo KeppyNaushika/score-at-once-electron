@@ -1,6 +1,6 @@
 import { useDrawingUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingUtils"
 import { useTextRenderCache } from "./useTextRenderCache"
-import { calculateOptimalFontSize } from "../utils/canvasTextRendererHybrid"
+import { calculateOptimalFontSizeV3 } from "../utils/canvasTextRendererV3"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import type {
   CropRegionWithProjectPage,
@@ -276,7 +276,7 @@ export function useImageCanvas({
                       // 非同期で事前レンダリング（状態変更なし）
                       handleTextPreRender([element], baseImg)
                       // フォールバック：最適化されたシンプルテキスト描画
-                      const optimalFontSize = calculateOptimalFontSize(
+                      const optimalFontSize = calculateOptimalFontSizeV3(
                         element.text,
                         boxWidth,
                         boxHeight,
