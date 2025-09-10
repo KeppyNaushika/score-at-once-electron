@@ -58,8 +58,31 @@ export async function renderSvgToCanvas(
 ): Promise<SvgRenderResult> {
   return new Promise((resolve) => {
     try {
-      // SVGをBlobに変換
-      const svgData = new XMLSerializer().serializeToString(svgElement)
+      // SVGをBlobに変換（MathJax defs修復付き）
+      let svgData = new XMLSerializer().serializeToString(svgElement)
+      
+      // MathJax要素が含まれている場合は、グローバルdefsを強制追加（Image変換と同じロジック）
+      const hasMathJaxElements = svgData.includes('mjx-container') || svgData.includes('<use')
+      if (hasMathJaxElements) {
+        console.log("🎨 Canvas描画：MathJax要素検出、グローバルdefsを追加")
+        
+        // ページ全体からMathJax defsを取得
+        const globalDefs = document.querySelector('#MJX-SVG-global-cache defs')
+        if (globalDefs && globalDefs.innerHTML.length > 10) {
+          const defsContent = globalDefs.outerHTML
+          console.log(`🎨 Canvas描画：グローバルdefs取得 ${defsContent.length}文字`)
+          
+          // SVGの開始タグ直後にdefsを強制挿入
+          svgData = svgData.replace(
+            /(<svg[^>]*>)/,
+            `$1${defsContent}`
+          )
+          console.log("🎨 Canvas描画：defs挿入完了")
+        } else {
+          console.warn("⚠️ Canvas描画：グローバルdefsが見つかりません")
+        }
+      }
+      
       const svgBlob = new Blob([svgData], {
         type: "image/svg+xml;charset=utf-8",
       })

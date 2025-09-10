@@ -202,7 +202,7 @@ function getSharedMathJaxContainer(): HTMLDivElement {
 }
 
 /**
- * MathJax処理を実行する共通ロジック
+ * MathJax処理を実行する共通ロジック（MathJax 4対応版）
  * DIVプレビューとSVG変換で共通使用
  * @param container 処理対象のDOM要素
  * @param htmlContent 処理するHTML内容
@@ -211,18 +211,59 @@ export async function processMathJaxContent(
   container: HTMLDivElement,
   htmlContent: string,
 ): Promise<void> {
+  console.log("🔄 MathJax処理開始:", htmlContent.substring(0, 100))
+  
   // 1. HTML内容を設定
   container.innerHTML = htmlContent
 
-  // 2. レンダリング完了まで待機
-  await waitForRenderingComplete()
+  // 2. 初期レンダリング完了まで待機
+  await waitForRenderingComplete(2)
 
-  // 3. MathJax処理
+  // 3. MathJax初期化確認
+  const MathJax = (window as any).MathJax
+  if (!MathJax) {
+    console.warn("MathJaxが利用できません")
+    return
+  }
+
+  // 4. MathJax処理
+  console.log("📐 MathJax組版処理実行中...")
   await processMathJax(container)
 
-  // 4. スタイルクリーンアップ
+  // 5. MathJax要素の確認
+  const mathElements = container.querySelectorAll('mjx-container')
+  console.log(`📊 検出されたMathJax要素数: ${mathElements.length}`)
+  
+  // MathJax要素の詳細情報を表示
+  mathElements.forEach((element, index) => {
+    console.log(`MathJax要素[${index}]:`, element)
+    const svg = element.querySelector('svg')
+    if (svg) {
+      console.log(`  - SVG要素: ${svg.getAttribute('width')}x${svg.getAttribute('height')}`)
+      const defs = svg.querySelector('defs')
+      if (defs) {
+        console.log(`  - defs要素あり: ${defs.innerHTML.length}文字`)
+      } else {
+        console.log(`  - defs要素なし`)
+      }
+    } else {
+      console.log(`  - SVG要素なし`)
+    }
+  })
+  
+  if (mathElements.length > 0) {
+    // MathJax要素が存在する場合は追加待機
+    await waitForRenderingComplete(3)
+    console.log("✅ MathJax要素処理完了")
+  } else {
+    console.log("📝 数式が検出されませんでした（通常のテキストとして処理）")
+  }
+
+  // 6. スタイルクリーンアップ
   cleanupElementStyles(container)
   await waitForRenderingComplete(1)
+  
+  console.log("🎯 MathJax処理完了")
 }
 
 /**

@@ -37,7 +37,7 @@ export default function RootLayout({
                 },
                 startup: {
                   ready: () => {
-                    console.log('🔥 MathJax initialized successfully');
+                    console.log('🔥 MathJax 4 initialized successfully');
                     MathJax.startup.defaultReady();
                     // 初期化完了をグローバルに通知
                     window.mathJaxReady = true;
@@ -51,7 +51,7 @@ export default function RootLayout({
         <script
           id="MathJax-script"
           async
-          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+          src="/js/mathjax/tex-svg.js"
         />
       </head>
       <body className={inter.className}>
