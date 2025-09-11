@@ -15,6 +15,7 @@ import {
   updateTextBoxContent,
   updateTextBoxSelection,
 } from "../utils/coordinateUtils"
+import { isAnchorClicked } from "../utils/canvasUtils"
 
 /**
  * テキストボックス操作フック
@@ -26,6 +27,7 @@ export function useTextBoxOperations() {
   )
   const [currentDrag, setCurrentDrag] = useState<DragState | null>(null)
   const [isCreatingAnchor, setIsCreatingAnchor] = useState<boolean>(false)
+  const [isDraggingAnchor, setIsDraggingAnchor] = useState<boolean>(false)
 
   // テキスト入力関連の状態
   const [showTextInput, setShowTextInput] = useState<boolean>(false)
@@ -41,29 +43,44 @@ export function useTextBoxOperations() {
 
       const coords = getCanvasCoordinates(e.clientX, e.clientY, canvas, zoom)
 
-      // テキストボックスの選択チェック
-      const clickedTextBox = findTextBoxAtPoint(textBoxes, coords)
+      // アンカーがクリックされたかチェック
+      let anchorClicked = false
+      for (const textBox of textBoxes) {
+        if (isAnchorClicked(coords.x, coords.y, textBox.x, textBox.y)) {
+          setTextBoxes(updateTextBoxSelection(textBoxes, textBox.id))
+          setSelectedTextBoxId(textBox.id)
+          setIsDraggingAnchor(true)
+          setCurrentDrag({ startX: coords.x, startY: coords.y })
+          anchorClicked = true
+          break
+        }
+      }
 
-      if (clickedTextBox) {
-        // 既存のテキストボックスをクリック
-        setTextBoxes(updateTextBoxSelection(textBoxes, clickedTextBox.id))
-        setSelectedTextBoxId(clickedTextBox.id)
+      if (!anchorClicked) {
+        // テキストボックスの選択チェック
+        const clickedTextBox = findTextBoxAtPoint(textBoxes, coords)
 
-        // ダブルクリックでテキスト編集
-        if (selectedTextBoxId === clickedTextBox.id) {
-          setTextInputValue(clickedTextBox.text)
+        if (clickedTextBox) {
+          // 既存のテキストボックスをクリック
+          setTextBoxes(updateTextBoxSelection(textBoxes, clickedTextBox.id))
+          setSelectedTextBoxId(clickedTextBox.id)
+
+          // ダブルクリックでテキスト編集
+          if (selectedTextBoxId === clickedTextBox.id) {
+            setTextInputValue(clickedTextBox.text)
+            setShowTextInput(true)
+          }
+        } else {
+          // 新しいアンカーの作成
+          setTextBoxes(updateTextBoxSelection(textBoxes, null))
+          setSelectedTextBoxId(null)
+
+          const newTextBox = createAnchorFromClick(coords)
+          setTextBoxes((prev) => [...prev, newTextBox])
+          setSelectedTextBoxId(newTextBox.id)
+          setTextInputValue("")
           setShowTextInput(true)
         }
-      } else {
-        // 新しいアンカーの作成
-        setTextBoxes(updateTextBoxSelection(textBoxes, null))
-        setSelectedTextBoxId(null)
-
-        const newTextBox = createAnchorFromClick(coords)
-        setTextBoxes((prev) => [...prev, newTextBox])
-        setSelectedTextBoxId(newTextBox.id)
-        setTextInputValue("")
-        setShowTextInput(true)
       }
     },
     [textBoxes, selectedTextBoxId],
@@ -74,7 +91,7 @@ export function useTextBoxOperations() {
    */
   const handleMouseMove = useCallback(
     (e: React.MouseEvent, zoom: number): void => {
-      if (!currentDrag || !selectedTextBoxId) return
+      if (!isDraggingAnchor || !selectedTextBoxId) return
 
       const canvas = e.currentTarget as HTMLCanvasElement
       const coords = getCanvasCoordinates(e.clientX, e.clientY, canvas, zoom)
@@ -88,7 +105,7 @@ export function useTextBoxOperations() {
         ),
       )
     },
-    [currentDrag, selectedTextBoxId],
+    [isDraggingAnchor, selectedTextBoxId],
   )
 
   /**
@@ -96,6 +113,7 @@ export function useTextBoxOperations() {
    */
   const handleMouseUp = useCallback((): void => {
     setCurrentDrag(null)
+    setIsDraggingAnchor(false)
   }, [])
 
   /**
@@ -169,6 +187,7 @@ export function useTextBoxOperations() {
     selectedTextBoxId,
     currentDrag,
     isCreatingAnchor,
+    isDraggingAnchor,
     showTextInput,
     textInputValue,
     setTextInputValue,

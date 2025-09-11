@@ -8,7 +8,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { TextBox } from "../types"
 import {
-  getTextPositionFromAnchor,
   renderSvgToCanvas,
 } from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"
@@ -56,22 +55,13 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
             const anchorX = canvas.width / 2
             const anchorY = canvas.height / 2
 
-            const textPosition = getTextPositionFromAnchor(
-              anchorX,
-              anchorY,
-              estimatedWidth,
-              estimatedHeight,
-              textBox.anchorDirection,
-            )
-
             // Canvas描画を実行
             const renderResult = await renderSvgToCanvas(
               svgElement,
               ctx,
-              textPosition.x,
-              textPosition.y,
-              estimatedWidth,
-              estimatedHeight,
+              anchorX,
+              anchorY,
+              textBox.anchorDirection,
             )
 
             setCanvasSize({

@@ -10,7 +10,6 @@ import type { AnchorDirection, TextBox } from "../types"
 import {
   drawAnchor,
   drawBackgroundImage,
-  getTextPositionFromAnchor,
   renderSvgToCanvas,
 } from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"
@@ -58,22 +57,12 @@ export function useCanvasManagement() {
         if (svgElement) {
           setStatus("Canvas描画中...")
 
-          // アンカー方向に基づいて描画位置を計算
-          const textPosition = getTextPositionFromAnchor(
-            anchorX,
-            anchorY,
-            estimatedWidth,
-            estimatedHeight,
-            anchorDirection,
-          )
-
           await renderSvgToCanvas(
             svgElement,
             ctx,
-            textPosition.x,
-            textPosition.y,
-            estimatedWidth,
-            estimatedHeight,
+            anchorX,
+            anchorY,
+            anchorDirection,
           )
           setStatus("描画完了")
         } else {
@@ -118,8 +107,8 @@ export function useCanvasManagement() {
 
         // テキストボックスとアンカーを描画
         for (const textBox of textBoxes) {
-          // アンカー点を描画
-          drawAnchor(ctx, textBox.x, textBox.y, textBox.isSelected)
+          // アンカー点を描画（非同期）
+          await drawAnchor(ctx, textBox.x, textBox.y, textBox.isSelected)
 
           // テキスト内容を描画
           if (textBox.text) {

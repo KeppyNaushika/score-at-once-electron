@@ -46,6 +46,7 @@ export default function TextboxCanvasPage() {
     selectedTextBoxId,
     currentDrag,
     isCreatingAnchor,
+    isDraggingAnchor,
     showTextInput,
     textInputValue,
     setTextInputValue,
@@ -112,7 +113,9 @@ export default function TextboxCanvasPage() {
                   ref={canvasRef}
                   width={800}
                   height={600}
-                  className="cursor-crosshair border-2 border-gray-300 shadow-lg"
+                  className={`border-2 border-gray-300 shadow-lg ${
+                    isDraggingAnchor ? "cursor-move" : "cursor-crosshair"
+                  }`}
                   style={{
                     transform: `scale(${zoom})`,
                     transformOrigin: "top left",

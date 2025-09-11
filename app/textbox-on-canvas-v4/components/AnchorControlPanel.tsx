@@ -6,6 +6,7 @@
 "use client"
 
 import {
+  Anchor,
   ArrowDown,
   ArrowDownLeft,
   ArrowDownRight,
@@ -71,7 +72,7 @@ export function AnchorControlPanel({
     },
     {
       direction: "center" as const,
-      icon: () => <div className="h-2 w-2 rounded-full bg-current" />,
+      icon: Anchor,
       position: "col-start-2 row-start-2",
     },
     {

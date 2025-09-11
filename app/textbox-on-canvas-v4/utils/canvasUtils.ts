@@ -39,22 +39,20 @@ export function setupDebugPreview(
 }
 
 /**
- * SVG要素をCanvasに高品質描画する（アスペクト比維持スケーリング付き）
+ * SVG要素をCanvasに高品質描画する（実測サイズベース）
  * @param svgElement 描画するSVG要素
  * @param ctx Canvas描画コンテキスト
- * @param x 描画開始X座標
- * @param y 描画開始Y座標
- * @param textBoxWidth テキストボックスの幅
- * @param textBoxHeight テキストボックスの高さ
+ * @param anchorX アンカーのX座標
+ * @param anchorY アンカーのY座標
+ * @param anchorDirection アンカー方向
  * @returns Promise<SvgRenderResult> 描画結果
  */
 export async function renderSvgToCanvas(
   svgElement: SVGSVGElement,
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  textBoxWidth: number,
-  textBoxHeight: number,
+  anchorX: number,
+  anchorY: number,
+  anchorDirection: AnchorDirection,
 ): Promise<SvgRenderResult> {
   return new Promise((resolve) => {
     try {
@@ -92,45 +90,41 @@ export async function renderSvgToCanvas(
 
       img.onload = () => {
         try {
-          // アスペクト比を維持しながらテキストボックスに合わせてスケーリング
-          const originalWidth = img.width
-          const originalHeight = img.height
+          // 実際のSVGサイズを取得
+          const actualWidth = img.width
+          const actualHeight = img.height
 
-          // スケール計算（アスペクト比維持）
-          const scaleX = textBoxWidth / originalWidth
-          const scaleY = textBoxHeight / originalHeight
-          const scale = Math.min(scaleX, scaleY) // より小さい方を選択してアスペクト比維持
-
-          // スケーリング後のサイズ
-          const scaledWidth = originalWidth * scale
-          const scaledHeight = originalHeight * scale
-
-          // 中央配置のための位置調整
-          const offsetX = (textBoxWidth - scaledWidth) / 2
-          const offsetY = (textBoxHeight - scaledHeight) / 2
+          // アンカー方向に基づいて描画位置を計算
+          const textPosition = getTextPositionFromAnchor(
+            anchorX,
+            anchorY,
+            actualWidth,
+            actualHeight,
+            anchorDirection,
+          )
 
           // 画像を描画
           ctx.drawImage(
             img,
-            x + offsetX,
-            y + offsetY,
-            scaledWidth,
-            scaledHeight,
+            textPosition.x,
+            textPosition.y,
+            actualWidth,
+            actualHeight,
           )
 
-          // デバッグ用赤枠を描画（測定精度確認用）
+          // デバッグ用赤枠を描画（実際のテキスト領域）
           drawDebugBorder(
             ctx,
-            x + offsetX,
-            y + offsetY,
-            scaledWidth,
-            scaledHeight,
+            textPosition.x,
+            textPosition.y,
+            actualWidth,
+            actualHeight,
           )
 
           URL.revokeObjectURL(svgUrl)
           resolve({
-            width: scaledWidth,
-            height: scaledHeight,
+            width: actualWidth,
+            height: actualHeight,
           })
         } catch (drawError) {
           URL.revokeObjectURL(svgUrl)
@@ -253,36 +247,91 @@ export function drawCreatingTextBox(
 }
 
 /**
- * アンカー点を描画する
+ * Lucide AnchorアイコンのSVGパスデータ
+ */
+const ANCHOR_SVG_PATH = "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
+
+/**
+ * LucideのAnchorアイコンをCanvasに描画する
  * @param ctx Canvas描画コンテキスト
  * @param x アンカーのX座標
  * @param y アンカーのY座標
  * @param isSelected 選択状態かどうか
  */
-export function drawAnchor(
+export async function drawAnchor(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   isSelected: boolean,
-): void {
-  ctx.save()
+): Promise<void> {
+  return new Promise((resolve) => {
+    try {
+      const size = CANVAS_SETTINGS.ANCHOR_RADIUS * 2
+      const color = isSelected
+        ? CANVAS_SETTINGS.SELECTED_ANCHOR_COLOR
+        : CANVAS_SETTINGS.ANCHOR_COLOR
+      const strokeColor = isSelected ? "#1d4ed8" : "#2563eb"
 
-  // 円の描画
-  ctx.beginPath()
-  ctx.arc(x, y, CANVAS_SETTINGS.ANCHOR_RADIUS, 0, Math.PI * 2)
+      // AnchorアイコンのSVGを生成
+      const svgContent = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="3"/>
+          <path d="M12 22V8"/>
+          <path d="M5 12H2a10 10 0 0 0 20 0h-3"/>
+        </svg>
+      `
 
-  // 塗りつぶし色の設定
-  ctx.fillStyle = isSelected
-    ? CANVAS_SETTINGS.SELECTED_ANCHOR_COLOR
-    : CANVAS_SETTINGS.ANCHOR_COLOR
-  ctx.fill()
+      const svgBlob = new Blob([svgContent], {
+        type: "image/svg+xml;charset=utf-8",
+      })
+      const svgUrl = URL.createObjectURL(svgBlob)
 
-  // 枠線の描画
-  ctx.strokeStyle = isSelected ? "#1d4ed8" : "#2563eb"
-  ctx.lineWidth = 2
-  ctx.stroke()
+      const img = new Image()
+      img.onload = () => {
+        try {
+          // アンカーアイコンを中央に配置
+          const drawX = x - size / 2
+          const drawY = y - size / 2
+          
+          ctx.drawImage(img, drawX, drawY, size, size)
+          URL.revokeObjectURL(svgUrl)
+          resolve()
+        } catch (error) {
+          URL.revokeObjectURL(svgUrl)
+          resolve()
+        }
+      }
 
-  ctx.restore()
+      img.onerror = () => {
+        URL.revokeObjectURL(svgUrl)
+        resolve()
+      }
+
+      img.src = svgUrl
+    } catch (error) {
+      resolve()
+    }
+  })
+}
+
+/**
+ * アンカーがクリックされたかどうかを判定する
+ * @param mouseX マウスのX座標
+ * @param mouseY マウスのY座標
+ * @param anchorX アンカーのX座標
+ * @param anchorY アンカーのY座標
+ * @returns アンカーがクリックされた場合はtrue
+ */
+export function isAnchorClicked(
+  mouseX: number,
+  mouseY: number,
+  anchorX: number,
+  anchorY: number,
+): boolean {
+  const distance = Math.sqrt(
+    Math.pow(mouseX - anchorX, 2) + Math.pow(mouseY - anchorY, 2)
+  )
+  return distance <= CANVAS_SETTINGS.ANCHOR_RADIUS * 2 // クリック範囲を少し大きめにする
 }
 
 /**
