@@ -24,14 +24,19 @@ export type AnchorDirection =
   | "bottom-right"
 
 /**
+ * 座標系の種類
+ */
+export type CoordinateSystem = "absolute" | "relative"
+
+/**
  * テキストボックスの基本データ構造（アンカーベース）
  */
 export interface TextBox {
   /** 一意識別子 */
   id: string
-  /** アンカーのX座標 */
+  /** X座標（絶対座標: px、相対座標: 0.0-1.0） */
   x: number
-  /** アンカーのY座標 */
+  /** Y座標（絶対座標: px、相対座標: 0.0-1.0） */
   y: number
   /** テキスト内容 */
   text: string
@@ -41,6 +46,8 @@ export interface TextBox {
   anchorDirection: AnchorDirection
   /** テキストサイズ（px） */
   textSize: number
+  /** 座標系（デフォルトは absolute） */
+  coordinateSystem?: CoordinateSystem
 }
 
 /**
@@ -253,6 +260,30 @@ export interface CanvasManagementHook {
 }
 
 /**
+ * 座標変換のオプション
+ */
+export interface CoordinateConversionOptions {
+  /** Canvas/画像の幅 */
+  canvasWidth: number
+  /** Canvas/画像の高さ */
+  canvasHeight: number
+}
+
+/**
+ * 座標変換ユーティリティの型定義
+ */
+export interface CoordinateConversionUtils {
+  /** 相対座標を絶対座標に変換 */
+  relativeToAbsolute: (point: Point, options: CoordinateConversionOptions) => Point
+  /** 絶対座標を相対座標に変換 */
+  absoluteToRelative: (point: Point, options: CoordinateConversionOptions) => Point
+  /** TextBoxを相対座標系に変換 */
+  textBoxToRelative: (textBox: TextBox, options: CoordinateConversionOptions) => TextBox
+  /** TextBoxを絶対座標系に変換 */
+  textBoxToAbsolute: (textBox: TextBox, options: CoordinateConversionOptions) => TextBox
+}
+
+/**
  * テキストボックス操作フックの戻り値
  */
 export interface TextBoxOperationsHook {
@@ -261,6 +292,7 @@ export interface TextBoxOperationsHook {
   selectedTextBoxId: string | null
   currentDrag: DragState | null
   isCreatingAnchor: boolean
+  isDraggingAnchor: boolean
   showTextInput: boolean
   textInputValue: string
   setTextInputValue: (value: string) => void

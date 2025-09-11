@@ -21,7 +21,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { AlignLeft, AlignCenter, AlignRight, AlignVerticalSpaceAround, AlignVerticalSpaceBetween } from "lucide-react"
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  AlignVerticalSpaceAround,
+  AlignVerticalSpaceBetween,
+} from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 
 // 型定義とインターフェース
@@ -43,7 +49,6 @@ function TextboxPreview({ textBox }: { textBox: TextBox }) {
 
           // SVG変換と完全に同じMathJax処理を実行
           await processMathJaxContent(previewRef.current!, htmlContent)
-
         } catch (error) {
           console.error("DIVプレビュー処理エラー:", error)
         }
@@ -54,15 +59,13 @@ function TextboxPreview({ textBox }: { textBox: TextBox }) {
   }, [textBox.text])
 
   return (
-    <div className="border border-green-300 rounded p-2 bg-white">
-      <div className="text-xs text-gray-500 mb-1">
-        ID: {textBox.id.substring(0, 8)}... | 位置: ({Math.round(textBox.x)}, {Math.round(textBox.y)})
+    <div className="rounded border border-green-300 bg-white p-2">
+      <div className="mb-1 text-xs text-gray-500">
+        ID: {textBox.id.substring(0, 8)}... | 位置: ({Math.round(textBox.x)},{" "}
+        {Math.round(textBox.y)})
       </div>
-      <div 
-        ref={previewRef}
-        className="text-sm math-preview"
-      />
-      <div className="text-xs text-gray-400 mt-1">
+      <div ref={previewRef} className="math-preview text-sm" />
+      <div className="mt-1 text-xs text-gray-400">
         生テキスト: {textBox.text}
       </div>
     </div>
@@ -77,7 +80,6 @@ import {
   drawBackgroundImage,
   drawCreatingTextBox,
   drawTextBoxBorder,
-  renderSvgToCanvas,
 } from "./utils/canvasUtils"
 import {
   createTextBoxFromDrag,
@@ -87,7 +89,11 @@ import {
   updateTextBoxContent,
   updateTextBoxSelection,
 } from "./utils/coordinateUtils"
-import { convertTextToSvg, processMathJaxContent, parseTextWithMath } from "./utils/textConversionUtils"
+import {
+  convertTextToSvg,
+  parseTextWithMath,
+  processMathJaxContent,
+} from "./utils/textConversionUtils"
 
 /**
  * テキストボックス Canvas ページのメインコンポーネント
@@ -108,57 +114,6 @@ export default function TextboxCanvasPage() {
   const [textInputValue, setTextInputValue] = useState<string>("")
   const [zoom, setZoom] = useState<number>(1)
   const [status, setStatus] = useState<string>("")
-
-  /**
-   * テキストをCanvas上にレンダリングする（MathJax対応）
-   * @param text レンダリングするテキスト
-   * @param x X座標
-   * @param y Y座標
-   * @param width 幅
-   * @param height 高さ
-   */
-  const renderTextToCanvas = useCallback(
-    async (
-      text: string,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-    ): Promise<void> => {
-      const canvas = canvasRef.current
-      if (!canvas || !text.trim()) return
-
-      try {
-        setStatus("数式を描画中...")
-
-        // 対応するテキストボックスを座標とテキストで検索（より確実）
-        const currentTextBox = textBoxes.find(tb => 
-          tb.text === text && 
-          Math.abs(tb.x - x) < 1 && 
-          Math.abs(tb.y - y) < 1
-        )
-        const horizontalAlign = currentTextBox?.horizontalAlign || 'left'
-        const verticalAlign = currentTextBox?.verticalAlign || 'top'
-
-        console.log('描画設定:', { text, horizontalAlign, verticalAlign, textBoxId: currentTextBox?.id })
-
-        // SVG生成（プレビューで正常確認済み）
-        const svgElement = await convertTextToSvg(text, width, height, horizontalAlign, verticalAlign)
-
-        if (svgElement) {
-          // SVG→Canvas変換を回避して、DOM要素として直接配置
-          await renderSvgAsOverlay(svgElement, x, y, width, height)
-          setStatus("描画完了")
-        } else {
-          setStatus("SVG生成失敗")
-        }
-      } catch (error) {
-        console.error("テキスト描画エラー:", error)
-        setStatus("描画エラー")
-      }
-    },
-    [textBoxes],
-  )
 
   /**
    * SVGをCanvasの上に絶対位置で配置する
@@ -183,43 +138,110 @@ export default function TextboxCanvasPage() {
       const canvasRect = canvas.getBoundingClientRect()
       const canvasStyle = window.getComputedStyle(canvas)
       const transform = canvasStyle.transform
-      
+
       // スケール値を抽出（zoom設定から）
       const scaleMatch = transform.match(/matrix\(([^,]+)/)
       const scale = scaleMatch ? parseFloat(scaleMatch[1]) : zoom
 
       // SVGの実際のサイズを取得（結合SVGの場合は独自サイズ）
-      const svgWidth = parseFloat(svgElement.getAttribute('width') || width.toString())
-      const svgHeight = parseFloat(svgElement.getAttribute('height') || height.toString())
+      const svgWidth = parseFloat(
+        svgElement.getAttribute("width") || width.toString(),
+      )
+      const svgHeight = parseFloat(
+        svgElement.getAttribute("height") || height.toString(),
+      )
 
       // SVG要素を複製してオーバーレイとして配置
       const overlayId = `svg-overlay-${Date.now()}`
       const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
-      
+
       clonedSvg.id = overlayId
-      clonedSvg.style.position = 'absolute'
+      clonedSvg.style.position = "absolute"
       clonedSvg.style.left = `${canvasRect.left + x * scale}px`
       clonedSvg.style.top = `${canvasRect.top + y * scale}px`
       clonedSvg.style.width = `${svgWidth * scale}px`
       clonedSvg.style.height = `${svgHeight * scale}px`
-      clonedSvg.style.pointerEvents = 'none'
-      clonedSvg.style.zIndex = '10'
+      clonedSvg.style.pointerEvents = "none"
+      clonedSvg.style.zIndex = "10"
 
       // デバッグ用：SVGサイズをコンソールに出力
-      console.log('SVGオーバーレイ:', {
+      console.log("SVGオーバーレイ:", {
         original: { width, height },
         svg: { width: svgWidth, height: svgHeight },
-        position: { x: x * scale, y: y * scale }
+        position: { x: x * scale, y: y * scale },
       })
 
       // 既存のオーバーレイを削除
       const existingOverlays = document.querySelectorAll('[id^="svg-overlay-"]')
-      existingOverlays.forEach(overlay => overlay.remove())
+      existingOverlays.forEach((overlay) => overlay.remove())
 
       // 新しいオーバーレイを追加
       document.body.appendChild(clonedSvg)
     },
-    [zoom]
+    [zoom],
+  )
+
+  /**
+   * テキストをCanvas上にレンダリングする（MathJax対応）
+   * @param text レンダリングするテキスト
+   * @param x X座標
+   * @param y Y座標
+   * @param width 幅
+   * @param height 高さ
+   */
+  const renderTextToCanvas = useCallback(
+    async (
+      text: string,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+    ): Promise<void> => {
+      const canvas = canvasRef.current
+      if (!canvas || !text.trim()) return
+
+      try {
+        setStatus("数式を描画中...")
+
+        // 対応するテキストボックスを座標とテキストで検索（より確実）
+        const currentTextBox = textBoxes.find(
+          (tb) =>
+            tb.text === text &&
+            Math.abs(tb.x - x) < 1 &&
+            Math.abs(tb.y - y) < 1,
+        )
+        const horizontalAlign = currentTextBox?.horizontalAlign || "left"
+        const verticalAlign = currentTextBox?.verticalAlign || "top"
+
+        console.log("描画設定:", {
+          text,
+          horizontalAlign,
+          verticalAlign,
+          textBoxId: currentTextBox?.id,
+        })
+
+        // SVG生成（プレビューで正常確認済み）
+        const svgElement = await convertTextToSvg(
+          text,
+          width,
+          height,
+          horizontalAlign,
+          verticalAlign,
+        )
+
+        if (svgElement) {
+          // SVG→Canvas変換を回避して、DOM要素として直接配置
+          await renderSvgAsOverlay(svgElement, x, y, width, height)
+          setStatus("描画完了")
+        } else {
+          setStatus("SVG生成失敗")
+        }
+      } catch (error) {
+        console.error("テキスト描画エラー:", error)
+        setStatus("描画エラー")
+      }
+    },
+    [renderSvgAsOverlay, textBoxes],
   )
 
   /**
@@ -487,25 +509,32 @@ export default function TextboxCanvasPage() {
 
               {/* SVG変換前のDIVプレビュー */}
               <div className="rounded-md border border-green-200 bg-green-50 p-3">
-                <div className="mb-2 text-sm font-medium text-green-800">📝 SVG変換前のDIVプレビュー</div>
+                <div className="mb-2 text-sm font-medium text-green-800">
+                  📝 SVG変換前のDIVプレビュー
+                </div>
                 <div id="div-preview-container" className="space-y-2">
-                  {textBoxes.length === 0 || !textBoxes.some(tb => tb.text) ? (
-                    <div className="text-gray-400 italic text-sm">
+                  {textBoxes.length === 0 ||
+                  !textBoxes.some((tb) => tb.text) ? (
+                    <div className="text-sm text-gray-400 italic">
                       テキストボックスにテキストを入力するとプレビューが表示されます
                     </div>
                   ) : (
-                    textBoxes.filter(tb => tb.text).map((textBox) => (
-                      <TextboxPreview key={textBox.id} textBox={textBox} />
-                    ))
+                    textBoxes
+                      .filter((tb) => tb.text)
+                      .map((textBox) => (
+                        <TextboxPreview key={textBox.id} textBox={textBox} />
+                      ))
                   )}
                 </div>
               </div>
 
               {/* SVG変換後のプレビュー */}
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-                <div className="mb-2 text-sm font-medium text-blue-800">🎨 SVG変換後のプレビュー</div>
+                <div className="mb-2 text-sm font-medium text-blue-800">
+                  🎨 SVG変換後のプレビュー
+                </div>
                 <div id="svg-preview-container" className="space-y-2">
-                  <div className="text-gray-400 italic text-sm">
+                  <div className="text-sm text-gray-400 italic">
                     テキストボックスにテキストを入力してCanvasに描画するとSVGが表示されます
                   </div>
                 </div>
@@ -570,18 +599,32 @@ export default function TextboxCanvasPage() {
                       {/* 配置設定 */}
                       <div className="space-y-4 border-t pt-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">水平方向の配置</label>
+                          <label className="text-sm font-medium">
+                            水平方向の配置
+                          </label>
                           <ToggleGroup
                             type="single"
-                            value={selectedTextBoxId ? textBoxes.find(tb => tb.id === selectedTextBoxId)?.horizontalAlign || 'left' : 'left'}
+                            value={
+                              selectedTextBoxId
+                                ? textBoxes.find(
+                                    (tb) => tb.id === selectedTextBoxId,
+                                  )?.horizontalAlign || "left"
+                                : "left"
+                            }
                             onValueChange={(value) => {
                               if (value && selectedTextBoxId) {
-                                setTextBoxes(prev => 
-                                  prev.map(tb => 
-                                    tb.id === selectedTextBoxId 
-                                      ? { ...tb, horizontalAlign: value as 'left' | 'center' | 'right' }
-                                      : tb
-                                  )
+                                setTextBoxes((prev) =>
+                                  prev.map((tb) =>
+                                    tb.id === selectedTextBoxId
+                                      ? {
+                                          ...tb,
+                                          horizontalAlign: value as
+                                            | "left"
+                                            | "center"
+                                            | "right",
+                                        }
+                                      : tb,
+                                  ),
                                 )
                                 // Canvas再描画をトリガー
                                 setTimeout(() => redrawCanvas(), 100)
@@ -592,7 +635,10 @@ export default function TextboxCanvasPage() {
                             <ToggleGroupItem value="left" aria-label="左揃え">
                               <AlignLeft className="h-4 w-4" />
                             </ToggleGroupItem>
-                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                            <ToggleGroupItem
+                              value="center"
+                              aria-label="中央揃え"
+                            >
                               <AlignCenter className="h-4 w-4" />
                             </ToggleGroupItem>
                             <ToggleGroupItem value="right" aria-label="右揃え">
@@ -602,18 +648,32 @@ export default function TextboxCanvasPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">垂直方向の配置</label>
+                          <label className="text-sm font-medium">
+                            垂直方向の配置
+                          </label>
                           <ToggleGroup
                             type="single"
-                            value={selectedTextBoxId ? textBoxes.find(tb => tb.id === selectedTextBoxId)?.verticalAlign || 'top' : 'top'}
+                            value={
+                              selectedTextBoxId
+                                ? textBoxes.find(
+                                    (tb) => tb.id === selectedTextBoxId,
+                                  )?.verticalAlign || "top"
+                                : "top"
+                            }
                             onValueChange={(value) => {
                               if (value && selectedTextBoxId) {
-                                setTextBoxes(prev => 
-                                  prev.map(tb => 
-                                    tb.id === selectedTextBoxId 
-                                      ? { ...tb, verticalAlign: value as 'top' | 'center' | 'bottom' }
-                                      : tb
-                                  )
+                                setTextBoxes((prev) =>
+                                  prev.map((tb) =>
+                                    tb.id === selectedTextBoxId
+                                      ? {
+                                          ...tb,
+                                          verticalAlign: value as
+                                            | "top"
+                                            | "center"
+                                            | "bottom",
+                                        }
+                                      : tb,
+                                  ),
                                 )
                                 // Canvas再描画をトリガー
                                 setTimeout(() => redrawCanvas(), 100)
@@ -624,7 +684,10 @@ export default function TextboxCanvasPage() {
                             <ToggleGroupItem value="top" aria-label="上揃え">
                               <AlignVerticalSpaceAround className="h-4 w-4 rotate-180" />
                             </ToggleGroupItem>
-                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                            <ToggleGroupItem
+                              value="center"
+                              aria-label="中央揃え"
+                            >
                               <AlignVerticalSpaceBetween className="h-4 w-4 rotate-90" />
                             </ToggleGroupItem>
                             <ToggleGroupItem value="bottom" aria-label="下揃え">
@@ -644,11 +707,13 @@ export default function TextboxCanvasPage() {
                       </div>
                       <div className="text-xs text-gray-500">
                         <p>
-                          <strong>数式記法:</strong> $x^2$ または \(x^2\) (インライン),
-                          $$\int x dx$$ または \[\int x dx\] (ブロック)
+                          <strong>数式記法:</strong> $x^2$ または \(x^2\)
+                          (インライン), $$\int x dx$$ または \[\int x dx\]
+                          (ブロック)
                         </p>
                         <p>
-                          <strong>書式:</strong> **太字**, *斜体*, __下線__, ~~取り消し線~~
+                          <strong>書式:</strong> **太字**, *斜体*, __下線__,
+                          ~~取り消し線~~
                         </p>
                       </div>
                     </div>

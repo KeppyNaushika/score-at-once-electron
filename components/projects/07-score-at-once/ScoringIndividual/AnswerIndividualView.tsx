@@ -3,12 +3,13 @@
 
 import { useCallback, useEffect } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
-import { RichTextEditorModalV3 } from "./RichTextEditorModalV3"
+import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/useDrawingState"
 import { useImageCanvas } from "./hooks/useImageCanvas"
 import { useImageNavigation } from "./hooks/useImageNavigation"
+import { useTextboxV4Integration } from "./hooks/useTextboxV4Integration"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
 
 export default function AnswerIndividualView({
@@ -25,6 +26,9 @@ export default function AnswerIndividualView({
   const { zoom, position, onZoomChange, onPositionChange } =
     useImageNavigation()
 
+  // V4統合: 常にV4モードを使用
+  const useV4Integration = true
+
   // 現在表示中の採点データを取得
   const currentScoringData =
     scoringDatas.find(
@@ -34,7 +38,7 @@ export default function AnswerIndividualView({
   // 描画状態管理（データベース統合対応）
   const drawingState = useDrawingState(
     currentScoringData?.id || null, // questionScoreIdとして使用
-    true // データベース永続化を有効化
+    true, // データベース永続化を有効化
   )
 
   // テキスト入力状態変更の通知
@@ -67,19 +71,54 @@ export default function AnswerIndividualView({
       selectionRectangle: drawingState.selectionRectangle,
       showMultiplePages,
       pageSpacing,
+      isDraggingElement: drawingState.isDraggingElement,
     })
 
-  // テキスト再編集処理（useAnswerIndividualEventsより前に定義）
+  // V4統合フック（画像サイズが確定してから初期化）
+  const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
+  const canvasHeight = loadedImages.length > 0 ? loadedImages[0].height : 600
+
+  // 答案画像のURL取得
+  const backgroundImageUrl = currentScoringData
+    ? currentScoringData.imageUrl.replace("appimg://", "file://")
+    : undefined
+
+  const v4Integration = useTextboxV4Integration({
+    canvasWidth,
+    canvasHeight,
+    drawingElements: drawingState.drawingElements,
+    updateDrawingElements: drawingState.setDrawingElements,
+  })
+
+  // V4統合: テキストアンカークリック処理
+  const handleTextAnchorClick = useCallback(
+    (position: { x: number; y: number }) => {
+      if (useV4Integration) {
+        // V4統合モード: V4統合モーダルを開く
+        v4Integration.openV4Modal(position)
+      } else {
+        // レガシーモード: 古いモーダルを開く（既存のロジック維持）
+        // 注：この部分は将来的に削除予定
+        console.warn(
+          "レガシーテキストモードは非推奨です。V4統合モードをご利用ください。",
+        )
+      }
+    },
+    [useV4Integration, v4Integration],
+  )
+
+  // V4統合: テキスト要素の再編集処理
   const handleTextElementReClick = useCallback(
     (element: any) => {
-      // 既存のテキスト内容と色でエディターを開く
-      drawingState.setTextInputValue(element.text || "")
-      drawingState.setStrokeColor(element.color)
-      drawingState.setIsEditingExistingText(true)
-      drawingState.setEditingTextElementId(element.id)
-      drawingState.setShowTextInput(true)
+      // V4統合モード: V4統合モーダルを開く
+      v4Integration.openV4Modal(
+        { x: element.x, y: element.y },
+        element.text || "",
+        element.id,
+      )
+      v4Integration.setCurrentTextColor(element.color || "#000000")
     },
-    [drawingState],
+    [v4Integration],
   )
 
   // イベントハンドリング
@@ -112,6 +151,7 @@ export default function AnswerIndividualView({
       // その他
       lineEditMode: drawingState.lineEditMode,
       rectangleEditMode: drawingState.rectangleEditMode,
+      // テキストボックス関連の状態
       isCreatingTextBox: drawingState.isCreatingTextBox,
       showTextInput: drawingState.showTextInput,
       textInputPosition: drawingState.textInputPosition,
@@ -146,7 +186,8 @@ export default function AnswerIndividualView({
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
       removeDrawingElement: drawingState.removeDrawingElement,
-      // テキスト再編集
+      // V4統合: テキストアンカー・再編集機能
+      onTextAnchorClick: handleTextAnchorClick,
       onTextElementReClick: handleTextElementReClick,
     })
 
@@ -364,68 +405,6 @@ export default function AnswerIndividualView({
     pageSpacing,
   ])
 
-  // テキストキャンセル処理（先に定義）
-  const handleTextCancel = useCallback(() => {
-    drawingState.setShowTextInput(false)
-    drawingState.setTextInputValue("")
-    drawingState.setCurrentDrawing(null)
-    drawingState.setIsEditingExistingText(false)
-    drawingState.setEditingTextElementId(null)
-  }, [drawingState])
-
-  // LaTeX記法をMarkdown記法に変換（RichTextEditorModalと同じ処理）
-  const convertLatexToMarkdown = useCallback((text: string): string => {
-    return text
-      .replace(/\\\(/g, '$')     // \( を $ に
-      .replace(/\\\)/g, '$')     // \) を $ に
-      .replace(/\\\[/g, '$$')    // \[ を $$ に
-      .replace(/\\\]/g, '$$')    // \] を $$ に
-  }, [])
-
-  // テキスト送信処理
-  const handleTextSubmit = useCallback(() => {
-    if (!drawingState.textInputValue.trim()) {
-      // 空のテキストの場合はキャンセル処理
-      handleTextCancel()
-      return
-    }
-
-    // LaTeX記法をMarkdown記法に変換
-    const processedText = convertLatexToMarkdown(drawingState.textInputValue)
-
-    if (
-      drawingState.isEditingExistingText &&
-      drawingState.editingTextElementId
-    ) {
-      // 既存テキストの編集
-      drawingState.updateDrawingElement(drawingState.editingTextElementId, {
-        text: processedText,
-        color: drawingState.strokeColor,
-      })
-
-      drawingState.setShowTextInput(false)
-      drawingState.setTextInputValue("")
-      drawingState.setIsEditingExistingText(false)
-      drawingState.setEditingTextElementId(null)
-    } else {
-      // 新規テキストの作成
-      if (!drawingState.currentDrawing) {
-        handleTextCancel()
-        return
-      }
-
-      const textElement = {
-        ...drawingState.currentDrawing,
-        text: processedText,
-      }
-
-      drawingState.addDrawingElement(textElement as any)
-      drawingState.setShowTextInput(false)
-      drawingState.setTextInputValue("")
-      drawingState.setCurrentDrawing(null)
-    }
-  }, [drawingState, handleTextCancel, convertLatexToMarkdown])
-
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
     return (
@@ -552,19 +531,21 @@ export default function AnswerIndividualView({
         onLineStyleChange={(style) => drawingState.setLineStyle(style as any)}
       />
 
-      {/* リッチテキストエディターモーダル */}
-      <RichTextEditorModalV3
-        open={drawingState.showTextInput}
-        onOpenChange={drawingState.setShowTextInput}
-        value={drawingState.textInputValue}
-        onValueChange={drawingState.setTextInputValue}
-        color={drawingState.strokeColor}
-        onColorChange={drawingState.setStrokeColor}
-        onSubmit={handleTextSubmit}
-        onCancel={handleTextCancel}
-        title={
-          drawingState.isEditingExistingText ? "テキスト編集" : "テキスト入力"
-        }
+      {/* V4統合: 高品質テキストエディターモーダル */}
+      <RichTextEditorModalV4
+        open={v4Integration.showV4Modal}
+        onOpenChange={(open) => !open && v4Integration.closeV4Modal()}
+        value={v4Integration.currentTextValue}
+        onValueChange={v4Integration.setCurrentTextValue}
+        color={v4Integration.currentTextColor}
+        onColorChange={v4Integration.setCurrentTextColor}
+        onSubmit={v4Integration.confirmText}
+        onCancel={v4Integration.cancelEdit}
+        title="高品質テキスト編集 (V4統合)"
+        position={v4Integration.currentPosition}
+        canvasWidth={canvasWidth}
+        canvasHeight={canvasHeight}
+        backgroundImageUrl={backgroundImageUrl}
       />
 
       {/* 隠しimg要素（Canvas描画用） */}

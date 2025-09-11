@@ -8,6 +8,7 @@
 import { useCallback, useState } from "react"
 import { TEXTBOX_SETTINGS } from "../constants"
 import type { AnchorDirection, DragState, TextBox } from "../types"
+import { isAnchorClicked } from "../utils/canvasUtils"
 import {
   createAnchorFromClick,
   findTextBoxAtPoint,
@@ -15,7 +16,6 @@ import {
   updateTextBoxContent,
   updateTextBoxSelection,
 } from "../utils/coordinateUtils"
-import { isAnchorClicked } from "../utils/canvasUtils"
 
 /**
  * テキストボックス操作フック
@@ -50,7 +50,12 @@ export function useTextBoxOperations() {
           setTextBoxes(updateTextBoxSelection(textBoxes, textBox.id))
           setSelectedTextBoxId(textBox.id)
           setIsDraggingAnchor(true)
-          setCurrentDrag({ startX: coords.x, startY: coords.y })
+          setCurrentDrag({
+            startX: coords.x,
+            startY: coords.y,
+            currentX: coords.x,
+            currentY: coords.y,
+          })
           anchorClicked = true
           break
         }

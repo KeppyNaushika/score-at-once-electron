@@ -38,10 +38,13 @@ interface UseAnswerDisplayEventsProps {
   selectionRectangle: any
   lineEditMode: any
   rectangleEditMode: any
+  // テキストボックス関連の状態
   isCreatingTextBox: boolean
   showTextInput: boolean
   textInputPosition: { x: number; y: number }
   textInputValue: string
+  // V4統合: テキストアンカー処理
+  onTextAnchorClick?: (position: { x: number; y: number }) => void
   isDraggingHandle: boolean
   currentHandle: string | null
 
@@ -170,22 +173,14 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     currentTool: props.currentTool,
     isDrawing: props.isDrawing,
     currentDrawing: props.currentDrawing,
-    isCreatingTextBox: props.isCreatingTextBox,
     isShiftPressed: props.isShiftPressed,
     strokeColor: props.strokeColor,
     strokeWidth: props.strokeWidth,
     lineStyle: props.lineStyle,
-    setIsCreatingTextBox: props.setIsCreatingTextBox,
     setIsDrawing: props.setIsDrawing,
     setCurrentDrawing: props.setCurrentDrawing,
     addDrawingElement: props.addDrawingElement,
-    canvasRef,
-    containerRef,
-    imageRef,
-    zoom,
-    setTextInputPosition: props.setTextInputPosition,
-    setShowTextInput: props.setShowTextInput,
-    setTextInputValue: props.setTextInputValue,
+    onTextAnchorClick: props.onTextAnchorClick,
   })
 
   // Main pointer event handlers that delegate to appropriate tool handlers
@@ -247,12 +242,15 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     ],
   )
 
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    // Call all handlers - they will check their own conditions
-    handleHandToolMouseUp()
-    handleSelectionMouseUp(e.nativeEvent)
-    handleDrawingMouseUp()
-  }, [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp])
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      // Call all handlers - they will check their own conditions
+      handleHandToolMouseUp()
+      handleSelectionMouseUp(e.nativeEvent)
+      handleDrawingMouseUp()
+    },
+    [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp],
+  )
 
   return {
     handlePointerDown,

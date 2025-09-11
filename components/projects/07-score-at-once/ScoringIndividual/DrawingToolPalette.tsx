@@ -9,13 +9,13 @@ import {
   Hand,
   Maximize,
   MousePointer2,
+  Type,
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
-import { TextToolPopover } from "./TextToolPopover"
 import type { DrawingTool } from "./types/answer-individual-types"
 
 interface DrawingToolPaletteProps {
@@ -138,12 +138,23 @@ export function DrawingToolPalette({
             onStrokeWidthChange={onStrokeWidthChange}
           />
 
-          <TextToolPopover
-            currentTool={currentTool}
-            onToolChange={onToolChange}
-            strokeColor={strokeColor}
-            onStrokeColorChange={onStrokeColorChange}
-          />
+          {/* V4統合テキストアンカーボタン */}
+          <Button
+            size="sm"
+            variant={currentTool === "text" ? "default" : "ghost"}
+            onClick={() => onToolChange("text")}
+            title="テキストアンカー - クリックでテキスト配置"
+            style={{
+              backgroundColor: currentTool === "text" ? strokeColor : undefined,
+              borderColor: currentTool === "text" ? strokeColor : undefined,
+            }}
+          >
+            <Type 
+              className="h-4 w-4" 
+              style={{ color: currentTool === "text" ? "white" : undefined }}
+            />
+          </Button>
+
         </div>
       </Card>
     </div>

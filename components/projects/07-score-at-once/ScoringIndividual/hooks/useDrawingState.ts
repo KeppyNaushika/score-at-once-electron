@@ -9,24 +9,29 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import { useCallback, useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // データベース統合フックのインポート
-import { useDrawingAnnotations, convertAnnotationToElement, type DrawingPersistenceCallbacks } from './useDrawingAnnotations'
+import {
+  convertAnnotationToElement,
+  useDrawingAnnotations,
+  type DrawingPersistenceCallbacks,
+} from "./useDrawingAnnotations"
 
 /**
  * 拡張された描画状態フック（データベース統合対応）
  */
 export function useDrawingState(
   questionScoreId?: string | null,
-  enablePersistence: boolean = true
-): DrawingState & DrawingActions & {
-  // データベース統合機能
-  isLoadingFromDB: boolean
-  dbError: string | null
-  syncWithDatabase: () => Promise<void>
-  loadFromDatabase: () => Promise<void>
-} {
+  enablePersistence: boolean = true,
+): DrawingState &
+  DrawingActions & {
+    // データベース統合機能
+    isLoadingFromDB: boolean
+    dbError: string | null
+    syncWithDatabase: () => Promise<void>
+    loadFromDatabase: () => Promise<void>
+  } {
   // 基本的な描画設定
   const [currentTool, setCurrentTool] = useState<DrawingTool>("hand")
   const [strokeColor, setStrokeColor] = useState(
@@ -73,7 +78,9 @@ export function useDrawingState(
 
   // テキスト再編集
   const [isEditingExistingText, setIsEditingExistingText] = useState(false)
-  const [editingTextElementId, setEditingTextElementId] = useState<string | null>(null)
+  const [editingTextElementId, setEditingTextElementId] = useState<
+    string | null
+  >(null)
 
   // キーボード状態
   const [isShiftPressed, setIsShiftPressed] = useState(false)
@@ -82,17 +89,17 @@ export function useDrawingState(
   // データベース統合フック
   const persistenceCallbacks: DrawingPersistenceCallbacks = {
     onAnnotationCreated: (annotation) => {
-      console.log('アノテーション作成完了:', annotation.id)
+      console.log("アノテーション作成完了:", annotation.id)
     },
     onAnnotationUpdated: (annotation) => {
-      console.log('アノテーション更新完了:', annotation.id)
+      console.log("アノテーション更新完了:", annotation.id)
     },
     onAnnotationDeleted: (annotationId) => {
-      console.log('アノテーション削除完了:', annotationId)
+      console.log("アノテーション削除完了:", annotationId)
     },
     onError: (error) => {
-      console.error('データベース操作エラー:', error)
-    }
+      console.error("データベース操作エラー:", error)
+    },
   }
 
   const {
@@ -103,8 +110,10 @@ export function useDrawingState(
     updateElement,
     deleteElement,
     loadAnnotations,
-    syncElements
-  } = useDrawingAnnotations(enablePersistence ? persistenceCallbacks : undefined)
+    syncElements,
+  } = useDrawingAnnotations(
+    enablePersistence ? persistenceCallbacks : undefined,
+  )
 
   // データベースからの初期読み込み
   useEffect(() => {
@@ -117,7 +126,7 @@ export function useDrawingState(
         }
       })
     }
-  }, [enablePersistence, questionScoreId, loadAnnotations])
+  }, [enablePersistence, questionScoreId, loadAnnotations, annotations])
 
   // アノテーションの変更を監視してローカル状態に反映
   useEffect(() => {
@@ -128,26 +137,29 @@ export function useDrawingState(
   }, [annotations, enablePersistence])
 
   // 描画要素操作（データベース統合対応）
-  const addDrawingElement = useCallback(async (element: DrawingElement) => {
-    // ローカル状態を即座に更新
-    setDrawingElements((prev) => [...prev, element])
-    
-    // データベースへの保存（バックグラウンド）
-    if (enablePersistence && questionScoreId) {
-      try {
-        await saveElement(element, questionScoreId)
-      } catch (error) {
-        console.error('描画要素保存エラー:', error)
-        // 保存に失敗した場合、ローカル状態をロールバック
-        setDrawingElements((prev) => prev.filter(e => e.id !== element.id))
+  const addDrawingElement = useCallback(
+    async (element: DrawingElement) => {
+      // ローカル状態を即座に更新
+      setDrawingElements((prev) => [...prev, element])
+
+      // データベースへの保存（バックグラウンド）
+      if (enablePersistence && questionScoreId) {
+        try {
+          await saveElement(element, questionScoreId)
+        } catch (error) {
+          console.error("描画要素保存エラー:", error)
+          // 保存に失敗した場合、ローカル状態をロールバック
+          setDrawingElements((prev) => prev.filter((e) => e.id !== element.id))
+        }
       }
-    }
-  }, [enablePersistence, questionScoreId, saveElement])
+    },
+    [enablePersistence, questionScoreId, saveElement],
+  )
 
   const updateDrawingElement = useCallback(
     async (id: string, updates: Partial<DrawingElement>) => {
       let previousElement: DrawingElement | null = null
-      
+
       // ローカル状態を即座に更新
       setDrawingElements((prev) => {
         const updated = prev.map((element) => {
@@ -159,14 +171,14 @@ export function useDrawingState(
         })
         return updated
       })
-      
+
       // データベース更新（バックグラウンド）
       if (enablePersistence && questionScoreId && previousElement) {
         try {
-          const updatedElement = { ...previousElement as any, ...updates }
+          const updatedElement = { ...(previousElement as any), ...updates }
           await updateElement(updatedElement)
         } catch (error) {
-          console.error('描画要素更新エラー:', error)
+          console.error("描画要素更新エラー:", error)
           // 更新に失敗した場合、ローカル状態をロールバック
           if (previousElement) {
             setDrawingElements((prev) =>
@@ -181,33 +193,36 @@ export function useDrawingState(
     [enablePersistence, questionScoreId, updateElement],
   )
 
-  const removeDrawingElement = useCallback(async (id: string) => {
-    let removedElement: DrawingElement | null = null
-    
-    // ローカル状態を即座に更新
-    setDrawingElements((prev) => {
-      removedElement = prev.find(e => e.id === id) || null
-      return prev.filter((element) => element.id !== id)
-    })
-    
-    // 複数選択からも削除
-    setSelectedElementIds((prev) =>
-      prev.filter((elementId) => elementId !== id),
-    )
-    
-    // データベースから削除（バックグラウンド）
-    if (enablePersistence && questionScoreId) {
-      try {
-        await deleteElement(id)
-      } catch (error) {
-        console.error('描画要素削除エラー:', error)
-        // 削除に失敗した場合、ローカル状態をロールバック
-        if (removedElement) {
-          setDrawingElements((prev) => [...prev, removedElement!])
+  const removeDrawingElement = useCallback(
+    async (id: string) => {
+      let removedElement: DrawingElement | null = null
+
+      // ローカル状態を即座に更新
+      setDrawingElements((prev) => {
+        removedElement = prev.find((e) => e.id === id) || null
+        return prev.filter((element) => element.id !== id)
+      })
+
+      // 複数選択からも削除
+      setSelectedElementIds((prev) =>
+        prev.filter((elementId) => elementId !== id),
+      )
+
+      // データベースから削除（バックグラウンド）
+      if (enablePersistence && questionScoreId) {
+        try {
+          await deleteElement(id)
+        } catch (error) {
+          console.error("描画要素削除エラー:", error)
+          // 削除に失敗した場合、ローカル状態をロールバック
+          if (removedElement) {
+            setDrawingElements((prev) => [...prev, removedElement!])
+          }
         }
       }
-    }
-  }, [enablePersistence, questionScoreId, deleteElement])
+    },
+    [enablePersistence, questionScoreId, deleteElement],
+  )
 
   // 複数選択操作
   const addToSelection = useCallback((id: string) => {
@@ -311,14 +326,14 @@ export function useDrawingState(
     setIsDrawing(false)
     setIsDrawingSelection(false)
     setSelectionRectangle(null)
-    
+
     // データベースからも全削除（バックグラウンド）
     if (enablePersistence && questionScoreId) {
       try {
         // データベースをクリアする代わりに同期して空配列を送信
         await syncElements([], questionScoreId)
       } catch (error) {
-        console.error('全描画クリアエラー:', error)
+        console.error("全描画クリアエラー:", error)
       }
     }
   }, [enablePersistence, questionScoreId, syncElements])
@@ -326,18 +341,18 @@ export function useDrawingState(
   // データベース同期関数
   const syncWithDatabase = useCallback(async () => {
     if (!enablePersistence || !questionScoreId) return
-    
+
     try {
       await syncElements(drawingElements, questionScoreId)
     } catch (error) {
-      console.error('データベース同期エラー:', error)
+      console.error("データベース同期エラー:", error)
     }
   }, [enablePersistence, questionScoreId, drawingElements, syncElements])
 
   // データベースから読み込み
   const loadFromDatabase = useCallback(async () => {
     if (!enablePersistence || !questionScoreId) return
-    
+
     try {
       const success = await loadAnnotations(questionScoreId)
       if (success) {
@@ -345,7 +360,7 @@ export function useDrawingState(
         setDrawingElements(elements)
       }
     } catch (error) {
-      console.error('データベース読み込みエラー:', error)
+      console.error("データベース読み込みエラー:", error)
     }
   }, [enablePersistence, questionScoreId, loadAnnotations, annotations])
 
@@ -427,6 +442,5 @@ export function useDrawingState(
     dbError,
     syncWithDatabase,
     loadFromDatabase,
-
   }
 }

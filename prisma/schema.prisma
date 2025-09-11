@@ -235,10 +235,12 @@ model DrawingAnnotation {
   // テキスト専用プロパティ
   text            String        @default("")      // テキスト内容（MathJax対応）
   fontSize        Int           @default(16)
-  textBoxWidth    Float         @default(0.0)     // 0.0 - 1.0 (テキストボックス境界)
-  textBoxHeight   Float         @default(0.0)     // 0.0 - 1.0
-  horizontalAlign String        @default("left")  // "left", "center", "right"
-  verticalAlign   String        @default("top")   // "top", "center", "bottom"
+  textBoxWidth    Float         @default(0.0)     // 0.0 - 1.0 (テキストボックス境界・非推奨)
+  textBoxHeight   Float         @default(0.0)     // 0.0 - 1.0 (非推奨)
+  horizontalAlign String        @default("left")  // "left", "center", "right" (非推奨)
+  verticalAlign   String        @default("top")   // "top", "center", "bottom" (非推奨)
+  // V4統合フィールド
+  anchorDirection String        @default("top-left") // V4統合アンカー方向: "top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right"
   
   // 表示プロパティ（逆ドラッグ対応）
   displayX        Float         @default(0.0)     // 0.0 - 1.0
