@@ -4,7 +4,7 @@
  */
 
 import { CANVAS_SETTINGS } from "../constants"
-import type { SvgRenderResult } from "../types"
+import type { AnchorDirection, Point, SvgRenderResult } from "../types"
 
 /**
  * デバッグプレビュー設定用の状態管理インターフェース
@@ -60,29 +60,29 @@ export async function renderSvgToCanvas(
     try {
       // SVGをBlobに変換（MathJax defs修復付き）
       let svgData = new XMLSerializer().serializeToString(svgElement)
-      
+
       // MathJax要素が含まれている場合は、グローバルdefsを強制追加（Image変換と同じロジック）
-      const hasMathJaxElements = svgData.includes('mjx-container') || svgData.includes('<use')
+      const hasMathJaxElements =
+        svgData.includes("mjx-container") || svgData.includes("<use")
       if (hasMathJaxElements) {
         console.log("🎨 Canvas描画：MathJax要素検出、グローバルdefsを追加")
-        
+
         // ページ全体からMathJax defsを取得
-        const globalDefs = document.querySelector('#MJX-SVG-global-cache defs')
+        const globalDefs = document.querySelector("#MJX-SVG-global-cache defs")
         if (globalDefs && globalDefs.innerHTML.length > 10) {
           const defsContent = globalDefs.outerHTML
-          console.log(`🎨 Canvas描画：グローバルdefs取得 ${defsContent.length}文字`)
-          
-          // SVGの開始タグ直後にdefsを強制挿入
-          svgData = svgData.replace(
-            /(<svg[^>]*>)/,
-            `$1${defsContent}`
+          console.log(
+            `🎨 Canvas描画：グローバルdefs取得 ${defsContent.length}文字`,
           )
+
+          // SVGの開始タグ直後にdefsを強制挿入
+          svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
           console.log("🎨 Canvas描画：defs挿入完了")
         } else {
           console.warn("⚠️ Canvas描画：グローバルdefsが見つかりません")
         }
       }
-      
+
       const svgBlob = new Blob([svgData], {
         type: "image/svg+xml;charset=utf-8",
       })
@@ -250,6 +250,103 @@ export function drawCreatingTextBox(
   ctx.setLineDash([]) // 点線リセット
 
   ctx.restore()
+}
+
+/**
+ * アンカー点を描画する
+ * @param ctx Canvas描画コンテキスト
+ * @param x アンカーのX座標
+ * @param y アンカーのY座標
+ * @param isSelected 選択状態かどうか
+ */
+export function drawAnchor(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  isSelected: boolean,
+): void {
+  ctx.save()
+
+  // 円の描画
+  ctx.beginPath()
+  ctx.arc(x, y, CANVAS_SETTINGS.ANCHOR_RADIUS, 0, Math.PI * 2)
+
+  // 塗りつぶし色の設定
+  ctx.fillStyle = isSelected
+    ? CANVAS_SETTINGS.SELECTED_ANCHOR_COLOR
+    : CANVAS_SETTINGS.ANCHOR_COLOR
+  ctx.fill()
+
+  // 枠線の描画
+  ctx.strokeStyle = isSelected ? "#1d4ed8" : "#2563eb"
+  ctx.lineWidth = 2
+  ctx.stroke()
+
+  ctx.restore()
+}
+
+/**
+ * アンカー方向に基づいてテキストの描画位置を計算する
+ * @param anchorX アンカーのX座標
+ * @param anchorY アンカーのY座標
+ * @param textWidth テキストの幅
+ * @param textHeight テキストの高さ
+ * @param anchorDirection アンカー方向
+ * @returns 計算された描画位置
+ */
+export function getTextPositionFromAnchor(
+  anchorX: number,
+  anchorY: number,
+  textWidth: number,
+  textHeight: number,
+  anchorDirection: AnchorDirection,
+): Point {
+  let x = anchorX
+  let y = anchorY
+
+  // 水平方向の調整
+  switch (anchorDirection) {
+    case "top-left":
+    case "left":
+    case "bottom-left":
+      // アンカーがテキストの左端
+      break
+    case "top":
+    case "center":
+    case "bottom":
+      // アンカーがテキストの中央
+      x = anchorX - textWidth / 2
+      break
+    case "top-right":
+    case "right":
+    case "bottom-right":
+      // アンカーがテキストの右端
+      x = anchorX - textWidth
+      break
+  }
+
+  // 垂直方向の調整
+  switch (anchorDirection) {
+    case "top-left":
+    case "top":
+    case "top-right":
+      // アンカーがテキストの上端
+      break
+    case "left":
+    case "center":
+    case "right":
+      // アンカーがテキストの中央
+      y = anchorY - textHeight / 2
+      break
+    case "bottom-left":
+    case "bottom":
+    case "bottom-right":
+      // アンカーがテキストの下端
+      y = anchorY - textHeight
+      break
+  }
+
+  return { x, y }
 }
 
 /**

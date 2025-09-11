@@ -33,11 +33,45 @@ export default function RootLayout({
                   processEnvironments: true
                 },
                 svg: {
-                  fontCache: 'global'
+                  fontCache: 'global',
+                  // オフライン環境用の設定
+                  scale: 1,
+                  minScale: 0.5,
+                  mtextInheritFont: false,
+                  merrorInheritFont: true,
+                  mathmlSpacing: false,
+                  skipAttributes: {},
+                  exFactor: 0.5,
+                  displayAlign: 'center',
+                  displayIndent: '0'
+                },
+                // オフライン専用設定
+                options: {
+                  // 外部リソースの読み込みを無効化
+                  enableMenu: false,
+                  menuOptions: {
+                    settings: {
+                      assistiveMml: false,
+                      collapsible: false,
+                      explorer: false
+                    }
+                  }
+                },
+                // ローダー設定（オフライン）
+                loader: {
+                  load: [],
+                  ready: () => {},
+                  failed: () => {},
+                  require: () => {},
+                  paths: {},
+                  source: {},
+                  dependencies: {},
+                  provides: {},
+                  mathjax: {}
                 },
                 startup: {
                   ready: () => {
-                    console.log('🔥 MathJax 4 initialized successfully');
+                    console.log('🔥 MathJax 4 initialized successfully (Offline Mode)');
                     MathJax.startup.defaultReady();
                     // 初期化完了をグローバルに通知
                     window.mathJaxReady = true;

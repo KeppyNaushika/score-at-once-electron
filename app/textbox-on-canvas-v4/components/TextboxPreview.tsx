@@ -5,9 +5,12 @@
 
 "use client"
 
-import React, { useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 import type { TextBox } from "../types"
-import { parseTextWithMath, processMathJaxContent } from "../utils/textConversionUtils"
+import {
+  parseTextWithMath,
+  processMathJaxContent,
+} from "../utils/textConversionUtils"
 
 /**
  * TextboxのプレビューコンポーネントでMathJax処理を実行
@@ -25,7 +28,6 @@ export function TextboxPreview({ textBox }: { textBox: TextBox }) {
 
           // SVG変換と完全に同じMathJax処理を実行
           await processMathJaxContent(previewRef.current!, htmlContent)
-
         } catch (error) {
           console.error("DIVプレビュー処理エラー:", error)
         }
@@ -36,15 +38,13 @@ export function TextboxPreview({ textBox }: { textBox: TextBox }) {
   }, [textBox.text])
 
   return (
-    <div className="border border-green-300 rounded p-2 bg-white">
-      <div className="text-xs text-gray-500 mb-1">
-        ID: {textBox.id.substring(0, 8)}... | 位置: ({Math.round(textBox.x)}, {Math.round(textBox.y)})
+    <div className="rounded border border-green-300 bg-white p-2">
+      <div className="mb-1 text-xs text-gray-500">
+        ID: {textBox.id.substring(0, 8)}... | 位置: ({Math.round(textBox.x)},{" "}
+        {Math.round(textBox.y)})
       </div>
-      <div 
-        ref={previewRef}
-        className="text-sm math-preview"
-      />
-      <div className="text-xs text-gray-400 mt-1">
+      <div ref={previewRef} className="math-preview text-sm" />
+      <div className="mt-1 text-xs text-gray-400">
         生テキスト: {textBox.text}
       </div>
     </div>

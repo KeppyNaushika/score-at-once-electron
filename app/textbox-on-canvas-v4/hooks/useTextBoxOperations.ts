@@ -6,24 +6,26 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import type { TextBox, DragState } from "../types"
+import { TEXTBOX_SETTINGS } from "../constants"
+import type { AnchorDirection, DragState, TextBox } from "../types"
 import {
+  createAnchorFromClick,
   findTextBoxAtPoint,
-  updateTextBoxSelection,
+  getCanvasCoordinates,
   updateTextBoxContent,
-  isValidDragForTextBox,
-  createTextBoxFromDrag
+  updateTextBoxSelection,
 } from "../utils/coordinateUtils"
-import { getCanvasCoordinates } from "../utils/coordinateUtils"
 
 /**
  * テキストボックス操作フック
  */
 export function useTextBoxOperations() {
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([])
-  const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(null)
+  const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(
+    null,
+  )
   const [currentDrag, setCurrentDrag] = useState<DragState | null>(null)
-  const [isCreatingTextBox, setIsCreatingTextBox] = useState<boolean>(false)
+  const [isCreatingAnchor, setIsCreatingAnchor] = useState<boolean>(false)
 
   // テキスト入力関連の状態
   const [showTextInput, setShowTextInput] = useState<boolean>(false)
@@ -53,59 +55,48 @@ export function useTextBoxOperations() {
           setShowTextInput(true)
         }
       } else {
-        // 新しいテキストボックスの作成開始
+        // 新しいアンカーの作成
         setTextBoxes(updateTextBoxSelection(textBoxes, null))
         setSelectedTextBoxId(null)
-        setIsCreatingTextBox(true)
-        setCurrentDrag({
-          startX: coords.x,
-          startY: coords.y,
-          currentX: coords.x,
-          currentY: coords.y,
-        })
+
+        const newTextBox = createAnchorFromClick(coords)
+        setTextBoxes((prev) => [...prev, newTextBox])
+        setSelectedTextBoxId(newTextBox.id)
+        setTextInputValue("")
+        setShowTextInput(true)
       }
     },
-    [textBoxes, selectedTextBoxId]
+    [textBoxes, selectedTextBoxId],
   )
 
   /**
-   * マウスムーブイベントハンドラー
+   * マウスムーブイベントハンドラー（ドラッグでアンカー移動）
    */
   const handleMouseMove = useCallback(
     (e: React.MouseEvent, zoom: number): void => {
-      if (!currentDrag || !isCreatingTextBox) return
+      if (!currentDrag || !selectedTextBoxId) return
 
       const canvas = e.currentTarget as HTMLCanvasElement
       const coords = getCanvasCoordinates(e.clientX, e.clientY, canvas, zoom)
-      
-      setCurrentDrag((prev) =>
-        prev
-          ? {
-              ...prev,
-              currentX: coords.x,
-              currentY: coords.y,
-            }
-          : null,
+
+      // 選択されたアンカーを移動
+      setTextBoxes((prev) =>
+        prev.map((textBox) =>
+          textBox.id === selectedTextBoxId
+            ? { ...textBox, x: coords.x, y: coords.y }
+            : textBox,
+        ),
       )
     },
-    [currentDrag, isCreatingTextBox]
+    [currentDrag, selectedTextBoxId],
   )
 
   /**
    * マウスアップイベントハンドラー
    */
   const handleMouseUp = useCallback((): void => {
-    if (currentDrag && isCreatingTextBox) {
-      // 有効なサイズのテキストボックスのみ作成
-      if (isValidDragForTextBox(currentDrag)) {
-        const newTextBox = createTextBoxFromDrag(currentDrag)
-        setTextBoxes((prev) => [...prev, newTextBox])
-      }
-
-      setCurrentDrag(null)
-      setIsCreatingTextBox(false)
-    }
-  }, [currentDrag, isCreatingTextBox])
+    setCurrentDrag(null)
+  }, [])
 
   /**
    * テキスト入力送信処理
@@ -118,7 +109,7 @@ export function useTextBoxOperations() {
     }
 
     setTextBoxes(
-      updateTextBoxContent(textBoxes, selectedTextBoxId, textInputValue)
+      updateTextBoxContent(textBoxes, selectedTextBoxId, textInputValue),
     )
     setShowTextInput(false)
     setTextInputValue("")
@@ -137,15 +128,47 @@ export function useTextBoxOperations() {
    */
   const getSelectedTextBox = useCallback((): TextBox | null => {
     if (!selectedTextBoxId) return null
-    return textBoxes.find(tb => tb.id === selectedTextBoxId) || null
+    return textBoxes.find((tb) => tb.id === selectedTextBoxId) || null
   }, [textBoxes, selectedTextBoxId])
+
+  /**
+   * テキストボックスのアンカー方向を更新
+   */
+  const updateTextBoxAnchorDirection = useCallback(
+    (id: string, anchorDirection: AnchorDirection): void => {
+      setTextBoxes((prev) =>
+        prev.map((textBox) =>
+          textBox.id === id ? { ...textBox, anchorDirection } : textBox,
+        ),
+      )
+    },
+    [],
+  )
+
+  /**
+   * テキストボックスのサイズを更新
+   */
+  const updateTextBoxSize = useCallback(
+    (id: string, textSize: number): void => {
+      const clampedSize = Math.max(
+        TEXTBOX_SETTINGS.MIN_TEXT_SIZE,
+        Math.min(TEXTBOX_SETTINGS.MAX_TEXT_SIZE, textSize),
+      )
+      setTextBoxes((prev) =>
+        prev.map((textBox) =>
+          textBox.id === id ? { ...textBox, textSize: clampedSize } : textBox,
+        ),
+      )
+    },
+    [],
+  )
 
   return {
     // 状態
     textBoxes,
     selectedTextBoxId,
     currentDrag,
-    isCreatingTextBox,
+    isCreatingAnchor,
     showTextInput,
     textInputValue,
     setTextInputValue,
@@ -157,9 +180,11 @@ export function useTextBoxOperations() {
     handleTextSubmit,
     handleTextCancel,
     getSelectedTextBox,
+    updateTextBoxAnchorDirection,
+    updateTextBoxSize,
 
     // 直接操作
     setTextBoxes,
-    setSelectedTextBoxId
+    setSelectedTextBoxId,
   }
 }

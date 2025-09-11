@@ -6,8 +6,13 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import type { TextBox } from "../types"
-import { drawBackgroundImage, renderSvgToCanvas, drawTextBoxBorder, drawCreatingTextBox } from "../utils/canvasUtils"
+import type { AnchorDirection, TextBox } from "../types"
+import {
+  drawAnchor,
+  drawBackgroundImage,
+  getTextPositionFromAnchor,
+  renderSvgToCanvas,
+} from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"
 
 /**
@@ -18,17 +23,15 @@ export function useCanvasManagement() {
   const [status, setStatus] = useState<string>("待機中")
 
   /**
-   * テキストをCanvasに描画する
+   * テキストをCanvasに描画する（アンカーベース）
    */
   const renderTextToCanvas = useCallback(
     async (
       text: string,
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-      horizontalAlign: 'left' | 'center' | 'right' = 'left',
-      verticalAlign: 'top' | 'center' | 'bottom' = 'top'
+      anchorX: number,
+      anchorY: number,
+      anchorDirection: AnchorDirection,
+      textSize: number,
     ): Promise<void> => {
       const canvas = canvasRef.current
       if (!canvas || !text.trim()) return
@@ -38,17 +41,40 @@ export function useCanvasManagement() {
 
       try {
         setStatus("SVG生成中...")
+
+        // テキストサイズに基づいて適切な描画サイズを計算
+        const estimatedWidth = text.length * textSize * 0.6
+        const estimatedHeight = textSize * 1.2
+
         const svgElement = await convertTextToSvg(
           text,
-          width,
-          height,
-          horizontalAlign,
-          verticalAlign
+          estimatedWidth,
+          estimatedHeight,
+          "left",
+          "top",
+          textSize,
         )
 
         if (svgElement) {
           setStatus("Canvas描画中...")
-          await renderSvgToCanvas(svgElement, ctx, x, y, width, height)
+
+          // アンカー方向に基づいて描画位置を計算
+          const textPosition = getTextPositionFromAnchor(
+            anchorX,
+            anchorY,
+            estimatedWidth,
+            estimatedHeight,
+            anchorDirection,
+          )
+
+          await renderSvgToCanvas(
+            svgElement,
+            ctx,
+            textPosition.x,
+            textPosition.y,
+            estimatedWidth,
+            estimatedHeight,
+          )
           setStatus("描画完了")
         } else {
           setStatus("SVG生成失敗")
@@ -58,18 +84,18 @@ export function useCanvasManagement() {
         setStatus("描画エラー")
       }
     },
-    []
+    [],
   )
 
   /**
-   * Canvas全体を再描画
+   * Canvas全体を再描画（アンカーベース）
    */
   const redrawCanvas = useCallback(
     async (
       textBoxes: TextBox[],
       currentDrag: any,
-      isCreatingTextBox: boolean,
-      backgroundImageUrl?: string
+      isCreatingAnchor: boolean,
+      backgroundImageUrl?: string,
     ): Promise<void> => {
       const canvas = canvasRef.current
       if (!canvas) return
@@ -90,17 +116,10 @@ export function useCanvasManagement() {
           await drawBackgroundImage(ctx, backgroundImageUrl)
         }
 
-        // テキストボックスを描画
+        // テキストボックスとアンカーを描画
         for (const textBox of textBoxes) {
-          // テキストボックス枠を描画
-          drawTextBoxBorder(
-            ctx,
-            textBox.x,
-            textBox.y,
-            textBox.width,
-            textBox.height,
-            textBox.isSelected
-          )
+          // アンカー点を描画
+          drawAnchor(ctx, textBox.x, textBox.y, textBox.isSelected)
 
           // テキスト内容を描画
           if (textBox.text) {
@@ -108,22 +127,10 @@ export function useCanvasManagement() {
               textBox.text,
               textBox.x,
               textBox.y,
-              textBox.width,
-              textBox.height,
-              textBox.horizontalAlign || 'left',
-              textBox.verticalAlign || 'top'
+              textBox.anchorDirection,
+              textBox.textSize,
             )
           }
-        }
-
-        // 作成中のテキストボックスを描画
-        if (currentDrag && isCreatingTextBox) {
-          const x = Math.min(currentDrag.startX, currentDrag.currentX)
-          const y = Math.min(currentDrag.startY, currentDrag.currentY)
-          const width = Math.abs(currentDrag.currentX - currentDrag.startX)
-          const height = Math.abs(currentDrag.currentY - currentDrag.startY)
-
-          drawCreatingTextBox(ctx, x, y, width, height)
         }
 
         setStatus("描画完了")
@@ -132,13 +139,13 @@ export function useCanvasManagement() {
         setStatus("描画エラー")
       }
     },
-    [renderTextToCanvas]
+    [renderTextToCanvas],
   )
 
   return {
     canvasRef,
     status,
     renderTextToCanvas,
-    redrawCanvas
+    redrawCanvas,
   }
 }

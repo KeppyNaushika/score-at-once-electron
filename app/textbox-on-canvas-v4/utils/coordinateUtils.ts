@@ -3,6 +3,7 @@
  * @description Canvas座標系とマウス座標系の変換、テキストボックス操作
  */
 
+import { CANVAS_SETTINGS, TEXTBOX_SETTINGS } from "../constants"
 import type { DragState, Point, TextBox } from "../types"
 
 /**
@@ -27,25 +28,25 @@ export function getCanvasCoordinates(
 }
 
 /**
- * 点が矩形内にあるかどうかを判定する
+ * 点がアンカー点の近くにあるかどうかを判定する
  * @param point 判定する点
- * @param rect 矩形（x, y, width, height）
- * @returns 矩形内にある場合はtrue
+ * @param anchor アンカー点（x, y）
+ * @param radius 判定半径（デフォルト: アンカー点の半径）
+ * @returns アンカー点の範囲内にある場合はtrue
  */
-export function isPointInRect(
+export function isPointNearAnchor(
   point: Point,
-  rect: { x: number; y: number; width: number; height: number },
+  anchor: { x: number; y: number },
+  radius: number = CANVAS_SETTINGS.ANCHOR_RADIUS,
 ): boolean {
-  return (
-    point.x >= rect.x &&
-    point.x <= rect.x + rect.width &&
-    point.y >= rect.y &&
-    point.y <= rect.y + rect.height
+  const distance = Math.sqrt(
+    Math.pow(point.x - anchor.x, 2) + Math.pow(point.y - anchor.y, 2),
   )
+  return distance <= radius
 }
 
 /**
- * 指定座標にあるテキストボックスを検索する
+ * 指定座標にあるテキストボックス（アンカー）を検索する
  * @param textBoxes テキストボックスの配列
  * @param point 検索する座標
  * @returns 見つかったテキストボックス、なければnull
@@ -54,7 +55,11 @@ export function findTextBoxAtPoint(
   textBoxes: TextBox[],
   point: Point,
 ): TextBox | null {
-  return textBoxes.find((textBox) => isPointInRect(point, textBox)) || null
+  return (
+    textBoxes.find((textBox) =>
+      isPointNearAnchor(point, { x: textBox.x, y: textBox.y }),
+    ) || null
+  )
 }
 
 /**
@@ -85,27 +90,23 @@ export function generateTextBoxId(): string {
 }
 
 /**
- * ドラッグ状態からテキストボックスを作成する
- * @param dragState ドラッグ状態
+ * クリック位置からアンカーベースのテキストボックスを作成する
+ * @param point クリック座標
  * @param text 初期テキスト（デフォルト: 空文字列）
  * @returns 新しいテキストボックス
  */
-export function createTextBoxFromDrag(
-  dragState: DragState,
+export function createAnchorFromClick(
+  point: Point,
   text: string = "",
 ): TextBox {
-  const rect = createRectFromDrag(dragState)
-
   return {
     id: generateTextBoxId(),
-    x: rect.x,
-    y: rect.y,
-    width: rect.width,
-    height: rect.height,
+    x: point.x,
+    y: point.y,
     text,
-    isSelected: false,
-    horizontalAlign: 'left',
-    verticalAlign: 'top',
+    isSelected: true,
+    anchorDirection: TEXTBOX_SETTINGS.DEFAULT_ANCHOR_DIRECTION,
+    textSize: TEXTBOX_SETTINGS.DEFAULT_TEXT_SIZE,
   }
 }
 

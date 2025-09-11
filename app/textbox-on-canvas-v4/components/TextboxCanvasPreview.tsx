@@ -5,10 +5,13 @@
 
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { TextBox } from "../types"
+import {
+  getTextPositionFromAnchor,
+  renderSvgToCanvas,
+} from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"
-import { renderSvgToCanvas, drawBackgroundImage } from "../utils/canvasUtils"
 
 /**
  * Canvas プレビューコンポーネント（V4新機能）
@@ -17,51 +20,69 @@ import { renderSvgToCanvas, drawBackgroundImage } from "../utils/canvasUtils"
 export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [renderingStatus, setRenderingStatus] = useState<string>("待機中")
-  const [canvasSize, setCanvasSize] = useState<{width: number, height: number} | null>(null)
+  const [canvasSize, setCanvasSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
 
   useEffect(() => {
     if (textBox.text && canvasRef.current) {
       const renderCanvasPreview = async () => {
         try {
           setRenderingStatus("Canvas描画中...")
-          
+
           const canvas = canvasRef.current!
-          const ctx = canvas.getContext('2d')!
-          
+          const ctx = canvas.getContext("2d")!
+
           // Canvas背景をクリア
-          ctx.fillStyle = 'white'
+          ctx.fillStyle = "white"
           ctx.fillRect(0, 0, canvas.width, canvas.height)
-          
-          // SVGプレビューと**全く同じSVG生成処理**
+
+          // アンカーベースのSVG生成処理
+          const estimatedWidth = textBox.text.length * textBox.textSize * 0.6
+          const estimatedHeight = textBox.textSize * 1.2
+
           const svgElement = await convertTextToSvg(
-            textBox.text, 
-            textBox.width, 
-            textBox.height, 
-            textBox.horizontalAlign || 'left', 
-            textBox.verticalAlign || 'top'
+            textBox.text,
+            estimatedWidth,
+            estimatedHeight,
+            "left",
+            "top",
+            textBox.textSize,
           )
 
           if (svgElement) {
+            // アンカー位置を中央に設定してプレビュー
+            const anchorX = canvas.width / 2
+            const anchorY = canvas.height / 2
+
+            const textPosition = getTextPositionFromAnchor(
+              anchorX,
+              anchorY,
+              estimatedWidth,
+              estimatedHeight,
+              textBox.anchorDirection,
+            )
+
             // Canvas描画を実行
             const renderResult = await renderSvgToCanvas(
               svgElement,
               ctx,
-              10, // 左マージン
-              10, // 上マージン
-              canvas.width - 20, // 表示幅（左右マージン考慮）
-              canvas.height - 20 // 表示高さ（上下マージン考慮）
+              textPosition.x,
+              textPosition.y,
+              estimatedWidth,
+              estimatedHeight,
             )
-            
+
             setCanvasSize({
               width: renderResult.width,
-              height: renderResult.height
+              height: renderResult.height,
             })
             setRenderingStatus("Canvas描画完了")
           } else {
             setCanvasSize(null)
             setRenderingStatus("SVG生成失敗")
           }
-
         } catch (error) {
           console.error("Canvasプレビュー処理エラー:", error)
           setCanvasSize(null)
@@ -71,23 +92,26 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
 
       renderCanvasPreview()
     }
-  }, [textBox.text, textBox.width, textBox.height, textBox.horizontalAlign, textBox.verticalAlign])
+  }, [textBox.text, textBox.anchorDirection, textBox.textSize])
 
   return (
-    <div className="border border-purple-300 rounded p-2 bg-white">
-      <div className="text-xs text-gray-500 mb-1">
-        ID: {textBox.id.substring(0, 8)}... | Canvas描画サイズ: {canvasSize ? `${Math.round(canvasSize.width)} × ${Math.round(canvasSize.height)}` : 'N/A'}
+    <div className="rounded border border-purple-300 bg-white p-2">
+      <div className="mb-1 text-xs text-gray-500">
+        ID: {textBox.id.substring(0, 8)}... | Canvas描画サイズ:{" "}
+        {canvasSize
+          ? `${Math.round(canvasSize.width)} × ${Math.round(canvasSize.height)}`
+          : "N/A"}
       </div>
-      <div className="border border-gray-200 rounded p-2 bg-white min-h-[80px] flex items-center justify-center">
-        <canvas 
+      <div className="flex min-h-[80px] items-center justify-center rounded border border-gray-200 bg-white p-2">
+        <canvas
           ref={canvasRef}
           width={300}
           height={80}
           className="border border-gray-100"
-          style={{ maxWidth: '100%', objectFit: 'contain' }}
+          style={{ maxWidth: "100%", objectFit: "contain" }}
         />
       </div>
-      <div className="text-xs text-gray-400 mt-1 flex justify-between">
+      <div className="mt-1 flex justify-between text-xs text-gray-400">
         <span>ステータス: {renderingStatus}</span>
         <span>元テキスト長: {textBox.text.length}文字</span>
       </div>

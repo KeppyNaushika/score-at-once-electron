@@ -19,22 +19,18 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { AlignLeft, AlignCenter, AlignRight, AlignVerticalSpaceAround, AlignVerticalSpaceBetween } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 // 分離されたコンポーネントとフック
 import {
+  TextboxCanvasPreview,
+  TextboxImagePreview,
   TextboxPreview,
   TextboxSvgPreview,
-  TextboxImagePreview,
-  TextboxCanvasPreview
 } from "./components"
-import {
-  useCanvasManagement,
-  useTextBoxOperations
-} from "./hooks"
-import type { TextBox } from "./types"
+import { AnchorControlPanel } from "./components/AnchorControlPanel"
+import { SAMPLE_IMAGE_URL } from "./constants"
+import { useCanvasManagement, useTextBoxOperations } from "./hooks"
 
 /**
  * メインのTextbox Canvas ページ
@@ -49,7 +45,7 @@ export default function TextboxCanvasPage() {
     textBoxes,
     selectedTextBoxId,
     currentDrag,
-    isCreatingTextBox,
+    isCreatingAnchor,
     showTextInput,
     textInputValue,
     setTextInputValue,
@@ -59,7 +55,9 @@ export default function TextboxCanvasPage() {
     handleTextSubmit,
     handleTextCancel,
     getSelectedTextBox,
-    setTextBoxes
+    updateTextBoxAnchorDirection,
+    updateTextBoxSize,
+    setTextBoxes,
   } = useTextBoxOperations()
 
   // 選択されたテキストボックス
@@ -67,26 +65,26 @@ export default function TextboxCanvasPage() {
 
   // Canvas再描画効果
   useEffect(() => {
-    redrawCanvas(textBoxes, currentDrag, isCreatingTextBox)
-  }, [redrawCanvas, textBoxes, currentDrag, isCreatingTextBox])
+    redrawCanvas(textBoxes, currentDrag, isCreatingAnchor, SAMPLE_IMAGE_URL)
+  }, [redrawCanvas, textBoxes, currentDrag, isCreatingAnchor])
 
-  // 配置設定の更新
-  const updateTextBoxAlign = useCallback((
-    field: 'horizontalAlign' | 'verticalAlign',
-    value: string
-  ) => {
-    if (!selectedTextBoxId) return
-    
-    setTextBoxes(prev => 
-      prev.map(tb => 
-        tb.id === selectedTextBoxId 
-          ? { ...tb, [field]: value }
-          : tb
-      )
-    )
-    // Canvas再描画をトリガー
-    setTimeout(() => redrawCanvas(textBoxes, currentDrag, isCreatingTextBox), 100)
-  }, [selectedTextBoxId, setTextBoxes, redrawCanvas, textBoxes, currentDrag, isCreatingTextBox])
+  // アンカー方向変更のハンドラー
+  const handleAnchorDirectionChange = useCallback(
+    (direction: any) => {
+      if (!selectedTextBoxId) return
+      updateTextBoxAnchorDirection(selectedTextBoxId, direction)
+    },
+    [selectedTextBoxId, updateTextBoxAnchorDirection],
+  )
+
+  // テキストサイズ変更のハンドラー
+  const handleTextSizeChange = useCallback(
+    (size: number) => {
+      if (!selectedTextBoxId) return
+      updateTextBoxSize(selectedTextBoxId, size)
+    },
+    [selectedTextBoxId, updateTextBoxSize],
+  )
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -124,6 +122,17 @@ export default function TextboxCanvasPage() {
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
                 />
+
+                {/* アンカー制御パネル */}
+                <AnchorControlPanel
+                  visible={!!selectedTextBox}
+                  currentDirection={
+                    selectedTextBox?.anchorDirection || "top-left"
+                  }
+                  currentTextSize={selectedTextBox?.textSize || 24}
+                  onDirectionChange={handleAnchorDirectionChange}
+                  onTextSizeChange={handleTextSizeChange}
+                />
               </div>
 
               {/* ズーム制御 */}
@@ -145,32 +154,36 @@ export default function TextboxCanvasPage() {
                 >
                   ズーム +
                 </Button>
-                <Button
-                  onClick={() => setZoom(1)}
-                  variant="outline"
-                  size="sm"
-                >
+                <Button onClick={() => setZoom(1)} variant="outline" size="sm">
                   リセット
                 </Button>
               </div>
 
               {/* 4段階プレビューシステム */}
               {selectedTextBox && selectedTextBox.text && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div>
-                    <div className="text-sm font-medium mb-2">1. DIV プレビュー（MathJax処理後）</div>
+                    <div className="mb-2 text-sm font-medium">
+                      1. DIV プレビュー（MathJax処理後）
+                    </div>
                     <TextboxPreview textBox={selectedTextBox} />
                   </div>
                   <div>
-                    <div className="text-sm font-medium mb-2">2. SVG プレビュー（図形データ）</div>
+                    <div className="mb-2 text-sm font-medium">
+                      2. SVG プレビュー（図形データ）
+                    </div>
                     <TextboxSvgPreview textBox={selectedTextBox} />
                   </div>
                   <div>
-                    <div className="text-sm font-medium mb-2">3. Image プレビュー（PNG変換後）</div>
+                    <div className="mb-2 text-sm font-medium">
+                      3. Image プレビュー（PNG変換後）
+                    </div>
                     <TextboxImagePreview textBox={selectedTextBox} />
                   </div>
                   <div>
-                    <div className="text-sm font-medium mb-2">4. Canvas プレビュー（V4新機能）</div>
+                    <div className="mb-2 text-sm font-medium">
+                      4. Canvas プレビュー（V4新機能）
+                    </div>
                     <TextboxCanvasPreview textBox={selectedTextBox} />
                   </div>
                 </div>
@@ -200,23 +213,29 @@ export default function TextboxCanvasPage() {
                           }
                         }}
                       />
-                      
+
                       {/* 配置設定 */}
                       <div className="space-y-4 border-t pt-4">
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">水平方向の配置</label>
+                          <label className="text-sm font-medium">
+                            水平方向の配置
+                          </label>
                           <ToggleGroup
                             type="single"
-                            value={selectedTextBox?.horizontalAlign || 'left'}
+                            value={selectedTextBox?.horizontalAlign || "left"}
                             onValueChange={(value) => {
-                              if (value) updateTextBoxAlign('horizontalAlign', value)
+                              if (value)
+                                updateTextBoxAlign("horizontalAlign", value)
                             }}
                             className="justify-start"
                           >
                             <ToggleGroupItem value="left" aria-label="左揃え">
                               <AlignLeft className="h-4 w-4" />
                             </ToggleGroupItem>
-                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                            <ToggleGroupItem
+                              value="center"
+                              aria-label="中央揃え"
+                            >
                               <AlignCenter className="h-4 w-4" />
                             </ToggleGroupItem>
                             <ToggleGroupItem value="right" aria-label="右揃え">
@@ -226,19 +245,25 @@ export default function TextboxCanvasPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <label className="text-sm font-medium">垂直方向の配置</label>
+                          <label className="text-sm font-medium">
+                            垂直方向の配置
+                          </label>
                           <ToggleGroup
                             type="single"
-                            value={selectedTextBox?.verticalAlign || 'top'}
+                            value={selectedTextBox?.verticalAlign || "top"}
                             onValueChange={(value) => {
-                              if (value) updateTextBoxAlign('verticalAlign', value)
+                              if (value)
+                                updateTextBoxAlign("verticalAlign", value)
                             }}
                             className="justify-start"
                           >
                             <ToggleGroupItem value="top" aria-label="上揃え">
                               <AlignVerticalSpaceAround className="h-4 w-4 rotate-180" />
                             </ToggleGroupItem>
-                            <ToggleGroupItem value="center" aria-label="中央揃え">
+                            <ToggleGroupItem
+                              value="center"
+                              aria-label="中央揃え"
+                            >
                               <AlignVerticalSpaceBetween className="h-4 w-4 rotate-90" />
                             </ToggleGroupItem>
                             <ToggleGroupItem value="bottom" aria-label="下揃え">
@@ -258,11 +283,13 @@ export default function TextboxCanvasPage() {
                       </div>
                       <div className="text-xs text-gray-500">
                         <p>
-                          <strong>数式記法:</strong> $x^2$ または \(x^2\) (インライン),
-                          $$\int x dx$$ または \[\int x dx\] (ブロック)
+                          <strong>数式記法:</strong> $x^2$ または \(x^2\)
+                          (インライン), $$\int x dx$$ または \[\int x dx\]
+                          (ブロック)
                         </p>
                         <p>
-                          <strong>書式:</strong> **太字**, *斜体*, __下線__, ~~取り消し線~~
+                          <strong>書式:</strong> **太字**, *斜体*, __下線__,
+                          ~~取り消し線~~
                         </p>
                       </div>
                     </div>

@@ -5,6 +5,7 @@
 このシステムは、数学式（MathJax）をサポートしたテキストボックスをCanvasに描画する高度なWebアプリケーションです。ReactMarkdown、MathJax、Canvas APIを統合し、高品質な数式レンダリングを実現しています。
 
 **V4の主要変更点:**
+
 - SVGオーバーレイ方式から純粋なCanvas描画方式に変更
 - PDF出力要件に対応した描画アーキテクチャ
 - MathJax SVG → Canvas 変換による高品質レンダリング
@@ -34,7 +35,7 @@ textbox-on-canvas/
 3. **依存性の逆転** - 高レベルモジュールは低レベルモジュールに依存しない
 4. **開放閉鎖原則** - 拡張に開かれ、変更に閉じている
 
-## 🧩 コンポーネント詳細
+## 🧩 コンポーネント詳細ØØØ
 
 ### 1. 型定義 (`types.ts`)
 
@@ -51,6 +52,7 @@ interface TextBox {
 ```
 
 **学習ポイント:**
+
 - TypeScriptの型安全性を活用
 - インターフェースによる契約の明確化
 - データ構造の一貫性保証
@@ -66,6 +68,7 @@ export const FONT_SETTINGS = {
 ```
 
 **学習ポイント:**
+
 - マジックナンバーの排除
 - `as const` による型推論の強化
 - 設定の一元管理
@@ -73,16 +76,18 @@ export const FONT_SETTINGS = {
 ### 3. MathJax処理 (`utils/mathJaxUtils.ts`)
 
 **主要機能:**
+
 - MathJax数式の組版処理
 - 非同期レンダリング待機
 - 動的サイズ測定
 
 **学習ポイント:**
+
 ```typescript
 export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number
+  initialHeight: number,
 ): Promise<MeasuredSize>
 ```
 
@@ -93,16 +98,18 @@ export async function measureMathJaxContentSize(
 ### 4. テキスト変換 (`utils/textConversionUtils.ts`)
 
 **技術スタック:**
+
 - ReactMarkdown
 - MutationObserver
 - DOM操作
 
 **学習ポイント:**
+
 ```typescript
 export async function convertTextToSvg(
   text: string,
   _width: number,
-  _height: number
+  _height: number,
 ): Promise<SVGSVGElement | null>
 ```
 
@@ -113,17 +120,21 @@ export async function convertTextToSvg(
 ### 5. Canvas描画 (`utils/canvasUtils.ts`)
 
 **主要機能:**
+
 - SVG-Canvas変換
 - アスペクト比維持スケーリング
 - デバッグ機能
 
 **学習ポイント:**
+
 ```typescript
 export async function renderSvgToCanvas(
   svgElement: SVGSVGElement,
   ctx: CanvasRenderingContext2D,
-  x: number, y: number,
-  textBoxWidth: number, textBoxHeight: number
+  x: number,
+  y: number,
+  textBoxWidth: number,
+  textBoxHeight: number,
 ): Promise<SvgRenderResult>
 ```
 
@@ -134,11 +145,13 @@ export async function renderSvgToCanvas(
 ### 6. 座標変換 (`utils/coordinateUtils.ts`)
 
 **主要機能:**
+
 - マウス座標-Canvas座標変換
 - テキストボックス操作
 - 衝突判定
 
 **学習ポイント:**
+
 - 座標系の理解
 - 幾何学的計算
 - イミュータブルな状態更新
@@ -166,11 +179,10 @@ await waitForRenderingComplete(2)
 const boundingRect = tempDiv.getBoundingClientRect()
 const scrollSize = { width: tempDiv.scrollWidth, height: tempDiv.scrollHeight }
 // 最大値を採用
-actualHeight = Math.max(height, Math.ceil(Math.max(
-  boundingRect.height, 
-  scrollSize.height, 
-  maxMathJaxHeight
-)))
+actualHeight = Math.max(
+  height,
+  Math.ceil(Math.max(boundingRect.height, scrollSize.height, maxMathJaxHeight)),
+)
 ```
 
 ### Canvas高品質レンダリング
@@ -178,7 +190,7 @@ actualHeight = Math.max(height, Math.ceil(Math.max(
 **技術:** SVG → Blob → Image → Canvas
 
 ```typescript
-const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" })
 const svgUrl = URL.createObjectURL(svgBlob)
 // アスペクト比維持スケーリング
 const scale = Math.min(scaleX, scaleY)
@@ -194,10 +206,10 @@ const scale = Math.min(scaleX, scaleY)
 
 ### 数式記法
 
-| 記法 | 出力 | 用途 |
-|------|------|------|
-| `$x^2$` | x² | インライン数式 |
-| `$$\frac{a}{b}$$` | 分数 | ブロック数式 |
+| 記法              | 出力 | 用途           |
+| ----------------- | ---- | -------------- |
+| `$x^2$`           | x²   | インライン数式 |
+| `$$\frac{a}{b}$$` | 分数 | ブロック数式   |
 | `$\int_0^1 x dx$` | 積分 | インライン積分 |
 
 ### 高度な機能
@@ -211,16 +223,17 @@ const scale = Math.min(scaleX, scaleY)
 ### 単体テスト対象
 
 1. **座標変換関数**
+
    ```typescript
-   test('getCanvasCoordinates', () => {
-     expect(getCanvasCoordinates(100, 100, canvas, 2))
-       .toEqual({ x: 50, y: 50 })
+   test("getCanvasCoordinates", () => {
+     expect(getCanvasCoordinates(100, 100, canvas, 2)).toEqual({ x: 50, y: 50 })
    })
    ```
 
 2. **テキストボックス操作**
+
    ```typescript
-   test('createTextBoxFromDrag', () => {
+   test("createTextBoxFromDrag", () => {
      const drag = { startX: 0, startY: 0, currentX: 100, currentY: 50 }
      const textBox = createTextBoxFromDrag(drag)
      expect(textBox.width).toBe(100)
@@ -237,6 +250,7 @@ const scale = Math.min(scaleX, scaleY)
 ### 新機能追加
 
 1. **テキストボックススタイリング**
+
    ```typescript
    interface TextBoxStyle {
      backgroundColor: string
@@ -246,8 +260,11 @@ const scale = Math.min(scaleX, scaleY)
    ```
 
 2. **エクスポート機能**
+
    ```typescript
-   export async function exportCanvasAsPDF(canvas: HTMLCanvasElement): Promise<Blob>
+   export async function exportCanvasAsPDF(
+     canvas: HTMLCanvasElement,
+   ): Promise<Blob>
    ```
 
 3. **リアルタイム協調編集**
@@ -262,6 +279,7 @@ const scale = Math.min(scaleX, scaleY)
 ### パフォーマンス最適化
 
 1. **キャッシュシステム**
+
    ```typescript
    const mathJaxCache = new Map<string, SVGSVGElement>()
    ```

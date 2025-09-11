@@ -58,6 +58,28 @@ export const CANVAS_SETTINGS = {
   CREATING_BORDER_COLOR: "#3b82f6",
   /** 選択されたテキストボックスの背景色 */
   SELECTED_BACKGROUND_COLOR: "rgba(37, 99, 235, 0.1)",
+  /** アンカー点の半径（px） */
+  ANCHOR_RADIUS: 6,
+  /** アンカー点の色 */
+  ANCHOR_COLOR: "#2563eb",
+  /** 選択されたアンカー点の色 */
+  SELECTED_ANCHOR_COLOR: "#1d4ed8",
+} as const
+
+/**
+ * テキストボックス（アンカーベース）の設定
+ */
+export const TEXTBOX_SETTINGS = {
+  /** デフォルトのアンカー方向 */
+  DEFAULT_ANCHOR_DIRECTION: "top-left" as const,
+  /** デフォルトのテキストサイズ */
+  DEFAULT_TEXT_SIZE: 24,
+  /** テキストサイズの最小値 */
+  MIN_TEXT_SIZE: 8,
+  /** テキストサイズの最大値 */
+  MAX_TEXT_SIZE: 100,
+  /** テキストサイズの変更単位 */
+  TEXT_SIZE_STEP: 2,
 } as const
 
 /**

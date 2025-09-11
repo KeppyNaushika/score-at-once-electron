@@ -1,7 +1,7 @@
 /**
  * @fileoverview Type definitions for textbox-on-canvas-v4 functionality
  * @description 数学式対応テキストボックス Canvas システムの型定義（リファクタリング版）
- * 
+ *
  * ## 型分類
  * - Core Types: 基本データ構造
  * - UI Types: ユーザーインターフェース関連
@@ -10,27 +10,37 @@
  */
 
 /**
- * テキストボックスの基本データ構造
+ * アンカー方向（8方向）
+ */
+export type AnchorDirection =
+  | "top-left"
+  | "top"
+  | "top-right"
+  | "left"
+  | "center"
+  | "right"
+  | "bottom-left"
+  | "bottom"
+  | "bottom-right"
+
+/**
+ * テキストボックスの基本データ構造（アンカーベース）
  */
 export interface TextBox {
   /** 一意識別子 */
   id: string
-  /** X座標 */
+  /** アンカーのX座標 */
   x: number
-  /** Y座標 */
+  /** アンカーのY座標 */
   y: number
-  /** 幅 */
-  width: number
-  /** 高さ */
-  height: number
   /** テキスト内容 */
   text: string
   /** 選択状態 */
   isSelected: boolean
-  /** 水平方向の配置 */
-  horizontalAlign: 'left' | 'center' | 'right'
-  /** 垂直方向の配置 */
-  verticalAlign: 'top' | 'center' | 'bottom'
+  /** アンカー方向（テキストの配置位置） */
+  anchorDirection: AnchorDirection
+  /** テキストサイズ（px） */
+  textSize: number
 }
 
 /**
@@ -152,7 +162,7 @@ export interface PreviewComponentProps {
 /**
  * レンダリング状態の種類
  */
-export type RenderingStatus = 
+export type RenderingStatus =
   | "待機中"
   | "SVG生成中..."
   | "Image生成中..."
@@ -184,9 +194,9 @@ export interface SvgConversionOptions {
   /** 高さ */
   height: number
   /** 水平方向の配置 */
-  horizontalAlign?: 'left' | 'center' | 'right'
+  horizontalAlign?: "left" | "center" | "right"
   /** 垂直方向の配置 */
-  verticalAlign?: 'top' | 'center' | 'bottom'
+  verticalAlign?: "top" | "center" | "bottom"
 }
 
 /**
@@ -230,17 +240,15 @@ export interface CanvasManagementHook {
     text: string,
     x: number,
     y: number,
-    width: number,
-    height: number,
-    horizontalAlign?: 'left' | 'center' | 'right',
-    verticalAlign?: 'top' | 'center' | 'bottom'
+    anchorDirection: AnchorDirection,
+    textSize: number,
   ) => Promise<void>
   /** Canvas全体を再描画する関数 */
   redrawCanvas: (
     textBoxes: TextBox[],
     currentDrag: DragState | null,
-    isCreatingTextBox: boolean,
-    backgroundImageUrl?: string
+    isCreatingAnchor: boolean,
+    backgroundImageUrl?: string,
   ) => Promise<void>
 }
 
@@ -252,7 +260,7 @@ export interface TextBoxOperationsHook {
   textBoxes: TextBox[]
   selectedTextBoxId: string | null
   currentDrag: DragState | null
-  isCreatingTextBox: boolean
+  isCreatingAnchor: boolean
   showTextInput: boolean
   textInputValue: string
   setTextInputValue: (value: string) => void
@@ -264,6 +272,11 @@ export interface TextBoxOperationsHook {
   handleTextSubmit: () => void
   handleTextCancel: () => void
   getSelectedTextBox: () => TextBox | null
+  updateTextBoxAnchorDirection: (
+    id: string,
+    anchorDirection: AnchorDirection,
+  ) => void
+  updateTextBoxSize: (id: string, textSize: number) => void
 
   // 直接操作
   setTextBoxes: React.Dispatch<React.SetStateAction<TextBox[]>>

@@ -27,7 +27,16 @@ module.exports = {
     ],
     extraResource: [
       ".next",
-      "public"
+      "public",
+      // オフライン動作に必要な静的ファイルを明示的に指定
+      {
+        from: "public/js/mathjax",
+        to: "public/js/mathjax"
+      },
+      {
+        from: "public/js/pdf.worker.min.mjs",
+        to: "public/js/pdf.worker.min.mjs"
+      }
     ]
   },
   rebuildConfig: {
@@ -84,10 +93,39 @@ module.exports = {
       const path = require('path')
       const { spawnSync } = require('child_process')
       
+      // オフライン動作に必要な静的ファイルの存在確認
+      const verifyOfflineFiles = (resourcesPath) => {
+        const criticalFiles = [
+          'public/js/mathjax/tex-svg.js',
+          'public/js/pdf.worker.min.mjs'
+        ]
+        
+        let allFilesExist = true
+        criticalFiles.forEach(file => {
+          const filePath = path.join(resourcesPath, file)
+          if (!fs.existsSync(filePath)) {
+            console.error(`❌ Critical offline file missing: ${file}`)
+            allFilesExist = false
+          } else {
+            const stats = fs.statSync(filePath)
+            console.log(`✓ Offline file verified: ${file} (${(stats.size / 1024 / 1024).toFixed(2)}MB)`)
+          }
+        })
+        
+        if (allFilesExist) {
+          console.log('✅ All offline files verified successfully')
+        } else {
+          console.error('❌ Some offline files are missing - app may not work offline')
+        }
+      }
+      
       if (options.platform === 'darwin') {
         const appPath = path.join(options.outputPaths[0], `${forgeConfig.packagerConfig.name}.app`)
         const resourcesPath = path.join(appPath, 'Contents', 'Resources')
         const infoPlistPath = path.join(appPath, 'Contents', 'Info.plist')
+        
+        // オフラインファイル検証
+        verifyOfflineFiles(resourcesPath)
         
         // カスタムアイコンをコピー
         const iconSource = path.join(__dirname, 'public', 'icons', 'icon.icns')
@@ -101,6 +139,10 @@ module.exports = {
           spawnSync('plutil', ['-replace', 'CFBundleIconFile', '-string', 'icon.icns', infoPlistPath])
           console.log('✓ Info.plistを更新しました')
         }
+      } else {
+        // Windows/Linux用のパス
+        const resourcesPath = path.join(options.outputPaths[0], 'resources')
+        verifyOfflineFiles(resourcesPath)
       }
     }
   },

@@ -78,10 +78,10 @@ function preprocessMathSyntax(text: string): string {
 function isInMathContext(text: string, position: number): boolean {
   // 数式区切り文字のパターン
   const mathPatterns = [
-    /\$\$[\s\S]*?\$\$/g,  // $$...$$
-    /\$[^$\n]*?\$/g,      // $...$
-    /\\[\[]([\s\S]*?)\\[\]]/g,  // \[...\]
-    /\\[(]([\s\S]*?)\\[)]/g     // \(...\)
+    /\$\$[\s\S]*?\$\$/g, // $$...$$
+    /\$[^$\n]*?\$/g, // $...$
+    /\\[\[]([\s\S]*?)\\[\]]/g, // \[...\]
+    /\\[(]([\s\S]*?)\\[)]/g, // \(...\)
   ]
 
   for (const pattern of mathPatterns) {
@@ -107,29 +107,38 @@ function isInMathContext(text: string, position: number): boolean {
 function safeReplace(
   text: string,
   searchRegex: RegExp,
-  replacement: string | ((match: string, ...args: any[]) => string)
+  replacement: string | ((match: string, ...args: any[]) => string),
 ): string {
   let result = text
   let match
   let offset = 0
 
   // グローバルフラグを確保
-  const globalRegex = new RegExp(searchRegex.source, searchRegex.flags.includes('g') ? searchRegex.flags : searchRegex.flags + 'g')
+  const globalRegex = new RegExp(
+    searchRegex.source,
+    searchRegex.flags.includes("g")
+      ? searchRegex.flags
+      : searchRegex.flags + "g",
+  )
 
   while ((match = globalRegex.exec(text)) !== null) {
     const matchPosition = match.index
 
     // 数式コンテキスト内でない場合のみ置換
     if (!isInMathContext(text, matchPosition)) {
-      const replacementText = typeof replacement === 'function'
-        ? replacement(match[0], ...match.slice(1))
-        : replacement
+      const replacementText =
+        typeof replacement === "function"
+          ? replacement(match[0], ...match.slice(1))
+          : replacement
 
       // 実際の置換位置を計算（これまでの置換によるオフセットを考慮）
       const actualPosition = matchPosition + offset
       const actualLength = match[0].length
 
-      result = result.slice(0, actualPosition) + replacementText + result.slice(actualPosition + actualLength)
+      result =
+        result.slice(0, actualPosition) +
+        replacementText +
+        result.slice(actualPosition + actualLength)
 
       // オフセットを更新
       offset += replacementText.length - match[0].length
@@ -178,14 +187,17 @@ let sharedMathJaxContainer: HTMLDivElement | null = null
  * @returns 永続的なDIV要素
  */
 function getSharedMathJaxContainer(): HTMLDivElement {
-  if (!sharedMathJaxContainer || !document.body.contains(sharedMathJaxContainer)) {
+  if (
+    !sharedMathJaxContainer ||
+    !document.body.contains(sharedMathJaxContainer)
+  ) {
     sharedMathJaxContainer = document.createElement("div")
     sharedMathJaxContainer.style.cssText = `
       position: absolute;
       left: -9999px;
       top: -9999px;
       font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
-      font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+      font-size: ${textSize}px;
       line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
       color: ${FONT_SETTINGS.DEFAULT_COLOR};
       background: white;
@@ -212,7 +224,7 @@ export async function processMathJaxContent(
   htmlContent: string,
 ): Promise<void> {
   console.log("🔄 MathJax処理開始:", htmlContent.substring(0, 100))
-  
+
   // 1. HTML内容を設定
   container.innerHTML = htmlContent
 
@@ -231,16 +243,18 @@ export async function processMathJaxContent(
   await processMathJax(container)
 
   // 5. MathJax要素の確認
-  const mathElements = container.querySelectorAll('mjx-container')
+  const mathElements = container.querySelectorAll("mjx-container")
   console.log(`📊 検出されたMathJax要素数: ${mathElements.length}`)
-  
+
   // MathJax要素の詳細情報を表示
   mathElements.forEach((element, index) => {
     console.log(`MathJax要素[${index}]:`, element)
-    const svg = element.querySelector('svg')
+    const svg = element.querySelector("svg")
     if (svg) {
-      console.log(`  - SVG要素: ${svg.getAttribute('width')}x${svg.getAttribute('height')}`)
-      const defs = svg.querySelector('defs')
+      console.log(
+        `  - SVG要素: ${svg.getAttribute("width")}x${svg.getAttribute("height")}`,
+      )
+      const defs = svg.querySelector("defs")
       if (defs) {
         console.log(`  - defs要素あり: ${defs.innerHTML.length}文字`)
       } else {
@@ -250,7 +264,7 @@ export async function processMathJaxContent(
       console.log(`  - SVG要素なし`)
     }
   })
-  
+
   if (mathElements.length > 0) {
     // MathJax要素が存在する場合は追加待機
     await waitForRenderingComplete(3)
@@ -262,7 +276,7 @@ export async function processMathJaxContent(
   // 6. スタイルクリーンアップ
   cleanupElementStyles(container)
   await waitForRenderingComplete(1)
-  
+
   console.log("🎯 MathJax処理完了")
 }
 
@@ -280,10 +294,10 @@ async function convertContainerToSvg(
 
     // SVG生成
     const svgElement = await createMathJaxSVG(processedHtml, 200, 50)
-    
+
     // SVGプレビューに表示（デバッグ用）
     displaySvgPreview(svgElement)
-    
+
     return svgElement
   } catch (error) {
     console.error("SVG変換エラー:", error)
@@ -296,22 +310,23 @@ async function convertContainerToSvg(
  * @param svgElement 表示するSVG要素
  */
 function displaySvgPreview(svgElement: SVGSVGElement | null): void {
-  const previewContainer = document.getElementById('svg-preview-container')
+  const previewContainer = document.getElementById("svg-preview-container")
   if (!previewContainer) return
 
   if (svgElement) {
     // 既存の内容をクリア
-    previewContainer.innerHTML = ''
-    
+    previewContainer.innerHTML = ""
+
     // SVGをクローンして表示
     const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
-    clonedSvg.style.border = '1px solid #007acc'
-    clonedSvg.style.backgroundColor = 'white'
-    clonedSvg.style.margin = '4px'
-    
+    clonedSvg.style.border = "1px solid #007acc"
+    clonedSvg.style.backgroundColor = "white"
+    clonedSvg.style.margin = "4px"
+
     previewContainer.appendChild(clonedSvg)
   } else {
-    previewContainer.innerHTML = '<div class="text-red-500 text-sm">SVG生成失敗</div>'
+    previewContainer.innerHTML =
+      '<div class="text-red-500 text-sm">SVG生成失敗</div>'
   }
 }
 
@@ -336,8 +351,9 @@ export async function convertTextToSvg(
   text: string,
   _width: number,
   _height: number,
-  horizontalAlign: 'left' | 'center' | 'right' = 'left',
-  verticalAlign: 'top' | 'center' | 'bottom' = 'top'
+  horizontalAlign: "left" | "center" | "right" = "left",
+  verticalAlign: "top" | "center" | "bottom" = "top",
+  textSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<SVGSVGElement | null> {
   if (!text.trim()) {
     return null
@@ -345,15 +361,15 @@ export async function convertTextToSvg(
 
   try {
     // 1. \nで改行分割
-    const lines = text.split('\n').filter(line => line.trim() !== '')
-    
+    const lines = text.split("\n").filter((line) => line.trim() !== "")
+
     if (lines.length === 0) {
       return null
     }
 
     // 2. 各行をSVGに変換
     const lineSvgs: SVGSVGElement[] = []
-    
+
     for (const line of lines) {
       const lineSvg = await convertSingleLineToSvg(line.trim())
       if (lineSvg) {
@@ -366,8 +382,14 @@ export async function convertTextToSvg(
     }
 
     // 3. 複数行SVGを結合（5px間隔）し、テキストボックスサイズに拡大縮小
-    return combineLineSvgs(lineSvgs, 5, _width, _height, horizontalAlign, verticalAlign)
-
+    return combineLineSvgs(
+      lineSvgs,
+      5,
+      _width,
+      _height,
+      horizontalAlign,
+      verticalAlign,
+    )
   } catch (error) {
     console.error("テキストからSVG変換エラー:", error)
     return null
@@ -379,7 +401,9 @@ export async function convertTextToSvg(
  * @param lineText 単一行のテキスト
  * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
  */
-async function convertSingleLineToSvg(lineText: string): Promise<SVGSVGElement | null> {
+async function convertSingleLineToSvg(
+  lineText: string,
+): Promise<SVGSVGElement | null> {
   if (!lineText.trim()) {
     return null
   }
@@ -396,7 +420,6 @@ async function convertSingleLineToSvg(lineText: string): Promise<SVGSVGElement |
 
     // 4. 処理済みコンテナをSVGに変換
     return await convertContainerToSvg(container)
-
   } catch (error) {
     console.error("単一行SVG変換エラー:", error)
     return null
@@ -437,37 +460,46 @@ async function processSingleLineMathJax(
  * @returns SVGSVGElement 結合されたSVG
  */
 function combineLineSvgs(
-  lineSvgs: SVGSVGElement[], 
-  spacing: number, 
-  targetWidth?: number, 
+  lineSvgs: SVGSVGElement[],
+  spacing: number,
+  targetWidth?: number,
   targetHeight?: number,
-  horizontalAlign: 'left' | 'center' | 'right' = 'left',
-  verticalAlign: 'top' | 'center' | 'bottom' = 'top'
+  horizontalAlign: "left" | "center" | "right" = "left",
+  verticalAlign: "top" | "center" | "bottom" = "top",
 ): SVGSVGElement {
   // 各行のサイズを取得
-  const lineInfos = lineSvgs.map(svg => ({
+  const lineInfos = lineSvgs.map((svg) => ({
     svg,
-    width: parseFloat(svg.getAttribute('width') || '0'),
-    height: parseFloat(svg.getAttribute('height') || '0')
+    width: parseFloat(svg.getAttribute("width") || "0"),
+    height: parseFloat(svg.getAttribute("height") || "0"),
   }))
 
   // 自然サイズを計算（拡大縮小なし）
-  const naturalWidth = Math.max(...lineInfos.map(info => info.width))
-  const naturalHeight = lineInfos.reduce((sum, info) => sum + info.height, 0) + 
-                        (lineInfos.length - 1) * spacing
+  const naturalWidth = Math.max(...lineInfos.map((info) => info.width))
+  const naturalHeight =
+    lineInfos.reduce((sum, info) => sum + info.height, 0) +
+    (lineInfos.length - 1) * spacing
 
   // Flexboxを使用した配置のためのCSS変数
-  const justifyContent = horizontalAlign === 'left' ? 'flex-start' : 
-                        horizontalAlign === 'center' ? 'center' : 'flex-end'
-  const alignItems = verticalAlign === 'top' ? 'flex-start' : 
-                    verticalAlign === 'center' ? 'center' : 'flex-end'
+  const justifyContent =
+    horizontalAlign === "left"
+      ? "flex-start"
+      : horizontalAlign === "center"
+        ? "center"
+        : "flex-end"
+  const alignItems =
+    verticalAlign === "top"
+      ? "flex-start"
+      : verticalAlign === "center"
+        ? "center"
+        : "flex-end"
 
   // コンテンツを行ごとに収集
   const contentLines: string[] = []
   lineInfos.forEach(({ svg }) => {
-    const foreignObject = svg.querySelector('foreignObject')
-    const innerDiv = foreignObject?.querySelector('div > div')
-    const divContent = innerDiv?.innerHTML || ''
+    const foreignObject = svg.querySelector("foreignObject")
+    const innerDiv = foreignObject?.querySelector("div > div")
+    const divContent = innerDiv?.innerHTML || ""
     contentLines.push(divContent)
   })
 
@@ -490,7 +522,9 @@ function combineLineSvgs(
           margin: 0;
           box-sizing: border-box;
         ">
-          ${contentLines.map(content => `
+          ${contentLines
+            .map(
+              (content) => `
             <div style="
               font-size: 24px;
               line-height: 1;
@@ -511,7 +545,9 @@ function combineLineSvgs(
               </style>
               ${content}
             </div>
-          `).join('')}
+          `,
+            )
+            .join("")}
         </div>
       </foreignObject>
     </svg>
