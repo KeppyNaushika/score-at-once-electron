@@ -214,64 +214,6 @@ export default function TextboxCanvasPage() {
                         }}
                       />
 
-                      {/* 配置設定 */}
-                      <div className="space-y-4 border-t pt-4">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">
-                            水平方向の配置
-                          </label>
-                          <ToggleGroup
-                            type="single"
-                            value={selectedTextBox?.horizontalAlign || "left"}
-                            onValueChange={(value) => {
-                              if (value)
-                                updateTextBoxAlign("horizontalAlign", value)
-                            }}
-                            className="justify-start"
-                          >
-                            <ToggleGroupItem value="left" aria-label="左揃え">
-                              <AlignLeft className="h-4 w-4" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem
-                              value="center"
-                              aria-label="中央揃え"
-                            >
-                              <AlignCenter className="h-4 w-4" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem value="right" aria-label="右揃え">
-                              <AlignRight className="h-4 w-4" />
-                            </ToggleGroupItem>
-                          </ToggleGroup>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">
-                            垂直方向の配置
-                          </label>
-                          <ToggleGroup
-                            type="single"
-                            value={selectedTextBox?.verticalAlign || "top"}
-                            onValueChange={(value) => {
-                              if (value)
-                                updateTextBoxAlign("verticalAlign", value)
-                            }}
-                            className="justify-start"
-                          >
-                            <ToggleGroupItem value="top" aria-label="上揃え">
-                              <AlignVerticalSpaceAround className="h-4 w-4 rotate-180" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem
-                              value="center"
-                              aria-label="中央揃え"
-                            >
-                              <AlignVerticalSpaceBetween className="h-4 w-4 rotate-90" />
-                            </ToggleGroupItem>
-                            <ToggleGroupItem value="bottom" aria-label="下揃え">
-                              <AlignVerticalSpaceAround className="h-4 w-4" />
-                            </ToggleGroupItem>
-                          </ToggleGroup>
-                        </div>
-                      </div>
 
                       <div className="flex space-x-2">
                         <Button onClick={handleTextSubmit}>

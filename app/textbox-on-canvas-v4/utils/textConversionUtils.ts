@@ -197,7 +197,7 @@ function getSharedMathJaxContainer(): HTMLDivElement {
       left: -9999px;
       top: -9999px;
       font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
-      font-size: ${textSize}px;
+      font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
       line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
       color: ${FONT_SETTINGS.DEFAULT_COLOR};
       background: white;

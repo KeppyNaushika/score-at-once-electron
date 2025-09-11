@@ -23,13 +23,17 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
         try {
           setRenderingStatus("SVG生成中...")
 
-          // Canvas描画プレビューと**全く同じSVG生成処理**
+          // アンカーベースのSVG生成処理
+          const estimatedWidth = textBox.text.length * textBox.textSize * 0.6
+          const estimatedHeight = textBox.textSize * 1.2
+
           const generatedSvg = await convertTextToSvg(
             textBox.text,
-            textBox.width,
-            textBox.height,
-            textBox.horizontalAlign || "left",
-            textBox.verticalAlign || "top",
+            estimatedWidth,
+            estimatedHeight,
+            "left",
+            "top",
+            textBox.textSize,
           )
 
           if (generatedSvg) {
@@ -48,13 +52,7 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
 
       renderSvgPreview()
     }
-  }, [
-    textBox.text,
-    textBox.width,
-    textBox.height,
-    textBox.horizontalAlign,
-    textBox.verticalAlign,
-  ])
+  }, [textBox.text, textBox.textSize])
 
   return (
     <div className="rounded border border-blue-300 bg-white p-2">

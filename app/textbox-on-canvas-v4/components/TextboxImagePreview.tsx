@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /**
  * @fileoverview Imageプレビューコンポーネント
  * @description SVG→Image変換後の状態を表示
@@ -27,13 +28,17 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
         try {
           setRenderingStatus("Image生成中...")
 
-          // SVGプレビューと**全く同じSVG生成処理**
+          // アンカーベースのSVG生成処理
+          const estimatedWidth = textBox.text.length * textBox.textSize * 0.6
+          const estimatedHeight = textBox.textSize * 1.2
+
           const svgElement = await convertTextToSvg(
             textBox.text,
-            textBox.width,
-            textBox.height,
-            textBox.horizontalAlign || "left",
-            textBox.verticalAlign || "top",
+            estimatedWidth,
+            estimatedHeight,
+            "left",
+            "top",
+            textBox.textSize,
           )
 
           if (svgElement) {
@@ -102,13 +107,7 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
         URL.revokeObjectURL(imageUrl)
       }
     }
-  }, [
-    textBox.text,
-    textBox.width,
-    textBox.height,
-    textBox.horizontalAlign,
-    textBox.verticalAlign,
-  ])
+  }, [textBox.text, textBox.textSize, imageUrl])
 
   return (
     <div className="rounded border border-orange-300 bg-white p-2">
