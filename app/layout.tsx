@@ -31,7 +31,7 @@ export default function RootLayout({
                   displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
                   processEscapes: true,
                   processEnvironments: true,
-                  packages: {'[+]': ['base', 'ams', 'newcommand', 'mathtools', 'textmacros']}
+                  packages: {'[+]': ['base', 'ams', 'newcommand']}
                 },
                 svg: {
                   fontCache: 'global',
