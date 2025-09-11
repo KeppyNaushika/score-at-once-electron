@@ -30,63 +30,55 @@ export default function RootLayout({
                   inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
                   displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
                   processEscapes: true,
-                  processEnvironments: true
+                  processEnvironments: true,
+                  packages: {'[+]': ['base', 'ams', 'newcommand', 'mathtools', 'textmacros']}
                 },
                 svg: {
                   fontCache: 'global',
-                  // オフライン環境用の設定
-                  scale: 1,
+                  scale: 1.0,
                   minScale: 0.5,
                   mtextInheritFont: false,
                   merrorInheritFont: true,
                   mathmlSpacing: false,
                   skipAttributes: {},
                   exFactor: 0.5,
-                  displayAlign: 'center',
+                  displayAlign: 'left',
                   displayIndent: '0'
                 },
-                // オフライン専用設定
-                options: {
-                  // 外部リソースの読み込みを無効化
-                  enableMenu: false,
-                  menuOptions: {
-                    settings: {
-                      assistiveMml: false,
-                      collapsible: false,
-                      explorer: false
-                    }
-                  }
+                chtml: {
+                  scale: 1.0,
+                  minScale: 0.5,
+                  mtextInheritFont: false,
+                  merrorInheritFont: true,
+                  matchFontHeight: false,
+                  fontURL: '/js/mathjax/output/chtml/fonts/woff-v2'
                 },
-                // ローダー設定（オフライン）
+                options: {
+                  skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
+                  ignoreHtmlClass: 'no-mathjax',
+                  processHtmlClass: 'mathjax'
+                },
                 loader: {
-                  load: [],
-                  ready: () => {},
-                  failed: () => {},
-                  require: () => {},
-                  paths: {},
+                  // ローカル環境用のローダー設定を最小限に
                   source: {},
                   dependencies: {},
                   provides: {},
-                  mathjax: {}
+                  failed: () => console.warn('MathJax loader failed'),
+                  require: (url) => console.log('MathJax require:', url)
                 },
                 startup: {
                   ready: () => {
                     console.log('🔥 MathJax 4 initialized successfully (Offline Mode)');
+
+                    // デフォルトの初期化を実行
                     MathJax.startup.defaultReady();
-                    // 初期化完了をグローバルに通知
-                    window.mathJaxReady = true;
-                    window.dispatchEvent(new Event('mathjax-ready'));
                   }
                 }
               };
             `,
           }}
         />
-        <script
-          id="MathJax-script"
-          async
-          src="/js/mathjax/tex-svg.js"
-        />
+        <script id="MathJax-script" async src="/js/mathjax/tex-svg.js" />
       </head>
       <body className={inter.className}>
         <AuthProvider>

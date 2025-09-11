@@ -18,7 +18,9 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
   const [renderingStatus, setRenderingStatus] = useState<string>("待機中")
 
   useEffect(() => {
-    if (textBox.text) {
+    if (textBox.text.trim()) {
+      let isCancelled = false
+      
       const renderSvgPreview = async () => {
         try {
           setRenderingStatus("SVG生成中...")
@@ -36,6 +38,9 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
             textBox.textSize,
           )
 
+          // コンポーネントがアンマウントされている場合は処理を中止
+          if (isCancelled) return
+
           if (generatedSvg) {
             setSvgElement(generatedSvg.cloneNode(true) as SVGSVGElement)
             setRenderingStatus("SVG生成完了")
@@ -44,13 +49,23 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
             setRenderingStatus("SVG生成失敗")
           }
         } catch (error) {
-          console.error("SVGプレビュー処理エラー:", error)
-          setSvgElement(null)
-          setRenderingStatus("SVG生成エラー")
+          if (!isCancelled) {
+            console.error("SVGプレビュー処理エラー:", error)
+            setSvgElement(null)
+            setRenderingStatus("SVG生成エラー")
+          }
         }
       }
 
       renderSvgPreview()
+
+      // クリーンアップ関数
+      return () => {
+        isCancelled = true
+      }
+    } else {
+      setSvgElement(null)
+      setRenderingStatus("待機中")
     }
   }, [textBox.text, textBox.textSize])
 

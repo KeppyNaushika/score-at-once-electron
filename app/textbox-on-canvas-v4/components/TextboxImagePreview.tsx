@@ -23,7 +23,10 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
   const [renderingStatus, setRenderingStatus] = useState<string>("待機中")
 
   useEffect(() => {
-    if (textBox.text) {
+    if (textBox.text.trim()) {
+      let isCancelled = false
+      let currentImageUrl: string | null = null
+
       const renderImagePreview = async () => {
         try {
           setRenderingStatus("Image生成中...")
@@ -41,73 +44,71 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
             textBox.textSize,
           )
 
+          if (isCancelled) return
+
           if (svgElement) {
-            // SVG→Blob→Image変換 (Canvas描画と全く同じ処理)
-            let svgData = new XMLSerializer().serializeToString(svgElement)
-
-            // MathJax要素が含まれている場合は、グローバルdefsを強制追加
-            const hasMathJaxElements =
-              svgData.includes("mjx-container") || svgData.includes("<use")
-            if (hasMathJaxElements) {
-              console.log("🔍 MathJax要素検出：グローバルdefsを追加")
-
-              // ページ全体からMathJax defsを取得
-              const globalDefs = document.querySelector(
-                "#MJX-SVG-global-cache defs",
-              )
-              if (globalDefs && globalDefs.innerHTML.length > 10) {
-                const defsContent = globalDefs.outerHTML
-                console.log(`📦 グローバルdefs取得: ${defsContent.length}文字`)
-
-                // SVGの開始タグ直後にdefsを強制挿入
-                svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
-                console.log("✅ グローバルdefs挿入完了")
-              } else {
-                console.warn("⚠️ グローバルdefsが見つかりません")
-              }
-            }
+            // SVG→Blob→Image変換
+            const svgData = new XMLSerializer().serializeToString(svgElement)
 
             const svgBlob = new Blob([svgData], {
               type: "image/svg+xml;charset=utf-8",
             })
             const svgUrl = URL.createObjectURL(svgBlob)
+            currentImageUrl = svgUrl
 
             const img = new Image()
             img.onload = () => {
-              setImageUrl(svgUrl)
-              setImageSize({ width: img.width, height: img.height })
-              setRenderingStatus("Image生成完了")
+              if (!isCancelled) {
+                setImageUrl(svgUrl)
+                setImageSize({ width: img.width, height: img.height })
+                setRenderingStatus("Image生成完了")
+              } else {
+                URL.revokeObjectURL(svgUrl)
+              }
             }
             img.onerror = () => {
-              URL.revokeObjectURL(svgUrl)
-              setImageUrl(null)
-              setImageSize(null)
-              setRenderingStatus("Image生成失敗")
+              if (!isCancelled) {
+                URL.revokeObjectURL(svgUrl)
+                setImageUrl(null)
+                setImageSize(null)
+                setRenderingStatus("Image生成失敗")
+              } else {
+                URL.revokeObjectURL(svgUrl)
+              }
             }
             img.src = svgUrl
           } else {
-            setImageUrl(null)
-            setImageSize(null)
-            setRenderingStatus("SVG生成失敗")
+            if (!isCancelled) {
+              setImageUrl(null)
+              setImageSize(null)
+              setRenderingStatus("SVG生成失敗")
+            }
           }
         } catch (error) {
-          console.error("Imageプレビュー処理エラー:", error)
-          setImageUrl(null)
-          setImageSize(null)
-          setRenderingStatus("Image生成エラー")
+          if (!isCancelled) {
+            console.error("Imageプレビュー処理エラー:", error)
+            setImageUrl(null)
+            setImageSize(null)
+            setRenderingStatus("Image生成エラー")
+          }
         }
       }
 
       renderImagePreview()
-    }
 
-    // クリーンアップ
-    return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl)
+      // クリーンアップ
+      return () => {
+        isCancelled = true
+        if (currentImageUrl) {
+          URL.revokeObjectURL(currentImageUrl)
+        }
       }
+    } else {
+      setImageUrl(null)
+      setImageSize(null)
+      setRenderingStatus("待機中")
     }
-  }, [textBox.text, textBox.textSize, imageUrl])
+  }, [textBox.text, textBox.textSize])
 
   return (
     <div className="rounded border border-orange-300 bg-white p-2">

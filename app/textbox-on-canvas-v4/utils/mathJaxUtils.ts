@@ -38,60 +38,111 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
   }
 
   try {
-    // MathJax 4では初期化完了を待つ必要がある
-    if (MathJax.startup && !MathJax.startup.document) {
+    // MathJax 4の初期化完了を確認
+    console.log("MathJax状態確認:", {
+      startup: !!MathJax.startup,
+      document: !!MathJax.startup?.document,
+      typesetPromise: !!MathJax.typesetPromise,
+      typeset: !!MathJax.typeset,
+      mathJaxReady: (window as any).mathJaxReady
+    })
+
+    // MathJaxが完全に初期化されるまで待機（非同期読み込み対応）
+    if (!MathJax.startup?.document && !(window as any).mathJaxReady) {
       console.log("MathJax初期化を待機中...")
       await new Promise((resolve) => {
-        if ((window as any).mathJaxReady) {
+        // 既に初期化済みの場合
+        if ((window as any).mathJaxReady || (MathJax.startup?.document)) {
           resolve(void 0)
-        } else {
-          const timeout = setTimeout(() => {
-            console.warn("MathJax初期化タイムアウト")
-            resolve(void 0)
-          }, 3000)
-
-          window.addEventListener(
-            "mathjax-ready",
-            () => {
-              clearTimeout(timeout)
-              resolve(void 0)
-            },
-            { once: true },
-          )
+          return
         }
+
+        let attempts = 0
+        const maxAttempts = 20 // 10秒間（500ms間隔）
+
+        const checkReady = () => {
+          attempts++
+          if ((window as any).mathJaxReady || MathJax.startup?.document || MathJax.typesetPromise) {
+            console.log(`MathJax初期化完了 (${attempts * 500}ms後)`)
+            resolve(void 0)
+          } else if (attempts >= maxAttempts) {
+            console.warn("MathJax初期化タイムアウト - 処理を継続")
+            resolve(void 0)
+          } else {
+            setTimeout(checkReady, 500)
+          }
+        }
+
+        // イベント待機と定期チェックを併用
+        window.addEventListener(
+          "mathjax-ready",
+          () => {
+            console.log("MathJax ready イベント受信")
+            resolve(void 0)
+          },
+          { once: true },
+        )
+
+        checkReady()
       })
     }
 
-    if (MathJax.typesetPromise) {
+    // typesetPromiseが利用可能な場合
+    if (MathJax.typesetPromise && typeof MathJax.typesetPromise === 'function') {
       console.log("MathJax typesetPromise実行中...")
 
-      // タイムアウト付きでtypesetPromiseを実行
-      const typesetTimeout = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("MathJax typeset timeout")), 5000)
-      })
-
       try {
+        const typesetTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("MathJax typeset timeout")), 8000)
+        })
+
         await Promise.race([
           MathJax.typesetPromise([container]),
           typesetTimeout,
         ])
-        console.log("MathJax typeset完了")
+        console.log("MathJax typesetPromise完了")
       } catch (error) {
-        console.warn("MathJax typeset中断:", error)
-        // フォールバックとして同期版を試行
-        if (MathJax.typeset) {
+        console.warn("MathJax typesetPromise失敗:", error)
+        
+        // フォールバック: 同期typeset
+        if (MathJax.typeset && typeof MathJax.typeset === 'function') {
           console.log("フォールバック: 同期typeset実行")
           MathJax.typeset([container])
+        } else {
+          console.warn("フォールバックtypesetも利用不可")
         }
       }
-    } else if (MathJax.typeset) {
-      console.log("MathJax typeset実行中...")
+    }
+    // typesetが利用可能な場合
+    else if (MathJax.typeset && typeof MathJax.typeset === 'function') {
+      console.log("MathJax typeset（同期）実行中...")
       MathJax.typeset([container])
-    } else {
-      console.warn("MathJaxの組版メソッドが見つかりません")
+      console.log("MathJax typeset（同期）完了")
+    }
+    // どちらも利用不可な場合
+    else {
+      console.warn("MathJaxの組版メソッドが見つかりません", {
+        typesetPromise: MathJax.typesetPromise,
+        typeset: MathJax.typeset,
+        allMethods: Object.keys(MathJax).filter(k => typeof MathJax[k] === 'function')
+      })
+      
+      // 最終フォールバック: 手動再初期化を試行
+      if (MathJax.startup && typeof MathJax.startup.defaultReady === 'function') {
+        console.log("MathJax再初期化を試行...")
+        try {
+          await MathJax.startup.defaultReady()
+          if (MathJax.typeset) {
+            MathJax.typeset([container])
+            console.log("再初期化後のtypeset完了")
+          }
+        } catch (reinitError) {
+          console.warn("MathJax再初期化失敗:", reinitError)
+        }
+      }
     }
 
-    await waitForRenderingComplete(2)
+    await waitForRenderingComplete(3) // 待機時間を延長
     console.log("MathJax処理完了")
   } catch (error) {
     console.error("MathJax処理エラー:", error)
@@ -198,118 +249,27 @@ export async function measureMathJaxContentSize(
 }
 
 /**
- * ページ内のMathJax defs要素を取得する（MathJax 4対応版）
+ * ページ内のMathJax defs要素を取得する（軽量化版）
  * @returns MathJaxの<defs>要素のHTML文字列
  */
 function extractMathJaxDefs(): string {
-  console.group("🔍 MathJax 4 defs抽出デバッグ")
-
-  // まず、MathJax要素が存在するかチェック
-  const mjxContainers = document.querySelectorAll("mjx-container")
-  console.log(`mjx-container要素数: ${mjxContainers.length}`)
-
-  if (mjxContainers.length > 0) {
-    mjxContainers.forEach((container, index) => {
-      console.log(`mjx-container[${index}]:`, container)
-      const svg = container.querySelector("svg")
-      if (svg) {
-        console.log(
-          `  - SVG要素あり: ID=${svg.id || "(なし)"}, サイズ=${svg.getAttribute("width")}x${svg.getAttribute("height")}`,
-        )
-        const defs = svg.querySelector("defs")
-        if (defs) {
-          console.log(`  - defs要素あり: 内容長=${defs.innerHTML.length}文字`)
-        } else {
-          console.log(`  - defs要素なし`)
-        }
-      } else {
-        console.log(`  - SVG要素なし`)
-      }
-    })
+  // 最も効率的で確実な方法：グローバルキャッシュから取得
+  const globalCache = document.querySelector("#MJX-SVG-global-cache defs")
+  if (globalCache && globalCache.innerHTML.length > 100) {
+    console.log(`📦 グローバルdefs取得: ${globalCache.innerHTML.length}文字`)
+    return globalCache.outerHTML
   }
 
-  // MathJax 4では構造が変更されている可能性があるため、より包括的な検索を実行
-  const selectors = [
-    // MathJax 4の新しい構造
-    "#MJX-SVG-global-cache defs",
-    "mjx-container svg defs",
-    'svg[id*="MJX"] defs',
-    'defs[id*="MJX"]',
-    // 従来の構造
-    "svg defs",
-    'style[id*="MJX"]',
-    // MathJax 4の追加候補
-    "[data-mjx] svg defs",
-    ".MathJax svg defs",
-    ".mjx-svg defs",
-    // 頻繁に使用される要素
-    "mjx-container defs",
-  ]
+  // フォールバック：MathJaxスタイル要素も含める
+  const styleElement = document.querySelector('style[id*="MJX"]')
+  if (styleElement && styleElement.innerHTML.length > 100) {
+    console.log(`📦 MathJaxスタイル取得: ${styleElement.innerHTML.length}文字`)
+    return styleElement.outerHTML
+  }
 
-  let defsContent = ""
-  const processedIds = new Set<string>()
-
-  selectors.forEach((selector) => {
-    const elements = document.querySelectorAll(selector)
-    console.log(`セレクタ "${selector}": ${elements.length}個の要素`)
-
-    elements.forEach((element, index) => {
-      console.log(`  - 要素${index}:`, element)
-
-      // 要素にIDがある場合は重複チェック
-      const elementId = element.id || `${selector}-${index}`
-      if (processedIds.has(elementId)) {
-        console.log(`    スキップ（重複）: ${elementId}`)
-        return
-      }
-
-      if (element && element.innerHTML) {
-        defsContent += element.outerHTML
-        processedIds.add(elementId)
-        console.log(
-          `    内容追加: ${element.innerHTML.length}文字, ID: ${elementId}`,
-        )
-      }
-    })
-  })
-
-  // ページ全体のSVG要素を詳細調査（MathJax 4対応）
-  const allSvgs = document.querySelectorAll("svg")
-  console.log(`ページ内の全SVG要素: ${allSvgs.length}個`)
-
-  allSvgs.forEach((svg, index) => {
-    const defs = svg.querySelector("defs")
-    if (defs) {
-      console.log(`SVG${index}にdefs発見:`, defs)
-      console.log(`  - ID: ${svg.id || "(なし)"}`)
-      console.log(
-        `  - クラス: ${svg.className.baseVal || svg.className || "(なし)"}`,
-      )
-      console.log(`  - data-mjx: ${svg.getAttribute("data-mjx") || "(なし)"}`)
-      console.log(`  - defs内容長: ${defs.innerHTML.length}文字`)
-      console.log(`  - defs ID: ${defs.id || "(なし)"}`)
-
-      // より厳密な重複チェック（ID + 内容のハッシュ）
-      const defsId = defs.id || `svg-${index}-defs`
-      const contentHash = defs.innerHTML.slice(0, 100) // 最初の100文字でハッシュ代替
-      const uniqueKey = `${defsId}-${contentHash}`
-
-      if (!processedIds.has(uniqueKey)) {
-        defsContent += defs.outerHTML
-        processedIds.add(uniqueKey)
-        console.log(`  - defs内容を追加しました (${uniqueKey})`)
-      } else {
-        console.log(`  - defs内容をスキップ（重複）: ${uniqueKey}`)
-      }
-    }
-  })
-
-  console.log(`最終的なdefs内容長: ${defsContent.length}文字`)
-  console.log(`処理した要素数: ${processedIds.size}個`)
-  console.log("defs内容プレビュー:", defsContent.substring(0, 300) + "...")
-  console.groupEnd()
-
-  return defsContent
+  // 最終フォールバック：何も見つからない場合は空文字を返す
+  console.log(`📝 MathJax defsが見つかりません（純粋なテキスト表示）`)
+  return ""
 }
 
 /**
@@ -341,7 +301,7 @@ async function waitForMathJaxDefsGeneration(): Promise<boolean> {
 }
 
 /**
- * 測定結果に基づいて最適なSVGを生成する（MathJax defs統合版）
+ * 測定結果に基づいて最適なSVGを生成する（軽量版）
  * @param htmlContent HTML内容
  * @param measuredSize 測定されたサイズ
  * @returns 生成されたSVG要素
@@ -350,23 +310,10 @@ export async function createOptimizedSVG(
   htmlContent: string,
   measuredSize: MeasuredSize,
 ): Promise<SVGSVGElement> {
-  // MathJax 4では、defs生成を待機する必要がある
-  await waitForMathJaxDefsGeneration()
-
-  // MathJax defsを抽出
+  // MathJax defsを抽出（軽量化）
   const mathJaxDefs = extractMathJaxDefs()
 
-  console.group("🎨 MathJax 4 SVG生成詳細")
-  console.log("defs情報:", {
-    defsLength: mathJaxDefs.length,
-    hasContent: mathJaxDefs.length > 0,
-    width: measuredSize.width,
-    height: measuredSize.height,
-  })
-  console.log(
-    "抽出されたdefs内容（最初の500文字）:",
-    mathJaxDefs.substring(0, 500),
-  )
+  console.log(`🎨 SVG生成: ${measuredSize.width}x${measuredSize.height}, defs: ${mathJaxDefs.length > 0 ? 'あり' : 'なし'}`)
 
   const svgString = `
     <svg xmlns="${SVG_SETTINGS.NAMESPACE}"
@@ -375,7 +322,7 @@ export async function createOptimizedSVG(
          height="${measuredSize.height}"
          viewBox="0 0 ${measuredSize.width} ${measuredSize.height}"
          overflow="${SVG_SETTINGS.DEFAULT_OVERFLOW}">
-      ${mathJaxDefs ? mathJaxDefs : ""}
+      ${mathJaxDefs}
       <foreignObject x="0" y="0"
                      width="${measuredSize.width}"
                      height="${measuredSize.height}"
@@ -401,37 +348,9 @@ export async function createOptimizedSVG(
     </svg>
   `
 
-  console.log(
-    "生成されたSVG文字列（最初の1000文字）:",
-    svgString.substring(0, 1000),
-  )
-
   const parser = new DOMParser()
   const svgDoc = parser.parseFromString(svgString, "image/svg+xml")
-  const svgElement = svgDoc.documentElement as unknown as SVGSVGElement
-
-  // 詳細なSVG解析
-  const defsInSvg = svgElement.querySelector("defs")
-  console.log("パースされたSVG要素:", svgElement)
-  console.log("SVG内のdefs要素:", defsInSvg)
-  console.log("defs要素の存在:", defsInSvg !== null)
-  if (defsInSvg) {
-    console.log("defs内容長:", defsInSvg.innerHTML.length)
-    console.log("defs ID:", defsInSvg.id || "(ID なし)")
-    console.log("defs内容プレビュー:", defsInSvg.innerHTML.substring(0, 200))
-  }
-
-  // XMLSerializerでの再シリアライズテスト
-  const reserializedSvg = new XMLSerializer().serializeToString(svgElement)
-  const defsInReserializedSvg = reserializedSvg.includes("<defs")
-  console.log("再シリアライズ後のdefs存在:", defsInReserializedSvg)
-  console.log(
-    "再シリアライズSVG（最初の800文字）:",
-    reserializedSvg.substring(0, 800),
-  )
-  console.groupEnd()
-
-  return svgElement
+  return svgDoc.documentElement as unknown as SVGSVGElement
 }
 
 /**
