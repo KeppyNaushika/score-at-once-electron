@@ -10,9 +10,24 @@ const initializePdfjs = async () => {
   }
   
   if (!pdfjsLib) {
-    pdfjsLib = await import('pdfjs-dist')
-    // Set up PDF.js worker - use local static file instead of CDN
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.mjs'
+    try {
+      // Try importing the legacy build first (more stable)
+      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.min.mjs')
+      
+      // Set up PDF.js worker - use local static file instead of CDN
+      if (pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.mjs'
+      }
+    } catch (error) {
+      // Fallback to standard import
+      console.warn('Legacy PDF.js import failed, trying standard import:', error)
+      const pdfModule = await import('pdfjs-dist')
+      pdfjsLib = pdfModule.default || pdfModule
+      
+      if (pdfjsLib.GlobalWorkerOptions) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/js/pdf.worker.min.mjs'
+      }
+    }
   }
   
   return pdfjsLib

@@ -28,9 +28,9 @@ export default function ExportWarningModal({
   warnings,
 }: ExportWarningModalProps) {
   const hasWarnings =
-    warnings.noScoringData.length > 0 ||
-    warnings.unscored.length > 0 ||
-    warnings.missingPartialScore.length > 0
+    (warnings?.noScoringData?.length ?? 0) > 0 ||
+    (warnings?.unscored?.length ?? 0) > 0 ||
+    (warnings?.missingPartialScore?.length ?? 0) > 0
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -44,7 +44,7 @@ export default function ExportWarningModal({
 
         <div className="space-y-4">
           {/* 採点データがない設問答案 */}
-          {warnings.noScoringData.length > 0 && (
+          {(warnings?.noScoringData?.length ?? 0) > 0 && (
             <Alert className="border-red-200 bg-red-50">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
@@ -52,7 +52,7 @@ export default function ExportWarningModal({
                   次の設問答案の採点データがありません
                 </div>
                 <div className="space-y-1 text-sm">
-                  {warnings.noScoringData.map((item, index) => (
+                  {(warnings?.noScoringData ?? []).map((item, index) => (
                     <div key={index} className="pl-2">
                       • {item}
                     </div>
@@ -63,13 +63,13 @@ export default function ExportWarningModal({
           )}
 
           {/* 未採点の設問答案 */}
-          {warnings.unscored.length > 0 && (
+          {(warnings?.unscored?.length ?? 0) > 0 && (
             <Alert className="border-orange-200 bg-orange-50">
               <AlertTriangle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-orange-800">
                 <div className="mb-2 font-medium">次の設問答案が未採点です</div>
                 <div className="space-y-1 text-sm">
-                  {warnings.unscored.map((item, index) => (
+                  {(warnings?.unscored ?? []).map((item, index) => (
                     <div key={index} className="pl-2">
                       • {item}
                     </div>
@@ -80,7 +80,7 @@ export default function ExportWarningModal({
           )}
 
           {/* 部分点が入力されていない設問 */}
-          {warnings.missingPartialScore.length > 0 && (
+          {(warnings?.missingPartialScore?.length ?? 0) > 0 && (
             <Alert className="border-yellow-200 bg-yellow-50">
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800">
@@ -88,7 +88,7 @@ export default function ExportWarningModal({
                   次の部分点が入力されていません
                 </div>
                 <div className="space-y-1 text-sm">
-                  {warnings.missingPartialScore.map((item, index) => (
+                  {(warnings?.missingPartialScore ?? []).map((item, index) => (
                     <div key={index} className="pl-2">
                       • {item}
                     </div>

@@ -191,22 +191,41 @@ export default function ScoringMainView() {
     // pageImagesから重複を除いた生徒データを抽出
     const uniqueStudents = new Map()
 
-    pageImages.forEach((sheet) => {
+    console.log('🔍 ScoringMainView debug - Processing pageImages for students:', pageImages.length)
+
+    pageImages.forEach((sheet, index) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
-        uniqueStudents.set(sheet.student.id, {
+        const studentData = {
           id: sheet.student.id,
           studentId: sheet.student.studentId,
           lastName: sheet.student.lastName,
           firstName: sheet.student.firstName,
           customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
+        }
+        
+        console.log(`🔍 Student ${index}:`, {
+          name: `${sheet.student.lastName} ${sheet.student.firstName}`,
+          customOrder: studentData.customOrder,
+          hasProjectStudents: !!sheet.student.projectStudents?.length,
+          projectStudentsLength: sheet.student.projectStudents?.length || 0
         })
+
+        uniqueStudents.set(sheet.student.id, studentData)
       }
     })
 
     // customOrderでソートして配列に変換
-    return Array.from(uniqueStudents.values()).sort(
+    const sortedStudents = Array.from(uniqueStudents.values()).sort(
       (a, b) => a.customOrder - b.customOrder,
     )
+
+    console.log('🔍 ScoringMainView debug - Final sorted students:', sortedStudents.map((student, index) => ({
+      index,
+      name: `${student.lastName} ${student.firstName}`,
+      customOrder: student.customOrder
+    })))
+
+    return sortedStudents
   }, [pageImages])
 
   // 個別表示モードで最初の生徒を自動選択
@@ -515,7 +534,7 @@ export default function ScoringMainView() {
             partialScoreInput={partialScoreInput}
             modifierKeyLabel={modifierKeyLabel}
             layoutDirection={layoutDirection}
-            visibleAnswersCount={visibleAnswers.size}
+            visibleAnswersCount={visibleAnswers.length}
             totalAnswersCount={pageImages.length}
             onLayoutDirectionChange={setLayoutDirection}
             onGridNavigation={handleGridNavigation}

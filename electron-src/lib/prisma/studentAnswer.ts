@@ -52,11 +52,27 @@ export async function uploadStudentAnswers(
       //   },
       // })
 
-      // TODO: Fix this for new schema - temporary implementation
+      // Find or create the appropriate ProjectPage for this pageNumber
+      let projectPage = await prisma.projectPage.findFirst({
+        where: {
+          projectId: projectId,
+          pageNumber: fileData.pageNumber || 1
+        }
+      })
+
+      if (!projectPage) {
+        projectPage = await prisma.projectPage.create({
+          data: {
+            projectId: projectId,
+            pageNumber: fileData.pageNumber || 1
+          }
+        })
+      }
+
       // データベースに記録（upsertで重複回避）
       const answerSheet = await prisma.pageImage.create({
         data: {
-          projectPageId: projectId, // TODO: This needs to be a proper projectPageId
+          projectPageId: projectPage.id, // Now using correct ProjectPage.id
           studentId: fileData.studentId,
           imagePath: relativePath,
           imageType: "STUDENT_ANSWER",
@@ -137,6 +153,7 @@ export async function getStudentAnswersByProjectId(projectId: string) {
             lastNameKana: sheet.student.lastNameKana,
             firstNameKana: sheet.student.firstNameKana,
             studentId: sheet.student.studentId,
+            projectStudents: sheet.student.projectStudents, // Include projectStudents for customOrder access
           } : null,
           projectId: sheet.projectPage.project.id,
           status: "ready" as const,

@@ -116,6 +116,7 @@ export interface ScoringData {
   maxScore: number // CropRegion.points
   status: ScoringStatus // QuestionScore.status
   questionRegion: CropRegionWithProjectPage // CropRegion データ（設問領域情報）
+  customOrder: number // ProjectStudent.customOrder (必須・ソート用)
 }
 
 /**
@@ -143,7 +144,7 @@ export function getScoringStatusFromArray(
   if (!cropRegionId) return "unscored"
   
   const score = findQuestionScore(questionScores, studentId, cropRegionId)
-  return (score?.status as ScoringStatus) || "unscored"
+  return (score?.status as ScoringStatus) ?? "unscored"
 }
 
 /**

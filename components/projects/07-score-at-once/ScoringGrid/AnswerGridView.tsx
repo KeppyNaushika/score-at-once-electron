@@ -20,7 +20,7 @@ export interface AnswerGridViewProps {
   // 統一されたデータ引数
   allScoringData: ScoringData[]
   masterAnswerData: any // 模範解答データ
-  filteredScoringDataIds: Set<string>
+  filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
   // Grid表示では設問情報不要
 
@@ -56,13 +56,37 @@ export default function AnswerGridView({
   }] : []
 
   const studentAnswers = allScoringData
-    .filter((data) => filteredScoringDataIds.has(data.id))
+    .filter((data) => filteredScoringDataIds.includes(data.id))
     .map((data) => ({
       ...data,
       isSelected: selectedScoringDataIds.has(data.id),
     }))
 
+  console.log('🔍 AnswerGridView debug - allScoringData order:', allScoringData.map((data, index) => ({
+    index,
+    id: data.id,
+    studentName: data.studentName
+  })))
+
+  console.log('🔍 AnswerGridView debug - filteredScoringDataIds:', filteredScoringDataIds)
+
+  console.log('🔍 AnswerGridView debug - studentAnswers order:', studentAnswers.map((data, index) => ({
+    index,
+    id: data.id,
+    studentName: data.studentName
+  })))
+
   const answers = [...masterAnswers, ...studentAnswers]
+  
+  // デバッグ: グリッドに渡される答案の順序をログ出力
+  console.log('🔍 AnswerGridView - Final answer order:', answers.map((answer, index) => ({
+    index,
+    id: answer.id,
+    studentName: answer.studentName || answer.studentId,
+    customOrder: answer.customOrder,
+    isFiltered: filteredScoringDataIds.includes(answer.id)
+  })))
+  
   const gridRef = useRef<HTMLDivElement>(null)
 
   // Custom hooks

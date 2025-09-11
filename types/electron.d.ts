@@ -18,6 +18,37 @@ import type {
   StudentClassMembership,
 } from "@prisma/client"
 
+// PDF.js module declarations
+declare module 'pdfjs-dist/legacy/build/pdf.min.mjs' {
+  export * from 'pdfjs-dist'
+  export { default } from 'pdfjs-dist'
+}
+
+declare module 'pdfjs-dist' {
+  export const GlobalWorkerOptions: {
+    workerSrc: string
+  }
+  
+  export function getDocument(params: {
+    data: ArrayBuffer
+    password?: string
+  }): {
+    promise: Promise<{
+      numPages: number
+      getPage(pageNum: number): Promise<{
+        getViewport(options: { scale: number }): {
+          width: number
+          height: number
+        }
+        render(options: {
+          canvasContext: CanvasRenderingContext2D
+          viewport: { width: number; height: number }
+        }): { promise: Promise<void> }
+      }>
+    }>
+  }
+}
+
 // Student answer related types (updated for new structure)
 // New: Based on PageImage instead of StudentAnswer
 export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{

@@ -16,7 +16,7 @@ interface ScoringContentAreaProps {
   // 採点データ管理（両View共通）
   allScoringData: ScoringData[]
   masterAnswerData: any // Grid表示用の模範解答データ
-  filteredScoringDataIds: Set<string>
+  filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
 
   // 設問情報（Individual表示のみ必要）

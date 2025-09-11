@@ -47,7 +47,7 @@ export function useScoringFilter({
     no_answer: false,
   })
 
-  const [visibleAnswers, setVisibleAnswers] = useState<Set<string>>(new Set())
+  const [visibleAnswers, setVisibleAnswers] = useState<string[]>([])
   const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<
     Set<string>
   >(new Set())
@@ -62,7 +62,7 @@ export function useScoringFilter({
       if (!questionId) return "unscored"
 
       const score = findQuestionScore(questionScores, studentId, questionId)
-      return (score?.status as ScoringStatus) || "unscored"
+      return (score?.status as ScoringStatus) ?? "unscored"
     },
     [questionScores],
   )
@@ -71,36 +71,30 @@ export function useScoringFilter({
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {
       const activeFilterSettings = customFilterSettings || filterSettings
-      const newVisibleAnswers = new Set<string>()
 
       if (!currentCropRegion) {
-        setVisibleAnswers(newVisibleAnswers)
+        setVisibleAnswers([])
         return
       }
 
-      // 最適化: ProjectPageIDでフィルタリングを先に実行
-      for (const pageImage of pageImages) {
-        if (pageImage.projectPageId !== currentCropRegion.projectPageId)
-          continue
+      console.log('🔍 Filter debug - Active filter settings:', activeFilterSettings)
+      console.log('🔍 Filter debug - Current crop region:', currentCropRegion.id)
+      console.log('🔍 Filter debug - Total page images:', pageImages.length)
 
-        if (!pageImage.studentId) continue // studentIdがnullの場合はスキップ
+      // allScoringData（既にソート済み）からフィルタリングして順序を保持
+      const newVisibleAnswers = allScoringData
+        .filter((scoringData) => {
+          const status = scoringData.status
+          const matchesFilter = activeFilterSettings[status as keyof typeof activeFilterSettings]
+          const isRecentlyScored = recentlyScoredAnswers.has(scoringData.id)
+          
+          // フィルター条件チェック（最近採点答案は強制表示）
+          return matchesFilter || isRecentlyScored
+        })
+        .map(scoringData => scoringData.id) // IDの配列として順序を保持
 
-        const score = findQuestionScore(
-          questionScores,
-          pageImage.studentId,
-          currentCropRegion.id,
-        )
-        const status = (score?.status as ScoringStatus) || "unscored"
-
-        const matchesFilter =
-          activeFilterSettings[status as keyof typeof activeFilterSettings]
-        const isRecentlyScored = recentlyScoredAnswers.has(pageImage.id)
-
-        // フィルター条件チェック（最近採点答案は強制表示）
-        if (matchesFilter || isRecentlyScored) {
-          newVisibleAnswers.add(pageImage.id)
-        }
-      }
+      console.log('🔍 Filter debug - Filtered results:', newVisibleAnswers)
+      console.log('🔍 Filter debug - Visible answer count:', newVisibleAnswers.length)
 
       setVisibleAnswers(newVisibleAnswers)
     },
@@ -137,8 +131,15 @@ export function useScoringFilter({
 
   // visibleAnswersが更新されたら適切な答案選択を行う（最適化版）
   useEffect(() => {
+    console.log('🔍 Selection debug - visibleAnswers changed:', {
+      newSize: visibleAnswers.length,
+      oldSize: lastVisibleAnswersRef.current.size,
+      newIds: visibleAnswers,
+      currentSelection: Array.from(selectedPageImageIdsRef.current)
+    })
+
     // visibleAnswersに変化がない場合はスキップ（パフォーマンス向上）
-    if (visibleAnswers.size === lastVisibleAnswersRef.current.size) {
+    if (visibleAnswers.length === lastVisibleAnswersRef.current.size) {
       let hasChanged = false
       for (const id of visibleAnswers) {
         if (!lastVisibleAnswersRef.current.has(id)) {
@@ -146,29 +147,41 @@ export function useScoringFilter({
           break
         }
       }
-      if (!hasChanged) return
+      if (!hasChanged) {
+        console.log('🔍 Selection debug - No changes in visibleAnswers, skipping')
+        return
+      }
     }
 
     // 最新のvisibleAnswersを記録
     lastVisibleAnswersRef.current = new Set(visibleAnswers)
 
     // 早期リターンで不要な処理をスキップ
-    if (visibleAnswers.size === 0) return
+    if (visibleAnswers.length === 0) {
+      console.log('🔍 Selection debug - No visible answers, returning')
+      return
+    }
 
     // 現在の選択状態をrefから取得（最新の状態）
     const currentSelection = selectedPageImageIdsRef.current
     if (currentSelection.size > 0) {
       // 高速な有効性チェック（Set.hasは高速）
       for (const selectedId of currentSelection) {
-        if (visibleAnswers.has(selectedId)) {
+        if (visibleAnswers.includes(selectedId)) {
+          console.log('🔍 Selection debug - Current selection is still valid:', selectedId)
           return // 有効な選択があるので処理終了
         }
       }
     }
 
     // 選択が空か無効な場合のみ、最初の学生答案を選択
+    console.log('🔍 Selection debug - Need to select first student answer')
+    const visibleAnswersArray = Array.from(visibleAnswers)
+    console.log('🔍 Selection debug - Visible answers array:', visibleAnswersArray)
+    
     for (const answerId of visibleAnswers) {
       if (!answerId.startsWith("master-")) {
+        console.log('🔍 Selection debug - Selecting first student answer:', answerId)
         setSelectedPageImageIds(new Set([answerId]))
         return // 見つかったらすぐ終了
       }
@@ -214,6 +227,18 @@ export function useScoringFilter({
         pageImage.projectPageId === currentCropRegion.projectPageId,
     )
 
+    console.log('🔍 Student ordering debug - Before sorting:', pageFilteredSheets.map((sheet, index) => ({
+      index,
+      id: sheet.id,
+      studentName: `${sheet.student?.lastName ?? ""} ${sheet.student?.firstName ?? ""}`,
+      studentId: sheet.student?.studentId,
+      customOrder: sheet.student?.projectStudents?.[0]?.customOrder,
+      hasProjectStudents: (sheet.student?.projectStudents?.length ?? 0) > 0,
+      projectStudentsLength: sheet.student?.projectStudents?.length ?? 0,
+      allProjectStudents: sheet.student?.projectStudents ?? [],
+      studentData: sheet.student
+    })))
+
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
@@ -228,13 +253,31 @@ export function useScoringFilter({
 
       // customOrderが同じ場合は姓名でソート
       if (aOrder === bOrder) {
-        const aName = `${a.student?.lastName || ""}${a.student?.firstName || ""}`
-        const bName = `${b.student?.lastName || ""}${b.student?.firstName || ""}`
+        const aName = `${a.student?.lastName ?? ""}${a.student?.firstName ?? ""}`
+        const bName = `${b.student?.lastName ?? ""}${b.student?.firstName ?? ""}`
         return aName.localeCompare(bName, "ja")
       }
 
-      return (aOrder || 0) - (bOrder || 0)
+      const sortResult = (aOrder || 0) - (bOrder || 0)
+      
+      console.log('🔍 Sorting comparison:', {
+        a: `${a.student?.lastName} ${a.student?.firstName}`,
+        aOrder,
+        b: `${b.student?.lastName} ${b.student?.firstName}`,
+        bOrder,
+        result: sortResult
+      })
+      
+      return sortResult
     })
+
+    console.log('🔍 Student ordering debug - After sorting:', sortedAnswerSheets.map((sheet, index) => ({
+      index,
+      id: sheet.id,
+      studentName: `${sheet.student?.lastName ?? ""} ${sheet.student?.firstName ?? ""}`,
+      studentId: sheet.student?.studentId,
+      customOrder: sheet.student?.projectStudents?.[0]?.customOrder
+    })))
 
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {
@@ -248,9 +291,10 @@ export function useScoringFilter({
               ? `appimg://${pageImage.imagePath}`
               : "",
             currentScore: undefined,
-            maxScore: currentCropRegion.points || 0,
+            maxScore: currentCropRegion.points ?? 0,
             status: "unscored" as ScoringStatus,
             questionRegion: currentCropRegion,
+            customOrder: 999999, // 不明な生徒は最後に配置
           }
         }
 
@@ -263,16 +307,17 @@ export function useScoringFilter({
         return {
           id: pageImage.id,
           studentId: pageImage.studentId, // Student.id (UUID) を使用
-          studentName: `${pageImage.student?.lastName || ""} ${pageImage.student?.firstName || ""}`,
+          studentName: `${pageImage.student?.lastName ?? ""} ${pageImage.student?.firstName ?? ""}`,
           imageUrl: pageImage.imagePath
             ? `appimg://${pageImage.imagePath}`
             : "",
           currentScore: score?.partialScore
             ? Number(score.partialScore)
             : undefined,
-          maxScore: currentCropRegion.points || 0,
-          status: (score?.status as ScoringStatus) || "unscored",
+          maxScore: currentCropRegion.points ?? 0,
+          status: (score?.status as ScoringStatus) ?? "unscored",
           questionRegion: currentCropRegion, // 採点領域情報を追加
+          customOrder: pageImage.student?.projectStudents?.[0]?.customOrder || 999999, // 必須フィールド
         }
       },
     )
@@ -291,10 +336,18 @@ export function useScoringFilter({
 
   // 表示用のグリッドデータ（学生データのみをフィルタリング）
   const getGridAnswerData = useCallback(() => {
-    // 学生答案のみをvisibleAnswersでフィルタリング
-    const filteredAnswers = getAllGridAnswerData.filter((answer) => {
-      return visibleAnswers.has(answer.id)
-    })
+    // allScoringDataの順序を保持したまま、visibleAnswersの順序でフィルタリング
+    const filteredAnswers = visibleAnswers
+      .map(answerId => getAllGridAnswerData.find(answer => answer.id === answerId))
+      .filter(Boolean) // undefinedを除外
+
+    // デバッグ: フィルタリング後の順序をログ出力
+    console.log('🔍 getGridAnswerData - Filtered order (preserving allScoringData order):', filteredAnswers.map((answer, index) => ({
+      index,
+      id: answer?.id,
+      studentName: answer?.studentName,
+      fromVisibleAnswersIndex: answer?.id ? visibleAnswers.indexOf(answer.id) : -1
+    })))
 
     return filteredAnswers
   }, [getAllGridAnswerData, visibleAnswers])

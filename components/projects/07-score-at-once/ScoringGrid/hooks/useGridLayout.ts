@@ -27,19 +27,27 @@ export function useGridLayout({
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {
+    console.log('🔍 useGridLayout debug - Input answers order:', answers.map((answer, index) => ({
+      index,
+      id: answer.id,
+      studentName: answer.studentName
+    })))
+
+    console.log('🔍 useGridLayout debug - Layout direction:', layoutDirection)
+
+    let result = answers
+
     // 下→右・下→左レイアウトでは、CSS Gridのgrid-auto-flow: columnが自動で縦配置するため
     // ソート変換不要、元の順序のまま使用
     if (layoutDirection === "down-right" || layoutDirection === "down-left") {
-      return answers // 元の順序をそのまま使用
+      result = answers // 元の順序をそのまま使用
     }
-
     // 右→下レイアウトのみソート処理
-    if (layoutDirection === "right-down") {
-      return answers // デフォルト順序
+    else if (layoutDirection === "right-down") {
+      result = answers // デフォルト順序
     }
-
     // 左→下レイアウト用のソート
-    if (layoutDirection === "left-down") {
+    else if (layoutDirection === "left-down") {
       const totalAnswers = answers.length
       const cols = effectiveGridSize.columns
       const sorted = new Array(totalAnswers)
@@ -53,10 +61,16 @@ export function useGridLayout({
         }
       })
 
-      return sorted.filter(Boolean)
+      result = sorted.filter(Boolean)
     }
 
-    return answers
+    console.log('🔍 useGridLayout debug - Output answers order:', result.map((answer, index) => ({
+      index,
+      id: answer.id,
+      studentName: answer.studentName
+    })))
+
+    return result
   }, [answers, layoutDirection, effectiveGridSize])
 
   return {
