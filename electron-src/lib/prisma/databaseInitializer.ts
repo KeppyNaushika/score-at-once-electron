@@ -498,17 +498,3 @@ export const optimizeDatabaseForSharedDrive = async (): Promise<void> => {
     await prisma.$disconnect()
   }
 }
-
-// データベースのバックアップ作成
-export const createDatabaseBackup = async (): Promise<string> => {
-  const databasePath = getDatabasePath()
-  const backupPath = `${databasePath}.backup.${Date.now()}`
-
-  try {
-    await fs.copyFile(databasePath, backupPath)
-    return backupPath
-  } catch (error) {
-    console.error("Failed to create database backup:", error)
-    throw error
-  }
-}

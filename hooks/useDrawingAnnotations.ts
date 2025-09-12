@@ -1,6 +1,6 @@
 /**
- * @fileoverview 統合描画アノテーション管理フック
- * @description すべての描画ツール（テキスト・直線・長方形・楕円）の統合管理とMathJax処理
+ * @fileoverview 統合描画アノテーション管理フック（シンプル版）
+ * @description 単一フックで全機能を提供し、無限ループを防止
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react'
@@ -9,59 +9,37 @@ import type {
   DrawingCreateData,
   DrawingUpdateData,
   DrawingType,
+  DrawingTool,
   DrawingAnnotationStats
 } from '@/types/drawing-annotation.types'
 
-// textbox-on-canvas-v3のMathJax処理を統合
+// MathJax処理
 import { createMathJaxSVG, measureMathJaxContentSize } from '@/app/textbox-on-canvas-v3/utils/mathJaxUtils'
 
-/**
- * 描画ツールの種類
- */
-export type DrawingTool = 'select' | 'text' | 'line' | 'rectangle' | 'ellipse'
-
-/**
- * 描画状態
- */
-export interface DrawingState {
-  /** 現在選択中のツール */
+interface DrawingState {
   currentTool: DrawingTool
-  /** 選択中の描画アノテーションID */
   selectedAnnotationId: string | null
-  /** 描画中のアノテーション（作成中） */
   drawingAnnotation: Partial<DrawingCreateData> | null
-  /** 描画中かどうか */
   isDrawing: boolean
-  /** MathJax処理中かどうか */
   isProcessingMathJax: boolean
 }
 
-/**
- * 描画操作のコールバック
- */
-export interface DrawingCallbacks {
-  /** アノテーション作成 */
-  onCreateAnnotation: (data: DrawingCreateData) => Promise<DrawingAnnotation | null>
-  /** アノテーション更新 */
-  onUpdateAnnotation: (id: string, data: DrawingUpdateData) => Promise<DrawingAnnotation | null>
-  /** アノテーション削除 */
-  onDeleteAnnotation: (id: string) => Promise<boolean>
-  /** 選択状態変更 */
-  onSelectionChange: (annotationId: string | null) => void
-  /** MathJax処理完了 */
-  onMathJaxProcessed: (annotation: DrawingAnnotation, svgElement: SVGSVGElement) => void
+interface DrawingCallbacks {
+  onCreateAnnotation?: (data: DrawingCreateData) => void
+  onUpdateAnnotation?: (id: string, data: DrawingUpdateData) => void
+  onDeleteAnnotation?: (id: string) => void
+  onSelectAnnotation?: (annotation: DrawingAnnotation | null) => void
 }
 
-/**
- * フックの戻り値型
- */
 export interface UseDrawingAnnotationsReturn {
   // 状態
   annotations: DrawingAnnotation[]
   drawingState: DrawingState
   stats: DrawingAnnotationStats | null
+  isLoading: boolean
+  error: string | null
   
-  // アクション
+  // データ操作
   loadAnnotations: (questionScoreId: string, type?: DrawingType) => Promise<void>
   createAnnotation: (data: DrawingCreateData) => Promise<DrawingAnnotation | null>
   updateAnnotation: (id: string, data: DrawingUpdateData) => Promise<DrawingAnnotation | null>
@@ -87,18 +65,23 @@ export interface UseDrawingAnnotationsReturn {
   // ユーティリティ
   getStats: (questionScoreId: string) => Promise<void>
   clearAnnotations: () => void
+  resetAll: () => void
 }
 
 /**
- * 統合描画アノテーション管理フック
+ * 統合描画アノテーション管理フック（シンプル版）
+ * 無限ループを防ぐため、questionScoreIdの自動読み込みは行わない
  */
 export function useDrawingAnnotations(
-  questionScoreId?: string,
   callbacks?: Partial<DrawingCallbacks>
 ): UseDrawingAnnotationsReturn {
-  // 状態管理
+  // 基本状態
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
   const [stats, setStats] = useState<DrawingAnnotationStats | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  // 描画ツール状態
   const [drawingState, setDrawingState] = useState<DrawingState>({
     currentTool: 'select',
     selectedAnnotationId: null,
@@ -107,10 +90,9 @@ export function useDrawingAnnotations(
     isProcessingMathJax: false
   })
 
-  // 参照
+  // コールバック参照
   const callbacksRef = useRef<Partial<DrawingCallbacks>>(callbacks || {})
   
-  // コールバック更新
   useEffect(() => {
     callbacksRef.current = callbacks || {}
   }, [callbacks])
@@ -119,18 +101,31 @@ export function useDrawingAnnotations(
    * アノテーション読み込み
    */
   const loadAnnotations = useCallback(async (
-    targetQuestionScoreId: string,
+    questionScoreId: string,
     type?: DrawingType
   ): Promise<void> => {
+    setIsLoading(true)
+    setError(null)
+    
     try {
-      const result = await window.electronAPI.drawing.getByQuestionScore(targetQuestionScoreId, type)
+      console.log(`📖 手動アノテーション読み込み: ${questionScoreId}`, { type })
+      const result = await window.electronAPI.drawing.getByQuestionScore(questionScoreId, type)
+      
       if (result.success && result.data) {
+        console.log(`✅ アノテーション読み込み成功: ${result.data.length}件`)
         setAnnotations(result.data)
       } else {
-        console.error('アノテーション読み込みエラー:', result.error)
+        console.error('❌ アノテーション読み込みエラー:', result.error)
+        setError(result.error || 'アノテーション読み込みに失敗しました')
+        setAnnotations([])
       }
-    } catch (error) {
-      console.error('アノテーション読み込み失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'アノテーション読み込みに失敗しました'
+      console.error('💥 アノテーション読み込み失敗:', err)
+      setError(errorMessage)
+      setAnnotations([])
+    } finally {
+      setIsLoading(false)
     }
   }, [])
 
@@ -141,17 +136,22 @@ export function useDrawingAnnotations(
     data: DrawingCreateData
   ): Promise<DrawingAnnotation | null> => {
     try {
+      console.log('🎨 アノテーション作成:', data.type)
       const result = await window.electronAPI.drawing.create(data)
+      
       if (result.success && result.data) {
         setAnnotations(prev => [...prev, result.data!])
         callbacksRef.current.onCreateAnnotation?.(data)
         return result.data
       } else {
-        console.error('アノテーション作成エラー:', result.error)
+        console.error('❌ アノテーション作成エラー:', result.error)
+        setError(result.error || 'アノテーション作成に失敗しました')
         return null
       }
-    } catch (error) {
-      console.error('アノテーション作成失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'アノテーション作成に失敗しました'
+      console.error('💥 アノテーション作成失敗:', err)
+      setError(errorMessage)
       return null
     }
   }, [])
@@ -164,19 +164,22 @@ export function useDrawingAnnotations(
     data: DrawingUpdateData
   ): Promise<DrawingAnnotation | null> => {
     try {
+      console.log(`✏️ アノテーション更新: ${id}`)
       const result = await window.electronAPI.drawing.update(id, data)
+      
       if (result.success && result.data) {
-        setAnnotations(prev => prev.map(annotation => 
-          annotation.id === id ? result.data! : annotation
-        ))
+        setAnnotations(prev => prev.map(ann => ann.id === id ? result.data! : ann))
         callbacksRef.current.onUpdateAnnotation?.(id, data)
         return result.data
       } else {
-        console.error('アノテーション更新エラー:', result.error)
+        console.error('❌ アノテーション更新エラー:', result.error)
+        setError(result.error || 'アノテーション更新に失敗しました')
         return null
       }
-    } catch (error) {
-      console.error('アノテーション更新失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'アノテーション更新に失敗しました'
+      console.error('💥 アノテーション更新失敗:', err)
+      setError(errorMessage)
       return null
     }
   }, [])
@@ -186,51 +189,53 @@ export function useDrawingAnnotations(
    */
   const deleteAnnotation = useCallback(async (id: string): Promise<boolean> => {
     try {
+      console.log(`🗑️ アノテーション削除: ${id}`)
       const result = await window.electronAPI.drawing.delete(id)
+      
       if (result.success) {
-        setAnnotations(prev => prev.filter(annotation => annotation.id !== id))
-        if (drawingState.selectedAnnotationId === id) {
-          setDrawingState(prev => ({ ...prev, selectedAnnotationId: null }))
-        }
+        setAnnotations(prev => prev.filter(ann => ann.id !== id))
         callbacksRef.current.onDeleteAnnotation?.(id)
         return true
       } else {
-        console.error('アノテーション削除エラー:', result.error)
+        console.error('❌ アノテーション削除エラー:', result.error)
+        setError(result.error || 'アノテーション削除に失敗しました')
         return false
       }
-    } catch (error) {
-      console.error('アノテーション削除失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'アノテーション削除に失敗しました'
+      console.error('💥 アノテーション削除失敗:', err)
+      setError(errorMessage)
       return false
     }
-  }, [drawingState.selectedAnnotationId])
+  }, [])
 
   /**
-   * タイプ別アノテーション削除
+   * タイプ別削除
    */
   const deleteByType = useCallback(async (
-    targetQuestionScoreId: string,
+    questionScoreId: string,
     type?: DrawingType
   ): Promise<boolean> => {
     try {
-      const result = await window.electronAPI.drawing.deleteByQuestionScore(targetQuestionScoreId, type)
+      console.log(`🗑️ タイプ別削除:`, { questionScoreId, type })
+      const result = await window.electronAPI.drawing.deleteByQuestionScore(questionScoreId, type)
+      
       if (result.success) {
-        // ローカル状態からも削除
         if (type) {
-          setAnnotations(prev => prev.filter(annotation => 
-            !(annotation.questionScoreId === targetQuestionScoreId && annotation.type === type)
-          ))
+          setAnnotations(prev => prev.filter(ann => ann.type !== type))
         } else {
-          setAnnotations(prev => prev.filter(annotation => 
-            annotation.questionScoreId !== targetQuestionScoreId
-          ))
+          setAnnotations([])
         }
         return true
       } else {
-        console.error('タイプ別削除エラー:', result.error)
+        console.error('❌ タイプ別削除エラー:', result.error)
+        setError(result.error || 'タイプ別削除に失敗しました')
         return false
       }
-    } catch (error) {
-      console.error('タイプ別削除失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'タイプ別削除に失敗しました'
+      console.error('💥 タイプ別削除失敗:', err)
+      setError(errorMessage)
       return false
     }
   }, [])
@@ -242,16 +247,21 @@ export function useDrawingAnnotations(
     annotationsData: DrawingCreateData[]
   ): Promise<DrawingAnnotation[]> => {
     try {
+      console.log(`🎨 バッチ作成: ${annotationsData.length}件`)
       const result = await window.electronAPI.drawing.batchCreate(annotationsData)
+      
       if (result.success && result.data) {
         setAnnotations(prev => [...prev, ...result.data!])
         return result.data
       } else {
-        console.error('バッチ作成エラー:', result.error)
+        console.error('❌ バッチ作成エラー:', result.error)
+        setError(result.error || 'バッチ作成に失敗しました')
         return []
       }
-    } catch (error) {
-      console.error('バッチ作成失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'バッチ作成に失敗しました'
+      console.error('💥 バッチ作成失敗:', err)
+      setError(errorMessage)
       return []
     }
   }, [])
@@ -263,47 +273,66 @@ export function useDrawingAnnotations(
     updates: Array<{ id: string; data: DrawingUpdateData }>
   ): Promise<DrawingAnnotation[]> => {
     try {
+      console.log(`✏️ バッチ更新: ${updates.length}件`)
       const result = await window.electronAPI.drawing.batchUpdate(updates)
+      
       if (result.success && result.data) {
-        // ローカル状態を更新
-        const updatedMap = new Map(result.data.map(annotation => [annotation.id, annotation]))
-        setAnnotations(prev => prev.map(annotation => 
-          updatedMap.get(annotation.id) || annotation
-        ))
+        const updatedMap = new Map(result.data.map(ann => [ann.id, ann]))
+        setAnnotations(prev => prev.map(ann => updatedMap.get(ann.id) || ann))
         return result.data
       } else {
-        console.error('バッチ更新エラー:', result.error)
+        console.error('❌ バッチ更新エラー:', result.error)
+        setError(result.error || 'バッチ更新に失敗しました')
         return []
       }
-    } catch (error) {
-      console.error('バッチ更新失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'バッチ更新に失敗しました'
+      console.error('💥 バッチ更新失敗:', err)
+      setError(errorMessage)
       return []
     }
   }, [])
 
   /**
-   * ツール選択
+   * ツール設定
    */
   const setCurrentTool = useCallback((tool: DrawingTool): void => {
-    setDrawingState(prev => ({ ...prev, currentTool: tool }))
-  }, [])
+    console.log(`🔧 ツール変更: ${drawingState.currentTool} → ${tool}`)
+    setDrawingState(prev => ({
+      ...prev,
+      currentTool: tool,
+      selectedAnnotationId: tool === 'select' ? prev.selectedAnnotationId : null
+    }))
+  }, [drawingState.currentTool])
 
   /**
    * アノテーション選択
    */
   const selectAnnotation = useCallback((annotationId: string | null): void => {
-    setDrawingState(prev => ({ ...prev, selectedAnnotationId: annotationId }))
-    callbacksRef.current.onSelectionChange?.(annotationId)
-  }, [])
+    console.log(`👆 アノテーション選択: ${annotationId}`)
+    setDrawingState(prev => ({
+      ...prev,
+      selectedAnnotationId: annotationId,
+      currentTool: annotationId ? 'select' : prev.currentTool
+    }))
+    
+    const selectedAnnotation = annotationId 
+      ? annotations.find(ann => ann.id === annotationId) || null 
+      : null
+    
+    callbacksRef.current.onSelectAnnotation?.(selectedAnnotation)
+  }, [annotations])
 
   /**
    * 描画開始
    */
   const startDrawing = useCallback((annotation: Partial<DrawingCreateData>): void => {
+    console.log(`🎨 描画開始: ${annotation.type}`, annotation)
     setDrawingState(prev => ({
       ...prev,
       drawingAnnotation: annotation,
-      isDrawing: true
+      isDrawing: true,
+      selectedAnnotationId: null
     }))
   }, [])
 
@@ -311,28 +340,53 @@ export function useDrawingAnnotations(
    * 描画更新
    */
   const updateDrawing = useCallback((annotation: Partial<DrawingCreateData>): void => {
-    setDrawingState(prev => ({
-      ...prev,
-      drawingAnnotation: { ...prev.drawingAnnotation, ...annotation }
-    }))
+    setDrawingState(prev => {
+      if (!prev.isDrawing || !prev.drawingAnnotation) return prev
+      
+      return {
+        ...prev,
+        drawingAnnotation: {
+          ...prev.drawingAnnotation,
+          ...annotation
+        }
+      }
+    })
   }, [])
 
   /**
    * 描画完了
    */
   const finishDrawing = useCallback(async (): Promise<DrawingAnnotation | null> => {
-    if (!drawingState.drawingAnnotation || !questionScoreId) {
+    if (!drawingState.isDrawing || !drawingState.drawingAnnotation || !drawingState.drawingAnnotation.questionScoreId) {
+      console.warn('⚠️ 描画完了: 描画中のアノテーションがありません')
       return null
     }
 
-    const { questionScoreId: _, ...annotationWithoutId } = drawingState.drawingAnnotation as DrawingCreateData
-    const annotationData: DrawingCreateData = {
-      questionScoreId,
-      ...annotationWithoutId
+    const completeData: DrawingCreateData = {
+      questionScoreId: drawingState.drawingAnnotation.questionScoreId,
+      type: drawingState.drawingAnnotation.type as DrawingType,
+      x: drawingState.drawingAnnotation.x || 0,
+      y: drawingState.drawingAnnotation.y || 0,
+      color: drawingState.drawingAnnotation.color || '#ef4444',
+      strokeWidth: drawingState.drawingAnnotation.strokeWidth || 3,
+      width: drawingState.drawingAnnotation.width || 0,
+      height: drawingState.drawingAnnotation.height || 0,
+      endX: drawingState.drawingAnnotation.endX || 0,
+      endY: drawingState.drawingAnnotation.endY || 0,
+      lineStyle: drawingState.drawingAnnotation.lineStyle || 'solid',
+      text: drawingState.drawingAnnotation.text || '',
+      fontSize: drawingState.drawingAnnotation.fontSize || 16,
+      textBoxWidth: drawingState.drawingAnnotation.textBoxWidth || 0,
+      textBoxHeight: drawingState.drawingAnnotation.textBoxHeight || 0,
+      horizontalAlign: drawingState.drawingAnnotation.horizontalAlign || 'left',
+      verticalAlign: drawingState.drawingAnnotation.verticalAlign || 'top',
+      displayX: drawingState.drawingAnnotation.displayX || 0,
+      displayY: drawingState.drawingAnnotation.displayY || 0,
+      createdByUserId: drawingState.drawingAnnotation.createdByUserId
     }
 
-    const result = await createAnnotation(annotationData)
-    
+    const result = await createAnnotation(completeData)
+
     setDrawingState(prev => ({
       ...prev,
       drawingAnnotation: null,
@@ -340,12 +394,13 @@ export function useDrawingAnnotations(
     }))
 
     return result
-  }, [drawingState.drawingAnnotation, questionScoreId, createAnnotation])
+  }, [drawingState.drawingAnnotation, drawingState.isDrawing, createAnnotation])
 
   /**
    * 描画キャンセル
    */
   const cancelDrawing = useCallback((): void => {
+    console.log('❌ 描画キャンセル')
     setDrawingState(prev => ({
       ...prev,
       drawingAnnotation: null,
@@ -354,7 +409,7 @@ export function useDrawingAnnotations(
   }, [])
 
   /**
-   * MathJax処理（textbox-on-canvas-v3統合）
+   * MathJax処理
    */
   const processMathJaxText = useCallback(async (
     htmlContent: string,
@@ -362,12 +417,14 @@ export function useDrawingAnnotations(
     height: number = 50
   ): Promise<SVGSVGElement> => {
     setDrawingState(prev => ({ ...prev, isProcessingMathJax: true }))
-    
+
     try {
+      console.log('🔢 MathJax SVG変換開始:', { htmlContent, width, height })
       const svgElement = await createMathJaxSVG(htmlContent, width, height)
+      console.log('✅ MathJax SVG変換完了')
       return svgElement
     } catch (error) {
-      console.error('MathJax処理エラー:', error)
+      console.error('💥 MathJax SVG変換失敗:', error)
       throw error
     } finally {
       setDrawingState(prev => ({ ...prev, isProcessingMathJax: false }))
@@ -375,7 +432,7 @@ export function useDrawingAnnotations(
   }, [])
 
   /**
-   * テキストサイズ測定（textbox-on-canvas-v3統合）
+   * MathJaxサイズ測定
    */
   const measureTextSize = useCallback(async (
     htmlContent: string,
@@ -383,26 +440,34 @@ export function useDrawingAnnotations(
     height: number = 50
   ): Promise<{ width: number; height: number }> => {
     try {
-      return await measureMathJaxContentSize(htmlContent, width, height)
+      console.log('📏 MathJaxサイズ測定開始:', { htmlContent, width, height })
+      const size = await measureMathJaxContentSize(htmlContent, width, height)
+      console.log('✅ MathJaxサイズ測定完了:', size)
+      return size
     } catch (error) {
-      console.error('テキストサイズ測定エラー:', error)
-      return { width, height }
+      console.error('💥 MathJaxサイズ測定失敗:', error)
+      throw error
     }
   }, [])
 
   /**
-   * 統計情報取得
+   * 統計取得
    */
-  const getStats = useCallback(async (targetQuestionScoreId: string): Promise<void> => {
+  const getStats = useCallback(async (questionScoreId: string): Promise<void> => {
     try {
-      const result = await window.electronAPI.drawing.getStats(targetQuestionScoreId)
+      console.log(`📊 統計取得: ${questionScoreId}`)
+      const result = await window.electronAPI.drawing.getStats(questionScoreId)
+      
       if (result.success && result.data) {
         setStats(result.data)
       } else {
-        console.error('統計情報取得エラー:', result.error)
+        console.error('❌ 統計取得エラー:', result.error)
+        setError(result.error || '統計取得に失敗しました')
       }
-    } catch (error) {
-      console.error('統計情報取得失敗:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : '統計取得に失敗しました'
+      console.error('💥 統計取得失敗:', err)
+      setError(errorMessage)
     }
   }, [])
 
@@ -410,8 +475,20 @@ export function useDrawingAnnotations(
    * アノテーションクリア
    */
   const clearAnnotations = useCallback((): void => {
+    console.log('🧹 アノテーションクリア')
     setAnnotations([])
     setStats(null)
+    setError(null)
+  }, [])
+
+  /**
+   * 全状態リセット
+   */
+  const resetAll = useCallback((): void => {
+    console.log('🔄 全状態リセット')
+    setAnnotations([])
+    setStats(null)
+    setError(null)
     setDrawingState({
       currentTool: 'select',
       selectedAnnotationId: null,
@@ -421,20 +498,15 @@ export function useDrawingAnnotations(
     })
   }, [])
 
-  // 初期読み込み
-  useEffect(() => {
-    if (questionScoreId) {
-      loadAnnotations(questionScoreId)
-    }
-  }, [questionScoreId, loadAnnotations])
-
   return {
     // 状態
     annotations,
     drawingState,
     stats,
+    isLoading,
+    error,
     
-    // アクション
+    // データ操作
     loadAnnotations,
     createAnnotation,
     updateAnnotation,
@@ -459,6 +531,10 @@ export function useDrawingAnnotations(
     
     // ユーティリティ
     getStats,
-    clearAnnotations
+    clearAnnotations,
+    resetAll
   }
 }
+
+// 必要な型を再エクスポート
+export type { DrawingTool } from '@/types/drawing-annotation.types'

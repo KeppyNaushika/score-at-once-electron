@@ -102,26 +102,91 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
     x: number
     y: number
   } | null>(null)
+  
+  // 編集状態管理
+  const [isEditingAnnotation, setIsEditingAnnotation] = useState(false)
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null)
+  const [originalAnnotation, setOriginalAnnotation] = useState<DrawingAnnotation | null>(null)
 
   // 描画管理フック
   const {
     annotations,
     drawingState,
+    loadAnnotations,
     setCurrentTool,
     selectAnnotation,
     startDrawing,
     updateDrawing,
+    updateAnnotation,
     finishDrawing,
     cancelDrawing,
     deleteAnnotation,
     processMathJaxText,
     measureTextSize,
-  } = useDrawingAnnotations(questionScoreId)
+    clearAnnotations,
+  } = useDrawingAnnotations()
+  
+  // ローカル状態でのアノテーション管理（編集中のリアルタイム更新用）
+  const [localAnnotations, setLocalAnnotations] = useState<DrawingAnnotation[]>([])
+  
+  // annotations が変更されたときにローカル状態を同期
+  useEffect(() => {
+    setLocalAnnotations(annotations)
+  }, [annotations])
 
   // ツール変更の同期
   useEffect(() => {
     setCurrentTool(currentTool)
   }, [currentTool, setCurrentTool])
+
+  // questionScoreId変更時の手動読み込み
+  useEffect(() => {
+    if (questionScoreId) {
+      console.log('🎨 UnifiedDrawingCanvas: questionScoreId変更で読み込み:', questionScoreId)
+      loadAnnotations(questionScoreId)
+    }
+  }, [questionScoreId, loadAnnotations])
+
+  /**
+   * アノテーション編集開始
+   */
+  const startEditingAnnotation = useCallback((annotation: DrawingAnnotation) => {
+    console.log('✏️ アノテーション編集開始:', annotation.id)
+    setIsEditingAnnotation(true)
+    setEditingAnnotationId(annotation.id)
+    setOriginalAnnotation(annotation)
+    selectAnnotation(annotation.id)
+  }, [selectAnnotation])
+
+  /**
+   * アノテーション編集完了
+   */
+  const finishEditingAnnotation = useCallback(async (updatedData: Partial<DrawingAnnotation>) => {
+    if (!editingAnnotationId || !originalAnnotation) return
+
+    try {
+      console.log('💾 アノテーション更新:', editingAnnotationId, updatedData)
+      await updateAnnotation(editingAnnotationId, updatedData)
+      
+      // 編集状態リセット
+      setIsEditingAnnotation(false)
+      setEditingAnnotationId(null)
+      setOriginalAnnotation(null)
+    } catch (error) {
+      console.error('❌ アノテーション更新失敗:', error)
+    }
+  }, [editingAnnotationId, originalAnnotation, updateAnnotation])
+
+  /**
+   * アノテーション編集キャンセル
+   */
+  const cancelEditingAnnotation = useCallback(() => {
+    console.log('❌ アノテーション編集キャンセル')
+    setIsEditingAnnotation(false)
+    setEditingAnnotationId(null)
+    setOriginalAnnotation(null)
+    selectAnnotation(null)
+  }, [selectAnnotation])
   /**
    * 波線描画
    */
@@ -533,9 +598,139 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
       )
     }
 
-    // 描画アノテーション描画
-    annotations.forEach((annotation) => {
-      drawAnnotation(ctx, annotation, canvas)
+    // 描画アノテーション描画（ローカル状態を使用）
+    localAnnotations.forEach((annotation) => {
+      const absStart = getAbsoluteCoordinates(
+        annotation.x,
+        annotation.y,
+        canvas,
+      )
+
+      ctx.strokeStyle = annotation.color
+      ctx.lineWidth = annotation.strokeWidth
+      ctx.fillStyle = annotation.color
+
+      // 選択状態の表示
+      const isSelected = drawingState.selectedAnnotationId === annotation.id
+      if (isSelected) {
+        ctx.strokeStyle = CANVAS_SETTINGS.SELECTED_BORDER_COLOR
+        ctx.lineWidth = annotation.strokeWidth + 2
+      }
+
+      // アノテーション種類別の描画（MathJax処理なし）
+      switch (annotation.type as DrawingType) {
+        case "line": {
+          const absEnd = getAbsoluteCoordinates(
+            annotation.endX,
+            annotation.endY,
+            canvas,
+          )
+
+          ctx.beginPath()
+          ctx.moveTo(absStart.x, absStart.y)
+
+          // 線のスタイルに応じた描画
+          switch (annotation.lineStyle) {
+            case "wave":
+              drawWaveLine(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
+              break
+            case "zigzag":
+              drawZigzagLine(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
+              break
+            case "double":
+              ctx.lineTo(absEnd.x, absEnd.y)
+              ctx.stroke()
+              ctx.beginPath()
+              const offset = annotation.strokeWidth + 2
+              ctx.moveTo(absStart.x, absStart.y + offset)
+              ctx.lineTo(absEnd.x, absEnd.y + offset)
+              break
+            case "arrow":
+              ctx.lineTo(absEnd.x, absEnd.y)
+              ctx.stroke()
+              drawArrowHead(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
+              break
+            case "both_arrow":
+              ctx.lineTo(absEnd.x, absEnd.y)
+              ctx.stroke()
+              drawArrowHead(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
+              drawArrowHead(ctx, absEnd.x, absEnd.y, absStart.x, absStart.y)
+              break
+            default:
+              ctx.lineTo(absEnd.x, absEnd.y)
+          }
+          ctx.stroke()
+          break
+        }
+
+        case "rectangle": {
+          const absWidth = annotation.width * canvas.width
+          const absHeight = annotation.height * canvas.height
+
+          ctx.beginPath()
+          ctx.rect(absStart.x, absStart.y, absWidth, absHeight)
+          ctx.stroke()
+
+          if (isSelected) {
+            ctx.fillStyle = CANVAS_SETTINGS.SELECTED_BACKGROUND_COLOR
+            ctx.fill()
+          }
+          break
+        }
+
+        case "ellipse": {
+          const absWidth = annotation.width * canvas.width
+          const absHeight = annotation.height * canvas.height
+          const centerX = absStart.x + absWidth / 2
+          const centerY = absStart.y + absHeight / 2
+
+          ctx.beginPath()
+          ctx.ellipse(
+            centerX,
+            centerY,
+            absWidth / 2,
+            absHeight / 2,
+            0,
+            0,
+            2 * Math.PI,
+          )
+          ctx.stroke()
+
+          if (isSelected) {
+            ctx.fillStyle = CANVAS_SETTINGS.SELECTED_BACKGROUND_COLOR
+            ctx.fill()
+          }
+          break
+        }
+
+        case "text": {
+          // テキストボックスの境界線描画
+          if (annotation.textBoxWidth > 0 && annotation.textBoxHeight > 0) {
+            const absWidth = annotation.textBoxWidth * canvas.width
+            const absHeight = annotation.textBoxHeight * canvas.height
+
+            ctx.strokeStyle = isSelected
+              ? CANVAS_SETTINGS.SELECTED_BORDER_COLOR
+              : CANVAS_SETTINGS.UNSELECTED_BORDER_COLOR
+            ctx.lineWidth = 1
+            ctx.setLineDash([5, 5])
+            ctx.strokeRect(absStart.x, absStart.y, absWidth, absHeight)
+            ctx.setLineDash([])
+          }
+
+          // テキスト描画（シンプルなテキストレンダリング、MathJax処理なし）
+          if (annotation.text) {
+            ctx.fillStyle = annotation.color
+            ctx.font = `${annotation.fontSize}px Arial`
+            ctx.fillText(
+              annotation.text,
+              absStart.x,
+              absStart.y + annotation.fontSize,
+            )
+          }
+          break
+        }
+      }
     })
 
     // 現在描画中のアノテーション描画
@@ -545,16 +740,81 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
       startPoint &&
       currentPoint
     ) {
-      drawTemporaryAnnotation(ctx, canvas)
+      const absStart = getAbsoluteCoordinates(
+        startPoint.x,
+        startPoint.y,
+        canvas,
+      )
+      const absCurrent = getAbsoluteCoordinates(
+        currentPoint.x,
+        currentPoint.y,
+        canvas,
+      )
+
+      ctx.strokeStyle = CANVAS_SETTINGS.CREATING_BORDER_COLOR
+      ctx.lineWidth = strokeWidth
+      ctx.setLineDash([5, 5])
+
+      const width = Math.abs(absCurrent.x - absStart.x)
+      const height = Math.abs(absCurrent.y - absStart.y)
+
+      switch (currentTool) {
+        case "line":
+          ctx.beginPath()
+          ctx.moveTo(absStart.x, absStart.y)
+          ctx.lineTo(absCurrent.x, absCurrent.y)
+          ctx.stroke()
+          break
+
+        case "rectangle":
+          ctx.strokeRect(
+            Math.min(absStart.x, absCurrent.x),
+            Math.min(absStart.y, absCurrent.y),
+            width,
+            height,
+          )
+          break
+
+        case "ellipse":
+          const centerX = (absStart.x + absCurrent.x) / 2
+          const centerY = (absStart.y + absCurrent.y) / 2
+          ctx.beginPath()
+          ctx.ellipse(
+            centerX,
+            centerY,
+            width / 2,
+            height / 2,
+            0,
+            0,
+            2 * Math.PI,
+          )
+          ctx.stroke()
+          break
+
+        case "text":
+          ctx.strokeRect(
+            Math.min(absStart.x, absCurrent.x),
+            Math.min(absStart.y, absCurrent.y),
+            width,
+            height,
+          )
+          break
+      }
+
+      ctx.setLineDash([])
     }
   }, [
-    annotations,
+    localAnnotations,
     drawingState.isDrawing,
     drawingState.drawingAnnotation,
+    drawingState.selectedAnnotationId,
     startPoint,
     currentPoint,
-    drawAnnotation,
-    drawTemporaryAnnotation,
+    currentTool,
+    strokeWidth,
+    drawArrowHead,
+    drawWaveLine, 
+    drawZigzagLine,
   ])
 
   /**
@@ -562,31 +822,49 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
    */
   const handleMouseDown = useCallback(
     (event: React.MouseEvent) => {
-      if (readOnly || currentTool === "select") {
-        // 選択モードでアノテーションヒット判定
-        const canvas = canvasRef.current
-        if (!canvas) return
-
-        const relativeCoords = getRelativeCoordinates(event, canvas)
-        const hitAnnotation = annotations.find((annotation) => {
-          return isPointInAnnotation(relativeCoords, annotation)
-        })
-
-        selectAnnotation(hitAnnotation?.id || null)
-        return
-      }
-
       const canvas = canvasRef.current
       if (!canvas) return
 
       const relativeCoords = getRelativeCoordinates(event, canvas)
 
+      // 選択モードでアノテーションヒット判定
+      if (readOnly || currentTool === "select") {
+        const hitAnnotation = localAnnotations.find((annotation) => {
+          return isPointInAnnotation(relativeCoords, annotation)
+        })
+
+        if (hitAnnotation) {
+          // アノテーション編集開始
+          setIsMouseDown(true)
+          setStartPoint(relativeCoords)
+          setCurrentPoint(relativeCoords)
+          startEditingAnnotation(hitAnnotation)
+        } else {
+          // アノテーションが選択されていない場合は編集をキャンセル
+          if (isEditingAnnotation) {
+            cancelEditingAnnotation()
+          }
+          selectAnnotation(null)
+        }
+        return
+      }
+
+      // 新規描画開始
       setIsMouseDown(true)
       setStartPoint(relativeCoords)
       setCurrentPoint(relativeCoords)
 
+      // questionScoreIdのバリデーション
+      if (!questionScoreId) {
+        console.error('❌ questionScoreId が設定されていません')
+        return
+      }
+
+      console.log('🎨 描画開始:', { questionScoreId, currentTool })
+
       // 描画開始
       const drawingData = {
+        questionScoreId: questionScoreId,
         type: currentTool as DrawingType,
         x: relativeCoords.x,
         y: relativeCoords.y,
@@ -615,9 +893,13 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
       drawingColor,
       strokeWidth,
       startDrawing,
-      annotations,
+      localAnnotations,
       selectAnnotation,
       isPointInAnnotation,
+      questionScoreId,
+      startEditingAnnotation,
+      isEditingAnnotation,
+      cancelEditingAnnotation,
     ],
   )
 
@@ -626,12 +908,51 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
    */
   const handleMouseMove = useCallback(
     (event: React.MouseEvent) => {
-      if (!isMouseDown || !startPoint) return
-
       const canvas = canvasRef.current
       if (!canvas) return
 
       const relativeCoords = getRelativeCoordinates(event, canvas)
+
+      // アノテーション編集中の場合
+      if (isEditingAnnotation && editingAnnotationId && originalAnnotation) {
+        const deltaX = relativeCoords.x - startPoint!.x
+        const deltaY = relativeCoords.y - startPoint!.y
+
+        // 編集中のアノテーションの位置を更新
+        const updatedData: Partial<DrawingAnnotation> = {
+          x: originalAnnotation.x + deltaX,
+          y: originalAnnotation.y + deltaY,
+        }
+
+        // 線分の場合は終点も移動
+        if (originalAnnotation.type === 'line' && originalAnnotation.endX !== undefined && originalAnnotation.endY !== undefined) {
+          updatedData.endX = originalAnnotation.endX + deltaX
+          updatedData.endY = originalAnnotation.endY + deltaY
+        }
+
+        // テキストの場合は表示位置も更新
+        if (originalAnnotation.type === 'text') {
+          updatedData.displayX = originalAnnotation.displayX + deltaX
+          updatedData.displayY = originalAnnotation.displayY + deltaY
+        }
+
+        // 矩形・楕円の場合は表示位置を更新
+        if (originalAnnotation.type === 'rectangle' || originalAnnotation.type === 'ellipse') {
+          updatedData.displayX = originalAnnotation.displayX + deltaX
+          updatedData.displayY = originalAnnotation.displayY + deltaY
+        }
+
+        // 他のアノテーションに影響しないよう、個別にローカル状態で更新
+        setLocalAnnotations(prev => prev.map(ann => 
+          ann.id === editingAnnotationId ? { ...ann, ...updatedData } : ann
+        ))
+        redrawCanvas()
+        return
+      }
+
+      // 新規描画中の場合
+      if (!isMouseDown || !startPoint) return
+
       setCurrentPoint(relativeCoords)
 
       // 描画更新
@@ -654,7 +975,16 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
       updateDrawing(updateData)
       redrawCanvas()
     },
-    [isMouseDown, startPoint, updateDrawing, redrawCanvas],
+    [
+      isMouseDown, 
+      startPoint, 
+      updateDrawing, 
+      redrawCanvas, 
+      isEditingAnnotation, 
+      editingAnnotationId, 
+      originalAnnotation,
+      setLocalAnnotations
+    ],
   )
 
   /**
@@ -662,6 +992,47 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
    */
   const handleMouseUp = useCallback(
     async (event: React.MouseEvent) => {
+      // アノテーション編集完了の場合
+      if (isEditingAnnotation && editingAnnotationId && originalAnnotation) {
+        const canvas = canvasRef.current
+        if (!canvas) return
+
+        const relativeCoords = getRelativeCoordinates(event, canvas)
+        const deltaX = relativeCoords.x - startPoint!.x
+        const deltaY = relativeCoords.y - startPoint!.y
+
+        // 最終的な位置データを計算
+        const finalData: Partial<DrawingAnnotation> = {
+          x: originalAnnotation.x + deltaX,
+          y: originalAnnotation.y + deltaY,
+        }
+
+        // 線分の場合は終点も移動
+        if (originalAnnotation.type === 'line' && originalAnnotation.endX !== undefined && originalAnnotation.endY !== undefined) {
+          finalData.endX = originalAnnotation.endX + deltaX
+          finalData.endY = originalAnnotation.endY + deltaY
+        }
+
+        // テキストの場合は表示位置も更新
+        if (originalAnnotation.type === 'text') {
+          finalData.displayX = originalAnnotation.displayX + deltaX
+          finalData.displayY = originalAnnotation.displayY + deltaY
+        }
+
+        // 矩形・楕円の場合は表示位置を更新
+        if (originalAnnotation.type === 'rectangle' || originalAnnotation.type === 'ellipse') {
+          finalData.displayX = originalAnnotation.displayX + deltaX
+          finalData.displayY = originalAnnotation.displayY + deltaY
+        }
+
+        // データベースに保存
+        await finishEditingAnnotation(finalData)
+        setStartPoint(null)
+        setCurrentPoint(null)
+        return
+      }
+
+      // 新規描画完了の場合
       if (!isMouseDown || !startPoint || !currentPoint) return
 
       setIsMouseDown(false)
@@ -731,6 +1102,10 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
       finishDrawing,
       onDrawingComplete,
       redrawCanvas,
+      isEditingAnnotation,
+      editingAnnotationId,
+      originalAnnotation,
+      finishEditingAnnotation,
     ],
   )
 

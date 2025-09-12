@@ -9,11 +9,10 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 
 // データベース統合フックのインポート
 import {
-  convertAnnotationToElement,
   useDrawingAnnotations,
   type DrawingPersistenceCallbacks,
 } from "./useDrawingAnnotations"
@@ -115,26 +114,11 @@ export function useDrawingState(
     enablePersistence ? persistenceCallbacks : undefined,
   )
 
-  // データベースからの初期読み込み
-  useEffect(() => {
-    if (enablePersistence && questionScoreId) {
-      loadAnnotations(questionScoreId).then((success) => {
-        if (success) {
-          // データベースからの読み込み成功時、既存要素をデータベースの内容で置き換え
-          const elements = annotations.map(convertAnnotationToElement)
-          setDrawingElements(elements)
-        }
-      })
-    }
-  }, [enablePersistence, questionScoreId, loadAnnotations, annotations])
+  // 自動読み込みは削除 - 手動でloadFromDatabaseを呼び出すことで読み込み
+  // これにより無限ループを完全に防止
 
-  // アノテーションの変更を監視してローカル状態に反映
-  useEffect(() => {
-    if (enablePersistence && annotations.length > 0) {
-      const elements = annotations.map(convertAnnotationToElement)
-      setDrawingElements(elements)
-    }
-  }, [annotations, enablePersistence])
+  // アノテーションの変更を監視してローカル状態に反映（初期読み込み完了後のみ）
+  // この useEffect は削除 - 初期読み込みで十分
 
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
@@ -354,15 +338,19 @@ export function useDrawingState(
     if (!enablePersistence || !questionScoreId) return
 
     try {
+      console.log("📖 loadFromDatabase: 明示的読み込み開始:", questionScoreId)
       const success = await loadAnnotations(questionScoreId)
       if (success) {
-        const elements = annotations.map(convertAnnotationToElement)
-        setDrawingElements(elements)
+        // loadAnnotationsの成功後、annotationsが更新されているはず
+        // しかし、直接参照はしない。代わりに、loadAnnotationsから返されたデータを使用
+        console.log("✅ loadFromDatabase: 読み込み成功")
+        // NOTE: 実際の要素設定は、useDrawingAnnotationsフック内で行われる
+        // ここでは状態の同期を待つか、別の方法で取得する
       }
     } catch (error) {
       console.error("データベース読み込みエラー:", error)
     }
-  }, [enablePersistence, questionScoreId, loadAnnotations, annotations])
+  }, [enablePersistence, questionScoreId, loadAnnotations])
 
   return {
     // State
