@@ -1110,6 +1110,23 @@ export interface MyAPI {
       data?: import('./drawing-annotation.types').DrawingAnnotation[]
       error?: string
     }>
+    getByStudent: (
+      studentId: string,
+      projectId: string,
+      type?: import('./drawing-annotation.types').DrawingType
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      error?: string
+    }>
+    getByProject: (
+      projectId: string,
+      type?: import('./drawing-annotation.types').DrawingType
+    ) => Promise<{
+      success: boolean
+      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      error?: string
+    }>
     update: (
       id: string,
       data: import('./drawing-annotation.types').DrawingUpdateData

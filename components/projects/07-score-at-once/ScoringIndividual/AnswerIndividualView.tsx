@@ -10,7 +10,6 @@ import { useDrawingState } from "./hooks/useDrawingState"
 import { useImageCanvas } from "./hooks/useImageCanvas"
 import { useImageNavigation } from "./hooks/useImageNavigation"
 import { useTextboxV4Integration } from "./hooks/useTextboxV4Integration"
-import { useDrawingAnnotations } from "./hooks/useDrawingAnnotations"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
 import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 
@@ -52,8 +51,7 @@ export default function AnswerIndividualView({
 
   // 透明度制御用：全設問のアノテーション読み込み
   const [allStudentAnnotations, setAllStudentAnnotations] = useState<DrawingAnnotation[]>([])
-  const annotationsHook = useDrawingAnnotations()
-
+  
   // 現在の学生とプロジェクトの全アノテーションを読み込み（透明度制御用）
   useEffect(() => {
     const loadAllAnnotations = async () => {
@@ -67,15 +65,23 @@ export default function AnswerIndividualView({
           studentId: currentStudentId,
           projectId: currentCropRegion.projectPage.projectId
         })
-        const annotations = await annotationsHook.loadAllStudentAnnotations(
+        
+        // ElectronAPIを直接呼び出してフック依存関係を回避
+        const result = await window.electronAPI.drawing.getByStudent(
           currentStudentId,
           currentCropRegion.projectPage.projectId
         )
-        console.log('🎨 透明度制御: 読み込み完了', {
-          annotationCount: annotations.length,
-          currentCropRegionId: currentCropRegion?.id
-        })
-        setAllStudentAnnotations(annotations)
+        
+        if (result.success && result.data) {
+          console.log('🎨 透明度制御: 読み込み完了', {
+            annotationCount: result.data.length,
+            currentCropRegionId: currentCropRegion?.id
+          })
+          setAllStudentAnnotations(result.data)
+        } else {
+          console.error('全設問アノテーション読み込みエラー:', result.error)
+          setAllStudentAnnotations([])
+        }
       } catch (error) {
         console.error('全設問アノテーション読み込みエラー:', error)
         setAllStudentAnnotations([])
@@ -83,7 +89,7 @@ export default function AnswerIndividualView({
     }
 
     loadAllAnnotations()
-  }, [currentStudentId, currentCropRegion?.projectPage?.projectId, currentCropRegion?.id, annotationsHook])
+  }, [currentStudentId, currentCropRegion?.projectPage?.projectId, currentCropRegion?.id])
 
   // テキスト入力状態変更の通知
   useEffect(() => {
