@@ -27,16 +27,7 @@ module.exports = {
     ],
     extraResource: [
       ".next",
-      "public",
-      // オフライン動作に必要な静的ファイルを明示的に指定
-      {
-        from: "public/js/mathjax",
-        to: "public/js/mathjax"
-      },
-      {
-        from: "public/js/pdf.worker.min.mjs",
-        to: "public/js/pdf.worker.min.mjs"
-      }
+      "public"
     ]
   },
   rebuildConfig: {
