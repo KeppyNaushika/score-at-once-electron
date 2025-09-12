@@ -29,6 +29,9 @@ interface UseImageCanvasProps {
   pageSpacing?: number
   // ドラッグ中の軽量化用
   isDraggingElement?: boolean
+  // 透明度制御用の全アノテーション
+  allAnnotations?: any[]
+  currentCropRegionId?: string | null
 }
 
 export function useImageCanvas({
@@ -51,6 +54,8 @@ export function useImageCanvas({
   showMultiplePages,
   pageSpacing,
   isDraggingElement,
+  allAnnotations = [],
+  currentCropRegionId,
 }: UseImageCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -60,6 +65,172 @@ export function useImageCanvas({
   const isPreRenderingRef = useRef(false)
 
   const { drawLineWithStyle } = useDrawingUtils()
+
+  // アノテーションをDrawingElement形式に変換する関数
+  const convertAnnotationToDrawingElement = useCallback((annotation: any): DrawingElement => {
+    return {
+      id: annotation.id,
+      type: annotation.type as DrawingElement['type'],
+      x: annotation.x,
+      y: annotation.y,
+      color: annotation.color,
+      strokeWidth: annotation.strokeWidth,
+      width: annotation.width,
+      height: annotation.height,
+      endX: annotation.endX,
+      endY: annotation.endY,
+      lineStyle: annotation.lineStyle,
+      text: annotation.text,
+      fontSize: annotation.fontSize,
+      textBoxWidth: annotation.textBoxWidth,
+      textBoxHeight: annotation.textBoxHeight,
+      displayX: annotation.displayX,
+      displayY: annotation.displayY,
+    }
+  }, [])
+
+  // 単一要素を描画するヘルパー関数
+  const drawSingleElement = useCallback(async (
+    ctx: CanvasRenderingContext2D,
+    element: DrawingElement,
+    baseImg: HTMLImageElement,
+    offsetX: number,
+    offsetY: number,
+    isSelected: boolean,
+    isDragging: boolean
+  ) => {
+    // テキストボックスの場合、表示用座標があればそれを使用
+    const displayX =
+      element.type === "text" && element.displayX !== undefined
+        ? element.displayX
+        : element.x
+    const displayY =
+      element.type === "text" && element.displayY !== undefined
+        ? element.displayY
+        : element.y
+
+    const currentX = displayX * baseImg.naturalWidth + offsetX
+    const currentY = displayY * baseImg.naturalHeight + offsetY
+
+    ctx.strokeStyle = element.color
+    ctx.fillStyle = element.color
+    ctx.lineWidth = element.strokeWidth
+
+    // テキスト要素のドラッグ中は軽量描画（長方形のみ）
+    if (isDragging && isSelected && element.type === "text") {
+      // 軽量描画: テキスト要素は長方形で代替表示
+      ctx.save()
+      ctx.strokeStyle = element.color
+      ctx.setLineDash([5, 5]) // 点線で軽量感を演出
+      ctx.lineWidth = 2
+      ctx.globalAlpha = 0.7
+
+      // テキストの概算サイズ
+      const boundingWidth = element.text
+        ? Math.max(
+            element.text.length * (element.fontSize || 16) * 0.6,
+            50,
+          )
+        : 50
+      const boundingHeight = Math.max(
+        (element.fontSize || 16) * 1.2,
+        20,
+      )
+
+      ctx.strokeRect(currentX, currentY, boundingWidth, boundingHeight)
+
+      // 軽量テキストラベル表示
+      ctx.font = "12px sans-serif"
+      ctx.fillStyle = element.color
+      ctx.globalAlpha = 0.8
+      const shortText = element.text
+        ? element.text.length > 10
+          ? element.text.substring(0, 10) + "..."
+          : element.text
+        : "Text"
+      ctx.fillText(shortText, currentX + 5, currentY + 15)
+
+      ctx.restore()
+      return
+    }
+
+    // 通常描画
+    switch (element.type) {
+      case "text":
+        if (element.text) {
+          // V4統合: 高品質テキスト描画
+          try {
+            await renderTextElementV4(
+              ctx,
+              element,
+              baseImg.naturalWidth,
+              baseImg.naturalHeight,
+              isSelected,
+            )
+          } catch (error) {
+            console.error("V4テキスト描画エラー:", error)
+            // フォールバック: シンプルテキスト描画
+            ctx.font = `${element.fontSize || 16}px sans-serif`
+            ctx.fillStyle = element.color
+            const lines = element.text.split("\n")
+            const lineHeight = (element.fontSize || 16) * 1.4
+            lines.forEach((line, index) => {
+              ctx.fillText(
+                line,
+                currentX,
+                currentY + index * lineHeight,
+              )
+            })
+          }
+        }
+        break
+      case "line":
+        if (element.endX !== undefined && element.endY !== undefined) {
+          const currentEndX = element.endX * baseImg.naturalWidth + offsetX
+          const currentEndY = element.endY * baseImg.naturalHeight + offsetY
+
+          ctx.save()
+          ctx.strokeStyle = element.color
+          drawLineWithStyle(
+            ctx,
+            currentX,
+            currentY,
+            currentEndX,
+            currentEndY,
+            element.lineStyle || "solid",
+            element.strokeWidth,
+          )
+          ctx.restore()
+        }
+        break
+      case "rectangle":
+        if (element.width !== undefined && element.height !== undefined) {
+          const rectWidth = element.width * baseImg.naturalWidth
+          const rectHeight = element.height * baseImg.naturalHeight
+
+          ctx.strokeRect(currentX, currentY, rectWidth, rectHeight)
+        }
+        break
+      case "ellipse":
+        if (element.width !== undefined && element.height !== undefined) {
+          const rectWidth = element.width * baseImg.naturalWidth
+          const rectHeight = element.height * baseImg.naturalHeight
+
+          ctx.beginPath()
+          ctx.ellipse(
+            currentX + rectWidth / 2,
+            currentY + rectHeight / 2,
+            Math.abs(rectWidth) / 2,
+            Math.abs(rectHeight) / 2,
+            0,
+            0,
+            2 * Math.PI,
+          )
+          ctx.stroke()
+        }
+        break
+    }
+  }, [drawLineWithStyle])
 
   // Canvas描画処理（CSS scale + scroll 方式）
   const drawCanvas = useCallback(
@@ -185,157 +356,31 @@ export function useImageCanvas({
           const offsetX = (canvasWidth - baseImg.naturalWidth) / 2
           const offsetY = 0
 
+          // まず現在の設問以外のアノテーション（全設問）を50%透明度で描画
+          for (const annotation of allAnnotations) {
+            // 現在の設問のアノテーションはスキップ（後で通常描画）
+            if (annotation.questionScore?.cropRegionId === currentCropRegionId) {
+              continue
+            }
+            
+            // アノテーションをDrawingElement形式に変換
+            const element = convertAnnotationToDrawingElement(annotation)
+            
+            // 透明度を50%に設定
+            ctx.globalAlpha = 0.5
+            
+            await drawSingleElement(ctx, element, baseImg, offsetX, offsetY, false, false)
+            
+            // 透明度を元に戻す
+            ctx.globalAlpha = 1.0
+          }
+
+          // 次に現在の設問の描画要素を通常描画
           for (const element of drawingElements) {
-            // テキストボックスの場合、表示用座標があればそれを使用
-            const displayX =
-              element.type === "text" && element.displayX !== undefined
-                ? element.displayX
-                : element.x
-            const displayY =
-              element.type === "text" && element.displayY !== undefined
-                ? element.displayY
-                : element.y
-
-            const currentX = displayX * baseImg.naturalWidth + offsetX
-            const currentY = displayY * baseImg.naturalHeight + offsetY
-
-            ctx.strokeStyle = element.color
-            ctx.fillStyle = element.color
-            ctx.lineWidth = element.strokeWidth
-
-            // 選択中の要素をハイライト（シャドウではなく背景色で表示）
             const isSelected = selectedElementIds.includes(element.id)
-
-            // テキスト要素のドラッグ中は軽量描画（長方形のみ）
-            if (isDraggingElement && isSelected && element.type === "text") {
-              // 軽量描画: テキスト要素は長方形で代替表示
-              ctx.save()
-              ctx.strokeStyle = element.color
-              ctx.setLineDash([5, 5]) // 点線で軽量感を演出
-              ctx.lineWidth = 2
-              ctx.globalAlpha = 0.7
-
-              // テキストの概算サイズ
-              const boundingWidth = element.text
-                ? Math.max(
-                    element.text.length * (element.fontSize || 16) * 0.6,
-                    50,
-                  )
-                : 50
-              const boundingHeight = Math.max(
-                (element.fontSize || 16) * 1.2,
-                20,
-              )
-
-              ctx.strokeRect(currentX, currentY, boundingWidth, boundingHeight)
-
-              // 軽量テキストラベル表示
-              ctx.font = "12px sans-serif"
-              ctx.fillStyle = element.color
-              ctx.globalAlpha = 0.8
-              const shortText = element.text
-                ? element.text.length > 10
-                  ? element.text.substring(0, 10) + "..."
-                  : element.text
-                : "Text"
-              ctx.fillText(shortText, currentX + 5, currentY + 15)
-
-              ctx.restore()
-              continue // 軽量描画のみで次へ
-            }
-
-            // 通常描画（ドラッグ中でない場合）
-            switch (element.type) {
-              case "text":
-                if (element.text) {
-                  // V4統合: 高品質テキスト描画
-                  try {
-                    await renderTextElementV4(
-                      ctx,
-                      element,
-                      canvasWidth,
-                      totalHeight,
-                      isSelected,
-                    )
-                  } catch (error) {
-                    console.error("V4テキスト描画エラー:", error)
-                    // フォールバック: シンプルテキスト描画
-                    ctx.font = `${element.fontSize || 16}px sans-serif`
-                    ctx.fillStyle = element.color
-                    const lines = element.text.split("\n")
-                    const lineHeight = (element.fontSize || 16) * 1.4
-                    lines.forEach((line, index) => {
-                      ctx.fillText(
-                        line,
-                        currentX,
-                        currentY + index * lineHeight,
-                      )
-                    })
-                  }
-                }
-                break
-              case "line":
-                if (element.endX !== undefined && element.endY !== undefined) {
-                  const currentEndX =
-                    element.endX * baseImg.naturalWidth + offsetX
-                  const currentEndY =
-                    element.endY * baseImg.naturalHeight + offsetY
-
-                  // 通常の自由線
-                  drawLineWithStyle(
-                    ctx,
-                    currentX,
-                    currentY,
-                    currentEndX,
-                    currentEndY,
-                    (element.lineStyle || "solid") as any,
-                    element.strokeWidth,
-                  )
-                }
-                break
-              case "rectangle":
-                if (
-                  element.width !== undefined &&
-                  element.height !== undefined
-                ) {
-                  const currentWidth = element.width * baseImg.naturalWidth
-                  const currentHeight = element.height * baseImg.naturalHeight
-                  ctx.strokeRect(
-                    currentX,
-                    currentY,
-                    currentWidth,
-                    currentHeight,
-                  )
-                }
-                break
-              case "ellipse":
-                if (
-                  element.width !== undefined &&
-                  element.height !== undefined
-                ) {
-                  const currentWidth = element.width * baseImg.naturalWidth
-                  const currentHeight = element.height * baseImg.naturalHeight
-                  const centerX = currentX + currentWidth / 2
-                  const centerY = currentY + currentHeight / 2
-                  const radiusX = Math.abs(currentWidth) / 2
-                  const radiusY = Math.abs(currentHeight) / 2
-
-                  ctx.beginPath()
-                  ctx.ellipse(
-                    centerX,
-                    centerY,
-                    radiusX,
-                    radiusY,
-                    0,
-                    0,
-                    2 * Math.PI,
-                  )
-                  ctx.stroke()
-                }
-                break
-            }
-
-            // 選択中の要素には追加の視覚的フィードバックを提供（ハンドルが表示される）
+            const isDragging = (isDraggingElement || false) && isSelected
+            
+            await drawSingleElement(ctx, element, baseImg, offsetX, offsetY, isSelected, isDragging)
           }
 
           // 選択された要素のハンドル（編集点）を描画
@@ -640,6 +685,10 @@ export function useImageCanvas({
       strokeColor,
       strokeWidth,
       isDraggingElement,
+      allAnnotations,
+      convertAnnotationToDrawingElement,
+      currentCropRegionId,
+      drawSingleElement,
     ],
   )
 

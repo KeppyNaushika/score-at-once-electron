@@ -111,6 +111,7 @@ export interface UseDrawingAnnotationsReturn {
   
   // CRUD操作
   loadAnnotations: (questionScoreId: string, type?: DrawingType) => Promise<boolean>
+  loadAllStudentAnnotations: (studentId: string, projectId: string, type?: DrawingType) => Promise<DrawingAnnotation[]>
   saveElement: (element: DrawingElement, questionScoreId: string) => Promise<DrawingAnnotation | null>
   updateElement: (element: DrawingElement) => Promise<DrawingAnnotation | null>
   deleteElement: (elementId: string) => Promise<boolean>
@@ -183,7 +184,34 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError, context])
+  }, [handleError])
+
+  /**
+   * 学生の全設問のアノテーションを読み込み（透明度制御用）
+   */
+  const loadAllStudentAnnotations = useCallback(async (
+    studentId: string,
+    projectId: string,
+    type?: DrawingType
+  ): Promise<DrawingAnnotation[]> => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await (window as any).electronAPI.drawing.getByStudent(studentId, projectId, type)
+      if (result.success && result.data) {
+        return result.data
+      } else {
+        handleError(result.error || '全設問アノテーション読み込みに失敗しました')
+        return []
+      }
+    } catch (error) {
+      handleError('全設問アノテーション読み込み中にエラーが発生しました', error)
+      return []
+    } finally {
+      setIsLoading(false)
+    }
+  }, [handleError])
 
   /**
    * 描画要素保存（新規作成）
@@ -266,7 +294,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError, context])
+  }, [handleError])
 
   /**
    * 描画要素削除
@@ -292,7 +320,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError, context])
+  }, [handleError])
 
   /**
    * タイプ別削除
@@ -329,7 +357,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError, context])
+  }, [handleError])
 
   /**
    * 描画要素の同期（既存システムからデータベースへ）
@@ -365,7 +393,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError, deleteByType])
+  }, [handleError, deleteByType, context])
 
   /**
    * MathJax処理（textbox-on-canvas-v3統合）
@@ -433,6 +461,7 @@ export function useDrawingAnnotations(
     
     // CRUD操作
     loadAnnotations,
+    loadAllStudentAnnotations,
     saveElement,
     updateElement,
     deleteElement,

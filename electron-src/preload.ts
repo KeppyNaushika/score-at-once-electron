@@ -495,6 +495,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     create: (data: any) => ipcRenderer.invoke("drawing:create", data),
     getByQuestionScore: (questionScoreId: string, type?: string) => 
       ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
+    getByStudent: (studentId: string, projectId: string, type?: string) =>
+      ipcRenderer.invoke("drawing:getByStudent", studentId, projectId, type),
+    getByProject: (projectId: string, type?: string) =>
+      ipcRenderer.invoke("drawing:getByProject", projectId, type),
     update: (id: string, data: any) => ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
     deleteByQuestionScore: (questionScoreId: string, type?: string) => 

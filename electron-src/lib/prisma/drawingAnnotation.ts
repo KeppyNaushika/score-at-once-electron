@@ -170,6 +170,128 @@ export async function getDrawingAnnotationsByQuestionScore(
 }
 
 /**
+ * 特定の学生・プロジェクトの全描画アノテーションを取得する（透明度制御用）
+ * @param studentId 学生ID
+ * @param projectId プロジェクトID
+ * @param type フィルタする描画タイプ（オプション）
+ * @returns Promise<DrawingAnnotationWithQuestionScore[]> 描画アノテーション配列（設問情報付き）
+ */
+export async function getDrawingAnnotationsByStudent(
+  studentId: string,
+  projectId: string,
+  type?: DrawingType,
+): Promise<DrawingAnnotation[]> {
+  try {
+    const result = await prisma.drawingAnnotation.findMany({
+      where: {
+        questionScore: {
+          studentId: studentId,
+          cropRegion: {
+            projectPage: {
+              projectId: projectId,
+            },
+          },
+        },
+        ...(type && { type }),
+      },
+      orderBy: { createdAt: "asc" },
+      include: {
+        createdByUser: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return result as DrawingAnnotation[]
+  } catch (error) {
+    console.error("🚫 学生別描画アノテーション取得エラー:", error)
+    throw error
+  }
+}
+
+/**
+ * プロジェクト全体の描画アノテーションを取得する（PDF出力用）
+ * @param projectId プロジェクトID
+ * @param type フィルタする描画タイプ（オプション）
+ * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列（設問情報付き）
+ */
+export async function getDrawingAnnotationsByProject(
+  projectId: string,
+  type?: DrawingType,
+): Promise<DrawingAnnotation[]> {
+  try {
+    const result = await prisma.drawingAnnotation.findMany({
+      where: {
+        questionScore: {
+          cropRegion: {
+            projectPage: {
+              projectId: projectId,
+            },
+          },
+        },
+        ...(type && { type }),
+      },
+      orderBy: [
+        { questionScore: { studentId: "asc" } },
+        { questionScore: { cropRegionId: "asc" } },
+        { createdAt: "asc" },
+      ],
+      include: {
+        createdByUser: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            studentId: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+            student: {
+              select: {
+                id: true,
+                studentId: true,
+                lastName: true,
+                firstName: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    return result as DrawingAnnotation[]
+  } catch (error) {
+    console.error("🚫 プロジェクト別描画アノテーション取得エラー:", error)
+    throw error
+  }
+}
+
+/**
  * 描画アノテーションを更新する
  * @param id 描画アノテーションのID
  * @param data 更新データ

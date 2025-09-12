@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
@@ -10,7 +10,9 @@ import { useDrawingState } from "./hooks/useDrawingState"
 import { useImageCanvas } from "./hooks/useImageCanvas"
 import { useImageNavigation } from "./hooks/useImageNavigation"
 import { useTextboxV4Integration } from "./hooks/useTextboxV4Integration"
+import { useDrawingAnnotations } from "./hooks/useDrawingAnnotations"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
+import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 
 export default function AnswerIndividualView({
   scoringDatas,
@@ -48,6 +50,41 @@ export default function AnswerIndividualView({
     }
   )
 
+  // 透明度制御用：全設問のアノテーション読み込み
+  const [allStudentAnnotations, setAllStudentAnnotations] = useState<DrawingAnnotation[]>([])
+  const annotationsHook = useDrawingAnnotations()
+
+  // 現在の学生とプロジェクトの全アノテーションを読み込み（透明度制御用）
+  useEffect(() => {
+    const loadAllAnnotations = async () => {
+      if (!currentStudentId || !currentCropRegion?.projectPage?.projectId) {
+        setAllStudentAnnotations([])
+        return
+      }
+
+      try {
+        console.log('🎨 透明度制御: 全設問アノテーション読み込み開始', {
+          studentId: currentStudentId,
+          projectId: currentCropRegion.projectPage.projectId
+        })
+        const annotations = await annotationsHook.loadAllStudentAnnotations(
+          currentStudentId,
+          currentCropRegion.projectPage.projectId
+        )
+        console.log('🎨 透明度制御: 読み込み完了', {
+          annotationCount: annotations.length,
+          currentCropRegionId: currentCropRegion?.id
+        })
+        setAllStudentAnnotations(annotations)
+      } catch (error) {
+        console.error('全設問アノテーション読み込みエラー:', error)
+        setAllStudentAnnotations([])
+      }
+    }
+
+    loadAllAnnotations()
+  }, [currentStudentId, currentCropRegion?.projectPage?.projectId, currentCropRegion?.id, annotationsHook])
+
   // テキスト入力状態変更の通知
   useEffect(() => {
     if (onTextInputStateChange) {
@@ -57,7 +94,7 @@ export default function AnswerIndividualView({
 
   // currentCropRegionはすでにpropsで渡されている（派生済み）
 
-  // 画像とキャンバス管理
+  // 画像とキャンバス管理（透明度制御統合）
   const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =
     useImageCanvas({
       currentScoringData,
@@ -79,6 +116,9 @@ export default function AnswerIndividualView({
       showMultiplePages,
       pageSpacing,
       isDraggingElement: drawingState.isDraggingElement,
+      // 透明度制御用の全アノテーション
+      allAnnotations: allStudentAnnotations,
+      currentCropRegionId: currentCropRegion?.id,
     })
 
   // V4統合フック（画像サイズが確定してから初期化）

@@ -51,6 +51,36 @@ export function setupDrawingHandlers() {
   })
 
   /**
+   * 特定の学生・プロジェクトの全描画アノテーション取得（透明度制御用）
+   */
+  ipcMain.handle('drawing:getByStudent', async (_, studentId: string, projectId: string, type?: DrawingType) => {
+    try {
+      console.log(`🎨 学生別描画アノテーション取得要求: Student=${studentId}, Project=${projectId}, Type=${type || 'ALL'}`)
+      const result = await drawingService.getDrawingAnnotationsByStudent(studentId, projectId, type)
+      console.log(`✅ 学生別描画アノテーション取得成功: ${result.length}件`)
+      return { success: true, data: result }
+    } catch (error) {
+      console.error('🚫 学生別描画アノテーション取得エラー:', error)
+      return { success: false, error: error instanceof Error ? error.message : '学生別描画アノテーション取得に失敗しました' }
+    }
+  })
+
+  /**
+   * プロジェクト全体の描画アノテーション取得（PDF出力用）
+   */
+  ipcMain.handle('drawing:getByProject', async (_, projectId: string, type?: DrawingType) => {
+    try {
+      console.log(`🎨 プロジェクト別描画アノテーション取得要求: Project=${projectId}, Type=${type || 'ALL'}`)
+      const result = await drawingService.getDrawingAnnotationsByProject(projectId, type)
+      console.log(`✅ プロジェクト別描画アノテーション取得成功: ${result.length}件`)
+      return { success: true, data: result }
+    } catch (error) {
+      console.error('🚫 プロジェクト別描画アノテーション取得エラー:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'プロジェクト別描画アノテーション取得に失敗しました' }
+    }
+  })
+
+  /**
    * 描画アノテーション更新
    */
   ipcMain.handle('drawing:update', async (_, id: string, data: DrawingUpdateData) => {
@@ -172,7 +202,9 @@ export function setupDrawingHandlers() {
 export function removeDrawingHandlers() {
   const handlers = [
     'drawing:create',
-    'drawing:getByQuestionScore', 
+    'drawing:getByQuestionScore',
+    'drawing:getByStudent',
+    'drawing:getByProject',
     'drawing:update',
     'drawing:delete',
     'drawing:deleteByQuestionScore',
