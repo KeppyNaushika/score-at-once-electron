@@ -44,6 +44,10 @@ interface ScoringContentAreaProps {
   
   // テキスト入力状態変更のコールバック（個別表示でキーボードショートカット制御のため）
   onTextInputStateChange?: (showTextInput: boolean) => void
+  
+  // QuestionScore自動作成用のコンテキスト情報
+  currentStudentId?: string
+  currentUserId?: string
 }
 
 export function ScoringContentArea({
@@ -62,6 +66,8 @@ export function ScoringContentArea({
   pageImages,
   onStudentsExtracted,
   onTextInputStateChange,
+  currentStudentId,
+  currentUserId,
 }: ScoringContentAreaProps) {
   // 個別表示時：selectedの最初の要素、または存在しないときはallの最初の要素
   const currentScoringDataId =
@@ -96,6 +102,8 @@ export function ScoringContentArea({
         }
       }}
       onTextInputStateChange={onTextInputStateChange}
+      currentStudentId={currentStudentId}
+      currentUserId={currentUserId}
     />
   ) : (
     // Grid表示：paddingとスクロールを統合

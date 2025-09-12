@@ -6,43 +6,62 @@
 // 基本型定義
 export type DrawingType = "text" | "line" | "rectangle" | "ellipse"
 export type DrawingTool = "select" | "text" | "line" | "rectangle" | "ellipse"
-export type LineStyle = "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow"
+export type LineStyle =
+  | "solid"
+  | "wave"
+  | "zigzag"
+  | "double"
+  | "arrow"
+  | "both_arrow"
 export type HorizontalAlign = "left" | "center" | "right"
 export type VerticalAlign = "top" | "center" | "bottom"
+export type AnchorDirection =
+  | "top-left"
+  | "top"
+  | "top-right"
+  | "left"
+  | "center"
+  | "right"
+  | "bottom-left"
+  | "bottom"
+  | "bottom-right"
 
 // データベース対応統合インターフェース
 export interface DrawingAnnotation {
   id: string
   questionScoreId: string
   type: DrawingType
-  
+
   // 基本プロパティ（全要素共通）
-  x: number          // 0.0 - 1.0 相対座標
-  y: number          // 0.0 - 1.0
+  x: number // 0.0 - 1.0 相対座標
+  y: number // 0.0 - 1.0
   color: string
   strokeWidth: number
-  
+
   // サイズプロパティ
-  width: number      // 0.0 - 1.0
-  height: number     // 0.0 - 1.0
-  
+  width: number // 0.0 - 1.0
+  height: number // 0.0 - 1.0
+
   // 直線専用プロパティ
-  endX: number       // 0.0 - 1.0
-  endY: number       // 0.0 - 1.0
+  endX: number // 0.0 - 1.0
+  endY: number // 0.0 - 1.0
   lineStyle: LineStyle
-  
+
   // テキスト専用プロパティ
   text: string
   fontSize: number
-  textBoxWidth: number     // 0.0 - 1.0
-  textBoxHeight: number    // 0.0 - 1.0
+  textBoxWidth: number // 0.0 - 1.0
+  textBoxHeight: number // 0.0 - 1.0
   horizontalAlign: HorizontalAlign
   verticalAlign: VerticalAlign
-  
+
+  // V4統合フィールド
+  anchorDirection: AnchorDirection
+
   // 表示プロパティ
-  displayX: number    // 0.0 - 1.0
-  displayY: number    // 0.0 - 1.0
-  
+  displayX: number // 0.0 - 1.0
+  displayY: number // 0.0 - 1.0
+
   // メタデータ
   createdAt: Date
   updatedAt: Date
@@ -57,7 +76,12 @@ export interface DrawingCreateData {
   y: number
   color?: string
   strokeWidth?: number
-  
+
+  // QuestionScore自動作成用の追加情報（questionScoreIdが存在しない場合に使用）
+  studentId?: string
+  cropRegionId?: string
+  scoredByUserId?: string
+
   // 全プロパティ（デフォルト値はデータベース側で設定）
   width?: number
   height?: number
@@ -70,6 +94,7 @@ export interface DrawingCreateData {
   textBoxHeight?: number
   horizontalAlign?: HorizontalAlign
   verticalAlign?: VerticalAlign
+  anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
   createdByUserId?: string | null
@@ -92,6 +117,7 @@ export interface DrawingUpdateData {
   textBoxHeight?: number
   horizontalAlign?: HorizontalAlign
   verticalAlign?: VerticalAlign
+  anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
 }

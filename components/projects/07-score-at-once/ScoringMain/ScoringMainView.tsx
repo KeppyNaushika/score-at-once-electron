@@ -511,6 +511,8 @@ export default function ScoringMainView() {
           autoScroll={autoScroll}
           showStudentNames={showStudentNames}
           onTextInputStateChange={setShowTextInput}
+          currentStudentId={currentStudentId || undefined}
+          currentUserId={currentUserId || undefined}
         />
 
         {/* 右側サイドパネル */}

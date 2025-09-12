@@ -18,12 +18,20 @@ import { createMathJaxSVG, measureMathJaxContentSize } from '@/app/textbox-on-ca
 // 既存の描画システム型と互換性を保つため
 import type { DrawingElement } from '../types/answer-individual-types'
 
+// QuestionScore自動作成用のコンテキスト情報
+interface DrawingContext {
+  currentStudentId?: string
+  currentCropRegionId?: string
+  currentUserId?: string
+}
+
 /**
  * 既存DrawingElementからDrawingCreateDataへの変換
  */
 export function convertElementToCreateData(
   element: DrawingElement,
-  questionScoreId: string
+  questionScoreId: string,
+  context?: DrawingContext
 ): DrawingCreateData {
   return {
     questionScoreId,
@@ -45,6 +53,10 @@ export function convertElementToCreateData(
     ...(element.displayY !== undefined && { displayY: element.displayY }),
     horizontalAlign: 'left', // デフォルト値
     verticalAlign: 'top', // デフォルト値
+    // QuestionScore自動作成用の情報
+    studentId: context?.currentStudentId,
+    cropRegionId: context?.currentCropRegionId,
+    scoredByUserId: context?.currentUserId,
   }
 }
 
@@ -120,7 +132,8 @@ export interface UseDrawingAnnotationsReturn {
  * 統合描画アノテーション管理フック（ScoringIndividual専用）
  */
 export function useDrawingAnnotations(
-  callbacks?: DrawingPersistenceCallbacks
+  callbacks?: DrawingPersistenceCallbacks,
+  context?: DrawingContext
 ): UseDrawingAnnotationsReturn {
   // 状態管理
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
@@ -170,7 +183,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError])
+  }, [handleError, context])
 
   /**
    * 描画要素保存（新規作成）
@@ -183,7 +196,12 @@ export function useDrawingAnnotations(
     setError(null)
 
     try {
-      const createData = convertElementToCreateData(element, questionScoreId)
+      const createData = convertElementToCreateData(element, questionScoreId, context)
+      console.log('📝 saveElement - 作成データ:', {
+        studentId: createData.studentId,
+        cropRegionId: createData.cropRegionId,
+        scoredByUserId: createData.scoredByUserId
+      })
       const result = await window.electronAPI.drawing.create(createData)
       
       if (result.success && result.data) {
@@ -200,7 +218,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError])
+  }, [handleError, context])
 
   /**
    * 描画要素更新
@@ -248,7 +266,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError])
+  }, [handleError, context])
 
   /**
    * 描画要素削除
@@ -274,7 +292,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError])
+  }, [handleError, context])
 
   /**
    * タイプ別削除
@@ -311,7 +329,7 @@ export function useDrawingAnnotations(
     } finally {
       setIsLoading(false)
     }
-  }, [handleError])
+  }, [handleError, context])
 
   /**
    * 描画要素の同期（既存システムからデータベースへ）
@@ -329,7 +347,7 @@ export function useDrawingAnnotations(
 
       // 新しい要素を一括作成
       const createDataList = elements.map(element => 
-        convertElementToCreateData(element, questionScoreId)
+        convertElementToCreateData(element, questionScoreId, context)
       )
 
       const result = await window.electronAPI.drawing.batchCreate(createDataList)

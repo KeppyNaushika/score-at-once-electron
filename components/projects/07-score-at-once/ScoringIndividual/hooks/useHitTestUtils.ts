@@ -34,17 +34,48 @@ export function useHitTestUtils() {
             return false
           }
 
-          // 線を囲む長方形で判定（より直感的）
-          const lineLeft = Math.min(element.x, element.endX) - tolerance
-          const lineRight = Math.max(element.x, element.endX) + tolerance
-          const lineTop = Math.min(element.y, element.endY) - tolerance
-          const lineBottom = Math.max(element.y, element.endY) + tolerance
+          // 点と線分の距離を計算する正確な判定（useEditModeUtilsから移植）
+          const lineLength = Math.sqrt(
+            Math.pow(element.endX - element.x, 2) +
+            Math.pow(element.endY - element.y, 2)
+          )
+          
+          // 線の長さが0の場合は点として扱う
+          if (lineLength === 0) {
+            const lineResult =
+              Math.abs(element.x - testX) < tolerance &&
+              Math.abs(element.y - testY) < tolerance
+            return lineResult
+          }
 
-          const lineResult =
-            testX >= lineLeft &&
-            testX <= lineRight &&
-            testY >= lineTop &&
-            testY <= lineBottom
+          // 点から線分への最短距離を計算
+          const A = testY - element.y
+          const B = element.x - testX
+          const C = (element.endY - element.y) * testX - (element.endX - element.x) * testY
+          const distance = Math.abs(
+            A * (element.endX - element.x) + B * (element.endY - element.y) + C
+          ) / lineLength
+
+          // 線分の範囲内にあるかもチェック
+          const dotProduct = 
+            ((testX - element.x) * (element.endX - element.x) +
+             (testY - element.y) * (element.endY - element.y)) / (lineLength * lineLength)
+          
+          const isWithinSegment = dotProduct >= 0 && dotProduct <= 1
+          
+          // 線分の範囲外の場合は端点までの距離を計算
+          let finalDistance = distance
+          if (!isWithinSegment) {
+            const distToStart = Math.sqrt(
+              Math.pow(testX - element.x, 2) + Math.pow(testY - element.y, 2)
+            )
+            const distToEnd = Math.sqrt(
+              Math.pow(testX - element.endX, 2) + Math.pow(testY - element.endY, 2)
+            )
+            finalDistance = Math.min(distToStart, distToEnd)
+          }
+
+          const lineResult = finalDistance < DRAWING_TOLERANCES.lineDistance
           return lineResult
 
         case "rectangle":
@@ -60,6 +91,26 @@ export function useHitTestUtils() {
           const rectangleResult =
             testX >= left && testX <= right && testY >= top && testY <= bottom
           return rectangleResult
+
+        case "ellipse":
+          if (element.width === undefined || element.height === undefined) {
+            return false
+          }
+
+          // 楕円の中心座標を計算
+          const centerX = element.x + element.width / 2
+          const centerY = element.y + element.height / 2
+          
+          // 楕円の半径（幅と高さの半分）
+          const radiusX = Math.abs(element.width) / 2
+          const radiusY = Math.abs(element.height) / 2
+          
+          // 楕円の方程式: (x-cx)²/rx² + (y-cy)²/ry² <= 1
+          const normalizedX = (testX - centerX) / radiusX
+          const normalizedY = (testY - centerY) / radiusY
+          const ellipseResult = (normalizedX * normalizedX + normalizedY * normalizedY) <= 1
+          
+          return ellipseResult
 
         default:
           return false
@@ -97,6 +148,7 @@ export function useHitTestUtils() {
           break
 
         case "rectangle":
+        case "ellipse":
         case "text":
           const width = element.width || element.textBoxWidth || 0
           const height = element.height || element.textBoxHeight || 0

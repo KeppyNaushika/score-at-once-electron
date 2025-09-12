@@ -31,6 +31,13 @@ interface DrawingCallbacks {
   onSelectAnnotation?: (annotation: DrawingAnnotation | null) => void
 }
 
+// QuestionScore自動作成用のコンテキスト情報
+interface DrawingContext {
+  currentStudentId?: string
+  currentCropRegionId?: string
+  currentUserId?: string
+}
+
 export interface UseDrawingAnnotationsReturn {
   // 状態
   annotations: DrawingAnnotation[]
@@ -73,7 +80,8 @@ export interface UseDrawingAnnotationsReturn {
  * 無限ループを防ぐため、questionScoreIdの自動読み込みは行わない
  */
 export function useDrawingAnnotations(
-  callbacks?: Partial<DrawingCallbacks>
+  callbacks?: Partial<DrawingCallbacks>,
+  context?: DrawingContext
 ): UseDrawingAnnotationsReturn {
   // 基本状態
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
@@ -137,7 +145,22 @@ export function useDrawingAnnotations(
   ): Promise<DrawingAnnotation | null> => {
     try {
       console.log('🎨 アノテーション作成:', data.type)
-      const result = await window.electronAPI.drawing.create(data)
+      
+      // QuestionScore自動作成用の情報がない場合はcontextから補完
+      const enrichedData: DrawingCreateData = {
+        ...data,
+        studentId: data.studentId || context?.currentStudentId,
+        cropRegionId: data.cropRegionId || context?.currentCropRegionId,
+        scoredByUserId: data.scoredByUserId || context?.currentUserId
+      }
+      
+      console.log('📝 補完されたデータ:', {
+        studentId: enrichedData.studentId,
+        cropRegionId: enrichedData.cropRegionId,
+        scoredByUserId: enrichedData.scoredByUserId
+      })
+      
+      const result = await window.electronAPI.drawing.create(enrichedData)
       
       if (result.success && result.data) {
         setAnnotations(prev => [...prev, result.data!])
@@ -382,7 +405,11 @@ export function useDrawingAnnotations(
       verticalAlign: drawingState.drawingAnnotation.verticalAlign || 'top',
       displayX: drawingState.drawingAnnotation.displayX || 0,
       displayY: drawingState.drawingAnnotation.displayY || 0,
-      createdByUserId: drawingState.drawingAnnotation.createdByUserId
+      createdByUserId: drawingState.drawingAnnotation.createdByUserId,
+      // QuestionScore自動作成用の情報（contextから取得）
+      studentId: context?.currentStudentId,
+      cropRegionId: context?.currentCropRegionId,
+      scoredByUserId: context?.currentUserId
     }
 
     const result = await createAnnotation(completeData)

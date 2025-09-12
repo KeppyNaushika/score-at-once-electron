@@ -23,6 +23,11 @@ import {
 export function useDrawingState(
   questionScoreId?: string | null,
   enablePersistence: boolean = true,
+  context?: {
+    currentStudentId?: string
+    currentCropRegionId?: string
+    currentUserId?: string
+  }
 ): DrawingState &
   DrawingActions & {
     // データベース統合機能
@@ -112,6 +117,7 @@ export function useDrawingState(
     syncElements,
   } = useDrawingAnnotations(
     enablePersistence ? persistenceCallbacks : undefined,
+    context
   )
 
   // 自動読み込みは削除 - 手動でloadFromDatabaseを呼び出すことで読み込み

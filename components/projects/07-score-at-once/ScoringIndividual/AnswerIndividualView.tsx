@@ -21,6 +21,8 @@ export default function AnswerIndividualView({
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
   onTextInputStateChange,
+  currentStudentId,
+  currentUserId,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } =
@@ -39,6 +41,11 @@ export default function AnswerIndividualView({
   const drawingState = useDrawingState(
     currentScoringData?.id || null, // questionScoreIdとして使用
     true, // データベース永続化を有効化
+    {
+      currentStudentId,
+      currentCropRegionId: currentCropRegion?.id,
+      currentUserId,
+    }
   )
 
   // テキスト入力状態変更の通知

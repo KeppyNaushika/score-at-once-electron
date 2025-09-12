@@ -63,6 +63,10 @@ export interface AnswerIndividualViewProps {
     partialScore?: number,
   ) => void
 
+  // QuestionScore自動作成用のコンテキスト情報
+  currentStudentId?: string
+  currentUserId?: string
+
   // Individual表示固有設定
   pageImages?: PageImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
