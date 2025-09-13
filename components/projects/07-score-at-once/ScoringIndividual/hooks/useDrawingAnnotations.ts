@@ -228,7 +228,9 @@ export function useDrawingAnnotations(
       console.log('📝 saveElement - 作成データ:', {
         studentId: createData.studentId,
         cropRegionId: createData.cropRegionId,
-        scoredByUserId: createData.scoredByUserId
+        scoredByUserId: createData.scoredByUserId,
+        questionScoreId: questionScoreId,
+        elementId: element.id
       })
       const result = await window.electronAPI.drawing.create(createData)
       
@@ -256,6 +258,11 @@ export function useDrawingAnnotations(
   ): Promise<DrawingAnnotation | null> => {
     setIsLoading(true)
     setError(null)
+
+    console.log('🔄 updateElement - 更新要求:', {
+      elementId: element.id,
+      elementType: element.type
+    })
 
     try {
       const updateData: DrawingUpdateData = {

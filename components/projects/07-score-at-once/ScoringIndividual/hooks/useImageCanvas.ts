@@ -367,49 +367,72 @@ export function useImageCanvas({
           const offsetX = (canvasWidth - baseImg.naturalWidth) / 2
           const offsetY = 0
 
-          // まず現在の設問以外のアノテーション（全設問）を50%透明度で描画
-          for (const annotation of allAnnotations) {
-            // 現在の設問のアノテーションはスキップ（後で通常描画）
-            if (
-              annotation.questionScore?.cropRegionId === currentCropRegionId
-            ) {
-              continue
+          // パフォーマンス最適化: ドラッグ中は他設問のアノテーションを非表示
+          const isAnyElementDragging = isDraggingElement && selectedElementIds.length > 0
+          
+          if (!isAnyElementDragging) {
+            // まず現在の設問以外のアノテーション（全設問）を50%透明度で描画
+            for (const annotation of allAnnotations) {
+              // 現在の設問のアノテーションはスキップ（後で通常描画）
+              if (
+                annotation.questionScore?.cropRegionId === currentCropRegionId
+              ) {
+                continue
+              }
+
+              // アノテーションをDrawingElement形式に変換
+              const element = convertAnnotationToDrawingElement(annotation)
+
+              // 透明度を50%に設定（読み取り専用表示）
+              ctx.globalAlpha = 0.5
+
+              // 読み取り専用のスタイルで描画
+              await drawSingleElement(
+                ctx,
+                element,
+                baseImg,
+                offsetX,
+                offsetY,
+                false, // 選択されていない
+                false, // ドラッグ中でない
+              )
+
+              // 透明度を元に戻す
+              ctx.globalAlpha = 1.0
             }
-
-            // アノテーションをDrawingElement形式に変換
-            const element = convertAnnotationToDrawingElement(annotation)
-
-            // 透明度を50%に設定
-            ctx.globalAlpha = 0.5
-
-            await drawSingleElement(
-              ctx,
-              element,
-              baseImg,
-              offsetX,
-              offsetY,
-              false,
-              false,
-            )
-
-            // 透明度を元に戻す
-            ctx.globalAlpha = 1.0
           }
 
-          // 次に現在の設問の描画要素を通常描画
+          // 次に現在の設問の描画要素を描画（ドラッグ中の軽量化対応）
           for (const element of drawingElements) {
             const isSelected = selectedElementIds.includes(element.id)
             const isDragging = (isDraggingElement || false) && isSelected
 
-            await drawSingleElement(
-              ctx,
-              element,
-              baseImg,
-              offsetX,
-              offsetY,
-              isSelected,
-              isDragging,
-            )
+            // ドラッグ中かつ選択されていない要素は軽量描画
+            if (isAnyElementDragging && !isSelected) {
+              // 軽量描画: 選択されていない要素は薄く表示
+              ctx.globalAlpha = 0.3
+              await drawSingleElement(
+                ctx,
+                element,
+                baseImg,
+                offsetX,
+                offsetY,
+                false,
+                false,
+              )
+              ctx.globalAlpha = 1.0
+            } else {
+              // 通常描画（選択中の要素 or ドラッグしていない時）
+              await drawSingleElement(
+                ctx,
+                element,
+                baseImg,
+                offsetX,
+                offsetY,
+                isSelected,
+                isDragging,
+              )
+            }
           }
 
           // 選択された要素のハンドル（編集点）を描画
