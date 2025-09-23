@@ -1,3 +1,10 @@
+import type {
+  CropRegion,
+  Project,
+  ProjectStudent,
+  QuestionScore,
+  Student,
+} from "@prisma/client"
 import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
 import { getProjectById } from "../../prisma/project"
 import { getStudentsForProject } from "../../prisma/projectStudent"
@@ -6,8 +13,8 @@ import {
   getQuestionScoresForProject,
 } from "../../prisma/questionScore"
 import {
-  calculateSubtotalScore,
-  SubtotalScoreDetail,
+  calculateSubtotalScoreForStudent,
+  QuestionScoreData,
 } from "../../shared/calculations/subtotal-calculator"
 import {
   ScoreDetail,
@@ -21,10 +28,10 @@ import {
 export interface ExportDataResult {
   success: boolean
   error?: string
-  project?: any
-  selectedStudents?: any[]
-  questionRegions?: any[]
-  subtotalRegions?: any[]
+  project?: Project
+  selectedStudents?: (Student & { projectStudent?: ProjectStudent })[]
+  questionRegions?: CropRegion[]
+  subtotalRegions?: CropRegion[]
   scoringData?: ScoringData[]
 }
 
@@ -59,9 +66,9 @@ export async function fetchExportData(
       .filter((student) => selectedStudentIds.includes(student.id))
       .sort((a, b) => {
         const aOrder =
-          (a as any).customOrder !== undefined ? (a as any).customOrder : 999999
+          (a as Student & { customOrder?: number }).customOrder ?? 999999
         const bOrder =
-          (b as any).customOrder !== undefined ? (b as any).customOrder : 999999
+          (b as Student & { customOrder?: number }).customOrder ?? 999999
         return aOrder - bOrder
       })
 
@@ -71,8 +78,8 @@ export async function fetchExportData(
 
     // 設問領域と小計領域の分離・ソート
     const questionRegions = cropRegions
-      .filter((region: any) => region.type === "QUESTION_ANSWER")
-      .sort((a: any, b: any) => {
+      .filter((region: CropRegion) => region.type === "QUESTION_ANSWER")
+      .sort((a: CropRegion, b: CropRegion) => {
         if (Math.abs(a.y - b.y) < 0.01) {
           return a.x - b.x
         }
@@ -80,8 +87,8 @@ export async function fetchExportData(
       })
 
     const subtotalRegions = cropRegions
-      .filter((region: any) => region.type === "SUBTOTAL_SCORE")
-      .sort((a: any, b: any) => {
+      .filter((region: CropRegion) => region.type === "SUBTOTAL_SCORE")
+      .sort((a: CropRegion, b: CropRegion) => {
         if (Math.abs(a.y - b.y) < 0.01) {
           return a.x - b.x
         }
@@ -124,21 +131,31 @@ export async function fetchExportData(
  * @returns 構造化された採点データ
  */
 async function buildScoringData(
-  selectedStudents: any[],
-  questionRegions: any[],
-  subtotalRegions: any[],
-  questionScores: any,
+  selectedStudents: (Student & {
+    customOrder?: number | null
+    grade?: string
+    className?: string
+    attendanceNumber?: number | null
+  })[],
+  questionRegions: CropRegion[],
+  subtotalRegions: CropRegion[],
+  questionScores: { success: boolean; scores?: QuestionScore[] },
 ): Promise<ScoringData[]> {
   return Promise.all(
     selectedStudents.map(async (student) => {
       const studentScores = questionScores.success
         ? questionScores.scores?.filter(
-            (score: any) => score.studentId === student.id,
+            (score: QuestionScore) => score.studentId === student.id,
           ) || []
         : []
 
       const scores = buildScoreDetails(studentScores, questionRegions)
-      const subtotalScores = await buildSubtotalScores(subtotalRegions, scores)
+      const subtotalScores = await buildSubtotalScores(
+        student.id,
+        subtotalRegions,
+        questionRegions,
+        studentScores,
+      )
 
       const totalScore = scores.reduce(
         (sum, score) => sum + (score.score || 0),
@@ -153,9 +170,9 @@ async function buildScoringData(
         studentId: student.id,
         studentName: `${student.lastName} ${student.firstName}`,
         studentNumber: student.studentId,
-        grade: (student as any).grade,
-        className: (student as any).className,
-        attendanceNumber: (student as any).attendanceNumber,
+        grade: student.grade,
+        className: student.className,
+        attendanceNumber: student.attendanceNumber,
         scores,
         totalScore,
         totalMaxScore,
@@ -173,20 +190,22 @@ async function buildScoringData(
  * @returns 設問別スコア詳細配列
  */
 function buildScoreDetails(
-  studentScores: any[],
-  questionRegions: any[],
+  studentScores: QuestionScore[],
+  questionRegions: CropRegion[],
 ): ScoreDetail[] {
-  return questionRegions.map((region: any) => {
+  return questionRegions.map((region: CropRegion) => {
     const scoreRecord = studentScores.find(
-      (score: any) => score.cropRegionId === region.id,
+      (score: QuestionScore) => score.cropRegionId === region.id,
     )
     const actualScore = scoreRecord
       ? calculateActualScore(
           {
             status: scoreRecord.status,
-            partialScore: scoreRecord.partialScore !== null && scoreRecord.partialScore !== undefined
-              ? Number(scoreRecord.partialScore)
-              : null,
+            partialScore:
+              scoreRecord.partialScore !== null &&
+              scoreRecord.partialScore !== undefined
+                ? Number(scoreRecord.partialScore)
+                : null,
           },
           region.points || 0,
         )
@@ -212,34 +231,49 @@ function buildScoreDetails(
 /**
  * 小計スコアを構築する
  *
+ * @param studentId - 生徒ID
  * @param subtotalRegions - 小計領域配列
- * @param scores - 設問スコア配列
+ * @param questionRegions - 設問領域配列
+ * @param studentScores - 生徒の設問スコア配列
  * @returns 小計スコア配列
  */
 async function buildSubtotalScores(
-  subtotalRegions: any[],
-  scores: ScoreDetail[],
+  studentId: string,
+  subtotalRegions: CropRegion[],
+  questionRegions: CropRegion[],
+  studentScores: QuestionScore[],
 ): Promise<SubtotalScore[]> {
-  // 小計点の計算用にデータを変換
-  const subtotalScoreData: SubtotalScoreDetail[] = scores.map((score) => ({
-    questionId: score.questionId,
-    score: score.score,
-    maxScore: score.maxScore,
-    status: score.status,
-  }))
+  // 設問スコアデータを新しい形式に変換
+  const questionScoreData: QuestionScoreData[] = studentScores
+    .filter((score) => score.studentId !== null)
+    .map((score) => ({
+      studentId: score.studentId!,
+      cropRegionId: score.cropRegionId,
+      status: score.status,
+      partialScore: score.partialScore ? Number(score.partialScore) : null,
+    }))
 
   return Promise.all(
-    subtotalRegions.map(async (subtotalRegion: any) => {
-      const result = await calculateSubtotalScore(
+    subtotalRegions.map(async (subtotalRegion: CropRegion) => {
+      const score = await calculateSubtotalScoreForStudent(
+        studentId,
         subtotalRegion.id,
-        subtotalScoreData,
+        questionScoreData,
+        questionRegions,
       )
+
+      // 最大点数を計算（この小計に含まれる設問の最大点数の合計）
+      // 現在は簡略化して全設問の最大点数を使用
+      const maxScore = questionRegions
+        .filter((region) => region.type === "QUESTION_ANSWER")
+        .reduce((sum, region) => sum + (region.points || 0), 0)
+
       return {
         subtotalRegionId: subtotalRegion.id,
         subtotalLabel:
           subtotalRegion.label || `小計${subtotalRegion.orderIndex || 1}`,
-        score: result.score,
-        maxScore: result.maxScore,
+        score,
+        maxScore,
       }
     }),
   )

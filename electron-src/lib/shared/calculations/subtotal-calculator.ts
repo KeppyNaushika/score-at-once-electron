@@ -1,4 +1,9 @@
-import { getCropSubtotalsByCropRegionId } from "../../prisma/cropSubtotal"
+import type { CropRegion } from "@prisma/client"
+import {
+  getCropSubtotalsByCropRegionId,
+  getCropSubtotalsBySubtotalId,
+} from "../../prisma/cropSubtotal"
+import { calculateActualScore } from "../../prisma/questionScore"
 
 // 小計点計算で使用する型定義
 export interface SubtotalScoreDetail {
@@ -6,6 +11,14 @@ export interface SubtotalScoreDetail {
   score: number | null
   maxScore: number
   status?: string
+}
+
+// 設問スコアの型定義（PDF exportと互換性を保つため）
+export interface QuestionScoreData {
+  studentId: string
+  cropRegionId: string
+  status: string
+  partialScore?: number | null
 }
 
 export interface SubtotalResult {
@@ -18,126 +31,210 @@ export interface SubtotalTargetMap {
 }
 
 /**
- * 設問が小計点の対象かチェックする関数（詳細版）
- * GROUP内OR、GROUP間ANDのロジックを実装
+ * 生徒の小計点を計算する関数（PDFエクスポートと同じロジック）
+ * GROUP内OR、GROUP間ANDのロジックを完全実装
  */
-export async function checkIfQuestionIsInSubtotal(
-  questionId: string,
+export async function calculateSubtotalScoreForStudent(
+  studentId: string,
   subtotalRegionId: string,
-): Promise<boolean> {
+  allQuestionScores: QuestionScoreData[],
+  cropRegions: CropRegion[],
+): Promise<number> {
   try {
-    // 小計点領域に関連付けられた定義を取得
-    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
+    console.log(
+      `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`,
+    )
 
+    // この生徒の全採点データを取得
+    const studentScores = allQuestionScores.filter(
+      (score) => score.studentId === studentId,
+    )
+
+    // 小計点領域に関連付けられたグループ項目を取得
+    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
+    console.log(`Found ${cropSubtotals?.length || 0} crop subtotals`)
+
+    // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!cropSubtotals || cropSubtotals.length === 0) {
-      return false
+      console.log(
+        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`,
+      )
+      return calculateStudentTotalScore(
+        studentId,
+        allQuestionScores,
+        cropRegions,
+      )
     }
 
-    // 簡略化されたロジック：直接的な関係をチェック
-    // CropSubtotalテーブルはcropRegionIdとsubtotalIdの関係を定義している
-    // 実際の実装では、subtotalに関連するcropRegionをチェック
-    // 現在のところ、小計の計算対象となる設問の特定は別の方法が必要
+    // グループ別に項目をまとめる
+    const groupMap = new Map<string, string[]>()
 
-    // TODO: 新しいスキーマでの設問-小計関係の特定方法を実装
-    // 現在は、設問が小計に含まれるかのチェックは未実装
-    console.warn(`checkIfQuestionIsInSubtotal not fully implemented for new schema: ${questionId} -> ${subtotalRegionId}`)
-    
-    return false
+    for (const cropSubtotal of cropSubtotals) {
+      if (!cropSubtotal || typeof cropSubtotal !== "object") continue
+
+      const groupId = (cropSubtotal as any).subtotal?.subtotalGroupId
+      if (!groupId) continue
+
+      if (!groupMap.has(groupId)) {
+        groupMap.set(groupId, [])
+      }
+      groupMap.get(groupId)!.push((cropSubtotal as any).subtotalId)
+    }
+
+    if (groupMap.size === 0) {
+      console.log(
+        `No valid groups found, calculating total of all questions for student`,
+      )
+      return calculateStudentTotalScore(
+        studentId,
+        allQuestionScores,
+        cropRegions,
+      )
+    }
+
+    // 各グループで該当する設問を取得（GROUP内OR）
+    const groupQuestionSets: Set<string>[] = []
+
+    for (const [_groupId, itemIds] of groupMap) {
+      const groupQuestionIds = new Set<string>()
+
+      // 各項目に関連付けられた設問を取得
+      for (const itemId of itemIds) {
+        try {
+          const cropSubtotals = await getCropSubtotalsBySubtotalId(itemId)
+          if (cropSubtotals && cropSubtotals.length > 0) {
+            cropSubtotals.forEach((cropSubtotal: any) => {
+              if (cropSubtotal.assignmentType === "QUESTION_ASSIGNMENT") {
+                groupQuestionIds.add(cropSubtotal.cropRegionId)
+              }
+            })
+          }
+        } catch (error) {
+          console.error(
+            `Error getting crop subtotals for item ${itemId}:`,
+            error,
+          )
+        }
+      }
+
+      groupQuestionSets.push(groupQuestionIds)
+    }
+
+    // GROUP間AND：全てのグループに共通する設問を取得
+    let finalQuestionIds: Set<string>
+    if (groupQuestionSets.length === 1) {
+      finalQuestionIds = groupQuestionSets[0]
+    } else {
+      finalQuestionIds = new Set()
+      const firstGroup = groupQuestionSets[0]
+
+      for (const questionId of firstGroup) {
+        const existsInAllGroups = groupQuestionSets.every((group) =>
+          group.has(questionId),
+        )
+        if (existsInAllGroups) {
+          finalQuestionIds.add(questionId)
+        }
+      }
+    }
+
+    // 該当する設問の点数を合計
+    let totalScore = 0
+    console.log(
+      `Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`,
+    )
+
+    for (const questionId of finalQuestionIds) {
+      const scoreData = studentScores.find((s) => s.cropRegionId === questionId)
+      if (scoreData) {
+        const cropRegion = cropRegions.find((r) => r.id === questionId)
+        const maxScore = cropRegion?.points || 10
+        const actualScore = calculateActualScore(scoreData, maxScore)
+        console.log(`Question ${questionId}: score ${actualScore}`)
+        totalScore += actualScore || 0
+      }
+    }
+
+    console.log(`Total subtotal score for student ${studentId}: ${totalScore}`)
+    return totalScore
   } catch (error) {
     console.error(
-      `Error checking if question ${questionId} is in subtotal ${subtotalRegionId}:`,
+      `Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`,
       error,
     )
-    return false
+    return 0
   }
 }
 
 /**
- * 小計点を計算する関数（GROUP内OR、GROUP間AND）
+ * 生徒の全設問合計点を計算する（フォールバック用）
+ */
+function calculateStudentTotalScore(
+  studentId: string,
+  allQuestionScores: QuestionScoreData[],
+  cropRegions: CropRegion[],
+): number {
+  const studentScores = allQuestionScores.filter(
+    (score) => score.studentId === studentId,
+  )
+
+  let totalScore = 0
+  for (const scoreData of studentScores) {
+    const cropRegion = cropRegions.find((r) => r.id === scoreData.cropRegionId)
+    if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
+      const maxScore = cropRegion.points || 10
+      const actualScore = calculateActualScore(scoreData, maxScore)
+      totalScore += actualScore || 0
+    }
+  }
+
+  return totalScore
+}
+
+/**
+ * 小計点を計算する関数（互換性のため維持、新しい実装を推奨）
+ * @deprecated Use calculateSubtotalScoreForStudent instead
  */
 export async function calculateSubtotalScore(
   subtotalRegionId: string,
   studentScores: SubtotalScoreDetail[],
 ): Promise<SubtotalResult> {
-  try {
-    // 小計点領域に関連付けられた定義を取得
-    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
+  console.warn(
+    "calculateSubtotalScore is deprecated, use calculateSubtotalScoreForStudent instead",
+  )
 
-    if (!cropSubtotals || cropSubtotals.length === 0) {
-      // フォールバック: 小計定義がない場合は全設問の合計を返す
-      const totalScore = studentScores.reduce((sum, score) => sum + (score.score || 0), 0)
-      const totalMaxScore = studentScores.reduce((sum, score) => sum + score.maxScore, 0)
-      return { score: totalScore, maxScore: totalMaxScore }
-    }
-
-    // TODO: 新しいスキーマでの小計計算ロジックを実装
-    // 現在は簡略化されたフォールバック動作
-    console.warn(`calculateSubtotalScore using fallback logic for region: ${subtotalRegionId}`)
-    
-    const totalScore = studentScores.reduce((sum, score) => sum + (score.score || 0), 0)
-    const totalMaxScore = studentScores.reduce((sum, score) => sum + score.maxScore, 0)
-    return { score: totalScore, maxScore: totalMaxScore }
-  } catch (error) {
-    console.error(
-      `Error calculating subtotal score for region ${subtotalRegionId}:`,
-      error,
-    )
-    return { score: 0, maxScore: 0 }
-  }
+  // フォールバック: 全設問の合計を返す
+  const totalScore = studentScores.reduce(
+    (sum, score) => sum + (score.score || 0),
+    0,
+  )
+  const totalMaxScore = studentScores.reduce(
+    (sum, score) => sum + score.maxScore,
+    0,
+  )
+  return { score: totalScore, maxScore: totalMaxScore }
 }
 
 /**
  * 小計点の対象設問インデックスを事前に構築する関数
- * パフォーマンス向上のため、複数の小計点について一括で処理
+ * @deprecated This function is deprecated as it depends on old schema logic
  */
 export async function buildSubtotalTargetMap(
-  subtotalRegions: any[],
-  questionRegions: any[],
+  subtotalRegions: CropRegion[],
+  questionRegions: CropRegion[],
 ): Promise<SubtotalTargetMap> {
-  const subtotalTargetMap: SubtotalTargetMap = {}
-
-  for (const subtotalRegion of subtotalRegions) {
-    const targetIndices: number[] = []
-
-    for (let i = 0; i < questionRegions.length; i++) {
-      const questionRegion = questionRegions[i]
-      const isTarget = await checkIfQuestionIsInSubtotal(
-        questionRegion.id,
-        subtotalRegion.id,
-      )
-      if (isTarget) {
-        targetIndices.push(i)
-      }
-    }
-
-    subtotalTargetMap[subtotalRegion.id] = targetIndices
-    console.log(
-      `Subtotal ${subtotalRegion.id} targets questions at indices: ${targetIndices.join(", ")}`,
-    )
-  }
-
-  return subtotalTargetMap
+  console.warn('buildSubtotalTargetMap is deprecated, use calculateSubtotalScoreForStudent instead')
+  return {}
 }
 
 /**
  * 小計点の対象設問インデックスを取得する関数
+ * @deprecated This function is deprecated as it depends on old schema logic
  */
 export async function getTargetQuestionIndicesForSubtotal(
   subtotalRegionId: string,
   scores: SubtotalScoreDetail[],
 ): Promise<number[]> {
-  const targetIndices: number[] = []
-
-  for (let i = 0; i < scores.length; i++) {
-    const score = scores[i]
-    const isTarget = await checkIfQuestionIsInSubtotal(
-      score.questionId,
-      subtotalRegionId,
-    )
-    if (isTarget) {
-      targetIndices.push(i)
-    }
-  }
-
-  return targetIndices
+  console.warn('getTargetQuestionIndicesForSubtotal is deprecated, use calculateSubtotalScoreForStudent instead')
+  return []
 }
