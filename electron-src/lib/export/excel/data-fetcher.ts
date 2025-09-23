@@ -64,6 +64,28 @@ export async function fetchExportData(
     // 選択された生徒のフィルタリングとソート
     const selectedStudents = (studentsResult.students || [])
       .filter((student) => selectedStudentIds.includes(student.id))
+      .map((student) => {
+        // 最新の学級情報を取得（memberships配列の最初の要素）
+        const studentWithMemberships = student as typeof student & {
+          memberships?: Array<{
+            attendanceNumber?: number | null
+            class: {
+              id: string
+              name: string
+              grade?: number | null
+            }
+          }>
+        }
+        const latestMembership = studentWithMemberships.memberships?.[0]
+        const classInfo = latestMembership?.class
+        
+        return {
+          ...student,
+          grade: classInfo?.grade?.toString(),
+          className: classInfo?.name,
+          attendanceNumber: latestMembership?.attendanceNumber,
+        }
+      })
       .sort((a, b) => {
         const aOrder =
           (a as Student & { customOrder?: number }).customOrder ?? 999999
@@ -136,6 +158,7 @@ async function buildScoringData(
     grade?: string
     className?: string
     attendanceNumber?: number | null
+    status?: "participating" | "expected" | "absent"
   })[],
   questionRegions: CropRegion[],
   subtotalRegions: CropRegion[],
@@ -173,6 +196,7 @@ async function buildScoringData(
         grade: student.grade,
         className: student.className,
         attendanceNumber: student.attendanceNumber,
+        status: student.status,
         scores,
         totalScore,
         totalMaxScore,

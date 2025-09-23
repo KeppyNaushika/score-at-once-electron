@@ -17,6 +17,14 @@ import {
  * @param subtotalTargetMap - 小計対象設問マップ
  * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
  */
+/**
+ * 順位付きの採点データ型
+ */
+type ScoringDataWithRank = ScoringData & {
+  originalIndex: number
+  rank: number
+}
+
 export async function createDataRows(
   worksheet: ExcelJS.Worksheet,
   scoringData: ScoringData[],
@@ -24,12 +32,31 @@ export async function createDataRows(
   subtotalTargetMap: SubtotalTargetMap,
   isScoreSheet: boolean,
 ) {
-  for (let i = 0; i < scoringData.length; i++) {
-    const student = scoringData[i]
+  // 事前に順位を計算（総合点の降順でソート）
+  const scoringDataWithRank: ScoringDataWithRank[] = scoringData
+    .map((student, index): ScoringDataWithRank => ({
+      ...student,
+      originalIndex: index,
+      rank: 0, // 仮の値、後で正しい順位に更新
+    }))
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .map((student, rank): ScoringDataWithRank => ({
+      ...student,
+      rank: rank + 1,
+    }))
+    // 元の順序に戻す
+    .sort((a, b) => a.originalIndex - b.originalIndex)
+
+  for (let i = 0; i < scoringDataWithRank.length; i++) {
+    const student = scoringDataWithRank[i]
     const rowIndex = i + 2 // ヘッダー行を考慮
 
+    // 受験状態を最左列（A列）に設定
+    const statusText = getStatusText(student.status)
+    
     const row = worksheet.addRow([
-      `=RANK(G${rowIndex},G:G,0)`, // 順位計算
+      statusText, // 受験状態（A列）
+      student.rank, // 順位（B列）- 事前に計算済みの順位を使用
       student.grade || "",
       student.className || "",
       student.attendanceNumber || "",
@@ -38,12 +65,12 @@ export async function createDataRows(
     ])
 
     // 合計点の計算（Excel関数使用）
-    const questionStartColIndex = 8 + subtotalRegions.length
+    const questionStartColIndex = 9 + subtotalRegions.length // 1つ右にシフト
     const questionEndColIndex =
       questionStartColIndex + student.scores.length - 1
     const questionStartCol = getExcelColumnLetter(questionStartColIndex)
     const questionEndCol = getExcelColumnLetter(questionEndColIndex)
-    const totalCell = row.getCell("G")
+    const totalCell = row.getCell("H") // G列からH列に変更
     totalCell.value = {
       formula: `SUM(${questionStartCol}${rowIndex}:${questionEndCol}${rowIndex})`,
     }
@@ -88,8 +115,8 @@ async function setSubtotalCells(
   rowIndex: number,
   isScoreSheet: boolean,
 ) {
-  let subtotalColIndex = 8
-  const questionStartColIndex = 8 + subtotalRegions.length
+  let subtotalColIndex = 9 // 1つ右にシフト
+  const questionStartColIndex = 9 + subtotalRegions.length // 1つ右にシフト
 
   for (let i = 0; i < subtotalRegions.length; i++) {
     const col = getExcelColumnLetter(subtotalColIndex)
@@ -144,7 +171,7 @@ function setQuestionCells(
   subtotalCount: number,
   isScoreSheet: boolean,
 ) {
-  let scoreColIndex = 8 + subtotalCount
+  let scoreColIndex = 9 + subtotalCount // 1つ右にシフト
 
   for (const score of student.scores) {
     const col = getExcelColumnLetter(scoreColIndex)
@@ -166,5 +193,24 @@ function setQuestionCells(
       }
     }
     scoreColIndex++
+  }
+}
+
+/**
+ * 受験状態を日本語に変換する
+ *
+ * @param status - 受験状態
+ * @returns 日本語の受験状態
+ */
+function getStatusText(status?: "participating" | "expected" | "absent"): string {
+  switch (status) {
+    case "participating":
+      return "受験"
+    case "expected":
+      return "見込"
+    case "absent":
+      return "欠席"
+    default:
+      return "受験"
   }
 }
