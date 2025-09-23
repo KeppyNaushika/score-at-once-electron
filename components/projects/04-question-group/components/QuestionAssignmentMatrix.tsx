@@ -2,7 +2,6 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Table,
@@ -336,59 +335,53 @@ export function QuestionAssignmentMatrix({
       </div>
 
       {/* マトリックステーブル */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">関連付けマトリックス</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div
-            className="relative h-96 w-full overflow-x-auto overflow-y-auto"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
-            }}
-          >
+      <div className="border rounded-lg">
+        <div className="border-b bg-gray-50 px-4 py-3">
+          <h3 className="text-base font-medium">関連付けマトリックス</h3>
+        </div>
+        <div
+          className="relative h-96 w-full overflow-x-auto overflow-y-auto"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
+          }}
+        >
             <Table
               ref={tableRef}
-              className="table-fixed"
-              style={{
-                minWidth: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`,
-                width: `${192 + subtotalGroups.reduce((sum, group) => sum + group.subtotals.length, 0) * 120}px`,
-              }}
+              className="w-auto"
+              style={{ width: 'fit-content' }}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             >
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
-                    <div className="truncate">設問</div>
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white text-center px-2 py-1" style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}>
+                    設問
                   </TableHead>
                   {subtotalGroups.map((group) => (
                     <TableHead
                       key={group.id}
                       className="border-l-2 border-blue-200 bg-blue-50/50 text-center"
                       colSpan={group.subtotals.length}
-                      style={{ width: `${group.subtotals.length * 120}px` }}
                     >
-                      <div className="text-sm font-semibold text-blue-700 truncate">
+                      <div className="text-sm font-semibold text-blue-700">
                         {group.name}
                       </div>
                     </TableHead>
                   ))}
                 </TableRow>
                 <TableRow>
-                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
+                  <TableHead className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white" style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}>
                     {/* 空のセル */}
                   </TableHead>
                   {subtotalGroups.map((group) =>
                     group.subtotals.map((subtotal) => (
                       <TableHead
                         key={subtotal.id}
-                        className="bg-gray-50/50 text-center"
-                        style={{ width: "120px", minWidth: "120px" }}
+                        className="bg-gray-50/50 text-center px-2"
                       >
-                        <div className="text-muted-foreground text-xs truncate">
+                        <div className="text-muted-foreground text-xs">
                           {subtotal.name}
                         </div>
                       </TableHead>
@@ -399,13 +392,13 @@ export function QuestionAssignmentMatrix({
               <TableBody>
                 {cropRegions.map((region) => (
                   <TableRow key={region.id}>
-                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white min-w-48 max-w-48 w-48">
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        <div className="font-medium truncate flex-1">
+                    <TableCell className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white px-2 py-1" style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}>
+                      <div className="flex items-center gap-1 overflow-hidden">
+                        <div className="font-medium flex-1 text-sm">
                           {region.label || `問${region.orderIndex || 1}`}
                         </div>
                         <Badge variant="outline" className="text-xs flex-shrink-0">
-                          {region.points || 0}点
+                          {region.points || 0}
                         </Badge>
                       </div>
                     </TableCell>
@@ -413,8 +406,7 @@ export function QuestionAssignmentMatrix({
                       group.subtotals.map((subtotal) => (
                         <TableCell
                           key={subtotal.id}
-                          className="text-center"
-                          style={{ width: "120px", minWidth: "120px" }}
+                          className="text-center px-2"
                           data-checkbox-cell
                           data-question-id={region.id}
                           data-item-id={subtotal.id}
@@ -445,9 +437,8 @@ export function QuestionAssignmentMatrix({
                 ))}
               </TableBody>
             </Table>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* 説明 */}
       <div className="text-muted-foreground bg-muted/50 rounded-lg p-4 text-sm">

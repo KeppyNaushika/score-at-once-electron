@@ -112,7 +112,7 @@ export function SubtotalGroupSelector({
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Calculator className="h-5 w-5 text-blue-600" />
-            共有小計点グループ
+            小計点グループ
           </CardTitle>
           <Button onClick={() => setShowSelector(true)} variant="outline">
             <Plus className="mr-2 h-4 w-4" />
