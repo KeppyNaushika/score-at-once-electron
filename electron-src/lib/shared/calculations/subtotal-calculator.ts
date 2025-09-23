@@ -223,7 +223,8 @@ export async function buildSubtotalTargetMap(
   subtotalRegions: CropRegion[],
   questionRegions: CropRegion[],
 ): Promise<SubtotalTargetMap> {
-  console.warn('buildSubtotalTargetMap is deprecated, use calculateSubtotalScoreForStudent instead')
+  // 正誤一覧シートの互換性のため維持（点数一覧では使用されない）
+  console.warn('buildSubtotalTargetMap is deprecated and returns empty map - subtotal scores are now calculated directly')
   return {}
 }
 

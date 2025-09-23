@@ -72,11 +72,13 @@ export async function createDataRows(
  * 小計点セルを設定する
  *
  * @param row - 対象の行
- * @param student - 生徒の採点データ
+ * @param student - 生徒の採点データ（計算済み小計点を含む）
  * @param subtotalRegions - 小計領域配列
- * @param subtotalTargetMap - 小計対象設問マップ
+ * @param subtotalTargetMap - 小計対象設問マップ（正誤一覧シートでのみ使用、非推奨）
  * @param rowIndex - 行インデックス（1ベース）
  * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
+ * 
+ * 注意: 点数一覧では計算済みの小計点を直接使用、正誤一覧では従来のExcel関数を使用
  */
 async function setSubtotalCells(
   row: ExcelJS.Row,
@@ -94,30 +96,32 @@ async function setSubtotalCells(
     const subtotalScore = student.subtotalScores[i]
 
     if (subtotalScore) {
-      const targetQuestionIndices =
-        subtotalTargetMap[subtotalScore.subtotalRegionId] || []
+      if (isScoreSheet) {
+        // 点数一覧：計算済みの小計点を直接使用
+        console.log(`📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for region ${subtotalScore.subtotalRegionId}`)
+        row.getCell(col).value = subtotalScore.score || 0
+      } else {
+        // 正誤一覧：従来のロジックを使用（Excel関数が必要）
+        const targetQuestionIndices =
+          subtotalTargetMap[subtotalScore.subtotalRegionId] || []
 
-      if (targetQuestionIndices.length > 0) {
-        const targetCells = targetQuestionIndices.map((index) => {
-          const questionCol = getExcelColumnLetter(
-            questionStartColIndex + index,
-          )
-          return `${questionCol}${rowIndex}`
-        })
+        if (targetQuestionIndices.length > 0) {
+          const targetCells = targetQuestionIndices.map((index) => {
+            const questionCol = getExcelColumnLetter(
+              questionStartColIndex + index,
+            )
+            return `${questionCol}${rowIndex}`
+          })
 
-        if (isScoreSheet) {
-          // 点数一覧：対象設問の合計
-          const formula = targetCells.join("+")
-          row.getCell(col).value = { formula }
-        } else {
           // 正誤一覧：対象設問の正答数
           const formula = targetCells
             .map((cell) => `IF(${cell}="○",1,0)`)
             .join("+")
           row.getCell(col).value = { formula }
+        } else {
+          // 正誤一覧で対象設問が不明な場合は0
+          row.getCell(col).value = 0
         }
-      } else {
-        row.getCell(col).value = 0
       }
     } else {
       row.getCell(col).value = 0
