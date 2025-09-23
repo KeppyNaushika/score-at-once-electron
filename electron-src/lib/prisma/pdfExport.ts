@@ -7,6 +7,7 @@ import { PageSizes, PDFDocument, rgb } from "pdf-lib"
 import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
 import { getCropRegionsByProjectId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
+import { getProjectById } from "./project"
 import { getStudentsForProject } from "./projectStudent"
 import {
   calculateActualScore,
@@ -25,6 +26,15 @@ try {
     "Sharp module not available, some image processing features may be limited:",
     error instanceof Error ? error.message : error,
   )
+}
+
+/**
+ * ファイル名として安全でない文字を置換する
+ * @param name - 元の名前
+ * @returns サニタイズされた名前
+ */
+function sanitizeFileName(name: string): string {
+  return name.replace(/[\\/:*?"<>|]/g, '_').trim()
 }
 
 // 採点状態の型定義（フロントエンドと統一）
@@ -659,11 +669,19 @@ export async function exportScoredAnswersPDF(
       })
     }
 
+    // プロジェクト情報を取得
+    const project = await getProjectById(projectId)
+    const projectName = project?.examName
+    
     // 保存場所を最初に選択
     let outputPath = options.outputPath
     if (!outputPath) {
       reportProgress(0, 100, "保存場所を選択してください...", 0)
-      const defaultFileName = `採点済み答案_${new Date().toISOString().split("T")[0]}.pdf`
+      const dateStr = new Date().toISOString().split("T")[0]
+      const safeProjectName = projectName ? sanitizeFileName(projectName) : null
+      const defaultFileName = safeProjectName 
+        ? `採点済み答案_${safeProjectName}_${dateStr}.pdf`
+        : `採点済み答案_${dateStr}.pdf`
       const result = await dialog.showSaveDialog({
         title: "採点済み答案PDFの保存",
         defaultPath: defaultFileName,

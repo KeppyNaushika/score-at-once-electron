@@ -68,7 +68,8 @@ export async function exportGradingDataExcel(
     )
 
     // ファイル保存
-    const saveResult = await saveWorkbook(workbook, options.outputPath)
+    const projectName = dataResult.project?.examName
+    const saveResult = await saveWorkbook(workbook, options.outputPath, projectName)
     if (!saveResult.success) {
       return { success: false, error: saveResult.error }
     }
