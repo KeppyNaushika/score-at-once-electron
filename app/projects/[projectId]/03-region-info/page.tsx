@@ -318,8 +318,8 @@ export default function RegionInfoPage() {
         </div>
 
         {/* Right: Region Details Table */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-4">
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-shrink-0 p-4 pb-0">
             <div className="mb-4">
               <h3 className="text-lg font-medium">
                 領域情報テーブル（全ページ統一順序）
@@ -332,7 +332,12 @@ export default function RegionInfoPage() {
                   </span>
                 )}
               </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                各行をクリックして選択し、種類・ラベル・配点などを設定してください。ドラッグ&ドロップで順序を変更できます。
+              </p>
             </div>
+          </div>
+          <div className="flex-1 overflow-hidden">
             <RegionDetailsTable
               regions={cropRegions}
               setRegions={handleRegionsChange}
