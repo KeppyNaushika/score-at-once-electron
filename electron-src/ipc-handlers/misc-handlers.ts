@@ -1,5 +1,14 @@
-import { ipcMain } from "electron"
+import type { PageImage } from "@prisma/client"
 import { Prisma } from "@prisma/client"
+import { ipcMain } from "electron"
+import * as fs from "fs/promises"
+import { getAbsolutePathFromData } from "../lib/dataManager"
+import {
+  createUser,
+  getUserByToken,
+  loginUser,
+  updateUserPassword,
+} from "../lib/prisma/auth"
 import {
   createClass,
   deleteClass,
@@ -8,31 +17,23 @@ import {
 } from "../lib/prisma/class"
 import {
   deleteMasterAnswer,
-  uploadMasterAnswers,
-  updateMasterAnswersOrder,
   getMasterAnswersByProjectId,
+  updateMasterAnswersOrder,
+  uploadMasterAnswers,
 } from "../lib/prisma/masterAnswer"
 import {
-  uploadStudentAnswers,
-  getStudentAnswersByProjectId,
-  deleteStudentAnswer,
   associateStudentAnswerWithStudent,
-  setStudentAnswerAbsent,
+  batchUpdateStudentAnswerPlacements,
+  deleteStudentAnswer,
   getStudentAnswerById,
-  updateStudentAnswerPlacement,
+  getStudentAnswersByProjectId,
+  setStudentAnswerAbsent,
   swapStudentAnswerPlacements,
   swapStudentAnswerPlacementsWithScoring,
-  batchUpdateStudentAnswerPlacements,
+  updateStudentAnswerPlacement,
+  uploadStudentAnswers,
 } from "../lib/prisma/studentAnswer"
 import { fetchUsers, getCurrentUser } from "../lib/prisma/user"
-import {
-  loginUser,
-  createUser,
-  getUserByToken,
-  updateUserPassword,
-} from "../lib/prisma/auth"
-import { getAbsolutePathFromData } from "../lib/dataManager"
-import * as fs from "fs/promises"
 
 export function setupMiscHandlers(): void {
   // User handlers
@@ -76,19 +77,24 @@ export function setupMiscHandlers(): void {
         name: string
         passcode?: string
         passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
-        password?: string  // Legacy support
+        password?: string // Legacy support
         role?: string
       },
     ) => {
       try {
-        if (userData.passcode !== undefined || userData.passcodeType !== undefined) {
+        if (
+          userData.passcode !== undefined ||
+          userData.passcodeType !== undefined
+        ) {
           // New passcode-based user creation
-          const { createUser: createUserWithPasscode } = await import("../lib/prisma/user")
+          const { createUser: createUserWithPasscode } = await import(
+            "../lib/prisma/user"
+          )
           return await createUserWithPasscode({
             username: userData.username,
             name: userData.name,
             passcode: userData.passcode,
-            passcodeType: userData.passcodeType
+            passcodeType: userData.passcodeType,
           })
         } else if (userData.password) {
           // Legacy password-based user creation
@@ -96,7 +102,7 @@ export function setupMiscHandlers(): void {
             username: userData.username,
             password: userData.password,
             name: userData.name,
-            role: userData.role
+            role: userData.role,
           })
         } else {
           throw new Error("Either passcode or password must be provided")
@@ -129,19 +135,26 @@ export function setupMiscHandlers(): void {
     },
   )
 
-  ipcMain.handle("verify-passcode", async (_event, userId: string, passcode: string) => {
-    try {
-      const { verifyPasscode } = await import("../lib/prisma/user")
-      return await verifyPasscode(userId, passcode)
-    } catch (err) {
-      console.error("Error verifying passcode:", err)
-      throw err
-    }
-  })
+  ipcMain.handle(
+    "verify-passcode",
+    async (_event, userId: string, passcode: string) => {
+      try {
+        const { verifyPasscode } = await import("../lib/prisma/user")
+        return await verifyPasscode(userId, passcode)
+      } catch (err) {
+        console.error("Error verifying passcode:", err)
+        throw err
+      }
+    },
+  )
 
   ipcMain.handle(
     "update-user",
-    async (_event, userId: string, userData: { username?: string; name?: string }) => {
+    async (
+      _event,
+      userId: string,
+      userData: { username?: string; name?: string },
+    ) => {
       try {
         const { updateUser } = await import("../lib/prisma/user")
         return await updateUser(userId, userData)
@@ -154,10 +167,19 @@ export function setupMiscHandlers(): void {
 
   ipcMain.handle(
     "update-user-passcode",
-    async (_event, userId: string, passcode?: string, passcodeType?: string) => {
+    async (
+      _event,
+      userId: string,
+      passcode?: string,
+      passcodeType?: string,
+    ) => {
       try {
         const { updateUserPasscode } = await import("../lib/prisma/user")
-        return await updateUserPasscode(userId, passcode, passcodeType as "none" | "4digit" | "6digit" | "alphanumeric")
+        return await updateUserPasscode(
+          userId,
+          passcode,
+          passcodeType as "none" | "4digit" | "6digit" | "alphanumeric",
+        )
       } catch (err) {
         console.error("Error updating user passcode:", err)
         throw err
@@ -352,12 +374,16 @@ export function setupMiscHandlers(): void {
         finalStudentId: string | null
         finalPageNumber: number
       }>,
-      withScoring: boolean = false
+      withScoring: boolean = false,
     ) => {
       try {
-        const result = await batchUpdateStudentAnswerPlacements(moves, withScoring)
+        const result = await batchUpdateStudentAnswerPlacements(
+          moves,
+          withScoring,
+        )
         if (!result.success) {
-          const errorMessage = "error" in result ? result.error : "Unknown error"
+          const errorMessage =
+            "error" in result ? result.error : "Unknown error"
           throw new Error(errorMessage)
         }
         return result
@@ -461,7 +487,7 @@ export function setupMiscHandlers(): void {
         // パスを適切にエンコード
         const encodedPath = encodeURI(relativePath)
         const result = `appimg://${encodedPath}`
-        
+
         return result
       } catch (err) {
         console.error("Error in IPC resolve-file-protocol-path:", err)
@@ -527,7 +553,7 @@ export function setupMiscHandlers(): void {
     async (_event, projectId: string) => {
       try {
         const masterAnswers = await getMasterAnswersByProjectId(projectId)
-        return masterAnswers.map((answer: any) => ({
+        return masterAnswers.map((answer: PageImage & { createdAt: Date; updatedAt: Date }) => ({
           ...answer,
           createdAt: answer.createdAt.toISOString(),
           updatedAt: answer.updatedAt.toISOString(),
@@ -664,14 +690,14 @@ export function setupMiscHandlers(): void {
     try {
       const { app } = require("electron")
       const path = require("path")
-      
+
       // パッケージ化されたアプリかどうかで分岐
-      const publicDir = app.isPackaged 
+      const publicDir = app.isPackaged
         ? path.join(app.getAppPath(), "public")
         : path.join(process.cwd(), "public")
-      
+
       const fullPath = path.join(publicDir, assetPath)
-      
+
       // file:// プロトコルを使用してパスを返す
       return { success: true, path: `file://${fullPath}` }
     } catch (err) {

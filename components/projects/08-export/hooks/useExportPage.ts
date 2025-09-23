@@ -8,6 +8,7 @@ import {
   ScoringMarkConfig,
   defaultScoringMarkConfig,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
+import type { Student as PrismaStudent } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -106,7 +107,10 @@ export function useExportPage() {
       if (studentsResponse && studentsResponse.success) {
         // 受験生徒順（customOrder）でソート
         const sortedStudents = (studentsResponse.students || []).sort(
-          (a: any, b: any) => {
+          (
+            a: PrismaStudent & { customOrder?: number | null },
+            b: PrismaStudent & { customOrder?: number | null },
+          ) => {
             // customOrderが設定されている場合はそれを優先
             if (
               a.customOrder !== null &&
@@ -120,8 +124,8 @@ export function useExportPage() {
             if (b.customOrder !== null && b.customOrder !== undefined) return 1
 
             // customOrderが未設定の場合は出席番号順をフォールバック
-            const aAttendanceNumber = a.memberships?.[0]?.attendanceNumber
-            const bAttendanceNumber = b.memberships?.[0]?.attendanceNumber
+            const aAttendanceNumber = (a as any).memberships?.[0]?.attendanceNumber
+            const bAttendanceNumber = (b as any).memberships?.[0]?.attendanceNumber
 
             if (aAttendanceNumber && bAttendanceNumber) {
               return aAttendanceNumber - bAttendanceNumber
@@ -139,8 +143,11 @@ export function useExportPage() {
         setStudents(sortedStudents)
         // デフォルトで参加中の学生を選択
         const participatingStudents = sortedStudents
-          .filter((s: any) => s.status === "participating")
-          .map((s: any) => s.id)
+          .filter(
+            (s: PrismaStudent & { status?: string }) =>
+              s.status === "participating",
+          )
+          .map((s: PrismaStudent) => s.id)
         setSelectedStudents(new Set(participatingStudents))
       }
     } catch (error) {
