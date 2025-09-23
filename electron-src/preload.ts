@@ -233,6 +233,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-crop-region", id),
   getCropRegionsByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-crop-regions-by-project-id", projectId),
+  getQuestionAnswerRegionsByProjectId: (projectId: string) =>
+    ipcRenderer.invoke("get-question-answer-regions-by-project-id", projectId),
   getCropRegionById: (id: string) =>
     ipcRenderer.invoke("get-crop-region-by-id", id),
   updateCropRegionOrders: (

@@ -5,6 +5,7 @@ import {
   updateCropRegion as dbUpdateCropRegion,
   deleteCropRegion as dbDeleteCropRegion,
   getCropRegionsByProjectId as dbGetCropRegionsByProjectId,
+  getQuestionAnswerRegionsByProjectId as dbGetQuestionAnswerRegionsByProjectId,
   getCropRegionById as dbGetCropRegionById,
   createManyCropRegions as dbCreateManyCropRegions,
   updateCropRegionOrders as dbUpdateCropRegionOrders,
@@ -128,6 +129,30 @@ export function setupCropRegionHandlers(): void {
         return JSON.parse(JSON.stringify(result))
       } catch (error) {
         console.error("❌ IPC: get-crop-regions-by-project-id error:", error)
+        throw error
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-question-answer-regions-by-project-id",
+    async (_event, projectId: string) => {
+      try {
+        console.log(
+          "🔄 IPC: get-question-answer-regions-by-project-id called with projectId:",
+          projectId,
+        )
+        const result = await dbGetQuestionAnswerRegionsByProjectId(projectId)
+        console.log(
+          "✅ IPC: get-question-answer-regions-by-project-id result:",
+          result?.length,
+          "regions",
+        )
+
+        // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
+        return JSON.parse(JSON.stringify(result))
+      } catch (error) {
+        console.error("❌ IPC: get-question-answer-regions-by-project-id error:", error)
         throw error
       }
     },
