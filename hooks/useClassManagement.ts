@@ -1,5 +1,6 @@
 "use client"
 
+import type { StudentClassMembership } from "@prisma/client"
 import { useEffect, useState } from "react"
 
 interface StudentWithMemberships {
@@ -62,12 +63,20 @@ export function useClassManagement(classId: string) {
     null,
   )
 
-  const transformClassData = (rawClassData: ClassWithMemberships & { memberships: any[] }): ClassWithMemberships => ({
+  const transformClassData = (
+    rawClassData: ClassWithMemberships & {
+      memberships: (StudentClassMembership & {
+        student: StudentWithMemberships
+      })[]
+    },
+  ): ClassWithMemberships => ({
     ...rawClassData,
     memberships:
       rawClassData.memberships?.map((membership) => ({
         ...membership,
-        startDate: new Date(membership.startDate || (membership as any).createdAt),
+        startDate: new Date(
+          membership.startDate || (membership as any).createdAt,
+        ),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
       })) || [],
   })

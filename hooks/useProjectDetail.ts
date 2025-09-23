@@ -1,16 +1,17 @@
 "use client"
 
+import type {
+  CropRegion,
+  PageImage,
+  Project,
+  ProjectPage,
+  ProjectStudent,
+  ProjectSubtotalGroup,
+} from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-interface ProjectData {
-  id: string
-  examName: string
-  description: string | null
-  examDate: Date | null
-  subject: string | null
-  createdAt: Date
-  updatedAt: Date
+interface ProjectData extends Project {
   userProjects?: Array<{
     user: {
       id: string
@@ -19,9 +20,12 @@ interface ProjectData {
       username: string
     }
   }>
-  projectPages?: any[]
-  projectSubtotalGroups?: any[]
-  projectStudents?: any[]
+  projectPages?: (ProjectPage & {
+    pageImages?: PageImage[]
+    cropRegions?: CropRegion[]
+  })[]
+  projectSubtotalGroups?: ProjectSubtotalGroup[]
+  projectStudents?: ProjectStudent[]
 }
 
 export function useProjectDetail(projectId: string) {
@@ -39,18 +43,22 @@ export function useProjectDetail(projectId: string) {
 
       if (result) {
         setProject(result)
-        
+
         // 生徒数を取得
-        const studentsResult = await window.electronAPI.getStudentsForProject(projectId)
+        const studentsResult =
+          await window.electronAPI.getStudentsForProject(projectId)
         if (studentsResult.success) {
           setStudentCount(studentsResult.students?.length || 0)
         }
 
         // 設問領域数を取得
-        const regionsResult = await window.electronAPI.getCropRegionsByProjectId(projectId)
+        const regionsResult =
+          await window.electronAPI.getCropRegionsByProjectId(projectId)
         if (Array.isArray(regionsResult)) {
           const questionRegions = regionsResult.filter(
-            region => region.type === "QUESTION_ANSWER" && (region.orderIndex || region.label)
+            (region) =>
+              region.type === "QUESTION_ANSWER" &&
+              (region.orderIndex || region.label),
           )
           setQuestionRegionCount(questionRegions.length)
         }
@@ -68,39 +76,63 @@ export function useProjectDetail(projectId: string) {
     return true
   }, [projectId])
 
-  const updateProject = useCallback(async (projectData: any) => {
-    if (!project) return false
+  const updateProject = useCallback(
+    async (
+      projectData: Partial<
+        Pick<Project, "examName" | "description" | "examDate" | "subject">
+      >,
+    ) => {
+      if (!project) return false
 
-    try {
-      const updatedProject = await window.electronAPI.updateProject(
-        project.id,
-        {
-          examName: projectData.examName,
-          description: projectData.description,
-          examDate: projectData.examDate,
-          subject: projectData.subject,
-        },
-      )
-      setProject(updatedProject)
-      toast.success("プロジェクトを更新しました")
-      return true
-    } catch (error) {
-      console.error("Failed to update project:", error)
-      toast.error("プロジェクトの更新に失敗しました")
-      return false
-    }
-  }, [project])
+      try {
+        const updatedProject = await window.electronAPI.updateProject(
+          project.id,
+          {
+            examName: projectData.examName,
+            description: projectData.description,
+            examDate: projectData.examDate,
+            subject: projectData.subject,
+          },
+        )
+        setProject(updatedProject)
+        toast.success("プロジェクトを更新しました")
+        return true
+      } catch (error) {
+        console.error("Failed to update project:", error)
+        toast.error("プロジェクトの更新に失敗しました")
+        return false
+      }
+    },
+    [project],
+  )
 
   useEffect(() => {
     loadProject()
   }, [loadProject])
 
-  const modelAnswerCount = project?.projectPages?.reduce((count, page) => 
-    count + (page.pageImages?.filter((img: any) => img.imageType === "MODEL_ANSWER")?.length || 0), 0) || 0
-  const answerSheetCount = project?.projectPages?.reduce((count, page) => 
-    count + (page.pageImages?.filter((img: any) => img.imageType === "STUDENT_ANSWER")?.length || 0), 0) || 0
-  const cropRegionCount = project?.projectPages?.reduce((count, page) => 
-    count + (page.cropRegions?.length || 0), 0) || 0
+  const modelAnswerCount =
+    project?.projectPages?.reduce(
+      (count, page) =>
+        count +
+        (page.pageImages?.filter(
+          (img: PageImage) => img.imageType === "MODEL_ANSWER",
+        )?.length || 0),
+      0,
+    ) || 0
+  const answerSheetCount =
+    project?.projectPages?.reduce(
+      (count, page) =>
+        count +
+        (page.pageImages?.filter(
+          (img: PageImage) => img.imageType === "STUDENT_ANSWER",
+        )?.length || 0),
+      0,
+    ) || 0
+  const cropRegionCount =
+    project?.projectPages?.reduce(
+      (count, page) => count + (page.cropRegions?.length || 0),
+      0,
+    ) || 0
 
   return {
     project,

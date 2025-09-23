@@ -3,6 +3,7 @@ import {
   Membership,
   StudentWithMemberships,
 } from "@/app/students/[studentId]/types"
+import type { Student, StudentClassMembership } from "@prisma/client"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -23,11 +24,26 @@ export function useStudentDetail(studentId: string) {
           // Transform the student data to match the expected interface
           const transformedStudent = {
             ...targetStudent,
-            memberships: targetStudent.memberships.map((membership: any) => ({
-              ...membership,
-              startDate: new Date(membership.startDate || membership.createdAt),
-              endDate: membership.endDate ? new Date(membership.endDate) : null,
-            })),
+            memberships: targetStudent.memberships.map(
+              (
+                membership: StudentClassMembership & {
+                  class: {
+                    id: string
+                    name: string
+                    grade?: number | null
+                    classCode?: string | null
+                  }
+                },
+              ) => ({
+                ...membership,
+                startDate: new Date(
+                  membership.startDate || membership.createdAt,
+                ),
+                endDate: membership.endDate
+                  ? new Date(membership.endDate)
+                  : null,
+              }),
+            ),
           }
           setStudent(transformedStudent)
         }
@@ -44,7 +60,7 @@ export function useStudentDetail(studentId: string) {
     fetchData()
   }, [studentId])
 
-  const handleEditStudent = async (studentData: any) => {
+  const handleEditStudent = async (studentData: Partial<Student>) => {
     try {
       const updatedStudent = await window.electronAPI.updateStudent(
         studentId,
@@ -54,11 +70,22 @@ export function useStudentDetail(studentId: string) {
       const transformedStudent = {
         ...updatedStudent,
         memberships:
-          updatedStudent.memberships?.map((membership: any) => ({
-            ...membership,
-            startDate: new Date(membership.startDate || membership.createdAt),
-            endDate: membership.endDate ? new Date(membership.endDate) : null,
-          })) || [],
+          updatedStudent.memberships?.map(
+            (
+              membership: StudentClassMembership & {
+                class: {
+                  id: string
+                  name: string
+                  grade?: number | null
+                  classCode?: string | null
+                }
+              },
+            ) => ({
+              ...membership,
+              startDate: new Date(membership.startDate || membership.createdAt),
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
+            }),
+          ) || [],
       }
       setStudent(transformedStudent)
       return true
@@ -89,7 +116,7 @@ export function useStudentDetail(studentId: string) {
   }
 
   const handleSaveMembership = async (
-    membershipData: any,
+    membershipData: Partial<StudentClassMembership> & { classId: string },
     membershipToEdit?: Membership | null,
   ) => {
     try {
@@ -113,11 +140,26 @@ export function useStudentDetail(studentId: string) {
         const transformedStudent = {
           ...updatedStudent,
           memberships:
-            updatedStudent.memberships?.map((membership: any) => ({
-              ...membership,
-              startDate: new Date(membership.startDate || membership.createdAt),
-              endDate: membership.endDate ? new Date(membership.endDate) : null,
-            })) || [],
+            updatedStudent.memberships?.map(
+              (
+                membership: StudentClassMembership & {
+                  class: {
+                    id: string
+                    name: string
+                    grade?: number | null
+                    classCode?: string | null
+                  }
+                },
+              ) => ({
+                ...membership,
+                startDate: new Date(
+                  membership.startDate || membership.createdAt,
+                ),
+                endDate: membership.endDate
+                  ? new Date(membership.endDate)
+                  : null,
+              }),
+            ) || [],
         }
         setStudent(transformedStudent)
       }
@@ -142,15 +184,26 @@ export function useStudentDetail(studentId: string) {
           const transformedStudent = {
             ...updatedStudent,
             memberships:
-              updatedStudent.memberships?.map((membership: any) => ({
-                ...membership,
-                startDate: new Date(
-                  membership.startDate || membership.createdAt,
-                ),
-                endDate: membership.endDate
-                  ? new Date(membership.endDate)
-                  : null,
-              })) || [],
+              updatedStudent.memberships?.map(
+                (
+                  membership: StudentClassMembership & {
+                    class: {
+                      id: string
+                      name: string
+                      grade?: number | null
+                      classCode?: string | null
+                    }
+                  },
+                ) => ({
+                  ...membership,
+                  startDate: new Date(
+                    membership.startDate || membership.createdAt,
+                  ),
+                  endDate: membership.endDate
+                    ? new Date(membership.endDate)
+                    : null,
+                }),
+              ) || [],
           }
           setStudent(transformedStudent)
         }

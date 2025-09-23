@@ -4,18 +4,18 @@
  * レポート分析に基づき複雑なstate管理を簡素化
  */
 
-import type {
-  UnifiedStudent,
-  UnifiedFile,
-  UploadData,
-  ExistingStudentAnswer,
-  TableData,
-  TableCell,
-  DisabledState,
-  PlacementStrategy,
-} from "@/types/student-answer.types"
 import type { StudentAnswerWithDetails } from "@/types/electron"
-import { sortStudentsForTable, calculatePosition } from "./studentOrderUtils"
+import type {
+  DisabledState,
+  ExistingStudentAnswer,
+  PlacementStrategy,
+  TableCell,
+  TableData,
+  UnifiedFile,
+  UnifiedStudent,
+  UploadData,
+} from "@/types/student-answer.types"
+import { calculatePosition, sortStudentsForTable } from "./studentOrderUtils"
 
 // ============================================================================
 // 既存データからUnified形式への変換
@@ -34,7 +34,7 @@ export function convertToUnifiedStudent(studentData: {
   studentId: string
   attendanceNumber?: number | null
   status?: string
-  customOrder?: number
+  customOrder?: number | null
 }): UnifiedStudent {
   return {
     id: studentData.id,

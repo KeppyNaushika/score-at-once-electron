@@ -42,7 +42,8 @@ const File = () => {
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
     const hasStudents =
       project.projectStudents && project.projectStudents.length > 0
-    const hasAnswers = project.studentAnswers && project.studentAnswers.length > 0
+    const hasAnswers =
+      project.studentAnswers && project.studentAnswers.length > 0
 
     if (!hasImages)
       return {
@@ -83,21 +84,20 @@ const File = () => {
     // 採点が完了しているかチェック
     // QUESTION_ANSWER領域数 × 答案数 = 全採点すべき数
     const questionAnswerCount =
-      project.cropRegions?.filter(
-        (region) => region.type === "QUESTION_ANSWER",
-      ).length || 0
+      project.cropRegions?.filter((region) => region.type === "QUESTION_ANSWER")
+        .length || 0
 
     const answerSheetCount = project.studentAnswers?.length || 0
     const expectedScoringCount = questionAnswerCount * answerSheetCount
 
     // ungraded以外のquestionScoresの個数を取得
-    const actualScoringCount =
-      project.studentAnswers?.reduce((total, sheet) => {
-        const gradedScores =
-          sheet.questionScores?.filter((score: any) => score.status !== "unscored")
-            .length || 0
-        return total + gradedScores
-      }, 0) || 0
+    const actualScoringCount = 0
+    // project.studentAnswers?.reduce((total, sheet) => {
+    //   const gradedScores =
+    //     sheet.questionScores?.filter((score: any) => score.status !== "unscored")
+    //       .length || 0
+    //   return total + gradedScores
+    // }, 0) || 0
 
     const hasScoring =
       expectedScoringCount > 0 && actualScoringCount >= expectedScoringCount

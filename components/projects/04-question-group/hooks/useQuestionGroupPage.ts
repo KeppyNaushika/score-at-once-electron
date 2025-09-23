@@ -1,6 +1,7 @@
 "use client"
 
 import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
+import type { CropSubtotal, Subtotal, SubtotalGroup } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
 interface SubtotalData {
@@ -38,28 +39,39 @@ export function useQuestionGroupPage(projectId: string) {
       setLoading(true)
       setError(null)
 
-      const [projectResponse, subtotalGroupsResponse, activeSubtotalGroupsResponse, cropRegionsResponse] =
-        await Promise.all([
-          window.electronAPI.fetchProjectById(projectId),
-          window.electronAPI.getSubtotalGroupsByProjectId(projectId),
-          window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
-          window.electronAPI.getCropRegionsByProjectId(projectId),
-        ])
+      const [
+        projectResponse,
+        subtotalGroupsResponse,
+        activeSubtotalGroupsResponse,
+        cropRegionsResponse,
+      ] = await Promise.all([
+        window.electronAPI.fetchProjectById(projectId),
+        window.electronAPI.getSubtotalGroupsByProjectId(projectId),
+        window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
+        window.electronAPI.getCropRegionsByProjectId(projectId),
+      ])
 
       console.log("📊 subtotalGroupsResponse:", subtotalGroupsResponse)
 
       // 各グループの詳細を確認
       if (subtotalGroupsResponse && subtotalGroupsResponse.length > 0) {
-        subtotalGroupsResponse.forEach((group: any, groupIndex: number) => {
-          console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
-          if (group.subtotals && group.subtotals.length > 0) {
-            group.subtotals.forEach((subtotal: any, subtotalIndex: number) => {
-              console.log(
-                `  📝 Subtotal ${subtotalIndex + 1}: ${subtotal.name} (order: ${subtotal.order})`,
+        subtotalGroupsResponse.forEach(
+          (
+            group: SubtotalGroup & { subtotals: Subtotal[] },
+            groupIndex: number,
+          ) => {
+            console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
+            if (group.subtotals && group.subtotals.length > 0) {
+              group.subtotals.forEach(
+                (subtotal: Subtotal, subtotalIndex: number) => {
+                  console.log(
+                    `  📝 Subtotal ${subtotalIndex + 1}: ${subtotal.name} (order: ${subtotal.order})`,
+                  )
+                },
               )
-            })
-          }
-        })
+            }
+          },
+        )
       }
 
       if (projectResponse) {
@@ -73,10 +85,14 @@ export function useQuestionGroupPage(projectId: string) {
         }
       }
 
-      if (activeSubtotalGroupsResponse && activeSubtotalGroupsResponse.success) {
-        const activeGroups = activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
-          (psg: any) => psg.subtotalGroup
-        ) || []
+      if (
+        activeSubtotalGroupsResponse &&
+        activeSubtotalGroupsResponse.success
+      ) {
+        const activeGroups =
+          activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
+            (psg: any) => psg.subtotalGroup,
+          ) || []
         setActiveSubtotalGroups(activeGroups)
       }
 
@@ -126,15 +142,27 @@ export function useQuestionGroupPage(projectId: string) {
             if (assignmentsResult && Array.isArray(assignmentsResult)) {
               const questionLabels = assignmentsResult
                 .map(
-                  (cropSubtotal: any) =>
+                  (
+                    cropSubtotal: CropSubtotal & {
+                      cropRegion?: {
+                        label?: string
+                        orderIndex?: number | null
+                        points?: number | null
+                      }
+                    },
+                  ) =>
                     cropSubtotal.cropRegion?.label ||
                     `問${cropSubtotal.cropRegion?.orderIndex || 1}`,
                 )
                 .filter(Boolean)
 
               const totalPoints = assignmentsResult.reduce(
-                (sum: number, cropSubtotal: any) =>
-                  sum + (cropSubtotal.cropRegion?.points || 0),
+                (
+                  sum: number,
+                  cropSubtotal: CropSubtotal & {
+                    cropRegion?: { points?: number | null }
+                  },
+                ) => sum + (cropSubtotal.cropRegion?.points || 0),
                 0,
               )
 
@@ -337,9 +365,7 @@ export function useQuestionGroupPage(projectId: string) {
             assignmentType: "QUESTION_ASSIGNMENT" as const,
           }))
 
-          await window.electronAPI.createManyCropSubtotals(
-            assignments,
-          )
+          await window.electronAPI.createManyCropSubtotals(assignments)
         }
 
         await calculateSubtotalData()

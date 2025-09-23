@@ -1,3 +1,4 @@
+import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 import { buildSubtotalTargetMap } from "../../shared/calculations/subtotal-calculator"
 import { ScoringData } from "../../shared/types/export-types"
@@ -17,8 +18,8 @@ import { createDataRows } from "./row-creators"
  */
 export async function createScoreSheet(
   workbook: ExcelJS.Workbook,
-  questionRegions: any[],
-  subtotalRegions: any[],
+  questionRegions: CropRegion[],
+  subtotalRegions: CropRegion[],
   scoringData: ScoringData[],
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("点数一覧")
@@ -59,8 +60,8 @@ export async function createScoreSheet(
  */
 export async function createResultSheet(
   workbook: ExcelJS.Workbook,
-  questionRegions: any[],
-  subtotalRegions: any[],
+  questionRegions: CropRegion[],
+  subtotalRegions: CropRegion[],
   scoringData: ScoringData[],
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("正誤一覧")

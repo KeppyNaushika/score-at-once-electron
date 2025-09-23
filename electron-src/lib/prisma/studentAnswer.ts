@@ -1,3 +1,4 @@
+import type { QuestionScore } from "@prisma/client"
 import * as fs from "fs/promises"
 import * as path from "path"
 import {
@@ -56,16 +57,16 @@ export async function uploadStudentAnswers(
       let projectPage = await prisma.projectPage.findFirst({
         where: {
           projectId: projectId,
-          pageNumber: fileData.pageNumber || 1
-        }
+          pageNumber: fileData.pageNumber || 1,
+        },
       })
 
       if (!projectPage) {
         projectPage = await prisma.projectPage.create({
           data: {
             projectId: projectId,
-            pageNumber: fileData.pageNumber || 1
-          }
+            pageNumber: fileData.pageNumber || 1,
+          },
         })
       }
 
@@ -105,12 +106,12 @@ export async function uploadStudentAnswers(
 export async function getStudentAnswersByProjectId(projectId: string) {
   try {
     const answerSheets = await prisma.pageImage.findMany({
-      where: { 
+      where: {
         imageType: "STUDENT_ANSWER",
         projectPage: {
-          projectId: projectId
+          projectId: projectId,
         },
-        studentId: { not: null } // Only include images with assigned students
+        studentId: { not: null }, // Only include images with assigned students
       },
       include: {
         student: {
@@ -123,8 +124,8 @@ export async function getStudentAnswersByProjectId(projectId: string) {
         },
         projectPage: {
           include: {
-            project: true
-          }
+            project: true,
+          },
         },
       },
       orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
@@ -132,12 +133,12 @@ export async function getStudentAnswersByProjectId(projectId: string) {
 
     // Transform PageImage data to legacy format for backward compatibility
     const processedAnswerSheets = answerSheets
-      .filter(sheet => sheet.student) // Ensure student exists
+      .filter((sheet) => sheet.student) // Ensure student exists
       .map((sheet) => {
         // Get ProjectStudent status to determine if absent
         const projectStudent = sheet.student?.projectStudents?.[0]
         const isAbsent = projectStudent?.status === "ABSENT"
-        
+
         return {
           id: sheet.id,
           studentId: sheet.studentId,
@@ -146,15 +147,17 @@ export async function getStudentAnswersByProjectId(projectId: string) {
           imagePath: sheet.imagePath, // Keep imagePath for UI compatibility
           originalImagePath: sheet.imagePath, // Map imagePath to originalImagePath for backward compatibility
           isAbsent: isAbsent, // Properly determined from ProjectStudent.status
-          student: sheet.student ? {
-            id: sheet.student.id,
-            lastName: sheet.student.lastName,
-            firstName: sheet.student.firstName,
-            lastNameKana: sheet.student.lastNameKana,
-            firstNameKana: sheet.student.firstNameKana,
-            studentId: sheet.student.studentId,
-            projectStudents: sheet.student.projectStudents, // Include projectStudents for customOrder access
-          } : null,
+          student: sheet.student
+            ? {
+                id: sheet.student.id,
+                lastName: sheet.student.lastName,
+                firstName: sheet.student.firstName,
+                lastNameKana: sheet.student.lastNameKana,
+                firstNameKana: sheet.student.firstNameKana,
+                studentId: sheet.student.studentId,
+                projectStudents: sheet.student.projectStudents, // Include projectStudents for customOrder access
+              }
+            : null,
           projectId: sheet.projectPage.project.id,
           status: "ready" as const,
         }
@@ -221,8 +224,8 @@ export async function associateStudentAnswerWithStudent(
         student: true,
         projectPage: {
           include: {
-            project: true
-          }
+            project: true,
+          },
         },
       },
     })
@@ -248,7 +251,7 @@ export async function setStudentAnswerAbsent(
   try {
     const answerSheet = await prisma.pageImage.update({
       where: { id: answerSheetId },
-      data: { 
+      data: {
         // TODO: Handle absent status in the new schema
         // isAbsent functionality needs to be implemented differently
       },
@@ -256,8 +259,8 @@ export async function setStudentAnswerAbsent(
         student: true,
         projectPage: {
           include: {
-            project: true
-          }
+            project: true,
+          },
         },
       },
     })
@@ -287,10 +290,10 @@ export async function getStudentAnswerById(answerSheetId: string) {
                 projectPages: {
                   include: {
                     cropRegions: true,
-                  }
-                }
-              }
-            }
+                  },
+                },
+              },
+            },
           },
         },
         // TODO: questionScores would need to be fetched separately in new schema
@@ -322,12 +325,12 @@ export async function updateStudentAnswerPlacement(
     // まず現在の答案情報を取得してprojectIdを確認
     const currentAnswerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
-      select: { 
-        projectPage: { 
-          select: { 
-            projectId: true 
-          } 
-        } 
+      select: {
+        projectPage: {
+          select: {
+            projectId: true,
+          },
+        },
       },
     })
 
@@ -352,8 +355,8 @@ export async function updateStudentAnswerPlacement(
         },
         projectPage: {
           include: {
-            project: true
-          }
+            project: true,
+          },
         },
         // TODO: questionScores would need to be fetched separately in new schema
       },
@@ -382,26 +385,26 @@ export async function swapStudentAnswerPlacements(
       const [answerSheet1, answerSheet2] = await Promise.all([
         tx.pageImage.findUnique({
           where: { id: answerSheetId1 },
-          select: { 
-            studentId: true, 
-            projectPage: { 
-              select: { 
-                pageNumber: true, 
-                projectId: true 
-              } 
-            } 
+          select: {
+            studentId: true,
+            projectPage: {
+              select: {
+                pageNumber: true,
+                projectId: true,
+              },
+            },
           },
         }),
         tx.pageImage.findUnique({
           where: { id: answerSheetId2 },
-          select: { 
-            studentId: true, 
-            projectPage: { 
-              select: { 
-                pageNumber: true, 
-                projectId: true 
-              } 
-            } 
+          select: {
+            studentId: true,
+            projectPage: {
+              select: {
+                pageNumber: true,
+                projectId: true,
+              },
+            },
           },
         }),
       ])
@@ -452,8 +455,8 @@ export async function swapStudentAnswerPlacements(
             },
             projectPage: {
               include: {
-                project: true
-              }
+                project: true,
+              },
             },
             // TODO: questionScores would need to be fetched separately in new schema
           },
@@ -471,8 +474,8 @@ export async function swapStudentAnswerPlacements(
             },
             projectPage: {
               include: {
-                project: true
-              }
+                project: true,
+              },
             },
             // TODO: questionScores would need to be fetched separately in new schema
           },
@@ -503,94 +506,105 @@ export async function batchUpdateStudentAnswerPlacements(
     finalStudentId: string | null
     finalPageNumber: number
   }>,
-  withScoring: boolean = false
+  withScoring: boolean = false,
 ) {
   console.log("🔄 [Electron] Starting batch placement update:", {
     movesCount: moves.length,
     withScoring,
-    moves: moves.map(m => ({ fileId: m.fileId.substring(0, 8) + "...", to: `${m.finalStudentId?.substring(0, 8) || 'null'}...p${m.finalPageNumber}` }))
+    moves: moves.map((m) => ({
+      fileId: m.fileId.substring(0, 8) + "...",
+      to: `${m.finalStudentId?.substring(0, 8) || "null"}...p${m.finalPageNumber}`,
+    })),
   })
 
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 移動対象の答案情報と採点データを取得
       const answerSheets = await Promise.all(
-        moves.map(move => 
+        moves.map((move) =>
           tx.pageImage.findUnique({
             where: { id: move.fileId },
-            select: { 
+            select: {
               id: true,
               studentId: true,
               projectPage: {
                 select: {
                   projectId: true,
-                  pageNumber: true
-                }
-              }
+                  pageNumber: true,
+                },
+              },
             },
-          })
-        )
+          }),
+        ),
       )
 
-      console.log("📄 [Electron] Found answer sheets:", answerSheets.filter(Boolean).length)
+      console.log(
+        "📄 [Electron] Found answer sheets:",
+        answerSheets.filter(Boolean).length,
+      )
 
       // 見つからない答案をチェック
       const missingSheets = moves.filter((_, index) => !answerSheets[index])
       if (missingSheets.length > 0) {
-        throw new Error(`答案が見つかりません: ${missingSheets.map(m => m.fileId).join(', ')}`)
+        throw new Error(
+          `答案が見つかりません: ${missingSheets.map((m) => m.fileId).join(", ")}`,
+        )
       }
 
-      let allQuestionScores: any[] = []
+      let allQuestionScores: QuestionScore[] = []
 
       if (withScoring) {
         // 全ての採点データを取得
         // TODO: QuestionScore querying needs to be updated for new schema
         // In new schema, scores are linked to students and crop regions, not answer sheets directly
         allQuestionScores = [] // await tx.questionScore.findMany({
-        //   where: { 
-        //     studentId: { 
-        //       in: moves.map(m => m.finalStudentId).filter(Boolean) 
-        //     } 
+        //   where: {
+        //     studentId: {
+        //       in: moves.map(m => m.finalStudentId).filter(Boolean)
+        //     }
         //   },
         // })
 
-        console.log("📊 [Electron] Found question scores:", allQuestionScores.length)
+        console.log(
+          "📊 [Electron] Found question scores:",
+          allQuestionScores.length,
+        )
 
         // TODO: Delete scoring data needs to be updated for new schema
         // 一時的に採点データを削除（制約回避）
         // await tx.questionScore.deleteMany({
-        //   where: { 
-        //     studentId: { 
-        //       in: moves.map(m => m.finalStudentId).filter(Boolean) 
-        //     } 
+        //   where: {
+        //     studentId: {
+        //       in: moves.map(m => m.finalStudentId).filter(Boolean)
+        //     }
         //   },
         // })
       }
 
       // 一時的に全ての答案をnull位置に移動（制約回避）
       await Promise.all(
-        moves.map((_, index) => 
+        moves.map((_, index) =>
           tx.pageImage.update({
             where: { id: moves[index].fileId },
             data: {
               studentId: null,
               // TODO: Handle temporary pageNumber assignment in new schema
             },
-          })
-        )
+          }),
+        ),
       )
 
       // 各答案を最終位置に移動
       await Promise.all(
-        moves.map(move => 
+        moves.map((move) =>
           tx.pageImage.update({
             where: { id: move.fileId },
             data: {
               studentId: move.finalStudentId,
               // TODO: Handle pageNumber assignment in new schema - might need to move to different ProjectPage
             },
-          })
-        )
+          }),
+        ),
       )
 
       if (withScoring && allQuestionScores.length > 0) {
@@ -616,7 +630,8 @@ export async function batchUpdateStudentAnswerPlacements(
     console.error("❌ [Electron] Error in batch placement update:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "一括配置変更に失敗しました",
+      error:
+        error instanceof Error ? error.message : "一括配置変更に失敗しました",
     }
   }
 }
@@ -626,7 +641,12 @@ export async function swapStudentAnswerPlacementsWithScoring(
   answerSheetId1: string,
   answerSheetId2: string,
 ) {
-  console.log("🔄 [Electron] Starting swap with scoring:", answerSheetId1, "↔", answerSheetId2)
+  console.log(
+    "🔄 [Electron] Starting swap with scoring:",
+    answerSheetId1,
+    "↔",
+    answerSheetId2,
+  )
   console.log("🔄 [Electron] Transaction starting...")
   try {
     // トランザクション内で答案交換を実行
@@ -635,33 +655,43 @@ export async function swapStudentAnswerPlacementsWithScoring(
       const [answerSheet1, answerSheet2] = await Promise.all([
         tx.pageImage.findUnique({
           where: { id: answerSheetId1 },
-          select: { 
-            studentId: true, 
-            projectPage: { 
-              select: { 
-                pageNumber: true, 
-                projectId: true 
-              } 
-            } 
+          select: {
+            studentId: true,
+            projectPage: {
+              select: {
+                pageNumber: true,
+                projectId: true,
+              },
+            },
           },
         }),
         tx.pageImage.findUnique({
           where: { id: answerSheetId2 },
-          select: { 
-            studentId: true, 
-            projectPage: { 
-              select: { 
-                pageNumber: true, 
-                projectId: true 
-              } 
-            } 
+          select: {
+            studentId: true,
+            projectPage: {
+              select: {
+                pageNumber: true,
+                projectId: true,
+              },
+            },
           },
         }),
       ])
 
       console.log("📄 [Electron] Found answer sheets:", {
-        answerSheet1: answerSheet1 ? { studentId: answerSheet1.studentId, pageNumber: answerSheet1.projectPage.pageNumber } : null,
-        answerSheet2: answerSheet2 ? { studentId: answerSheet2.studentId, pageNumber: answerSheet2.projectPage.pageNumber } : null
+        answerSheet1: answerSheet1
+          ? {
+              studentId: answerSheet1.studentId,
+              pageNumber: answerSheet1.projectPage.pageNumber,
+            }
+          : null,
+        answerSheet2: answerSheet2
+          ? {
+              studentId: answerSheet2.studentId,
+              pageNumber: answerSheet2.projectPage.pageNumber,
+            }
+          : null,
       })
 
       if (!answerSheet1 || !answerSheet2) {
@@ -681,7 +711,7 @@ export async function swapStudentAnswerPlacementsWithScoring(
 
       console.log("📊 [Electron] Found question scores:", {
         questionScores1Count: questionScores1.length,
-        questionScores2Count: questionScores2.length
+        questionScores2Count: questionScores2.length,
       })
 
       // TODO: Score deletion needs to be updated for new schema
@@ -763,8 +793,8 @@ export async function swapStudentAnswerPlacementsWithScoring(
             },
             projectPage: {
               include: {
-                project: true
-              }
+                project: true,
+              },
             },
             // TODO: questionScores would need to be fetched separately in new schema
           },
@@ -782,8 +812,8 @@ export async function swapStudentAnswerPlacementsWithScoring(
             },
             projectPage: {
               include: {
-                project: true
-              }
+                project: true,
+              },
             },
             // TODO: questionScores would need to be fetched separately in new schema
           },
@@ -792,8 +822,16 @@ export async function swapStudentAnswerPlacementsWithScoring(
 
       console.log("✅ [Electron] Transaction completed successfully")
       console.log("📝 [Electron] Final answer sheet positions:", {
-        answerSheet1: { id: answerSheetId1, studentId: updatedAnswerSheet1?.studentId, pageNumber: updatedAnswerSheet1?.projectPage?.pageNumber },
-        answerSheet2: { id: answerSheetId2, studentId: updatedAnswerSheet2?.studentId, pageNumber: updatedAnswerSheet2?.projectPage?.pageNumber }
+        answerSheet1: {
+          id: answerSheetId1,
+          studentId: updatedAnswerSheet1?.studentId,
+          pageNumber: updatedAnswerSheet1?.projectPage?.pageNumber,
+        },
+        answerSheet2: {
+          id: answerSheetId2,
+          studentId: updatedAnswerSheet2?.studentId,
+          pageNumber: updatedAnswerSheet2?.projectPage?.pageNumber,
+        },
       })
       return { updatedAnswerSheet1, updatedAnswerSheet2 }
     })
@@ -804,7 +842,10 @@ export async function swapStudentAnswerPlacementsWithScoring(
       answerSheets: [result.updatedAnswerSheet1, result.updatedAnswerSheet2],
     }
   } catch (error) {
-    console.error("❌ [Electron] Error swapping answer sheet placements with scoring:", error)
+    console.error(
+      "❌ [Electron] Error swapping answer sheet placements with scoring:",
+      error,
+    )
     return {
       success: false,
       error:

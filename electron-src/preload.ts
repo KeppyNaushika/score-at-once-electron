@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client"
+import type { DrawingAnnotation } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
 import { CreateProjectArgs } from "../types/electron"
 import {
@@ -494,19 +495,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Drawing Annotation related
   drawing: {
-    create: (data: any) => ipcRenderer.invoke("drawing:create", data),
+    create: (data: Partial<DrawingAnnotation>) => ipcRenderer.invoke("drawing:create", data),
     getByQuestionScore: (questionScoreId: string, type?: string) => 
       ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
     getByStudent: (studentId: string, projectId: string, type?: string) =>
       ipcRenderer.invoke("drawing:getByStudent", studentId, projectId, type),
     getByProject: (projectId: string, type?: string) =>
       ipcRenderer.invoke("drawing:getByProject", projectId, type),
-    update: (id: string, data: any) => ipcRenderer.invoke("drawing:update", id, data),
+    update: (id: string, data: Partial<DrawingAnnotation>) => ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
     deleteByQuestionScore: (questionScoreId: string, type?: string) => 
       ipcRenderer.invoke("drawing:deleteByQuestionScore", questionScoreId, type),
-    batchCreate: (annotations: any[]) => ipcRenderer.invoke("drawing:batchCreate", annotations),
-    batchUpdate: (updates: any[]) => ipcRenderer.invoke("drawing:batchUpdate", updates),
+    batchCreate: (annotations: Partial<DrawingAnnotation>[]) => ipcRenderer.invoke("drawing:batchCreate", annotations),
+    batchUpdate: (updates: Array<{id: string; data: Partial<DrawingAnnotation>}>) => ipcRenderer.invoke("drawing:batchUpdate", updates),
     getStats: (questionScoreId: string) => ipcRenderer.invoke("drawing:getStats", questionScoreId),
     getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
   },
