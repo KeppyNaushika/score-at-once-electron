@@ -25,7 +25,7 @@ export default function PDFWorkerTestContent() {
       console.log("Current worker src:", currentWorkerSrc)
 
       // 2. ローカルのWorkerファイルを設定
-      const localWorkerUrl = "/pdfjs/pdf.worker.min.js"
+      const localWorkerUrl = "/js/pdf.worker.min.mjs"
 
       // ファイルの存在確認
       const response = await fetch(localWorkerUrl)
@@ -622,7 +622,7 @@ export default function PDFWorkerTestContent() {
               <h3 className="font-medium">1. Worker初期化テスト</h3>
               <p className="text-sm text-gray-600">
                 ローカルのPDF.js
-                Workerファイル（/pdfjs/pdf.worker.min.js）の存在確認と初期化
+                Workerファイル（/js/pdf.worker.min.mjs）の存在確認と初期化
               </p>
             </div>
             <div>
