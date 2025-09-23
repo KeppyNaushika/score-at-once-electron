@@ -1,21 +1,20 @@
 import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
+import type { CropRegion, DrawingAnnotation, QuestionScore } from "@prisma/client"
 import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument, rgb } from "pdf-lib"
 import { getAbsolutePathFromData, getAppRootPath } from "../dataManager"
 import { getCropRegionsByProjectId } from "./cropRegion"
-import {
-  getCropSubtotalsByCropRegionId,
-  getCropSubtotalsBySubtotalId,
-} from "./cropSubtotal"
+import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getStudentsForProject } from "./projectStudent"
 import {
   calculateActualScore,
   getQuestionScoresForProject,
 } from "./questionScore"
+import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotal-calculator"
+import type { QuestionScoreData } from "../shared/calculations/subtotal-calculator"
 import { getStudentAnswersByProjectId } from "./studentAnswer"
-import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 const fontkit = require("fontkit")
 // Optional sharp import with fallback
 let sharp: any = null
@@ -128,12 +127,13 @@ async function renderDrawingAnnotations(
   questionScoreId: string,
   imageWidth: number,
   imageHeight: number,
-  pdfDoc: PDFDocument
+  pdfDoc: PDFDocument,
 ): Promise<void> {
   try {
     // 該当QuestionScoreの描画アノテーションを取得
-    const annotations = await getDrawingAnnotationsByQuestionScore(questionScoreId)
-    
+    const annotations =
+      await getDrawingAnnotationsByQuestionScore(questionScoreId)
+
     if (!annotations || annotations.length === 0) {
       return
     }
@@ -142,10 +142,16 @@ async function renderDrawingAnnotations(
 
     // 各アノテーションをレンダリング
     for (const annotation of annotations) {
-      await renderSingleAnnotation(page, annotation, imageWidth, imageHeight, pdfDoc)
+      await renderSingleAnnotation(
+        page,
+        annotation as DrawingAnnotation & { createdByUserId: string | null },
+        imageWidth,
+        imageHeight,
+        pdfDoc,
+      )
     }
   } catch (error) {
-    console.error('描画アノテーション レンダリングエラー:', error)
+    console.error("描画アノテーション レンダリングエラー:", error)
   }
 }
 
@@ -153,27 +159,33 @@ async function renderDrawingAnnotations(
  * 単一の描画アノテーションをPDFページにレンダリングする
  */
 async function renderSingleAnnotation(
-  page: any,
-  annotation: any, // DrawingAnnotation型
+  page: any, // pdf-lib PDFPage
+  annotation: DrawingAnnotation,
   imageWidth: number,
   imageHeight: number,
-  pdfDoc: PDFDocument
+  pdfDoc: PDFDocument,
 ): Promise<void> {
   switch (annotation.type) {
-    case 'line':
+    case "line":
       renderLineAnnotation(page, annotation, imageWidth, imageHeight)
       break
-    case 'rectangle':
+    case "rectangle":
       renderRectangleAnnotation(page, annotation, imageWidth, imageHeight)
       break
-    case 'ellipse':
+    case "ellipse":
       renderEllipseAnnotation(page, annotation, imageWidth, imageHeight)
       break
-    case 'text':
-      await renderTextAnnotation(page, annotation, imageWidth, imageHeight, pdfDoc)
+    case "text":
+      await renderTextAnnotation(
+        page,
+        annotation,
+        imageWidth,
+        imageHeight,
+        pdfDoc,
+      )
       break
     default:
-      console.warn('未対応の描画アノテーションタイプ:', annotation.type)
+      console.warn("未対応の描画アノテーションタイプ:", annotation.type)
   }
 }
 
@@ -181,10 +193,10 @@ async function renderSingleAnnotation(
  * 直線アノテーションのレンダリング
  */
 function renderLineAnnotation(
-  page: any,
-  annotation: any,
+  page: any, // pdf-lib PDFPage
+  annotation: DrawingAnnotation,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
 ): void {
   const startX = annotation.x * imageWidth
   const startY = (1 - annotation.y) * imageHeight
@@ -192,7 +204,7 @@ function renderLineAnnotation(
   const endY = (1 - annotation.endY) * imageHeight
 
   const color = parseColor(annotation.color)
-  
+
   // 基本直線を描画
   page.drawLine({
     start: { x: startX, y: startY },
@@ -203,13 +215,13 @@ function renderLineAnnotation(
 
   // 線スタイルに応じた追加描画
   switch (annotation.lineStyle) {
-    case 'double':
+    case "double":
       // 二重線
       const offset = annotation.strokeWidth + 2
       const angle = Math.atan2(endY - startY, endX - startX)
       const perpX = Math.cos(angle + Math.PI / 2) * offset
       const perpY = Math.sin(angle + Math.PI / 2) * offset
-      
+
       page.drawLine({
         start: { x: startX + perpX, y: startY + perpY },
         end: { x: endX + perpX, y: endY + perpY },
@@ -217,11 +229,20 @@ function renderLineAnnotation(
         color,
       })
       break
-      
-    case 'arrow':
-    case 'both_arrow':
+
+    case "arrow":
+    case "both_arrow":
       // 矢印頭部を描画
-      drawArrowHead(page, startX, startY, endX, endY, annotation.strokeWidth, color, annotation.lineStyle === 'both_arrow')
+      drawArrowHead(
+        page,
+        startX,
+        startY,
+        endX,
+        endY,
+        annotation.strokeWidth,
+        color,
+        annotation.lineStyle === "both_arrow",
+      )
       break
   }
 }
@@ -230,10 +251,10 @@ function renderLineAnnotation(
  * 長方形アノテーションのレンダリング
  */
 function renderRectangleAnnotation(
-  page: any,
-  annotation: any,
+  page: any, // pdf-lib PDFPage
+  annotation: DrawingAnnotation,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
 ): void {
   const x = annotation.displayX * imageWidth
   const y = (1 - annotation.displayY - annotation.height) * imageHeight // PDFは下からの座標系
@@ -241,7 +262,7 @@ function renderRectangleAnnotation(
   const height = annotation.height * imageHeight
 
   const color = parseColor(annotation.color)
-  
+
   page.drawRectangle({
     x,
     y,
@@ -256,18 +277,19 @@ function renderRectangleAnnotation(
  * 楕円アノテーションのレンダリング
  */
 function renderEllipseAnnotation(
-  page: any,
-  annotation: any,
+  page: any, // pdf-lib PDFPage
+  annotation: DrawingAnnotation,
   imageWidth: number,
-  imageHeight: number
+  imageHeight: number,
 ): void {
   const centerX = (annotation.displayX + annotation.width / 2) * imageWidth
-  const centerY = (1 - annotation.displayY - annotation.height / 2) * imageHeight
+  const centerY =
+    (1 - annotation.displayY - annotation.height / 2) * imageHeight
   const radiusX = (annotation.width / 2) * imageWidth
   const radiusY = (annotation.height / 2) * imageHeight
 
   const color = parseColor(annotation.color)
-  
+
   page.drawEllipse({
     x: centerX,
     y: centerY,
@@ -282,13 +304,13 @@ function renderEllipseAnnotation(
  * テキストアノテーションのレンダリング（MathJax対応）
  */
 async function renderTextAnnotation(
-  page: any,
-  annotation: any,
+  page: any, // pdf-lib PDFPage
+  annotation: DrawingAnnotation,
   imageWidth: number,
   imageHeight: number,
-  pdfDoc: PDFDocument
+  pdfDoc: PDFDocument,
 ): Promise<void> {
-  if (!annotation.text || annotation.text.trim() === '') {
+  if (!annotation.text || annotation.text.trim() === "") {
     return
   }
 
@@ -297,24 +319,28 @@ async function renderTextAnnotation(
   const color = parseColor(annotation.color)
 
   // 簡単なMathJax記法（$...$）のチェック
-  const isMathJax = annotation.text.includes('$')
-  
+  const isMathJax = annotation.text.includes("$")
+
   if (isMathJax) {
     // MathJax処理は複雑なため、プレーンテキストとして描画
     // TODO: 将来的にはSVG→PNG変換によるMathJax描画を実装
-    console.warn('MathJax テキストは現在プレーンテキストとして描画されます:', annotation.text)
+    console.warn(
+      "MathJax テキストは現在プレーンテキストとして描画されます:",
+      annotation.text,
+    )
   }
 
   // テキスト描画（フォールバック対応）
   try {
-    page.drawText(annotation.text.replace(/\$/g, ''), { // MathJax記号を削除
+    page.drawText(annotation.text.replace(/\$/g, ""), {
+      // MathJax記号を削除
       x,
       y,
       size: annotation.fontSize,
       color,
     })
   } catch (error) {
-    console.error('テキスト描画エラー:', error)
+    console.error("テキスト描画エラー:", error)
   }
 }
 
@@ -329,7 +355,7 @@ function drawArrowHead(
   endY: number,
   strokeWidth: number,
   color: any,
-  bothEnds: boolean = false
+  bothEnds: boolean = false,
 ): void {
   const angle = Math.atan2(endY - startY, endX - startX)
   const arrowLength = Math.max(10, strokeWidth * 3)
@@ -347,7 +373,7 @@ function drawArrowHead(
     thickness: strokeWidth,
     color,
   })
-  
+
   page.drawLine({
     start: { x: endX, y: endY },
     end: { x: arrowX2, y: arrowY2 },
@@ -358,10 +384,14 @@ function drawArrowHead(
   // 両端矢印の場合、始点にも矢印を描画
   if (bothEnds) {
     const reverseAngle = angle + Math.PI
-    const startArrowX1 = startX - arrowLength * Math.cos(reverseAngle - arrowAngle)
-    const startArrowY1 = startY - arrowLength * Math.sin(reverseAngle - arrowAngle)
-    const startArrowX2 = startX - arrowLength * Math.cos(reverseAngle + arrowAngle)
-    const startArrowY2 = startY - arrowLength * Math.sin(reverseAngle + arrowAngle)
+    const startArrowX1 =
+      startX - arrowLength * Math.cos(reverseAngle - arrowAngle)
+    const startArrowY1 =
+      startY - arrowLength * Math.sin(reverseAngle - arrowAngle)
+    const startArrowX2 =
+      startX - arrowLength * Math.cos(reverseAngle + arrowAngle)
+    const startArrowY2 =
+      startY - arrowLength * Math.sin(reverseAngle + arrowAngle)
 
     page.drawLine({
       start: { x: startX, y: startY },
@@ -369,7 +399,7 @@ function drawArrowHead(
       thickness: strokeWidth,
       color,
     })
-    
+
     page.drawLine({
       start: { x: startX, y: startY },
       end: { x: startArrowX2, y: startArrowY2 },
@@ -384,14 +414,14 @@ function drawArrowHead(
  */
 function parseColor(colorString: string): any {
   // #RRGGBB形式を想定
-  if (colorString.startsWith('#')) {
+  if (colorString.startsWith("#")) {
     const hex = colorString.slice(1)
     const r = parseInt(hex.slice(0, 2), 16) / 255
     const g = parseInt(hex.slice(2, 4), 16) / 255
     const b = parseInt(hex.slice(4, 6), 16) / 255
     return rgb(r, g, b)
   }
-  
+
   // デフォルトは赤色
   return rgb(1, 0, 0)
 }
@@ -545,7 +575,7 @@ function calculateTextPosition(
 // 特定の生徒のプロジェクト全体の合計点を計算する関数
 function calculateStudentTotalScore(
   studentId: string,
-  allQuestionScores: any,
+  allQuestionScores: { success: boolean; scores?: QuestionScore[] },
   cropRegions: CropRegionWithProjectPage[],
 ): number {
   try {
@@ -559,7 +589,7 @@ function calculateStudentTotalScore(
 
     // この生徒の全採点データを取得
     const studentScores = allQuestionScores.scores.filter(
-      (score: any) => score.studentId === studentId,
+      (score: QuestionScore) => score.studentId === studentId,
     )
 
     console.log(`Found ${studentScores.length} scores for student ${studentId}`)
@@ -571,7 +601,10 @@ function calculateStudentTotalScore(
       // 設問領域のみを対象とする（小計点・合計点領域は除外）
       if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
         const maxScore = cropRegion?.points || 10
-        const actualScore = calculateActualScore(scoreData, maxScore)
+        const actualScore = calculateActualScore({
+          status: scoreData.status,
+          partialScore: scoreData.partialScore ? Number(scoreData.partialScore) : null,
+        } as { status: string; partialScore?: number | null }, maxScore)
         console.log(`Question ${scoreData.cropRegionId}: score ${actualScore}`)
         totalScore += actualScore || 0
       }
@@ -590,145 +623,6 @@ function calculateStudentTotalScore(
   }
 }
 
-// 特定の生徒の特定の小計点領域の点数を計算する関数
-async function calculateStudentSubtotalScore(
-  studentId: string,
-  subtotalRegionId: string,
-  allQuestionScores: any,
-  cropRegions: CropRegionWithProjectPage[],
-): Promise<number> {
-  try {
-    console.log(
-      `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`,
-    )
-
-    if (!allQuestionScores.success || !allQuestionScores.scores) {
-      console.log(`No question scores available`)
-      return 0
-    }
-
-    // この生徒の全採点データを取得
-    const studentScores = allQuestionScores.scores.filter(
-      (score: any) => score.studentId === studentId,
-    )
-
-    // 小計点領域に関連付けられたグループ項目を取得
-    const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
-    console.log(`Found ${cropSubtotals?.length || 0} crop subtotals`)
-
-    // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
-    if (!cropSubtotals || cropSubtotals.length === 0) {
-      console.log(
-        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`,
-      )
-      return calculateStudentTotalScore(
-        studentId,
-        allQuestionScores,
-        cropRegions,
-      )
-    }
-
-    // グループ別に項目をまとめる
-    const groupMap = new Map<string, string[]>()
-
-    for (const cropSubtotal of cropSubtotals) {
-      if (!cropSubtotal || typeof cropSubtotal !== "object") continue
-
-      const groupId = (cropSubtotal as any).subtotal?.subtotalGroupId
-      if (!groupId) continue
-
-      if (!groupMap.has(groupId)) {
-        groupMap.set(groupId, [])
-      }
-      groupMap.get(groupId)!.push((cropSubtotal as any).subtotalId)
-    }
-
-    if (groupMap.size === 0) {
-      console.log(
-        `No valid groups found, calculating total of all questions for student`,
-      )
-      return calculateStudentTotalScore(
-        studentId,
-        allQuestionScores,
-        cropRegions,
-      )
-    }
-
-    // 各グループで該当する設問を取得（GROUP内OR）
-    const groupQuestionSets: Set<string>[] = []
-
-    for (const [_groupId, itemIds] of groupMap) {
-      const groupQuestionIds = new Set<string>()
-
-      // 各項目に関連付けられた設問を取得
-      for (const itemId of itemIds) {
-        try {
-          const cropSubtotals = await getCropSubtotalsBySubtotalId(itemId)
-          if (cropSubtotals && cropSubtotals.length > 0) {
-            cropSubtotals.forEach((cropSubtotal: any) => {
-              if (cropSubtotal.assignmentType === "QUESTION_ASSIGNMENT") {
-                groupQuestionIds.add(cropSubtotal.cropRegionId)
-              }
-            })
-          }
-        } catch (error) {
-          console.error(
-            `Error getting crop subtotals for item ${itemId}:`,
-            error,
-          )
-        }
-      }
-
-      groupQuestionSets.push(groupQuestionIds)
-    }
-
-    // GROUP間AND：全てのグループに共通する設問を取得
-    let finalQuestionIds: Set<string>
-    if (groupQuestionSets.length === 1) {
-      finalQuestionIds = groupQuestionSets[0]
-    } else {
-      finalQuestionIds = new Set()
-      const firstGroup = groupQuestionSets[0]
-
-      for (const questionId of firstGroup) {
-        const existsInAllGroups = groupQuestionSets.every((group) =>
-          group.has(questionId),
-        )
-        if (existsInAllGroups) {
-          finalQuestionIds.add(questionId)
-        }
-      }
-    }
-
-    // 該当する設問の点数を合計
-    let totalScore = 0
-    console.log(
-      `Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`,
-    )
-
-    for (const questionId of finalQuestionIds) {
-      const scoreData = studentScores.find(
-        (s: any) => s.cropRegionId === questionId,
-      )
-      if (scoreData) {
-        const cropRegion = cropRegions.find((r) => r.id === questionId)
-        const maxScore = cropRegion?.points || 10
-        const actualScore = calculateActualScore(scoreData, maxScore)
-        console.log(`Question ${questionId}: score ${actualScore}`)
-        totalScore += actualScore || 0
-      }
-    }
-
-    console.log(`Total subtotal score for student ${studentId}: ${totalScore}`)
-    return totalScore
-  } catch (error) {
-    console.error(
-      `Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`,
-      error,
-    )
-    return 0
-  }
-}
 
 export async function exportScoredAnswersPDF(
   options: ExportScoredAnswersOptions,
@@ -1085,7 +979,11 @@ async function addAnswerSheetToPDF(
     const relevantScores =
       questionScores.success && questionScores.scores
         ? questionScores.scores.filter(
-            (score: any) =>
+            (
+              score: QuestionScore & {
+                cropRegion?: { projectPage?: { id: string } }
+              },
+            ) =>
               score.studentId === answerSheet.studentId &&
               score.cropRegion?.projectPage?.id === answerSheet.projectPageId,
           )
@@ -1096,19 +994,29 @@ async function addAnswerSheetToPDF(
     )
 
     // 採点データを適切に処理
-    const processedScores = relevantScores.map((score: any) => {
-      const cropRegion = cropRegions.find(
-        (region) => region.id === score.cropRegionId,
-      )
-      const maxScore = cropRegion?.points || 10
-      const actualScore = calculateActualScore(score, maxScore)
+    const processedScores = relevantScores.map(
+      (
+        score: QuestionScore & {
+          cropRegion?: any
+          drawingAnnotations?: DrawingAnnotation[]
+        },
+      ) => {
+        const cropRegion = cropRegions.find(
+          (region) => region.id === score.cropRegionId,
+        )
+        const maxScore = cropRegion?.points || 10
+        const actualScore = calculateActualScore({
+          status: score.status,
+          partialScore: score.partialScore ? Number(score.partialScore) : null,
+        } as { status: string; partialScore?: number | null }, maxScore)
 
-      return {
-        ...score,
-        score: actualScore,
-        maxScore: maxScore,
-      }
-    })
+        return {
+          ...score,
+          score: actualScore,
+          maxScore: maxScore,
+        }
+      },
+    )
 
     // processedScores are ready for mark placement
 
@@ -1264,11 +1172,14 @@ async function addAnswerSheetToPDF(
               score.id,
               regionWidthOnImage,
               regionHeightOnImage,
-              pdfDoc
+              pdfDoc,
             )
             console.log(`✅ 描画アノテーションをレンダリング完了: ${score.id}`)
           } catch (annotationError) {
-            console.error('描画アノテーションレンダリングエラー:', annotationError)
+            console.error(
+              "描画アノテーションレンダリングエラー:",
+              annotationError,
+            )
           }
         }
       } catch (markError) {
@@ -1310,8 +1221,8 @@ async function addAnswerSheetToPDF(
         page.drawRectangle({
           x: scorePosition.x - textPadding,
           y: scorePosition.y - textPadding,
-          width: textWidth + (textPadding * 2),
-          height: textHeight + (textPadding * 2),
+          width: textWidth + textPadding * 2,
+          height: textHeight + textPadding * 2,
           color: rgb(1, 1, 1), // 白色背景
         })
 
@@ -1330,17 +1241,17 @@ async function addAnswerSheetToPDF(
         const commentX = markPosition.x
         const commentY = markPosition.y - 20
         const commentSize = Math.max(8, config.scoreSize - 4)
-        
+
         // コメントテキスト背景をクリア（重複描画防止）
         const commentWidth = font.widthOfTextAtSize(score.comment, commentSize)
         const commentHeight = commentSize
         const commentPadding = 1
-        
+
         page.drawRectangle({
           x: commentX - commentPadding,
           y: commentY - commentPadding,
-          width: commentWidth + (commentPadding * 2),
-          height: commentHeight + (commentPadding * 2),
+          width: commentWidth + commentPadding * 2,
+          height: commentHeight + commentPadding * 2,
           color: rgb(1, 1, 1), // 白色背景
         })
 
@@ -1384,11 +1295,23 @@ async function addAnswerSheetToPDF(
         }
 
         // プロジェクト全体スコープで小計点を計算
-        const subtotalScore = await calculateStudentSubtotalScore(
+        // データ形式を変換  
+        const questionScoreData: QuestionScoreData[] = questionScores.success && questionScores.scores
+          ? questionScores.scores
+              .filter((score: any) => score.studentId !== null)
+              .map((score: any) => ({
+                studentId: score.studentId!,
+                cropRegionId: score.cropRegionId,
+                status: score.status,
+                partialScore: score.partialScore ? Number(score.partialScore) : null,
+              }))
+          : []
+        
+        const subtotalScore = await calculateSubtotalScoreForStudent(
           studentId,
           subtotalRegion.id,
-          questionScores,
-          cropRegions,
+          questionScoreData,
+          cropRegions as CropRegion[],
         )
         console.log(
           `Calculated subtotal score for student ${studentId}, region ${subtotalRegion.id} (${subtotalRegion.label}): ${subtotalScore}`,
@@ -1453,8 +1376,8 @@ async function addAnswerSheetToPDF(
         page.drawRectangle({
           x: subtotalPosition.x - subtotalPadding,
           y: subtotalPosition.y - subtotalPadding,
-          width: textWidth + (subtotalPadding * 2),
-          height: textHeight + (subtotalPadding * 2),
+          width: textWidth + subtotalPadding * 2,
+          height: textHeight + subtotalPadding * 2,
           color: rgb(1, 1, 1), // 白色背景
         })
 
@@ -1579,8 +1502,8 @@ async function addAnswerSheetToPDF(
         page.drawRectangle({
           x: totalScorePosition.x - totalScorePadding,
           y: totalScorePosition.y - totalScorePadding,
-          width: textWidth + (totalScorePadding * 2),
-          height: textHeight + (totalScorePadding * 2),
+          width: textWidth + totalScorePadding * 2,
+          height: textHeight + totalScorePadding * 2,
           color: rgb(1, 1, 1), // 白色背景
         })
 
