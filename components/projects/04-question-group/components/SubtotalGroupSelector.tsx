@@ -12,7 +12,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Calculator, Plus, Search, Trash2 } from "lucide-react"
+import { Calculator, Plus, Search, Trash2, ExternalLink } from "lucide-react"
+import Link from "next/link"
 import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotal-group-types"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 
@@ -126,7 +127,7 @@ export function SubtotalGroupSelector({
             <Calculator className="mx-auto mb-4 h-12 w-12 opacity-50" />
             <p>有効化された小計点グループがありません</p>
             <p className="mt-2 text-sm">
-              「グループを追加」ボタンで既存のグループを有効化できます
+              「グループを追加」ボタンで既存のグループを有効化するか、新しいグループを作成できます
             </p>
           </div>
         ) : (
@@ -170,6 +171,20 @@ export function SubtotalGroupSelector({
             <DialogTitle>小計点グループを選択</DialogTitle>
           </DialogHeader>
 
+          {/* 新規小計点グループ作成ボタン */}
+          <div className="border border-green-200 bg-green-50 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium text-green-800">新しいグループを作成</span>
+              <Link href="/subtotal-groups" target="_blank">
+                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                  <Plus className="mr-1 h-4 w-4" />
+                  新規作成
+                  <ExternalLink className="ml-1 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
           <div className="space-y-4">
             {/* 検索 */}
             <div className="relative">
@@ -197,13 +212,7 @@ export function SubtotalGroupSelector({
                 </p>
                 {!searchTerm && (
                   <p className="mt-2 text-sm">
-                    <a
-                      href="/subtotal-groups"
-                      className="text-blue-600 hover:underline"
-                    >
-                      小計点管理ページ
-                    </a>
-                    で新しいグループを作成できます
+                    上部の「新規作成」ボタンから新しいグループを作成できます
                   </p>
                 )}
               </div>
