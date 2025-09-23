@@ -153,17 +153,7 @@ const RegionDetailsTable = ({
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h3 className="mb-2 text-lg font-semibold">
-          作成した領域の詳細設定（全ページ統一順序）
-        </h3>
-        <p className="text-muted-foreground text-sm">
-          各行をクリックして選択し、種類・ラベル・配点などを設定してください。ドラッグ&ドロップで順序を変更できます。
-        </p>
-      </div>
-
-      <div className="overflow-x-auto">
+    <div className="h-full overflow-auto p-6">
         <table className="border-border w-full border-collapse border">
           <thead>
             <tr className="bg-muted/50">
@@ -219,13 +209,12 @@ const RegionDetailsTable = ({
             })}
           </tbody>
         </table>
-      </div>
 
-      <DeleteConfirmModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={confirmDeleteRegion}
-      />
+        <DeleteConfirmModal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          onConfirm={confirmDeleteRegion}
+        />
     </div>
   )
 }
