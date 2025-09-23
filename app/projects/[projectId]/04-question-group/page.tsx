@@ -7,9 +7,7 @@ import { SubtotalGroupSelector } from "@/components/projects/04-question-group/c
 import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrix"
 import { QuestionAssignmentMatrix } from "@/components/projects/04-question-group/components/QuestionAssignmentMatrix"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calculator, Settings, ExternalLink } from "lucide-react"
-import Link from "next/link"
+import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
@@ -190,22 +188,6 @@ export default function SubtotalGroupPage() {
       />
 
       <div className="space-y-8">
-        {/* 小計点グループ管理への案内 */}
-        <div className="border border-blue-200 bg-blue-50 rounded-lg p-6">
-          <div className="flex items-center gap-2 text-blue-800 mb-4">
-            <Settings className="h-5 w-5" />
-            <h2 className="text-lg font-semibold">小計点グループの作成・管理</h2>
-          </div>
-          <p className="text-blue-700 text-sm mb-4">
-            新しい小計点グループの作成や既存グループの編集は、専用の管理ページで行います。
-          </p>
-          <Link href="/subtotal-groups">
-            <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
-              <ExternalLink className="mr-2 h-4 w-4" />
-              小計点グループ管理ページを開く
-            </Button>
-          </Link>
-        </div>
 
         {/* 小計点グループ選択 */}
         <SubtotalGroupSelector
@@ -214,29 +196,6 @@ export default function SubtotalGroupPage() {
           onRefresh={loadData}
         />
 
-        {/* 適用済み小計点グループの表示 */}
-        {activeSubtotalGroups.length > 0 && (
-          <div className="border rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Calculator className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">適用済み小計点グループ</h2>
-            </div>
-            <div className="space-y-4">
-              {activeSubtotalGroups.map((group) => (
-                <div key={group.id} className="p-4 border rounded-lg bg-gray-50">
-                  <h3 className="font-medium text-lg mb-2">{group.name}</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {group.subtotals?.map((subtotal) => (
-                      <div key={subtotal.id} className="text-sm bg-white px-3 py-1 rounded border">
-                        {subtotal.name}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* 設問と小計項目の関連付け */}
         {activeSubtotalGroups.length > 0 && cropRegions.length > 0 && (
