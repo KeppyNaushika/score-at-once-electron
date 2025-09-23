@@ -3,14 +3,14 @@
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { SubtotalGroupSelector } from "@/components/projects/04-question-group/components/SubtotalGroupSelector"
-import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrix"
 import { QuestionAssignmentMatrix } from "@/components/projects/04-question-group/components/QuestionAssignmentMatrix"
+import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrix"
+import { SubtotalGroupSelector } from "@/components/projects/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
+import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
 import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
 
 export default function SubtotalGroupPage() {
   const params = useParams()
@@ -19,10 +19,16 @@ export default function SubtotalGroupPage() {
   const projectId = params.projectId as string
 
   const [project, setProject] = useState<any>(null)
-  const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<SubtotalGroupWithItems[]>([])
-  const [availableSubtotalGroups, setAvailableSubtotalGroups] = useState<SubtotalGroupWithItems[]>([])
+  const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
+    SubtotalGroupWithItems[]
+  >([])
+  const [availableSubtotalGroups, setAvailableSubtotalGroups] = useState<
+    SubtotalGroupWithItems[]
+  >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
-  const [subtotalRegions, setSubtotalRegions] = useState<CropRegionWithDetails[]>([])
+  const [subtotalRegions, setSubtotalRegions] = useState<
+    CropRegionWithDetails[]
+  >([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -39,24 +45,34 @@ export default function SubtotalGroupPage() {
       ])
 
       // 小計点グループの取得
-      const [activeSubtotalGroupsResponse, availableSubtotalGroupsResponse] = await Promise.all([
-        window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
-        window.electronAPI.getAvailableSubtotalGroupsForProject(projectId),
-      ])
+      const [activeSubtotalGroupsResponse, availableSubtotalGroupsResponse] =
+        await Promise.all([
+          window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
+          window.electronAPI.getAvailableSubtotalGroupsForProject(projectId),
+        ])
 
       if (projectResponse) {
         setProject(projectResponse)
       }
 
-      if (activeSubtotalGroupsResponse && activeSubtotalGroupsResponse.success) {
-        const activeGroups = activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
-          (psg: any) => psg.subtotalGroup
-        ) || []
+      if (
+        activeSubtotalGroupsResponse &&
+        activeSubtotalGroupsResponse.success
+      ) {
+        const activeGroups =
+          activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
+            (psg: any) => psg.subtotalGroup,
+          ) || []
         setActiveSubtotalGroups(activeGroups)
       }
 
-      if (availableSubtotalGroupsResponse && availableSubtotalGroupsResponse.success) {
-        setAvailableSubtotalGroups(availableSubtotalGroupsResponse.subtotalGroups || [])
+      if (
+        availableSubtotalGroupsResponse &&
+        availableSubtotalGroupsResponse.success
+      ) {
+        setAvailableSubtotalGroups(
+          availableSubtotalGroupsResponse.subtotalGroups || [],
+        )
       }
 
       if (cropRegionsResponse) {
@@ -188,7 +204,6 @@ export default function SubtotalGroupPage() {
       />
 
       <div className="space-y-8">
-
         {/* 小計点グループ選択 */}
         <SubtotalGroupSelector
           projectId={projectId}
@@ -196,13 +211,14 @@ export default function SubtotalGroupPage() {
           onRefresh={loadData}
         />
 
-
         {/* 設問と小計項目の関連付け */}
         {activeSubtotalGroups.length > 0 && cropRegions.length > 0 && (
-          <div className="border rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-lg border p-6">
+            <div className="mb-4 flex items-center gap-2">
               <Calculator className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">設問と小計項目の関連付け</h2>
+              <h2 className="text-lg font-semibold">
+                設問と小計項目の関連付け
+              </h2>
             </div>
             <QuestionAssignmentMatrix
               subtotalGroups={activeSubtotalGroups}
@@ -214,8 +230,8 @@ export default function SubtotalGroupPage() {
 
         {/* 小計点領域との関連付け */}
         {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
-          <div className="border rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-lg border p-6">
+            <div className="mb-4 flex items-center gap-2">
               <Calculator className="h-5 w-5" />
               <h2 className="text-lg font-semibold">小計点領域との関連付け</h2>
             </div>
@@ -229,16 +245,16 @@ export default function SubtotalGroupPage() {
 
         {/* ガイダンス */}
         {cropRegions.length === 0 && (
-          <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-6">
-            <p className="text-yellow-800 text-sm">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+            <p className="text-sm text-yellow-800">
               まず「採点領域作成」で設問領域と小計点領域を作成してください。
             </p>
           </div>
         )}
 
         {subtotalRegions.length === 0 && cropRegions.length > 0 && (
-          <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-6">
-            <p className="text-yellow-800 text-sm">
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+            <p className="text-sm text-yellow-800">
               小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
             </p>
           </div>

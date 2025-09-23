@@ -12,6 +12,7 @@ import { useStudentDetail } from "@/app/students/[studentId]/hooks/use-student-d
 import { Membership } from "@/app/students/[studentId]/types"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
+import type { StudentClassMembership } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useState } from "react"
 
@@ -39,7 +40,7 @@ export default function StudentDetailPage() {
     setIsStudentModalOpen(true)
   }
 
-  const handleSaveStudentData = async (studentData: any) => {
+  const handleSaveStudentData = async (id: string, studentData: any) => {
     const success = await handleEditStudent(studentData)
     if (success) {
       setIsStudentModalOpen(false)
@@ -56,7 +57,9 @@ export default function StudentDetailPage() {
     setIsMembershipModalOpen(true)
   }
 
-  const handleSaveMembershipData = async (membershipData: any) => {
+  const handleSaveMembershipData = async (
+    membershipData: Partial<StudentClassMembership> & { classId: string },
+  ) => {
     const success = await handleSaveMembership(membershipData, membershipToEdit)
     if (success) {
       setIsMembershipModalOpen(false)

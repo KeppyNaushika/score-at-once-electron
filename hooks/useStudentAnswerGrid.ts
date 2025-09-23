@@ -9,6 +9,7 @@ import {
   convertToUploadData,
 } from "@/utils/studentAnswerConverter"
 import { sortStudentsForTable } from "@/utils/studentOrderUtils"
+import type { ProjectStudent, Student } from "@prisma/client"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 
@@ -18,7 +19,12 @@ import { toast } from "sonner"
 
 interface UseAnswerSheetGridProps {
   projectId: string
-  students: any[] // 既存のStudentData形式
+  students: (Student & {
+    projectStudent?: ProjectStudent
+    customOrder?: number | null
+    status?: string
+    attendanceNumber?: number | null
+  })[] // Student with project-specific data
   onUploadComplete?: () => void
 }
 

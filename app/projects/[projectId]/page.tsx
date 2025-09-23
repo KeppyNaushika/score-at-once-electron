@@ -9,6 +9,7 @@ import WorkflowSteps from "@/components/projects/detail/WorkflowSteps"
 import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
+import type { Project } from "@prisma/client"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -32,7 +33,11 @@ export default function ProjectDetailPage() {
     updateProject,
   } = useProjectDetail(projectId)
 
-  const handleProjectUpdated = async (updatedProjectData: any) => {
+  const handleProjectUpdated = async (
+    updatedProjectData: Partial<
+      Pick<Project, "examName" | "description" | "examDate" | "subject">
+    >,
+  ) => {
     const success = await updateProject(updatedProjectData)
     if (success) {
       setShowEditModal(false)

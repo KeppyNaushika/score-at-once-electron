@@ -1,3 +1,4 @@
+import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 import { SubtotalTargetMap } from "../../shared/calculations/subtotal-calculator"
 import { ScoringData } from "../../shared/types/export-types"
@@ -19,7 +20,7 @@ import {
 export async function createDataRows(
   worksheet: ExcelJS.Worksheet,
   scoringData: ScoringData[],
-  subtotalRegions: any[],
+  subtotalRegions: CropRegion[],
   subtotalTargetMap: SubtotalTargetMap,
   isScoreSheet: boolean,
 ) {
@@ -47,7 +48,7 @@ export async function createDataRows(
       formula: `SUM(${questionStartCol}${rowIndex}:${questionEndCol}${rowIndex})`,
     }
     // 合計点を赤色に設定
-    totalCell.font = { color: { argb: 'FFFF0000' } }
+    totalCell.font = { color: { argb: "FFFF0000" } }
 
     // 小計点の設定
     await setSubtotalCells(
@@ -80,7 +81,7 @@ export async function createDataRows(
 async function setSubtotalCells(
   row: ExcelJS.Row,
   student: ScoringData,
-  subtotalRegions: any[],
+  subtotalRegions: CropRegion[],
   subtotalTargetMap: SubtotalTargetMap,
   rowIndex: number,
   isScoreSheet: boolean,
@@ -150,14 +151,14 @@ function setQuestionCells(
       cell.value = score.score || 0
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "hold") {
-        cell.font = { color: { argb: 'FFFF0000' } }
+        cell.font = { color: { argb: "FFFF0000" } }
       }
     } else {
       // 正誤一覧
       cell.value = getStatusSymbol(score.status, score.score ?? undefined)
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "hold") {
-        cell.font = { color: { argb: 'FFFF0000' } }
+        cell.font = { color: { argb: "FFFF0000" } }
       }
     }
     scoreColIndex++

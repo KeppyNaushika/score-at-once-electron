@@ -13,7 +13,7 @@ export interface ScoringData {
   studentNumber: string
   grade?: string
   className?: string
-  attendanceNumber?: number
+  attendanceNumber?: number | null
   scores: ScoreDetail[]
   totalScore: number
   totalMaxScore: number
@@ -35,7 +35,13 @@ export interface ScoreDetail {
   shimon?: string
   score: number | null
   maxScore: number
-  status: "unscored" | "correct" | "partial" | "hold" | "incorrect" | "no_answer"
+  status:
+    | "unscored"
+    | "correct"
+    | "partial"
+    | "hold"
+    | "incorrect"
+    | "no_answer"
 }
 
 export interface ExportResult {
@@ -74,5 +80,14 @@ export interface MarkSettings {
   partialMarkPath: string
   noAnswerMarkPath: string
   useTransparentMarks: boolean
-  markPosition: 'top-left' | 'top-center' | 'top-right' | 'center-left' | 'center' | 'center-right' | 'bottom-left' | 'bottom-center' | 'bottom-right'
+  markPosition:
+    | "top-left"
+    | "top-center"
+    | "top-right"
+    | "center-left"
+    | "center"
+    | "center-right"
+    | "bottom-left"
+    | "bottom-center"
+    | "bottom-right"
 }

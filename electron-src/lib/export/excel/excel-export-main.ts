@@ -2,6 +2,7 @@ import * as ExcelJS from "exceljs"
 import {
   ExportGradingDataOptions,
   ExportResult,
+  ScoringData,
 } from "../../shared/types/export-types"
 import { fetchExportData } from "./data-fetcher"
 import { saveWorkbook } from "./file-saver"
@@ -98,7 +99,7 @@ interface ValidationResult {
 /**
  * 採点データを検証して警告を生成する
  */
-function validateScoringData(scoringData: any[]): ValidationResult {
+function validateScoringData(scoringData: ScoringData[]): ValidationResult {
   const warnings = {
     noScoringData: [] as string[],
     ungraded: [] as string[],

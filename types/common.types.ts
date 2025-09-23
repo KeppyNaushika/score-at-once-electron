@@ -1,5 +1,7 @@
+import type { PageImage, Student } from "@prisma/client"
+
 export type Id = string
-export type ProjectId = Id // Changed from ExamId
+export type ProjectId = Id
 export type SheetId = Id
 export type QuestionId = Id
 export type StudentId = Id
@@ -106,7 +108,7 @@ export type LayoutRegionAreaType = CropRegionAreaType
 
 export interface CropRegionArea {
   id?: string
-  projectPageId?: string  // Updated: now references ProjectPage instead of projectId and masterImageId
+  projectPageId?: string // Updated: now references ProjectPage instead of projectId and masterImageId
   label: string
   type: CropRegionAreaType
   x: number
@@ -147,13 +149,13 @@ export interface ProjectWithDetails {
   description?: string
   createdAt: Date
   updatedAt: Date
-  projectPages?: ProjectPageData[]  // Updated: now uses ProjectPage instead of masterImages
-  pageImages?: PageImageData[]     // Updated: unified image management
-  cropRegions?: CropRegionArea[]   // Updated: renamed from layoutRegions
+  projectPages?: ProjectPageData[] // Updated: now uses ProjectPage instead of masterImages
+  pageImages?: PageImageData[] // Updated: unified image management
+  cropRegions?: CropRegionArea[] // Updated: renamed from layoutRegions
   tags?: TagData[]
   projectStudents?: ProjectStudentData[]
   userProjects?: UserProjectData[] // Added: many-to-many User-Project relation
-  studentAnswers?: any[]           // Added: student answers for project status checking
+  studentAnswers?: (PageImage & { student?: Student })[] // Added: student answers for project status checking
 }
 
 export interface ProjectStudentData {
@@ -180,9 +182,9 @@ export interface ProjectPageData {
 export interface PageImageData {
   id: string
   projectPageId: string
-  studentId?: string | null  // NULL for master images, student ID for answer images
+  studentId?: string | null // NULL for master images, student ID for answer images
   imagePath: string
-  imageType: 'MODEL_ANSWER' | 'STUDENT_ANSWER'
+  imageType: "MODEL_ANSWER" | "STUDENT_ANSWER"
   createdAt: Date
   updatedAt: Date
 }
@@ -203,7 +205,7 @@ export interface StudentAnswerData {
   projectId: string
   studentId?: string
   pageNumber: number
-  originalImagePath: string  // Main path field retained
+  originalImagePath: string // Main path field retained
   createdAt: Date
   updatedAt: Date
   questionScores?: QuestionScoreData[]
@@ -213,10 +215,10 @@ export interface StudentAnswerData {
 // Updated: QuestionScoreData simplified to match new schema
 export interface QuestionScoreData {
   id: string
-  cropRegionId: string      // Updated: renamed from layoutRegionId
+  cropRegionId: string // Updated: renamed from layoutRegionId
   studentId?: string | null // Updated: now references student directly
-  partialScore: number | null  // Updated: simplified from string to number
-  status: string            // unscored, correct, incorrect, partial, no_answer
+  partialScore: number | null // Updated: simplified from string to number
+  status: string // unscored, correct, incorrect, partial, no_answer
   scoredByUserId?: string | null
   createdAt: Date
   updatedAt: Date
@@ -239,7 +241,7 @@ export interface StudentData {
 }
 
 export interface CropRegionCreateData {
-  projectPageId: string  // Updated: now references ProjectPage instead of projectId and masterImageId
+  projectPageId: string // Updated: now references ProjectPage instead of projectId and masterImageId
   label: string
   type:
     | "QUESTION_ANSWER"
@@ -278,17 +280,17 @@ export interface CropRegionUpdateData {
 }
 
 export interface QuestionScoreCreateData {
-  cropRegionId: string         // Updated: primary reference
-  studentId?: string | null    // Updated: now references student directly
+  cropRegionId: string // Updated: primary reference
+  studentId?: string | null // Updated: now references student directly
   partialScore?: number | null // Decimal型をnumberとして扱う
   scoredByUserId?: string | null
-  status?: string             // unscored, correct, incorrect, partial, no_answer
+  status?: string // unscored, correct, incorrect, partial, no_answer
   // Removed: studentAnswerId, comment
 }
 
 export interface QuestionScoreUpdateData {
-  partialScore?: number | null  // Decimal型をnumberとして扱う
-  status?: string              // unscored, correct, incorrect, partial, no_answer
+  partialScore?: number | null // Decimal型をnumberとして扱う
+  status?: string // unscored, correct, incorrect, partial, no_answer
   // Removed: comment
 }
 
@@ -319,7 +321,7 @@ export interface UserProjectData {
   id: string
   userId: string
   projectId: string
-  role: string  // 'OWNER', 'GRADER', etc.
+  role: string // 'OWNER', 'GRADER', etc.
   createdAt: Date
   updatedAt: Date
 }
@@ -345,7 +347,7 @@ export interface CropSubtotalData {
   id: string
   cropRegionId: string
   subtotalId: string
-  assignmentType: 'SUBTOTAL_DEFINITION' | 'QUESTION_ASSIGNMENT'
+  assignmentType: "SUBTOTAL_DEFINITION" | "QUESTION_ASSIGNMENT"
   createdAt: Date
   updatedAt: Date
 }
