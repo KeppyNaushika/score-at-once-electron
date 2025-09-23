@@ -14,6 +14,7 @@ export interface ScoringData {
   grade?: string
   className?: string
   attendanceNumber?: number | null
+  status?: "participating" | "expected" | "absent"
   scores: ScoreDetail[]
   totalScore: number
   totalMaxScore: number

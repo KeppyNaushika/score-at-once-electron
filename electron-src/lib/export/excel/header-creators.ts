@@ -15,6 +15,7 @@ export async function createSheetHeaders(
   subtotalRegions: CropRegion[],
 ) {
   const row = worksheet.addRow([
+    "受験状態",
     "順位",
     "学年",
     "学級",
