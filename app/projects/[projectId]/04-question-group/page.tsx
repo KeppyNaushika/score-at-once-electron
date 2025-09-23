@@ -189,27 +189,23 @@ export default function SubtotalGroupPage() {
         helpButton={helpButton}
       />
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="space-y-8">
         {/* 小計点グループ管理への案内 */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
-              <Settings className="h-5 w-5" />
-              小計点グループの作成・管理
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-blue-700 text-sm mb-4">
-              新しい小計点グループの作成や既存グループの編集は、専用の管理ページで行います。
-            </p>
-            <Link href="/subtotal-groups">
-              <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                小計点グループ管理ページを開く
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="border border-blue-200 bg-blue-50 rounded-lg p-6">
+          <div className="flex items-center gap-2 text-blue-800 mb-4">
+            <Settings className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">小計点グループの作成・管理</h2>
+          </div>
+          <p className="text-blue-700 text-sm mb-4">
+            新しい小計点グループの作成や既存グループの編集は、専用の管理ページで行います。
+          </p>
+          <Link href="/subtotal-groups">
+            <Button variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-100">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              小計点グループ管理ページを開く
+            </Button>
+          </Link>
+        </div>
 
         {/* 小計点グループ選択 */}
         <SubtotalGroupSelector
@@ -220,100 +216,84 @@ export default function SubtotalGroupPage() {
 
         {/* 適用済み小計点グループの表示 */}
         {activeSubtotalGroups.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                適用済み小計点グループ
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {activeSubtotalGroups.map((group) => (
-                  <div key={group.id} className="p-4 border rounded-lg">
-                    <h3 className="font-medium text-lg mb-2">{group.name}</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                      {group.subtotals?.map((subtotal) => (
-                        <div key={subtotal.id} className="text-sm bg-gray-100 px-3 py-1 rounded">
-                          {subtotal.name}
-                        </div>
-                      ))}
-                    </div>
+          <div className="border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">適用済み小計点グループ</h2>
+            </div>
+            <div className="space-y-4">
+              {activeSubtotalGroups.map((group) => (
+                <div key={group.id} className="p-4 border rounded-lg bg-gray-50">
+                  <h3 className="font-medium text-lg mb-2">{group.name}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {group.subtotals?.map((subtotal) => (
+                      <div key={subtotal.id} className="text-sm bg-white px-3 py-1 rounded border">
+                        {subtotal.name}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* 設問と小計項目の関連付け */}
         {activeSubtotalGroups.length > 0 && cropRegions.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                設問と小計項目の関連付け
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <QuestionAssignmentMatrix
-                subtotalGroups={activeSubtotalGroups}
-                cropRegions={cropRegions}
-                onUpdateAssignments={updateQuestionAssignments}
-              />
-            </CardContent>
-          </Card>
+          <div className="border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">設問と小計項目の関連付け</h2>
+            </div>
+            <QuestionAssignmentMatrix
+              subtotalGroups={activeSubtotalGroups}
+              cropRegions={cropRegions}
+              onUpdateAssignments={updateQuestionAssignments}
+            />
+          </div>
         )}
 
         {/* 小計点領域との関連付け */}
         {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                小計点領域との関連付け
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SubtotalAssignmentMatrix
-                subtotalGroups={activeSubtotalGroups}
-                subtotalRegions={subtotalRegions}
-                onUpdateSubtotalAssignments={updateSubtotalAssignments}
-              />
-            </CardContent>
-          </Card>
+          <div className="border rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Calculator className="h-5 w-5" />
+              <h2 className="text-lg font-semibold">小計点領域との関連付け</h2>
+            </div>
+            <SubtotalAssignmentMatrix
+              subtotalGroups={activeSubtotalGroups}
+              subtotalRegions={subtotalRegions}
+              onUpdateSubtotalAssignments={updateSubtotalAssignments}
+            />
+          </div>
         )}
 
         {/* ガイダンス */}
         {cropRegions.length === 0 && (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="pt-6">
-              <p className="text-yellow-800 text-sm">
-                まず「採点領域作成」で設問領域と小計点領域を作成してください。
-              </p>
-            </CardContent>
-          </Card>
+          <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-6">
+            <p className="text-yellow-800 text-sm">
+              まず「採点領域作成」で設問領域と小計点領域を作成してください。
+            </p>
+          </div>
         )}
 
         {subtotalRegions.length === 0 && cropRegions.length > 0 && (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="pt-6">
-              <p className="text-yellow-800 text-sm">
-                小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
-              </p>
-            </CardContent>
-          </Card>
+          <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-6">
+            <p className="text-yellow-800 text-sm">
+              小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
+            </p>
+          </div>
         )}
-      </div>
 
-      {/* フッター */}
-      <div className="flex justify-center">
-        <Button
-          onClick={() => router.push(`/projects/${projectId}/05-students`)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          次のステップ: 受験生徒管理
-        </Button>
+        {/* フッター */}
+        <div className="flex justify-center pt-4">
+          <Button
+            onClick={() => router.push(`/projects/${projectId}/05-students`)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            次のステップ: 受験生徒管理
+          </Button>
+        </div>
       </div>
     </div>
   )
