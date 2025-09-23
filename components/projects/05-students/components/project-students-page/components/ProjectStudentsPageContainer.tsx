@@ -6,11 +6,11 @@ import PageHeader from "@/components/layout/PageHeader"
 import ProjectStudentAddModal from "@/components/projects/05-students/components/ProjectStudentAddModal"
 import SortableStudentTable from "@/components/projects/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/projects/05-students/components/StudentRemovalConfirmModal"
-import { StudentActionButtons } from "@/components/projects/05-students/components/project-students-page/components/StudentActionButtons"
 import { StudentManagementHelp } from "@/components/projects/05-students/components/project-students-page/components/StudentManagementHelp"
 import { StudentStatisticsCards } from "@/components/projects/05-students/components/project-students-page/components/StudentStatisticsCards"
 import { useProjectStudentsData } from "@/components/projects/05-students/components/project-students-page/hooks/useProjectStudentsData"
 import { Button } from "@/components/ui/button"
+import { Plus, Users } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 export function ProjectStudentsPageContainer() {
@@ -76,15 +76,22 @@ export function ProjectStudentsPageContainer() {
       </PageHeader>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
-        {/* アクションボタン */}
-        <StudentActionButtons
-          selectedStudentsCount={selectedStudentsForRemoval.size}
-          onRemoveStudents={initiateStudentRemoval}
-          onAddStudents={() => setShowAddDialog(true)}
-        />
-
-        {/* 統計カード */}
-        <StudentStatisticsCards students={students} />
+        {/* アクションボタンと統計カード */}
+        <div className="mb-6 flex flex-shrink-0 items-center justify-between">
+          <div className="flex gap-2">
+            {selectedStudentsForRemoval.size > 0 && (
+              <Button variant="destructive" onClick={initiateStudentRemoval}>
+                <Users className="mr-2 h-4 w-4" />
+                選択した生徒を削除 ({selectedStudentsForRemoval.size})
+              </Button>
+            )}
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              生徒を追加
+            </Button>
+          </div>
+          <StudentStatisticsCards students={students} />
+        </div>
 
         {/* 生徒一覧テーブル */}
         <div className="flex min-h-0 flex-1 flex-col">
