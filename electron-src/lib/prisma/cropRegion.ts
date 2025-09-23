@@ -121,6 +121,57 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
   return regions
 }
 
+/**
+ * プロジェクトのQUESTION_ANSWER型領域のみを順序付きで取得（採点画面専用）
+ * フィルタリングを DB レベルで行うことで正しい順序を保持
+ */
+export const getQuestionAnswerRegionsByProjectId = async (projectId: string) => {
+  const regions = await prisma.cropRegion.findMany({
+    where: { 
+      projectPage: {
+        projectId: projectId
+      },
+      type: "QUESTION_ANSWER" // DB レベルでフィルタリング
+    },
+    include: {
+      projectPage: true,
+      cropSubtotals: {
+        include: {
+          subtotal: true,
+        },
+      },
+      questionScores: true,
+    },
+    orderBy: [
+      { orderIndex: "asc" }, // 手動順序（最優先）
+      { projectPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
+      { y: "asc" }, // Y座標（フォールバック）
+      { x: "asc" }, // X座標（フォールバック）
+    ],
+  })
+
+  // orderIndexがnullの領域があった場合、自動で設定する
+  const regionsWithNullOrder = regions.filter(region => region.orderIndex === null)
+  if (regionsWithNullOrder.length > 0) {
+    console.log(`Found ${regionsWithNullOrder.length} question answer regions with null orderIndex, fixing...`)
+    
+    // 同じ修正ロジック
+    for (let i = 0; i < regionsWithNullOrder.length; i++) {
+      const region = regionsWithNullOrder[i]
+      const newOrderIndex = regions.length + i // 既存の最大値の後に追加
+      
+      await prisma.cropRegion.update({
+        where: { id: region.id },
+        data: { orderIndex: newOrderIndex }
+      })
+      
+      region.orderIndex = newOrderIndex
+    }
+  }
+
+  return regions
+}
+
 // IDで CropRegion を取得
 export const getCropRegionById = async (id: string) => {
   return prisma.cropRegion.findUnique({

@@ -56,16 +56,13 @@ export function useScoringDataLoader(
 
         // 設問領域データの読み込み
         const regionsResult =
-          await window.electronAPI.getCropRegionsByProjectId(projectId)
+          await window.electronAPI.getQuestionAnswerRegionsByProjectId(projectId)
         if (!regionsResult || !Array.isArray(regionsResult)) {
           throw new Error("設問領域データの読み込みに失敗しました")
         }
 
-        const cropRegions = regionsResult.filter(
-          (region: any) => region.type === "QUESTION_ANSWER",
-        ) as CropRegionWithProjectPage[]
-
-        setCropRegions(cropRegions)
+        // DBレベルでフィルタリング済みなので、順序を保持したまま設定
+        setCropRegions(regionsResult as CropRegionWithProjectPage[])
 
         // ユーザーIDの取得
         const userData = await window.electronAPI.getCurrentUser()

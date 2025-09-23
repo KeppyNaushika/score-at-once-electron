@@ -588,6 +588,9 @@ export interface MyAPI {
   getCropRegionsByProjectId: (
     projectId: string,
   ) => Promise<CropRegionWithDetails[]>
+  getQuestionAnswerRegionsByProjectId: (
+    projectId: string,
+  ) => Promise<CropRegionWithDetails[]>
   getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>,
