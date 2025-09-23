@@ -1216,15 +1216,6 @@ async function addAnswerSheetToPDF(
           config.scoreAlignment,
         )
 
-        // スコアテキスト背景をクリア（重複描画防止）
-        const textPadding = 2 // テキスト周囲のパディング
-        page.drawRectangle({
-          x: scorePosition.x - textPadding,
-          y: scorePosition.y - textPadding,
-          width: textWidth + textPadding * 2,
-          height: textHeight + textPadding * 2,
-          color: rgb(1, 1, 1), // 白色背景
-        })
 
         // Draw score text
         page.drawText(scoreText, {
@@ -1245,15 +1236,6 @@ async function addAnswerSheetToPDF(
         // コメントテキスト背景をクリア（重複描画防止）
         const commentWidth = font.widthOfTextAtSize(score.comment, commentSize)
         const commentHeight = commentSize
-        const commentPadding = 1
-
-        page.drawRectangle({
-          x: commentX - commentPadding,
-          y: commentY - commentPadding,
-          width: commentWidth + commentPadding * 2,
-          height: commentHeight + commentPadding * 2,
-          color: rgb(1, 1, 1), // 白色背景
-        })
 
         page.drawText(score.comment, {
           x: commentX,
@@ -1371,15 +1353,6 @@ async function addAnswerSheetToPDF(
           config.scoreAlignment,
         )
 
-        // 小計点テキスト背景をクリア（重複描画防止）
-        const subtotalPadding = 2
-        page.drawRectangle({
-          x: subtotalPosition.x - subtotalPadding,
-          y: subtotalPosition.y - subtotalPadding,
-          width: textWidth + subtotalPadding * 2,
-          height: textHeight + subtotalPadding * 2,
-          color: rgb(1, 1, 1), // 白色背景
-        })
 
         // 小計点を描画
         console.log(
@@ -1497,15 +1470,6 @@ async function addAnswerSheetToPDF(
           config.scoreAlignment,
         )
 
-        // 合計点テキスト背景をクリア（重複描画防止）
-        const totalScorePadding = 2
-        page.drawRectangle({
-          x: totalScorePosition.x - totalScorePadding,
-          y: totalScorePosition.y - totalScorePadding,
-          width: textWidth + totalScorePadding * 2,
-          height: textHeight + totalScorePadding * 2,
-          color: rgb(1, 1, 1), // 白色背景
-        })
 
         // 合計点を描画
         console.log(
