@@ -3,7 +3,6 @@
  */
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import PageHeader from "@/components/layout/PageHeader"
 import { StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import { ConfirmChangesModal } from "@/components/projects/06-student-answers/student-answer-table/components/ConfirmChangesModal"
 import { Button } from "@/components/ui/button"
@@ -14,7 +13,6 @@ import type {
 } from "@/types/student-answer.types"
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Eye, FileEdit, Grid3X3 } from "lucide-react"
-import { useRouter } from "next/navigation"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -45,47 +43,6 @@ export function LoadingSpinner() {
   )
 }
 
-interface StudentAnswersPageHeaderProps {
-  projectId: string
-  pendingChangesCount: number
-  helpButton: React.ReactNode
-  onPendingChangesClick: () => void
-}
-
-export function StudentAnswersPageHeader({
-  projectId,
-  pendingChangesCount,
-  helpButton,
-  onPendingChangesClick,
-}: StudentAnswersPageHeaderProps) {
-  const router = useRouter()
-
-  return (
-    <PageHeader
-      title="答案アップロード"
-      description="生徒の答案画像をアップロードし、生徒と関連付けます"
-      helpButton={helpButton}
-    >
-      <div className="flex gap-2">
-        {pendingChangesCount > 0 && (
-          <Button
-            variant="default"
-            onClick={onPendingChangesClick}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-          >
-            <FileEdit className="h-4 w-4" />
-            {pendingChangesCount}件の変更を反映
-          </Button>
-        )}
-        <Button
-          onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}
-        >
-          次へ: 採点開始
-        </Button>
-      </div>
-    </PageHeader>
-  )
-}
 
 interface StudentAnswersTabsNavigationProps {
   activeTab: StudentAnswerTab

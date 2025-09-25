@@ -204,11 +204,11 @@ export default function RegionInfoPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <PageHeader title="領域情報の編集" description="" helpButton={helpButton}>
+      <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton}>
         <Button
-          onClick={() => router.push(`/projects/${projectId}/05-students`)}
+          onClick={() => router.push(`/projects/${projectId}/04-question-group`)}
         >
-          次へ: 受験生徒管理
+          次へ: 4. 小計点
         </Button>
       </PageHeader>
 

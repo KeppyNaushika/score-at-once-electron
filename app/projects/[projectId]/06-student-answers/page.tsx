@@ -2,11 +2,13 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { usePageHelp } from "@/components/help/usePageHelp"
-import { useParams } from "next/navigation"
+import PageHeader from "@/components/layout/PageHeader"
+import { Button } from "@/components/ui/button"
+import { FileEdit } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import {
-  StudentAnswersPageHeader,
   StudentAnswersTabContent,
   StudentAnswersTabsNavigation,
   LoadingSpinner,
@@ -28,6 +30,7 @@ import { useStudentAnswersData, usePendingChanges } from "./hooks"
 
 export default function StudentAnswersPage() {
   const params = useParams()
+  const router = useRouter()
   const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
@@ -80,12 +83,28 @@ export default function StudentAnswersPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-full flex-col overflow-y-auto">
-        <StudentAnswersPageHeader
-          projectId={projectId}
-          pendingChangesCount={pendingChanges.length}
+        <PageHeader
+          title="生徒答案のアップロード・関連付け"
           helpButton={helpButton}
-          onPendingChangesClick={openConfirmModal}
-        />
+        >
+          <div className="flex gap-2">
+            {pendingChanges.length > 0 && (
+              <Button
+                variant="default"
+                onClick={openConfirmModal}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+              >
+                <FileEdit className="h-4 w-4" />
+                {pendingChanges.length}件の変更を反映
+              </Button>
+            )}
+            <Button
+              onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}
+            >
+              次へ: 7. 採点
+            </Button>
+          </div>
+        </PageHeader>
 
         <div className="min-h-0 flex-1 overflow-hidden p-3">
           <StudentAnswersTabsNavigation

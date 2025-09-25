@@ -141,13 +141,12 @@ export default function MasterAnswerStepPage() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader
-        title="模範解答のアップロード"
-        description=""
+        title="模範解答画像のアップロード"
         helpButton={helpButton}
       >
         {masterAnswers.length > 0 && (
           <Button onClick={goToNextStep} disabled={isLoading}>
-            次へ: 採点領域作成
+            次へ: 2. 採点領域
           </Button>
         )}
       </PageHeader>
