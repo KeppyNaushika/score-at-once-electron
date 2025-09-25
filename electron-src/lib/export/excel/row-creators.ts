@@ -126,7 +126,13 @@ async function setSubtotalCells(
       if (isScoreSheet) {
         // 点数一覧：計算済みの小計点を直接使用
         console.log(`📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for region ${subtotalScore.subtotalRegionId}`)
-        row.getCell(col).value = subtotalScore.score || 0
+        if (subtotalScore.score !== null && subtotalScore.score !== undefined) {
+          // 採点済みデータがあれば0点でも表示
+          row.getCell(col).value = subtotalScore.score
+        } else {
+          // データがない場合は空欄
+          row.getCell(col).value = ""
+        }
       } else {
         // 正誤一覧：従来のロジックを使用（Excel関数が必要）
         const targetQuestionIndices =
@@ -146,12 +152,13 @@ async function setSubtotalCells(
             .join("+")
           row.getCell(col).value = { formula }
         } else {
-          // 正誤一覧で対象設問が不明な場合は0
-          row.getCell(col).value = 0
+          // 正誤一覧で対象設問が不明な場合は空欄
+          row.getCell(col).value = ""
         }
       }
     } else {
-      row.getCell(col).value = 0
+      // データがない場合は空欄
+      row.getCell(col).value = ""
     }
     subtotalColIndex++
   }
@@ -179,14 +186,27 @@ function setQuestionCells(
 
     if (isScoreSheet) {
       // 点数一覧
-      cell.value = score.score || 0
+      if (score.status === "unscored") {
+        // 未採点の場合は空欄
+        cell.value = ""
+      } else {
+        // 採点済みの場合は0点でも表示
+        cell.value = score.score !== null && score.score !== undefined ? score.score : 0
+      }
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "hold") {
         cell.font = { color: { argb: "FFFF0000" } }
       }
     } else {
       // 正誤一覧
-      cell.value = getStatusSymbol(score.status, score.score ?? undefined)
+      if (score.status === "unscored") {
+        // 未採点の場合は空欄
+        cell.value = ""
+      } else {
+        // 採点済みの場合は記号を表示
+        const statusSymbol = getStatusSymbol(score.status, score.score ?? undefined)
+        cell.value = statusSymbol || ""
+      }
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "hold") {
         cell.font = { color: { argb: "FFFF0000" } }
