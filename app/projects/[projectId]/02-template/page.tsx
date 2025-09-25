@@ -1,7 +1,9 @@
 "use client"
 
 import { usePageHelp } from "@/components/help/usePageHelp"
+import PageHeader from "@/components/layout/PageHeader"
 import CropRegionEditor from "@/components/projects/02-template/components/CropRegionEditor"
+import { Button } from "@/components/ui/button"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 
@@ -9,7 +11,6 @@ import { useCallback, useEffect } from "react"
 import { AreaType, RegionCoordinates } from "@/components/projects/02-template/types"
 import { canProceedToNextStep } from "@/components/projects/02-template/utils/template-actions"
 import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
-import { TemplateHeader } from "@/components/projects/02-template/components/TemplateHeader"
 import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
 import { useCropRegionSave } from "@/components/projects/02-template/hooks/useCropRegionSave"
 import { useTemplateData } from "@/components/projects/02-template/hooks/useTemplateData"
@@ -146,6 +147,12 @@ export default function TemplateStepPage() {
     }
   }, [initialData.layoutId, projectId, router])
 
+  // 現在選択中の画像に対応する領域があるかチェック
+  const hasRegionsForCurrentImage =
+    initialData.selectedMasterImage &&
+    initialData.cropRegions.filter((r) => r.projectPageId === initialData.selectedMasterImage?.id)
+      .length > 0
+
   // ローディング・エラー状態の表示
   if (isLoading || !projectId) {
     return <TemplateStatus isLoading={isLoading} hasProjectId={!!projectId} />
@@ -154,12 +161,14 @@ export default function TemplateStepPage() {
   return (
     <div className="flex h-full flex-col">
       {/* ヘッダー */}
-      <TemplateHeader
+      <PageHeader
+        title="答案の採点領域作成"
         helpButton={helpButton}
-        selectedMasterImage={initialData.selectedMasterImage}
-        cropRegions={initialData.cropRegions}
-        onNextStep={goToNextStep}
-      />
+      >
+        {hasRegionsForCurrentImage && (
+          <Button onClick={goToNextStep}>次へ: 3. 領域情報</Button>
+        )}
+      </PageHeader>
 
       {/* メインコンテンツ */}
       <div className="flex flex-1 flex-col overflow-hidden">

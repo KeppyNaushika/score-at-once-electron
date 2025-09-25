@@ -179,8 +179,12 @@ export default function SubtotalGroupPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto space-y-6 px-4 py-6">
-        <div className="flex items-center justify-center">
+      <div className="flex h-full flex-col">
+        <PageHeader
+          title="小計点の設定"
+          helpButton={helpButton}
+        />
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-red-600">
               エラーが発生しました
@@ -196,14 +200,20 @@ export default function SubtotalGroupPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-6">
+    <div className="flex h-full flex-col">
       <PageHeader
-        title="小計点設定"
-        description="事前に作成した小計点グループをプロジェクトに適用し、小計点領域との関連付けを設定します。"
+        title="小計点の設定"
         helpButton={helpButton}
-      />
+      >
+        <Button
+          onClick={() => router.push(`/projects/${projectId}/05-students`)}
+        >
+          次へ: 5. 受験生徒
+        </Button>
+      </PageHeader>
 
-      <div className="space-y-8">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="space-y-8">
         {/* 小計点グループ選択 */}
         <SubtotalGroupSelector
           projectId={projectId}
@@ -259,15 +269,6 @@ export default function SubtotalGroupPage() {
             </p>
           </div>
         )}
-
-        {/* フッター */}
-        <div className="flex justify-center pt-4">
-          <Button
-            onClick={() => router.push(`/projects/${projectId}/05-students`)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            次のステップ: 受験生徒管理
-          </Button>
         </div>
       </div>
     </div>

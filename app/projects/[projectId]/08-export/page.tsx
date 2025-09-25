@@ -173,8 +173,7 @@ export default function ExportPage() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader
-        title="結果出力"
-        description="採点結果をPDFまたはExcelファイルとして出力します"
+        title="採点結果のファイル出力"
         helpButton={helpButton}
       />
 

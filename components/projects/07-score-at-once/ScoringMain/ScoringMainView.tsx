@@ -470,8 +470,7 @@ export default function ScoringMainView() {
 
       {/* PageHeader */}
       <PageHeader
-        title="採点"
-        description="答案を採点し、点数を入力します"
+        title="答案の採点・点数入力"
         helpButton={helpButton}
       >
         <ScoringHeaderControls
