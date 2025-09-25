@@ -208,7 +208,7 @@ export default function SubtotalGroupPage() {
         <Button
           onClick={() => router.push(`/projects/${projectId}/05-students`)}
         >
-          次へ: 5. 受験生徒
+          次へ: 受験生徒の管理
         </Button>
       </PageHeader>
 

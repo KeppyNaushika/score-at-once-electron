@@ -166,7 +166,7 @@ export default function TemplateStepPage() {
         helpButton={helpButton}
       >
         {hasRegionsForCurrentImage && (
-          <Button onClick={goToNextStep}>次へ: 3. 領域情報</Button>
+          <Button onClick={goToNextStep}>次へ: 採点領域の詳細情報設定</Button>
         )}
       </PageHeader>
 

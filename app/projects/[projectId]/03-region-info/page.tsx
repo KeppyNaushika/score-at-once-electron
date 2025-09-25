@@ -208,7 +208,7 @@ export default function RegionInfoPage() {
         <Button
           onClick={() => router.push(`/projects/${projectId}/04-question-group`)}
         >
-          次へ: 4. 小計点
+          次へ: 小計点の設定
         </Button>
       </PageHeader>
 

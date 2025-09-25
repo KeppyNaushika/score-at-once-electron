@@ -146,7 +146,7 @@ export default function MasterAnswerStepPage() {
       >
         {masterAnswers.length > 0 && (
           <Button onClick={goToNextStep} disabled={isLoading}>
-            次へ: 2. 採点領域
+            次へ: 答案の採点領域作成
           </Button>
         )}
       </PageHeader>

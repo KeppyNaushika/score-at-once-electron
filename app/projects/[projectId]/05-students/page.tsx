@@ -69,7 +69,7 @@ export default function StudentsPage() {
               router.push(`/projects/${projectId}/06-student-answers`)
             }
           >
-            次へ: 6. 生徒解答
+            次へ: 生徒答案のアップロード・関連付け
           </Button>
         </div>
       </PageHeader>
