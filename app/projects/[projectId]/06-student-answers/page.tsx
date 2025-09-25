@@ -101,7 +101,7 @@ export default function StudentAnswersPage() {
             <Button
               onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}
             >
-              次へ: 7. 採点
+              次へ: 答案の採点・点数入力
             </Button>
           </div>
         </PageHeader>
