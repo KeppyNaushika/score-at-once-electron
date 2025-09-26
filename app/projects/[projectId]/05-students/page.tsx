@@ -58,10 +58,7 @@ export default function StudentsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader
-        title="受験生徒の管理"
-        helpButton={helpButton}
-      >
+      <PageHeader title="受験生徒の管理" helpButton={helpButton}>
         <div className="flex items-center gap-2">
           <StudentManagementHelp />
           <Button
@@ -69,7 +66,7 @@ export default function StudentsPage() {
               router.push(`/projects/${projectId}/06-student-answers`)
             }
           >
-            次へ: 生徒答案のアップロード・関連付け
+            次へ: 生徒答案の追加と関連付け
           </Button>
         </div>
       </PageHeader>

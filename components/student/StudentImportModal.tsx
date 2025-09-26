@@ -90,9 +90,10 @@ export default function StudentImportModal({
       } else {
         setError(result.error || "生徒のインポートに失敗しました。")
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Import failed:", err)
-      setError(err.message || "インポート処理中にエラーが発生しました。")
+      const errorMessage = err instanceof Error ? err.message : "インポート処理中にエラーが発生しました。"
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }

@@ -106,8 +106,8 @@ export const deleteMasterAnswer = async (
       
       try {
         await fs.unlink(filePath)
-      } catch (fileError: any) {
-        if (fileError.code !== "ENOENT") {
+      } catch (fileError: unknown) {
+        if (fileError && typeof fileError === 'object' && 'code' in fileError && fileError.code !== "ENOENT") {
           console.warn(`Failed to delete answer file ${filePath}:`, fileError)
         }
       }

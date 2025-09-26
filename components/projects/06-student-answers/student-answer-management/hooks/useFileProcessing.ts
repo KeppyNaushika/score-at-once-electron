@@ -59,11 +59,13 @@ export function useFileProcessing() {
               originalFileName: file.name,
             })
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           // パスワード要求エラーは静かに再スロー
           if (
-            error.message === "password-required" ||
-            error.message === "invalid-password"
+            error instanceof Error && (
+              error.message === "password-required" ||
+              error.message === "invalid-password"
+            )
           ) {
             throw error
           }
@@ -99,9 +101,9 @@ export function useFileProcessing() {
               const images = await convertFilesToImages([file])
               processedFiles.push(...images)
             }
-          } catch (error: any) {
+          } catch (error: unknown) {
             // パスワード要求エラーの場合
-            if (error.message === "password-required") {
+            if (error instanceof Error && error.message === "password-required") {
               passwordRequiredFiles.push(file)
             } else {
               console.error(`ファイル処理エラー (${file.name}):`, error)

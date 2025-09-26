@@ -83,10 +83,7 @@ export default function StudentAnswersPage() {
   return (
     <ProtectedRoute>
       <div className="flex h-full flex-col overflow-y-auto">
-        <PageHeader
-          title="生徒答案のアップロード・関連付け"
-          helpButton={helpButton}
-        >
+        <PageHeader title="生徒答案の追加と関連付け" helpButton={helpButton}>
           <div className="flex gap-2">
             {pendingChanges.length > 0 && (
               <Button
@@ -99,9 +96,11 @@ export default function StudentAnswersPage() {
               </Button>
             )}
             <Button
-              onClick={() => router.push(`/projects/${projectId}/07-score-at-once`)}
+              onClick={() =>
+                router.push(`/projects/${projectId}/07-score-at-once`)
+              }
             >
-              次へ: 答案の採点・点数入力
+              次へ: 一括採点
             </Button>
           </div>
         </PageHeader>

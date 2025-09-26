@@ -65,11 +65,11 @@ export function useStudentAnswerUpload(
                   isSelected: false,
                 })
               }
-            } catch (pdfError: any) {
+            } catch (pdfError: unknown) {
               console.error(`PDF conversion failed for ${file.name}:`, pdfError)
 
               // パスワードエラーの場合はパスワードダイアログを表示
-              if (pdfError.message === "password-required") {
+              if (pdfError instanceof Error && pdfError.message === "password-required") {
                 // パスワード入力を要求
                 const password = await new Promise<string | null>((resolve) => {
                   setPasswordDialog({
@@ -109,7 +109,7 @@ export function useStudentAnswerUpload(
                         isSelected: false,
                       })
                     }
-                  } catch (passwordError: any) {
+                  } catch (passwordError: unknown) {
                     console.error(
                       `PDF conversion with password failed for ${file.name}:`,
                       passwordError,
