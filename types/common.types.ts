@@ -1,4 +1,35 @@
 import type { PageImage, Student } from "@prisma/client"
+import type { ProjectPayload } from "@/electron-src/lib/prisma/project"
+
+// シリアライゼーション型変換ユーティリティ
+// Date型をstring型に変換し、オブジェクトは再帰的に処理
+type Serialized<T> = T extends Date
+  ? string
+  : T extends (infer U)[]
+  ? Serialized<U>[]
+  : T extends object
+  ? { [K in keyof T]: Serialized<T[K]> }
+  : T
+
+// Prisma型ベースのシリアライゼーション済みProject型
+export type SerializedProject = Serialized<ProjectPayload> & {
+  // IPCハンドラーで平坦化されるcropRegions
+  cropRegions?: Serialized<
+    NonNullable<ProjectPayload['projectPages'][number]['cropRegions']>[number]
+  >[]
+  // IPCハンドラーで抽出されるanswerImages  
+  answerImages?: {
+    id: string
+    projectPageId: string
+    studentId: string | null
+    imagePath: string
+    imageType: string
+    pageNumber: number
+    createdAt: string
+    updatedAt: string
+    student?: Serialized<Student> | null
+  }[]
+}
 
 export type Id = string
 export type ProjectId = Id
@@ -110,7 +141,7 @@ export interface CropRegionArea {
   id?: string
   projectPageId?: string // Updated: now references ProjectPage instead of projectId and masterImageId
   label: string
-  type: CropRegionAreaType
+  type: string // Changed from CropRegionAreaType to string for database compatibility
   x: number
   y: number
   width: number
@@ -119,6 +150,7 @@ export interface CropRegionArea {
   points?: number | string | null
   createdAt?: Date
   updatedAt?: Date
+  questionScores?: QuestionScoreData[] // Added: for project list scoring status checking
 }
 
 // 互換性のためのエイリアス（段階的移行用）
@@ -141,21 +173,70 @@ export interface EditableTableColumn<T extends EditableTableRow> {
   }
 }
 
-export interface ProjectWithDetails {
-  id: string
-  examName: string
-  examDate: Date | null
-  subject?: string
-  description?: string
-  createdAt: Date
-  updatedAt: Date
-  projectPages?: ProjectPageData[] // Updated: now uses ProjectPage instead of masterImages
-  pageImages?: PageImageData[] // Updated: unified image management
-  cropRegions?: CropRegionArea[] // Updated: renamed from layoutRegions
-  tags?: TagData[]
-  projectStudents?: ProjectStudentData[]
-  userProjects?: UserProjectData[] // Added: many-to-many User-Project relation
-  studentAnswers?: (PageImage & { student?: Student })[] // Added: student answers for project status checking
+// Prisma型ベースの型安全なProject型をエクスポート
+export type ProjectWithDetails = SerializedProject
+
+// 型ガード関数群 - 型アサーションを使わない安全な型チェック
+export function isValidProject(data: unknown): data is SerializedProject {
+  if (typeof data !== 'object' || data === null) return false
+  
+  const obj = data as Record<string, unknown>
+  
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.examName === 'string' &&
+    (obj.examDate === null || typeof obj.examDate === 'string') &&
+    (obj.subject === undefined || obj.subject === null || typeof obj.subject === 'string') &&
+    (obj.description === undefined || obj.description === null || typeof obj.description === 'string') &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.updatedAt === 'string' &&
+    (obj.projectPages === undefined || Array.isArray(obj.projectPages)) &&
+    (obj.cropRegions === undefined || Array.isArray(obj.cropRegions)) &&
+    (obj.projectStudents === undefined || Array.isArray(obj.projectStudents)) &&
+    (obj.userProjects === undefined || Array.isArray(obj.userProjects)) &&
+    (obj.projectSubtotalGroups === undefined || Array.isArray(obj.projectSubtotalGroups)) &&
+    (obj.answerImages === undefined || Array.isArray(obj.answerImages))
+  )
+}
+
+export function isValidCropRegion(data: unknown): data is SerializedProject['cropRegions'][number] {
+  if (typeof data !== 'object' || data === null) return false
+  
+  const obj = data as Record<string, unknown>
+  
+  return (
+    (obj.id === undefined || typeof obj.id === 'string') &&
+    (obj.projectPageId === undefined || typeof obj.projectPageId === 'string') &&
+    typeof obj.label === 'string' &&
+    typeof obj.type === 'string' &&
+    typeof obj.x === 'number' &&
+    typeof obj.y === 'number' &&
+    typeof obj.width === 'number' &&
+    typeof obj.height === 'number' &&
+    (obj.orderIndex === undefined || obj.orderIndex === null || typeof obj.orderIndex === 'number') &&
+    (obj.points === undefined || obj.points === null || typeof obj.points === 'number' || typeof obj.points === 'string') &&
+    (obj.createdAt === undefined || typeof obj.createdAt === 'string') &&
+    (obj.updatedAt === undefined || typeof obj.updatedAt === 'string') &&
+    (obj.questionScores === undefined || Array.isArray(obj.questionScores))
+  )
+}
+
+export function isValidAnswerImage(data: unknown): data is SerializedProject['answerImages'][number] {
+  if (typeof data !== 'object' || data === null) return false
+  
+  const obj = data as Record<string, unknown>
+  
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.projectPageId === 'string' &&
+    (obj.studentId === null || typeof obj.studentId === 'string') &&
+    typeof obj.imagePath === 'string' &&
+    typeof obj.imageType === 'string' &&
+    typeof obj.pageNumber === 'number' &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.updatedAt === 'string' &&
+    (obj.student === undefined || obj.student === null || typeof obj.student === 'object')
+  )
 }
 
 export interface ProjectStudentData {
@@ -175,7 +256,7 @@ export interface ProjectPageData {
   pageNumber: number
   createdAt: Date
   updatedAt: Date
-  cropRegions?: CropRegionArea[]
+  cropRegions?: any[] // Temporarily use any[] for database compatibility
   pageImages?: PageImageData[]
 }
 

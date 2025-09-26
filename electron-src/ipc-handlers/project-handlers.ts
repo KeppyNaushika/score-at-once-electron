@@ -77,6 +77,10 @@ export function setupProjectHandlers(): void {
               height: region.height,
               createdAt: region.createdAt.toISOString(),
               updatedAt: region.updatedAt.toISOString(),
+              questionScores: region.questionScores?.map((score) => ({
+                id: score.id,
+                status: score.status,
+              })) || [],
             })) || [];
             return allRegions.concat(pageRegions);
           }, []) || [],
@@ -90,6 +94,31 @@ export function setupProjectHandlers(): void {
             createdAt: ps.createdAt.toISOString(),
             updatedAt: ps.updatedAt.toISOString(),
           })) || [],
+        answerImages:
+          project.projectPages?.reduce((allImages: any[], page) => {
+            const answerImages = page.pageImages?.filter(image => image.imageType === "STUDENT_ANSWER").map((image) => ({
+              id: image.id,
+              projectPageId: image.projectPageId,
+              studentId: image.studentId,
+              imagePath: image.imagePath,
+              imageType: image.imageType,
+              pageNumber: page.pageNumber,
+              createdAt: image.createdAt.toISOString(),
+              updatedAt: image.updatedAt.toISOString(),
+              student: image.student ? {
+                id: image.student.id,
+                studentId: image.student.studentId,
+                lastName: image.student.lastName,
+                firstName: image.student.firstName,
+                lastNameKana: image.student.lastNameKana,
+                firstNameKana: image.student.firstNameKana,
+                enrollmentYear: image.student.enrollmentYear,
+                createdAt: image.student.createdAt.toISOString(),
+                updatedAt: image.student.updatedAt.toISOString(),
+              } : null,
+            })) || [];
+            return allImages.concat(answerImages);
+          }, []) || [],
       }))
 
       return serializedProjects

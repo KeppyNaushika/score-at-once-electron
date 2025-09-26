@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  Calculator,
+  Download,
   Edit,
   Eye,
   FileImage,
@@ -24,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ProjectWithDetails } from "@/types/common.types"
+import { ProjectWithDetails, isValidProject, isValidCropRegion } from "@/types/common.types"
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
@@ -37,84 +39,117 @@ const File = () => {
   }
 
   const getProjectStatus = (project: ProjectWithDetails) => {
+    // 型ガードを使用してデータの安全性を確認
+    if (!isValidProject(project)) {
+      console.warn('Invalid project data:', project)
+      return {
+        step: 1,
+        action: "upload",
+        text: "データエラー",
+        url: `/projects/${project.id}/01-upload`,
+      }
+    }
     const hasImages = project.projectPages && project.projectPages.length > 0
     const hasLayout = project.cropRegions && project.cropRegions.length > 0
     const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
+
+    // 小計点領域が存在するかチェック（型ガード使用）
+    const hasSubtotalRegions =
+      project.cropRegions?.some((region) => 
+        isValidCropRegion(region) && region.type === "SUBTOTAL_SCORE"
+      ) || false
+    // 小計点設定が完了しているかチェック（小計点領域がある場合のみ）
+    const hasSubtotalGroupSetting =
+      !hasSubtotalRegions ||
+      (project.projectSubtotalGroups &&
+        project.projectSubtotalGroups.length > 0)
+
     const hasStudents =
       project.projectStudents && project.projectStudents.length > 0
-    const hasAnswers =
-      project.studentAnswers && project.studentAnswers.length > 0
+    const hasAnswers = project.answerImages && project.answerImages.length > 0
 
     if (!hasImages)
       return {
         step: 1,
-        action: "upload-master",
-        text: "1. 模範解答をアップロード",
+        action: "upload",
+        text: "模範解答画像の管理",
         url: `/projects/${project.id}/01-upload`,
       }
     if (!hasLayout)
       return {
         step: 2,
-        action: "setup-regions",
-        text: "2. 採点領域を設定",
+        action: "template",
+        text: "答案の採点領域作成",
         url: `/projects/${project.id}/02-template`,
       }
     if (!hasRegionInfo)
       return {
         step: 3,
-        action: "edit-region-info",
-        text: "3. 領域情報を編集",
+        action: "region-info",
+        text: "採点領域の詳細情報設定",
         url: `/projects/${project.id}/03-region-info`,
+      }
+    if (!hasSubtotalGroupSetting)
+      return {
+        step: 4,
+        action: "question-group",
+        text: "小計点の設定",
+        url: `/projects/${project.id}/04-question-group`,
       }
     if (!hasStudents)
       return {
-        step: 4,
-        action: "manage-students",
-        text: "4. 受験生徒を確認",
+        step: 5,
+        action: "students",
+        text: "受験生徒の管理",
         url: `/projects/${project.id}/05-students`,
       }
     if (!hasAnswers)
       return {
-        step: 5,
-        action: "upload-answers",
-        text: "5. 生徒解答をアップロード",
+        step: 6,
+        action: "student-answers",
+        text: "生徒答案の追加と関連付け",
         url: `/projects/${project.id}/06-student-answers`,
       }
 
     // 採点が完了しているかチェック
     // QUESTION_ANSWER領域数 × 答案数 = 全採点すべき数
     const questionAnswerCount =
-      project.cropRegions?.filter((region) => region.type === "QUESTION_ANSWER")
-        .length || 0
+      project.cropRegions?.filter((region) => 
+        isValidCropRegion(region) && region.type === "QUESTION_ANSWER"
+      ).length || 0
 
-    const answerSheetCount = project.studentAnswers?.length || 0
+    const answerSheetCount = project.answerImages?.length || 0
     const expectedScoringCount = questionAnswerCount * answerSheetCount
 
-    // ungraded以外のquestionScoresの個数を取得
-    const actualScoringCount = 0
-    // project.studentAnswers?.reduce((total, sheet) => {
-    //   const gradedScores =
-    //     sheet.questionScores?.filter((score: any) => score.status !== "unscored")
-    //       .length || 0
-    //   return total + gradedScores
-    // }, 0) || 0
+    // unscored以外のquestionScoresの個数を取得（型ガード使用）
+    const actualScoringCount =
+      project.cropRegions?.reduce((total, region) => {
+        if (isValidCropRegion(region) && region.type === "QUESTION_ANSWER") {
+          const gradedScores =
+            region.questionScores?.filter(
+              (score) => score && typeof score.status === 'string' && score.status !== "unscored"
+            ).length || 0
+          return total + gradedScores
+        }
+        return total
+      }, 0) || 0
 
     const hasScoring =
       expectedScoringCount > 0 && actualScoringCount >= expectedScoringCount
 
     if (!hasScoring) {
       return {
-        step: 6,
-        action: "start-grading",
-        text: "6. 採点を開始",
+        step: 7,
+        action: "score-at-once",
+        text: "一括採点",
         url: `/projects/${project.id}/07-score-at-once`,
       }
     }
 
     return {
-      step: 7,
-      action: "export-results",
-      text: "7. 結果出力",
+      step: 8,
+      action: "export",
+      text: "採点結果のファイル出力",
       url: `/projects/${project.id}/08-export`,
     }
   }
@@ -151,7 +186,13 @@ const File = () => {
             </TableHeader>
             <TableBody>
               {projects.map((project) => {
-                const status = getProjectStatus(project as any)
+                // 型ガードを使用して安全にproject処理
+                if (!isValidProject(project)) {
+                  console.warn('Skipping invalid project:', project)
+                  return null
+                }
+                
+                const status = getProjectStatus(project)
 
                 return (
                   <TableRow key={project.id}>
@@ -160,18 +201,10 @@ const File = () => {
                         <div className="font-medium">{project.examName}</div>
                         <div className="text-muted-foreground text-sm">
                           {project.examDate
-                            ? new Date(project.examDate).toLocaleDateString(
-                                "ja-JP",
-                              )
+                            ? typeof project.examDate === 'string'
+                              ? new Date(project.examDate).toLocaleDateString("ja-JP")
+                              : project.examDate.toLocaleDateString("ja-JP")
                             : "実施日未設定"}
-                          {(project as any).tags &&
-                            (project as any).tags.length > 0 && (
-                              <span className="ml-2">
-                                {(project as any).tags
-                                  .map((tag: any) => tag.text)
-                                  .join(", ")}
-                              </span>
-                            )}
                         </div>
                       </div>
                     </TableCell>
@@ -180,7 +213,7 @@ const File = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleStartScoring(project as any)}
+                        onClick={() => handleStartScoring(project)}
                       >
                         <Eye className="mr-1 h-4 w-4" />
                         詳細
@@ -190,12 +223,8 @@ const File = () => {
                     <TableCell className="text-center">
                       <Button
                         size="sm"
-                        onClick={() => handleNextStep(project as any)}
-                        className={
-                          status.step === 6
-                            ? "bg-green-600 hover:bg-green-700"
-                            : ""
-                        }
+                        onClick={() => handleNextStep(project)}
+                        className="w-48 justify-start text-left"
                       >
                         {status.step === 1 && (
                           <FileImage className="mr-1 h-4 w-4" />
@@ -205,13 +234,19 @@ const File = () => {
                         )}
                         {status.step === 3 && <Edit className="mr-1 h-4 w-4" />}
                         {status.step === 4 && (
-                          <Users className="mr-1 h-4 w-4" />
+                          <Calculator className="mr-1 h-4 w-4" />
                         )}
                         {status.step === 5 && (
-                          <Upload className="mr-1 h-4 w-4" />
+                          <Users className="mr-1 h-4 w-4" />
                         )}
                         {status.step === 6 && (
+                          <Upload className="mr-1 h-4 w-4" />
+                        )}
+                        {status.step === 7 && (
                           <PlayCircle className="mr-1 h-4 w-4" />
+                        )}
+                        {status.step === 8 && (
+                          <Download className="mr-1 h-4 w-4" />
                         )}
                         <span className="text-xs">{status.text}</span>
                       </Button>
