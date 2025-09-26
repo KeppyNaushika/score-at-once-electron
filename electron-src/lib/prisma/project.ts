@@ -17,7 +17,19 @@ export const getProjects = async () => {
               student: true,
             },
           },
-          cropRegions: true,
+          cropRegions: {
+            include: {
+              questionScores: {
+                include: {
+                  student: true,
+                  scoredByUser: true,
+                },
+              },
+            },
+            orderBy: {
+              orderIndex: "asc",
+            },
+          },
         },
         orderBy: {
           pageNumber: "asc",
