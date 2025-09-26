@@ -198,8 +198,8 @@ export function useStudentAnswerUploadMain({
           fileProcessing.setPasswordError("")
           toast.success("すべてのパスワード保護ファイルの処理が完了しました")
         }
-      } catch (error: any) {
-        if (error.message === "invalid-password") {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message === "invalid-password") {
           fileProcessing.setPasswordError("パスワードが正しくありません")
         } else {
           // パスワード関連以外の予期しないエラーのみログ出力

@@ -13,7 +13,7 @@ type Serialized<T> = T extends Date
 
 // Prisma型ベースのシリアライゼーション済みProject型
 export type SerializedProject = Serialized<ProjectPayload> & {
-  // IPCハンドラーで平坦化されるcropRegions
+  // IPCハンドラーで平坦化されるcropRegions（questionScoresを含む）
   cropRegions?: Serialized<
     NonNullable<ProjectPayload['projectPages'][number]['cropRegions']>[number]
   >[]
@@ -176,6 +176,35 @@ export interface EditableTableColumn<T extends EditableTableRow> {
 // Prisma型ベースの型安全なProject型をエクスポート
 export type ProjectWithDetails = SerializedProject
 
+// シリアライズされたQuestionScore型
+export interface SerializedQuestionScore {
+  id: string
+  cropRegionId: string
+  studentId: string | null
+  partialScore: number | null
+  status: string
+  scoredByUserId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+// CropRegion型に適切なquestionScores型を追加
+export interface SerializedCropRegion {
+  id: string
+  projectPageId: string
+  label: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  orderIndex: number | null
+  points: number | null
+  createdAt: string
+  updatedAt: string
+  questionScores?: SerializedQuestionScore[]
+}
+
 // 型ガード関数群 - 型アサーションを使わない安全な型チェック
 export function isValidProject(data: unknown): data is SerializedProject {
   if (typeof data !== 'object' || data === null) return false
@@ -199,29 +228,48 @@ export function isValidProject(data: unknown): data is SerializedProject {
   )
 }
 
-export function isValidCropRegion(data: unknown): data is SerializedProject['cropRegions'][number] {
+export function isValidQuestionScore(data: unknown): data is SerializedQuestionScore {
   if (typeof data !== 'object' || data === null) return false
   
   const obj = data as Record<string, unknown>
   
   return (
-    (obj.id === undefined || typeof obj.id === 'string') &&
-    (obj.projectPageId === undefined || typeof obj.projectPageId === 'string') &&
+    typeof obj.id === 'string' &&
+    typeof obj.cropRegionId === 'string' &&
+    (obj.studentId === null || typeof obj.studentId === 'string') &&
+    (obj.partialScore === null || typeof obj.partialScore === 'number') &&
+    typeof obj.status === 'string' &&
+    (obj.scoredByUserId === null || typeof obj.scoredByUserId === 'string') &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.updatedAt === 'string'
+  )
+}
+
+export function isValidCropRegion(data: unknown): data is SerializedCropRegion {
+  if (typeof data !== 'object' || data === null) return false
+  
+  const obj = data as Record<string, unknown>
+  
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.projectPageId === 'string' &&
     typeof obj.label === 'string' &&
     typeof obj.type === 'string' &&
     typeof obj.x === 'number' &&
     typeof obj.y === 'number' &&
     typeof obj.width === 'number' &&
     typeof obj.height === 'number' &&
-    (obj.orderIndex === undefined || obj.orderIndex === null || typeof obj.orderIndex === 'number') &&
-    (obj.points === undefined || obj.points === null || typeof obj.points === 'number' || typeof obj.points === 'string') &&
-    (obj.createdAt === undefined || typeof obj.createdAt === 'string') &&
-    (obj.updatedAt === undefined || typeof obj.updatedAt === 'string') &&
-    (obj.questionScores === undefined || Array.isArray(obj.questionScores))
+    (obj.orderIndex === null || typeof obj.orderIndex === 'number') &&
+    (obj.points === null || typeof obj.points === 'number') &&
+    typeof obj.createdAt === 'string' &&
+    typeof obj.updatedAt === 'string' &&
+    (obj.questionScores === undefined || 
+      (Array.isArray(obj.questionScores) && 
+       obj.questionScores.every(score => isValidQuestionScore(score))))
   )
 }
 
-export function isValidAnswerImage(data: unknown): data is SerializedProject['answerImages'][number] {
+export function isValidAnswerImage(data: unknown): data is NonNullable<SerializedProject['answerImages']>[number] {
   if (typeof data !== 'object' || data === null) return false
   
   const obj = data as Record<string, unknown>

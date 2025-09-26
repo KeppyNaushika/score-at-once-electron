@@ -191,7 +191,10 @@ export default function ScoringMainView() {
     // pageImagesから重複を除いた生徒データを抽出
     const uniqueStudents = new Map()
 
-    console.log('🔍 ScoringMainView debug - Processing pageImages for students:', pageImages.length)
+    console.log(
+      "🔍 ScoringMainView debug - Processing pageImages for students:",
+      pageImages.length,
+    )
 
     pageImages.forEach((sheet, index) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
@@ -202,12 +205,12 @@ export default function ScoringMainView() {
           firstName: sheet.student.firstName,
           customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
         }
-        
+
         console.log(`🔍 Student ${index}:`, {
           name: `${sheet.student.lastName} ${sheet.student.firstName}`,
           customOrder: studentData.customOrder,
           hasProjectStudents: !!sheet.student.projectStudents?.length,
-          projectStudentsLength: sheet.student.projectStudents?.length || 0
+          projectStudentsLength: sheet.student.projectStudents?.length || 0,
         })
 
         uniqueStudents.set(sheet.student.id, studentData)
@@ -219,11 +222,14 @@ export default function ScoringMainView() {
       (a, b) => a.customOrder - b.customOrder,
     )
 
-    console.log('🔍 ScoringMainView debug - Final sorted students:', sortedStudents.map((student, index) => ({
-      index,
-      name: `${student.lastName} ${student.firstName}`,
-      customOrder: student.customOrder
-    })))
+    console.log(
+      "🔍 ScoringMainView debug - Final sorted students:",
+      sortedStudents.map((student, index) => ({
+        index,
+        name: `${student.lastName} ${student.firstName}`,
+        customOrder: student.customOrder,
+      })),
+    )
 
     return sortedStudents
   }, [pageImages])
@@ -469,10 +475,7 @@ export default function ScoringMainView() {
       </Head>
 
       {/* PageHeader */}
-      <PageHeader
-        title="答案の採点・点数入力"
-        helpButton={helpButton}
-      >
+      <PageHeader title="一括採点" helpButton={helpButton}>
         <ScoringHeaderControls
           gradingMode={gradingMode}
           onGradingModeChange={setGradingMode}

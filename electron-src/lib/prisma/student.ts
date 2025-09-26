@@ -330,9 +330,10 @@ export const importStudentsFromFile = async (
         if (result) {
           importedStudents.push(result)
         }
-      } catch (dbError: any) {
+      } catch (dbError: unknown) {
+        const errorMessage = dbError instanceof Error ? dbError.message : '不明なエラー'
         errors.push(
-          `生徒 ${name} (${studentId}) のインポート失敗: ${dbError.message}`,
+          `生徒 ${name} (${studentId}) のインポート失敗: ${errorMessage}`,
         )
       }
     }
@@ -344,8 +345,9 @@ export const importStudentsFromFile = async (
       }
     }
     return { success: true, importedStudents }
-  } catch (error: any) {
-    return { success: false, error: `ファイルインポート失敗: ${error.message}` }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    return { success: false, error: `ファイルインポート失敗: ${errorMessage}` }
   }
 }
 

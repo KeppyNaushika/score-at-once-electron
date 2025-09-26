@@ -26,7 +26,63 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { ProjectWithDetails, isValidProject, isValidCropRegion } from "@/types/common.types"
+import { QuestionScore, CropRegion } from "@prisma/client"
+import { 
+  ProjectWithDetails, 
+  SerializedProject, 
+  isValidProject, 
+  isValidCropRegion,
+  isValidQuestionScore 
+} from "@/types/common.types"
+
+// 実際のデータ構造に基づく型定義
+type CropRegionWithQuestionScores = {
+  id: string
+  projectPageId: string
+  label: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  points: number | null
+  orderIndex: number | null
+  createdAt: string
+  updatedAt: string
+  questionScores?: {
+    id: string
+    cropRegionId: string
+    studentId: string | null
+    partialScore: number | null
+    status: string
+    scoredByUserId: string | null
+    createdAt: string
+    updatedAt: string
+    student: {
+      id: string
+      createdAt: string
+      updatedAt: string
+      studentId: string
+      lastName: string
+      firstName: string
+      lastNameKana: string
+      firstNameKana: string
+      enrollmentYear: number | null
+    } | null
+    scoredByUser: {
+      id: string
+      createdAt: string
+      updatedAt: string
+      username: string
+      passcode: string | null
+      name: string
+      role: string
+      passcodeType: string | null
+    } | null
+  }[]
+}
+
+type QuestionScoreFromProject = NonNullable<CropRegionWithQuestionScores['questionScores']>[number]
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
@@ -42,11 +98,13 @@ const File = () => {
     // 型ガードを使用してデータの安全性を確認
     if (!isValidProject(project)) {
       console.warn('Invalid project data:', project)
+      // 無効なprojectでも基本的なidプロパティは存在する可能性が高い
+      const projectId = (project as { id?: string }).id || 'unknown'
       return {
         step: 1,
         action: "upload",
         text: "データエラー",
-        url: `/projects/${project.id}/01-upload`,
+        url: `/projects/${projectId}/01-upload`,
       }
     }
     const hasImages = project.projectPages && project.projectPages.length > 0
@@ -124,12 +182,13 @@ const File = () => {
     // unscored以外のquestionScoresの個数を取得（型ガード使用）
     const actualScoringCount =
       project.cropRegions?.reduce((total, region) => {
-        if (isValidCropRegion(region) && region.type === "QUESTION_ANSWER") {
-          const gradedScores =
-            region.questionScores?.filter(
-              (score) => score && typeof score.status === 'string' && score.status !== "unscored"
-            ).length || 0
-          return total + gradedScores
+        if (isValidCropRegion(region) && region.type === "QUESTION_ANSWER" && 'questionScores' in region) {
+          const regionWithScores = region as CropRegionWithQuestionScores
+          const validQuestionScores = regionWithScores.questionScores?.filter(
+            (score): score is QuestionScoreFromProject => 
+              isValidQuestionScore(score) && score.status !== "unscored"
+          ) || []
+          return total + validQuestionScores.length
         }
         return total
       }, 0) || 0
@@ -203,7 +262,7 @@ const File = () => {
                           {project.examDate
                             ? typeof project.examDate === 'string'
                               ? new Date(project.examDate).toLocaleDateString("ja-JP")
-                              : project.examDate.toLocaleDateString("ja-JP")
+                              : new Date(project.examDate).toLocaleDateString("ja-JP")
                             : "実施日未設定"}
                         </div>
                       </div>
