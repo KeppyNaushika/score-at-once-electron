@@ -2,7 +2,7 @@ import {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
-import { ProjectWithDetails } from "@/types/common.types"
+import { ProjectWithDetails, isValidProject } from "@/types/common.types"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -40,7 +40,10 @@ export function useScoringDataLoader(
         if (!projectData) {
           throw new Error("プロジェクトが見つかりません")
         }
-        setProject(projectData as ProjectWithDetails)
+        if (!isValidProject(projectData)) {
+          throw new Error("プロジェクトデータの形式が正しくありません")
+        }
+        setProject(projectData)
 
         // 答案データの読み込み
         const answersResult =
