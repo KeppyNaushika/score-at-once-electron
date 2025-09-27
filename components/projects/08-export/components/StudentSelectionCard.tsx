@@ -2,7 +2,6 @@
 
 import { Student } from "@/app/projects/[projectId]/08-export/types"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +10,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { CheckSquare, Search, Square, Users } from "lucide-react"
+import {
+  Check,
+  CheckSquare,
+  Search,
+  Square,
+  UserCheck,
+  Users,
+  UserX,
+} from "lucide-react"
 
 interface StudentSelectionCardProps {
   students: Student[]
@@ -78,134 +85,149 @@ export function StudentSelectionCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          生徒選択
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="flex h-full flex-col">
+      {/* タイトル */}
+      <div className="mb-2 flex items-center gap-2">
+        <Users className="h-5 w-5" />
+        <h3 className="text-lg font-semibold">生徒選択</h3>
+      </div>
+
+      {/* 1行目: 検索のみ */}
+      <div className="mb-2 flex items-center">
         {/* 検索 */}
-        <div className="space-y-2">
-          <Label htmlFor="search">検索</Label>
-          <div className="relative">
-            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-            <Input
-              id="search"
-              placeholder="名前または学籍番号で検索"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8"
-            />
-          </div>
+        <div className="relative w-full">
+          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
+          <Input
+            placeholder="名前または学籍番号で検索"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-8 pl-8 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* 2行目: 学級 | 状態 | 選択 */}
+      <div className="mb-2 flex items-center justify-between">
+        {/* 学級フィルタ */}
+        <div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs whitespace-nowrap"
+              >
+                学級({selectedClasses.length})
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-2">
+              <div className="space-y-1">
+                <h4 className="mb-2 text-sm font-medium">学級を選択</h4>
+                {availableClasses.map((cls) => (
+                  <Button
+                    key={cls.id}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full justify-between px-2"
+                    onClick={() => toggleClassFilter(cls.id)}
+                  >
+                    <span className="text-sm">{cls.name}</span>
+                    {selectedClasses.includes(cls.id) && (
+                      <Check className="h-4 w-4" />
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
-        {/* フィルタ */}
-        <div className="flex gap-2">
-          {/* 学級フィルタ */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                学級 ({selectedClasses.length})
+        {/* 状態フィルタ（アイコン付き）*/}
+        <div className="flex gap-1">
+          {[
+            { value: "participating", label: "受験", icon: UserCheck },
+            { value: "expected", label: "見込", icon: Users },
+            { value: "absent", label: "欠席", icon: UserX },
+          ].map((status) => {
+            const Icon = status.icon
+            return (
+              <Button
+                key={status.value}
+                variant={
+                  selectedStatuses.includes(status.value)
+                    ? "default"
+                    : "outline"
+                }
+                size="sm"
+                className="h-8 px-2 text-xs"
+                onClick={() => toggleStatusFilter(status.value)}
+              >
+                <Icon className="mr-1 h-3 w-3" />
+                {status.label}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                <h4 className="font-medium">学級を選択</h4>
-                {availableClasses.map((cls) => (
-                  <div key={cls.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`class-${cls.id}`}
-                      checked={selectedClasses.includes(cls.id)}
-                      onCheckedChange={() => toggleClassFilter(cls.id)}
-                    />
-                    <Label htmlFor={`class-${cls.id}`} className="text-sm">
-                      {cls.name}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* 状態フィルタ */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
-                状態 ({selectedStatuses.length})
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56">
-              <div className="space-y-2">
-                <h4 className="font-medium">状態を選択</h4>
-                {[
-                  { value: "participating", label: "参加中" },
-                  { value: "expected", label: "見込" },
-                  { value: "absent", label: "欠席" },
-                ].map((status) => (
-                  <div
-                    key={status.value}
-                    className="flex items-center space-x-2"
-                  >
-                    <Checkbox
-                      id={`status-${status.value}`}
-                      checked={selectedStatuses.includes(status.value)}
-                      onCheckedChange={() => toggleStatusFilter(status.value)}
-                    />
-                    <Label
-                      htmlFor={`status-${status.value}`}
-                      className="text-sm"
-                    >
-                      {status.label}
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+            )
+          })}
         </div>
 
         {/* 一括選択 */}
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={selectAllFiltered}>
-            <CheckSquare className="mr-1 h-4 w-4" />
-            表示中を全選択
+        <div className="flex gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={selectAllFiltered}
+          >
+            <CheckSquare className="mr-1 h-3 w-3" />
+            全選択
           </Button>
-          <Button variant="outline" size="sm" onClick={deselectAllFiltered}>
-            <Square className="mr-1 h-4 w-4" />
-            表示中を全解除
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={deselectAllFiltered}
+          >
+            <Square className="mr-1 h-3 w-3" />
+            全解除
           </Button>
         </div>
+      </div>
 
-        {/* 生徒リスト */}
-        <div className="max-h-96 space-y-2 overflow-y-auto rounded-md border p-2">
+      {/* 3行目: 生徒リスト - 残りの高さを使用 */}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+          <span>生徒一覧</span>
+          <span>
+            {selectedStudents.size}人選択中 / {students.length}人表示中
+          </span>
+        </div>
+        <div className="flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
           {students.map((student) => (
             <div
               key={student.id}
-              className="hover:bg-muted flex items-center space-x-2 rounded p-2"
+              className="hover:bg-muted flex items-center space-x-2 rounded p-1"
             >
               <Checkbox
                 id={`student-${student.id}`}
                 checked={selectedStudents.has(student.id)}
                 onCheckedChange={() => toggleStudentSelection(student.id)}
+                className="h-4 w-4"
               />
               <Label
                 htmlFor={`student-${student.id}`}
                 className="flex-1 cursor-pointer"
               >
                 <div className="flex items-center justify-between">
-                  <span>
+                  <span className="text-xs">
                     {student.lastName} {student.firstName}
                   </span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     {student.customOrder !== null &&
                       student.customOrder !== undefined && (
-                        <span className="text-muted-foreground bg-muted rounded px-1 py-0.5 text-xs">
+                        <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
                           {student.customOrder}
                         </span>
                       )}
-                    <span className="text-muted-foreground text-sm">
+                    <span className="text-muted-foreground text-xs">
                       {student.studentId}
                     </span>
                   </div>
@@ -214,11 +236,7 @@ export function StudentSelectionCard({
             </div>
           ))}
         </div>
-
-        <div className="text-muted-foreground text-sm">
-          {selectedStudents.size}人選択中 / {students.length}人表示中
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
