@@ -84,7 +84,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "dayjs": "^1.11.18",
-    "electron-next": "^3.1.5",
     "electron-squirrel-startup": "^1.0.1",
     "exceljs": "^4.4.0",
     "fontkit": "^2.0.4",
@@ -145,12 +144,9 @@
     "rimraf": "^6.0.1",
     "tw-animate-css": "^1.3.8",
     "typescript": "^5.9.2",
-    "wait-on": "^8.0.4"
+    "wait-on": "^9.0.1"
   },
   "overrides": {
     "xlsx": "^0.20.2"
-  },
-  "prisma": {
-    "seed": "node prisma/seed.js"
   }
 }

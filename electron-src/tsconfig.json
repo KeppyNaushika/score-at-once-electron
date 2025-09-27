@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "ignoreDeprecations": "5.0",
     "allowJs": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
@@ -16,7 +17,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "target": "esnext",
+    "target": "ES2022",
     "outDir": "../main",
     "baseUrl": "../",
     "paths": {
