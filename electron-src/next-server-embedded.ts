@@ -1,5 +1,8 @@
 import { join } from "path"
-import isDev from "electron-is-dev"
+import { app } from "electron"
+
+// Electron公式推奨の環境判定方法
+const isDev = !app.isPackaged
 
 let nextApp: any = null
 let httpServer: any = null
