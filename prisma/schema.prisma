@@ -17,9 +17,9 @@ model User {
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   passcodeType       String?             @default("none")
+  drawingAnnotations DrawingAnnotation[]
   questionScores     QuestionScore[]
   userProjects       UserProject[]
-  drawingAnnotations DrawingAnnotation[]
 }
 
 model Class {
@@ -62,8 +62,8 @@ model StudentClassMembership {
   notes            String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
-  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
   student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
 
   @@index([studentId])
   @@index([classId])
@@ -93,8 +93,8 @@ model ProjectStudent {
   customOrder Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, studentId])
   @@index([projectId])
@@ -121,8 +121,8 @@ model PageImage {
   imageType     String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @default(now()) @updatedAt
-  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model CropRegion {
@@ -172,8 +172,8 @@ model CropSubtotal {
   assignmentType String
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @default(now()) @updatedAt
-  subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model UserProject {
@@ -183,8 +183,8 @@ model UserProject {
   role      String   @default("GRADER")
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model ProjectSubtotalGroup {
@@ -193,8 +193,8 @@ model ProjectSubtotalGroup {
   subtotalGroupId String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @default(now()) @updatedAt
-  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model QuestionScore {
@@ -206,55 +206,40 @@ model QuestionScore {
   scoredByUserId     String?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
-  scoredByUser       User?               @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  student            Student?            @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   drawingAnnotations DrawingAnnotation[]
+  cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student            Student?            @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  scoredByUser       User?               @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model DrawingAnnotation {
-  id               String        @id @default(uuid())
-  questionScoreId  String        // QuestionScore.idに紐づけ
-  
-  // 基本プロパティ（全要素共通）
-  type            String        // "text", "line", "rectangle", "ellipse"
-  x               Float         // 0.0 - 1.0 相対座標
-  y               Float         // 0.0 - 1.0
+  id              String        @id @default(uuid())
+  questionScoreId String
+  type            String
+  x               Float
+  y               Float
   color           String        @default("#ef4444")
   strokeWidth     Int           @default(3)
-  
-  // サイズ（長方形・楕円・テキストボックス）
-  width           Float         @default(0.0)     // 0.0 - 1.0
-  height          Float         @default(0.0)     // 0.0 - 1.0
-  
-  // 直線専用プロパティ
-  endX            Float         @default(0.0)     // 0.0 - 1.0 (直線終点)
-  endY            Float         @default(0.0)     // 0.0 - 1.0
-  lineStyle       String        @default("solid") // "solid", "wave", "zigzag", "double", "arrow", "both_arrow"
-  
-  // テキスト専用プロパティ
-  text            String        @default("")      // テキスト内容（MathJax対応）
+  width           Float         @default(0.0)
+  height          Float         @default(0.0)
+  endX            Float         @default(0.0)
+  endY            Float         @default(0.0)
+  lineStyle       String        @default("solid")
+  text            String        @default("")
   fontSize        Int           @default(16)
-  textBoxWidth    Float         @default(0.0)     // 0.0 - 1.0 (テキストボックス境界・非推奨)
-  textBoxHeight   Float         @default(0.0)     // 0.0 - 1.0 (非推奨)
-  horizontalAlign String        @default("left")  // "left", "center", "right" (非推奨)
-  verticalAlign   String        @default("top")   // "top", "center", "bottom" (非推奨)
-  // V4統合フィールド
-  anchorDirection String        @default("top-left") // V4統合アンカー方向: "top-left", "top", "top-right", "left", "center", "right", "bottom-left", "bottom", "bottom-right"
-  
-  // 表示プロパティ（逆ドラッグ対応）
-  displayX        Float         @default(0.0)     // 0.0 - 1.0
-  displayY        Float         @default(0.0)     // 0.0 - 1.0
-  
-  // メタデータ
+  textBoxWidth    Float         @default(0.0)
+  textBoxHeight   Float         @default(0.0)
+  horizontalAlign String        @default("left")
+  verticalAlign   String        @default("top")
+  anchorDirection String        @default("top-left")
+  displayX        Float         @default(0.0)
+  displayY        Float         @default(0.0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   createdByUserId String?
-  
-  // リレーション
+  createdByUser   User?         @relation(fields: [createdByUserId], references: [id])
   questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
-  createdByUser   User?         @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
-  
+
   @@index([questionScoreId])
   @@index([type])
   @@index([createdAt])
