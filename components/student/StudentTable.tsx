@@ -44,7 +44,6 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
-import StudentImportModal from "@/components/student/StudentImportModal"
 import StudentModal from "@/components/student/StudentModal"
 
 interface StudentWithMemberships {
@@ -111,8 +110,6 @@ export default function StudentTable() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [studentToEdit, setStudentToEdit] =
     useState<StudentWithMemberships | null>(null)
-  const [isStudentImportModalOpen, setIsStudentImportModalOpen] =
-    useState(false)
   const [isSpreadsheetImportModalOpen, setIsSpreadsheetImportModalOpen] =
     useState(false)
 
@@ -483,14 +480,6 @@ export default function StudentTable() {
           />
         )}
 
-        {isStudentImportModalOpen && (
-          <StudentImportModal
-            isOpen={isStudentImportModalOpen}
-            onClose={() => setIsStudentImportModalOpen(false)}
-            onImportSuccess={onStudentsImported as any}
-            existingClasses={classes as any}
-          />
-        )}
 
         {isSpreadsheetImportModalOpen && (
           <SpreadsheetImportModal

@@ -468,14 +468,6 @@ export interface MyAPI {
     studentData: Prisma.StudentUpdateInput,
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
-  importStudentsFromFile: (
-    filePath: string,
-    existingClasses: { id: string; name: string }[],
-  ) => Promise<{
-    success: boolean
-    importedStudents?: StudentWithMemberships[]
-    error?: string
-  }>
 
   // Student Class Membership related
   createStudentClassMembership: (

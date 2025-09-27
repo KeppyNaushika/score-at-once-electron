@@ -158,11 +158,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateStudent: (id: string, studentData: Prisma.StudentUpdateInput) =>
     ipcRenderer.invoke("update-student", id, studentData),
   deleteStudent: (id: string) => ipcRenderer.invoke("delete-student", id),
-  importStudentsFromFile: (
-    filePath: string,
-    existingClasses: { id: string; name: string }[],
-  ) =>
-    ipcRenderer.invoke("import-students-from-file", filePath, existingClasses),
 
   // Student Class Membership related
   createStudentClassMembership: (

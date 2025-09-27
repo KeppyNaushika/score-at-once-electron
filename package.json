@@ -108,8 +108,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.13",
-    "vaul": "^1.1.2",
-    "xlsx": "^0.20.2"
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.8.3",
@@ -146,7 +145,5 @@
     "typescript": "^5.9.2",
     "wait-on": "^9.0.1"
   },
-  "overrides": {
-    "xlsx": "^0.20.2"
-  }
+  "overrides": {}
 }
