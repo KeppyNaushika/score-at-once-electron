@@ -2,7 +2,6 @@ import { ipcMain } from "electron"
 import { Prisma } from "@prisma/client"
 import {
   fetchStudents,
-  importStudentsFromFile,
   createStudent,
   updateStudent,
   deleteStudent,
@@ -39,21 +38,6 @@ export function setupStudentHandlers(): void {
     }
   })
 
-  ipcMain.handle(
-    "import-students-from-file",
-    async (
-      _event,
-      filePath: string,
-      existingClasses: { id: string; name: string }[],
-    ) => {
-      try {
-        return await importStudentsFromFile(filePath, existingClasses)
-      } catch (err) {
-        console.error("Error importing students from file:", err)
-        throw err
-      }
-    },
-  )
 
   ipcMain.handle(
     "create-student",
