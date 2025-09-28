@@ -26,7 +26,7 @@ export function useWorkflowData(
     const progress = project ? getProjectProgress(project) : null
     const stepCompletions = project ? getStepCompletionStatus(project) : Array(8).fill(false)
 
-    // Phase 1: テスト設定
+    // Phase 1: 試験前準備
     const phase1Steps = [
       {
         id: "01-upload",
@@ -67,10 +67,6 @@ export function useWorkflowData(
         canStart: progress?.hasRegionInfo ?? (questionRegionCount > 0),
         dependsOn: ["03-region-info"],
       },
-    ]
-
-    // Phase 2: データ準備
-    const phase2Steps = [
       {
         id: "05-students",
         title: "受験生徒管理",
@@ -81,6 +77,10 @@ export function useWorkflowData(
         canStart: progress?.hasSubtotalGroupSetting ?? (questionRegionCount > 0),
         dependsOn: ["04-question-group"],
       },
+    ]
+
+    // Phase 2: 試験後操作
+    const phase2Steps = [
       {
         id: "06-student-answers",
         title: "答案アップロード",
@@ -91,10 +91,6 @@ export function useWorkflowData(
         canStart: progress?.hasStudents ?? (studentCount > 0),
         dependsOn: ["05-students"],
       },
-    ]
-
-    // Phase 3: 実行・出力
-    const phase3Steps = [
       {
         id: "07-score-at-once",
         title: "採点実行",
@@ -106,6 +102,10 @@ export function useWorkflowData(
                   (answerSheetCount > 0 && questionRegionCount > 0),
         dependsOn: ["06-student-answers"],
       },
+    ]
+
+    // Phase 3: 出力
+    const phase3Steps = [
       {
         id: "08-export",
         title: "結果出力",
@@ -126,7 +126,8 @@ export function useWorkflowData(
     const phase2IsCompleted = phase2CompletedSteps === phase2Steps.length
 
     const phase3CompletedSteps = phase3Steps.filter(step => step.isCompleted).length
-    const phase3IsCompleted = phase3CompletedSteps === phase3Steps.length
+    // Phase 3（出力）は完了判定から除外
+    const phase3IsCompleted = false
 
     // 現在のフェーズを決定
     let currentPhase: 1 | 2 | 3 = 1
@@ -140,8 +141,8 @@ export function useWorkflowData(
     const phases: WorkflowPhase[] = [
       {
         id: 1,
-        title: "テスト設定",
-        description: "試験の基本構造を定義",
+        title: "試験前準備",
+        description: "試験実施前の設定と準備作業",
         emoji: "🛠️",
         steps: phase1Steps,
         isActive: currentPhase === 1,
@@ -153,9 +154,9 @@ export function useWorkflowData(
       },
       {
         id: 2,
-        title: "データ準備",
-        description: "採点対象データを準備",
-        emoji: "📚",
+        title: "試験後操作",
+        description: "答案収集と採点作業",
+        emoji: "📝",
         steps: phase2Steps,
         isActive: currentPhase === 2,
         isCompleted: phase2IsCompleted,
@@ -166,9 +167,9 @@ export function useWorkflowData(
       },
       {
         id: 3,
-        title: "実行・出力",
-        description: "採点作業と結果出力",
-        emoji: "⚡",
+        title: "出力",
+        description: "採点結果の出力（常時利用可能）",
+        emoji: "📤",
         steps: phase3Steps,
         isActive: currentPhase === 3,
         isCompleted: phase3IsCompleted,
@@ -179,9 +180,9 @@ export function useWorkflowData(
       },
     ]
 
-    // 全体進捗を計算
-    const totalSteps = phase1Steps.length + phase2Steps.length + phase3Steps.length
-    const totalCompletedSteps = phase1CompletedSteps + phase2CompletedSteps + phase3CompletedSteps
+    // 全体進捗を計算（出力フェーズは除外）
+    const totalSteps = phase1Steps.length + phase2Steps.length
+    const totalCompletedSteps = phase1CompletedSteps + phase2CompletedSteps
     const overallProgress = (totalCompletedSteps / totalSteps) * 100
 
     // 次のアクションを決定

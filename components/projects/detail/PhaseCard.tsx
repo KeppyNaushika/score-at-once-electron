@@ -71,21 +71,24 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
               </p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-lg font-bold">
-              {phase.completedSteps}/{phase.totalSteps}
+          {phase.id !== 3 && (
+            <div className="text-right">
+              <div className="text-lg font-bold">
+                {phase.completedSteps}/{phase.totalSteps}
+              </div>
+              <div className="text-xs text-gray-600">完了</div>
             </div>
-            <div className="text-xs text-gray-600">完了</div>
-          </div>
+          )}
         </CardTitle>
       </CardHeader>
 
       <CardContent>
         <div className="space-y-2">
           {phase.steps.map((step) => (
-            <div
+            <Link
               key={step.id}
-              className={`p-3 rounded-lg transition-all ${getStepRowClass(
+              href={`/projects/${projectId}${step.path}`}
+              className={`block p-3 rounded-lg transition-all hover:shadow-sm cursor-pointer ${getStepRowClass(
                 step
               )}`}
             >
@@ -112,31 +115,11 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
                   </div>
                 </div>
 
-                {step.canStart && !step.isCompleted && (
-                  <Link href={`/projects/${projectId}${step.path}`}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="ml-2 h-8 w-8 p-0"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                )}
-
-                {step.isCompleted && (
-                  <Link href={`/projects/${projectId}${step.path}`}>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="ml-2 h-8 w-8 p-0 opacity-60"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                )}
+                <div className="ml-2">
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 

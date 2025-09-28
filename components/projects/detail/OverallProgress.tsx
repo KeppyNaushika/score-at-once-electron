@@ -43,7 +43,7 @@ export default function OverallProgress({
               <div className="text-2xl mb-1">{phase.emoji}</div>
               <h3 className="font-medium text-sm mb-1">{phase.title}</h3>
               <div className="text-xs text-gray-600">
-                {phase.completedSteps}/{phase.totalSteps} 完了
+                {phase.id === 3 ? "利用可能" : `${phase.completedSteps}/${phase.totalSteps} 完了`}
               </div>
               <div
                 className={`text-xs font-medium mt-1 ${
