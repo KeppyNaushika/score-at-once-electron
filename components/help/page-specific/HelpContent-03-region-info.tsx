@@ -1,18 +1,19 @@
 "use client"
 
 import {
+  Badge,
   HelpSection,
   ShortcutItem,
   StepItem,
   TipItem,
 } from "@/components/help/common/HelpComponents"
 import {
-  AlertTriangle,
   CheckCircle,
-  Info,
+  Edit,
   Keyboard,
   Lightbulb,
   Settings,
+  Table,
 } from "lucide-react"
 
 export function HelpContent03RegionInfo() {
@@ -20,146 +21,133 @@ export function HelpContent03RegionInfo() {
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <Settings className="h-6 w-6 text-indigo-600" />
-          領域情報の使い方
+          <Settings className="h-6 w-6 text-blue-600" />
+          採点領域の詳細情報設定 - 使い方
         </h2>
         <p className="text-muted-foreground">
-          作成した採点領域に設問番号や配点などの詳細情報を設定します。
+          採点する場所に設問番号や配点などの詳しい情報を設定しましょう。
         </p>
       </div>
 
       <HelpSection
-        icon={<Settings className="h-5 w-5 text-blue-600" />}
-        title="基本的な編集手順"
+        icon={<Edit className="h-5 w-5 text-green-600" />}
+        title="基本の使い方"
       >
         <div className="space-y-3">
           <StepItem
             number={1}
-            title="領域タイプを選択"
-            description="ドロップダウンから適切なタイプ（設問、氏名欄など）を選択"
+            title="種類を選ぶ"
+            description="表の「種類」で、その場所が何か（設問解答・氏名・生徒番号など）を選びます"
           />
           <StepItem
             number={2}
-            title="設問番号を入力"
-            description="設問の場合、「1」「2-1」「3-a」のような番号を入力"
+            title="ラベルを付ける"
+            description="「問1 計算問題」のように、採点時に分かりやすい名前を付けます"
           />
           <StepItem
             number={3}
-            title="配点を設定"
-            description="その設問の満点を数値で入力（例：10、5、2.5）"
+            title="配点を決める"
+            description="設問解答の場合は、その問題の満点を入力します（例：10点、2.5点）"
             isImportant
           />
           <StepItem
             number={4}
-            title="ラベルを入力"
-            description="採点時に表示される分かりやすい名前を付ける"
+            title="自動で保存"
+            description="入力内容は自動的に保存されます"
           />
         </div>
       </HelpSection>
 
-      <HelpSection
-        icon={<Info className="h-5 w-5 text-green-600" />}
-        title="領域タイプの説明"
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="space-y-2">
-            <div className="border-l-4 border-green-500 pl-3">
-              <p className="text-sm font-medium">設問 (QUESTION)</p>
-              <p className="text-muted-foreground text-xs">
-                採点が必要な解答領域
-              </p>
-            </div>
-            <div className="border-l-4 border-orange-500 pl-3">
-              <p className="text-sm font-medium">氏名欄 (NAME)</p>
-              <p className="text-muted-foreground text-xs">
-                学生の氏名記入部分
-              </p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <div className="border-l-4 border-purple-500 pl-3">
-              <p className="text-sm font-medium">合計点 (TOTAL)</p>
-              <p className="text-muted-foreground text-xs">全体の合計点表示</p>
-            </div>
-            <div className="border-l-4 border-blue-500 pl-3">
-              <p className="text-sm font-medium">小計 (SUBTOTAL)</p>
-              <p className="text-muted-foreground text-xs">部分点の合計表示</p>
-            </div>
-          </div>
-        </div>
-      </HelpSection>
+      <div className="my-4 border-t border-gray-200" />
 
-      <HelpSection
-        icon={<Keyboard className="h-5 w-5 text-indigo-600" />}
-        title="キーボード操作"
-      >
-        <div className="space-y-2">
-          <ShortcutItem keys="Tab" description="次のフィールドに移動" />
-          <ShortcutItem keys="Enter" description="編集を確定して次の行へ" />
-          <ShortcutItem keys="Esc" description="編集をキャンセル" />
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
-        title="設定のコツ"
-      >
-        <div className="space-y-3">
-          <TipItem type="success">
-            <strong>設問番号の付け方:</strong>
-            一貫した命名規則を使いましょう。「1」「2-1」「2-2」「3-a」など。
-          </TipItem>
-
-          <TipItem type="info">
-            <strong>配点設定:</strong>
-            小数点も使えます（2.5点など）。合計が試験の満点と一致するか確認しましょう。
-          </TipItem>
-
-          <TipItem type="warning">
-            <strong>ラベルの重要性:</strong>
-            「問1 計算問題」のように内容が分かる名前を付けると採点時に便利です。
-          </TipItem>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
-        title="よくある間違い"
-      >
-        <div className="space-y-2">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-700">
-              <strong>設問番号の重複:</strong>{" "}
-              同じ番号を複数の領域に付けないよう注意
-            </p>
-          </div>
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-            <p className="text-sm text-orange-700">
-              <strong>配点の設定漏れ:</strong>{" "}
-              設問タイプには必ず配点を設定してください
-            </p>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<CheckCircle className="h-5 w-5 text-green-600" />}
-        title="完了前のチェック"
-      >
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <h4 className="mb-2 font-medium">設定完了チェックリスト</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HelpSection
+          icon={<Table className="h-5 w-5 text-blue-600" />}
+          title="領域の種類"
+        >
+          <div className="space-y-3">
             <div>
-              <div>□ 全設問にタイプ設定</div>
-              <div>□ 設問番号に重複なし</div>
+              <h4 className="mb-2 font-medium">採点が必要な場所</h4>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Badge variant="outline">📋 設問解答</Badge>
+              </div>
             </div>
             <div>
-              <div>□ 全設問に配点設定</div>
-              <div>□ ラベルが分かりやすい</div>
+              <h4 className="mb-2 font-medium">確認が必要な場所</h4>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <Badge variant="secondary">📄 氏名</Badge>
+                <Badge variant="secondary">🔢 生徒番号</Badge>
+              </div>
+            </div>
+            <div>
+              <h4 className="mb-2 font-medium">点数の表示場所</h4>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary">🏆 合計点</Badge>
+                <Badge variant="secondary">🔢 小計</Badge>
+              </div>
             </div>
           </div>
-        </div>
-      </HelpSection>
+        </HelpSection>
+
+        <HelpSection
+          icon={<Keyboard className="h-5 w-5 text-indigo-600" />}
+          title="素早く移動する方法"
+        >
+          <div className="space-y-2">
+            <ShortcutItem keys="Tab" description="同じ行の次の項目へ" />
+            <ShortcutItem keys="Enter" description="次の行の同じ項目へ" />
+            <ShortcutItem keys="Shift+Tab" description="同じ行の前の項目へ" />
+            <ShortcutItem keys="Shift+Enter" description="前の行の同じ項目へ" />
+          </div>
+          <div className="mt-3 rounded-lg bg-blue-50 p-3">
+            <p className="text-sm text-blue-800">
+              行をドラッグして順序を変更することもできます
+            </p>
+          </div>
+        </HelpSection>
+      </div>
+
+      <div className="my-4 border-t border-gray-200" />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <HelpSection
+          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          title="困ったときは"
+        >
+          <div className="space-y-3">
+            <TipItem type="info">
+              <strong>配点を設定したい：</strong>
+              種類が「設問解答」の行だけに配点を入力できます。
+              他の種類では配点欄は使えません。
+            </TipItem>
+
+            <TipItem type="warning">
+              <strong>領域が見つからない：</strong>
+              前のステップ「採点領域作成」で採点する場所を囲んでから、
+              このページに進んでください。
+            </TipItem>
+          </div>
+        </HelpSection>
+
+        <HelpSection
+          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          title="操作のコツ"
+        >
+          <div className="space-y-3">
+            <TipItem type="success">
+              <strong>ラベルの付け方：</strong>
+              「問1」「問2-1」「問3-a」のように、
+              問題文と同じ番号を使うと分かりやすいです。
+            </TipItem>
+
+            <TipItem type="success">
+              すべての設定が終わったら、「次へ:
+              小計点の設定」ボタンが表示されます。
+              配点に間違いがないか確認してから次に進みましょう。
+            </TipItem>
+          </div>
+        </HelpSection>
+      </div>
     </div>
   )
 }
