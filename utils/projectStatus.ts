@@ -1,15 +1,10 @@
 /**
  * プロジェクトステータス判定の共通ユーティリティ
- * 
+ *
  * プロジェクト一覧と詳細ページで統一されたステータス判定を提供
  */
 
-import { 
-  ProjectWithDetails, 
-  isValidProject, 
-  isValidCropRegion,
-  isValidQuestionScore 
-} from "@/types/common.types"
+import { ProjectWithDetails } from "@/types/common.types"
 
 // プロジェクトステータスの型定義
 export interface ProjectStatus {
@@ -37,61 +32,14 @@ export interface ProjectProgress {
   answerSheetCount: number
 }
 
-// CropRegion with QuestionScores type (from ProjectList)
-type CropRegionWithQuestionScores = {
-  id: string
-  projectPageId: string
-  label: string
-  type: string
-  x: number
-  y: number
-  width: number
-  height: number
-  points: number | null
-  orderIndex: number | null
-  createdAt: string
-  updatedAt: string
-  questionScores?: {
-    id: string
-    cropRegionId: string
-    studentId: string | null
-    partialScore: number | null
-    status: string
-    scoredByUserId: string | null
-    createdAt: string
-    updatedAt: string
-    student: {
-      id: string
-      createdAt: string
-      updatedAt: string
-      studentId: string
-      lastName: string
-      firstName: string
-      lastNameKana: string
-      firstNameKana: string
-      enrollmentYear: number | null
-    } | null
-    scoredByUser: {
-      id: string
-      createdAt: string
-      updatedAt: string
-      username: string
-      passcode: string | null
-      name: string
-      role: string
-      passcodeType: string | null
-    } | null
-  }[]
-}
-
-type QuestionScoreFromProject = NonNullable<CropRegionWithQuestionScores['questionScores']>[number]
-
 /**
  * プロジェクトの詳細進捗情報を計算
  */
-export function getProjectProgress(project: ProjectWithDetails): ProjectProgress {
-  // 型ガードを使用してデータの安全性を確認
-  if (!isValidProject(project)) {
+export function getProjectProgress(
+  project: ProjectWithDetails,
+): ProjectProgress {
+  // ProjectWithDetails型を信頼し、基本的な存在チェックのみ実施
+  if (!project) {
     return {
       hasImages: false,
       hasLayout: false,
@@ -112,17 +60,15 @@ export function getProjectProgress(project: ProjectWithDetails): ProjectProgress
   const hasLayout = !!(project.cropRegions && project.cropRegions.length > 0)
   const hasRegionInfo = hasLayout // 領域情報は領域が存在すれば設定済みとみなす
 
-  // 小計点領域が存在するかチェック（型ガード使用）
+  // 小計点領域が存在するかチェック
   const hasSubtotalRegions =
-    project.cropRegions?.some((region) => 
-      isValidCropRegion(region) && region.type === "SUBTOTAL_SCORE"
-    ) || false
+    project.cropRegions?.some((region) => region.type === "SUBTOTAL_SCORE") ||
+    false
 
   // 小計点設定が完了しているかチェック（小計点領域がある場合のみ）
   const hasSubtotalGroupSetting = !!(
     !hasSubtotalRegions ||
-    (project.projectSubtotalGroups &&
-      project.projectSubtotalGroups.length > 0)
+    (project.projectSubtotalGroups && project.projectSubtotalGroups.length > 0)
   )
 
   const hasStudents = !!(
@@ -133,22 +79,40 @@ export function getProjectProgress(project: ProjectWithDetails): ProjectProgress
   // 採点完了の精密な判定
   // QUESTION_ANSWER領域数 × 答案数 = 全採点すべき数
   const questionAnswerCount =
-    project.cropRegions?.filter((region) => 
-      isValidCropRegion(region) && region.type === "QUESTION_ANSWER"
-    ).length || 0
+    project.cropRegions?.filter((region) => region.type === "QUESTION_ANSWER")
+      .length || 0
 
-  const answerSheetCount = project.answerImages?.length || 0
+  // 受験・見込み生徒のIDリストを取得（欠席生徒を除外）
+  const participatingStudentIds =
+    project.projectStudents
+      ?.filter(
+        (ps) => ps.status === "PARTICIPATING" || ps.status === "EXPECTED",
+      )
+      ?.map((ps) => ps.studentId) || []
+
+  // 受験・見込み生徒の数をカウント（複数ページの答案でも1人1回のみ）
+  const answerSheetCount = new Set(
+    project.answerImages
+      ?.filter(
+        (img) =>
+          img.studentId && participatingStudentIds.includes(img.studentId),
+      )
+      ?.map((img) => img.studentId),
+  ).size
+
   const expectedScoringCount = questionAnswerCount * answerSheetCount
 
-  // unscored以外のquestionScoresの個数を取得（型ガード使用）
+  // unscored以外のquestionScoresの個数を取得
+  // 受験・見込み生徒のQuestionScoreのみをカウント（欠席生徒を除外）
   const actualScoringCount =
     project.cropRegions?.reduce((total, region) => {
-      if (isValidCropRegion(region) && region.type === "QUESTION_ANSWER" && 'questionScores' in region) {
-        const regionWithScores = region as CropRegionWithQuestionScores
-        const validQuestionScores = regionWithScores.questionScores?.filter(
-          (score): score is QuestionScoreFromProject => 
-            isValidQuestionScore(score) && score.status !== "unscored"
-        ) || []
+      if (region.type === "QUESTION_ANSWER" && region.questionScores) {
+        const validQuestionScores = region.questionScores.filter(
+          (score) =>
+            score.status !== "unscored" &&
+            score.studentId !== null &&
+            participatingStudentIds.includes(score.studentId),
+        )
         return total + validQuestionScores.length
       }
       return total
@@ -177,16 +141,14 @@ export function getProjectProgress(project: ProjectWithDetails): ProjectProgress
  * プロジェクトの現在のステータスを取得
  */
 export function getProjectStatus(project: ProjectWithDetails): ProjectStatus {
-  // 型ガードを使用してデータの安全性を確認
-  if (!isValidProject(project)) {
-    console.warn('Invalid project data:', project)
-    // 無効なprojectでも基本的なidプロパティは存在する可能性が高い
-    const projectId = (project as { id?: string }).id || 'unknown'
+  // ProjectWithDetails型を信頼し、基本的な存在チェックのみ実施
+  if (!project?.id) {
+    console.warn("Project missing required id:", project)
     return {
       step: 1,
       action: "upload",
       text: "データエラー",
-      url: `/projects/${projectId}/01-upload`,
+      url: `/projects/unknown/01-upload`,
       isCompleted: false,
       canStart: true,
     }
@@ -281,7 +243,7 @@ export function getProjectStatus(project: ProjectWithDetails): ProjectStatus {
  */
 export function getProjectCompletionRate(project: ProjectWithDetails): number {
   const progress = getProjectProgress(project)
-  
+
   const completedSteps = [
     progress.hasImages,
     progress.hasLayout,
@@ -298,17 +260,19 @@ export function getProjectCompletionRate(project: ProjectWithDetails): number {
 /**
  * ステップごとの完了状況を配列で取得
  */
-export function getStepCompletionStatus(project: ProjectWithDetails): boolean[] {
+export function getStepCompletionStatus(
+  project: ProjectWithDetails,
+): boolean[] {
   const progress = getProjectProgress(project)
-  
+
   return [
-    progress.hasImages,           // Step 1
-    progress.hasLayout,           // Step 2
-    progress.hasRegionInfo,       // Step 3
+    progress.hasImages, // Step 1
+    progress.hasLayout, // Step 2
+    progress.hasRegionInfo, // Step 3
     progress.hasSubtotalGroupSetting, // Step 4
-    progress.hasStudents,         // Step 5
-    progress.hasAnswers,          // Step 6
-    progress.hasScoring,          // Step 7
-    false,                        // Step 8 (出力は常に実行可能)
+    progress.hasStudents, // Step 5
+    progress.hasAnswers, // Step 6
+    progress.hasScoring, // Step 7
+    false, // Step 8 (出力は常に実行可能)
   ]
 }
