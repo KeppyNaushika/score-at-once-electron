@@ -1,14 +1,15 @@
 "use client"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import AdditionalActions from "@/components/projects/detail/AdditionalActions"
+import NextSteps from "@/components/projects/detail/NextSteps"
+import OverallProgress from "@/components/projects/detail/OverallProgress"
+import PhaseCard from "@/components/projects/detail/PhaseCard"
 import ProjectHeader from "@/components/projects/detail/ProjectHeader"
-import ProjectStats from "@/components/projects/detail/ProjectStats"
-import WorkflowProgress from "@/components/projects/detail/WorkflowProgress"
-import WorkflowSteps from "@/components/projects/detail/WorkflowSteps"
+import QuickStats from "@/components/projects/detail/QuickStats"
 import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
+import { useWorkflowData } from "@/hooks/useWorkflowData"
 import type { Project } from "@prisma/client"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
@@ -32,6 +33,18 @@ export default function ProjectDetailPage() {
     cropRegionCount,
     updateProject,
   } = useProjectDetail(projectId)
+
+  // ワークフローデータを生成
+  const workflowData = useWorkflowData(
+    {
+      masterImageCount: modelAnswerCount,
+      cropRegionCount,
+      questionRegionCount,
+      studentCount,
+      answerSheetCount,
+    },
+    project
+  )
 
   const handleProjectUpdated = async (
     updatedProjectData: Partial<
@@ -94,41 +107,33 @@ export default function ProjectDetailPage() {
             onDelete={() => setShowDeleteModal(true)}
           />
 
-          <ProjectStats
-            masterImageCount={modelAnswerCount}
-            cropRegionCount={cropRegionCount}
-            questionRegionCount={questionRegionCount}
-            studentCount={studentCount}
-            answerSheetCount={answerSheetCount}
+          <OverallProgress
+            phases={workflowData.phases}
+            currentPhase={workflowData.currentPhase}
+            overallProgress={workflowData.overallProgress}
           />
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <WorkflowSteps
-              projectId={projectId}
-              masterImageCount={modelAnswerCount}
-              cropRegionCount={cropRegionCount}
-              questionRegionCount={questionRegionCount}
-              studentCount={studentCount}
-              answerSheetCount={answerSheetCount}
-            />
+          <QuickStats
+            stats={{
+              masterImageCount: modelAnswerCount,
+              cropRegionCount,
+              questionRegionCount,
+              studentCount,
+              answerSheetCount,
+            }}
+          />
 
-            <AdditionalActions
-              projectId={projectId}
-              masterImageCount={modelAnswerCount}
-              cropRegionCount={cropRegionCount}
-              questionRegionCount={questionRegionCount}
-              studentCount={studentCount}
-              answerSheetCount={answerSheetCount}
-            />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {workflowData.phases.map((phase) => (
+              <PhaseCard
+                key={phase.id}
+                phase={phase}
+                projectId={projectId}
+              />
+            ))}
           </div>
 
-          <WorkflowProgress
-            masterImageCount={modelAnswerCount}
-            cropRegionCount={cropRegionCount}
-            questionRegionCount={questionRegionCount}
-            studentCount={studentCount}
-            answerSheetCount={answerSheetCount}
-          />
+          <NextSteps workflowData={workflowData} projectId={projectId} />
 
           {/* Modals */}
           {project && showEditModal && (
