@@ -1,0 +1,217 @@
+import type { ProjectWorkflowData, WorkflowPhase, WorkflowStats } from "@/types/workflow.types"
+import type { ProjectWithDetails } from "@/types/common.types"
+import { getProjectProgress, getStepCompletionStatus } from "@/utils/projectStatus"
+import { useMemo } from "react"
+
+/**
+ * ワークフローデータを生成するカスタムフック
+ * 
+ * 統計データとプロジェクト詳細から3フェーズのワークフロー情報を構築し、
+ * 現在のフェーズと次のアクションを決定する（精密な判定ロジック使用）
+ */
+export function useWorkflowData(
+  stats: WorkflowStats,
+  project: any | null
+): ProjectWorkflowData {
+  const {
+    masterImageCount,
+    cropRegionCount,
+    questionRegionCount,
+    studentCount,
+    answerSheetCount,
+  } = stats
+
+  return useMemo(() => {
+    // プロジェクトデータがない場合はフォールバック
+    const progress = project ? getProjectProgress(project) : null
+    const stepCompletions = project ? getStepCompletionStatus(project) : Array(8).fill(false)
+
+    // Phase 1: テスト設定
+    const phase1Steps = [
+      {
+        id: "01-upload",
+        title: "模範解答アップロード",
+        description: "試験問題の模範解答画像をアップロード",
+        path: "/01-upload",
+        icon: "FileImage",
+        isCompleted: progress?.hasImages ?? (masterImageCount > 0),
+        canStart: true,
+      },
+      {
+        id: "02-template",
+        title: "採点領域作成",
+        description: "各設問の採点範囲を視覚的に設定",
+        path: "/02-template",
+        icon: "Settings",
+        isCompleted: progress?.hasLayout ?? (cropRegionCount > 0),
+        canStart: progress?.hasImages ?? (masterImageCount > 0),
+        dependsOn: ["01-upload"],
+      },
+      {
+        id: "03-region-info",
+        title: "領域情報",
+        description: "各領域の種類、配点、ラベルを設定",
+        path: "/03-region-info",
+        icon: "Edit",
+        isCompleted: progress?.hasRegionInfo ?? (questionRegionCount > 0),
+        canStart: progress?.hasLayout ?? (cropRegionCount > 0),
+        dependsOn: ["02-template"],
+      },
+      {
+        id: "04-question-group",
+        title: "小計点の設定",
+        description: "設問グループと小計点の関連付けを設定",
+        path: "/04-question-group",
+        icon: "Calculator",
+        isCompleted: progress?.hasSubtotalGroupSetting ?? (questionRegionCount > 0),
+        canStart: progress?.hasRegionInfo ?? (questionRegionCount > 0),
+        dependsOn: ["03-region-info"],
+      },
+    ]
+
+    // Phase 2: データ準備
+    const phase2Steps = [
+      {
+        id: "05-students",
+        title: "受験生徒管理",
+        description: "プロジェクトに参加する生徒を管理",
+        path: "/05-students",
+        icon: "Users",
+        isCompleted: progress?.hasStudents ?? (studentCount > 0),
+        canStart: progress?.hasSubtotalGroupSetting ?? (questionRegionCount > 0),
+        dependsOn: ["04-question-group"],
+      },
+      {
+        id: "06-student-answers",
+        title: "答案アップロード",
+        description: "スキャンした生徒の答案画像をアップロード",
+        path: "/06-student-answers",
+        icon: "Upload",
+        isCompleted: progress?.hasAnswers ?? (answerSheetCount > 0),
+        canStart: progress?.hasStudents ?? (studentCount > 0),
+        dependsOn: ["05-students"],
+      },
+    ]
+
+    // Phase 3: 実行・出力
+    const phase3Steps = [
+      {
+        id: "07-score-at-once",
+        title: "採点実行",
+        description: "キーボードファーストで効率的に採点",
+        path: "/07-score-at-once",
+        icon: "BarChart3",
+        isCompleted: progress?.hasScoring ?? false,
+        canStart: (progress?.hasAnswers && progress?.hasRegionInfo) ?? 
+                  (answerSheetCount > 0 && questionRegionCount > 0),
+        dependsOn: ["06-student-answers"],
+      },
+      {
+        id: "08-export",
+        title: "結果出力",
+        description: "採点結果をExcel・PDFで出力",
+        path: "/08-export",
+        icon: "FileOutput",
+        isCompleted: false, // 出力は何度でも実行可能
+        canStart: progress?.hasScoring ?? false,
+        dependsOn: ["07-score-at-once"],
+      },
+    ]
+
+    // フェーズの完了状況を計算
+    const phase1CompletedSteps = phase1Steps.filter(step => step.isCompleted).length
+    const phase1IsCompleted = phase1CompletedSteps === phase1Steps.length
+
+    const phase2CompletedSteps = phase2Steps.filter(step => step.isCompleted).length
+    const phase2IsCompleted = phase2CompletedSteps === phase2Steps.length
+
+    const phase3CompletedSteps = phase3Steps.filter(step => step.isCompleted).length
+    const phase3IsCompleted = phase3CompletedSteps === phase3Steps.length
+
+    // 現在のフェーズを決定
+    let currentPhase: 1 | 2 | 3 = 1
+    if (phase1IsCompleted && !phase2IsCompleted) {
+      currentPhase = 2
+    } else if (phase1IsCompleted && phase2IsCompleted) {
+      currentPhase = 3
+    }
+
+    // フェーズデータを構築
+    const phases: WorkflowPhase[] = [
+      {
+        id: 1,
+        title: "テスト設定",
+        description: "試験の基本構造を定義",
+        emoji: "🛠️",
+        steps: phase1Steps,
+        isActive: currentPhase === 1,
+        isCompleted: phase1IsCompleted,
+        canStart: true,
+        completedSteps: phase1CompletedSteps,
+        totalSteps: phase1Steps.length,
+        nextStepId: phase1Steps.find(step => !step.isCompleted && step.canStart)?.id,
+      },
+      {
+        id: 2,
+        title: "データ準備",
+        description: "採点対象データを準備",
+        emoji: "📚",
+        steps: phase2Steps,
+        isActive: currentPhase === 2,
+        isCompleted: phase2IsCompleted,
+        canStart: phase1IsCompleted,
+        completedSteps: phase2CompletedSteps,
+        totalSteps: phase2Steps.length,
+        nextStepId: phase2Steps.find(step => !step.isCompleted && step.canStart)?.id,
+      },
+      {
+        id: 3,
+        title: "実行・出力",
+        description: "採点作業と結果出力",
+        emoji: "⚡",
+        steps: phase3Steps,
+        isActive: currentPhase === 3,
+        isCompleted: phase3IsCompleted,
+        canStart: phase1IsCompleted && phase2IsCompleted,
+        completedSteps: phase3CompletedSteps,
+        totalSteps: phase3Steps.length,
+        nextStepId: phase3Steps.find(step => !step.isCompleted && step.canStart)?.id,
+      },
+    ]
+
+    // 全体進捗を計算
+    const totalSteps = phase1Steps.length + phase2Steps.length + phase3Steps.length
+    const totalCompletedSteps = phase1CompletedSteps + phase2CompletedSteps + phase3CompletedSteps
+    const overallProgress = (totalCompletedSteps / totalSteps) * 100
+
+    // 次のアクションを決定
+    const activePhase = phases.find(phase => phase.isActive)
+    const nextAction = activePhase?.nextStepId
+      ? (() => {
+          const nextStep = activePhase.steps.find(step => step.id === activePhase.nextStepId)
+          return nextStep
+            ? {
+                title: nextStep.title,
+                description: nextStep.description,
+                path: nextStep.path,
+                buttonText: `${nextStep.title}を開始`,
+              }
+            : null
+        })()
+      : null
+
+    return {
+      phases,
+      currentPhase,
+      overallProgress,
+      nextAction,
+    }
+  }, [
+    masterImageCount,
+    cropRegionCount,
+    questionRegionCount,
+    studentCount,
+    answerSheetCount,
+    project,
+  ])
+}
