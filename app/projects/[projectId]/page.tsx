@@ -1,7 +1,6 @@
 "use client"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
-import NextSteps from "@/components/projects/detail/NextSteps"
 import OverallProgress from "@/components/projects/detail/OverallProgress"
 import PhaseCard from "@/components/projects/detail/PhaseCard"
 import ProjectHeader from "@/components/projects/detail/ProjectHeader"
@@ -133,7 +132,6 @@ export default function ProjectDetailPage() {
             ))}
           </div>
 
-          <NextSteps workflowData={workflowData} projectId={projectId} />
 
           {/* Modals */}
           {project && showEditModal && (
