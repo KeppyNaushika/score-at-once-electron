@@ -6,7 +6,6 @@ import PageHeader from "@/components/layout/PageHeader"
 import ProjectStudentAddModal from "@/components/projects/05-students/components/ProjectStudentAddModal"
 import SortableStudentTable from "@/components/projects/05-students/components/SortableStudentTable"
 import StudentRemovalConfirmModal from "@/components/projects/05-students/components/StudentRemovalConfirmModal"
-import { StudentManagementHelp } from "@/components/projects/05-students/components/project-students-page/components/StudentManagementHelp"
 import { StudentStatisticsCards } from "@/components/projects/05-students/components/project-students-page/components/StudentStatisticsCards"
 import { useProjectStudentsData } from "@/components/projects/05-students/components/project-students-page/hooks/useProjectStudentsData"
 import { Button } from "@/components/ui/button"
@@ -59,16 +58,13 @@ export default function StudentsPage() {
   return (
     <div className="flex h-full flex-col">
       <PageHeader title="受験生徒の管理" helpButton={helpButton}>
-        <div className="flex items-center gap-2">
-          <StudentManagementHelp />
-          <Button
-            onClick={() =>
-              router.push(`/projects/${projectId}/06-student-answers`)
-            }
-          >
-            次へ: 生徒答案の追加と関連付け
-          </Button>
-        </div>
+        <Button
+          onClick={() =>
+            router.push(`/projects/${projectId}/06-student-answers`)
+          }
+        >
+          次へ: 生徒答案の追加と関連付け
+        </Button>
       </PageHeader>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">

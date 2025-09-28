@@ -9,11 +9,9 @@ import {
 import {
   BarChart3,
   CheckCircle,
-  Info,
   Keyboard,
   Lightbulb,
   Settings,
-  Users,
 } from "lucide-react"
 
 export function HelpContent07Scoring() {
@@ -21,194 +19,128 @@ export function HelpContent07Scoring() {
     <div className="space-y-6">
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
-          <BarChart3 className="h-6 w-6 text-red-600" />
-          採点作業の使い方
+          <BarChart3 className="h-6 w-6 text-blue-600" />
+          一括採点 - 使い方
         </h2>
         <p className="text-muted-foreground">
-          キーボードショートカットを使って効率的に採点を行います。複数教員での協調採点にも対応。
+          キーボードを使って素早く採点しましょう。複数の先生で一緒に採点することもできます。
         </p>
       </div>
 
       <HelpSection
-        icon={<Keyboard className="h-5 w-5 text-blue-600" />}
-        title="基本的な採点手順"
+        icon={<Keyboard className="h-5 w-5 text-green-600" />}
+        title="基本の使い方"
       >
         <div className="space-y-3">
           <StepItem
             number={1}
-            title="答案と設問を確認"
-            description="表示された答案画像と採点対象の設問を確認"
+            title="答案を見る"
+            description="画面に表示された生徒の答案を確認してください"
           />
           <StepItem
             number={2}
-            title="点数を入力"
-            description="数字キー（0-9）で点数を直接入力"
+            title="キーボードで採点"
+            description="Q(未採点)、E(正答)、F(部分点)、O(誤答)、P(無答)のキーを押します"
             isImportant
           />
           <StepItem
             number={3}
-            title="次の答案へ移動"
-            description="Spaceキーで次の答案に進む"
+            title="次の答案へ"
+            description="自動的に次の答案が表示されます"
           />
           <StepItem
             number={4}
-            title="必要に応じてコメント"
-            description="?キーでコメント入力モードに切り替え"
+            title="設問を変える"
+            description="Shift+A で前の設問、Shift+D で次の設問に移動できます"
           />
         </div>
       </HelpSection>
 
-      <HelpSection
-        icon={<Keyboard className="h-5 w-5 text-indigo-600" />}
-        title="主要なキーボードショートカット"
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <h4 className="mb-2 text-sm font-medium text-blue-700">基本操作</h4>
-            <div className="space-y-1">
-              <ShortcutItem keys="0-9" description="点数を直接入力" />
-              <ShortcutItem keys="Space" description="次の答案に進む" />
-              <ShortcutItem keys="Backspace" description="前の答案に戻る" />
-              <ShortcutItem keys="Enter" description="入力確定して次へ" />
-            </div>
-          </div>
-          <div>
-            <h4 className="mb-2 text-sm font-medium text-green-700">
-              便利機能
-            </h4>
-            <div className="space-y-1">
-              <ShortcutItem keys="F" description="満点を入力" />
-              <ShortcutItem keys="X" description="0点を入力" />
-              <ShortcutItem keys="?" description="コメント入力" />
-              <ShortcutItem keys="Tab" description="次の設問に移動" />
-            </div>
-          </div>
-        </div>
-      </HelpSection>
+      <div className="my-4 border-t border-gray-200" />
 
-      <HelpSection
-        icon={<Settings className="h-5 w-5 text-yellow-600" />}
-        title="表示モードの切り替え"
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">
-              設問拡大モード
-            </h4>
-            <p className="text-muted-foreground text-xs">
-              現在採点中の設問領域を拡大表示
-            </p>
-            <p className="text-xs text-blue-600">詳細な確認に最適</p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HelpSection
+          icon={<Keyboard className="h-5 w-5 text-blue-600" />}
+          title="採点キー"
+        >
+          <div className="space-y-2">
+            <ShortcutItem keys="Q" description="未採点（まだ採点していない）" />
+            <ShortcutItem keys="E" description="正答（正解）" />
+            <ShortcutItem keys="F" description="部分点（一部正解）" />
+            <ShortcutItem keys="J" description="保留（後で確認する）" />
+            <ShortcutItem keys="O" description="誤答（間違い）" />
+            <ShortcutItem keys="P" description="無答（何も書いてない）" />
           </div>
-          <div className="border-l-4 border-green-500 pl-3">
-            <h4 className="text-sm font-medium text-green-700">
-              全体表示モード
-            </h4>
-            <p className="text-muted-foreground text-xs">
-              答案全体を表示して文脈を把握
-            </p>
-            <p className="text-xs text-green-600">記述問題の採点に有効</p>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Users className="h-5 w-5 text-purple-600" />}
-        title="複数教員での協調採点"
-      >
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-medium text-purple-700">
-              分担採点の例
-            </h4>
-            <div className="rounded-lg border border-purple-200 bg-purple-50 p-3">
-              <div className="space-y-1 text-xs">
-                <p>• A先生: 問1-3（計算問題）</p>
-                <p>• B先生: 問4-6（記述問題）</p>
-                <p>• C先生: 問7-9（証明問題）</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-            <h4 className="text-xs font-medium text-orange-800">
-              競合回避システム
-            </h4>
-            <p className="text-xs text-orange-700">
-              同じ答案を複数の教員が採点しようとした場合、システムが自動的に検出して警告表示
-            </p>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Info className="h-5 w-5 text-cyan-600" />}
-        title="採点データの管理"
-      >
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-medium">自動保存機能</h4>
-            <p className="text-muted-foreground text-xs">
-              採点データは入力と同時に自動保存されます。
-            </p>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium">採点履歴の確認</h4>
-            <p className="text-muted-foreground text-xs">
-              「いつ」「誰が」「何点付けたか」の履歴を確認できます。
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <h4 className="text-xs font-medium text-blue-800">採点の修正</h4>
-            <p className="text-xs text-blue-700">
-              採点完了後でも点数の修正は可能です。必要に応じて再採点できます。
-            </p>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
-        title="効率的な採点のコツ"
-      >
-        <div className="space-y-3">
           <TipItem type="success">
-            <strong>キーボード中心の操作:</strong>
-            数字キー、Space、Backspaceの3つを覚えるだけで大幅に効率化されます。
+            5つのキーでマウス不要の高速採点が可能です。
           </TipItem>
+        </HelpSection>
 
-          <TipItem type="info">
-            <strong>部分点の活用:</strong>
-            小数点も入力可能です（2.5点、7.5点など）。記述問題で適切な部分点を付けましょう。
-          </TipItem>
-
-          <TipItem type="warning">
-            <strong>採点基準の統一:</strong>
-            複数教員で採点する場合は、事前に採点基準を明確にしておくことが重要です。
-          </TipItem>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<CheckCircle className="h-5 w-5 text-green-600" />}
-        title="採点完了の確認"
-      >
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <h4 className="mb-2 text-sm font-medium">採点完了チェックリスト</h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <div>□ 全受験者の採点完了</div>
-              <div>□ 未採点の設問なし</div>
-            </div>
-            <div>
-              <div>□ 点数の入力漏れなし</div>
-              <div>□ 部分点が適切に設定</div>
-            </div>
+        <HelpSection
+          icon={<Settings className="h-5 w-5 text-green-600" />}
+          title="移動と操作"
+        >
+          <div className="space-y-2">
+            <ShortcutItem keys="Shift+A" description="前の設問に移る" />
+            <ShortcutItem keys="Shift+D" description="次の設問に移る" />
+            <ShortcutItem
+              keys="W・A・S・D"
+              description="答案を上下左右に移動"
+            />
+            <ShortcutItem keys="R" description="表示を更新" />
+            <ShortcutItem keys="N" description="生徒名の表示・非表示" />
+            <ShortcutItem keys="0-9" description="部分点を数字で入力" />
           </div>
-        </div>
-      </HelpSection>
+          <TipItem type="info">部分点は小数点も使えます（例：2.5点）。</TipItem>
+        </HelpSection>
+      </div>
+
+      <div className="my-4 border-t border-gray-200" />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <HelpSection
+          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          title="困ったときは"
+        >
+          <div className="space-y-3">
+            <TipItem type="info">
+              <strong>キーボードが効かない：</strong>
+              画面をクリックしてからキーを押し直してください。
+            </TipItem>
+
+            <TipItem type="info">
+              <strong>間違えて採点した：</strong>
+              正しいキーを押し直せば点数が変更されます。
+            </TipItem>
+
+            <TipItem type="warning">
+              <strong>保留機能を活用：</strong>
+              迷ったときはJキーで保留にして後でまとめて確認できます。
+            </TipItem>
+          </div>
+        </HelpSection>
+
+        <HelpSection
+          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          title="操作のコツ"
+        >
+          <div className="space-y-3">
+            <TipItem type="success">
+              <strong>基本5キーをマスター：</strong>
+              Q・E・F・O・Pで採点速度が大幅向上します。
+            </TipItem>
+
+            <TipItem type="success">
+              <strong>部分点を活用：</strong>
+              Fキー後に数字で細かい点数を入力（2.5点など）。
+            </TipItem>
+
+            <TipItem type="info">
+              採点データは自動保存されるため作業中断も安心です。
+            </TipItem>
+          </div>
+        </HelpSection>
+      </div>
     </div>
   )
 }

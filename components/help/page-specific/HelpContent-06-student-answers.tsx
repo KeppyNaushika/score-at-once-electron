@@ -1,19 +1,12 @@
 "use client"
 
 import {
+  Badge,
   HelpSection,
   StepItem,
   TipItem,
 } from "@/components/help/common/HelpComponents"
-import {
-  AlertTriangle,
-  CheckCircle,
-  FileImage,
-  Info,
-  Lightbulb,
-  Settings,
-  Upload,
-} from "lucide-react"
+import { CheckCircle, FileImage, Info, Lightbulb, Upload } from "lucide-react"
 
 export function HelpContent06StudentAnswers() {
   return (
@@ -21,255 +14,131 @@ export function HelpContent06StudentAnswers() {
       <div>
         <h2 className="mb-2 flex items-center gap-2 text-xl font-bold">
           <Upload className="h-6 w-6 text-blue-600" />
-          答案アップロードの使い方
+          生徒答案の追加と関連付け - 使い方
         </h2>
         <p className="text-muted-foreground">
-          生徒の答案画像をアップロードし、表形式で生徒と答案の対応付けを行います。
+          生徒の答案画像をアップロードして、それぞれの生徒に正しく関連付けましょう。
         </p>
       </div>
 
       <HelpSection
         icon={<Upload className="h-5 w-5 text-green-600" />}
-        title="基本的なアップロード手順"
+        title="基本の使い方"
       >
         <div className="space-y-3">
           <StepItem
             number={1}
-            title="ファイル選択"
-            description="「新規追加」タブで答案画像（PNG、JPEG、PDF）をドラッグ&ドロップ"
+            title="答案を選ぶ"
+            description="「新規追加」タブで答案画像ファイルをドラッグするか選択"
           />
           <StepItem
             number={2}
-            title="配置戦略選択"
-            description="「ページごと並べる」または「生徒ごと並べる」を選択"
+            title="並べ方を決める"
+            description="「ページごと」か「生徒ごと」かを選んでください"
             isImportant
           />
           <StepItem
             number={3}
-            title="グリッドで確認"
-            description="生徒×ページの表で答案の配置を確認・調整"
+            title="表で確認"
+            description="生徒と答案が正しく対応しているかチェック"
           />
           <StepItem
             number={4}
-            title="アップロード実行"
-            description="「アップロード」ボタンでデータベースに保存"
+            title="アップロード"
+            description="「アップロード」ボタンを押して保存"
           />
         </div>
       </HelpSection>
 
-      <HelpSection
-        icon={<Settings className="h-5 w-5 text-purple-600" />}
-        title="配置戦略の選択"
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div className="border-l-4 border-green-500 pl-3">
-            <h4 className="text-sm font-medium text-green-700">
-              ページごと並べる
-            </h4>
-            <p className="text-muted-foreground mb-1 text-xs">
-              1ページ目全員 → 2ページ目全員の順
-            </p>
-            <p className="text-xs text-green-600">
-              ページ別にスキャンした場合に適している
-            </p>
-          </div>
-          <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">
-              生徒ごと並べる
-            </h4>
-            <p className="text-muted-foreground mb-1 text-xs">
-              生徒A全ページ → 生徒B全ページの順
-            </p>
-            <p className="text-xs text-blue-600">
-              生徒別にスキャンした場合に適している
-            </p>
-          </div>
-        </div>
-      </HelpSection>
+      <div className="my-4 border-t border-gray-200" />
 
-      <HelpSection
-        icon={<FileImage className="h-5 w-5 text-indigo-600" />}
-        title="表形式の管理機能"
-      >
-        <div className="space-y-3">
-          <div>
-            <h4 className="text-sm font-medium">基本操作</h4>
-            <div className="space-y-1 text-xs">
-              <p>
-                • <strong>ドラッグ&ドロップ:</strong> 画像を別のセルに移動
-              </p>
-              <p>
-                • <strong>Alt+クリック:</strong> セルを無効化（配置対象外）
-              </p>
-              <p>
-                • <strong>画像削除:</strong> セル右上の×ボタンで画像削除
-              </p>
-              <p>
-                • <strong>プレビュー切替:</strong> 全体表示と氏名欄表示を切替
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium">セルの状態</h4>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                  <span>配置済み（画像あり）</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-gray-500"></div>
-                  <span>空き（配置可能）</span>
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-red-500"></div>
-                  <span>生徒無効（欠席等）</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-orange-500"></div>
-                  <span>セル無効（除外）</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Info className="h-5 w-5 text-cyan-600" />}
-        title="タブの使い分け"
-      >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <div>
-            <h4 className="text-sm font-medium text-green-700">新規追加タブ</h4>
-            <div className="space-y-1 text-xs">
-              <p>• 新しい答案画像のアップロード</p>
-              <p>• 配置戦略の選択と自動配置</p>
-              <p>• 一括アップロード実行</p>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-sm font-medium text-orange-700">
-              配置済み答案の確認タブ
-            </h4>
-            <div className="space-y-1 text-xs">
-              <p>• アップロード済み答案の確認・入れ替え</p>
-              <p>• 楽観的更新による即座な変更反映</p>
-              <p>• 手動更新ボタンによる変更確定</p>
-              <p>• 採点情報込み入れ替えの3つのオプション</p>
-            </div>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Settings className="h-5 w-5 text-blue-600" />}
-        title="楽観的答案入れ替えシステム"
-      >
-        <div className="space-y-3">
-          <div className="border-l-4 border-blue-500 pl-3">
-            <h4 className="text-sm font-medium text-blue-700">
-              新機能：手動更新システム
-            </h4>
-            <div className="mt-1 space-y-1 text-xs">
-              <p>
-                •
-                ドラッグ&ドロップで答案を入れ替え（即座に赤いオーバーレイ表示）
-              </p>
-              <p>• 変更はローカルのみ反映、データベースは未更新</p>
-              <p>• 「x件の変更を反映」ボタンで一括確定</p>
-              <p>• 詳細な確認モーダルで安全な処理選択</p>
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium">入れ替え処理の選択肢</h4>
-            <div className="space-y-2 text-xs">
-              <div className="rounded border border-blue-200 bg-blue-50 p-2">
-                <p>
-                  <strong className="text-blue-700">
-                    採点情報も一緒に入れ替え（推奨）
-                  </strong>
-                </p>
-                <p className="text-blue-600">
-                  答案画像と採点結果を正しく対応させます
-                </p>
-              </div>
-              <div className="rounded border border-orange-200 bg-orange-50 p-2">
-                <p>
-                  <strong className="text-orange-700">
-                    答案画像のみ入れ替え（注意）
-                  </strong>
-                </p>
-                <p className="text-orange-600">
-                  採点情報は元の位置に残り、データ不整合のリスクがあります
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
-        title="効率的な管理のコツ"
-      >
-        <div className="space-y-3">
-          <TipItem type="success">
-            <strong>スキャン方法に応じた戦略選択:</strong>
-            ページ別にスキャンした場合は「ページごと並べる」、生徒別にスキャンした場合は「生徒ごと並べる」を選択すると自動配置が正確になります。
-          </TipItem>
-
-          <TipItem type="info">
-            <strong>プレビュー機能の活用:</strong>
-            氏名欄表示で生徒の特定、全体表示で答案内容の確認ができます。用途に応じて切り替えると効率的です。
-          </TipItem>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<AlertTriangle className="h-5 w-5 text-red-600" />}
-        title="よくある問題と対処法"
-      >
-        <div className="space-y-2">
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-xs text-red-700">
-              <strong>画像が表示されない:</strong>{" "}
-              ファイルパスや権限を確認してください
-            </p>
-          </div>
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-3">
-            <p className="text-xs text-orange-700">
-              <strong>自動配置が期待通りにならない:</strong>{" "}
-              配置戦略の選択を確認し、必要に応じて手動調整してください
-            </p>
-          </div>
-        </div>
-      </HelpSection>
-
-      <HelpSection
-        icon={<CheckCircle className="h-5 w-5 text-green-600" />}
-        title="完了前のチェック"
-      >
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <h4 className="mb-2 text-sm font-medium">
-            答案管理完了チェックリスト
-          </h4>
-          <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <HelpSection
+          icon={<FileImage className="h-5 w-5 text-blue-600" />}
+          title="使えるファイルの種類"
+        >
+          <div className="space-y-3">
             <div>
-              <div>□ 全受験者の答案を配置</div>
-              <div>□ 画像が正常に表示</div>
+              <h4 className="mb-2 font-medium">対応ファイル</h4>
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="outline">PDF</Badge>
+                <Badge variant="outline">PNG</Badge>
+                <Badge variant="outline">JPEG/JPG</Badge>
+              </div>
             </div>
-            <div>
-              <div>□ 欠席者セルを無効化</div>
-              <div>□ アップロード処理完了</div>
+            <div className="rounded-lg bg-blue-50 p-4">
+              <p className="text-sm text-blue-800">
+                PDFファイルは自動的にページごとの画像に変換されます。
+              </p>
             </div>
           </div>
-        </div>
-      </HelpSection>
+        </HelpSection>
+
+        <HelpSection
+          icon={<Info className="h-5 w-5 text-purple-600" />}
+          title="並べ方の選び方"
+        >
+          <div className="space-y-3">
+            <div className="border-l-4 border-green-500 pl-3">
+              <h4 className="text-sm font-medium text-green-700">
+                ページごと並べる
+              </h4>
+              <p className="text-xs text-green-600">
+                1ページ目をまとめて、次に2ページ目をまとめてスキャンした場合
+              </p>
+            </div>
+            <div className="border-l-4 border-blue-500 pl-3">
+              <h4 className="text-sm font-medium text-blue-700">
+                生徒ごと並べる
+              </h4>
+              <p className="text-xs text-blue-600">
+                生徒Aの全ページ、次に生徒Bの全ページという順でスキャンした場合
+              </p>
+            </div>
+          </div>
+        </HelpSection>
+      </div>
+
+      <div className="my-4 border-t border-gray-200" />
+
+      <div className="grid gap-6 xl:grid-cols-2">
+        <HelpSection
+          icon={<Lightbulb className="h-5 w-5 text-yellow-600" />}
+          title="困ったときは"
+        >
+          <div className="space-y-3">
+            <TipItem type="info">
+              <strong>答案の位置を間違えた：</strong>
+              「配置済み答案の確認」タブで、画像をドラッグして正しい位置に移動できます。
+              変更したら「○件の変更を反映」ボタンを押してください。
+            </TipItem>
+
+            <TipItem type="warning">
+              <strong>自動配置がうまくいかない：</strong>
+              スキャンした順番に合わせて「ページごと」か「生徒ごと」を選び直してください。
+              それでもダメなら手動で調整しましょう。
+            </TipItem>
+          </div>
+        </HelpSection>
+
+        <HelpSection
+          icon={<CheckCircle className="h-5 w-5 text-green-600" />}
+          title="操作のコツ"
+        >
+          <div className="space-y-3">
+            <TipItem type="success">
+              <strong>2つのタブを使い分ける：</strong>
+              新しく答案を追加するときは「新規追加」、
+              すでにアップロードした答案を確認・修正するときは「配置済み答案の確認」を使います。
+            </TipItem>
+
+            <TipItem type="success">
+              答案を移動するときは、採点情報も一緒に移動することをお勧めします。
+              答案と採点結果がずれてしまうのを防げます。
+            </TipItem>
+          </div>
+        </HelpSection>
+      </div>
     </div>
   )
 }
