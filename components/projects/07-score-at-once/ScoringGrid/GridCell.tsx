@@ -4,6 +4,18 @@ import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMa
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 
+const SCORE_STATUS_KEYS = Object.keys(SCORE_STATUS_CONFIG) as Array<
+  keyof typeof SCORE_STATUS_CONFIG
+>
+
+type ScoreStatusConfig =
+  (typeof SCORE_STATUS_CONFIG)[keyof typeof SCORE_STATUS_CONFIG]
+
+const isScoreStatusKey = (
+  status: keyof typeof SCORE_STATUS_CONFIG,
+): status is keyof typeof SCORE_STATUS_CONFIG =>
+  SCORE_STATUS_KEYS.includes(status)
+
 interface GridCellProps {
   answer: GridAnswerItem
   isSelected: boolean
@@ -25,12 +37,32 @@ export function GridCell({
   selectionBorderSettings,
   onMouseDown,
 }: GridCellProps) {
-  const config =
-    SCORE_STATUS_CONFIG[answer.status as keyof typeof SCORE_STATUS_CONFIG] ||
-    SCORE_STATUS_CONFIG.unscored
+  const statusKey: keyof typeof SCORE_STATUS_CONFIG = isScoreStatusKey(
+    answer.status,
+  )
+    ? answer.status
+    : "unscored"
+  const config: ScoreStatusConfig =
+    SCORE_STATUS_CONFIG[statusKey] ?? SCORE_STATUS_CONFIG.unscored
   const Icon = config.icon
   const isMaster =
     answer.studentId === "MASTER" || answer.studentName === "模範解答"
+
+  const cellClasses = ["flex flex-shrink-0 flex-col gap-1 p-2"]
+
+  if (isMaster) {
+    cellClasses.push("border-2 border-black bg-white")
+  } else {
+    cellClasses.push("border-2")
+    if (isSelected) {
+      cellClasses.push(
+        selectionBorderSettings.tailwindClass,
+        config.selectedBgColor,
+      )
+    } else {
+      cellClasses.push(config.borderColor, config.bgColor ?? "bg-white")
+    }
+  }
 
   const getScoreDisplay = () => {
     if (answer.status === "correct") {
@@ -50,17 +82,7 @@ export function GridCell({
   return (
     <div
       data-answer-id={answer.id}
-      className={`flex flex-shrink-0 flex-col gap-1 p-2 ${
-        isMaster
-          ? "border-2 border-black bg-white"
-          : `${config.bgColor || "bg-white"}`
-      } ${!isMaster ? config.borderColor : ""} ${
-        !isMaster
-          ? isSelected
-            ? `border-2 ${selectionBorderSettings.tailwindClass}`
-            : "border-2 border-transparent"
-          : ""
-      }`}
+      className={cellClasses.join(" ")}
       onMouseDown={(e) => onMouseDown(e, answer.id)}
     >
       {/* 答案画像 */}

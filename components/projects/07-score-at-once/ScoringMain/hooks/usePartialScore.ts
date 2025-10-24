@@ -86,21 +86,22 @@ export function usePartialScore({
       }
 
       let finalInput = partialScoreInput
-      if (finalInput.endsWith(".")) {
-        finalInput = finalInput + "0"
-      }
 
-      const finalValue = parseFloat(finalInput)
-      const maxPoints = currentCropRegion?.points || 10
-
-      // 値の妥当性チェック
-      if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
-        const roundedValue = Math.round(finalValue * 100) / 100
-        onBatchScore(confirmType, roundedValue, null, selectedAnswers)
-      } else if (finalInput === "" || finalInput === "0.") {
-        // 空の場合は0点として処理
-        onBatchScore(confirmType, 0, null, selectedAnswers)
+      if (finalInput.trim() === "") {
+        onBatchScore(confirmType, null, null, selectedAnswers)
       } else {
+        if (finalInput.endsWith(".")) {
+          finalInput = finalInput + "0"
+        }
+
+        const finalValue = parseFloat(finalInput)
+        const maxPoints = currentCropRegion?.points || 10
+
+        // 値の妥当性チェック
+        if (!isNaN(finalValue) && finalValue >= 0 && finalValue <= maxPoints) {
+          const roundedValue = Math.round(finalValue * 100) / 100
+          onBatchScore(confirmType, roundedValue, null, selectedAnswers)
+        }
       }
 
       // モーダルを閉じる

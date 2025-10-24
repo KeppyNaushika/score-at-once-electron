@@ -139,7 +139,9 @@ export default function RegionInfoPage() {
               regionData,
             )
           } else {
-            return await window.electronAPI.createCropRegion(regionData)
+            const { orderIndex: _ignoredOrderIndex, ...createData } =
+              regionData
+            return await window.electronAPI.createCropRegion(createData)
           }
         })
 
@@ -221,40 +223,15 @@ export default function RegionInfoPage() {
         >
           <h3 className="mb-3 font-medium">模範解答 (全ページ)</h3>
           <div className="space-y-4">
-            {projectPages.map((_, pageIndex) => {
-              // 順序は固定（1, 2, 3...）だが、対応する画像は実際のpageNumber順
-              const displayPageNumber = pageIndex + 1
-              const correspondingPage = projectPages.find(
-                (img) => img.pageNumber === displayPageNumber,
-              )
-
-              if (!correspondingPage) {
-                return (
-                  <div key={`page-${displayPageNumber}`} className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-medium">
-                        ページ {displayPageNumber}
-                      </h4>
-                      <div className="text-muted-foreground text-xs">
-                        (画像なし)
-                      </div>
-                    </div>
-                    <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
-                      <div className="text-muted-foreground text-sm">
-                        画像が見つかりません
-                      </div>
-                    </div>
-                  </div>
-                )
-              }
-
-              const imageUrl = backgroundImageUrls[correspondingPage.id]
+            {projectPages.map((page) => {
+              const displayPageNumber = page.pageNumber
+              const imageUrl = backgroundImageUrls[page.id]
               const pageRegions = cropRegions.filter(
-                (region) => region.projectPage?.id === correspondingPage.id,
+                (region) => region.projectPage?.id === page.id,
               )
 
               return (
-                <div key={`page-${displayPageNumber}`} className="space-y-2">
+                <div key={page.id} className="space-y-2">
                   <div className="flex items-center gap-2">
                     <h4 className="text-sm font-medium">
                       ページ {displayPageNumber}
@@ -263,7 +240,8 @@ export default function RegionInfoPage() {
                       ({pageRegions.length}個の領域)
                     </div>
                   </div>
-                  {imageUrl && (
+
+                  {imageUrl ? (
                     <div className="relative overflow-hidden rounded-lg border">
                       <Image
                         src={imageUrl}
@@ -273,10 +251,9 @@ export default function RegionInfoPage() {
                         height={600}
                         unoptimized
                         onClick={() => {
-                          setSelectedProjectPage(correspondingPage)
+                          setSelectedProjectPage(page)
                         }}
                       />
-                      {/* Overlay regions for this page */}
                       {pageRegions.map((area, index) => {
                         const globalIndex = cropRegions.findIndex(
                           (r) => r.id === area.id,
@@ -284,7 +261,7 @@ export default function RegionInfoPage() {
                         const isSelected = selectedRowIndex === globalIndex
                         return (
                           <div
-                            key={area.id || `area-${pageIndex}-${index}`}
+                            key={area.id ?? `area-${page.id}-${index}`}
                             className={`absolute border-2 ${
                               isSelected
                                 ? "border-orange-500 bg-orange-500/30"
@@ -303,12 +280,17 @@ export default function RegionInfoPage() {
                           />
                         )
                       })}
-                      {/* Page indicator if this is selected */}
-                      {selectedProjectPage?.id === correspondingPage.id && (
+                      {selectedProjectPage?.id === page.id && (
                         <div className="absolute top-2 left-2 rounded bg-blue-500 px-2 py-1 text-xs font-medium text-white">
                           編集中
                         </div>
                       )}
+                    </div>
+                  ) : (
+                    <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
+                      <div className="text-muted-foreground text-sm">
+                        画像が見つかりません
+                      </div>
                     </div>
                   )}
                 </div>

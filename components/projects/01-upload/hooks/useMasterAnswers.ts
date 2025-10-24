@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { MasterAnswer, MasterAnswersState } from "@/components/projects/01-upload/types"
 import {
+  convertProjectPagesToMasterAnswers,
   createUploadData,
   generateImageUrls,
   generatePageNumberUpdateRequests,
@@ -182,25 +183,11 @@ export function useMasterAnswers(
           const updatedProject =
             await window.electronAPI.fetchProjectById(projectId)
           if (updatedProject && updatedProject.projectPages) {
-            // Convert projectPages to master answers format for compatibility
-            const masterAnswers = updatedProject.projectPages
-              .filter((page) =>
-                page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER"),
-              )
-              .map((page) => {
-                const masterAnswer = page.pageImages?.find(
-                  (img) => img.imageType === "MODEL_ANSWER",
-                )
-                return {
-                  id: page.id,
-                  projectId: page.projectId,
-                  imagePath: masterAnswer?.imagePath || "",
-                  pageNumber: page.pageNumber,
-                  createdAt: page.createdAt,
-                  updatedAt: page.updatedAt,
-                }
-              })
-            const sortedUpdatedAnswers = sortImagesByPageNumber(masterAnswers)
+            const masterAnswers = convertProjectPagesToMasterAnswers(
+              updatedProject.projectPages,
+            )
+            const sortedUpdatedAnswers =
+              sortImagesByPageNumber(masterAnswers)
 
             setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))
             onAnswersChange(sortedUpdatedAnswers)
@@ -299,16 +286,17 @@ export function useMasterAnswers(
       }))
 
       try {
-        await window.electronAPI.deleteMasterAnswer(answerId)
-        const updatedAnswers = state.answers.filter((answer) => answer.id !== answerId)
+        const result = await window.electronAPI.deleteMasterAnswer(answerId)
+        const updatedAnswers = sortImagesByPageNumber(
+          convertProjectPagesToMasterAnswers(result.projectPages),
+        )
+        const newUrls = await generateImageUrls(updatedAnswers)
 
         setState((prev) => ({
           ...prev,
           answers: updatedAnswers,
           isDeleting: { ...prev.isDeleting, [answerId]: false },
-          imageUrls: Object.fromEntries(
-            Object.entries(prev.imageUrls).filter(([id]) => id !== answerId),
-          ),
+          imageUrls: newUrls,
         }))
 
         onAnswersChange(updatedAnswers)
@@ -322,7 +310,7 @@ export function useMasterAnswers(
         }))
       }
     },
-    [state.answers, onAnswersChange],
+    [onAnswersChange],
   )
 
   /**

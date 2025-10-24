@@ -92,45 +92,128 @@ export const uploadMasterAnswers = async (
   return uploadedAnswers
 }
 
+type ProjectPageWithMasterImages = Prisma.ProjectPageGetPayload<{
+  include: {
+    project: true
+    pageImages: {
+      where: { imageType: "MODEL_ANSWER" }
+      orderBy: { createdAt: "asc" }
+      include: { student: true }
+    }
+    cropRegions: true
+  }
+}>
+
+export interface DeleteMasterAnswerResult {
+  deletedAnswer: PageImage | null
+  projectPages: ProjectPageWithMasterImages[]
+}
+
 export const deleteMasterAnswer = async (
   answerId: string,
-): Promise<PageImage | void> => {
+): Promise<DeleteMasterAnswerResult> => {
   try {
     const answer = await prisma.pageImage.findUnique({
       where: { id: answerId },
-      include: { projectPage: true }
+      include: { projectPage: true },
     })
-    
-    if (answer && answer.imageType === "MODEL_ANSWER") {
-      const filePath = getAbsolutePathFromData(answer.imagePath)
-      
-      try {
-        await fs.unlink(filePath)
-      } catch (fileError: unknown) {
-        if (fileError && typeof fileError === 'object' && 'code' in fileError && fileError.code !== "ENOENT") {
-          console.warn(`Failed to delete answer file ${filePath}:`, fileError)
-        }
-      }
 
-      // Delete the PageImage
-      const deletedAnswer = await prisma.pageImage.delete({ 
-        where: { id: answerId } 
+    if (!answer) {
+      console.warn(
+        `No PageImage found for master answer deletion (id: ${answerId}).`,
+      )
+      return { deletedAnswer: null, projectPages: [] }
+    }
+
+    if (answer.imageType !== "MODEL_ANSWER") {
+      console.warn(
+        `PageImage ${answerId} is not a MODEL_ANSWER (found ${answer.imageType}). Skipping deletion.`,
+      )
+      return { deletedAnswer: null, projectPages: [] }
+    }
+
+    const projectId = answer.projectPage.projectId
+    const filePath = getAbsolutePathFromData(answer.imagePath)
+    let updatedPages: ProjectPageWithMasterImages[] = []
+
+    await prisma.$transaction(async (tx) => {
+      await tx.pageImage.delete({
+        where: { id: answerId },
       })
 
-      // Check if this was the only answer for this ProjectPage
-      const remainingAnswers = await prisma.pageImage.count({
-        where: { projectPageId: answer.projectPageId }
+      const remainingAnswers = await tx.pageImage.count({
+        where: { projectPageId: answer.projectPageId },
       })
 
-      // If no answers remain, delete the ProjectPage
       if (remainingAnswers === 0) {
-        await prisma.projectPage.delete({
-          where: { id: answer.projectPageId }
+        await tx.projectPage.delete({
+          where: { id: answer.projectPageId },
         })
       }
 
-      return deletedAnswer
+      const pages = await tx.projectPage.findMany({
+        where: { projectId },
+        orderBy: { pageNumber: "asc" },
+        include: {
+          project: true,
+          cropRegions: true,
+          pageImages: {
+            where: { imageType: "MODEL_ANSWER" },
+            orderBy: { createdAt: "asc" },
+            include: {
+              student: true,
+            },
+          },
+        },
+      })
+
+      let resequenced = false
+      for (let index = 0; index < pages.length; index++) {
+        const targetPageNumber = index + 1
+        if (pages[index].pageNumber !== targetPageNumber) {
+          resequenced = true
+          await tx.projectPage.update({
+            where: { id: pages[index].id },
+            data: { pageNumber: targetPageNumber },
+          })
+        }
+      }
+
+      if (resequenced) {
+        updatedPages = await tx.projectPage.findMany({
+          where: { projectId },
+          orderBy: { pageNumber: "asc" },
+          include: {
+            project: true,
+            cropRegions: true,
+            pageImages: {
+              where: { imageType: "MODEL_ANSWER" },
+              orderBy: { createdAt: "asc" },
+              include: {
+                student: true,
+              },
+            },
+          },
+        })
+      } else {
+        updatedPages = pages
+      }
+    })
+
+    try {
+      await fs.unlink(filePath)
+    } catch (fileError: unknown) {
+      if (
+        fileError &&
+        typeof fileError === "object" &&
+        "code" in fileError &&
+        fileError.code !== "ENOENT"
+      ) {
+        console.warn(`Failed to delete answer file ${filePath}:`, fileError)
+      }
     }
+
+    return { deletedAnswer: answer, projectPages: updatedPages }
   } catch (error) {
     console.error(`Failed to delete master answer ${answerId}:`, error)
     throw error

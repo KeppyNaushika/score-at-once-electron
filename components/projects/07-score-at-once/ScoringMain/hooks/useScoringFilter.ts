@@ -156,9 +156,10 @@ export function useScoringFilter({
           imageUrl: pageImage.imagePath
             ? `appimg://${pageImage.imagePath}`
             : "",
-          currentScore: score?.partialScore
-            ? Number(score.partialScore)
-            : undefined,
+          currentScore:
+            score?.partialScore !== undefined && score?.partialScore !== null
+              ? Number(score.partialScore)
+              : undefined,
           maxScore: currentCropRegion.points ?? 0,
           status: (score?.status as ScoringStatus) ?? "unscored",
           questionRegion: currentCropRegion, // 採点領域情報を追加
@@ -255,6 +256,20 @@ export function useScoringFilter({
     selectedPageImageIdsRef.current = selectedPageImageIds
   }, [selectedPageImageIds])
 
+  useEffect(() => {
+    if (selectedPageImageIds.size !== 1) {
+      return
+    }
+    const selectedId = Array.from(selectedPageImageIds)[0]
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("score-view:scroll-to-answer", {
+          detail: { answerId: selectedId },
+        }),
+      )
+    }
+  }, [selectedPageImageIds])
+
   // visibleAnswersが更新されたら適切な答案選択を行う（最適化版）
   useEffect(() => {
     console.log("🔍 Selection debug - visibleAnswers changed:", {
@@ -287,6 +302,9 @@ export function useScoringFilter({
     // 早期リターンで不要な処理をスキップ
     if (visibleAnswers.length === 0) {
       console.log("🔍 Selection debug - No visible answers, returning")
+      if (selectedPageImageIdsRef.current.size > 0) {
+        setSelectedPageImageIds(new Set())
+      }
       return
     }
 
@@ -300,6 +318,13 @@ export function useScoringFilter({
             "🔍 Selection debug - Current selection is still valid:",
             selectedId,
           )
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("score-view:scroll-to-answer", {
+                detail: { answerId: selectedId },
+              }),
+            )
+          }
           return // 有効な選択があるので処理終了
         }
       }
@@ -320,6 +345,13 @@ export function useScoringFilter({
           answerId,
         )
         setSelectedPageImageIds(new Set([answerId]))
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("score-view:scroll-to-answer", {
+              detail: { answerId },
+            }),
+          )
+        }
         return // 見つかったらすぐ終了
       }
     }

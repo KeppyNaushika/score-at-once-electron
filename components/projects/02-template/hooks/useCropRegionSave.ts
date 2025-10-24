@@ -66,7 +66,8 @@ export function useCropRegionSave(
           )
         } else if (operation === "create") {
           // 新規領域の作成
-          return await window.electronAPI.createCropRegion(regionData)
+          const { orderIndex: _ignoredOrderIndex, ...createData } = regionData
+          return await window.electronAPI.createCropRegion(createData)
         } else {
           throw new Error(
             `Invalid operation: ${operation} for region with ID: ${region.id}`,
@@ -112,7 +113,6 @@ export function useCropRegionSave(
           }
 
           const regionData = {
-            projectId,
             projectPageId: area.projectPageId,
             type: area.type,
             x: area.x,
@@ -136,7 +136,8 @@ export function useCropRegionSave(
             saveResults.push({ originalIndex: i, result, wasUpdate: true })
           } else {
             // 新規領域の作成
-            const result = await window.electronAPI.createCropRegion(regionData)
+            const { orderIndex: _ignoredOrderIndex, ...createData } = regionData
+            const result = await window.electronAPI.createCropRegion(createData)
             saveResults.push({ originalIndex: i, result, wasUpdate: false })
           }
         }
@@ -198,7 +199,6 @@ export function useCropRegionSave(
       }
 
       // 新規領域オブジェクトを作成（orderIndexを設定）
-      const nextOrderIndex = existingRegions.length
       const newRegion: CropRegionArea = {
         type,
         x: coords.x,
@@ -208,7 +208,6 @@ export function useCropRegionSave(
         label,
         points,
         projectPageId,
-        orderIndex: nextOrderIndex,
       }
 
       try {
@@ -220,6 +219,12 @@ export function useCropRegionSave(
           return {
             ...newRegion,
             id: savedRegion.id,
+            orderIndex: savedRegion.orderIndex ?? null,
+            points:
+              typeof savedRegion.points === "number"
+                ? String(savedRegion.points)
+                : newRegion.points,
+            label: savedRegion.label ?? newRegion.label,
           }
         }
         return null

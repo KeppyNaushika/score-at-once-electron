@@ -3,6 +3,7 @@
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { MasterAnswerManager } from "@/components/projects/01-upload/components/MasterAnswerManager"
+import { convertProjectPagesToMasterAnswers } from "@/components/projects/01-upload/utils/image-utils"
 import { Button } from "@/components/ui/button"
 import type { MasterAnswerData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"
@@ -47,24 +48,9 @@ export default function MasterAnswerStepPage() {
         await window.electronAPI.fetchProjectById(projectId) // ProjectWithDetails 型
       if (fetchedProject && fetchedProject.projectPages) {
         // projectPages から master answers を抽出してソート
-        const masterAnswers = fetchedProject.projectPages
-          .filter((page) =>
-            page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER"),
-          )
-          .map((page) => {
-            const masterAnswer = page.pageImages?.find(
-              (img) => img.imageType === "MODEL_ANSWER",
-            )
-            return {
-              id: page.id,
-              projectId: page.projectId,
-              imagePath: masterAnswer?.imagePath || "",
-              pageNumber: page.pageNumber,
-              createdAt: page.createdAt,
-              updatedAt: page.updatedAt,
-            }
-          })
-          .sort((a, b) => a.pageNumber - b.pageNumber)
+        const masterAnswers = convertProjectPagesToMasterAnswers(
+          fetchedProject.projectPages,
+        ).sort((a, b) => a.pageNumber - b.pageNumber)
         setMasterAnswers(masterAnswers)
       } else {
         setMasterAnswers([])
