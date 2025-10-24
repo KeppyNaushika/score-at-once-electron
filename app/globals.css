@@ -2,7 +2,7 @@
 
 @import "tailwindcss";
 
-@custom-variant dark (&: is(.dark *));
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -129,13 +129,13 @@
     display: inline-block !important;
     margin: 0 2px;
   }
-  
+
   .math-preview mjx-container[jax="CHTML"][display="true"] {
     display: block !important;
     text-align: center !important;
     margin: 8px 0;
   }
-  
+
   .math-preview mjx-container[jax="CHTML"] mjx-math {
     font-size: 1.1em;
   }
