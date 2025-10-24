@@ -99,23 +99,25 @@ export async function fetchExportData(
     }
 
     // 設問領域と小計領域の分離・ソート
+    const sortByOrderIndex = (a: CropRegion, b: CropRegion) => {
+      const orderA = a.orderIndex ?? Number.MAX_SAFE_INTEGER
+      const orderB = b.orderIndex ?? Number.MAX_SAFE_INTEGER
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      if (Math.abs(a.y - b.y) < 0.01) {
+        return a.x - b.x
+      }
+      return a.y - b.y
+    }
+
     const questionRegions = cropRegions
       .filter((region: CropRegion) => region.type === "QUESTION_ANSWER")
-      .sort((a: CropRegion, b: CropRegion) => {
-        if (Math.abs(a.y - b.y) < 0.01) {
-          return a.x - b.x
-        }
-        return a.y - b.y
-      })
+      .sort(sortByOrderIndex)
 
     const subtotalRegions = cropRegions
       .filter((region: CropRegion) => region.type === "SUBTOTAL_SCORE")
-      .sort((a: CropRegion, b: CropRegion) => {
-        if (Math.abs(a.y - b.y) < 0.01) {
-          return a.x - b.x
-        }
-        return a.y - b.y
-      })
+      .sort(sortByOrderIndex)
 
     // 採点データの構造化
     const scoringData = await buildScoringData(
@@ -237,7 +239,7 @@ function buildScoreDetails(
 
     return {
       questionId: region.id,
-      questionLabel: region.label || `問${region.orderIndex || 1}`,
+      questionLabel: region.label || `問${(region.orderIndex ?? 0) + 1}`,
       score: actualScore,
       maxScore: region.points || 0,
       status:
@@ -311,7 +313,7 @@ async function buildSubtotalScores(
       const result = {
         subtotalRegionId: subtotalRegion.id,
         subtotalLabel:
-          subtotalRegion.label || `小計${subtotalRegion.orderIndex || 1}`,
+        subtotalRegion.label || `小計${(subtotalRegion.orderIndex ?? 0) + 1}`,
         score,
         maxScore,
       }

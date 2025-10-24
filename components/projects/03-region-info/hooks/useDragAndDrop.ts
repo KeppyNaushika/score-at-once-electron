@@ -44,19 +44,27 @@ export const useDragAndDrop = ({
     const { draggedIndex } = dragState
 
     if (draggedIndex !== null && draggedIndex !== dropIndex) {
-      const newRegions = [...regions]
-      const draggedItem = newRegions[draggedIndex]
+      const reordered = [...regions]
+      const draggedItem = reordered[draggedIndex]
 
-      newRegions.splice(draggedIndex, 1)
-      newRegions.splice(dropIndex, 0, draggedItem)
-      setRegions(newRegions)
+      reordered.splice(draggedIndex, 1)
+      reordered.splice(dropIndex, 0, draggedItem)
+
+      const reorderedWithOrder = reordered.map((region, index) => ({
+        ...region,
+        orderIndex: index,
+      }))
+
+      setRegions(reorderedWithOrder)
 
       // orderIndexを更新（データベースに反映）
       try {
-        const updates = newRegions.map((region, index) => ({
-          id: region.id,
-          orderIndex: index, // 0から始まる連番
-        }))
+        const updates = reorderedWithOrder
+          .map((region) => ({
+            id: region.id,
+            orderIndex: region.orderIndex ?? 0,
+          }))
+          .filter((update) => update.id)
 
         if ((window as any).electronAPI?.updateLayoutRegionOrders) {
           await (window as any).electronAPI.updateLayoutRegionOrders(updates)

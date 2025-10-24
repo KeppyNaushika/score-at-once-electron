@@ -126,3 +126,53 @@ export const generatePageNumberUpdateRequests = (
     pageNumber: index + 1,
   }))
 }
+
+/**
+ * ProjectPage配列からMasterAnswer配列を生成する
+ * @param {ProjectPageWithDetails[]} projectPages - プロジェクトページ一覧
+ * @returns {MasterAnswer[]} MasterAnswer形式の配列
+ */
+type MinimalPageImage = {
+  id: string
+  imagePath: string
+  imageType: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+type MinimalProjectPage = {
+  id: string
+  projectId: string
+  pageNumber: number
+  pageImages?: MinimalPageImage[]
+}
+
+export const convertProjectPagesToMasterAnswers = <
+  T extends MinimalProjectPage
+>(
+  projectPages: T[],
+): MasterAnswer[] => {
+  return projectPages.flatMap((page) => {
+    const masterAnswer = page.pageImages?.find(
+      (img) => img.imageType === "MODEL_ANSWER",
+    )
+
+    if (!masterAnswer) {
+      console.warn(
+        `Project page ${page.id} is flagged as having a master answer but no MODEL_ANSWER image exists.`,
+      )
+      return []
+    }
+
+    return [
+      {
+        id: masterAnswer.id,
+        projectId: page.projectId,
+        imagePath: masterAnswer.imagePath,
+        pageNumber: page.pageNumber,
+        createdAt: masterAnswer.createdAt,
+        updatedAt: masterAnswer.updatedAt,
+      },
+    ]
+  })
+}

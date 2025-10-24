@@ -261,6 +261,11 @@ export type PageImageWithDetails = Prisma.PageImageGetPayload<{
   }
 }>
 
+export interface MasterAnswerDeletionResult {
+  deletedAnswer: PageImage | null
+  projectPages: ProjectPageWithDetails[]
+}
+
 // Backward compatibility aliases
 export type MasterAnswerPayload = ProjectPageWithDetails
 
@@ -554,7 +559,9 @@ export interface MyAPI {
       path?: string
     }[],
   ) => Promise<ProjectPageWithDetails[]>
-  deleteMasterAnswer: (answerId: string) => Promise<ProjectPageWithDetails | void>
+  deleteMasterAnswer: (
+    answerId: string,
+  ) => Promise<MasterAnswerDeletionResult>
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>

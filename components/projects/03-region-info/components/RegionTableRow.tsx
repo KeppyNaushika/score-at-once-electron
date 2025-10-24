@@ -91,6 +91,12 @@ export const RegionTableRow = ({
     ? typeIcons[regionType]
     : typeIcons["OTHER"]
 
+  const ensureSelected = () => {
+    if (!isSelected) {
+      onSelect(globalIndex)
+    }
+  }
+
   return (
     <tr
       key={region.id || `region-${globalIndex}`}
@@ -129,7 +135,10 @@ export const RegionTableRow = ({
           onValueChange={(value) => onRegionChange(globalIndex, "type", value)}
           disabled={disabled}
         >
-          <SelectTrigger className="w-full">
+          <SelectTrigger
+            className="w-full"
+            onFocus={ensureSelected}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -150,6 +159,7 @@ export const RegionTableRow = ({
           onKeyDown={(e) => onKeyDown(e, globalIndex, "label")}
           onCompositionStart={onCompositionStart}
           onCompositionEnd={onCompositionEnd}
+          onFocus={ensureSelected}
           disabled={disabled}
           placeholder="領域名を入力"
           className="h-8 w-full min-w-20"
@@ -168,6 +178,7 @@ export const RegionTableRow = ({
             onKeyDown={(e) => onKeyDown(e, globalIndex, "points")}
             onCompositionStart={onCompositionStart}
             onCompositionEnd={onCompositionEnd}
+            onFocus={ensureSelected}
             disabled={disabled}
             placeholder="10"
             className="h-8 w-full min-w-20"

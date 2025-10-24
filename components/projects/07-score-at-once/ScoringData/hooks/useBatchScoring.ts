@@ -56,12 +56,17 @@ export function useBatchScoring({
         status = statusOrAnswerIds as ScoringStatus
         answerIds = Array.from(selectedAnswers)
         inputPartialScore =
-          typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
+          typeof statusOrPartialScore === "number"
+            ? statusOrPartialScore
+            : null
       } else {
         // 旧形式: handleBatchScore(answerIds, status)
         answerIds = statusOrAnswerIds as string | string[]
         status = statusOrPartialScore as ScoringStatus
-        inputPartialScore = partialScore || null
+        inputPartialScore =
+          partialScore !== undefined && partialScore !== null
+            ? partialScore
+            : null
       }
 
       let effectiveUserId: string
@@ -118,9 +123,11 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.partialScore
-                ? Number(currentScore.partialScore)
-                : null
+              newScore =
+                currentScore?.partialScore !== undefined &&
+                currentScore?.partialScore !== null
+                  ? Number(currentScore.partialScore)
+                  : null
             }
             break
           case "pending":
@@ -129,9 +136,11 @@ export function useBatchScoring({
               newScore = inputPartialScore
             } else {
               // nullの場合は現在のpartialScoreを維持（ステータスのみ変更）
-              newScore = currentScore?.partialScore
-                ? Number(currentScore.partialScore)
-                : null
+              newScore =
+                currentScore?.partialScore !== undefined &&
+                currentScore?.partialScore !== null
+                  ? Number(currentScore.partialScore)
+                  : null
             }
             break
         }

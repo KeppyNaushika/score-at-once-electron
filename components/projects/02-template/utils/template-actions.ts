@@ -33,7 +33,6 @@ export async function saveTemplate(
       }
 
       const regionData = {
-        projectId,
         projectPageId: area.projectPageId,
         type: area.type,
         x: area.x,

@@ -5,8 +5,42 @@ import prisma from "./client"
 export const createCropRegion = async (
   data: Prisma.CropRegionUncheckedCreateInput,
 ) => {
+  if (!data.projectPageId) {
+    throw new Error("projectPageId is required to create a crop region.")
+  }
+
+  const projectPage = await prisma.projectPage.findUnique({
+    where: { id: data.projectPageId },
+    select: { projectId: true },
+  })
+
+  if (!projectPage) {
+    throw new Error(
+      `Project page not found for crop region creation (id: ${data.projectPageId}).`,
+    )
+  }
+
+  let orderIndex = data.orderIndex ?? null
+
+  if (orderIndex === null || orderIndex === undefined) {
+    const maxOrder = await prisma.cropRegion.aggregate({
+      _max: { orderIndex: true },
+      where: {
+        projectPage: {
+          projectId: projectPage.projectId,
+        },
+      },
+    })
+
+    const currentMax = maxOrder._max.orderIndex ?? -1
+    orderIndex = currentMax + 1
+  }
+
   return prisma.cropRegion.create({
-    data,
+    data: {
+      ...data,
+      orderIndex,
+    },
     include: {
       projectPage: true,
       cropSubtotals: {

@@ -14,7 +14,7 @@ import type {
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import { useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 
 export interface AnswerGridViewProps {
   // 統一されたデータ引数
@@ -87,6 +87,7 @@ export default function AnswerGridView({
     isFiltered: filteredScoringDataIds.includes(answer.id)
   })))
   
+  const containerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
   // Custom hooks
@@ -124,7 +125,7 @@ export default function AnswerGridView({
     selectedAnswers: selectedScoringDataIds,
     layoutDirection,
     autoScroll,
-    gridRef,
+    containerRef,
   })
 
   // Mouse event handlers
@@ -168,7 +169,7 @@ export default function AnswerGridView({
   }
 
   return (
-    <div className={`h-full overflow-y-auto ${className}`}>
+    <div ref={containerRef} className={`h-full overflow-y-auto ${className}`}>
       {/* 答案グリッド */}
       <div
         ref={gridRef}

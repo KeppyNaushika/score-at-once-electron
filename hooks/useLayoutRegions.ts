@@ -13,7 +13,7 @@ export interface CropRegion {
   height: number
   label: string
   points: string | null
-  orderIndex: number
+  orderIndex: number | null
   masterImageId: string
 }
 
@@ -47,7 +47,7 @@ export function useCropRegions(projectId?: string) {
         height: region.height,
         label: region.label || "",
         points: region.points ? String(region.points) : null,
-        orderIndex: region.orderIndex || 1,
+        orderIndex: region.orderIndex ?? 1,
         masterImageId: region.projectPage?.id || ""
       }))
 
@@ -85,7 +85,8 @@ export function useCropRegions(projectId?: string) {
         if (region.id) {
           return await window.electronAPI.updateCropRegion(region.id, regionData)
         } else {
-          return await window.electronAPI.createCropRegion(regionData)
+          const { orderIndex: _ignoredOrderIndex, ...createData } = regionData
+          return await window.electronAPI.createCropRegion(createData)
         }
       })
 
@@ -102,8 +103,11 @@ export function useCropRegions(projectId?: string) {
             width: region!.width,
             height: region!.height,
             label: region!.label || "",
-            points: region!.points ? String(region!.points) : null,
-            orderIndex: region!.orderIndex || 1,
+          points: region!.points ? String(region!.points) : null,
+          orderIndex:
+            region!.orderIndex !== undefined && region!.orderIndex !== null
+              ? region!.orderIndex
+              : null,
             masterImageId: region!.projectPage?.id || "",
           }))
 

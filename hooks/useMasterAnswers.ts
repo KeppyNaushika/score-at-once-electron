@@ -74,6 +74,40 @@ export function useMasterAnswers(
   const [_currentFileIndex, setCurrentFileIndex] = useState(0)
   const [_currentPassword, setCurrentPassword] = useState<string>("")
 
+  const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
+    try {
+      // まずパスワードなしで試行
+      const pdfImages = await convertPdfToImages(file)
+      return pdfImages
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
+        // パスワードが必要な場合、ダイアログを表示してPromiseを返す
+        return new Promise((resolve, reject) => {
+          const isInvalidPassword = errorMessage === 'invalid-password'
+          setState(prev => ({
+            ...prev,
+            passwordDialog: {
+              isOpen: true,
+              fileName: file.name,
+              attempts: isInvalidPassword ? prev.passwordDialog.attempts + 1 : 0,
+              hasError: isInvalidPassword,
+              isLoading: false
+            }
+          }))
+          
+          // グローバルスコープで解決関数を保存
+          ;(window as any).__masterAnswerPasswordResolve = resolve
+          ;(window as any).__masterAnswerPasswordReject = reject
+          ;(window as any).__masterAnswerPasswordFile = file
+        })
+      } else {
+        // その他のエラーはそのまま投げる
+        throw error
+      }
+    }
+  }, [])
+
   const uploadAnswers = useCallback(async (files: File[]) => {
     if (!projectId) {
       toast.error("プロジェクトIDが指定されていません。")
@@ -175,42 +209,7 @@ export function useMasterAnswers(
       setCurrentFileIndex(0)
       setCurrentPassword("")
     }
-  }, [projectId, onAnswersChange])
-
-  // パスワード付きPDF変換処理
-  const convertPdfToImagesWithPassword = useCallback(async (file: File): Promise<ConvertedImage[]> => {
-    try {
-      // まずパスワードなしで試行
-      const pdfImages = await convertPdfToImages(file)
-      return pdfImages
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      if (errorMessage === 'password-required' || errorMessage === 'invalid-password') {
-        // パスワードが必要な場合、ダイアログを表示してPromiseを返す
-        return new Promise((resolve, reject) => {
-          const isInvalidPassword = errorMessage === 'invalid-password'
-          setState(prev => ({
-            ...prev,
-            passwordDialog: {
-              isOpen: true,
-              fileName: file.name,
-              attempts: isInvalidPassword ? prev.passwordDialog.attempts + 1 : 0,
-              hasError: isInvalidPassword,
-              isLoading: false
-            }
-          }))
-          
-          // グローバルスコープで解決関数を保存
-          ;(window as any).__masterAnswerPasswordResolve = resolve
-          ;(window as any).__masterAnswerPasswordReject = reject
-          ;(window as any).__masterAnswerPasswordFile = file
-        })
-      } else {
-        // その他のエラーはそのまま投げる
-        throw error
-      }
-    }
-  }, [])
+  }, [projectId, onAnswersChange, convertPdfToImagesWithPassword])
 
   // パスワード送信処理
   const handlePasswordSubmit = useCallback(async (password: string) => {
@@ -324,16 +323,31 @@ export function useMasterAnswers(
     }))
 
     try {
-      await window.electronAPI.deleteMasterAnswer(answerId)
-      const updatedAnswers = state.answers.filter((answer) => answer.id !== answerId)
-      
+      const result = await window.electronAPI.deleteMasterAnswer(answerId)
+      const updatedAnswers = result.projectPages
+        .flatMap(page =>
+          page.pageImages
+            .filter(img => img.imageType === "MODEL_ANSWER")
+            .map(img => ({ ...img, projectPage: page })),
+        )
+        .sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
+
+      const newUrls: Record<string, string> = {}
+      for (const answer of updatedAnswers) {
+        try {
+          const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(answer.imagePath)
+          newUrls[answer.id] = resolvedUrl
+        } catch (error) {
+          console.error(`Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`, error)
+          newUrls[answer.id] = ""
+        }
+      }
+
       setState(prev => ({
         ...prev,
         answers: updatedAnswers,
         isDeleting: { ...prev.isDeleting, [answerId]: false },
-        imageUrls: Object.fromEntries(
-          Object.entries(prev.imageUrls).filter(([id]) => id !== answerId)
-        )
+        imageUrls: newUrls
       }))
       
       onAnswersChange(updatedAnswers)
@@ -346,7 +360,7 @@ export function useMasterAnswers(
         isDeleting: { ...prev.isDeleting, [answerId]: false }
       }))
     }
-  }, [state.answers, onAnswersChange])
+  }, [onAnswersChange])
 
   const moveAnswer = useCallback(async (fromIndex: number, direction: "left" | "right") => {
     const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
