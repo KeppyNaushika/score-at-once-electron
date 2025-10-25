@@ -3,8 +3,8 @@
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { QuestionAssignmentMatrix } from "@/components/projects/04-question-group/components/QuestionAssignmentMatrix"
-import { SubtotalAssignmentMatrix } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrix"
+import { QuestionAssignmentMatrixWithFillHandle } from "@/components/projects/04-question-group/components/QuestionAssignmentMatrixWithFillHandle"
+import { SubtotalAssignmentMatrixWithFillHandle } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrixWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/projects/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
 import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
@@ -230,7 +230,7 @@ export default function SubtotalGroupPage() {
                 設問と小計項目の関連付け
               </h2>
             </div>
-            <QuestionAssignmentMatrix
+            <QuestionAssignmentMatrixWithFillHandle
               subtotalGroups={activeSubtotalGroups}
               cropRegions={cropRegions}
               onUpdateAssignments={updateQuestionAssignments}
@@ -245,7 +245,7 @@ export default function SubtotalGroupPage() {
               <Calculator className="h-5 w-5" />
               <h2 className="text-lg font-semibold">小計点領域との関連付け</h2>
             </div>
-            <SubtotalAssignmentMatrix
+            <SubtotalAssignmentMatrixWithFillHandle
               subtotalGroups={activeSubtotalGroups}
               subtotalRegions={subtotalRegions}
               onUpdateSubtotalAssignments={updateSubtotalAssignments}

@@ -67,9 +67,9 @@ export default function StudentsPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-6">
+      <div className="flex-1 overflow-auto p-6">
         {/* アクションボタンと統計カード */}
-        <div className="mb-6 flex flex-shrink-0 items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div className="flex gap-2">
             {selectedStudentsForRemoval.size > 0 && (
               <Button variant="destructive" onClick={initiateStudentRemoval}>
@@ -86,7 +86,7 @@ export default function StudentsPage() {
         </div>
 
         {/* 生徒一覧テーブル */}
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="mb-6">
           <SortableStudentTable
             classes={classes}
             onStudentStatusUpdate={updateStudentStatus}

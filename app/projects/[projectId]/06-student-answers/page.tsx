@@ -82,7 +82,7 @@ export default function StudentAnswersPage() {
 
   return (
     <ProtectedRoute>
-      <div className="flex h-full flex-col overflow-y-auto">
+      <div className="flex h-full flex-col">
         <PageHeader title="生徒答案の追加と関連付け" helpButton={helpButton}>
           <div className="flex gap-2">
             {pendingChanges.length > 0 && (
@@ -105,7 +105,7 @@ export default function StudentAnswersPage() {
           </div>
         </PageHeader>
 
-        <div className="min-h-0 flex-1 overflow-hidden p-3">
+        <div className="flex-1 overflow-auto p-3">
           <StudentAnswersTabsNavigation
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab as StudentAnswerTab)}
