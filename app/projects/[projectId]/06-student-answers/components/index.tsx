@@ -59,7 +59,7 @@ export function StudentAnswersTabsNavigation({
     <Tabs
       value={activeTab}
       onValueChange={onTabChange}
-      className="flex h-full flex-col"
+      className="flex flex-col"
     >
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="new-grid" className="flex items-center gap-2">
@@ -113,7 +113,7 @@ export function StudentAnswersTabContent({
 }: StudentAnswersTabContentProps) {
   return (
     <>
-      <TabsContent value="new-grid" className="mt-3 min-h-0 flex-1 p-3">
+      <TabsContent value="new-grid" className="mt-3 p-3">
         <StudentAnswerUpload
           projectId={projectId}
           students={students}
@@ -124,7 +124,7 @@ export function StudentAnswersTabContent({
         />
       </TabsContent>
 
-      <TabsContent value="current" className="mt-3 min-h-0 flex-1 p-3">
+      <TabsContent value="current" className="mt-3 p-3">
         <StudentAnswerUpload
           projectId={projectId}
           students={students}

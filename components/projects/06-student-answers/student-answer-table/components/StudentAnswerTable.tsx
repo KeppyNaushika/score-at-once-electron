@@ -68,14 +68,14 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <Card className="flex h-full flex-col">
+        <Card>
           <TableHeader
             maxPages={maxPages}
             enabledFilesCount={getEnabledFiles().length}
@@ -93,8 +93,9 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
             onAllowOverwriteChange={setAllowOverwrite}
           />
 
-          <CardContent className="min-h-0 flex-1 overflow-auto p-4">
-            <TableContent
+          <CardContent className="p-4">
+            <div className="min-h-96">
+              <TableContent
               tableData={tableData}
               sortedStudents={sortedStudents}
               maxPages={maxPages}
@@ -118,6 +119,7 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
               onUploadModalOpen={handleUploadModalOpen}
               onDeleteAnswerSheet={handleDeleteAnswerSheet}
             />
+            </div>
           </CardContent>
         </Card>
 

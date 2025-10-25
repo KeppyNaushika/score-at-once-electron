@@ -107,7 +107,7 @@ export function StudentAnswerUpload({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-4">
       {/* ファイルアップロードゾーン */}
       <FileUploadZone
         onDrop={handleDrop}
@@ -118,7 +118,7 @@ export function StudentAnswerUpload({
       />
 
       {/* 答案配置テーブル */}
-      <div className="min-h-0 flex-1">
+      <div>
         <StudentAnswerTable
           projectId={projectId}
           students={students}

@@ -50,8 +50,8 @@ export function SortableStudentTableContainer(props: SortableStudentTableProps) 
   } = useSortableStudentTable(props)
 
   return (
-    <Card className="min-h-0 shrink grow">
-      <CardHeader className="shrink-0">
+    <Card>
+      <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">生徒一覧</CardTitle>
@@ -76,8 +76,8 @@ export function SortableStudentTableContainer(props: SortableStudentTableProps) 
           classes={classes}
         />
       </CardHeader>
-      <CardContent className="min-h-0 flex-1 shrink overflow-hidden">
-        <div className="h-full overflow-auto rounded-md border">
+      <CardContent>
+        <div className="min-h-96 rounded-md border">
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
