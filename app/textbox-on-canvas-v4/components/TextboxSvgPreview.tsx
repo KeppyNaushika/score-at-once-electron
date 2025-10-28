@@ -20,7 +20,7 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
   useEffect(() => {
     if (textBox.text.trim()) {
       let isCancelled = false
-      
+
       const renderSvgPreview = async () => {
         try {
           setRenderingStatus("SVG生成中...")
@@ -64,8 +64,19 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
         isCancelled = true
       }
     } else {
-      setSvgElement(null)
-      setRenderingStatus("待機中")
+      let cancelled = false
+      const frame = requestAnimationFrame(() => {
+        if (cancelled) {
+          return
+        }
+        setSvgElement(null)
+        setRenderingStatus("待機中")
+      })
+
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(frame)
+      }
     }
   }, [textBox.text, textBox.textSize])
 

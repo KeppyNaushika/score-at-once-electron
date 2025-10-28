@@ -73,19 +73,31 @@ export default function StudentClassMembershipModal({
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
-    if (membershipToEdit) {
-      setStudentId(membershipToEdit.studentId)
-      setClassId(membershipToEdit.classId)
-      setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
-      setNotes(membershipToEdit.notes || "")
-    } else {
-      setStudentId(initialStudentId || "")
-      setClassId(initialClassId || "")
-      setAttendanceNumber("")
-      setNotes("")
+    let canceled = false
+    const frame = requestAnimationFrame(() => {
+      if (canceled) {
+        return
+      }
+
+      if (membershipToEdit) {
+        setStudentId(membershipToEdit.studentId)
+        setClassId(membershipToEdit.classId)
+        setAttendanceNumber(membershipToEdit.attendanceNumber?.toString() || "")
+        setNotes(membershipToEdit.notes || "")
+      } else {
+        setStudentId(initialStudentId || "")
+        setClassId(initialClassId || "")
+        setAttendanceNumber("")
+        setNotes("")
+      }
+      setStudentSearchTerm("")
+      setErrors({})
+    })
+
+    return () => {
+      canceled = true
+      cancelAnimationFrame(frame)
     }
-    setStudentSearchTerm("")
-    setErrors({})
   }, [membershipToEdit, initialStudentId, initialClassId, isOpen])
 
   const validateForm = () => {

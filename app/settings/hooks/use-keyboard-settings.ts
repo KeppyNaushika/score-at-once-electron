@@ -15,8 +15,12 @@ export function useKeyboardSettings() {
 
   // 初期化時にlocalStorageから読み込み
   useEffect(() => {
-    setShortcuts(getKeyboardShortcuts())
-    setModifierKeyLabel(getModifierKeyLabel())
+    const frame = requestAnimationFrame(() => {
+      setShortcuts(getKeyboardShortcuts())
+      setModifierKeyLabel(getModifierKeyLabel())
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   // キー入力をキャプチャ

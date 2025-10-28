@@ -1,6 +1,6 @@
 "use client"
 
-import { RefObject, useCallback } from "react"
+import { RefObject, useCallback, useEffect, useState } from "react"
 
 interface DragPreviewProps {
   dragging: boolean
@@ -19,6 +19,28 @@ export function DragPreview({
   containerRef,
   zoom,
 }: DragPreviewProps) {
+  const [hasContainer, setHasContainer] = useState(false)
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) {
+      return
+    }
+
+    let canceled = false
+    const frame = requestAnimationFrame(() => {
+      if (!canceled) {
+        setHasContainer(true)
+      }
+    })
+
+    return () => {
+      canceled = true
+      cancelAnimationFrame(frame)
+      setHasContainer(false)
+    }
+  }, [containerRef])
+
   const calculateDisplayCoords = useCallback(() => {
     if (!dragging || !dragStartCoords || !dragCurrentCoords) {
       return null
@@ -30,7 +52,7 @@ export function DragPreview({
     const height = Math.abs(dragCurrentCoords.y - dragStartCoords.y)
 
     // Convert relative coordinates to display coordinates
-    if (!imageDimensions || !containerRef.current) return null
+    if (!imageDimensions || !hasContainer) return null
 
     // 標準スクロール方式：ズームのみ考慮した座標計算
     const scaledImageWidth = imageDimensions.width * zoom
@@ -47,8 +69,8 @@ export function DragPreview({
     dragStartCoords,
     dragCurrentCoords,
     imageDimensions,
-    containerRef,
     zoom,
+    hasContainer,
   ])
 
   const displayCoords = calculateDisplayCoords()

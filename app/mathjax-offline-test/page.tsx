@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 /**
  * MathJaxオフライン動作テストページ
@@ -15,6 +15,19 @@ import { useState, useEffect } from "react"
 export default function MathJaxOfflineTestPage() {
   const [mathJaxReady, setMathJaxReady] = useState(false)
   const [renderCount, setRenderCount] = useState(0)
+
+  const triggerMathJaxRender = useCallback(async () => {
+    const MathJax = (window as any).MathJax
+    if (MathJax && MathJax.typesetPromise) {
+      try {
+        await MathJax.typesetPromise([document.body])
+        setRenderCount((prev) => prev + 1)
+        console.log("MathJaxレンダリング完了")
+      } catch (error) {
+        console.error("MathJaxレンダリングエラー:", error)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // MathJax初期化の確認
@@ -40,20 +53,7 @@ export default function MathJaxOfflineTestPage() {
     return () => {
       window.removeEventListener("mathjax-ready", handleMathJaxReady)
     }
-  }, [])
-
-  const triggerMathJaxRender = async () => {
-    const MathJax = (window as any).MathJax
-    if (MathJax && MathJax.typesetPromise) {
-      try {
-        await MathJax.typesetPromise([document.body])
-        setRenderCount((prev) => prev + 1)
-        console.log("MathJaxレンダリング完了")
-      } catch (error) {
-        console.error("MathJaxレンダリングエラー:", error)
-      }
-    }
-  }
+  }, [triggerMathJaxRender])
 
   const forceRerender = () => {
     if (mathJaxReady) {

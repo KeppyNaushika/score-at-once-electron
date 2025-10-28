@@ -51,20 +51,32 @@ export default function ClassModal({
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
-    if (classToEdit) {
-      setName(classToEdit.name)
-      setClassCode(classToEdit.classCode ?? "")
-      setGrade(classToEdit.grade ?? undefined)
-      setDescription(classToEdit.description ?? "")
-      setIsVisible(classToEdit.isVisible ?? true)
-    } else {
-      setName("")
-      setClassCode("")
-      setGrade(undefined)
-      setDescription("")
-      setIsVisible(true)
+    let cancelled = false
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) {
+        return
+      }
+
+      if (classToEdit) {
+        setName(classToEdit.name)
+        setClassCode(classToEdit.classCode ?? "")
+        setGrade(classToEdit.grade ?? undefined)
+        setDescription(classToEdit.description ?? "")
+        setIsVisible(classToEdit.isVisible ?? true)
+      } else {
+        setName("")
+        setClassCode("")
+        setGrade(undefined)
+        setDescription("")
+        setIsVisible(true)
+      }
+      setErrors({})
+    })
+
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
     }
-    setErrors({})
   }, [classToEdit, isOpen])
 
   const validateForm = () => {
@@ -188,7 +200,6 @@ export default function ClassModal({
               />
             </div>
           </div>
-
 
           {/* 説明 */}
           <div className="grid grid-cols-4 items-start gap-4">

@@ -1,7 +1,7 @@
 "use client"
 
 import type { StudentClassMembership } from "@prisma/client"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 interface StudentWithMemberships {
   id: string
@@ -81,7 +81,7 @@ export function useClassManagement(classId: string) {
       })) || [],
   })
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
       // Fetch all classes and find the one we need
@@ -99,11 +99,15 @@ export function useClassManagement(classId: string) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [classId])
 
   useEffect(() => {
-    fetchData()
-  }, [classId])
+    const frame = requestAnimationFrame(() => {
+      void fetchData()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [fetchData])
 
   const handleSaveClass = async (classInfo: Partial<ClassWithMemberships>) => {
     try {

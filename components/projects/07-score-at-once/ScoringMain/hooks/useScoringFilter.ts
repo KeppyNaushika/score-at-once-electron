@@ -236,10 +236,15 @@ export function useScoringFilter({
 
   // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
   useEffect(() => {
-    if (pageImages.length > 0 && cropRegions.length > 0) {
-      // 表示対象を更新（選択はクリアしない）
-      updateVisibleAnswers()
+    if (pageImages.length === 0 || cropRegions.length === 0) {
+      return
     }
+
+    const frame = requestAnimationFrame(() => {
+      updateVisibleAnswers()
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [
     pageImages.length,
     cropRegions.length,
@@ -358,7 +363,7 @@ export function useScoringFilter({
   }, [visibleAnswers, setSelectedPageImageIds])
 
   // 模範解答データを取得（Grid表示用）
-  const getMasterAnswerData = useCallback((): any | null => {
+  const masterAnswerData = useMemo((): any | null => {
     if (!currentCropRegion || !project?.projectPages) return null
 
     // projectPageIdに基づいてprojectPageを取得
@@ -384,7 +389,7 @@ export function useScoringFilter({
       questionRegion: currentCropRegion, // 採点領域情報を追加
       isMaster: true, // 模範解答フラグ
     }
-  }, [currentCropRegion, project?.projectPages])
+  }, [currentCropRegion, project])
 
   // 基本的なグリッドデータ取得（後方互換性のため残す）
   const getAllGridAnswerData = useMemo(() => {
@@ -483,7 +488,7 @@ export function useScoringFilter({
   return {
     // 新しいデータ構造
     allScoringData,
-    masterAnswerData: getMasterAnswerData(), // Grid表示用の模範解答データ
+    masterAnswerData, // Grid表示用の模範解答データ
     filteredScoringDataIds: visibleAnswers,
     selectedScoringDataIds: selectedPageImageIds,
 

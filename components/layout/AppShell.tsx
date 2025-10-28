@@ -11,15 +11,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   const toggleSidebar = () => {
-    setIsSidebarMinimized(!isSidebarMinimized)
+    setIsSidebarMinimized((prev) => !prev)
   }
 
   useEffect(() => {
-    if (pathname.includes("/score")) {
-      setIsSidebarMinimized(true)
-    } else {
-      // setIsSidebarMinimized(false); // 必要に応じて
+    if (!pathname.includes("/score")) {
+      return
     }
+
+    const frame = requestAnimationFrame(() => {
+      setIsSidebarMinimized(true)
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [pathname])
 
   return (

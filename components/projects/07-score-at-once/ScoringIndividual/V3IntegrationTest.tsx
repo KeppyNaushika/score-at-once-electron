@@ -83,7 +83,11 @@ LaTeX記法: \\(\\alpha + \\beta\\) と \\[\\gamma = \\frac{a}{b}\\]
   }, [testText])
 
   useEffect(() => {
-    runIntegrationTest()
+    const frame = requestAnimationFrame(() => {
+      runIntegrationTest()
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [runIntegrationTest])
 
   return (
