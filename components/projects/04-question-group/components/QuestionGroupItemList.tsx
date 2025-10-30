@@ -113,7 +113,11 @@ export function QuestionGroupItemList({
 
   // Sync local items with props when subtotalGroup changes
   useEffect(() => {
-    setItems(subtotalGroup.subtotals)
+    const frame = requestAnimationFrame(() => {
+      setItems(subtotalGroup.subtotals)
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [subtotalGroup.subtotals])
 
   const sensors = useSensors(

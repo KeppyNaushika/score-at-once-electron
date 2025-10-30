@@ -412,7 +412,11 @@ export default function TextboxCanvasPage() {
 
   // Canvas再描画効果
   useEffect(() => {
-    redrawCanvas()
+    const frame = requestAnimationFrame(() => {
+      redrawCanvas()
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [redrawCanvas])
 
   return (
@@ -494,7 +498,7 @@ export default function TextboxCanvasPage() {
                             </div>
                           )}
                         </div>
-                        <div className="ml-2 flex-shrink-0">
+                        <div className="ml-2 shrink-0">
                           {textBox.isSelected && (
                             <span className="rounded bg-blue-500 px-2 py-1 text-xs text-white">
                               選択中

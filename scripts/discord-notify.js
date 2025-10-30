@@ -1,5 +1,5 @@
-import { request } from "https"
 import dotenv from "dotenv"
+import { request } from "https"
 dotenv.config()
 
 /**
@@ -123,7 +123,7 @@ async function addReactionToWebhookMessage(webhookUrl, messageId, emoji) {
 function getRecentPRs(previousVersion) {
   try {
     const { execSync } = require("child_process")
-    
+
     // 前回バージョンから現在までのコミット履歴を取得
     let gitLogCommand
     if (previousVersion) {
@@ -131,11 +131,14 @@ function getRecentPRs(previousVersion) {
     } else {
       gitLogCommand = `git log --oneline --grep="Merge pull request" -n 10`
     }
-    
-    const gitLog = execSync(gitLogCommand, { encoding: "utf-8", stdio: "pipe" }).trim()
-    
+
+    const gitLog = execSync(gitLogCommand, {
+      encoding: "utf-8",
+      stdio: "pipe",
+    }).trim()
+
     if (!gitLog) return []
-    
+
     // PRコミットから情報を抽出
     return gitLog
       .split("\n")
@@ -164,20 +167,20 @@ function getRecentPRs(previousVersion) {
 function getPreviousVersion(currentVersion) {
   try {
     const { execSync } = require("child_process")
-    
+
     // すべてのタグを取得し、バージョン順でソート
-    const tags = execSync("git tag -l 'v*' --sort=-version:refname", { 
-      encoding: "utf-8", 
-      stdio: "pipe" 
+    const tags = execSync("git tag -l 'v*' --sort=-version:refname", {
+      encoding: "utf-8",
+      stdio: "pipe",
     })
       .trim()
       .split("\n")
       .filter(Boolean)
-    
+
     // 現在のバージョンタグを除外して最新のものを取得
     const currentTag = `v${currentVersion}`
-    const previousTag = tags.find(tag => tag !== currentTag)
-    
+    const previousTag = tags.find((tag) => tag !== currentTag)
+
     return previousTag || null
   } catch (error) {
     console.warn("前回バージョンの取得に失敗:", error.message)
@@ -198,7 +201,9 @@ function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
   const color = isPrerelease ? 0xffa500 : 0x00ff00 // オレンジ or 緑
 
   // 説明文を動的に生成
-  let description = packageJson.description || "完全無料・インストール不要・オフライン完結の採点支援ソフト"
+  let description =
+    packageJson.description ||
+    "完全無料・インストール不要・オフライン完結の採点支援ソフト"
   description += "\n\n"
   description += `**[📥 ダウンロード](${releaseUrl})**`
   description += "\n"
@@ -212,21 +217,23 @@ function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
   // 最近のPR情報を取得
   const previousVersion = getPreviousVersion(version)
   const recentPRs = getRecentPRs(previousVersion)
-  
+
   // フィールドを動的に生成
   const fields = [
     {
       name: "📦 バージョン",
       value: version,
       inline: true,
-    }
+    },
   ]
 
   // PR情報があれば追加
   if (recentPRs.length > 0) {
     fields.push({
       name: "✨ このバージョンの新機能・改善",
-      value: recentPRs.map(pr => `• ${pr.replace(/^#\d+:\s*/, "")}`).join("\n"),
+      value: recentPRs
+        .map((pr) => `• ${pr.replace(/^#\d+:\s*/, "")}`)
+        .join("\n"),
       inline: false,
     })
   }
@@ -293,9 +300,11 @@ async function notifyRelease(version, releaseUrl, isPrerelease = false) {
   }
 }
 
-export default {
+const discordNotify = {
   sendDiscordNotification,
   addReactionToWebhookMessage,
   createReleaseMessage,
   notifyRelease,
 }
+
+export default discordNotify

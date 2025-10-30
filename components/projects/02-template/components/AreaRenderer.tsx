@@ -6,6 +6,7 @@ import {
   RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -37,25 +38,50 @@ export function AreaRenderer({
   containerRef,
   zoom,
 }: AreaRendererProps) {
-  // 全てのhooksを最初に定義（条件分岐の前に）
-  const [_containerReady, setContainerReady] = useState(false)
-  const [_forceUpdate, setForceUpdate] = useState(0)
+  const [containerSize, setContainerSize] = useState<{
+    width: number
+    height: number
+  } | null>(null)
 
-  // ウィンドウリサイズ時の再計算を強制
-  const triggerUpdate = useCallback(() => {
-    setForceUpdate((prev) => prev + 1)
-  }, [])
+  useEffect(() => {
+    const node = containerRef.current
+    if (!node) {
+      return
+    }
+
+    let canceled = false
+    const updateSize = () => {
+      if (canceled) {
+        return
+      }
+      const nextSize = {
+        width: node.clientWidth,
+        height: node.clientHeight,
+      }
+      setContainerSize(nextSize)
+    }
+
+    const frame = requestAnimationFrame(updateSize)
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(updateSize)
+    })
+    resizeObserver.observe(node)
+
+    return () => {
+      canceled = true
+      cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+    }
+  }, [containerRef])
 
   const convertAreaToDisplayCoords = useCallback(
     (area: any) => {
-      if (!imageDimensions || !containerRef.current) {
+      if (!imageDimensions || !containerSize) {
         return { left: 0, top: 0, width: 0, height: 0 }
       }
 
-      const containerWidth = containerRef.current.clientWidth
-      const containerHeight = containerRef.current.clientHeight
+      const { width: containerWidth, height: containerHeight } = containerSize
 
-      // コンテナサイズが0の場合は描画しない（初期化中）
       if (containerWidth === 0 || containerHeight === 0) {
         return { left: 0, top: 0, width: 0, height: 0 }
       }
@@ -71,34 +97,14 @@ export function AreaRenderer({
         height: area.height * scaledImageHeight,
       }
     },
-    [imageDimensions, zoom, containerRef],
+    [imageDimensions, zoom, containerSize],
   )
 
-  useEffect(() => {
-    // refが設定されたら再レンダリングを促す
-    if (containerRef.current) {
-      setContainerReady(true)
-    }
+  const isReady = useMemo(() => {
+    return Boolean(containerSize && containerSize.width && imageDimensions)
+  }, [containerSize, imageDimensions])
 
-    // ResizeObserverでコンテナサイズの変更を監視
-    let resizeObserver: ResizeObserver | null = null
-
-    if (containerRef.current) {
-      resizeObserver = new ResizeObserver(() => {
-        triggerUpdate()
-      })
-      resizeObserver.observe(containerRef.current)
-    }
-
-    return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect()
-      }
-    }
-  }, [containerRef, triggerUpdate])
-
-  // refが準備できていない場合は何も描画しない
-  if (!containerRef.current) {
+  if (!isReady) {
     return null
   }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -8,11 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Lock, AlertCircle } from "lucide-react"
-import { useState, useEffect, useRef } from "react"
+import { AlertCircle, Lock } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 interface PasswordDialogProps {
   isOpen: boolean
@@ -47,20 +47,53 @@ export function PasswordDialog({
   // エラー時の振動効果
   useEffect(() => {
     if (error && !isFirstAttempt) {
-      setIsShaking(true)
-      // 振動効果のリセット
-      const timer = setTimeout(() => {
-        setIsShaking(false)
-      }, 600)
-      return () => clearTimeout(timer)
+      let canceled = false
+      let cleanup: (() => void) | null = null
+
+      const frame = requestAnimationFrame(() => {
+        if (canceled) {
+          return
+        }
+
+        setIsShaking(true)
+        // 振動効果のリセット
+        const timer = setTimeout(() => {
+          if (canceled) {
+            return
+          }
+          setIsShaking(false)
+        }, 600)
+
+        cleanup = () => {
+          clearTimeout(timer)
+        }
+      })
+
+      return () => {
+        canceled = true
+        cancelAnimationFrame(frame)
+        if (cleanup) {
+          cleanup()
+        }
+      }
     }
   }, [error, isFirstAttempt])
 
   // ダイアログが開かれた時にパスワードをクリア
   useEffect(() => {
     if (isOpen) {
-      setPassword("")
-      setIsShaking(false)
+      let canceled = false
+      const frame = requestAnimationFrame(() => {
+        if (canceled) {
+          return
+        }
+        setPassword("")
+        setIsShaking(false)
+      })
+      return () => {
+        canceled = true
+        cancelAnimationFrame(frame)
+      }
     }
   }, [isOpen])
 
@@ -78,9 +111,10 @@ export function PasswordDialog({
             PDFパスワード入力
           </DialogTitle>
           <DialogDescription>
-            <span className="font-medium">{fileName}</span> はパスワードで保護されています。
+            <span className="font-medium">{fileName}</span>{" "}
+            はパスワードで保護されています。
           </DialogDescription>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm">
             パスワードを入力してファイルを読み込んでください。
           </p>
         </DialogHeader>
@@ -105,7 +139,7 @@ export function PasswordDialog({
           </div>
 
           {error && !isFirstAttempt && (
-            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
               <AlertCircle className="h-4 w-4" />
               パスワードが間違っている可能性があります
             </div>
@@ -120,10 +154,7 @@ export function PasswordDialog({
             >
               キャンセル
             </Button>
-            <Button
-              type="submit"
-              disabled={!password.trim() || isLoading}
-            >
+            <Button type="submit" disabled={!password.trim() || isLoading}>
               {isLoading ? "処理中..." : "OK"}
             </Button>
           </DialogFooter>

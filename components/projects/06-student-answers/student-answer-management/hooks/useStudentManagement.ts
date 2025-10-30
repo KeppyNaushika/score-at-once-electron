@@ -35,7 +35,11 @@ export function useStudentManagement({ students }: UseStudentManagementProps) {
 
   // studentsが変更されたときに自動更新
   useEffect(() => {
-    updateStudentsWithAnswers()
+    const frame = requestAnimationFrame(() => {
+      updateStudentsWithAnswers()
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [updateStudentsWithAnswers])
 
   // 学生選択状態の切り替え

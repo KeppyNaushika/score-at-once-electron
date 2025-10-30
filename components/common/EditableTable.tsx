@@ -1,12 +1,10 @@
 "use client"
+"use no memo"
 
 import { Button } from "@/components/ui/button"
-import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
+import { ColumnDef, flexRender, getCoreRowModel } from "@tanstack/react-table"
+import type { TableOptions, TableOptionsResolved } from "@tanstack/table-core"
+import { createTable } from "@tanstack/table-core"
 import { Plus, Trash2 } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -74,6 +72,36 @@ function EditableCell({ getValue, row, column, table }: EditableCellProps) {
   )
 }
 
+function useLocalReactTable<TData>(options: TableOptions<TData>) {
+  const [table] = useState(() =>
+    createTable<TData>({
+      state: {},
+      onStateChange: () => {},
+      renderFallbackValue: null,
+      ...options,
+    } as TableOptionsResolved<TData>),
+  )
+
+  const [internalState, setInternalState] = useState(() => table.initialState)
+
+  useEffect(() => {
+    table.setOptions((prev) => ({
+      ...prev,
+      ...options,
+      state: {
+        ...internalState,
+        ...options.state,
+      },
+      onStateChange: (updater) => {
+        setInternalState(updater)
+        options.onStateChange?.(updater)
+      },
+    }))
+  }, [table, options, internalState])
+
+  return table
+}
+
 export function EditableTable<T extends Record<string, any>>({
   data,
   columns,
@@ -89,26 +117,32 @@ export function EditableTable<T extends Record<string, any>>({
     setTableData(data)
   }, [data])
 
-  const deleteRow = useCallback((rowIndex: number) => {
-    const newData = tableData.filter((_, index) => index !== rowIndex)
-    setTableData(newData)
-    setTimeout(() => onDataChange(newData), 0)
-  }, [tableData, setTableData, onDataChange])
+  const deleteRow = useCallback(
+    (rowIndex: number) => {
+      const newData = tableData.filter((_, index) => index !== rowIndex)
+      setTableData(newData)
+      setTimeout(() => onDataChange(newData), 0)
+    },
+    [tableData, setTableData, onDataChange],
+  )
 
-  const addRowAfter = useCallback((index: number) => {
-    const newRow = columns.reduce((acc, col) => {
-      ;(acc as any)[col.id as string] = ""
-      return acc
-    }, {} as T)
+  const addRowAfter = useCallback(
+    (index: number) => {
+      const newRow = columns.reduce((acc, col) => {
+        ;(acc as any)[col.id as string] = ""
+        return acc
+      }, {} as T)
 
-    const newData = [
-      ...tableData.slice(0, index + 1),
-      newRow,
-      ...tableData.slice(index + 1)
-    ]
-    setTableData(newData)
-    setTimeout(() => onDataChange(newData), 0)
-  }, [columns, tableData, setTableData, onDataChange])
+      const newData = [
+        ...tableData.slice(0, index + 1),
+        newRow,
+        ...tableData.slice(index + 1),
+      ]
+      setTableData(newData)
+      setTimeout(() => onDataChange(newData), 0)
+    },
+    [columns, tableData, setTableData, onDataChange],
+  )
 
   const editableColumns = useMemo(
     () => [
@@ -125,7 +159,7 @@ export function EditableTable<T extends Record<string, any>>({
             variant="ghost"
             size="sm"
             onClick={() => addRowAfter(row.index)}
-            className="h-6 w-6 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+            className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
             title="この行の下に新しい行を追加"
           >
             <Plus className="h-3 w-3" />
@@ -156,7 +190,7 @@ export function EditableTable<T extends Record<string, any>>({
     [columns, allowDeleteRow, deleteRow, addRowAfter],
   )
 
-  const table = useReactTable({
+  const table = useLocalReactTable({
     data: tableData,
     columns: editableColumns,
     getCoreRowModel: getCoreRowModel(),
@@ -196,7 +230,7 @@ export function EditableTable<T extends Record<string, any>>({
       columns.reduce((acc, col) => {
         ;(acc as any)[col.id as string] = ""
         return acc
-      }, {} as T)
+      }, {} as T),
     )
 
     const newData = [...tableData, ...newRows]
@@ -223,7 +257,6 @@ export function EditableTable<T extends Record<string, any>>({
     setTableData(pastedData)
     onDataChange(pastedData)
   }
-
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -288,7 +321,7 @@ export function EditableTable<T extends Record<string, any>>({
               variant="outline"
               size="sm"
               onClick={() => addMultipleRows(5)}
-              className="text-xs px-2"
+              className="px-2 text-xs"
             >
               +5行
             </Button>
@@ -296,7 +329,7 @@ export function EditableTable<T extends Record<string, any>>({
               variant="outline"
               size="sm"
               onClick={() => addMultipleRows(10)}
-              className="text-xs px-2"
+              className="px-2 text-xs"
             >
               +10行
             </Button>

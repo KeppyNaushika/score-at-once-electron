@@ -11,39 +11,40 @@ export function useGridNavigation({
 
   // 外部からのitemsPerRowを優先し、ない場合はlocalStorageから読み込み
   useEffect(() => {
-    if (externalItemsPerRow) {
-      setItemsPerRow(externalItemsPerRow)
-    } else {
-      const stored = localStorage.getItem("answerGridView-itemsPerLine")
-      let initialValue = [5] // デフォルト値
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored)
-          if (
-            Array.isArray(parsed) &&
-            parsed.length === 1 &&
-            typeof parsed[0] === "number" &&
-            parsed[0] >= 1 &&
-            parsed[0] <= 10
-          ) {
-            initialValue = parsed
-            setItemsPerRow(parsed)
+    const frame = requestAnimationFrame(() => {
+      if (externalItemsPerRow) {
+        setItemsPerRow(externalItemsPerRow)
+      } else {
+        const stored = localStorage.getItem("answerGridView-itemsPerLine")
+        let initialValue = [5] // デフォルト値
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored)
+            if (
+              Array.isArray(parsed) &&
+              parsed.length === 1 &&
+              typeof parsed[0] === "number" &&
+              parsed[0] >= 1 &&
+              parsed[0] <= 10
+            ) {
+              initialValue = parsed
+              setItemsPerRow(parsed)
+            }
+          } catch (error) {
+            console.warn("Failed to parse stored itemsPerRow:", error)
           }
-        } catch (error) {
-          console.warn("Failed to parse stored itemsPerRow:", error)
         }
       }
-    }
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [externalItemsPerRow])
 
   // itemsPerRowの変更をlocalStorageに保存
-  const handleItemsPerRowChange = useCallback(
-    (value: number[]) => {
-      setItemsPerRow(value)
-      localStorage.setItem("answerGridView-itemsPerLine", JSON.stringify(value))
-    },
-    [],
-  )
+  const handleItemsPerRowChange = useCallback((value: number[]) => {
+    setItemsPerRow(value)
+    localStorage.setItem("answerGridView-itemsPerLine", JSON.stringify(value))
+  }, [])
 
   // 答案表示数の増減機能
   const incrementItemsPerRow = useCallback(() => {

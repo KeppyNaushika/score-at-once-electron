@@ -35,34 +35,70 @@ export function FilePreviewCell({
   // 既存画像の遅延読み込み
   useEffect(() => {
     if (!imagePreview && file.imagePath && !isImageLoading) {
-      setIsImageLoading(true)
-      loadStudentAnswerImage(file)
-        .then((dataUrl) => {
-          setImagePreview(dataUrl)
-          setIsImageLoading(false)
-        })
-        .catch((error) => {
-          console.error("画像読み込みエラー:", error)
-          setIsImageLoading(false)
-        })
+      let cancelled = false
+      const frame = requestAnimationFrame(() => {
+        if (cancelled) {
+          return
+        }
+
+        setIsImageLoading(true)
+        loadStudentAnswerImage(file)
+          .then((dataUrl) => {
+            if (cancelled) {
+              return
+            }
+            setImagePreview(dataUrl)
+            setIsImageLoading(false)
+          })
+          .catch((error) => {
+            if (cancelled) {
+              return
+            }
+            console.error("画像読み込みエラー:", error)
+            setIsImageLoading(false)
+          })
+      })
+
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(frame)
+      }
     }
   }, [file, imagePreview, isImageLoading])
 
   // 氏名欄プレビューの生成
   useEffect(() => {
     if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
-      setIsNameRegionLoading(true)
-      // imagePreviewを使用して氏名欄を描画
-      const tempFile = { ...file, preview: imagePreview }
-      drawNameRegionCanvas(tempFile, pageNumber)
-        .then((canvas) => {
-          setNameRegionPreview(canvas)
-          setIsNameRegionLoading(false)
-        })
-        .catch((error) => {
-          console.error("氏名欄プレビュー生成エラー:", error)
-          setIsNameRegionLoading(false)
-        })
+      let cancelled = false
+      const frame = requestAnimationFrame(() => {
+        if (cancelled) {
+          return
+        }
+
+        setIsNameRegionLoading(true)
+        // imagePreviewを使用して氏名欄を描画
+        const tempFile = { ...file, preview: imagePreview }
+        drawNameRegionCanvas(tempFile, pageNumber)
+          .then((canvas) => {
+            if (cancelled) {
+              return
+            }
+            setNameRegionPreview(canvas)
+            setIsNameRegionLoading(false)
+          })
+          .catch((error) => {
+            if (cancelled) {
+              return
+            }
+            console.error("氏名欄プレビュー生成エラー:", error)
+            setIsNameRegionLoading(false)
+          })
+      })
+
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(frame)
+      }
     }
   }, [
     file,

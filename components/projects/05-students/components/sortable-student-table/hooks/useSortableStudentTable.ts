@@ -1,6 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import type {
+  ClassGroup,
+  Student,
+  StudentStatus,
+} from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
 import {
   DragEndEvent,
   DragStartEvent,
@@ -10,11 +14,7 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
-import type {
-  ClassGroup,
-  Student,
-  StudentStatus,
-} from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import { useCallback, useEffect, useState } from "react"
 
 interface UseSortableStudentTableProps {
   classes: ClassGroup[]
@@ -61,52 +61,56 @@ export function useSortableStudentTable({
 
   // 生徒の並び順を初期化・更新
   useEffect(() => {
-    // まず学級順→出席番号順でソート
-    const classMap = new Map<string, ClassGroup>()
-    classes.forEach((cls) => classMap.set(cls.id, cls))
+    const frame = requestAnimationFrame(() => {
+      // まず学級順→出席番号順でソート
+      const classMap = new Map<string, ClassGroup>()
+      classes.forEach((cls) => classMap.set(cls.id, cls))
 
-    const defaultSorted = filteredStudents.slice().sort((a, b) => {
-      const aClass = a.memberships[0]?.class.name || ""
-      const bClass = b.memberships[0]?.class.name || ""
-      const aAttendance = a.memberships[0]?.attendanceNumber || 99999
-      const bAttendance = b.memberships[0]?.attendanceNumber || 99999
+      const defaultSorted = filteredStudents.slice().sort((a, b) => {
+        const aClass = a.memberships[0]?.class.name || ""
+        const bClass = b.memberships[0]?.class.name || ""
+        const aAttendance = a.memberships[0]?.attendanceNumber || 99999
+        const bAttendance = b.memberships[0]?.attendanceNumber || 99999
 
-      // 学級名でソート
-      if (aClass !== bClass) {
-        return aClass.localeCompare(bClass)
-      }
+        // 学級名でソート
+        if (aClass !== bClass) {
+          return aClass.localeCompare(bClass)
+        }
 
-      // 同じ学級内では出席番号でソート
-      return aAttendance - bAttendance
+        // 同じ学級内では出席番号でソート
+        return aAttendance - bAttendance
+      })
+
+      // カスタムオーダーがある場合はそれを優先
+      const withCustomOrder = defaultSorted.slice().sort((a, b) => {
+        // カスタムオーダーが両方ある場合
+        if (
+          a.customOrder !== null &&
+          a.customOrder !== undefined &&
+          b.customOrder !== null &&
+          b.customOrder !== undefined
+        ) {
+          return a.customOrder - b.customOrder
+        }
+
+        // aにのみカスタムオーダーがある場合
+        if (a.customOrder !== null && a.customOrder !== undefined) {
+          return -1
+        }
+
+        // bにのみカスタムオーダーがある場合
+        if (b.customOrder !== null && b.customOrder !== undefined) {
+          return 1
+        }
+
+        // 両方カスタムオーダーがない場合はデフォルトの順序を維持
+        return 0
+      })
+
+      setSortedStudents(withCustomOrder)
     })
 
-    // カスタムオーダーがある場合はそれを優先
-    const withCustomOrder = defaultSorted.slice().sort((a, b) => {
-      // カスタムオーダーが両方ある場合
-      if (
-        a.customOrder !== null &&
-        a.customOrder !== undefined &&
-        b.customOrder !== null &&
-        b.customOrder !== undefined
-      ) {
-        return a.customOrder - b.customOrder
-      }
-
-      // aにのみカスタムオーダーがある場合
-      if (a.customOrder !== null && a.customOrder !== undefined) {
-        return -1
-      }
-
-      // bにのみカスタムオーダーがある場合
-      if (b.customOrder !== null && b.customOrder !== undefined) {
-        return 1
-      }
-
-      // 両方カスタムオーダーがない場合はデフォルトの順序を維持
-      return 0
-    })
-
-    setSortedStudents(withCustomOrder)
+    return () => cancelAnimationFrame(frame)
   }, [filteredStudents, classes])
 
   // ドラッグ開始

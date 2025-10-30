@@ -64,17 +64,21 @@ export function StudentAnswerGridManager({
 
   // 欠席者の自動無効化
   useEffect(() => {
-    const absentStudentIds = students
-      .filter((student) => student.status === "absent")
-      .map((student) => student.id)
+    const frame = requestAnimationFrame(() => {
+      const absentStudentIds = students
+        .filter((student) => student.status === "absent")
+        .map((student) => student.id)
 
-    if (absentStudentIds.length > 0) {
-      setStudentStates((prev) => {
-        const newStates = new Set(prev)
-        absentStudentIds.forEach((id) => newStates.add(id))
-        return newStates
-      })
-    }
+      if (absentStudentIds.length > 0) {
+        setStudentStates((prev) => {
+          const newStates = new Set(prev)
+          absentStudentIds.forEach((id) => newStates.add(id))
+          return newStates
+        })
+      }
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [students])
 
   // 最大ページ数
@@ -335,7 +339,7 @@ export function StudentAnswerGridManager({
         {activeFile ? (
           <div className="scale-110 rotate-3 transform rounded-lg border-2 border-blue-400 bg-white p-4 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 flex-shrink-0 rounded bg-blue-200" />
+              <div className="h-8 w-8 shrink-0 rounded bg-blue-200" />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold text-gray-800">
                   {activeFile.name.split(" - ページ")[0] || activeFile.name}

@@ -1,10 +1,10 @@
-import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
+import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import type {
   GradingMode,
   LayoutDirection,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 
 export function useScoringMainState() {
   // 採点モード状態
@@ -22,12 +22,9 @@ export function useScoringMainState() {
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
   const [showScoreComparison, setShowScoreComparison] = useState(false)
   const [showSidePanel, setShowSidePanel] = useState(true)
-  const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
-
-  // プラットフォーム固有のキーラベルを初期化
-  useEffect(() => {
-    setModifierKeyLabel(getModifierKeyLabel())
-  }, [])
+  const [modifierKeyLabel, setModifierKeyLabel] = useState(
+    () => getModifierKeyLabel() || "Alt",
+  )
 
   // グリッドビュー用のヘルパー関数
   const handleAnswerSelect = useCallback(

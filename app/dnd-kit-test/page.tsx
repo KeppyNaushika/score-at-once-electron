@@ -142,7 +142,11 @@ export default function DndKitTestPage() {
 
   // 初期配置
   useEffect(() => {
-    setIsMounted(true)
+    const frame = requestAnimationFrame(() => {
+      setIsMounted(true)
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   // 戦略変更時の自動配置

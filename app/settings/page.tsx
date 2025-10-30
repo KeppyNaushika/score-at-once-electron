@@ -2,22 +2,22 @@
 
 import { KeyboardShortcutSection } from "@/app/settings/components/keyboard-shortcut-section"
 import { useKeyboardSettings } from "@/app/settings/hooks/use-keyboard-settings"
+import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import { UserEditModal } from "@/components/auth/UserEditModal"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
-import { UserEditModal } from "@/components/auth/UserEditModal"
-import { UserPen, Edit3 } from "lucide-react"
-import { useState, useEffect } from "react"
-import { toast } from "sonner"
-import { 
-  getSelectionBorderSettings, 
-  saveSelectionBorderColor, 
-  SELECTION_BORDER_COLORS 
+import {
+  getSelectionBorderSettings,
+  saveSelectionBorderColor,
+  SELECTION_BORDER_COLORS,
 } from "@/lib/utils"
+import { Edit3, UserPen } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 interface User {
   id: string
@@ -44,20 +44,26 @@ export default function SettingsPage() {
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [selectionBorderColor, setSelectionBorderColor] = useState(getSelectionBorderSettings().color)
+  const [selectionBorderColor, setSelectionBorderColor] = useState(
+    getSelectionBorderSettings().color,
+  )
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       const usersData = await window.electronAPI.fetchUsers()
       setUsers(usersData)
     } catch (error) {
       console.error("Failed to load users:", error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void loadUsers()
+    })
+
+    return () => cancelAnimationFrame(frame)
+  }, [loadUsers])
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user)
@@ -70,19 +76,19 @@ export default function SettingsPage() {
   }
 
   const handleUserUpdated = () => {
-    loadUsers()
+    void loadUsers()
     toast.success("ユーザー情報が更新されました")
   }
 
   const handlePasscodeUpdated = () => {
-    loadUsers() // ユーザー一覧を再読み込み
+    void loadUsers() // ユーザー一覧を再読み込み
   }
 
   const handleSelectionBorderColorChange = (color: string) => {
     setSelectionBorderColor(color)
     saveSelectionBorderColor(color)
     // カスタムイベントを発火して他のコンポーネントに通知
-    window.dispatchEvent(new CustomEvent('selectionBorderColorChanged'))
+    window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
     toast.success("選択枠色が変更されました")
   }
 
@@ -104,13 +110,16 @@ export default function SettingsPage() {
             <CardContent>
               <div className="space-y-3">
                 {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
                     <div>
                       <div className="font-medium">{user.name}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-muted-foreground text-sm">
                         @{user.username} • {user.role}
                         {user.passcodeType && user.passcodeType !== "none" && (
-                          <span className="ml-2 text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
+                          <span className="ml-2 rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
                             パスコード: {user.passcodeType}
                           </span>
                         )}
@@ -122,7 +131,7 @@ export default function SettingsPage() {
                         size="sm"
                         onClick={() => handleEditUser(user)}
                       >
-                        <Edit3 className="h-4 w-4 mr-2" />
+                        <Edit3 className="mr-2 h-4 w-4" />
                         ユーザー情報編集
                       </Button>
                       <Button
@@ -130,7 +139,7 @@ export default function SettingsPage() {
                         size="sm"
                         onClick={() => handleEditPasscode(user)}
                       >
-                        <UserPen className="h-4 w-4 mr-2" />
+                        <UserPen className="mr-2 h-4 w-4" />
                         パスコード編集
                       </Button>
                     </div>
@@ -149,29 +158,33 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div>
                 <Label className="text-base font-medium">選択枠の色</Label>
-                <p className="text-sm text-muted-foreground mb-3">
+                <p className="text-muted-foreground mb-3 text-sm">
                   答案選択時の枠色を変更できます
                 </p>
                 <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(SELECTION_BORDER_COLORS).map(([colorValue, config]) => (
-                    <button
-                      key={colorValue}
-                      onClick={() => handleSelectionBorderColorChange(colorValue)}
-                      className={`relative flex items-center justify-center p-3 rounded-lg border-2 transition-all hover:scale-105 ${
-                        selectionBorderColor === colorValue 
-                          ? 'border-gray-800 shadow-md' 
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div 
-                        className="w-8 h-8 rounded border-2"
-                        style={{ borderColor: config.color }}
-                      />
-                      {selectionBorderColor === colorValue && (
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full" />
-                      )}
-                    </button>
-                  ))}
+                  {Object.entries(SELECTION_BORDER_COLORS).map(
+                    ([colorValue, config]) => (
+                      <button
+                        key={colorValue}
+                        onClick={() =>
+                          handleSelectionBorderColorChange(colorValue)
+                        }
+                        className={`relative flex items-center justify-center rounded-lg border-2 p-3 transition-all hover:scale-105 ${
+                          selectionBorderColor === colorValue
+                            ? "border-gray-800 shadow-md"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <div
+                          className="h-8 w-8 rounded border-2"
+                          style={{ borderColor: config.color }}
+                        />
+                        {selectionBorderColor === colorValue && (
+                          <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500" />
+                        )}
+                      </button>
+                    ),
+                  )}
                 </div>
               </div>
             </CardContent>

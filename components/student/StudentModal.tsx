@@ -43,22 +43,34 @@ export default function StudentModal({
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
   useEffect(() => {
-    if (studentToEdit) {
-      setStudentId(studentToEdit.studentId)
-      setLastName(studentToEdit.lastName)
-      setFirstName(studentToEdit.firstName)
-      setLastNameKana(studentToEdit.lastNameKana)
-      setFirstNameKana(studentToEdit.firstNameKana)
-      setEnrollmentYear(studentToEdit.enrollmentYear ?? undefined)
-    } else {
-      setStudentId("")
-      setLastName("")
-      setFirstName("")
-      setLastNameKana("")
-      setFirstNameKana("")
-      setEnrollmentYear(undefined)
+    let canceled = false
+    const frame = requestAnimationFrame(() => {
+      if (canceled) {
+        return
+      }
+
+      if (studentToEdit) {
+        setStudentId(studentToEdit.studentId)
+        setLastName(studentToEdit.lastName)
+        setFirstName(studentToEdit.firstName)
+        setLastNameKana(studentToEdit.lastNameKana)
+        setFirstNameKana(studentToEdit.firstNameKana)
+        setEnrollmentYear(studentToEdit.enrollmentYear ?? undefined)
+      } else {
+        setStudentId("")
+        setLastName("")
+        setFirstName("")
+        setLastNameKana("")
+        setFirstNameKana("")
+        setEnrollmentYear(undefined)
+      }
+      setErrors({})
+    })
+
+    return () => {
+      canceled = true
+      cancelAnimationFrame(frame)
     }
-    setErrors({})
   }, [studentToEdit, isOpen])
 
   const validateForm = () => {

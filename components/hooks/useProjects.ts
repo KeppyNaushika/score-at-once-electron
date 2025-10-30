@@ -1,13 +1,14 @@
 "use client"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { useEffect, useState } from "react"
 import type { ProjectWithDetails } from "@/types/electron"
+import { useEffect, useState } from "react"
 
 export const useProjects = () => {
   const { user } = useAuth()
   const [projects, setProjects] = useState<ProjectWithDetails[]>([])
-  const [selectedProject, setSelectedProject] = useState<ProjectWithDetails | null>(null)
+  const [selectedProject, setSelectedProject] =
+    useState<ProjectWithDetails | null>(null)
 
   const loadProjects = async () => {
     try {
@@ -23,7 +24,11 @@ export const useProjects = () => {
   }
 
   useEffect(() => {
-    loadProjects()
+    const frame = requestAnimationFrame(() => {
+      void loadProjects()
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [])
 
   const createProject = async (createProjectArgs: {

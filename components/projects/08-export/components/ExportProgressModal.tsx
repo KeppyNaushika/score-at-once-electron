@@ -78,10 +78,16 @@ export default function ExportProgressModal({
   }
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
+      return
+    }
+
+    const frame = requestAnimationFrame(() => {
       setIsVisible(true)
       setIsClosing(false)
-    }
+    })
+
+    return () => cancelAnimationFrame(frame)
   }, [isOpen])
 
   useEffect(() => {
@@ -158,7 +164,7 @@ export default function ExportProgressModal({
                               : "bg-gray-50"
                         }`}
                       >
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           {stepStatus === "completed" && (
                             <CheckSquare className="h-4 w-4 text-green-600" />
                           )}
@@ -223,7 +229,7 @@ export default function ExportProgressModal({
                       key={step.id}
                       className="flex items-center space-x-3 rounded-md bg-green-50 p-2"
                     >
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <CheckSquare className="h-4 w-4 text-green-600" />
                       </div>
                       <div className="flex-1">
@@ -267,7 +273,7 @@ export default function ExportProgressModal({
                               : "bg-gray-50"
                         }`}
                       >
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           {stepStatus === "completed" && (
                             <CheckSquare className="h-4 w-4 text-green-600" />
                           )}

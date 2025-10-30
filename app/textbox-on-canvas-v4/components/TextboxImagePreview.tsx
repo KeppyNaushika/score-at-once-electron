@@ -104,9 +104,20 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
         }
       }
     } else {
-      setImageUrl(null)
-      setImageSize(null)
-      setRenderingStatus("待機中")
+      let cancelled = false
+      const frame = requestAnimationFrame(() => {
+        if (cancelled) {
+          return
+        }
+        setImageUrl(null)
+        setImageSize(null)
+        setRenderingStatus("待機中")
+      })
+
+      return () => {
+        cancelled = true
+        cancelAnimationFrame(frame)
+      }
     }
   }, [textBox.text, textBox.textSize])
 
