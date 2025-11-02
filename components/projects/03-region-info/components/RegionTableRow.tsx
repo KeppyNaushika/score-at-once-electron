@@ -1,5 +1,6 @@
 "use client"
 
+import type { ComponentType } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,7 +15,18 @@ import {
   CropRegionAreaType,
 } from "@/types/common.types"
 import type { CropRegionWithDetails } from "@/types/electron"
-import { GripVertical, Trash2 } from "lucide-react"
+import {
+  Ellipsis,
+  FileText,
+  GripVertical,
+  Hash,
+  ListOrdered,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Trophy,
+  User,
+} from "lucide-react"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {
@@ -28,15 +40,17 @@ const areaTypeToJapanese: Record<string, string> = {
   OTHER: "その他",
 }
 
-const typeIcons: Record<CropRegionAreaType, string> = {
-  ["QUESTION_ANSWER"]: "📋",
-  ["STUDENT_NAME"]: "📄",
-  ["STUDENT_ID"]: "🔢",
-  ["TOTAL_SCORE"]: "🏆",
-  ["SUBTOTAL_SCORE"]: "🔢",
-  ["MARK"]: "✏️",
-  ["COMMENT"]: "💬",
-  ["OTHER"]: "📎",
+type IconType = ComponentType<{ className?: string }>
+
+const typeIcons: Record<CropRegionAreaType, IconType> = {
+  ["QUESTION_ANSWER"]: FileText,
+  ["STUDENT_NAME"]: User,
+  ["STUDENT_ID"]: Hash,
+  ["TOTAL_SCORE"]: Trophy,
+  ["SUBTOTAL_SCORE"]: ListOrdered,
+  ["MARK"]: Pencil,
+  ["COMMENT"]: MessageSquare,
+  ["OTHER"]: Ellipsis,
 }
 
 type RegionTableRowProps = {
@@ -87,7 +101,7 @@ export const RegionTableRow = ({
   const isValidType = (type: string): type is CropRegionAreaType =>
     CROP_REGION_AREA_TYPES.includes(type as CropRegionAreaType)
 
-  const icon = isValidType(regionType)
+  const IconComponent = isValidType(regionType)
     ? typeIcons[regionType]
     : typeIcons["OTHER"]
 
@@ -120,7 +134,11 @@ export const RegionTableRow = ({
       </td>
       <td className="border-border border px-2 py-1">
         <div className="flex items-center space-x-2">
-          <span className="text-lg">{icon}</span>
+          <IconComponent
+            className={`h-4 w-4 flex-shrink-0 ${
+              isSelected ? "text-primary" : "text-muted-foreground"
+            }`}
+          />
           <span className="text-sm font-medium">{globalIndex + 1}</span>
         </div>
       </td>

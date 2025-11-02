@@ -1,6 +1,18 @@
 "use client"
 
+import type { ComponentType } from "react"
 import { CropRegionArea } from "@/types/common.types"
+import {
+  Ellipsis,
+  FileText,
+  Hash,
+  ListOrdered,
+  MessageSquare,
+  Palette,
+  Pencil,
+  Trophy,
+  User,
+} from "lucide-react"
 
 type CropRegionListProps = {
   areas: CropRegionArea[]
@@ -9,34 +21,36 @@ type CropRegionListProps = {
   disabled: boolean
 }
 
+type IconType = ComponentType<{ className?: string }>
+
+const typeIcons: Record<string, IconType> = {
+  QUESTION_ANSWER: FileText,
+  STUDENT_NAME: User,
+  STUDENT_ID: Hash,
+  TOTAL_SCORE: Trophy,
+  SUBTOTAL_SCORE: ListOrdered,
+  MARK: Pencil,
+  COMMENT: MessageSquare,
+  OTHER: Ellipsis,
+}
+
+const typeLabels = {
+  QUESTION_ANSWER: "設問",
+  STUDENT_NAME: "氏名",
+  STUDENT_ID: "番号",
+  TOTAL_SCORE: "合計",
+  SUBTOTAL_SCORE: "小計",
+  MARK: "マーク",
+  COMMENT: "コメント",
+  OTHER: "その他",
+}
+
 const CropRegionList = ({
   areas,
   selectedAreaIndex,
   onSelectArea,
   disabled,
 }: CropRegionListProps) => {
-  const typeIcons = {
-    QUESTION_ANSWER: "📋",
-    STUDENT_NAME: "📄",
-    STUDENT_ID: "🔢",
-    TOTAL_SCORE: "🏆",
-    SUBTOTAL_SCORE: "🔢",
-    MARK: "✏️",
-    COMMENT: "💬",
-    OTHER: "📎",
-  }
-
-  const typeLabels = {
-    QUESTION_ANSWER: "設問",
-    STUDENT_NAME: "氏名",
-    STUDENT_ID: "番号",
-    TOTAL_SCORE: "合計",
-    SUBTOTAL_SCORE: "小計",
-    MARK: "マーク",
-    COMMENT: "コメント",
-    OTHER: "その他",
-  }
-
   return (
     <div className="flex h-full flex-col">
       <div className="bg-background flex-shrink-0 border-b p-4">
@@ -51,7 +65,7 @@ const CropRegionList = ({
       <div className="scrollbar-overlay flex-1 overflow-auto p-4">
         {areas.length === 0 ? (
           <div className="text-muted-foreground border-muted-foreground/25 rounded-lg border-2 border-dashed py-8 text-center">
-            <div className="mb-3 text-3xl">🎨</div>
+            <Palette className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
             <p className="text-base font-medium">領域を作成してください</p>
             <p className="mt-2 text-sm">
               左の模範解答上でマウスをドラッグして領域を作成できます
@@ -61,7 +75,7 @@ const CropRegionList = ({
           <div className="space-y-3">
             {areas.map((area, index) => {
               const isSelected = selectedAreaIndex === index
-              const icon =
+              const IconComponent =
                 typeIcons[area.type as keyof typeof typeIcons] ||
                 typeIcons["OTHER"]
               const typeLabel =
@@ -81,7 +95,13 @@ const CropRegionList = ({
                   }`}
                 >
                   <div className="mb-1 flex items-center space-x-2">
-                    <span className="text-lg">{icon}</span>
+                    <IconComponent
+                      className={`h-4 w-4 flex-shrink-0 ${
+                        isSelected
+                          ? "text-primary-foreground"
+                          : "text-muted-foreground"
+                      }`}
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">
                         {area.label || `領域 ${index + 1}`}
