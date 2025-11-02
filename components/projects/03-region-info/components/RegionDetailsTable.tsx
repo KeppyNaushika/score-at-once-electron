@@ -6,6 +6,7 @@ import { useDragAndDrop } from "@/components/projects/03-region-info/hooks/useDr
 import { useKeyboardNavigation } from "@/components/projects/03-region-info/hooks/useKeyboardNavigation"
 import type { CropRegionWithDetails } from "@/types/electron"
 import { useState } from "react"
+import { Palette } from "lucide-react"
 
 type RegionDetailsTableProps = {
   regions: CropRegionWithDetails[]
@@ -137,7 +138,7 @@ const RegionDetailsTable = ({
   if (filteredRegions.length === 0) {
     return (
       <div className="p-8 text-center">
-        <div className="mb-4 text-4xl">🎨</div>
+        <Palette className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
         <h3 className="mb-2 text-lg font-medium">
           {selectedMasterImageId
             ? "このページに領域がありません"
