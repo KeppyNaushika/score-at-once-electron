@@ -2,7 +2,9 @@ import type {
   CropRegionWithProjectPage,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+import { useShortcutContext } from "../contexts/ShortcutProvider"
 
 interface UsePartialScoreProps {
   selectedAnswers: Set<string>
@@ -22,9 +24,22 @@ export function usePartialScore({
   onBatchScore,
   onAutoAdvance,
 }: UsePartialScoreProps) {
+  const { setContextValue } = useShortcutContext()
   // 部分点入力モーダル用状態
   const [partialScoreInput, setPartialScoreInput] = useState("")
   const [showPartialScoreModal, setShowPartialScoreModal] = useState(false)
+  const showExceedsMaxPointsToast = useCallback((maxPoints: number) => {
+    toast.warning(`配点を超える値は入力できません（最大${maxPoints}点）`)
+  }, [])
+  const blurActiveElement = useMemo(() => {
+    return () => {
+      if (typeof document === "undefined") return
+      const activeElement = document.activeElement
+      if (activeElement instanceof HTMLElement) {
+        activeElement.blur()
+      }
+    }
+  }, [])
 
   // 部分点入力開始（数字キー・小数点対応）
   const handlePartialScoreInput = useCallback(
@@ -63,7 +78,12 @@ export function usePartialScore({
         const maxPoints = currentCropRegion.points || 10
 
         // 不正な値や最大点数超過の場合は無視
-        if (isNaN(numericValue) || numericValue > maxPoints) {
+        if (isNaN(numericValue)) {
+          return
+        }
+
+        if (numericValue > maxPoints) {
+          showExceedsMaxPointsToast(maxPoints)
           return
         }
       }
@@ -75,6 +95,7 @@ export function usePartialScore({
       currentCropRegion,
       partialScoreInput,
       showPartialScoreModal,
+      showExceedsMaxPointsToast,
     ],
   )
 
@@ -107,6 +128,8 @@ export function usePartialScore({
       // モーダルを閉じる
       setPartialScoreInput("")
       setShowPartialScoreModal(false)
+      blurActiveElement()
+      setContextValue("inputFocus", false)
 
       // 自動進行（300ms後に実行）
       if (onAutoAdvance) {
@@ -122,6 +145,8 @@ export function usePartialScore({
       currentCropRegion,
       onBatchScore,
       onAutoAdvance,
+      blurActiveElement,
+      setContextValue,
     ],
   )
 
@@ -129,7 +154,9 @@ export function usePartialScore({
   const handlePartialScoreCancel = useCallback(() => {
     setPartialScoreInput("")
     setShowPartialScoreModal(false)
-  }, [])
+    blurActiveElement()
+    setContextValue("inputFocus", false)
+  }, [blurActiveElement, setContextValue])
 
   // Backspaceで文字削除
   const handlePartialScoreBackspace = useCallback(() => {
@@ -159,7 +186,12 @@ export function usePartialScore({
           const numericValue = parseFloat(value)
 
           // 不正な値や最大点数超過の場合は無視
-          if (isNaN(numericValue) || numericValue > maxPoints) {
+          if (isNaN(numericValue)) {
+            return
+          }
+
+          if (numericValue > maxPoints) {
+            showExceedsMaxPointsToast(maxPoints)
             return
           }
         }
@@ -167,13 +199,21 @@ export function usePartialScore({
         setPartialScoreInput(value)
       }
     },
-    [currentCropRegion],
+    [currentCropRegion, showExceedsMaxPointsToast],
   )
+
+  useEffect(() => {
+    if (!showPartialScoreModal) {
+      blurActiveElement()
+      setContextValue("inputFocus", false)
+    }
+  }, [showPartialScoreModal, blurActiveElement, setContextValue])
 
   return {
     partialScoreInput,
     showPartialScoreModal,
     setPartialScoreInput,
+    setShowPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,

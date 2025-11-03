@@ -10,21 +10,24 @@ import {
   ScoringErrorState,
   ScoringLoadingState,
 } from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
+import { ShortcutProvider } from "@/components/projects/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { usePartialScore } from "@/components/projects/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringData } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringData"
 import { useScoringDataLoader } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
 import { useScoringFilter } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringFilter"
-import { useScoringKeyboard } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringNavigation } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringSettings } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
+import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
+import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
 import Head from "next/head"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-export default function ScoringMainView() {
+// 内部コンポーネント（ShortcutProvider内で使用）
+function ScoringMainViewContent() {
   const params = useParams()
   const projectId = params.projectId as string
   const { helpButton } = usePageHelp()
@@ -191,11 +194,6 @@ export default function ScoringMainView() {
     // pageImagesから重複を除いた生徒データを抽出
     const uniqueStudents = new Map()
 
-    console.log(
-      "🔍 ScoringMainView debug - Processing pageImages for students:",
-      pageImages.length,
-    )
-
     pageImages.forEach((sheet, index) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
         const studentData = {
@@ -205,14 +203,6 @@ export default function ScoringMainView() {
           firstName: sheet.student.firstName,
           customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
         }
-
-        console.log(`🔍 Student ${index}:`, {
-          name: `${sheet.student.lastName} ${sheet.student.firstName}`,
-          customOrder: studentData.customOrder,
-          hasProjectStudents: !!sheet.student.projectStudents?.length,
-          projectStudentsLength: sheet.student.projectStudents?.length || 0,
-        })
-
         uniqueStudents.set(sheet.student.id, studentData)
       }
     })
@@ -221,16 +211,6 @@ export default function ScoringMainView() {
     const sortedStudents = Array.from(uniqueStudents.values()).sort(
       (a, b) => a.customOrder - b.customOrder,
     )
-
-    console.log(
-      "🔍 ScoringMainView debug - Final sorted students:",
-      sortedStudents.map((student, index) => ({
-        index,
-        name: `${student.lastName} ${student.firstName}`,
-        customOrder: student.customOrder,
-      })),
-    )
-
     return sortedStudents
   }, [pageImages])
 
@@ -346,6 +326,8 @@ export default function ScoringMainView() {
   const {
     partialScoreInput,
     showPartialScoreModal,
+    setPartialScoreInput,
+    setShowPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
@@ -358,29 +340,349 @@ export default function ScoringMainView() {
     onAutoAdvance: handleAutoAdvance,
   })
 
-  // キーボードハンドリングhook
-  useScoringKeyboard({
-    gradingMode: gradingMode,
-    selectedAnswers: selectedPageImageIds,
-    onBatchScore: handleBatchScoreWithProgress,
-    onNextQuestion: handleNextQuestion,
-    onPrevQuestion: handlePrevQuestion,
-    onNextStudent: handleNextStudent,
-    onPrevStudent: handlePrevStudent,
-    onZoomIn: handleZoomIn,
-    onZoomOut: handleZoomOut,
-    onResetZoom: handleResetZoom,
-    onToggleViewMode: toggleViewMode,
-    onGridNavigation: handleGridNavigation,
-    onToggleFilterByScoreKey: handleToggleFilterByScoreKey,
-    onRefreshFilter: handleRefreshFilter,
-    onPartialScoreInput: handlePartialScoreInput,
-    onPartialScoreConfirm: handlePartialScoreConfirm,
-    onPartialScoreCancel: handlePartialScoreCancel,
-    onPartialScoreBackspace: handlePartialScoreBackspace,
-    showPartialScoreModal,
-    onToggleFilter: handleToggleFilter,
-    onToggleStudentNames: handleToggleStudentNames,
+  // ============================================
+  // 新しいショートカットシステム: コンテキスト値の設定
+  // ============================================
+  useContextValue("gradingMode", gradingMode)
+  useContextValue("hasSelectedAnswers", selectedPageImageIds.size > 0)
+  useContextValue("sidePanelVisible", showSidePanel)
+  useContextValue("partialScoreModalOpen", showPartialScoreModal)
+  useContextValue("modalOpen", showPartialScoreModal || showScoreComparison)
+  // inputFocus は ShortcutProvider が自動検出
+  // textEditorActive は RichTextEditor で設定
+
+  // ============================================
+  // 新しいショートカットシステム: コマンド登録（動作確認用）
+  // ============================================
+
+  // 生徒名表示切り替えコマンド
+  useCommand("view.toggleStudentNames", handleToggleStudentNames, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "生徒名表示切り替え",
+      category: "表示",
+      description: "グリッド内の生徒名表示を切り替えます",
+    },
+  })
+
+  // フィルタ更新コマンド
+  useCommand("filter.refresh", handleRefreshFilter, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "フィルタ更新",
+      category: "フィルタ",
+      description: "フィルタ条件を適用して表示を更新します",
+    },
+  })
+
+  // ============================================
+  // ナビゲーションコマンドの登録
+  // ============================================
+
+  // 矢印キー: 問題切り替え
+  useCommand("navigation.nextQuestionArrow", handleNextQuestion, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "次の問題へ（→）",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.prevQuestionArrow", handlePrevQuestion, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "前の問題へ（←）",
+      category: "ナビゲーション",
+    },
+  })
+
+  // Shift+A/D: 問題切り替え
+  useCommand("navigation.nextQuestion", handleNextQuestion, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "次の問題へ（Shift+D）",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.prevQuestion", handlePrevQuestion, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "前の問題へ（Shift+A）",
+      category: "ナビゲーション",
+    },
+  })
+
+  // 矢印キー: 生徒切り替え（グリッドモードでは使用しない）
+  // WASDがグリッド移動に使われるため、矢印キーの上下は使用しない
+
+  // WASD: グリッド移動（グリッドモードのみ）
+  useCommand("navigation.moveUp", () => handleGridNavigation("w"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "上に移動",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.moveDown", () => handleGridNavigation("s"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "下に移動",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "左に移動",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.moveRight", () => handleGridNavigation("d"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "右に移動",
+      category: "ナビゲーション",
+    },
+  })
+
+  // ズーム操作
+  useCommand("navigation.zoomIn", handleZoomIn, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "ズームイン",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.zoomOut", handleZoomOut, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "ズームアウト",
+      category: "ナビゲーション",
+    },
+  })
+
+  useCommand("navigation.resetZoom", handleResetZoom, {
+    when: "!inputFocus && !modalOpen",
+    metadata: {
+      title: "ズームリセット",
+      category: "ナビゲーション",
+    },
+  })
+
+  // ============================================
+  // Ctrl+数字フィルタコマンド（グリッドモードのみ）
+  // ============================================
+  useCommand("filter.toggle1", () => handleToggleFilter("1"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ1切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggle2", () => handleToggleFilter("2"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ2切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggle3", () => handleToggleFilter("3"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ3切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggle4", () => handleToggleFilter("4"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ4切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggle5", () => handleToggleFilter("5"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ5切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  useCommand("filter.toggle6", () => handleToggleFilter("6"), {
+    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+    metadata: {
+      title: "フィルタ6切り替え",
+      category: "フィルタ",
+    },
+  })
+
+  // ============================================
+  // 部分点モーダルコマンド
+  // ============================================
+  useCommand(
+    "modal.confirmPartial",
+    () => handlePartialScoreConfirm("partial"),
+    {
+      when: "partialScoreModalOpen",
+      metadata: {
+        title: "部分点として確定",
+        category: "モーダル",
+        description: "入力した部分点を確定します",
+      },
+    },
+  )
+
+  useCommand(
+    "modal.confirmPending",
+    () => handlePartialScoreConfirm("pending"),
+    {
+      when: "partialScoreModalOpen",
+      metadata: {
+        title: "保留として確定",
+        category: "モーダル",
+        description: "保留として確定します",
+      },
+    },
+  )
+
+  useCommand("modal.cancel", handlePartialScoreCancel, {
+    when: "modalOpen",
+    metadata: {
+      title: "モーダルを閉じる",
+      category: "モーダル",
+    },
+  })
+
+  useCommand("modal.backspace", handlePartialScoreBackspace, {
+    when: "partialScoreModalOpen",
+    metadata: {
+      title: "文字削除",
+      category: "モーダル",
+    },
+  })
+
+  // 数字入力コマンド（0-9と小数点）
+  useCommand("modal.input0", () => handlePartialScoreInput("0"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "0を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input1", () => handlePartialScoreInput("1"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "1を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input2", () => handlePartialScoreInput("2"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "2を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input3", () => handlePartialScoreInput("3"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "3を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input4", () => handlePartialScoreInput("4"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "4を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input5", () => handlePartialScoreInput("5"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "5を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input6", () => handlePartialScoreInput("6"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "6を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input7", () => handlePartialScoreInput("7"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "7を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input8", () => handlePartialScoreInput("8"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "8を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.input9", () => handlePartialScoreInput("9"), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "9を入力", category: "モーダル" },
+  })
+
+  useCommand("modal.inputDot", () => handlePartialScoreInput("."), {
+    when: "partialScoreModalOpen",
+    metadata: { title: "小数点を入力", category: "モーダル" },
+  })
+
+  // ============================================
+  // 部分点モーダルオープンコマンド（数字キー）
+  // ============================================
+  // モーダルが閉じている状態で数字キーを押すと、モーダルを開いてその数字を入力
+  useCommand("scoring.openPartialWith0", () => handlePartialScoreInput("0"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "0キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith1", () => handlePartialScoreInput("1"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "1キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith2", () => handlePartialScoreInput("2"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "2キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith3", () => handlePartialScoreInput("3"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "3キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith4", () => handlePartialScoreInput("4"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "4キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith5", () => handlePartialScoreInput("5"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "5キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith6", () => handlePartialScoreInput("6"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "6キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith7", () => handlePartialScoreInput("7"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "7キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith8", () => handlePartialScoreInput("8"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "8キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWith9", () => handlePartialScoreInput("9"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: "9キーで部分点入力", category: "採点" },
+  })
+
+  useCommand("scoring.openPartialWithDot", () => handlePartialScoreInput("."), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
+    metadata: { title: ".キーで部分点入力", category: "採点" },
   })
 
   // selectedPageImageIdsから現在の生徒IDを取得
@@ -569,5 +871,14 @@ export default function ScoringMainView() {
         currentAnswerSheet={currentAnswerSheet}
       />
     </div>
+  )
+}
+
+// メインのエクスポートコンポーネント
+export default function ScoringMainView() {
+  return (
+    <ShortcutProvider>
+      <ScoringMainViewContent />
+    </ShortcutProvider>
   )
 }

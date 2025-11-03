@@ -1,4 +1,4 @@
-import { DEFAULT_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
+import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoring-keybindings"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
@@ -66,21 +66,6 @@ export function useScoringFilter({
         pageImage.projectPageId === currentCropRegion.projectPageId,
     )
 
-    console.log(
-      "🔍 Student ordering debug - Before sorting:",
-      pageFilteredSheets.map((sheet, index) => ({
-        index,
-        id: sheet.id,
-        studentName: `${sheet.student?.lastName ?? ""} ${sheet.student?.firstName ?? ""}`,
-        studentId: sheet.student?.studentId,
-        customOrder: sheet.student?.projectStudents?.[0]?.customOrder,
-        hasProjectStudents: (sheet.student?.projectStudents?.length ?? 0) > 0,
-        projectStudentsLength: sheet.student?.projectStudents?.length ?? 0,
-        allProjectStudents: sheet.student?.projectStudents ?? [],
-        studentData: sheet.student,
-      })),
-    )
-
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
       // ProjectStudentのcustomOrderで並び替え（小さい値が先）
       // customOrderが未定義の場合は、学籍番号の数値として比較
@@ -102,27 +87,8 @@ export function useScoringFilter({
 
       const sortResult = (aOrder || 0) - (bOrder || 0)
 
-      console.log("🔍 Sorting comparison:", {
-        a: `${a.student?.lastName} ${a.student?.firstName}`,
-        aOrder,
-        b: `${b.student?.lastName} ${b.student?.firstName}`,
-        bOrder,
-        result: sortResult,
-      })
-
       return sortResult
     })
-
-    console.log(
-      "🔍 Student ordering debug - After sorting:",
-      sortedAnswerSheets.map((sheet, index) => ({
-        index,
-        id: sheet.id,
-        studentName: `${sheet.student?.lastName ?? ""} ${sheet.student?.firstName ?? ""}`,
-        studentId: sheet.student?.studentId,
-        customOrder: sheet.student?.projectStudents?.[0]?.customOrder,
-      })),
-    )
 
     const studentScoringData: ScoringData[] = sortedAnswerSheets.map(
       (pageImage) => {
@@ -194,16 +160,6 @@ export function useScoringFilter({
         return
       }
 
-      console.log(
-        "🔍 Filter debug - Active filter settings:",
-        activeFilterSettings,
-      )
-      console.log(
-        "🔍 Filter debug - Current crop region:",
-        currentCropRegion.id,
-      )
-      console.log("🔍 Filter debug - Total page images:", pageImages.length)
-
       // allScoringData（既にソート済み）からフィルタリングして順序を保持
       const newVisibleAnswers = allScoringData
         .filter((scoringData) => {
@@ -217,21 +173,9 @@ export function useScoringFilter({
         })
         .map((scoringData) => scoringData.id) // IDの配列として順序を保持
 
-      console.log("🔍 Filter debug - Filtered results:", newVisibleAnswers)
-      console.log(
-        "🔍 Filter debug - Visible answer count:",
-        newVisibleAnswers.length,
-      )
-
       setVisibleAnswers(newVisibleAnswers)
     },
-    [
-      filterSettings,
-      currentCropRegion,
-      pageImages.length,
-      allScoringData,
-      recentlyScoredAnswers,
-    ],
+    [filterSettings, currentCropRegion, allScoringData, recentlyScoredAnswers],
   )
 
   // 初期化時と設問変更時に表示対象を設定（選択は別のuseEffectで管理）
@@ -277,13 +221,6 @@ export function useScoringFilter({
 
   // visibleAnswersが更新されたら適切な答案選択を行う（最適化版）
   useEffect(() => {
-    console.log("🔍 Selection debug - visibleAnswers changed:", {
-      newSize: visibleAnswers.length,
-      oldSize: lastVisibleAnswersRef.current.size,
-      newIds: visibleAnswers,
-      currentSelection: Array.from(selectedPageImageIdsRef.current),
-    })
-
     // visibleAnswersに変化がない場合はスキップ（パフォーマンス向上）
     if (visibleAnswers.length === lastVisibleAnswersRef.current.size) {
       let hasChanged = false
@@ -294,9 +231,6 @@ export function useScoringFilter({
         }
       }
       if (!hasChanged) {
-        console.log(
-          "🔍 Selection debug - No changes in visibleAnswers, skipping",
-        )
         return
       }
     }
@@ -306,7 +240,6 @@ export function useScoringFilter({
 
     // 早期リターンで不要な処理をスキップ
     if (visibleAnswers.length === 0) {
-      console.log("🔍 Selection debug - No visible answers, returning")
       if (selectedPageImageIdsRef.current.size > 0) {
         setSelectedPageImageIds(new Set())
       }
@@ -319,10 +252,6 @@ export function useScoringFilter({
       // 高速な有効性チェック（Set.hasは高速）
       for (const selectedId of currentSelection) {
         if (visibleAnswers.includes(selectedId)) {
-          console.log(
-            "🔍 Selection debug - Current selection is still valid:",
-            selectedId,
-          )
           if (typeof window !== "undefined") {
             window.dispatchEvent(
               new CustomEvent("score-view:scroll-to-answer", {
@@ -336,19 +265,10 @@ export function useScoringFilter({
     }
 
     // 選択が空か無効な場合のみ、最初の学生答案を選択
-    console.log("🔍 Selection debug - Need to select first student answer")
     const visibleAnswersArray = Array.from(visibleAnswers)
-    console.log(
-      "🔍 Selection debug - Visible answers array:",
-      visibleAnswersArray,
-    )
 
     for (const answerId of visibleAnswers) {
       if (!answerId.startsWith("master-")) {
-        console.log(
-          "🔍 Selection debug - Selecting first student answer:",
-          answerId,
-        )
         setSelectedPageImageIds(new Set([answerId]))
         if (typeof window !== "undefined") {
           window.dispatchEvent(
@@ -408,19 +328,6 @@ export function useScoringFilter({
       )
       .filter(Boolean) // undefinedを除外
 
-    // デバッグ: フィルタリング後の順序をログ出力
-    console.log(
-      "🔍 getGridAnswerData - Filtered order (preserving allScoringData order):",
-      filteredAnswers.map((answer, index) => ({
-        index,
-        id: answer?.id,
-        studentName: answer?.studentName,
-        fromVisibleAnswersIndex: answer?.id
-          ? visibleAnswers.indexOf(answer.id)
-          : -1,
-      })),
-    )
-
     return filteredAnswers
   }, [getAllGridAnswerData, visibleAnswers])
 
@@ -459,12 +366,12 @@ export function useScoringFilter({
   const handleToggleFilterByScoreKey = useCallback(
     (scoreKey: string) => {
       const scoreToFilterMap: { [key: string]: keyof typeof filterSettings } = {
-        [DEFAULT_SHORTCUTS.unscored]: "unscored",
-        [DEFAULT_SHORTCUTS.correct]: "correct",
-        [DEFAULT_SHORTCUTS.incorrect]: "incorrect",
-        [DEFAULT_SHORTCUTS.partial]: "partial",
-        [DEFAULT_SHORTCUTS.pending]: "pending",
-        [DEFAULT_SHORTCUTS.no_answer]: "no_answer",
+        [DEFAULT_KEYBINDINGS["scoring.unscored"]]: "unscored",
+        [DEFAULT_KEYBINDINGS["scoring.correct"]]: "correct",
+        [DEFAULT_KEYBINDINGS["scoring.incorrect"]]: "incorrect",
+        [DEFAULT_KEYBINDINGS["scoring.partial"]]: "partial",
+        [DEFAULT_KEYBINDINGS["scoring.pending"]]: "pending",
+        [DEFAULT_KEYBINDINGS["scoring.noAnswer"]]: "no_answer",
       }
 
       const filterKey = scoreToFilterMap[scoreKey]

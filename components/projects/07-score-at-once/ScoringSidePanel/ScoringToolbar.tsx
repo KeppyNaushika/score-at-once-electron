@@ -1,6 +1,7 @@
 "use client"
 
-import { getKeyboardShortcuts } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
+import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
+import { useKeyBindings } from "@/components/projects/07-score-at-once/hooks/useKeyBindings"
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -163,6 +164,136 @@ export default function ScoringToolbar({
   modifierKeyLabel,
   gradingMode = "grid",
 }: ScoringToolbarProps) {
+  // 新しいショートカットシステム: キーバインディング取得
+  const { keyBindings } = useKeyBindings()
+
+  // コンテキスト値の設定（不要だがサンプルとして残す）
+  // hasSelectedAnswers は ScoringMainView で設定済み
+
+  // ============================================
+  // 採点コマンドの登録
+  // ============================================
+  useCommand("scoring.unscored", () => onScore("unscored"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "未採点として採点",
+      category: "採点",
+      description: "選択中の答案を未採点にします",
+    },
+  })
+
+  useCommand("scoring.correct", () => onScore("correct"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "正答として採点",
+      category: "採点",
+      description: "選択中の答案を正答として採点します",
+    },
+  })
+
+  useCommand("scoring.pending", () => onScore("pending"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "保留として採点",
+      category: "採点",
+      description: "選択中の答案を保留として採点します",
+    },
+  })
+
+  useCommand("scoring.incorrect", () => onScore("incorrect"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "誤答として採点",
+      category: "採点",
+      description: "選択中の答案を誤答として採点します",
+    },
+  })
+
+  useCommand("scoring.noAnswer", () => onScore("no_answer"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "無答として採点",
+      category: "採点",
+      description: "選択中の答案を無答として採点します",
+    },
+  })
+
+  // ============================================
+  // フィルタトグルコマンドの登録（グリッドモードのみ）
+  // ============================================
+  useCommand(
+    "filter.toggleUnscored",
+    () => onToggleFilter && onToggleFilter("unscored"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "未採点フィルタトグル",
+        category: "フィルタ",
+        description: "未採点の答案の表示を切り替えます",
+      },
+    },
+  )
+
+  useCommand(
+    "filter.toggleCorrect",
+    () => onToggleFilter && onToggleFilter("correct"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "正答フィルタトグル",
+        category: "フィルタ",
+      },
+    },
+  )
+
+  useCommand(
+    "filter.togglePartial",
+    () => onToggleFilter && onToggleFilter("partial"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "部分点フィルタトグル",
+        category: "フィルタ",
+      },
+    },
+  )
+
+  useCommand(
+    "filter.togglePending",
+    () => onToggleFilter && onToggleFilter("pending"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "保留フィルタトグル",
+        category: "フィルタ",
+      },
+    },
+  )
+
+  useCommand(
+    "filter.toggleIncorrect",
+    () => onToggleFilter && onToggleFilter("incorrect"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "誤答フィルタトグル",
+        category: "フィルタ",
+      },
+    },
+  )
+
+  useCommand(
+    "filter.toggleNoAnswer",
+    () => onToggleFilter && onToggleFilter("no_answer"),
+    {
+      when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
+      metadata: {
+        title: "無答フィルタトグル",
+        category: "フィルタ",
+      },
+    },
+  )
+
   return (
     <TooltipProvider delayDuration={300}>
       {/* 採点セクション */}
@@ -187,7 +318,9 @@ export default function ScoringToolbar({
         <div className="grid grid-cols-3 gap-2">
           {SCORING_BUTTONS.map((button) => {
             const Icon = button.icon
-            const shortcuts = getKeyboardShortcuts() // 動的に取得
+            // コマンドIDからキーバインディングを取得
+            const commandId = `scoring.${button.status === "no_answer" ? "noAnswer" : button.status}`
+            const keyBinding = keyBindings[commandId] || "?"
             return (
               <Tooltip key={button.status}>
                 <TooltipTrigger asChild>
@@ -212,9 +345,7 @@ export default function ScoringToolbar({
                     <div className="mt-1 text-xs text-gray-400">
                       キー:{" "}
                       <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                        {shortcuts[
-                          button.shortcutKey as keyof typeof shortcuts
-                        ]?.toUpperCase() || "キー"}
+                        {keyBinding.toUpperCase()}
                       </kbd>
                     </div>
                   </div>
@@ -252,7 +383,13 @@ export default function ScoringToolbar({
                   filterSettings[
                     button.filterKey as keyof typeof filterSettings
                   ]
-                const shortcuts = getKeyboardShortcuts() // 動的に取得
+                // コマンドIDからキーバインディングを取得
+                const statusKey =
+                  button.key === "no_answer"
+                    ? "NoAnswer"
+                    : button.key.charAt(0).toUpperCase() + button.key.slice(1)
+                const commandId = `filter.toggle${statusKey}`
+                const keyBinding = keyBindings[commandId] || "?"
                 return (
                   <Tooltip key={button.key}>
                     <TooltipTrigger asChild>
@@ -276,10 +413,7 @@ export default function ScoringToolbar({
                         <div className="mt-1 text-xs text-gray-400">
                           キー:{" "}
                           <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs">
-                            {modifierKeyLabel}+
-                            {shortcuts[
-                              button.shortcutKey as keyof typeof shortcuts
-                            ]?.toUpperCase() || "キー"}
+                            {keyBinding.toUpperCase()}
                           </kbd>
                         </div>
                       </div>

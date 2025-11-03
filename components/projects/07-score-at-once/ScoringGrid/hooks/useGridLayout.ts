@@ -27,13 +27,13 @@ export function useGridLayout({
 
   // レイアウト方向に応じて答案を並び替え
   const sortedAnswers = useCallback(() => {
-    console.log('🔍 useGridLayout debug - Input answers order:', answers.map((answer, index) => ({
-      index,
-      id: answer.id,
-      studentName: answer.studentName
-    })))
+    // console.log('🔍 useGridLayout debug - Input answers order:', answers.map((answer, index) => ({
+    //   index,
+    //   id: answer.id,
+    //   studentName: answer.studentName
+    // })))
 
-    console.log('🔍 useGridLayout debug - Layout direction:', layoutDirection)
+    // console.log('🔍 useGridLayout debug - Layout direction:', layoutDirection)
 
     let result = answers
 
@@ -64,11 +64,11 @@ export function useGridLayout({
       result = sorted.filter(Boolean)
     }
 
-    console.log('🔍 useGridLayout debug - Output answers order:', result.map((answer, index) => ({
-      index,
-      id: answer.id,
-      studentName: answer.studentName
-    })))
+    // console.log('🔍 useGridLayout debug - Output answers order:', result.map((answer, index) => ({
+    //   index,
+    //   id: answer.id,
+    //   studentName: answer.studentName
+    // })))
 
     return result
   }, [answers, layoutDirection, effectiveGridSize])

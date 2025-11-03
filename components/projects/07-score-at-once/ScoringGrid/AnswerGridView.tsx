@@ -4,7 +4,6 @@ import { DragSelectionOverlay } from "@/components/projects/07-score-at-once/Sco
 import { GridCell } from "@/components/projects/07-score-at-once/ScoringGrid/GridCell"
 import { useAutoScroll } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useAutoScroll"
 import { useGridDragSelection } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridDragSelection"
-import { useGridKeyboard } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridKeyboard"
 import { useGridLayout } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridLayout"
 import { useGridNavigation } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridNavigation"
 import { useGridSelection } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useGridSelection"
@@ -14,7 +13,7 @@ import type {
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useRef } from "react"
+import { useRef } from "react"
 
 export interface AnswerGridViewProps {
   // 統一されたデータ引数
@@ -50,10 +49,14 @@ export default function AnswerGridView({
   className = "",
 }: AnswerGridViewProps) {
   // フィルタリングされた採点データを取得（模範解答 + 学生データ）
-  const masterAnswers = masterAnswerData ? [{
-    ...masterAnswerData,
-    isSelected: selectedScoringDataIds.has(masterAnswerData.id),
-  }] : []
+  const masterAnswers = masterAnswerData
+    ? [
+        {
+          ...masterAnswerData,
+          isSelected: selectedScoringDataIds.has(masterAnswerData.id),
+        },
+      ]
+    : []
 
   const studentAnswers = allScoringData
     .filter((data) => filteredScoringDataIds.includes(data.id))
@@ -62,31 +65,8 @@ export default function AnswerGridView({
       isSelected: selectedScoringDataIds.has(data.id),
     }))
 
-  console.log('🔍 AnswerGridView debug - allScoringData order:', allScoringData.map((data, index) => ({
-    index,
-    id: data.id,
-    studentName: data.studentName
-  })))
-
-  console.log('🔍 AnswerGridView debug - filteredScoringDataIds:', filteredScoringDataIds)
-
-  console.log('🔍 AnswerGridView debug - studentAnswers order:', studentAnswers.map((data, index) => ({
-    index,
-    id: data.id,
-    studentName: data.studentName
-  })))
-
   const answers = [...masterAnswers, ...studentAnswers]
-  
-  // デバッグ: グリッドに渡される答案の順序をログ出力
-  console.log('🔍 AnswerGridView - Final answer order:', answers.map((answer, index) => ({
-    index,
-    id: answer.id,
-    studentName: answer.studentName || answer.studentId,
-    customOrder: answer.customOrder,
-    isFiltered: filteredScoringDataIds.includes(answer.id)
-  })))
-  
+
   const containerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
@@ -113,12 +93,6 @@ export default function AnswerGridView({
       selectedAnswers: selectedScoringDataIds,
       sortedAnswers,
     })
-
-  // Keyboard shortcuts
-  useGridKeyboard({
-    selectedAnswers: selectedScoringDataIds,
-    onAnswerScore: onScoringDataScore,
-  })
 
   // Auto scroll
   useAutoScroll({
