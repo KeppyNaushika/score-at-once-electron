@@ -1,14 +1,39 @@
-import {
-  DEFAULT_SHORTCUTS,
-  getKeyboardShortcuts,
-  getModifierKeyLabel,
-  saveKeyboardShortcuts,
-} from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
+import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoring-keybindings"
+import { getModifierKeyLabel } from "@/lib/platform-utils"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
+// localStorage キー
+const STORAGE_KEY = "scoringKeyBindings"
+
+// キーバインディング取得関数（新システム版）
+function getKeyboardShortcuts() {
+  if (typeof window === "undefined") return DEFAULT_KEYBINDINGS
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      return { ...DEFAULT_KEYBINDINGS, ...JSON.parse(stored) }
+    }
+  } catch (error) {
+    console.error("Failed to load keyboard shortcuts:", error)
+  }
+  return DEFAULT_KEYBINDINGS
+}
+
+// キーバインディング保存関数（新システム版）
+function saveKeyboardShortcuts(shortcuts: typeof DEFAULT_KEYBINDINGS) {
+  if (typeof window === "undefined") return
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(shortcuts))
+  } catch (error) {
+    console.error("Failed to save keyboard shortcuts:", error)
+  }
+}
+
 export function useKeyboardSettings() {
-  const [shortcuts, setShortcuts] = useState(DEFAULT_SHORTCUTS)
+  const [shortcuts, setShortcuts] = useState(DEFAULT_KEYBINDINGS)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [pendingKey, setPendingKey] = useState<string>("")
   const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
@@ -93,8 +118,8 @@ export function useKeyboardSettings() {
 
   const handleReset = () => {
     if (confirm("すべてのショートカットキーをデフォルトに戻しますか？")) {
-      setShortcuts(DEFAULT_SHORTCUTS)
-      saveKeyboardShortcuts(DEFAULT_SHORTCUTS)
+      setShortcuts(DEFAULT_KEYBINDINGS)
+      saveKeyboardShortcuts(DEFAULT_KEYBINDINGS)
       toast.success("ショートカットキーをデフォルトに戻しました")
     }
   }

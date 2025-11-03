@@ -1,0 +1,423 @@
+"use client"
+
+/**
+ * ショートカット管理システムのプロバイダー
+ * 一括採点画面専用のショートカット機能を提供
+ *
+ * 主な機能:
+ * - コマンドの登録・解除（コンポーネントのライフサイクルに連動）
+ * - キーバインディングの管理（localStorage連携、カスタマイズ可能）
+ * - コンテキスト状態の管理（実行条件の判定）
+ * - when句による柔軟な実行条件制御
+ * - macOSデッドキー対応
+ */
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react"
+import { DEFAULT_KEYBINDINGS } from "../../constants/scoring-keybindings"
+import type {
+  CommandHandler,
+  KeyBinding,
+  ScoringContextState,
+  ShortcutContextValue,
+} from "./ShortcutContextTypes"
+
+// ============================================
+// コンテキスト作成
+// ============================================
+
+const ShortcutContext = createContext<ShortcutContextValue | null>(null)
+
+/**
+ * ShortcutContextを取得するフック
+ * ShortcutProvider内でのみ使用可能
+ */
+export function useShortcutContext() {
+  const context = useContext(ShortcutContext)
+  if (!context) {
+    throw new Error("useShortcutContext must be used within ShortcutProvider")
+  }
+  return context
+}
+
+// ============================================
+// ユーティリティ関数
+// ============================================
+
+/**
+ * macOSデッドキーのKeyCodeマッピング
+ * Option+E などがデッドキーとして検出される問題に対応
+ */
+const DEAD_KEY_CODE_MAP: { [code: string]: string } = {
+  KeyQ: "q",
+  KeyE: "e",
+  KeyF: "f",
+  KeyJ: "j",
+  KeyO: "o",
+  KeyP: "p",
+  KeyA: "a",
+  KeyS: "s",
+  KeyD: "d",
+  KeyW: "w",
+  KeyR: "r",
+  KeyT: "t",
+  KeyY: "y",
+  KeyU: "u",
+  KeyI: "i",
+  KeyG: "g",
+  KeyH: "h",
+  KeyK: "k",
+  KeyL: "l",
+  KeyZ: "z",
+  KeyX: "x",
+  KeyC: "c",
+  KeyV: "v",
+  KeyB: "b",
+  KeyN: "n",
+  KeyM: "m",
+}
+
+/**
+ * キー入力を正規化する
+ * macOSデッドキー対応と修飾キーの処理を含む
+ */
+function normalizeKey(event: KeyboardEvent): string {
+  let key = event.key.toLowerCase()
+
+  // macOSデッドキー対応
+  if (key === "dead" && event.code && DEAD_KEY_CODE_MAP[event.code]) {
+    key = DEAD_KEY_CODE_MAP[event.code]
+  } else if (event.code && DEAD_KEY_CODE_MAP[event.code]) {
+    key = DEAD_KEY_CODE_MAP[event.code]
+  }
+
+  // スペースキーの正規化
+  if (key === " ") {
+    key = "Space"
+  }
+
+  // 修飾キーを含める（順序: Ctrl, Alt, Shift, Meta）
+  const modifiers: string[] = []
+  if (event.ctrlKey || event.metaKey) modifiers.push("Ctrl")
+  if (event.altKey) modifiers.push("Alt")
+  if (event.shiftKey) modifiers.push("Shift")
+
+  if (modifiers.length > 0) {
+    return `${modifiers.join("+")}+${key}`
+  }
+
+  return key
+}
+
+/**
+ * when句を評価する
+ * JavaScript式として安全に評価
+ */
+function evaluateWhenClause(
+  when: string,
+  context: ScoringContextState,
+): boolean {
+  try {
+    // 簡易的な式評価（セキュリティ上の理由で制限された構文のみ）
+    // コンテキスト変数を直接参照可能
+    // 例: "!inputFocus && gradingMode == 'grid'"
+
+    const fn = new Function(
+      "inputFocus",
+      "textEditorActive",
+      "gradingMode",
+      "modalOpen",
+      "partialScoreModalOpen",
+      "sidePanelVisible",
+      "hasSelectedAnswers",
+      `return ${when}`,
+    )
+
+    return fn(
+      context.inputFocus,
+      context.textEditorActive,
+      context.gradingMode,
+      context.modalOpen,
+      context.partialScoreModalOpen,
+      context.sidePanelVisible,
+      context.hasSelectedAnswers,
+    )
+  } catch (error) {
+    console.error("Failed to evaluate when clause:", when, error)
+    return false
+  }
+}
+
+// ============================================
+// ShortcutProvider コンポーネント
+// ============================================
+
+interface ShortcutProviderProps {
+  children: ReactNode
+}
+
+export function ShortcutProvider({ children }: ShortcutProviderProps) {
+  // ============================================
+  // 状態管理
+  // ============================================
+
+  // コンテキスト状態
+  const [context, setContext] = useState<ScoringContextState>({
+    inputFocus: false,
+    textEditorActive: false,
+    gradingMode: "grid",
+    modalOpen: false,
+    partialScoreModalOpen: false,
+    sidePanelVisible: true,
+    hasSelectedAnswers: false,
+  })
+
+  // コマンドレジストリ（commandId -> CommandHandler）
+  const [commands, setCommands] = useState<Map<string, CommandHandler>>(
+    new Map(),
+  )
+
+  // キーバインディング（localStorageから読み込み）
+  const [keyBindings, setKeyBindings] = useState<KeyBinding>(() => {
+    if (typeof window === "undefined") return DEFAULT_KEYBINDINGS
+    try {
+      const stored = localStorage.getItem("scoring-keybindings")
+      return stored
+        ? { ...DEFAULT_KEYBINDINGS, ...JSON.parse(stored) }
+        : DEFAULT_KEYBINDINGS
+    } catch {
+      return DEFAULT_KEYBINDINGS
+    }
+  })
+
+  // ============================================
+  // コンテキスト値の更新
+  // ============================================
+
+  const setContextValue = useCallback(
+    <K extends keyof ScoringContextState>(
+      key: K,
+      value: ScoringContextState[K],
+    ) => {
+      setContext((prev) => {
+        // 変更がない場合は更新しない（無駄な再レンダリング防止）
+        if (prev[key] === value) return prev
+        return { ...prev, [key]: value }
+      })
+    },
+    [],
+  )
+
+  // ============================================
+  // コマンドの登録・解除
+  // ============================================
+
+  const registerCommand = useCallback((command: CommandHandler) => {
+    setCommands((prev) => {
+      const next = new Map(prev)
+
+      // 重複登録の警告（開発環境のみ）
+      if (
+        process.env.NODE_ENV === "development" &&
+        next.has(command.commandId)
+      ) {
+        console.warn(
+          `[ShortcutProvider] Command "${command.commandId}" is already registered. Overwriting.`,
+        )
+      }
+
+      next.set(command.commandId, command)
+      return next
+    })
+  }, [])
+
+  const unregisterCommand = useCallback((commandId: string) => {
+    setCommands((prev) => {
+      const next = new Map(prev)
+      next.delete(commandId)
+      return next
+    })
+  }, [])
+
+  // ============================================
+  // キーバインディングの管理
+  // ============================================
+
+  const updateKeyBinding = useCallback(
+    (commandId: string, key: string) => {
+      const newBindings = { ...keyBindings, [commandId]: key }
+      setKeyBindings(newBindings)
+
+      // localStorageに保存
+      try {
+        localStorage.setItem("scoring-keybindings", JSON.stringify(newBindings))
+      } catch (error) {
+        console.error("Failed to save keybindings to localStorage:", error)
+      }
+    },
+    [keyBindings],
+  )
+
+  const resetKeyBindings = useCallback(() => {
+    setKeyBindings(DEFAULT_KEYBINDINGS)
+    try {
+      localStorage.removeItem("scoring-keybindings")
+    } catch (error) {
+      console.error("Failed to remove keybindings from localStorage:", error)
+    }
+  }, [])
+
+  // ============================================
+  // 全コマンド取得
+  // ============================================
+
+  const getAllCommands = useCallback(() => {
+    return Array.from(commands.values())
+  }, [commands])
+
+  // ============================================
+  // 自動的な入力フォーカス検出
+  // ============================================
+
+  useEffect(() => {
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target
+      const isInput =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+
+      setContextValue("inputFocus", isInput)
+    }
+
+    document.addEventListener("focusin", handleFocus, true)
+    document.addEventListener("focusout", handleFocus, true)
+
+    return () => {
+      document.removeEventListener("focusin", handleFocus, true)
+      document.removeEventListener("focusout", handleFocus, true)
+    }
+  }, [setContextValue])
+
+  // ============================================
+  // キーボードイベントハンドリング
+  // ============================================
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // キーを正規化（macOSデッドキー対応含む）
+      const key = normalizeKey(event)
+
+      // ============================================
+      // 重要: input要素内での制御
+      // ============================================
+      const target = event.target
+      const isInputElement =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+
+      // input要素内では、モーダル制御キー（F, J, Escape）以外をスルー
+      // これにより、通常の文字入力（0-9, a-z, .等）とBackspace等は正常に動作する
+      if (isInputElement) {
+        const modalControlKeys = ["f", "j", "Escape"]
+
+        if (!modalControlKeys.includes(key)) {
+          // モーダル制御キー以外は通常の入力として処理（Backspace含む）
+          return
+        }
+        // F, J, Escapeの場合は、後続のコマンド評価に進む
+      }
+
+      // 逆引き: key -> commandId[] (複数のコマンドが同じキーにバインドされている可能性)
+      const commandIds = Object.entries(keyBindings)
+        .filter(([_, bindingKey]) => bindingKey === key)
+        .map(([id]) => id)
+
+      if (commandIds.length === 0) {
+        // このキーにバインドされたコマンドはない
+        return
+      }
+
+      // ============================================
+      // 重要: より具体的な条件を持つコマンドを優先
+      // ============================================
+      // when句の複雑さ（&&の数）でソート（降順）
+      // より複雑な条件 = より具体的な状況 = 優先度が高い
+      const sortedCommandIds = commandIds.sort((a, b) => {
+        const commandA = commands.get(a)
+        const commandB = commands.get(b)
+        if (!commandA || !commandB) return 0
+
+        const complexityA = (commandA.when.match(/&&/g) || []).length
+        const complexityB = (commandB.when.match(/&&/g) || []).length
+
+        return complexityB - complexityA // 降順（複雑な方が先）
+      })
+
+      // 複数のコマンドがある場合、when句が真になる最初のコマンドを実行
+      for (const commandId of sortedCommandIds) {
+        const command = commands.get(commandId)
+        if (!command) {
+          // コマンドが登録されていない（コンポーネントがアンマウント済み）
+          continue
+        }
+
+        // when句を評価
+        const shouldExecute = evaluateWhenClause(command.when, context)
+
+        if (shouldExecute) {
+          // 実行条件を満たす最初のコマンドを実行
+          event.preventDefault()
+          event.stopPropagation()
+
+          try {
+            command.handler()
+          } catch (error) {
+            console.error(`Failed to execute command "${commandId}":`, error)
+          }
+
+          // 最初にマッチしたコマンドのみ実行（VSCodeと同じ動作）
+          return
+        }
+      }
+
+      // どのコマンドも実行条件を満たさなかった
+      // → イベントは通常通り処理される
+    }
+
+    // キーダウンイベントをリスニング
+    document.addEventListener("keydown", handleKeyDown, true)
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [keyBindings, commands, context])
+
+  // ============================================
+  // コンテキスト値の提供
+  // ============================================
+
+  const value: ShortcutContextValue = {
+    context,
+    setContextValue,
+    registerCommand,
+    unregisterCommand,
+    keyBindings,
+    updateKeyBinding,
+    resetKeyBindings,
+    getAllCommands,
+  }
+
+  return (
+    <ShortcutContext.Provider value={value}>
+      {children}
+    </ShortcutContext.Provider>
+  )
+}

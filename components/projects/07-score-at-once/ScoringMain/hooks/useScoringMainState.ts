@@ -1,9 +1,9 @@
 import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
-import { getModifierKeyLabel } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringKeyboard"
 import type {
   GradingMode,
   LayoutDirection,
 } from "@/components/projects/07-score-at-once/types"
+import { getModifierKeyLabel } from "@/lib/platform-utils"
 import { useCallback, useState } from "react"
 
 export function useScoringMainState() {

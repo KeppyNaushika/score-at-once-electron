@@ -1,11 +1,7 @@
-const { FlatCompat } = require("@eslint/eslintrc")
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-})
+const nextConfig = require("eslint-config-next")
 
 module.exports = [
-  ...compat.extends("next/core-web-vitals"),
+  ...nextConfig,
   {
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
