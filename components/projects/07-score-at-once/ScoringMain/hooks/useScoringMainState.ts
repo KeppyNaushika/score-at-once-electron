@@ -4,37 +4,50 @@ import type {
   LayoutDirection,
 } from "@/components/projects/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platform-utils"
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 export function useScoringMainState() {
-  // 採点モード状態
+  /** 採点モード状態 */
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
+  /** 選択中の答案ID集合 */
   const [selectedPageImageIds, setSelectedPageImageIds] = useState<Set<string>>(
     new Set(),
   )
+  const [manualSelectionVersion, setManualSelectionVersion] = useState(0)
+  const suppressSelectionUpdateRef = useRef(false)
+  /** グリッド表示方向 */
   const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(
     DEFAULT_LAYOUT_DIRECTION,
   )
+  /** 現在選択中の生徒インデックス */
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
+  /** 選択中の設問領域ID */
   const [currentCropRegionId, setCurrentCropRegionId] = useState<string | null>(
     null,
   )
+  /** キーボードヘルプ表示状態 */
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
+  /** 採点結果比較表示状態 */
   const [showScoreComparison, setShowScoreComparison] = useState(false)
+  /** サイドパネル表示状態 */
   const [showSidePanel, setShowSidePanel] = useState(true)
+  /** ショートカットで利用する修飾キー表示ラベル */
   const [modifierKeyLabel, setModifierKeyLabel] = useState(
     () => getModifierKeyLabel() || "Alt",
   )
 
-  // グリッドビュー用のヘルパー関数
+  /**
+   * 単一クリック・ショートカットによる選択更新
+   */
   const handleAnswerSelect = useCallback(
     (answerId: string, isSelected: boolean, pageImages: any[]) => {
-      // 模範解答は選択対象外
+      if (suppressSelectionUpdateRef.current) {
+        return
+      }
       if (answerId.startsWith("master-")) {
         return
       }
 
-      // 答案が実際に存在するかチェック
       const answerExists = pageImages.some((sheet) => sheet.id === answerId)
       if (!answerExists) {
         return
@@ -53,8 +66,20 @@ export function useScoringMainState() {
     [],
   )
 
+  /**
+   * 複数選択置き換え用のヘルパー
+   */
+  const replaceSelection = useCallback((ids: string[]) => {
+    suppressSelectionUpdateRef.current = true
+    setSelectedPageImageIds(new Set(ids))
+    setManualSelectionVersion((version) => version + 1)
+    queueMicrotask(() => {
+      suppressSelectionUpdateRef.current = false
+    })
+  }, [])
+
   return {
-    // 個別の状態
+    /** 個別の状態 */
     gradingMode,
     selectedPageImageIds,
     layoutDirection,
@@ -64,7 +89,8 @@ export function useScoringMainState() {
     showScoreComparison,
     showSidePanel,
     modifierKeyLabel,
-    // アクション関数
+    manualSelectionVersion,
+    /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
     setLayoutDirection,
@@ -74,7 +100,8 @@ export function useScoringMainState() {
     setShowScoreComparison,
     setShowSidePanel,
     setModifierKeyLabel,
-    // ヘルパー関数
+    /** ヘルパー関数 */
     handleAnswerSelect,
+    replaceSelection,
   }
 }

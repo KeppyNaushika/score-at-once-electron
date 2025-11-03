@@ -10,28 +10,33 @@ import { useGridSelection } from "@/components/projects/07-score-at-once/Scoring
 import { useSelectionBorder } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
 import type {
   LayoutDirection,
+  MasterAnswerData,
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { useRef } from "react"
 
 export interface AnswerGridViewProps {
-  // 統一されたデータ引数
+  /** 統一されたデータ引数 */
   allScoringData: ScoringData[]
-  masterAnswerData: any // 模範解答データ
+  /** Grid表示用の模範解答データ */
+  masterAnswerData: MasterAnswerData | null
   filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
-  // Grid表示では設問情報不要
 
-  // 操作関数
+  /** 操作関数 */
   onScoringDataSelect: (id: string, isSelected: boolean) => void
+  onScoringDataReplace?: (ids: string[]) => void
   onScoringDataScore: (id: string | string[], status: ScoringStatus) => void
 
-  // 表示設定
+  /** 表示設定 */
   layoutDirection: LayoutDirection
-  itemsPerRow?: number[] // 外部からの1行/列あたり表示件数
-  autoScroll?: boolean // 自動スクロール設定
-  showStudentNames?: boolean // 生徒名表示設定
+  /** 外部からの1行/列あたり表示件数 */
+  itemsPerRow?: number[]
+  /** 自動スクロール設定 */
+  autoScroll?: boolean
+  /** 生徒名表示設定 */
+  showStudentNames?: boolean
   className?: string
 }
 
@@ -41,6 +46,7 @@ export default function AnswerGridView({
   filteredScoringDataIds,
   selectedScoringDataIds,
   onScoringDataSelect,
+  onScoringDataReplace,
   onScoringDataScore,
   layoutDirection,
   itemsPerRow: externalItemsPerRow,
@@ -48,7 +54,7 @@ export default function AnswerGridView({
   showStudentNames = true,
   className = "",
 }: AnswerGridViewProps) {
-  // フィルタリングされた採点データを取得（模範解答 + 学生データ）
+  /** フィルタリングされた採点データ（模範解答 + 学生データ） */
   const masterAnswers = masterAnswerData
     ? [
         {
@@ -70,7 +76,7 @@ export default function AnswerGridView({
   const containerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
 
-  // Custom hooks
+  /** 主要なカスタムフック */
   const { itemsPerRow } = useGridNavigation({
     externalItemsPerRow,
   })
@@ -90,11 +96,12 @@ export default function AnswerGridView({
     useGridDragSelection({
       gridRef,
       onAnswerSelect: onScoringDataSelect,
+      onReplaceSelection: onScoringDataReplace,
       selectedAnswers: selectedScoringDataIds,
       sortedAnswers,
     })
 
-  // Auto scroll
+  /** 自動スクロール制御 */
   useAutoScroll({
     selectedAnswers: selectedScoringDataIds,
     layoutDirection,
@@ -102,7 +109,7 @@ export default function AnswerGridView({
     containerRef,
   })
 
-  // Mouse event handlers
+  /** ドラッグ中のマウス移動ハンドラー */
   const handleMouseMove = (event: React.MouseEvent) => {
     if (dragStart && gridRef.current) {
       const gridRect = gridRef.current.getBoundingClientRect()
@@ -117,7 +124,6 @@ export default function AnswerGridView({
         updateDrag(currentX, currentY)
       }
 
-      // ドラッグ中の現在位置を更新（グリッドコンテナに対する相対座標）
       if (isDragging || distance > 5) {
         updateDrag(currentX, currentY)
       }
@@ -126,14 +132,12 @@ export default function AnswerGridView({
 
   const handleMouseUp = (event: React.MouseEvent) => {
     if (isDragging) {
-      // ドラッグ選択を終了
       handleDragSelection(event, dragStart)
     }
     endDrag()
   }
 
   const onCellMouseDown = (event: React.MouseEvent, answerId: string) => {
-    // グリッドコンテナに対する相対座標を保存
     if (gridRef.current) {
       const gridRect = gridRef.current.getBoundingClientRect()
       startDrag(event.clientX - gridRect.left, event.clientY - gridRect.top)
@@ -151,23 +155,23 @@ export default function AnswerGridView({
         style={{
           gridTemplateColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "none" // 列表示: 自動生成される列
+              ? "none"
               : `repeat(${effectiveGridSize.columns}, 1fr)`,
           gridTemplateRows:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${effectiveGridSize.rows}, 1fr)` // 高さのみ指定
+              ? `repeat(${effectiveGridSize.rows}, 1fr)`
               : "none",
           gridAutoRows: "auto",
           gridAutoColumns:
             layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "minmax(200px, max-content)" // 列表示: 最小200px、内容に応じて拡張
+              ? "minmax(200px, max-content)"
               : undefined,
           gridAutoFlow:
             layoutDirection === "down-right" || layoutDirection === "down-left"
               ? "column"
               : "row",
           width: "100%",
-          height: "max-content", // 内容に応じた高さ
+          height: "max-content",
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
