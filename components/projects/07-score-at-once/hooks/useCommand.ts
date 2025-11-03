@@ -23,6 +23,18 @@ import type {
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 
 /**
+ * メタデータの同値性を判定するために安定したシグネチャを生成
+ */
+function createMetadataSignature(metadata?: CommandMetadata): string {
+  if (!metadata) return "null"
+  try {
+    return JSON.stringify(metadata)
+  } catch {
+    return "nonserializable"
+  }
+}
+
+/**
  * useCommandのオプション
  */
 export interface UseCommandOptions {
@@ -79,8 +91,13 @@ export function useCommand(
     handlerRef.current()
   }, [])
 
-  // メタデータを安定化（オブジェクトの内容で比較）
-  const stableMetadata = useMemo(() => options.metadata, [options.metadata])
+  // メタデータを安定化（内容が変わらない限り再登録しない）
+  const metadataSignature = useMemo(
+    () => createMetadataSignature(options.metadata),
+    [options.metadata],
+  )
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- metadataSignature already reflects changes to options.metadata
+  const stableMetadata = useMemo(() => options.metadata, [metadataSignature])
 
   // when句を安定化
   const when = options.when || "true"
