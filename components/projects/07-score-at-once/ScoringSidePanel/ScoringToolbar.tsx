@@ -191,6 +191,15 @@ export default function ScoringToolbar({
     },
   })
 
+  useCommand("scoring.partial", () => onScore("partial"), {
+    when: "!inputFocus && !modalOpen && hasSelectedAnswers",
+    metadata: {
+      title: "部分点として採点",
+      category: "採点",
+      description: "選択中の答案を部分点として採点します",
+    },
+  })
+
   useCommand("scoring.pending", () => onScore("pending"), {
     when: "!inputFocus && !modalOpen && hasSelectedAnswers",
     metadata: {

@@ -106,7 +106,8 @@ export function GridCell({
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 flex-1 items-center space-x-1">
           <span
-            className={`truncate text-xs ${
+            title={isMaster || showStudentNames ? answer.studentName : undefined}
+            className={`block max-w-full truncate text-xs ${
               isMaster ? "font-bold text-black" : "font-medium"
             }`}
           >
