@@ -6,6 +6,7 @@ import type {
   CropRegionWithProjectPage,
   GradingMode,
   LayoutDirection,
+  MasterAnswerData,
   PageImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
@@ -13,39 +14,40 @@ import type {
 interface ScoringContentAreaProps {
   gradingMode: GradingMode
 
-  // 採点データ管理（両View共通）
+  /** 採点データ管理（両View共通） */
   allScoringData: ScoringData[]
-  masterAnswerData: any // Grid表示用の模範解答データ
+  masterAnswerData: MasterAnswerData | null
   filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
 
-  // 設問情報（Individual表示のみ必要）
+  /** 設問情報（Individual表示のみ必要） */
   currentCropRegion?: CropRegionWithProjectPage
 
-  // 操作関数（両View共通）
+  /** 操作関数（両View共通） */
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
+  onScoringDataReplace?: (ids: string[]) => void
   onScoringDataScore: (
     statusOrAnswerIds: any,
     statusOrPartialScore?: any,
     partialScore?: any,
   ) => void
 
-  // GridView設定
+  /** GridView設定 */
   layoutDirection: LayoutDirection
   itemsPerLine: number[]
   autoScroll: boolean
   showStudentNames: boolean
 
-  // IndividualView設定
+  /** IndividualView設定 */
   pageImages?: PageImageWithProjectStudents[]
 
-  // 生徒データコールバック（個別表示でサイドパネルに渡すため）
+  /** 生徒データコールバック（個別表示でサイドパネルに渡すため） */
   onStudentsExtracted?: (students: any[]) => void
-  
-  // テキスト入力状態変更のコールバック（個別表示でキーボードショートカット制御のため）
+
+  /** テキスト入力状態変更のコールバック（ショートカット制御用） */
   onTextInputStateChange?: (showTextInput: boolean) => void
-  
-  // QuestionScore自動作成用のコンテキスト情報
+
+  /** QuestionScore自動作成用のコンテキスト情報 */
   currentStudentId?: string
   currentUserId?: string
 }
@@ -58,6 +60,7 @@ export function ScoringContentArea({
   selectedScoringDataIds,
   currentCropRegion,
   onScoringDataSelect,
+  onScoringDataReplace,
   onScoringDataScore,
   layoutDirection,
   itemsPerLine,
@@ -69,7 +72,7 @@ export function ScoringContentArea({
   currentStudentId,
   currentUserId,
 }: ScoringContentAreaProps) {
-  // 個別表示時：selectedの最初の要素、または存在しないときはallの最初の要素
+  /** 個別表示時：selectedの最初の要素を利用 */
   const currentScoringDataId =
     gradingMode === "individual"
       ? selectedScoringDataIds.size > 0
@@ -79,9 +82,9 @@ export function ScoringContentArea({
           : null
       : null
 
-  // Grid layoutでは不要な階層を削除し、直接表示
+  /** Grid layoutでは不要な階層を削除し、直接表示 */
   return gradingMode === "individual" ? (
-    // 個別表示はフルサイズ表示
+    /** 個別表示はフルサイズ表示 */
     <AnswerIndividualView
       scoringDatas={allScoringData}
       currentScoringDataId={currentScoringDataId}
@@ -92,7 +95,6 @@ export function ScoringContentArea({
         statusOrPartialScore,
         partialScore,
       ) => {
-        // 個別表示モードでは現在の答案のみを対象にする
         if (currentScoringDataId) {
           onScoringDataScore(
             [currentScoringDataId],
@@ -106,7 +108,7 @@ export function ScoringContentArea({
       currentUserId={currentUserId}
     />
   ) : (
-    // Grid表示：paddingとスクロールを統合
+    /** Grid表示：paddingとスクロールを統合 */
     <AnswerGridView
       allScoringData={allScoringData}
       masterAnswerData={masterAnswerData}
@@ -114,6 +116,7 @@ export function ScoringContentArea({
       selectedScoringDataIds={selectedScoringDataIds}
       layoutDirection={layoutDirection}
       onScoringDataSelect={onScoringDataSelect}
+      onScoringDataReplace={onScoringDataReplace}
       onScoringDataScore={onScoringDataScore}
       itemsPerRow={itemsPerLine}
       autoScroll={autoScroll}

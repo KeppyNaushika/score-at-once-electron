@@ -1,4 +1,8 @@
-import type { ScoringData } from "@/components/projects/07-score-at-once/types"
+import type {
+  MasterAnswerData,
+  ScoringData,
+} from "@/components/projects/07-score-at-once/types"
 
-// CropRegionWithProjectPage, PageImageWithProjectStudents を使用
-export type GridAnswerItem = ScoringData & { isSelected?: boolean }
+export type GridAnswerItem = (ScoringData | MasterAnswerData) & {
+  isSelected?: boolean
+}
