@@ -4,6 +4,7 @@ import { RefObject } from "react"
 interface UseGridDragSelectionProps {
   gridRef: RefObject<HTMLDivElement | null>
   onAnswerSelect: (id: string, isSelected: boolean) => void
+  onReplaceSelection?: (ids: string[]) => void
   selectedAnswers: Set<string>
   sortedAnswers: () => GridAnswerItem[]
 }
@@ -11,44 +12,34 @@ interface UseGridDragSelectionProps {
 export function useGridDragSelection({
   gridRef,
   onAnswerSelect,
+  onReplaceSelection,
   selectedAnswers,
   sortedAnswers,
 }: UseGridDragSelectionProps) {
-  // マウスドラッグ選択
   const handleMouseDown = (event: React.MouseEvent, answerId: string) => {
-    // 模範解答の場合は選択処理をスキップ
     if (answerId.startsWith("master-")) {
       event.preventDefault()
       return
     }
 
-    // Ctrlキーが押されている場合は複数選択（追加・削除切り替え）
     if (event.ctrlKey) {
       event.preventDefault()
       onAnswerSelect(answerId, !selectedAnswers.has(answerId))
-    }
-    // Shiftキーが押されている場合は範囲選択
-    else if (event.shiftKey) {
+    } else if (event.shiftKey) {
       event.preventDefault()
       handleShiftSelect(answerId)
-    }
-    // 通常クリック（単一選択または新規選択開始）
-    else {
+    } else {
       if (!selectedAnswers.has(answerId)) {
-        // 現在の選択をクリア
         selectedAnswers.forEach((id) => onAnswerSelect(id, false))
-        // 新しい選択を追加
         onAnswerSelect(answerId, true)
       }
     }
   }
 
-  // Shift+クリックでの範囲選択処理
   const handleShiftSelect = (endAnswerId: string) => {
     const answers = sortedAnswers()
     if (answers.length === 0) return
 
-    // 既に選択されている最初の答案を取得
     let startIndex = -1
     for (let i = 0; i < answers.length; i++) {
       if (selectedAnswers.has(answers[i].id)) {
@@ -57,16 +48,13 @@ export function useGridDragSelection({
       }
     }
 
-    // 終了位置を取得
     const endIndex = answers.findIndex((answer) => answer.id === endAnswerId)
 
     if (startIndex === -1 || endIndex === -1) {
-      // 範囲選択できない場合は単一選択
       onAnswerSelect(endAnswerId, true)
       return
     }
 
-    // 範囲を選択
     const minIndex = Math.min(startIndex, endIndex)
     const maxIndex = Math.max(startIndex, endIndex)
 
@@ -77,19 +65,15 @@ export function useGridDragSelection({
     }
   }
 
-  // 選択範囲の描画を計算する関数
   const getDragSelectionRect = (
     dragStart: { x: number; y: number } | null,
     dragCurrent: { x: number; y: number } | null,
   ) => {
     if (!dragStart || !dragCurrent || !gridRef.current) return null
 
-    // スクロール位置を取得
     const scrollLeft = gridRef.current.scrollLeft
     const scrollTop = gridRef.current.scrollTop
 
-    // dragStartとdragCurrentは既にグリッドコンテナに対する相対座標だが、
-    // 表示用にはスクロール位置を加算する必要がある
     const startX = Math.min(dragStart.x, dragCurrent.x) + scrollLeft
     const endX = Math.max(dragStart.x, dragCurrent.x) + scrollLeft
     const startY = Math.min(dragStart.y, dragCurrent.y) + scrollTop
@@ -103,7 +87,6 @@ export function useGridDragSelection({
     }
   }
 
-  // ドラッグによる矩形選択処理
   const handleDragSelection = (
     event: React.MouseEvent,
     dragStart: { x: number; y: number } | null,
@@ -113,17 +96,14 @@ export function useGridDragSelection({
     const gridElement = gridRef.current
     const gridRect = gridElement.getBoundingClientRect()
 
-    // 現在のマウス位置をグリッドコンテナに対する相対座標に変換
     const currentX = event.clientX - gridRect.left
     const currentY = event.clientY - gridRect.top
 
-    // 矩形選択範囲を計算（dragStartは既にグリッドコンテナに対する相対座標）
     const startX = Math.min(dragStart.x, currentX)
     const endX = Math.max(dragStart.x, currentX)
     const startY = Math.min(dragStart.y, currentY)
     const endY = Math.max(dragStart.y, currentY)
 
-    // グリッド内の答案カードをチェック
     const cardElements = gridElement.querySelectorAll("[data-answer-id]")
     const selectedIds: string[] = []
 
@@ -136,7 +116,6 @@ export function useGridDragSelection({
         bottom: rect.bottom - gridRect.top,
       }
 
-      // 矩形と重なるかチェック
       if (
         relativeRect.left < endX &&
         relativeRect.right > startX &&
@@ -150,12 +129,19 @@ export function useGridDragSelection({
       }
     })
 
-    // 選択状態を更新
-    if (selectedIds.length > 0) {
-      // 現在の選択をクリア
-      selectedAnswers.forEach((id) => onAnswerSelect(id, false))
-      // 新しい選択を追加
-      selectedIds.forEach((id) => onAnswerSelect(id, true))
+    const uniqueSelectedIds = Array.from(new Set(selectedIds)).filter(
+      (id) => !id.startsWith("master-"),
+    )
+
+    if (uniqueSelectedIds.length > 0) {
+      if (onReplaceSelection) {
+        onReplaceSelection(uniqueSelectedIds)
+      } else {
+        selectedAnswers.forEach((id) => onAnswerSelect(id, false))
+        uniqueSelectedIds.forEach((id) => onAnswerSelect(id, true))
+      }
+    } else if (onReplaceSelection) {
+      onReplaceSelection([])
     }
   }
 

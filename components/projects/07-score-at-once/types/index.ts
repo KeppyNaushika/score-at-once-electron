@@ -3,10 +3,10 @@
  * 複数の機能で使用される型をここに統一
  */
 
-// Prismaから基本型とPayload型をインポート
+/** Prismaから基本型とPayload型をインポート */
 import type { Prisma, QuestionScore } from "@prisma/client"
 
-// Prisma基本型をエクスポート
+/** Prisma基本型をエクスポート */
 export type { CropRegion, PageImage, QuestionScore } from "@prisma/client"
 
 /**
@@ -88,7 +88,7 @@ export function calculateActualScore(
 
   switch (score.status) {
     case "correct":
-      return maxScore // cropRegion.points を返す
+      return maxScore
     case "incorrect":
     case "no_answer":
       return 0
@@ -96,7 +96,7 @@ export function calculateActualScore(
       return null
     case "partial":
     case "pending":
-      return score.partialScore // DBから取得した値をそのまま使用
+      return score.partialScore
     default:
       return null
   }
@@ -108,15 +108,38 @@ export function calculateActualScore(
  * 注意: 学生データのみを管理し、模範解答は別途管理する
  */
 export interface ScoringData {
-  id: string // PageImage.id
-  studentId: string // Student.id (UUID)
-  studentName: string // "${lastName} ${firstName}"
-  imageUrl: string // "appimg://${imagePath}"
-  currentScore?: number // QuestionScore.partialScore
-  maxScore: number // CropRegion.points
-  status: ScoringStatus // QuestionScore.status
-  questionRegion: CropRegionWithProjectPage // CropRegion データ（設問領域情報）
-  customOrder: number // ProjectStudent.customOrder (必須・ソート用)
+  /** PageImage.id */
+  id: string
+  /** Student.id (UUID) */
+  studentId: string
+  /** 生徒氏名 */
+  studentName: string
+  /** 画像URL (appimg://...) */
+  imageUrl: string
+  /** QuestionScore.partialScore */
+  currentScore?: number
+  /** CropRegion.points */
+  maxScore: number
+  /** QuestionScore.status */
+  status: ScoringStatus
+  /** 採点領域情報 */
+  questionRegion: CropRegionWithProjectPage
+  /** ProjectStudent.customOrder (必須・ソート用) */
+  customOrder: number
+}
+
+export type MasterStatus = "master"
+
+export interface MasterAnswerData {
+  id: string
+  studentId: "MASTER"
+  studentName: string
+  imageUrl: string
+  maxScore: number
+  status: MasterStatus
+  questionRegion: CropRegionWithProjectPage
+  customOrder: number
+  isMaster: true
 }
 
 /**
@@ -126,10 +149,11 @@ export interface ScoringData {
 export function findQuestionScore(
   questionScores: QuestionScore[],
   studentId: string,
-  cropRegionId: string
+  cropRegionId: string,
 ): QuestionScore | undefined {
   return questionScores.find(
-    score => score.studentId === studentId && score.cropRegionId === cropRegionId
+    (score) =>
+      score.studentId === studentId && score.cropRegionId === cropRegionId,
   )
 }
 
@@ -139,10 +163,10 @@ export function findQuestionScore(
 export function getScoringStatusFromArray(
   questionScores: QuestionScore[],
   studentId: string,
-  cropRegionId?: string
+  cropRegionId?: string,
 ): ScoringStatus {
   if (!cropRegionId) return "unscored"
-  
+
   const score = findQuestionScore(questionScores, studentId, cropRegionId)
   return (score?.status as ScoringStatus) ?? "unscored"
 }
