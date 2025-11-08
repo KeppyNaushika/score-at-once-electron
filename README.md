@@ -14,11 +14,9 @@
 [![PDF.js](https://img.shields.io/badge/PDF.js-FF6B35?style=flat&logo=mozilla&logoColor=white)](https://mozilla.github.io/pdf.js/)
 [![ExcelJS](https://img.shields.io/badge/ExcelJS-217346?style=flat&logo=microsoft-excel&logoColor=white)](https://github.com/exceljs/exceljs)
 [![Sharp](https://img.shields.io/badge/Sharp-99CC00?style=flat&logo=sharp&logoColor=white)](https://sharp.pixelplumbing.com/)
-[![Early Preview](https://img.shields.io/badge/License-Early%20Preview-orange.svg)](./LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
 
-複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像・PDFをデジタル採点し、結果をExcel/PDFとして出力できます。
-
-⚠️ **早期プレビュー版** - 現在は限定配布でのテスト段階です。将来的にはAGPL v3.0でのオープンソース公開を予定しています。
+複数の教員が協調して試験の採点を行えるElectronベースのデスクトップアプリケーションです。答案画像・PDFをデジタル採点し、結果をExcel/PDFとして出力できます。本プロジェクトは **GNU Affero General Public License v3.0（AGPLv3）** の下で公開されています。
 
 **Python版「一括採点.py」からの進化**: 従来のPython版の高速採点機能を完全継承し、Electronデスクトップアプリとして複数教員協調採点・競合解決機構・モダンUI/UXを実現しました。
 
@@ -392,28 +390,14 @@ Electron + React + TypeScriptによる、保守性と拡張性を重視した設
 
 ## 📄 ライセンス
 
-⚠️ **この版は早期プレビュー版です** - 限定配布・テスト用途
+このプロジェクトは [GNU Affero General Public License v3.0](./LICENSE)（AGPLv3）で提供されています。主なポイントは以下のとおりです。
 
-現在このプロジェクトは **独自の早期プレビュー版使用許諾契約書** の下で限定配布されています。
+- ソフトウェアの利用・複製・改変・再配布が可能です。
+- 変更版をネットワーク経由で提供する場合、利用者が対応するソースコードへアクセスできるようにする義務があります。
+- 派生物を再配布する際も AGPLv3 と同等のライセンス条件を適用する必要があります。
+- ライセンス本文および著作権表示は削除せず配布してください。
 
-### 早期プレビュー版について
-
-#### 主な制限事項
-
-- **開発段階のプレビュー版** - 動作保証なし、データ損失の可能性があります
-- **テスト不十分** - 重要なデータのバックアップを推奨します
-- **再配布禁止** - 第三者への提供・転載を禁止します
-- **30日間の使用期限** - 配信日から30日後にソフトウェアを削除してください
-- **使用停止要請** - 著作権者からの要請時は直ちに使用を中止してください
-
-#### 将来のライセンス変更
-
-本ソフトウェアは **将来的にAGPL v3.0ライセンスでの公開を予定** しています。
-正式版リリース時には、オープンソースライセンスに移行します。
-
-ダウンロードまたは実行により、[使用許諾契約書](./LICENSE)の条件に同意したものとみなされます。
-
-詳細は[LICENSE](./LICENSE)ファイルをご確認ください。
+詳細は必ず `LICENSE` ファイルを参照してください。
 
 ---
 
