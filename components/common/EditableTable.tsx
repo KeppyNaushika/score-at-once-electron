@@ -84,20 +84,18 @@ function useLocalReactTable<TData>(options: TableOptions<TData>) {
 
   const [internalState, setInternalState] = useState(() => table.initialState)
 
-  useEffect(() => {
-    table.setOptions((prev) => ({
-      ...prev,
-      ...options,
-      state: {
-        ...internalState,
-        ...options.state,
-      },
-      onStateChange: (updater) => {
-        setInternalState(updater)
-        options.onStateChange?.(updater)
-      },
-    }))
-  }, [table, options, internalState])
+  table.setOptions((prev) => ({
+    ...prev,
+    ...options,
+    state: {
+      ...internalState,
+      ...options.state,
+    },
+    onStateChange: (updater) => {
+      setInternalState(updater)
+      options.onStateChange?.(updater)
+    },
+  }))
 
   return table
 }
