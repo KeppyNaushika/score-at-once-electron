@@ -9,16 +9,11 @@ const fs = require("fs")
 const path = require("path")
 
 const repoRoot = path.resolve(__dirname, "..")
-const sourceDir = path.join(
-  repoRoot,
-  "node_modules",
-  "mathjax",
-  "es5",
-  "output",
-  "chtml",
-  "fonts",
-  "woff-v2",
-)
+const CANDIDATE_PATHS = [
+  ["mathjax", "es5", "output", "chtml", "fonts", "woff-v2"],
+  ["mathjax", "output", "chtml", "fonts", "woff-v2"],
+  ["mathjax-full", "es5", "output", "chtml", "fonts", "woff-v2"],
+]
 const targetDir = path.join(
   repoRoot,
   "public",
@@ -48,10 +43,22 @@ const copyRecursive = (src, dest) => {
   }
 }
 
-if (!fs.existsSync(sourceDir)) {
-  console.error(`MathJaxフォントのソースが見つかりません: ${sourceDir}`)
+const sourceDir =
+  CANDIDATE_PATHS.map((segments) =>
+    path.join(repoRoot, "node_modules", ...segments),
+  ).find((candidate) => fs.existsSync(candidate))
+
+if (!sourceDir) {
+  console.error(
+    "MathJaxフォントのソースが見つかりません: " +
+      CANDIDATE_PATHS.map((segments) =>
+        path.join("node_modules", ...segments),
+      ).join(", "),
+  )
   process.exit(1)
 }
+
+console.log(`✓ MathJax font source: ${sourceDir}`)
 
 ensureDir(targetDir)
 copyRecursive(sourceDir, targetDir)
