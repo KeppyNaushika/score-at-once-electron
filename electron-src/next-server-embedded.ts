@@ -20,39 +20,38 @@ export async function startEmbeddedNextServer(): Promise<void> {
     // Next.jsアプリの初期化
     let appDir
     if (process.resourcesPath) {
-      // パッケージ化されている場合、まずextraResourcesディレクトリをチェック
-      const extraResourceDir = join(process.resourcesPath, '..')
-      const asarUnpackedDir = join(process.resourcesPath, 'app.asar.unpacked')
-      
-      console.log(`Checking extraResource directory: ${extraResourceDir}`)
-      console.log(`Checking asar.unpacked directory: ${asarUnpackedDir}`)
-      
-      // extraResourcesに.nextがあるかチェック
-      const extraResourceNextDir = join(extraResourceDir, '.next')
-      const asarUnpackedNextDir = join(asarUnpackedDir, '.next')
-      
-      // .nextディレクトリの存在確認
+      // パッケージ化されている場合、Resourcesディレクトリを直接使用
+      // forge.config.jsのextraResourceで.nextとpublicの両方がResourcesディレクトリに配置される
+      appDir = process.resourcesPath
+
+      console.log(`Using Resources directory as app directory: ${appDir}`)
+
+      // .nextとpublicディレクトリの存在確認
       try {
         const fs = require('fs')
-        console.log(`Checking if ${extraResourceNextDir} exists: ${fs.existsSync(extraResourceNextDir)}`)
-        console.log(`Checking if ${asarUnpackedNextDir} exists: ${fs.existsSync(asarUnpackedNextDir)}`)
-        
-        if (fs.existsSync(extraResourceNextDir)) {
-          appDir = extraResourceDir
-          console.log(`✓ Using extraResource Next.js app directory: ${appDir}`)
-        } else if (fs.existsSync(asarUnpackedNextDir)) {
-          appDir = asarUnpackedDir
-          console.log(`✓ Using asar.unpacked Next.js app directory: ${appDir}`)
+        const nextDir = join(appDir, '.next')
+        const publicDir = join(appDir, 'public')
+
+        console.log(`Checking if ${nextDir} exists: ${fs.existsSync(nextDir)}`)
+        console.log(`Checking if ${publicDir} exists: ${fs.existsSync(publicDir)}`)
+
+        if (!fs.existsSync(nextDir)) {
+          console.warn(`⚠ Warning: .next directory not found at ${nextDir}`)
+        }
+        if (!fs.existsSync(publicDir)) {
+          console.warn(`⚠ Warning: public directory not found at ${publicDir}`)
+        }
+
+        // PDF workerファイルの存在確認
+        const pdfWorkerPath = join(publicDir, 'js', 'pdf.worker.min.mjs')
+        console.log(`Checking if PDF worker exists: ${fs.existsSync(pdfWorkerPath)}`)
+        if (!fs.existsSync(pdfWorkerPath)) {
+          console.error(`❌ PDF worker file not found at ${pdfWorkerPath}`)
         } else {
-          // フォールバック: extraResourceディレクトリを使用
-          appDir = extraResourceDir
-          console.log(`⚠ Fallback to extraResource directory: ${appDir}`)
-          console.log(`⚠ Warning: No .next directory found in expected locations`)
+          console.log(`✓ PDF worker file found at ${pdfWorkerPath}`)
         }
       } catch (error) {
-        console.error(`❌ Error checking .next directories:`, error)
-        appDir = extraResourceDir
-        console.log(`❌ Error fallback to extraResource directory: ${appDir}`)
+        console.error(`❌ Error checking directories:`, error)
       }
     } else {
       // 開発環境の場合
