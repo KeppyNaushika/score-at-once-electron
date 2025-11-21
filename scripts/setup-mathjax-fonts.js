@@ -64,3 +64,25 @@ ensureDir(targetDir)
 copyRecursive(sourceDir, targetDir)
 
 console.log("✓ MathJax woff-v2 fonts copied to public assets")
+
+// PDF.js workerファイルのセットアップ
+const pdfWorkerSource = path.join(
+  repoRoot,
+  "node_modules",
+  "pdfjs-dist",
+  "build",
+  "pdf.worker.min.mjs"
+)
+const pdfWorkerDest = path.join(repoRoot, "public", "js", "pdf.worker.min.mjs")
+
+if (!fs.existsSync(pdfWorkerSource)) {
+  console.error("PDF.js workerファイルが見つかりません: " + pdfWorkerSource)
+  process.exit(1)
+}
+
+const pdfWorkerDestDir = path.dirname(pdfWorkerDest)
+ensureDir(pdfWorkerDestDir)
+fs.copyFileSync(pdfWorkerSource, pdfWorkerDest)
+
+console.log(`✓ PDF.js worker file copied from ${pdfWorkerSource}`)
+console.log(`  to ${pdfWorkerDest}`)
