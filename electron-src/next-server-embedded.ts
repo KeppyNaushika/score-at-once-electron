@@ -1,4 +1,4 @@
-import { join } from "path"
+import { delimiter, join } from "path"
 import { app } from "electron"
 
 // Electron公式推奨の環境判定方法
@@ -7,11 +7,44 @@ const isDev = !app.isPackaged
 let nextApp: any = null
 let httpServer: any = null
 
+/**
+ * packaged環境では .next が Resources 配下に置かれ、node_modules は app.asar 内にある。
+ * デフォルトのモジュール解決では親ディレクトリに node_modules が見つからないため、
+ * NODE_PATH に候補パスを追加して Next.js の runtime から参照できるようにする。
+ */
+const ensurePackagedNodePath = (basePath: string) => {
+  try {
+    const fs = require('fs')
+    const Module = require('module') as any
+
+    const candidatePaths = [
+      join(basePath, 'app.asar', 'node_modules'),
+      join(basePath, 'app.asar.unpacked', 'node_modules'),
+      join(basePath, 'node_modules'),
+    ].filter((p: string) => fs.existsSync(p))
+
+    if (!candidatePaths.length) {
+      console.warn(`⚠ Warning: No node_modules directory found near ${basePath}`)
+      return
+    }
+
+    const existing = process.env.NODE_PATH
+      ? process.env.NODE_PATH.split(delimiter).filter(Boolean)
+      : []
+    const updated = Array.from(new Set([...candidatePaths, ...existing]))
+
+    process.env.NODE_PATH = updated.join(delimiter)
+    Module._initPaths()
+    console.log(`Adjusted NODE_PATH for packaged runtime: ${updated.join(', ')}`)
+  } catch (error) {
+    console.warn('Failed to extend NODE_PATH for packaged runtime:', error)
+  }
+}
+
 export async function startEmbeddedNextServer(): Promise<void> {
   if (isDev) return // 開発時は外部サーバーを使用
 
   try {
-    const next = require('next')
     const { createServer } = require('http')
     
     const hostname = 'localhost'
@@ -23,6 +56,9 @@ export async function startEmbeddedNextServer(): Promise<void> {
       // パッケージ化されている場合、Resourcesディレクトリを直接使用
       // forge.config.jsのextraResourceで.nextとpublicの両方がResourcesディレクトリに配置される
       appDir = process.resourcesPath
+
+      // .next から next 本体を解決できるよう NODE_PATH を追加
+      ensurePackagedNodePath(appDir)
 
       console.log(`Using Resources directory as app directory: ${appDir}`)
 
@@ -59,6 +95,7 @@ export async function startEmbeddedNextServer(): Promise<void> {
       console.log(`Development Next.js app directory: ${appDir}`)
     }
     
+    const next = require('next')
     nextApp = next({ 
       dev: false, 
       hostname, 
