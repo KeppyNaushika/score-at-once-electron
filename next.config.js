@@ -3,7 +3,12 @@
  */
 const nextConfig = {
   images: {
-    domains: ["localhost"], // 画像を置いているドメイン
+    remotePatterns: [
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
+    ],
   },
   reactStrictMode: false, // Strict Modeを無効化してテスト
   // PDF.jsワーカーファイルを静的ファイルとして配信
