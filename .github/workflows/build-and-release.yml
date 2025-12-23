@@ -290,7 +290,16 @@ jobs:
 
       - name: Generate release notes
         id: release_notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # デバッグ: Token存在確認
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "::warning::GITHUB_TOKEN is not set - API calls may fail"
+          else
+            echo "GITHUB_TOKEN is configured (length: ${#GITHUB_TOKEN})"
+          fi
+
           RELEASE_TYPE="${{ steps.vars.outputs.release_type }}"
           VERSION="${{ steps.vars.outputs.version }}"
 
@@ -355,21 +364,25 @@ jobs:
 
               echo "Found PR #$pr_number"
 
-              # Try to get PR title from GitHub API (with authentication for higher rate limits)
-              if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
-                pr_data=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  -H "Accept: application/vnd.github.v3+json" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number" 2>/dev/null)
-              else
-                pr_data=$(curl -s -H "Accept: application/vnd.github.v3+json" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number" 2>/dev/null)
-              fi
+              # Try to get PR title from GitHub API with proper error handling
+              echo "Fetching PR #$pr_number from API..."
 
-              if [ $? -eq 0 ] && [ -n "$pr_data" ]; then
-                pr_title=$(echo "$pr_data" | jq -r '.title // empty' 2>/dev/null)
-                pr_body=$(echo "$pr_data" | jq -r '.body // empty' 2>/dev/null | head -3 | tr '\n' ' ')
+              # Use -w to get HTTP status code
+              response=$(curl -s -w "\n%{http_code}" \
+                -H "Authorization: token $GITHUB_TOKEN" \
+                -H "Accept: application/vnd.github.v3+json" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/$pr_number")
+
+              http_code=$(echo "$response" | tail -n1)
+              pr_data=$(echo "$response" | sed '$d')
+
+              echo "API Response status: $http_code"
+
+              if [ "$http_code" = "200" ] && [ -n "$pr_data" ]; then
+                pr_title=$(echo "$pr_data" | jq -r '.title // empty')
 
                 if [ -n "$pr_title" ] && [ "$pr_title" != "null" ] && [ "$pr_title" != "empty" ]; then
+                  echo "Got PR title: $pr_title"
                   CHANGES="$CHANGES### 🔀 $pr_title (PR #$pr_number)\n"
 
                   # Get commits within this PR for hierarchy
@@ -379,12 +392,22 @@ jobs:
                   fi
                   CHANGES="$CHANGES\n"
                   continue
+                else
+                  echo "::warning::Could not parse PR title from API response"
+                fi
+              else
+                echo "::warning::API call failed for PR #$pr_number (HTTP $http_code)"
+                # Show error message if available
+                error_msg=$(echo "$pr_data" | jq -r '.message // empty' 2>/dev/null)
+                if [ -n "$error_msg" ]; then
+                  echo "API Error: $error_msg"
                 fi
               fi
 
-              # Fallback: format branch name nicely
+              # Fallback: Use PR number and branch name
+              echo "Using fallback for PR #$pr_number"
               branch_name=$(echo "$branch_info" | sed 's/.*\///' | sed 's/-/ /g' | sed 's/_/ /g')
-              CHANGES="$CHANGES### 🔀 $(echo $branch_name | sed 's/.*/\L&/; s/[a-z]/\u&/') (PR #$pr_number)\n\n"
+              CHANGES="$CHANGES- PR #$pr_number: $branch_name\n"
 
             elif [[ $commit_msg =~ .*\(#([0-9]+)\)$ ]]; then
               # Commit with PR reference - skip as it will be included in PR hierarchy
@@ -407,8 +430,10 @@ jobs:
           echo "Final changes:"
           echo "$CHANGES"
 
-          # If no meaningful changes, provide default message
+          # If no meaningful changes, provide default message with warning
           if [ -z "$CHANGES" ] || [ "$(echo "$CHANGES" | wc -l)" -eq 0 ]; then
+            echo "::warning::No PR information could be retrieved - using default message"
+            echo "This might indicate an API authentication or rate limiting issue"
             CHANGES="- バグ修正と機能改善"
           fi
 
