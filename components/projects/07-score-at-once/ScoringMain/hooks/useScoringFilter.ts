@@ -276,6 +276,12 @@ export function useScoringFilter({
   const consumedSnapshotVersionRef = useRef(0)
   const manualSelectionVersionRef = useRef(manualSelectionVersion)
   const questionChangeVersionRef = useRef<number | null>(null)
+  const visibleAnswersRef = useRef(visibleAnswers)
+
+  // visibleAnswersの最新値を追跡
+  useLayoutEffect(() => {
+    visibleAnswersRef.current = visibleAnswers
+  }, [visibleAnswers])
 
   useEffect(() => {
     const manualSelectionChanged =
@@ -304,29 +310,17 @@ export function useScoringFilter({
       lastVisibleAnswersRef.current,
     )
 
-    const questionChangedExternally =
-      questionChangeVersionRef.current !== questionChangeVersion
-
     if (visibleChanged) {
       lastVisibleAnswersRef.current = visibleAnswers
     }
 
-    if (questionChangedExternally) {
-      pendingGridSelectionRef.current = true
-    }
-
-    if ((cropRegionChanged || questionChangedExternally) && !visibleChanged) {
+    if (cropRegionChanged && !visibleChanged) {
       prevGradingModeRef.current = gradingMode
       prevCropRegionIdRef.current = currentCropRegionId
       return
     }
 
-    if (
-      modeChangedToGrid ||
-      cropRegionChanged ||
-      visibleChanged ||
-      questionChangedExternally
-    ) {
+    if (modeChangedToGrid || cropRegionChanged || visibleChanged) {
       pendingGridSelectionRef.current = true
     }
 
@@ -342,19 +336,16 @@ export function useScoringFilter({
       ? snapshot.version > consumedSnapshotVersionRef.current
       : false
     const visibleIds = new Set(visibleAnswers)
-    const filteredSelection = questionChangedExternally
-      ? []
-      : hasFreshSnapshot && snapshot?.filteredSelection
+    const filteredSelection =
+      hasFreshSnapshot && snapshot?.filteredSelection
         ? snapshot.filteredSelection
         : Array.from(selectedPageImageIds).filter(
             (id) => visibleIds.has(id) && !id.startsWith("master-"),
           )
     const firstStudentAnswerId =
-      questionChangedExternally && visibleAnswers.length > 0
-        ? (visibleAnswers.find((id) => !id.startsWith("master-")) ?? null)
-        : hasFreshSnapshot && snapshot?.firstStudentAnswerId
-          ? snapshot.firstStudentAnswerId
-          : (visibleAnswers.find((id) => !id.startsWith("master-")) ?? null)
+      hasFreshSnapshot && snapshot?.firstStudentAnswerId
+        ? snapshot.firstStudentAnswerId
+        : (visibleAnswers.find((id) => !id.startsWith("master-")) ?? null)
 
     if (pendingGridSelectionRef.current) {
       const shouldApplySelection =
@@ -383,9 +374,8 @@ export function useScoringFilter({
           return
         }
 
-        const hasVisibleSelection = questionChangedExternally
-          ? false
-          : hasFreshSnapshot && snapshot?.hasVisibleSelection
+        const hasVisibleSelection =
+          hasFreshSnapshot && snapshot?.hasVisibleSelection
             ? snapshot.hasVisibleSelection
             : filteredSelection.length > 0
 
@@ -429,7 +419,6 @@ export function useScoringFilter({
   }, [
     currentCropRegionId,
     gradingMode,
-    questionChangeVersion,
     selectedPageImageIds,
     setSelectedPageImageIds,
     visibleAnswers,
@@ -470,6 +459,37 @@ export function useScoringFilter({
       )
     }
   }, [gradingMode, selectedPageImageIds, visibleAnswers])
+
+  // 設問変更時の選択処理用のref
+  const questionChangeVersionForSelectionRef = useRef(questionChangeVersion)
+
+  // 設問変更時の選択処理（グリッドモード専用）
+  useEffect(() => {
+    // 個別モードでは何もしない
+    if (gradingMode !== "grid") return
+
+    // バージョンが変わっていなければスキップ（初回も含む）
+    if (questionChangeVersionForSelectionRef.current === questionChangeVersion) {
+      return
+    }
+    questionChangeVersionForSelectionRef.current = questionChangeVersion
+
+    // setTimeout(0)で全ての状態更新がコミットされた後に実行
+    const timeoutId = setTimeout(() => {
+      const currentVisible = visibleAnswersRef.current
+      const firstStudentAnswerId = currentVisible.find(
+        (id) => !id.startsWith("master-"),
+      )
+
+      if (firstStudentAnswerId) {
+        setSelectedPageImageIds(new Set([firstStudentAnswerId]))
+      } else {
+        setSelectedPageImageIds(new Set())
+      }
+    }, 0)
+
+    return () => clearTimeout(timeoutId)
+  }, [questionChangeVersion, gradingMode, setSelectedPageImageIds])
 
   const masterAnswerData = useMemo((): MasterAnswerData | null => {
     if (!currentCropRegion || !project?.projectPages) return null
