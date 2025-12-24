@@ -74,12 +74,40 @@ export function useScoringFilter({
   })
 
   const [visibleAnswers, setVisibleAnswers] = useState<string[]>([])
-  const [recentlyScoredAnswers, setRecentlyScoredAnswers] = useState<
-    Set<string>
-  >(new Set())
+
+  // 設問ごとに採点履歴を管理（設問IDをキーとするMap）
+  // これにより設問変更時に明示的なクリア処理が不要になる
+  const [recentlyScoredAnswersByQuestion, setRecentlyScoredAnswersByQuestion] =
+    useState<Map<string, Set<string>>>(new Map())
 
   const currentCropRegion = cropRegions.find(
     (r) => r.id === currentCropRegionId,
+  )
+
+  // 現在の設問の採点履歴を取得（外部インターフェース互換）
+  const recentlyScoredAnswers = useMemo(() => {
+    if (!currentCropRegionId) return new Set<string>()
+    return recentlyScoredAnswersByQuestion.get(currentCropRegionId) ?? new Set()
+  }, [recentlyScoredAnswersByQuestion, currentCropRegionId])
+
+  // 現在の設問の採点履歴を更新する関数（外部インターフェース互換）
+  const setRecentlyScoredAnswers = useCallback(
+    (
+      update:
+        | Set<string>
+        | ((prev: Set<string>) => Set<string>),
+    ) => {
+      if (!currentCropRegionId) return
+      setRecentlyScoredAnswersByQuestion((prevMap) => {
+        const currentSet = prevMap.get(currentCropRegionId) ?? new Set()
+        const newSet =
+          typeof update === "function" ? update(currentSet) : update
+        const newMap = new Map(prevMap)
+        newMap.set(currentCropRegionId, newSet)
+        return newMap
+      })
+    },
+    [currentCropRegionId],
   )
 
   const allScoringData = useMemo((): ScoringData[] => {
@@ -197,6 +225,7 @@ export function useScoringFilter({
         const status = scoringData.status
         const matchesFilter =
           activeFilterSettings[status as keyof typeof activeFilterSettings]
+        // 設問ごとに採点履歴が管理されているため、現在の設問の履歴のみが参照される
         const isRecentlyScored = recentlyScoredAnswers.has(scoringData.id)
 
         if (matchesFilter || isRecentlyScored) {
@@ -465,16 +494,17 @@ export function useScoringFilter({
 
   // 設問変更時の選択処理（グリッドモード専用）
   useEffect(() => {
-    // 個別モードでは何もしない
-    if (gradingMode !== "grid") return
-
     // バージョンが変わっていなければスキップ（初回も含む）
     if (questionChangeVersionForSelectionRef.current === questionChangeVersion) {
       return
     }
     questionChangeVersionForSelectionRef.current = questionChangeVersion
 
+    // 個別モードでは選択処理は行わない（生徒は移動しない）
+    if (gradingMode !== "grid") return
+
     // setTimeout(0)で全ての状態更新がコミットされた後に実行
+    // visibleAnswersの更新を待つ必要があるため
     const timeoutId = setTimeout(() => {
       const currentVisible = visibleAnswersRef.current
       const firstStudentAnswerId = currentVisible.find(
@@ -539,7 +569,7 @@ export function useScoringFilter({
     setRecentlyScoredAnswers(new Set())
 
     updateVisibleAnswers()
-  }, [updateVisibleAnswers])
+  }, [updateVisibleAnswers, setRecentlyScoredAnswers])
 
   const handleToggleFilter = useCallback(
     (key: string) => {
@@ -555,7 +585,7 @@ export function useScoringFilter({
         setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, updateVisibleAnswers],
+    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers],
   )
 
   const handleToggleFilterByScoreKey = useCallback(
@@ -582,7 +612,7 @@ export function useScoringFilter({
         setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, updateVisibleAnswers],
+    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers],
   )
 
   return {
