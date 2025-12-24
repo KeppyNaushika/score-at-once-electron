@@ -64,7 +64,35 @@ export function useImageCanvas({
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
   const isPreRenderingRef = useRef(false)
 
+  // 採点記号画像のキャッシュ
+  const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
+
   const { drawLineWithStyle } = useDrawingUtils()
+
+  // 採点記号画像のプリロード
+  useEffect(() => {
+    const markTypes = ["correct", "incorrect", "partial", "hold", "unscored"]
+    const loadPromises = markTypes.map((type) => {
+      return new Promise<void>((resolve) => {
+        if (scoringMarkImagesRef.current.has(type)) {
+          resolve()
+          return
+        }
+        const img = new Image()
+        img.onload = () => {
+          scoringMarkImagesRef.current.set(type, img)
+          resolve()
+        }
+        img.onerror = () => {
+          console.warn(`Failed to load scoring mark: ${type}`)
+          resolve()
+        }
+        // Next.jsのpublicフォルダからロード
+        img.src = `/score-assets/${type}.png`
+      })
+    })
+    Promise.all(loadPromises)
+  }, [])
 
   // アノテーションをDrawingElement形式に変換する関数
   const convertAnnotationToDrawingElement = useCallback(
@@ -353,6 +381,26 @@ export function useImageCanvas({
             const labelFontSize = Math.max(12, 14 / zoom) // 最小12px、ズームで調整
             ctx.font = `${labelFontSize}px sans-serif`
             ctx.fillText(currentCropRegion.label, questionX, questionY - 5)
+
+            // 採点記号の描画（中央配置）
+            if (currentScoringData && currentScoringData.status !== "unscored") {
+              // ステータスに対応する画像キーを取得
+              const markKey = currentScoringData.status === "pending" ? "hold"
+                : currentScoringData.status === "no_answer" ? "incorrect"
+                : currentScoringData.status
+              const markImage = scoringMarkImagesRef.current.get(markKey)
+
+              if (markImage) {
+                // 採点記号のサイズ（設問領域の高さの50%、最大100px）
+                const markSize = Math.min(questionHeight * 0.5, 100)
+
+                // 中央配置
+                const markX = questionX + (questionWidth - markSize) / 2
+                const markY = questionY + (questionHeight - markSize) / 2
+
+                ctx.drawImage(markImage, markX, markY, markSize, markSize)
+              }
+            }
           }
         } else {
           // Question page is outside loaded image range
@@ -726,6 +774,7 @@ export function useImageCanvas({
     [
       pageSpacing,
       currentCropRegion,
+      currentScoringData,
       zoom,
       drawingElements,
       selectedElementIds,
