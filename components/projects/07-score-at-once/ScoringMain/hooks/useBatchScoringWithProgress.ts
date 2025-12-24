@@ -1,9 +1,11 @@
 import type { GradingMode } from "@/components/projects/07-score-at-once/types"
+import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import { useCallback } from "react"
 
 interface UseBatchScoringWithProgressParams {
   selectedAnswers: Set<string>
   gradingMode: GradingMode
+  scoringBehavior: ScoringBehavior
   setRecentlyScoredAnswers: (
     callback: (prev: Set<string>) => Set<string>,
   ) => void
@@ -17,17 +19,20 @@ interface UseBatchScoringWithProgressParams {
   setSelectedAnswers: (answers: Set<string>) => void
   handleGridNavigation: (direction: string) => void
   handleNextStudent: () => void
+  handleNextQuestion: () => void
 }
 
 export function useBatchScoringWithProgress({
   selectedAnswers,
   gradingMode,
+  scoringBehavior,
   setRecentlyScoredAnswers,
   handleBatchScore,
   getGridAnswerData,
   setSelectedAnswers,
   handleGridNavigation,
   handleNextStudent,
+  handleNextQuestion,
 }: UseBatchScoringWithProgressParams) {
   // 自動進行機能付きのhandleBatchScore（ラッパー）
   const handleBatchScoreWithProgress = useCallback(
@@ -54,8 +59,9 @@ export function useBatchScoringWithProgress({
         selectedAnswers,
       )
 
-      // 採点後の自動次答案選択（一覧採点モード用）
+      // 採点後の自動進行
       if (gradingMode === "grid" && selectedAnswers.size >= 1) {
+        // グリッドモード: 次の答案を自動選択
         const gridAnswers = getGridAnswerData()
 
         // 最適化: 答案IDのインデックスマップを事前作成
@@ -92,8 +98,16 @@ export function useBatchScoringWithProgress({
         } else {
           // 選択をクリアせず保持する
         }
-      } else {
-        // 選択をクリアせず保持する
+      } else if (gradingMode === "individual") {
+        // 個別モード: scoringBehaviorに従って自動進行
+        if (scoringBehavior === "next-student") {
+          // 次の生徒の同じ設問
+          handleNextStudent()
+        } else if (scoringBehavior === "next-question") {
+          // 同じ生徒の次の設問
+          handleNextQuestion()
+        }
+        // "stay"の場合は何もしない
       }
 
       // 採点実行完了
@@ -101,10 +115,13 @@ export function useBatchScoringWithProgress({
     [
       selectedAnswers,
       gradingMode,
+      scoringBehavior,
       setRecentlyScoredAnswers,
       handleBatchScore,
       getGridAnswerData,
       setSelectedAnswers,
+      handleNextStudent,
+      handleNextQuestion,
     ],
   )
 
@@ -114,10 +131,15 @@ export function useBatchScoringWithProgress({
       // グリッドモードでは次の答案に移動
       handleGridNavigation("d")
     } else {
-      // 個別モードでは次の学生に移動
-      handleNextStudent()
+      // 個別モードではscoringBehaviorに従って移動
+      if (scoringBehavior === "next-student") {
+        handleNextStudent()
+      } else if (scoringBehavior === "next-question") {
+        handleNextQuestion()
+      }
+      // "stay"の場合は何もしない
     }
-  }, [gradingMode, handleGridNavigation, handleNextStudent])
+  }, [gradingMode, scoringBehavior, handleGridNavigation, handleNextStudent, handleNextQuestion])
 
   return {
     handleBatchScoreWithProgress,

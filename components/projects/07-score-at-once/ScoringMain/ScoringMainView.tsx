@@ -396,12 +396,14 @@ function ScoringMainViewContent() {
     useBatchScoringWithProgress({
       selectedAnswers: selectedPageImageIds,
       gradingMode: gradingMode,
+      scoringBehavior: scoringBehavior,
       setRecentlyScoredAnswers,
       handleBatchScore,
       getGridAnswerData,
       setSelectedAnswers: setSelectedPageImageIds,
       handleGridNavigation,
-      handleNextStudent,
+      handleNextStudent: handleIndividualNextStudent,
+      handleNextQuestion,
     })
 
   const handleToggleStudentNames = useCallback(() => {
