@@ -63,6 +63,12 @@ export default function ClassDetailPage() {
     router.push("/classes")
   }
 
+  // 現在所属中かどうかを判定するヘルパー関数
+  const isCurrentMembership = (m: { endDate?: Date | null }) => {
+    if (!m.endDate) return true
+    return new Date(m.endDate) >= new Date()
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -262,7 +268,7 @@ export default function ClassDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {classData.memberships.filter((m) => !m.endDate).length}
+              {classData.memberships.filter((m) => isCurrentMembership(m)).length}
             </div>
           </CardContent>
         </Card>
@@ -275,7 +281,7 @@ export default function ClassDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-600">
-              {classData.memberships.filter((m) => m.endDate).length}
+              {classData.memberships.filter((m) => !isCurrentMembership(m)).length}
             </div>
           </CardContent>
         </Card>

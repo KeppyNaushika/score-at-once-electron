@@ -22,7 +22,10 @@ export function CurrentMembershipsCard({
   onEditMembership,
   onEndMembership,
 }: CurrentMembershipsCardProps) {
-  const currentMemberships = student.memberships.filter((m) => !m.endDate)
+  const now = new Date()
+  const currentMemberships = student.memberships.filter(
+    (m) => !m.endDate || new Date(m.endDate) >= now,
+  )
 
   return (
     <Card className="mb-6">

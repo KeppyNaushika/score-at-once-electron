@@ -66,10 +66,16 @@ export default function StudentMembershipTimeline({
     )
   }
 
+  // 現在所属中かどうかを判定するヘルパー関数
+  const isCurrentMembership = (m: { endDate?: Date | null }) => {
+    if (!m.endDate) return true
+    return new Date(m.endDate) >= new Date()
+  }
+
   return (
     <div className="space-y-4">
       {sortedMemberships.map((membership, index) => {
-        const isActive = !membership.endDate
+        const isActive = isCurrentMembership(membership)
         const duration = membership.endDate
           ? `${formatDate(new Date(membership.startDate))} - ${formatDate(new Date(membership.endDate))}`
           : `${formatDate(new Date(membership.startDate))} - 現在`

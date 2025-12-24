@@ -208,5 +208,107 @@ export const deleteClass = async (id: string): Promise<void> => {
 }
 
 
+// 生徒の試験成績を取得
+export interface StudentExamResult {
+  projectId: string
+  examName: string
+  examDate: Date | null
+  subject: string | null
+  totalScore: number
+  maxScore: number
+  scoredCount: number
+  totalQuestions: number
+  status: "complete" | "partial" | "unscored"
+}
+
+export const getStudentExamResults = async (
+  studentId: string,
+): Promise<StudentExamResult[]> => {
+  try {
+    // 生徒が参加しているプロジェクトを取得
+    const projectStudents = await prisma.projectStudent.findMany({
+      where: { studentId },
+      include: {
+        project: {
+          include: {
+            projectPages: {
+              include: {
+                cropRegions: {
+                  where: { type: "QUESTION_ANSWER" },
+                  include: {
+                    questionScores: {
+                      where: { studentId },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    const results: StudentExamResult[] = []
+
+    for (const ps of projectStudents) {
+      const project = ps.project
+      let totalScore = 0
+      let maxScore = 0
+      let scoredCount = 0
+      let totalQuestions = 0
+
+      for (const page of project.projectPages) {
+        for (const region of page.cropRegions) {
+          totalQuestions++
+          maxScore += region.points || 0
+
+          const score = region.questionScores[0]
+          if (score && score.status !== "unscored") {
+            scoredCount++
+            if (score.status === "correct") {
+              totalScore += region.points || 0
+            } else if (score.status === "partial" && score.partialScore) {
+              totalScore += Number(score.partialScore)
+            }
+            // incorrect の場合は 0 点
+          }
+        }
+      }
+
+      let status: "complete" | "partial" | "unscored" = "unscored"
+      if (scoredCount === totalQuestions && totalQuestions > 0) {
+        status = "complete"
+      } else if (scoredCount > 0) {
+        status = "partial"
+      }
+
+      results.push({
+        projectId: project.id,
+        examName: project.examName,
+        examDate: project.examDate,
+        subject: project.subject,
+        totalScore,
+        maxScore,
+        scoredCount,
+        totalQuestions,
+        status,
+      })
+    }
+
+    // 試験日の降順でソート
+    results.sort((a, b) => {
+      if (!a.examDate && !b.examDate) return 0
+      if (!a.examDate) return 1
+      if (!b.examDate) return -1
+      return new Date(b.examDate).getTime() - new Date(a.examDate).getTime()
+    })
+
+    return results
+  } catch (error) {
+    console.error("Failed to get student exam results:", error)
+    throw error
+  }
+}
+
 // Export the updated types
 export { type ClassWithMemberships, type StudentWithMemberships }
