@@ -11,6 +11,7 @@ import type {
   LayoutDirection,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
+import { Separator } from "@/components/ui/separator"
 
 interface ScoringSidePanelProps {
   projectId: string
@@ -104,7 +105,7 @@ export function ScoringSidePanel({
   onScoringBehaviorChange,
 }: ScoringSidePanelProps) {
   return (
-    <div className="w-96 overflow-y-auto border-l border-gray-200 bg-gray-50 p-4">
+    <div className="w-96 overflow-y-auto border-l border-gray-200 bg-white px-4">
       {/* 設問ナビゲーター */}
       <QuestionNavigator
         questionRegions={cropRegions}
@@ -114,6 +115,8 @@ export function ScoringSidePanel({
         onNextQuestion={onNextQuestion}
         questionProgress={questionProgress}
       />
+
+      <Separator />
 
       {/* 採点ツールバー */}
       <ScoringToolbar
@@ -134,15 +137,20 @@ export function ScoringSidePanel({
         onStudentChange &&
         onScoringBehaviorChange &&
         scoringBehavior && (
-          <IndividualModePanel
-            students={students}
-            selectedAnswers={selectedPageImageIds}
-            pageImages={pageImages}
-            onStudentChange={onStudentChange}
-            scoringBehavior={scoringBehavior}
-            onScoringBehaviorChange={onScoringBehaviorChange}
-          />
+          <>
+            <Separator />
+            <IndividualModePanel
+              students={students}
+              selectedAnswers={selectedPageImageIds}
+              pageImages={pageImages}
+              onStudentChange={onStudentChange}
+              scoringBehavior={scoringBehavior}
+              onScoringBehaviorChange={onScoringBehaviorChange}
+            />
+          </>
         )}
+
+      <Separator />
 
       {/* ナビゲーション制御 */}
       <NavigationControls
@@ -160,8 +168,12 @@ export function ScoringSidePanel({
         gradingMode={gradingMode}
       />
 
+      <Separator />
+
       {/* プロジェクト進捗 */}
-      <ProjectProgressCard projectId={projectId} />
+      <div className="py-3">
+        <ProjectProgressCard projectId={projectId} />
+      </div>
     </div>
   )
 }

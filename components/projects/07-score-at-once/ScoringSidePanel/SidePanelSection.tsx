@@ -9,13 +9,12 @@ interface SidePanelSectionProps {
   title: string
   badge?: string | number
   rightElement?: ReactNode
-  
+
   // セクション内容
   children: ReactNode
-  
+
   // スタイル設定
   className?: string
-  spacing?: "normal" | "compact" // 間隔設定
 }
 
 /**
@@ -29,12 +28,9 @@ export function SidePanelSection({
   rightElement,
   children,
   className = "",
-  spacing = "normal",
 }: SidePanelSectionProps) {
-  const spacingClass = spacing === "compact" ? "mb-2" : "mb-4"
-  
   return (
-    <div className={`bg-white p-4 ${spacingClass} ${className}`}>
+    <div className={`py-3 ${className}`}>
       {/* セクションヘッダー（統一スタイル） */}
       <div className="mb-2 flex items-center gap-2">
         <Icon className="h-4 w-4 text-gray-500" />

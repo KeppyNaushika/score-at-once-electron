@@ -75,7 +75,7 @@ export default function QuestionNavigator({
     <TooltipProvider delayDuration={300}>
       <SidePanelSection icon={FileText} title="設問">
         {/* ナビゲーション: [前] [設問プルダウン] [次] */}
-        <div className="mb-4 flex items-center gap-2">
+        <div className="flex items-center gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -173,7 +173,7 @@ export default function QuestionNavigator({
         </div>
 
         {/* 設問一覧（サムネイル表示） */}
-        <div className="mt-4 border-t pt-4">
+        <div className="mt-3 border-t border-gray-100 pt-3">
           <div className="mb-2 text-xs text-gray-500">
             設問一覧（クリックで移動）
           </div>
