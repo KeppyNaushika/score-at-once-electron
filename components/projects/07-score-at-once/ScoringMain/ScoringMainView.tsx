@@ -24,7 +24,7 @@ import { useCommand } from "@/components/projects/07-score-at-once/hooks/useComm
 import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
 import Head from "next/head"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -125,17 +125,27 @@ function ScoringMainViewContent() {
         (sheet: any) => sheet.student.id === studentId,
       )
       if (studentSheets.length > 0) {
-        setSelectedPageImageIds(new Set([studentSheets[0].id]))
+        // 現在の設問ページに対応するpageImageを優先選択
+        // currentCropRegionのprojectPageIdと一致するものを探す
+        const currentPageSheet = currentCropRegion
+          ? studentSheets.find(
+              (sheet: any) =>
+                sheet.projectPageId === currentCropRegion.projectPageId,
+            )
+          : null
+
+        const targetSheet = currentPageSheet || studentSheets[0]
+        setSelectedPageImageIds(new Set([targetSheet.id]))
 
         const studentIndex = pageImages.findIndex(
-          (sheet: any) => sheet.student.id === studentId,
+          (sheet: any) => sheet.id === targetSheet.id,
         )
         if (studentIndex !== -1) {
           setCurrentStudentIndex(studentIndex)
         }
       }
     },
-    [pageImages, setSelectedPageImageIds, setCurrentStudentIndex],
+    [pageImages, setSelectedPageImageIds, setCurrentStudentIndex, currentCropRegion],
   )
 
   /** 採点データ管理hook */
@@ -183,6 +193,16 @@ function ScoringMainViewContent() {
   })
 
   const previousCropRegionIdRef = useRef<string | null>(currentCropRegionId)
+  // 設問変更時のeffectで使用するためのrefs（依存配列の問題を回避）
+  const pageImagesRef = useRef(pageImages)
+  const selectedPageImageIdsRef = useRef(selectedPageImageIds)
+  const cropRegionsRef = useRef(cropRegions)
+  useLayoutEffect(() => {
+    pageImagesRef.current = pageImages
+    selectedPageImageIdsRef.current = selectedPageImageIds
+    cropRegionsRef.current = cropRegions
+  })
+
   const handleReplaceSelection = useCallback(
     (ids: string[]) => {
       replaceSelection(ids)
@@ -190,18 +210,20 @@ function ScoringMainViewContent() {
     [replaceSelection],
   )
 
-  /** 設問変更時は一覧表示モードのみ選択をリセット */
+  /** 設問変更時の選択更新 */
   useEffect(() => {
-    if (gradingMode !== "grid") {
+    // 設問が変更されていない場合は何もしない
+    if (
+      !previousCropRegionIdRef.current ||
+      !currentCropRegionId ||
+      previousCropRegionIdRef.current === currentCropRegionId
+    ) {
       previousCropRegionIdRef.current = currentCropRegionId
       return
     }
 
-    if (
-      previousCropRegionIdRef.current &&
-      currentCropRegionId &&
-      previousCropRegionIdRef.current !== currentCropRegionId
-    ) {
+    if (gradingMode === "grid") {
+      // グリッドモード: 選択をリセット
       setSelectedPageImageIds(new Set())
       const scheduleIncrement = () =>
         setQuestionChangeVersion((version) => version + 1)
@@ -209,6 +231,36 @@ function ScoringMainViewContent() {
         queueMicrotask(scheduleIncrement)
       } else {
         Promise.resolve().then(scheduleIncrement)
+      }
+    } else {
+      // 個別モード: 現在選択中の生徒の新しい設問ページに対応するpageImageに更新
+      const currentSelectedIds = selectedPageImageIdsRef.current
+      const currentPageImages = pageImagesRef.current
+      const currentCropRegions = cropRegionsRef.current
+
+      if (currentSelectedIds.size > 0) {
+        const currentAnswerId = Array.from(currentSelectedIds)[0]
+        const currentAnswer = currentPageImages.find(
+          (a: any) => a.id === currentAnswerId,
+        )
+        if (currentAnswer?.student?.id) {
+          // 新しい設問のcropRegionを取得
+          const newCropRegion = currentCropRegions.find(
+            (r) => r.id === currentCropRegionId,
+          )
+          if (newCropRegion) {
+            // 同じ生徒の新しいページに対応するpageImageを探す
+            const studentId = currentAnswer.student?.id
+            const newPageImage = currentPageImages.find(
+              (a: any) =>
+                a.student?.id === studentId &&
+                a.projectPageId === newCropRegion.projectPageId,
+            )
+            if (newPageImage) {
+              setSelectedPageImageIds(new Set([newPageImage.id]))
+            }
+          }
+        }
       }
     }
 
@@ -268,14 +320,20 @@ function ScoringMainViewContent() {
     )
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
-      const nextStudentAnswer = pageImages.find(
+      // 現在の設問ページに対応するpageImageを優先選択
+      const nextStudentSheets = pageImages.filter(
         (a: any) => a.student?.id === nextStudent.id,
       )
+      const nextStudentAnswer = currentCropRegion
+        ? nextStudentSheets.find(
+            (a: any) => a.projectPageId === currentCropRegion.projectPageId,
+          ) || nextStudentSheets[0]
+        : nextStudentSheets[0]
       if (nextStudentAnswer) {
         setSelectedPageImageIds(new Set([nextStudentAnswer.id]))
       }
     }
-  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds])
+  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds, currentCropRegion])
 
   const handleIndividualPrevStudent = useCallback(() => {
     if (selectedPageImageIds.size === 0) return
@@ -292,14 +350,20 @@ function ScoringMainViewContent() {
     )
     if (currentIndex > 0) {
       const prevStudent = sortedStudents[currentIndex - 1]
-      const prevStudentAnswer = pageImages.find(
+      // 現在の設問ページに対応するpageImageを優先選択
+      const prevStudentSheets = pageImages.filter(
         (a: any) => a.student?.id === prevStudent.id,
       )
+      const prevStudentAnswer = currentCropRegion
+        ? prevStudentSheets.find(
+            (a: any) => a.projectPageId === currentCropRegion.projectPageId,
+          ) || prevStudentSheets[0]
+        : prevStudentSheets[0]
       if (prevStudentAnswer) {
         setSelectedPageImageIds(new Set([prevStudentAnswer.id]))
       }
     }
-  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds])
+  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds, currentCropRegion])
 
   const {
     viewMode,
