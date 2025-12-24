@@ -378,10 +378,11 @@ export default function AnswerIndividualView({
     const availableWidth = container.offsetWidth
     const availableHeight = container.offsetHeight
 
-    // パディングを考慮
-    const padding = 40
-    const effectiveWidth = availableWidth - padding
-    const effectiveHeight = availableHeight - padding
+    // 余白の比率: 2:6:2（左右/上下に20%ずつの余白、中央60%に設問を表示）
+    const marginRatio = 0.2
+    const contentRatio = 1 - marginRatio * 2 // 0.6
+    const effectiveWidth = availableWidth * contentRatio
+    const effectiveHeight = availableHeight * contentRatio
 
     // 設問が属するページの画像を使用
     const questionPageNumber = currentCropRegion.projectPage?.pageNumber || 1
