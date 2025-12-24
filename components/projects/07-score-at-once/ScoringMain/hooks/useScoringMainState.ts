@@ -1,8 +1,4 @@
-import { DEFAULT_LAYOUT_DIRECTION } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
-import type {
-  GradingMode,
-  LayoutDirection,
-} from "@/components/projects/07-score-at-once/types"
+import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platform-utils"
 import { useCallback, useRef, useState } from "react"
 
@@ -15,10 +11,6 @@ export function useScoringMainState() {
   )
   const [manualSelectionVersion, setManualSelectionVersion] = useState(0)
   const suppressSelectionUpdateRef = useRef(false)
-  /** グリッド表示方向 */
-  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(
-    DEFAULT_LAYOUT_DIRECTION,
-  )
   /** 現在選択中の生徒インデックス */
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   /** 選択中の設問領域ID */
@@ -82,7 +74,6 @@ export function useScoringMainState() {
     /** 個別の状態 */
     gradingMode,
     selectedPageImageIds,
-    layoutDirection,
     currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
@@ -93,7 +84,6 @@ export function useScoringMainState() {
     /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
-    setLayoutDirection,
     setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,

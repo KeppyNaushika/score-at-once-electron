@@ -14,6 +14,7 @@ import {
   Calculator,
   ChevronsLeft,
   ChevronsRight,
+  Grid2X2,
   Home,
   LogIn,
   LogOut,
@@ -44,6 +45,11 @@ const navItems = [
     href: "/textbox-on-canvas-v4",
     label: "Textbox Canvas V4",
     icon: FlaskConical,
+  },
+  {
+    href: "/test/grid-layout-debug",
+    label: "Grid Layout Debug",
+    icon: Grid2X2,
   },
   { href: "/settings", label: "設定", icon: Settings },
 ]
