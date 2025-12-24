@@ -569,6 +569,7 @@ export default function AnswerIndividualView({
 
       {/* 左上パレット */}
       <DrawingToolPalette
+        containerRef={containerRef}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onMaximizeView={handleMaximizeView}

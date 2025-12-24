@@ -13,12 +13,18 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import type { DrawingTool } from "./types/answer-individual-types"
 
+const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
+
 interface DrawingToolPaletteProps {
+  // Container ref for mouse event monitoring
+  containerRef?: React.RefObject<HTMLDivElement | null>
+
   // View controls
   onZoomIn: () => void
   onZoomOut: () => void
@@ -40,6 +46,7 @@ interface DrawingToolPaletteProps {
 }
 
 export function DrawingToolPalette({
+  containerRef,
   onZoomIn,
   onZoomOut,
   onMaximizeView,
@@ -54,8 +61,72 @@ export function DrawingToolPalette({
   onStrokeWidthChange,
   onLineStyleChange,
 }: DrawingToolPaletteProps) {
+  const [isVisible, setIsVisible] = useState(true)
+  const [isHovered, setIsHovered] = useState(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // タイマーをリセットして表示状態に戻す
+  const resetTimer = useCallback(() => {
+    setIsVisible(true)
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
+    timerRef.current = setTimeout(() => {
+      if (!isHovered) {
+        setIsVisible(false)
+      }
+    }, FADE_OUT_DELAY)
+  }, [isHovered])
+
+  // コンテナのマウスイベントを監視
+  useEffect(() => {
+    const container = containerRef?.current
+    if (!container) return
+
+    const handleMouseMove = () => {
+      resetTimer()
+    }
+
+    const handleMouseDown = () => {
+      resetTimer()
+    }
+
+    container.addEventListener("mousemove", handleMouseMove)
+    container.addEventListener("mousedown", handleMouseDown)
+
+    // 初回タイマー開始
+    resetTimer()
+
+    return () => {
+      container.removeEventListener("mousemove", handleMouseMove)
+      container.removeEventListener("mousedown", handleMouseDown)
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+      }
+    }
+  }, [containerRef, resetTimer])
+
+  // ホバー状態変更時にタイマーを調整
+  useEffect(() => {
+    if (isHovered) {
+      // ホバー中はタイマーをクリア
+      if (timerRef.current) {
+        clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    } else if (isVisible) {
+      // ホバー解除時にタイマーを再開
+      resetTimer()
+    }
+  }, [isHovered, isVisible, resetTimer])
+
   return (
-    <div className="absolute top-4 left-4">
+    <div
+      className="absolute top-4 left-4 transition-opacity duration-300"
+      style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? "auto" : "none" }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <Card className="p-2">
         <div className="flex flex-col space-y-1">
           {/* ズーム・ビュー操作 */}
