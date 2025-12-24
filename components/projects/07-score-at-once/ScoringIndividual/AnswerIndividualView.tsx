@@ -459,6 +459,72 @@ export default function AnswerIndividualView({
     pageSpacing,
   ])
 
+  // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
+  useEffect(() => {
+    if (
+      !currentCropRegion ||
+      !containerRef.current ||
+      !imageLoaded ||
+      loadedImages.length === 0
+    )
+      return
+
+    const container = containerRef.current
+
+    // 設問が属するページの画像を使用
+    const questionPageNumber = currentCropRegion.projectPage?.pageNumber || 1
+    const questionPageIndex = questionPageNumber - 1
+
+    const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
+    if (!questionImg) return
+
+    // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
+    const questionCenterX =
+      (currentCropRegion.x + currentCropRegion.width / 2) *
+      questionImg.naturalWidth
+    const questionCenterY =
+      (currentCropRegion.y + currentCropRegion.height / 2) *
+      questionImg.naturalHeight
+
+    // 複数ページ表示の場合、設問が属するページのオフセットを計算
+    let pageOffsetY = 0
+    if (loadedImages.length > 1) {
+      const spacing = pageSpacing || 20
+      for (let i = 0; i < questionPageIndex; i++) {
+        if (i < loadedImages.length) {
+          pageOffsetY += loadedImages[i].naturalHeight + spacing
+        }
+      }
+    }
+
+    // 画像の中央配置オフセットを考慮
+    const canvasWidth = loadedImages[0].naturalWidth
+    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
+
+    // 次のフレームでスクロール位置を調整
+    requestAnimationFrame(() => {
+      // 設問の実際のCanvas上での位置（ズーム適用後）
+      const questionCenterScreenX = (questionCenterX + imageOffsetX) * zoom
+      const questionCenterScreenY = (questionCenterY + pageOffsetY) * zoom
+
+      // コンテナ中心座標
+      const containerCenterX = container.offsetWidth / 2
+      const containerCenterY = container.offsetHeight / 2
+
+      // 理想的なスクロール位置（設問を中央に）
+      const idealScrollLeft = questionCenterScreenX - containerCenterX
+      const idealScrollTop = questionCenterScreenY - containerCenterY
+
+      // はみ出さないように制限
+      const maxScrollLeft = container.scrollWidth - container.offsetWidth
+      const maxScrollTop = container.scrollHeight - container.offsetHeight
+      const scrollLeft = Math.max(0, Math.min(idealScrollLeft, maxScrollLeft))
+      const scrollTop = Math.max(0, Math.min(idealScrollTop, maxScrollTop))
+
+      container.scrollTo({ left: scrollLeft, top: scrollTop, behavior: "smooth" })
+    })
+  }, [currentCropRegion?.id, containerRef, imageLoaded, loadedImages, pageSpacing, zoom])
+
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
     return (
