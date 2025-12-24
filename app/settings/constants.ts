@@ -72,6 +72,8 @@ export const SHORTCUT_LABELS: {
   // 表示
   "view.toggleStudentNames": "名前表示切替",
   "view.toggleViewMode": "表示モード切替",
+  "view.fullView": "全体表示",
+  "view.questionView": "設問表示",
 
   // モーダル
   "modal.confirmPartial": "部分点として確定",
@@ -148,7 +150,7 @@ export const SHORTCUT_CATEGORIES = {
   },
   view: {
     label: "表示制御",
-    keys: ["view.toggleStudentNames", "view.toggleViewMode"] as const,
+    keys: ["view.toggleStudentNames", "view.toggleViewMode", "view.fullView", "view.questionView"] as const,
     description: "表示の切り替え",
   },
   modal: {

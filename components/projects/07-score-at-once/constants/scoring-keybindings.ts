@@ -72,6 +72,8 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // ============================================
   "view.toggleStudentNames": "n", // 生徒名表示切り替え
   "view.toggleViewMode": "v", // 表示モード切り替え（将来用）
+  "view.fullView": "a", // 全体表示（個別モード専用）- All
+  "view.questionView": "c", // 設問表示（個別モード専用）- Crop
 
   // ============================================
   // モーダルコマンド (Modal)
