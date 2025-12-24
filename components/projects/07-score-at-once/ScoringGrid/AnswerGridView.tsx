@@ -147,7 +147,7 @@ export default function AnswerGridView({
   }
 
   return (
-    <div ref={containerRef} className={`h-full overflow-y-auto ${className}`}>
+    <div ref={containerRef} className={`h-full min-h-0 overflow-y-auto ${className}`}>
       {/* 答案グリッド */}
       <div
         ref={gridRef}

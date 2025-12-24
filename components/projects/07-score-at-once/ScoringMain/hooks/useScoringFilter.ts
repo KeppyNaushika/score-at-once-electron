@@ -454,7 +454,21 @@ export function useScoringFilter({
     manualSelectionVersion,
   ])
 
+  // フィルター変更時のスクロール処理用ref（選択変更では発火しない）
+  const prevVisibleAnswersRef = useRef<string[]>(visibleAnswers)
+
   useEffect(() => {
+    // visibleAnswersが変わっていない場合はスキップ（選択変更のみの場合）
+    const prevVisible = prevVisibleAnswersRef.current
+    const visibleChanged =
+      prevVisible.length !== visibleAnswers.length ||
+      prevVisible.some((id, i) => id !== visibleAnswers[i])
+    prevVisibleAnswersRef.current = visibleAnswers
+
+    if (!visibleChanged) {
+      return
+    }
+
     if (gradingMode !== "grid") {
       return
     }
