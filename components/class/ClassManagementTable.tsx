@@ -2,13 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   Table,
   TableBody,
@@ -17,17 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  BookOpen,
-  Calendar,
-  Edit,
-  GraduationCap,
-  Info,
-  PlusCircle,
-  Search,
-  Trash2,
-  Users,
-} from "lucide-react"
+import { Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -150,182 +134,108 @@ export default function ClassManagementTable() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header with Help */}
-      <div className="mb-6 flex items-center gap-2">
-        <h1 className="text-3xl font-bold">学級管理</h1>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Info className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[450px]" align="start" side="bottom">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-purple-600" />
-                  <h3 className="text-base font-semibold">学級管理について</h3>
-                </div>
-                <p className="text-muted-foreground pl-7 text-sm">
-                  学級やクラスの情報を管理し、生徒を組織化します。
-                </p>
-              </div>
-
-              <div className="space-y-3 pl-7">
-                <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-purple-800">
-                  <strong>柔軟な学級設計</strong>
-                  <br />
-                  様々なタイプの学級を作成できます：
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    <li>ホームルーム（例：1年A組）</li>
-                    <li>習熟度別クラス（例：英語E1）</li>
-                    <li>特別活動クラブ（例：吹奏楽部）</li>
-                    <li>選択授業（例：物理選択）</li>
-                  </ul>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">管理項目：</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-blue-600" />
-                      <span>所属生徒数</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-green-600" />
-                      <span>所属期間</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-orange-600" />
-                      <span>学級コード</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Edit className="h-4 w-4 text-purple-600" />
-                      <span>説明・備考</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                  <strong>便利な機能:</strong> 生徒は複数の学級に所属可能で、
-                  所属期間も管理できるため、年度途中のクラス変更にも対応します。
-                </div>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+    <div className="flex h-full flex-col gap-4">
+      {/* Controls */}
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <Search className="text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="学級名で検索"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-60"
+            />
+          </div>
+          <span className="text-muted-foreground text-sm">
+            {filteredClasses.length}学級
+          </span>
+        </div>
+        <Button onClick={handleAddNewClass} size="sm">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          学級追加
+        </Button>
       </div>
 
-      {/* Classes List */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="mb-3 flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              学級一覧 ({filteredClasses.length}学級)
-            </CardTitle>
-            <Button onClick={handleAddNewClass} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              学級追加
-            </Button>
-          </div>
-          {/* Search Controls */}
-          <div className="bg-muted/30 flex items-center gap-3 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Search className="text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="学級名で検索"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-60"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="max-h-[500px] overflow-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>学級名・コード</TableHead>
-                  <TableHead>学年</TableHead>
-                  <TableHead>説明</TableHead>
-                  <TableHead>現在の所属数</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
+      {/* Classes Table */}
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>学級名・コード</TableHead>
+              <TableHead>学年</TableHead>
+              <TableHead>説明</TableHead>
+              <TableHead>現在の所属数</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredClasses.map((classItem) => {
+              const sortedClass = getClassWithSortedStudents(classItem)
+              return (
+                <TableRow
+                  key={classItem.id}
+                  onClick={() => router.push(`/classes/${classItem.id}`)}
+                  className="hover:bg-muted/50 cursor-pointer"
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span>{classItem.name}</span>
+                      {classItem.classCode && (
+                        <Badge variant="outline" className="text-xs">
+                          {classItem.classCode}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{classItem.grade || "未設定"}</TableCell>
+                  <TableCell>
+                    {classItem.description ? (
+                      <span className="text-sm">{classItem.description}</span>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">
+                        なし
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>{sortedClass.memberships.length}名</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditClass(classItem)
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteClass(classItem.id)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClasses.map((classItem) => {
-                  const sortedClass = getClassWithSortedStudents(classItem)
-                  return (
-                    <TableRow
-                      key={classItem.id}
-                      onClick={() => router.push(`/classes/${classItem.id}`)}
-                      className="hover:bg-muted/50 cursor-pointer"
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{classItem.name}</span>
-                          {classItem.classCode && (
-                            <Badge variant="outline" className="text-xs">
-                              {classItem.classCode}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{classItem.grade || "未設定"}</TableCell>
-                      <TableCell>
-                        {classItem.description ? (
-                          <span className="text-sm">
-                            {classItem.description}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">
-                            なし
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{sortedClass.memberships.length}名</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleEditClass(classItem)
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteClass(classItem.id)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                {filteredClasses.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center">
-                      該当する学級が見つかりません。
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+              )
+            })}
+            {filteredClasses.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">
+                  該当する学級が見つかりません。
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {/* Modals */}
       {isClassModalOpen && (

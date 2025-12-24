@@ -5,6 +5,7 @@ import {
   createStudent,
   updateStudent,
   deleteStudent,
+  getStudentExamResults,
 } from "../lib/prisma/student"
 import {
   getStudentsForProject,
@@ -309,6 +310,18 @@ export function setupStudentHandlers(): void {
         return await updateStudentOrders(projectId, studentOrders)
       } catch (err) {
         console.error("Error updating student orders:", err)
+        throw err
+      }
+    },
+  )
+
+  ipcMain.handle(
+    "get-student-exam-results",
+    async (_event, studentId: string) => {
+      try {
+        return await getStudentExamResults(studentId)
+      } catch (err) {
+        console.error("Error getting student exam results:", err)
         throw err
       }
     },

@@ -134,6 +134,19 @@ type StudentClassMembershipWithDetails =
     }
   }>
 
+// Student exam result type
+interface StudentExamResult {
+  projectId: string
+  examName: string
+  examDate: Date | null
+  subject: string | null
+  totalScore: number
+  maxScore: number
+  scoredCount: number
+  totalQuestions: number
+  status: "complete" | "partial" | "unscored"
+}
+
 // Legacy types for backward compatibility
 type ClassWithStudents = ClassWithMemberships
 type StudentWithClass = StudentWithMemberships
@@ -473,6 +486,7 @@ export interface MyAPI {
     studentData: Prisma.StudentUpdateInput,
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
+  getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
 
   // Student Class Membership related
   createStudentClassMembership: (

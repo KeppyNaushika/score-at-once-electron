@@ -1,6 +1,7 @@
 "use client"
 
 import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/current-memberships-card"
+import { ExamResultsCard } from "@/app/students/[studentId]/components/exam-results-card"
 import {
   LoadingState,
   StudentNotFoundState,
@@ -86,6 +87,8 @@ export default function StudentDetailPage() {
         onEditStudent={handleEditStudentClick}
         onDeleteStudent={handleDeleteStudent}
       />
+
+      <ExamResultsCard studentId={studentId} />
 
       <CurrentMembershipsCard
         student={student}

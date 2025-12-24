@@ -30,13 +30,22 @@ export default function MembershipTable({
   onBulkDelete,
 }: MembershipTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // 現在所属中かどうかを判定するヘルパー関数
+  const isCurrentMembership = (m: { endDate?: Date | null }) => {
+    if (!m.endDate) return true
+    return new Date(m.endDate) >= new Date()
+  }
+
   // すべての所属を現在の所属を優先してソート
   const sortedMemberships = memberships
     .sort((a, b) => {
-      // 現在の所属（endDateがnull）を先に表示
-      if (!a.endDate && b.endDate) return -1
-      if (a.endDate && !b.endDate) return 1
-      
+      // 現在の所属を先に表示
+      const aIsCurrent = isCurrentMembership(a)
+      const bIsCurrent = isCurrentMembership(b)
+      if (aIsCurrent && !bIsCurrent) return -1
+      if (!aIsCurrent && bIsCurrent) return 1
+
       // 両方とも現在の所属または両方とも終了した所属の場合、出席番号順
       if (a.attendanceNumber && b.attendanceNumber) {
         return a.attendanceNumber - b.attendanceNumber
@@ -138,12 +147,12 @@ export default function MembershipTable({
                         <div className="flex items-center gap-2">
                           {membership.student.lastName}{" "}
                           {membership.student.firstName}
-                          {!membership.endDate && (
+                          {isCurrentMembership(membership) && (
                             <Badge variant="default" className="text-xs">
                               在籍中
                             </Badge>
                           )}
-                          {membership.endDate && (
+                          {!isCurrentMembership(membership) && (
                             <Badge variant="secondary" className="text-xs">
                               終了
                             </Badge>
