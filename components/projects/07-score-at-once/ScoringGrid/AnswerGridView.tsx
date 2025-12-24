@@ -14,7 +14,7 @@ import type {
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
@@ -75,6 +75,28 @@ export default function AnswerGridView({
 
   const containerRef = useRef<HTMLDivElement>(null)
   const gridRef = useRef<HTMLDivElement>(null)
+
+  /** コンテナサイズ監視（列レイアウト用） */
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const updateSize = () => {
+      setContainerSize({
+        width: container.offsetWidth,
+        height: container.offsetHeight,
+      })
+    }
+
+    updateSize()
+
+    const observer = new ResizeObserver(updateSize)
+    observer.observe(container)
+
+    return () => observer.disconnect()
+  }, [])
 
   /** 主要なカスタムフック */
   const { itemsPerRow } = useGridNavigation({
@@ -146,32 +168,41 @@ export default function AnswerGridView({
     handleMouseDown(event, answerId)
   }
 
+  const isColumnLayout =
+    layoutDirection === "down-right" || layoutDirection === "down-left"
+
+  /** 列レイアウト時のセル高さを計算（トップダウンで明示的に計算） */
+  const OUTER_PADDING = 16 // p-4 = 16px（外側コンテナのpadding）
+  const GRID_GAP = 8 // gap-2 = 8px
+  const GRID_PADDING = 4 // p-1 = 4px
+  const calculatedCellHeight = isColumnLayout
+    ? (containerSize.height - OUTER_PADDING * 2 - GRID_PADDING * 2 - GRID_GAP * (itemsPerRow[0] - 1)) / itemsPerRow[0]
+    : 0
+
   return (
-    <div ref={containerRef} className={`h-full min-h-0 overflow-y-auto ${className}`}>
+    <div
+      ref={containerRef}
+      className={`h-full min-h-0 ${isColumnLayout ? "overflow-x-auto overflow-y-hidden" : "overflow-y-auto"} ${className}`}
+    >
       {/* 答案グリッド */}
       <div
         ref={gridRef}
         className="relative grid min-w-0 gap-2 p-1 select-none"
         style={{
-          gridTemplateColumns:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "none"
-              : `repeat(${effectiveGridSize.columns}, 1fr)`,
-          gridTemplateRows:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? `repeat(${effectiveGridSize.rows}, 1fr)`
-              : "none",
+          gridTemplateColumns: isColumnLayout
+            ? "none"
+            : `repeat(${effectiveGridSize.columns}, 1fr)`,
+          gridTemplateRows: isColumnLayout
+            ? `repeat(${effectiveGridSize.rows}, 1fr)`
+            : "none",
           gridAutoRows: "auto",
-          gridAutoColumns:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "minmax(200px, max-content)"
-              : undefined,
-          gridAutoFlow:
-            layoutDirection === "down-right" || layoutDirection === "down-left"
-              ? "column"
-              : "row",
-          width: "100%",
-          height: "max-content",
+          gridAutoColumns: isColumnLayout
+            ? "minmax(200px, max-content)"
+            : undefined,
+          gridAutoFlow: isColumnLayout ? "column" : "row",
+          width: isColumnLayout ? "max-content" : "100%",
+          // 列レイアウト時は高さを100%にして、行ごとに均等分割
+          height: isColumnLayout ? "100%" : "max-content",
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -189,7 +220,7 @@ export default function AnswerGridView({
               isSelected={isSelected}
               showStudentNames={showStudentNames}
               layoutDirection={layoutDirection}
-              itemsPerRow={itemsPerRow[0]}
+              calculatedCellHeight={calculatedCellHeight}
               selectionBorderSettings={selectionBorderSettings}
               onMouseDown={onCellMouseDown}
             />

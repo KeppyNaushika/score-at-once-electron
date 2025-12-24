@@ -21,7 +21,7 @@ interface GridCellProps {
   isSelected: boolean
   showStudentNames: boolean
   layoutDirection: LayoutDirection
-  itemsPerRow: number
+  calculatedCellHeight: number
   selectionBorderSettings: {
     tailwindClass: string
   }
@@ -33,7 +33,7 @@ export function GridCell({
   isSelected,
   showStudentNames,
   layoutDirection,
-  itemsPerRow,
+  calculatedCellHeight,
   selectionBorderSettings,
   onMouseDown,
 }: GridCellProps) {
@@ -79,10 +79,23 @@ export function GridCell({
     return "採点中"
   }
 
+  const isColumnLayout =
+    layoutDirection === "down-right" || layoutDirection === "down-left"
+
+  // 列レイアウト時は明示的に高さを設定
+  const cellStyle: React.CSSProperties = isColumnLayout
+    ? {
+        height: calculatedCellHeight,
+        maxHeight: calculatedCellHeight,
+        overflow: "hidden",
+      }
+    : {}
+
   return (
     <div
       data-answer-id={answer.id}
       className={cellClasses.join(" ")}
+      style={cellStyle}
       onMouseDown={(e) => onMouseDown(e, answer.id)}
     >
       {/* 答案画像 */}
@@ -91,14 +104,12 @@ export function GridCell({
         cropRegion={answer.questionRegion}
         alt={isMaster ? "模範解答" : `${answer.studentName}の答案`}
         className={
-          layoutDirection === "down-right" || layoutDirection === "down-left"
+          isColumnLayout
             ? "h-full w-auto flex-1" // 列表示: 高さ目一杯、幅は縦横比で自動、余白占有
             : "h-auto w-full" // 行表示: 幅目一杯、高さは縦横比で自動
         }
-        isColumnLayout={
-          layoutDirection === "down-right" || layoutDirection === "down-left"
-        }
-        itemsPerRow={itemsPerRow}
+        isColumnLayout={isColumnLayout}
+        calculatedCellHeight={calculatedCellHeight}
         isSelected={isSelected}
       />
 
@@ -106,7 +117,9 @@ export function GridCell({
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 flex-1 items-center space-x-1">
           <span
-            title={isMaster || showStudentNames ? answer.studentName : undefined}
+            title={
+              isMaster || showStudentNames ? answer.studentName : undefined
+            }
             className={`block max-w-full truncate text-xs ${
               isMaster ? "font-bold text-black" : "font-medium"
             }`}
@@ -135,7 +148,7 @@ export function GridCell({
         </div>
 
         {!isMaster && (
-          <Icon className={`h-3 w-3 ${config.textColor} flex-shrink-0`} />
+          <Icon className={`h-3 w-3 ${config.textColor} shrink-0`} />
         )}
       </div>
     </div>

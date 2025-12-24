@@ -30,9 +30,12 @@ interface CroppedAnswerImageProps {
   alt: string
   className?: string
   isColumnLayout?: boolean
-  itemsPerRow?: number // 1行あたりの表示数
+  calculatedCellHeight?: number // 親から渡された計算済みセル高さ
   isSelected?: boolean
 }
+
+// セル内の固定オフセット（padding + gap + footer）
+const CELL_CONTENT_OFFSET = 32 // p-2(16px) + gap-1(4px) + footer(~12px)
 
 // 採点領域をクロップして表示するコンポーネント
 export default function CroppedAnswerImage({
@@ -41,7 +44,7 @@ export default function CroppedAnswerImage({
   alt,
   className = "",
   isColumnLayout = false,
-  itemsPerRow,
+  calculatedCellHeight = 0,
   isSelected = false,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -61,18 +64,34 @@ export default function CroppedAnswerImage({
     const sourceHeight = cropRegion.height * imageElement.naturalHeight
     const aspectRatio = sourceWidth / sourceHeight
 
-    // コンテナサイズを取得
-    const containerWidth = canvas.offsetWidth
-    const containerHeight = canvas.offsetHeight
+    let canvasWidth: number
+    let canvasHeight: number
 
-    if (isColumnLayout) {
-      // 列表示: 高さベースで幅を計算
-      canvas.height = containerHeight
-      canvas.width = containerHeight * aspectRatio
+    if (isColumnLayout && calculatedCellHeight > 0) {
+      // 列表示: 計算済みセル高さからcanvas高さを算出
+      canvasHeight = Math.max(10, calculatedCellHeight - CELL_CONTENT_OFFSET)
+      canvasWidth = canvasHeight * aspectRatio
     } else {
-      // 行表示: 幅ベースで高さを計算
-      canvas.width = containerWidth
-      canvas.height = containerWidth / aspectRatio
+      // 行表示: 親要素の幅を基準に計算
+      const parent = canvas.parentElement
+      if (!parent) return
+      const containerWidth = parent.offsetWidth
+      canvasWidth = Math.max(10, containerWidth)
+      canvasHeight = canvasWidth / aspectRatio
+    }
+
+    canvas.width = canvasWidth
+    canvas.height = canvasHeight
+
+    // canvas の CSS サイズを直接設定（ピクセルバッファサイズと一致させる）
+    if (isColumnLayout) {
+      canvas.style.width = `${canvasWidth}px`
+      canvas.style.height = `${canvasHeight}px`
+      canvas.style.flexShrink = "0"
+    } else {
+      canvas.style.width = "100%"
+      canvas.style.height = ""
+      canvas.style.flexShrink = ""
     }
 
     // 採点領域をクロップして描画
@@ -91,15 +110,19 @@ export default function CroppedAnswerImage({
       canvas.width,
       canvas.height,
     )
-  }, [imageLoaded, cropRegion, isColumnLayout, itemsPerRow])
+  }, [imageLoaded, cropRegion, isColumnLayout, calculatedCellHeight])
 
   const handleImageLoad = () => {
     setImageLoaded(true)
   }
 
+  // 行表示: 幅100%、高さは自動
+  // 列表示: 明示的にサイズ指定（useEffect内で直接設定）
+  const containerClass = isColumnLayout ? "" : "w-full"
+
   return (
     <div
-      className={`relative w-full ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
+      className={`relative ${containerClass} ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
     >
       {/* Canvas描画用の画像データ取得のため、Next.js Imageではなく通常のimgタグを使用 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -113,7 +136,6 @@ export default function CroppedAnswerImage({
       />
       <canvas
         ref={canvasRef}
-        className="h-full w-full"
         style={{ display: imageLoaded ? "block" : "none" }}
       />
       {!imageLoaded && (

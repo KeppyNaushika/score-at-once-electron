@@ -47,9 +47,11 @@ function ScoringMainViewContent() {
     itemsPerLine,
     autoScroll,
     showStudentNames,
+    layoutDirection,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
+    setLayoutDirection,
   } = useScoringSettings()
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
@@ -63,7 +65,6 @@ function ScoringMainViewContent() {
     /** 個別の状態 */
     gradingMode,
     selectedPageImageIds,
-    layoutDirection,
     currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
@@ -73,7 +74,6 @@ function ScoringMainViewContent() {
     /** アクション関数 */
     setGradingMode,
     setSelectedPageImageIds,
-    setLayoutDirection,
     setCurrentStudentIndex,
     setCurrentCropRegionId,
     setShowKeyboardHelp,

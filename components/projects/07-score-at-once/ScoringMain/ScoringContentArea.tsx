@@ -121,7 +121,7 @@ export function ScoringContentArea({
       itemsPerRow={itemsPerLine}
       autoScroll={autoScroll}
       showStudentNames={showStudentNames}
-      className="p-6"
+      className="p-4"
     />
   )
 }
