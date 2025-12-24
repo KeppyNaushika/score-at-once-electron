@@ -66,19 +66,30 @@ export function DrawingToolPalette({
   const [isVisible, setIsVisible] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const isHoveredRef = useRef(isHovered)
 
-  // タイマーをリセットして表示状態に戻す
-  const resetTimer = useCallback(() => {
-    setIsVisible(true)
+  // isHoveredの最新値をrefで追跡
+  useEffect(() => {
+    isHoveredRef.current = isHovered
+  }, [isHovered])
+
+  // フェードアウトタイマーを開始（setStateを含まない、effect用）
+  const startFadeoutTimer = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current)
     }
     timerRef.current = setTimeout(() => {
-      if (!isHovered) {
+      if (!isHoveredRef.current) {
         setIsVisible(false)
       }
     }, FADE_OUT_DELAY)
-  }, [isHovered])
+  }, [])
+
+  // タイマーをリセットして表示状態に戻す（イベントハンドラ用）
+  const resetTimer = useCallback(() => {
+    setIsVisible(true)
+    startFadeoutTimer()
+  }, [startFadeoutTimer])
 
   // コンテナのマウスイベントを監視
   useEffect(() => {
@@ -96,8 +107,8 @@ export function DrawingToolPalette({
     container.addEventListener("mousemove", handleMouseMove)
     container.addEventListener("mousedown", handleMouseDown)
 
-    // 初回タイマー開始
-    resetTimer()
+    // 初回タイマー開始（setStateを呼ばずタイマーのみ設定）
+    startFadeoutTimer()
 
     return () => {
       container.removeEventListener("mousemove", handleMouseMove)
@@ -106,7 +117,7 @@ export function DrawingToolPalette({
         clearTimeout(timerRef.current)
       }
     }
-  }, [containerRef, resetTimer])
+  }, [containerRef, resetTimer, startFadeoutTimer])
 
   // ホバー状態変更時にタイマーを調整
   useEffect(() => {
@@ -117,10 +128,10 @@ export function DrawingToolPalette({
         timerRef.current = null
       }
     } else if (isVisible) {
-      // ホバー解除時にタイマーを再開
-      resetTimer()
+      // ホバー解除時にタイマーを再開（setStateを呼ばずタイマーのみ設定）
+      startFadeoutTimer()
     }
-  }, [isHovered, isVisible, resetTimer])
+  }, [isHovered, isVisible, startFadeoutTimer])
 
   // Tooltipコンテンツのスタイル
   const tooltipContentClass = cn(
