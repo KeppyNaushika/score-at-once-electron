@@ -89,15 +89,15 @@
     "fontkit": "^2.0.4",
     "input-otp": "^1.4.2",
     "jsonwebtoken": "^9.0.3",
-    "lucide-react": "^0.561.0",
+    "lucide-react": "^0.562.0",
     "mathjax": "^4.1.0",
-    "next": "^16.0.10",
+    "next": "^16.1.1",
     "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "5.4.449",
     "react": "^19.2.3",
     "react-color": "^2.19.3",
-    "react-datepicker": "^9.0.0",
+    "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.3",
     "react-dropzone": "^14.3.8",
     "react-markdown": "^10.1.0",
@@ -124,14 +124,14 @@
     "@types/react": "^19.2.7",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.49.0",
-    "@typescript-eslint/parser": "^8.49.0",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
     "electron": "^39.2.7",
     "electron-builder": "^26.0.12",
     "eslint": "^9.39.2",
-    "eslint-config-next": "^16.0.10",
+    "eslint-config-next": "^16.1.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-promise": "^7.2.1",
@@ -145,5 +145,8 @@
     "typescript": "^5.9.3",
     "wait-on": "^9.0.3"
   },
-  "overrides": {}
+  "overrides": {
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1"
+  }
 }

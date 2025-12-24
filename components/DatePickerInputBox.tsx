@@ -46,7 +46,7 @@ const DatePickerInputBox = (props: {
           locale={ja as any}
           className="w-96 border-b-2 p-4 outline-none placeholder:opacity-0"
           selected={date}
-          onChange={(date) => {
+          onChange={(date: Date | null) => {
             setDate(date)
           }}
           isClearable
