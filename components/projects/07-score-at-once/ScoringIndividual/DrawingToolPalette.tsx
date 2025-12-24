@@ -4,6 +4,8 @@ import type { CropRegionWithProjectPage } from "@/components/projects/07-score-a
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
+import { cn } from "@/lib/utils"
 import {
   Crop,
   Hand,
@@ -120,114 +122,218 @@ export function DrawingToolPalette({
     }
   }, [isHovered, isVisible, resetTimer])
 
+  // Tooltipコンテンツのスタイル
+  const tooltipContentClass = cn(
+    "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95",
+    "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+    "data-[side=right]:slide-in-from-left-2",
+    "z-50 w-fit rounded-md px-3 py-1.5 text-xs"
+  )
+
   return (
-    <div
-      className="absolute top-4 left-4 transition-opacity duration-300"
-      style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? "auto" : "none" }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <Card className="p-2">
-        <div className="flex flex-col space-y-1">
-          {/* ズーム・ビュー操作 */}
-          <Button size="sm" variant="ghost" onClick={onZoomIn} title="拡大 (+)">
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onZoomOut}
-            title="縮小 (-)"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onMaximizeView}
-            title="全体表示 - ページ全体をフィット"
-          >
-            <Maximize className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={onCropView}
-            title="設問表示 - 設問領域をフィット"
-            disabled={!currentCropRegion}
-          >
-            <Crop className="h-4 w-4" />
-          </Button>
+    <TooltipPrimitive.Provider delayDuration={300} disableHoverableContent>
+      <div
+        className="absolute top-4 left-4 transition-opacity duration-300"
+        style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? "auto" : "none" }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <Card className="p-2">
+          <div className="flex flex-col space-y-1">
+            {/* ズーム・ビュー操作 */}
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button size="sm" variant="ghost" onClick={onZoomIn}>
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">拡大</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        +
+                      </kbd>
+                    </div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
 
-          {/* セパレーター */}
-          <Separator className="my-1" />
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button size="sm" variant="ghost" onClick={onZoomOut}>
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">縮小</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        -
+                      </kbd>
+                    </div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
 
-          {/* ツール選択 */}
-          <Button
-            size="sm"
-            variant={currentTool === "hand" ? "default" : "ghost"}
-            onClick={() => onToolChange("hand")}
-            title="ハンドツール - ドラッグで移動"
-          >
-            <Hand className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            variant={currentTool === "select" ? "default" : "ghost"}
-            onClick={() => onToolChange("select")}
-            title="選択ツール - 図形を選択・移動・削除"
-          >
-            <MousePointer2 className="h-4 w-4" />
-          </Button>
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button size="sm" variant="ghost" onClick={onMaximizeView}>
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">全体表示</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        A
+                      </kbd>
+                    </div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
 
-          <LineToolPopover
-            currentTool={currentTool}
-            onToolChange={onToolChange}
-            strokeColor={strokeColor}
-            strokeWidth={strokeWidth}
-            lineStyle={lineStyle}
-            onStrokeColorChange={onStrokeColorChange}
-            onStrokeWidthChange={onStrokeWidthChange}
-            onLineStyleChange={onLineStyleChange}
-          />
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onCropView}
+                  disabled={!currentCropRegion}
+                >
+                  <Crop className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">設問表示</div>
+                    <div className="mt-1 text-xs text-gray-400">
+                      キー:{" "}
+                      <kbd className="rounded bg-gray-200 px-1 py-0.5 text-xs text-gray-800">
+                        C
+                      </kbd>
+                    </div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
 
-          <RectangleToolPopover
-            currentTool={currentTool}
-            onToolChange={onToolChange}
-            strokeColor={strokeColor}
-            strokeWidth={strokeWidth}
-            onStrokeColorChange={onStrokeColorChange}
-            onStrokeWidthChange={onStrokeWidthChange}
-          />
+            {/* セパレーター */}
+            <Separator className="my-1" />
 
-          <EllipseToolPopover
-            currentTool={currentTool}
-            onToolChange={onToolChange}
-            strokeColor={strokeColor}
-            strokeWidth={strokeWidth}
-            onStrokeColorChange={onStrokeColorChange}
-            onStrokeWidthChange={onStrokeWidthChange}
-          />
+            {/* ツール選択 */}
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button
+                  size="sm"
+                  variant={currentTool === "hand" ? "default" : "ghost"}
+                  onClick={() => onToolChange("hand")}
+                >
+                  <Hand className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">ハンドツール</div>
+                    <div className="text-xs text-gray-400">ドラッグで移動</div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
 
-          {/* V4統合テキストアンカーボタン */}
-          <Button
-            size="sm"
-            variant={currentTool === "text" ? "default" : "ghost"}
-            onClick={() => onToolChange("text")}
-            title="テキストアンカー - クリックでテキスト配置"
-            style={{
-              backgroundColor: currentTool === "text" ? strokeColor : undefined,
-              borderColor: currentTool === "text" ? strokeColor : undefined,
-            }}
-          >
-            <Type 
-              className="h-4 w-4" 
-              style={{ color: currentTool === "text" ? "white" : undefined }}
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button
+                  size="sm"
+                  variant={currentTool === "select" ? "default" : "ghost"}
+                  onClick={() => onToolChange("select")}
+                >
+                  <MousePointer2 className="h-4 w-4" />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">選択ツール</div>
+                    <div className="text-xs text-gray-400">図形を選択・移動・削除</div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
+
+            <LineToolPopover
+              currentTool={currentTool}
+              onToolChange={onToolChange}
+              strokeColor={strokeColor}
+              strokeWidth={strokeWidth}
+              lineStyle={lineStyle}
+              onStrokeColorChange={onStrokeColorChange}
+              onStrokeWidthChange={onStrokeWidthChange}
+              onLineStyleChange={onLineStyleChange}
             />
-          </Button>
 
-        </div>
-      </Card>
-    </div>
+            <RectangleToolPopover
+              currentTool={currentTool}
+              onToolChange={onToolChange}
+              strokeColor={strokeColor}
+              strokeWidth={strokeWidth}
+              onStrokeColorChange={onStrokeColorChange}
+              onStrokeWidthChange={onStrokeWidthChange}
+            />
+
+            <EllipseToolPopover
+              currentTool={currentTool}
+              onToolChange={onToolChange}
+              strokeColor={strokeColor}
+              strokeWidth={strokeWidth}
+              onStrokeColorChange={onStrokeColorChange}
+              onStrokeWidthChange={onStrokeWidthChange}
+            />
+
+            {/* V4統合テキストアンカーボタン */}
+            <TooltipPrimitive.Root>
+              <TooltipPrimitive.Trigger asChild>
+                <Button
+                  size="sm"
+                  variant={currentTool === "text" ? "default" : "ghost"}
+                  onClick={() => onToolChange("text")}
+                  style={{
+                    backgroundColor: currentTool === "text" ? strokeColor : undefined,
+                    borderColor: currentTool === "text" ? strokeColor : undefined,
+                  }}
+                >
+                  <Type
+                    className="h-4 w-4"
+                    style={{ color: currentTool === "text" ? "white" : undefined }}
+                  />
+                </Button>
+              </TooltipPrimitive.Trigger>
+              <TooltipPrimitive.Portal>
+                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                  <div className="text-center">
+                    <div className="font-medium">テキストアンカー</div>
+                    <div className="text-xs text-gray-400">クリックでテキスト配置</div>
+                  </div>
+                </TooltipPrimitive.Content>
+              </TooltipPrimitive.Portal>
+            </TooltipPrimitive.Root>
+
+          </div>
+        </Card>
+      </div>
+    </TooltipPrimitive.Provider>
   )
 }

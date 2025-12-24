@@ -2,6 +2,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useCommand } from "../hooks/useCommand"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
@@ -458,6 +459,26 @@ export default function AnswerIndividualView({
     onZoomChange,
     pageSpacing,
   ])
+
+  // キーボードショートカット: 全体表示（個別モード専用）
+  useCommand("view.fullView", handleMaximizeView, {
+    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+    metadata: {
+      title: "全体表示",
+      category: "表示制御",
+      description: "個別採点時にページ全体を表示します",
+    },
+  })
+
+  // キーボードショートカット: 設問表示（個別モード専用）
+  useCommand("view.questionView", handleCropView, {
+    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
+    metadata: {
+      title: "設問表示",
+      category: "表示制御",
+      description: "個別採点時に設問領域をフィットして表示します",
+    },
+  })
 
   // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
   useEffect(() => {
