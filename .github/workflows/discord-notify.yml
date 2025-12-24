@@ -1,0 +1,172 @@
+name: Discord Notifications
+
+on:
+  issues:
+    types: [opened]
+  pull_request:
+    types: [closed]
+
+jobs:
+  notify-issue-opened:
+    name: Notify Issue Opened
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+
+    steps:
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK_ISSUES: ${{ secrets.DISCORD_WEBHOOK_ISSUES }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_ISSUES" ]; then
+            echo "DISCORD_WEBHOOK_ISSUES is not set, skipping notification"
+            exit 0
+          fi
+
+          cat > discord_notify.js << 'EOF'
+          const https = require('https');
+
+          const webhookUrl = process.env.DISCORD_WEBHOOK_ISSUES;
+          const issueTitle = process.env.ISSUE_TITLE;
+          const issueUrl = process.env.ISSUE_URL;
+          const issueNumber = process.env.ISSUE_NUMBER;
+          const issueAuthor = process.env.ISSUE_AUTHOR;
+
+          const url = new URL(webhookUrl);
+
+          const payload = JSON.stringify({
+            embeds: [{
+              title: `📋 Issue #${issueNumber} が作成されました`,
+              description: `**${issueTitle}**\n\n[Issue を確認する](${issueUrl})`,
+              color: 0x238636,
+              fields: [{
+                name: '作成者',
+                value: issueAuthor,
+                inline: true
+              }],
+              footer: {
+                text: 'Score at Once',
+                icon_url: 'https://github.com/KeppyNaushika.png'
+              },
+              timestamp: new Date().toISOString()
+            }]
+          });
+
+          const options = {
+            hostname: url.hostname,
+            port: 443,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload)
+            }
+          };
+
+          const req = https.request(options, (res) => {
+            console.log('Discord notification sent:', res.statusCode);
+          });
+
+          req.on('error', (error) => {
+            console.error('Discord notification failed:', error.message);
+          });
+
+          req.setTimeout(10000, () => {
+            req.destroy();
+            console.log('Discord notification timeout');
+          });
+
+          req.write(payload);
+          req.end();
+          EOF
+
+          DISCORD_WEBHOOK_ISSUES="${{ secrets.DISCORD_WEBHOOK_ISSUES }}" \
+          ISSUE_TITLE="${{ github.event.issue.title }}" \
+          ISSUE_URL="${{ github.event.issue.html_url }}" \
+          ISSUE_NUMBER="${{ github.event.issue.number }}" \
+          ISSUE_AUTHOR="${{ github.event.issue.user.login }}" \
+          node discord_notify.js
+
+  notify-pr-merged:
+    name: Notify PR Merged
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+
+    steps:
+      - name: Send Discord Notification
+        env:
+          DISCORD_WEBHOOK_PR: ${{ secrets.DISCORD_WEBHOOK_PR }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_PR" ]; then
+            echo "DISCORD_WEBHOOK_PR is not set, skipping notification"
+            exit 0
+          fi
+
+          cat > discord_notify.js << 'EOF'
+          const https = require('https');
+
+          const webhookUrl = process.env.DISCORD_WEBHOOK_PR;
+          const prTitle = process.env.PR_TITLE;
+          const prUrl = process.env.PR_URL;
+          const prNumber = process.env.PR_NUMBER;
+          const prAuthor = process.env.PR_AUTHOR;
+          const mergedBy = process.env.MERGED_BY;
+
+          const url = new URL(webhookUrl);
+
+          const payload = JSON.stringify({
+            embeds: [{
+              title: `🔀 PR #${prNumber} がマージされました`,
+              description: `**${prTitle}**\n\n[Pull Request を確認する](${prUrl})`,
+              color: 0x8957e5,
+              fields: [{
+                name: '作成者',
+                value: prAuthor,
+                inline: true
+              }, {
+                name: 'マージ実行者',
+                value: mergedBy,
+                inline: true
+              }],
+              footer: {
+                text: 'Score at Once',
+                icon_url: 'https://github.com/KeppyNaushika.png'
+              },
+              timestamp: new Date().toISOString()
+            }]
+          });
+
+          const options = {
+            hostname: url.hostname,
+            port: 443,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(payload)
+            }
+          };
+
+          const req = https.request(options, (res) => {
+            console.log('Discord notification sent:', res.statusCode);
+          });
+
+          req.on('error', (error) => {
+            console.error('Discord notification failed:', error.message);
+          });
+
+          req.setTimeout(10000, () => {
+            req.destroy();
+            console.log('Discord notification timeout');
+          });
+
+          req.write(payload);
+          req.end();
+          EOF
+
+          DISCORD_WEBHOOK_PR="${{ secrets.DISCORD_WEBHOOK_PR }}" \
+          PR_TITLE="${{ github.event.pull_request.title }}" \
+          PR_URL="${{ github.event.pull_request.html_url }}" \
+          PR_NUMBER="${{ github.event.pull_request.number }}" \
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}" \
+          MERGED_BY="${{ github.event.pull_request.merged_by.login }}" \
+          node discord_notify.js
