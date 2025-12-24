@@ -34,9 +34,13 @@ const EditProjectWindow = ({
   onSave,
 }: EditProjectWindowProps) => {
   const [examName, setExamName] = useState(projectToEdit.examName)
-  const [examDate, setExamDate] = useState<Date | undefined>(
-    projectToEdit.examDate ?? undefined,
-  )
+  const [examDate, setExamDate] = useState<Date | undefined>(() => {
+    if (!projectToEdit.examDate) return undefined
+    // examDateが文字列の場合はDateオブジェクトに変換
+    return projectToEdit.examDate instanceof Date
+      ? projectToEdit.examDate
+      : new Date(projectToEdit.examDate)
+  })
   const [description, setDescription] = useState<string | null>(
     projectToEdit.description ?? null,
   )
