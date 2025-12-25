@@ -10,6 +10,7 @@ export type {
   PageSize,
   PageOrientation,
   ScoringMarkConfig,
+  ScoreTextConfig,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
 
 // Re-export utilities
@@ -18,7 +19,11 @@ export {
   saveConfigToStorage,
 } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoring-mark-utils"
 
-export { defaultConfig as defaultScoringMarkConfig } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
+export {
+  defaultConfig as defaultScoringMarkConfig,
+  defaultPartialScoreConfig,
+  defaultSummaryScoreConfig,
+} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
 
 interface ScoringMarkSettingsProps {
   config: any

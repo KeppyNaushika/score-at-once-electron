@@ -8,6 +8,7 @@ interface SizeSettingsSectionProps {
   scoreSize: number
   onMarkSizeChange: (size: number) => void
   onScoreSizeChange: (size: number) => void
+  showMarkOnly?: boolean
 }
 
 export function SizeSettingsSection({
@@ -15,38 +16,43 @@ export function SizeSettingsSection({
   scoreSize,
   onMarkSizeChange,
   onScoreSizeChange,
+  showMarkOnly = false,
 }: SizeSettingsSectionProps) {
-  return (
-    <div className="grid grid-cols-2 gap-6">
-      {/* 左側：採点マークサイズ */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">
-          📌 マークサイズ: {markSize}px
-        </Label>
+  if (showMarkOnly) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-xs">サイズ (px)</Label>
         <Input
-          type="range"
+          type="number"
           value={markSize}
-          onChange={(e) => onMarkSizeChange(parseInt(e.target.value))}
+          onChange={(e) => onMarkSizeChange(parseInt(e.target.value) || 50)}
           min={20}
           max={200}
-          step={5}
-          className="w-full"
         />
       </div>
+    )
+  }
 
-      {/* 右側：点数サイズ */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">
-          🔢 点数サイズ: {scoreSize}px
-        </Label>
+  return (
+    <div className="grid grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <Label className="text-xs">マークサイズ (px)</Label>
         <Input
-          type="range"
+          type="number"
+          value={markSize}
+          onChange={(e) => onMarkSizeChange(parseInt(e.target.value) || 50)}
+          min={20}
+          max={200}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-xs">点数サイズ (px)</Label>
+        <Input
+          type="number"
           value={scoreSize}
-          onChange={(e) => onScoreSizeChange(parseInt(e.target.value))}
+          onChange={(e) => onScoreSizeChange(parseInt(e.target.value) || 14)}
           min={8}
           max={48}
-          step={1}
-          className="w-full"
         />
       </div>
     </div>

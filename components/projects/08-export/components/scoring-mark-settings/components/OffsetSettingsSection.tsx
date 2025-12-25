@@ -12,6 +12,7 @@ interface OffsetSettingsSectionProps {
   onMarkOffsetYChange: (value: number) => void
   onScoreOffsetXChange: (value: number) => void
   onScoreOffsetYChange: (value: number) => void
+  showMarkOnly?: boolean
 }
 
 export function OffsetSettingsSection({
@@ -23,68 +24,83 @@ export function OffsetSettingsSection({
   onMarkOffsetYChange,
   onScoreOffsetXChange,
   onScoreOffsetYChange,
+  showMarkOnly = false,
 }: OffsetSettingsSectionProps) {
+  if (showMarkOnly) {
+    return (
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
+          <Label className="text-xs">左右 (px)</Label>
+          <Input
+            type="number"
+            value={markOffsetX}
+            onChange={(e) => onMarkOffsetXChange(parseInt(e.target.value) || 0)}
+            min={-100}
+            max={100}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">上下 (px)</Label>
+          <Input
+            type="number"
+            value={markOffsetY}
+            onChange={(e) => onMarkOffsetYChange(parseInt(e.target.value) || 0)}
+            min={-100}
+            max={100}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 gap-6">
-      {/* 左側：採点マークオフセット設定 */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">📌 採点マークオフセット</Label>
+        <Label className="text-sm font-medium">採点マークオフセット</Label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
-            <Label className="text-xs">左右: {markOffsetX}px</Label>
+            <Label className="text-xs">左右 (px)</Label>
             <Input
-              type="range"
+              type="number"
               value={markOffsetX}
-              onChange={(e) => onMarkOffsetXChange(parseInt(e.target.value))}
+              onChange={(e) => onMarkOffsetXChange(parseInt(e.target.value) || 0)}
               min={-100}
               max={100}
-              step={1}
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs">上下: {markOffsetY}px</Label>
+            <Label className="text-xs">上下 (px)</Label>
             <Input
-              type="range"
+              type="number"
               value={markOffsetY}
-              onChange={(e) => onMarkOffsetYChange(parseInt(e.target.value))}
+              onChange={(e) => onMarkOffsetYChange(parseInt(e.target.value) || 0)}
               min={-100}
               max={100}
-              step={1}
-              className="w-full"
             />
           </div>
         </div>
       </div>
-
-      {/* 右側：点数テキストオフセット設定 */}
       <div className="space-y-3">
-        <Label className="text-sm font-medium">
-          🔢 点数テキストオフセット
-        </Label>
+        <Label className="text-sm font-medium">点数テキストオフセット</Label>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
-            <Label className="text-xs">左右: {scoreOffsetX}px</Label>
+            <Label className="text-xs">左右 (px)</Label>
             <Input
-              type="range"
+              type="number"
               value={scoreOffsetX}
-              onChange={(e) => onScoreOffsetXChange(parseInt(e.target.value))}
+              onChange={(e) => onScoreOffsetXChange(parseInt(e.target.value) || 0)}
               min={-100}
               max={100}
-              step={1}
-              className="w-full"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs">上下: {scoreOffsetY}px</Label>
+            <Label className="text-xs">上下 (px)</Label>
             <Input
-              type="range"
+              type="number"
               value={scoreOffsetY}
-              onChange={(e) => onScoreOffsetYChange(parseInt(e.target.value))}
+              onChange={(e) => onScoreOffsetYChange(parseInt(e.target.value) || 0)}
               min={-100}
               max={100}
-              step={1}
-              className="w-full"
             />
           </div>
         </div>

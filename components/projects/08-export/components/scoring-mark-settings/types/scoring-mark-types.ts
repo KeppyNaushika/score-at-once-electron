@@ -26,6 +26,15 @@ export type TextAlignment = "left" | "center" | "right"
 export type PageSize = "A4" | "A3" | "B4" | "B5" | "Letter"
 export type PageOrientation = "portrait" | "landscape"
 
+// 点数テキスト設定の共通型
+export interface ScoreTextConfig {
+  position: MarkPosition
+  offsetX: number // X軸オフセット（-100 to 100）
+  offsetY: number // Y軸オフセット（-100 to 100）
+  size: number // 点数サイズ（8 to 48）
+  alignment: TextAlignment
+}
+
 // 採点マーク設定の型定義
 export interface ScoringMarkConfig {
   // 表示設定
@@ -38,12 +47,21 @@ export interface ScoringMarkConfig {
   markOffsetY: number // Y軸オフセット（-100 to 100）
   markSize: number // マークサイズ（20 to 200）
 
-  // 点数テキスト用設定
+  // 点数テキスト用設定（後方互換性のために維持）
   scorePosition: MarkPosition
   scoreOffsetX: number // X軸オフセット（-100 to 100）
   scoreOffsetY: number // Y軸オフセット（-100 to 100）
   scoreSize: number // 点数サイズ（8 to 48）
   scoreAlignment: TextAlignment
+
+  // 部分点と小計・合計点を別々に設定するかどうか
+  useSeparateScoreSettings: boolean
+
+  // 部分点（設問ごとの点数）用設定
+  partialScore: ScoreTextConfig
+
+  // 小計・合計点用設定
+  summaryScore: ScoreTextConfig
 
   // 透明度設定
   useTransparent: boolean

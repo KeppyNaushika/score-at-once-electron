@@ -16,6 +16,7 @@ interface PositionSettingsSectionProps {
   scorePosition: MarkPosition
   onMarkPositionChange: (position: MarkPosition) => void
   onScorePositionChange: (position: MarkPosition) => void
+  showMarkOnly?: boolean
 }
 
 export function PositionSettingsSection({
@@ -23,7 +24,25 @@ export function PositionSettingsSection({
   scorePosition,
   onMarkPositionChange,
   onScorePositionChange,
+  showMarkOnly = false,
 }: PositionSettingsSectionProps) {
+  if (showMarkOnly) {
+    return (
+      <Select value={markPosition} onValueChange={onMarkPositionChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="位置を選択" />
+        </SelectTrigger>
+        <SelectContent>
+          {(Object.keys(positionLabels) as MarkPosition[]).map((position) => (
+            <SelectItem key={position} value={position}>
+              {positionLabels[position]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* 左側：採点マーク位置設定 */}

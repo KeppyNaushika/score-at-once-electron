@@ -6,42 +6,11 @@ import {
 } from "@/app/projects/[projectId]/08-export/types"
 import {
   ScoringMarkConfig,
-  defaultScoringMarkConfig,
+  loadConfigFromStorage,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
 import type { Student as PrismaStudent } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-
-// localStorageから設定を読み込む関数
-function loadScoringMarkConfig(): ScoringMarkConfig {
-  if (typeof window === "undefined") return defaultScoringMarkConfig
-
-  try {
-    const stored = localStorage.getItem("scoring-mark-config")
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      return {
-        ...defaultScoringMarkConfig,
-        ...parsed,
-        showMarkForStatus: {
-          ...defaultScoringMarkConfig.showMarkForStatus,
-          ...(parsed.showMarkForStatus || {}),
-        },
-        showScoreForStatus: {
-          ...defaultScoringMarkConfig.showScoreForStatus,
-          ...(parsed.showScoreForStatus || {}),
-        },
-      }
-    }
-  } catch (error) {
-    console.error(
-      "Failed to load scoring mark config from localStorage:",
-      error,
-    )
-  }
-
-  return defaultScoringMarkConfig
-}
 
 export function useExportPage() {
   const params = useParams()
@@ -77,7 +46,7 @@ export function useExportPage() {
   })
 
   const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
-    loadScoringMarkConfig(),
+    loadConfigFromStorage(),
   )
 
   // プログレス状態

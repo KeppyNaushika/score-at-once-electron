@@ -62,6 +62,15 @@ type MarkPosition =
 // テキスト配置の型定義
 type TextAlignment = "left" | "center" | "right"
 
+// 点数テキスト設定の共通型
+interface ScoreTextConfig {
+  position: MarkPosition
+  offsetX: number
+  offsetY: number
+  size: number
+  alignment: TextAlignment
+}
+
 // 採点マーク設定の型定義
 interface ScoringMarkConfig {
   showMarkForStatus: Record<ScoringStatus, boolean>
@@ -71,12 +80,18 @@ interface ScoringMarkConfig {
   markOffsetX: number
   markOffsetY: number
   markSize: number
-  // 点数テキスト用設定
+  // 点数テキスト用設定（後方互換性のために維持）
   scorePosition: MarkPosition
   scoreOffsetX: number
   scoreOffsetY: number
   scoreSize: number
   scoreAlignment: TextAlignment
+  // 部分点と小計・合計点を別々に設定するかどうか
+  useSeparateScoreSettings?: boolean
+  // 部分点（設問ごとの点数）用設定
+  partialScore?: ScoreTextConfig
+  // 小計・合計点用設定
+  summaryScore?: ScoreTextConfig
   useTransparent: boolean
 }
 
@@ -1039,6 +1054,22 @@ async function addAnswerSheetToPDF(
     // processedScores are ready for mark placement
 
     // デフォルト設定
+    const defaultPartialScoreConfig: ScoreTextConfig = {
+      position: "middle-center",
+      offsetX: 0,
+      offsetY: 0,
+      size: 14,
+      alignment: "center",
+    }
+
+    const defaultSummaryScoreConfig: ScoreTextConfig = {
+      position: "middle-center",
+      offsetX: 0,
+      offsetY: 0,
+      size: 18, // 小計・合計点はやや大きめ
+      alignment: "center",
+    }
+
     const defaultConfig: ScoringMarkConfig = {
       showMarkForStatus: {
         unscored: true, // 未採点も表示してテストするため
@@ -1063,12 +1094,18 @@ async function addAnswerSheetToPDF(
       markOffsetX: 0,
       markOffsetY: 0,
       markSize: 50,
-      // 点数テキスト設定
+      // 点数テキスト設定（後方互換性のために維持）
       scorePosition: "middle-center", // 既定を中央に配置
       scoreOffsetX: 0, // 中央配置なのでオフセットなし
       scoreOffsetY: 0,
       scoreSize: 14,
       scoreAlignment: "center", // 中央揃え
+      // 部分点と小計・合計点を別々に設定するかどうか
+      useSeparateScoreSettings: false,
+      // 部分点設定
+      partialScore: { ...defaultPartialScoreConfig },
+      // 小計・合計点設定
+      summaryScore: { ...defaultSummaryScoreConfig },
       useTransparent: false,
     }
 
@@ -1083,6 +1120,16 @@ async function addAnswerSheetToPDF(
         ...defaultConfig.showScoreForStatus,
         ...(scoringMarkConfig?.showScoreForStatus || {}),
       },
+      // 部分点設定のマージ（後方互換性: partialScoreがない場合は既存設定を使用）
+      partialScore: scoringMarkConfig?.partialScore || {
+        position: scoringMarkConfig?.scorePosition || defaultConfig.scorePosition,
+        offsetX: scoringMarkConfig?.scoreOffsetX || defaultConfig.scoreOffsetX,
+        offsetY: scoringMarkConfig?.scoreOffsetY || defaultConfig.scoreOffsetY,
+        size: scoringMarkConfig?.scoreSize || defaultConfig.scoreSize,
+        alignment: scoringMarkConfig?.scoreAlignment || defaultConfig.scoreAlignment,
+      },
+      // 小計・合計点設定のマージ
+      summaryScore: scoringMarkConfig?.summaryScore || defaultSummaryScoreConfig,
     }
 
     console.log(
@@ -1208,30 +1255,31 @@ async function addAnswerSheetToPDF(
         // マーク描画に失敗しても続行
       }
 
-      // 点数を描画
+      // 部分点（設問ごとの点数）を描画 - partialScore設定を使用
       if (
         config.showScoreForStatus[scoringStatus] &&
         score.score !== null &&
         score.score !== undefined
       ) {
         const scoreText = `${score.score}` // 満点表示は削除、点数のみ表示
+        const partialConfig = config.partialScore!
 
         // テキストの幅を測定
-        const textWidth = font.widthOfTextAtSize(scoreText, config.scoreSize)
-        const textHeight = config.scoreSize // フォントサイズを高さとして使用
+        const textWidth = font.widthOfTextAtSize(scoreText, partialConfig.size)
+        const textHeight = partialConfig.size // フォントサイズを高さとして使用
 
-        // テキストの位置を計算（新しい関数を使用）
+        // テキストの位置を計算（partialScore設定を使用）
         const scorePosition = calculateTextPosition(
-          config.scorePosition,
-          config.scoreOffsetX,
-          config.scoreOffsetY,
+          partialConfig.position,
+          partialConfig.offsetX,
+          partialConfig.offsetY,
           regionXOnImage,
           regionYOnImage,
           regionWidthOnImage,
           regionHeightOnImage,
           textWidth,
           textHeight,
-          config.scoreAlignment,
+          partialConfig.alignment,
         )
 
 
@@ -1239,7 +1287,7 @@ async function addAnswerSheetToPDF(
         page.drawText(scoreText, {
           x: scorePosition.x,
           y: scorePosition.y,
-          size: config.scoreSize,
+          size: partialConfig.size,
           font: font,
           color: rgb(1, 0, 0), // 赤色
         })
@@ -1249,7 +1297,7 @@ async function addAnswerSheetToPDF(
       if (score.comment) {
         const commentX = markPosition.x
         const commentY = markPosition.y - 20
-        const commentSize = Math.max(8, config.scoreSize - 4)
+        const commentSize = Math.max(8, config.partialScore!.size - 4)
 
         // コメントテキスト背景をクリア（重複描画防止）
         const commentWidth = font.widthOfTextAtSize(score.comment, commentSize)
@@ -1352,23 +1400,24 @@ async function addAnswerSheetToPDF(
             (subtotalRegion.height / image.height) * imageHeight
         }
 
-        // 小計点テキストを描画
+        // 小計点テキストを描画 - summaryScore設定を使用
         const subtotalText = `${subtotalScore}`
-        const textWidth = font.widthOfTextAtSize(subtotalText, config.scoreSize)
-        const textHeight = config.scoreSize
+        const summaryConfig = config.summaryScore!
+        const textWidth = font.widthOfTextAtSize(subtotalText, summaryConfig.size)
+        const textHeight = summaryConfig.size
 
-        // テキストの位置を計算
+        // テキストの位置を計算（summaryScore設定を使用）
         const subtotalPosition = calculateTextPosition(
-          config.scorePosition,
-          config.scoreOffsetX,
-          config.scoreOffsetY,
+          summaryConfig.position,
+          summaryConfig.offsetX,
+          summaryConfig.offsetY,
           regionXOnImage,
           regionYOnImage,
           regionWidthOnImage,
           regionHeightOnImage,
           textWidth,
           textHeight,
-          config.scoreAlignment,
+          summaryConfig.alignment,
         )
 
 
@@ -1379,7 +1428,7 @@ async function addAnswerSheetToPDF(
         page.drawText(subtotalText, {
           x: subtotalPosition.x,
           y: subtotalPosition.y,
-          size: config.scoreSize,
+          size: summaryConfig.size,
           font: font,
           color: rgb(0, 0, 1), // 青色（小計点は青色で区別）
         })
@@ -1466,26 +1515,27 @@ async function addAnswerSheetToPDF(
             (totalScoreRegion.height / image.height) * imageHeight
         }
 
-        // 合計点テキストを描画
+        // 合計点テキストを描画 - summaryScore設定を使用
         const totalScoreText = `${totalScore}`
+        const summaryConfig = config.summaryScore!
         const textWidth = font.widthOfTextAtSize(
           totalScoreText,
-          config.scoreSize,
+          summaryConfig.size,
         )
-        const textHeight = config.scoreSize
+        const textHeight = summaryConfig.size
 
-        // テキストの位置を計算
+        // テキストの位置を計算（summaryScore設定を使用）
         const totalScorePosition = calculateTextPosition(
-          config.scorePosition,
-          config.scoreOffsetX,
-          config.scoreOffsetY,
+          summaryConfig.position,
+          summaryConfig.offsetX,
+          summaryConfig.offsetY,
           regionXOnImage,
           regionYOnImage,
           regionWidthOnImage,
           regionHeightOnImage,
           textWidth,
           textHeight,
-          config.scoreAlignment,
+          summaryConfig.alignment,
         )
 
 
@@ -1496,7 +1546,7 @@ async function addAnswerSheetToPDF(
         page.drawText(totalScoreText, {
           x: totalScorePosition.x,
           y: totalScorePosition.y,
-          size: config.scoreSize,
+          size: summaryConfig.size,
           font: font,
           color: rgb(1, 0, 0), // 赤色（合計点は赤色で区別）
         })
@@ -1512,5 +1562,350 @@ async function addAnswerSheetToPDF(
     // ヘッダー情報は削除（日本語フォント問題を回避）
   } catch (error) {
     throw error
+  }
+}
+
+// ============================================================
+// Canvas描画エンジン用の新しいAPI
+// ============================================================
+
+/**
+ * PDF出力に必要なデータを取得する型定義
+ */
+export interface PdfExportPageData {
+  studentId: string
+  studentName: string
+  pageNumber: number
+  imagePath: string
+  imageUrl: string // file:// URL形式
+  scoringData: Array<{
+    questionScoreId: string
+    status: string
+    partialScore: number | null
+    cropRegion: {
+      id: string
+      x: number
+      y: number
+      width: number
+      height: number
+      label: string
+      maxScore: number | null
+      pageNumber: number
+    }
+  }>
+  annotations: Array<{
+    id: string
+    questionScoreId: string
+    type: string
+    x: number
+    y: number
+    color: string
+    strokeWidth: number
+    width: number
+    height: number
+    endX: number
+    endY: number
+    lineStyle: string
+    text: string
+    fontSize: number
+    displayX: number
+    displayY: number
+    anchorDirection: string
+  }>
+}
+
+export interface PdfExportData {
+  success: boolean
+  projectName?: string
+  pages?: PdfExportPageData[]
+  error?: string
+}
+
+/**
+ * PDF出力に必要なデータを取得
+ * レンダラー側でCanvas描画を行うためのデータを提供
+ */
+export async function getPdfExportData(options: {
+  projectId: string
+  selectedStudentIds: string[]
+}): Promise<PdfExportData> {
+  const { projectId, selectedStudentIds } = options
+
+  try {
+    // プロジェクト情報を取得
+    const project = await getProjectById(projectId)
+    if (!project) {
+      return { success: false, error: "プロジェクトが見つかりません" }
+    }
+
+    // 採点領域を取得
+    const cropRegions = await getCropRegionsByProjectId(projectId)
+
+    // 採点スコアを取得
+    const scoresResult = await getQuestionScoresForProject(projectId)
+    const allScores = scoresResult.scores || []
+
+    // 生徒情報を取得
+    const studentsResult = await getStudentsForProject(projectId)
+    const allStudents = studentsResult.students || []
+
+    // 答案画像を取得
+    const studentAnswersResult = await getStudentAnswersByProjectId(projectId)
+    const studentAnswers = studentAnswersResult.success ? studentAnswersResult.answerSheets || [] : []
+
+    // 選択された生徒のみフィルタリング
+    const selectedStudents = allStudents.filter((s) =>
+      selectedStudentIds.includes(s.id)
+    )
+
+    const pages: PdfExportPageData[] = []
+
+    for (const student of selectedStudents) {
+      // この生徒の答案画像を取得
+      const studentAnswerList = studentAnswers.filter(
+        (sa: { studentId: string | null }) => sa.studentId === student.id
+      )
+
+      if (studentAnswerList.length === 0) continue
+
+      for (const studentAnswer of studentAnswerList) {
+        const imagePath = getAbsolutePathFromData(
+          (studentAnswer as any).originalImagePath
+        )
+
+        if (!imagePath || !fs.existsSync(imagePath)) continue
+
+        // ページ番号を取得
+        const pageNumber = (studentAnswer as any).projectPage?.pageNumber || 1
+
+        // このページの採点領域を取得
+        const pageRegions = cropRegions.filter(
+          (cr) => cr.projectPage?.pageNumber === pageNumber
+        )
+
+        // 採点データを構築
+        const scoringData = pageRegions
+          .map((region) => {
+            const score = allScores.find(
+              (s) =>
+                s.cropRegionId === region.id && s.studentId === student.id
+            )
+            return {
+              questionScoreId: score?.id || "",
+              status: score?.status || "unscored",
+              partialScore:
+                score?.partialScore !== null
+                  ? Number(score?.partialScore)
+                  : null,
+              cropRegion: {
+                id: region.id,
+                x: region.x,
+                y: region.y,
+                width: region.width,
+                height: region.height,
+                label: region.label,
+                maxScore: region.points !== null ? Number(region.points) : null,
+                pageNumber: region.projectPage?.pageNumber || 1,
+              },
+            }
+          })
+          .filter((sd) => sd.questionScoreId !== "")
+
+        // アノテーションを取得
+        const annotations: PdfExportPageData["annotations"] = []
+        for (const sd of scoringData) {
+          if (!sd.questionScoreId) continue
+          const annots = await getDrawingAnnotationsByQuestionScore(
+            sd.questionScoreId
+          )
+          for (const annot of annots) {
+            annotations.push({
+              id: annot.id,
+              questionScoreId: annot.questionScoreId,
+              type: annot.type,
+              x: annot.x,
+              y: annot.y,
+              color: annot.color,
+              strokeWidth: annot.strokeWidth,
+              width: annot.width,
+              height: annot.height,
+              endX: annot.endX,
+              endY: annot.endY,
+              lineStyle: annot.lineStyle,
+              text: annot.text,
+              fontSize: annot.fontSize,
+              displayX: annot.displayX,
+              displayY: annot.displayY,
+              anchorDirection: annot.anchorDirection,
+            })
+          }
+        }
+
+        pages.push({
+          studentId: student.id,
+          studentName: `${student.lastName} ${student.firstName}`,
+          pageNumber,
+          imagePath,
+          imageUrl: `file://${imagePath}`,
+          scoringData,
+          annotations,
+        })
+      }
+    }
+
+    // ページを生徒順・ページ番号順でソート
+    pages.sort((a, b) => {
+      const studentCompare = selectedStudentIds.indexOf(a.studentId) - selectedStudentIds.indexOf(b.studentId)
+      if (studentCompare !== 0) return studentCompare
+      return a.pageNumber - b.pageNumber
+    })
+
+    return {
+      success: true,
+      projectName: project.examName,
+      pages,
+    }
+  } catch (error) {
+    console.error("Error getting PDF export data:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * Canvas描画済み画像からPDFを作成
+ */
+export async function createPdfFromRenderedImages(options: {
+  projectId: string
+  renderedPages: Array<{
+    studentId: string
+    pageNumber: number
+    imageData: ArrayBuffer
+  }>
+  pdfOrientation?: "portrait" | "landscape"
+  progressCallback?: (progress: {
+    current: number
+    total: number
+    step: string
+    percentage: number
+    currentStepIndex: number
+    totalSteps: number
+  }) => void
+}): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+  const { projectId, renderedPages, pdfOrientation = "portrait", progressCallback } = options
+
+  try {
+    // プロジェクト情報を取得
+    const project = await getProjectById(projectId)
+    if (!project) {
+      return { success: false, error: "プロジェクトが見つかりません" }
+    }
+
+    // 保存先を選択
+    const sanitizedExamName = sanitizeFileName(project.examName || "採点済み答案")
+    const { filePath: outputPath, canceled } = await dialog.showSaveDialog({
+      title: "採点済み答案PDFの保存先",
+      defaultPath: `${sanitizedExamName}_採点済み.pdf`,
+      filters: [{ name: "PDF", extensions: ["pdf"] }],
+    })
+
+    if (canceled || !outputPath) {
+      return { success: false, error: "保存がキャンセルされました" }
+    }
+
+    progressCallback?.({
+      current: 0,
+      total: renderedPages.length,
+      step: "PDFを作成中...",
+      percentage: 0,
+      currentStepIndex: 1,
+      totalSteps: 2,
+    })
+
+    // PDFドキュメントを作成
+    const pdfDoc = await PDFDocument.create()
+    const pageSize = pdfOrientation === "landscape"
+      ? [PageSizes.A4[1], PageSizes.A4[0]] as [number, number]
+      : PageSizes.A4
+
+    // 各ページを追加
+    for (let i = 0; i < renderedPages.length; i++) {
+      const pageData = renderedPages[i]
+
+      progressCallback?.({
+        current: i + 1,
+        total: renderedPages.length,
+        step: `ページ ${i + 1}/${renderedPages.length} を処理中...`,
+        percentage: Math.round(((i + 1) / renderedPages.length) * 100),
+        currentStepIndex: 1,
+        totalSteps: 2,
+      })
+
+      try {
+        // ArrayBufferからUint8Arrayに変換
+        const imageBytes = new Uint8Array(pageData.imageData)
+
+        // 画像をPDFに埋め込み
+        const image = await pdfDoc.embedPng(imageBytes)
+
+        // 新しいページを追加
+        const page = pdfDoc.addPage(pageSize)
+        const { width: pageWidth, height: pageHeight } = page.getSize()
+
+        // 画像をページにフィットさせる
+        const imageAspectRatio = image.width / image.height
+        const pageAspectRatio = pageWidth / pageHeight
+
+        let imageWidth: number
+        let imageHeight: number
+
+        if (imageAspectRatio > pageAspectRatio) {
+          // 画像の方が横長 -> 幅に合わせる
+          imageWidth = pageWidth
+          imageHeight = pageWidth / imageAspectRatio
+        } else {
+          // 画像の方が縦長 -> 高さに合わせる
+          imageHeight = pageHeight
+          imageWidth = pageHeight * imageAspectRatio
+        }
+
+        // 画像を中央に配置
+        const imageX = (pageWidth - imageWidth) / 2
+        const imageY = (pageHeight - imageHeight) / 2
+
+        page.drawImage(image, {
+          x: imageX,
+          y: imageY,
+          width: imageWidth,
+          height: imageHeight,
+        })
+      } catch (pageError) {
+        console.error(`Error processing page ${i + 1}:`, pageError)
+        // エラーが発生しても続行
+      }
+    }
+
+    progressCallback?.({
+      current: renderedPages.length,
+      total: renderedPages.length,
+      step: "PDFを保存中...",
+      percentage: 100,
+      currentStepIndex: 2,
+      totalSteps: 2,
+    })
+
+    // PDFを保存
+    const pdfBytes = await pdfDoc.save()
+    fs.writeFileSync(outputPath, pdfBytes)
+
+    return { success: true, outputPath }
+  } catch (error) {
+    console.error("Error creating PDF from rendered images:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
 }
