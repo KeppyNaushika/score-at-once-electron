@@ -86,7 +86,7 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
           }
         } catch (error) {
           if (!isCancelled) {
-            console.error("Imageプレビュー処理エラー:", error)
+            // Imageプレビュー処理エラー
             setImageUrl(null)
             setImageSize(null)
             setRenderingStatus("Image生成エラー")

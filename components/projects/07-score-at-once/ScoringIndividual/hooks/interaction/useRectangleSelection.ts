@@ -15,7 +15,12 @@ interface UseRectangleSelectionProps {
   // Actions
   clearSelection: () => void
   setIsDrawingSelection: (drawing: boolean) => void
-  setSelectionRectangle: (rect: SelectionRectangle | null) => void
+  setSelectionRectangle: (
+    rect:
+      | SelectionRectangle
+      | null
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+  ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   setSelectedElementIds: (ids: string[]) => void
   setLineEditMode: (mode: any) => void
@@ -42,7 +47,6 @@ export function useRectangleSelection({
     (imageCoords: { x: number; y: number }) => {
       if (currentTool !== "select") return false
 
-      // 何も選択されなかった場合は選択範囲ドラッグを開始
       if (!isCtrlPressed) {
         clearSelection()
       }
@@ -71,33 +75,25 @@ export function useRectangleSelection({
     ],
   )
 
-  // 長方形選択の更新
+  // 長方形選択の更新 - 関数型更新で最新の状態を使用
   const updateRectangleSelection = useCallback(
     (imageCoords: { x: number; y: number }) => {
-      if (
-        currentTool !== "select" ||
-        !isDrawingSelection ||
-        !selectionRectangle
-      ) {
+      if (currentTool !== "select" || !isDrawingSelection) {
         return false
       }
 
-      const width = imageCoords.x - selectionRectangle.x
-      const height = imageCoords.y - selectionRectangle.y
+      // 関数型更新で最新の selectionRectangle を使用
+      setSelectionRectangle((prev) => {
+        if (!prev) return prev
 
-      setSelectionRectangle({
-        ...selectionRectangle,
-        width,
-        height,
+        const width = imageCoords.x - prev.x
+        const height = imageCoords.y - prev.y
+
+        return { ...prev, width, height }
       })
       return true
     },
-    [
-      currentTool,
-      isDrawingSelection,
-      selectionRectangle,
-      setSelectionRectangle,
-    ],
+    [currentTool, isDrawingSelection, setSelectionRectangle],
   )
 
   // 長方形選択の完了

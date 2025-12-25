@@ -1,8 +1,31 @@
+/**
+ * @fileoverview 描画スタイルフック
+ * 線種（実線・波線・ジグザグ・二重線）の描画機能を提供
+ */
 import type { LineStyle } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback } from "react"
 
+/**
+ * 描画スタイルフック
+ *
+ * @description
+ * 様々な線種（solid, wave, zigzag, double）を
+ * Canvasに描画するためのユーティリティを提供する。
+ *
+ * @returns 描画スタイル関数
+ */
 export function useDrawingStyleUtils() {
-  // 線種描画機能
+  /**
+   * 指定されたスタイルで線を描画
+   *
+   * @param ctx - Canvasコンテキスト
+   * @param x1 - 開始点X座標
+   * @param y1 - 開始点Y座標
+   * @param x2 - 終了点X座標
+   * @param y2 - 終了点Y座標
+   * @param style - 線のスタイル
+   * @param strokeWidth - 線の太さ
+   */
   const drawLineWithStyle = useCallback(
     (
       ctx: CanvasRenderingContext2D,

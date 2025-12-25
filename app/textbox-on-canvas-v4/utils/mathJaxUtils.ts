@@ -33,23 +33,12 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
   const MathJax = (window as any).MathJax
 
   if (!MathJax) {
-    console.warn("MathJaxが利用できません")
     return
   }
 
   try {
-    // MathJax 4の初期化完了を確認
-    console.log("MathJax状態確認:", {
-      startup: !!MathJax.startup,
-      document: !!MathJax.startup?.document,
-      typesetPromise: !!MathJax.typesetPromise,
-      typeset: !!MathJax.typeset,
-      mathJaxReady: (window as any).mathJaxReady
-    })
-
     // MathJaxが完全に初期化されるまで待機（非同期読み込み対応）
     if (!MathJax.startup?.document && !(window as any).mathJaxReady) {
-      console.log("MathJax初期化を待機中...")
       await new Promise((resolve) => {
         // 既に初期化済みの場合
         if ((window as any).mathJaxReady || (MathJax.startup?.document)) {
@@ -63,10 +52,8 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
         const checkReady = () => {
           attempts++
           if ((window as any).mathJaxReady || MathJax.startup?.document || MathJax.typesetPromise) {
-            console.log(`MathJax初期化完了 (${attempts * 500}ms後)`)
             resolve(void 0)
           } else if (attempts >= maxAttempts) {
-            console.warn("MathJax初期化タイムアウト - 処理を継続")
             resolve(void 0)
           } else {
             setTimeout(checkReady, 500)
@@ -77,7 +64,6 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
         window.addEventListener(
           "mathjax-ready",
           () => {
-            console.log("MathJax ready イベント受信")
             resolve(void 0)
           },
           { once: true },
@@ -89,8 +75,6 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
 
     // typesetPromiseが利用可能な場合
     if (MathJax.typesetPromise && typeof MathJax.typesetPromise === 'function') {
-      console.log("MathJax typesetPromise実行中...")
-
       try {
         const typesetTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error("MathJax typeset timeout")), 8000)
@@ -100,52 +84,35 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
           MathJax.typesetPromise([container]),
           typesetTimeout,
         ])
-        console.log("MathJax typesetPromise完了")
-      } catch (error) {
-        console.warn("MathJax typesetPromise失敗:", error)
-        
+      } catch {
         // フォールバック: 同期typeset
         if (MathJax.typeset && typeof MathJax.typeset === 'function') {
-          console.log("フォールバック: 同期typeset実行")
           MathJax.typeset([container])
-        } else {
-          console.warn("フォールバックtypesetも利用不可")
         }
       }
     }
     // typesetが利用可能な場合
     else if (MathJax.typeset && typeof MathJax.typeset === 'function') {
-      console.log("MathJax typeset（同期）実行中...")
       MathJax.typeset([container])
-      console.log("MathJax typeset（同期）完了")
     }
     // どちらも利用不可な場合
     else {
-      console.warn("MathJaxの組版メソッドが見つかりません", {
-        typesetPromise: MathJax.typesetPromise,
-        typeset: MathJax.typeset,
-        allMethods: Object.keys(MathJax).filter(k => typeof MathJax[k] === 'function')
-      })
-      
       // 最終フォールバック: 手動再初期化を試行
       if (MathJax.startup && typeof MathJax.startup.defaultReady === 'function') {
-        console.log("MathJax再初期化を試行...")
         try {
           await MathJax.startup.defaultReady()
           if (MathJax.typeset) {
             MathJax.typeset([container])
-            console.log("再初期化後のtypeset完了")
           }
-        } catch (reinitError) {
-          console.warn("MathJax再初期化失敗:", reinitError)
+        } catch {
+          // 再初期化失敗
         }
       }
     }
 
-    await waitForRenderingComplete(3) // 待機時間を延長
-    console.log("MathJax処理完了")
-  } catch (error) {
-    console.error("MathJax処理エラー:", error)
+    await waitForRenderingComplete(3)
+  } catch {
+    // MathJax処理エラー
   }
 }
 
@@ -236,8 +203,8 @@ export async function measureMathJaxContentSize(
       width: Math.max(20, scrollSize.width),
       height: Math.max(20, scrollSize.height),
     }
-  } catch (error) {
-    console.error("MathJax測定エラー:", error)
+  } catch {
+    // MathJax測定エラー
   } finally {
     // 必ずクリーンアップする
     if (document.body.contains(tempDiv)) {
@@ -256,19 +223,16 @@ function extractMathJaxDefs(): string {
   // 最も効率的で確実な方法：グローバルキャッシュから取得
   const globalCache = document.querySelector("#MJX-SVG-global-cache defs")
   if (globalCache && globalCache.innerHTML.length > 100) {
-    console.log(`📦 グローバルdefs取得: ${globalCache.innerHTML.length}文字`)
     return globalCache.outerHTML
   }
 
   // フォールバック：MathJaxスタイル要素も含める
   const styleElement = document.querySelector('style[id*="MJX"]')
   if (styleElement && styleElement.innerHTML.length > 100) {
-    console.log(`📦 MathJaxスタイル取得: ${styleElement.innerHTML.length}文字`)
     return styleElement.outerHTML
   }
 
   // 最終フォールバック：何も見つからない場合は空文字を返す
-  console.log(`📝 MathJax defsが見つかりません（純粋なテキスト表示）`)
   return ""
 }
 
@@ -283,20 +247,15 @@ async function waitForMathJaxDefsGeneration(): Promise<boolean> {
     "#MJX-SVG-global-cache defs",
   )
   if (existingGlobalDefs && existingGlobalDefs.innerHTML.length > 100) {
-    console.log(
-      `✅ 既存のMathJax defs確認: ${existingGlobalDefs.innerHTML.length}文字`,
-    )
     return true
   }
 
   // グローバルdefsが存在しない場合は、コンテナ内defsを検索
   const mjxContainers = document.querySelectorAll("mjx-container svg defs")
   if (mjxContainers.length > 0) {
-    console.log(`✅ MathJax defs生成確認: ${mjxContainers.length}個`)
     return true
   }
 
-  console.log(`📝 MathJax defsは不要（純粋なSVG出力）`)
   return true // defsが不要な場合もある
 }
 
@@ -312,8 +271,6 @@ export async function createOptimizedSVG(
 ): Promise<SVGSVGElement> {
   // MathJax defsを抽出（軽量化）
   const mathJaxDefs = extractMathJaxDefs()
-
-  console.log(`🎨 SVG生成: ${measuredSize.width}x${measuredSize.height}, defs: ${mathJaxDefs.length > 0 ? 'あり' : 'なし'}`)
 
   const svgString = `
     <svg xmlns="${SVG_SETTINGS.NAMESPACE}"

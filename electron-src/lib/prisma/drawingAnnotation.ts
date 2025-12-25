@@ -88,6 +88,8 @@ export async function createDrawingAnnotation(
 
     const result = await prisma.drawingAnnotation.create({
       data: {
+        // フロントエンドで生成したIDがあれば使用、なければPrismaが自動生成
+        ...(data.id && { id: data.id }),
         questionScoreId: data.questionScoreId,
         type: data.type,
         x: data.x,

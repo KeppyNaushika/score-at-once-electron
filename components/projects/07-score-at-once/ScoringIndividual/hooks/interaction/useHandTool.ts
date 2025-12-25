@@ -1,15 +1,36 @@
+/**
+ * @fileoverview ハンドツールフック
+ * コンテナのドラッグスクロール（パン操作）を管理
+ */
 import { useCallback } from "react"
 
+/** ハンドツールフックのプロパティ */
 interface UseHandToolHandlersProps {
+  /** コンテナ参照 */
   containerRef: React.RefObject<HTMLDivElement | null>
+  /** 現在のツール */
   currentTool: string
+  /** ドラッグ中フラグ */
   isDraggingElement: boolean
+  /** ドラッグオフセット */
   dragElementOffset: { x: number; y: number }
+  /** ドラッグ状態設定関数 */
   setIsDraggingElement: (dragging: boolean) => void
+  /** ドラッグオフセット設定関数 */
   setDragElementOffset: (offset: { x: number; y: number }) => void
 }
 
-export function useHandToolHandlers({
+/**
+ * ハンドツールフック
+ *
+ * @description
+ * ハンドツール選択時のドラッグ操作で
+ * コンテナをスクロールさせる（パン操作）機能を提供する。
+ *
+ * @param props - フックのプロパティ
+ * @returns マウスイベントハンドラー
+ */
+export function useHandTool({
   containerRef,
   currentTool,
   isDraggingElement,

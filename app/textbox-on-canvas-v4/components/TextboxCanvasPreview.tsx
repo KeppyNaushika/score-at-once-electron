@@ -74,7 +74,7 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
             setRenderingStatus("SVG生成失敗")
           }
         } catch (error) {
-          console.error("Canvasプレビュー処理エラー:", error)
+          // Canvasプレビュー処理エラー
           setCanvasSize(null)
           setRenderingStatus("Canvas描画エラー")
         }

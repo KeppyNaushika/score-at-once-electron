@@ -2,6 +2,7 @@
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
+  QuestionScore,
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
@@ -14,6 +15,18 @@ export type LineStyle =
   | "double"
   | "arrow"
   | "both_arrow"
+
+// アンカー方向（8方向 + center）
+export type AnchorDirection =
+  | "top-left"
+  | "top"
+  | "top-right"
+  | "left"
+  | "center"
+  | "right"
+  | "bottom-left"
+  | "bottom"
+  | "bottom-right"
 
 // 描画要素の型定義
 export interface DrawingElement {
@@ -33,6 +46,7 @@ export interface DrawingElement {
   // テキストボックス用
   textBoxWidth?: number // 0.0 - 1.0
   textBoxHeight?: number // 0.0 - 1.0
+  anchorDirection?: AnchorDirection // テキストのアンカー方向
   // テキストボックス表示用座標（逆方向ドラッグ対応）
   displayX?: number // 0.0 - 1.0
   displayY?: number // 0.0 - 1.0
@@ -66,6 +80,9 @@ export interface AnswerIndividualViewProps {
   // QuestionScore自動作成用のコンテキスト情報
   currentStudentId?: string
   currentUserId?: string
+
+  // アノテーション用: QuestionScore配列（正しいquestionScoreIdを取得するため）
+  questionScores?: QuestionScore[]
 
   // Individual表示固有設定
   pageImages?: PageImageWithProjectStudents[] // 全答案データ
@@ -115,6 +132,8 @@ export interface DrawingState {
   isCtrlPressed: boolean // Ctrl/Cmd修飾キー状態
   isDraggingHandle: boolean
   currentHandle: string | null
+  // ホバー中の要素ID（ハンドル表示用）
+  hoveredElementId: string | null
 }
 
 // 描画アクション
@@ -124,7 +143,9 @@ export interface DrawingActions {
   setStrokeWidth: (width: number) => void
   setLineStyle: (style: LineStyle) => void
   setFontSize: (size: number) => void
-  setDrawingElements: (elements: DrawingElement[]) => void
+  setDrawingElements: (
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+  ) => void
   addDrawingElement: (element: DrawingElement) => void
   updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
   removeDrawingElement: (id: string) => void
@@ -136,13 +157,25 @@ export interface DrawingActions {
   clearSelection: () => void
   // 選択範囲
   setIsDrawingSelection: (drawing: boolean) => void
-  setSelectionRectangle: (rect: SelectionRectangle | null) => void
+  setSelectionRectangle: (
+    rect:
+      | SelectionRectangle
+      | null
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+  ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   clearDrawing: () => void
 
   // Internal state updaters
   setIsDrawing: (drawing: boolean) => void
-  setCurrentDrawing: (drawing: Partial<DrawingElement> | null) => void
+  setCurrentDrawing: (
+    drawing:
+      | Partial<DrawingElement>
+      | null
+      | ((
+          prev: Partial<DrawingElement> | null,
+        ) => Partial<DrawingElement> | null),
+  ) => void
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
@@ -158,4 +191,6 @@ export interface DrawingActions {
   setIsCtrlPressed: (pressed: boolean) => void
   setIsDraggingHandle: (dragging: boolean) => void
   setCurrentHandle: (handle: string | null) => void
+  // ホバー要素ID更新
+  setHoveredElementId: (id: string | null) => void
 }

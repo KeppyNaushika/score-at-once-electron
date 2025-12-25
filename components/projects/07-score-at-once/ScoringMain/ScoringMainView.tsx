@@ -863,6 +863,7 @@ function ScoringMainViewContent() {
           onTextInputStateChange={setShowTextInput}
           currentStudentId={currentStudentId || undefined}
           currentUserId={currentUserId || undefined}
+          questionScores={questionScores}
         />
 
         {/* 右側サイドパネル */}

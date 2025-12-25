@@ -8,6 +8,7 @@ import type {
   LayoutDirection,
   MasterAnswerData,
   PageImageWithProjectStudents,
+  QuestionScore,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 
@@ -50,6 +51,9 @@ interface ScoringContentAreaProps {
   /** QuestionScore自動作成用のコンテキスト情報 */
   currentStudentId?: string
   currentUserId?: string
+
+  /** アノテーション用: QuestionScore配列 */
+  questionScores?: QuestionScore[]
 }
 
 export function ScoringContentArea({
@@ -71,6 +75,7 @@ export function ScoringContentArea({
   onTextInputStateChange,
   currentStudentId,
   currentUserId,
+  questionScores,
 }: ScoringContentAreaProps) {
   /** 個別表示時：selectedの最初の要素を利用 */
   const currentScoringDataId =
@@ -106,6 +111,7 @@ export function ScoringContentArea({
       onTextInputStateChange={onTextInputStateChange}
       currentStudentId={currentStudentId}
       currentUserId={currentUserId}
+      questionScores={questionScores}
     />
   ) : (
     /** Grid表示：paddingとスクロールを統合 */

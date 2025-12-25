@@ -1,5 +1,5 @@
-import { useCallback, useRef } from "react"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import { useCallback, useRef } from "react"
 
 interface UseElementSelectionProps {
   currentTool: string
