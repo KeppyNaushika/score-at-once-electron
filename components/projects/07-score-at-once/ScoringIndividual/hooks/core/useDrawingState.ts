@@ -9,7 +9,13 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 // データベース統合フックのインポート
 import {
@@ -130,6 +136,7 @@ export function useDrawingState(
 
       // 設問変更時は即座にdrawingElementsと選択をクリア
       // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 意図的：設問変更時に古いデータ表示を防ぐため描画前にクリアが必要
       setDrawingElements([])
       setSelectedElementIds([])
 
@@ -149,6 +156,7 @@ export function useDrawingState(
 
     // annotationsをdrawingElementsに変換（同期的に更新）
     const elements = annotations.map(convertAnnotationToElement)
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 意図的：DBアノテーション変更時にローカル状態を同期するため必要
     setDrawingElements(elements)
   }, [annotations])
 
@@ -202,6 +210,44 @@ export function useDrawingState(
                 element.id === id ? previousElement! : element,
               ),
             )
+          }
+        }
+      }
+    },
+    [enablePersistence, questionScoreId, updateElement],
+  )
+
+  // 複数要素を一括更新（1回のsetStateで全て更新）
+  const updateDrawingElements = useCallback(
+    async (
+      updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+    ) => {
+      const previousElements: Map<string, DrawingElement> = new Map()
+      const updateMap = new Map(updates.map((u) => [u.id, u.updates]))
+
+      // ローカル状態を即座に更新（1回のsetStateで全て更新）
+      setDrawingElements((prev) => {
+        return prev.map((element) => {
+          const elementUpdates = updateMap.get(element.id)
+          if (elementUpdates) {
+            previousElements.set(element.id, element)
+            return { ...element, ...elementUpdates }
+          }
+          return element
+        })
+      })
+
+      // データベース更新（バックグラウンド、各要素を個別に更新）
+      if (enablePersistence && questionScoreId) {
+        for (const { id, updates: elementUpdates } of updates) {
+          const previousElement = previousElements.get(id)
+          if (previousElement) {
+            try {
+              const updatedElement = { ...previousElement, ...elementUpdates }
+              await updateElement(updatedElement)
+            } catch (error) {
+              console.error("描画要素更新エラー:", error)
+            }
           }
         }
       }
@@ -418,6 +464,7 @@ export function useDrawingState(
     setDrawingElements,
     addDrawingElement,
     updateDrawingElement,
+    updateDrawingElements,
     removeDrawingElement,
     // 複数選択システム
     setSelectedElementIds,

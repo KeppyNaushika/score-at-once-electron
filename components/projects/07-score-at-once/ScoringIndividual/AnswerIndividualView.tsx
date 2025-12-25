@@ -1,18 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
+import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useCommand } from "../hooks/useCommand"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
-import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useTextboxV4Integration } from "./hooks/text/useTextboxIntegration"
+import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
-import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 
 export default function AnswerIndividualView({
   scoringDatas,
@@ -46,7 +46,9 @@ export default function AnswerIndividualView({
       return null
     }
     const found = questionScores.find(
-      (qs) => qs.studentId === currentStudentId && qs.cropRegionId === currentCropRegion.id
+      (qs) =>
+        qs.studentId === currentStudentId &&
+        qs.cropRegionId === currentCropRegion.id,
     )
     return found?.id ?? null
   }, [questionScores, currentStudentId, currentCropRegion])
@@ -61,12 +63,14 @@ export default function AnswerIndividualView({
       currentStudentId,
       currentCropRegionId: currentCropRegion?.id,
       currentUserId,
-    }
+    },
   )
 
   // 透明度制御用：全設問のアノテーション読み込み
-  const [allStudentAnnotations, setAllStudentAnnotations] = useState<DrawingAnnotation[]>([])
-  
+  const [allStudentAnnotations, setAllStudentAnnotations] = useState<
+    DrawingAnnotation[]
+  >([])
+
   // 現在の学生とプロジェクトの全アノテーションを読み込み（透明度制御用）
   useEffect(() => {
     const loadAllAnnotations = async () => {
@@ -76,35 +80,39 @@ export default function AnswerIndividualView({
       }
 
       try {
-        console.log('🎨 透明度制御: 全設問アノテーション読み込み開始', {
+        console.log("🎨 透明度制御: 全設問アノテーション読み込み開始", {
           studentId: currentStudentId,
-          projectId: currentCropRegion.projectPage.projectId
+          projectId: currentCropRegion.projectPage.projectId,
         })
-        
+
         // ElectronAPIを直接呼び出してフック依存関係を回避
         const result = await window.electronAPI.drawing.getByStudent(
           currentStudentId,
-          currentCropRegion.projectPage.projectId
+          currentCropRegion.projectPage.projectId,
         )
-        
+
         if (result.success && result.data) {
-          console.log('🎨 透明度制御: 読み込み完了', {
+          console.log("🎨 透明度制御: 読み込み完了", {
             annotationCount: result.data.length,
-            currentCropRegionId: currentCropRegion?.id
+            currentCropRegionId: currentCropRegion?.id,
           })
           setAllStudentAnnotations(result.data)
         } else {
-          console.error('全設問アノテーション読み込みエラー:', result.error)
+          console.error("全設問アノテーション読み込みエラー:", result.error)
           setAllStudentAnnotations([])
         }
       } catch (error) {
-        console.error('全設問アノテーション読み込みエラー:', error)
+        console.error("全設問アノテーション読み込みエラー:", error)
         setAllStudentAnnotations([])
       }
     }
 
     loadAllAnnotations()
-  }, [currentStudentId, currentCropRegion?.projectPage?.projectId, currentCropRegion?.id])
+  }, [
+    currentStudentId,
+    currentCropRegion?.projectPage?.projectId,
+    currentCropRegion?.id,
+  ])
 
   // テキスト入力状態変更の通知
   useEffect(() => {
@@ -116,33 +124,41 @@ export default function AnswerIndividualView({
   // currentCropRegionはすでにpropsで渡されている（派生済み）
 
   // 画像とキャンバス管理（透明度制御統合）
-  const { canvasRef, overlayCanvasRef, textCanvasRef, imageRef, containerRef, imageLoaded, loadedImages, textBoundsCache } =
-    useImageCanvas({
-      currentScoringData,
-      currentCropRegion,
-      pageImages,
-      zoom,
-      position,
-      drawingElements: drawingState.drawingElements,
-      currentDrawing: drawingState.currentDrawing,
-      isDrawing: drawingState.isDrawing,
-      isCreatingTextBox: drawingState.isCreatingTextBox,
-      strokeColor: drawingState.strokeColor,
-      strokeWidth: drawingState.strokeWidth,
-      lineStyle: drawingState.lineStyle,
-      isShiftPressed: drawingState.isShiftPressed,
-      selectedElementIds: drawingState.selectedElementIds,
-      isDrawingSelection: drawingState.isDrawingSelection,
-      selectionRectangle: drawingState.selectionRectangle,
-      showMultiplePages,
-      pageSpacing,
-      isDraggingElement: drawingState.isDraggingElement,
-      // 透明度制御用の全アノテーション
-      allAnnotations: allStudentAnnotations,
-      currentCropRegionId: currentCropRegion?.id,
-      // ホバー要素ID（ハンドル表示用）
-      hoveredElementId: drawingState.hoveredElementId,
-    })
+  const {
+    canvasRef,
+    overlayCanvasRef,
+    textCanvasRef,
+    imageRef,
+    containerRef,
+    imageLoaded,
+    loadedImages,
+    textBoundsCache,
+  } = useImageCanvas({
+    currentScoringData,
+    currentCropRegion,
+    pageImages,
+    zoom,
+    position,
+    drawingElements: drawingState.drawingElements,
+    currentDrawing: drawingState.currentDrawing,
+    isDrawing: drawingState.isDrawing,
+    isCreatingTextBox: drawingState.isCreatingTextBox,
+    strokeColor: drawingState.strokeColor,
+    strokeWidth: drawingState.strokeWidth,
+    lineStyle: drawingState.lineStyle,
+    isShiftPressed: drawingState.isShiftPressed,
+    selectedElementIds: drawingState.selectedElementIds,
+    isDrawingSelection: drawingState.isDrawingSelection,
+    selectionRectangle: drawingState.selectionRectangle,
+    showMultiplePages,
+    pageSpacing,
+    isDraggingElement: drawingState.isDraggingElement,
+    // 透明度制御用の全アノテーション
+    allAnnotations: allStudentAnnotations,
+    currentCropRegionId: currentCropRegion?.id,
+    // ホバー要素ID（ハンドル表示用）
+    hoveredElementId: drawingState.hoveredElementId,
+  })
 
   // V4統合フック（画像サイズが確定してから初期化）
   const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
@@ -529,7 +545,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "画面のパン操作を行います",
       },
-    }
+    },
   )
 
   // 選択ツール
@@ -543,7 +559,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "図形を選択・移動・編集します",
       },
-    }
+    },
   )
 
   // テキストツール
@@ -557,7 +573,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "テキストを追加します",
       },
-    }
+    },
   )
 
   // 線ツール
@@ -571,7 +587,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "直線を描画します",
       },
-    }
+    },
   )
 
   // 矩形ツール
@@ -585,7 +601,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "矩形を描画します",
       },
-    }
+    },
   )
 
   // 楕円ツール
@@ -599,7 +615,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "楕円・円を描画します",
       },
-    }
+    },
   )
 
   // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
@@ -664,9 +680,20 @@ export default function AnswerIndividualView({
       const scrollLeft = Math.max(0, Math.min(idealScrollLeft, maxScrollLeft))
       const scrollTop = Math.max(0, Math.min(idealScrollTop, maxScrollTop))
 
-      container.scrollTo({ left: scrollLeft, top: scrollTop, behavior: "smooth" })
+      container.scrollTo({
+        left: scrollLeft,
+        top: scrollTop,
+        behavior: "smooth",
+      })
     })
-  }, [currentCropRegion?.id, containerRef, imageLoaded, loadedImages, pageSpacing, zoom])
+  }, [
+    currentCropRegion?.id,
+    containerRef,
+    imageLoaded,
+    loadedImages,
+    pageSpacing,
+    zoom,
+  ])
 
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
@@ -736,7 +763,7 @@ export default function AnswerIndividualView({
                   )
                 : 600
             }
-            className="absolute left-0 top-0 block"
+            className="absolute top-0 left-0 block"
             style={{
               width:
                 loadedImages.length > 0
@@ -780,7 +807,7 @@ export default function AnswerIndividualView({
                   )
                 : 600
             }
-            className="absolute left-0 top-0 block pointer-events-none"
+            className="pointer-events-none absolute top-0 left-0 block"
             style={{
               width:
                 loadedImages.length > 0
@@ -819,7 +846,7 @@ export default function AnswerIndividualView({
                   )
                 : 600
             }
-            className="absolute left-0 top-0 block pointer-events-none"
+            className="pointer-events-none absolute top-0 left-0 block"
             style={{
               width:
                 loadedImages.length > 0
@@ -872,10 +899,10 @@ export default function AnswerIndividualView({
         onStrokeColorChange={drawingState.setStrokeColor}
         onStrokeWidthChange={drawingState.setStrokeWidth}
         onLineStyleChange={(style) => drawingState.setLineStyle(style as any)}
-        selectedElements={drawingState.drawingElements.filter(el =>
-          drawingState.selectedElementIds.includes(el.id)
+        selectedElements={drawingState.drawingElements.filter((el) =>
+          drawingState.selectedElementIds.includes(el.id),
         )}
-        onUpdateSelectedElement={drawingState.updateDrawingElement}
+        onUpdateSelectedElements={drawingState.updateDrawingElements}
         onClearSelection={drawingState.clearSelection}
       />
 

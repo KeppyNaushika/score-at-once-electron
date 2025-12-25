@@ -53,7 +53,13 @@ export interface DrawingElement {
 }
 
 // 描画ツールの型定義
-export type DrawingTool = "hand" | "text" | "line" | "rectangle" | "ellipse" | "select"
+export type DrawingTool =
+  | "hand"
+  | "text"
+  | "line"
+  | "rectangle"
+  | "ellipse"
+  | "select"
 
 // 線の編集モード
 export type LineEditMode = "move" | "start" | "end" | null
@@ -88,7 +94,7 @@ export interface AnswerIndividualViewProps {
   pageImages?: PageImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
   pageSpacing?: number // ページ間の余白（ピクセル）
-  
+
   // テキスト入力状態変更のコールバック
   onTextInputStateChange?: (showTextInput: boolean) => void
 }
@@ -146,9 +152,15 @@ export interface DrawingActions {
   setDrawingElements: (
     elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
   ) => void
-  addDrawingElement: (element: DrawingElement) => void
-  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
-  removeDrawingElement: (id: string) => void
+  addDrawingElement: (element: DrawingElement) => void | Promise<void>
+  updateDrawingElement: (
+    id: string,
+    updates: Partial<DrawingElement>,
+  ) => void | Promise<void>
+  updateDrawingElements: (
+    updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+  ) => void | Promise<void>
+  removeDrawingElement: (id: string) => void | Promise<void>
   // 複数選択システム
   setSelectedElementIds: (ids: string[]) => void
   addToSelection: (id: string) => void
