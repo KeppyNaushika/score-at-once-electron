@@ -47,8 +47,8 @@ export function LineToolPopover({
     // イベント伝播を停止（キャンバスのクリックハンドラに伝播しないように）
     e.stopPropagation()
 
-    // 他のタイプの要素が選択されている場合は選択を解除
-    if (hasOtherTypeSelected && onClearSelection) {
+    // このタイプの要素が選択されていない場合のみ選択を解除
+    if (!hasSelectedElement && hasOtherTypeSelected && onClearSelection) {
       onClearSelection()
     }
 
@@ -75,7 +75,12 @@ export function LineToolPopover({
           size="sm"
           variant={isActive ? "default" : "ghost"}
           onClick={handleClick}
-          title={hasSelectedElement ? "選択中の線を編集" : "自由線ツール - Shift+ドラッグで鉛直・水平線"}
+          onPointerDown={(e) => e.stopPropagation()}
+          title={
+            hasSelectedElement
+              ? "選択中の線を編集"
+              : "自由線ツール - Shift+ドラッグで鉛直・水平線"
+          }
           style={{
             backgroundColor: isActive ? strokeColor : undefined,
             borderColor: isActive ? strokeColor : undefined,
@@ -94,13 +99,16 @@ export function LineToolPopover({
           </h4>
 
           {/* 線種選択 */}
-          <div>
+          <div onPointerDown={(e) => e.stopPropagation()}>
             <Label className="text-xs">線種</Label>
             <div className="mt-1 grid grid-cols-2 gap-1">
               <Button
                 size="sm"
                 variant={lineStyle === "solid" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("solid")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("solid")
+                }}
                 className="h-8 text-xs"
               >
                 直線
@@ -108,7 +116,10 @@ export function LineToolPopover({
               <Button
                 size="sm"
                 variant={lineStyle === "wave" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("wave")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("wave")
+                }}
                 className="h-8 text-xs"
               >
                 波線
@@ -116,7 +127,10 @@ export function LineToolPopover({
               <Button
                 size="sm"
                 variant={lineStyle === "zigzag" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("zigzag")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("zigzag")
+                }}
                 className="h-8 text-xs"
               >
                 折線
@@ -124,7 +138,10 @@ export function LineToolPopover({
               <Button
                 size="sm"
                 variant={lineStyle === "double" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("double")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("double")
+                }}
                 className="h-8 text-xs"
               >
                 二重線
@@ -132,7 +149,10 @@ export function LineToolPopover({
               <Button
                 size="sm"
                 variant={lineStyle === "arrow" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("arrow")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("arrow")
+                }}
                 className="h-8 text-xs"
               >
                 矢印 →
@@ -140,7 +160,10 @@ export function LineToolPopover({
               <Button
                 size="sm"
                 variant={lineStyle === "both_arrow" ? "default" : "outline"}
-                onClick={() => onLineStyleChange("both_arrow")}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onLineStyleChange("both_arrow")
+                }}
                 className="h-8 text-xs"
               >
                 両矢印 ↔
@@ -149,7 +172,7 @@ export function LineToolPopover({
           </div>
 
           {/* 線幅 */}
-          <div>
+          <div onPointerDown={(e) => e.stopPropagation()}>
             <Label className="text-xs">線幅: {strokeWidth}px</Label>
             <Slider
               min={1}
@@ -168,7 +191,11 @@ export function LineToolPopover({
               {COLOR_PALETTE.map((color, index) => (
                 <button
                   key={index}
-                  onClick={() => onStrokeColorChange(color)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStrokeColorChange(color)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={`h-5 w-5 rounded border transition-transform hover:scale-110 ${
                     strokeColor === color
                       ? "border-2 border-gray-800"

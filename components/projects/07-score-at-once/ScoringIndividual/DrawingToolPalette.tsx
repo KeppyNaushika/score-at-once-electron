@@ -4,8 +4,8 @@ import type { CropRegionWithProjectPage } from "@/components/projects/07-score-a
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import { cn } from "@/lib/utils"
+import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import {
   Crop,
   Hand,
@@ -19,7 +19,10 @@ import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
 import { TextToolPopover } from "./TextToolPopover"
-import type { DrawingElement, DrawingTool } from "./types/answer-individual-types"
+import type {
+  DrawingElement,
+  DrawingTool,
+} from "./types/answer-individual-types"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 
@@ -48,7 +51,9 @@ interface DrawingToolPaletteProps {
 
   // 選択中の要素（スタイル編集用）
   selectedElements?: DrawingElement[]
-  onUpdateSelectedElement?: (id: string, updates: Partial<DrawingElement>) => void
+  onUpdateSelectedElements?: (
+    updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+  ) => void
   onClearSelection?: () => void
 }
 
@@ -68,14 +73,18 @@ export function DrawingToolPalette({
   onStrokeWidthChange,
   onLineStyleChange,
   selectedElements = [],
-  onUpdateSelectedElement,
+  onUpdateSelectedElements,
   onClearSelection,
 }: DrawingToolPaletteProps) {
   // 選択中の各タイプの要素を取得（複数選択対応）
-  const selectedLines = selectedElements.filter(el => el.type === "line")
-  const selectedRectangles = selectedElements.filter(el => el.type === "rectangle")
-  const selectedEllipses = selectedElements.filter(el => el.type === "ellipse")
-  const selectedTexts = selectedElements.filter(el => el.type === "text")
+  const selectedLines = selectedElements.filter((el) => el.type === "line")
+  const selectedRectangles = selectedElements.filter(
+    (el) => el.type === "rectangle",
+  )
+  const selectedEllipses = selectedElements.filter(
+    (el) => el.type === "ellipse",
+  )
+  const selectedTexts = selectedElements.filter((el) => el.type === "text")
 
   // 代表要素（UI表示用に最初の要素を使用）
   const firstLine = selectedLines[0]
@@ -99,81 +108,121 @@ export function DrawingToolPalette({
   // 選択中のテキストがある場合はその色を使用
   const effectiveTextColor = firstText?.color || strokeColor
 
-  // ===== 線用ハンドラ（複数選択対応） =====
-  const handleLineStyleChange = useCallback((style: string) => {
-    if (selectedLines.length > 0 && onUpdateSelectedElement) {
-      selectedLines.forEach(el => {
-        onUpdateSelectedElement(el.id, { lineStyle: style as any })
-      })
-    }
-    onLineStyleChange(style)
-  }, [selectedLines, onUpdateSelectedElement, onLineStyleChange])
+  // ===== 線用ハンドラ（線のみに適用） =====
+  const handleLineColorChange = useCallback(
+    (color: string) => {
+      if (selectedLines.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedLines.map((el) => ({
+          id: el.id,
+          updates: { color },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeColorChange(color)
+    },
+    [selectedLines, onUpdateSelectedElements, onStrokeColorChange],
+  )
 
-  const handleLineColorChange = useCallback((color: string) => {
-    if (selectedLines.length > 0 && onUpdateSelectedElement) {
-      selectedLines.forEach(el => {
-        onUpdateSelectedElement(el.id, { color })
-      })
-    }
-    onStrokeColorChange(color)
-  }, [selectedLines, onUpdateSelectedElement, onStrokeColorChange])
+  const handleLineWidthChange = useCallback(
+    (width: number) => {
+      if (selectedLines.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedLines.map((el) => ({
+          id: el.id,
+          updates: { strokeWidth: width },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeWidthChange(width)
+    },
+    [selectedLines, onUpdateSelectedElements, onStrokeWidthChange],
+  )
 
-  const handleLineWidthChange = useCallback((width: number) => {
-    if (selectedLines.length > 0 && onUpdateSelectedElement) {
-      selectedLines.forEach(el => {
-        onUpdateSelectedElement(el.id, { strokeWidth: width })
-      })
-    }
-    onStrokeWidthChange(width)
-  }, [selectedLines, onUpdateSelectedElement, onStrokeWidthChange])
+  const handleLineStyleChange = useCallback(
+    (style: string) => {
+      if (selectedLines.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedLines.map((el) => ({
+          id: el.id,
+          updates: { lineStyle: style as any },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onLineStyleChange(style)
+    },
+    [selectedLines, onUpdateSelectedElements, onLineStyleChange],
+  )
 
-  // ===== 長方形用ハンドラ（複数選択対応） =====
-  const handleRectColorChange = useCallback((color: string) => {
-    if (selectedRectangles.length > 0 && onUpdateSelectedElement) {
-      selectedRectangles.forEach(el => {
-        onUpdateSelectedElement(el.id, { color })
-      })
-    }
-    onStrokeColorChange(color)
-  }, [selectedRectangles, onUpdateSelectedElement, onStrokeColorChange])
+  // ===== 長方形用ハンドラ（長方形のみに適用） =====
+  const handleRectColorChange = useCallback(
+    (color: string) => {
+      if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedRectangles.map((el) => ({
+          id: el.id,
+          updates: { color },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeColorChange(color)
+    },
+    [selectedRectangles, onUpdateSelectedElements, onStrokeColorChange],
+  )
 
-  const handleRectWidthChange = useCallback((width: number) => {
-    if (selectedRectangles.length > 0 && onUpdateSelectedElement) {
-      selectedRectangles.forEach(el => {
-        onUpdateSelectedElement(el.id, { strokeWidth: width })
-      })
-    }
-    onStrokeWidthChange(width)
-  }, [selectedRectangles, onUpdateSelectedElement, onStrokeWidthChange])
+  const handleRectWidthChange = useCallback(
+    (width: number) => {
+      if (selectedRectangles.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedRectangles.map((el) => ({
+          id: el.id,
+          updates: { strokeWidth: width },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeWidthChange(width)
+    },
+    [selectedRectangles, onUpdateSelectedElements, onStrokeWidthChange],
+  )
 
-  // ===== 楕円用ハンドラ（複数選択対応） =====
-  const handleEllipseColorChange = useCallback((color: string) => {
-    if (selectedEllipses.length > 0 && onUpdateSelectedElement) {
-      selectedEllipses.forEach(el => {
-        onUpdateSelectedElement(el.id, { color })
-      })
-    }
-    onStrokeColorChange(color)
-  }, [selectedEllipses, onUpdateSelectedElement, onStrokeColorChange])
+  // ===== 楕円用ハンドラ（楕円のみに適用） =====
+  const handleEllipseColorChange = useCallback(
+    (color: string) => {
+      if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedEllipses.map((el) => ({
+          id: el.id,
+          updates: { color },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeColorChange(color)
+    },
+    [selectedEllipses, onUpdateSelectedElements, onStrokeColorChange],
+  )
 
-  const handleEllipseWidthChange = useCallback((width: number) => {
-    if (selectedEllipses.length > 0 && onUpdateSelectedElement) {
-      selectedEllipses.forEach(el => {
-        onUpdateSelectedElement(el.id, { strokeWidth: width })
-      })
-    }
-    onStrokeWidthChange(width)
-  }, [selectedEllipses, onUpdateSelectedElement, onStrokeWidthChange])
+  const handleEllipseWidthChange = useCallback(
+    (width: number) => {
+      if (selectedEllipses.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedEllipses.map((el) => ({
+          id: el.id,
+          updates: { strokeWidth: width },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeWidthChange(width)
+    },
+    [selectedEllipses, onUpdateSelectedElements, onStrokeWidthChange],
+  )
 
-  // ===== テキスト用ハンドラ（複数選択対応） =====
-  const handleTextColorChange = useCallback((color: string) => {
-    if (selectedTexts.length > 0 && onUpdateSelectedElement) {
-      selectedTexts.forEach(el => {
-        onUpdateSelectedElement(el.id, { color })
-      })
-    }
-    onStrokeColorChange(color)
-  }, [selectedTexts, onUpdateSelectedElement, onStrokeColorChange])
+  // ===== テキスト用ハンドラ（テキストのみに適用） =====
+  const handleTextColorChange = useCallback(
+    (color: string) => {
+      if (selectedTexts.length > 0 && onUpdateSelectedElements) {
+        const updates = selectedTexts.map((el) => ({
+          id: el.id,
+          updates: { color },
+        }))
+        onUpdateSelectedElements(updates)
+      }
+      onStrokeColorChange(color)
+    },
+    [selectedTexts, onUpdateSelectedElements, onStrokeColorChange],
+  )
   const [isVisible, setIsVisible] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -249,14 +298,17 @@ export function DrawingToolPalette({
     "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95",
     "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
     "data-[side=right]:slide-in-from-left-2",
-    "z-50 w-fit rounded-md px-3 py-1.5 text-xs"
+    "z-50 w-fit rounded-md px-3 py-1.5 text-xs",
   )
 
   return (
     <TooltipPrimitive.Provider delayDuration={300} disableHoverableContent>
       <div
         className="absolute top-4 left-4 transition-opacity duration-300"
-        style={{ opacity: isVisible ? 1 : 0, pointerEvents: isVisible ? "auto" : "none" }}
+        style={{
+          opacity: isVisible ? 1 : 0,
+          pointerEvents: isVisible ? "auto" : "none",
+        }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -270,7 +322,11 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">拡大</div>
                     <div className="mt-1 text-xs text-gray-400">
@@ -291,7 +347,11 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">縮小</div>
                     <div className="mt-1 text-xs text-gray-400">
@@ -312,7 +372,11 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">全体表示</div>
                     <div className="mt-1 text-xs text-gray-400">
@@ -338,7 +402,11 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">設問表示</div>
                     <div className="mt-1 text-xs text-gray-400">
@@ -367,7 +435,11 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">ハンドツール</div>
                     <div className="text-xs text-gray-400">ドラッグで移動</div>
@@ -387,10 +459,16 @@ export function DrawingToolPalette({
                 </Button>
               </TooltipPrimitive.Trigger>
               <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
+                <TooltipPrimitive.Content
+                  side="right"
+                  sideOffset={5}
+                  className={tooltipContentClass}
+                >
                   <div className="text-center">
                     <div className="font-medium">選択ツール</div>
-                    <div className="text-xs text-gray-400">図形を選択・移動・削除</div>
+                    <div className="text-xs text-gray-400">
+                      図形を選択・移動・削除
+                    </div>
                   </div>
                 </TooltipPrimitive.Content>
               </TooltipPrimitive.Portal>
@@ -406,7 +484,11 @@ export function DrawingToolPalette({
               onStrokeWidthChange={handleLineWidthChange}
               onLineStyleChange={handleLineStyleChange}
               hasSelectedElement={selectedLines.length > 0}
-              hasOtherTypeSelected={selectedRectangles.length > 0 || selectedEllipses.length > 0 || selectedTexts.length > 0}
+              hasOtherTypeSelected={
+                selectedRectangles.length > 0 ||
+                selectedEllipses.length > 0 ||
+                selectedTexts.length > 0
+              }
               onClearSelection={onClearSelection}
             />
 
@@ -418,7 +500,11 @@ export function DrawingToolPalette({
               onStrokeColorChange={handleRectColorChange}
               onStrokeWidthChange={handleRectWidthChange}
               hasSelectedElement={selectedRectangles.length > 0}
-              hasOtherTypeSelected={selectedLines.length > 0 || selectedEllipses.length > 0 || selectedTexts.length > 0}
+              hasOtherTypeSelected={
+                selectedLines.length > 0 ||
+                selectedEllipses.length > 0 ||
+                selectedTexts.length > 0
+              }
               onClearSelection={onClearSelection}
             />
 
@@ -430,7 +516,11 @@ export function DrawingToolPalette({
               onStrokeColorChange={handleEllipseColorChange}
               onStrokeWidthChange={handleEllipseWidthChange}
               hasSelectedElement={selectedEllipses.length > 0}
-              hasOtherTypeSelected={selectedLines.length > 0 || selectedRectangles.length > 0 || selectedTexts.length > 0}
+              hasOtherTypeSelected={
+                selectedLines.length > 0 ||
+                selectedRectangles.length > 0 ||
+                selectedTexts.length > 0
+              }
               onClearSelection={onClearSelection}
             />
 
@@ -440,10 +530,13 @@ export function DrawingToolPalette({
               textColor={effectiveTextColor}
               onTextColorChange={handleTextColorChange}
               hasSelectedElement={selectedTexts.length > 0}
-              hasOtherTypeSelected={selectedLines.length > 0 || selectedRectangles.length > 0 || selectedEllipses.length > 0}
+              hasOtherTypeSelected={
+                selectedLines.length > 0 ||
+                selectedRectangles.length > 0 ||
+                selectedEllipses.length > 0
+              }
               onClearSelection={onClearSelection}
             />
-
           </div>
         </Card>
       </div>

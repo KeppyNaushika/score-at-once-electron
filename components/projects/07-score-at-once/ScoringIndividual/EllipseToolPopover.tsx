@@ -42,8 +42,8 @@ export function EllipseToolPopover({
     // イベント伝播を停止（キャンバスのクリックハンドラに伝播しないように）
     e.stopPropagation()
 
-    // 他のタイプの要素が選択されている場合は選択を解除
-    if (hasOtherTypeSelected && onClearSelection) {
+    // このタイプの要素が選択されていない場合のみ選択を解除
+    if (!hasSelectedElement && hasOtherTypeSelected && onClearSelection) {
       onClearSelection()
     }
 
@@ -70,7 +70,12 @@ export function EllipseToolPopover({
           size="sm"
           variant={isActive ? "default" : "ghost"}
           onClick={handleClick}
-          title={hasSelectedElement ? "選択中の楕円を編集" : "楕円ツール - Shift+ドラッグで正円"}
+          onPointerDown={(e) => e.stopPropagation()}
+          title={
+            hasSelectedElement
+              ? "選択中の楕円を編集"
+              : "楕円ツール - Shift+ドラッグで正円"
+          }
           style={{
             backgroundColor: isActive ? strokeColor : undefined,
             borderColor: isActive ? strokeColor : undefined,
@@ -89,7 +94,7 @@ export function EllipseToolPopover({
           </h4>
 
           {/* 線幅 */}
-          <div>
+          <div onPointerDown={(e) => e.stopPropagation()}>
             <Label className="text-xs">線幅: {strokeWidth}px</Label>
             <Slider
               min={1}
@@ -108,7 +113,11 @@ export function EllipseToolPopover({
               {COLOR_PALETTE.map((color, index) => (
                 <button
                   key={index}
-                  onClick={() => onStrokeColorChange(color)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStrokeColorChange(color)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={`h-5 w-5 rounded border transition-transform hover:scale-110 ${
                     strokeColor === color
                       ? "border-2 border-gray-800"

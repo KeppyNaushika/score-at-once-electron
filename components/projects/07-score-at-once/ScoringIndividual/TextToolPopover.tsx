@@ -37,8 +37,8 @@ export function TextToolPopover({
     // イベント伝播を停止（キャンバスのクリックハンドラに伝播しないように）
     e.stopPropagation()
 
-    // 他のタイプの要素が選択されている場合は選択を解除
-    if (hasOtherTypeSelected && onClearSelection) {
+    // このタイプの要素が選択されていない場合のみ選択を解除
+    if (!hasSelectedElement && hasOtherTypeSelected && onClearSelection) {
       onClearSelection()
     }
 
@@ -65,7 +65,12 @@ export function TextToolPopover({
           size="sm"
           variant={isActive ? "default" : "ghost"}
           onClick={handleClick}
-          title={hasSelectedElement ? "選択中のテキストを編集" : "テキストアンカー - クリックでテキスト配置"}
+          onPointerDown={(e) => e.stopPropagation()}
+          title={
+            hasSelectedElement
+              ? "選択中のテキストを編集"
+              : "テキストアンカー - クリックでテキスト配置"
+          }
           style={{
             backgroundColor: isActive ? textColor : undefined,
             borderColor: isActive ? textColor : undefined,
@@ -90,7 +95,11 @@ export function TextToolPopover({
               {COLOR_PALETTE.map((color, index) => (
                 <button
                   key={index}
-                  onClick={() => onTextColorChange(color)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onTextColorChange(color)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={`h-5 w-5 rounded border transition-transform hover:scale-110 ${
                     textColor === color
                       ? "border-2 border-gray-800"
