@@ -22,6 +22,9 @@ interface LineToolPopoverProps {
   onStrokeColorChange: (color: string) => void
   onStrokeWidthChange: (width: number) => void
   onLineStyleChange: (style: string) => void
+  hasSelectedElement?: boolean // 選択中の線があるかどうか
+  hasOtherTypeSelected?: boolean // 他のタイプの要素が選択されているか
+  onClearSelection?: () => void
 }
 
 export function LineToolPopover({
@@ -33,11 +36,26 @@ export function LineToolPopover({
   onStrokeColorChange,
   onStrokeWidthChange,
   onLineStyleChange,
+  hasSelectedElement = false,
+  hasOtherTypeSelected = false,
+  onClearSelection,
 }: LineToolPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const handleClick = () => {
-    if (currentTool === "line") {
+  // 線が選択されている場合はポップオーバーを開く
+  const handleClick = (e: React.MouseEvent) => {
+    // イベント伝播を停止（キャンバスのクリックハンドラに伝播しないように）
+    e.stopPropagation()
+
+    // 他のタイプの要素が選択されている場合は選択を解除
+    if (hasOtherTypeSelected && onClearSelection) {
+      onClearSelection()
+    }
+
+    if (hasSelectedElement) {
+      // 選択中の線がある場合はポップオーバーを開く
+      setIsOpen(!isOpen)
+    } else if (currentTool === "line") {
       // 既に選択されている場合はPopoverをトグル
       setIsOpen(!isOpen)
     } else {
@@ -47,28 +65,33 @@ export function LineToolPopover({
     }
   }
 
+  // ボタンがアクティブ状態かどうか（線ツール選択中 または 線を選択中）
+  const isActive = currentTool === "line" || hasSelectedElement
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           size="sm"
-          variant={currentTool === "line" ? "default" : "ghost"}
+          variant={isActive ? "default" : "ghost"}
           onClick={handleClick}
-          title="自由線ツール - Shift+ドラッグで鉛直・水平線"
+          title={hasSelectedElement ? "選択中の線を編集" : "自由線ツール - Shift+ドラッグで鉛直・水平線"}
           style={{
-            backgroundColor: currentTool === "line" ? strokeColor : undefined,
-            borderColor: currentTool === "line" ? strokeColor : undefined,
+            backgroundColor: isActive ? strokeColor : undefined,
+            borderColor: isActive ? strokeColor : undefined,
           }}
         >
           <Ruler
             className="h-4 w-4"
-            style={{ color: currentTool === "line" ? "white" : undefined }}
+            style={{ color: isActive ? "white" : undefined }}
           />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" side="right">
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">線分ツール</h4>
+          <h4 className="text-sm font-medium">
+            {hasSelectedElement ? "選択中の線を編集" : "線分ツール"}
+          </h4>
 
           {/* 線種選択 */}
           <div>

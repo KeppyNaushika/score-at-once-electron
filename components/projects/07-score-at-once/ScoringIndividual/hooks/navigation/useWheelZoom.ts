@@ -1,12 +1,30 @@
+/**
+ * @fileoverview ホイールズームフック
+ * Ctrl/Meta + ホイールでマウス位置を基準にズームする
+ */
 import { ZOOM_SETTINGS } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
 import { useEffect } from "react"
 
+/** ホイールズームフックのプロパティ */
 interface UseWheelZoomProps {
+  /** コンテナ参照 */
   containerRef: React.RefObject<HTMLDivElement | null>
+  /** 現在のズーム倍率 */
   zoom: number
+  /** ズーム変更時のコールバック */
   onZoomChange: (zoom: number) => void
 }
 
+/**
+ * ホイールズームフック
+ *
+ * @description
+ * Ctrl/Meta + マウスホイールでズームを制御する。
+ * マウス位置を基準にズームすることで、
+ * ユーザーが注目している箇所を維持する。
+ *
+ * @param props - フックのプロパティ
+ */
 export function useWheelZoom({
   containerRef,
   zoom,

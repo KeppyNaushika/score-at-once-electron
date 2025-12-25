@@ -1,16 +1,16 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useCommand } from "../hooks/useCommand"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
-import { useDrawingState } from "./hooks/useDrawingState"
-import { useImageCanvas } from "./hooks/useImageCanvas"
-import { useImageNavigation } from "./hooks/useImageNavigation"
-import { useTextboxV4Integration } from "./hooks/useTextboxV4Integration"
+import { useDrawingState } from "./hooks/core/useDrawingState"
+import { useImageCanvas } from "./hooks/core/useImageCanvas"
+import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
+import { useTextboxV4Integration } from "./hooks/text/useTextboxIntegration"
 import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
 import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 
@@ -25,6 +25,7 @@ export default function AnswerIndividualView({
   onTextInputStateChange,
   currentStudentId,
   currentUserId,
+  questionScores,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } =
@@ -39,9 +40,22 @@ export default function AnswerIndividualView({
       (scoringData) => scoringData.id === currentScoringDataId,
     ) ?? null
 
+  // 正しいQuestionScore.idを取得（studentIdとcropRegionIdで検索）
+  const currentQuestionScoreId = useMemo(() => {
+    if (!questionScores || !currentStudentId || !currentCropRegion?.id) {
+      return null
+    }
+    const found = questionScores.find(
+      (qs) => qs.studentId === currentStudentId && qs.cropRegionId === currentCropRegion.id
+    )
+    return found?.id ?? null
+  }, [questionScores, currentStudentId, currentCropRegion])
+
   // 描画状態管理（データベース統合対応）
+  // questionScoresから正しいQuestionScore.idを取得して渡す
+  // 見つからない場合はnullを渡し、context情報でバックエンドがQuestionScoreを自動作成する
   const drawingState = useDrawingState(
-    currentScoringData?.id || null, // questionScoreIdとして使用
+    currentQuestionScoreId,
     true, // データベース永続化を有効化
     {
       currentStudentId,
@@ -102,7 +116,7 @@ export default function AnswerIndividualView({
   // currentCropRegionはすでにpropsで渡されている（派生済み）
 
   // 画像とキャンバス管理（透明度制御統合）
-  const { canvasRef, imageRef, containerRef, imageLoaded, loadedImages } =
+  const { canvasRef, overlayCanvasRef, textCanvasRef, imageRef, containerRef, imageLoaded, loadedImages, textBoundsCache } =
     useImageCanvas({
       currentScoringData,
       currentCropRegion,
@@ -126,11 +140,22 @@ export default function AnswerIndividualView({
       // 透明度制御用の全アノテーション
       allAnnotations: allStudentAnnotations,
       currentCropRegionId: currentCropRegion?.id,
+      // ホバー要素ID（ハンドル表示用）
+      hoveredElementId: drawingState.hoveredElementId,
     })
 
   // V4統合フック（画像サイズが確定してから初期化）
   const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
   const canvasHeight = loadedImages.length > 0 ? loadedImages[0].height : 600
+
+  // 画像アスペクト比（Shift制約で正円/正方形にするため）
+  const imageAspectRatio = useMemo(() => {
+    if (loadedImages.length > 0) {
+      const img = loadedImages[0]
+      return img.naturalWidth / img.naturalHeight
+    }
+    return 1
+  }, [loadedImages])
 
   // 答案画像のURL取得
   const backgroundImageUrl = currentScoringData
@@ -142,6 +167,8 @@ export default function AnswerIndividualView({
     canvasHeight,
     drawingElements: drawingState.drawingElements,
     updateDrawingElements: drawingState.setDrawingElements,
+    addDrawingElement: drawingState.addDrawingElement,
+    updateDrawingElement: drawingState.updateDrawingElement,
   })
 
   // V4統合: テキストアンカークリック処理
@@ -212,6 +239,7 @@ export default function AnswerIndividualView({
       textInputValue: drawingState.textInputValue,
       isDraggingHandle: drawingState.isDraggingHandle,
       currentHandle: drawingState.currentHandle,
+      hoveredElementId: drawingState.hoveredElementId,
       // 複数選択アクション
       setSelectedElementIds: drawingState.setSelectedElementIds,
       addToSelection: drawingState.addToSelection,
@@ -237,12 +265,18 @@ export default function AnswerIndividualView({
       setIsCtrlPressed: drawingState.setIsCtrlPressed,
       setIsDraggingHandle: drawingState.setIsDraggingHandle,
       setCurrentHandle: drawingState.setCurrentHandle,
+      setHoveredElementId: drawingState.setHoveredElementId,
+      setDrawingElements: drawingState.setDrawingElements,
       addDrawingElement: drawingState.addDrawingElement,
       updateDrawingElement: drawingState.updateDrawingElement,
       removeDrawingElement: drawingState.removeDrawingElement,
       // V4統合: テキストアンカー・再編集機能
       onTextAnchorClick: handleTextAnchorClick,
       onTextElementReClick: handleTextElementReClick,
+      // Shift制約で正円/正方形にするため
+      imageAspectRatio,
+      // テキスト境界キャッシュ（ヒットテスト用）
+      textBoundsCache,
     })
 
   // ズーム操作（CSS scale + scroll 方式）
@@ -480,6 +514,94 @@ export default function AnswerIndividualView({
     },
   })
 
+  // ============================================
+  // 描画ツールのキーボードショートカット
+  // ============================================
+
+  // ハンドツール
+  useCommand(
+    "tool.hand",
+    useCallback(() => drawingState.setCurrentTool("hand"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "ハンドツール",
+        category: "描画ツール",
+        description: "画面のパン操作を行います",
+      },
+    }
+  )
+
+  // 選択ツール
+  useCommand(
+    "tool.select",
+    useCallback(() => drawingState.setCurrentTool("select"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "選択ツール",
+        category: "描画ツール",
+        description: "図形を選択・移動・編集します",
+      },
+    }
+  )
+
+  // テキストツール
+  useCommand(
+    "tool.text",
+    useCallback(() => drawingState.setCurrentTool("text"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "テキストツール",
+        category: "描画ツール",
+        description: "テキストを追加します",
+      },
+    }
+  )
+
+  // 線ツール
+  useCommand(
+    "tool.line",
+    useCallback(() => drawingState.setCurrentTool("line"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "線ツール",
+        category: "描画ツール",
+        description: "直線を描画します",
+      },
+    }
+  )
+
+  // 矩形ツール
+  useCommand(
+    "tool.rectangle",
+    useCallback(() => drawingState.setCurrentTool("rectangle"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "矩形ツール",
+        category: "描画ツール",
+        description: "矩形を描画します",
+      },
+    }
+  )
+
+  // 楕円ツール
+  useCommand(
+    "tool.ellipse",
+    useCallback(() => drawingState.setCurrentTool("ellipse"), [drawingState]),
+    {
+      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
+      metadata: {
+        title: "楕円ツール",
+        category: "描画ツール",
+        description: "楕円・円を描画します",
+      },
+    }
+  )
+
   // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
   useEffect(() => {
     if (
@@ -599,6 +721,7 @@ export default function AnswerIndividualView({
             minHeight: "100%",
           }}
         >
+          {/* メインキャンバス（画像・描画要素） */}
           <canvas
             ref={canvasRef}
             width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
@@ -613,7 +736,7 @@ export default function AnswerIndividualView({
                   )
                 : 600
             }
-            className="block"
+            className="absolute left-0 top-0 block"
             style={{
               width:
                 loadedImages.length > 0
@@ -641,6 +764,84 @@ export default function AnswerIndividualView({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+          />
+          {/* テキスト専用キャンバス */}
+          <canvas
+            ref={textCanvasRef}
+            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
+            height={
+              loadedImages.length > 0
+                ? loadedImages.reduce(
+                    (total, img, index) =>
+                      total +
+                      img.naturalHeight +
+                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+                    0,
+                  )
+                : 600
+            }
+            className="absolute left-0 top-0 block pointer-events-none"
+            style={{
+              width:
+                loadedImages.length > 0
+                  ? `${loadedImages[0].naturalWidth * zoom}px`
+                  : `${800 * zoom}px`,
+              height:
+                loadedImages.length > 0
+                  ? `${
+                      loadedImages.reduce(
+                        (total, img, index) =>
+                          total +
+                          img.naturalHeight +
+                          (index < loadedImages.length - 1
+                            ? pageSpacing || 20
+                            : 0),
+                        0,
+                      ) * zoom
+                    }px`
+                  : `${600 * zoom}px`,
+              imageRendering: "pixelated",
+              transform: "translateZ(0)",
+            }}
+          />
+          {/* オーバーレイキャンバス（ハンドル表示専用） */}
+          <canvas
+            ref={overlayCanvasRef}
+            width={loadedImages.length > 0 ? loadedImages[0].naturalWidth : 800}
+            height={
+              loadedImages.length > 0
+                ? loadedImages.reduce(
+                    (total, img, index) =>
+                      total +
+                      img.naturalHeight +
+                      (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
+                    0,
+                  )
+                : 600
+            }
+            className="absolute left-0 top-0 block pointer-events-none"
+            style={{
+              width:
+                loadedImages.length > 0
+                  ? `${loadedImages[0].naturalWidth * zoom}px`
+                  : `${800 * zoom}px`,
+              height:
+                loadedImages.length > 0
+                  ? `${
+                      loadedImages.reduce(
+                        (total, img, index) =>
+                          total +
+                          img.naturalHeight +
+                          (index < loadedImages.length - 1
+                            ? pageSpacing || 20
+                            : 0),
+                        0,
+                      ) * zoom
+                    }px`
+                  : `${600 * zoom}px`,
+              imageRendering: "pixelated",
+              transform: "translateZ(0)",
+            }}
           />
         </div>
       </div>
@@ -671,6 +872,11 @@ export default function AnswerIndividualView({
         onStrokeColorChange={drawingState.setStrokeColor}
         onStrokeWidthChange={drawingState.setStrokeWidth}
         onLineStyleChange={(style) => drawingState.setLineStyle(style as any)}
+        selectedElements={drawingState.drawingElements.filter(el =>
+          drawingState.selectedElementIds.includes(el.id)
+        )}
+        onUpdateSelectedElement={drawingState.updateDrawingElement}
+        onClearSelection={drawingState.clearSelection}
       />
 
       {/* V4統合: 高品質テキストエディターモーダル */}
@@ -688,6 +894,10 @@ export default function AnswerIndividualView({
         canvasWidth={canvasWidth}
         canvasHeight={canvasHeight}
         backgroundImageUrl={backgroundImageUrl}
+        fontSize={v4Integration.currentFontSize}
+        onFontSizeChange={v4Integration.setCurrentFontSize}
+        anchorDirection={v4Integration.currentAnchorDirection}
+        onAnchorDirectionChange={v4Integration.setCurrentAnchorDirection}
       />
 
       {/* 隠しimg要素（Canvas描画用） */}

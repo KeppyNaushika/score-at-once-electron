@@ -69,7 +69,7 @@ export function useCanvasManagement() {
           setStatus("SVG生成失敗")
         }
       } catch (error) {
-        console.error("Canvas描画エラー:", error)
+        // Canvas描画エラー
         setStatus("描画エラー")
       }
     },
@@ -124,7 +124,7 @@ export function useCanvasManagement() {
 
         setStatus("描画完了")
       } catch (error) {
-        console.error("Canvas再描画エラー:", error)
+        // Canvas再描画エラー
         setStatus("描画エラー")
       }
     },

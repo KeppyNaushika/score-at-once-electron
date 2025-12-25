@@ -28,19 +28,12 @@ export function addMathJaxDefsToSvg(svgData: string): string {
     svgData.includes("mjx-container") || svgData.includes("<use")
 
   if (hasMathJaxElements) {
-    console.log("🔍 MathJax要素検出：グローバルdefsを追加")
-
     // ページ全体からMathJax defsを取得
     const globalDefs = document.querySelector("#MJX-SVG-global-cache defs")
     if (globalDefs && globalDefs.innerHTML.length > 10) {
       const defsContent = globalDefs.outerHTML
-      console.log(`📦 グローバルdefs取得: ${defsContent.length}文字`)
-
       // SVGの開始タグ直後にdefsを強制挿入
       svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
-      console.log("✅ グローバルdefs挿入完了")
-    } else {
-      console.warn("⚠️ グローバルdefsが見つかりません")
     }
   }
 
@@ -82,8 +75,7 @@ export function createSvgBlobUrl(svgElement: SVGSVGElement): string | null {
     // Blob作成
     const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" })
     return URL.createObjectURL(svgBlob)
-  } catch (error) {
-    console.error("SVG Blob URL作成エラー:", error)
+  } catch {
     return null
   }
 }

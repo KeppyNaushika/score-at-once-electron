@@ -50,7 +50,6 @@ function sanitizeMathContent(content: string): string {
 function preprocessMathSyntax(text: string): string {
   // セキュリティチェック
   if (isDangerous(text)) {
-    console.warn("危険なパターンが検出されました")
     return text
   }
 
@@ -178,39 +177,41 @@ export function parseTextWithMath(text: string): string {
   return parseDiscordMarkdown(normalizedText)
 }
 
-// MathJax処理用の永続的なDOM容器
-let sharedMathJaxContainer: HTMLDivElement | null = null
+/**
+ * MathJax処理用の一時的なDOM容器を作成する
+ * 各テキスト要素ごとに独立したコンテナを使用し、並列処理を可能にする
+ * @returns 新しいDIV要素
+ */
+function createMathJaxContainer(): HTMLDivElement {
+  const container = document.createElement("div")
+  container.style.cssText = `
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
+    font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+    line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
+    color: ${FONT_SETTINGS.DEFAULT_COLOR};
+    background: white;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    width: max-content;
+    height: max-content;
+    display: block;
+  `
+  document.body.appendChild(container)
+  return container
+}
 
 /**
- * MathJax処理用の永続的なDOM容器を取得または作成する
- * DIVプレビューとSVG変換で共通のDOM管理方式を使用
- * @returns 永続的なDIV要素
+ * 一時的なDOM容器を破棄する
+ * @param container 破棄するコンテナ
  */
-function getSharedMathJaxContainer(): HTMLDivElement {
-  if (
-    !sharedMathJaxContainer ||
-    !document.body.contains(sharedMathJaxContainer)
-  ) {
-    sharedMathJaxContainer = document.createElement("div")
-    sharedMathJaxContainer.style.cssText = `
-      position: absolute;
-      left: -9999px;
-      top: -9999px;
-      font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
-      font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
-      line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
-      color: ${FONT_SETTINGS.DEFAULT_COLOR};
-      background: white;
-      padding: 0;
-      margin: 0;
-      border: 0;
-      width: max-content;
-      height: max-content;
-      display: block;
-    `
-    document.body.appendChild(sharedMathJaxContainer)
+function destroyMathJaxContainer(container: HTMLDivElement): void {
+  if (container && container.parentNode) {
+    container.parentNode.removeChild(container)
   }
-  return sharedMathJaxContainer
 }
 
 /**
@@ -223,8 +224,6 @@ export async function processMathJaxContent(
   container: HTMLDivElement,
   htmlContent: string,
 ): Promise<void> {
-  console.log("🔄 MathJax処理開始:", htmlContent.substring(0, 100))
-
   // 1. HTML内容を設定
   container.innerHTML = htmlContent
 
@@ -234,50 +233,23 @@ export async function processMathJaxContent(
   // 3. MathJax初期化確認
   const MathJax = (window as any).MathJax
   if (!MathJax) {
-    console.warn("MathJaxが利用できません")
     return
   }
 
   // 4. MathJax処理
-  console.log("📐 MathJax組版処理実行中...")
   await processMathJax(container)
 
   // 5. MathJax要素の確認
   const mathElements = container.querySelectorAll("mjx-container")
-  console.log(`📊 検出されたMathJax要素数: ${mathElements.length}`)
-
-  // MathJax要素の詳細情報を表示
-  mathElements.forEach((element, index) => {
-    console.log(`MathJax要素[${index}]:`, element)
-    const svg = element.querySelector("svg")
-    if (svg) {
-      console.log(
-        `  - SVG要素: ${svg.getAttribute("width")}x${svg.getAttribute("height")}`,
-      )
-      const defs = svg.querySelector("defs")
-      if (defs) {
-        console.log(`  - defs要素あり: ${defs.innerHTML.length}文字`)
-      } else {
-        console.log(`  - defs要素なし`)
-      }
-    } else {
-      console.log(`  - SVG要素なし`)
-    }
-  })
 
   if (mathElements.length > 0) {
     // MathJax要素が存在する場合は追加待機
     await waitForRenderingComplete(3)
-    console.log("✅ MathJax要素処理完了")
-  } else {
-    console.log("📝 数式が検出されませんでした（通常のテキストとして処理）")
   }
 
   // 6. スタイルクリーンアップ
   cleanupElementStyles(container)
   await waitForRenderingComplete(1)
-
-  console.log("🎯 MathJax処理完了")
 }
 
 /**
@@ -299,8 +271,7 @@ async function convertContainerToSvg(
     displaySvgPreview(svgElement)
 
     return svgElement
-  } catch (error) {
-    console.error("SVG変換エラー:", error)
+  } catch {
     return null
   }
 }
@@ -336,15 +307,7 @@ function displaySvgPreview(svgElement: SVGSVGElement | null): void {
  * @returns string 処理結果のデバッグ情報
  */
 export function testSafeReplace(text: string): string {
-  console.log("=== 安全な文字列置換テスト ===")
-  console.log("入力:", text)
-
-  const result = parseDiscordMarkdown(text)
-
-  console.log("出力:", result)
-  console.log("============================")
-
-  return result
+  return parseDiscordMarkdown(text)
 }
 
 export async function convertTextToSvg(
@@ -354,6 +317,7 @@ export async function convertTextToSvg(
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top",
   textSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  textColor: string = "#000000",
 ): Promise<SVGSVGElement | null> {
   if (!text.trim()) {
     return null
@@ -381,7 +345,7 @@ export async function convertTextToSvg(
       return null
     }
 
-    // 3. 複数行SVGを結合（5px間隔）し、テキストボックスサイズに拡大縮小
+    // 3. 複数行SVGを結合（5px間隔）
     return combineLineSvgs(
       lineSvgs,
       5,
@@ -389,15 +353,16 @@ export async function convertTextToSvg(
       _height,
       horizontalAlign,
       verticalAlign,
+      textColor,
     )
   } catch (error) {
-    console.error("テキストからSVG変換エラー:", error)
     return null
   }
 }
 
 /**
  * 単一行をSVGに変換（改行なし）
+ * 並列処理対応: 各呼び出しで独立したコンテナを使用
  * @param lineText 単一行のテキスト
  * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
  */
@@ -408,21 +373,23 @@ async function convertSingleLineToSvg(
     return null
   }
 
+  // 各行ごとに独立したコンテナを作成（並列処理で競合しない）
+  const container = createMathJaxContainer()
+
   try {
     // 1. テキストをHTMLに変換
     const htmlContent = parseTextWithMath(lineText)
 
-    // 2. 共通のMathJax処理コンテナを取得
-    const container = getSharedMathJaxContainer()
-
-    // 3. MathJax処理を実行（単一行、overflow: hidden）
+    // 2. MathJax処理を実行（単一行、overflow: hidden）
     await processSingleLineMathJax(container, htmlContent)
 
-    // 4. 処理済みコンテナをSVGに変換
+    // 3. 処理済みコンテナをSVGに変換
     return await convertContainerToSvg(container)
-  } catch (error) {
-    console.error("単一行SVG変換エラー:", error)
+  } catch {
     return null
+  } finally {
+    // 4. コンテナを破棄（メモリリーク防止）
+    destroyMathJaxContainer(container)
   }
 }
 
@@ -449,16 +416,6 @@ async function processSingleLineMathJax(
   await waitForRenderingComplete(1)
 }
 
-/**
- * 複数行SVGを縦に結合
- * @param lineSvgs 結合する行SVG配列
- * @param spacing 行間スペース（px）
- * @param targetWidth 目標幅（使用されない - 互換性のため残存）
- * @param targetHeight 目標高さ（使用されない - 互換性のため残存）
- * @param horizontalAlign 水平方向の配置
- * @param verticalAlign 垂直方向の配置
- * @returns SVGSVGElement 結合されたSVG
- */
 function combineLineSvgs(
   lineSvgs: SVGSVGElement[],
   spacing: number,
@@ -466,6 +423,7 @@ function combineLineSvgs(
   targetHeight?: number,
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top",
+  textColor: string = "#000000",
 ): SVGSVGElement {
   // 各行のサイズを取得
   const lineInfos = lineSvgs.map((svg) => ({
@@ -528,7 +486,7 @@ function combineLineSvgs(
             <div style="
               font-size: 24px;
               line-height: 1;
-              color: #000000;
+              color: ${textColor};
               text-align: left;
               text-justify: none;
               word-break: normal;

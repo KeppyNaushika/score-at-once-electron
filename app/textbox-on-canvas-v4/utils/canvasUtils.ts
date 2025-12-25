@@ -45,6 +45,8 @@ export function setupDebugPreview(
  * @param anchorX アンカーのX座標
  * @param anchorY アンカーのY座標
  * @param anchorDirection アンカー方向
+ * @param showDebugBorder デバッグ用枠線を表示するか（デフォルト: false）
+ * @param opacity 描画透明度（0.0-1.0、デフォルト1.0）
  * @returns Promise<SvgRenderResult> 描画結果
  */
 export async function renderSvgToCanvas(
@@ -53,6 +55,8 @@ export async function renderSvgToCanvas(
   anchorX: number,
   anchorY: number,
   anchorDirection: AnchorDirection,
+  showDebugBorder: boolean = false,
+  opacity: number = 1.0,
 ): Promise<SvgRenderResult> {
   return new Promise((resolve) => {
     try {
@@ -63,21 +67,12 @@ export async function renderSvgToCanvas(
       const hasMathJaxElements =
         svgData.includes("mjx-container") || svgData.includes("<use")
       if (hasMathJaxElements) {
-        console.log("🎨 Canvas描画：MathJax要素検出、グローバルdefsを追加")
-
         // ページ全体からMathJax defsを取得
         const globalDefs = document.querySelector("#MJX-SVG-global-cache defs")
         if (globalDefs && globalDefs.innerHTML.length > 10) {
           const defsContent = globalDefs.outerHTML
-          console.log(
-            `🎨 Canvas描画：グローバルdefs取得 ${defsContent.length}文字`,
-          )
-
           // SVGの開始タグ直後にdefsを強制挿入
           svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
-          console.log("🎨 Canvas描画：defs挿入完了")
-        } else {
-          console.warn("⚠️ Canvas描画：グローバルdefsが見つかりません")
         }
       }
 
@@ -103,7 +98,9 @@ export async function renderSvgToCanvas(
             anchorDirection,
           )
 
-          // 画像を描画
+          // 透明度を適用して画像を描画
+          ctx.save()
+          ctx.globalAlpha = opacity
           ctx.drawImage(
             img,
             textPosition.x,
@@ -111,15 +108,18 @@ export async function renderSvgToCanvas(
             actualWidth,
             actualHeight,
           )
+          ctx.restore()
 
-          // デバッグ用赤枠を描画（実際のテキスト領域）
-          drawDebugBorder(
-            ctx,
-            textPosition.x,
-            textPosition.y,
-            actualWidth,
-            actualHeight,
-          )
+          // デバッグ用赤枠を描画（実際のテキスト領域）- 透明度なし
+          if (showDebugBorder) {
+            drawDebugBorder(
+              ctx,
+              textPosition.x,
+              textPosition.y,
+              actualWidth,
+              actualHeight,
+            )
+          }
 
           URL.revokeObjectURL(svgUrl)
           resolve({

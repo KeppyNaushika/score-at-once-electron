@@ -1,12 +1,12 @@
-import { useCoordinateUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useCoordinateUtils"
-import { useDrawingHandlers } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingHandlers"
-import { useDrawingUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useDrawingUtils"
-import { useHandToolHandlers } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useHandToolHandlers"
-import { useKeyboardHandlers } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useKeyboardHandlers"
-import { useSelectionHandlers } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useSelectionHandlers"
-import { useWheelZoom } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/useWheelZoom"
 import type { DrawingTool } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback } from "react"
+import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
+import { useHandTool } from "./interaction/useHandTool"
+import { useKeyboard } from "./interaction/useKeyboard"
+import { useWheelZoom } from "./navigation/useWheelZoom"
+import { useCoordinates } from "./utils/useCoordinates"
+import { useEditModeUtils } from "./utils/useEditMode"
+import { useHitTestUtils } from "./utils/useHitTest"
 
 interface UseAnswerDisplayEventsProps {
   // Canvas and container refs
@@ -47,6 +47,13 @@ interface UseAnswerDisplayEventsProps {
   onTextAnchorClick?: (position: { x: number; y: number }) => void
   isDraggingHandle: boolean
   currentHandle: string | null
+  hoveredElementId: string | null
+
+  // テキスト境界キャッシュ（ヒットテスト用）
+  textBoundsCache?: Map<
+    string,
+    { x: number; y: number; width: number; height: number }
+  >
 
   // Drawing actions
   setSelectedElementIds: (ids: string[]) => void
@@ -71,29 +78,35 @@ interface UseAnswerDisplayEventsProps {
   setIsCtrlPressed: (pressed: boolean) => void
   setIsDraggingHandle: (dragging: boolean) => void
   setCurrentHandle: (handle: string | null) => void
+  setHoveredElementId: (id: string | null) => void
+  setDrawingElements: (elements: any[] | ((prev: any[]) => any[])) => void
   addDrawingElement: (element: any) => void
   updateDrawingElement: (id: string, updates: any) => void
   removeDrawingElement: (id: string) => void
 
   // テキスト再編集
   onTextElementReClick?: (element: any) => void
+
+  // 画像アスペクト比（Shift制約用）
+  imageAspectRatio?: number
 }
 
 export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   const { canvasRef, containerRef, imageRef, zoom, onZoomChange, imageLoaded } =
     props
 
-  // Initialize drawing utilities
-  const {
-    hitTestElement,
-    hitTestHandle,
-    getLineEditMode,
-    getRectangleEditMode,
-  } = useDrawingUtils()
+  // Initialize hit test utilities（ズームを渡して画面上の当たり判定サイズを一定に）
+  const { hitTestElement, hitTestHandle } = useHitTestUtils({
+    zoom,
+    textBoundsCache: props.textBoundsCache,
+  })
+
+  // Initialize edit mode utilities
+  const { getLineEditMode, getRectangleEditMode } = useEditModeUtils()
 
   // Initialize coordinate utilities
   const { getImageCoordinatesFromEvent, getScreenCoordinatesFromEvent } =
-    useCoordinateUtils({
+    useCoordinates({
       canvasRef,
       imageRef,
       zoom,
@@ -107,7 +120,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
   })
 
   // Initialize keyboard handlers
-  useKeyboardHandlers({
+  useKeyboard({
     selectedElementIds: props.selectedElementIds,
     showTextInput: props.showTextInput,
     setIsShiftPressed: props.setIsShiftPressed,
@@ -120,7 +133,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     handleHandToolMouseDown,
     handleHandToolMouseMove,
     handleHandToolMouseUp,
-  } = useHandToolHandlers({
+  } = useHandTool({
     containerRef,
     currentTool: props.currentTool,
     isDraggingElement: props.isDraggingElement,
@@ -129,58 +142,56 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     setDragElementOffset: props.setDragElementOffset,
   })
 
+  // 統合されたキャンバスインタラクション
   const {
     handleSelectionMouseDown,
     handleSelectionMouseMove,
     handleSelectionMouseUp,
-  } = useSelectionHandlers({
+    handleNewDrawingMouseDown,
+    handleNewDrawingMouseMove,
+    handleNewDrawingMouseUp,
+  } = useCanvasInteraction({
+    canvasRef,
     currentTool: props.currentTool,
     drawingElements: props.drawingElements,
     selectedElementIds: props.selectedElementIds,
     isDraggingElement: props.isDraggingElement,
+    isDrawing: props.isDrawing,
+    currentDrawing: props.currentDrawing,
     isDrawingSelection: props.isDrawingSelection,
     selectionRectangle: props.selectionRectangle,
-    isCtrlPressed: props.isCtrlPressed,
     isShiftPressed: props.isShiftPressed,
+    isCtrlPressed: props.isCtrlPressed,
+    strokeColor: props.strokeColor,
+    strokeWidth: props.strokeWidth,
+    lineStyle: props.lineStyle,
     lineEditMode: props.lineEditMode,
+    rectangleEditMode: props.rectangleEditMode,
     dragElementOffset: props.dragElementOffset,
-    canvasRef, // Canvas ref for cursor management
-    toggleSelection: props.toggleSelection,
     setSelectedElementIds: props.setSelectedElementIds,
+    toggleSelection: props.toggleSelection,
     clearSelection: props.clearSelection,
     setIsDrawingSelection: props.setIsDrawingSelection,
     setSelectionRectangle: props.setSelectionRectangle,
     selectElementsInRectangle: props.selectElementsInRectangle,
+    setIsDrawing: props.setIsDrawing,
+    setCurrentDrawing: props.setCurrentDrawing,
     setIsDraggingElement: props.setIsDraggingElement,
     setDragElementOffset: props.setDragElementOffset,
     setLineEditMode: props.setLineEditMode,
     setRectangleEditMode: props.setRectangleEditMode,
+    setDrawingElements: props.setDrawingElements,
+    addDrawingElement: props.addDrawingElement,
     updateDrawingElement: props.updateDrawingElement,
-    // Drawing utils
+    removeDrawingElement: props.removeDrawingElement,
     hitTestElement,
     hitTestHandle,
     getLineEditMode,
     getRectangleEditMode,
-    // テキスト再編集
-    onTextElementReClick: props.onTextElementReClick,
-  })
-
-  const {
-    handleDrawingMouseDown,
-    handleDrawingMouseMove,
-    handleDrawingMouseUp,
-  } = useDrawingHandlers({
-    currentTool: props.currentTool,
-    isDrawing: props.isDrawing,
-    currentDrawing: props.currentDrawing,
-    isShiftPressed: props.isShiftPressed,
-    strokeColor: props.strokeColor,
-    strokeWidth: props.strokeWidth,
-    lineStyle: props.lineStyle,
-    setIsDrawing: props.setIsDrawing,
-    setCurrentDrawing: props.setCurrentDrawing,
-    addDrawingElement: props.addDrawingElement,
     onTextAnchorClick: props.onTextAnchorClick,
+    onTextElementReClick: props.onTextElementReClick,
+    setHoveredElementId: props.setHoveredElementId,
+    imageAspectRatio: props.imageAspectRatio,
   })
 
   // Main pointer event handlers that delegate to appropriate tool handlers
@@ -198,7 +209,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       } else if (props.currentTool === "select") {
         if (handleSelectionMouseDown(imageCoords, e.nativeEvent)) return
       } else {
-        handleDrawingMouseDown(imageCoords)
+        handleNewDrawingMouseDown(imageCoords)
       }
     },
     [
@@ -208,7 +219,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       props.currentTool,
       handleHandToolMouseDown,
       handleSelectionMouseDown,
-      handleDrawingMouseDown,
+      handleNewDrawingMouseDown,
     ],
   )
 
@@ -228,7 +239,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
         handleHandToolMouseMove(e)
       } else {
         // 描画ツールでの操作
-        handleDrawingMouseMove(imageCoords)
+        handleNewDrawingMouseMove(imageCoords)
       }
     },
     [
@@ -238,7 +249,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       props.currentTool,
       handleHandToolMouseMove,
       handleSelectionMouseMove,
-      handleDrawingMouseMove,
+      handleNewDrawingMouseMove,
     ],
   )
 
@@ -247,9 +258,9 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       // Call all handlers - they will check their own conditions
       handleHandToolMouseUp()
       handleSelectionMouseUp(e.nativeEvent)
-      handleDrawingMouseUp()
+      handleNewDrawingMouseUp()
     },
-    [handleHandToolMouseUp, handleSelectionMouseUp, handleDrawingMouseUp],
+    [handleHandToolMouseUp, handleSelectionMouseUp, handleNewDrawingMouseUp],
   )
 
   return {

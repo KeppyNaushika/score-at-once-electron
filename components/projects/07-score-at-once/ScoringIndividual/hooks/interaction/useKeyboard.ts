@@ -1,14 +1,34 @@
+/**
+ * @fileoverview キーボードイベントフック
+ * Shift/Ctrl/Metaキーの追跡と要素削除のショートカット
+ */
 import { useEffect } from "react"
 
+/** キーボードフックのプロパティ */
 interface UseKeyboardHandlersProps {
+  /** 選択中の要素ID配列 */
   selectedElementIds: string[]
+  /** テキスト入力中フラグ */
   showTextInput: boolean
+  /** Shiftキー状態設定関数 */
   setIsShiftPressed: (pressed: boolean) => void
+  /** Ctrlキー状態設定関数 */
   setIsCtrlPressed: (pressed: boolean) => void
+  /** 描画要素削除関数 */
   removeDrawingElement: (id: string) => void
 }
 
-export function useKeyboardHandlers({
+/**
+ * キーボードイベントフック
+ *
+ * @description
+ * グローバルなキーボードイベントを監視し、
+ * 修飾キーの状態追跡と要素削除ショートカットを提供する。
+ * テキスト入力中は修飾キーのみ追跡し、他のショートカットは無効化する。
+ *
+ * @param props - フックのプロパティ
+ */
+export function useKeyboard({
   selectedElementIds,
   showTextInput,
   setIsShiftPressed,

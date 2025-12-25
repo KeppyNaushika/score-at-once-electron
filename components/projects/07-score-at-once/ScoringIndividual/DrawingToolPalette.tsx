@@ -11,7 +11,6 @@ import {
   Hand,
   Maximize,
   MousePointer2,
-  Type,
   ZoomIn,
   ZoomOut,
 } from "lucide-react"
@@ -19,7 +18,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"
-import type { DrawingTool } from "./types/answer-individual-types"
+import { TextToolPopover } from "./TextToolPopover"
+import type { DrawingElement, DrawingTool } from "./types/answer-individual-types"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 
@@ -45,6 +45,11 @@ interface DrawingToolPaletteProps {
   onStrokeColorChange: (color: string) => void
   onStrokeWidthChange: (width: number) => void
   onLineStyleChange: (style: string) => void
+
+  // 選択中の要素（スタイル編集用）
+  selectedElements?: DrawingElement[]
+  onUpdateSelectedElement?: (id: string, updates: Partial<DrawingElement>) => void
+  onClearSelection?: () => void
 }
 
 export function DrawingToolPalette({
@@ -62,7 +67,113 @@ export function DrawingToolPalette({
   onStrokeColorChange,
   onStrokeWidthChange,
   onLineStyleChange,
+  selectedElements = [],
+  onUpdateSelectedElement,
+  onClearSelection,
 }: DrawingToolPaletteProps) {
+  // 選択中の各タイプの要素を取得（複数選択対応）
+  const selectedLines = selectedElements.filter(el => el.type === "line")
+  const selectedRectangles = selectedElements.filter(el => el.type === "rectangle")
+  const selectedEllipses = selectedElements.filter(el => el.type === "ellipse")
+  const selectedTexts = selectedElements.filter(el => el.type === "text")
+
+  // 代表要素（UI表示用に最初の要素を使用）
+  const firstLine = selectedLines[0]
+  const firstRectangle = selectedRectangles[0]
+  const firstEllipse = selectedEllipses[0]
+  const firstText = selectedTexts[0]
+
+  // 選択中の線がある場合はその値を、なければデフォルト値を使用
+  const effectiveLineStyle = firstLine?.lineStyle || lineStyle
+  const effectiveLineColor = firstLine?.color || strokeColor
+  const effectiveLineWidth = firstLine?.strokeWidth || strokeWidth
+
+  // 選択中の長方形がある場合はその値を使用
+  const effectiveRectColor = firstRectangle?.color || strokeColor
+  const effectiveRectWidth = firstRectangle?.strokeWidth || strokeWidth
+
+  // 選択中の楕円がある場合はその値を使用
+  const effectiveEllipseColor = firstEllipse?.color || strokeColor
+  const effectiveEllipseWidth = firstEllipse?.strokeWidth || strokeWidth
+
+  // 選択中のテキストがある場合はその色を使用
+  const effectiveTextColor = firstText?.color || strokeColor
+
+  // ===== 線用ハンドラ（複数選択対応） =====
+  const handleLineStyleChange = useCallback((style: string) => {
+    if (selectedLines.length > 0 && onUpdateSelectedElement) {
+      selectedLines.forEach(el => {
+        onUpdateSelectedElement(el.id, { lineStyle: style as any })
+      })
+    }
+    onLineStyleChange(style)
+  }, [selectedLines, onUpdateSelectedElement, onLineStyleChange])
+
+  const handleLineColorChange = useCallback((color: string) => {
+    if (selectedLines.length > 0 && onUpdateSelectedElement) {
+      selectedLines.forEach(el => {
+        onUpdateSelectedElement(el.id, { color })
+      })
+    }
+    onStrokeColorChange(color)
+  }, [selectedLines, onUpdateSelectedElement, onStrokeColorChange])
+
+  const handleLineWidthChange = useCallback((width: number) => {
+    if (selectedLines.length > 0 && onUpdateSelectedElement) {
+      selectedLines.forEach(el => {
+        onUpdateSelectedElement(el.id, { strokeWidth: width })
+      })
+    }
+    onStrokeWidthChange(width)
+  }, [selectedLines, onUpdateSelectedElement, onStrokeWidthChange])
+
+  // ===== 長方形用ハンドラ（複数選択対応） =====
+  const handleRectColorChange = useCallback((color: string) => {
+    if (selectedRectangles.length > 0 && onUpdateSelectedElement) {
+      selectedRectangles.forEach(el => {
+        onUpdateSelectedElement(el.id, { color })
+      })
+    }
+    onStrokeColorChange(color)
+  }, [selectedRectangles, onUpdateSelectedElement, onStrokeColorChange])
+
+  const handleRectWidthChange = useCallback((width: number) => {
+    if (selectedRectangles.length > 0 && onUpdateSelectedElement) {
+      selectedRectangles.forEach(el => {
+        onUpdateSelectedElement(el.id, { strokeWidth: width })
+      })
+    }
+    onStrokeWidthChange(width)
+  }, [selectedRectangles, onUpdateSelectedElement, onStrokeWidthChange])
+
+  // ===== 楕円用ハンドラ（複数選択対応） =====
+  const handleEllipseColorChange = useCallback((color: string) => {
+    if (selectedEllipses.length > 0 && onUpdateSelectedElement) {
+      selectedEllipses.forEach(el => {
+        onUpdateSelectedElement(el.id, { color })
+      })
+    }
+    onStrokeColorChange(color)
+  }, [selectedEllipses, onUpdateSelectedElement, onStrokeColorChange])
+
+  const handleEllipseWidthChange = useCallback((width: number) => {
+    if (selectedEllipses.length > 0 && onUpdateSelectedElement) {
+      selectedEllipses.forEach(el => {
+        onUpdateSelectedElement(el.id, { strokeWidth: width })
+      })
+    }
+    onStrokeWidthChange(width)
+  }, [selectedEllipses, onUpdateSelectedElement, onStrokeWidthChange])
+
+  // ===== テキスト用ハンドラ（複数選択対応） =====
+  const handleTextColorChange = useCallback((color: string) => {
+    if (selectedTexts.length > 0 && onUpdateSelectedElement) {
+      selectedTexts.forEach(el => {
+        onUpdateSelectedElement(el.id, { color })
+      })
+    }
+    onStrokeColorChange(color)
+  }, [selectedTexts, onUpdateSelectedElement, onStrokeColorChange])
   const [isVisible, setIsVisible] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -288,59 +399,50 @@ export function DrawingToolPalette({
             <LineToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={strokeColor}
-              strokeWidth={strokeWidth}
-              lineStyle={lineStyle}
-              onStrokeColorChange={onStrokeColorChange}
-              onStrokeWidthChange={onStrokeWidthChange}
-              onLineStyleChange={onLineStyleChange}
+              strokeColor={effectiveLineColor}
+              strokeWidth={effectiveLineWidth}
+              lineStyle={effectiveLineStyle}
+              onStrokeColorChange={handleLineColorChange}
+              onStrokeWidthChange={handleLineWidthChange}
+              onLineStyleChange={handleLineStyleChange}
+              hasSelectedElement={selectedLines.length > 0}
+              hasOtherTypeSelected={selectedRectangles.length > 0 || selectedEllipses.length > 0 || selectedTexts.length > 0}
+              onClearSelection={onClearSelection}
             />
 
             <RectangleToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={strokeColor}
-              strokeWidth={strokeWidth}
-              onStrokeColorChange={onStrokeColorChange}
-              onStrokeWidthChange={onStrokeWidthChange}
+              strokeColor={effectiveRectColor}
+              strokeWidth={effectiveRectWidth}
+              onStrokeColorChange={handleRectColorChange}
+              onStrokeWidthChange={handleRectWidthChange}
+              hasSelectedElement={selectedRectangles.length > 0}
+              hasOtherTypeSelected={selectedLines.length > 0 || selectedEllipses.length > 0 || selectedTexts.length > 0}
+              onClearSelection={onClearSelection}
             />
 
             <EllipseToolPopover
               currentTool={currentTool}
               onToolChange={onToolChange}
-              strokeColor={strokeColor}
-              strokeWidth={strokeWidth}
-              onStrokeColorChange={onStrokeColorChange}
-              onStrokeWidthChange={onStrokeWidthChange}
+              strokeColor={effectiveEllipseColor}
+              strokeWidth={effectiveEllipseWidth}
+              onStrokeColorChange={handleEllipseColorChange}
+              onStrokeWidthChange={handleEllipseWidthChange}
+              hasSelectedElement={selectedEllipses.length > 0}
+              hasOtherTypeSelected={selectedLines.length > 0 || selectedRectangles.length > 0 || selectedTexts.length > 0}
+              onClearSelection={onClearSelection}
             />
 
-            {/* V4統合テキストアンカーボタン */}
-            <TooltipPrimitive.Root>
-              <TooltipPrimitive.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant={currentTool === "text" ? "default" : "ghost"}
-                  onClick={() => onToolChange("text")}
-                  style={{
-                    backgroundColor: currentTool === "text" ? strokeColor : undefined,
-                    borderColor: currentTool === "text" ? strokeColor : undefined,
-                  }}
-                >
-                  <Type
-                    className="h-4 w-4"
-                    style={{ color: currentTool === "text" ? "white" : undefined }}
-                  />
-                </Button>
-              </TooltipPrimitive.Trigger>
-              <TooltipPrimitive.Portal>
-                <TooltipPrimitive.Content side="right" sideOffset={5} className={tooltipContentClass}>
-                  <div className="text-center">
-                    <div className="font-medium">テキストアンカー</div>
-                    <div className="text-xs text-gray-400">クリックでテキスト配置</div>
-                  </div>
-                </TooltipPrimitive.Content>
-              </TooltipPrimitive.Portal>
-            </TooltipPrimitive.Root>
+            <TextToolPopover
+              currentTool={currentTool}
+              onToolChange={onToolChange}
+              textColor={effectiveTextColor}
+              onTextColorChange={handleTextColorChange}
+              hasSelectedElement={selectedTexts.length > 0}
+              hasOtherTypeSelected={selectedLines.length > 0 || selectedRectangles.length > 0 || selectedEllipses.length > 0}
+              onClearSelection={onClearSelection}
+            />
 
           </div>
         </Card>

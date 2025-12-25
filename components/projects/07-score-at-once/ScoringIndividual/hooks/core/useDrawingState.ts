@@ -9,10 +9,11 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 // データベース統合フックのインポート
 import {
+  convertAnnotationToElement,
   useDrawingAnnotations,
   type DrawingPersistenceCallbacks,
 } from "./useDrawingAnnotations"
@@ -27,7 +28,7 @@ export function useDrawingState(
     currentStudentId?: string
     currentCropRegionId?: string
     currentUserId?: string
-  }
+  },
 ): DrawingState &
   DrawingActions & {
     // データベース統合機能
@@ -90,17 +91,14 @@ export function useDrawingState(
   const [isShiftPressed, setIsShiftPressed] = useState(false)
   const [isCtrlPressed, setIsCtrlPressed] = useState(false)
 
+  // ホバー中の要素（端点表示用）
+  const [hoveredElementId, setHoveredElementId] = useState<string | null>(null)
+
   // データベース統合フック
   const persistenceCallbacks: DrawingPersistenceCallbacks = {
-    onAnnotationCreated: (annotation) => {
-      console.log("アノテーション作成完了:", annotation.id)
-    },
-    onAnnotationUpdated: (annotation) => {
-      console.log("アノテーション更新完了:", annotation.id)
-    },
-    onAnnotationDeleted: (annotationId) => {
-      console.log("アノテーション削除完了:", annotationId)
-    },
+    onAnnotationCreated: () => {},
+    onAnnotationUpdated: () => {},
+    onAnnotationDeleted: () => {},
     onError: (error) => {
       console.error("データベース操作エラー:", error)
     },
@@ -117,14 +115,42 @@ export function useDrawingState(
     syncElements,
   } = useDrawingAnnotations(
     enablePersistence ? persistenceCallbacks : undefined,
-    context
+    context,
   )
 
-  // 自動読み込みは削除 - 手動でloadFromDatabaseを呼び出すことで読み込み
-  // これにより無限ループを完全に防止
+  // questionScoreIdが変更された時にDBから自動読み込み
+  const prevQuestionScoreIdRef = useRef<string | null | undefined>(undefined)
+  const isInitialLoadRef = useRef(true)
 
-  // アノテーションの変更を監視してローカル状態に反映（初期読み込み完了後のみ）
-  // この useEffect は削除 - 初期読み込みで十分
+  // 設問変更時の同期的クリア（useLayoutEffectで描画前に確実にクリア）
+  // useLayoutEffectは描画effectの前に実行されるため、古いデータで描画されることを防ぐ
+  useLayoutEffect(() => {
+    if (prevQuestionScoreIdRef.current !== questionScoreId) {
+      prevQuestionScoreIdRef.current = questionScoreId
+
+      // 設問変更時は即座にdrawingElementsと選択をクリア
+      // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
+      setDrawingElements([])
+      setSelectedElementIds([])
+
+      // DB読み込みは非同期なので、ここでは開始のみ
+      if (enablePersistence && questionScoreId) {
+        loadAnnotations(questionScoreId)
+      }
+    }
+  }, [enablePersistence, questionScoreId, loadAnnotations])
+
+  // annotationsが更新されたらdrawingElementsに反映
+  useEffect(() => {
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false
+      return
+    }
+
+    // annotationsをdrawingElementsに変換（同期的に更新）
+    const elements = annotations.map(convertAnnotationToElement)
+    setDrawingElements(elements)
+  }, [annotations])
 
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
@@ -344,15 +370,7 @@ export function useDrawingState(
     if (!enablePersistence || !questionScoreId) return
 
     try {
-      console.log("📖 loadFromDatabase: 明示的読み込み開始:", questionScoreId)
-      const success = await loadAnnotations(questionScoreId)
-      if (success) {
-        // loadAnnotationsの成功後、annotationsが更新されているはず
-        // しかし、直接参照はしない。代わりに、loadAnnotationsから返されたデータを使用
-        console.log("✅ loadFromDatabase: 読み込み成功")
-        // NOTE: 実際の要素設定は、useDrawingAnnotationsフック内で行われる
-        // ここでは状態の同期を待つか、別の方法で取得する
-      }
+      await loadAnnotations(questionScoreId)
     } catch (error) {
       console.error("データベース読み込みエラー:", error)
     }
@@ -389,6 +407,7 @@ export function useDrawingState(
     isCtrlPressed,
     isDraggingHandle,
     currentHandle,
+    hoveredElementId,
 
     // Actions
     setCurrentTool,
@@ -430,6 +449,7 @@ export function useDrawingState(
     setIsCtrlPressed,
     setIsDraggingHandle,
     setCurrentHandle,
+    setHoveredElementId,
 
     // データベース統合機能
     isLoadingFromDB,

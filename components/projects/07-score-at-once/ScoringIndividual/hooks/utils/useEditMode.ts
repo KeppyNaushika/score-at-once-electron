@@ -1,13 +1,13 @@
-import { useCallback } from "react"
-import type { 
-  DrawingElement, 
-  LineEditMode, 
-  RectangleEditMode 
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
+import type {
+  DrawingElement,
+  LineEditMode,
+  RectangleEditMode,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import { useCallback } from "react"
 
 export function useEditModeUtils() {
-  // 線の編集モード判定（開始点、終了点、移動）
+  // 線の編集モード判定（開始点、終了点、移動）- PowerPointスタイル
   const getLineEditMode = useCallback(
     (element: DrawingElement, testX: number, testY: number): LineEditMode => {
       if (
@@ -18,39 +18,52 @@ export function useEditModeUtils() {
         return null
       }
 
-      const tolerance = DRAWING_TOLERANCES.hitTest
+      const lineTolerance = DRAWING_TOLERANCES.lineDistance
 
-      // 開始点判定
-      if (
-        Math.abs(element.x - testX) < tolerance &&
-        Math.abs(element.y - testY) < tolerance
-      ) {
+      // 1. 開始点判定（端点を優先）
+      const distToStart = Math.sqrt(
+        Math.pow(testX - element.x, 2) + Math.pow(testY - element.y, 2),
+      )
+      if (distToStart < lineTolerance) {
         return "start"
       }
 
-      // 終了点判定
-      if (
-        Math.abs(element.endX - testX) < tolerance &&
-        Math.abs(element.endY - testY) < tolerance
-      ) {
+      // 2. 終了点判定（端点を優先）
+      const distToEnd = Math.sqrt(
+        Math.pow(testX - element.endX, 2) + Math.pow(testY - element.endY, 2),
+      )
+      if (distToEnd < lineTolerance) {
         return "end"
       }
 
-      // 線分との距離判定（移動モード）
-      const A = testY - element.y
-      const B = element.x - testX
-      const C =
-        (element.endY - element.y) * testX - (element.endX - element.x) * testY
-      const distance =
-        Math.abs(
-          A * (element.endX - element.x) + B * (element.endY - element.y) + C,
-        ) /
-        Math.sqrt(
-          Math.pow(element.endX - element.x, 2) +
-            Math.pow(element.endY - element.y, 2),
-        )
+      // 3. 線分への最短距離を計算（移動モード判定）
+      const dx = element.endX - element.x
+      const dy = element.endY - element.y
+      const lineLength = Math.sqrt(dx * dx + dy * dy)
 
-      if (distance < DRAWING_TOLERANCES.lineDistance) {
+      // 線の長さが0の場合
+      if (lineLength === 0) {
+        return distToStart < lineTolerance ? "move" : null
+      }
+
+      // 線分上の最近点を求める（0-1の範囲でクランプ）
+      const t = Math.max(
+        0,
+        Math.min(
+          1,
+          ((testX - element.x) * dx + (testY - element.y) * dy) /
+            (lineLength * lineLength),
+        ),
+      )
+
+      // 最近点までの距離
+      const nearestX = element.x + t * dx
+      const nearestY = element.y + t * dy
+      const distToLine = Math.sqrt(
+        Math.pow(testX - nearestX, 2) + Math.pow(testY - nearestY, 2),
+      )
+
+      if (distToLine < lineTolerance) {
         return "move"
       }
 

@@ -50,7 +50,7 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
           }
         } catch (error) {
           if (!isCancelled) {
-            console.error("SVGプレビュー処理エラー:", error)
+            // SVGプレビュー処理エラー
             setSvgElement(null)
             setRenderingStatus("SVG生成エラー")
           }

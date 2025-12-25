@@ -70,6 +70,7 @@ export interface DrawingAnnotation {
 
 // 作成用データ型
 export interface DrawingCreateData {
+  id?: string // フロントエンドで生成したUUIDを使用可能（指定なしの場合はDB側で自動生成）
   questionScoreId: string
   type: DrawingType
   x: number

@@ -50,6 +50,11 @@ interface RichTextEditorModalV4Props {
   canvasHeight?: number
   // 答案画像背景表示用
   backgroundImageUrl?: string
+  // フォントサイズとアンカー方向
+  fontSize?: number
+  onFontSizeChange?: (size: number) => void
+  anchorDirection?: AnchorDirection
+  onAnchorDirectionChange?: (direction: AnchorDirection) => void
 }
 
 export function RichTextEditorModalV4({
@@ -66,15 +71,40 @@ export function RichTextEditorModalV4({
   canvasWidth = 800,
   canvasHeight = 600,
   backgroundImageUrl,
+  fontSize: initialFontSize = 16,
+  onFontSizeChange,
+  anchorDirection: initialAnchorDirection = "top-left",
+  onAnchorDirectionChange,
 }: RichTextEditorModalV4Props) {
-  const [fontSize, setFontSize] = useState(16)
+  const [fontSize, setFontSizeLocal] = useState(initialFontSize)
   const [isBold, setIsBold] = useState(false)
   const [isItalic, setIsItalic] = useState(false)
   const [isUnderline, setIsUnderline] = useState(false)
 
   // V4統合: アンカー方向の設定
-  const [anchorDirection, setAnchorDirection] =
-    useState<AnchorDirection>("top-left")
+  const [anchorDirection, setAnchorDirectionLocal] =
+    useState<AnchorDirection>(initialAnchorDirection)
+
+  // 親への通知付きsetFontSize
+  const setFontSize = useCallback((size: number) => {
+    setFontSizeLocal(size)
+    onFontSizeChange?.(size)
+  }, [onFontSizeChange])
+
+  // 親への通知付きsetAnchorDirection
+  const setAnchorDirection = useCallback((direction: AnchorDirection) => {
+    setAnchorDirectionLocal(direction)
+    onAnchorDirectionChange?.(direction)
+  }, [onAnchorDirectionChange])
+
+  // propsが変更されたときにローカル状態を更新
+  useEffect(() => {
+    setFontSizeLocal(initialFontSize)
+  }, [initialFontSize])
+
+  useEffect(() => {
+    setAnchorDirectionLocal(initialAnchorDirection)
+  }, [initialAnchorDirection])
 
   // 背景画像表示設定
   const [showBackground, setShowBackground] = useState(false)
@@ -169,12 +199,12 @@ export function RichTextEditorModalV4({
 
   // フォントサイズ調整
   const handleFontSizeIncrease = useCallback(() => {
-    setFontSize((prev) => Math.min(prev + 2, 48))
-  }, [])
+    setFontSize(Math.min(fontSize + 2, 48))
+  }, [fontSize, setFontSize])
 
   const handleFontSizeDecrease = useCallback(() => {
-    setFontSize((prev) => Math.max(prev - 2, 8))
-  }, [])
+    setFontSize(Math.max(fontSize - 2, 8))
+  }, [fontSize, setFontSize])
 
   // アンカー方向の取得関数
   const getHorizontalAlign = (direction: AnchorDirection) => {

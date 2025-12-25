@@ -118,6 +118,16 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   // 保存コマンド (Save)
   // ============================================
   "save.all": "Ctrl+s", // すべて保存（将来用）
+
+  // ============================================
+  // 描画ツールコマンド (Drawing Tools)
+  // ============================================
+  "tool.hand": "h", // ハンドツール（パン操作）
+  "tool.select": "g", // 選択ツール（移動・編集）
+  "tool.text": "t", // テキストツール
+  "tool.line": "l", // 線ツール
+  "tool.rectangle": "b", // 矩形ツール (Box)
+  "tool.ellipse": "y", // 楕円ツール
 } as const
 
 /**
@@ -131,6 +141,7 @@ export const KEYBINDING_CATEGORIES = {
   view: "表示",
   modal: "モーダル",
   save: "保存",
+  tool: "描画ツール",
 } as const
 
 /**
