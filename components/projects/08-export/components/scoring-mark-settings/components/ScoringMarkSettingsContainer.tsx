@@ -2,21 +2,32 @@
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Settings } from "lucide-react"
 import { StatusDisplaySection } from "@/components/projects/08-export/components/scoring-mark-settings/components/StatusDisplaySection"
-import { PositionSettingsSection } from "@/components/projects/08-export/components/scoring-mark-settings/components/PositionSettingsSection"
-import { OffsetSettingsSection } from "@/components/projects/08-export/components/scoring-mark-settings/components/OffsetSettingsSection"
-import { SizeSettingsSection } from "@/components/projects/08-export/components/scoring-mark-settings/components/SizeSettingsSection"
-import { TextAlignmentSection } from "@/components/projects/08-export/components/scoring-mark-settings/components/TextAlignmentSection"
 import type {
   MarkPosition,
+  ScoreTextConfig,
   ScoringMarkConfig,
   ScoringStatus,
   TextAlignment,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
 import {
   defaultConfig,
+  defaultPartialScoreConfig,
+  defaultSummaryScoreConfig,
+  positionLabels,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
 import { saveConfigToStorage } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoring-mark-utils"
 
@@ -29,27 +40,40 @@ export function ScoringMarkSettingsContainer({
   config,
   onChange,
 }: ScoringMarkSettingsContainerProps) {
+  const partialScore: ScoreTextConfig = config.partialScore || defaultPartialScoreConfig
+  const summaryScore: ScoreTextConfig = config.summaryScore || defaultSummaryScoreConfig
+  const useSeparateSettings = config.useSeparateScoreSettings ?? false
+
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
     const newConfig = { ...config, ...updates }
     onChange(newConfig)
     saveConfigToStorage(newConfig)
   }
 
+  const updatePartialScore = (updates: Partial<ScoreTextConfig>) => {
+    updateConfig({ partialScore: { ...partialScore, ...updates } })
+  }
+
+  const updateSummaryScore = (updates: Partial<ScoreTextConfig>) => {
+    updateConfig({ summaryScore: { ...summaryScore, ...updates } })
+  }
+
+  const updateBothScores = (updates: Partial<ScoreTextConfig>) => {
+    updateConfig({
+      partialScore: { ...partialScore, ...updates },
+      summaryScore: { ...summaryScore, ...updates },
+    })
+  }
+
   const updateMarkStatusDisplay = (status: ScoringStatus, show: boolean) => {
     updateConfig({
-      showMarkForStatus: {
-        ...config.showMarkForStatus,
-        [status]: show,
-      },
+      showMarkForStatus: { ...config.showMarkForStatus, [status]: show },
     })
   }
 
   const updateScoreStatusDisplay = (status: ScoringStatus, show: boolean) => {
     updateConfig({
-      showScoreForStatus: {
-        ...config.showScoreForStatus,
-        [status]: show,
-      },
+      showScoreForStatus: { ...config.showScoreForStatus, [status]: show },
     })
   }
 
@@ -58,14 +82,80 @@ export function ScoringMarkSettingsContainer({
     saveConfigToStorage(defaultConfig)
   }
 
+  const renderScoreSettings = (
+    scoreConfig: ScoreTextConfig,
+    onUpdate: (updates: Partial<ScoreTextConfig>) => void
+  ) => (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">位置</Label>
+        <Select value={scoreConfig.position} onValueChange={(v: MarkPosition) => onUpdate({ position: v })}>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(positionLabels) as MarkPosition[]).map((pos) => (
+              <SelectItem key={pos} value={pos}>{positionLabels[pos]}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">左右</Label>
+        <Input
+          type="number"
+          value={scoreConfig.offsetX}
+          onChange={(e) => onUpdate({ offsetX: parseInt(e.target.value) || 0 })}
+          min={-100}
+          max={100}
+          className="h-9 w-full"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">上下</Label>
+        <Input
+          type="number"
+          value={scoreConfig.offsetY}
+          onChange={(e) => onUpdate({ offsetY: parseInt(e.target.value) || 0 })}
+          min={-100}
+          max={100}
+          className="h-9 w-full"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">サイズ</Label>
+        <Input
+          type="number"
+          value={scoreConfig.size}
+          onChange={(e) => onUpdate({ size: parseInt(e.target.value) || 14 })}
+          min={8}
+          max={48}
+          className="h-9 w-full"
+        />
+      </div>
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">配置</Label>
+        <Select value={scoreConfig.alignment} onValueChange={(v: TextAlignment) => onUpdate({ alignment: v })}>
+          <SelectTrigger className="h-9 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="left">左揃え</SelectItem>
+            <SelectItem value="center">中央揃え</SelectItem>
+            <SelectItem value="right">右揃え</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Settings className="h-5 w-5" />
-        <Label className="text-base font-medium">採点マーク設定</Label>
+        <Settings className="h-4 w-4" />
+        <Label className="text-sm font-medium">採点マーク設定</Label>
       </div>
 
-      {/* 採点マークと点数の表示対象を左右対称に配置 */}
       <StatusDisplaySection
         showMarkForStatus={config.showMarkForStatus}
         showScoreForStatus={config.showScoreForStatus}
@@ -74,63 +164,110 @@ export function ScoringMarkSettingsContainer({
         onScoreStatusChange={updateScoreStatusDisplay}
       />
 
-      {/* 透明度設定 */}
       <div className="flex items-center space-x-2">
         <Checkbox
           id="use-transparent"
           checked={config.useTransparent}
-          onCheckedChange={(checked) =>
-            updateConfig({ useTransparent: checked as boolean })
-          }
+          onCheckedChange={(checked) => updateConfig({ useTransparent: checked as boolean })}
         />
-        <Label htmlFor="use-transparent" className="text-sm font-medium">
-          透明マークを使用
-        </Label>
+        <Label htmlFor="use-transparent" className="text-sm">透明マークを使用</Label>
       </div>
 
-      {/* 位置設定を左右対称に配置 */}
-      <PositionSettingsSection
-        markPosition={config.markPosition}
-        scorePosition={config.scorePosition}
-        onMarkPositionChange={(position: MarkPosition) =>
-          updateConfig({ markPosition: position })
-        }
-        onScorePositionChange={(position: MarkPosition) =>
-          updateConfig({ scorePosition: position })
-        }
-      />
+      <Separator />
 
-      {/* オフセット設定を左右対称に配置 */}
-      <OffsetSettingsSection
-        markOffsetX={config.markOffsetX}
-        markOffsetY={config.markOffsetY}
-        scoreOffsetX={config.scoreOffsetX}
-        scoreOffsetY={config.scoreOffsetY}
-        onMarkOffsetXChange={(value) => updateConfig({ markOffsetX: value })}
-        onMarkOffsetYChange={(value) => updateConfig({ markOffsetY: value })}
-        onScoreOffsetXChange={(value) => updateConfig({ scoreOffsetX: value })}
-        onScoreOffsetYChange={(value) => updateConfig({ scoreOffsetY: value })}
-      />
+      {/* 採点マーク設定 */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">採点マーク</Label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">位置</Label>
+            <Select value={config.markPosition} onValueChange={(v: MarkPosition) => updateConfig({ markPosition: v })}>
+              <SelectTrigger className="h-9 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(positionLabels) as MarkPosition[]).map((pos) => (
+                  <SelectItem key={pos} value={pos}>{positionLabels[pos]}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">左右</Label>
+            <Input
+              type="number"
+              value={config.markOffsetX}
+              onChange={(e) => updateConfig({ markOffsetX: parseInt(e.target.value) || 0 })}
+              min={-100}
+              max={100}
+              className="h-9 w-full"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">上下</Label>
+            <Input
+              type="number"
+              value={config.markOffsetY}
+              onChange={(e) => updateConfig({ markOffsetY: parseInt(e.target.value) || 0 })}
+              min={-100}
+              max={100}
+              className="h-9 w-full"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">サイズ</Label>
+            <Input
+              type="number"
+              value={config.markSize}
+              onChange={(e) => updateConfig({ markSize: parseInt(e.target.value) || 50 })}
+              min={20}
+              max={200}
+              className="h-9 w-full"
+            />
+          </div>
+        </div>
+      </div>
 
-      {/* サイズ設定を左右対称に配置 */}
-      <SizeSettingsSection
-        markSize={config.markSize}
-        scoreSize={config.scoreSize}
-        onMarkSizeChange={(size) => updateConfig({ markSize: size })}
-        onScoreSizeChange={(size) => updateConfig({ scoreSize: size })}
-      />
+      <Separator />
 
-      {/* テキスト配置設定を追加 */}
-      <TextAlignmentSection
-        scoreAlignment={config.scoreAlignment}
-        onScoreAlignmentChange={(alignment: TextAlignment) =>
-          updateConfig({ scoreAlignment: alignment })
-        }
-      />
+      {/* 点数表示設定 */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-medium">点数表示</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="separate-settings" className="text-xs text-muted-foreground">
+              別々に設定
+            </Label>
+            <Switch
+              id="separate-settings"
+              checked={useSeparateSettings}
+              onCheckedChange={(checked) => updateConfig({ useSeparateScoreSettings: checked })}
+            />
+          </div>
+        </div>
 
-      {/* リセットボタン */}
+        {useSeparateSettings ? (
+          <Tabs defaultValue="partial" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-8">
+              <TabsTrigger value="partial" className="text-xs text-red-600">部分点</TabsTrigger>
+              <TabsTrigger value="summary" className="text-xs text-blue-600">小計・合計点</TabsTrigger>
+            </TabsList>
+            <TabsContent value="partial" className="mt-2">
+              {renderScoreSettings(partialScore, updatePartialScore)}
+            </TabsContent>
+            <TabsContent value="summary" className="mt-2">
+              {renderScoreSettings(summaryScore, updateSummaryScore)}
+            </TabsContent>
+          </Tabs>
+        ) : (
+          renderScoreSettings(partialScore, updateBothScores)
+        )}
+      </div>
+
+      <Separator />
+
       <div className="flex justify-end">
-        <Button variant="outline" onClick={resetToDefaults}>
+        <Button variant="outline" size="sm" onClick={resetToDefaults}>
           デフォルトに戻す
         </Button>
       </div>

@@ -1,8 +1,27 @@
 import type {
   MarkPosition,
+  ScoreTextConfig,
   ScoringMarkConfig,
   ScoringStatus,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
+
+// 部分点用デフォルト設定
+export const defaultPartialScoreConfig: ScoreTextConfig = {
+  position: "middle-center",
+  offsetX: 0,
+  offsetY: 0,
+  size: 14,
+  alignment: "center",
+}
+
+// 小計・合計点用デフォルト設定
+export const defaultSummaryScoreConfig: ScoreTextConfig = {
+  position: "middle-center",
+  offsetX: 0,
+  offsetY: 0,
+  size: 18, // 小計・合計点はやや大きめ
+  alignment: "center",
+}
 
 // デフォルト設定
 export const defaultConfig: ScoringMarkConfig = {
@@ -27,12 +46,18 @@ export const defaultConfig: ScoringMarkConfig = {
   markOffsetX: 0,
   markOffsetY: 0,
   markSize: 50,
-  // 点数テキスト設定
-  scorePosition: "middle-center", // デフォルトを中央に変更
+  // 点数テキスト設定（後方互換性のために維持）
+  scorePosition: "middle-center",
   scoreOffsetX: 0,
   scoreOffsetY: 0,
   scoreSize: 14,
   scoreAlignment: "center",
+  // 部分点と小計・合計点を別々に設定するかどうか
+  useSeparateScoreSettings: false,
+  // 部分点設定
+  partialScore: { ...defaultPartialScoreConfig },
+  // 小計・合計点設定
+  summaryScore: { ...defaultSummaryScoreConfig },
   useTransparent: false,
   // PDF設定
   pageSize: "A4",
