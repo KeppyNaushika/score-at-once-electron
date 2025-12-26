@@ -39,7 +39,7 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin', 'win32'],
+      platforms: ['darwin', 'win32', 'linux'],
       config: {
         darwin: {
           options: {
@@ -55,6 +55,8 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-deb',
+      platforms: ['linux'],
+      enabled: process.platform === 'linux',
       config: {
         options: {
           icon: "./public/icons/icon-win.png"
@@ -63,6 +65,8 @@ module.exports = {
     },
     {
       name: '@electron-forge/maker-rpm',
+      platforms: ['linux'],
+      enabled: process.platform === 'linux',
       config: {
         options: {
           icon: "./public/icons/icon-win.png"
@@ -79,6 +83,26 @@ module.exports = {
     },
   ],
   hooks: {
+    prePackage: async () => {
+      const fs = require('fs')
+      const path = require('path')
+
+      // Remove .next/node_modules which contains broken symlinks
+      const nextNodeModules = path.join(__dirname, '.next', 'node_modules')
+      if (fs.existsSync(nextNodeModules)) {
+        console.log('🧹 Removing .next/node_modules (broken symlinks)...')
+        fs.rmSync(nextNodeModules, { recursive: true, force: true })
+        console.log('✓ Removed .next/node_modules')
+      }
+
+      // Also clean .next/cache to reduce size
+      const nextCache = path.join(__dirname, '.next', 'cache')
+      if (fs.existsSync(nextCache)) {
+        console.log('🧹 Removing .next/cache...')
+        fs.rmSync(nextCache, { recursive: true, force: true })
+        console.log('✓ Removed .next/cache')
+      }
+    },
     postPackage: async (forgeConfig, options) => {
       const fs = require('fs')
       const path = require('path')
