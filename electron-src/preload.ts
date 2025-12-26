@@ -1,7 +1,6 @@
-import { Prisma } from "@prisma/client"
 import type { DrawingAnnotation } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
-import { CreateProjectArgs } from "../types/electron"
 import {
   CropRegionCreateData,
   CropRegionUpdateData,
@@ -9,6 +8,7 @@ import {
   QuestionScoreUpdateData,
   ScoringMarkConfig,
 } from "../types/common.types"
+import { CreateProjectArgs } from "../types/electron"
 
 declare global {
   namespace NodeJS {
@@ -89,7 +89,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
   deleteStudentAnswer: (answerSheetId: string) =>
     ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
-  associateStudentAnswerWithStudent: (answerSheetId: string, studentId: string) =>
+  associateStudentAnswerWithStudent: (
+    answerSheetId: string,
+    studentId: string,
+  ) =>
     ipcRenderer.invoke(
       "associate-answer-sheet-with-student",
       answerSheetId,
@@ -110,7 +113,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       studentId,
       pageNumber,
     ),
-  swapStudentAnswerPlacements: (answerSheetId1: string, answerSheetId2: string) =>
+  swapStudentAnswerPlacements: (
+    answerSheetId1: string,
+    answerSheetId2: string,
+  ) =>
     ipcRenderer.invoke(
       "swap-answer-sheet-placements",
       answerSheetId1,
@@ -465,6 +471,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
     scoringMarkConfig?: ScoringMarkConfig
   }) => ipcRenderer.invoke("export-scored-answers-pdf", options),
 
+  // Canvas描画エンジン用PDF出力API
+  export: {
+    getPdfExportData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+    }) => ipcRenderer.invoke("export:getPdfExportData", options),
+    createPdfFromRenderedImages: (options: {
+      projectId: string
+      renderedPages: Array<{
+        studentId: string
+        pageNumber: number
+        imageData: ArrayBuffer
+      }>
+      pdfOrientation?: "portrait" | "landscape"
+      outputPath?: string
+    }) => ipcRenderer.invoke("export:createPdfFromRenderedImages", options),
+    convertSvgToPng: (options: {
+      svgString: string
+      width?: number
+      height?: number
+    }) => ipcRenderer.invoke("export:convertSvgToPng", options),
+    selectPdfSavePath: (options: {
+      projectName?: string
+    }) => ipcRenderer.invoke("export:selectPdfSavePath", options),
+  },
+
   // Excel Export related
   exportGradingDataExcel: (options: {
     projectId: string
@@ -492,20 +524,30 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Drawing Annotation related
   drawing: {
-    create: (data: Partial<DrawingAnnotation>) => ipcRenderer.invoke("drawing:create", data),
-    getByQuestionScore: (questionScoreId: string, type?: string) => 
+    create: (data: Partial<DrawingAnnotation>) =>
+      ipcRenderer.invoke("drawing:create", data),
+    getByQuestionScore: (questionScoreId: string, type?: string) =>
       ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
     getByStudent: (studentId: string, projectId: string, type?: string) =>
       ipcRenderer.invoke("drawing:getByStudent", studentId, projectId, type),
     getByProject: (projectId: string, type?: string) =>
       ipcRenderer.invoke("drawing:getByProject", projectId, type),
-    update: (id: string, data: Partial<DrawingAnnotation>) => ipcRenderer.invoke("drawing:update", id, data),
+    update: (id: string, data: Partial<DrawingAnnotation>) =>
+      ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
-    deleteByQuestionScore: (questionScoreId: string, type?: string) => 
-      ipcRenderer.invoke("drawing:deleteByQuestionScore", questionScoreId, type),
-    batchCreate: (annotations: Partial<DrawingAnnotation>[]) => ipcRenderer.invoke("drawing:batchCreate", annotations),
-    batchUpdate: (updates: Array<{id: string; data: Partial<DrawingAnnotation>}>) => ipcRenderer.invoke("drawing:batchUpdate", updates),
-    getStats: (questionScoreId: string) => ipcRenderer.invoke("drawing:getStats", questionScoreId),
+    deleteByQuestionScore: (questionScoreId: string, type?: string) =>
+      ipcRenderer.invoke(
+        "drawing:deleteByQuestionScore",
+        questionScoreId,
+        type,
+      ),
+    batchCreate: (annotations: Partial<DrawingAnnotation>[]) =>
+      ipcRenderer.invoke("drawing:batchCreate", annotations),
+    batchUpdate: (
+      updates: Array<{ id: string; data: Partial<DrawingAnnotation> }>,
+    ) => ipcRenderer.invoke("drawing:batchUpdate", updates),
+    getStats: (questionScoreId: string) =>
+      ipcRenderer.invoke("drawing:getStats", questionScoreId),
     getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
   },
 })
