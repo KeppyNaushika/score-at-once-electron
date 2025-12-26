@@ -62,8 +62,11 @@ export async function fetchExportData(
     const questionScores = await getQuestionScoresForProject(projectId)
 
     // 選択された生徒のフィルタリングとソート
+    // 空配列の場合は全生徒を取得（統計計算用）
     const selectedStudents = (studentsResult.students || [])
-      .filter((student) => selectedStudentIds.includes(student.id))
+      .filter((student) =>
+        selectedStudentIds.length === 0 || selectedStudentIds.includes(student.id)
+      )
       .map((student) => {
         // 最新の学級情報を取得（memberships配列の最初の要素）
         const studentWithMemberships = student as typeof student & {

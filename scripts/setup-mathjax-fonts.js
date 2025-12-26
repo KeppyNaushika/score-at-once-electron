@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * MathJaxのフォント資産をpublic配下へコピーするユーティリティ
+ * フォント・アセットセットアップスクリプト
  * Electron/OFFLINEビルドでリソース欠損を防ぐ
+ *
+ * コピーされるアセット:
+ * - MathJax woff-v2 フォント（数式表示用）
+ * - PDF.js Worker（PDF変換用）
+ * - Noto Sans JP フォント（個人成績表PDF用）
  */
 
 const fs = require("fs")
@@ -86,3 +91,39 @@ fs.copyFileSync(pdfWorkerSource, pdfWorkerDest)
 
 console.log(`✓ PDF.js worker file copied from ${pdfWorkerSource}`)
 console.log(`  to ${pdfWorkerDest}`)
+
+// Noto Sans JP フォントのセットアップ（個人成績表PDF用）
+const notoSansJpFontsDir = path.join(
+  repoRoot,
+  "node_modules",
+  "@fontsource",
+  "noto-sans-jp",
+  "files"
+)
+const notoSansJpTargetDir = path.join(repoRoot, "public", "fonts")
+
+// コピー対象のフォントファイル（japanese subset の 400/700 weight）
+const notoSansJpFonts = [
+  "noto-sans-jp-japanese-400-normal.woff",
+  "noto-sans-jp-japanese-700-normal.woff",
+]
+
+if (!fs.existsSync(notoSansJpFontsDir)) {
+  console.warn("⚠ Noto Sans JP フォントが見つかりません: " + notoSansJpFontsDir)
+  console.warn("  npm install @fontsource/noto-sans-jp を実行してください")
+} else {
+  ensureDir(notoSansJpTargetDir)
+  let copiedCount = 0
+  for (const fontFile of notoSansJpFonts) {
+    const src = path.join(notoSansJpFontsDir, fontFile)
+    const dest = path.join(notoSansJpTargetDir, fontFile)
+    if (fs.existsSync(src)) {
+      fs.copyFileSync(src, dest)
+      copiedCount++
+    } else {
+      console.warn(`⚠ フォントファイルが見つかりません: ${fontFile}`)
+    }
+  }
+  console.log(`✓ Noto Sans JP fonts copied (${copiedCount}/${notoSansJpFonts.length} files)`)
+  console.log(`  to ${notoSansJpTargetDir}`)
+}
