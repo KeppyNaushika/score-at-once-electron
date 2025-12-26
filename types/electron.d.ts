@@ -1,34 +1,30 @@
 import type {
-  Prisma,
-  User,
   Class,
-  Student,
-  Project,
-  ProjectPage,
-  PageImage,
   CropRegion,
-  SubtotalGroup,
-  Subtotal,
   CropSubtotal,
-  UserProject,
+  PageImage,
+  Prisma,
+  Project,
   ProjectSubtotalGroup,
   QuestionScore,
-  StudentAnswer,
-  ProjectStudent,
-  StudentClassMembership,
+  Student,
+  Subtotal,
+  SubtotalGroup,
+  User,
+  UserProject,
 } from "@prisma/client"
 
 // PDF.js module declarations
-declare module 'pdfjs-dist/legacy/build/pdf.min.mjs' {
-  export * from 'pdfjs-dist'
-  export { default } from 'pdfjs-dist'
+declare module "pdfjs-dist/legacy/build/pdf.min.mjs" {
+  export * from "pdfjs-dist"
+  export { default } from "pdfjs-dist"
 }
 
-declare module 'pdfjs-dist' {
+declare module "pdfjs-dist" {
   export const GlobalWorkerOptions: {
     workerSrc: string
   }
-  
+
   export function getDocument(params: {
     data: ArrayBuffer
     password?: string
@@ -202,7 +198,6 @@ export type SaveCropRegionArgs = Omit<
   Prisma.CropRegionUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 > & { id?: string; projectPageId: string }
-
 
 // SubtotalGroup and Subtotal related types (updated from QuestionGroup/Item)
 export type SubtotalGroupWithItems = Prisma.SubtotalGroupGetPayload<{
@@ -573,9 +568,7 @@ export interface MyAPI {
       path?: string
     }[],
   ) => Promise<ProjectPageWithDetails[]>
-  deleteMasterAnswer: (
-    answerId: string,
-  ) => Promise<MasterAnswerDeletionResult>
+  deleteMasterAnswer: (answerId: string) => Promise<MasterAnswerDeletionResult>
   updateMasterAnswersOrder: (
     answerOrders: { id: string; pageNumber: number }[],
   ) => Promise<Prisma.BatchPayload>
@@ -628,7 +621,6 @@ export interface MyAPI {
   updateCropRegionOrders: (
     updates: Array<{ id: string; orderIndex: number }>,
   ) => Promise<CropRegion[]>
-
 
   // SubtotalGroup related (updated from QuestionGroup)
   getSubtotalGroups: () => Promise<{
@@ -797,7 +789,7 @@ export interface MyAPI {
   getSubtotalDefinitionsByCropRegionId: (
     cropRegionId: string,
   ) => Promise<CropSubtotalWithRelations[]>
-  
+
   // Backward compatibility aliases
   deleteSubtotalDefinitionsByLayoutRegionId: (
     cropRegionId: string,
@@ -850,7 +842,7 @@ export interface MyAPI {
   deleteAssignmentsByQuestionCropRegionId: (
     questionCropRegionId: string,
   ) => Promise<Prisma.BatchPayload>
-  
+
   // Backward compatibility alias
   deleteAssignmentsByQuestionLayoutRegionId: (
     questionLayoutRegionId: string,
@@ -1057,6 +1049,98 @@ export interface MyAPI {
     error?: string
   }>
 
+  // Canvas描画エンジン用PDF出力API
+  export: {
+    // PDF出力に必要なデータを取得
+    getPdfExportData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+    }) => Promise<{
+      success: boolean
+      projectName?: string
+      pages?: Array<{
+        studentId: string
+        studentName: string
+        pageNumber: number
+        imagePath: string
+        imageUrl: string
+        scoringData: Array<{
+          questionScoreId: string
+          status: string
+          partialScore: number | null
+          cropRegion: {
+            id: string
+            x: number
+            y: number
+            width: number
+            height: number
+            label: string
+            maxScore: number | null
+            pageNumber: number
+          }
+        }>
+        annotations: Array<{
+          id: string
+          questionScoreId: string
+          type: string
+          x: number
+          y: number
+          color: string
+          strokeWidth: number
+          width: number
+          height: number
+          endX: number
+          endY: number
+          lineStyle: string
+          text: string
+          fontSize: number
+          displayX: number
+          displayY: number
+          anchorDirection: string
+        }>
+      }>
+      error?: string
+    }>
+
+    // Canvas描画済み画像からPDF作成
+    createPdfFromRenderedImages: (options: {
+      projectId: string
+      renderedPages: Array<{
+        studentId: string
+        pageNumber: number
+        imageData: ArrayBuffer
+      }>
+      pdfOrientation?: "portrait" | "landscape"
+      outputPath?: string
+    }) => Promise<{
+      success: boolean
+      outputPath?: string
+      error?: string
+    }>
+
+    // SVG→PNG変換（MathJaxテキストのtaint問題回避用）
+    convertSvgToPng: (options: {
+      svgString: string
+      width?: number
+      height?: number
+    }) => Promise<{
+      success: boolean
+      dataUrl?: string
+      width?: number   // 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため）
+      height?: number
+      error?: string
+    }>
+
+    // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
+    selectPdfSavePath: (options: {
+      projectName?: string
+    }) => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }>
+  }
+
   // Excel Export related
   exportGradingDataExcel: (options: {
     projectId: string
@@ -1113,42 +1197,44 @@ export interface MyAPI {
 
   // Drawing Annotation related
   drawing: {
-    create: (data: import('./drawing-annotation.types').DrawingCreateData) => Promise<{
+    create: (
+      data: import("./drawing-annotation.types").DrawingCreateData,
+    ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation
+      data?: import("./drawing-annotation.types").DrawingAnnotation
       error?: string
     }>
     getByQuestionScore: (
       questionScoreId: string,
-      type?: import('./drawing-annotation.types').DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
     getByStudent: (
       studentId: string,
       projectId: string,
-      type?: import('./drawing-annotation.types').DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
     getByProject: (
       projectId: string,
-      type?: import('./drawing-annotation.types').DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
     update: (
       id: string,
-      data: import('./drawing-annotation.types').DrawingUpdateData
+      data: import("./drawing-annotation.types").DrawingUpdateData,
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation
+      data?: import("./drawing-annotation.types").DrawingAnnotation
       error?: string
     }>
     delete: (id: string) => Promise<{
@@ -1157,36 +1243,36 @@ export interface MyAPI {
     }>
     deleteByQuestionScore: (
       questionScoreId: string,
-      type?: import('./drawing-annotation.types').DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
     ) => Promise<{
       success: boolean
       error?: string
     }>
     batchCreate: (
-      annotations: import('./drawing-annotation.types').DrawingCreateData[]
+      annotations: import("./drawing-annotation.types").DrawingCreateData[],
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
     batchUpdate: (
       updates: Array<{
         id: string
-        data: import('./drawing-annotation.types').DrawingUpdateData
-      }>
+        data: import("./drawing-annotation.types").DrawingUpdateData
+      }>,
     ) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation[]
+      data?: import("./drawing-annotation.types").DrawingAnnotation[]
       error?: string
     }>
     getStats: (questionScoreId: string) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotationStats
+      data?: import("./drawing-annotation.types").DrawingAnnotationStats
       error?: string
     }>
     getById: (id: string) => Promise<{
       success: boolean
-      data?: import('./drawing-annotation.types').DrawingAnnotation | null
+      data?: import("./drawing-annotation.types").DrawingAnnotation | null
       error?: string
     }>
   }

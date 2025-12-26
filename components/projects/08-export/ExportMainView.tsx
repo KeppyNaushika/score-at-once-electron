@@ -27,6 +27,7 @@ export default function ExportMainView() {
   // Canvas描画用の状態
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
   const [startCanvasRendering, setStartCanvasRendering] = useState(false)
+  const [pdfOutputPath, setPdfOutputPath] = useState<string>("")
 
   const {
     project,
@@ -82,16 +83,29 @@ export default function ExportMainView() {
       return
     }
 
-    setIsExporting(true)
-    setShowProgressModal(true)
-    setExportProgress(0)
-    setExportStatus("processing")
-    setCurrentStep("データを取得中...")
-
     try {
+      // Step 1: 最初に保存先を選択（ユーザー操作を先に済ませる）
+      const savePathResult = await window.electronAPI.export.selectPdfSavePath({
+        projectName: project?.examName,
+      })
+
+      if (savePathResult.canceled || !savePathResult.filePath) {
+        // ユーザーがキャンセルした場合は何もしない
+        return
+      }
+
+      setPdfOutputPath(savePathResult.filePath)
+
+      // Step 2: 処理開始
+      setIsExporting(true)
+      setShowProgressModal(true)
+      setExportProgress(0)
+      setExportStatus("processing")
+      setCurrentStep("データを取得中...")
+
       const selectedStudentIds = Array.from(selectedStudents)
 
-      // Step 1: PDF出力データを取得
+      // Step 3: PDF出力データを取得
       const dataResult = await window.electronAPI.export.getPdfExportData({
         projectId: project.id,
         selectedStudentIds,
@@ -111,7 +125,7 @@ export default function ExportMainView() {
         return
       }
 
-      // Step 2: Canvas描画を開始
+      // Step 4: Canvas描画を開始
       setCurrentStep("Canvas描画を準備中...")
       setPdfExportPages(dataResult.pages)
       setStartCanvasRendering(true)
@@ -159,11 +173,12 @@ export default function ExportMainView() {
         setExportProgress(85)
         setCurrentStep("PDFを作成中...")
 
-        // Step 3: Canvas描画結果からPDFを作成
+        // Step 5: Canvas描画結果からPDFを作成（保存先は事前に選択済み）
         const result = await window.electronAPI.export.createPdfFromRenderedImages({
           projectId: project.id,
           renderedPages,
           pdfOrientation: exportOptions.pdfOrientation,
+          outputPath: pdfOutputPath,
         })
 
         if (result.success) {
@@ -182,7 +197,7 @@ export default function ExportMainView() {
         setIsExporting(false)
       }
     },
-    [project?.id, exportOptions.pdfOrientation, setExportProgress, setCurrentStep, setExportStatus, setIsExporting]
+    [project?.id, exportOptions.pdfOrientation, pdfOutputPath, setExportProgress, setCurrentStep, setExportStatus, setIsExporting]
   )
 
   /**

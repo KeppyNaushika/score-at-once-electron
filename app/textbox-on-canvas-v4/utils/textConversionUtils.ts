@@ -180,16 +180,17 @@ export function parseTextWithMath(text: string): string {
 /**
  * MathJax処理用の一時的なDOM容器を作成する
  * 各テキスト要素ごとに独立したコンテナを使用し、並列処理を可能にする
+ * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns 新しいDIV要素
  */
-function createMathJaxContainer(): HTMLDivElement {
+function createMathJaxContainer(fontSize: number = FONT_SETTINGS.DEFAULT_SIZE): HTMLDivElement {
   const container = document.createElement("div")
   container.style.cssText = `
     position: absolute;
     left: -9999px;
     top: -9999px;
     font-family: ${FONT_SETTINGS.DEFAULT_FAMILY};
-    font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+    font-size: ${fontSize}px;
     line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
     color: ${FONT_SETTINGS.DEFAULT_COLOR};
     background: white;
@@ -255,17 +256,19 @@ export async function processMathJaxContent(
 /**
  * SVG変換のための処理
  * @param container 処理済みのDOM要素
+ * @param fontSize フォントサイズ
  * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
  */
 async function convertContainerToSvg(
   container: HTMLDivElement,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<SVGSVGElement | null> {
   try {
     // MathJax処理済みのHTML内容を取得
     const processedHtml = container.innerHTML
 
-    // SVG生成
-    const svgElement = await createMathJaxSVG(processedHtml, 200, 50)
+    // SVG生成（fontSizeを渡す）
+    const svgElement = await createMathJaxSVG(processedHtml, 200, 50, fontSize)
 
     // SVGプレビューに表示（デバッグ用）
     displaySvgPreview(svgElement)
@@ -331,11 +334,11 @@ export async function convertTextToSvg(
       return null
     }
 
-    // 2. 各行をSVGに変換
+    // 2. 各行をSVGに変換（fontSizeを渡す）
     const lineSvgs: SVGSVGElement[] = []
 
     for (const line of lines) {
-      const lineSvg = await convertSingleLineToSvg(line.trim())
+      const lineSvg = await convertSingleLineToSvg(line.trim(), textSize)
       if (lineSvg) {
         lineSvgs.push(lineSvg)
       }
@@ -345,7 +348,7 @@ export async function convertTextToSvg(
       return null
     }
 
-    // 3. 複数行SVGを結合（5px間隔）
+    // 3. 複数行SVGを結合（5px間隔、fontSizeを渡す）
     return combineLineSvgs(
       lineSvgs,
       5,
@@ -354,6 +357,7 @@ export async function convertTextToSvg(
       horizontalAlign,
       verticalAlign,
       textColor,
+      textSize,
     )
   } catch (error) {
     return null
@@ -364,17 +368,19 @@ export async function convertTextToSvg(
  * 単一行をSVGに変換（改行なし）
  * 並列処理対応: 各呼び出しで独立したコンテナを使用
  * @param lineText 単一行のテキスト
+ * @param fontSize フォントサイズ
  * @returns Promise<SVGSVGElement | null> 生成されたSVG要素またはnull
  */
 async function convertSingleLineToSvg(
   lineText: string,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<SVGSVGElement | null> {
   if (!lineText.trim()) {
     return null
   }
 
   // 各行ごとに独立したコンテナを作成（並列処理で競合しない）
-  const container = createMathJaxContainer()
+  const container = createMathJaxContainer(fontSize)
 
   try {
     // 1. テキストをHTMLに変換
@@ -383,8 +389,8 @@ async function convertSingleLineToSvg(
     // 2. MathJax処理を実行（単一行、overflow: hidden）
     await processSingleLineMathJax(container, htmlContent)
 
-    // 3. 処理済みコンテナをSVGに変換
-    return await convertContainerToSvg(container)
+    // 3. 処理済みコンテナをSVGに変換（fontSizeを渡す）
+    return await convertContainerToSvg(container, fontSize)
   } catch {
     return null
   } finally {
@@ -424,6 +430,7 @@ function combineLineSvgs(
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top",
   textColor: string = "#000000",
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): SVGSVGElement {
   // 各行のサイズを取得
   const lineInfos = lineSvgs.map((svg) => ({
@@ -484,7 +491,7 @@ function combineLineSvgs(
             .map(
               (content) => `
             <div style="
-              font-size: 24px;
+              font-size: ${fontSize}px;
               line-height: 1;
               color: ${textColor};
               text-align: left;

@@ -1,0 +1,715 @@
+/**
+ * PDF出力用Canvas描画ユーティリティ
+ *
+ * 一括採点個別表示のCanvas描画エンジン（useImageCanvas.ts）を流用し、
+ * PDF出力に適した形式でCanvas上に描画を行う。
+ */
+
+import { convertTextToSvg } from "@/app/textbox-on-canvas-v4/utils/textConversionUtils"
+import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
+import type { AnchorDirection } from "@/app/textbox-on-canvas-v4/types"
+import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
+
+/**
+ * 採点データ（PDF出力用）
+ */
+export interface ScoringDataForPdf {
+  questionScoreId: string
+  status: string // "unscored" | "correct" | "partial" | "pending" | "incorrect" | "no_answer"
+  partialScore?: number | null
+  cropRegion: {
+    id: string
+    x: number
+    y: number
+    width: number
+    height: number
+    label: string
+    projectPage?: {
+      pageNumber: number
+    }
+  }
+}
+
+/**
+ * 採点マーク設定
+ */
+export interface ScoringMarkConfigForPdf {
+  markPosition: string // "center" | "top-left" | "top-right" | "bottom-left" | "bottom-right" etc.
+  markSize: number
+  useTransparent: boolean
+  showPartialScore: boolean
+  partialScorePosition: string
+  partialScoreSize: number
+  partialScoreOffsetX: number
+  partialScoreOffsetY: number
+}
+
+/**
+ * 描画要素（内部用、DrawingAnnotationから変換）
+ */
+interface DrawingElement {
+  id: string
+  type: "text" | "line" | "rectangle" | "ellipse"
+  x: number
+  y: number
+  color: string
+  strokeWidth: number
+  width?: number
+  height?: number
+  endX?: number
+  endY?: number
+  lineStyle?: string
+  text?: string
+  fontSize?: number
+  displayX?: number
+  displayY?: number
+  anchorDirection?: string
+}
+
+/**
+ * DrawingAnnotationをDrawingElementに変換
+ */
+function convertAnnotationToDrawingElement(
+  annotation: DrawingAnnotation,
+): DrawingElement {
+  return {
+    id: annotation.id,
+    type: annotation.type as "text" | "line" | "rectangle" | "ellipse",
+    x: annotation.x,
+    y: annotation.y,
+    color: annotation.color,
+    strokeWidth: annotation.strokeWidth,
+    width: annotation.width,
+    height: annotation.height,
+    endX: annotation.endX,
+    endY: annotation.endY,
+    lineStyle: annotation.lineStyle,
+    text: annotation.text,
+    fontSize: annotation.fontSize,
+    displayX: annotation.displayX,
+    displayY: annotation.displayY,
+    anchorDirection: annotation.anchorDirection,
+  }
+}
+
+/**
+ * 単一の描画要素をCanvas上に描画
+ *
+ * useImageCanvas.ts の drawSingleElement を純粋関数として抽出
+ */
+async function drawElement(
+  ctx: CanvasRenderingContext2D,
+  element: DrawingElement,
+  imageWidth: number,
+  imageHeight: number,
+  offsetX: number = 0,
+  offsetY: number = 0,
+): Promise<void> {
+  // 座標計算（テキストも含めてelement.x/yを使用 - 一括採点個別表示と同じ）
+  const currentX = element.x * imageWidth + offsetX
+  const currentY = element.y * imageHeight + offsetY
+
+  ctx.strokeStyle = element.color
+  ctx.fillStyle = element.color
+  ctx.lineWidth = element.strokeWidth
+
+  switch (element.type) {
+    case "text":
+      if (element.text) {
+        const anchorDir = (element.anchorDirection || "top-left") as AnchorDirection
+        const fontSize = element.fontSize ?? 16
+        const textColor = element.color || "#000000"
+
+        try {
+          const svgElement = await convertTextToSvg(
+            element.text,
+            imageWidth,
+            imageHeight,
+            "left",
+            "top",
+            fontSize,
+            textColor,
+          )
+
+          if (svgElement) {
+            let svgData = new XMLSerializer().serializeToString(svgElement)
+
+            // MathJax defsを埋め込み
+            const hasMathJaxElements =
+              svgData.includes("mjx-container") || svgData.includes("<use")
+            if (hasMathJaxElements) {
+              const globalDefs = document.querySelector("#MJX-SVG-global-cache defs")
+              if (globalDefs && globalDefs.innerHTML.length > 10) {
+                const defsContent = globalDefs.outerHTML
+                svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
+              }
+            }
+
+            // SVG→PNG変換（Canvas taint問題を回避するためmainプロセスで実行）
+            const result = await window.electronAPI.export.convertSvgToPng({
+              svgString: svgData,
+            })
+
+            if (result.success && result.dataUrl) {
+              const img = new Image()
+              await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve()
+                img.onerror = () => reject(new Error("Failed to load converted PNG"))
+                img.src = result.dataUrl!
+              })
+
+              // 論理サイズで描画（Retinaではimg.width/heightが2倍になるため）
+              const width = result.width ?? img.width
+              const height = result.height ?? img.height
+
+              const textPosition = getTextPositionFromAnchor(
+                currentX,
+                currentY,
+                width,
+                height,
+                anchorDir,
+              )
+
+              ctx.drawImage(img, textPosition.x, textPosition.y, width, height)
+            } else {
+              throw new Error(result.error || "SVG to PNG conversion failed")
+            }
+          } else {
+            throw new Error("Failed to generate SVG")
+          }
+        } catch (error) {
+          console.error("MathJaxテキスト描画エラー:", error)
+          // フォールバック: シンプルテキスト描画
+          ctx.font = `${fontSize}px sans-serif`
+          ctx.fillStyle = textColor
+          ctx.textBaseline = "top"
+          const lines = element.text.split("\n")
+          const lineHeight = fontSize * 1.4
+          lines.forEach((line, index) => {
+            ctx.fillText(line, currentX, currentY + index * lineHeight)
+          })
+        }
+      }
+      break
+
+    case "line":
+      if (element.endX !== undefined && element.endY !== undefined) {
+        const currentEndX = element.endX * imageWidth + offsetX
+        const currentEndY = element.endY * imageHeight + offsetY
+
+        ctx.save()
+        ctx.strokeStyle = element.color
+        ctx.fillStyle = element.color
+        ctx.lineWidth = element.strokeWidth
+        ctx.setLineDash([])
+        ctx.lineCap = "round"
+        ctx.lineJoin = "round"
+
+        // 線の長さと角度を計算
+        const dx = currentEndX - currentX
+        const dy = currentEndY - currentY
+        const lineLength = Math.sqrt(dx * dx + dy * dy)
+        const angle = Math.atan2(dy, dx)
+
+        // 矢印のサイズ
+        const arrowSize = Math.max(element.strokeWidth * 5, 12)
+
+        switch (element.lineStyle) {
+          case "wave": {
+            const waveAmplitude = element.strokeWidth * 2
+            const waveLength = element.strokeWidth * 4
+            const segments = Math.max(Math.floor(lineLength / waveLength), 1)
+
+            ctx.beginPath()
+            for (let i = 0; i <= segments; i++) {
+              const t = i / segments
+              const x = currentX + dx * t
+              const y = currentY + dy * t
+              const waveOffset =
+                Math.sin(t * segments * Math.PI * 2) * waveAmplitude
+              const perpX = -Math.sin(angle) * waveOffset
+              const perpY = Math.cos(angle) * waveOffset
+
+              if (i === 0) {
+                ctx.moveTo(x + perpX, y + perpY)
+              } else {
+                ctx.lineTo(x + perpX, y + perpY)
+              }
+            }
+            ctx.stroke()
+            break
+          }
+
+          case "zigzag": {
+            const zigHeight = element.strokeWidth * 2
+            const zigLength = element.strokeWidth * 3
+            const segments = Math.max(Math.floor(lineLength / zigLength), 1)
+
+            ctx.beginPath()
+            ctx.moveTo(currentX, currentY)
+            for (let i = 1; i <= segments; i++) {
+              const t = i / segments
+              const x = currentX + dx * t
+              const y = currentY + dy * t
+              const zigOffset = i % 2 === 1 ? zigHeight : -zigHeight
+              const perpX = -Math.sin(angle) * zigOffset
+              const perpY = Math.cos(angle) * zigOffset
+              ctx.lineTo(x + perpX, y + perpY)
+            }
+            ctx.lineTo(currentEndX, currentEndY)
+            ctx.stroke()
+            break
+          }
+
+          case "double": {
+            const offset = element.strokeWidth
+            const perpX = -Math.sin(angle) * offset
+            const perpY = Math.cos(angle) * offset
+
+            ctx.beginPath()
+            ctx.moveTo(currentX + perpX, currentY + perpY)
+            ctx.lineTo(currentEndX + perpX, currentEndY + perpY)
+            ctx.stroke()
+
+            ctx.beginPath()
+            ctx.moveTo(currentX - perpX, currentY - perpY)
+            ctx.lineTo(currentEndX - perpX, currentEndY - perpY)
+            ctx.stroke()
+            break
+          }
+
+          case "arrow": {
+            ctx.beginPath()
+            ctx.moveTo(currentX, currentY)
+            ctx.lineTo(currentEndX, currentEndY)
+            ctx.stroke()
+
+            ctx.beginPath()
+            ctx.moveTo(currentEndX, currentEndY)
+            ctx.lineTo(
+              currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6),
+            )
+            ctx.lineTo(
+              currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6),
+            )
+            ctx.closePath()
+            ctx.fill()
+            break
+          }
+
+          case "both_arrow": {
+            ctx.beginPath()
+            ctx.moveTo(currentX, currentY)
+            ctx.lineTo(currentEndX, currentEndY)
+            ctx.stroke()
+
+            // 終点の矢印
+            ctx.beginPath()
+            ctx.moveTo(currentEndX, currentEndY)
+            ctx.lineTo(
+              currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6),
+            )
+            ctx.lineTo(
+              currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6),
+            )
+            ctx.closePath()
+            ctx.fill()
+
+            // 始点の矢印
+            ctx.beginPath()
+            ctx.moveTo(currentX, currentY)
+            ctx.lineTo(
+              currentX + arrowSize * Math.cos(angle - Math.PI / 6),
+              currentY + arrowSize * Math.sin(angle - Math.PI / 6),
+            )
+            ctx.lineTo(
+              currentX + arrowSize * Math.cos(angle + Math.PI / 6),
+              currentY + arrowSize * Math.sin(angle + Math.PI / 6),
+            )
+            ctx.closePath()
+            ctx.fill()
+            break
+          }
+
+          default:
+            // solid - 通常の直線
+            ctx.beginPath()
+            ctx.moveTo(currentX, currentY)
+            ctx.lineTo(currentEndX, currentEndY)
+            ctx.stroke()
+            break
+        }
+
+        ctx.restore()
+      }
+      break
+
+    case "rectangle":
+      if (element.width !== undefined && element.height !== undefined) {
+        const rectWidth = element.width * imageWidth
+        const rectHeight = element.height * imageHeight
+        ctx.strokeRect(currentX, currentY, rectWidth, rectHeight)
+      }
+      break
+
+    case "ellipse":
+      if (element.width !== undefined && element.height !== undefined) {
+        const rectWidth = element.width * imageWidth
+        const rectHeight = element.height * imageHeight
+
+        ctx.beginPath()
+        ctx.ellipse(
+          currentX + rectWidth / 2,
+          currentY + rectHeight / 2,
+          Math.abs(rectWidth) / 2,
+          Math.abs(rectHeight) / 2,
+          0,
+          0,
+          2 * Math.PI,
+        )
+        ctx.stroke()
+      }
+      break
+  }
+}
+
+/**
+ * 採点マークの位置を計算
+ */
+function calculateMarkPosition(
+  regionX: number,
+  regionY: number,
+  regionWidth: number,
+  regionHeight: number,
+  markSize: number,
+  position: string,
+): { x: number; y: number } {
+  const padding = 5
+
+  switch (position) {
+    case "top-left":
+      return { x: regionX + padding, y: regionY + padding }
+    case "top":
+      return { x: regionX + (regionWidth - markSize) / 2, y: regionY + padding }
+    case "top-right":
+      return {
+        x: regionX + regionWidth - markSize - padding,
+        y: regionY + padding,
+      }
+    case "left":
+      return {
+        x: regionX + padding,
+        y: regionY + (regionHeight - markSize) / 2,
+      }
+    case "center":
+      return {
+        x: regionX + (regionWidth - markSize) / 2,
+        y: regionY + (regionHeight - markSize) / 2,
+      }
+    case "right":
+      return {
+        x: regionX + regionWidth - markSize - padding,
+        y: regionY + (regionHeight - markSize) / 2,
+      }
+    case "bottom-left":
+      return {
+        x: regionX + padding,
+        y: regionY + regionHeight - markSize - padding,
+      }
+    case "bottom":
+      return {
+        x: regionX + (regionWidth - markSize) / 2,
+        y: regionY + regionHeight - markSize - padding,
+      }
+    case "bottom-right":
+      return {
+        x: regionX + regionWidth - markSize - padding,
+        y: regionY + regionHeight - markSize - padding,
+      }
+    default:
+      // デフォルトは中央
+      return {
+        x: regionX + (regionWidth - markSize) / 2,
+        y: regionY + (regionHeight - markSize) / 2,
+      }
+  }
+}
+
+/**
+ * 部分点テキストの位置を計算
+ */
+function calculatePartialScorePosition(
+  regionX: number,
+  regionY: number,
+  regionWidth: number,
+  regionHeight: number,
+  position: string,
+  offsetX: number,
+  offsetY: number,
+): { x: number; y: number } {
+  let baseX: number
+  let baseY: number
+
+  switch (position) {
+    case "top-left":
+      baseX = regionX
+      baseY = regionY
+      break
+    case "top-right":
+      baseX = regionX + regionWidth
+      baseY = regionY
+      break
+    case "bottom-left":
+      baseX = regionX
+      baseY = regionY + regionHeight
+      break
+    case "bottom-right":
+      baseX = regionX + regionWidth
+      baseY = regionY + regionHeight
+      break
+    default:
+      baseX = regionX + regionWidth
+      baseY = regionY + regionHeight
+      break
+  }
+
+  return {
+    x: baseX + offsetX,
+    y: baseY + offsetY,
+  }
+}
+
+/**
+ * 採点マーク画像を描画
+ */
+function drawScoringMark(
+  ctx: CanvasRenderingContext2D,
+  markImage: HTMLImageElement,
+  region: ScoringDataForPdf["cropRegion"],
+  config: ScoringMarkConfigForPdf,
+  imageWidth: number,
+  imageHeight: number,
+): void {
+  const regionX = region.x * imageWidth
+  const regionY = region.y * imageHeight
+  const regionWidth = region.width * imageWidth
+  const regionHeight = region.height * imageHeight
+
+  const markSize = Math.min(
+    config.markSize,
+    regionWidth * 0.8,
+    regionHeight * 0.8,
+  )
+  const { x, y } = calculateMarkPosition(
+    regionX,
+    regionY,
+    regionWidth,
+    regionHeight,
+    markSize,
+    config.markPosition,
+  )
+
+  ctx.drawImage(markImage, x, y, markSize, markSize)
+}
+
+/**
+ * 部分点テキストを描画
+ */
+function drawPartialScoreText(
+  ctx: CanvasRenderingContext2D,
+  score: number,
+  region: ScoringDataForPdf["cropRegion"],
+  config: ScoringMarkConfigForPdf,
+  imageWidth: number,
+  imageHeight: number,
+): void {
+  if (!config.showPartialScore) return
+
+  const regionX = region.x * imageWidth
+  const regionY = region.y * imageHeight
+  const regionWidth = region.width * imageWidth
+  const regionHeight = region.height * imageHeight
+
+  const { x, y } = calculatePartialScorePosition(
+    regionX,
+    regionY,
+    regionWidth,
+    regionHeight,
+    config.partialScorePosition,
+    config.partialScoreOffsetX,
+    config.partialScoreOffsetY,
+  )
+
+  ctx.save()
+  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
+  ctx.fillStyle = "#ef4444" // 赤色
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.fillText(String(score), x, y)
+  ctx.restore()
+}
+
+/**
+ * 答案シート1枚分をCanvas上に描画
+ *
+ * @param canvas - 描画先のCanvas要素
+ * @param image - 答案画像
+ * @param scoringDataList - 採点データのリスト（設問ごと）
+ * @param annotations - 全アノテーション
+ * @param config - 採点マーク設定
+ * @param scoringMarkImages - 採点マーク画像のMap
+ * @returns PNG Blob
+ */
+export async function renderAnswerSheetToCanvas(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  scoringDataList: ScoringDataForPdf[],
+  annotations: DrawingAnnotation[],
+  config: ScoringMarkConfigForPdf,
+  scoringMarkImages: Map<string, HTMLImageElement>,
+): Promise<Blob> {
+  const ctx = canvas.getContext("2d")
+  if (!ctx) {
+    throw new Error("Canvas context not available")
+  }
+
+  const imageWidth = image.naturalWidth
+  const imageHeight = image.naturalHeight
+
+  // Canvasサイズを画像サイズに設定
+  canvas.width = imageWidth
+  canvas.height = imageHeight
+
+  // Canvasをクリア
+  ctx.clearRect(0, 0, imageWidth, imageHeight)
+
+  // Canvas Context設定
+  ctx.globalCompositeOperation = "source-over"
+  ctx.globalAlpha = 1.0
+  ctx.lineCap = "butt"
+  ctx.lineJoin = "miter"
+  ctx.miterLimit = 10
+  ctx.setLineDash([])
+
+  // 1. 答案画像を描画
+  ctx.drawImage(image, 0, 0)
+
+  // 2. 各設問に対して採点マークと部分点を描画
+  for (const scoringData of scoringDataList) {
+    if (scoringData.status === "unscored") continue
+
+    // 採点マーク画像の取得
+    const markKey =
+      scoringData.status === "pending"
+        ? "hold"
+        : scoringData.status === "no_answer"
+          ? "incorrect"
+          : scoringData.status
+    const markImage = scoringMarkImages.get(markKey)
+
+    if (markImage) {
+      drawScoringMark(
+        ctx,
+        markImage,
+        scoringData.cropRegion,
+        config,
+        imageWidth,
+        imageHeight,
+      )
+    }
+
+    // 部分点テキストの描画
+    if (
+      scoringData.status === "partial" &&
+      scoringData.partialScore !== null &&
+      scoringData.partialScore !== undefined
+    ) {
+      drawPartialScoreText(
+        ctx,
+        scoringData.partialScore,
+        scoringData.cropRegion,
+        config,
+        imageWidth,
+        imageHeight,
+      )
+    }
+  }
+
+  // 3. 全アノテーションを描画
+  for (const annotation of annotations) {
+    const element = convertAnnotationToDrawingElement(annotation)
+    await drawElement(ctx, element, imageWidth, imageHeight)
+  }
+
+  // Canvas結果をBlobとして取得
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob)
+        } else {
+          reject(new Error("Failed to create blob from canvas"))
+        }
+      },
+      "image/png",
+      1.0,
+    )
+  })
+}
+
+/**
+ * 採点マーク画像をプリロード
+ *
+ * fetchしてBlobからObjectURLを作成することで、Canvasのtainted問題を回避
+ */
+export async function preloadScoringMarkImages(
+  useTransparent: boolean,
+): Promise<Map<string, HTMLImageElement>> {
+  const prefix = useTransparent ? "tp_" : ""
+  const markTypes = ["correct", "partial", "hold", "incorrect"]
+  const images = new Map<string, HTMLImageElement>()
+
+  await Promise.all(
+    markTypes.map(async (type) => {
+      try {
+        // fetchしてBlobとして取得
+        const response = await fetch(`/score-assets/${prefix}${type}.png`)
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+
+        const img = new Image()
+        img.src = objectUrl
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            // ObjectURLを解放（画像は既にメモリにロード済み）
+            URL.revokeObjectURL(objectUrl)
+            resolve()
+          }
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl)
+            reject(new Error(`Failed to load ${type} mark image`))
+          }
+        })
+        images.set(type, img)
+      } catch (error) {
+        console.error(`Failed to fetch ${type} mark image:`, error)
+        // フォールバック: 直接読み込み
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.src = `/score-assets/${prefix}${type}.png`
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () =>
+            reject(new Error(`Failed to load ${type} mark image`))
+        })
+        images.set(type, img)
+      }
+    }),
+  )
+
+  return images
+}

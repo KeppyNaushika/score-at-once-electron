@@ -1741,12 +1741,24 @@ export async function getPdfExportData(options: {
           }
         }
 
+        // 画像をbase64データURLに変換（Canvasのtainted問題を回避）
+        let imageUrl = ""
+        try {
+          const imageBuffer = fs.readFileSync(imagePath)
+          const ext = path.extname(imagePath).toLowerCase()
+          const mimeType = ext === ".png" ? "image/png" : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : "image/png"
+          imageUrl = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
+        } catch (imgError) {
+          console.error(`Failed to read image: ${imagePath}`, imgError)
+          continue // この画像をスキップ
+        }
+
         pages.push({
           studentId: student.id,
           studentName: `${student.lastName} ${student.firstName}`,
           pageNumber,
           imagePath,
-          imageUrl: `file://${imagePath}`,
+          imageUrl,
           scoringData,
           annotations,
         })
@@ -1785,6 +1797,7 @@ export async function createPdfFromRenderedImages(options: {
     imageData: ArrayBuffer
   }>
   pdfOrientation?: "portrait" | "landscape"
+  outputPath?: string
   progressCallback?: (progress: {
     current: number
     total: number
@@ -1794,7 +1807,7 @@ export async function createPdfFromRenderedImages(options: {
     totalSteps: number
   }) => void
 }): Promise<{ success: boolean; outputPath?: string; error?: string }> {
-  const { projectId, renderedPages, pdfOrientation = "portrait", progressCallback } = options
+  const { projectId, renderedPages, pdfOrientation = "portrait", outputPath: providedOutputPath, progressCallback } = options
 
   try {
     // プロジェクト情報を取得
@@ -1803,16 +1816,20 @@ export async function createPdfFromRenderedImages(options: {
       return { success: false, error: "プロジェクトが見つかりません" }
     }
 
-    // 保存先を選択
-    const sanitizedExamName = sanitizeFileName(project.examName || "採点済み答案")
-    const { filePath: outputPath, canceled } = await dialog.showSaveDialog({
-      title: "採点済み答案PDFの保存先",
-      defaultPath: `${sanitizedExamName}_採点済み.pdf`,
-      filters: [{ name: "PDF", extensions: ["pdf"] }],
-    })
+    // 保存先を決定（事前に指定されている場合はダイアログをスキップ）
+    let outputPath = providedOutputPath
+    if (!outputPath) {
+      const sanitizedExamName = sanitizeFileName(project.examName || "採点済み答案")
+      const { filePath, canceled } = await dialog.showSaveDialog({
+        title: "採点済み答案PDFの保存先",
+        defaultPath: `${sanitizedExamName}_採点済み.pdf`,
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      })
 
-    if (canceled || !outputPath) {
-      return { success: false, error: "保存がキャンセルされました" }
+      if (canceled || !filePath) {
+        return { success: false, error: "保存がキャンセルされました" }
+      }
+      outputPath = filePath
     }
 
     progressCallback?.({

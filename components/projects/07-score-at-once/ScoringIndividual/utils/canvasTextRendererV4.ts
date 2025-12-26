@@ -8,8 +8,13 @@ import {
   isAnchorClicked
 } from "../../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
 
-const svgCache = new Map<string, { text: string; color: string; svg: SVGSVGElement }>()
+/** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */
+const svgCache = new Map<string, { text: string; color: string; fontSize: number; svg: SVGSVGElement }>()
 
+/**
+ * SVGキャッシュをクリアする
+ * @param elementId 特定の要素のみクリアする場合はそのID
+ */
 export function clearSvgCache(elementId?: string): void {
   if (elementId) {
     svgCache.delete(elementId)
@@ -18,16 +23,22 @@ export function clearSvgCache(elementId?: string): void {
   }
 }
 
-function getCachedSvg(elementId: string, text: string, color: string): SVGSVGElement | null {
+/**
+ * キャッシュからSVGを取得する
+ */
+function getCachedSvg(elementId: string, text: string, color: string, fontSize: number): SVGSVGElement | null {
   const cached = svgCache.get(elementId)
-  if (cached && cached.text === text && cached.color === color) {
+  if (cached && cached.text === text && cached.color === color && cached.fontSize === fontSize) {
     return cached.svg.cloneNode(true) as SVGSVGElement
   }
   return null
 }
 
-function cacheSvg(elementId: string, text: string, color: string, svg: SVGSVGElement): void {
-  svgCache.set(elementId, { text, color, svg: svg.cloneNode(true) as SVGSVGElement })
+/**
+ * SVGをキャッシュに保存する
+ */
+function cacheSvg(elementId: string, text: string, color: string, fontSize: number, svg: SVGSVGElement): void {
+  svgCache.set(elementId, { text, color, fontSize, svg: svg.cloneNode(true) as SVGSVGElement })
 }
 
 export interface V4TextRenderResult {
@@ -38,6 +49,9 @@ export interface V4TextRenderResult {
   textBounds: { x: number; y: number; width: number; height: number }
 }
 
+/**
+ * DrawingElementからAnchorDirectionに変換する
+ */
 function convertToAnchorDirection(element: DrawingElement): AnchorDirection {
   if ((element as any).anchorDirection) {
     return (element as any).anchorDirection as AnchorDirection
@@ -63,6 +77,17 @@ function convertToAnchorDirection(element: DrawingElement): AnchorDirection {
   return "top-left"
 }
 
+/**
+ * V4テキスト要素をCanvasに描画する
+ * @param ctx Canvas描画コンテキスト
+ * @param element 描画する要素
+ * @param canvasWidth Canvasの幅
+ * @param canvasHeight Canvasの高さ
+ * @param isSelected 選択状態かどうか
+ * @param showAnchor アンカーを表示するかどうか
+ * @param opacity 透明度（0.0-1.0）
+ * @returns 描画結果
+ */
 export async function renderTextElementV4(
   ctx: CanvasRenderingContext2D,
   element: DrawingElement,
@@ -87,8 +112,9 @@ export async function renderTextElementV4(
     const anchorY = element.y * canvasHeight
     const anchorDirection = convertToAnchorDirection(element)
     const textColor = element.color || "#000000"
+    const fontSize = element.fontSize ?? 16
 
-    let svgElement = getCachedSvg(element.id, element.text, textColor)
+    let svgElement = getCachedSvg(element.id, element.text, textColor, fontSize)
 
     if (!svgElement) {
       svgElement = await convertTextToSvg(
@@ -97,12 +123,12 @@ export async function renderTextElementV4(
         canvasHeight,
         "left",
         "top",
-        24,
+        fontSize,
         textColor
       )
 
       if (svgElement) {
-        cacheSvg(element.id, element.text, textColor, svgElement)
+        cacheSvg(element.id, element.text, textColor, fontSize, svgElement)
       }
     }
 
@@ -161,6 +187,9 @@ export async function renderTextElementV4(
   }
 }
 
+/**
+ * テキスト要素のアンカーがクリックされたかどうかを判定する
+ */
 export function isTextAnchorClicked(
   mouseX: number,
   mouseY: number,
@@ -176,6 +205,9 @@ export function isTextAnchorClicked(
   return isAnchorClicked(mouseX, mouseY, anchorX, anchorY)
 }
 
+/**
+ * 複数のV4テキスト要素をCanvasに描画する
+ */
 export async function renderTextElementsV4(
   ctx: CanvasRenderingContext2D,
   elements: DrawingElement[],
@@ -201,6 +233,10 @@ export async function renderTextElementsV4(
   return results
 }
 
+/**
+ * テキスト要素のヒットテストを行う
+ * @returns "anchor" | "text" | null
+ */
 export function hitTestTextElement(
   mouseX: number,
   mouseY: number,

@@ -85,16 +85,16 @@ export async function renderSvgToCanvas(
 
       img.onload = () => {
         try {
-          // 実際のSVGサイズを取得
-          const actualWidth = img.width
-          const actualHeight = img.height
+          // 実際のSVGサイズをそのまま使用（fontSizeは生成時に適用済み）
+          const width = img.width
+          const height = img.height
 
           // アンカー方向に基づいて描画位置を計算
           const textPosition = getTextPositionFromAnchor(
             anchorX,
             anchorY,
-            actualWidth,
-            actualHeight,
+            width,
+            height,
             anchorDirection,
           )
 
@@ -105,8 +105,8 @@ export async function renderSvgToCanvas(
             img,
             textPosition.x,
             textPosition.y,
-            actualWidth,
-            actualHeight,
+            width,
+            height,
           )
           ctx.restore()
 
@@ -116,15 +116,15 @@ export async function renderSvgToCanvas(
               ctx,
               textPosition.x,
               textPosition.y,
-              actualWidth,
-              actualHeight,
+              width,
+              height,
             )
           }
 
           URL.revokeObjectURL(svgUrl)
           resolve({
-            width: actualWidth,
-            height: actualHeight,
+            width: width,
+            height: height,
           })
         } catch (drawError) {
           URL.revokeObjectURL(svgUrl)

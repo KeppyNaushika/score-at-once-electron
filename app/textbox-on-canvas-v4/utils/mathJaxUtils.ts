@@ -154,12 +154,14 @@ export function cleanupElementStyles(container: HTMLElement): void {
  * @param htmlContent 測定対象のHTML文字列
  * @param initialWidth 初期幅
  * @param initialHeight 初期高さ
+ * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns Promise<MeasuredSize> 測定されたサイズ
  */
 export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
   initialHeight: number,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<MeasuredSize> {
   // 一時的なDOM要素を作成（scrollWidth/scrollHeight専用設定）
   const tempDiv = document.createElement("div")
@@ -167,7 +169,7 @@ export async function measureMathJaxContentSize(
     position: absolute;
     left: -9999px;
     top: -9999px;
-    font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+    font-size: ${fontSize}px;
     line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
     color: ${FONT_SETTINGS.DEFAULT_COLOR};
     visibility: hidden;
@@ -263,11 +265,13 @@ async function waitForMathJaxDefsGeneration(): Promise<boolean> {
  * 測定結果に基づいて最適なSVGを生成する（軽量版）
  * @param htmlContent HTML内容
  * @param measuredSize 測定されたサイズ
+ * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns 生成されたSVG要素
  */
 export async function createOptimizedSVG(
   htmlContent: string,
   measuredSize: MeasuredSize,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<SVGSVGElement> {
   // MathJax defsを抽出（軽量化）
   const mathJaxDefs = extractMathJaxDefs()
@@ -285,7 +289,7 @@ export async function createOptimizedSVG(
                      height="${measuredSize.height}"
                      overflow="${SVG_SETTINGS.DEFAULT_OVERFLOW}">
         <div xmlns="${SVG_SETTINGS.XHTML_NAMESPACE}">
-          <div style="font-size: ${FONT_SETTINGS.DEFAULT_SIZE}px;
+          <div style="font-size: ${fontSize}px;
                      line-height: ${FONT_SETTINGS.DEFAULT_LINE_HEIGHT};
                      color: ${FONT_SETTINGS.DEFAULT_COLOR};
                      overflow: visible;
@@ -315,20 +319,23 @@ export async function createOptimizedSVG(
  * @param htmlContent 変換対象のHTML文字列
  * @param initialWidth 初期幅
  * @param initialHeight 初期高さ
+ * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns Promise<SVGSVGElement> 生成されたSVG要素
  */
 export async function createMathJaxSVG(
   htmlContent: string,
   initialWidth: number,
   initialHeight: number,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
 ): Promise<SVGSVGElement> {
-  // MathJax処理後の正確なサイズを測定
+  // MathJax処理後の正確なサイズを測定（fontSizeを渡す）
   const measuredSize = await measureMathJaxContentSize(
     htmlContent,
     initialWidth,
     initialHeight,
+    fontSize,
   )
 
-  // 測定結果に基づいて最適なSVGを生成
-  return await createOptimizedSVG(htmlContent, measuredSize)
+  // 測定結果に基づいて最適なSVGを生成（fontSizeを渡す）
+  return await createOptimizedSVG(htmlContent, measuredSize, fontSize)
 }
