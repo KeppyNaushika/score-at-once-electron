@@ -1032,23 +1032,6 @@ export interface MyAPI {
     error?: string
   }>
 
-  // PDF Export related
-  exportScoredAnswersPDF: (options: {
-    projectId: string
-    selectedStudentIds: string[]
-    outputPath?: string
-    pdfOrientation?: "portrait" | "landscape"
-    scoringMarkConfig?: {
-      position: string
-      size: number
-      showTransparent: boolean
-    }
-  }) => Promise<{
-    success: boolean
-    outputPath?: string
-    error?: string
-  }>
-
   // Canvas描画エンジン用PDF出力API
   export: {
     // PDF出力に必要なデータを取得

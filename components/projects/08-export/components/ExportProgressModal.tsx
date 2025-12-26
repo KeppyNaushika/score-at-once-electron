@@ -27,15 +27,11 @@ interface ExportProgressModalProps {
   outputPath?: string
 }
 
-// PDF出力の7つのステップを定義
+// PDF出力のステップを定義（並行処理対応）
 const PDF_EXPORT_STEPS = [
-  { id: 1, name: "保存場所選択", progressRange: [0, 5] },
-  { id: 2, name: "生徒データ取得", progressRange: [5, 20] },
-  { id: 3, name: "答案データ取得", progressRange: [20, 30] },
-  { id: 4, name: "採点データ取得", progressRange: [30, 40] },
-  { id: 5, name: "答案画像確認", progressRange: [40, 45] },
-  { id: 6, name: "PDFページ作成", progressRange: [45, 95] },
-  { id: 7, name: "最適化・保存", progressRange: [95, 100] },
+  { id: 1, name: "保存先選択・データ取得", progressRange: [0, 10], isParallel: true },
+  { id: 2, name: "Canvas描画", progressRange: [10, 85] },
+  { id: 3, name: "PDF生成・保存", progressRange: [85, 100] },
 ]
 
 export default function ExportProgressModal({
@@ -62,7 +58,7 @@ export default function ExportProgressModal({
     }
   }
 
-  // Step6のページ数を抽出する関数
+  // Canvas描画のページ数を抽出する関数
   const getPageProgress = () => {
     // currentStepから「答案 X / Y を処理中...」や「ページ X / Y を作成中...」などの形式を抽出
     const pageMatch =
@@ -75,6 +71,16 @@ export default function ExportProgressModal({
       }
     }
     return null
+  }
+
+  // 並行処理ステップかどうかを判定
+  const isParallelStep = () => {
+    return currentStep.includes("保存先を選択") || currentStep.includes("バックグラウンド")
+  }
+
+  // Canvas描画完了後、保存先待ちの状態かどうか
+  const isWaitingForSavePath = () => {
+    return currentStep.includes("保存先の選択を待っています")
   }
 
   useEffect(() => {
@@ -145,6 +151,27 @@ export default function ExportProgressModal({
                 <Progress value={progress} className="h-2 w-full" />
               </div>
 
+              {/* 並行処理時の特別な表示 */}
+              {(isParallelStep() || isWaitingForSavePath()) && (
+                <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="mt-0.5 shrink-0">
+                      <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-amber-800">
+                        保存先を選択してください
+                      </p>
+                      <p className="mt-1 text-sm text-amber-700">
+                        {isWaitingForSavePath()
+                          ? "Canvas描画が完了しました。保存先を選択するとPDF生成を開始します。"
+                          : "ダイアログで保存先を選んでいる間、バックグラウンドで処理を進めています。"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ステップ表示 */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">処理ステップ</h4>
@@ -152,13 +179,16 @@ export default function ExportProgressModal({
                   {PDF_EXPORT_STEPS.map((step) => {
                     const stepStatus = getStepStatus(step)
                     const pageProgress = getPageProgress()
+                    const isCurrentParallel = step.id === 1 && isParallelStep()
 
                     return (
                       <div
                         key={step.id}
                         className={`flex items-center space-x-3 rounded-md p-2 transition-colors ${
                           stepStatus === "processing"
-                            ? "border border-blue-200 bg-blue-50"
+                            ? isCurrentParallel
+                              ? "border border-amber-300 bg-amber-50"
+                              : "border border-blue-200 bg-blue-50"
                             : stepStatus === "completed"
                               ? "bg-green-50"
                               : "bg-gray-50"
@@ -169,7 +199,7 @@ export default function ExportProgressModal({
                             <CheckSquare className="h-4 w-4 text-green-600" />
                           )}
                           {stepStatus === "processing" && (
-                            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                            <Loader2 className={`h-4 w-4 animate-spin ${isCurrentParallel ? "text-amber-600" : "text-blue-600"}`} />
                           )}
                           {stepStatus === "pending" && (
                             <Square className="h-4 w-4 text-gray-400" />
@@ -179,7 +209,9 @@ export default function ExportProgressModal({
                           <span
                             className={`text-sm ${
                               stepStatus === "processing"
-                                ? "font-medium text-blue-700"
+                                ? isCurrentParallel
+                                  ? "font-medium text-amber-700"
+                                  : "font-medium text-blue-700"
                                 : stepStatus === "completed"
                                   ? "text-green-700"
                                   : "text-gray-500"
@@ -188,15 +220,19 @@ export default function ExportProgressModal({
                             Step {step.id}: {step.name}
                             {stepStatus === "completed" && "：完了"}
                             {stepStatus === "processing" &&
-                              step.id === 6 &&
+                              step.id === 2 &&
                               pageProgress && (
                                 <span className="ml-2 text-blue-600">
-                                  ({pageProgress.current} / {pageProgress.total}
-                                  )
+                                  ({pageProgress.current} / {pageProgress.total})
                                 </span>
                               )}
                             {stepStatus === "processing" &&
-                              step.id !== 6 &&
+                              step.id === 1 &&
+                              isCurrentParallel &&
+                              "（並行処理中）"}
+                            {stepStatus === "processing" &&
+                              !isCurrentParallel &&
+                              step.id !== 2 &&
                               "中..."}
                           </span>
                         </div>
