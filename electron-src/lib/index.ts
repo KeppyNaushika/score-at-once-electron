@@ -26,7 +26,6 @@ export {
 
 // === 出力機能 ===
 export { exportGradingDataExcel } from "./export/excel/excel-export-main"
-export { exportScoredAnswersPDF } from "./prisma/pdfExport"
 
 // === Prisma関連（互換性のため、個別import推奨） ===
 export { getAbsolutePathFromData } from "./dataManager"

@@ -6,7 +6,6 @@ import {
   CropRegionUpdateData,
   QuestionScoreCreateData,
   QuestionScoreUpdateData,
-  ScoringMarkConfig,
 } from "../types/common.types"
 import { CreateProjectArgs } from "../types/electron"
 
@@ -462,14 +461,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-crop-subtotals-by-crop-region-id", cropRegionId),
   getSubtotalDefinitionsByQuestionGroupItemId: (subtotalId: string) =>
     ipcRenderer.invoke("get-crop-subtotals-by-subtotal-id", subtotalId),
-
-  // PDF Export related
-  exportScoredAnswersPDF: (options: {
-    projectId: string
-    selectedStudentIds: string[]
-    outputPath?: string
-    scoringMarkConfig?: ScoringMarkConfig
-  }) => ipcRenderer.invoke("export-scored-answers-pdf", options),
 
   // Canvas描画エンジン用PDF出力API
   export: {
