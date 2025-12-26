@@ -53,7 +53,6 @@ export default function ExportProgressModal({
   totalPagesCount = 0,
   canvasRenderingComplete = false,
 }: ExportProgressModalProps) {
-  const [isVisible, setIsVisible] = useState(isOpen)
   const [isClosing, setIsClosing] = useState(false)
 
   // 現在のフェーズを計算
@@ -108,20 +107,15 @@ export default function ExportProgressModal({
     return { displayCount, groupSize, canvasTotal: total, pdfEmbedded: embedded }
   }, [totalPagesCount, embeddedPagesCount, progressDetails.canvasTotal])
 
+  // isOpenがtrueになったらisClosingをリセット（モーダルが開く時）
   useEffect(() => {
-    if (!isOpen) {
-      // isOpenがfalseになったらモーダルを閉じる
-      setIsVisible(false)
-      setIsClosing(false)
-      return
+    if (isOpen) {
+      // requestAnimationFrameでマイクロタスク後に実行してカスケードを回避
+      const frame = requestAnimationFrame(() => {
+        setIsClosing(false)
+      })
+      return () => cancelAnimationFrame(frame)
     }
-
-    const frame = requestAnimationFrame(() => {
-      setIsVisible(true)
-      setIsClosing(false)
-    })
-
-    return () => cancelAnimationFrame(frame)
   }, [isOpen])
 
   useEffect(() => {
@@ -129,7 +123,6 @@ export default function ExportProgressModal({
       const timer = setTimeout(() => {
         setIsClosing(true)
         setTimeout(() => {
-          setIsVisible(false)
           onClose()
         }, 300)
       }, 2000)
@@ -142,14 +135,13 @@ export default function ExportProgressModal({
     if (status !== "processing") {
       setIsClosing(true)
       setTimeout(() => {
-        setIsVisible(false)
         onClose()
       }, 300)
     }
   }
 
   return (
-    <Dialog open={isVisible} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
         className={`transition-opacity duration-300 sm:max-w-md ${
           isClosing ? "opacity-0" : "opacity-100"
