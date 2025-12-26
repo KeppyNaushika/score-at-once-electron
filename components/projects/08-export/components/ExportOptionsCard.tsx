@@ -2,13 +2,16 @@
 
 import {
   ExportOptions,
+  IndividualReportOptions,
   PdfOrientation,
 } from "@/app/projects/[projectId]/08-export/types"
 import ScoringMarkSettings, {
   ScoringMarkConfig,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
+import { IndividualReportSettings } from "@/components/projects/08-export/components/IndividualReportSettings"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download } from "lucide-react"
 
@@ -17,6 +20,8 @@ interface ExportOptionsCardProps {
   setExportOptions: (options: ExportOptions) => void
   scoringMarkConfig: ScoringMarkConfig
   setScoringMarkConfig: (config: ScoringMarkConfig) => void
+  individualReportOptions: IndividualReportOptions
+  setIndividualReportOptions: (options: IndividualReportOptions) => void
   selectedStudents: Set<string>
   isExporting: boolean
   onExportScoredAnswers: () => void
@@ -29,6 +34,8 @@ export function ExportOptionsCard({
   setExportOptions,
   scoringMarkConfig,
   setScoringMarkConfig,
+  individualReportOptions,
+  setIndividualReportOptions,
   selectedStudents,
   isExporting,
   onExportScoredAnswers,
@@ -39,6 +46,13 @@ export function ExportOptionsCard({
     setExportOptions({
       ...exportOptions,
       pdfOrientation: value,
+    })
+  }
+
+  const handleParallelCountChange = (value: number[]) => {
+    setExportOptions({
+      ...exportOptions,
+      parallelCount: value[0],
     })
   }
 
@@ -110,6 +124,28 @@ export function ExportOptionsCard({
           </div>
         </div>
 
+        {/* 並列処理設定 */}
+        <div className="space-y-3">
+          <h4 className="text-base font-semibold">処理設定</h4>
+          <div>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">並列処理数</Label>
+              <span className="text-sm font-medium">{exportOptions.parallelCount}</span>
+            </div>
+            <Slider
+              value={[exportOptions.parallelCount]}
+              onValueChange={handleParallelCountChange}
+              min={1}
+              max={8}
+              step={1}
+              className="mt-2"
+            />
+            <p className="text-muted-foreground mt-1 text-xs">
+              値を大きくすると処理が速くなりますが、メモリ使用量が増えます
+            </p>
+          </div>
+        </div>
+
         {/* 採点マーク設定 */}
         <ScoringMarkSettings
           config={scoringMarkConfig}
@@ -156,20 +192,24 @@ export function ExportOptionsCard({
           <Button
             className="w-full"
             size="lg"
-            disabled
             onClick={onExportIndividualReports}
+            disabled={selectedStudents.size === 0 || isExporting}
           >
             <Download className="mr-2 h-4 w-4" />
-            個人成績表PDFをダウンロード（開発中）
+            個人成績表PDFをダウンロード
           </Button>
+          {selectedStudents.size === 0 && (
+            <p className="text-muted-foreground mt-2 text-center text-xs">
+              生徒を選択してください
+            </p>
+          )}
         </div>
 
-        <div className="space-y-3">
-          <h4 className="text-base font-semibold">個人成績表設定</h4>
-          <p className="text-muted-foreground text-sm">
-            個人成績表PDFの出力機能は現在開発中です。
-          </p>
-        </div>
+        {/* 個人成績表設定 */}
+        <IndividualReportSettings
+          options={individualReportOptions}
+          onChange={setIndividualReportOptions}
+        />
       </TabsContent>
     </Tabs>
   )

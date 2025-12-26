@@ -129,7 +129,7 @@ export function ScoringMarkSettingsContainer({
           value={scoreConfig.size}
           onChange={(e) => onUpdate({ size: parseInt(e.target.value) || 14 })}
           min={8}
-          max={48}
+          max={200}
           className="h-9 w-full"
         />
       </div>

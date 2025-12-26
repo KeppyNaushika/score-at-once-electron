@@ -1,11 +1,15 @@
-import { ipcMain } from "electron"
+import { ipcMain, BrowserWindow, dialog } from "electron"
 import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 import {
   createPdfFromRenderedImages,
   getPdfExportData,
+  createPdfStreamingSession,
+  addPageToStreamingSession,
+  finalizeStreamingSession,
+  cancelStreamingSession,
 } from "../lib/prisma/pdfExport"
-
-import { BrowserWindow } from "electron"
+import { fetchIndividualReportData } from "../lib/export/individual-report"
+import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 
 export function setupExportHandlers(): void {
   // Excel Export handlers
@@ -57,7 +61,7 @@ export function setupExportHandlers(): void {
   ipcMain.handle(
     "export:createPdfFromRenderedImages",
     async (
-      event,
+      _event,
       options: {
         projectId: string
         renderedPages: Array<{
@@ -69,21 +73,11 @@ export function setupExportHandlers(): void {
       },
     ) => {
       try {
-        // プログレスコールバックを設定
-        const progressCallback = (progress: {
-          current: number
-          total: number
-          step: string
-          percentage: number
-          currentStepIndex: number
-          totalSteps: number
-        }) => {
-          event.sender.send("export-progress", progress)
-        }
-
+        // プログレスコールバックは渡さない（React側で管理するため）
+        // Electron側のprogressCallbackはReact側のプログレス更新と競合し、
+        // プログレスバーが0%にリセットされて2周するように見える問題を引き起こしていた
         return await createPdfFromRenderedImages({
           ...options,
-          progressCallback,
         })
       } catch (err) {
         console.error("Error creating PDF from rendered images:", err)
@@ -217,6 +211,180 @@ export function setupExportHandlers(): void {
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // ============================================================
+  // ストリーミングPDF生成API
+  // ============================================================
+
+  // ストリーミングセッション作成
+  ipcMain.handle(
+    "export:createPdfStreamingSession",
+    async (
+      _event,
+      options: {
+        totalPages: number
+        pdfOrientation?: "portrait" | "landscape"
+      },
+    ) => {
+      try {
+        return await createPdfStreamingSession(options)
+      } catch (err) {
+        console.error("Error creating PDF streaming session:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // ストリーミングセッションにページを追加
+  ipcMain.handle(
+    "export:addPageToStreamingSession",
+    async (
+      _event,
+      options: {
+        sessionId: string
+        pageIndex: number
+        imageData: ArrayBuffer
+      },
+    ) => {
+      try {
+        return await addPageToStreamingSession(options)
+      } catch (err) {
+        console.error("Error adding page to streaming session:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // ストリーミングセッションを完了してPDF保存
+  ipcMain.handle(
+    "export:finalizeStreamingSession",
+    async (
+      _event,
+      options: {
+        sessionId: string
+        outputPath: string
+      },
+    ) => {
+      try {
+        return await finalizeStreamingSession(options)
+      } catch (err) {
+        console.error("Error finalizing streaming session:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // ストリーミングセッションをキャンセル
+  ipcMain.handle(
+    "export:cancelStreamingSession",
+    async (
+      _event,
+      sessionId: string,
+    ) => {
+      try {
+        cancelStreamingSession(sessionId)
+        return { success: true }
+      } catch (err) {
+        console.error("Error canceling streaming session:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // ============================================================
+  // 個人成績表PDF API
+  // ============================================================
+
+  // 個人成績表用データ取得
+  ipcMain.handle(
+    "export:getIndividualReportData",
+    async (_event, options: GetIndividualReportDataOptions) => {
+      try {
+        return await fetchIndividualReportData(options)
+      } catch (err) {
+        console.error("Error getting individual report data:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    },
+  )
+
+  // 個人成績表PDF保存先選択ダイアログ
+  ipcMain.handle(
+    "export:selectIndividualReportSavePath",
+    async (
+      _event,
+      options: {
+        projectName?: string
+      },
+    ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
+      try {
+        const dateStr = new Date().toISOString().split("T")[0]
+        const safeProjectName = options.projectName
+          ? options.projectName.replace(/[<>:"/\\|?*]/g, "_")
+          : null
+        const defaultFileName = safeProjectName
+          ? `個人成績表_${safeProjectName}_${dateStr}.pdf`
+          : `個人成績表_${dateStr}.pdf`
+
+        const result = await dialog.showSaveDialog({
+          title: "個人成績表PDFの保存先",
+          defaultPath: defaultFileName,
+          filters: [{ name: "PDF Files", extensions: ["pdf"] }],
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, canceled: true }
+        }
+
+        return { success: true, filePath: result.filePath }
+      } catch (err) {
+        console.error("Error selecting individual report save path:", err)
+        return {
+          success: false,
+          canceled: false,
+        }
+      }
+    },
+  )
+
+  // 個人成績表PDFバッファを保存
+  ipcMain.handle(
+    "export:saveIndividualReportPdf",
+    async (
+      _event,
+      options: {
+        filePath: string
+        pdfBuffer: ArrayBuffer
+      },
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const fs = require("fs").promises
+        await fs.writeFile(options.filePath, Buffer.from(options.pdfBuffer))
+        return { success: true }
+      } catch (err) {
+        console.error("Error saving individual report PDF:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "ファイル保存に失敗しました",
         }
       }
     },

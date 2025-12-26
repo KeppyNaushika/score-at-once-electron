@@ -1122,6 +1122,77 @@ export interface MyAPI {
       filePath?: string
       canceled?: boolean
     }>
+
+    // ============================================================
+    // ストリーミングPDF生成API
+    // ============================================================
+
+    // ストリーミングセッション作成（空ページを事前に作成）
+    createPdfStreamingSession: (options: {
+      totalPages: number
+      pdfOrientation?: "portrait" | "landscape"
+    }) => Promise<{
+      success: boolean
+      sessionId?: string
+      error?: string
+    }>
+
+    // ストリーミングセッションにページを追加（Canvas描画完了次第呼び出し）
+    addPageToStreamingSession: (options: {
+      sessionId: string
+      pageIndex: number
+      imageData: ArrayBuffer
+    }) => Promise<{
+      success: boolean
+      error?: string
+    }>
+
+    // ストリーミングセッションを完了してPDF保存
+    finalizeStreamingSession: (options: {
+      sessionId: string
+      outputPath: string
+    }) => Promise<{
+      success: boolean
+      outputPath?: string
+      error?: string
+    }>
+
+    // ストリーミングセッションをキャンセル
+    cancelStreamingSession: (sessionId: string) => Promise<{
+      success: boolean
+      error?: string
+    }>
+
+    // ============================================================
+    // 個人成績表PDF API
+    // ============================================================
+
+    // 個人成績表用データ取得
+    getIndividualReportData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+      options: import("../electron-src/lib/export/individual-report").IndividualReportOptions
+    }) => Promise<
+      import("../electron-src/lib/export/individual-report").GetIndividualReportDataResult
+    >
+
+    // 個人成績表PDF保存先選択ダイアログ
+    selectIndividualReportSavePath: (options: {
+      projectName?: string
+    }) => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }>
+
+    // 個人成績表PDFバッファを保存
+    saveIndividualReportPdf: (options: {
+      filePath: string
+      pdfBuffer: ArrayBuffer
+    }) => Promise<{
+      success: boolean
+      error?: string
+    }>
   }
 
   // Excel Export related

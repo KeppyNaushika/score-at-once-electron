@@ -1,7 +1,9 @@
 "use client"
 
 import {
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
   ExportOptions,
+  IndividualReportOptions,
   Student,
 } from "@/app/projects/[projectId]/08-export/types"
 import {
@@ -43,11 +45,16 @@ export function useExportPage() {
     markSize: 50,
     showMarks: true,
     pdfOrientation: "portrait", // デフォルトはA4縦
+    parallelCount: 4, // デフォルト並列数
   })
 
   const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
     loadConfigFromStorage(),
   )
+
+  // 個人成績表オプション
+  const [individualReportOptions, setIndividualReportOptions] =
+    useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
 
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)
@@ -194,6 +201,8 @@ export function useExportPage() {
     setExportOptions,
     scoringMarkConfig,
     setScoringMarkConfig,
+    individualReportOptions,
+    setIndividualReportOptions,
 
     // プログレス
     showProgressModal,

@@ -1,11 +1,14 @@
 "use client"
 
+import { pdf } from "@react-pdf/renderer"
+import type { RenderProgress, RenderedPageData } from "@/app/projects/[projectId]/08-export/types"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { ExportOptionsCard } from "@/components/projects/08-export/components/ExportOptionsCard"
 import ExportProgressModal from "@/components/projects/08-export/components/ExportProgressModal"
 import ExportWarningModal from "@/components/projects/08-export/components/ExportWarningModal"
+import { IndividualReportDocument, registerFonts } from "@/components/projects/08-export/components/individual-report-pdf"
 import {
   PdfCanvasRenderer,
   type PdfExportPageData,
@@ -13,7 +16,7 @@ import {
 import { StudentSelectionCard } from "@/components/projects/08-export/components/StudentSelectionCard"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
 import type { ScoringMarkConfigForPdf } from "@/components/projects/08-export/utils/pdf-canvas-renderer"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export default function ExportMainView() {
   const { helpButton } = usePageHelp()
@@ -27,17 +30,17 @@ export default function ExportMainView() {
   // Canvas描画用の状態
   const [pdfExportPages, setPdfExportPages] = useState<PdfExportPageData[]>([])
   const [startCanvasRendering, setStartCanvasRendering] = useState(false)
-  const [pdfOutputPath, setPdfOutputPath] = useState<string>("")
 
-  // 並行処理用のref（保存先選択とCanvas描画の同期用）
-  const savePathResolverRef = useRef<((path: string | null) => void) | null>(null)
-  const pdfOutputPathRef = useRef<string>("") // 保存先パス（即座に反映用）
-  const renderedPagesRef = useRef<Array<{
-    studentId: string
-    pageNumber: number
-    imageData: ArrayBuffer
-  }> | null>(null)
-  const isWaitingForSavePathRef = useRef(false)
+  // 保存先選択のPromiseを保持（並行処理用）
+  const savePathPromiseRef = useRef<Promise<{ success: boolean; filePath?: string; canceled?: boolean }> | null>(null)
+
+  // ストリーミングセッション用の状態
+  const streamingSessionIdRef = useRef<string | null>(null)
+  const [embeddedPagesCount, setEmbeddedPagesCount] = useState(0)
+  const [totalPagesCount, setTotalPagesCount] = useState(0)
+  const [canvasRenderingComplete, setCanvasRenderingComplete] = useState(false)
+  const savePathResultRef = useRef<{ filePath: string } | null>(null)
+  const isExportCancelledRef = useRef(false)
 
   const {
     project,
@@ -56,6 +59,8 @@ export default function ExportMainView() {
     setExportOptions,
     scoringMarkConfig,
     setScoringMarkConfig,
+    individualReportOptions,
+    setIndividualReportOptions,
     showProgressModal,
     setShowProgressModal,
     exportProgress,
@@ -70,23 +75,43 @@ export default function ExportMainView() {
 
   /**
    * scoringMarkConfigをScoringMarkConfigForPdf形式に変換
+   * 常にpartialScoreオブジェクトから読み取る（UIが常にpartialScoreに保存するため）
    */
   const getScoringMarkConfigForPdf = useCallback((): ScoringMarkConfigForPdf => {
+    // 部分点設定を取得（partialScoreが存在する場合はそれを使用、なければ旧式設定からフォールバック）
+    const partialScore = scoringMarkConfig.partialScore
+    const partialScoreConfig = partialScore && partialScore.size !== undefined
+      ? partialScore
+      : {
+          position: scoringMarkConfig.scorePosition || "middle-center",
+          size: scoringMarkConfig.scoreSize || 14,
+          offsetX: scoringMarkConfig.scoreOffsetX || 0,
+          offsetY: scoringMarkConfig.scoreOffsetY || 0,
+        }
+
+    console.log("[DEBUG] getScoringMarkConfigForPdf:", {
+      useSeparateScoreSettings: scoringMarkConfig.useSeparateScoreSettings,
+      partialScore: scoringMarkConfig.partialScore,
+      partialScoreConfig,
+    })
+
     return {
       markPosition: scoringMarkConfig.markPosition,
       markSize: scoringMarkConfig.markSize,
       useTransparent: scoringMarkConfig.useTransparent,
       showPartialScore: true, // 部分点を表示
-      partialScorePosition: scoringMarkConfig.scorePosition || "bottom-right",
-      partialScoreSize: scoringMarkConfig.scoreSize || 14,
-      partialScoreOffsetX: scoringMarkConfig.scoreOffsetX || 0,
-      partialScoreOffsetY: scoringMarkConfig.scoreOffsetY || 0,
+      partialScorePosition: partialScoreConfig.position || "middle-center",
+      partialScoreSize: partialScoreConfig.size || 14,
+      partialScoreOffsetX: partialScoreConfig.offsetX || 0,
+      partialScoreOffsetY: partialScoreConfig.offsetY || 0,
+      // ステータスごとの点数表示設定
+      showScoreForStatus: scoringMarkConfig.showScoreForStatus,
     }
   }, [scoringMarkConfig])
 
   /**
-   * Canvas描画ベースのPDF出力（並行処理フロー）
-   * 保存先選択とデータ取得→Canvas描画を完全並行処理で実行
+   * Canvas描画ベースのPDF出力（ストリーミング処理フロー）
+   * 1. データ取得 → 2. ストリーミングセッション作成 & 保存先選択 → 3. Canvas描画（完了次第PDF埋め込み） → 4. PDF保存
    */
   const handleExportScoredAnswers = async () => {
     if (selectedStudents.size === 0) {
@@ -94,205 +119,236 @@ export default function ExportMainView() {
       return
     }
 
-    try {
-      // 状態リセット
-      renderedPagesRef.current = null
-      isWaitingForSavePathRef.current = false
-      pdfOutputPathRef.current = ""
+    if (isExporting) {
+      return
+    }
 
+    try {
       // 処理開始
       setIsExporting(true)
       setShowProgressModal(true)
       setExportProgress(0)
       setExportStatus("processing")
-      setCurrentStep("保存先を選択してください（バックグラウンドで処理中...）")
+      setCurrentStep("データを取得中...")
+      setEmbeddedPagesCount(0)
+      setTotalPagesCount(0)
+      setCanvasRenderingComplete(false)
+      savePathResultRef.current = null
+      isExportCancelledRef.current = false
 
       const selectedStudentIds = Array.from(selectedStudents)
 
-      // 保存先選択のPromiseを作成（Canvas描画完了時に解決を待つ）
-      const savePathPromise = new Promise<string | null>((resolve) => {
-        savePathResolverRef.current = resolve
+      // 1. データ取得
+      const dataResult = await window.electronAPI.export.getPdfExportData({
+        projectId: project.id,
+        selectedStudentIds,
       })
 
-      // 並行処理開始: 保存先選択とデータ取得を同時に開始
-      const savePathTask = (async () => {
-        const result = await window.electronAPI.export.selectPdfSavePath({
-          projectName: project?.examName,
-        })
-        const path = result.canceled || !result.filePath ? null : result.filePath
-        // 保存先が決まったらrefに即座に反映
-        if (path) {
-          pdfOutputPathRef.current = path
-        }
-        // resolverを呼び出す（Canvas描画完了待ちの場合に通知）
-        if (savePathResolverRef.current) {
-          savePathResolverRef.current(path)
-        }
-        return path
-      })()
-
-      const dataTask = (async () => {
-        const dataResult = await window.electronAPI.export.getPdfExportData({
-          projectId: project.id,
-          selectedStudentIds,
-        })
-
-        // データ取得エラーチェック
-        if (!dataResult.success || !dataResult.pages) {
-          throw new Error(dataResult.error || "データ取得に失敗しました")
-        }
-
-        if (dataResult.pages.length === 0) {
-          throw new Error("出力対象のページがありません")
-        }
-
-        // Canvas描画を開始（保存先の決定を待たずに）
-        setExportProgress(5)
-        setCurrentStep("保存先を選択してください（Canvas描画を開始...）")
-        setPdfExportPages(dataResult.pages)
-        setStartCanvasRendering(true)
-
-        return dataResult.pages
-      })()
-
-      // 保存先選択の結果を待つ（Canvas描画は並行して進行中）
-      const savePath = await savePathTask
-
-      // 保存先のキャンセルチェック
-      if (!savePath) {
-        // ユーザーがキャンセルした場合は中止
-        setStartCanvasRendering(false)
-        setPdfExportPages([])
-        setShowProgressModal(false)
-        setIsExporting(false)
-        return
+      if (!dataResult.success || !dataResult.pages) {
+        throw new Error(dataResult.error || "データ取得に失敗しました")
       }
 
-      setPdfOutputPath(savePath)
+      if (dataResult.pages.length === 0) {
+        throw new Error("出力対象のページがありません")
+      }
 
-      // データ取得タスクの完了を待つ（Canvas描画が開始されていることを確認）
-      await dataTask
+      setTotalPagesCount(dataResult.pages.length)
+      setExportProgress(5)
+
+      // 2. ストリーミングセッション作成（空ページを事前に作成）
+      setCurrentStep("PDFセッションを作成中...")
+      const sessionResult = await window.electronAPI.export.createPdfStreamingSession({
+        totalPages: dataResult.pages.length,
+        pdfOrientation: exportOptions.pdfOrientation,
+      })
+
+      if (!sessionResult.success || !sessionResult.sessionId) {
+        throw new Error(sessionResult.error || "PDFセッションの作成に失敗しました")
+      }
+
+      streamingSessionIdRef.current = sessionResult.sessionId
+
+      // 3. 保存先選択を並行で開始
+      setCurrentStep("保存先を選択してください...")
+      const savePathPromise = window.electronAPI.export.selectPdfSavePath({
+        projectName: project?.examName,
+      })
+      savePathPromiseRef.current = savePathPromise
+
+      // キャンセル監視：Canvas描画完了前にキャンセルされたら即座に中断
+      savePathPromise.then(result => {
+        if (!result.success || result.canceled || !result.filePath) {
+          // キャンセルフラグを立てる
+          isExportCancelledRef.current = true
+          // キャンセルされた場合、Canvas描画中なら中断
+          setStartCanvasRendering(false)
+          setPdfExportPages([])
+          setShowProgressModal(false)
+          setIsExporting(false)
+          setEmbeddedPagesCount(0)
+          setTotalPagesCount(0)
+          setCanvasRenderingComplete(false)
+          savePathPromiseRef.current = null
+          savePathResultRef.current = null
+          // セッションのクリーンアップ
+          if (streamingSessionIdRef.current) {
+            window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+            streamingSessionIdRef.current = null
+          }
+        }
+      })
+
+      // 4. Canvas描画を開始（onPageCompleteでPDFに逐次埋め込み）
+      setPdfExportPages(dataResult.pages)
+      setStartCanvasRendering(true)
+
+      // handlePageComplete と handleCanvasComplete がストリーミング処理を実行
 
     } catch (error) {
       console.error("Export error:", error)
       setExportStatus("error")
-      setCurrentStep(`出力中にエラーが発生しました: ${error instanceof Error ? error.message : "不明なエラー"}`)
+      setCurrentStep(`エラー: ${error instanceof Error ? error.message : "不明なエラー"}`)
       setIsExporting(false)
       setStartCanvasRendering(false)
       setPdfExportPages([])
+      setEmbeddedPagesCount(0)
+      setTotalPagesCount(0)
+      setCanvasRenderingComplete(false)
+      savePathPromiseRef.current = null
+      savePathResultRef.current = null
+      // セッションのクリーンアップ
+      if (streamingSessionIdRef.current) {
+        window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+        streamingSessionIdRef.current = null
+      }
     }
   }
 
   /**
-   * Canvas描画進捗コールバック
+   * Canvas描画進捗コールバック（並列処理対応）
    */
   const handleCanvasProgress = useCallback(
-    (current: number, total: number, step: string) => {
-      // 10-80%をCanvas描画に割り当て（0-10%はデータ取得）
-      const canvasProgress = 10 + Math.round((current / total) * 70)
-      setExportProgress(canvasProgress)
-      setCurrentStep(`Canvas描画中: ${current} / ${total} ページ`)
+    (progress: RenderProgress) => {
+      if (progress.phase === "preload") {
+        setExportProgress(5)
+        setCurrentStep("採点マーク画像を読み込み中...")
+      } else if (progress.phase === "rendering") {
+        // 10-90%をCanvas描画+PDF埋め込みに割り当て
+        // Canvas描画進捗とPDF埋め込み進捗を合成
+        const canvasWeight = 0.7  // Canvas描画に70%
+        const embedWeight = 0.3   // PDF埋め込みに30%
+        const canvasProgress = progress.completed / progress.total
+        const embedProgress = embeddedPagesCount / (totalPagesCount || 1)
+        const combinedProgress = 10 + Math.round((canvasProgress * canvasWeight + embedProgress * embedWeight) * 80)
+        setExportProgress(combinedProgress)
+        const parallelStr = progress.inProgress > 0 ? ` (${progress.inProgress}並列)` : ""
+        setCurrentStep(`Canvas: ${progress.completed}/${progress.total}ページ${parallelStr} | PDF: ${embeddedPagesCount}/${totalPagesCount}ページ埋め込み済み`)
+      } else if (progress.phase === "complete") {
+        setExportProgress(90)
+        setCurrentStep("Canvas描画完了、PDF保存中...")
+      }
     },
-    [setExportProgress, setCurrentStep]
+    [setExportProgress, setCurrentStep, embeddedPagesCount, totalPagesCount]
   )
 
   /**
-   * PDF生成・保存処理（Canvas描画完了後に呼び出し）
+   * 1ページ完了時のコールバック（ストリーミング埋め込み）
    */
-  const createAndSavePdf = useCallback(
-    async (
-      renderedPages: Array<{
-        studentId: string
-        pageNumber: number
-        imageData: ArrayBuffer
-      }>,
-      outputPath: string
-    ) => {
-      try {
-        setExportProgress(85)
-        setCurrentStep("PDFを作成中...")
+  const handlePageComplete = useCallback(
+    async (pageData: RenderedPageData) => {
+      // キャンセル済みなら何もしない
+      if (isExportCancelledRef.current) {
+        return
+      }
 
-        const result = await window.electronAPI.export.createPdfFromRenderedImages({
-          projectId: project.id,
-          renderedPages,
-          pdfOrientation: exportOptions.pdfOrientation,
-          outputPath,
+      if (!streamingSessionIdRef.current) {
+        console.error("Streaming session not found")
+        return
+      }
+
+      try {
+        const result = await window.electronAPI.export.addPageToStreamingSession({
+          sessionId: streamingSessionIdRef.current,
+          pageIndex: pageData.pageIndex,
+          imageData: pageData.imageData,
         })
 
         if (result.success) {
-          setExportProgress(100)
-          setExportStatus("completed")
-          setCurrentStep("完了しました")
+          setEmbeddedPagesCount(prev => prev + 1)
         } else {
-          setExportStatus("error")
-          setCurrentStep(`エラー: ${result.error}`)
+          console.error(`Failed to embed page ${pageData.pageIndex}:`, result.error)
         }
       } catch (error) {
-        console.error("PDF creation error:", error)
-        setExportStatus("error")
-        setCurrentStep("PDF作成中にエラーが発生しました")
-      } finally {
-        setIsExporting(false)
+        console.error(`Error embedding page ${pageData.pageIndex}:`, error)
       }
     },
-    [project?.id, exportOptions.pdfOrientation, setExportProgress, setCurrentStep, setExportStatus, setIsExporting]
+    []
   )
 
   /**
    * Canvas描画完了コールバック
-   * 保存先が決まっていれば即座にPDF生成、まだなら待機
+   * 保存先選択を待ち、埋め込み完了フラグを立てる
    */
   const handleCanvasComplete = useCallback(
     async (
-      renderedPages: Array<{
+      _renderedPages: Array<{
         studentId: string
         pageNumber: number
         imageData: ArrayBuffer
       }>
     ) => {
-      setStartCanvasRendering(false)
-      setPdfExportPages([])
-
-      if (renderedPages.length === 0) {
-        setExportStatus("error")
-        setCurrentStep("描画されたページがありません")
-        setIsExporting(false)
+      // キャンセル済みなら何もしない
+      if (isExportCancelledRef.current) {
         return
       }
 
-      // 保存先が既に決まっているかチェック（Refで即座に確認）
-      if (pdfOutputPathRef.current) {
-        // 保存先が決まっている → 即座にPDF生成
-        await createAndSavePdf(renderedPages, pdfOutputPathRef.current)
-      } else {
-        // 保存先がまだ決まっていない → 結果を保存して待機
-        renderedPagesRef.current = renderedPages
-        isWaitingForSavePathRef.current = true
-        setCurrentStep("保存先の選択を待っています...")
+      setStartCanvasRendering(false)
+      setPdfExportPages([])
 
-        // 保存先が決まるまで待機
-        const savePath = await new Promise<string | null>((resolve) => {
-          // 既にresolverが設定されている場合はそれを使う
-          const existingResolver = savePathResolverRef.current
-          savePathResolverRef.current = (path) => {
-            if (existingResolver) existingResolver(path)
-            resolve(path)
-          }
-        })
-
-        isWaitingForSavePathRef.current = false
-
-        if (!savePath) {
-          // キャンセルされた場合
-          setShowProgressModal(false)
-          setIsExporting(false)
-          return
-        }
-
-        await createAndSavePdf(renderedPages, savePath)
+      // ストリーミングセッションがない場合はエラー
+      if (!streamingSessionIdRef.current) {
+        setExportStatus("error")
+        setCurrentStep("PDFセッションが見つかりません")
+        setIsExporting(false)
+        savePathPromiseRef.current = null
+        return
       }
+
+      // 保存先選択の完了を待つ
+      if (!savePathPromiseRef.current) {
+        setExportStatus("error")
+        setCurrentStep("保存先選択が開始されていません")
+        setIsExporting(false)
+        // セッションのクリーンアップ
+        window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+        streamingSessionIdRef.current = null
+        return
+      }
+
+      setCurrentStep("保存先の選択を待っています...")
+      const savePathResult = await savePathPromiseRef.current
+      savePathPromiseRef.current = null
+
+      if (!savePathResult.success || savePathResult.canceled || !savePathResult.filePath) {
+        // キャンセルされた場合 - 全状態をリセット
+        setShowProgressModal(false)
+        setIsExporting(false)
+        setEmbeddedPagesCount(0)
+        setTotalPagesCount(0)
+        setCanvasRenderingComplete(false)
+        savePathResultRef.current = null
+        // セッションのクリーンアップ
+        window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+        streamingSessionIdRef.current = null
+        return
+      }
+
+      // 保存先を保持し、Canvas描画完了フラグを立てる
+      // PDF埋め込み完了を待ってからuseEffectでPDF保存を実行
+      savePathResultRef.current = { filePath: savePathResult.filePath }
+      setCanvasRenderingComplete(true)
     },
-    [createAndSavePdf, setExportStatus, setCurrentStep, setIsExporting, setShowProgressModal]
+    [setExportStatus, setCurrentStep, setIsExporting, setShowProgressModal]
   )
 
   /**
@@ -306,9 +362,66 @@ export default function ExportMainView() {
       setExportStatus("error")
       setCurrentStep(`Canvas描画エラー: ${error.message}`)
       setIsExporting(false)
+      setEmbeddedPagesCount(0)
+      setTotalPagesCount(0)
+      setCanvasRenderingComplete(false)
+      savePathPromiseRef.current = null
+      savePathResultRef.current = null
+      // セッションのクリーンアップ
+      if (streamingSessionIdRef.current) {
+        window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+        streamingSessionIdRef.current = null
+      }
     },
     [setExportStatus, setCurrentStep, setIsExporting]
   )
+
+  /**
+   * Canvas描画完了 + PDF埋め込み完了時にPDF保存を実行
+   */
+  useEffect(() => {
+    const finalizePdf = async () => {
+      if (!canvasRenderingComplete) return
+      if (embeddedPagesCount < totalPagesCount) return
+      if (!streamingSessionIdRef.current) return
+      if (!savePathResultRef.current) return
+
+      try {
+        setExportProgress(95)
+        setCurrentStep("PDFを保存中...")
+
+        const result = await window.electronAPI.export.finalizeStreamingSession({
+          sessionId: streamingSessionIdRef.current,
+          outputPath: savePathResultRef.current.filePath,
+        })
+
+        streamingSessionIdRef.current = null
+        savePathResultRef.current = null
+        setCanvasRenderingComplete(false)
+
+        if (result.success) {
+          setExportProgress(100)
+          setExportStatus("completed")
+          setCurrentStep("完了しました")
+        } else {
+          setExportStatus("error")
+          setCurrentStep(`エラー: ${result.error}`)
+        }
+      } catch (error) {
+        console.error("PDF finalization error:", error)
+        setExportStatus("error")
+        setCurrentStep("PDF保存中にエラーが発生しました")
+        if (streamingSessionIdRef.current) {
+          window.electronAPI.export.cancelStreamingSession(streamingSessionIdRef.current)
+          streamingSessionIdRef.current = null
+        }
+      } finally {
+        setIsExporting(false)
+      }
+    }
+
+    finalizePdf()
+  }, [canvasRenderingComplete, embeddedPagesCount, totalPagesCount, setExportProgress, setCurrentStep, setExportStatus, setIsExporting])
 
   const handleExportGradingData = async () => {
     if (selectedStudents.size === 0) {
@@ -374,7 +487,109 @@ export default function ExportMainView() {
   }
 
   const handleExportIndividualReports = async () => {
-    alert("個人成績表PDF出力機能は現在開発中です。")
+    if (selectedStudents.size === 0) {
+      alert("出力する生徒を選択してください")
+      return
+    }
+
+    if (isExporting) {
+      return
+    }
+
+    try {
+      setIsExporting(true)
+      setShowProgressModal(true)
+      setExportProgress(0)
+      setExportStatus("processing")
+      setCurrentStep("データを取得中...")
+
+      const selectedStudentIds = Array.from(selectedStudents)
+
+      // 1. 保存先選択
+      setCurrentStep("保存先を選択してください...")
+      const savePathResult = await window.electronAPI.export.selectIndividualReportSavePath({
+        projectName: project?.examName,
+      })
+
+      if (!savePathResult.success || savePathResult.canceled || !savePathResult.filePath) {
+        setShowProgressModal(false)
+        setIsExporting(false)
+        return
+      }
+
+      setExportProgress(10)
+      setCurrentStep("個人成績表データを生成中...")
+
+      // 2. データ取得（統計・アドバイス含む）
+      const dataResult = await window.electronAPI.export.getIndividualReportData({
+        projectId: project.id,
+        selectedStudentIds,
+        options: individualReportOptions,
+      })
+
+      if (!dataResult.success || !dataResult.reports) {
+        throw new Error(dataResult.error || "データ取得に失敗しました")
+      }
+
+      setExportProgress(30)
+      setCurrentStep(`${dataResult.reports.length}名分のレポートを生成中...`)
+
+      // 3. React-PDFでPDFを生成
+      setExportProgress(50)
+      setCurrentStep("PDFを生成中...")
+
+      // フォント登録（初回のみ実行される）
+      registerFonts()
+
+      const pdfDocument = (
+        <IndividualReportDocument
+          reports={dataResult.reports}
+          options={individualReportOptions}
+        />
+      )
+
+      const blob = await pdf(pdfDocument).toBlob()
+      const arrayBuffer = await blob.arrayBuffer()
+
+      setExportProgress(80)
+      setCurrentStep("PDFを保存中...")
+
+      // 4. PDFを保存
+      const saveResult = await window.electronAPI.export.saveIndividualReportPdf({
+        filePath: savePathResult.filePath,
+        pdfBuffer: arrayBuffer,
+      })
+
+      if (!saveResult.success) {
+        throw new Error(saveResult.error || "PDF保存に失敗しました")
+      }
+
+      setExportProgress(100)
+      setExportStatus("completed")
+      setCurrentStep("完了しました")
+
+      // 少し待ってからモーダルを閉じる
+      setTimeout(() => {
+        setShowProgressModal(false)
+        setExportProgress(0)
+        setExportStatus("processing")
+        setCurrentStep("")
+      }, 1500)
+
+    } catch (error) {
+      console.error("Individual report export error:", error)
+      setExportStatus("error")
+      setCurrentStep(`エラー: ${error instanceof Error ? error.message : "不明なエラー"}`)
+      // エラー時は3秒後にモーダルを閉じる
+      setTimeout(() => {
+        setShowProgressModal(false)
+        setExportProgress(0)
+        setExportStatus("processing")
+        setCurrentStep("")
+      }, 3000)
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   if (loading) {
@@ -412,6 +627,8 @@ export default function ExportMainView() {
               setExportOptions={setExportOptions}
               scoringMarkConfig={scoringMarkConfig}
               setScoringMarkConfig={setScoringMarkConfig}
+              individualReportOptions={individualReportOptions}
+              setIndividualReportOptions={setIndividualReportOptions}
               selectedStudents={selectedStudents}
               isExporting={isExporting}
               onExportScoredAnswers={handleExportScoredAnswers}
@@ -428,6 +645,9 @@ export default function ExportMainView() {
           progress={exportProgress}
           status={exportStatus}
           currentStep={currentStep}
+          embeddedPagesCount={embeddedPagesCount}
+          totalPagesCount={totalPagesCount}
+          canvasRenderingComplete={canvasRenderingComplete}
         />
 
         {/* 警告モーダル */}
@@ -443,7 +663,9 @@ export default function ExportMainView() {
           pages={pdfExportPages}
           scoringMarkConfig={getScoringMarkConfigForPdf()}
           startRendering={startCanvasRendering}
+          poolSize={exportOptions.parallelCount}
           onProgress={handleCanvasProgress}
+          onPageComplete={handlePageComplete}
           onComplete={handleCanvasComplete}
           onError={handleCanvasError}
         />

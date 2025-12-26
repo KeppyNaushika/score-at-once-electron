@@ -486,6 +486,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectPdfSavePath: (options: {
       projectName?: string
     }) => ipcRenderer.invoke("export:selectPdfSavePath", options),
+    // ストリーミングPDF生成API
+    createPdfStreamingSession: (options: {
+      totalPages: number
+      pdfOrientation?: "portrait" | "landscape"
+    }) => ipcRenderer.invoke("export:createPdfStreamingSession", options),
+    addPageToStreamingSession: (options: {
+      sessionId: string
+      pageIndex: number
+      imageData: ArrayBuffer
+    }) => ipcRenderer.invoke("export:addPageToStreamingSession", options),
+    finalizeStreamingSession: (options: {
+      sessionId: string
+      outputPath: string
+    }) => ipcRenderer.invoke("export:finalizeStreamingSession", options),
+    cancelStreamingSession: (sessionId: string) =>
+      ipcRenderer.invoke("export:cancelStreamingSession", sessionId),
+    // 個人成績表PDF API
+    getIndividualReportData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+      options: import("./lib/export/individual-report").IndividualReportOptions
+    }) => ipcRenderer.invoke("export:getIndividualReportData", options),
+    selectIndividualReportSavePath: (options: { projectName?: string }) =>
+      ipcRenderer.invoke("export:selectIndividualReportSavePath", options),
+    saveIndividualReportPdf: (options: { filePath: string; pdfBuffer: ArrayBuffer }) =>
+      ipcRenderer.invoke("export:saveIndividualReportPdf", options),
   },
 
   // Excel Export related
