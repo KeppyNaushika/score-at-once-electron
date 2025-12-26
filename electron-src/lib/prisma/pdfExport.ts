@@ -3,11 +3,12 @@ import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
 import { getAbsolutePathFromData } from "../dataManager"
+import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotal-calculator"
 import { getCropRegionsByProjectId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getProjectById } from "./project"
 import { getStudentsForProject } from "./projectStudent"
-import { getQuestionScoresForProject } from "./questionScore"
+import { getQuestionScoresForProject, calculateActualScore } from "./questionScore"
 import { getStudentAnswersByProjectId } from "./studentAnswer"
 
 /**
@@ -72,6 +73,31 @@ export interface PdfExportPageData {
       pageNumber: number
     }
   }>
+  // 小計点データ
+  subtotalData: Array<{
+    regionId: string
+    label: string
+    score: number
+    x: number
+    y: number
+    width: number
+    height: number
+    pageNumber: number
+  }>
+  // 合計点領域データ
+  totalScoreData: Array<{
+    regionId: string
+    score: number
+    maxScore: number
+    x: number
+    y: number
+    width: number
+    height: number
+    pageNumber: number
+  }>
+  // 合計点データ（後方互換性のため維持）
+  totalScore: number | null
+  totalMaxScore: number | null
   annotations: Array<{
     id: string
     questionScoreId: string
@@ -238,6 +264,86 @@ export async function getPdfExportData(options: {
           continue // この画像をスキップ
         }
 
+        // 小計点領域を取得（このページのSUBTOTAL_SCORE領域）
+        const subtotalRegions = pageRegions.filter(
+          (cr) => cr.type === "SUBTOTAL_SCORE"
+        )
+
+        // 小計点データを計算
+        const subtotalData: PdfExportPageData["subtotalData"] = []
+        for (const subtotalRegion of subtotalRegions) {
+          if (!subtotalRegion.projectPage) continue
+
+          // 小計点を計算
+          const subtotalScore = await calculateSubtotalScoreForStudent(
+            student.id,
+            subtotalRegion.id,
+            allScores
+              .filter(s => s.studentId !== null)
+              .map(s => ({
+                studentId: s.studentId as string,
+                cropRegionId: s.cropRegionId,
+                status: s.status,
+                partialScore: s.partialScore !== null ? Number(s.partialScore) : null,
+              })),
+            cropRegions as any, // CropRegion型として渡す
+          )
+
+          subtotalData.push({
+            regionId: subtotalRegion.id,
+            label: subtotalRegion.label,
+            score: subtotalScore,
+            x: subtotalRegion.x,
+            y: subtotalRegion.y,
+            width: subtotalRegion.width,
+            height: subtotalRegion.height,
+            pageNumber: subtotalRegion.projectPage.pageNumber,
+          })
+        }
+
+        // 合計点を計算（全設問の合計）
+        const questionRegions = cropRegions.filter(
+          (cr) => cr.type === "QUESTION_ANSWER"
+        )
+        let totalScore = 0
+        let totalMaxScore = 0
+        for (const region of questionRegions) {
+          const score = allScores.find(
+            (s) => s.cropRegionId === region.id && s.studentId === student.id
+          )
+          if (score) {
+            const maxScore = region.points !== null ? Number(region.points) : 0
+            totalMaxScore += maxScore
+            const actualScore = calculateActualScore(
+              { status: score.status, partialScore: score.partialScore !== null ? Number(score.partialScore) : null },
+              maxScore
+            )
+            totalScore += actualScore ?? 0
+          }
+        }
+
+        // 合計点領域を取得（このページのTOTAL_SCORE領域）
+        const totalScoreRegions = pageRegions.filter(
+          (cr) => cr.type === "TOTAL_SCORE"
+        )
+
+        // 合計点領域データを構築
+        const totalScoreData: PdfExportPageData["totalScoreData"] = []
+        for (const totalRegion of totalScoreRegions) {
+          if (!totalRegion.projectPage) continue
+
+          totalScoreData.push({
+            regionId: totalRegion.id,
+            score: totalScore,
+            maxScore: totalMaxScore,
+            x: totalRegion.x,
+            y: totalRegion.y,
+            width: totalRegion.width,
+            height: totalRegion.height,
+            pageNumber: totalRegion.projectPage.pageNumber,
+          })
+        }
+
         pages.push({
           studentId: student.id,
           studentName: `${student.lastName} ${student.firstName}`,
@@ -245,6 +351,10 @@ export async function getPdfExportData(options: {
           imagePath,
           imageUrl,
           scoringData,
+          subtotalData,
+          totalScoreData,
+          totalScore,
+          totalMaxScore,
           annotations,
         })
       }
@@ -272,7 +382,7 @@ export async function getPdfExportData(options: {
 }
 
 /**
- * Canvas描画済み画像からPDFを作成
+ * Canvas描画済み画像からPDFを作成（バッチ処理版）
  */
 export async function createPdfFromRenderedImages(options: {
   projectId: string
@@ -332,60 +442,66 @@ export async function createPdfFromRenderedImages(options: {
       ? [PageSizes.A4[1], PageSizes.A4[0]] as [number, number]
       : PageSizes.A4
 
-    // 各ページを追加
-    for (let i = 0; i < renderedPages.length; i++) {
-      const pageData = renderedPages[i]
+    // バッチサイズ（並列embedPng）
+    const BATCH_SIZE = 4
+
+    // 各ページを追加（バッチ処理）
+    for (let batchStart = 0; batchStart < renderedPages.length; batchStart += BATCH_SIZE) {
+      const batch = renderedPages.slice(batchStart, batchStart + BATCH_SIZE)
 
       progressCallback?.({
-        current: i + 1,
+        current: batchStart,
         total: renderedPages.length,
-        step: `ページ ${i + 1}/${renderedPages.length} を処理中...`,
-        percentage: Math.round(((i + 1) / renderedPages.length) * 100),
+        step: `画像埋め込み中... (${batchStart + 1}-${Math.min(batchStart + BATCH_SIZE, renderedPages.length)}/${renderedPages.length})`,
+        percentage: Math.round((batchStart / renderedPages.length) * 90),
         currentStepIndex: 1,
         totalSteps: 2,
       })
 
-      try {
-        // ArrayBufferからUint8Arrayに変換
-        const imageBytes = new Uint8Array(pageData.imageData)
+      // バッチ内で並列embedPng
+      const embedPromises = batch.map(async (pageData) => {
+        try {
+          const imageBytes = new Uint8Array(pageData.imageData)
+          const image = await pdfDoc.embedPng(imageBytes)
+          return { success: true, image, pageData }
+        } catch (error) {
+          console.error(`Error embedding image:`, error)
+          return { success: false, image: null, pageData }
+        }
+      })
 
-        // 画像をPDFに埋め込み
-        const image = await pdfDoc.embedPng(imageBytes)
+      const embedResults = await Promise.all(embedPromises)
 
-        // 新しいページを追加
+      // 順序通りにページを追加
+      for (const result of embedResults) {
+        if (!result.success || !result.image) continue
+
         const page = pdfDoc.addPage(pageSize)
         const { width: pageWidth, height: pageHeight } = page.getSize()
 
-        // 画像をページにフィットさせる
-        const imageAspectRatio = image.width / image.height
+        const imageAspectRatio = result.image.width / result.image.height
         const pageAspectRatio = pageWidth / pageHeight
 
         let imageWidth: number
         let imageHeight: number
 
         if (imageAspectRatio > pageAspectRatio) {
-          // 画像の方が横長 -> 幅に合わせる
           imageWidth = pageWidth
           imageHeight = pageWidth / imageAspectRatio
         } else {
-          // 画像の方が縦長 -> 高さに合わせる
           imageHeight = pageHeight
           imageWidth = pageHeight * imageAspectRatio
         }
 
-        // 画像を中央に配置
         const imageX = (pageWidth - imageWidth) / 2
         const imageY = (pageHeight - imageHeight) / 2
 
-        page.drawImage(image, {
+        page.drawImage(result.image, {
           x: imageX,
           y: imageY,
           width: imageWidth,
           height: imageHeight,
         })
-      } catch (pageError) {
-        console.error(`Error processing page ${i + 1}:`, pageError)
-        // エラーが発生しても続行
       }
     }
 
@@ -410,4 +526,172 @@ export async function createPdfFromRenderedImages(options: {
       error: error instanceof Error ? error.message : "Unknown error",
     }
   }
+}
+
+// ============================================================
+// ストリーミングPDF生成API
+// ============================================================
+
+import type { PDFPage, PDFImage } from "pdf-lib"
+
+/** ストリーミングセッションの状態 */
+interface PdfStreamingSession {
+  pdfDoc: PDFDocument
+  pages: PDFPage[]
+  pageSize: [number, number]
+  embeddedImages: Map<number, PDFImage>
+  totalPages: number
+}
+
+/** アクティブなストリーミングセッション */
+const streamingSessions = new Map<string, PdfStreamingSession>()
+
+/**
+ * ストリーミングPDF生成用のセッションを作成
+ * 全ページ分の空ページを事前に作成する
+ */
+export async function createPdfStreamingSession(options: {
+  totalPages: number
+  pdfOrientation?: "portrait" | "landscape"
+}): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+  const { totalPages, pdfOrientation = "portrait" } = options
+
+  try {
+    const pdfDoc = await PDFDocument.create()
+    const pageSize: [number, number] = pdfOrientation === "landscape"
+      ? [PageSizes.A4[1], PageSizes.A4[0]]
+      : [PageSizes.A4[0], PageSizes.A4[1]]
+
+    // 全ページ分の空ページを作成
+    const pages: PDFPage[] = []
+    for (let i = 0; i < totalPages; i++) {
+      const page = pdfDoc.addPage(pageSize)
+      pages.push(page)
+    }
+
+    // セッションIDを生成
+    const sessionId = `pdf-stream-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+
+    // セッションを保存
+    streamingSessions.set(sessionId, {
+      pdfDoc,
+      pages,
+      pageSize,
+      embeddedImages: new Map(),
+      totalPages,
+    })
+
+    return { success: true, sessionId }
+  } catch (error) {
+    console.error("Error creating PDF streaming session:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * ストリーミングでページに画像を描画
+ * 空ページに画像を追加する
+ */
+export async function addPageToStreamingSession(options: {
+  sessionId: string
+  pageIndex: number
+  imageData: ArrayBuffer
+}): Promise<{ success: boolean; error?: string }> {
+  const { sessionId, pageIndex, imageData } = options
+
+  try {
+    const session = streamingSessions.get(sessionId)
+    if (!session) {
+      return { success: false, error: "セッションが見つかりません" }
+    }
+
+    if (pageIndex < 0 || pageIndex >= session.totalPages) {
+      return { success: false, error: `ページインデックスが範囲外です: ${pageIndex}` }
+    }
+
+    const page = session.pages[pageIndex]
+    const { width: pageWidth, height: pageHeight } = page.getSize()
+
+    // 画像を埋め込み
+    const imageBytes = new Uint8Array(imageData)
+    const image = await session.pdfDoc.embedPng(imageBytes)
+    session.embeddedImages.set(pageIndex, image)
+
+    // 画像をページにフィットさせる
+    const imageAspectRatio = image.width / image.height
+    const pageAspectRatio = pageWidth / pageHeight
+
+    let imageWidth: number
+    let imageHeight: number
+
+    if (imageAspectRatio > pageAspectRatio) {
+      imageWidth = pageWidth
+      imageHeight = pageWidth / imageAspectRatio
+    } else {
+      imageHeight = pageHeight
+      imageWidth = pageHeight * imageAspectRatio
+    }
+
+    const imageX = (pageWidth - imageWidth) / 2
+    const imageY = (pageHeight - imageHeight) / 2
+
+    page.drawImage(image, {
+      x: imageX,
+      y: imageY,
+      width: imageWidth,
+      height: imageHeight,
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error(`Error adding page ${pageIndex} to streaming session:`, error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * ストリーミングセッションを完了してPDFを保存
+ */
+export async function finalizeStreamingSession(options: {
+  sessionId: string
+  outputPath: string
+}): Promise<{ success: boolean; outputPath?: string; error?: string }> {
+  const { sessionId, outputPath } = options
+
+  try {
+    const session = streamingSessions.get(sessionId)
+    if (!session) {
+      return { success: false, error: "セッションが見つかりません" }
+    }
+
+    // PDFを保存
+    const pdfBytes = await session.pdfDoc.save()
+    fs.writeFileSync(outputPath, pdfBytes)
+
+    // セッションをクリーンアップ
+    streamingSessions.delete(sessionId)
+
+    return { success: true, outputPath }
+  } catch (error) {
+    console.error("Error finalizing streaming session:", error)
+    // エラー時もセッションをクリーンアップ
+    streamingSessions.delete(sessionId)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
+  }
+}
+
+/**
+ * ストリーミングセッションをキャンセル
+ */
+export function cancelStreamingSession(sessionId: string): void {
+  streamingSessions.delete(sessionId)
 }

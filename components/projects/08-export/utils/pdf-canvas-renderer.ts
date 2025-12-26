@@ -24,6 +24,7 @@ export interface ScoringDataForPdf {
     width: number
     height: number
     label: string
+    maxScore?: number | null // 配点
     projectPage?: {
       pageNumber: number
     }
@@ -42,6 +43,36 @@ export interface ScoringMarkConfigForPdf {
   partialScoreSize: number
   partialScoreOffsetX: number
   partialScoreOffsetY: number
+  // ステータスごとの点数表示設定
+  showScoreForStatus?: Record<string, boolean>
+}
+
+/**
+ * 小計点データ（PDF出力用）
+ */
+export interface SubtotalDataForPdf {
+  regionId: string
+  label: string
+  score: number
+  x: number
+  y: number
+  width: number
+  height: number
+  pageNumber: number
+}
+
+/**
+ * 合計点データ（PDF出力用）
+ */
+export interface TotalScoreDataForPdf {
+  regionId: string
+  score: number
+  maxScore: number
+  x: number
+  y: number
+  width: number
+  height: number
+  pageNumber: number
 }
 
 /**
@@ -459,12 +490,32 @@ function calculatePartialScorePosition(
       baseX = regionX
       baseY = regionY
       break
+    case "top-center":
+      baseX = regionX + regionWidth / 2
+      baseY = regionY
+      break
     case "top-right":
       baseX = regionX + regionWidth
       baseY = regionY
       break
+    case "middle-left":
+      baseX = regionX
+      baseY = regionY + regionHeight / 2
+      break
+    case "middle-center":
+      baseX = regionX + regionWidth / 2
+      baseY = regionY + regionHeight / 2
+      break
+    case "middle-right":
+      baseX = regionX + regionWidth
+      baseY = regionY + regionHeight / 2
+      break
     case "bottom-left":
       baseX = regionX
+      baseY = regionY + regionHeight
+      break
+    case "bottom-center":
+      baseX = regionX + regionWidth / 2
       baseY = regionY + regionHeight
       break
     case "bottom-right":
@@ -472,8 +523,9 @@ function calculatePartialScorePosition(
       baseY = regionY + regionHeight
       break
     default:
-      baseX = regionX + regionWidth
-      baseY = regionY + regionHeight
+      // デフォルトは中央
+      baseX = regionX + regionWidth / 2
+      baseY = regionY + regionHeight / 2
       break
   }
 
@@ -517,9 +569,10 @@ function drawScoringMark(
 }
 
 /**
- * 部分点テキストを描画
+ * 点数テキストを描画（赤色）
+ * @param score - 表示する点数
  */
-function drawPartialScoreText(
+function drawScoreText(
   ctx: CanvasRenderingContext2D,
   score: number,
   region: ScoringDataForPdf["cropRegion"],
@@ -546,10 +599,66 @@ function drawPartialScoreText(
 
   ctx.save()
   ctx.font = `bold ${config.partialScoreSize}px sans-serif`
-  ctx.fillStyle = "#ef4444" // 赤色
+  ctx.fillStyle = "#ef4444" // 点数は全て赤色
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
   ctx.fillText(String(score), x, y)
+  ctx.restore()
+}
+
+/**
+ * 小計点テキストを描画（青色）
+ */
+function drawSubtotalScoreText(
+  ctx: CanvasRenderingContext2D,
+  subtotalData: SubtotalDataForPdf,
+  config: ScoringMarkConfigForPdf,
+  imageWidth: number,
+  imageHeight: number,
+): void {
+  const regionX = subtotalData.x * imageWidth
+  const regionY = subtotalData.y * imageHeight
+  const regionWidth = subtotalData.width * imageWidth
+  const regionHeight = subtotalData.height * imageHeight
+
+  // 小計点領域の中央に表示
+  const x = regionX + regionWidth / 2
+  const y = regionY + regionHeight / 2
+
+  ctx.save()
+  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
+  ctx.fillStyle = "#2563eb" // 小計点は青色
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.fillText(String(subtotalData.score), x, y)
+  ctx.restore()
+}
+
+/**
+ * 合計点テキストを描画（青色）
+ */
+function drawTotalScoreText(
+  ctx: CanvasRenderingContext2D,
+  totalScoreData: TotalScoreDataForPdf,
+  config: ScoringMarkConfigForPdf,
+  imageWidth: number,
+  imageHeight: number,
+): void {
+  const regionX = totalScoreData.x * imageWidth
+  const regionY = totalScoreData.y * imageHeight
+  const regionWidth = totalScoreData.width * imageWidth
+  const regionHeight = totalScoreData.height * imageHeight
+
+  // 合計点領域の中央に表示
+  const x = regionX + regionWidth / 2
+  const y = regionY + regionHeight / 2
+
+  ctx.save()
+  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
+  ctx.fillStyle = "#2563eb" // 合計点も青色
+  ctx.textAlign = "center"
+  ctx.textBaseline = "middle"
+  ctx.fillText(String(totalScoreData.score), x, y)
   ctx.restore()
 }
 
@@ -562,6 +671,8 @@ function drawPartialScoreText(
  * @param annotations - 全アノテーション
  * @param config - 採点マーク設定
  * @param scoringMarkImages - 採点マーク画像のMap
+ * @param subtotalDataList - 小計点データのリスト
+ * @param totalScoreDataList - 合計点データのリスト
  * @returns PNG Blob
  */
 export async function renderAnswerSheetToCanvas(
@@ -571,6 +682,8 @@ export async function renderAnswerSheetToCanvas(
   annotations: DrawingAnnotation[],
   config: ScoringMarkConfigForPdf,
   scoringMarkImages: Map<string, HTMLImageElement>,
+  subtotalDataList: SubtotalDataForPdf[] = [],
+  totalScoreDataList: TotalScoreDataForPdf[] = [],
 ): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) {
@@ -622,24 +735,50 @@ export async function renderAnswerSheetToCanvas(
       )
     }
 
-    // 部分点テキストの描画
-    if (
-      scoringData.status === "partial" &&
-      scoringData.partialScore !== null &&
-      scoringData.partialScore !== undefined
-    ) {
-      drawPartialScoreText(
-        ctx,
-        scoringData.partialScore,
-        scoringData.cropRegion,
-        config,
-        imageWidth,
-        imageHeight,
-      )
+    // 点数テキストの描画
+    // showScoreForStatusがある場合はステータスごとに判定、ない場合は後方互換性のためpartialのみ
+    const shouldShowScore = config.showScoreForStatus
+      ? config.showScoreForStatus[scoringData.status] ?? false
+      : scoringData.status === "partial"
+
+    if (shouldShowScore) {
+      // ステータスに応じた点数を決定
+      let scoreToDisplay: number | null = null
+      if (scoringData.status === "correct") {
+        // 正解: 配点を表示
+        scoreToDisplay = scoringData.cropRegion.maxScore ?? null
+      } else if (scoringData.status === "partial") {
+        // 部分点: 部分点を表示
+        scoreToDisplay = scoringData.partialScore ?? null
+      } else if (scoringData.status === "incorrect" || scoringData.status === "no_answer") {
+        // 誤答/無答: 0点を表示
+        scoreToDisplay = 0
+      }
+
+      if (scoreToDisplay !== null) {
+        drawScoreText(
+          ctx,
+          scoreToDisplay,
+          scoringData.cropRegion,
+          config,
+          imageWidth,
+          imageHeight,
+        )
+      }
     }
   }
 
-  // 3. 全アノテーションを描画
+  // 3. 小計点を描画（青色）
+  for (const subtotalData of subtotalDataList) {
+    drawSubtotalScoreText(ctx, subtotalData, config, imageWidth, imageHeight)
+  }
+
+  // 4. 合計点を描画（青色）
+  for (const totalScoreData of totalScoreDataList) {
+    drawTotalScoreText(ctx, totalScoreData, config, imageWidth, imageHeight)
+  }
+
+  // 5. 全アノテーションを描画
   for (const annotation of annotations) {
     const element = convertAnnotationToDrawingElement(annotation)
     await drawElement(ctx, element, imageWidth, imageHeight)
