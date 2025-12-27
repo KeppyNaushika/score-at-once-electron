@@ -16,6 +16,10 @@ jobs:
       - name: Send Discord Notification
         env:
           DISCORD_WEBHOOK_ISSUES: ${{ secrets.DISCORD_WEBHOOK_ISSUES }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
         run: |
           if [ -z "$DISCORD_WEBHOOK_ISSUES" ]; then
             echo "DISCORD_WEBHOOK_ISSUES is not set, skipping notification"
@@ -79,11 +83,6 @@ jobs:
           req.end();
           EOF
 
-          DISCORD_WEBHOOK_ISSUES="${{ secrets.DISCORD_WEBHOOK_ISSUES }}" \
-          ISSUE_TITLE="${{ github.event.issue.title }}" \
-          ISSUE_URL="${{ github.event.issue.html_url }}" \
-          ISSUE_NUMBER="${{ github.event.issue.number }}" \
-          ISSUE_AUTHOR="${{ github.event.issue.user.login }}" \
           node discord_notify.js
 
   notify-pr-merged:
