@@ -2,6 +2,7 @@ import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
+import crypto from "crypto"
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotal-calculator"
 import { getCropRegionsByProjectId } from "./cropRegion"
@@ -570,7 +571,8 @@ export async function createPdfStreamingSession(options: {
     }
 
     // セッションIDを生成
-    const sessionId = `pdf-stream-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
+    const randomSuffix = crypto.randomBytes(8).toString("hex")
+    const sessionId = `pdf-stream-${Date.now()}-${randomSuffix}`
 
     // セッションを保存
     streamingSessions.set(sessionId, {
