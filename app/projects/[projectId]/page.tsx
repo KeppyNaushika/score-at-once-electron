@@ -9,6 +9,7 @@ import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
 import { useWorkflowData } from "@/hooks/useWorkflowData"
+import { toast } from "sonner"
 import type { Project } from "@prisma/client"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
@@ -21,6 +22,7 @@ export default function ProjectDetailPage() {
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const {
     project,
@@ -58,6 +60,38 @@ export default function ProjectDetailPage() {
 
   const handleProjectDeleted = () => {
     router.push("/projects")
+  }
+
+  const handleExport = async () => {
+    if (isExporting) return
+
+    setIsExporting(true)
+    toast("エクスポート中...", {
+      description: "プロジェクトをエクスポートしています。",
+    })
+
+    try {
+      const result = await (window as any).electronAPI.archive.exportProject({
+        projectId,
+      })
+
+      if (result.success) {
+        toast.success("エクスポート完了", {
+          description: `${result.outputPath} に保存しました。`,
+        })
+      } else {
+        toast.error("エクスポート失敗", {
+          description: result.error || "エクスポートに失敗しました。",
+        })
+      }
+    } catch (error) {
+      toast.error("エクスポート失敗", {
+        description:
+          error instanceof Error ? error.message : "エラーが発生しました。",
+      })
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   if (isLoading) {
@@ -104,6 +138,7 @@ export default function ProjectDetailPage() {
             project={project}
             onEdit={() => setShowEditModal(true)}
             onDelete={() => setShowDeleteModal(true)}
+            onExport={handleExport}
           />
 
           <OverallProgress

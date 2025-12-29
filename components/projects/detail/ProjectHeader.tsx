@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Calendar, Edit, Info, MoreVertical, Tag, Trash2 } from "lucide-react"
+import { Calendar, Download, Edit, Info, MoreVertical, Tag, Trash2 } from "lucide-react"
 import Link from "next/link"
 
 interface ProjectData {
@@ -25,12 +25,14 @@ interface ProjectHeaderProps {
   project: ProjectData
   onEdit: () => void
   onDelete: () => void
+  onExport?: () => void
 }
 
 export default function ProjectHeader({
   project,
   onEdit,
   onDelete,
+  onExport,
 }: ProjectHeaderProps) {
   return (
     <div className="mb-6">
@@ -80,6 +82,12 @@ export default function ProjectHeader({
                   プロジェクト設定
                 </Link>
               </DropdownMenuItem>
+              {onExport && (
+                <DropdownMenuItem onClick={onExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  エクスポート
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onClick={onDelete}

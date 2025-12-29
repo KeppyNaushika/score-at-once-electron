@@ -1,0 +1,220 @@
+/**
+ * プロジェクトアーカイブ（エクスポート/インポート）IPCハンドラー
+ */
+
+import { ipcMain, dialog } from "electron"
+import {
+  exportProject,
+  selectExportSavePath,
+} from "../lib/export/project-archive"
+import {
+  analyzeArchive,
+  importAsNew,
+  extractArchive,
+  cleanupTempDir,
+} from "../lib/import/project-archive"
+import { detectAllConflicts, executeMergeImport } from "../lib/import/merge"
+import type {
+  MatchingConfig,
+  ConflictResolutions,
+} from "../../types/project-archive.types"
+
+/**
+ * アーカイブ関連のIPCハンドラーを登録
+ */
+export function registerArchiveHandlers(): void {
+  // エクスポート
+  ipcMain.handle(
+    "archive:exportProject",
+    async (
+      _event,
+      options: { projectId: string; outputPath?: string },
+    ) => {
+      try {
+        return await exportProject(options)
+      } catch (error) {
+        console.error("Error in archive:exportProject:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "エクスポートに失敗しました",
+        }
+      }
+    },
+  )
+
+  // エクスポート保存先選択ダイアログ
+  ipcMain.handle(
+    "archive:selectExportSavePath",
+    async (_event, options: { projectName?: string }) => {
+      try {
+        return await selectExportSavePath(options)
+      } catch (error) {
+        console.error("Error in archive:selectExportSavePath:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "ダイアログ表示に失敗しました",
+        }
+      }
+    },
+  )
+
+  // インポートファイル選択ダイアログ
+  ipcMain.handle("archive:selectImportFile", async () => {
+    try {
+      const result = await dialog.showOpenDialog({
+        title: "プロジェクトをインポート",
+        filters: [{ name: "Score at Once アーカイブ", extensions: ["score"] }],
+        properties: ["openFile"],
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: true, canceled: true }
+      }
+
+      return { success: true, filePath: result.filePaths[0] }
+    } catch (error) {
+      console.error("Error in archive:selectImportFile:", error)
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "ダイアログ表示に失敗しました",
+      }
+    }
+  })
+
+  // アーカイブ解析（プレビュー用）
+  ipcMain.handle(
+    "archive:analyzeArchive",
+    async (_event, options: { archivePath: string }) => {
+      try {
+        return await analyzeArchive(options)
+      } catch (error) {
+        console.error("Error in archive:analyzeArchive:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "アーカイブ解析に失敗しました",
+        }
+      }
+    },
+  )
+
+  // 新規作成インポート
+  ipcMain.handle(
+    "archive:importAsNew",
+    async (_event, options: { archivePath: string }) => {
+      try {
+        return await importAsNew(options)
+      } catch (error) {
+        console.error("Error in archive:importAsNew:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "インポートに失敗しました",
+        }
+      }
+    },
+  )
+
+  // 競合検出
+  ipcMain.handle(
+    "archive:detectConflicts",
+    async (
+      _event,
+      options: { archivePath: string; matchingConfig: MatchingConfig },
+    ) => {
+      let tempDir: string | null = null
+
+      try {
+        // アーカイブを展開
+        const extractResult = await extractArchive(options.archivePath)
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
+        }
+        tempDir = extractResult.data.tempDir
+
+        // 競合検出
+        const result = await detectAllConflicts(
+          extractResult.data,
+          options.matchingConfig,
+        )
+
+        return result
+      } catch (error) {
+        console.error("Error in archive:detectConflicts:", error)
+        return {
+          success: false,
+          results: [],
+          error:
+            error instanceof Error
+              ? error.message
+              : "競合検出に失敗しました",
+        }
+      } finally {
+        if (tempDir) {
+          cleanupTempDir(tempDir)
+        }
+      }
+    },
+  )
+
+  // マージインポート
+  ipcMain.handle(
+    "archive:mergeImport",
+    async (
+      _event,
+      options: {
+        archivePath: string
+        matchingConfig: MatchingConfig
+        conflictResolutions: ConflictResolutions
+      },
+    ) => {
+      let tempDir: string | null = null
+
+      try {
+        // アーカイブを展開
+        const extractResult = await extractArchive(options.archivePath)
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
+        }
+        tempDir = extractResult.data.tempDir
+
+        // マージインポートを実行
+        const result = await executeMergeImport(
+          extractResult.data,
+          options.matchingConfig,
+          options.conflictResolutions,
+        )
+
+        return result
+      } catch (error) {
+        console.error("Error in archive:mergeImport:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "マージインポートに失敗しました",
+        }
+      } finally {
+        if (tempDir) {
+          cleanupTempDir(tempDir)
+        }
+      }
+    },
+  )
+
+  console.log("Archive handlers registered")
+}

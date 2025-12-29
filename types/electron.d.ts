@@ -1220,6 +1220,66 @@ export interface MyAPI {
     }
   }>
 
+  // =============================================================================
+  // プロジェクトアーカイブ（エクスポート/インポート）関連
+  // =============================================================================
+  archive: {
+    /**
+     * プロジェクトをZIPアーカイブとしてエクスポート
+     */
+    exportProject: (
+      options: import("./project-archive.types").ExportProjectOptions,
+    ) => Promise<import("./project-archive.types").ExportProjectResult>
+
+    /**
+     * アーカイブファイルを解析してプレビュー情報を取得
+     */
+    analyzeArchive: (
+      options: import("./project-archive.types").AnalyzeArchiveOptions,
+    ) => Promise<import("./project-archive.types").AnalyzeArchiveResult>
+
+    /**
+     * アーカイブを新規プロジェクトとしてインポート
+     */
+    importAsNew: (
+      options: import("./project-archive.types").ImportAsNewOptions,
+    ) => Promise<import("./project-archive.types").ImportAsNewResult>
+
+    /**
+     * 競合を検出（マージインポート用ドライラン）
+     */
+    detectConflicts: (
+      options: import("./project-archive.types").DetectConflictsOptions,
+    ) => Promise<import("./project-archive.types").ConflictDetectionResult>
+
+    /**
+     * マージインポートを実行
+     */
+    mergeImport: (
+      options: import("./project-archive.types").MergeImportOptions,
+    ) => Promise<import("./project-archive.types").MergeImportResult>
+
+    /**
+     * エクスポート保存先選択ダイアログ
+     */
+    selectExportSavePath: (options: {
+      projectName?: string
+    }) => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }>
+
+    /**
+     * インポートファイル選択ダイアログ
+     */
+    selectImportFile: () => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+    }>
+  }
+
   // データ管理関連
   getDataDirectoryInfo: () => Promise<{
     success: boolean

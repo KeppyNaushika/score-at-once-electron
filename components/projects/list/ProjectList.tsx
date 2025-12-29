@@ -1,11 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import {
   Calculator,
   Download,
   Edit,
   Eye,
   FileImage,
+  FolderInput,
   PlayCircle,
   PlusCircle,
   Settings,
@@ -17,6 +19,7 @@ import { useRouter } from "next/navigation"
 import { useFileActions } from "@/components/hooks/useFileActions"
 import { useProjects } from "@/components/hooks/useProjects"
 import CreateProjectWindow from "@/components/projects/forms/CreateProjectWindow"
+import { ImportWizardModal } from "@/components/import/ImportWizardModal"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -36,6 +39,7 @@ import { getProjectStatus } from "@/utils/projectStatus"
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
+  const [showImportModal, setShowImportModal] = useState(false)
 
   const { createProjectModal } = useFileActions()
   const router = useRouter()
@@ -44,10 +48,14 @@ const File = () => {
     router.push(`/projects/${project.id}`)
   }
 
-
   const handleNextStep = (project: ProjectWithDetails) => {
     const status = getProjectStatus(project)
     router.push(status.url)
+  }
+
+  const handleImportComplete = (projectId: string) => {
+    loadProjects()
+    router.push(`/projects/${projectId}`)
   }
 
   return (
@@ -58,11 +66,20 @@ const File = () => {
           onProjectCreated={loadProjects}
         />
       )}
+      <ImportWizardModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onComplete={handleImportComplete}
+      />
       <div className="flex min-w-full flex-col">
         <div className="flex items-center space-x-2 border-b px-4 py-2">
           <Button onClick={createProjectModal.open} variant="outline">
             <PlusCircle className="mr-2 h-4 w-4" />
             新規試験作成
+          </Button>
+          <Button onClick={() => setShowImportModal(true)} variant="outline">
+            <FolderInput className="mr-2 h-4 w-4" />
+            インポート
           </Button>
         </div>
 
