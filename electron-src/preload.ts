@@ -567,6 +567,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("drawing:getStats", questionScoreId),
     getById: (id: string) => ipcRenderer.invoke("drawing:getById", id),
   },
+
+  // Project Archive (Export/Import) related
+  archive: {
+    exportProject: (options: { projectId: string; outputPath?: string }) =>
+      ipcRenderer.invoke("archive:exportProject", options),
+    analyzeArchive: (options: { archivePath: string }) =>
+      ipcRenderer.invoke("archive:analyzeArchive", options),
+    importAsNew: (options: { archivePath: string }) =>
+      ipcRenderer.invoke("archive:importAsNew", options),
+    detectConflicts: (options: {
+      archivePath: string
+      matchingConfig: import("../types/project-archive.types").MatchingConfig
+    }) => ipcRenderer.invoke("archive:detectConflicts", options),
+    mergeImport: (options: {
+      archivePath: string
+      matchingConfig: import("../types/project-archive.types").MatchingConfig
+      conflictResolutions: import("../types/project-archive.types").ConflictResolutions
+    }) => ipcRenderer.invoke("archive:mergeImport", options),
+    selectExportSavePath: (options: { projectName?: string }) =>
+      ipcRenderer.invoke("archive:selectExportSavePath", options),
+    selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
+  },
 })
 
 process.once("loaded", () => {

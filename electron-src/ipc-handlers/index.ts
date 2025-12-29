@@ -8,6 +8,7 @@ import { setupQuestionGroupHandlers } from "./question-group-handlers"
 import { setupAuthHandlers } from "./auth-handlers"
 import { setupSubtotalGroupHandlers } from "./subtotal-group-handlers"
 import { setupDrawingHandlers } from "./drawing-handlers"
+import { registerArchiveHandlers } from "./archive-handlers"
 
 export function setupAllIPCHandlers(): void {
   setupProjectHandlers()
@@ -20,6 +21,7 @@ export function setupAllIPCHandlers(): void {
   setupAuthHandlers()
   setupSubtotalGroupHandlers()
   setupDrawingHandlers() // 描画アノテーション handlers
-  
+  registerArchiveHandlers() // プロジェクトアーカイブ handlers
+
   console.log("✅ All IPC handlers setup completed")
 }
