@@ -386,8 +386,6 @@ async function createPageImageRecords(
   data: ExtractedArchiveData,
   mappings: IdMappings,
 ): Promise<void> {
-  const dataDir = getDataDirectory()
-
   for (const img of data.projectData.pageImages) {
     const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
     const newStudentId = remapId(img.studentId, mappings.student)
@@ -395,30 +393,18 @@ async function createPageImageRecords(
 
     if (!newProjectPageId) continue
 
-    // 新しいパスを計算
+    // 新しいパスを計算（相対パスで保存）
     const filename = path.basename(img.imagePath)
     let newImagePath: string
 
     if (img.imageType === "MODEL_ANSWER") {
-      newImagePath = path.join(
-        dataDir,
-        "projects",
-        newProjectId,
-        "master-images",
-        filename,
-      )
+      newImagePath = `projects/${newProjectId}/master-images/${filename}`
     } else {
       // STUDENT_ANSWERの場合、元のパス構造を維持
       const relativePath = img.imagePath.substring(
         img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1,
       )
-      newImagePath = path.join(
-        dataDir,
-        "projects",
-        newProjectId,
-        "answer-sheets",
-        relativePath,
-      )
+      newImagePath = `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
     }
 
     await prisma.pageImage.create({
