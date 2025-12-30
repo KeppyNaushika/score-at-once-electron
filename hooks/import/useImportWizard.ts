@@ -42,7 +42,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await (window as any).electronAPI.archive.selectImportFile()
+      const result = await window.electronAPI.archive.selectImportFile()
 
       if (!result.success) {
         setState((prev) => ({
@@ -59,7 +59,7 @@ export function useImportWizard() {
       }
 
       // アーカイブを解析
-      const analyzeResult = await (window as any).electronAPI.archive.analyzeArchive({
+      const analyzeResult = await window.electronAPI.archive.analyzeArchive({
         archivePath: result.filePath!,
       })
 
@@ -122,7 +122,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await (window as any).electronAPI.archive.detectConflicts({
+      const result = await window.electronAPI.archive.detectConflicts({
         archivePath: state.archivePath,
         matchingConfig: state.matchingConfig,
       })
@@ -193,7 +193,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await (window as any).electronAPI.archive.importAsNew({
+      const result = await window.electronAPI.archive.importAsNew({
         archivePath: state.archivePath,
       })
 
@@ -226,7 +226,7 @@ export function useImportWizard() {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
-      const result = await (window as any).electronAPI.archive.mergeImport({
+      const result = await window.electronAPI.archive.mergeImport({
         archivePath: state.archivePath,
         matchingConfig: state.matchingConfig,
         conflictResolutions: state.conflictResolutions,

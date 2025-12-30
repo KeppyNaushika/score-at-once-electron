@@ -234,6 +234,28 @@ export type CropSubtotalWithDetails = Prisma.CropSubtotalGetPayload<{
   }
 }>
 
+/** getCropSubtotalsByCropRegionIdの戻り値型 */
+export type CropSubtotalWithSubtotal = Prisma.CropSubtotalGetPayload<{
+  include: {
+    subtotal: {
+      include: {
+        subtotalGroup: true
+      }
+    }
+  }
+}>
+
+/** getCropSubtotalsBySubtotalIdの戻り値型 */
+export type CropSubtotalWithCropRegion = Prisma.CropSubtotalGetPayload<{
+  include: {
+    cropRegion: {
+      include: {
+        projectPage: true
+      }
+    }
+  }
+}>
+
 export type CropSubtotalPayload = CropSubtotal
 
 // 互換性のためのエイリアス関数

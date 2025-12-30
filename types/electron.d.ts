@@ -1268,6 +1268,7 @@ export interface MyAPI {
       success: boolean
       filePath?: string
       canceled?: boolean
+      error?: string
     }>
 
     /**
@@ -1277,6 +1278,7 @@ export interface MyAPI {
       success: boolean
       filePath?: string
       canceled?: boolean
+      error?: string
     }>
   }
 

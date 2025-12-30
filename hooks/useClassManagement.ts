@@ -1,8 +1,9 @@
 "use client"
 
-import type { StudentClassMembership } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
+/** 生徒情報（membershipsなし） */
 interface StudentWithMemberships {
   id: string
   studentId: string
@@ -13,6 +14,7 @@ interface StudentWithMemberships {
   enrollmentYear?: number | null
 }
 
+/** 学級情報（memberships含む） */
 interface ClassWithMemberships {
   id: string
   name: string
@@ -20,28 +22,36 @@ interface ClassWithMemberships {
   grade?: number | null
   description?: string | null
   isVisible?: boolean
-  memberships: Array<{
-    id: string
-    startDate: Date
-    endDate?: Date | null
-    attendanceNumber?: number | null
-    notes?: string | null
-    student: {
-      id: string
-      studentId: string
-      lastName: string
-      firstName: string
-      firstNameKana: string
-    }
-  }>
+  memberships: Membership[]
 }
 
+/** 所属関係情報 */
 interface Membership {
   id: string
   startDate: Date
   endDate?: Date | null
   attendanceNumber?: number | null
   notes?: string | null
+  studentId?: string // 新規作成時に使用
+  student: {
+    id: string
+    studentId: string
+    lastName: string
+    firstName: string
+    firstNameKana: string
+  }
+}
+
+/** IPC経由で受け取る生の所属関係データ（Dateがstringでシリアライズされている） */
+interface RawMembership {
+  id: string
+  studentId: string
+  classId: string
+  startDate: string | Date
+  endDate?: string | Date | null
+  attendanceNumber?: number | null
+  notes?: string | null
+  createdAt?: string | Date
   student: {
     id: string
     studentId: string
@@ -63,21 +73,22 @@ export function useClassManagement(classId: string) {
     null,
   )
 
+  /** APIレスポンスをUI用の型に変換 */
   const transformClassData = (
-    rawClassData: ClassWithMemberships & {
-      memberships: (StudentClassMembership & {
-        student: StudentWithMemberships
-      })[]
+    rawClassData: Omit<ClassWithMemberships, "memberships"> & {
+      memberships: RawMembership[]
     },
   ): ClassWithMemberships => ({
     ...rawClassData,
     memberships:
       rawClassData.memberships?.map((membership) => ({
-        ...membership,
-        startDate: new Date(
-          membership.startDate || (membership as any).createdAt,
-        ),
+        id: membership.id,
+        startDate: new Date(membership.startDate || membership.createdAt || new Date()),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
+        attendanceNumber: membership.attendanceNumber,
+        notes: membership.notes,
+        studentId: membership.studentId,
+        student: membership.student,
       })) || [],
   })
 
@@ -112,11 +123,16 @@ export function useClassManagement(classId: string) {
   const handleSaveClass = async (classInfo: Partial<ClassWithMemberships>) => {
     try {
       // Extract memberships to avoid type conflicts
-      const { memberships, ...classUpdateData } = classInfo
-      const updatedClass = await window.electronAPI.updateClass({
+      const { memberships: _memberships, ...classUpdateData } = classInfo
+      const updateInput: Prisma.ClassUpdateInput & { id: string } = {
         id: classId,
-        ...classUpdateData,
-      } as any)
+        name: classUpdateData.name,
+        classCode: classUpdateData.classCode,
+        grade: classUpdateData.grade,
+        description: classUpdateData.description,
+        isVisible: classUpdateData.isVisible,
+      }
+      const updatedClass = await window.electronAPI.updateClass(updateInput)
       setClassData(transformClassData(updatedClass))
       setIsClassModalOpen(false)
     } catch (error) {
@@ -134,13 +150,21 @@ export function useClassManagement(classId: string) {
   const handleSaveMembership = async (membershipData: Partial<Membership>) => {
     try {
       if (membershipToEdit) {
+        // 既存のmembershipを更新
+        const updateInput: Prisma.StudentClassMembershipUpdateInput = {
+          attendanceNumber: membershipData.attendanceNumber,
+          notes: membershipData.notes,
+          startDate: membershipData.startDate,
+          endDate: membershipData.endDate,
+        }
         await window.electronAPI.updateStudentClassMembership(
           membershipToEdit.id,
-          membershipData as any,
+          updateInput,
         )
-      } else {
+      } else if (membershipData.studentId) {
+        // 新規所属関係を作成
         await window.electronAPI.addStudentToClass(
-          (membershipData as any).studentId,
+          membershipData.studentId,
           classId,
         )
       }
