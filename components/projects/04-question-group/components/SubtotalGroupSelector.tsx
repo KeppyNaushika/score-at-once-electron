@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Calculator, Plus, Search, Trash2, ExternalLink } from "lucide-react"
 import Link from "next/link"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotal-group-types"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 
 interface SubtotalGroupSelectorProps {

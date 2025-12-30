@@ -1,6 +1,6 @@
 "use client"
 
-import type { Student } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import type { Student } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 interface DragOverlayContentProps {
   activeStudent: Student | null

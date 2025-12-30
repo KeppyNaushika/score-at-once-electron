@@ -1,5 +1,5 @@
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
-import { buildDnDArrayFromFileStates } from "@/components/projects/06-student-answers/student-answer-table/utils/drag-drop-utils"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
+import { buildDnDArrayFromFileStates } from "@/components/projects/06-student-answers/student-answer-table/utils/dragDropUtils"
 import type {
   PlacementStrategy,
   UnifiedFile,

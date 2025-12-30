@@ -9,7 +9,7 @@ import type {
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
-} from "@/types/drawing-annotation.types"
+} from "@/types/drawingAnnotation.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // textbox-on-canvas-v3のMathJax処理を統合
@@ -19,7 +19,7 @@ import {
 } from "@/app/textbox-on-canvas-v3/utils/mathJaxUtils"
 
 // 既存の描画システム型と互換性を保つため
-import type { DrawingElement } from "../../types/answer-individual-types"
+import type { DrawingElement } from "../../types/answerIndividualTypes"
 
 // QuestionScore自動作成用のコンテキスト情報
 interface DrawingContext {

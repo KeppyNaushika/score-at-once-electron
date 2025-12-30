@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2, Calculator } from "lucide-react"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotal-group-types"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 
 interface SubtotalGroupCardProps {
   group: SubtotalGroup

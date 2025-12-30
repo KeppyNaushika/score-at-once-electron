@@ -8,16 +8,16 @@ import {
   extractArchive,
   cleanupTempDir,
   readManifestOnly,
-} from "./archive-extractor"
-import { validateManifest } from "./manifest-validator"
-import { generateNewIdMappings } from "./id-remapper"
-import { createImportedData } from "./data-creator"
+} from "./archiveExtractor"
+import { validateManifest } from "./manifestValidator"
+import { generateNewIdMappings } from "./idRemapper"
+import { createImportedData } from "./dataCreator"
 import type {
   ImportAsNewOptions,
   ImportAsNewResult,
   AnalyzeArchiveOptions,
   AnalyzeArchiveResult,
-} from "../../../../types/project-archive.types"
+} from "../../../../types/projectArchive.types"
 
 /**
  * アーカイブを解析（プレビュー用）
@@ -130,7 +130,7 @@ export async function importAsNew(
 }
 
 // Re-export for convenience
-export * from "./archive-extractor"
-export * from "./manifest-validator"
-export * from "./id-remapper"
-export * from "./data-creator"
+export * from "./archiveExtractor"
+export * from "./manifestValidator"
+export * from "./idRemapper"
+export * from "./dataCreator"

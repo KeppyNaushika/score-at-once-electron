@@ -21,7 +21,7 @@ import {
 } from "@/components/projects/08-export/components/PdfCanvasRenderer"
 import { StudentSelectionCard } from "@/components/projects/08-export/components/StudentSelectionCard"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
-import type { ScoringMarkConfigForPdf } from "@/components/projects/08-export/utils/pdf-canvas-renderer"
+import type { ScoringMarkConfigForPdf } from "@/components/projects/08-export/utils/pdfCanvasRenderer"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 export default function ExportMainView() {

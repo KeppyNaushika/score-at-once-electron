@@ -10,7 +10,7 @@ import type {
   ClassMatchingMethod,
   UserMatchingMethod,
   SubtotalGroupMatchingMethod,
-} from "@/types/project-archive.types"
+} from "@/types/projectArchive.types"
 import {
   Users,
   School,

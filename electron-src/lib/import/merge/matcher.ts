@@ -11,8 +11,8 @@ import type {
   ClassMatchingMethod,
   UserMatchingMethod,
   SubtotalGroupMatchingMethod,
-} from "../../../../types/project-archive.types"
-import type { ExtractedArchiveData } from "../project-archive/archive-extractor"
+} from "../../../../types/projectArchive.types"
+import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
 
 /**
  * マッチング結果

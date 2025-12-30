@@ -579,12 +579,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("archive:importAsNew", options),
     detectConflicts: (options: {
       archivePath: string
-      matchingConfig: import("../types/project-archive.types").MatchingConfig
+      matchingConfig: import("../types/projectArchive.types").MatchingConfig
     }) => ipcRenderer.invoke("archive:detectConflicts", options),
     mergeImport: (options: {
       archivePath: string
-      matchingConfig: import("../types/project-archive.types").MatchingConfig
-      conflictResolutions: import("../types/project-archive.types").ConflictResolutions
+      matchingConfig: import("../types/projectArchive.types").MatchingConfig
+      conflictResolutions: import("../types/projectArchive.types").ConflictResolutions
     }) => ipcRenderer.invoke("archive:mergeImport", options),
     selectExportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("archive:selectExportSavePath", options),

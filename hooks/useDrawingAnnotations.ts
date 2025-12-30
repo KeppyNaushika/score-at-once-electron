@@ -9,7 +9,7 @@ import type {
   DrawingTool,
   DrawingType,
   DrawingUpdateData,
-} from "@/types/drawing-annotation.types"
+} from "@/types/drawingAnnotation.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // MathJax処理
@@ -445,4 +445,4 @@ export function useDrawingAnnotations(
 }
 
 // 必要な型を再エクスポート
-export type { DrawingTool } from "@/types/drawing-annotation.types"
+export type { DrawingTool } from "@/types/drawingAnnotation.types"

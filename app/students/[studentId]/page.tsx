@@ -1,14 +1,14 @@
 "use client"
 
-import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/current-memberships-card"
-import { ExamResultsCard } from "@/app/students/[studentId]/components/exam-results-card"
+import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/CurrentMembershipsCard"
+import { ExamResultsCard } from "@/app/students/[studentId]/components/ExamResultsCard"
 import {
   LoadingState,
   StudentNotFoundState,
-} from "@/app/students/[studentId]/components/loading-state"
-import { MembershipHistoryCard } from "@/app/students/[studentId]/components/membership-history-card"
-import { StudentDetailHeader } from "@/app/students/[studentId]/components/student-detail-header"
-import { StudentInfoCard } from "@/app/students/[studentId]/components/student-info-card"
+} from "@/app/students/[studentId]/components/LoadingState"
+import { MembershipHistoryCard } from "@/app/students/[studentId]/components/MembershipHistoryCard"
+import { StudentDetailHeader } from "@/app/students/[studentId]/components/StudentDetailHeader"
+import { StudentInfoCard } from "@/app/students/[studentId]/components/StudentInfoCard"
 import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
 import { Membership } from "@/app/students/[studentId]/types"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"

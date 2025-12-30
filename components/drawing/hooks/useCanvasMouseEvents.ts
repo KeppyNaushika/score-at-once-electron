@@ -9,10 +9,10 @@ import type {
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
-} from "@/types/drawing-annotation.types"
+} from "@/types/drawingAnnotation.types"
 import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
-import { getRelativeCoordinates } from "../utils/coordinate-utils"
-import { isPointInAnnotation } from "../utils/hit-detection"
+import { getRelativeCoordinates } from "../utils/coordinateUtils"
+import { isPointInAnnotation } from "../utils/hitDetection"
 
 /**
  * フックのパラメータ

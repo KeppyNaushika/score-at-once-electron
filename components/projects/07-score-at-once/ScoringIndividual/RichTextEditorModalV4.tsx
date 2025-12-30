@@ -25,7 +25,7 @@ import {
   UnfoldVertical,
 } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
-import { COLOR_PALETTE } from "./constants/drawing-constants"
+import { COLOR_PALETTE } from "./constants/drawingConstants"
 
 // V4統合: textbox-on-canvas-v4の機能をインポート
 import type {

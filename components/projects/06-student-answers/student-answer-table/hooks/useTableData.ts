@@ -7,7 +7,7 @@ import {
   getEnabledFiles,
   getFileColor,
   sortStudentsByCustomOrder,
-} from "@/components/projects/06-student-answers/student-answer-table/utils/table-data-utils"
+} from "@/components/projects/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   PlacementStrategy,
   UnifiedFile,

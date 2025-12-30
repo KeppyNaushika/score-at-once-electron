@@ -22,14 +22,14 @@ import type {
   ScoringMarkConfig,
   ScoringStatus,
   TextAlignment,
-} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
+} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import {
   defaultConfig,
   defaultPartialScoreConfig,
   defaultSummaryScoreConfig,
   positionLabels,
-} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
-import { saveConfigToStorage } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoring-mark-utils"
+} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import { saveConfigToStorage } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 
 interface ScoringMarkSettingsContainerProps {
   config: ScoringMarkConfig

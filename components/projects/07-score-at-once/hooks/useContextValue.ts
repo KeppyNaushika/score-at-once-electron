@@ -13,7 +13,7 @@
  */
 
 import { useEffect } from "react"
-import type { ScoringContextState } from "../ScoringMain/contexts/ShortcutContextTypes"
+import type { ScoringContextState } from "../ScoringMain/contexts/shortcutContextTypes"
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 
 /**

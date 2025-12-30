@@ -6,7 +6,7 @@ import { TableCell, TableRow } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
-import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 export function SortableTableRow({
   student,

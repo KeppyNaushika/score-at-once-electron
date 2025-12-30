@@ -1,5 +1,5 @@
-import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoring-keybindings"
-import { getModifierKeyLabel } from "@/lib/platform-utils"
+import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoringKeybindings"
+import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 

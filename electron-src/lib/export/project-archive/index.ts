@@ -5,12 +5,12 @@
  */
 
 import { app, dialog } from "electron"
-import { collectProjectData } from "./data-collector"
-import { createArchive, generateExportFileName } from "./archive-creator"
+import { collectProjectData } from "./dataCollector"
+import { createArchive, generateExportFileName } from "./archiveCreator"
 import type {
   ExportProjectOptions,
   ExportProjectResult,
-} from "../../../../types/project-archive.types"
+} from "../../../../types/projectArchive.types"
 import { getProjectById } from "../../prisma/project"
 
 /**
@@ -119,5 +119,5 @@ export async function selectExportSavePath(options: {
 }
 
 // Re-export types
-export * from "./data-collector"
-export * from "./archive-creator"
+export * from "./dataCollector"
+export * from "./archiveCreator"

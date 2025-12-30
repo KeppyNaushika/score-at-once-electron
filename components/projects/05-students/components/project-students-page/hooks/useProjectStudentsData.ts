@@ -6,7 +6,7 @@ import type {
   Student,
   StudentForRemoval,
   StudentStatus,
-} from "@/components/projects/05-students/components/project-students-page/types/project-students-types"
+} from "@/components/projects/05-students/components/project-students-page/types/projectStudentsTypes"
 import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectStudentsDataProps {

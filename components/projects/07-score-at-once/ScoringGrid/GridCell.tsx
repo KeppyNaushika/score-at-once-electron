@@ -1,5 +1,5 @@
-import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/score-status-config"
-import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
+import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"
 import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/CroppedAnswerImage"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"

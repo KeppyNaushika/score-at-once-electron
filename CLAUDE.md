@@ -28,6 +28,18 @@
 
 **例**: 「データベースをリセットしますが、既存データが消失します。実行してよろしいですか？」
 
+## 📁 ファイル命名規則
+
+| 拡張子 | 規則       | 例                                        |
+| ------ | ---------- | ----------------------------------------- |
+| `.tsx` | PascalCase | `ActionButton.tsx`, `ScoringMainView.tsx` |
+| `.ts`  | camelCase  | `useProject.ts`, `dataFetcher.ts`         |
+
+**例外**:
+
+- Next.js規約ファイル: `page.tsx`, `layout.tsx`, `error.tsx` など
+- shadcn/ui コンポーネント: `button.tsx`, `dialog.tsx` など（ライブラリ規約に従う）
+
 ## 主要コマンド
 
 ```bash
@@ -72,24 +84,24 @@ npx prisma studio
 1. **生徒詳細ページ** (`/app/students/[studentId]/`)
    - 574行のpage.tsxを機能別に分割
    - 型定義: `types.ts`
-   - カスタムフック: `hooks/use-student-detail.ts`
+   - カスタムフック: `hooks/useStudentDetail.ts`
    - UIコンポーネント: `components/` (6個のコンポーネント)
    - 保守性と可読性を大幅に向上
 
 2. **設定ページ** (`/app/settings/`)
    - 543行のpage.tsxを責任別に分割
    - 定数定義: `constants.ts`
-   - カスタムフック: `hooks/use-keyboard-settings.ts`
-   - UIコンポーネント: `components/keyboard-shortcut-section.tsx`
+   - カスタムフック: `hooks/useKeyboardSettings.ts`
+   - UIコンポーネント: `components/KeyboardShortcutSection.tsx`
    - キーボード設定の複雑なロジックを分離
 
 3. **Excel出力機能** (`/electron-src/lib/export/excel/`)
-   - 553行のexcel-export-main.tsを機能別に分割
-   - データ取得: `data-fetcher.ts` (244行)
-   - シート作成: `sheet-creators.ts` (70行)
-   - ヘッダー作成: `header-creators.ts` (30行)
-   - データ行作成: `row-creators.ts` (120行)
-   - ファイル保存: `file-saver.ts` (40行)
+   - 553行のexcelExportMain.tsを機能別に分割
+   - データ取得: `dataFetcher.ts` (244行)
+   - シート作成: `sheetCreators.ts` (70行)
+   - ヘッダー作成: `headerCreators.ts` (30行)
+   - データ行作成: `rowCreators.ts` (120行)
+   - ファイル保存: `fileSaver.ts` (40行)
    - 統合エクスポート: `index.ts` (7行)
    - 包括的なTypeDoc形式コメント付き
 
@@ -614,7 +626,6 @@ export interface SerializedQuestionScore extends Omit<
 - **コンポーネント分割**: 責任別・機能別の明確な分離
 - **カスタムフック活用**: ロジックとUIの完全分離
 - **TypeScript厳格型チェック**: any型の使用を最小限に抑制
-- **一貫したファイル命名規則**: kebab-case統一
 - **型定義の充実化**: 18個の詳細型定義に加え、機能別型定義を追加
 - **Electronプロセス間通信**: 型安全性確保と互換性レイヤー
 - **ビルドエラー0件の維持**: 型エラーの完全解決

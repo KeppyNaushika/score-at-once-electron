@@ -1,5 +1,5 @@
 // Import and re-export from student-answer.types for consistency
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
   PlacementStrategy,

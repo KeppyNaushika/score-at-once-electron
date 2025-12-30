@@ -3,7 +3,7 @@ import type {
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback } from "react"
 
 interface UseRectangleSelectionProps {

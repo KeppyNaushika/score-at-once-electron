@@ -3,6 +3,6 @@
  */
 
 export * from "./types"
-export * from "./data-fetcher"
-export * from "./statistics-calculator"
-export * from "./advice-generator"
+export * from "./dataFetcher"
+export * from "./statisticsCalculator"
+export * from "./adviceGenerator"

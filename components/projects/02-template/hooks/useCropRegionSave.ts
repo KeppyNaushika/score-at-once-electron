@@ -4,7 +4,7 @@ import {
   RegionCoordinates,
 } from "@/components/projects/02-template/types"
 import { CropRegionArea } from "@/types/common.types"
-import type { CropRegionWithDetails } from "@/types/prisma-extensions"
+import type { CropRegionWithDetails } from "@/types/prismaExtensions"
 import { User } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"

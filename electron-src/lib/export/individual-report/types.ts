@@ -2,7 +2,7 @@
  * 個人成績表PDF出力機能の型定義
  */
 
-import type { ScoringData } from "../../shared/types/export-types"
+import type { ScoringData } from "../../shared/types/exportTypes"
 
 // ================== 表示モード関連 ==================
 

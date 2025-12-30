@@ -2,7 +2,7 @@
  * @fileoverview 要素リサイズフック
  * 矩形・楕円・テキストボックスのリサイズを管理
  */
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback } from "react"
 
 /** リサイズの元の境界 */

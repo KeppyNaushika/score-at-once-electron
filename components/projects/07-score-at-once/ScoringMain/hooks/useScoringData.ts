@@ -2,9 +2,9 @@ import { useBatchScoring } from "@/components/projects/07-score-at-once/ScoringD
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-} from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
-import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/data-loader"
-import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progress-calculator"
+} from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
+import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/dataLoader"
+import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progressCalculator"
 import { type QuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useState } from "react"
 

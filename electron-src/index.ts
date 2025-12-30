@@ -1,8 +1,8 @@
 import { app } from "electron"
-import { initializeApp } from "./app-initializer"
+import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
-import { startEmbeddedNextServer } from "./next-server-embedded"
-import { createMainWindow, setupWindowEvents } from "./window-manager"
+import { startEmbeddedNextServer } from "./nextServerEmbedded"
+import { createMainWindow, setupWindowEvents } from "./windowManager"
 
 // Windows用デバッグ出力の有効化
 if (process.platform === "win32" && app.isPackaged) {

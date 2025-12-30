@@ -16,7 +16,7 @@ import type {
   ConflictCategory,
   ConflictPolicy,
   CategoryMatchingResult,
-} from "@/types/project-archive.types"
+} from "@/types/projectArchive.types"
 import {
   ChevronDown,
   ChevronRight,

@@ -8,7 +8,7 @@ import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
   ImportAsNewResult,
   MergeImportResult,
-} from "@/types/project-archive.types"
+} from "@/types/projectArchive.types"
 import {
   Download,
   FileText,

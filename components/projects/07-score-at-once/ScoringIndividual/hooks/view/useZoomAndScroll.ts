@@ -4,7 +4,7 @@
  */
 import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
-import { ZOOM_SETTINGS } from "../../constants/drawing-constants"
+import { ZOOM_SETTINGS } from "../../constants/drawingConstants"
 
 /** ズーム・スクロール操作フックのパラメータ */
 export interface UseZoomAndScrollParams {

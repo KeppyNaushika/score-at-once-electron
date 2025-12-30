@@ -5,6 +5,6 @@
  */
 
 export * from "./matcher"
-export * from "./conflict-detector"
-export * from "./conflict-resolver"
-export * from "./data-merger"
+export * from "./conflictDetector"
+export * from "./conflictResolver"
+export * from "./dataMerger"

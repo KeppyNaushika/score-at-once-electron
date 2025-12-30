@@ -5,7 +5,7 @@
 import type {
   DrawingElement,
   LineStyle,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback, useRef } from "react"
 
 /** 新規描画作成フックのプロパティ */

@@ -1,4 +1,4 @@
-import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/grid-types"
+import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useMemo } from "react"
 

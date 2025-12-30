@@ -6,7 +6,7 @@ import {
   renderSvgToCanvas,
 } from "../../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
 import { convertTextToSvg } from "../../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
-import type { DrawingElement } from "../types/answer-individual-types"
+import type { DrawingElement } from "../types/answerIndividualTypes"
 
 /** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */
 const svgCache = new Map<

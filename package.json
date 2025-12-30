@@ -27,7 +27,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit && tsc -p ./electron-src/tsconfig.json",
     "check-all": "npm run typecheck && npm run lint",
-    "check:hooks": "npx ts-node --transpile-only scripts/find-unused-hook-returns.ts",
+    "check:hooks": "npx ts-node --transpile-only scripts/findUnusedHookReturns.ts",
     "release": "node scripts/release.js",
     "release:patch": "node scripts/version-release.js patch",
     "release:minor": "node scripts/version-release.js minor",

@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress"
 import { FileUp, Loader2, Upload, X } from "lucide-react"
 import React, { useCallback, useRef, useState } from "react"
 import type { FileUploadDropzoneProps } from "@/components/projects/01-upload/types"
-import { isValidMasterImageFile } from "../utils/file-validation"
+import { isValidMasterImageFile } from "../utils/fileValidation"
 
 /**
  * FileUploadDropzone - ファイルアップロード用ドラッグ&ドロップエリアコンポーネント

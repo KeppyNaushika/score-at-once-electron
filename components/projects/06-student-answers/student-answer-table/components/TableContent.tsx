@@ -2,7 +2,7 @@ import { EmptyTableCell } from "@/components/projects/06-student-answers/student
 import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"
 import { SortableTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/SortableTableCell"
 import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
-import type { DisabledReason } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
+import type { DisabledReason } from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
 import {
   Table,
   TableBody,

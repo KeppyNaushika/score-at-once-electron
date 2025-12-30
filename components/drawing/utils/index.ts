@@ -5,7 +5,7 @@
 export {
   getRelativeCoordinates,
   getAbsoluteCoordinates,
-} from "./coordinate-utils"
-export { drawWaveLine, drawZigzagLine, drawArrowHead } from "./line-rendering"
-export { isPointInAnnotation } from "./hit-detection"
-export { redrawCanvas, type CanvasDrawParams } from "./canvas-renderer"
+} from "./coordinateUtils"
+export { drawWaveLine, drawZigzagLine, drawArrowHead } from "./lineRendering"
+export { isPointInAnnotation } from "./hitDetection"
+export { redrawCanvas, type CanvasDrawParams } from "./canvasRenderer"

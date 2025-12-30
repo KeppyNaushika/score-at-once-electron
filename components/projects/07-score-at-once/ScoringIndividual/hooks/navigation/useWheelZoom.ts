@@ -2,7 +2,7 @@
  * @fileoverview ホイールズームフック
  * Ctrl/Meta + ホイールでマウス位置を基準にズームする
  */
-import { ZOOM_SETTINGS } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
+import { ZOOM_SETTINGS } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import { useEffect } from "react"
 
 /** ホイールズームフックのプロパティ */

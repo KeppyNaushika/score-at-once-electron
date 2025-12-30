@@ -3,7 +3,7 @@
  * 採点画面でキーバインディングを取得するために使用
  */
 
-import type { KeyBinding } from "../ScoringMain/contexts/ShortcutContextTypes"
+import type { KeyBinding } from "../ScoringMain/contexts/shortcutContextTypes"
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 
 /**

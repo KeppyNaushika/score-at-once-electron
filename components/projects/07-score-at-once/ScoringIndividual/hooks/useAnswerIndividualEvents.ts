@@ -5,7 +5,7 @@ import type {
   LineStyle,
   RectangleEditMode,
   SelectionRectangle,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback } from "react"
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"
