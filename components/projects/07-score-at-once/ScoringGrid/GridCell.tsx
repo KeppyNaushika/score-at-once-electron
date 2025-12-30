@@ -12,7 +12,7 @@ type ScoreStatusConfig =
   (typeof SCORE_STATUS_CONFIG)[keyof typeof SCORE_STATUS_CONFIG]
 
 const isScoreStatusKey = (
-  status: keyof typeof SCORE_STATUS_CONFIG,
+  status: keyof typeof SCORE_STATUS_CONFIG
 ): status is keyof typeof SCORE_STATUS_CONFIG =>
   SCORE_STATUS_KEYS.includes(status)
 
@@ -38,7 +38,7 @@ export function GridCell({
   onMouseDown,
 }: GridCellProps) {
   const statusKey: keyof typeof SCORE_STATUS_CONFIG = isScoreStatusKey(
-    answer.status,
+    answer.status
   )
     ? answer.status
     : "unscored"
@@ -57,7 +57,7 @@ export function GridCell({
     if (isSelected) {
       cellClasses.push(
         selectionBorderSettings.tailwindClass,
-        config.selectedBgColor,
+        config.selectedBgColor
       )
     } else {
       cellClasses.push(config.borderColor, config.bgColor ?? "bg-white")

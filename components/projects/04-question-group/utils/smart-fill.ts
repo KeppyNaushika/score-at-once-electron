@@ -25,7 +25,7 @@
  */
 export function smartFillCheckbox(
   values: boolean[],
-  targetLength: number,
+  targetLength: number
 ): boolean[] {
   // 空配列の場合
   if (values.length === 0) return []

@@ -57,7 +57,7 @@ export function useTableData({
       sortedStudents,
       modelAnswerCount,
       disabledState,
-      mode,
+      mode
     )
   }, [files, sortedStudents, modelAnswerCount, disabledState, mode])
 
@@ -72,7 +72,7 @@ export function useTableData({
       // 動的無効化チェック
       return dynamicDisabledPositions.has(position)
     },
-    [isPositionDisabled, modelAnswerCount, dynamicDisabledPositions],
+    [isPositionDisabled, modelAnswerCount, dynamicDisabledPositions]
   )
 
   // 既存答案がある位置の計算（警告オーバーレイ用）
@@ -83,7 +83,7 @@ export function useTableData({
       modelAnswerCount,
       disabledState,
       mode,
-      existingStudentAnswers,
+      existingStudentAnswers
     )
   }, [
     files,

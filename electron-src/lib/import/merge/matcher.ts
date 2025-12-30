@@ -76,7 +76,7 @@ interface SubtotalGroupData {
  */
 export async function matchStudents(
   importData: ExtractedArchiveData,
-  method: StudentMatchingMethod,
+  method: StudentMatchingMethod
 ): Promise<MatchResult<StudentData>[]> {
   const results: MatchResult<StudentData>[] = []
 
@@ -84,7 +84,7 @@ export async function matchStudents(
   const existingStudents = await prisma.student.findMany()
 
   for (const importStudent of importData.studentsData.students) {
-    let matchedStudent: typeof existingStudents[0] | null = null
+    let matchedStudent: (typeof existingStudents)[0] | null = null
 
     switch (method) {
       case "uuid":
@@ -94,8 +94,9 @@ export async function matchStudents(
 
       case "studentId":
         matchedStudent =
-          existingStudents.find((s) => s.studentId === importStudent.studentId) ??
-          null
+          existingStudents.find(
+            (s) => s.studentId === importStudent.studentId
+          ) ?? null
         break
 
       case "name":
@@ -103,7 +104,7 @@ export async function matchStudents(
           existingStudents.find(
             (s) =>
               s.lastName === importStudent.lastName &&
-              s.firstName === importStudent.firstName,
+              s.firstName === importStudent.firstName
           ) ?? null
         break
     }
@@ -147,14 +148,14 @@ export async function matchStudents(
  */
 export async function matchClasses(
   importData: ExtractedArchiveData,
-  method: ClassMatchingMethod,
+  method: ClassMatchingMethod
 ): Promise<MatchResult<ClassData>[]> {
   const results: MatchResult<ClassData>[] = []
 
   const existingClasses = await prisma.class.findMany()
 
   for (const importClass of importData.classesData.classes) {
-    let matchedClass: typeof existingClasses[0] | null = null
+    let matchedClass: (typeof existingClasses)[0] | null = null
 
     switch (method) {
       case "uuid":
@@ -203,19 +204,18 @@ export async function matchClasses(
  */
 export async function matchUsers(
   importData: ExtractedArchiveData,
-  method: UserMatchingMethod,
+  method: UserMatchingMethod
 ): Promise<MatchResult<UserData>[]> {
   const results: MatchResult<UserData>[] = []
 
   const existingUsers = await prisma.user.findMany()
 
   for (const importUser of importData.usersData.users) {
-    let matchedUser: typeof existingUsers[0] | null = null
+    let matchedUser: (typeof existingUsers)[0] | null = null
 
     switch (method) {
       case "uuid":
-        matchedUser =
-          existingUsers.find((u) => u.id === importUser.id) ?? null
+        matchedUser = existingUsers.find((u) => u.id === importUser.id) ?? null
         break
 
       case "username":
@@ -257,14 +257,14 @@ export async function matchUsers(
  */
 export async function matchSubtotalGroups(
   importData: ExtractedArchiveData,
-  method: SubtotalGroupMatchingMethod,
+  method: SubtotalGroupMatchingMethod
 ): Promise<MatchResult<SubtotalGroupData>[]> {
   const results: MatchResult<SubtotalGroupData>[] = []
 
   const existingGroups = await prisma.subtotalGroup.findMany()
 
   for (const importGroup of importData.subtotalsData.subtotalGroups) {
-    let matchedGroup: typeof existingGroups[0] | null = null
+    let matchedGroup: (typeof existingGroups)[0] | null = null
 
     switch (method) {
       case "uuid":
@@ -307,7 +307,7 @@ export async function matchSubtotalGroups(
  */
 export async function performAllMatching(
   importData: ExtractedArchiveData,
-  config: MatchingConfig,
+  config: MatchingConfig
 ): Promise<AllMatchResults> {
   const [students, classes, users, subtotalGroups] = await Promise.all([
     matchStudents(importData, config.student),
@@ -327,9 +327,7 @@ export async function performAllMatching(
 /**
  * IDマッピングを生成（既存データへのマッピング）
  */
-export function buildIdMappings(
-  matchResults: AllMatchResults,
-): {
+export function buildIdMappings(matchResults: AllMatchResults): {
   student: Record<string, string>
   class: Record<string, string>
   user: Record<string, string>

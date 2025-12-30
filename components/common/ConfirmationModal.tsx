@@ -10,7 +10,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle, Trash2, FileX, Users, Info, HelpCircle } from "lucide-react"
+import {
+  AlertTriangle,
+  Trash2,
+  FileX,
+  Users,
+  Info,
+  HelpCircle,
+} from "lucide-react"
 
 interface ConfirmationItem {
   id: string
@@ -91,7 +98,7 @@ export default function ConfirmationModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-full bg-gray-100 ${styles.icon}`}>
+            <div className={`rounded-full bg-gray-100 p-2 ${styles.icon}`}>
               <IconComponent className="h-6 w-6" />
             </div>
             <div>
@@ -100,7 +107,7 @@ export default function ConfirmationModal({
               </DialogTitle>
             </div>
           </div>
-          <DialogDescription className="text-gray-600 mt-3">
+          <DialogDescription className="mt-3 text-gray-600">
             {description}
           </DialogDescription>
         </DialogHeader>
@@ -112,12 +119,12 @@ export default function ConfirmationModal({
               {warnings.map((warning, index) => (
                 <div
                   key={index}
-                  className={`p-3 rounded-md text-sm ${
+                  className={`rounded-md p-3 text-sm ${
                     warning.type === "destructive"
-                      ? "bg-red-50 text-red-800 border border-red-200"
+                      ? "border border-red-200 bg-red-50 text-red-800"
                       : warning.type === "warning"
-                      ? "bg-orange-50 text-orange-800 border border-orange-200"
-                      : "bg-blue-50 text-blue-800 border border-blue-200"
+                        ? "border border-orange-200 bg-orange-50 text-orange-800"
+                        : "border border-blue-200 bg-blue-50 text-blue-800"
                   }`}
                 >
                   {warning.message}
@@ -132,11 +139,11 @@ export default function ConfirmationModal({
               <div className="text-sm font-medium text-gray-700">
                 対象項目 ({items.length}件):
               </div>
-              <div className="max-h-32 overflow-y-auto space-y-1 border rounded-md p-2 bg-gray-50">
+              <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border bg-gray-50 p-2">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-2 bg-white rounded border text-sm"
+                    className="flex items-center justify-between rounded border bg-white p-2 text-sm"
                   >
                     <span className="font-medium">{item.display}</span>
                     {item.badges && (
@@ -160,11 +167,7 @@ export default function ConfirmationModal({
         </div>
 
         <DialogFooter className="flex space-x-2">
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={loading}
-          >
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             {cancelText}
           </Button>
           <Button

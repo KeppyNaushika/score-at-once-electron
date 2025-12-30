@@ -7,7 +7,7 @@ import { MasterAnswer } from "@/components/projects/01-upload/types"
  * @returns {MasterAnswer[]} ページ番号順にソートされた解答リスト
  */
 export const sortImagesByPageNumber = (
-  answers: MasterAnswer[],
+  answers: MasterAnswer[]
 ): MasterAnswer[] => {
   return [...answers].sort((a, b) => a.pageNumber - b.pageNumber)
 }
@@ -18,20 +18,20 @@ export const sortImagesByPageNumber = (
  * @returns {Promise<Record<string, string>>} 解答IDとURLのマッピング
  */
 export const generateImageUrls = async (
-  answers: MasterAnswer[],
+  answers: MasterAnswer[]
 ): Promise<Record<string, string>> => {
   const urls: Record<string, string> = {}
 
   for (const answer of answers) {
     try {
       const resolvedUrl = await window.electronAPI.resolveFileProtocolPath(
-        answer.imagePath,
+        answer.imagePath
       )
       urls[answer.id] = resolvedUrl
     } catch (error) {
       console.error(
         `Failed to resolve path for answer ${answer.id} (${answer.imagePath}):`,
-        error,
+        error
       )
       urls[answer.id] = ""
     }
@@ -48,7 +48,7 @@ export const generateImageUrls = async (
  */
 export const createUploadData = async (
   file: File,
-  convertedImages?: ConvertedImage[],
+  convertedImages?: ConvertedImage[]
 ): Promise<ConvertedImage[]> => {
   if (file.type === "application/pdf") {
     return convertedImages || []
@@ -75,7 +75,7 @@ export const createUploadData = async (
 export const generateUploadSuccessMessage = (
   totalPages: number,
   pdfCount: number,
-  imageCount: number,
+  imageCount: number
 ): string => {
   let message = `${totalPages}枚の模範解答をアップロードしました`
 
@@ -98,7 +98,7 @@ export const generateUploadSuccessMessage = (
 export const moveImageInList = (
   answers: MasterAnswer[],
   fromIndex: number,
-  direction: "left" | "right",
+  direction: "left" | "right"
 ): MasterAnswer[] | null => {
   const toIndex = direction === "left" ? fromIndex - 1 : fromIndex + 1
 
@@ -119,7 +119,7 @@ export const moveImageInList = (
  * @returns {Array<{id: string, pageNumber: number}>} 更新リクエスト配列
  */
 export const generatePageNumberUpdateRequests = (
-  answers: MasterAnswer[],
+  answers: MasterAnswer[]
 ): Array<{ id: string; pageNumber: number }> => {
   return answers.map((answer, index) => ({
     id: answer.id,
@@ -148,18 +148,18 @@ type MinimalProjectPage = {
 }
 
 export const convertProjectPagesToMasterAnswers = <
-  T extends MinimalProjectPage
+  T extends MinimalProjectPage,
 >(
-  projectPages: T[],
+  projectPages: T[]
 ): MasterAnswer[] => {
   return projectPages.flatMap((page) => {
     const masterAnswer = page.pageImages?.find(
-      (img) => img.imageType === "MODEL_ANSWER",
+      (img) => img.imageType === "MODEL_ANSWER"
     )
 
     if (!masterAnswer) {
       console.warn(
-        `Project page ${page.id} is flagged as having a master answer but no MODEL_ANSWER image exists.`,
+        `Project page ${page.id} is flagged as having a master answer but no MODEL_ANSWER image exists.`
       )
       return []
     }

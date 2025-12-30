@@ -240,7 +240,7 @@ export default function ScoringToolbar({
         category: "フィルタ",
         description: "未採点の答案の表示を切り替えます",
       },
-    },
+    }
   )
 
   useCommand(
@@ -252,7 +252,7 @@ export default function ScoringToolbar({
         title: "正答フィルタトグル",
         category: "フィルタ",
       },
-    },
+    }
   )
 
   useCommand(
@@ -264,7 +264,7 @@ export default function ScoringToolbar({
         title: "部分点フィルタトグル",
         category: "フィルタ",
       },
-    },
+    }
   )
 
   useCommand(
@@ -276,7 +276,7 @@ export default function ScoringToolbar({
         title: "保留フィルタトグル",
         category: "フィルタ",
       },
-    },
+    }
   )
 
   useCommand(
@@ -288,7 +288,7 @@ export default function ScoringToolbar({
         title: "誤答フィルタトグル",
         category: "フィルタ",
       },
-    },
+    }
   )
 
   useCommand(
@@ -300,7 +300,7 @@ export default function ScoringToolbar({
         title: "無答フィルタトグル",
         category: "フィルタ",
       },
-    },
+    }
   )
 
   return (

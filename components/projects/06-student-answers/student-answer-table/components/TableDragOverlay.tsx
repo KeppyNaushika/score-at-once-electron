@@ -9,7 +9,7 @@ interface TableDragOverlayProps {
   getFileColor: (file: UnifiedFile) => string
   drawNameRegionCanvas: (
     file: UnifiedFile,
-    pageNumber: number,
+    pageNumber: number
   ) => Promise<string | null>
 }
 

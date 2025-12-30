@@ -1,4 +1,8 @@
-import type { GradingMode, ScoringData, ScoringStatus } from "@/components/projects/07-score-at-once/types"
+import type {
+  GradingMode,
+  ScoringData,
+  ScoringStatus,
+} from "@/components/projects/07-score-at-once/types"
 import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import { useCallback } from "react"
 
@@ -10,13 +14,13 @@ interface UseBatchScoringWithProgressParams {
   gradingMode: GradingMode
   scoringBehavior: ScoringBehavior
   setRecentlyScoredAnswers: (
-    callback: (prev: Set<string>) => Set<string>,
+    callback: (prev: Set<string>) => Set<string>
   ) => void
   handleBatchScore: (
     statusOrAnswerIds: ScoringStatus | string | string[],
     statusOrPartialScore?: ScoringStatus | number | null,
     partialScore?: number | null,
-    selectedAnswers?: Set<string>,
+    selectedAnswers?: Set<string>
   ) => Promise<void>
   getGridAnswerData: () => ScoringDataWithSelection[]
   setSelectedAnswers: (answers: Set<string>) => void
@@ -42,7 +46,7 @@ export function useBatchScoringWithProgress({
     async (
       statusOrAnswerIds: ScoringStatus | string | string[],
       statusOrPartialScore?: ScoringStatus | number | null,
-      partialScore?: number | null,
+      partialScore?: number | null
     ) => {
       // 採点実行開始
 
@@ -59,7 +63,7 @@ export function useBatchScoringWithProgress({
         statusOrAnswerIds,
         statusOrPartialScore,
         partialScore,
-        selectedAnswers,
+        selectedAnswers
       )
 
       // 採点後の自動進行
@@ -125,7 +129,7 @@ export function useBatchScoringWithProgress({
       setSelectedAnswers,
       handleNextStudent,
       handleNextQuestion,
-    ],
+    ]
   )
 
   // 自動進行関数
@@ -142,7 +146,13 @@ export function useBatchScoringWithProgress({
       }
       // "stay"の場合は何もしない
     }
-  }, [gradingMode, scoringBehavior, handleGridNavigation, handleNextStudent, handleNextQuestion])
+  }, [
+    gradingMode,
+    scoringBehavior,
+    handleGridNavigation,
+    handleNextStudent,
+    handleNextQuestion,
+  ])
 
   return {
     handleBatchScoreWithProgress,

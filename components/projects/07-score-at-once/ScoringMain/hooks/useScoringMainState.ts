@@ -10,7 +10,7 @@ export function useScoringMainState() {
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
   /** 選択中の答案ID集合 */
   const [selectedPageImageIds, setSelectedPageImageIds] = useState<Set<string>>(
-    new Set(),
+    new Set()
   )
   const [manualSelectionVersion, setManualSelectionVersion] = useState(0)
   const suppressSelectionUpdateRef = useRef(false)
@@ -18,7 +18,7 @@ export function useScoringMainState() {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   /** 選択中の設問領域ID */
   const [currentCropRegionId, setCurrentCropRegionId] = useState<string | null>(
-    null,
+    null
   )
   /** キーボードヘルプ表示状態 */
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false)
@@ -28,7 +28,7 @@ export function useScoringMainState() {
   const [showSidePanel, setShowSidePanel] = useState(true)
   /** ショートカットで利用する修飾キー表示ラベル */
   const [modifierKeyLabel, setModifierKeyLabel] = useState(
-    () => getModifierKeyLabel() || "Alt",
+    () => getModifierKeyLabel() || "Alt"
   )
 
   /**
@@ -38,7 +38,7 @@ export function useScoringMainState() {
     (
       answerId: string,
       isSelected: boolean,
-      pageImages: PageImageWithProjectStudents[],
+      pageImages: PageImageWithProjectStudents[]
     ) => {
       if (suppressSelectionUpdateRef.current) {
         return
@@ -62,7 +62,7 @@ export function useScoringMainState() {
         return newSet
       })
     },
-    [],
+    []
   )
 
   /**

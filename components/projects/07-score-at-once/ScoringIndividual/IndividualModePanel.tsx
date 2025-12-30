@@ -37,9 +37,7 @@ export function IndividualModePanel({
   const currentStudentId = useMemo(() => {
     if (selectedAnswers && selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      const selectedAnswer = pageImages?.find(
-        (a) => a.id === selectedAnswerId,
-      )
+      const selectedAnswer = pageImages?.find((a) => a.id === selectedAnswerId)
       return selectedAnswer?.student?.id || ""
     }
     return ""

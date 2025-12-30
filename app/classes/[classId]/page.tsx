@@ -268,7 +268,10 @@ export default function ClassDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {classData.memberships.filter((m) => isCurrentMembership(m)).length}
+              {
+                classData.memberships.filter((m) => isCurrentMembership(m))
+                  .length
+              }
             </div>
           </CardContent>
         </Card>
@@ -281,7 +284,10 @@ export default function ClassDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-600">
-              {classData.memberships.filter((m) => !isCurrentMembership(m)).length}
+              {
+                classData.memberships.filter((m) => !isCurrentMembership(m))
+                  .length
+              }
             </div>
           </CardContent>
         </Card>

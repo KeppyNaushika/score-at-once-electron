@@ -25,7 +25,7 @@ export function setupDebugPreview(
   svgElement: SVGSVGElement,
   width: number,
   height: number,
-  state: DebugPreviewState,
+  state: DebugPreviewState
 ): void {
   try {
     const svgData = new XMLSerializer().serializeToString(svgElement)
@@ -56,7 +56,7 @@ export async function renderSvgToCanvas(
   anchorY: number,
   anchorDirection: AnchorDirection,
   showDebugBorder: boolean = false,
-  opacity: number = 1.0,
+  opacity: number = 1.0
 ): Promise<SvgRenderResult> {
   return new Promise((resolve) => {
     try {
@@ -95,30 +95,18 @@ export async function renderSvgToCanvas(
             anchorY,
             width,
             height,
-            anchorDirection,
+            anchorDirection
           )
 
           // 透明度を適用して画像を描画
           ctx.save()
           ctx.globalAlpha = opacity
-          ctx.drawImage(
-            img,
-            textPosition.x,
-            textPosition.y,
-            width,
-            height,
-          )
+          ctx.drawImage(img, textPosition.x, textPosition.y, width, height)
           ctx.restore()
 
           // デバッグ用赤枠を描画（実際のテキスト領域）- 透明度なし
           if (showDebugBorder) {
-            drawDebugBorder(
-              ctx,
-              textPosition.x,
-              textPosition.y,
-              width,
-              height,
-            )
+            drawDebugBorder(ctx, textPosition.x, textPosition.y, width, height)
           }
 
           URL.revokeObjectURL(svgUrl)
@@ -157,7 +145,7 @@ function drawDebugBorder(
   x: number,
   y: number,
   width: number,
-  height: number,
+  height: number
 ): void {
   ctx.save()
   ctx.strokeStyle = CANVAS_SETTINGS.DEBUG_BORDER_COLOR
@@ -197,7 +185,7 @@ export function drawTextBoxBorder(
   y: number,
   width: number,
   height: number,
-  isSelected: boolean,
+  isSelected: boolean
 ): void {
   ctx.save()
 
@@ -233,7 +221,7 @@ export function drawCreatingTextBox(
   x: number,
   y: number,
   width: number,
-  height: number,
+  height: number
 ): void {
   ctx.save()
 
@@ -249,7 +237,8 @@ export function drawCreatingTextBox(
 /**
  * Lucide AnchorアイコンのSVGパスデータ
  */
-const _ANCHOR_SVG_PATH = "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
+const _ANCHOR_SVG_PATH =
+  "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
 
 /**
  * LucideのAnchorアイコンをCanvasに描画する
@@ -262,7 +251,7 @@ export async function drawAnchor(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  isSelected: boolean,
+  isSelected: boolean
 ): Promise<void> {
   return new Promise((resolve) => {
     try {
@@ -292,7 +281,7 @@ export async function drawAnchor(
           // アンカーアイコンを中央に配置
           const drawX = x - size / 2
           const drawY = y - size / 2
-          
+
           ctx.drawImage(img, drawX, drawY, size, size)
           URL.revokeObjectURL(svgUrl)
           resolve()
@@ -326,7 +315,7 @@ export function isAnchorClicked(
   mouseX: number,
   mouseY: number,
   anchorX: number,
-  anchorY: number,
+  anchorY: number
 ): boolean {
   const distance = Math.sqrt(
     Math.pow(mouseX - anchorX, 2) + Math.pow(mouseY - anchorY, 2)
@@ -348,7 +337,7 @@ export function getTextPositionFromAnchor(
   anchorY: number,
   textWidth: number,
   textHeight: number,
-  anchorDirection: AnchorDirection,
+  anchorDirection: AnchorDirection
 ): Point {
   let x = anchorX
   let y = anchorY
@@ -406,7 +395,7 @@ export function getTextPositionFromAnchor(
  */
 export async function drawBackgroundImage(
   ctx: CanvasRenderingContext2D,
-  imageUrl: string,
+  imageUrl: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const img = new Image()

@@ -18,7 +18,7 @@ export interface UseCoordinatesProps {
 export interface UseCoordinatesReturn {
   /** イベントから画像座標（正規化）を取得 */
   getImageCoordinatesFromEvent: (
-    e: React.MouseEvent | React.PointerEvent,
+    e: React.MouseEvent | React.PointerEvent
   ) => { x: number; y: number } | null
   /** イベントからスクリーン座標を取得 */
   getScreenCoordinatesFromEvent: (e: React.MouseEvent | React.PointerEvent) => {
@@ -32,7 +32,7 @@ export interface UseCoordinatesReturn {
     displayWidth: number,
     displayHeight: number,
     offsetX: number,
-    offsetY: number,
+    offsetY: number
   ) => { x: number; y: number }
   /** 画像相対座標からスクリーン座標へ変換 */
   imageToScreenCoords: (
@@ -41,7 +41,7 @@ export interface UseCoordinatesReturn {
     displayWidth: number,
     displayHeight: number,
     offsetX: number,
-    offsetY: number,
+    offsetY: number
   ) => { x: number; y: number }
 }
 
@@ -108,7 +108,7 @@ export function useCoordinates({
         y: imageY / img.naturalHeight,
       }
     },
-    [canvasRef, imageRef, zoom],
+    [canvasRef, imageRef, zoom]
   )
 
   /**
@@ -124,7 +124,7 @@ export function useCoordinates({
         y: e.clientY,
       }
     },
-    [],
+    []
   )
 
   /**
@@ -145,14 +145,14 @@ export function useCoordinates({
       displayWidth: number,
       displayHeight: number,
       offsetX: number,
-      offsetY: number,
+      offsetY: number
     ): { x: number; y: number } => {
       return {
         x: (screenX - offsetX) / displayWidth,
         y: (screenY - offsetY) / displayHeight,
       }
     },
-    [],
+    []
   )
 
   /**
@@ -173,14 +173,14 @@ export function useCoordinates({
       displayWidth: number,
       displayHeight: number,
       offsetX: number,
-      offsetY: number,
+      offsetY: number
     ): { x: number; y: number } => {
       return {
         x: imageX * displayWidth + offsetX,
         y: imageY * displayHeight + offsetY,
       }
     },
-    [],
+    []
   )
 
   return {

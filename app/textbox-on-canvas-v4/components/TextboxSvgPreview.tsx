@@ -35,7 +35,7 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
             estimatedHeight,
             "left",
             "top",
-            textBox.textSize,
+            textBox.textSize
           )
 
           // コンポーネントがアンマウントされている場合は処理を中止

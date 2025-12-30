@@ -47,10 +47,10 @@ export function useDragDropState({
         strategy,
         students,
         modelAnswerCount,
-        files,
+        files
       )
     },
-    [students, modelAnswerCount, files],
+    [students, modelAnswerCount, files]
   )
 
   // DnD配列から3つ組を更新する関数（メモ化）
@@ -58,7 +58,7 @@ export function useDragDropState({
     (dndArray: UnifiedFile[]): FileState[] => {
       return updateFileStatesFromDnDArray(dndArray)
     },
-    [],
+    []
   )
 
   // 1. 初期化: DB → 3つ組（実データから直接生成）
@@ -84,7 +84,7 @@ export function useDragDropState({
     ) {
       const newFiles = buildDnDArray(
         initialFileStatesRef.current,
-        fileOrder || "page-first",
+        fileOrder || "page-first"
       )
       if (newFiles.length > 0) {
         onFilesChange(newFiles)

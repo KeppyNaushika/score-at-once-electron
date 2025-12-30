@@ -82,20 +82,27 @@ export function RichTextEditorModalV4({
   const [isUnderline, setIsUnderline] = useState(false)
 
   // V4統合: アンカー方向の設定
-  const [anchorDirection, setAnchorDirectionLocal] =
-    useState<AnchorDirection>(initialAnchorDirection)
+  const [anchorDirection, setAnchorDirectionLocal] = useState<AnchorDirection>(
+    initialAnchorDirection
+  )
 
   // 親への通知付きsetFontSize
-  const setFontSize = useCallback((size: number) => {
-    setFontSizeLocal(size)
-    onFontSizeChange?.(size)
-  }, [onFontSizeChange])
+  const setFontSize = useCallback(
+    (size: number) => {
+      setFontSizeLocal(size)
+      onFontSizeChange?.(size)
+    },
+    [onFontSizeChange]
+  )
 
   // 親への通知付きsetAnchorDirection
-  const setAnchorDirection = useCallback((direction: AnchorDirection) => {
-    setAnchorDirectionLocal(direction)
-    onAnchorDirectionChange?.(direction)
-  }, [onAnchorDirectionChange])
+  const setAnchorDirection = useCallback(
+    (direction: AnchorDirection) => {
+      setAnchorDirectionLocal(direction)
+      onAnchorDirectionChange?.(direction)
+    },
+    [onAnchorDirectionChange]
+  )
 
   // propsが変更されたときにローカル状態を更新
   useEffect(() => {
@@ -111,7 +118,7 @@ export function RichTextEditorModalV4({
 
   // テキストエリアの参照
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(
-    null,
+    null
   )
 
   // V4統合: プレビュー用のTextBoxオブジェクトを作成
@@ -155,18 +162,18 @@ export function RichTextEditorModalV4({
         if (selectedText) {
           textareaRef.setSelectionRange(
             start + prefix.length,
-            end + prefix.length,
+            end + prefix.length
           )
         } else {
           textareaRef.setSelectionRange(
             start + prefix.length,
-            start + prefix.length,
+            start + prefix.length
           )
         }
         textareaRef.focus()
       }, 0)
     },
-    [value, onValueChange, textareaRef],
+    [value, onValueChange, textareaRef]
   )
 
   // 書式設定ボタンのハンドラー
@@ -237,7 +244,7 @@ export function RichTextEditorModalV4({
 
       setAnchorDirection(newDirection)
     },
-    [anchorDirection, setAnchorDirection],
+    [anchorDirection, setAnchorDirection]
   )
 
   const setVerticalAlign = useCallback(
@@ -257,7 +264,7 @@ export function RichTextEditorModalV4({
 
       setAnchorDirection(newDirection)
     },
-    [anchorDirection, setAnchorDirection],
+    [anchorDirection, setAnchorDirection]
   )
 
   // キーボードショートカット
@@ -286,7 +293,7 @@ export function RichTextEditorModalV4({
         onCancel()
       }
     },
-    [handleBold, handleItalic, handleUnderline, onSubmit, onCancel],
+    [handleBold, handleItalic, handleUnderline, onSubmit, onCancel]
   )
 
   return (

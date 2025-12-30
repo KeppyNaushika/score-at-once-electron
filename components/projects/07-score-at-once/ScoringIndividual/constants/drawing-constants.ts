@@ -20,10 +20,10 @@ export const DEFAULT_DRAWING_SETTINGS = {
 
 // 描画時の許容誤差（正規化座標 0-1）
 export const DRAWING_TOLERANCES = {
-  hitTest: 0.04,         // 汎用的な当たり判定（未使用、後方互換用）
-  lineDistance: 0.003,   // 線の当たり判定幅（片側）
-  rectangleEdge: 0.03,   // 矩形の辺の判定（未使用、後方互換用）
-  handleRadius: 0.003,   // 端点/角ハンドルの半径（線と同等）
+  hitTest: 0.04, // 汎用的な当たり判定（未使用、後方互換用）
+  lineDistance: 0.003, // 線の当たり判定幅（片側）
+  rectangleEdge: 0.03, // 矩形の辺の判定（未使用、後方互換用）
+  handleRadius: 0.003, // 端点/角ハンドルの半径（線と同等）
 } as const
 
 // ズーム設定

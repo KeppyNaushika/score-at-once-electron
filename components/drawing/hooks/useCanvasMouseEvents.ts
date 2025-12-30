@@ -4,7 +4,12 @@
  */
 
 import { useCallback, useState, useRef } from "react"
-import type { DrawingAnnotation, DrawingCreateData, DrawingType, DrawingUpdateData } from "@/types/drawing-annotation.types"
+import type {
+  DrawingAnnotation,
+  DrawingCreateData,
+  DrawingType,
+  DrawingUpdateData,
+} from "@/types/drawing-annotation.types"
 import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
 import { getRelativeCoordinates } from "../utils/coordinate-utils"
 import { isPointInAnnotation } from "../utils/hit-detection"
@@ -38,9 +43,16 @@ export interface UseCanvasMouseEventsParams {
   /** アノテーション選択関数 */
   selectAnnotation: (id: string | null) => void
   /** アノテーション更新関数 */
-  updateAnnotation: (id: string, data: DrawingUpdateData) => Promise<DrawingAnnotation | null>
+  updateAnnotation: (
+    id: string,
+    data: DrawingUpdateData
+  ) => Promise<DrawingAnnotation | null>
   /** テキストサイズ測定関数 */
-  measureTextSize: (text: string, maxWidth: number, maxHeight: number) => Promise<{ width: number; height: number }>
+  measureTextSize: (
+    text: string,
+    maxWidth: number,
+    maxHeight: number
+  ) => Promise<{ width: number; height: number }>
   /** 描画完了コールバック */
   onDrawingComplete?: (annotation: DrawingAnnotation) => void
   /** ローカルアノテーション更新関数 */
@@ -70,7 +82,9 @@ export interface UseCanvasMouseEventsReturn {
 /**
  * キャンバスマウスイベント処理フック
  */
-export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCanvasMouseEventsReturn {
+export function useCanvasMouseEvents(
+  params: UseCanvasMouseEventsParams
+): UseCanvasMouseEventsReturn {
   const {
     canvasRef,
     readOnly,
@@ -93,49 +107,62 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
 
   // 状態管理
   const [isMouseDown, setIsMouseDown] = useState(false)
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
-  const [currentPoint, setCurrentPoint] = useState<{ x: number; y: number } | null>(null)
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(
+    null
+  )
+  const [currentPoint, setCurrentPoint] = useState<{
+    x: number
+    y: number
+  } | null>(null)
 
   // 編集状態管理
   const [isEditingAnnotation, setIsEditingAnnotation] = useState(false)
-  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null)
+  const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(
+    null
+  )
   const originalAnnotationRef = useRef<DrawingAnnotation | null>(null)
 
   /**
    * アノテーション編集開始
    */
-  const startEditingAnnotation = useCallback((annotation: DrawingAnnotation) => {
-    console.log('Edit annotation start:', annotation.id)
-    setIsEditingAnnotation(true)
-    setEditingAnnotationId(annotation.id)
-    originalAnnotationRef.current = annotation
-    selectAnnotation(annotation.id)
-  }, [selectAnnotation])
+  const startEditingAnnotation = useCallback(
+    (annotation: DrawingAnnotation) => {
+      console.log("Edit annotation start:", annotation.id)
+      setIsEditingAnnotation(true)
+      setEditingAnnotationId(annotation.id)
+      originalAnnotationRef.current = annotation
+      selectAnnotation(annotation.id)
+    },
+    [selectAnnotation]
+  )
 
   /**
    * アノテーション編集完了
    */
-  const finishEditingAnnotation = useCallback(async (updatedData: DrawingUpdateData) => {
-    if (!editingAnnotationId || !originalAnnotationRef.current) return
+  const finishEditingAnnotation = useCallback(
+    async (updatedData: DrawingUpdateData) => {
+      if (!editingAnnotationId || !originalAnnotationRef.current) return
 
-    try {
-      console.log('Save annotation:', editingAnnotationId, updatedData)
-      await updateAnnotation(editingAnnotationId, updatedData)
+      try {
+        console.log("Save annotation:", editingAnnotationId, updatedData)
+        await updateAnnotation(editingAnnotationId, updatedData)
 
-      // 編集状態リセット
-      setIsEditingAnnotation(false)
-      setEditingAnnotationId(null)
-      originalAnnotationRef.current = null
-    } catch (error) {
-      console.error('Annotation update failed:', error)
-    }
-  }, [editingAnnotationId, updateAnnotation])
+        // 編集状態リセット
+        setIsEditingAnnotation(false)
+        setEditingAnnotationId(null)
+        originalAnnotationRef.current = null
+      } catch (error) {
+        console.error("Annotation update failed:", error)
+      }
+    },
+    [editingAnnotationId, updateAnnotation]
+  )
 
   /**
    * アノテーション編集キャンセル
    */
   const cancelEditingAnnotation = useCallback(() => {
-    console.log('Cancel annotation edit')
+    console.log("Cancel annotation edit")
     setIsEditingAnnotation(false)
     setEditingAnnotationId(null)
     originalAnnotationRef.current = null
@@ -181,11 +208,11 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
 
       // questionScoreIdのバリデーション
       if (!questionScoreId) {
-        console.error('questionScoreId is not set')
+        console.error("questionScoreId is not set")
         return
       }
 
-      console.log('Drawing start:', { questionScoreId, currentTool })
+      console.log("Drawing start:", { questionScoreId, currentTool })
 
       // 描画開始
       const drawingData = {
@@ -225,7 +252,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
       startEditingAnnotation,
       isEditingAnnotation,
       cancelEditingAnnotation,
-    ],
+    ]
   )
 
   /**
@@ -239,7 +266,11 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
       const relativeCoords = getRelativeCoordinates(event, canvas)
 
       // アノテーション編集中の場合
-      if (isEditingAnnotation && editingAnnotationId && originalAnnotationRef.current) {
+      if (
+        isEditingAnnotation &&
+        editingAnnotationId &&
+        originalAnnotationRef.current
+      ) {
         const deltaX = relativeCoords.x - startPoint!.x
         const deltaY = relativeCoords.y - startPoint!.y
         const originalAnnotation = originalAnnotationRef.current
@@ -251,27 +282,36 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
         }
 
         // 線分の場合は終点も移動
-        if (originalAnnotation.type === 'line' && originalAnnotation.endX !== undefined && originalAnnotation.endY !== undefined) {
+        if (
+          originalAnnotation.type === "line" &&
+          originalAnnotation.endX !== undefined &&
+          originalAnnotation.endY !== undefined
+        ) {
           updatedData.endX = originalAnnotation.endX + deltaX
           updatedData.endY = originalAnnotation.endY + deltaY
         }
 
         // テキストの場合は表示位置も更新
-        if (originalAnnotation.type === 'text') {
+        if (originalAnnotation.type === "text") {
           updatedData.displayX = originalAnnotation.displayX + deltaX
           updatedData.displayY = originalAnnotation.displayY + deltaY
         }
 
         // 矩形・楕円の場合は表示位置を更新
-        if (originalAnnotation.type === 'rectangle' || originalAnnotation.type === 'ellipse') {
+        if (
+          originalAnnotation.type === "rectangle" ||
+          originalAnnotation.type === "ellipse"
+        ) {
           updatedData.displayX = originalAnnotation.displayX + deltaX
           updatedData.displayY = originalAnnotation.displayY + deltaY
         }
 
         // 他のアノテーションに影響しないよう、個別にローカル状態で更新
-        setLocalAnnotations(prev => prev.map(ann =>
-          ann.id === editingAnnotationId ? { ...ann, ...updatedData } : ann
-        ))
+        setLocalAnnotations((prev) =>
+          prev.map((ann) =>
+            ann.id === editingAnnotationId ? { ...ann, ...updatedData } : ann
+          )
+        )
         redrawCanvas()
         return
       }
@@ -309,8 +349,8 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
       redrawCanvas,
       isEditingAnnotation,
       editingAnnotationId,
-      setLocalAnnotations
-    ],
+      setLocalAnnotations,
+    ]
   )
 
   /**
@@ -319,7 +359,11 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
   const handleMouseUp = useCallback(
     async (event: React.MouseEvent) => {
       // アノテーション編集完了の場合
-      if (isEditingAnnotation && editingAnnotationId && originalAnnotationRef.current) {
+      if (
+        isEditingAnnotation &&
+        editingAnnotationId &&
+        originalAnnotationRef.current
+      ) {
         const canvas = canvasRef.current
         if (!canvas) return
 
@@ -335,19 +379,26 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
         }
 
         // 線分の場合は終点も移動
-        if (originalAnnotation.type === 'line' && originalAnnotation.endX !== undefined && originalAnnotation.endY !== undefined) {
+        if (
+          originalAnnotation.type === "line" &&
+          originalAnnotation.endX !== undefined &&
+          originalAnnotation.endY !== undefined
+        ) {
           finalData.endX = originalAnnotation.endX + deltaX
           finalData.endY = originalAnnotation.endY + deltaY
         }
 
         // テキストの場合は表示位置も更新
-        if (originalAnnotation.type === 'text') {
+        if (originalAnnotation.type === "text") {
           finalData.displayX = originalAnnotation.displayX + deltaX
           finalData.displayY = originalAnnotation.displayY + deltaY
         }
 
         // 矩形・楕円の場合は表示位置を更新
-        if (originalAnnotation.type === 'rectangle' || originalAnnotation.type === 'ellipse') {
+        if (
+          originalAnnotation.type === "rectangle" ||
+          originalAnnotation.type === "ellipse"
+        ) {
           finalData.displayX = originalAnnotation.displayX + deltaX
           finalData.displayY = originalAnnotation.displayY + deltaY
         }
@@ -380,7 +431,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
       // テキストツールの場合はプロンプト表示
       if (currentTool === "text") {
         const text = prompt(
-          "テキストを入力してください（LaTeX数式対応: $数式$）:",
+          "テキストを入力してください（LaTeX数式対応: $数式$）:"
         )
         if (!text) {
           cancelDrawing()
@@ -395,7 +446,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
           const measuredSize = await measureTextSize(
             text,
             width * width,
-            height * height,
+            height * height
           )
           updateDrawing({
             text,
@@ -433,7 +484,7 @@ export function useCanvasMouseEvents(params: UseCanvasMouseEventsParams): UseCan
       isEditingAnnotation,
       editingAnnotationId,
       finishEditingAnnotation,
-    ],
+    ]
   )
 
   return {

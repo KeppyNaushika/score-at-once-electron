@@ -121,8 +121,7 @@ export function IndividualSelectionTab({
                         </label>
                         <div className="text-right">
                           <div className="text-sm font-medium">
-                            {student.memberships?.[0]?.class.name ||
-                              "未所属"}
+                            {student.memberships?.[0]?.class.name || "未所属"}
                           </div>
                           {student.memberships?.[0]?.attendanceNumber && (
                             <div className="text-muted-foreground text-xs">

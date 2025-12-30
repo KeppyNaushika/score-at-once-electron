@@ -9,15 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Table, TableBody } from "@/components/ui/table"
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { SortableTableRow } from "@/components/projects/05-students/components/sortable-student-table/components/SortableTableRow"
 import { TableFilters } from "@/components/projects/05-students/components/sortable-student-table/components/TableFilters"
 import { TableHeaderRow } from "@/components/projects/05-students/components/sortable-student-table/components/TableHeaderRow"
@@ -25,7 +18,9 @@ import { DragOverlayContent } from "@/components/projects/05-students/components
 import { useSortableStudentTable } from "@/components/projects/05-students/components/sortable-student-table/hooks/useSortableStudentTable"
 import type { SortableStudentTableProps } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
 
-export function SortableStudentTableContainer(props: SortableStudentTableProps) {
+export function SortableStudentTableContainer(
+  props: SortableStudentTableProps
+) {
   const {
     classes,
     selectedStudents,

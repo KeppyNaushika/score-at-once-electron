@@ -7,7 +7,11 @@ import type {
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
 import { drawBarChart, drawBoxPlot, drawRadarChart } from "./chart-renderers"
-import type { BarChartData, ChartConfig, RadarChartData } from "./chart-renderers"
+import type {
+  BarChartData,
+  ChartConfig,
+  RadarChartData,
+} from "./chart-renderers"
 
 /** レポート描画設定 */
 export interface ReportRenderConfig {
@@ -38,7 +42,7 @@ export interface ReportRenderConfig {
 
 /** デフォルト設定（A4 @144dpi） */
 export const DEFAULT_RENDER_CONFIG: ReportRenderConfig = {
-  pageWidth: 1190,  // A4 width @ 144dpi
+  pageWidth: 1190, // A4 width @ 144dpi
   pageHeight: 1684, // A4 height @ 144dpi
   margin: { top: 60, right: 60, bottom: 60, left: 60 },
   fontSize: { title: 28, header: 18, body: 14, small: 12 },
@@ -61,7 +65,7 @@ export async function renderIndividualReportToCanvas(
   canvas: HTMLCanvasElement,
   reportData: IndividualReportData,
   options: IndividualReportOptions,
-  config: ReportRenderConfig = DEFAULT_RENDER_CONFIG,
+  config: ReportRenderConfig = DEFAULT_RENDER_CONFIG
 ): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) throw new Error("Canvas context not available")
@@ -74,25 +78,53 @@ export async function renderIndividualReportToCanvas(
   ctx.fillRect(0, 0, config.pageWidth, config.pageHeight)
 
   let currentY = config.margin.top
-  const contentWidth = config.pageWidth - config.margin.left - config.margin.right
+  const contentWidth =
+    config.pageWidth - config.margin.left - config.margin.right
 
   // 1. ヘッダー描画
   currentY = drawReportHeader(ctx, reportData, config, currentY, contentWidth)
 
   // 2. 生徒情報・統計情報
-  currentY = drawStudentInfo(ctx, reportData, options, config, currentY, contentWidth)
+  currentY = drawStudentInfo(
+    ctx,
+    reportData,
+    options,
+    config,
+    currentY,
+    contentWidth
+  )
 
   // 3. スコアテーブル
-  currentY = drawScoreTable(ctx, reportData, options, config, currentY, contentWidth)
+  currentY = drawScoreTable(
+    ctx,
+    reportData,
+    options,
+    config,
+    currentY,
+    contentWidth
+  )
 
   // 4. グラフ（オプション）
   if (options.showGraph) {
-    currentY = drawCharts(ctx, reportData, options, config, currentY, contentWidth)
+    currentY = drawCharts(
+      ctx,
+      reportData,
+      options,
+      config,
+      currentY,
+      contentWidth
+    )
   }
 
   // 5. 学習アドバイス（オプション）
   if (options.showLearningAdvice) {
-    currentY = drawLearningAdvice(ctx, reportData, config, currentY, contentWidth)
+    currentY = drawLearningAdvice(
+      ctx,
+      reportData,
+      config,
+      currentY,
+      contentWidth
+    )
   }
 
   // 6. コメント欄（オプション）
@@ -107,9 +139,10 @@ export async function renderIndividualReportToCanvas(
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Failed to create blob"))),
+      (blob) =>
+        blob ? resolve(blob) : reject(new Error("Failed to create blob")),
       "image/png",
-      1.0,
+      1.0
     )
   })
 }
@@ -120,7 +153,7 @@ function drawReportHeader(
   reportData: IndividualReportData,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  contentWidth: number
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY
@@ -132,7 +165,7 @@ function drawReportHeader(
   ctx.fillText(
     reportData.examInfo.examName,
     margin.left + contentWidth / 2,
-    y + fontSize.title,
+    y + fontSize.title
   )
   y += fontSize.title + 10
 
@@ -165,7 +198,7 @@ function drawStudentInfo(
   options: IndividualReportOptions,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  contentWidth: number
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY
@@ -175,13 +208,19 @@ function drawStudentInfo(
   ctx.fillStyle = colors.text
 
   // 氏名
-  ctx.fillText(reportData.studentInfo.fullName, margin.left, y + fontSize.header)
+  ctx.fillText(
+    reportData.studentInfo.fullName,
+    margin.left,
+    y + fontSize.header
+  )
 
   // 学籍番号・学級情報
   ctx.font = `${fontSize.body}px sans-serif`
   const classInfo = [
     reportData.studentInfo.grade ? `${reportData.studentInfo.grade}年` : "",
-    reportData.studentInfo.className ? `${reportData.studentInfo.className}` : "",
+    reportData.studentInfo.className
+      ? `${reportData.studentInfo.className}`
+      : "",
     reportData.studentInfo.attendanceNumber
       ? `${reportData.studentInfo.attendanceNumber}番`
       : "",
@@ -203,17 +242,21 @@ function drawStudentInfo(
       const { rankType } = options
       if (rankType === "class" || rankType === "both") {
         stats.push(
-          `学級順位: ${reportData.statistics.personal.classRank}/${reportData.statistics.class.total}位`,
+          `学級順位: ${reportData.statistics.personal.classRank}/${reportData.statistics.class.total}位`
         )
       }
       if (rankType === "overall" || rankType === "both") {
         stats.push(
-          `全体順位: ${reportData.statistics.personal.overallRank}/${reportData.statistics.overall.total}位`,
+          `全体順位: ${reportData.statistics.personal.overallRank}/${reportData.statistics.overall.total}位`
         )
       }
     }
 
-    ctx.fillText(stats.join("  "), margin.left + contentWidth, y + fontSize.header)
+    ctx.fillText(
+      stats.join("  "),
+      margin.left + contentWidth,
+      y + fontSize.header
+    )
   }
 
   y += fontSize.header + 20
@@ -228,7 +271,7 @@ function drawScoreTable(
   options: IndividualReportOptions,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  contentWidth: number
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY
@@ -242,10 +285,15 @@ function drawScoreTable(
 
   // テーブル設定
   const rowHeight = 24
-  const colWidths: { label: number; maxScore: number; score: number; mark?: number; rate: number } =
-    isDetailMode
-      ? { label: 150, maxScore: 60, score: 60, mark: 50, rate: 60 }
-      : { label: 200, maxScore: 80, score: 80, rate: 80 }
+  const colWidths: {
+    label: number
+    maxScore: number
+    score: number
+    mark?: number
+    rate: number
+  } = isDetailMode
+    ? { label: 150, maxScore: 60, score: 60, mark: 50, rate: 60 }
+    : { label: 200, maxScore: 80, score: 80, rate: 80 }
 
   // ヘッダー
   ctx.fillStyle = "#f3f4f6"
@@ -294,34 +342,39 @@ function drawScoreTable(
 
     // ラベル
     const label = isDetailMode
-      ? (item as typeof reportData.scoringData.scores[0]).questionLabel
-      : (item as typeof reportData.scoringData.subtotalScores[0]).subtotalLabel
+      ? (item as (typeof reportData.scoringData.scores)[0]).questionLabel
+      : (item as (typeof reportData.scoringData.subtotalScores)[0])
+          .subtotalLabel
     ctx.textAlign = "left"
     ctx.fillText(
       label.length > 15 ? label.substring(0, 15) + "..." : label,
       colX + 8,
-      y + rowHeight / 2,
+      y + rowHeight / 2
     )
     colX += colWidths.label
 
     // 配点
     ctx.textAlign = "center"
     const maxScore = isDetailMode
-      ? (item as typeof reportData.scoringData.scores[0]).maxScore
-      : (item as typeof reportData.scoringData.subtotalScores[0]).maxScore
-    ctx.fillText(String(maxScore), colX + colWidths.maxScore / 2, y + rowHeight / 2)
+      ? (item as (typeof reportData.scoringData.scores)[0]).maxScore
+      : (item as (typeof reportData.scoringData.subtotalScores)[0]).maxScore
+    ctx.fillText(
+      String(maxScore),
+      colX + colWidths.maxScore / 2,
+      y + rowHeight / 2
+    )
     colX += colWidths.maxScore
 
     // 得点
     const score = isDetailMode
-      ? (item as typeof reportData.scoringData.scores[0]).score ?? "-"
-      : (item as typeof reportData.scoringData.subtotalScores[0]).score
+      ? ((item as (typeof reportData.scoringData.scores)[0]).score ?? "-")
+      : (item as (typeof reportData.scoringData.subtotalScores)[0]).score
     ctx.fillText(String(score), colX + colWidths.score / 2, y + rowHeight / 2)
     colX += colWidths.score
 
     // 評価マーク（設問詳細モードのみ）
     if (isDetailMode && options.showMarks) {
-      const status = (item as typeof reportData.scoringData.scores[0]).status
+      const status = (item as (typeof reportData.scoringData.scores)[0]).status
       let mark = ""
       let markColor = colors.text
       switch (status) {
@@ -353,9 +406,14 @@ function drawScoreTable(
 
     // 正答率
     if (isDetailMode) {
-      const questionId = (item as typeof reportData.scoringData.scores[0]).questionId
+      const questionId = (item as (typeof reportData.scoringData.scores)[0])
+        .questionId
       const rate = reportData.statistics.questionCorrectRates[questionId] ?? 0
-      ctx.fillText(`${Math.round(rate)}%`, colX + colWidths.rate / 2, y + rowHeight / 2)
+      ctx.fillText(
+        `${Math.round(rate)}%`,
+        colX + colWidths.rate / 2,
+        y + rowHeight / 2
+      )
     }
 
     y += rowHeight
@@ -376,13 +434,13 @@ function drawScoreTable(
   ctx.fillText(
     String(reportData.scoringData.totalMaxScore),
     colX + colWidths.maxScore / 2,
-    y + rowHeight / 2,
+    y + rowHeight / 2
   )
   colX += colWidths.maxScore
   ctx.fillText(
     String(reportData.scoringData.totalScore),
     colX + colWidths.score / 2,
-    y + rowHeight / 2,
+    y + rowHeight / 2
   )
 
   y += rowHeight + 20
@@ -397,7 +455,7 @@ function drawCharts(
   options: IndividualReportOptions,
   config: ReportRenderConfig,
   startY: number,
-  _contentWidth: number,
+  _contentWidth: number
 ): number {
   const { margin, colors } = config
   let y = startY
@@ -418,17 +476,19 @@ function drawCharts(
   }
 
   // 小計データからグラフ用データを生成
-  const chartData: BarChartData[] = reportData.scoringData.subtotalScores.map((st) => {
-    const stats = reportData.statistics.subtotalStatistics.find(
-      (s) => s.subtotalId === st.subtotalRegionId,
-    )
-    return {
-      label: st.subtotalLabel,
-      value: st.score,
-      maxValue: st.maxScore,
-      average: stats?.average,
+  const chartData: BarChartData[] = reportData.scoringData.subtotalScores.map(
+    (st) => {
+      const stats = reportData.statistics.subtotalStatistics.find(
+        (s) => s.subtotalId === st.subtotalRegionId
+      )
+      return {
+        label: st.subtotalLabel,
+        value: st.score,
+        maxValue: st.maxScore,
+        average: stats?.average,
+      }
     }
-  })
+  )
 
   const radarData: RadarChartData[] = chartData.map((d) => ({
     label: d.label,
@@ -447,7 +507,7 @@ function drawCharts(
       chartX,
       y,
       chartConfig,
-      options.graphOptions.showAverageLine,
+      options.graphOptions.showAverageLine
     )
     chartX += chartConfig.width + 20
   }
@@ -460,7 +520,7 @@ function drawCharts(
       chartX,
       y,
       chartConfig,
-      options.graphOptions.showAverageLine,
+      options.graphOptions.showAverageLine
     )
     chartX += chartConfig.width + 20
   }
@@ -475,7 +535,7 @@ function drawCharts(
       reportData.scoringData.totalMaxScore,
       chartX,
       y,
-      boxConfig,
+      boxConfig
     )
   }
 
@@ -490,14 +550,18 @@ function drawLearningAdvice(
   reportData: IndividualReportData,
   config: ReportRenderConfig,
   startY: number,
-  _contentWidth: number,
+  _contentWidth: number
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY
 
-  const { differentiatingQuestions, mustReviewQuestions } = reportData.learningAdvice
+  const { differentiatingQuestions, mustReviewQuestions } =
+    reportData.learningAdvice
 
-  if (differentiatingQuestions.length === 0 && mustReviewQuestions.length === 0) {
+  if (
+    differentiatingQuestions.length === 0 &&
+    mustReviewQuestions.length === 0
+  ) {
     return y
   }
 
@@ -535,7 +599,7 @@ function drawCommentSection(
   ctx: CanvasRenderingContext2D,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  contentWidth: number
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY
@@ -566,7 +630,7 @@ function drawSignatureSection(
   ctx: CanvasRenderingContext2D,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  contentWidth: number
 ): void {
   const { margin, fontSize, colors } = config
   let y = startY
@@ -579,21 +643,29 @@ function drawSignatureSection(
   const boxGap = 100
 
   // 保護者印
-  ctx.fillText("保護者印", margin.left + contentWidth / 2 - boxGap - boxSize - 20, y + fontSize.body)
+  ctx.fillText(
+    "保護者印",
+    margin.left + contentWidth / 2 - boxGap - boxSize - 20,
+    y + fontSize.body
+  )
   ctx.strokeStyle = colors.border
   ctx.strokeRect(
     margin.left + contentWidth / 2 - boxGap - boxSize,
     y + fontSize.body + 5,
     boxSize,
-    boxSize,
+    boxSize
   )
 
   // 担任印
-  ctx.fillText("担任印", margin.left + contentWidth / 2 + boxGap - 50, y + fontSize.body)
+  ctx.fillText(
+    "担任印",
+    margin.left + contentWidth / 2 + boxGap - 50,
+    y + fontSize.body
+  )
   ctx.strokeRect(
     margin.left + contentWidth / 2 + boxGap,
     y + fontSize.body + 5,
     boxSize,
-    boxSize,
+    boxSize
   )
 }

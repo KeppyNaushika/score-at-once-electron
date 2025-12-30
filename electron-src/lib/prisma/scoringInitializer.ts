@@ -10,18 +10,18 @@ export const initializeScoringRecords = async (projectId: string) => {
       // プロジェクトの全ての生徒を取得
       const projectStudents = await tx.projectStudent.findMany({
         where: { projectId },
-        select: { studentId: true }
+        select: { studentId: true },
       })
 
       // プロジェクトの全ての採点領域を取得
       const questionRegions = await tx.cropRegion.findMany({
-        where: { 
+        where: {
           projectPage: {
-            projectId
+            projectId,
           },
-          type: "QUESTION_ANSWER"
+          type: "QUESTION_ANSWER",
         },
-        select: { id: true }
+        select: { id: true },
       })
 
       // デフォルトユーザーを取得（現在のユーザー認証システムがないため）
@@ -40,8 +40,8 @@ export const initializeScoringRecords = async (projectId: string) => {
             where: {
               studentId: projectStudent.studentId,
               cropRegionId: region.id,
-              scoredByUserId: defaultUser.id
-            }
+              scoredByUserId: defaultUser.id,
+            },
           })
 
           if (!existing) {
@@ -50,7 +50,7 @@ export const initializeScoringRecords = async (projectId: string) => {
               cropRegionId: region.id,
               partialScore: null,
               status: "ungraded",
-              scoredByUserId: defaultUser.id
+              scoredByUserId: defaultUser.id,
             })
           }
         }
@@ -59,21 +59,21 @@ export const initializeScoringRecords = async (projectId: string) => {
       // 一括作成（重複は既にチェック済みなので、素直に作成）
       if (scoringRecords.length > 0) {
         await tx.questionScore.createMany({
-          data: scoringRecords
+          data: scoringRecords,
         })
       }
 
       return {
         success: true,
         initialized: scoringRecords.length,
-        message: `${scoringRecords.length} scoring records initialized`
+        message: `${scoringRecords.length} scoring records initialized`,
       }
     })
   } catch (error) {
     console.error("Failed to initialize scoring records:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     }
   }
 }

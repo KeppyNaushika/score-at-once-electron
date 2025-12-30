@@ -64,7 +64,7 @@ export function setupMiscHandlers(): void {
         console.error("Error logging in user:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -78,7 +78,7 @@ export function setupMiscHandlers(): void {
         passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
         password?: string // Legacy support
         role?: string
-      },
+      }
     ) => {
       try {
         if (
@@ -86,9 +86,8 @@ export function setupMiscHandlers(): void {
           userData.passcodeType !== undefined
         ) {
           // New passcode-based user creation
-          const { createUser: createUserWithPasscode } = await import(
-            "../lib/prisma/user"
-          )
+          const { createUser: createUserWithPasscode } =
+            await import("../lib/prisma/user")
           return await createUserWithPasscode({
             username: userData.username,
             name: userData.name,
@@ -110,7 +109,7 @@ export function setupMiscHandlers(): void {
         console.error("Error creating user:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("get-user-by-token", async (_event, token: string) => {
@@ -131,7 +130,7 @@ export function setupMiscHandlers(): void {
         console.error("Error updating user password:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -144,7 +143,7 @@ export function setupMiscHandlers(): void {
         console.error("Error verifying passcode:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -152,7 +151,7 @@ export function setupMiscHandlers(): void {
     async (
       _event,
       userId: string,
-      userData: { username?: string; name?: string },
+      userData: { username?: string; name?: string }
     ) => {
       try {
         const { updateUser } = await import("../lib/prisma/user")
@@ -161,7 +160,7 @@ export function setupMiscHandlers(): void {
         console.error("Error updating user:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -170,20 +169,20 @@ export function setupMiscHandlers(): void {
       _event,
       userId: string,
       passcode?: string,
-      passcodeType?: string,
+      passcodeType?: string
     ) => {
       try {
         const { updateUserPasscode } = await import("../lib/prisma/user")
         return await updateUserPasscode(
           userId,
           passcode,
-          passcodeType as "none" | "4digit" | "6digit" | "alphanumeric",
+          passcodeType as "none" | "4digit" | "6digit" | "alphanumeric"
         )
       } catch (err) {
         console.error("Error updating user passcode:", err)
         throw err
       }
-    },
+    }
   )
 
   // Answer sheet handlers
@@ -198,7 +197,7 @@ export function setupMiscHandlers(): void {
         buffer: ArrayBuffer
         studentId?: string
         pageNumber?: number
-      }[],
+      }[]
     ) => {
       try {
         return await uploadStudentAnswers(projectId, filesData)
@@ -206,7 +205,7 @@ export function setupMiscHandlers(): void {
         console.error("Error uploading answer sheets:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -220,7 +219,7 @@ export function setupMiscHandlers(): void {
         const serializedStudentAnswers = (result.answerSheets || []).map(
           (answer) => ({
             ...answer,
-          }),
+          })
         )
         return { success: true, studentAnswers: serializedStudentAnswers }
       } catch (err) {
@@ -230,7 +229,7 @@ export function setupMiscHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error",
         }
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -242,7 +241,7 @@ export function setupMiscHandlers(): void {
         console.error("Error deleting answer sheet:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -254,7 +253,7 @@ export function setupMiscHandlers(): void {
         console.error("Error associating answer sheet with student:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -266,7 +265,7 @@ export function setupMiscHandlers(): void {
         console.error("Error setting answer sheet absent status:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -285,7 +284,7 @@ export function setupMiscHandlers(): void {
         console.error("Error fetching answer sheet by ID:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -294,13 +293,13 @@ export function setupMiscHandlers(): void {
       _event,
       answerSheetId: string,
       studentId: string | null,
-      pageNumber: number,
+      pageNumber: number
     ) => {
       try {
         const result = await updateStudentAnswerPlacement(
           answerSheetId,
           studentId,
-          pageNumber,
+          pageNumber
         )
         if (!result.success) {
           throw new Error(result.error)
@@ -312,7 +311,7 @@ export function setupMiscHandlers(): void {
         console.error("Error updating answer sheet placement:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -321,7 +320,7 @@ export function setupMiscHandlers(): void {
       try {
         const result = await swapStudentAnswerPlacements(
           answerSheetId1,
-          answerSheetId2,
+          answerSheetId2
         )
         if (!result.success) {
           throw new Error(result.error)
@@ -335,7 +334,7 @@ export function setupMiscHandlers(): void {
         console.error("Error swapping answer sheet placements:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -344,7 +343,7 @@ export function setupMiscHandlers(): void {
       try {
         const result = await swapStudentAnswerPlacementsWithScoring(
           answerSheetId1,
-          answerSheetId2,
+          answerSheetId2
         )
         if (!result.success) {
           throw new Error(result.error)
@@ -357,11 +356,11 @@ export function setupMiscHandlers(): void {
       } catch (err) {
         console.error(
           "Error swapping answer sheet placements with scoring:",
-          err,
+          err
         )
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -373,12 +372,12 @@ export function setupMiscHandlers(): void {
         finalStudentId: string | null
         finalPageNumber: number
       }>,
-      withScoring: boolean = false,
+      withScoring: boolean = false
     ) => {
       try {
         const result = await batchUpdateStudentAnswerPlacements(
           moves,
-          withScoring,
+          withScoring
         )
         if (!result.success) {
           const errorMessage =
@@ -390,7 +389,7 @@ export function setupMiscHandlers(): void {
         console.error("Error in batch update answer sheet placements:", err)
         throw err
       }
-    },
+    }
   )
 
   // Class handlers
@@ -412,7 +411,7 @@ export function setupMiscHandlers(): void {
         console.error("Error creating class:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -424,7 +423,7 @@ export function setupMiscHandlers(): void {
         console.error("Error updating class:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-class", async (_event, classId: string) => {
@@ -447,7 +446,7 @@ export function setupMiscHandlers(): void {
         type: string
         buffer: ArrayBuffer
         path?: string
-      }[],
+      }[]
     ) => {
       try {
         return await uploadMasterAnswers(projectId, filesData)
@@ -455,7 +454,7 @@ export function setupMiscHandlers(): void {
         console.error("Error in IPC upload-master-images:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-master-answer", async (_event, answerId: string) => {
@@ -476,7 +475,7 @@ export function setupMiscHandlers(): void {
         console.error("Error in IPC update-master-answers-order:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -492,7 +491,7 @@ export function setupMiscHandlers(): void {
         console.error("Error in IPC resolve-file-protocol-path:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("read-file-as-base64", async (_event, filePath: string) => {
@@ -558,18 +557,16 @@ export function setupMiscHandlers(): void {
         console.error("Error getting master images by project ID:", err)
         throw err
       }
-    },
+    }
   )
 
   // Data management handlers
   ipcMain.handle("get-data-directory-info", async (_event) => {
     try {
-      const { getDataDirectory, calculateDataSize } = await import(
-        "../lib/dataManager"
-      )
-      const { getProjects: dbFetchProjects } = await import(
-        "../lib/prisma/project"
-      )
+      const { getDataDirectory, calculateDataSize } =
+        await import("../lib/dataManager")
+      const { getProjects: dbFetchProjects } =
+        await import("../lib/prisma/project")
 
       const dataDirectory = getDataDirectory()
       const size = await calculateDataSize()

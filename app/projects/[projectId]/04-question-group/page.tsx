@@ -7,7 +7,12 @@ import { QuestionAssignmentMatrixWithFillHandle } from "@/components/projects/04
 import { SubtotalAssignmentMatrixWithFillHandle } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrixWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/projects/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
-import { CropRegionWithDetails, ProjectSubtotalGroupWithSubtotalGroup, ProjectWithDetails, SubtotalGroupWithItems } from "@/types/electron"
+import {
+  CropRegionWithDetails,
+  ProjectSubtotalGroupWithSubtotalGroup,
+  ProjectWithDetails,
+  SubtotalGroupWithItems,
+} from "@/types/electron"
 import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -61,7 +66,8 @@ export default function SubtotalGroupPage() {
       ) {
         const activeGroups =
           activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
-            (psg: ProjectSubtotalGroupWithSubtotalGroup) => psg.subtotalGroup as SubtotalGroupWithItems,
+            (psg: ProjectSubtotalGroupWithSubtotalGroup) =>
+              psg.subtotalGroup as SubtotalGroupWithItems
           ) || []
         setActiveSubtotalGroups(activeGroups)
       }
@@ -71,27 +77,27 @@ export default function SubtotalGroupPage() {
         availableSubtotalGroupsResponse.success
       ) {
         setAvailableSubtotalGroups(
-          availableSubtotalGroupsResponse.subtotalGroups || [],
+          availableSubtotalGroupsResponse.subtotalGroups || []
         )
       }
 
       if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
         const questionRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER",
+          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER"
         )
         setCropRegions(questionRegions)
 
         // 小計点タイプの領域のみフィルタリング
         const subtotalRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE",
+          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE"
         )
         setSubtotalRegions(subtotalRegions)
       }
     } catch (err) {
       console.error("データの読み込みエラー:", err)
       setError(
-        err instanceof Error ? err.message : "データの読み込みに失敗しました",
+        err instanceof Error ? err.message : "データの読み込みに失敗しました"
       )
     } finally {
       setLoading(false)
@@ -104,7 +110,7 @@ export default function SubtotalGroupPage() {
       try {
         // 既存の関連付けを削除
         await window.electronAPI.deleteCropSubtotalsByCropRegionId(
-          subtotalCropRegionId,
+          subtotalCropRegionId
         )
 
         // 新しい関連付けを作成
@@ -123,12 +129,12 @@ export default function SubtotalGroupPage() {
         setError(
           err instanceof Error
             ? err.message
-            : "小計点関連付けの更新に失敗しました",
+            : "小計点関連付けの更新に失敗しました"
         )
         return false
       }
     },
-    [],
+    []
   )
 
   // 設問と小計項目の関連付け更新
@@ -137,7 +143,7 @@ export default function SubtotalGroupPage() {
       try {
         // 既存の関連付けを削除
         await window.electronAPI.deleteCropSubtotalsByCropRegionId(
-          questionCropRegionId,
+          questionCropRegionId
         )
 
         // 新しい関連付けを作成
@@ -156,12 +162,12 @@ export default function SubtotalGroupPage() {
         setError(
           err instanceof Error
             ? err.message
-            : "設問関連付けの更新に失敗しました",
+            : "設問関連付けの更新に失敗しました"
         )
         return false
       }
     },
-    [],
+    []
   )
 
   // 初期化
@@ -180,11 +186,8 @@ export default function SubtotalGroupPage() {
   if (error) {
     return (
       <div className="flex h-full flex-col">
-        <PageHeader
-          title="小計点の設定"
-          helpButton={helpButton}
-        />
-        <div className="flex-1 flex items-center justify-center">
+        <PageHeader title="小計点の設定" helpButton={helpButton} />
+        <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <h2 className="text-lg font-semibold text-red-600">
               エラーが発生しました
@@ -201,10 +204,7 @@ export default function SubtotalGroupPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader
-        title="小計点の設定"
-        helpButton={helpButton}
-      >
+      <PageHeader title="小計点の設定" helpButton={helpButton}>
         <Button
           onClick={() => router.push(`/projects/${projectId}/05-students`)}
         >
@@ -214,61 +214,63 @@ export default function SubtotalGroupPage() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-8">
-        {/* 小計点グループ選択 */}
-        <SubtotalGroupSelector
-          projectId={projectId}
-          activeSubtotalGroups={activeSubtotalGroups}
-          onRefresh={loadData}
-        />
+          {/* 小計点グループ選択 */}
+          <SubtotalGroupSelector
+            projectId={projectId}
+            activeSubtotalGroups={activeSubtotalGroups}
+            onRefresh={loadData}
+          />
 
-        {/* 設問と小計項目の関連付け */}
-        {activeSubtotalGroups.length > 0 && cropRegions.length > 0 && (
-          <div className="rounded-lg border p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">
-                設問と小計項目の関連付け
-              </h2>
+          {/* 設問と小計項目の関連付け */}
+          {activeSubtotalGroups.length > 0 && cropRegions.length > 0 && (
+            <div className="rounded-lg border p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                <h2 className="text-lg font-semibold">
+                  設問と小計項目の関連付け
+                </h2>
+              </div>
+              <QuestionAssignmentMatrixWithFillHandle
+                subtotalGroups={activeSubtotalGroups}
+                cropRegions={cropRegions}
+                onUpdateAssignments={updateQuestionAssignments}
+              />
             </div>
-            <QuestionAssignmentMatrixWithFillHandle
-              subtotalGroups={activeSubtotalGroups}
-              cropRegions={cropRegions}
-              onUpdateAssignments={updateQuestionAssignments}
-            />
-          </div>
-        )}
+          )}
 
-        {/* 小計点領域との関連付け */}
-        {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
-          <div className="rounded-lg border p-6">
-            <div className="mb-4 flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              <h2 className="text-lg font-semibold">小計点領域との関連付け</h2>
+          {/* 小計点領域との関連付け */}
+          {activeSubtotalGroups.length > 0 && subtotalRegions.length > 0 && (
+            <div className="rounded-lg border p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <Calculator className="h-5 w-5" />
+                <h2 className="text-lg font-semibold">
+                  小計点領域との関連付け
+                </h2>
+              </div>
+              <SubtotalAssignmentMatrixWithFillHandle
+                subtotalGroups={activeSubtotalGroups}
+                subtotalRegions={subtotalRegions}
+                onUpdateSubtotalAssignments={updateSubtotalAssignments}
+              />
             </div>
-            <SubtotalAssignmentMatrixWithFillHandle
-              subtotalGroups={activeSubtotalGroups}
-              subtotalRegions={subtotalRegions}
-              onUpdateSubtotalAssignments={updateSubtotalAssignments}
-            />
-          </div>
-        )}
+          )}
 
-        {/* ガイダンス */}
-        {cropRegions.length === 0 && (
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
-            <p className="text-sm text-yellow-800">
-              まず「採点領域作成」で設問領域と小計点領域を作成してください。
-            </p>
-          </div>
-        )}
+          {/* ガイダンス */}
+          {cropRegions.length === 0 && (
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+              <p className="text-sm text-yellow-800">
+                まず「採点領域作成」で設問領域と小計点領域を作成してください。
+              </p>
+            </div>
+          )}
 
-        {subtotalRegions.length === 0 && cropRegions.length > 0 && (
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
-            <p className="text-sm text-yellow-800">
-              小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
-            </p>
-          </div>
-        )}
+          {subtotalRegions.length === 0 && cropRegions.length > 0 && (
+            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+              <p className="text-sm text-yellow-800">
+                小計点領域が作成されていません。「採点領域作成」で小計点領域を追加してください。
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -49,7 +49,7 @@ export default function MasterAnswerStepPage() {
       if (fetchedProject && fetchedProject.projectPages) {
         // projectPages から master answers を抽出してソート
         const masterAnswers = convertProjectPagesToMasterAnswers(
-          fetchedProject.projectPages,
+          fetchedProject.projectPages
         ).sort((a, b) => a.pageNumber - b.pageNumber)
         setMasterAnswers(masterAnswers)
       } else {
@@ -76,20 +76,17 @@ export default function MasterAnswerStepPage() {
    *
    * @param updatedImages - 更新された画像データリスト
    */
-  const handleAnswersChange = useCallback(
-    (updatedAnswers: MasterAnswer[]) => {
-      // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
-      // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
-      // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
-      // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
-      // その通知されたリストをそのまま使うのがシンプル。
-      setMasterAnswers(updatedAnswers) // MasterAnswerManagerからの最新のリストで状態を更新
-      toast("模範解答更新", {
-        description: "模範解答リストが更新されました。",
-      })
-    },
-    [],
-  )
+  const handleAnswersChange = useCallback((updatedAnswers: MasterAnswer[]) => {
+    // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
+    // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
+    // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。
+    // ただし、MasterImageManager が自身の変更を onMasterImagesChange で通知するなら、
+    // その通知されたリストをそのまま使うのがシンプル。
+    setMasterAnswers(updatedAnswers) // MasterAnswerManagerからの最新のリストで状態を更新
+    toast("模範解答更新", {
+      description: "模範解答リストが更新されました。",
+    })
+  }, [])
 
   /**
    * 次のステップへ遷移する

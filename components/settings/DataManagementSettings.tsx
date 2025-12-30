@@ -75,7 +75,7 @@ export default function DataManagementSettings({
         "・すべての答案画像\n" +
         "・すべての採点データ\n" +
         "・データベース\n\n" +
-        "この操作は取り消せません。",
+        "この操作は取り消せません。"
     )
 
     if (confirmed) {

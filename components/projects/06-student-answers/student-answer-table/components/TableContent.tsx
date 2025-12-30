@@ -10,7 +10,10 @@ import {
   TableRow,
   TableHeader as UITableHeader,
 } from "@/components/ui/table"
-import type { UnifiedFile, UnifiedStudent } from "@/components/projects/06-student-answers/types"
+import type {
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/components/projects/06-student-answers/types"
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 
 interface TableContentProps {
@@ -44,7 +47,7 @@ interface TableContentProps {
   getFileColor: (file: UnifiedFile) => string
   drawNameRegionCanvas: (
     file: UnifiedFile,
-    pageNumber: number,
+    pageNumber: number
   ) => Promise<string | null>
   toggleRowDisabled: (index: number) => void
   toggleColDisabled: (index: number) => void
@@ -53,7 +56,7 @@ interface TableContentProps {
   onUploadModalOpen: (
     position: number,
     studentName: string | undefined,
-    pageNumber: number | undefined,
+    pageNumber: number | undefined
   ) => void
   onDeleteAnswerSheet?: (fileId: string) => void
 }
@@ -270,7 +273,7 @@ interface EmptyTableCellWithLogicProps {
   onUploadModalOpen: (
     position: number,
     studentName: string | undefined,
-    pageNumber: number | undefined,
+    pageNumber: number | undefined
   ) => void
 }
 
@@ -299,7 +302,7 @@ function EmptyTableCellWithLogic({
     (file) =>
       file.studentId === cellData.student?.id &&
       file.pageNumber === cellData.pageNumber &&
-      !disabledState.files.has(file.id),
+      !disabledState.files.has(file.id)
   )
   const hasNewFileToUpload = !!newFileInCell
 
@@ -349,7 +352,7 @@ function EmptyTableCellWithLogic({
           cellData.student
             ? `${cellData.student.lastName} ${cellData.student.firstName}`
             : undefined,
-          cellData.pageNumber ?? undefined,
+          cellData.pageNumber ?? undefined
         )
       }}
       onToggleAnswerDisabled={() => {

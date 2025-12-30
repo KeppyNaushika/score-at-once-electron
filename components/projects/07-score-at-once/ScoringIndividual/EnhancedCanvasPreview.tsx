@@ -24,10 +24,10 @@ interface EnhancedCanvasPreviewProps {
  * - テキスト全体が表示されるように自動サイズ調整
  * - 答案画像を背景に表示可能
  */
-export function EnhancedCanvasPreview({ 
-  textBox, 
+export function EnhancedCanvasPreview({
+  textBox,
   backgroundImageUrl,
-  showBackground = false 
+  showBackground = false,
 }: EnhancedCanvasPreviewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [renderingStatus, setRenderingStatus] = useState<string>("待機中")
@@ -46,10 +46,16 @@ export function EnhancedCanvasPreview({
           const ctx = canvas.getContext("2d")!
 
           // テキストサイズに基づいてCanvas推定サイズを計算
-          const lines = textBox.text.split('\n')
-          const maxLineLength = Math.max(...lines.map(line => line.length))
-          const estimatedWidth = Math.max(300, maxLineLength * textBox.textSize * 0.8)
-          const estimatedHeight = Math.max(120, lines.length * textBox.textSize * 1.5 + 60)
+          const lines = textBox.text.split("\n")
+          const maxLineLength = Math.max(...lines.map((line) => line.length))
+          const estimatedWidth = Math.max(
+            300,
+            maxLineLength * textBox.textSize * 0.8
+          )
+          const estimatedHeight = Math.max(
+            120,
+            lines.length * textBox.textSize * 1.5 + 60
+          )
 
           // Canvasサイズを動的に設定
           canvas.width = estimatedWidth
@@ -88,7 +94,7 @@ export function EnhancedCanvasPreview({
             estimatedHeight - 40,
             "left",
             "top",
-            textBox.textSize,
+            textBox.textSize
           )
 
           if (svgElement) {
@@ -104,14 +110,14 @@ export function EnhancedCanvasPreview({
               ctx,
               anchorX,
               anchorY,
-              textBox.anchorDirection,
+              textBox.anchorDirection
             )
 
             setActualSize({
               width: renderResult.width,
               height: renderResult.height,
             })
-            
+
             setRenderingStatus("描画完了")
           } else {
             setActualSize(null)
@@ -126,13 +132,20 @@ export function EnhancedCanvasPreview({
 
       renderEnhancedPreview()
     }
-  }, [textBox.text, textBox.anchorDirection, textBox.textSize, backgroundImageUrl, showBackground])
+  }, [
+    textBox.text,
+    textBox.anchorDirection,
+    textBox.textSize,
+    backgroundImageUrl,
+    showBackground,
+  ])
 
   return (
     <div className="rounded border border-blue-300 bg-white p-3">
       <div className="mb-2 flex items-center justify-between text-xs text-gray-600">
         <span>
-          プレビューサイズ: {actualSize
+          プレビューサイズ:{" "}
+          {actualSize
             ? `${Math.round(actualSize.width)} × ${Math.round(actualSize.height)}px`
             : "計算中..."}
         </span>
@@ -140,23 +153,24 @@ export function EnhancedCanvasPreview({
           背景: {showBackground && backgroundImageUrl ? "答案画像" : "白背景"}
         </span>
       </div>
-      
+
       <div className="flex justify-center rounded border border-gray-200 bg-gray-50 p-2">
         <canvas
           ref={canvasRef}
           className="max-w-full rounded border border-gray-100 shadow-sm"
-          style={{ 
+          style={{
             maxHeight: "300px",
             objectFit: "contain",
-            backgroundColor: "white"
+            backgroundColor: "white",
           }}
         />
       </div>
-      
+
       <div className="mt-2 flex justify-between text-xs text-gray-500">
         <span>ステータス: {renderingStatus}</span>
         <span>
-          テキスト: {textBox.text.length}文字 / {textBox.text.split('\n').length}行
+          テキスト: {textBox.text.length}文字 /{" "}
+          {textBox.text.split("\n").length}行
         </span>
       </div>
     </div>

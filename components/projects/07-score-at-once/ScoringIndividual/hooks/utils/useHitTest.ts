@@ -14,7 +14,7 @@ function getTextBoundsFromAnchor(
   anchorY: number,
   textWidth: number,
   textHeight: number,
-  anchorDirection: AnchorDirection,
+  anchorDirection: AnchorDirection
 ): { left: number; top: number } {
   let left = anchorX
   let top = anchorY
@@ -108,7 +108,7 @@ export function useHitTestUtils({
     (x1: number, y1: number, x2: number, y2: number): number => {
       return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     },
-    [],
+    []
   )
 
   /**
@@ -120,11 +120,11 @@ export function useHitTestUtils({
       testY: number,
       centerX: number,
       centerY: number,
-      radius: number,
+      radius: number
     ): boolean => {
       return distance(testX, testY, centerX, centerY) <= radius
     },
-    [distance],
+    [distance]
   )
 
   /**
@@ -137,7 +137,7 @@ export function useHitTestUtils({
       x1: number,
       y1: number,
       x2: number,
-      y2: number,
+      y2: number
     ): number => {
       const dx = x2 - x1
       const dy = y2 - y1
@@ -150,7 +150,7 @@ export function useHitTestUtils({
       // 線分上の最近点のパラメータ t (0-1にクランプ)
       const t = Math.max(
         0,
-        Math.min(1, ((testX - x1) * dx + (testY - y1) * dy) / lengthSquared),
+        Math.min(1, ((testX - x1) * dx + (testY - y1) * dy) / lengthSquared)
       )
 
       // 最近点の座標
@@ -159,7 +159,7 @@ export function useHitTestUtils({
 
       return distance(testX, testY, nearestX, nearestY)
     },
-    [distance],
+    [distance]
   )
 
   /**
@@ -186,7 +186,7 @@ export function useHitTestUtils({
               testY,
               element.endX,
               element.endY,
-              HANDLE_RADIUS,
+              HANDLE_RADIUS
             )
           ) {
             return "handle:end"
@@ -199,7 +199,7 @@ export function useHitTestUtils({
             element.x,
             element.y,
             element.endX,
-            element.endY,
+            element.endY
           )
           if (dist <= LINE_WIDTH) {
             return "body"
@@ -348,7 +348,7 @@ export function useHitTestUtils({
             element.y,
             boxWidth,
             boxHeight,
-            anchorDirection,
+            anchorDirection
           )
           const right = left + boxWidth
           const bottom = top + boxHeight
@@ -376,7 +376,7 @@ export function useHitTestUtils({
       HANDLE_RADIUS,
       LINE_WIDTH,
       textBoundsCache,
-    ],
+    ]
   )
 
   /**
@@ -387,7 +387,7 @@ export function useHitTestUtils({
     (element: DrawingElement, testX: number, testY: number): boolean => {
       return hitTestElementWithHandle(element, testX, testY) !== null
     },
-    [hitTestElementWithHandle],
+    [hitTestElementWithHandle]
   )
 
   /**
@@ -401,7 +401,7 @@ export function useHitTestUtils({
       }
       return null
     },
-    [hitTestElementWithHandle],
+    [hitTestElementWithHandle]
   )
 
   return {

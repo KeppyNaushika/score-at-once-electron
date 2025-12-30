@@ -48,30 +48,36 @@ export function setupProjectHandlers(): void {
       const projectsWithFlattenedData = projects.map((project) => ({
         ...project,
         // projectPagesのcropRegionsのquestionScoresをシリアライズ
-        projectPages: project.projectPages?.map((page) => ({
-          ...page,
-          cropRegions: page.cropRegions?.map((region) => ({
-            ...region,
-            questionScores: region.questionScores?.map(serializeQuestionScore) || [],
+        projectPages:
+          project.projectPages?.map((page) => ({
+            ...page,
+            cropRegions:
+              page.cropRegions?.map((region) => ({
+                ...region,
+                questionScores:
+                  region.questionScores?.map(serializeQuestionScore) || [],
+              })) || [],
           })) || [],
-        })) || [],
         // cropRegionsを平坦化（シリアライズ済み）
         cropRegions:
-          project.projectPages?.flatMap((page) =>
-            page.cropRegions?.map((region) => ({
-              ...region,
-              questionScores: region.questionScores?.map(serializeQuestionScore) || [],
-            })) || []
+          project.projectPages?.flatMap(
+            (page) =>
+              page.cropRegions?.map((region) => ({
+                ...region,
+                questionScores:
+                  region.questionScores?.map(serializeQuestionScore) || [],
+              })) || []
           ) || [],
         // answerImagesを抽出
         answerImages:
-          project.projectPages?.flatMap((page) =>
-            page.pageImages
-              ?.filter((image) => image.imageType === "STUDENT_ANSWER")
-              ?.map((image) => ({
-                ...image,
-                pageNumber: page.pageNumber,
-              })) || []
+          project.projectPages?.flatMap(
+            (page) =>
+              page.pageImages
+                ?.filter((image) => image.imageType === "STUDENT_ANSWER")
+                ?.map((image) => ({
+                  ...image,
+                  pageNumber: page.pageNumber,
+                })) || []
           ) || [],
       }))
 
@@ -94,30 +100,36 @@ export function setupProjectHandlers(): void {
       return {
         ...project,
         // projectPagesのcropRegionsのquestionScoresをシリアライズ
-        projectPages: project.projectPages?.map((page) => ({
-          ...page,
-          cropRegions: page.cropRegions?.map((region) => ({
-            ...region,
-            questionScores: region.questionScores?.map(serializeQuestionScore) || [],
+        projectPages:
+          project.projectPages?.map((page) => ({
+            ...page,
+            cropRegions:
+              page.cropRegions?.map((region) => ({
+                ...region,
+                questionScores:
+                  region.questionScores?.map(serializeQuestionScore) || [],
+              })) || [],
           })) || [],
-        })) || [],
         // cropRegionsを平坦化（シリアライズ済み）
         cropRegions:
-          project.projectPages?.flatMap((page) =>
-            page.cropRegions?.map((region) => ({
-              ...region,
-              questionScores: region.questionScores?.map(serializeQuestionScore) || [],
-            })) || []
+          project.projectPages?.flatMap(
+            (page) =>
+              page.cropRegions?.map((region) => ({
+                ...region,
+                questionScores:
+                  region.questionScores?.map(serializeQuestionScore) || [],
+              })) || []
           ) || [],
         // answerImagesを抽出
         answerImages:
-          project.projectPages?.flatMap((page) =>
-            page.pageImages
-              ?.filter((image) => image.imageType === "STUDENT_ANSWER")
-              ?.map((image) => ({
-                ...image,
-                pageNumber: page.pageNumber,
-              })) || []
+          project.projectPages?.flatMap(
+            (page) =>
+              page.pageImages
+                ?.filter((image) => image.imageType === "STUDENT_ANSWER")
+                ?.map((image) => ({
+                  ...image,
+                  pageNumber: page.pageNumber,
+                })) || []
           ) || [],
       }
     } catch (err) {
@@ -131,7 +143,7 @@ export function setupProjectHandlers(): void {
     async (
       _event,
       projectData: Omit<Prisma.ProjectCreateInput, "user">,
-      userId: string,
+      userId: string
     ) => {
       try {
         if (!userId) throw new Error("User ID is required to create a project.")
@@ -141,15 +153,15 @@ export function setupProjectHandlers(): void {
         return {
           ...project,
           cropRegions:
-            project.projectPages?.flatMap((page) =>
-              page.cropRegions?.map((region) => region) || []
+            project.projectPages?.flatMap(
+              (page) => page.cropRegions?.map((region) => region) || []
             ) || [],
         }
       } catch (err) {
         console.error("Error creating project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -163,7 +175,7 @@ export function setupProjectHandlers(): void {
         console.error("Error updating project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-project", async (_event, projectId: string) => {
@@ -188,6 +200,6 @@ export function setupProjectHandlers(): void {
         console.error("Error fetching project pages by project ID:", err)
         throw err
       }
-    },
+    }
   )
 }

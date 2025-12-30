@@ -123,4 +123,3 @@ export interface FileUploadDropzoneProps {
   maxFileSize?: number
   disabled?: boolean
 }
-

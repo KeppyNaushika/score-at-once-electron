@@ -87,7 +87,7 @@ export const FONT_SETTINGS = {
 export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number,
+  initialHeight: number
 ): Promise<MeasuredSize>
 ```
 
@@ -109,7 +109,7 @@ export async function measureMathJaxContentSize(
 export async function convertTextToSvg(
   text: string,
   _width: number,
-  _height: number,
+  _height: number
 ): Promise<SVGSVGElement | null>
 ```
 
@@ -134,7 +134,7 @@ export async function renderSvgToCanvas(
   x: number,
   y: number,
   textBoxWidth: number,
-  textBoxHeight: number,
+  textBoxHeight: number
 ): Promise<SvgRenderResult>
 ```
 
@@ -181,7 +181,7 @@ const scrollSize = { width: tempDiv.scrollWidth, height: tempDiv.scrollHeight }
 // 最大値を採用
 actualHeight = Math.max(
   height,
-  Math.ceil(Math.max(boundingRect.height, scrollSize.height, maxMathJaxHeight)),
+  Math.ceil(Math.max(boundingRect.height, scrollSize.height, maxMathJaxHeight))
 )
 ```
 
@@ -263,7 +263,7 @@ const scale = Math.min(scaleX, scaleY)
 
    ```typescript
    export async function exportCanvasAsPDF(
-     canvas: HTMLCanvasElement,
+     canvas: HTMLCanvasElement
    ): Promise<Blob>
    ```
 

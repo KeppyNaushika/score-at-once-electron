@@ -60,7 +60,7 @@ export const initializeDatabase = async (): Promise<boolean> => {
       try {
         const stats = await fs.stat(dbPath)
         console.log(
-          `Database file created successfully, size: ${stats.size} bytes`,
+          `Database file created successfully, size: ${stats.size} bytes`
         )
       } catch (error) {
         console.error(`Failed to verify database file creation:`, error)
@@ -94,10 +94,10 @@ export const initializeDatabase = async (): Promise<boolean> => {
                 () =>
                   reject(
                     new Error(
-                      `Database connection timeout after 20 seconds (attempt ${attempt})`,
-                    ),
+                      `Database connection timeout after 20 seconds (attempt ${attempt})`
+                    )
                   ),
-                20000, // タイムアウトを20秒に延長
+                20000 // タイムアウトを20秒に延長
               )
             })
 
@@ -116,7 +116,7 @@ export const initializeDatabase = async (): Promise<boolean> => {
               // 最後の試行失敗時
               console.error("All connection attempts failed")
               throw new Error(
-                `Database connection failed after ${maxRetries} attempts: ${connectError instanceof Error ? connectError.message : connectError}`,
+                `Database connection failed after ${maxRetries} attempts: ${connectError instanceof Error ? connectError.message : connectError}`
               )
             }
           }
@@ -430,7 +430,7 @@ CREATE INDEX "DrawingAnnotation_createdAt_idx" ON "DrawingAnnotation"("createdAt
         } catch (unlinkError) {
           console.error(
             "Failed to remove corrupted database file:",
-            unlinkError,
+            unlinkError
           )
         }
 

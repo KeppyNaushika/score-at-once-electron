@@ -35,26 +35,20 @@ export function SidePanelSection({
       <div className="mb-2 flex items-center gap-2">
         <Icon className="h-4 w-4 text-gray-500" />
         <span className="text-sm font-medium text-gray-700">{title}</span>
-        
+
         {/* バッジ表示 */}
         {badge && (
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
             {badge}
           </span>
         )}
-        
+
         {/* 右端要素（ボタン等） */}
-        {rightElement && (
-          <div className="ml-auto">
-            {rightElement}
-          </div>
-        )}
+        {rightElement && <div className="ml-auto">{rightElement}</div>}
       </div>
 
       {/* セクション内容 */}
-      <div>
-        {children}
-      </div>
+      <div>{children}</div>
     </div>
   )
 }

@@ -11,11 +11,11 @@ type CropRegionEditorProps = {
   setAreas: React.Dispatch<React.SetStateAction<CropRegionArea[]>>
   onCreateRegion?: (
     type: CropRegionAreaType,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
   onUpdateRegion?: (
     index: number,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => Promise<void>
   disabled: boolean
   backgroundImageUrl: string | null
@@ -34,12 +34,12 @@ const CropRegionEditor = ({
   projectPageId,
 }: CropRegionEditorProps) => {
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
-    null,
+    null
   )
 
   const handleUpdateArea = async (
     index: number,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => {
     if (onUpdateRegion) {
       // Use efficient individual update
@@ -74,7 +74,7 @@ const CropRegionEditor = ({
 
   const addArea = async (
     type: CropRegionAreaType,
-    customCoords?: { x: number; y: number; width: number; height: number },
+    customCoords?: { x: number; y: number; width: number; height: number }
   ) => {
     if (!projectPageId) {
       toast.error("基準画像が選択されていません。エリアを追加できません。")

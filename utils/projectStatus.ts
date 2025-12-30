@@ -36,7 +36,7 @@ export interface ProjectProgress {
  * プロジェクトの詳細進捗情報を計算
  */
 export function getProjectProgress(
-  project: ProjectWithDetails,
+  project: ProjectWithDetails
 ): ProjectProgress {
   // ProjectWithDetails型を信頼し、基本的な存在チェックのみ実施
   if (!project) {
@@ -86,7 +86,7 @@ export function getProjectProgress(
   const participatingStudentIds =
     project.projectStudents
       ?.filter(
-        (ps) => ps.status === "PARTICIPATING" || ps.status === "EXPECTED",
+        (ps) => ps.status === "PARTICIPATING" || ps.status === "EXPECTED"
       )
       ?.map((ps) => ps.studentId) || []
 
@@ -95,9 +95,9 @@ export function getProjectProgress(
     project.answerImages
       ?.filter(
         (img) =>
-          img.studentId && participatingStudentIds.includes(img.studentId),
+          img.studentId && participatingStudentIds.includes(img.studentId)
       )
-      ?.map((img) => img.studentId),
+      ?.map((img) => img.studentId)
   ).size
 
   const expectedScoringCount = questionAnswerCount * answerSheetCount
@@ -111,7 +111,7 @@ export function getProjectProgress(
           (score) =>
             score.status !== "unscored" &&
             score.studentId !== null &&
-            participatingStudentIds.includes(score.studentId),
+            participatingStudentIds.includes(score.studentId)
         )
         return total + validQuestionScores.length
       }
@@ -261,7 +261,7 @@ export function getProjectCompletionRate(project: ProjectWithDetails): number {
  * ステップごとの完了状況を配列で取得
  */
 export function getStepCompletionStatus(
-  project: ProjectWithDetails,
+  project: ProjectWithDetails
 ): boolean[] {
   const progress = getProjectProgress(project)
 

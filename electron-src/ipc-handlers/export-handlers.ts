@@ -21,7 +21,7 @@ export function setupExportHandlers(): void {
         projectId: string
         selectedStudentIds: string[]
         outputPath?: string
-      },
+      }
     ) => {
       try {
         return await exportGradingDataExcel(options)
@@ -32,7 +32,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // Canvas描画用PDF出力データ取得
@@ -43,7 +43,7 @@ export function setupExportHandlers(): void {
       options: {
         projectId: string
         selectedStudentIds: string[]
-      },
+      }
     ) => {
       try {
         return await getPdfExportData(options)
@@ -54,7 +54,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // Canvas描画済み画像からPDF作成
@@ -70,7 +70,7 @@ export function setupExportHandlers(): void {
           imageData: ArrayBuffer
         }>
         pdfOrientation?: "portrait" | "landscape"
-      },
+      }
     ) => {
       try {
         // プログレスコールバックは渡さない（React側で管理するため）
@@ -86,7 +86,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
@@ -96,7 +96,7 @@ export function setupExportHandlers(): void {
       _event,
       options: {
         projectName?: string
-      },
+      }
     ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
       try {
         const { dialog } = require("electron")
@@ -126,7 +126,7 @@ export function setupExportHandlers(): void {
           canceled: false,
         }
       }
-    },
+    }
   )
 
   // SVG→PNG変換ハンドラ（MathJaxテキストのtaint問題回避用）
@@ -138,7 +138,7 @@ export function setupExportHandlers(): void {
         svgString: string
         width?: number
         height?: number
-      },
+      }
     ): Promise<{
       success: boolean
       dataUrl?: string
@@ -213,7 +213,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // ============================================================
@@ -228,7 +228,7 @@ export function setupExportHandlers(): void {
       options: {
         totalPages: number
         pdfOrientation?: "portrait" | "landscape"
-      },
+      }
     ) => {
       try {
         return await createPdfStreamingSession(options)
@@ -239,7 +239,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // ストリーミングセッションにページを追加
@@ -251,7 +251,7 @@ export function setupExportHandlers(): void {
         sessionId: string
         pageIndex: number
         imageData: ArrayBuffer
-      },
+      }
     ) => {
       try {
         return await addPageToStreamingSession(options)
@@ -262,7 +262,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // ストリーミングセッションを完了してPDF保存
@@ -273,7 +273,7 @@ export function setupExportHandlers(): void {
       options: {
         sessionId: string
         outputPath: string
-      },
+      }
     ) => {
       try {
         return await finalizeStreamingSession(options)
@@ -284,16 +284,13 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // ストリーミングセッションをキャンセル
   ipcMain.handle(
     "export:cancelStreamingSession",
-    async (
-      _event,
-      sessionId: string,
-    ) => {
+    async (_event, sessionId: string) => {
       try {
         cancelStreamingSession(sessionId)
         return { success: true }
@@ -304,7 +301,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // ============================================================
@@ -324,7 +321,7 @@ export function setupExportHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error occurred",
         }
       }
-    },
+    }
   )
 
   // 個人成績表PDF保存先選択ダイアログ
@@ -334,7 +331,7 @@ export function setupExportHandlers(): void {
       _event,
       options: {
         projectName?: string
-      },
+      }
     ): Promise<{ success: boolean; filePath?: string; canceled?: boolean }> => {
       try {
         const dateStr = new Date().toISOString().split("T")[0]
@@ -363,7 +360,7 @@ export function setupExportHandlers(): void {
           canceled: false,
         }
       }
-    },
+    }
   )
 
   // 個人成績表PDFバッファを保存
@@ -374,7 +371,7 @@ export function setupExportHandlers(): void {
       options: {
         filePath: string
         pdfBuffer: ArrayBuffer
-      },
+      }
     ): Promise<{ success: boolean; error?: string }> => {
       try {
         const fs = require("fs").promises
@@ -384,9 +381,10 @@ export function setupExportHandlers(): void {
         console.error("Error saving individual report PDF:", err)
         return {
           success: false,
-          error: err instanceof Error ? err.message : "ファイル保存に失敗しました",
+          error:
+            err instanceof Error ? err.message : "ファイル保存に失敗しました",
         }
       }
-    },
+    }
   )
 }

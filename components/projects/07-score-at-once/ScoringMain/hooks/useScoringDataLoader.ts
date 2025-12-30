@@ -16,15 +16,15 @@ interface ScoringDataLoaderResult {
 }
 
 export function useScoringDataLoader(
-  projectId: string,
+  projectId: string
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<ProjectWithDetails | null>(null)
   const [pageImages, setPageImages] = useState<PageImageWithProjectStudents[]>(
-    [],
+    []
   )
   const [cropRegions, setCropRegions] = useState<CropRegionWithProjectPage[]>(
-    [],
+    []
   )
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +59,9 @@ export function useScoringDataLoader(
 
         // 設問領域データの読み込み
         const regionsResult =
-          await window.electronAPI.getQuestionAnswerRegionsByProjectId(projectId)
+          await window.electronAPI.getQuestionAnswerRegionsByProjectId(
+            projectId
+          )
         if (!regionsResult || !Array.isArray(regionsResult)) {
           throw new Error("設問領域データの読み込みに失敗しました")
         }
@@ -78,7 +80,7 @@ export function useScoringDataLoader(
       } catch (error) {
         console.error("データの読み込みに失敗しました:", error)
         setError(
-          error instanceof Error ? error.message : "不明なエラーが発生しました",
+          error instanceof Error ? error.message : "不明なエラーが発生しました"
         )
         toast.error("データの読み込みに失敗しました")
       } finally {

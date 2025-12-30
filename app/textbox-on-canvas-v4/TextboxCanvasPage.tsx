@@ -78,7 +78,7 @@ export default function TextboxCanvasPage() {
       if (!selectedTextBoxId) return
       updateTextBoxAnchorDirection(selectedTextBoxId, direction)
     },
-    [selectedTextBoxId, updateTextBoxAnchorDirection],
+    [selectedTextBoxId, updateTextBoxAnchorDirection]
   )
 
   // テキストサイズ変更のハンドラー
@@ -87,7 +87,7 @@ export default function TextboxCanvasPage() {
       if (!selectedTextBoxId) return
       updateTextBoxSize(selectedTextBoxId, size)
     },
-    [selectedTextBoxId, updateTextBoxSize],
+    [selectedTextBoxId, updateTextBoxSize]
   )
 
   return (
@@ -219,7 +219,6 @@ export default function TextboxCanvasPage() {
                           }
                         }}
                       />
-
 
                       <div className="flex space-x-2">
                         <Button onClick={handleTextSubmit}>

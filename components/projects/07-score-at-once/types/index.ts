@@ -64,8 +64,10 @@ export type LayoutDirection =
  * クライアントサイド用のQuestionScore型
  * partialScoreをDecimalからnumberに変更（UI状態管理用）
  */
-export interface ClientQuestionScore
-  extends Omit<QuestionScore, "partialScore"> {
+export interface ClientQuestionScore extends Omit<
+  QuestionScore,
+  "partialScore"
+> {
   partialScore: number | null
 }
 
@@ -82,7 +84,7 @@ export interface ScoringDataRecord {
  */
 export function calculateActualScore(
   score: ClientQuestionScore | null,
-  maxScore: number,
+  maxScore: number
 ): number | null {
   if (!score) return null
 
@@ -149,11 +151,11 @@ export interface MasterGridItem {
 export function findQuestionScore(
   questionScores: QuestionScore[],
   studentId: string,
-  cropRegionId: string,
+  cropRegionId: string
 ): QuestionScore | undefined {
   return questionScores.find(
     (score) =>
-      score.studentId === studentId && score.cropRegionId === cropRegionId,
+      score.studentId === studentId && score.cropRegionId === cropRegionId
   )
 }
 
@@ -163,7 +165,7 @@ export function findQuestionScore(
 export function getScoringStatusFromArray(
   questionScores: QuestionScore[],
   studentId: string,
-  cropRegionId?: string,
+  cropRegionId?: string
 ): ScoringStatus {
   if (!cropRegionId) return "unscored"
 
@@ -175,7 +177,7 @@ export function getScoringStatusFromArray(
  * Prisma.Decimalを安全にnumberに変換
  */
 export function decimalToNumber(
-  decimal: Prisma.Decimal | number | string | null | undefined,
+  decimal: Prisma.Decimal | number | string | null | undefined
 ): number | null {
   if (decimal === null || decimal === undefined) return null
   return Number(decimal.toString())

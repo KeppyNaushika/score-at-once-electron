@@ -48,7 +48,7 @@ export function PageNavigation({
   }
 
   const currentIndex = masterImages.findIndex(
-    (img) => img.id === selectedMasterImage?.id,
+    (img) => img.id === selectedMasterImage?.id
   )
 
   /**

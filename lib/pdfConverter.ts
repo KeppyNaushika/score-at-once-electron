@@ -24,7 +24,7 @@ const initializePdfjs = async () => {
       // Fallback to standard import
       console.warn(
         "Legacy PDF.js import failed, trying standard import:",
-        error,
+        error
       )
       const pdfModule = await import("pdfjs-dist")
       pdfjsLib = pdfModule.default || pdfModule
@@ -51,7 +51,7 @@ export interface PdfConversionError {
 
 export async function getPdfPageCount(
   file: File,
-  password?: string,
+  password?: string
 ): Promise<number> {
   const pdfjs = await initializePdfjs()
 
@@ -64,7 +64,7 @@ export async function getPdfPageCount(
     const pdf = await loadingTask.promise
     return pdf.numPages
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'name' in error) {
+    if (error && typeof error === "object" && "name" in error) {
       if (error.name === "PasswordException") {
         throw new Error("password-required")
       } else if (error.name === "InvalidPDFException" && password) {
@@ -79,7 +79,7 @@ export async function getPdfPageCount(
 export async function convertPdfToImages(
   file: File,
   password?: string,
-  onProgress?: (current: number, total: number) => void,
+  onProgress?: (current: number, total: number) => void
 ): Promise<ConvertedImage[]> {
   // PDF.jsを初期化
   const pdfjs = await initializePdfjs()
@@ -131,7 +131,7 @@ export async function convertPdfToImages(
     return images
   } catch (error: unknown) {
     // PDF.js エラーハンドリング
-    if (error && typeof error === 'object' && 'name' in error) {
+    if (error && typeof error === "object" && "name" in error) {
       if (error.name === "PasswordException") {
         throw new Error("password-required")
       } else if (error.name === "InvalidPDFException" && password) {

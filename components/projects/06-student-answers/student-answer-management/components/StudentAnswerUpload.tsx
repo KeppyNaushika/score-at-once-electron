@@ -8,8 +8,8 @@ import {
   reorderFilesByStrategy,
 } from "@/components/projects/06-student-answers/student-answer-management/utils/reorderFilesByStrategy"
 import { StudentAnswerTable } from "@/components/projects/06-student-answers/student-answer-table/components/StudentAnswerTable"
-import { PasswordDialog } from "@/components/ui/password-dialog"
 import type { PlacementStrategy } from "@/components/projects/06-student-answers/types"
+import { PasswordDialog } from "@/components/ui/password-dialog"
 import { useCallback, useEffect } from "react"
 
 export function StudentAnswerUpload({
@@ -50,7 +50,7 @@ export function StudentAnswerUpload({
         finalExistingAnswers,
         students,
         finalModelAnswerCount,
-        fileOrder,
+        fileOrder
       )
       setFiles(initialFiles)
     }
@@ -73,13 +73,13 @@ export function StudentAnswerUpload({
           files,
           students,
           finalModelAnswerCount,
-          newFileOrder,
+          newFileOrder
         )
         setFiles(reorderedFiles)
       }
       setFileOrder(newFileOrder)
     },
-    [mode, files, students, finalModelAnswerCount, setFiles, setFileOrder],
+    [mode, files, students, finalModelAnswerCount, setFiles, setFileOrder]
   )
 
   // 表示モードでは既存の答案をテーブル表示

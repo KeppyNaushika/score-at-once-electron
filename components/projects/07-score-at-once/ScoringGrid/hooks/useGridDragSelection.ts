@@ -67,7 +67,7 @@ export function useGridDragSelection({
 
   const getDragSelectionRect = (
     dragStart: { x: number; y: number } | null,
-    dragCurrent: { x: number; y: number } | null,
+    dragCurrent: { x: number; y: number } | null
   ) => {
     if (!dragStart || !dragCurrent || !gridRef.current) return null
 
@@ -89,7 +89,7 @@ export function useGridDragSelection({
 
   const handleDragSelection = (
     event: React.MouseEvent,
-    dragStart: { x: number; y: number } | null,
+    dragStart: { x: number; y: number } | null
   ) => {
     if (!dragStart || !gridRef.current) return
 
@@ -130,7 +130,7 @@ export function useGridDragSelection({
     })
 
     const uniqueSelectedIds = Array.from(new Set(selectedIds)).filter(
-      (id) => !id.startsWith("master-"),
+      (id) => !id.startsWith("master-")
     )
 
     if (uniqueSelectedIds.length > 0) {

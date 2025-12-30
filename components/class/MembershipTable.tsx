@@ -38,26 +38,25 @@ export default function MembershipTable({
   }
 
   // すべての所属を現在の所属を優先してソート
-  const sortedMemberships = memberships
-    .sort((a, b) => {
-      // 現在の所属を先に表示
-      const aIsCurrent = isCurrentMembership(a)
-      const bIsCurrent = isCurrentMembership(b)
-      if (aIsCurrent && !bIsCurrent) return -1
-      if (!aIsCurrent && bIsCurrent) return 1
+  const sortedMemberships = memberships.sort((a, b) => {
+    // 現在の所属を先に表示
+    const aIsCurrent = isCurrentMembership(a)
+    const bIsCurrent = isCurrentMembership(b)
+    if (aIsCurrent && !bIsCurrent) return -1
+    if (!aIsCurrent && bIsCurrent) return 1
 
-      // 両方とも現在の所属または両方とも終了した所属の場合、出席番号順
-      if (a.attendanceNumber && b.attendanceNumber) {
-        return a.attendanceNumber - b.attendanceNumber
-      }
-      if (a.attendanceNumber) return -1
-      if (b.attendanceNumber) return 1
-      return 0
-    })
+    // 両方とも現在の所属または両方とも終了した所属の場合、出席番号順
+    if (a.attendanceNumber && b.attendanceNumber) {
+      return a.attendanceNumber - b.attendanceNumber
+    }
+    if (a.attendanceNumber) return -1
+    if (b.attendanceNumber) return 1
+    return 0
+  })
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(sortedMemberships.map(m => m.id)))
+      setSelectedIds(new Set(sortedMemberships.map((m) => m.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -75,7 +74,9 @@ export default function MembershipTable({
 
   const handleBulkDelete = () => {
     if (selectedIds.size > 0 && onBulkDelete) {
-      if (window.confirm(`選択された${selectedIds.size}件の所属を削除しますか？`)) {
+      if (
+        window.confirm(`選択された${selectedIds.size}件の所属を削除しますか？`)
+      ) {
         onBulkDelete(Array.from(selectedIds))
         setSelectedIds(new Set())
       }
@@ -112,7 +113,10 @@ export default function MembershipTable({
                   <TableRow>
                     <TableHead className="w-[50px]">
                       <Checkbox
-                        checked={selectedIds.size === sortedMemberships.length && sortedMemberships.length > 0}
+                        checked={
+                          selectedIds.size === sortedMemberships.length &&
+                          sortedMemberships.length > 0
+                        }
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
@@ -127,14 +131,16 @@ export default function MembershipTable({
                 </TableHeader>
                 <TableBody>
                   {sortedMemberships.map((membership) => (
-                    <TableRow 
+                    <TableRow
                       key={membership.id}
                       className={membership.endDate ? "opacity-60" : ""}
                     >
                       <TableCell>
                         <Checkbox
                           checked={selectedIds.has(membership.id)}
-                          onCheckedChange={(checked) => handleSelectOne(membership.id, checked as boolean)}
+                          onCheckedChange={(checked) =>
+                            handleSelectOne(membership.id, checked as boolean)
+                          }
                         />
                       </TableCell>
                       <TableCell className="font-mono">
@@ -163,7 +169,9 @@ export default function MembershipTable({
                         {membership.startDate.toLocaleDateString("ja-JP")}
                       </TableCell>
                       <TableCell>
-                        {membership.endDate ? membership.endDate.toLocaleDateString("ja-JP") : "-"}
+                        {membership.endDate
+                          ? membership.endDate.toLocaleDateString("ja-JP")
+                          : "-"}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {membership.notes}

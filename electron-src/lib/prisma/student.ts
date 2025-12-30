@@ -50,7 +50,7 @@ export const fetchStudents = async (): Promise<StudentWithMemberships[]> => {
 }
 
 export const createStudent = async (
-  studentData: Prisma.StudentCreateInput,
+  studentData: Prisma.StudentCreateInput
 ): Promise<StudentWithMemberships> => {
   try {
     return await prisma.student.create({
@@ -77,7 +77,7 @@ export const createStudent = async (
 
 export const updateStudent = async (
   id: string,
-  studentData: Prisma.StudentUpdateInput,
+  studentData: Prisma.StudentUpdateInput
 ): Promise<StudentWithMemberships> => {
   try {
     return await prisma.student.update({
@@ -133,7 +133,7 @@ export const fetchClasses = async (): Promise<ClassWithMemberships[]> => {
 }
 
 export const createClass = async (
-  classData: Prisma.ClassCreateInput,
+  classData: Prisma.ClassCreateInput
 ): Promise<ClassWithMemberships> => {
   try {
     return await prisma.class.create({
@@ -157,7 +157,7 @@ export const createClass = async (
 
 export const updateClass = async (
   id: string,
-  classData: Prisma.ClassUpdateInput,
+  classData: Prisma.ClassUpdateInput
 ): Promise<ClassWithMemberships> => {
   try {
     return await prisma.class.update({
@@ -196,7 +196,7 @@ export const deleteClass = async (id: string): Promise<void> => {
 
     if (classWithMemberships && classWithMemberships.memberships.length > 0) {
       throw new Error(
-        "この学級には現在も所属している生徒がいるため削除できません。",
+        "この学級には現在も所属している生徒がいるため削除できません。"
       )
     }
 
@@ -206,7 +206,6 @@ export const deleteClass = async (id: string): Promise<void> => {
     throw error
   }
 }
-
 
 // 生徒の試験成績を取得
 export interface StudentExamResult {
@@ -222,7 +221,7 @@ export interface StudentExamResult {
 }
 
 export const getStudentExamResults = async (
-  studentId: string,
+  studentId: string
 ): Promise<StudentExamResult[]> => {
   try {
     // 生徒が参加しているプロジェクトを取得

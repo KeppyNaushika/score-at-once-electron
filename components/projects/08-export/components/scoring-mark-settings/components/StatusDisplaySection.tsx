@@ -29,10 +29,7 @@ export function StatusDisplaySection({
         <Label className="text-sm font-medium">📌 採点マーク表示対象</Label>
         <div className="space-y-2">
           {(Object.keys(statusLabels) as ScoringStatus[]).map((status) => (
-            <div
-              key={`mark-${status}`}
-              className="flex items-center space-x-3"
-            >
+            <div key={`mark-${status}`} className="flex items-center space-x-3">
               <Checkbox
                 id={`mark-${status}`}
                 checked={showMarkForStatus[status]}

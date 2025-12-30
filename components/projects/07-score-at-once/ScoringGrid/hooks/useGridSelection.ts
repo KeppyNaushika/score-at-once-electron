@@ -8,7 +8,7 @@ export interface DragState {
 
 export function useGridSelection() {
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(
-    null,
+    null
   )
   const [isDragging, setIsDragging] = useState(false)
   const [dragCurrent, setDragCurrent] = useState<{

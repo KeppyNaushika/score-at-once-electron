@@ -24,7 +24,7 @@ export function CurrentMembershipsCard({
 }: CurrentMembershipsCardProps) {
   const now = new Date()
   const currentMemberships = student.memberships.filter(
-    (m) => !m.endDate || new Date(m.endDate) >= now,
+    (m) => !m.endDate || new Date(m.endDate) >= now
   )
 
   return (
@@ -68,7 +68,7 @@ export function CurrentMembershipsCard({
                         <Calendar className="h-4 w-4" />
                         開始日:{" "}
                         {new Date(membership.startDate).toLocaleDateString(
-                          "ja-JP",
+                          "ja-JP"
                         )}
                       </p>
                       {membership.notes && (

@@ -22,7 +22,7 @@ export function useGridLayout({
           ? itemsPerRow[0] // 下→右レイアウトでは1列の表示件数として使用
           : 3, // デフォルト値
     }),
-    [itemsPerRow, layoutDirection],
+    [itemsPerRow, layoutDirection]
   )
 
   // レイアウト方向に応じて答案を並び替え

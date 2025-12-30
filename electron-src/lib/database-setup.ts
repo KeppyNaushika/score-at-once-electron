@@ -1,7 +1,10 @@
 import { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
-import { getDatabasePath, createSharedPrismaClient } from "./prisma/databaseInitializer"
+import {
+  getDatabasePath,
+  createSharedPrismaClient,
+} from "./prisma/databaseInitializer"
 
 /**
  * データベースセットアップユーティリティ
@@ -38,7 +41,7 @@ export class DatabaseSetup {
       const classCount = await this.prisma.class.count()
       return userCount === 0 && classCount === 0
     } catch (error) {
-      console.log('❌ Database content check failed:', error)
+      console.log("❌ Database content check failed:", error)
       return true // エラーの場合は空とみなす
     }
   }
@@ -54,7 +57,9 @@ export class DatabaseSetup {
       }
     } catch (error) {
       console.error(`❌ Failed to create database directory: ${dbDir}`, error)
-      throw new Error(`Database directory creation failed: ${error instanceof Error ? error.message : error}`)
+      throw new Error(
+        `Database directory creation failed: ${error instanceof Error ? error.message : error}`
+      )
     }
   }
 
@@ -63,76 +68,77 @@ export class DatabaseSetup {
    */
   async runSeed(): Promise<void> {
     try {
-      console.log('🌱 Starting integrated seed...')
+      console.log("🌱 Starting integrated seed...")
 
       // デフォルトユーザーの作成
       await this.prisma.user.upsert({
-        where: { username: 'admin' },
+        where: { username: "admin" },
         update: {},
         create: {
-          username: 'admin',
-          name: '管理者',
-          role: 'admin',
-          passcodeType: 'none'
-        }
+          username: "admin",
+          name: "管理者",
+          role: "admin",
+          passcodeType: "none",
+        },
       })
 
       // サンプル学級の作成
       const sampleClass = await this.prisma.class.upsert({
-        where: { name: 'サンプル学級' },
+        where: { name: "サンプル学級" },
         update: {},
         create: {
-          name: 'サンプル学級',
-          classCode: 'SAMPLE01',
+          name: "サンプル学級",
+          classCode: "SAMPLE01",
           grade: 1,
-          description: 'システム動作確認用のサンプル学級です',
-          isVisible: true
-        }
+          description: "システム動作確認用のサンプル学級です",
+          isVisible: true,
+        },
       })
 
       // サンプル生徒の作成
       const sampleStudents = [
         {
-          studentId: 'STU001',
-          lastName: '山田',
-          firstName: '太郎',
-          lastNameKana: 'ヤマダ',
-          firstNameKana: 'タロウ',
-          enrollmentYear: new Date().getFullYear()
+          studentId: "STU001",
+          lastName: "山田",
+          firstName: "太郎",
+          lastNameKana: "ヤマダ",
+          firstNameKana: "タロウ",
+          enrollmentYear: new Date().getFullYear(),
         },
         {
-          studentId: 'STU002',
-          lastName: '佐藤',
-          firstName: '花子',
-          lastNameKana: 'サトウ',
-          firstNameKana: 'ハナコ',
-          enrollmentYear: new Date().getFullYear()
+          studentId: "STU002",
+          lastName: "佐藤",
+          firstName: "花子",
+          lastNameKana: "サトウ",
+          firstNameKana: "ハナコ",
+          enrollmentYear: new Date().getFullYear(),
         },
         {
-          studentId: 'STU003',
-          lastName: '田中',
-          firstName: '次郎',
-          lastNameKana: 'タナカ',
-          firstNameKana: 'ジロウ',
-          enrollmentYear: new Date().getFullYear()
-        }
+          studentId: "STU003",
+          lastName: "田中",
+          firstName: "次郎",
+          lastNameKana: "タナカ",
+          firstNameKana: "ジロウ",
+          enrollmentYear: new Date().getFullYear(),
+        },
       ]
 
       for (const [index, studentData] of sampleStudents.entries()) {
         const student = await this.prisma.student.upsert({
           where: { studentId: studentData.studentId },
           update: {},
-          create: studentData
+          create: studentData,
         })
 
         // 学級への所属を作成（既存チェック後に作成）
-        const existingMembership = await this.prisma.studentClassMembership.findFirst({
-          where: {
-            studentId: student.id,
-            classId: sampleClass.id,
-            endDate: null // 現在有効な所属のみ
-          }
-        })
+        const existingMembership =
+          await this.prisma.studentClassMembership.findFirst({
+            where: {
+              studentId: student.id,
+              classId: sampleClass.id,
+              endDate: null, // 現在有効な所属のみ
+            },
+          })
 
         if (!existingMembership) {
           await this.prisma.studentClassMembership.create({
@@ -140,30 +146,30 @@ export class DatabaseSetup {
               studentId: student.id,
               classId: sampleClass.id,
               attendanceNumber: index + 1,
-              startDate: new Date()
-            }
+              startDate: new Date(),
+            },
           })
         }
       }
 
       // サンプル小計グループの作成
       let mathSubtotalGroup = await this.prisma.subtotalGroup.findFirst({
-        where: { name: '数学小計グループ' }
+        where: { name: "数学小計グループ" },
       })
-      
+
       if (!mathSubtotalGroup) {
         mathSubtotalGroup = await this.prisma.subtotalGroup.create({
           data: {
-            name: '数学小計グループ'
-          }
+            name: "数学小計グループ",
+          },
         })
       }
 
       // サンプル小計項目の作成
       const mathSubtotals = [
-        { name: '計算問題', order: 1 },
-        { name: '文章題', order: 2 },
-        { name: '図形問題', order: 3 }
+        { name: "計算問題", order: 1 },
+        { name: "文章題", order: 2 },
+        { name: "図形問題", order: 3 },
       ]
 
       for (const subtotalData of mathSubtotals) {
@@ -171,24 +177,23 @@ export class DatabaseSetup {
         const existingSubtotal = await this.prisma.subtotal.findFirst({
           where: {
             subtotalGroupId: mathSubtotalGroup.id,
-            name: subtotalData.name
-          }
+            name: subtotalData.name,
+          },
         })
-        
+
         if (!existingSubtotal) {
           await this.prisma.subtotal.create({
             data: {
               ...subtotalData,
-              subtotalGroupId: mathSubtotalGroup.id
-            }
+              subtotalGroupId: mathSubtotalGroup.id,
+            },
           })
         }
       }
 
-      console.log('🎉 Integrated seed completed successfully!')
-
+      console.log("🎉 Integrated seed completed successfully!")
     } catch (error) {
-      console.error('❌ Error during seed:', error)
+      console.error("❌ Error during seed:", error)
       throw error
     }
   }
@@ -204,11 +209,12 @@ export class DatabaseSetup {
       if (!dbExists) {
         // データベースディレクトリを確保
         this.ensureDatabaseDirectory()
-        
+
         // databaseInitializerを使用してスキーマを作成
-        const { initializeDatabase } = await import('./prisma/databaseInitializer')
+        const { initializeDatabase } =
+          await import("./prisma/databaseInitializer")
         const wasCreated = await initializeDatabase()
-        
+
         if (wasCreated) {
           // 新しく作成されたDBにシードデータを投入
           await this.runSeed()
@@ -224,7 +230,7 @@ export class DatabaseSetup {
 
       return setupPerformed
     } catch (error) {
-      console.error('❌ Database setup failed:', error)
+      console.error("❌ Database setup failed:", error)
       throw error
     } finally {
       await this.prisma.$disconnect()
@@ -237,10 +243,10 @@ export class DatabaseSetup {
   async testConnection(): Promise<boolean> {
     try {
       await this.prisma.$connect()
-      console.log('✅ Database connection test successful')
+      console.log("✅ Database connection test successful")
       return true
     } catch (error) {
-      console.error('❌ Database connection test failed:', error)
+      console.error("❌ Database connection test failed:", error)
       return false
     } finally {
       await this.prisma.$disconnect()

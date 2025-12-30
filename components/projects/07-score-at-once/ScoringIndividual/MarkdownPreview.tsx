@@ -33,7 +33,7 @@ export function MarkdownPreview({
       <div
         className={cn(
           "flex min-h-16 items-center justify-center text-gray-400",
-          className,
+          className
         )}
         style={style}
       >

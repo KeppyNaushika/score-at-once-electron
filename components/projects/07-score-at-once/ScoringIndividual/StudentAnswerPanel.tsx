@@ -32,13 +32,13 @@ export function StudentAnswerPanel({
 }: StudentAnswerPanelProps) {
   // 受験生徒順にソート
   const sortedStudents = [...students].sort(
-    (a, b) => a.customOrder - b.customOrder,
+    (a, b) => a.customOrder - b.customOrder
   )
   const currentStudent = sortedStudents.find((s) => s.id === currentStudentId)
 
   const handlePrevStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentStudentId,
+      (s) => s.id === currentStudentId
     )
     if (currentIndex > 0) {
       onStudentChange(sortedStudents[currentIndex - 1].id)
@@ -47,7 +47,7 @@ export function StudentAnswerPanel({
 
   const handleNextStudent = () => {
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentStudentId,
+      (s) => s.id === currentStudentId
     )
     if (currentIndex < sortedStudents.length - 1) {
       onStudentChange(sortedStudents[currentIndex + 1].id)

@@ -14,7 +14,7 @@ import {
 export function calculateQuestionProgress(
   cropRegions: CropRegionWithProjectPage[],
   pageImages: PageImageWithProjectStudents[],
-  questionScores: QuestionScore[],
+  questionScores: QuestionScore[]
 ): QuestionProgress {
   const progress: QuestionProgress = {}
 
@@ -32,12 +32,12 @@ export function calculateQuestionProgress(
 
     // ProjectPageIDでフィルタリング（正しい方法）
     const samePageImages = pageImages.filter(
-      (pageImage) => pageImage.projectPageId === cropRegion.projectPageId,
+      (pageImage) => pageImage.projectPageId === cropRegion.projectPageId
     )
 
     // studentIdフィルタリング
     const relevantPageImages = samePageImages.filter(
-      (pageImage) => pageImage.studentId,
+      (pageImage) => pageImage.studentId
     )
 
     const totalAnswers = relevantPageImages.length
@@ -49,7 +49,7 @@ export function calculateQuestionProgress(
       const score = findQuestionScore(
         questionScores,
         pageImage.studentId,
-        cropRegion.id,
+        cropRegion.id
       )
       const isGraded = score && score.status !== "unscored"
 
@@ -70,7 +70,7 @@ export function calculateQuestionProgress(
 
   // 0/0 の問題がある場合の警告
   const zeroZeroQuestions = Object.entries(progress).filter(
-    ([_, data]) => data.totalAnswers === 0 && data.gradedAnswers === 0,
+    ([_, data]) => data.totalAnswers === 0 && data.gradedAnswers === 0
   )
 
   if (zeroZeroQuestions.length > 0) {
@@ -79,7 +79,7 @@ export function calculateQuestionProgress(
       zeroZeroQuestions.map(([id, data]) => ({
         questionId: id,
         ...data,
-      })),
+      }))
     )
   }
 

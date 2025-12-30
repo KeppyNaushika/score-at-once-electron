@@ -47,7 +47,7 @@ const FileUploadDropzone = React.memo(
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25 hover:border-primary/50",
           (disabled || isUploading) && "cursor-not-allowed opacity-50",
-          className,
+          className
         )}
       >
         <input {...getInputProps()} disabled={disabled || isUploading} />
@@ -77,7 +77,7 @@ const FileUploadDropzone = React.memo(
         </div>
       </div>
     )
-  },
+  }
 )
 
 FileUploadDropzone.displayName = "FileUploadDropzone"

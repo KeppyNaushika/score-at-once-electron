@@ -55,7 +55,7 @@ export default function QuestionNavigator({
   // 0/0の設問を特定
   const zeroProgressQuestions = Object.entries(questionProgress || {}).filter(
     ([_, progress]) =>
-      progress.totalAnswers === 0 && progress.gradedAnswers === 0,
+      progress.totalAnswers === 0 && progress.gradedAnswers === 0
   )
 
   if (zeroProgressQuestions.length > 0) {
@@ -68,7 +68,7 @@ export default function QuestionNavigator({
           questionLabel: region?.label || "Unknown",
           ...progress,
         }
-      }),
+      })
     )
   }
   return (

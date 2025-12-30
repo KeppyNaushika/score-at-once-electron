@@ -23,8 +23,10 @@ export function SubtotalGroupsPageContainer() {
     setLoading(true)
     try {
       // IPCハンドラーが利用可能かチェック
-      if (typeof window.electronAPI?.getSubtotalGroups !== 'function') {
-        setIpcError("IPCハンドラーが利用できません。Electronアプリを再起動してください。")
+      if (typeof window.electronAPI?.getSubtotalGroups !== "function") {
+        setIpcError(
+          "IPCハンドラーが利用できません。Electronアプリを再起動してください。"
+        )
         setSubtotalGroups([])
         setFilteredGroups([])
         return
@@ -58,19 +60,19 @@ export function SubtotalGroupsPageContainer() {
       // モーダルが開いている時は無視
       if (showModal) return
 
-      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+      if ((event.ctrlKey || event.metaKey) && event.key === "n") {
         event.preventDefault()
         handleCreate()
       }
 
-      if (event.key === 'F5' || (event.ctrlKey && event.key === 'r')) {
+      if (event.key === "F5" || (event.ctrlKey && event.key === "r")) {
         event.preventDefault()
         fetchSubtotalGroups()
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
   }, [fetchSubtotalGroups, showModal])
 
   // 検索フィルタリング（グループ名と小計項目名で検索）
@@ -84,7 +86,7 @@ export function SubtotalGroupsPageContainer() {
         const matchesGroupName = group.name.toLowerCase().includes(searchLower)
 
         // 小計項目名で検索
-        const matchesSubtotalName = group.subtotals.some(subtotal =>
+        const matchesSubtotalName = group.subtotals.some((subtotal) =>
           subtotal.name.toLowerCase().includes(searchLower)
         )
 
@@ -108,7 +110,7 @@ export function SubtotalGroupsPageContainer() {
 
   // 削除
   const handleDelete = async (groupId: string) => {
-    const group = subtotalGroups.find(g => g.id === groupId)
+    const group = subtotalGroups.find((g) => g.id === groupId)
     const groupName = group?.name || "不明なグループ"
 
     if (
@@ -154,15 +156,15 @@ export function SubtotalGroupsPageContainer() {
         <div className="flex items-center gap-4">
           {/* 検索 */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="グループ名、小計項目名で検索..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-80"
+              className="w-80 pl-10"
             />
           </div>
-          <div className="text-sm text-muted-foreground">
+          <div className="text-muted-foreground text-sm">
             {filteredGroups.length}件表示
           </div>
         </div>
@@ -174,9 +176,9 @@ export function SubtotalGroupsPageContainer() {
 
       {/* エラーメッセージ */}
       {ipcError && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="text-red-800 font-medium mb-2">接続エラー</div>
-          <div className="text-red-700 text-sm">{ipcError}</div>
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="mb-2 font-medium text-red-800">接続エラー</div>
+          <div className="text-sm text-red-700">{ipcError}</div>
           <Button
             onClick={fetchSubtotalGroups}
             className="mt-3"
@@ -207,7 +209,7 @@ export function SubtotalGroupsPageContainer() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredGroups.map((group) => (
               <SubtotalGroupCard
                 key={group.id}

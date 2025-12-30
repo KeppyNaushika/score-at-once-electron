@@ -1,5 +1,9 @@
 "use client"
 
+import type {
+  PendingChange,
+  ScoringDataOption,
+} from "@/components/projects/06-student-answers/types"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,10 +15,6 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type {
-  PendingChange,
-  ScoringDataOption,
-} from "@/components/projects/06-student-answers/types"
 import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
 import { useState } from "react"
 

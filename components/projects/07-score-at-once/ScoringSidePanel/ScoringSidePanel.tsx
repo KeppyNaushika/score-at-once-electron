@@ -37,7 +37,7 @@ interface ScoringSidePanelProps {
   onScore: (
     statusOrAnswerIds: ScoringStatus | string | string[],
     statusOrPartialScore?: ScoringStatus | number | null,
-    partialScore?: number | null,
+    partialScore?: number | null
   ) => void
   onToggleFilter: (filterId: string) => void
   onRefreshFilter: () => void
@@ -68,7 +68,7 @@ interface ScoringSidePanelProps {
   pageImages?: PageImageWithProjectStudents[]
   scoringBehavior?: "next-student" | "next-question" | "stay"
   onScoringBehaviorChange?: (
-    behavior: "next-student" | "next-question" | "stay",
+    behavior: "next-student" | "next-question" | "stay"
   ) => void
 }
 

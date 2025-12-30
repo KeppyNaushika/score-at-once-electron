@@ -48,15 +48,15 @@ export function useStudentManagement({ students }: UseStudentManagementProps) {
       prev.map((student) =>
         student.id === studentId
           ? { ...student, isSelected: !student.isSelected }
-          : student,
-      ),
+          : student
+      )
     )
   }, [])
 
   // 全学生の選択状態切り替え
   const toggleAllStudents = useCallback((selected: boolean) => {
     setStudentsWithAnswers((prev) =>
-      prev.map((student) => ({ ...student, isSelected: selected })),
+      prev.map((student) => ({ ...student, isSelected: selected }))
     )
   }, [])
 
@@ -66,8 +66,8 @@ export function useStudentManagement({ students }: UseStudentManagementProps) {
       prev.map((student) =>
         student.id === studentId
           ? { ...student, overwrite: !student.overwrite }
-          : student,
-      ),
+          : student
+      )
     )
   }, [])
 

@@ -18,7 +18,12 @@ export interface ProjectStatus {
   hasCropRegions: boolean
   hasStudentAnswers: boolean
   isGradingComplete: boolean
-  nextStep: "master-images" | "crop-regions" | "student-answers" | "grading" | "complete"
+  nextStep:
+    | "master-images"
+    | "crop-regions"
+    | "student-answers"
+    | "grading"
+    | "complete"
   progress: number
 }
 
@@ -27,42 +32,47 @@ export function useProject(projectId?: string) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const calculateProjectStatus = useCallback((project: ProjectWithDetails): ProjectStatus => {
-    const hasMasterImages = (project.projectPages?.some(page => 
-      page.pageImages.some(img => img.imageType === "MODEL_ANSWER")) ?? false)
-    const hasCropRegions = (project.cropRegions?.length ?? 0) > 0
-    const hasStudentAnswers = false // TODO: Implement when student answers are added
-    const isGradingComplete = false // TODO: Implement when grading is added
+  const calculateProjectStatus = useCallback(
+    (project: ProjectWithDetails): ProjectStatus => {
+      const hasMasterImages =
+        project.projectPages?.some((page) =>
+          page.pageImages.some((img) => img.imageType === "MODEL_ANSWER")
+        ) ?? false
+      const hasCropRegions = (project.cropRegions?.length ?? 0) > 0
+      const hasStudentAnswers = false // TODO: Implement when student answers are added
+      const isGradingComplete = false // TODO: Implement when grading is added
 
-    let nextStep: ProjectStatus["nextStep"] = "master-images"
-    let progress = 0
+      let nextStep: ProjectStatus["nextStep"] = "master-images"
+      let progress = 0
 
-    if (!hasMasterImages) {
-      nextStep = "master-images"
-      progress = 0
-    } else if (!hasCropRegions) {
-      nextStep = "crop-regions"
-      progress = 25
-    } else if (!hasStudentAnswers) {
-      nextStep = "student-answers"
-      progress = 50
-    } else if (!isGradingComplete) {
-      nextStep = "grading"
-      progress = 75
-    } else {
-      nextStep = "complete"
-      progress = 100
-    }
+      if (!hasMasterImages) {
+        nextStep = "master-images"
+        progress = 0
+      } else if (!hasCropRegions) {
+        nextStep = "crop-regions"
+        progress = 25
+      } else if (!hasStudentAnswers) {
+        nextStep = "student-answers"
+        progress = 50
+      } else if (!isGradingComplete) {
+        nextStep = "grading"
+        progress = 75
+      } else {
+        nextStep = "complete"
+        progress = 100
+      }
 
-    return {
-      hasMasterImages,
-      hasCropRegions,
-      hasStudentAnswers,
-      isGradingComplete,
-      nextStep,
-      progress
-    }
-  }, [])
+      return {
+        hasMasterImages,
+        hasCropRegions,
+        hasStudentAnswers,
+        isGradingComplete,
+        nextStep,
+        progress,
+      }
+    },
+    []
+  )
 
   const fetchProject = useCallback(async (id: string) => {
     if (!id) return
@@ -78,7 +88,10 @@ export function useProject(projectId?: string) {
         setError("プロジェクトが見つかりません")
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "プロジェクトの読み込みに失敗しました"
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "プロジェクトの読み込みに失敗しました"
       setError(errorMessage)
       toast.error(errorMessage)
     } finally {
@@ -86,20 +99,29 @@ export function useProject(projectId?: string) {
     }
   }, [])
 
-  const updateProject = useCallback(async (updates: Prisma.ProjectUpdateInput) => {
-    if (!project?.id) return
+  const updateProject = useCallback(
+    async (updates: Prisma.ProjectUpdateInput) => {
+      if (!project?.id) return
 
-    try {
-      const updatedProject = await window.electronAPI.updateProject(project.id, updates)
-      setProject(prev => prev ? { ...prev, ...updatedProject } : null)
-      return updatedProject
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "プロジェクトの更新に失敗しました"
-      setError(errorMessage)
-      toast.error(errorMessage)
-      throw err
-    }
-  }, [project])
+      try {
+        const updatedProject = await window.electronAPI.updateProject(
+          project.id,
+          updates
+        )
+        setProject((prev) => (prev ? { ...prev, ...updatedProject } : null))
+        return updatedProject
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "プロジェクトの更新に失敗しました"
+        setError(errorMessage)
+        toast.error(errorMessage)
+        throw err
+      }
+    },
+    [project]
+  )
 
   const deleteProject = useCallback(async () => {
     if (!project) return
@@ -109,7 +131,8 @@ export function useProject(projectId?: string) {
       setProject(null)
       toast.success("プロジェクトを削除しました")
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "プロジェクトの削除に失敗しました"
+      const errorMessage =
+        err instanceof Error ? err.message : "プロジェクトの削除に失敗しました"
       setError(errorMessage)
       toast.error(errorMessage)
       throw err
@@ -139,6 +162,6 @@ export function useProject(projectId?: string) {
     updateProject,
     deleteProject,
     refreshProject,
-    setProject
+    setProject,
   }
 }

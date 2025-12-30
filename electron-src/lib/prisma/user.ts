@@ -50,7 +50,7 @@ export const createUser = async (userData: {
 
 export const verifyPasscode = async (
   userId: string,
-  passcode: string,
+  passcode: string
 ): Promise<boolean> => {
   try {
     const user = await prisma.user.findUnique({
@@ -92,7 +92,7 @@ export const updateUser = async (
 export const updateUserPasscode = async (
   userId: string,
   passcode?: string,
-  passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric",
+  passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
 ): Promise<User> => {
   try {
     const hashedPasscode =

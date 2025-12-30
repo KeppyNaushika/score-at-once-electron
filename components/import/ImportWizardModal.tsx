@@ -71,9 +71,9 @@ export function ImportWizardModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 p-0">
         {/* ヘッダー */}
-        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+        <DialogHeader className="bg-muted/30 border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold">
               プロジェクトインポート
@@ -84,14 +84,15 @@ export function ImportWizardModal({
           <div className="flex items-center justify-center gap-1 pt-4">
             {effectiveSteps.map((step, index) => {
               const isActive = step === state.currentStep
-              const isCompleted = effectiveSteps.indexOf(step) < effectiveStepIndex
+              const isCompleted =
+                effectiveSteps.indexOf(step) < effectiveStepIndex
 
               return (
                 <div key={step} className="flex items-center">
                   {index > 0 && (
                     <div
                       className={cn(
-                        "w-12 h-0.5 mx-1 transition-colors",
+                        "mx-1 h-0.5 w-12 transition-colors",
                         isCompleted ? "bg-primary" : "bg-muted-foreground/20"
                       )}
                     />
@@ -99,17 +100,16 @@ export function ImportWizardModal({
                   <div className="flex flex-col items-center gap-1">
                     <div
                       className={cn(
-                        "flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium transition-all",
-                        isActive && "bg-primary text-primary-foreground ring-4 ring-primary/20",
+                        "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all",
+                        isActive &&
+                          "bg-primary text-primary-foreground ring-primary/20 ring-4",
                         isCompleted && "bg-primary text-primary-foreground",
-                        !isActive && !isCompleted && "bg-muted text-muted-foreground"
+                        !isActive &&
+                          !isCompleted &&
+                          "bg-muted text-muted-foreground"
                       )}
                     >
-                      {isCompleted ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        index + 1
-                      )}
+                      {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
                     </div>
                     <span
                       className={cn(
@@ -129,27 +129,29 @@ export function ImportWizardModal({
 
         {/* エラー表示 */}
         {state.error && (
-          <div className="mx-6 mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <div className="bg-destructive/10 border-destructive/20 mx-6 mt-4 rounded-lg border p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
+              <AlertCircle className="text-destructive mt-0.5 h-5 w-5 flex-shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-destructive">エラー</p>
-                <p className="text-sm text-destructive/80 mt-1">{state.error}</p>
+                <p className="text-destructive text-sm font-medium">エラー</p>
+                <p className="text-destructive/80 mt-1 text-sm">
+                  {state.error}
+                </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={wizard.clearError}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 -mr-2 -mt-2"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 -mt-2 -mr-2"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
           </div>
         )}
 
         {/* ステップコンテンツ */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 min-h-[400px]">
+        <div className="min-h-[400px] flex-1 overflow-y-auto px-6 py-6">
           {state.currentStep === "file_select" && (
             <FileSelectStep wizard={wizard} />
           )}
@@ -163,19 +165,23 @@ export function ImportWizardModal({
             <ConflictResolveStep wizard={wizard} />
           )}
           {state.currentStep === "execute" && (
-            <ExecuteStep wizard={wizard} onComplete={onComplete} onClose={onClose} />
+            <ExecuteStep
+              wizard={wizard}
+              onComplete={onComplete}
+              onClose={onClose}
+            />
           )}
         </div>
 
         {/* フッター */}
-        <div className="flex justify-between items-center px-6 py-4 border-t bg-muted/30">
+        <div className="bg-muted/30 flex items-center justify-between border-t px-6 py-4">
           <Button
             variant="ghost"
             onClick={wizard.goBack}
             disabled={state.currentStep === "file_select" || state.isProcessing}
             className="gap-2"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="h-4 w-4" />
             戻る
           </Button>
           <Button

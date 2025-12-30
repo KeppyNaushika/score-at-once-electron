@@ -13,7 +13,14 @@ interface TestImageProps {
   calculatedCellHeight: number // 親から渡された計算済み高さ
 }
 
-function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerRef, calculatedCellHeight }: TestImageProps) {
+function TestImage({
+  index,
+  isColumnLayout,
+  itemsPerRow,
+  aspectRatio,
+  containerRef,
+  calculatedCellHeight,
+}: TestImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const parentRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
@@ -46,7 +53,8 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
       calculatedCellWidth = cellHeight * aspectRatio
     } else {
       // 行レイアウト: 幅を均等分割
-      const availableWidth = containerWidth - padding * 2 - gap * (itemsPerRow - 1)
+      const availableWidth =
+        containerWidth - padding * 2 - gap * (itemsPerRow - 1)
       calculatedCellWidth = availableWidth / itemsPerRow
       cellHeight = calculatedCellWidth / aspectRatio
     }
@@ -78,10 +86,25 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
       ctx.fillStyle = "#000"
       ctx.font = "12px sans-serif"
       ctx.textAlign = "center"
-      ctx.fillText(`C:${canvas.width.toFixed(0)}x${canvas.height.toFixed(0)}`, canvas.width / 2, canvas.height / 2 - 8)
-      ctx.fillText(`P:${parentWidth.toFixed(0)}x${parentHeight.toFixed(0)}`, canvas.width / 2, canvas.height / 2 + 8)
+      ctx.fillText(
+        `C:${canvas.width.toFixed(0)}x${canvas.height.toFixed(0)}`,
+        canvas.width / 2,
+        canvas.height / 2 - 8
+      )
+      ctx.fillText(
+        `P:${parentWidth.toFixed(0)}x${parentHeight.toFixed(0)}`,
+        canvas.width / 2,
+        canvas.height / 2 + 8
+      )
     }
-  }, [index, isColumnLayout, itemsPerRow, aspectRatio, containerRef, calculatedCellHeight])
+  }, [
+    index,
+    isColumnLayout,
+    itemsPerRow,
+    aspectRatio,
+    containerRef,
+    calculatedCellHeight,
+  ])
 
   // itemsPerRow変更時に再計算（タイミングを調整）
   useEffect(() => {
@@ -100,25 +123,30 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
 
   // 列レイアウト時は明示的に高さを設定
   const cellStyle = isColumnLayout
-    ? { height: `${calculatedCellHeight}px`, maxHeight: `${calculatedCellHeight}px`, overflow: "hidden" }
+    ? {
+        height: `${calculatedCellHeight}px`,
+        maxHeight: `${calculatedCellHeight}px`,
+        overflow: "hidden",
+      }
     : {}
 
   // canvas の CSS サイズを明示的に設定（ピクセルバッファサイズと一致させる）
   const canvasStyle = isColumnLayout
-    ? { width: canvasCssSize.width, height: canvasCssSize.height, flexShrink: 0 }
+    ? {
+        width: canvasCssSize.width,
+        height: canvasCssSize.height,
+        flexShrink: 0,
+      }
     : { width: "100%" }
 
   return (
     <div
       ref={parentRef}
-      className="flex flex-col gap-0.5 border-2 border-gray-300 bg-white pt-1 px-1 pb-0"
+      className="flex flex-col gap-0.5 border-2 border-gray-300 bg-white px-1 pt-1 pb-0"
       style={cellStyle}
     >
-      <canvas
-        ref={canvasRef}
-        style={canvasStyle}
-      />
-      <div className="text-[10px] text-gray-500 whitespace-nowrap flex-shrink-0 truncate">
+      <canvas ref={canvasRef} style={canvasStyle} />
+      <div className="flex-shrink-0 truncate text-[10px] whitespace-nowrap text-gray-500">
         #{index} C:{dimensions.width.toFixed(0)}x{dimensions.height.toFixed(0)}
       </div>
     </div>
@@ -126,14 +154,16 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
 }
 
 export default function GridLayoutDebugPage() {
-  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>("right-down")
+  const [layoutDirection, setLayoutDirection] =
+    useState<LayoutDirection>("right-down")
   const [itemsPerRow, setItemsPerRow] = useState(5)
   const [itemCount, setItemCount] = useState(15)
   const [aspectRatio, setAspectRatio] = useState(2) // 横長
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
 
-  const isColumnLayout = layoutDirection === "down-right" || layoutDirection === "down-left"
+  const isColumnLayout =
+    layoutDirection === "down-right" || layoutDirection === "down-left"
 
   // コンテナサイズを監視
   useEffect(() => {
@@ -159,7 +189,8 @@ export default function GridLayoutDebugPage() {
   const gap = 4 // gap-1 = 4px
   const padding = 2 // p-0.5 = 2px
   const calculatedCellHeight = isColumnLayout
-    ? (containerSize.height - padding * 2 - gap * (itemsPerRow - 1)) / itemsPerRow
+    ? (containerSize.height - padding * 2 - gap * (itemsPerRow - 1)) /
+      itemsPerRow
     : 0
 
   const effectiveGridSize = {
@@ -177,7 +208,9 @@ export default function GridLayoutDebugPage() {
           <label className="block text-sm font-medium">Layout Direction</label>
           <select
             value={layoutDirection}
-            onChange={(e) => setLayoutDirection(e.target.value as LayoutDirection)}
+            onChange={(e) =>
+              setLayoutDirection(e.target.value as LayoutDirection)
+            }
             className="mt-1 rounded border p-2"
           >
             <option value="right-down">右→下 (Row)</option>
@@ -188,7 +221,9 @@ export default function GridLayoutDebugPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Items Per {isColumnLayout ? "Column" : "Row"}</label>
+          <label className="block text-sm font-medium">
+            Items Per {isColumnLayout ? "Column" : "Row"}
+          </label>
           <input
             type="range"
             min="1"
@@ -214,7 +249,9 @@ export default function GridLayoutDebugPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium">Aspect Ratio (W/H)</label>
+          <label className="block text-sm font-medium">
+            Aspect Ratio (W/H)
+          </label>
           <input
             type="range"
             min="0.5"
@@ -230,8 +267,12 @@ export default function GridLayoutDebugPage() {
 
       {/* デバッグ情報 */}
       <div className="mb-4 rounded bg-blue-50 p-2 text-sm">
-        <p>Container: {containerSize.width}x{containerSize.height}</p>
-        <p>Grid: {effectiveGridSize.columns} cols x {effectiveGridSize.rows} rows</p>
+        <p>
+          Container: {containerSize.width}x{containerSize.height}
+        </p>
+        <p>
+          Grid: {effectiveGridSize.columns} cols x {effectiveGridSize.rows} rows
+        </p>
         <p>isColumnLayout: {String(isColumnLayout)}</p>
         <p>calculatedCellHeight: {calculatedCellHeight.toFixed(1)}px</p>
       </div>
@@ -239,8 +280,10 @@ export default function GridLayoutDebugPage() {
       {/* グリッドコンテナ */}
       <div
         ref={containerRef}
-        className={`flex-1 min-h-0 border-2 border-blue-500 ${
-          isColumnLayout ? "overflow-x-auto overflow-y-hidden" : "overflow-y-auto"
+        className={`min-h-0 flex-1 border-2 border-blue-500 ${
+          isColumnLayout
+            ? "overflow-x-auto overflow-y-hidden"
+            : "overflow-y-auto"
         }`}
       >
         <div
@@ -254,7 +297,7 @@ export default function GridLayoutDebugPage() {
               : "none",
             gridAutoRows: "auto",
             gridAutoColumns: isColumnLayout
-              ? "auto"  // minmax(200px, max-content)から変更
+              ? "auto" // minmax(200px, max-content)から変更
               : undefined,
             gridAutoFlow: isColumnLayout ? "column" : "row",
             width: isColumnLayout ? "max-content" : "100%",

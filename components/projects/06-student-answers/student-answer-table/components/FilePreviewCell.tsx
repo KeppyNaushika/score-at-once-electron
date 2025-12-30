@@ -23,11 +23,11 @@ export function FilePreviewCell({
   allowOverwrite?: boolean
 }) {
   const [nameRegionPreview, setNameRegionPreview] = useState<string | null>(
-    null,
+    null
   )
   const [isNameRegionLoading, setIsNameRegionLoading] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(
-    file.preview || null,
+    file.preview || null
   )
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)

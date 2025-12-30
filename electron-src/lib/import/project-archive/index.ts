@@ -28,7 +28,7 @@ import type {
  * @returns 解析結果
  */
 export async function analyzeArchive(
-  options: AnalyzeArchiveOptions,
+  options: AnalyzeArchiveOptions
 ): Promise<AnalyzeArchiveResult> {
   try {
     // マニフェストのみを読み込む
@@ -69,7 +69,7 @@ export async function analyzeArchive(
  * @returns インポート結果
  */
 export async function importAsNew(
-  options: ImportAsNewOptions,
+  options: ImportAsNewOptions
 ): Promise<ImportAsNewResult> {
   let tempDir: string | null = null
 
@@ -119,9 +119,7 @@ export async function importAsNew(
     return {
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : "インポートに失敗しました",
+        error instanceof Error ? error.message : "インポートに失敗しました",
     }
   } finally {
     // 一時ディレクトリをクリーンアップ

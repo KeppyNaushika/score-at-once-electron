@@ -26,10 +26,7 @@ export function registerArchiveHandlers(): void {
   // エクスポート
   ipcMain.handle(
     "archive:exportProject",
-    async (
-      _event,
-      options: { projectId: string; outputPath?: string },
-    ) => {
+    async (_event, options: { projectId: string; outputPath?: string }) => {
       try {
         return await exportProject(options)
       } catch (error) {
@@ -42,7 +39,7 @@ export function registerArchiveHandlers(): void {
               : "エクスポートに失敗しました",
         }
       }
-    },
+    }
   )
 
   // エクスポート保存先選択ダイアログ
@@ -61,7 +58,7 @@ export function registerArchiveHandlers(): void {
               : "ダイアログ表示に失敗しました",
         }
       }
-    },
+    }
   )
 
   // インポートファイル選択ダイアログ
@@ -106,7 +103,7 @@ export function registerArchiveHandlers(): void {
               : "アーカイブ解析に失敗しました",
         }
       }
-    },
+    }
   )
 
   // 新規作成インポート
@@ -120,12 +117,10 @@ export function registerArchiveHandlers(): void {
         return {
           success: false,
           error:
-            error instanceof Error
-              ? error.message
-              : "インポートに失敗しました",
+            error instanceof Error ? error.message : "インポートに失敗しました",
         }
       }
-    },
+    }
   )
 
   // 競合検出
@@ -133,7 +128,7 @@ export function registerArchiveHandlers(): void {
     "archive:detectConflicts",
     async (
       _event,
-      options: { archivePath: string; matchingConfig: MatchingConfig },
+      options: { archivePath: string; matchingConfig: MatchingConfig }
     ) => {
       let tempDir: string | null = null
 
@@ -148,7 +143,7 @@ export function registerArchiveHandlers(): void {
         // 競合検出
         const result = await detectAllConflicts(
           extractResult.data,
-          options.matchingConfig,
+          options.matchingConfig
         )
 
         return result
@@ -158,16 +153,14 @@ export function registerArchiveHandlers(): void {
           success: false,
           results: [],
           error:
-            error instanceof Error
-              ? error.message
-              : "競合検出に失敗しました",
+            error instanceof Error ? error.message : "競合検出に失敗しました",
         }
       } finally {
         if (tempDir) {
           cleanupTempDir(tempDir)
         }
       }
-    },
+    }
   )
 
   // マージインポート
@@ -179,7 +172,7 @@ export function registerArchiveHandlers(): void {
         archivePath: string
         matchingConfig: MatchingConfig
         conflictResolutions: ConflictResolutions
-      },
+      }
     ) => {
       let tempDir: string | null = null
 
@@ -195,7 +188,7 @@ export function registerArchiveHandlers(): void {
         const result = await executeMergeImport(
           extractResult.data,
           options.matchingConfig,
-          options.conflictResolutions,
+          options.conflictResolutions
         )
 
         return result
@@ -213,7 +206,7 @@ export function registerArchiveHandlers(): void {
           cleanupTempDir(tempDir)
         }
       }
-    },
+    }
   )
 
   console.log("Archive handlers registered")

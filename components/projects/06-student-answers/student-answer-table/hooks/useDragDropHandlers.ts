@@ -24,7 +24,11 @@ interface UseDragDropHandlersParams {
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
+    changedFiles: Array<{
+      fileId: string
+      fromState: FileState
+      toState: FileState
+    }>
   ) => void
   setActiveFile: (file: UnifiedFile | null) => void
   setIsDraggingFromTrash: (isDragging: boolean) => void
@@ -55,10 +59,10 @@ export function useDragDropHandlers({
       const activeId = active.id.toString()
 
       const activeFileFromEnabled = getEnabledFiles().find(
-        (f) => f.id === activeId,
+        (f) => f.id === activeId
       )
       const activeFileFromDisabled = getDisabledFiles().find(
-        (f) => f.id === activeId,
+        (f) => f.id === activeId
       )
 
       if (activeFileFromEnabled) {
@@ -69,7 +73,7 @@ export function useDragDropHandlers({
         setIsDraggingFromTrash(true)
       }
     },
-    [getEnabledFiles, getDisabledFiles, setActiveFile, setIsDraggingFromTrash],
+    [getEnabledFiles, getDisabledFiles, setActiveFile, setIsDraggingFromTrash]
   )
 
   const handleDragEnd = useCallback(
@@ -119,7 +123,7 @@ export function useDragDropHandlers({
           const reorderedFileIds = arrayMove(
             newFiles.map((f) => f.id),
             oldIndex,
-            newIndex,
+            newIndex
           )
 
           // 2. 各位置に対して、新しいfileIdと元の論理位置を組み合わせ
@@ -149,7 +153,7 @@ export function useDragDropHandlers({
             const currentFileStates = fileStatesRef.current
             const changedFiles = compareFileStates(
               initialFileStatesRef.current,
-              currentFileStates,
+              currentFileStates
             )
 
             // 変更されたファイル情報を一括で親に渡す
@@ -161,7 +165,7 @@ export function useDragDropHandlers({
                 `${changedFiles.length}件の答案配置を変更しました`,
                 {
                   description: "「変更を反映」ボタンで確定してください",
-                },
+                }
               )
             } else {
               toast.info("元の位置に戻されました")
@@ -189,7 +193,7 @@ export function useDragDropHandlers({
       setIsDraggingFromTrash,
       fileStatesRef,
       initialFileStatesRef,
-    ],
+    ]
   )
 
   return {

@@ -76,7 +76,9 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
   } = useDrawingAnnotations()
 
   // ローカル状態でのアノテーション管理（編集中のリアルタイム更新用）
-  const [localAnnotations, setLocalAnnotations] = useState<DrawingAnnotation[]>([])
+  const [localAnnotations, setLocalAnnotations] = useState<DrawingAnnotation[]>(
+    []
+  )
 
   // マウスイベントの状態をrefで管理（循環参照を避けるため）
   const mouseStateRef = useRef<{
@@ -97,7 +99,10 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
   // questionScoreId変更時の手動読み込み
   useEffect(() => {
     if (questionScoreId) {
-      console.log('UnifiedDrawingCanvas: questionScoreId changed, loading:', questionScoreId)
+      console.log(
+        "UnifiedDrawingCanvas: questionScoreId changed, loading:",
+        questionScoreId
+      )
       loadAnnotations(questionScoreId)
     }
   }, [questionScoreId, loadAnnotations])

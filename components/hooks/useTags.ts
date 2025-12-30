@@ -18,7 +18,7 @@ const defaultSuggestions: ReactTagType[] = [
 
 export const useTags = (
   initialTags: ReactTagType[] = [],
-  suggestionsList: ReactTagType[] = defaultSuggestions,
+  suggestionsList: ReactTagType[] = defaultSuggestions
 ) => {
   const [tags, setTags] = useState<ReactTagType[]>(initialTags)
   const [suggestions] = useState<ReactTagType[]>(suggestionsList)
@@ -42,7 +42,7 @@ export const useTags = (
         return newTags
       })
     },
-    [],
+    []
   )
 
   // 必要に応じてタグを初期化/リセットする関数

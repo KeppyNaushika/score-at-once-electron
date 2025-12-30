@@ -117,7 +117,7 @@ export function useStudentAnswerTableLogic({
         // TODO: エラー通知を追加
       }
     },
-    [onReloadData],
+    [onReloadData]
   )
 
   // ============================================================================
@@ -174,7 +174,7 @@ export function useStudentAnswerTableLogic({
   const handleUploadModalOpen = (
     position: number,
     studentName: string | undefined,
-    pageNumber: number | undefined,
+    pageNumber: number | undefined
   ) => {
     setUploadModalState({
       isOpen: true,
@@ -193,7 +193,7 @@ export function useStudentAnswerTableLogic({
     console.log(
       `Uploading to position ${uploadModalState.position}:`,
       file.name,
-      pageNumber,
+      pageNumber
     )
     setUploadModalState({ isOpen: false })
   }

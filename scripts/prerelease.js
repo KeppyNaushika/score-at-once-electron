@@ -6,18 +6,22 @@ require("dotenv").config()
 async function createPrerelease(prereleaseType) {
   let versionCommitHash = null
   let tagName = null
-  
+
   try {
     console.log(`🚀 Creating pre-release (${prereleaseType})...`)
 
     // 現在のコミットハッシュを保存（ロールバック用）
-    const _originalCommit = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
+    const _originalCommit = execSync("git rev-parse HEAD", {
+      encoding: "utf-8",
+    }).trim()
 
     // Bump version with prerelease
     execSync(`npm version pre${prereleaseType}`, { stdio: "inherit" })
 
     // バージョンコミットのハッシュとタグ名を保存
-    versionCommitHash = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
+    versionCommitHash = execSync("git rev-parse HEAD", {
+      encoding: "utf-8",
+    }).trim()
     const packageJson = require("../package.json")
     const newVersion = packageJson.version
     tagName = `v${newVersion}`
@@ -32,23 +36,21 @@ async function createPrerelease(prereleaseType) {
     // 全て成功したら最後にプッシュ
     execSync("git push", { stdio: "inherit" })
     execSync("git push --tags", { stdio: "inherit" })
-    
   } catch (error) {
     console.error("❌ Pre-release failed:", error.message)
-    
+
     // ビルド失敗時のクリーンアップ
     if (versionCommitHash && tagName) {
       console.log("🧹 Cleaning up failed pre-release...")
-      
+
       try {
         // ローカルタグを削除
         execSync(`git tag -d ${tagName}`, { stdio: "ignore" })
         console.log(`✅ Deleted local tag: ${tagName}`)
-        
+
         // バージョンコミットを取り消し（HEADを一つ前に戻す）
         execSync("git reset --hard HEAD~1", { stdio: "inherit" })
         console.log("✅ Reverted version commit")
-        
       } catch (cleanupError) {
         console.error("⚠️ Cleanup failed:", cleanupError.message)
         console.log("手動でのクリーンアップが必要です:")
@@ -56,7 +58,7 @@ async function createPrerelease(prereleaseType) {
         console.log("  git reset --hard HEAD~1")
       }
     }
-    
+
     process.exit(1)
   }
 }
@@ -143,22 +145,30 @@ async function createPrereleaseGitHub(version) {
     console.log("🎉 Creating GitHub pre-release...")
 
     const tagName = `v${version}`
-    
+
     // リリースノートをファイルに書き出し
     const tempNotesFile = `temp-notes-${version}.md`
     fs.writeFileSync(tempNotesFile, releaseNotes)
-    
+
     try {
       // 個別にコマンドを構築してクォート問題を回避
       const titleText = `一括採点 ${tagName} (Pre-release)`
-      
-      execSync([
-        "gh", "release", "create", tagName,
-        ...archives,
-        "--prerelease",
-        "--title", `"${titleText}"`,
-        "--notes-file", tempNotesFile
-      ].join(" "), { stdio: "inherit" })
+
+      execSync(
+        [
+          "gh",
+          "release",
+          "create",
+          tagName,
+          ...archives,
+          "--prerelease",
+          "--title",
+          `"${titleText}"`,
+          "--notes-file",
+          tempNotesFile,
+        ].join(" "),
+        { stdio: "inherit" }
+      )
     } finally {
       // 一時ファイルを削除
       if (fs.existsSync(tempNotesFile)) {
@@ -170,7 +180,7 @@ async function createPrereleaseGitHub(version) {
 
     // リリースURLを取得
     const repoInfo = JSON.parse(
-      execSync("gh repo view --json owner,name", { encoding: "utf-8" }),
+      execSync("gh repo view --json owner,name", { encoding: "utf-8" })
     )
     const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`
 

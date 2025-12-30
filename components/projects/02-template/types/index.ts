@@ -190,11 +190,11 @@ export interface UseImageCanvasInteractionProps {
   areas: CropRegionArea[]
   onAddAreaByDrag: (
     type: import("@/types/common.types").CropRegionAreaType,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (
     index: number,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   zoom: number
 }

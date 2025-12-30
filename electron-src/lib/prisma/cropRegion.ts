@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // CropRegion を作成
 export const createCropRegion = async (
-  data: Prisma.CropRegionUncheckedCreateInput,
+  data: Prisma.CropRegionUncheckedCreateInput
 ) => {
   if (!data.projectPageId) {
     throw new Error("projectPageId is required to create a crop region.")
@@ -16,7 +16,7 @@ export const createCropRegion = async (
 
   if (!projectPage) {
     throw new Error(
-      `Project page not found for crop region creation (id: ${data.projectPageId}).`,
+      `Project page not found for crop region creation (id: ${data.projectPageId}).`
     )
   }
 
@@ -54,7 +54,7 @@ export const createCropRegion = async (
 
 // 複数の CropRegion を作成
 export const createManyCropRegions = async (
-  data: Prisma.CropRegionCreateManyInput[],
+  data: Prisma.CropRegionCreateManyInput[]
 ) => {
   return prisma.cropRegion.createMany({
     data,
@@ -64,7 +64,7 @@ export const createManyCropRegions = async (
 // CropRegion を更新
 export const updateCropRegion = async (
   id: string,
-  data: Prisma.CropRegionUpdateInput,
+  data: Prisma.CropRegionUpdateInput
 ) => {
   return prisma.cropRegion.update({
     where: { id },
@@ -90,10 +90,10 @@ export const deleteCropRegion = async (id: string) => {
 // プロジェクトIDで CropRegion を取得
 export const getCropRegionsByProjectId = async (projectId: string) => {
   const regions = await prisma.cropRegion.findMany({
-    where: { 
+    where: {
       projectPage: {
-        projectId: projectId
-      }
+        projectId: projectId,
+      },
     },
     include: {
       projectPage: true, // projectPage情報を追加
@@ -113,26 +113,30 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
   })
 
   // orderIndexがnullの領域があった場合、自動で設定する
-  const regionsWithNullOrder = regions.filter(region => region.orderIndex === null)
+  const regionsWithNullOrder = regions.filter(
+    (region) => region.orderIndex === null
+  )
   if (regionsWithNullOrder.length > 0) {
-    console.log(`Found ${regionsWithNullOrder.length} regions with null orderIndex, fixing...`)
-    
+    console.log(
+      `Found ${regionsWithNullOrder.length} regions with null orderIndex, fixing...`
+    )
+
     // orderIndex順で並べ替え済みの結果を使用してorderIndexを設定
-    const updates = regions.map((region, index) => 
+    const updates = regions.map((region, index) =>
       prisma.cropRegion.update({
         where: { id: region.id },
-        data: { orderIndex: index }
+        data: { orderIndex: index },
       })
     )
-    
+
     await Promise.all(updates)
-    
+
     // 更新後のデータを再取得
     return await prisma.cropRegion.findMany({
-      where: { 
+      where: {
         projectPage: {
-          projectId: projectId
-        }
+          projectId: projectId,
+        },
       },
       include: {
         projectPage: true,
@@ -159,13 +163,15 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
  * プロジェクトのQUESTION_ANSWER型領域のみを順序付きで取得（採点画面専用）
  * フィルタリングを DB レベルで行うことで正しい順序を保持
  */
-export const getQuestionAnswerRegionsByProjectId = async (projectId: string) => {
+export const getQuestionAnswerRegionsByProjectId = async (
+  projectId: string
+) => {
   const regions = await prisma.cropRegion.findMany({
-    where: { 
+    where: {
       projectPage: {
-        projectId: projectId
+        projectId: projectId,
       },
-      type: "QUESTION_ANSWER" // DB レベルでフィルタリング
+      type: "QUESTION_ANSWER", // DB レベルでフィルタリング
     },
     include: {
       projectPage: true,
@@ -185,20 +191,24 @@ export const getQuestionAnswerRegionsByProjectId = async (projectId: string) => 
   })
 
   // orderIndexがnullの領域があった場合、自動で設定する
-  const regionsWithNullOrder = regions.filter(region => region.orderIndex === null)
+  const regionsWithNullOrder = regions.filter(
+    (region) => region.orderIndex === null
+  )
   if (regionsWithNullOrder.length > 0) {
-    console.log(`Found ${regionsWithNullOrder.length} question answer regions with null orderIndex, fixing...`)
-    
+    console.log(
+      `Found ${regionsWithNullOrder.length} question answer regions with null orderIndex, fixing...`
+    )
+
     // 同じ修正ロジック
     for (let i = 0; i < regionsWithNullOrder.length; i++) {
       const region = regionsWithNullOrder[i]
       const newOrderIndex = regions.length + i // 既存の最大値の後に追加
-      
+
       await prisma.cropRegion.update({
         where: { id: region.id },
-        data: { orderIndex: newOrderIndex }
+        data: { orderIndex: newOrderIndex },
       })
-      
+
       region.orderIndex = newOrderIndex
     }
   }
@@ -224,13 +234,13 @@ export const getCropRegionById = async (id: string) => {
 
 // 複数の CropRegion の順序を一括更新
 export const updateCropRegionOrders = async (
-  updates: Array<{ id: string; orderIndex: number }>,
+  updates: Array<{ id: string; orderIndex: number }>
 ) => {
   const updatePromises = updates.map((update) =>
     prisma.cropRegion.update({
       where: { id: update.id },
       data: { orderIndex: update.orderIndex },
-    }),
+    })
   )
 
   return Promise.all(updatePromises)

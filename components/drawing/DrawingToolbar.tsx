@@ -3,20 +3,20 @@
  * @description 統合描画システム用のツールバー（ツール選択・設定）
  */
 
-'use client'
+"use client"
 
-import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import React from "react"
+import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select"
 import {
   MousePointer,
   Type,
@@ -24,11 +24,11 @@ import {
   Square,
   Circle,
   Trash2,
-  RotateCcw
-} from 'lucide-react'
+  RotateCcw,
+} from "lucide-react"
 
-import type { DrawingTool } from '@/hooks/useDrawingAnnotations'
-import type { LineStyle } from '@/types/drawing-annotation.types'
+import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
+import type { LineStyle } from "@/types/drawing-annotation.types"
 
 /**
  * ツールバーのプロパティ
@@ -70,38 +70,38 @@ export interface DrawingToolbarProps {
  * 描画ツールの定義
  */
 const DRAWING_TOOLS = [
-  { id: 'select', label: '選択', icon: MousePointer },
-  { id: 'text', label: 'テキスト', icon: Type },
-  { id: 'line', label: '直線', icon: Minus },
-  { id: 'rectangle', label: '長方形', icon: Square },
-  { id: 'ellipse', label: '楕円', icon: Circle },
+  { id: "select", label: "選択", icon: MousePointer },
+  { id: "text", label: "テキスト", icon: Type },
+  { id: "line", label: "直線", icon: Minus },
+  { id: "rectangle", label: "長方形", icon: Square },
+  { id: "ellipse", label: "楕円", icon: Circle },
 ] as const
 
 /**
  * 線のスタイルの定義
  */
 const LINE_STYLES: { value: LineStyle; label: string }[] = [
-  { value: 'solid', label: '実線' },
-  { value: 'wave', label: '波線' },
-  { value: 'zigzag', label: 'ジグザグ' },
-  { value: 'double', label: '二重線' },
-  { value: 'arrow', label: '矢印' },
-  { value: 'both_arrow', label: '両矢印' },
+  { value: "solid", label: "実線" },
+  { value: "wave", label: "波線" },
+  { value: "zigzag", label: "ジグザグ" },
+  { value: "double", label: "二重線" },
+  { value: "arrow", label: "矢印" },
+  { value: "both_arrow", label: "両矢印" },
 ]
 
 /**
  * プリセット色
  */
 const PRESET_COLORS = [
-  '#ef4444', // red-500
-  '#f97316', // orange-500
-  '#eab308', // yellow-500
-  '#22c55e', // green-500
-  '#3b82f6', // blue-500
-  '#8b5cf6', // violet-500
-  '#ec4899', // pink-500
-  '#000000', // black
-  '#6b7280', // gray-500
+  "#ef4444", // red-500
+  "#f97316", // orange-500
+  "#eab308", // yellow-500
+  "#22c55e", // green-500
+  "#3b82f6", // blue-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#000000", // black
+  "#6b7280", // gray-500
 ]
 
 /**
@@ -122,23 +122,25 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onDelete,
   onClearAll,
   readOnly = false,
-  className = ''
+  className = "",
 }) => {
   return (
-    <div className={`flex items-center gap-2 p-3 bg-white border rounded-lg shadow-sm ${className}`}>
+    <div
+      className={`flex items-center gap-2 rounded-lg border bg-white p-3 shadow-sm ${className}`}
+    >
       {/* ツール選択 */}
       <div className="flex items-center gap-1">
         {DRAWING_TOOLS.map(({ id, label, icon: Icon }) => (
           <Button
             key={id}
-            variant={currentTool === id ? 'default' : 'outline'}
+            variant={currentTool === id ? "default" : "outline"}
             size="sm"
             onClick={() => onToolChange(id as DrawingTool)}
             disabled={readOnly}
             title={label}
-            className="w-8 h-8 p-0"
+            className="h-8 w-8 p-0"
           >
-            <Icon className="w-4 h-4" />
+            <Icon className="h-4 w-4" />
           </Button>
         ))}
       </div>
@@ -156,10 +158,10 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             <button
               key={color}
               type="button"
-              className={`w-6 h-6 rounded border-2 ${
+              className={`h-6 w-6 rounded border-2 ${
                 drawingColor === color
-                  ? 'border-gray-900 ring-2 ring-gray-400'
-                  : 'border-gray-300 hover:border-gray-400'
+                  ? "border-gray-900 ring-2 ring-gray-400"
+                  : "border-gray-300 hover:border-gray-400"
               }`}
               style={{ backgroundColor: color }}
               onClick={() => onColorChange(color)}
@@ -174,7 +176,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             value={drawingColor}
             onChange={(e) => onColorChange(e.target.value)}
             disabled={readOnly}
-            className="w-8 h-6 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed"
+            className="h-6 w-8 cursor-pointer rounded border border-gray-300 disabled:cursor-not-allowed"
           />
         </div>
       </div>
@@ -183,7 +185,10 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
 
       {/* 線の太さ */}
       <div className="flex items-center gap-2">
-        <Label htmlFor="strokeWidth" className="text-sm font-medium whitespace-nowrap">
+        <Label
+          htmlFor="strokeWidth"
+          className="text-sm font-medium whitespace-nowrap"
+        >
           太さ:
         </Label>
         <Input
@@ -194,16 +199,19 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           value={strokeWidth}
           onChange={(e) => onStrokeWidthChange(Number(e.target.value))}
           disabled={readOnly}
-          className="w-16 h-8"
+          className="h-8 w-16"
         />
       </div>
 
       {/* 線のスタイル（直線ツール選択時のみ表示） */}
-      {currentTool === 'line' && (
+      {currentTool === "line" && (
         <>
           <Separator orientation="vertical" className="h-8" />
           <div className="flex items-center gap-2">
-            <Label htmlFor="lineStyle" className="text-sm font-medium whitespace-nowrap">
+            <Label
+              htmlFor="lineStyle"
+              className="text-sm font-medium whitespace-nowrap"
+            >
               線種:
             </Label>
             <Select
@@ -211,7 +219,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
               onValueChange={(value) => onLineStyleChange(value as LineStyle)}
               disabled={readOnly}
             >
-              <SelectTrigger className="w-24 h-8">
+              <SelectTrigger className="h-8 w-24">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -227,11 +235,14 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
       )}
 
       {/* フォントサイズ（テキストツール選択時のみ表示） */}
-      {currentTool === 'text' && (
+      {currentTool === "text" && (
         <>
           <Separator orientation="vertical" className="h-8" />
           <div className="flex items-center gap-2">
-            <Label htmlFor="fontSize" className="text-sm font-medium whitespace-nowrap">
+            <Label
+              htmlFor="fontSize"
+              className="text-sm font-medium whitespace-nowrap"
+            >
               文字:
             </Label>
             <Input
@@ -242,7 +253,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
               value={fontSize}
               onChange={(e) => onFontSizeChange(Number(e.target.value))}
               disabled={readOnly}
-              className="w-16 h-8"
+              className="h-8 w-16"
             />
           </div>
         </>
@@ -259,9 +270,9 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           onClick={onDelete}
           disabled={readOnly || !selectedAnnotationId}
           title="選択中の要素を削除"
-          className="w-8 h-8 p-0"
+          className="h-8 w-8 p-0"
         >
-          <Trash2 className="w-4 h-4" />
+          <Trash2 className="h-4 w-4" />
         </Button>
 
         {/* 全削除 */}
@@ -271,21 +282,21 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           onClick={onClearAll}
           disabled={readOnly}
           title="すべての描画を削除"
-          className="w-8 h-8 p-0"
+          className="h-8 w-8 p-0"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RotateCcw className="h-4 w-4" />
         </Button>
       </div>
 
       {/* 現在の状態表示 */}
       <div className="ml-auto flex items-center gap-2 text-sm text-gray-500">
         {readOnly && (
-          <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+          <span className="rounded bg-gray-100 px-2 py-1 text-xs">
             読み取り専用
           </span>
         )}
         {selectedAnnotationId && (
-          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+          <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
             要素選択中
           </span>
         )}

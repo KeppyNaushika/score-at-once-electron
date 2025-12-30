@@ -150,7 +150,12 @@ export const SHORTCUT_CATEGORIES = {
   },
   view: {
     label: "表示制御",
-    keys: ["view.toggleStudentNames", "view.toggleViewMode", "view.fullView", "view.questionView"] as const,
+    keys: [
+      "view.toggleStudentNames",
+      "view.toggleViewMode",
+      "view.fullView",
+      "view.questionView",
+    ] as const,
     description: "表示の切り替え",
   },
   modal: {

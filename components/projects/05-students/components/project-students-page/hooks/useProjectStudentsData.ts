@@ -1,6 +1,5 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import type {
   ClassGroup,
   GradingDataInfo,
@@ -8,12 +7,15 @@ import type {
   StudentForRemoval,
   StudentStatus,
 } from "@/components/projects/05-students/components/project-students-page/types/project-students-types"
+import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectStudentsDataProps {
   projectId: string
 }
 
-export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProps) {
+export function useProjectStudentsData({
+  projectId,
+}: UseProjectStudentsDataProps) {
   const [loading, setLoading] = useState(true)
   const [students, setStudents] = useState<Student[]>([]) // 順序付き生徒リスト
   const [classes, setClasses] = useState<ClassGroup[]>([]) // フィルタ用学級情報
@@ -54,7 +56,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
 
           // customOrderが未設定の場合はデフォルト順序（追加順など）
           return 0
-        },
+        }
       )
 
       setStudents(sortedStudents)
@@ -76,7 +78,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
 
       // フィルタ用学級リストをセット（表示用のみ、データ構造には影響しない）
       const filterClasses: ClassGroup[] = Array.from(
-        uniqueClasses.values(),
+        uniqueClasses.values()
       ).map((cls) => ({
         ...cls,
         students: [], // 空配列 - フィルタ用なので実際の生徒リストは不要
@@ -97,13 +99,13 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
   // 生徒の状態を更新
   const updateStudentStatus = async (
     studentId: string,
-    newStatus: StudentStatus,
+    newStatus: StudentStatus
   ) => {
     try {
       const result = await window.electronAPI.updateStudentProjectStatus(
         projectId,
         studentId,
-        newStatus,
+        newStatus
       )
       if (!result.success) {
         throw new Error(result.error || "Failed to update student status")
@@ -112,10 +114,8 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
       // 受験生徒リストのステータスを更新
       setStudents((prevStudents) =>
         prevStudents.map((student) =>
-          student.id === studentId
-            ? { ...student, status: newStatus }
-            : student,
-        ),
+          student.id === studentId ? { ...student, status: newStatus } : student
+        )
       )
     } catch (error) {
       console.error("Failed to update student status:", error)
@@ -125,12 +125,12 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
   // 生徒の並び順を更新
   const updateStudentOrders = async (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => {
     try {
       const result = await window.electronAPI.updateStudentOrders(
         projectId,
-        studentOrders,
+        studentOrders
       )
       if (!result.success) {
         throw new Error(result.error || "Failed to update student orders")
@@ -138,7 +138,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
 
       // 成功した場合、受験生徒リストのcustomOrderを更新し、再ソート
       const orderMap = new Map(
-        studentOrders.map((o) => [o.studentId, o.customOrder]),
+        studentOrders.map((o) => [o.studentId, o.customOrder])
       )
 
       setStudents((prevStudents) => {
@@ -170,7 +170,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
   // 生徒選択の変更（SortableStudentTable用）
   const handleStudentSelectionChange = (
     studentId: string,
-    isSelected: boolean,
+    isSelected: boolean
   ) => {
     setSelectedStudentsForRemoval((prev) => {
       const newSet = new Set(prev)
@@ -200,7 +200,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
       const matchesClass =
         selectedClassId === "all" ||
         student.memberships?.some(
-          (membership) => membership.class.id === selectedClassId,
+          (membership) => membership.class.id === selectedClassId
         )
 
       return matchesSearch && matchesStatus && matchesClass
@@ -225,7 +225,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
       const gradingResult =
         await window.electronAPI.checkGradingDataForStudents(
           projectId,
-          studentIds,
+          studentIds
         )
       if (gradingResult.success) {
         setGradingDataInfo({
@@ -248,11 +248,11 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
     try {
       const result = await window.electronAPI.removeStudentsFromProject(
         projectId,
-        studentsToRemove,
+        studentsToRemove
       )
       if (!result.success) {
         throw new Error(
-          result.error || "Failed to remove students from project",
+          result.error || "Failed to remove students from project"
         )
       }
 
@@ -284,23 +284,25 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
     const matchesClass =
       selectedClassId === "all" ||
       student.memberships?.some(
-        (membership) => membership.class.id === selectedClassId,
+        (membership) => membership.class.id === selectedClassId
       )
 
     return matchesSearch && matchesStatus && matchesClass
   })
 
   // 削除用生徒データの作成
-  const studentsForRemovalData: StudentForRemoval[] = studentsToRemove.map((id) => {
-    const student = students.find((s) => s.id === id)
-    return {
-      id,
-      studentId: student?.studentId || "",
-      lastName: student?.lastName || "",
-      firstName: student?.firstName || "",
-      className: student?.memberships?.[0]?.class.name || "未所属",
+  const studentsForRemovalData: StudentForRemoval[] = studentsToRemove.map(
+    (id) => {
+      const student = students.find((s) => s.id === id)
+      return {
+        id,
+        studentId: student?.studentId || "",
+        lastName: student?.lastName || "",
+        firstName: student?.firstName || "",
+        className: student?.memberships?.[0]?.class.name || "未所属",
+      }
     }
-  })
+  )
 
   return {
     loading,

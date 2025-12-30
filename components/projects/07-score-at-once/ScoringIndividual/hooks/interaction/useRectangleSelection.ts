@@ -21,7 +21,7 @@ interface UseRectangleSelectionProps {
     rect:
       | SelectionRectangle
       | null
-      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null)
   ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   setSelectedElementIds: (ids: string[]) => void
@@ -74,7 +74,7 @@ export function useRectangleSelection({
       setLineEditMode,
       setRectangleEditMode,
       clearSelection,
-    ],
+    ]
   )
 
   // 長方形選択の更新 - 関数型更新で最新の状態を使用
@@ -95,7 +95,7 @@ export function useRectangleSelection({
       })
       return true
     },
-    [currentTool, isDrawingSelection, setSelectionRectangle],
+    [currentTool, isDrawingSelection, setSelectionRectangle]
   )
 
   // 長方形選択の完了
@@ -160,19 +160,19 @@ export function useRectangleSelection({
 
               const rectLeft = Math.min(
                 selectionRectangle.x,
-                selectionRectangle.x + selectionRectangle.width,
+                selectionRectangle.x + selectionRectangle.width
               )
               const rectTop = Math.min(
                 selectionRectangle.y,
-                selectionRectangle.y + selectionRectangle.height,
+                selectionRectangle.y + selectionRectangle.height
               )
               const rectRight = Math.max(
                 selectionRectangle.x,
-                selectionRectangle.x + selectionRectangle.width,
+                selectionRectangle.x + selectionRectangle.width
               )
               const rectBottom = Math.max(
                 selectionRectangle.y,
-                selectionRectangle.y + selectionRectangle.height,
+                selectionRectangle.y + selectionRectangle.height
               )
 
               return !(

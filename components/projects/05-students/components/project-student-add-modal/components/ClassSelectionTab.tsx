@@ -36,9 +36,7 @@ export function ClassSelectionTab({
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">利用可能な学級</CardTitle>
-            <CardDescription>
-              追加したい学級を選択してください
-            </CardDescription>
+            <CardDescription>追加したい学級を選択してください</CardDescription>
           </CardHeader>
           <CardContent className="max-h-80 space-y-3 overflow-auto">
             {loading ? (

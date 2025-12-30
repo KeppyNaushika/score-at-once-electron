@@ -21,7 +21,7 @@ export function useNameRegion(projectId: string) {
         const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.projectPageId === projectPage.id,
+            region.projectPageId === projectPage.id
         )
         availability[projectPage.pageNumber] = !!nameRegion
       }
@@ -49,7 +49,7 @@ export function useNameRegion(projectId: string) {
         const projectPages =
           await window.electronAPI.getProjectPagesByProjectId(projectId)
         const projectPage = projectPages.find(
-          (page) => page.pageNumber === pageNumber,
+          (page) => page.pageNumber === pageNumber
         )
 
         if (!projectPage) {
@@ -59,7 +59,7 @@ export function useNameRegion(projectId: string) {
         const nameRegion = cropRegions.find(
           (region) =>
             region.type === "STUDENT_NAME" &&
-            region.projectPageId === projectPage.id,
+            region.projectPageId === projectPage.id
         )
 
         if (!nameRegion || !file.preview) {
@@ -95,7 +95,7 @@ export function useNameRegion(projectId: string) {
               0,
               0,
               regionWidth,
-              regionHeight,
+              regionHeight
             )
 
             // データURLを返す
@@ -112,7 +112,7 @@ export function useNameRegion(projectId: string) {
         return null
       }
     },
-    [projectId],
+    [projectId]
   )
 
   return {

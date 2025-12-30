@@ -20,9 +20,7 @@ export default function PageHeader({
           <div>
             <h1 className="text-xl font-semibold">{title}</h1>
           </div>
-          {helpButton && (
-            <div className="ml-3">{helpButton}</div>
-          )}
+          {helpButton && <div className="ml-3">{helpButton}</div>}
         </div>
         {children && (
           <div className="flex items-center space-x-2">{children}</div>

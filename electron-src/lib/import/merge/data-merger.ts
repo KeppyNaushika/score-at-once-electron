@@ -50,7 +50,7 @@ function createEmptyCounts(): ArchiveDataCounts {
 export async function executeMergeImport(
   data: ExtractedArchiveData,
   config: MatchingConfig,
-  resolutions: ConflictResolutions,
+  resolutions: ConflictResolutions
 ): Promise<MergeImportResult> {
   const warnings: string[] = []
   const counts: MergeCounts = {
@@ -115,14 +115,12 @@ export async function executeMergeImport(
           // 既存データとの競合チェック
           const conflictItem = conflictResult.results
             .find((r) => r.category === "Student")
-            ?.conflictItems.find(
-              (c) => c.importData.id === importStudent.id,
-            )
+            ?.conflictItems.find((c) => c.importData.id === importStudent.id)
 
           if (conflictItem) {
             const resolution = resolveConflict(
               conflictItem,
-              resolutions.Student,
+              resolutions.Student
             )
 
             if (resolution === "import") {
@@ -210,7 +208,9 @@ export async function executeMergeImport(
           })
           idMappings.user[importUser.id] = newId
           counts.created.users++
-          warnings.push(`新規ユーザー "${importUser.name}" のパスコードは空です`)
+          warnings.push(
+            `新規ユーザー "${importUser.name}" のパスコードは空です`
+          )
         } else {
           // ユーザーは基本的に既存を維持
           idMappings.user[importUser.id] = result.existingData.id
@@ -403,7 +403,9 @@ export async function executeMergeImport(
               id: newId,
               cropRegionId: newRegionId,
               studentId: newStudentId,
-              partialScore: qs.partialScore ? parseFloat(qs.partialScore) : null,
+              partialScore: qs.partialScore
+                ? parseFloat(qs.partialScore)
+                : null,
               status: qs.status,
               scoredByUserId: newScoredByUserId,
             },
@@ -517,7 +519,7 @@ export async function executeMergeImport(
  */
 async function copyMergeImages(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newProjectId: string
 ): Promise<void> {
   const dataDir = getDataDirectory()
   const projectDir = path.join(dataDir, "projects", newProjectId)
@@ -537,7 +539,7 @@ async function copyMergeImages(
   // 答案画像
   for (const srcPath of data.answerSheetPaths) {
     const relativePath = srcPath.substring(
-      srcPath.indexOf("answer-sheets") + "answer-sheets".length + 1,
+      srcPath.indexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const destPath = path.join(answerSheetsDir, relativePath)
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
@@ -550,7 +552,7 @@ async function copyMergeImages(
  */
 async function createMergePageImageRecords(
   data: ExtractedArchiveData,
-  idMappings: Record<string, Record<string, string>>,
+  idMappings: Record<string, Record<string, string>>
 ): Promise<void> {
   const dataDir = getDataDirectory()
   const newProjectId = Object.values(idMappings.project)[0]
@@ -572,18 +574,18 @@ async function createMergePageImageRecords(
         "projects",
         newProjectId,
         "master-images",
-        filename,
+        filename
       )
     } else {
       const relativePath = img.imagePath.substring(
-        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1,
+        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
       )
       newImagePath = path.join(
         dataDir,
         "projects",
         newProjectId,
         "answer-sheets",
-        relativePath,
+        relativePath
       )
     }
 

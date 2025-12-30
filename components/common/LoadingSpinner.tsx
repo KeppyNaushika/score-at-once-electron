@@ -34,14 +34,14 @@ const LoadingSpinner = React.memo(
       <div
         className={cn(
           "flex flex-col items-center justify-center p-8",
-          className,
+          className
         )}
       >
         <Loader2 className={cn("mb-2 animate-spin", sizeClasses[size])} />
         {text && <p className="text-muted-foreground text-sm">{text}</p>}
       </div>
     )
-  },
+  }
 )
 
 LoadingSpinner.displayName = "LoadingSpinner"

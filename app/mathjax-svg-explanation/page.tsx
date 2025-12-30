@@ -45,7 +45,9 @@ import { Info, Play, Code, ArrowRight } from "lucide-react"
 
 export default function MathJaxSVGExplanation() {
   const [currentStep, setCurrentStep] = useState(0)
-  const [demoText, setDemoText] = useState("$E = mc^2$ とは **アインシュタイン**の有名な公式です。")
+  const [demoText, setDemoText] = useState(
+    "$E = mc^2$ とは **アインシュタイン**の有名な公式です。"
+  )
   const [stepResults, setStepResults] = useState<Record<number, StepResult>>({})
   const _containerRef = useRef<HTMLDivElement>(null)
 
@@ -53,7 +55,8 @@ export default function MathJaxSVGExplanation() {
     {
       id: 0,
       title: "1. 入力テキストの準備",
-      description: "ユーザーが入力したMarkdown + MathJaxテキストを処理する準備をします",
+      description:
+        "ユーザーが入力したMarkdown + MathJaxテキストを処理する準備をします",
       code: `// ユーザーの入力テキスト
 const inputText = "${demoText}"
 
@@ -70,20 +73,21 @@ const processedText = convertLatexToMarkdown(inputText)
 console.log('処理後:', processedText)`,
       action: () => {
         const processed = demoText
-          .replace(/\\\(/g, '$')
-          .replace(/\\\)/g, '$')
-          .replace(/\\\[/g, '$$')
-          .replace(/\\\]/g, '$$')
-        setStepResults(prev => ({
+          .replace(/\\\(/g, "$")
+          .replace(/\\\)/g, "$")
+          .replace(/\\\[/g, "$$")
+          .replace(/\\\]/g, "$$")
+        setStepResults((prev) => ({
           ...prev,
-          0: { processed, original: demoText }
+          0: { processed, original: demoText },
         }))
-      }
+      },
     },
     {
       id: 1,
       title: "2. ReactMarkdownでHTML変換",
-      description: "Markdown記法を通常のHTMLに変換し、数式部分はMathJax用のマークアップになります",
+      description:
+        "Markdown記法を通常のHTMLに変換し、数式部分はMathJax用のマークアップになります",
       code: `import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeMathjax from 'rehype-mathjax/svg'
@@ -116,22 +120,23 @@ document.body.appendChild(tempDiv)
 const root = renderReactMarkdown(tempDiv, processedText)`,
       action: async () => {
         // 実際のDOM要素を作成してReactMarkdownを描画
-        const tempDiv = document.createElement('div')
-        tempDiv.style.cssText = 'position: absolute; left: -9999px; visibility: hidden; font-size: 16px; line-height: 1;'
+        const tempDiv = document.createElement("div")
+        tempDiv.style.cssText =
+          "position: absolute; left: -9999px; visibility: hidden; font-size: 16px; line-height: 1;"
         tempDiv.innerHTML = `
           <span>E = mc² とは <strong>アインシュタイン</strong>の有名な公式です。</span>
         `
         document.body.appendChild(tempDiv)
-        
+
         setTimeout(() => {
           const htmlContent = tempDiv.innerHTML
-          setStepResults(prev => ({
+          setStepResults((prev) => ({
             ...prev,
-            1: { htmlContent, container: tempDiv }
+            1: { htmlContent, container: tempDiv },
           }))
           document.body.removeChild(tempDiv)
         }, 100)
-      }
+      },
     },
     {
       id: 2,
@@ -169,8 +174,9 @@ async function waitForRenderingComplete(frames = 2): Promise<void> {
 await processMathJax(tempDiv)`,
       action: async () => {
         // MathJax処理のシミュレーション
-        const tempDiv = document.createElement('div')
-        tempDiv.style.cssText = 'position: absolute; left: -9999px; visibility: hidden; font-size: 16px;'
+        const tempDiv = document.createElement("div")
+        tempDiv.style.cssText =
+          "position: absolute; left: -9999px; visibility: hidden; font-size: 16px;"
         tempDiv.innerHTML = `
           <span>
             <mjx-container class="MathJax" jax="SVG">
@@ -184,16 +190,16 @@ await processMathJax(tempDiv)`,
           </span>
         `
         document.body.appendChild(tempDiv)
-        
+
         setTimeout(() => {
           const processedHTML = tempDiv.innerHTML
-          setStepResults(prev => ({
+          setStepResults((prev) => ({
             ...prev,
-            2: { processedHTML, hasMathJax: true }
+            2: { processedHTML, hasMathJax: true },
           }))
           document.body.removeChild(tempDiv)
         }, 100)
-      }
+      },
     },
     {
       id: 3,
@@ -230,14 +236,15 @@ function cleanupElementStyles(container: HTMLElement): void {
 cleanupElementStyles(tempDiv)
 console.log('スタイルクリーンアップ完了')`,
       action: () => {
-        setStepResults(prev => ({
+        setStepResults((prev) => ({
           ...prev,
-          3: { 
+          3: {
             cleaned: true,
-            description: "マージン・パディング・ボーダーを0に設定し、MathJax要素をベースライン配置に変更"
-          }
+            description:
+              "マージン・パディング・ボーダーを0に設定し、MathJax要素をベースライン配置に変更",
+          },
         }))
-      }
+      },
     },
     {
       id: 4,
@@ -284,18 +291,19 @@ console.log('測定サイズ:', size)`,
           boundingHeight: 22,
           scrollWidth: 320,
           scrollHeight: 24,
-          mathJaxHeight: 20
+          mathJaxHeight: 20,
         }
-        setStepResults(prev => ({
+        setStepResults((prev) => ({
           ...prev,
-          4: { size: simulatedSize }
+          4: { size: simulatedSize },
         }))
-      }
+      },
     },
     {
       id: 5,
       title: "6. SVG要素の作成",
-      description: "測定したサイズでSVG要素を作成し、HTMLコンテンツを埋め込みます",
+      description:
+        "測定したサイズでSVG要素を作成し、HTMLコンテンツを埋め込みます",
       code: `// 最適化されたSVG要素を作成
 function createOptimizedSVG(
   htmlContent: string, 
@@ -355,15 +363,16 @@ function createOptimizedSVG(
 const svgElement = createOptimizedSVG(htmlContent, size, 16, '#000000')
 console.log('SVG要素作成完了')`,
       action: () => {
-        setStepResults(prev => ({
+        setStepResults((prev) => ({
           ...prev,
-          5: { 
+          5: {
             svgCreated: true,
             svgSize: { width: 320, height: 24 },
-            description: "SVG要素内にforeignObjectを使ってHTMLコンテンツを埋め込み完了"
-          }
+            description:
+              "SVG要素内にforeignObjectを使ってHTMLコンテンツを埋め込み完了",
+          },
         }))
-      }
+      },
     },
     {
       id: 6,
@@ -430,35 +439,35 @@ const finalCanvas = await renderSvgToCanvas(svgElement, 400, 100)
 console.log('Canvas描画完了:', finalCanvas)`,
       action: () => {
         // 実際にCanvasを作成してデモ
-        const canvas = document.createElement('canvas')
+        const canvas = document.createElement("canvas")
         canvas.width = 320
         canvas.height = 24
-        const ctx = canvas.getContext('2d')!
-        
+        const ctx = canvas.getContext("2d")!
+
         // 背景
-        ctx.fillStyle = '#f8f9fa'
+        ctx.fillStyle = "#f8f9fa"
         ctx.fillRect(0, 0, canvas.width, canvas.height)
-        
+
         // テキスト描画（MathJaxの代替）
-        ctx.fillStyle = '#000000'
-        ctx.font = '16px -apple-system, sans-serif'
-        ctx.textBaseline = 'middle'
-        ctx.fillText('E = mc² とは', 5, 12)
-        
+        ctx.fillStyle = "#000000"
+        ctx.font = "16px -apple-system, sans-serif"
+        ctx.textBaseline = "middle"
+        ctx.fillText("E = mc² とは", 5, 12)
+
         // 太字部分
-        ctx.font = 'bold 16px -apple-system, sans-serif'
-        ctx.fillText('アインシュタイン', 100, 12)
-        
+        ctx.font = "bold 16px -apple-system, sans-serif"
+        ctx.fillText("アインシュタイン", 100, 12)
+
         // 続きのテキスト
-        ctx.font = '16px -apple-system, sans-serif'
-        ctx.fillText('の有名な公式です。', 200, 12)
-        
-        setStepResults(prev => ({
+        ctx.font = "16px -apple-system, sans-serif"
+        ctx.fillText("の有名な公式です。", 200, 12)
+
+        setStepResults((prev) => ({
           ...prev,
-          6: { canvas, completed: true }
+          6: { canvas, completed: true },
         }))
-      }
-    }
+      },
+    },
   ]
 
   const runStep = async (stepId: number) => {
@@ -473,7 +482,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
       const step = steps[i]
       if (step && step.action) {
         await step.action()
-        await new Promise(resolve => setTimeout(resolve, 300))
+        await new Promise((resolve) => setTimeout(resolve, 300))
       }
     }
   }
@@ -483,7 +492,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
       {/* ヘッダー */}
       <div className="border-b bg-white">
         <div className="container mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="mb-2 text-3xl font-bold text-gray-800">
             MathJax → SVG → Canvas 変換プロセス解説
           </h1>
           <p className="text-gray-600">
@@ -494,8 +503,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
 
       {/* メインコンテンツ */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          
+        <div className="grid gap-8 lg:grid-cols-3">
           {/* 左側：ステップリスト */}
           <div className="lg:col-span-1">
             <Card>
@@ -511,27 +519,27 @@ console.log('Canvas描画完了:', finalCanvas)`,
                     <Button
                       key={step.id}
                       variant={currentStep === index ? "default" : "outline"}
-                      className="w-full text-left justify-start"
+                      className="w-full justify-start text-left"
                       onClick={() => {
                         setCurrentStep(index)
                         runStep(index)
                       }}
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-xs bg-gray-200 px-1.5 py-0.5 rounded">
+                        <span className="rounded bg-gray-200 px-1.5 py-0.5 text-xs">
                           {index + 1}
                         </span>
-                        <span className="text-sm truncate">
-                          {step.title.replace(/^\d+\.\s*/, '')}
+                        <span className="truncate text-sm">
+                          {step.title.replace(/^\d+\.\s*/, "")}
                         </span>
                       </span>
                     </Button>
                   ))}
                 </div>
-                
-                <div className="mt-4 pt-4 border-t">
-                  <Button 
-                    onClick={runAllSteps} 
+
+                <div className="mt-4 border-t pt-4">
+                  <Button
+                    onClick={runAllSteps}
                     className="w-full"
                     variant="secondary"
                   >
@@ -541,7 +549,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
                 </div>
               </CardContent>
             </Card>
-            
+
             {/* 入力テキスト設定 */}
             <Card className="mt-4">
               <CardHeader>
@@ -555,7 +563,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
                   rows={3}
                   className="text-sm"
                 />
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 text-xs text-gray-500">
                   $...$ や $$...$$ で数式を記述できます
                 </p>
               </CardContent>
@@ -583,11 +591,11 @@ console.log('Canvas描画完了:', finalCanvas)`,
 
                   {/* コード例 */}
                   <div>
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <h4 className="mb-2 flex items-center gap-2 font-semibold">
                       <Code size={16} />
                       実装コード
                     </h4>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
+                    <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100">
                       <code>{steps[currentStep]?.code}</code>
                     </pre>
                   </div>
@@ -618,26 +626,36 @@ console.log('Canvas描画完了:', finalCanvas)`,
                   {/* 実行結果 */}
                   {stepResults[currentStep] && (
                     <div>
-                      <h4 className="font-semibold mb-2">実行結果</h4>
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="mb-2 font-semibold">実行結果</h4>
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
                         {currentStep === 0 && stepResults[0] && (
                           <div>
-                            <p><strong>元のテキスト:</strong> {stepResults[0].original}</p>
-                            <p><strong>変換後:</strong> {stepResults[0].processed}</p>
+                            <p>
+                              <strong>元のテキスト:</strong>{" "}
+                              {stepResults[0].original}
+                            </p>
+                            <p>
+                              <strong>変換後:</strong>{" "}
+                              {stepResults[0].processed}
+                            </p>
                           </div>
                         )}
                         {currentStep === 1 && stepResults[1] && (
                           <div>
-                            <p><strong>HTMLコンテンツ:</strong></p>
-                            <code className="text-xs block mt-1 bg-white p-2 rounded border">
+                            <p>
+                              <strong>HTMLコンテンツ:</strong>
+                            </p>
+                            <code className="mt-1 block rounded border bg-white p-2 text-xs">
                               {stepResults[1].htmlContent}
                             </code>
                           </div>
                         )}
                         {currentStep === 2 && stepResults[2] && (
                           <div>
-                            <p><strong>MathJax処理後のHTML:</strong></p>
-                            <code className="text-xs block mt-1 bg-white p-2 rounded border">
+                            <p>
+                              <strong>MathJax処理後のHTML:</strong>
+                            </p>
+                            <code className="mt-1 block rounded border bg-white p-2 text-xs">
                               {stepResults[2].processedHTML}
                             </code>
                             <p className="mt-2 text-sm text-green-700">
@@ -655,37 +673,57 @@ console.log('Canvas描画完了:', finalCanvas)`,
                         {currentStep === 4 && stepResults[4] && (
                           <div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><strong>測定幅:</strong> {stepResults[4].size?.width}px</div>
-                              <div><strong>測定高さ:</strong> {stepResults[4].size?.height}px</div>
-                              <div><strong>Bounding幅:</strong> {stepResults[4].size?.boundingWidth}px</div>
-                              <div><strong>Scroll幅:</strong> {stepResults[4].size?.scrollWidth}px</div>
+                              <div>
+                                <strong>測定幅:</strong>{" "}
+                                {stepResults[4].size?.width}px
+                              </div>
+                              <div>
+                                <strong>測定高さ:</strong>{" "}
+                                {stepResults[4].size?.height}px
+                              </div>
+                              <div>
+                                <strong>Bounding幅:</strong>{" "}
+                                {stepResults[4].size?.boundingWidth}px
+                              </div>
+                              <div>
+                                <strong>Scroll幅:</strong>{" "}
+                                {stepResults[4].size?.scrollWidth}px
+                              </div>
                             </div>
                           </div>
                         )}
                         {currentStep === 5 && stepResults[5] && (
                           <div>
-                            <p className="text-sm text-green-700 mb-2">
+                            <p className="mb-2 text-sm text-green-700">
                               ✅ {stepResults[5].description}
                             </p>
                             <div className="text-sm">
-                              <strong>SVGサイズ:</strong> {stepResults[5].svgSize?.width} × {stepResults[5].svgSize?.height}px
+                              <strong>SVGサイズ:</strong>{" "}
+                              {stepResults[5].svgSize?.width} ×{" "}
+                              {stepResults[5].svgSize?.height}px
                             </div>
                           </div>
                         )}
                         {currentStep === 6 && stepResults[6] && (
                           <div>
-                            <p className="text-sm text-green-700 mb-3">
+                            <p className="mb-3 text-sm text-green-700">
                               ✅ Canvas描画完了！
                             </p>
                             {stepResults[6].canvas && (
                               <div>
-                                <p className="text-sm mb-2"><strong>最終結果:</strong></p>
-                                <div className="bg-white p-2 border rounded inline-block">
+                                <p className="mb-2 text-sm">
+                                  <strong>最終結果:</strong>
+                                </p>
+                                <div className="inline-block rounded border bg-white p-2">
                                   <canvas
                                     ref={(canvas) => {
                                       if (canvas && stepResults[6].canvas) {
-                                        const ctx = canvas.getContext('2d')!
-                                        ctx.drawImage(stepResults[6].canvas, 0, 0)
+                                        const ctx = canvas.getContext("2d")!
+                                        ctx.drawImage(
+                                          stepResults[6].canvas,
+                                          0,
+                                          0
+                                        )
                                       }
                                     }}
                                     width="320"
@@ -693,8 +731,9 @@ console.log('Canvas描画完了:', finalCanvas)`,
                                     className="border"
                                   />
                                 </div>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  👆 これが実際にCanvas上に描画されるテキスト画像です
+                                <p className="mt-1 text-xs text-gray-600">
+                                  👆
+                                  これが実際にCanvas上に描画されるテキスト画像です
                                 </p>
                               </div>
                             )}
@@ -714,35 +753,35 @@ console.log('Canvas描画完了:', finalCanvas)`,
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2 text-sm">
-                  <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                  <div className="rounded-full bg-blue-100 px-3 py-1 text-blue-800">
                     1. テキスト準備
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-green-100 px-3 py-1 text-green-800">
                     2. Markdown→HTML
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-purple-100 px-3 py-1 text-purple-800">
                     3. MathJax処理
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-yellow-100 px-3 py-1 text-yellow-800">
                     4. スタイル調整
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-orange-100 px-3 py-1 text-orange-800">
                     5. サイズ測定
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-red-100 px-3 py-1 text-red-800">
                     6. SVG作成
                   </div>
-                  <ArrowRight size={16} className="text-gray-400 my-1" />
-                  <div className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full">
+                  <ArrowRight size={16} className="my-1 text-gray-400" />
+                  <div className="rounded-full bg-gray-100 px-3 py-1 text-gray-800">
                     7. Canvas描画
                   </div>
                 </div>
-                
+
                 <div className="mt-4 text-sm text-gray-600">
                   <p>
                     このプロセスにより、MathJax記法で書かれた数式が高品質なCanvas画像として描画され、

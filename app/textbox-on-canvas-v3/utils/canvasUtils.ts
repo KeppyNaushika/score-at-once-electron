@@ -25,7 +25,7 @@ export function setupDebugPreview(
   svgElement: SVGSVGElement,
   width: number,
   height: number,
-  state: DebugPreviewState,
+  state: DebugPreviewState
 ): void {
   try {
     const svgData = new XMLSerializer().serializeToString(svgElement)
@@ -54,7 +54,7 @@ export async function renderSvgToCanvas(
   x: number,
   y: number,
   textBoxWidth: number,
-  textBoxHeight: number,
+  textBoxHeight: number
 ): Promise<SvgRenderResult> {
   return new Promise((resolve) => {
     try {
@@ -92,7 +92,7 @@ export async function renderSvgToCanvas(
             x + offsetX,
             y + offsetY,
             scaledWidth,
-            scaledHeight,
+            scaledHeight
           )
 
           // デバッグ用赤枠を描画（測定精度確認用）
@@ -101,7 +101,7 @@ export async function renderSvgToCanvas(
             x + offsetX,
             y + offsetY,
             scaledWidth,
-            scaledHeight,
+            scaledHeight
           )
 
           URL.revokeObjectURL(svgUrl)
@@ -140,7 +140,7 @@ function drawDebugBorder(
   x: number,
   y: number,
   width: number,
-  height: number,
+  height: number
 ): void {
   ctx.save()
   ctx.strokeStyle = CANVAS_SETTINGS.DEBUG_BORDER_COLOR
@@ -180,7 +180,7 @@ export function drawTextBoxBorder(
   y: number,
   width: number,
   height: number,
-  isSelected: boolean,
+  isSelected: boolean
 ): void {
   ctx.save()
 
@@ -216,7 +216,7 @@ export function drawCreatingTextBox(
   x: number,
   y: number,
   width: number,
-  height: number,
+  height: number
 ): void {
   ctx.save()
 
@@ -237,7 +237,7 @@ export function drawCreatingTextBox(
  */
 export async function drawBackgroundImage(
   ctx: CanvasRenderingContext2D,
-  imageUrl: string,
+  imageUrl: string
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const img = new Image()

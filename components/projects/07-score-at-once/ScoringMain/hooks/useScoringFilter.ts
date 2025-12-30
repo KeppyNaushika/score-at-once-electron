@@ -82,7 +82,7 @@ export function useScoringFilter({
     useState<Map<string, Set<string>>>(new Map())
 
   const currentCropRegion = cropRegions.find(
-    (r) => r.id === currentCropRegionId,
+    (r) => r.id === currentCropRegionId
   )
 
   // 現在の設問の採点履歴を取得（外部インターフェース互換）
@@ -93,11 +93,7 @@ export function useScoringFilter({
 
   // 現在の設問の採点履歴を更新する関数（外部インターフェース互換）
   const setRecentlyScoredAnswers = useCallback(
-    (
-      update:
-        | Set<string>
-        | ((prev: Set<string>) => Set<string>),
-    ) => {
+    (update: Set<string> | ((prev: Set<string>) => Set<string>)) => {
       if (!currentCropRegionId) return
       setRecentlyScoredAnswersByQuestion((prevMap) => {
         const currentSet = prevMap.get(currentCropRegionId) ?? new Set()
@@ -108,15 +104,14 @@ export function useScoringFilter({
         return newMap
       })
     },
-    [currentCropRegionId],
+    [currentCropRegionId]
   )
 
   const allScoringData = useMemo((): ScoringData[] => {
     if (!currentCropRegion) return []
 
     const pageFilteredSheets = pageImages.filter(
-      (pageImage) =>
-        pageImage.projectPageId === currentCropRegion.projectPageId,
+      (pageImage) => pageImage.projectPageId === currentCropRegion.projectPageId
     )
 
     const sortedAnswerSheets = [...pageFilteredSheets].sort((a, b) => {
@@ -161,7 +156,7 @@ export function useScoringFilter({
         const score = findQuestionScore(
           questionScores,
           pageImage.studentId,
-          currentCropRegion.id,
+          currentCropRegion.id
         )
 
         return {
@@ -181,7 +176,7 @@ export function useScoringFilter({
           customOrder:
             pageImage.student?.projectStudents?.[0]?.customOrder || 999999,
         }
-      },
+      }
     )
 
     return studentScoringData
@@ -194,7 +189,7 @@ export function useScoringFilter({
       const score = findQuestionScore(questionScores, studentId, questionId)
       return (score?.status as ScoringStatus) ?? "unscored"
     },
-    [questionScores],
+    [questionScores]
   )
 
   const updateVisibleAnswers = useCallback(
@@ -268,7 +263,7 @@ export function useScoringFilter({
       recentlyScoredAnswers,
       selectedPageImageIds,
       questionChangeVersion,
-    ],
+    ]
   )
 
   useLayoutEffect(() => {
@@ -337,7 +332,7 @@ export function useScoringFilter({
 
     const visibleChanged = !areArraysEqual(
       visibleAnswers,
-      lastVisibleAnswersRef.current,
+      lastVisibleAnswersRef.current
     )
 
     if (visibleChanged) {
@@ -370,7 +365,7 @@ export function useScoringFilter({
       hasFreshSnapshot && snapshot?.filteredSelection
         ? snapshot.filteredSelection
         : Array.from(selectedPageImageIds).filter(
-            (id) => visibleIds.has(id) && !id.startsWith("master-"),
+            (id) => visibleIds.has(id) && !id.startsWith("master-")
           )
     const firstStudentAnswerId =
       hasFreshSnapshot && snapshot?.firstStudentAnswerId
@@ -499,7 +494,7 @@ export function useScoringFilter({
       window.dispatchEvent(
         new CustomEvent("score-view:scroll-to-answer", {
           detail: { answerId: firstVisibleSelected },
-        }),
+        })
       )
     }
   }, [gradingMode, selectedPageImageIds, visibleAnswers])
@@ -510,7 +505,9 @@ export function useScoringFilter({
   // 設問変更時の選択処理（グリッドモード専用）
   useEffect(() => {
     // バージョンが変わっていなければスキップ（初回も含む）
-    if (questionChangeVersionForSelectionRef.current === questionChangeVersion) {
+    if (
+      questionChangeVersionForSelectionRef.current === questionChangeVersion
+    ) {
       return
     }
     questionChangeVersionForSelectionRef.current = questionChangeVersion
@@ -523,7 +520,7 @@ export function useScoringFilter({
     const timeoutId = setTimeout(() => {
       const currentVisible = visibleAnswersRef.current
       const firstStudentAnswerId = currentVisible.find(
-        (id) => !id.startsWith("master-"),
+        (id) => !id.startsWith("master-")
       )
 
       if (firstStudentAnswerId) {
@@ -540,13 +537,13 @@ export function useScoringFilter({
     if (!currentCropRegion || !project?.projectPages) return null
 
     const projectPage = project.projectPages.find(
-      (page) => page.id === currentCropRegion.projectPageId,
+      (page) => page.id === currentCropRegion.projectPageId
     )
 
     if (!projectPage) return null
 
     const masterImage = projectPage.pageImages?.find(
-      (img) => img.imageType === "MODEL_ANSWER",
+      (img) => img.imageType === "MODEL_ANSWER"
     )
     const masterImagePath = masterImage?.imagePath
 
@@ -575,11 +572,11 @@ export function useScoringFilter({
   })[] => {
     return visibleAnswers
       .map((answerId) =>
-        getAllGridAnswerData.find((answer) => answer.id === answerId),
+        getAllGridAnswerData.find((answer) => answer.id === answerId)
       )
       .filter(
         (answer): answer is ScoringData & { isSelected: boolean } =>
-          answer !== undefined,
+          answer !== undefined
       )
   }, [getAllGridAnswerData, visibleAnswers])
 
@@ -603,7 +600,7 @@ export function useScoringFilter({
         setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers],
+    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers]
   )
 
   const handleToggleFilterByScoreKey = useCallback(
@@ -630,7 +627,7 @@ export function useScoringFilter({
         setRecentlyScoredAnswers(new Set())
       }
     },
-    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers],
+    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers]
   )
 
   return {

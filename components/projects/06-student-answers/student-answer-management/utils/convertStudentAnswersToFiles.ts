@@ -28,7 +28,7 @@ type AnswerSheetInput =
  * @returns UnifiedFile配列
  */
 export function convertAnswerSheetsToFiles(
-  answerSheets: AnswerSheetInput[],
+  answerSheets: AnswerSheetInput[]
 ): UnifiedFile[] {
   return answerSheets.map((answerSheet) => {
     // Handle both processed format (originalImagePath) and raw format (imagePath)
@@ -71,7 +71,9 @@ export function convertAnswerSheetsToFiles(
  * @param file UnifiedFileオブジェクト
  * @returns Base64エンコードされた画像データURL
  */
-export async function loadStudentAnswerImage(file: UnifiedFile): Promise<string> {
+export async function loadStudentAnswerImage(
+  file: UnifiedFile
+): Promise<string> {
   // 新規ファイル（メモリ内）の場合はpreviewを返す
   if (file.preview && !file.imagePath) {
     return file.preview

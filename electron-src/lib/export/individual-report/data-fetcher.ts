@@ -20,7 +20,7 @@ import type {
  * 個人成績表用データを取得
  */
 export async function fetchIndividualReportData(
-  options: GetIndividualReportDataOptions,
+  options: GetIndividualReportDataOptions
 ): Promise<GetIndividualReportDataResult> {
   const { projectId, selectedStudentIds, options: reportOptions } = options
 
@@ -35,7 +35,10 @@ export async function fetchIndividualReportData(
     }
 
     // 選択された生徒のデータを取得
-    const selectedDataResult = await fetchExportData(projectId, selectedStudentIds)
+    const selectedDataResult = await fetchExportData(
+      projectId,
+      selectedStudentIds
+    )
     if (!selectedDataResult.success || !selectedDataResult.scoringData) {
       return {
         success: false,
@@ -58,46 +61,50 @@ export async function fetchIndividualReportData(
     const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
 
     // 各生徒のレポートデータを構築
-    const reports: IndividualReportData[] = selectedScoringData.map((scoringData) => {
-      // 生徒情報
-      const studentInfo: StudentInfoForReport = {
-        id: scoringData.studentId,
-        fullName: scoringData.studentName,
-        studentNumber: scoringData.studentNumber,
-        grade: scoringData.grade || null,
-        className: scoringData.className || null,
-        attendanceNumber: scoringData.attendanceNumber ?? null,
+    const reports: IndividualReportData[] = selectedScoringData.map(
+      (scoringData) => {
+        // 生徒情報
+        const studentInfo: StudentInfoForReport = {
+          id: scoringData.studentId,
+          fullName: scoringData.studentName,
+          studentNumber: scoringData.studentNumber,
+          grade: scoringData.grade || null,
+          className: scoringData.className || null,
+          attendanceNumber: scoringData.attendanceNumber ?? null,
+        }
+
+        // 学級データを抽出（同じ学級の生徒のスコア）
+        const classScoringData = allScoringData.filter(
+          (d) =>
+            d.className === scoringData.className &&
+            d.grade === scoringData.grade
+        )
+
+        // 統計データ
+        const statistics = calculateStatisticsForStudent(
+          scoringData.studentId,
+          scoringData.totalScore,
+          allScoringData,
+          classScoringData,
+          questionCorrectRates
+        )
+
+        // 学習アドバイス
+        const learningAdvice = generateLearningAdvice(
+          scoringData.scores,
+          questionCorrectRates,
+          reportOptions.adviceOptions
+        )
+
+        return {
+          studentInfo,
+          examInfo,
+          scoringData,
+          statistics,
+          learningAdvice,
+        }
       }
-
-      // 学級データを抽出（同じ学級の生徒のスコア）
-      const classScoringData = allScoringData.filter(
-        (d) => d.className === scoringData.className && d.grade === scoringData.grade,
-      )
-
-      // 統計データ
-      const statistics = calculateStatisticsForStudent(
-        scoringData.studentId,
-        scoringData.totalScore,
-        allScoringData,
-        classScoringData,
-        questionCorrectRates,
-      )
-
-      // 学習アドバイス
-      const learningAdvice = generateLearningAdvice(
-        scoringData.scores,
-        questionCorrectRates,
-        reportOptions.adviceOptions,
-      )
-
-      return {
-        studentInfo,
-        examInfo,
-        scoringData,
-        statistics,
-        learningAdvice,
-      }
-    })
+    )
 
     // 警告の収集
     const warnings = collectWarnings(selectedScoringData)
@@ -112,7 +119,8 @@ export async function fetchIndividualReportData(
     console.error("Error fetching individual report data:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "データ取得に失敗しました",
+      error:
+        error instanceof Error ? error.message : "データ取得に失敗しました",
     }
   }
 }
@@ -121,8 +129,15 @@ export async function fetchIndividualReportData(
  * 警告情報を収集
  */
 function collectWarnings(
-  scoringData: { studentId: string; studentName: string; scores: { status: string }[] }[],
-): { hasWarnings: boolean; data: { noScoringData: string[]; ungraded: string[] } } {
+  scoringData: {
+    studentId: string
+    studentName: string
+    scores: { status: string }[]
+  }[]
+): {
+  hasWarnings: boolean
+  data: { noScoringData: string[]; ungraded: string[] }
+} {
   const noScoringData: string[] = []
   const ungraded: string[] = []
 

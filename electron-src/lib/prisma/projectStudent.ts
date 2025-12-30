@@ -11,8 +11,8 @@ export async function getStudentsForProject(projectId: string) {
     const projectStudents = await prisma.projectStudent.findMany({
       where: { projectId },
       orderBy: [
-        { customOrder: 'asc' },  // カスタム順序を優先
-        { student: { studentId: 'asc' } }  // 学籍番号順をフォールバック
+        { customOrder: "asc" }, // カスタム順序を優先
+        { student: { studentId: "asc" } }, // 学籍番号順をフォールバック
       ],
       include: {
         student: {
@@ -59,7 +59,7 @@ export async function getStudentsForProject(projectId: string) {
  */
 export async function addStudentsToProject(
   projectId: string,
-  studentIds: string[],
+  studentIds: string[]
 ) {
   try {
     // 既に参加している生徒を除外
@@ -72,7 +72,7 @@ export async function addStudentsToProject(
     })
 
     const existingStudentIds = new Set(
-      existingProjectStudents.map((ps) => ps.studentId),
+      existingProjectStudents.map((ps) => ps.studentId)
     )
     const newStudentIds = studentIds.filter((id) => !existingStudentIds.has(id))
 
@@ -110,7 +110,7 @@ export async function addStudentsToProject(
  */
 export async function removeStudentsFromProject(
   projectId: string,
-  studentIds: string[],
+  studentIds: string[]
 ) {
   try {
     // プロジェクトから生徒を削除
@@ -152,7 +152,7 @@ export async function removeStudentsFromProject(
 export async function updateStudentProjectStatus(
   projectId: string,
   studentId: string,
-  status: "participating" | "expected" | "absent",
+  status: "participating" | "expected" | "absent"
 ) {
   try {
     // statusを大文字に変換してenumに合わせる
@@ -185,7 +185,7 @@ export async function updateStudentProjectStatus(
  */
 export async function updateStudentOrders(
   projectId: string,
-  studentOrders: { studentId: string; customOrder: number }[],
+  studentOrders: { studentId: string; customOrder: number }[]
 ) {
   try {
     // 各生徒の並び順を更新
@@ -239,7 +239,7 @@ export async function getClassesNotInProject(projectId: string) {
       select: { studentId: true },
     })
     const participatingStudentIds = new Set(
-      projectStudents.map((ps) => ps.studentId),
+      projectStudents.map((ps) => ps.studentId)
     )
 
     // プロジェクトに参加していない学級を抽出
@@ -247,7 +247,7 @@ export async function getClassesNotInProject(projectId: string) {
       .map((cls) => {
         const allStudents = cls.memberships.map((m) => m.student)
         const nonParticipatingStudents = allStudents.filter(
-          (student) => !participatingStudentIds.has(student.id),
+          (student) => !participatingStudentIds.has(student.id)
         )
 
         return {
@@ -281,7 +281,7 @@ export async function getStudentsNotInProject(projectId: string) {
       select: { studentId: true },
     })
     const participatingStudentIds = new Set(
-      projectStudents.map((ps) => ps.studentId),
+      projectStudents.map((ps) => ps.studentId)
     )
 
     // プロジェクトに参加していない生徒を取得

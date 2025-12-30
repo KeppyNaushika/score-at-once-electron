@@ -15,7 +15,7 @@ import { createResultSheet, createScoreSheet } from "./sheet-creators"
  * @returns 出力結果（成功/失敗、出力パス、エラーメッセージ）
  */
 export async function exportGradingDataExcel(
-  options: ExportGradingDataOptions,
+  options: ExportGradingDataOptions
 ): Promise<ExportResult> {
   try {
     const { projectId, selectedStudentIds } = options
@@ -56,7 +56,7 @@ export async function exportGradingDataExcel(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalRegions,
-      dataResult.scoringData,
+      dataResult.scoringData
     )
 
     // 正誤一覧シート作成
@@ -64,12 +64,16 @@ export async function exportGradingDataExcel(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalRegions,
-      dataResult.scoringData,
+      dataResult.scoringData
     )
 
     // ファイル保存
     const projectName = dataResult.project?.examName
-    const saveResult = await saveWorkbook(workbook, options.outputPath, projectName)
+    const saveResult = await saveWorkbook(
+      workbook,
+      options.outputPath,
+      projectName
+    )
     if (!saveResult.success) {
       return { success: false, error: saveResult.error }
     }

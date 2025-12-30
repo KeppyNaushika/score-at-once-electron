@@ -9,7 +9,7 @@ import prisma from "./client"
  */
 export const calculateActualScore = (
   questionScore: { status: string; partialScore?: number | null },
-  maxScore: number,
+  maxScore: number
 ): number | null => {
   switch (questionScore.status) {
     case "correct":
@@ -23,7 +23,8 @@ export const calculateActualScore = (
     case "partial":
     case "pending":
     case "proposed":
-      return questionScore.partialScore !== null && questionScore.partialScore !== undefined
+      return questionScore.partialScore !== null &&
+        questionScore.partialScore !== undefined
         ? Number(questionScore.partialScore)
         : null
     default:
@@ -131,7 +132,6 @@ export const getQuestionScoresForStudent = async (studentId: string) => {
   }
 }
 
-
 /**
  * 採点データを作成
  */
@@ -194,14 +194,13 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
   }
 }
 
-
 /**
  * 採点データを更新（楽観的ロック対応）
  */
 export const updateQuestionScore = async (
   id: string,
   data: UpdateQuestionScoreData,
-  expectedVersion?: number,
+  expectedVersion?: number
 ) => {
   try {
     // 楽観的ロックのチェック
@@ -278,7 +277,7 @@ export const deleteQuestionScore = async (id: string) => {
  */
 export const getQuestionScoreComparison = async (
   studentId: string,
-  cropRegionId: string,
+  cropRegionId: string
 ) => {
   try {
     const scores = await prisma.questionScore.findMany({
@@ -325,7 +324,7 @@ export const finalizeQuestionScore = async (
     partialScore?: number // 部分点・保留の場合のみ
     status: string
     comment?: string
-  },
+  }
 ) => {
   try {
     return await prisma.$transaction(async (tx) => {
@@ -377,12 +376,14 @@ export const getAnswerSheetProgress = async (_answerSheetId: string) => {
     // TODO: This function needs to be rewritten for new schema
     // In new schema, there's no direct answerSheet table
     // Need to get student and project info differently
-    console.warn("getAnswerSheetProgress function needs rewriting for new schema")
+    console.warn(
+      "getAnswerSheetProgress function needs rewriting for new schema"
+    )
     return {
       success: false,
-      error: "Function not yet updated for new schema"
+      error: "Function not yet updated for new schema",
     }
-    
+
     /* Old code - needs rewriting:
     const answerSheet = await prisma.pageImage.findUnique({
       where: { id: answerSheetId },
@@ -454,14 +455,14 @@ export const getProjectProgress = async (projectId: string) => {
   try {
     // プロジェクトに参加している生徒数を取得
     const totalAnswerSheets = await prisma.projectStudent.count({
-      where: { projectId }
+      where: { projectId },
     })
 
     if (totalAnswerSheets === 0) {
       return {
         totalAnswerSheets: 0,
         completedAnswerSheets: 0,
-        percentage: 0
+        percentage: 0,
       }
     }
 
@@ -469,24 +470,24 @@ export const getProjectProgress = async (projectId: string) => {
     const totalCropRegions = await prisma.cropRegion.count({
       where: {
         projectPage: {
-          projectId
+          projectId,
         },
-        type: "QUESTION_ANSWER"
-      }
+        type: "QUESTION_ANSWER",
+      },
     })
 
     if (totalCropRegions === 0) {
       return {
         totalAnswerSheets,
         completedAnswerSheets: 0,
-        percentage: 0
+        percentage: 0,
       }
     }
 
     // 各生徒の採点完了状況を確認
     const projectStudents = await prisma.projectStudent.findMany({
       where: { projectId },
-      select: { studentId: true }
+      select: { studentId: true },
     })
 
     let completedAnswerSheets = 0
@@ -498,15 +499,12 @@ export const getProjectProgress = async (projectId: string) => {
           studentId: projectStudent.studentId,
           cropRegion: {
             projectPage: {
-              projectId
+              projectId,
             },
-            type: "QUESTION_ANSWER"
+            type: "QUESTION_ANSWER",
           },
-          OR: [
-            { status: "final" },
-            { status: "proposed" }
-          ]
-        }
+          OR: [{ status: "final" }, { status: "proposed" }],
+        },
       })
 
       // 全設問が採点済みの場合、完了とみなす
@@ -515,20 +513,22 @@ export const getProjectProgress = async (projectId: string) => {
       }
     }
 
-    const percentage = totalAnswerSheets > 0 ? (completedAnswerSheets / totalAnswerSheets) * 100 : 0
+    const percentage =
+      totalAnswerSheets > 0
+        ? (completedAnswerSheets / totalAnswerSheets) * 100
+        : 0
 
     return {
       totalAnswerSheets,
       completedAnswerSheets,
-      percentage: Math.round(percentage * 100) / 100 // 小数点2位まで
+      percentage: Math.round(percentage * 100) / 100, // 小数点2位まで
     }
   } catch (error) {
     console.error("Error getting project progress:", error)
     return {
       totalAnswerSheets: 0,
       completedAnswerSheets: 0,
-      percentage: 0
+      percentage: 0,
     }
   }
 }
-

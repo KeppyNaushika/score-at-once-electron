@@ -20,7 +20,7 @@ export async function createScoreSheet(
   workbook: ExcelJS.Workbook,
   questionRegions: CropRegion[],
   subtotalRegions: CropRegion[],
-  scoringData: ScoringData[],
+  scoringData: ScoringData[]
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("点数一覧")
 
@@ -30,7 +30,7 @@ export async function createScoreSheet(
   // 小計点の対象設問マップを事前に構築
   const subtotalTargetMap = await buildSubtotalTargetMap(
     subtotalRegions,
-    questionRegions,
+    questionRegions
   )
 
   // データ行の作成
@@ -39,7 +39,7 @@ export async function createScoreSheet(
     scoringData,
     subtotalRegions,
     subtotalTargetMap,
-    true,
+    true
   )
 
   // スタイル適用
@@ -62,7 +62,7 @@ export async function createResultSheet(
   workbook: ExcelJS.Workbook,
   questionRegions: CropRegion[],
   subtotalRegions: CropRegion[],
-  scoringData: ScoringData[],
+  scoringData: ScoringData[]
 ): Promise<ExcelJS.Worksheet> {
   const worksheet = workbook.addWorksheet("正誤一覧")
 
@@ -72,7 +72,7 @@ export async function createResultSheet(
   // 小計点の対象設問マップを事前に構築
   const subtotalTargetMap = await buildSubtotalTargetMap(
     subtotalRegions,
-    questionRegions,
+    questionRegions
   )
 
   // データ行の作成
@@ -81,7 +81,7 @@ export async function createResultSheet(
     scoringData,
     subtotalRegions,
     subtotalTargetMap,
-    false,
+    false
   )
 
   // スタイル適用

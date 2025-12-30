@@ -15,20 +15,20 @@ export const uploadMasterAnswers = async (
     type: string
     buffer: ArrayBuffer
     path?: string
-  }[],
+  }[]
 ): Promise<(PageImage & { projectPage: ProjectPage })[]> => {
   // Check if project exists and get existing pages
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    include: { 
-      projectPages: { 
-        include: { 
-          pageImages: { 
-            where: { imageType: "MODEL_ANSWER" } 
-          } 
+    include: {
+      projectPages: {
+        include: {
+          pageImages: {
+            where: { imageType: "MODEL_ANSWER" },
+          },
         },
-        orderBy: { pageNumber: "asc" }
-      } 
+        orderBy: { pageNumber: "asc" },
+      },
     },
   })
 
@@ -40,7 +40,7 @@ export const uploadMasterAnswers = async (
     project.projectPages?.reduce(
       (max: number, page: { pageNumber: number }) =>
         Math.max(max, page.pageNumber),
-      0,
+      0
     ) || 0
 
   const uploadedAnswers: (PageImage & { projectPage: ProjectPage })[] = []
@@ -81,7 +81,7 @@ export const uploadMasterAnswers = async (
         },
         include: {
           projectPage: true,
-        }
+        },
       })
 
       uploadedAnswers.push(newImage)
@@ -110,7 +110,7 @@ export interface DeleteMasterAnswerResult {
 }
 
 export const deleteMasterAnswer = async (
-  answerId: string,
+  answerId: string
 ): Promise<DeleteMasterAnswerResult> => {
   try {
     const answer = await prisma.pageImage.findUnique({
@@ -120,14 +120,14 @@ export const deleteMasterAnswer = async (
 
     if (!answer) {
       console.warn(
-        `No PageImage found for master answer deletion (id: ${answerId}).`,
+        `No PageImage found for master answer deletion (id: ${answerId}).`
       )
       return { deletedAnswer: null, projectPages: [] }
     }
 
     if (answer.imageType !== "MODEL_ANSWER") {
       console.warn(
-        `PageImage ${answerId} is not a MODEL_ANSWER (found ${answer.imageType}). Skipping deletion.`,
+        `PageImage ${answerId} is not a MODEL_ANSWER (found ${answer.imageType}). Skipping deletion.`
       )
       return { deletedAnswer: null, projectPages: [] }
     }
@@ -221,7 +221,7 @@ export const deleteMasterAnswer = async (
 }
 
 export const updateMasterAnswersOrder = async (
-  answerOrders: { id: string; pageNumber: number }[],
+  answerOrders: { id: string; pageNumber: number }[]
 ): Promise<Prisma.BatchPayload> => {
   if (!answerOrders || answerOrders.length === 0) {
     return { count: 0 }
@@ -230,11 +230,11 @@ export const updateMasterAnswersOrder = async (
   try {
     // Get the ProjectPages that correspond to these answers
     const answers = await prisma.pageImage.findMany({
-      where: { 
-        id: { in: answerOrders.map(order => order.id) },
-        imageType: "MODEL_ANSWER"
+      where: {
+        id: { in: answerOrders.map((order) => order.id) },
+        imageType: "MODEL_ANSWER",
       },
-      include: { projectPage: true }
+      include: { projectPage: true },
     })
 
     if (answers.length === 0) {
@@ -248,12 +248,13 @@ export const updateMasterAnswersOrder = async (
       _max: { pageNumber: true },
       where: { projectId: projectId },
     })
-    const offset = (maxPageNumberInProject._max.pageNumber || 0) + answerOrders.length + 100
+    const offset =
+      (maxPageNumberInProject._max.pageNumber || 0) + answerOrders.length + 100
 
     await prisma.$transaction(async (tx) => {
       // Create a map of answer ID to ProjectPage ID
       const answerToPageMap = new Map()
-      answers.forEach(answer => {
+      answers.forEach((answer) => {
         answerToPageMap.set(answer.id, answer.projectPageId)
       })
 
@@ -297,8 +298,8 @@ export const getMasterAnswersByProjectId = async (projectId: string) => {
     where: { projectId },
     include: {
       pageImages: {
-        where: { imageType: "MODEL_ANSWER" }
-      }
+        where: { imageType: "MODEL_ANSWER" },
+      },
     },
     orderBy: { pageNumber: "asc" },
   })
@@ -320,13 +321,11 @@ export const getMasterAnswersByProjectId = async (projectId: string) => {
   return masterAnswers
 }
 
-export const createMasterAnswer = async (
-  data: {
-    projectId: string
-    path: string
-    pageNumber: number
-  },
-) => {
+export const createMasterAnswer = async (data: {
+  projectId: string
+  path: string
+  pageNumber: number
+}) => {
   // Create ProjectPage first
   const projectPage = await prisma.projectPage.create({
     data: {
@@ -351,25 +350,25 @@ export const createManyMasterAnswers = async (
     projectId: string
     path: string
     pageNumber: number
-  }[],
+  }[]
 ) => {
   const createdAnswers = []
-  
+
   for (const answerData of data) {
     const result = await createMasterAnswer(answerData)
     createdAnswers.push(result)
   }
-  
+
   return { count: createdAnswers.length }
 }
 
 export const updateMasterAnswer = async (
   id: string,
-  data: { path?: string; pageNumber?: number },
+  data: { path?: string; pageNumber?: number }
 ) => {
   const answer = await prisma.pageImage.findUnique({
     where: { id },
-    include: { projectPage: true }
+    include: { projectPage: true },
   })
 
   if (!answer || answer.imageType !== "MODEL_ANSWER") {
@@ -380,7 +379,7 @@ export const updateMasterAnswer = async (
   if (data.path) {
     await prisma.pageImage.update({
       where: { id },
-      data: { imagePath: data.path }
+      data: { imagePath: data.path },
     })
   }
 
@@ -388,39 +387,39 @@ export const updateMasterAnswer = async (
   if (data.pageNumber) {
     await prisma.projectPage.update({
       where: { id: answer.projectPageId },
-      data: { pageNumber: data.pageNumber }
+      data: { pageNumber: data.pageNumber },
     })
   }
 
   // Return updated data
   return prisma.pageImage.findUnique({
     where: { id },
-    include: { projectPage: true }
+    include: { projectPage: true },
   })
 }
 
 export const deleteMasterAnswersByProjectId = async (projectId: string) => {
   // Delete all master answers for the project
   const deletedAnswers = await prisma.pageImage.deleteMany({
-    where: { 
+    where: {
       imageType: "MODEL_ANSWER",
-      projectPage: { projectId }
+      projectPage: { projectId },
     },
   })
 
   // Delete ProjectPages that have no remaining images
   const emptyPages = await prisma.projectPage.findMany({
-    where: { 
+    where: {
       projectId,
-      pageImages: { none: {} }
-    }
+      pageImages: { none: {} },
+    },
   })
 
   if (emptyPages.length > 0) {
     await prisma.projectPage.deleteMany({
-      where: { 
-        id: { in: emptyPages.map(page => page.id) }
-      }
+      where: {
+        id: { in: emptyPages.map((page) => page.id) },
+      },
     })
   }
 
@@ -429,16 +428,16 @@ export const deleteMasterAnswersByProjectId = async (projectId: string) => {
 
 export const getMasterAnswerByPage = async (
   projectId: string,
-  pageNumber: number,
+  pageNumber: number
 ) => {
   const projectPage = await prisma.projectPage.findFirst({
     where: { projectId, pageNumber },
     include: {
       pageImages: {
         where: { imageType: "MODEL_ANSWER" },
-        take: 1
-      }
-    }
+        take: 1,
+      },
+    },
   })
 
   if (projectPage?.pageImages?.[0]) {

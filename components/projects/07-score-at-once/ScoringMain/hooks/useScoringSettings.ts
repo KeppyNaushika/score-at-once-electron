@@ -7,7 +7,9 @@ export function useScoringSettings() {
   const [itemsPerLine, setItemsPerLine] = useState([5])
   const [autoScroll, setAutoScroll] = useState(true)
   const [showStudentNames, setShowStudentNames] = useState(true)
-  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(DEFAULT_LAYOUT_DIRECTION)
+  const [layoutDirection, setLayoutDirection] = useState<LayoutDirection>(
+    DEFAULT_LAYOUT_DIRECTION
+  )
 
   // localStorage から設定を読み込む
   useEffect(() => {
@@ -24,13 +26,15 @@ export function useScoringSettings() {
         }
 
         const savedShowStudentNames = localStorage.getItem(
-          "scoring-showStudentNames",
+          "scoring-showStudentNames"
         )
         if (savedShowStudentNames) {
           setShowStudentNames(JSON.parse(savedShowStudentNames))
         }
 
-        const savedLayoutDirection = localStorage.getItem("scoring-layoutDirection")
+        const savedLayoutDirection = localStorage.getItem(
+          "scoring-layoutDirection"
+        )
         if (savedLayoutDirection) {
           setLayoutDirection(JSON.parse(savedLayoutDirection))
         }

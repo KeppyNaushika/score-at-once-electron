@@ -34,11 +34,11 @@ export interface SortableStudentTableProps {
   classes: ClassGroup[]
   onStudentStatusUpdate: (
     studentId: string,
-    status: StudentStatus,
+    status: StudentStatus
   ) => Promise<void>
   onStudentOrderUpdate: (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => Promise<void>
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void

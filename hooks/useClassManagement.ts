@@ -70,20 +70,22 @@ export function useClassManagement(classId: string) {
     useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(
-    null,
+    null
   )
 
   /** APIレスポンスをUI用の型に変換 */
   const transformClassData = (
     rawClassData: Omit<ClassWithMemberships, "memberships"> & {
       memberships: RawMembership[]
-    },
+    }
   ): ClassWithMemberships => ({
     ...rawClassData,
     memberships:
       rawClassData.memberships?.map((membership) => ({
         id: membership.id,
-        startDate: new Date(membership.startDate || membership.createdAt || new Date()),
+        startDate: new Date(
+          membership.startDate || membership.createdAt || new Date()
+        ),
         endDate: membership.endDate ? new Date(membership.endDate) : null,
         attendanceNumber: membership.attendanceNumber,
         notes: membership.notes,
@@ -159,13 +161,13 @@ export function useClassManagement(classId: string) {
         }
         await window.electronAPI.updateStudentClassMembership(
           membershipToEdit.id,
-          updateInput,
+          updateInput
         )
       } else if (membershipData.studentId) {
         // 新規所属関係を作成
         await window.electronAPI.addStudentToClass(
           membershipData.studentId,
-          classId,
+          classId
         )
       }
 

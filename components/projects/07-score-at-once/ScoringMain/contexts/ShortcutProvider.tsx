@@ -121,7 +121,7 @@ function normalizeKey(event: KeyboardEvent): string {
  */
 function evaluateWhenClause(
   when: string,
-  context: ScoringContextState,
+  context: ScoringContextState
 ): boolean {
   try {
     // 簡易的な式評価（セキュリティ上の理由で制限された構文のみ）
@@ -136,7 +136,7 @@ function evaluateWhenClause(
       "partialScoreModalOpen",
       "sidePanelVisible",
       "hasSelectedAnswers",
-      `return ${when}`,
+      `return ${when}`
     )
 
     return fn(
@@ -146,7 +146,7 @@ function evaluateWhenClause(
       context.modalOpen,
       context.partialScoreModalOpen,
       context.sidePanelVisible,
-      context.hasSelectedAnswers,
+      context.hasSelectedAnswers
     )
   } catch (error) {
     console.error("Failed to evaluate when clause:", when, error)
@@ -180,7 +180,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
 
   // コマンドレジストリ（commandId -> CommandHandler）
   const [commands, setCommands] = useState<Map<string, CommandHandler>>(
-    new Map(),
+    new Map()
   )
 
   // キーバインディング（localStorageから読み込み）
@@ -203,7 +203,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const setContextValue = useCallback(
     <K extends keyof ScoringContextState>(
       key: K,
-      value: ScoringContextState[K],
+      value: ScoringContextState[K]
     ) => {
       setContext((prev) => {
         // 変更がない場合は更新しない（無駄な再レンダリング防止）
@@ -211,7 +211,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
         return { ...prev, [key]: value }
       })
     },
-    [],
+    []
   )
 
   // ============================================
@@ -228,7 +228,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
         next.has(command.commandId)
       ) {
         console.warn(
-          `[ShortcutProvider] Command "${command.commandId}" is already registered. Overwriting.`,
+          `[ShortcutProvider] Command "${command.commandId}" is already registered. Overwriting.`
         )
       }
 
@@ -261,7 +261,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
         console.error("Failed to save keybindings to localStorage:", error)
       }
     },
-    [keyBindings],
+    [keyBindings]
   )
 
   const resetKeyBindings = useCallback(() => {

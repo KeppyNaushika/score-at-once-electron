@@ -32,7 +32,12 @@ interface MatchingCardProps<T extends string> {
   description: string
   value: T
   onChange: (value: T) => void
-  options: Array<{ value: T; label: string; description: string; recommended?: boolean }>
+  options: Array<{
+    value: T
+    label: string
+    description: string
+    recommended?: boolean
+  }>
 }
 
 function MatchingCard<T extends string>({
@@ -46,11 +51,11 @@ function MatchingCard<T extends string>({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-medium">
           {icon}
           <span>{title}</span>
         </CardTitle>
-        <p className="text-xs text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground text-xs">{description}</p>
       </CardHeader>
       <CardContent className="pt-0">
         <RadioGroup
@@ -63,10 +68,10 @@ function MatchingCard<T extends string>({
               key={option.value}
               htmlFor={`${title}-${option.value}`}
               className={cn(
-                "flex items-start gap-3 p-3 rounded-lg cursor-pointer transition-colors border",
+                "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
                 value === option.value
                   ? "bg-primary/5 border-primary"
-                  : "bg-transparent border-transparent hover:bg-muted/50"
+                  : "hover:bg-muted/50 border-transparent bg-transparent"
               )}
             >
               <RadioGroupItem
@@ -74,17 +79,17 @@ function MatchingCard<T extends string>({
                 value={option.value}
                 className="mt-0.5"
               />
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{option.label}</span>
                   {option.recommended && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-primary/10 text-primary">
-                      <Sparkles className="w-3 h-3" />
+                    <span className="bg-primary/10 text-primary inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs">
+                      <Sparkles className="h-3 w-3" />
                       推奨
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-muted-foreground mt-0.5 text-xs">
                   {option.description}
                 </p>
               </div>
@@ -106,8 +111,8 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-2">マッチング設定</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="mb-2 text-lg font-semibold">マッチング設定</h3>
+        <p className="text-muted-foreground text-sm">
           インポートデータと既存データをどのように照合するかを設定します。
         </p>
       </div>
@@ -115,7 +120,7 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
       <div className="grid gap-4">
         {/* 生徒マッチング */}
         <MatchingCard<StudentMatchingMethod>
-          icon={<Users className="w-4 h-4" />}
+          icon={<Users className="h-4 w-4" />}
           title="生徒"
           description="生徒データの照合方法"
           value={state.matchingConfig.student}
@@ -142,7 +147,7 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
 
         {/* 学級マッチング */}
         <MatchingCard<ClassMatchingMethod>
-          icon={<School className="w-4 h-4" />}
+          icon={<School className="h-4 w-4" />}
           title="学級"
           description="学級データの照合方法"
           value={state.matchingConfig.class}
@@ -164,7 +169,7 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
 
         {/* ユーザーマッチング */}
         <MatchingCard<UserMatchingMethod>
-          icon={<UserCircle className="w-4 h-4" />}
+          icon={<UserCircle className="h-4 w-4" />}
           title="ユーザー"
           description="採点者データの照合方法"
           value={state.matchingConfig.user}
@@ -186,7 +191,7 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
 
         {/* 小計グループマッチング */}
         <MatchingCard<SubtotalGroupMatchingMethod>
-          icon={<Layers className="w-4 h-4" />}
+          icon={<Layers className="h-4 w-4" />}
           title="小計グループ"
           description="小計グループの照合方法"
           value={state.matchingConfig.subtotalGroup}
@@ -216,13 +221,13 @@ export function MatchingConfigStep({ wizard }: MatchingConfigStepProps) {
         >
           {state.isProcessing ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               競合を検出中...
             </>
           ) : (
             <>
               競合を確認
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="h-4 w-4" />
             </>
           )}
         </Button>

@@ -73,7 +73,7 @@ interface UseAnswerDisplayEventsProps {
     rect:
       | SelectionRectangle
       | null
-      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null)
   ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   setIsDraggingElement: (dragging: boolean) => void
@@ -83,8 +83,8 @@ interface UseAnswerDisplayEventsProps {
       | Partial<DrawingElement>
       | null
       | ((
-          prev: Partial<DrawingElement> | null,
-        ) => Partial<DrawingElement> | null),
+          prev: Partial<DrawingElement> | null
+        ) => Partial<DrawingElement> | null)
   ) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: LineEditMode) => void
@@ -99,7 +99,7 @@ interface UseAnswerDisplayEventsProps {
   setCurrentHandle: (handle: string | null) => void
   setHoveredElementId: (id: string | null) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
   ) => void
   addDrawingElement: (element: DrawingElement) => void
   updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
@@ -241,7 +241,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       handleHandToolMouseDown,
       handleSelectionMouseDown,
       handleNewDrawingMouseDown,
-    ],
+    ]
   )
 
   const handlePointerMove = useCallback(
@@ -271,7 +271,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       handleHandToolMouseMove,
       handleSelectionMouseMove,
       handleNewDrawingMouseMove,
-    ],
+    ]
   )
 
   const handlePointerUp = useCallback(
@@ -281,7 +281,7 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       handleSelectionMouseUp(e.nativeEvent)
       handleNewDrawingMouseUp()
     },
-    [handleHandToolMouseUp, handleSelectionMouseUp, handleNewDrawingMouseUp],
+    [handleHandToolMouseUp, handleSelectionMouseUp, handleNewDrawingMouseUp]
   )
 
   return {

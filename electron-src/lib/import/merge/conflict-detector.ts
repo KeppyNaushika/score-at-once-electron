@@ -13,10 +13,7 @@ import type {
   MatchingConfig,
 } from "../../../../types/project-archive.types"
 import type { ExtractedArchiveData } from "../project-archive/archive-extractor"
-import {
-  performAllMatching,
-  type MatchResult,
-} from "./matcher"
+import { performAllMatching, type MatchResult } from "./matcher"
 
 /**
  * 2つの値が異なるかどうかを比較
@@ -24,10 +21,10 @@ import {
 function hasDataDifference(
   importData: Record<string, unknown>,
   existingData: Record<string, unknown>,
-  excludeKeys: string[] = ["id", "createdAt", "updatedAt"],
+  excludeKeys: string[] = ["id", "createdAt", "updatedAt"]
 ): boolean {
   const keysToCheck = Object.keys(importData).filter(
-    (k) => !excludeKeys.includes(k),
+    (k) => !excludeKeys.includes(k)
   )
 
   for (const key of keysToCheck) {
@@ -45,7 +42,7 @@ function hasDataDifference(
 function createConflictItems<T extends { id: string }>(
   results: MatchResult<T>[],
   category: ConflictCategory,
-  labelGenerator: (data: T) => string,
+  labelGenerator: (data: T) => string
 ): ConflictItem[] {
   const conflicts: ConflictItem[] = []
 
@@ -53,7 +50,10 @@ function createConflictItems<T extends { id: string }>(
     if (result.existingData) {
       // データに差異があるかチェック
       const importObj = result.importData as unknown as Record<string, unknown>
-      const existingObj = result.existingData as unknown as Record<string, unknown>
+      const existingObj = result.existingData as unknown as Record<
+        string,
+        unknown
+      >
 
       if (hasDataDifference(importObj, existingObj)) {
         conflicts.push({
@@ -74,7 +74,7 @@ function createConflictItems<T extends { id: string }>(
  * マッチング結果からサマリーを生成
  */
 function createMatchingSummary<T extends { id: string }>(
-  results: MatchResult<T>[],
+  results: MatchResult<T>[]
 ): MatchingSummary {
   let matched = 0
   let newItems = 0
@@ -85,7 +85,10 @@ function createMatchingSummary<T extends { id: string }>(
       newItems++
     } else {
       const importObj = result.importData as unknown as Record<string, unknown>
-      const existingObj = result.existingData as unknown as Record<string, unknown>
+      const existingObj = result.existingData as unknown as Record<
+        string,
+        unknown
+      >
 
       if (hasDataDifference(importObj, existingObj)) {
         conflicts++
@@ -102,7 +105,7 @@ function createMatchingSummary<T extends { id: string }>(
  * IDマッピングを生成
  */
 function createIdMapping<T extends { id: string }>(
-  results: MatchResult<T>[],
+  results: MatchResult<T>[]
 ): Record<string, string> {
   const mapping: Record<string, string> = {}
 
@@ -123,7 +126,7 @@ function createIdMapping<T extends { id: string }>(
  */
 export async function detectAllConflicts(
   importData: ExtractedArchiveData,
-  config: MatchingConfig,
+  config: MatchingConfig
 ): Promise<ConflictDetectionResult> {
   const warnings: string[] = []
 
@@ -138,7 +141,7 @@ export async function detectAllConflicts(
     const studentConflicts = createConflictItems(
       matchResults.students,
       "Student",
-      (s) => `${s.lastName} ${s.firstName} (${s.studentId})`,
+      (s) => `${s.lastName} ${s.firstName} (${s.studentId})`
     )
     results.push({
       category: "Student",
@@ -151,7 +154,7 @@ export async function detectAllConflicts(
     const classConflicts = createConflictItems(
       matchResults.classes,
       "Class",
-      (c) => c.name,
+      (c) => c.name
     )
     results.push({
       category: "Class",
@@ -164,7 +167,7 @@ export async function detectAllConflicts(
     const userConflicts = createConflictItems(
       matchResults.users,
       "User",
-      (u) => `${u.name} (${u.username})`,
+      (u) => `${u.name} (${u.username})`
     )
     results.push({
       category: "User",
@@ -177,7 +180,7 @@ export async function detectAllConflicts(
     const subtotalGroupConflicts = createConflictItems(
       matchResults.subtotalGroups,
       "SubtotalGroup",
-      (sg) => sg.name,
+      (sg) => sg.name
     )
     results.push({
       category: "SubtotalGroup",
@@ -199,10 +202,7 @@ export async function detectAllConflicts(
     return {
       success: false,
       results: [],
-      error:
-        error instanceof Error
-          ? error.message
-          : "競合検出に失敗しました",
+      error: error instanceof Error ? error.message : "競合検出に失敗しました",
     }
   }
 }
@@ -215,7 +215,7 @@ export async function detectAllConflicts(
 export async function detectScoreConflicts(
   importData: ExtractedArchiveData,
   _studentIdMapping: Record<string, string>,
-  _cropRegionIdMapping: Record<string, string>,
+  _cropRegionIdMapping: Record<string, string>
 ): Promise<CategoryMatchingResult[]> {
   const results: CategoryMatchingResult[] = []
 
@@ -226,7 +226,11 @@ export async function detectScoreConflicts(
   // QuestionScore (プレースホルダー)
   results.push({
     category: "QuestionScore",
-    summary: { matched: 0, newItems: importData.scoresData.questionScores.length, conflicts: 0 },
+    summary: {
+      matched: 0,
+      newItems: importData.scoresData.questionScores.length,
+      conflicts: 0,
+    },
     conflictItems: [],
     idMapping: {},
   })
@@ -234,7 +238,11 @@ export async function detectScoreConflicts(
   // DrawingAnnotation (プレースホルダー)
   results.push({
     category: "DrawingAnnotation",
-    summary: { matched: 0, newItems: importData.scoresData.drawingAnnotations.length, conflicts: 0 },
+    summary: {
+      matched: 0,
+      newItems: importData.scoresData.drawingAnnotations.length,
+      conflicts: 0,
+    },
     conflictItems: [],
     idMapping: {},
   })

@@ -17,7 +17,7 @@ export function getCanvasCoordinates(
   clientX: number,
   clientY: number,
   canvas: HTMLCanvasElement,
-  zoom: number,
+  zoom: number
 ): Point {
   const rect = canvas.getBoundingClientRect()
   const x = (clientX - rect.left) / zoom
@@ -34,7 +34,7 @@ export function getCanvasCoordinates(
  */
 export function isPointInRect(
   point: Point,
-  rect: { x: number; y: number; width: number; height: number },
+  rect: { x: number; y: number; width: number; height: number }
 ): boolean {
   return (
     point.x >= rect.x &&
@@ -52,7 +52,7 @@ export function isPointInRect(
  */
 export function findTextBoxAtPoint(
   textBoxes: TextBox[],
-  point: Point,
+  point: Point
 ): TextBox | null {
   return textBoxes.find((textBox) => isPointInRect(point, textBox)) || null
 }
@@ -92,7 +92,7 @@ export function generateTextBoxId(): string {
  */
 export function createTextBoxFromDrag(
   dragState: DragState,
-  text: string = "",
+  text: string = ""
 ): TextBox {
   const rect = createRectFromDrag(dragState)
 
@@ -104,8 +104,8 @@ export function createTextBoxFromDrag(
     height: rect.height,
     text,
     isSelected: false,
-    horizontalAlign: 'left',
-    verticalAlign: 'top',
+    horizontalAlign: "left",
+    verticalAlign: "top",
   }
 }
 
@@ -117,7 +117,7 @@ export function createTextBoxFromDrag(
  */
 export function updateTextBoxSelection(
   textBoxes: TextBox[],
-  selectedId: string | null,
+  selectedId: string | null
 ): TextBox[] {
   return textBoxes.map((textBox) => ({
     ...textBox,
@@ -135,10 +135,10 @@ export function updateTextBoxSelection(
 export function updateTextBoxContent(
   textBoxes: TextBox[],
   id: string,
-  newText: string,
+  newText: string
 ): TextBox[] {
   return textBoxes.map((textBox) =>
-    textBox.id === id ? { ...textBox, text: newText } : textBox,
+    textBox.id === id ? { ...textBox, text: newText } : textBox
   )
 }
 
@@ -162,7 +162,7 @@ export function removeTextBox(textBoxes: TextBox[], id: string): TextBox[] {
 export function isValidTextBoxSize(
   rect: { width: number; height: number },
   minWidth: number = 10,
-  minHeight: number = 10,
+  minHeight: number = 10
 ): boolean {
   return rect.width >= minWidth && rect.height >= minHeight
 }
@@ -177,7 +177,7 @@ export function isValidTextBoxSize(
 export function isValidDragForTextBox(
   dragState: DragState,
   minWidth: number = 10,
-  minHeight: number = 10,
+  minHeight: number = 10
 ): boolean {
   const rect = createRectFromDrag(dragState)
   return isValidTextBoxSize(rect, minWidth, minHeight)

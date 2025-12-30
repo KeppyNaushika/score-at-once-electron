@@ -34,7 +34,7 @@ export const getAppRootPath = (): string => {
   } else {
     // 開発環境の場合
     const rootPath = process.cwd()
-        return rootPath
+    return rootPath
   }
 }
 
@@ -79,18 +79,20 @@ export const initializeDataDirectory = async (): Promise<void> => {
     // サブディレクトリの作成
     const projectsDir = path.join(dataDir, "projects")
     const exportsDir = getExportsDirectory()
-    
+
     await fs.mkdir(projectsDir, { recursive: true, mode: 0o755 })
     await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
-    
+
     console.log("Data directory initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
     console.error("Data directory path:", dataDir)
     console.error("Process platform:", process.platform)
     console.error("App is packaged:", app.isPackaged)
-    
-    throw new Error(`Data directory initialization failed: ${error instanceof Error ? error.message : error}`)
+
+    throw new Error(
+      `Data directory initialization failed: ${error instanceof Error ? error.message : error}`
+    )
   }
 }
 

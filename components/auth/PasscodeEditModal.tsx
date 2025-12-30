@@ -24,7 +24,13 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface User {
   id: string
@@ -43,7 +49,12 @@ interface PasscodeEditModalProps {
 
 type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"
 
-export function PasscodeEditModal({ isOpen, onClose, onPasscodeUpdated, user }: PasscodeEditModalProps) {
+export function PasscodeEditModal({
+  isOpen,
+  onClose,
+  onPasscodeUpdated,
+  user,
+}: PasscodeEditModalProps) {
   const [passcodeType, setPasscodeType] = useState<PasscodeType>("none")
   const [passcode, setPasscode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -94,11 +105,13 @@ export function PasscodeEditModal({ isOpen, onClose, onPasscodeUpdated, user }: 
 
       // Reset form
       setPasscode("")
-      
+
       onPasscodeUpdated()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "パスコードの更新に失敗しました")
+      setError(
+        err instanceof Error ? err.message : "パスコードの更新に失敗しました"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -185,14 +198,14 @@ export function PasscodeEditModal({ isOpen, onClose, onPasscodeUpdated, user }: 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>ユーザー名</Label>
-            <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-700">
+            <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
               {user.username}
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label>表示名</Label>
-            <div className="px-3 py-2 bg-gray-50 rounded-md text-sm text-gray-700">
+            <div className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
               {user.name}
             </div>
           </div>
@@ -207,10 +220,13 @@ export function PasscodeEditModal({ isOpen, onClose, onPasscodeUpdated, user }: 
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="passcodeType">パスコードタイプ</Label>
-                <Select value={passcodeType} onValueChange={(value: PasscodeType) => {
-                  setPasscodeType(value)
-                  setPasscode("")
-                }}>
+                <Select
+                  value={passcodeType}
+                  onValueChange={(value: PasscodeType) => {
+                    setPasscodeType(value)
+                    setPasscode("")
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="パスコードタイプを選択" />
                   </SelectTrigger>
@@ -222,14 +238,12 @@ export function PasscodeEditModal({ isOpen, onClose, onPasscodeUpdated, user }: 
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {renderPasscodeInput()}
             </CardContent>
           </Card>
 
-          {error && (
-            <div className="text-sm text-red-500">{error}</div>
-          )}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

@@ -16,7 +16,7 @@ export async function saveTemplate(
   projectId: string,
   currentUser: User,
   selectedMasterImageId: string,
-  cropRegions: CropRegionArea[],
+  cropRegions: CropRegionArea[]
 ): Promise<{ success: boolean; savedRegions?: CropRegionArea[] }> {
   if (!projectId || !currentUser || !selectedMasterImageId) {
     toast.error("プロジェクトID、ユーザー情報、基準画像は必須です。")
@@ -28,7 +28,7 @@ export async function saveTemplate(
     const savePromises = cropRegions.map(async (area) => {
       if (!area.projectPageId) {
         throw new Error(
-          `Crop region ${area.label || "Unnamed"} is missing projectPageId.`,
+          `Crop region ${area.label || "Unnamed"} is missing projectPageId.`
         )
       }
 
@@ -87,11 +87,11 @@ export async function saveTemplate(
  * @returns Promise<{ success: boolean, detectedRegions?: CropRegionData[] }>
  */
 export async function detectCropRegions(
-  selectedMasterImage: { path?: string } | null,
+  selectedMasterImage: { path?: string } | null
 ): Promise<{ success: boolean; detectedRegions?: CropRegionArea[] }> {
   if (!selectedMasterImage || !selectedMasterImage.path) {
     toast.error(
-      "模範解答画像が選択されていないか、パスが無効です。自動検出を実行できません。",
+      "模範解答画像が選択されていないか、パスが無効です。自動検出を実行できません。"
     )
     return { success: false }
   }
@@ -103,7 +103,7 @@ export async function detectCropRegions(
   } catch (error) {
     console.error("Failed to detect crop regions:", error)
     toast.error(
-      `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+      `採点枠領域の自動検出に失敗しました: ${error instanceof Error ? error.message : String(error)}`
     )
     return { success: false }
   }
@@ -134,14 +134,14 @@ export function canProceedToNextStep(layoutId: string | undefined): boolean {
  */
 export function getAdjacentImages(
   masterImages: Array<{ id: string; pageNumber: number }>,
-  selectedImageId: string | undefined,
+  selectedImageId: string | undefined
 ) {
   if (!selectedImageId) {
     return { previousImage: null, nextImage: null, currentIndex: -1 }
   }
 
   const currentIndex = masterImages.findIndex(
-    (img) => img.id === selectedImageId,
+    (img) => img.id === selectedImageId
   )
 
   return {

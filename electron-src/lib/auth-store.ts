@@ -1,6 +1,6 @@
-import { app } from 'electron'
-import { join } from 'path'
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from 'fs'
+import { app } from "electron"
+import { join } from "path"
+import { readFileSync, writeFileSync, existsSync, unlinkSync } from "fs"
 
 interface AuthData {
   authToken: string | null
@@ -8,7 +8,7 @@ interface AuthData {
 
 // 認証データファイルのパス
 const getAuthFilePath = (): string => {
-  return join(app.getPath('userData'), 'auth.json')
+  return join(app.getPath("userData"), "auth.json")
 }
 
 export class AuthStoreManager {
@@ -19,11 +19,11 @@ export class AuthStoreManager {
     try {
       const filePath = getAuthFilePath()
       if (existsSync(filePath)) {
-        const data = readFileSync(filePath, 'utf8')
+        const data = readFileSync(filePath, "utf8")
         return JSON.parse(data)
       }
     } catch (error) {
-      console.error('Failed to read auth data:', error)
+      console.error("Failed to read auth data:", error)
     }
     return { authToken: null }
   }
@@ -34,9 +34,9 @@ export class AuthStoreManager {
   private static writeAuthData(data: AuthData): void {
     try {
       const filePath = getAuthFilePath()
-      writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+      writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8")
     } catch (error) {
-      console.error('Failed to write auth data:', error)
+      console.error("Failed to write auth data:", error)
       throw error
     }
   }
@@ -48,7 +48,7 @@ export class AuthStoreManager {
     const data = this.readAuthData()
     data.authToken = token
     this.writeAuthData(data)
-    console.log('✅ AuthToken saved to file')
+    console.log("✅ AuthToken saved to file")
   }
 
   /**
@@ -56,7 +56,10 @@ export class AuthStoreManager {
    */
   static getAuthToken(): string | null {
     const data = this.readAuthData()
-    console.log('🔍 AuthToken retrieved from file:', data.authToken ? 'exists' : 'not found')
+    console.log(
+      "🔍 AuthToken retrieved from file:",
+      data.authToken ? "exists" : "not found"
+    )
     return data.authToken
   }
 
@@ -67,7 +70,7 @@ export class AuthStoreManager {
     const data = this.readAuthData()
     data.authToken = null
     this.writeAuthData(data)
-    console.log('🗑️ AuthToken cleared from file')
+    console.log("🗑️ AuthToken cleared from file")
   }
 
   /**
@@ -79,9 +82,9 @@ export class AuthStoreManager {
       if (existsSync(filePath)) {
         unlinkSync(filePath)
       }
-      console.log('🗑️ All auth data cleared from file')
+      console.log("🗑️ All auth data cleared from file")
     } catch (error) {
-      console.error('Failed to clear auth data:', error)
+      console.error("Failed to clear auth data:", error)
     }
   }
 
@@ -92,7 +95,7 @@ export class AuthStoreManager {
     const data = this.readAuthData()
     return {
       hasToken: !!data.authToken,
-      storePath: getAuthFilePath()
+      storePath: getAuthFilePath(),
     }
   }
 }

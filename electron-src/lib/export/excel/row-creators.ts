@@ -30,20 +30,24 @@ export async function createDataRows(
   scoringData: ScoringData[],
   subtotalRegions: CropRegion[],
   subtotalTargetMap: SubtotalTargetMap,
-  isScoreSheet: boolean,
+  isScoreSheet: boolean
 ) {
   // 事前に順位を計算（総合点の降順でソート）
   const scoringDataWithRank: ScoringDataWithRank[] = scoringData
-    .map((student, index): ScoringDataWithRank => ({
-      ...student,
-      originalIndex: index,
-      rank: 0, // 仮の値、後で正しい順位に更新
-    }))
+    .map(
+      (student, index): ScoringDataWithRank => ({
+        ...student,
+        originalIndex: index,
+        rank: 0, // 仮の値、後で正しい順位に更新
+      })
+    )
     .sort((a, b) => b.totalScore - a.totalScore)
-    .map((student, rank): ScoringDataWithRank => ({
-      ...student,
-      rank: rank + 1,
-    }))
+    .map(
+      (student, rank): ScoringDataWithRank => ({
+        ...student,
+        rank: rank + 1,
+      })
+    )
     // 元の順序に戻す
     .sort((a, b) => a.originalIndex - b.originalIndex)
 
@@ -53,7 +57,7 @@ export async function createDataRows(
 
     // 受験状態を最左列（A列）に設定
     const statusText = getStatusText(student.status)
-    
+
     const row = worksheet.addRow([
       statusText, // 受験状態（A列）
       student.rank, // 順位（B列）- 事前に計算済みの順位を使用
@@ -84,7 +88,7 @@ export async function createDataRows(
       subtotalRegions,
       subtotalTargetMap,
       rowIndex,
-      isScoreSheet,
+      isScoreSheet
     )
 
     // 設問別データの設定
@@ -104,7 +108,7 @@ export async function createDataRows(
  * @param subtotalTargetMap - 小計対象設問マップ（正誤一覧シートでのみ使用、非推奨）
  * @param rowIndex - 行インデックス（1ベース）
  * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
- * 
+ *
  * 注意: 点数一覧では計算済みの小計点を直接使用、正誤一覧では従来のExcel関数を使用
  */
 async function setSubtotalCells(
@@ -113,7 +117,7 @@ async function setSubtotalCells(
   subtotalRegions: CropRegion[],
   subtotalTargetMap: SubtotalTargetMap,
   rowIndex: number,
-  isScoreSheet: boolean,
+  isScoreSheet: boolean
 ) {
   let subtotalColIndex = 9 // 1つ右にシフト
   const questionStartColIndex = 9 + subtotalRegions.length // 1つ右にシフト
@@ -125,7 +129,9 @@ async function setSubtotalCells(
     if (subtotalScore) {
       if (isScoreSheet) {
         // 点数一覧：計算済みの小計点を直接使用
-        console.log(`📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for region ${subtotalScore.subtotalRegionId}`)
+        console.log(
+          `📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for region ${subtotalScore.subtotalRegionId}`
+        )
         if (subtotalScore.score !== null && subtotalScore.score !== undefined) {
           // 採点済みデータがあれば0点でも表示
           row.getCell(col).value = subtotalScore.score
@@ -141,7 +147,7 @@ async function setSubtotalCells(
         if (targetQuestionIndices.length > 0) {
           const targetCells = targetQuestionIndices.map((index) => {
             const questionCol = getExcelColumnLetter(
-              questionStartColIndex + index,
+              questionStartColIndex + index
             )
             return `${questionCol}${rowIndex}`
           })
@@ -176,7 +182,7 @@ function setQuestionCells(
   row: ExcelJS.Row,
   student: ScoringData,
   subtotalCount: number,
-  isScoreSheet: boolean,
+  isScoreSheet: boolean
 ) {
   let scoreColIndex = 9 + subtotalCount // 1つ右にシフト
 
@@ -191,7 +197,8 @@ function setQuestionCells(
         cell.value = ""
       } else {
         // 採点済みの場合は0点でも表示
-        cell.value = score.score !== null && score.score !== undefined ? score.score : 0
+        cell.value =
+          score.score !== null && score.score !== undefined ? score.score : 0
       }
       // 部分点・保留の場合は赤色に設定
       if (score.status === "partial" || score.status === "hold") {
@@ -204,7 +211,10 @@ function setQuestionCells(
         cell.value = ""
       } else {
         // 採点済みの場合は記号を表示
-        const statusSymbol = getStatusSymbol(score.status, score.score ?? undefined)
+        const statusSymbol = getStatusSymbol(
+          score.status,
+          score.score ?? undefined
+        )
         cell.value = statusSymbol || ""
       }
       // 部分点・保留の場合は赤色に設定
@@ -222,7 +232,9 @@ function setQuestionCells(
  * @param status - 受験状態
  * @returns 日本語の受験状態
  */
-function getStatusText(status?: "participating" | "expected" | "absent"): string {
+function getStatusText(
+  status?: "participating" | "expected" | "absent"
+): string {
   switch (status) {
     case "participating":
       return "受験"

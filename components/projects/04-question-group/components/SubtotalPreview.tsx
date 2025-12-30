@@ -36,14 +36,14 @@ export function SubtotalPreview({
     const groupData = subtotalData[groupId] || {}
     return Object.values(groupData).reduce(
       (sum, subtotal) => sum + subtotal.totalPoints,
-      0,
+      0
     )
   }
 
   // 全体の合計点数を計算
   const totalPoints = subtotalGroups.reduce(
     (sum, group) => sum + getGroupTotalPoints(group.id),
-    0,
+    0
   )
 
   return (
@@ -74,7 +74,7 @@ export function SubtotalPreview({
                 <p className="text-2xl font-bold">
                   {subtotalGroups.reduce(
                     (sum, group) => sum + group.subtotals.length,
-                    0,
+                    0
                   )}
                 </p>
               </div>
@@ -163,7 +163,7 @@ export function SubtotalPreview({
                                         >
                                           {question}
                                         </Badge>
-                                      ),
+                                      )
                                     )}
                                   </div>
                                 )}

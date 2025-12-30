@@ -17,17 +17,21 @@ let httpServer: Server | null = null
  */
 const ensurePackagedNodePath = (basePath: string) => {
   try {
-    const fs = require('fs')
-    const Module = require('module') as typeof import('module') & { _initPaths(): void }
+    const fs = require("fs")
+    const Module = require("module") as typeof import("module") & {
+      _initPaths(): void
+    }
 
     const candidatePaths = [
-      join(basePath, 'app.asar', 'node_modules'),
-      join(basePath, 'app.asar.unpacked', 'node_modules'),
-      join(basePath, 'node_modules'),
+      join(basePath, "app.asar", "node_modules"),
+      join(basePath, "app.asar.unpacked", "node_modules"),
+      join(basePath, "node_modules"),
     ].filter((p: string) => fs.existsSync(p))
 
     if (!candidatePaths.length) {
-      console.warn(`⚠ Warning: No node_modules directory found near ${basePath}`)
+      console.warn(
+        `⚠ Warning: No node_modules directory found near ${basePath}`
+      )
       return
     }
 
@@ -38,9 +42,11 @@ const ensurePackagedNodePath = (basePath: string) => {
 
     process.env.NODE_PATH = updated.join(delimiter)
     Module._initPaths()
-    console.log(`Adjusted NODE_PATH for packaged runtime: ${updated.join(', ')}`)
+    console.log(
+      `Adjusted NODE_PATH for packaged runtime: ${updated.join(", ")}`
+    )
   } catch (error) {
-    console.warn('Failed to extend NODE_PATH for packaged runtime:', error)
+    console.warn("Failed to extend NODE_PATH for packaged runtime:", error)
   }
 }
 
@@ -48,11 +54,11 @@ export async function startEmbeddedNextServer(): Promise<void> {
   if (isDev) return // 開発時は外部サーバーを使用
 
   try {
-    const { createServer } = require('http')
-    
-    const hostname = 'localhost'
+    const { createServer } = require("http")
+
+    const hostname = "localhost"
     const port = 3000
-    
+
     // Next.jsアプリの初期化
     let appDir
     if (process.resourcesPath) {
@@ -67,12 +73,14 @@ export async function startEmbeddedNextServer(): Promise<void> {
 
       // .nextとpublicディレクトリの存在確認
       try {
-        const fs = require('fs')
-        const nextDir = join(appDir, '.next')
-        const publicDir = join(appDir, 'public')
+        const fs = require("fs")
+        const nextDir = join(appDir, ".next")
+        const publicDir = join(appDir, "public")
 
         console.log(`Checking if ${nextDir} exists: ${fs.existsSync(nextDir)}`)
-        console.log(`Checking if ${publicDir} exists: ${fs.existsSync(publicDir)}`)
+        console.log(
+          `Checking if ${publicDir} exists: ${fs.existsSync(publicDir)}`
+        )
 
         if (!fs.existsSync(nextDir)) {
           console.warn(`⚠ Warning: .next directory not found at ${nextDir}`)
@@ -82,8 +90,10 @@ export async function startEmbeddedNextServer(): Promise<void> {
         }
 
         // PDF workerファイルの存在確認
-        const pdfWorkerPath = join(publicDir, 'js', 'pdf.worker.min.mjs')
-        console.log(`Checking if PDF worker exists: ${fs.existsSync(pdfWorkerPath)}`)
+        const pdfWorkerPath = join(publicDir, "js", "pdf.worker.min.mjs")
+        console.log(
+          `Checking if PDF worker exists: ${fs.existsSync(pdfWorkerPath)}`
+        )
         if (!fs.existsSync(pdfWorkerPath)) {
           console.error(`❌ PDF worker file not found at ${pdfWorkerPath}`)
         } else {
@@ -97,42 +107,46 @@ export async function startEmbeddedNextServer(): Promise<void> {
       appDir = process.cwd()
       console.log(`Development Next.js app directory: ${appDir}`)
     }
-    
-    const next = require('next')
+
+    const next = require("next")
     nextApp = next({
       dev: false,
       hostname,
       port,
-      dir: appDir
+      dir: appDir,
     }) as NextServer
 
     const handle = nextApp.getRequestHandler()
 
     await nextApp.prepare()
-    
-    httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        await handle(req, res)
-      } catch (err) {
-        console.error('Error occurred handling', req.url, err)
-        res.statusCode = 500
-        res.end('internal server error')
+
+    httpServer = createServer(
+      async (req: IncomingMessage, res: ServerResponse) => {
+        try {
+          await handle(req, res)
+        } catch (err) {
+          console.error("Error occurred handling", req.url, err)
+          res.statusCode = 500
+          res.end("internal server error")
+        }
       }
-    })
-    
+    )
+
     return new Promise<void>((resolve, reject) => {
       httpServer!.listen(port, hostname, () => {
-        console.log(`✓ Next.js server started successfully on http://${hostname}:${port}`)
-        console.log('Next.js server is now ready to accept connections')
+        console.log(
+          `✓ Next.js server started successfully on http://${hostname}:${port}`
+        )
+        console.log("Next.js server is now ready to accept connections")
         resolve()
       })
-      httpServer!.on('error', (err: Error) => {
-        console.error('Failed to start Next.js server:', err)
+      httpServer!.on("error", (err: Error) => {
+        console.error("Failed to start Next.js server:", err)
         reject(err)
       })
     })
   } catch (error) {
-    console.error('Error starting embedded Next.js server:', error)
+    console.error("Error starting embedded Next.js server:", error)
     throw error
   }
 }

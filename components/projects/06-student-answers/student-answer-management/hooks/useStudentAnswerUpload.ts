@@ -9,7 +9,7 @@ import { toast } from "sonner"
 
 export function useStudentAnswerUpload(
   projectId: string,
-  onUploadComplete?: () => void,
+  onUploadComplete?: () => void
 ) {
   // State管理
   const [isUploading, setIsUploading] = useState(false)
@@ -69,7 +69,10 @@ export function useStudentAnswerUpload(
               console.error(`PDF conversion failed for ${file.name}:`, pdfError)
 
               // パスワードエラーの場合はパスワードダイアログを表示
-              if (pdfError instanceof Error && pdfError.message === "password-required") {
+              if (
+                pdfError instanceof Error &&
+                pdfError.message === "password-required"
+              ) {
                 // パスワード入力を要求
                 const password = await new Promise<string | null>((resolve) => {
                   setPasswordDialog({
@@ -112,10 +115,10 @@ export function useStudentAnswerUpload(
                   } catch (passwordError: unknown) {
                     console.error(
                       `PDF conversion with password failed for ${file.name}:`,
-                      passwordError,
+                      passwordError
                     )
                     toast.error(
-                      `${file.name}: パスワードが正しくないか、変換に失敗しました`,
+                      `${file.name}: パスワードが正しくないか、変換に失敗しました`
                     )
                   }
                 }
@@ -141,7 +144,7 @@ export function useStudentAnswerUpload(
 
           processedCount++
           setPdfProcessingProgress(
-            Math.round((processedCount / rawFiles.length) * 100),
+            Math.round((processedCount / rawFiles.length) * 100)
           )
         } catch (error) {
           console.error(`Error converting file ${file.name}:`, error)
@@ -151,7 +154,7 @@ export function useStudentAnswerUpload(
 
       return results
     },
-    [],
+    []
   )
 
   // ファイルドロップ処理
@@ -177,7 +180,7 @@ export function useStudentAnswerUpload(
         setPdfProcessingProgress(0)
       }
     },
-    [convertFiles],
+    [convertFiles]
   )
 
   // アップロード処理
@@ -199,7 +202,7 @@ export function useStudentAnswerUpload(
           const data = uploadData[i]
           const result = await window.electronAPI.uploadStudentAnswers(
             projectId,
-            [data],
+            [data]
           )
 
           if (result.success) {
@@ -230,7 +233,7 @@ export function useStudentAnswerUpload(
 
         if (successCount < uploadData.length) {
           toast.warning(
-            `${uploadData.length - successCount}件のアップロードに失敗しました`,
+            `${uploadData.length - successCount}件のアップロードに失敗しました`
           )
         }
       } catch (error) {
@@ -241,7 +244,7 @@ export function useStudentAnswerUpload(
         setUploadProgress(0)
       }
     },
-    [onUploadComplete, projectId],
+    [onUploadComplete, projectId]
   )
 
   return {

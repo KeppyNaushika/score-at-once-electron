@@ -39,16 +39,20 @@ function serializeQuestionScore(score: {
 /**
  * CropRegionをIPC用にシリアライズ（questionScoresのDecimalを変換）
  */
-function serializeCropRegion<T extends { questionScores?: Array<{
-  id: string
-  cropRegionId: string
-  studentId: string | null
-  partialScore: { toNumber(): number } | null
-  status: string
-  scoredByUserId: string | null
-  createdAt: Date
-  updatedAt: Date
-}> }>(region: T) {
+function serializeCropRegion<
+  T extends {
+    questionScores?: Array<{
+      id: string
+      cropRegionId: string
+      studentId: string | null
+      partialScore: { toNumber(): number } | null
+      status: string
+      scoredByUserId: string | null
+      createdAt: Date
+      updatedAt: Date
+    }>
+  },
+>(region: T) {
   return {
     ...region,
     questionScores: region.questionScores?.map(serializeQuestionScore) || [],
@@ -87,7 +91,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-crop-region error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -102,7 +106,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-many-crop-regions error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -113,7 +117,7 @@ export function setupCropRegionHandlers(): void {
           "🔄 IPC: update-crop-region called with id:",
           id,
           "data:",
-          data,
+          data
         )
         const result = await dbUpdateCropRegion(id, data)
         console.log("✅ IPC: update-crop-region result:", result)
@@ -122,7 +126,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: update-crop-region error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -131,7 +135,7 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: update-crop-region-orders called with updates:",
-          updates,
+          updates
         )
         const result = await dbUpdateCropRegionOrders(updates)
         console.log("✅ IPC: update-crop-region-orders result:", result)
@@ -140,7 +144,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: update-crop-region-orders error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-crop-region", async (_event, id: string) => {
@@ -161,13 +165,13 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-crop-regions-by-project-id called with projectId:",
-          projectId,
+          projectId
         )
         const result = await dbGetCropRegionsByProjectId(projectId)
         console.log(
           "✅ IPC: get-crop-regions-by-project-id result:",
           result?.length,
-          "regions",
+          "regions"
         )
 
         // questionScoresのDecimalをnumberに変換
@@ -176,7 +180,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: get-crop-regions-by-project-id error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -185,22 +189,25 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-question-answer-regions-by-project-id called with projectId:",
-          projectId,
+          projectId
         )
         const result = await dbGetQuestionAnswerRegionsByProjectId(projectId)
         console.log(
           "✅ IPC: get-question-answer-regions-by-project-id result:",
           result?.length,
-          "regions",
+          "regions"
         )
 
         // questionScoresのDecimalをnumberに変換
         return result?.map(serializeCropRegion) || []
       } catch (error) {
-        console.error("❌ IPC: get-question-answer-regions-by-project-id error:", error)
+        console.error(
+          "❌ IPC: get-question-answer-regions-by-project-id error:",
+          error
+        )
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle("get-crop-region-by-id", async (_event, id: string) => {
@@ -230,7 +237,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-subtotal error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -245,7 +252,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-many-subtotals error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -256,7 +263,7 @@ export function setupCropRegionHandlers(): void {
           "🔄 IPC: update-subtotal called with id:",
           id,
           "data:",
-          data,
+          data
         )
         const result = await dbUpdateSubtotal(id, data)
         console.log("✅ IPC: update-subtotal result:", result)
@@ -265,7 +272,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: update-subtotal error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-subtotal", async (_event, id: string) => {
@@ -286,20 +293,20 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-subtotals-by-group-id called with subtotalGroupId:",
-          subtotalGroupId,
+          subtotalGroupId
         )
         const result = await dbGetSubtotalsByGroupId(subtotalGroupId)
         console.log(
           "✅ IPC: get-subtotals-by-group-id result:",
           result?.length,
-          "subtotals",
+          "subtotals"
         )
         return result
       } catch (error) {
         console.error("❌ IPC: get-subtotals-by-group-id error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle("get-subtotal-by-id", async (_event, id: string) => {
@@ -327,7 +334,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-crop-subtotal error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -336,7 +343,7 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: create-many-crop-subtotals called with data:",
-          data,
+          data
         )
         const result = await dbCreateManyCropSubtotals(data)
         console.log("✅ IPC: create-many-crop-subtotals result:", result)
@@ -345,7 +352,7 @@ export function setupCropRegionHandlers(): void {
         console.error("❌ IPC: create-many-crop-subtotals error:", error)
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-crop-subtotal", async (_event, id: string) => {
@@ -366,22 +373,22 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: delete-crop-subtotals-by-crop-region-id called with cropRegionId:",
-          cropRegionId,
+          cropRegionId
         )
         const result = await dbDeleteCropSubtotalsByCropRegionId(cropRegionId)
         console.log(
           "✅ IPC: delete-crop-subtotals-by-crop-region-id result:",
-          result,
+          result
         )
         return result
       } catch (error) {
         console.error(
           "❌ IPC: delete-crop-subtotals-by-crop-region-id error:",
-          error,
+          error
         )
         throw error
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -390,23 +397,23 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-crop-subtotals-by-crop-region-id called with cropRegionId:",
-          cropRegionId,
+          cropRegionId
         )
         const result = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
         console.log(
           "✅ IPC: get-crop-subtotals-by-crop-region-id result:",
           result?.length,
-          "subtotals",
+          "subtotals"
         )
         return result
       } catch (error) {
         console.error(
           "❌ IPC: get-crop-subtotals-by-crop-region-id error:",
-          error,
+          error
         )
         throw error
       }
-    },
+    }
   )
 
   // 互換性のあるレスポンス形式での取得（QuestionAssignmentMatrix専用）
@@ -416,13 +423,13 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-assignments-by-question-crop-region-id called with cropRegionId:",
-          cropRegionId,
+          cropRegionId
         )
         const assignments = await dbGetCropSubtotalsByCropRegionId(cropRegionId)
         console.log(
           "✅ IPC: get-assignments-by-question-crop-region-id result:",
           assignments?.length,
-          "assignments",
+          "assignments"
         )
 
         return {
@@ -432,7 +439,7 @@ export function setupCropRegionHandlers(): void {
       } catch (error) {
         console.error(
           "❌ IPC: get-assignments-by-question-crop-region-id error:",
-          error,
+          error
         )
         return {
           success: false,
@@ -440,7 +447,7 @@ export function setupCropRegionHandlers(): void {
           assignments: [],
         }
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -449,20 +456,20 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-crop-subtotals-by-subtotal-id called with subtotalId:",
-          subtotalId,
+          subtotalId
         )
         const result = await dbGetCropSubtotalsBySubtotalId(subtotalId)
         console.log(
           "✅ IPC: get-crop-subtotals-by-subtotal-id result:",
           result?.length,
-          "assignments",
+          "assignments"
         )
         return result
       } catch (error) {
         console.error("❌ IPC: get-crop-subtotals-by-subtotal-id error:", error)
         throw error
       }
-    },
+    }
   )
 
   // 互換性のためのエイリアス
@@ -472,22 +479,22 @@ export function setupCropRegionHandlers(): void {
       try {
         console.log(
           "🔄 IPC: get-subtotal-definitions-by-crop-region-id called with cropRegionId:",
-          cropRegionId,
+          cropRegionId
         )
         const result = await dbGetSubtotalDefsByCropRegionId(cropRegionId)
         console.log(
           "✅ IPC: get-subtotal-definitions-by-crop-region-id result:",
           result?.length,
-          "definitions",
+          "definitions"
         )
         return result
       } catch (error) {
         console.error(
           "❌ IPC: get-subtotal-definitions-by-crop-region-id error:",
-          error,
+          error
         )
         throw error
       }
-    },
+    }
   )
 }

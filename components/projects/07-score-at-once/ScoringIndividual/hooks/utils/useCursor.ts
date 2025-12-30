@@ -27,7 +27,7 @@ export interface UseCursorProps {
   hitTestHandle?: (
     element: DrawingElement,
     x: number,
-    y: number,
+    y: number
   ) => string | null
 }
 
@@ -40,13 +40,13 @@ export interface UseCursorReturn {
   /** リサイズカーソルの種類を取得 */
   getResizeCursor: (
     element: DrawingElement | null,
-    handle: string,
+    handle: string
   ) => CursorStyle
   /** リサイズハンドルをチェックしてカーソルを返す */
   checkResizeHandle: (
     element: DrawingElement,
     testX: number,
-    testY: number,
+    testY: number
   ) => CursorStyle | null
 }
 
@@ -76,7 +76,7 @@ export function useCursor({
         canvas.style.cursor = cursorStyle
       }
     },
-    [canvasRef],
+    [canvasRef]
   )
 
   /**
@@ -159,7 +159,7 @@ export function useCursor({
           return "move"
       }
     },
-    [],
+    []
   )
 
   /**
@@ -174,7 +174,7 @@ export function useCursor({
     (
       element: DrawingElement,
       testX: number,
-      testY: number,
+      testY: number
     ): CursorStyle | null => {
       if (!hitTestHandle) return null
 
@@ -184,7 +184,7 @@ export function useCursor({
       }
       return null
     },
-    [hitTestHandle, getResizeCursor],
+    [hitTestHandle, getResizeCursor]
   )
 
   return {

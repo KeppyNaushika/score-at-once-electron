@@ -80,7 +80,7 @@ export interface AnswerIndividualViewProps {
   onScoringDataScore?: (
     statusOrAnswerIds: string | string[],
     statusOrPartialScore?: ScoringStatus | number,
-    partialScore?: number,
+    partialScore?: number
   ) => void
 
   // QuestionScore自動作成用のコンテキスト情報
@@ -150,15 +150,15 @@ export interface DrawingActions {
   setLineStyle: (style: LineStyle) => void
   setFontSize: (size: number) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
   ) => void
   addDrawingElement: (element: DrawingElement) => void | Promise<void>
   updateDrawingElement: (
     id: string,
-    updates: Partial<DrawingElement>,
+    updates: Partial<DrawingElement>
   ) => void | Promise<void>
   updateDrawingElements: (
-    updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+    updates: Array<{ id: string; updates: Partial<DrawingElement> }>
   ) => void | Promise<void>
   removeDrawingElement: (id: string) => void | Promise<void>
   // 複数選択システム
@@ -173,7 +173,7 @@ export interface DrawingActions {
     rect:
       | SelectionRectangle
       | null
-      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null)
   ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   clearDrawing: () => void
@@ -185,8 +185,8 @@ export interface DrawingActions {
       | Partial<DrawingElement>
       | null
       | ((
-          prev: Partial<DrawingElement> | null,
-        ) => Partial<DrawingElement> | null),
+          prev: Partial<DrawingElement> | null
+        ) => Partial<DrawingElement> | null)
   ) => void
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void

@@ -4,7 +4,7 @@ import { ProjectStudentAddModalContainer } from "@/components/projects/05-studen
 import type { ProjectStudentAddModalProps } from "@/components/projects/05-students/components/project-student-add-modal/types/project-student-add-types"
 
 export default function ProjectStudentAddModal(
-  props: ProjectStudentAddModalProps,
+  props: ProjectStudentAddModalProps
 ) {
   return <ProjectStudentAddModalContainer {...props} />
 }

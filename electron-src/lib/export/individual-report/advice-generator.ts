@@ -19,7 +19,9 @@ function isIncorrectAnswer(score: ScoreDetail): boolean {
   return (
     score.status === "incorrect" ||
     score.status === "no_answer" ||
-    (score.status === "partial" && score.score !== null && score.score < score.maxScore * 0.5)
+    (score.status === "partial" &&
+      score.score !== null &&
+      score.score < score.maxScore * 0.5)
   )
 }
 
@@ -35,7 +37,7 @@ export function findDifferentiatingQuestions(
     rateMax: number
     filterMode: QuestionFilterMode
     topN: number
-  },
+  }
 ): AdviceQuestion[] {
   const { rateMin, rateMax, filterMode, topN } = options
 
@@ -76,7 +78,7 @@ export function findMustReviewQuestions(
     rateMin: number
     filterMode: QuestionFilterMode
     topN: number
-  },
+  }
 ): AdviceQuestion[] {
   const { rateMin, filterMode, topN } = options
 
@@ -112,7 +114,7 @@ export function findMustReviewQuestions(
 export function generateLearningAdvice(
   scores: ScoreDetail[],
   questionCorrectRates: Record<string, number>,
-  options: AdviceOptions,
+  options: AdviceOptions
 ): LearningAdviceData {
   const differentiatingQuestions = options.showDifferentiatingQuestions
     ? findDifferentiatingQuestions(scores, questionCorrectRates, {

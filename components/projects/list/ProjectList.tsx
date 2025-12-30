@@ -29,12 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  ProjectWithDetails,
-  isValidProject
-} from "@/types/common.types"
+import { ProjectWithDetails, isValidProject } from "@/types/common.types"
 import { getProjectStatus } from "@/utils/projectStatus"
-
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
@@ -95,10 +91,10 @@ const File = () => {
               {projects.map((project) => {
                 // 型ガードを使用して安全にproject処理
                 if (!isValidProject(project)) {
-                  console.warn('Skipping invalid project:', project)
+                  console.warn("Skipping invalid project:", project)
                   return null
                 }
-                
+
                 const status = getProjectStatus(project)
 
                 return (
@@ -108,9 +104,13 @@ const File = () => {
                         <div className="font-medium">{project.examName}</div>
                         <div className="text-muted-foreground text-sm">
                           {project.examDate
-                            ? typeof project.examDate === 'string'
-                              ? new Date(project.examDate).toLocaleDateString("ja-JP")
-                              : new Date(project.examDate).toLocaleDateString("ja-JP")
+                            ? typeof project.examDate === "string"
+                              ? new Date(project.examDate).toLocaleDateString(
+                                  "ja-JP"
+                                )
+                              : new Date(project.examDate).toLocaleDateString(
+                                  "ja-JP"
+                                )
                             : "実施日未設定"}
                         </div>
                       </div>

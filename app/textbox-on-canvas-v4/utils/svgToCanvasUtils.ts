@@ -47,14 +47,14 @@ export function addMathJaxDefsToSvg(svgData: string): string {
  * @returns 生成されたSVG要素またはnull
  */
 export async function generateSvgElement(
-  options: SvgConversionOptions,
+  options: SvgConversionOptions
 ): Promise<SVGSVGElement | null> {
   return await convertTextToSvg(
     options.text,
     options.width,
     options.height,
     options.horizontalAlign || "left",
-    options.verticalAlign || "top",
+    options.verticalAlign || "top"
   )
 }
 
@@ -86,7 +86,7 @@ export function createSvgBlobUrl(svgElement: SVGSVGElement): string | null {
  * @returns Promise<HTMLImageElement | null>
  */
 export function convertSvgToImage(
-  svgElement: SVGSVGElement,
+  svgElement: SVGSVGElement
 ): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const svgUrl = createSvgBlobUrl(svgElement)

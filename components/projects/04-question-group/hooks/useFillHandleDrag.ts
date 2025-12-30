@@ -73,7 +73,11 @@ interface UseFillHandleDragParams {
  * })
  * ```
  */
-export function useFillHandleDrag({ onFillComplete, rows = [], cols = [] }: UseFillHandleDragParams) {
+export function useFillHandleDrag({
+  onFillComplete,
+  rows = [],
+  cols = [],
+}: UseFillHandleDragParams) {
   const [state, setState] = useState<FillHandleState>({
     isDragging: false,
     startCell: null,
@@ -95,7 +99,7 @@ export function useFillHandleDrag({ onFillComplete, rows = [], cols = [] }: UseF
         initialValues: [initialValue],
       })
     },
-    [],
+    []
   )
 
   /**
@@ -116,7 +120,7 @@ export function useFillHandleDrag({ onFillComplete, rows = [], cols = [] }: UseF
         }
       })
     },
-    [rows, cols],
+    [rows, cols]
   )
 
   /**
@@ -138,7 +142,7 @@ export function useFillHandleDrag({ onFillComplete, rows = [], cols = [] }: UseF
       // スマートフィル適用
       const filledValues = smartFillCheckbox(
         prev.initialValues,
-        prev.selectedRange.length,
+        prev.selectedRange.length
       )
 
       // 更新データ作成
@@ -172,10 +176,10 @@ export function useFillHandleDrag({ onFillComplete, rows = [], cols = [] }: UseF
       if (!state.isDragging) return false
 
       return state.selectedRange.some(
-        (cell) => cell.rowId === rowId && cell.colId === colId,
+        (cell) => cell.rowId === rowId && cell.colId === colId
       )
     },
-    [state.isDragging, state.selectedRange],
+    [state.isDragging, state.selectedRange]
   )
 
   // デバッグ用：ドラッグ状態をログ出力
@@ -202,7 +206,7 @@ function calculateRange(
   start: CellPosition,
   end: CellPosition,
   rows: Array<{ id: string }>,
-  cols: Array<{ id: string }>,
+  cols: Array<{ id: string }>
 ): CellPosition[] {
   const minRowIndex = Math.min(start.rowIndex, end.rowIndex)
   const maxRowIndex = Math.max(start.rowIndex, end.rowIndex)

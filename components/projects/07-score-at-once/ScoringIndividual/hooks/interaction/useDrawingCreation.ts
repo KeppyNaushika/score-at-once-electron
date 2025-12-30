@@ -30,7 +30,7 @@ export interface UseDrawingCreationProps {
   setIsDrawing: (drawing: boolean) => void
   /** 描画要素配列設定 */
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
   ) => void
   /** 描画要素追加（DB保存付き） */
   addDrawingElement: (element: DrawingElement) => void
@@ -113,7 +113,7 @@ export function useDrawingCreation({
         }
       }
     },
-    [isShiftPressed, imageAspectRatio],
+    [isShiftPressed, imageAspectRatio]
   )
 
   /**
@@ -130,7 +130,7 @@ export function useDrawingCreation({
       startX: number,
       startY: number,
       endX: number,
-      endY: number,
+      endY: number
     ): { endX: number; endY: number } => {
       if (!isShiftPressed) {
         return { endX, endY }
@@ -144,7 +144,7 @@ export function useDrawingCreation({
         return { endX: startX, endY }
       }
     },
-    [isShiftPressed],
+    [isShiftPressed]
   )
 
   /**
@@ -232,7 +232,7 @@ export function useDrawingCreation({
       setIsDrawing,
       setDrawingElements,
       onTextAnchorClick,
-    ],
+    ]
   )
 
   /**
@@ -257,15 +257,15 @@ export function useDrawingCreation({
           drawingElementRef.current.x,
           drawingElementRef.current.y,
           imageCoords.x,
-          imageCoords.y,
+          imageCoords.y
         )
 
         setDrawingElements((prev) =>
           prev.map((el) =>
             el.id === elementId
               ? { ...el, endX: constrained.endX, endY: constrained.endY }
-              : el,
-          ),
+              : el
+          )
         )
         return true
       }
@@ -282,8 +282,8 @@ export function useDrawingCreation({
 
         setDrawingElements((prev) =>
           prev.map((el) =>
-            el.id === elementId ? { ...el, width, height } : el,
-          ),
+            el.id === elementId ? { ...el, width, height } : el
+          )
         )
         return true
       }
@@ -295,7 +295,7 @@ export function useDrawingCreation({
       applyLineShiftConstraint,
       applyShiftConstraint,
       setDrawingElements,
-    ],
+    ]
   )
 
   /**

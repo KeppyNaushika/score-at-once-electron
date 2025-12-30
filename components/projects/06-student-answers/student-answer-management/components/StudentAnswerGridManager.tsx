@@ -25,7 +25,7 @@ interface StudentAnswerGridManagerProps {
   onFileOrderChange?: (order: "page-first" | "student-first") => void
   onFilesReorder?: (reorderedFiles: UnifiedFile[]) => void
   onUpload: (
-    data: Array<{ file: UnifiedFile; studentId: string; pageNumber: number }>,
+    data: Array<{ file: UnifiedFile; studentId: string; pageNumber: number }>
   ) => void
 }
 
@@ -141,14 +141,14 @@ export function StudentAnswerGridManager({
         onFilesReorder(newFiles)
       }
     },
-    [files, onFilesReorder],
+    [files, onFilesReorder]
   )
 
   const handleCellClick = useCallback(
     (_studentId: string, _pageNumber: number) => {
       // セルクリック処理
     },
-    [],
+    []
   )
 
   // アップロード処理

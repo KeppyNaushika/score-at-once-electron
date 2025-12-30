@@ -9,10 +9,7 @@ export default function SubtotalGroupsPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <PageHeader
-        title="小計点グループ管理"
-        helpButton={helpButton}
-      />
+      <PageHeader title="小計点グループ管理" helpButton={helpButton} />
       <div className="flex-1 overflow-hidden">
         <SubtotalGroupsPageContainer />
       </div>

@@ -69,7 +69,7 @@ export function FileUploadDropzone({
 
       return null
     },
-    [maxFileSize],
+    [maxFileSize]
   )
 
   /**
@@ -92,7 +92,7 @@ export function FileUploadDropzone({
       // コールバック実行
       onFilesSelected(Array.from(files))
     },
-    [validateFiles, onFilesSelected],
+    [validateFiles, onFilesSelected]
   )
 
   /**
@@ -106,7 +106,7 @@ export function FileUploadDropzone({
         setIsDragOver(true)
       }
     },
-    [disabled, isUploading],
+    [disabled, isUploading]
   )
 
   /**
@@ -132,7 +132,7 @@ export function FileUploadDropzone({
       const files = e.dataTransfer.files
       handleFileSelection(files)
     },
-    [disabled, isUploading, handleFileSelection],
+    [disabled, isUploading, handleFileSelection]
   )
 
   /**
@@ -152,7 +152,7 @@ export function FileUploadDropzone({
       // ファイル入力をリセット（同じファイルを再選択可能にする）
       e.target.value = ""
     },
-    [handleFileSelection],
+    [handleFileSelection]
   )
 
   /**

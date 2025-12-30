@@ -102,17 +102,25 @@ async function createRelease() {
     // リリースノートをファイルに書き出し
     const tempNotesFile = `temp-notes-${currentVersion}.md`
     fs.writeFileSync(tempNotesFile, releaseNotes)
-    
+
     try {
       // 個別にコマンドを構築してクォート問題を回避
       const titleText = `一括採点 ${tagName}`
-      
-      execSync([
-        "gh", "release", "create", tagName,
-        ...archives,
-        "--title", `"${titleText}"`,
-        "--notes-file", tempNotesFile
-      ].join(" "), { stdio: "inherit" })
+
+      execSync(
+        [
+          "gh",
+          "release",
+          "create",
+          tagName,
+          ...archives,
+          "--title",
+          `"${titleText}"`,
+          "--notes-file",
+          tempNotesFile,
+        ].join(" "),
+        { stdio: "inherit" }
+      )
     } finally {
       // 一時ファイルを削除
       if (fs.existsSync(tempNotesFile)) {
@@ -124,7 +132,7 @@ async function createRelease() {
 
     // リリースURLを取得
     const repoInfo = JSON.parse(
-      execSync("gh repo view --json owner,name", { encoding: "utf-8" }),
+      execSync("gh repo view --json owner,name", { encoding: "utf-8" })
     )
     const releaseUrl = `https://github.com/${repoInfo.owner.login}/${repoInfo.name}/releases/tag/${tagName}`
 

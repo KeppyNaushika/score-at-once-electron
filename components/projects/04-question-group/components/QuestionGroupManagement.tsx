@@ -28,7 +28,7 @@ interface QuestionGroupManagementProps {
   onUpdateSubtotal: (id: string, name: string) => Promise<boolean>
   onDeleteSubtotal: (id: string) => Promise<boolean>
   onUpdateSubtotalOrders: (
-    orders: { id: string; order: number }[],
+    orders: { id: string; order: number }[]
   ) => Promise<boolean>
 }
 
@@ -66,7 +66,7 @@ export function QuestionGroupManagement({
 
     const success = await onUpdateSubtotalGroup(
       editingGroup.id,
-      editGroupName.trim(),
+      editGroupName.trim()
     )
     if (success) {
       setEditingGroup(null)
@@ -78,7 +78,7 @@ export function QuestionGroupManagement({
   const handleDeleteGroup = async (group: SubtotalGroupWithItems) => {
     if (
       window.confirm(
-        `小計点「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`,
+        `小計点「${group.name}」を削除しますか？\n関連する項目と設問の関連付けも削除されます。`
       )
     ) {
       await onDeleteSubtotalGroup(group.id)
@@ -86,7 +86,7 @@ export function QuestionGroupManagement({
   }
 
   const selectedGroup = subtotalGroups.find(
-    (g) => g.id === selectedSubtotalGroupId,
+    (g) => g.id === selectedSubtotalGroupId
   )
 
   return (

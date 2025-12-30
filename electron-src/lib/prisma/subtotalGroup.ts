@@ -91,28 +91,30 @@ export async function updateSubtotalGroup(
 ) {
   try {
     // トランザクション内で更新
-    const subtotalGroup = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // 既存の小計項目を削除
-      await tx.subtotal.deleteMany({
-        where: { subtotalGroupId: id },
-      })
+    const subtotalGroup = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // 既存の小計項目を削除
+        await tx.subtotal.deleteMany({
+          where: { subtotalGroupId: id },
+        })
 
-      // 小計点グループを更新
-      return await tx.subtotalGroup.update({
-        where: { id },
-        data: {
-          name: data.name,
-          subtotals: {
-            create: data.subtotals,
+        // 小計点グループを更新
+        return await tx.subtotalGroup.update({
+          where: { id },
+          data: {
+            name: data.name,
+            subtotals: {
+              create: data.subtotals,
+            },
           },
-        },
-        include: {
-          subtotals: {
-            orderBy: { order: "asc" },
+          include: {
+            subtotals: {
+              orderBy: { order: "asc" },
+            },
           },
-        },
-      })
-    })
+        })
+      }
+    )
 
     return {
       success: true,
@@ -165,21 +167,27 @@ export async function deleteSubtotalGroup(id: string) {
     // 実際に使用されている場合は削除を防ぐ
     if (usageDetails.length > 0) {
       // プロジェクト別に使用状況をまとめる
-      const usageByProject = usageDetails.reduce((acc, usage) => {
-        const projectName = usage.cropRegion.projectPage.project.examName
-        const subtotalName = usage.subtotal.name
-        const cropRegionLabel = usage.cropRegion.label || `設問${(usage.cropRegion.orderIndex || 0) + 1}`
-        
-        if (!acc[projectName]) {
-          acc[projectName] = []
-        }
-        acc[projectName].push(`${cropRegionLabel} → ${subtotalName}`)
-        return acc
-      }, {} as Record<string, string[]>)
+      const usageByProject = usageDetails.reduce(
+        (acc, usage) => {
+          const projectName = usage.cropRegion.projectPage.project.examName
+          const subtotalName = usage.subtotal.name
+          const cropRegionLabel =
+            usage.cropRegion.label ||
+            `設問${(usage.cropRegion.orderIndex || 0) + 1}`
+
+          if (!acc[projectName]) {
+            acc[projectName] = []
+          }
+          acc[projectName].push(`${cropRegionLabel} → ${subtotalName}`)
+          return acc
+        },
+        {} as Record<string, string[]>
+      )
 
       const usageMessages = Object.entries(usageByProject)
-        .map(([projectName, assignments]) => 
-          `・${projectName}: ${assignments.join(", ")}`
+        .map(
+          ([projectName, assignments]) =>
+            `・${projectName}: ${assignments.join(", ")}`
         )
         .join("\n")
 
@@ -360,8 +368,10 @@ export async function removeSubtotalGroupFromProject(
 
     // 実際に使用されている場合は削除を防ぐ
     if (usageDetails.length > 0) {
-      const assignments = usageDetails.map(usage => {
-        const cropRegionLabel = usage.cropRegion.label || `設問${(usage.cropRegion.orderIndex || 0) + 1}`
+      const assignments = usageDetails.map((usage) => {
+        const cropRegionLabel =
+          usage.cropRegion.label ||
+          `設問${(usage.cropRegion.orderIndex || 0) + 1}`
         return `${cropRegionLabel} → ${usage.subtotal.name}`
       })
 

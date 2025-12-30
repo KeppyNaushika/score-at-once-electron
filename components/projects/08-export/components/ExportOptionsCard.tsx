@@ -130,7 +130,9 @@ export function ExportOptionsCard({
           <div>
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">並列処理数</Label>
-              <span className="text-sm font-medium">{exportOptions.parallelCount}</span>
+              <span className="text-sm font-medium">
+                {exportOptions.parallelCount}
+              </span>
             </div>
             <Slider
               value={[exportOptions.parallelCount]}

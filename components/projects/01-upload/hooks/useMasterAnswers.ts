@@ -3,7 +3,10 @@
 import { ConvertedImage } from "@/lib/pdfConverter"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { MasterAnswer, MasterAnswersState } from "@/components/projects/01-upload/types"
+import {
+  MasterAnswer,
+  MasterAnswersState,
+} from "@/components/projects/01-upload/types"
 import {
   convertProjectPagesToMasterAnswers,
   createUploadData,
@@ -34,7 +37,7 @@ import {
 export function useMasterAnswers(
   projectId: string,
   initialAnswers: MasterAnswer[],
-  onAnswersChange: (answers: MasterAnswer[]) => void,
+  onAnswersChange: (answers: MasterAnswer[]) => void
 ) {
   // 状態管理
   const [state, setState] = useState<MasterAnswersState>({
@@ -92,7 +95,7 @@ export function useMasterAnswers(
             const dialogState = createPasswordDialogState(
               file.name,
               isInvalidPassword,
-              state.passwordDialog.attempts,
+              state.passwordDialog.attempts
             )
 
             setState((prev) => ({
@@ -109,7 +112,7 @@ export function useMasterAnswers(
         }
       }
     },
-    [state.passwordDialog.attempts],
+    [state.passwordDialog.attempts]
   )
 
   /**
@@ -162,20 +165,20 @@ export function useMasterAnswers(
 
         const result = await window.electronAPI.uploadMasterAnswers(
           projectId,
-          allFilesData,
+          allFilesData
         )
 
         if (result) {
           const totalPages = allFilesData.length
           const pdfCount = files.filter(
-            (f) => f.type === "application/pdf",
+            (f) => f.type === "application/pdf"
           ).length
           const imageCount = files.length - pdfCount
 
           const message = generateUploadSuccessMessage(
             totalPages,
             pdfCount,
-            imageCount,
+            imageCount
           )
           toast.success(message)
 
@@ -184,10 +187,9 @@ export function useMasterAnswers(
             await window.electronAPI.fetchProjectById(projectId)
           if (updatedProject && updatedProject.projectPages) {
             const masterAnswers = convertProjectPagesToMasterAnswers(
-              updatedProject.projectPages,
+              updatedProject.projectPages
             )
-            const sortedUpdatedAnswers =
-              sortImagesByPageNumber(masterAnswers)
+            const sortedUpdatedAnswers = sortImagesByPageNumber(masterAnswers)
 
             setState((prev) => ({ ...prev, answers: sortedUpdatedAnswers }))
             onAnswersChange(sortedUpdatedAnswers)
@@ -204,7 +206,7 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isUploading: false }))
       }
     },
-    [projectId, onAnswersChange, convertPdfToImagesWithPassword],
+    [projectId, onAnswersChange, convertPdfToImagesWithPassword]
   )
 
   /**
@@ -288,7 +290,7 @@ export function useMasterAnswers(
       try {
         const result = await window.electronAPI.deleteMasterAnswer(answerId)
         const updatedAnswers = sortImagesByPageNumber(
-          convertProjectPagesToMasterAnswers(result.projectPages),
+          convertProjectPagesToMasterAnswers(result.projectPages)
         )
         const newUrls = await generateImageUrls(updatedAnswers)
 
@@ -310,7 +312,7 @@ export function useMasterAnswers(
         }))
       }
     },
-    [onAnswersChange],
+    [onAnswersChange]
   )
 
   /**
@@ -338,7 +340,7 @@ export function useMasterAnswers(
         setState((prev) => ({ ...prev, isMoving: false }))
       }
     },
-    [state.answers, onAnswersChange],
+    [state.answers, onAnswersChange]
   )
 
   return {

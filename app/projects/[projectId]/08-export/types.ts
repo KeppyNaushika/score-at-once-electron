@@ -41,14 +41,14 @@ export interface Student {
 }
 
 // PDF用紙の向きの型
-export type PdfOrientation = 'portrait' | 'landscape'
+export type PdfOrientation = "portrait" | "landscape"
 
 // 出力オプションの型
 export interface ExportOptions {
   includeScoredAnswers: boolean
   includeIndividualReports: boolean
   includeGradingData: boolean
-  format: 'pdf' | 'excel'
+  format: "pdf" | "excel"
   markPosition: string
   markSize: number
   showMarks: boolean
@@ -57,15 +57,20 @@ export interface ExportOptions {
 }
 
 // PDF出力フェーズの型
-export type ExportPhase = 'initializing' | 'rendering' | 'embedding' | 'saving' | 'complete'
+export type ExportPhase =
+  | "initializing"
+  | "rendering"
+  | "embedding"
+  | "saving"
+  | "complete"
 
 // Canvas描画の詳細プログレス
 export interface RenderProgress {
-  phase: 'preload' | 'rendering' | 'complete'
+  phase: "preload" | "rendering" | "complete"
   total: number
   completed: number
-  inProgress: number      // 現在描画中のページ数
-  currentPages: number[]  // 描画中のページインデックス
+  inProgress: number // 現在描画中のページ数
+  currentPages: number[] // 描画中のページインデックス
 }
 
 // PDF埋め込みの詳細プログレス
@@ -88,7 +93,7 @@ export interface DetailedProgressState {
   // タイミング情報
   timing: {
     startTime: number
-    estimatedRemaining: number | null  // 秒
+    estimatedRemaining: number | null // 秒
   }
 }
 

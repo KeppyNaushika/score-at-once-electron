@@ -36,7 +36,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <main
         className={cn(
           "flex-1 overflow-auto pt-0 transition-[padding-left] duration-300 ease-in-out",
-          isSidebarMinimized ? "pl-16" : "pl-64",
+          isSidebarMinimized ? "pl-16" : "pl-64"
         )}
       >
         {children}

@@ -2,13 +2,7 @@
  * 個人成績表PDFドキュメント
  * React-PDFを使用してベクターPDFを生成
  */
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Font,
-} from "@react-pdf/renderer"
+import { Document, Page, Text, View, Font } from "@react-pdf/renderer"
 import type {
   IndividualReportData,
   IndividualReportOptions,
@@ -103,7 +97,8 @@ export function IndividualReportDocument({
             <View>
               <Text style={styles.studentDetail}>
                 {report.studentInfo.grade && `${report.studentInfo.grade}年`}
-                {report.studentInfo.className && ` ${report.studentInfo.className}`}
+                {report.studentInfo.className &&
+                  ` ${report.studentInfo.className}`}
                 {report.studentInfo.attendanceNumber != null &&
                   ` ${report.studentInfo.attendanceNumber}番`}
               </Text>
@@ -116,13 +111,15 @@ export function IndividualReportDocument({
               <View style={styles.statItem}>
                 <Text style={styles.statLabel}>得点</Text>
                 <Text style={styles.statValue}>
-                  {report.scoringData.totalScore} / {report.scoringData.totalMaxScore}
+                  {report.scoringData.totalScore} /{" "}
+                  {report.scoringData.totalMaxScore}
                 </Text>
               </View>
             )}
             {options.showAverage !== "none" && (
               <>
-                {(options.showAverage === "class" || options.showAverage === "both") && (
+                {(options.showAverage === "class" ||
+                  options.showAverage === "both") && (
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>学級平均</Text>
                     <Text style={styles.statValue}>
@@ -130,7 +127,8 @@ export function IndividualReportDocument({
                     </Text>
                   </View>
                 )}
-                {(options.showAverage === "overall" || options.showAverage === "both") && (
+                {(options.showAverage === "overall" ||
+                  options.showAverage === "both") && (
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>全体平均</Text>
                     <Text style={styles.statValue}>
@@ -150,19 +148,23 @@ export function IndividualReportDocument({
             )}
             {options.showRank && (
               <>
-                {(options.rankType === "class" || options.rankType === "both") && (
+                {(options.rankType === "class" ||
+                  options.rankType === "both") && (
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>学級順位</Text>
                     <Text style={styles.statValue}>
-                      {report.statistics.personal.classRank} / {report.statistics.class.total}
+                      {report.statistics.personal.classRank} /{" "}
+                      {report.statistics.class.total}
                     </Text>
                   </View>
                 )}
-                {(options.rankType === "overall" || options.rankType === "both") && (
+                {(options.rankType === "overall" ||
+                  options.rankType === "both") && (
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>全体順位</Text>
                     <Text style={styles.statValue}>
-                      {report.statistics.personal.overallRank} / {report.statistics.overall.total}
+                      {report.statistics.personal.overallRank} /{" "}
+                      {report.statistics.overall.total}
                     </Text>
                   </View>
                 )}

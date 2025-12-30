@@ -22,7 +22,7 @@ export function useEditModeUtils() {
 
       // 1. 開始点判定（端点を優先）
       const distToStart = Math.sqrt(
-        Math.pow(testX - element.x, 2) + Math.pow(testY - element.y, 2),
+        Math.pow(testX - element.x, 2) + Math.pow(testY - element.y, 2)
       )
       if (distToStart < lineTolerance) {
         return "start"
@@ -30,7 +30,7 @@ export function useEditModeUtils() {
 
       // 2. 終了点判定（端点を優先）
       const distToEnd = Math.sqrt(
-        Math.pow(testX - element.endX, 2) + Math.pow(testY - element.endY, 2),
+        Math.pow(testX - element.endX, 2) + Math.pow(testY - element.endY, 2)
       )
       if (distToEnd < lineTolerance) {
         return "end"
@@ -52,15 +52,15 @@ export function useEditModeUtils() {
         Math.min(
           1,
           ((testX - element.x) * dx + (testY - element.y) * dy) /
-            (lineLength * lineLength),
-        ),
+            (lineLength * lineLength)
+        )
       )
 
       // 最近点までの距離
       const nearestX = element.x + t * dx
       const nearestY = element.y + t * dy
       const distToLine = Math.sqrt(
-        Math.pow(testX - nearestX, 2) + Math.pow(testY - nearestY, 2),
+        Math.pow(testX - nearestX, 2) + Math.pow(testY - nearestY, 2)
       )
 
       if (distToLine < lineTolerance) {
@@ -69,7 +69,7 @@ export function useEditModeUtils() {
 
       return null
     },
-    [],
+    []
   )
 
   // 矩形の編集モード判定（角・辺でのリサイズ、内部での移動）
@@ -77,7 +77,7 @@ export function useEditModeUtils() {
     (
       element: DrawingElement,
       testX: number,
-      testY: number,
+      testY: number
     ): RectangleEditMode => {
       if (
         element.type !== "rectangle" ||
@@ -116,7 +116,7 @@ export function useEditModeUtils() {
 
       return null
     },
-    [],
+    []
   )
 
   return {

@@ -3,7 +3,10 @@
  * @description アノテーションに対するポイントのヒット判定ロジック
  */
 
-import type { DrawingAnnotation, DrawingType } from "@/types/drawing-annotation.types"
+import type {
+  DrawingAnnotation,
+  DrawingType,
+} from "@/types/drawing-annotation.types"
 
 /**
  * ポイントがアノテーション内にあるかチェック
@@ -13,7 +16,7 @@ import type { DrawingAnnotation, DrawingType } from "@/types/drawing-annotation.
  */
 export function isPointInAnnotation(
   point: { x: number; y: number },
-  annotation: DrawingAnnotation,
+  annotation: DrawingAnnotation
 ): boolean {
   switch (annotation.type as DrawingType) {
     case "rectangle":
@@ -49,15 +52,16 @@ export function isPointInAnnotation(
         0,
         Math.min(
           1,
-          ((point.x - annotation.x) * lineDx + (point.y - annotation.y) * lineDy) /
-            (length * length),
-        ),
+          ((point.x - annotation.x) * lineDx +
+            (point.y - annotation.y) * lineDy) /
+            (length * length)
+        )
       )
 
       const projectionX = annotation.x + t * lineDx
       const projectionY = annotation.y + t * lineDy
       const distance = Math.sqrt(
-        (point.x - projectionX) ** 2 + (point.y - projectionY) ** 2,
+        (point.x - projectionX) ** 2 + (point.y - projectionY) ** 2
       )
 
       return distance < threshold

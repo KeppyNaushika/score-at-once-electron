@@ -29,8 +29,8 @@ export function ModeSelectStep({ wizard }: ModeSelectStepProps) {
       {manifest && (
         <Card className="bg-muted/30">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-medium flex items-center gap-2">
-              <FileText className="w-4 h-4" />
+            <CardTitle className="flex items-center gap-2 text-base font-medium">
+              <FileText className="h-4 w-4" />
               アーカイブ情報
             </CardTitle>
           </CardHeader>
@@ -43,35 +43,40 @@ export function ModeSelectStep({ wizard }: ModeSelectStepProps) {
               </div>
               <div>
                 <p className="text-muted-foreground mb-1">エクスポート日時</p>
-                <p className="font-medium flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
+                <p className="flex items-center gap-1 font-medium">
+                  <Calendar className="h-3.5 w-3.5" />
                   {new Date(manifest.exportedAt).toLocaleString("ja-JP")}
                 </p>
               </div>
             </div>
 
             {/* データ件数 */}
-            <div className="pt-3 border-t">
-              <p className="text-xs text-muted-foreground mb-2">含まれるデータ</p>
+            <div className="border-t pt-3">
+              <p className="text-muted-foreground mb-2 text-xs">
+                含まれるデータ
+              </p>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="gap-1">
-                  <Users className="w-3 h-3" />
+                  <Users className="h-3 w-3" />
                   生徒 {manifest.counts.students}名
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
-                  <FileText className="w-3 h-3" />
+                  <FileText className="h-3 w-3" />
                   ページ {manifest.counts.pages}
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
                   設問 {manifest.counts.regions}
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
-                  <ClipboardCheck className="w-3 h-3" />
+                  <ClipboardCheck className="h-3 w-3" />
                   採点 {manifest.counts.scores}件
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
-                  <Image className="w-3 h-3" aria-hidden="true" />
-                  画像 {manifest.counts.masterImages + manifest.counts.answerSheetImages}枚
+                  <Image className="h-3 w-3" aria-hidden="true" />
+                  画像{" "}
+                  {manifest.counts.masterImages +
+                    manifest.counts.answerSheetImages}
+                  枚
                 </Badge>
               </div>
             </div>
@@ -81,33 +86,36 @@ export function ModeSelectStep({ wizard }: ModeSelectStepProps) {
 
       {/* モード選択 */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">インポートモードを選択</h3>
+        <h3 className="mb-4 text-lg font-semibold">インポートモードを選択</h3>
 
         <div className="grid gap-4">
           {/* 新規作成モード */}
           <button
             onClick={() => selectMode("new")}
             className={cn(
-              "w-full p-5 rounded-xl border-2 text-left transition-all",
+              "w-full rounded-xl border-2 p-5 text-left transition-all",
               "hover:border-primary hover:bg-primary/5",
-              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+              "focus:ring-primary focus:ring-2 focus:ring-offset-2 focus:outline-none",
               "group"
             )}
           >
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                <FilePlus2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100 transition-colors group-hover:bg-blue-200 dark:bg-blue-900/30 dark:group-hover:bg-blue-900/50">
+                <FilePlus2 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-semibold">新規作成</h4>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ChevronRight className="text-muted-foreground group-hover:text-primary h-5 w-5 transition-colors" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   全てのデータを新しいプロジェクトとして作成します。
                   既存データとの統合は行いません。
                 </p>
-                <Badge variant="outline" className="mt-3 text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-950">
+                <Badge
+                  variant="outline"
+                  className="mt-3 border-blue-200 bg-blue-50 text-blue-600 dark:bg-blue-950"
+                >
                   推奨: 新しいマシンへの移行時
                 </Badge>
               </div>
@@ -118,26 +126,29 @@ export function ModeSelectStep({ wizard }: ModeSelectStepProps) {
           <button
             onClick={() => selectMode("merge")}
             className={cn(
-              "w-full p-5 rounded-xl border-2 text-left transition-all",
+              "w-full rounded-xl border-2 p-5 text-left transition-all",
               "hover:border-primary hover:bg-primary/5",
-              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+              "focus:ring-primary focus:ring-2 focus:ring-offset-2 focus:outline-none",
               "group"
             )}
           >
             <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
-                <GitMerge className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-100 transition-colors group-hover:bg-emerald-200 dark:bg-emerald-900/30 dark:group-hover:bg-emerald-900/50">
+                <GitMerge className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-semibold">統合</h4>
-                  <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <ChevronRight className="text-muted-foreground group-hover:text-primary h-5 w-5 transition-colors" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-1 text-sm">
                   既存の生徒・学級データとマッチングし、採点結果を統合します。
                   競合がある場合は解決方法を選択できます。
                 </p>
-                <Badge variant="outline" className="mt-3 text-emerald-600 border-emerald-200 bg-emerald-50 dark:bg-emerald-950">
+                <Badge
+                  variant="outline"
+                  className="mt-3 border-emerald-200 bg-emerald-50 text-emerald-600 dark:bg-emerald-950"
+                >
                   推奨: 複数マシンでの採点結果を統合する場合
                 </Badge>
               </div>

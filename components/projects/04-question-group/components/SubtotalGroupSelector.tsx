@@ -42,7 +42,7 @@ export function SubtotalGroupSelector({
         try {
           const result =
             await window.electronAPI.getAvailableSubtotalGroupsForProject(
-              projectId,
+              projectId
             )
           if (result.success && result.subtotalGroups) {
             setAvailableGroups(result.subtotalGroups)
@@ -62,7 +62,7 @@ export function SubtotalGroupSelector({
     try {
       const result = await window.electronAPI.addSubtotalGroupToProject(
         projectId,
-        groupId,
+        groupId
       )
       if (result.success) {
         setShowSelector(false)
@@ -80,7 +80,7 @@ export function SubtotalGroupSelector({
   const handleRemoveGroup = async (groupId: string) => {
     if (
       !confirm(
-        "この小計点グループをプロジェクトから削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。",
+        "この小計点グループをプロジェクトから削除しますか？\\n\\n注意：関連する採点データにも影響する可能性があります。"
       )
     ) {
       return
@@ -89,7 +89,7 @@ export function SubtotalGroupSelector({
     try {
       const result = await window.electronAPI.removeSubtotalGroupFromProject(
         projectId,
-        groupId,
+        groupId
       )
       if (result.success) {
         onRefresh()
@@ -104,7 +104,7 @@ export function SubtotalGroupSelector({
 
   // 検索フィルタリング
   const filteredGroups = availableGroups.filter((group) =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    group.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   return (
@@ -172,11 +172,16 @@ export function SubtotalGroupSelector({
           </DialogHeader>
 
           {/* 新規小計点グループ作成ボタン */}
-          <div className="border border-green-200 bg-green-50 rounded-lg p-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-3">
             <div className="flex items-center justify-between">
-              <span className="font-medium text-green-800">新しいグループを作成</span>
+              <span className="font-medium text-green-800">
+                新しいグループを作成
+              </span>
               <Link href="/subtotal-groups" target="_blank">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white hover:bg-green-700"
+                >
                   <Plus className="mr-1 h-4 w-4" />
                   新規作成
                   <ExternalLink className="ml-1 h-4 w-4" />

@@ -1,5 +1,11 @@
 import { join } from "path"
-import { BrowserWindow, app, Menu, Event, RenderProcessGoneDetails } from "electron"
+import {
+  BrowserWindow,
+  app,
+  Menu,
+  Event,
+  RenderProcessGoneDetails,
+} from "electron"
 import type { IncomingMessage } from "electron"
 import menu from "./menu"
 
@@ -9,21 +15,21 @@ const isDev = !app.isPackaged
 export function createMainWindow(): BrowserWindow {
   // アイコンのパスを設定（プラットフォーム別）
   const getIconPath = () => {
-    if (process.platform === 'darwin') {
+    if (process.platform === "darwin") {
       // macOSの場合は.icnsファイルを使用
-      return isDev 
+      return isDev
         ? join(__dirname, "../public/icons/icon.icns")
         : join(process.resourcesPath, "app.asar/public/icons/icon.icns")
     } else {
       // Windows/Linuxの場合はPNGファイルを使用
-      return isDev 
+      return isDev
         ? join(__dirname, "../public/icons/icon-win.png")
         : join(process.resourcesPath, "app.asar/public/icons/icon-win.png")
     }
   }
-  
+
   const iconPath = getIconPath()
-  
+
   const mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -44,46 +50,48 @@ export function createMainWindow(): BrowserWindow {
 
   // DevToolsは手動で開く（自動開放はクラッシュの原因）
   // 必要な場合: mainWindow.webContents.openDevTools()
-  if (isDev && process.env.ENABLE_DEVTOOLS === 'true') {
+  if (isDev && process.env.ENABLE_DEVTOOLS === "true") {
     mainWindow.webContents.openDevTools()
   }
 
-  
   // webContentsのクラッシュイベントをキャッチ
-  mainWindow.webContents.on('render-process-gone', (_event: Event, details: RenderProcessGoneDetails) => {
-    console.error('❌ Render process gone:', details)
+  mainWindow.webContents.on(
+    "render-process-gone",
+    (_event: Event, details: RenderProcessGoneDetails) => {
+      console.error("❌ Render process gone:", details)
+    }
+  )
+
+  mainWindow.webContents.on("unresponsive", () => {
+    console.error("❌ WebContents became unresponsive")
   })
-  
-  mainWindow.webContents.on('unresponsive', () => {
-    console.error('❌ WebContents became unresponsive')
+
+  mainWindow.webContents.on("responsive", () => {
+    console.log("✅ WebContents became responsive again")
   })
-  
-  mainWindow.webContents.on('responsive', () => {
-    console.log('✅ WebContents became responsive again')
-  })
-  
+
   // Windowsでは即座にウィンドウを表示（デバッグ用）
   if (process.platform === "win32") {
     setTimeout(() => {
       mainWindow.show()
     }, 2000)
   }
-  
+
   // Next.jsサーバーが起動するまで待機してからURLを読み込み
   const loadWhenReady = async () => {
     const maxAttempts = 30 // 30秒間試行
     let attempts = 0
-    
+
     const checkServer = async (): Promise<boolean> => {
       try {
-        const { net } = require('electron')
+        const { net } = require("electron")
         const request = net.request(url)
-        
+
         return new Promise((resolve) => {
-          request.on('response', (response: IncomingMessage) => {
+          request.on("response", (response: IncomingMessage) => {
             resolve(response.statusCode === 200)
           })
-          request.on('error', () => {
+          request.on("error", () => {
             resolve(false)
           })
           request.end()
@@ -92,17 +100,23 @@ export function createMainWindow(): BrowserWindow {
         return false
       }
     }
-    
+
     const waitForServer = async (): Promise<void> => {
       while (attempts < maxAttempts) {
         if (await checkServer()) {
-          mainWindow.webContents.once('did-fail-load', (event, errorCode, errorDescription) => {
-            console.error('❌ Failed to load URL:', { errorCode, errorDescription })
-          })
-          
+          mainWindow.webContents.once(
+            "did-fail-load",
+            (event, errorCode, errorDescription) => {
+              console.error("❌ Failed to load URL:", {
+                errorCode,
+                errorDescription,
+              })
+            }
+          )
+
           try {
             await mainWindow.loadURL(url)
-            
+
             // 少し遅延を追加してから表示
             setTimeout(() => {
               mainWindow.show()
@@ -111,19 +125,19 @@ export function createMainWindow(): BrowserWindow {
             console.error("❌ Error during loadURL:", error)
             throw error
           }
-          
+
           return
         }
-        
+
         attempts++
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
       }
-      
+
       console.error("Next.js server failed to start within 30 seconds")
       // サーバーが起動しない場合でもウィンドウを表示
       mainWindow.show()
     }
-    
+
     waitForServer()
   }
 

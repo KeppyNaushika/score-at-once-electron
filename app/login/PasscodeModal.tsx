@@ -29,7 +29,12 @@ interface PasscodeModalProps {
   onPasscodeVerified: () => void
 }
 
-export function PasscodeModal({ isOpen, onClose, user, onPasscodeVerified }: PasscodeModalProps) {
+export function PasscodeModal({
+  isOpen,
+  onClose,
+  user,
+  onPasscodeVerified,
+}: PasscodeModalProps) {
   const [passcode, setPasscode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
@@ -41,7 +46,7 @@ export function PasscodeModal({ isOpen, onClose, user, onPasscodeVerified }: Pas
 
     try {
       const isValid = await window.electronAPI.verifyPasscode(user.id, passcode)
-      
+
       if (isValid) {
         setPasscode("")
         onPasscodeVerified()
@@ -138,9 +143,7 @@ export function PasscodeModal({ isOpen, onClose, user, onPasscodeVerified }: Pas
             {renderPasscodeInput()}
           </div>
 
-          {error && (
-            <div className="text-sm text-red-500">{error}</div>
-          )}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

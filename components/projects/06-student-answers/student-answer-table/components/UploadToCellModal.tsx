@@ -1,4 +1,3 @@
- 
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -48,7 +47,7 @@ export function UploadToCellModal({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = async (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -92,7 +91,7 @@ export function UploadToCellModal({
             buffer: image.buffer,
             preview,
           }
-        }),
+        })
       )
       setConvertedImages(convertedImages)
       setShowPasswordInput(false)
@@ -108,7 +107,7 @@ export function UploadToCellModal({
         setShowPasswordInput(true)
       } else {
         toast.error(
-          `PDF変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`,
+          `PDF変換エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
         )
       }
     } finally {
@@ -136,7 +135,7 @@ export function UploadToCellModal({
       file,
       selectedFile.type === "application/pdf"
         ? selectedImageIndex + 1
-        : undefined,
+        : undefined
     )
     handleClose()
   }

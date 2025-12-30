@@ -4,7 +4,7 @@ export const getGlobalIndex = (
   filteredIndex: number,
   filteredRegions: CropRegionWithDetails[],
   allRegions: CropRegionWithDetails[],
-  selectedProjectPageId?: string,
+  selectedProjectPageId?: string
 ) => {
   if (!selectedProjectPageId) return filteredIndex
   const filteredRegion = filteredRegions[filteredIndex]
@@ -13,13 +13,13 @@ export const getGlobalIndex = (
       region.id === filteredRegion.id ||
       (region.projectPageId === filteredRegion.projectPageId &&
         region.x === filteredRegion.x &&
-        region.y === filteredRegion.y),
+        region.y === filteredRegion.y)
   )
 }
 
 export const filterRegionsByPage = (
   regions: CropRegionWithDetails[],
-  selectedProjectPageId?: string,
+  selectedProjectPageId?: string
 ) => {
   return selectedProjectPageId
     ? regions.filter((region) => region.projectPageId === selectedProjectPageId)

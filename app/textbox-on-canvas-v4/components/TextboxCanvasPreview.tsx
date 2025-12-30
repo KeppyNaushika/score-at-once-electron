@@ -7,9 +7,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import type { TextBox } from "../types"
-import {
-  renderSvgToCanvas,
-} from "../utils/canvasUtils"
+import { renderSvgToCanvas } from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"
 
 /**
@@ -47,7 +45,7 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
             estimatedHeight,
             "left",
             "top",
-            textBox.textSize,
+            textBox.textSize
           )
 
           if (svgElement) {
@@ -61,7 +59,7 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
               ctx,
               anchorX,
               anchorY,
-              textBox.anchorDirection,
+              textBox.anchorDirection
             )
 
             setCanvasSize({

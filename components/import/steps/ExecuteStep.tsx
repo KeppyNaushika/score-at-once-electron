@@ -63,12 +63,12 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   // 実行前の確認画面
   if (!result && !isExecuting) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-8">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
-            <Download className="w-10 h-10 text-primary" />
+      <div className="flex h-full flex-col items-center justify-center py-8">
+        <div className="mb-8 text-center">
+          <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
+            <Download className="text-primary h-10 w-10" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
+          <h3 className="mb-2 text-xl font-semibold">
             インポートを実行しますか？
           </h3>
           <p className="text-muted-foreground max-w-md">
@@ -79,52 +79,56 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         </div>
 
         {/* 実行サマリー */}
-        <Card className="w-full max-w-md mb-8">
+        <Card className="mb-8 w-full max-w-md">
           <CardContent className="p-5">
-            <h4 className="text-sm font-medium mb-4">インポート内容</h4>
+            <h4 className="mb-4 text-sm font-medium">インポート内容</h4>
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-muted-foreground" />
+                <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                  <FileText className="text-muted-foreground h-4 w-4" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">プロジェクト</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {state.manifest?.projectName}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Users className="w-4 h-4 text-muted-foreground" />
+                <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                  <Users className="text-muted-foreground h-4 w-4" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">生徒</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {state.manifest?.counts.students}名
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <ClipboardCheck className="w-4 h-4 text-muted-foreground" />
+                <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                  <ClipboardCheck className="text-muted-foreground h-4 w-4" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">採点結果</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {state.manifest?.counts.scores}件
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Image className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
+                <div className="bg-muted flex h-8 w-8 items-center justify-center rounded-lg">
+                  <Image
+                    className="text-muted-foreground h-4 w-4"
+                    aria-hidden="true"
+                  />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">画像</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {(state.manifest?.counts.masterImages || 0) +
-                      (state.manifest?.counts.answerSheetImages || 0)}枚
+                      (state.manifest?.counts.answerSheetImages || 0)}
+                    枚
                   </p>
                 </div>
               </div>
@@ -133,7 +137,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         </Card>
 
         <Button onClick={handleExecute} size="lg" className="gap-2 px-8">
-          <Download className="w-5 h-5" />
+          <Download className="h-5 w-5" />
           インポートを実行
         </Button>
       </div>
@@ -143,11 +147,11 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   // 実行中
   if (isExecuting) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-16">
-        <div className="w-20 h-20 mx-auto mb-8 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      <div className="flex h-full flex-col items-center justify-center py-16">
+        <div className="bg-primary/10 mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-2xl">
+          <Loader2 className="text-primary h-10 w-10 animate-spin" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">インポート中...</h3>
+        <h3 className="mb-2 text-xl font-semibold">インポート中...</h3>
         <p className="text-muted-foreground mb-8">
           データをインポートしています。しばらくお待ちください。
         </p>
@@ -161,12 +165,12 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   // 完了（成功）
   if (result?.success) {
     return (
-      <div className="flex flex-col items-center justify-center h-full py-8">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-            <CheckCircle2 className="w-10 h-10 text-green-600 dark:text-green-400" />
+      <div className="flex h-full flex-col items-center justify-center py-8">
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-green-100 dark:bg-green-900/30">
+            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
+          <h3 className="mb-2 text-xl font-semibold">
             インポートが完了しました
           </h3>
           <p className="text-muted-foreground">
@@ -176,9 +180,9 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
         {/* 結果サマリー */}
         {"importedCounts" in result && result.importedCounts && (
-          <Card className="w-full max-w-md mb-6 bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+          <Card className="mb-6 w-full max-w-md border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
             <CardContent className="p-5">
-              <h4 className="text-sm font-medium text-green-800 dark:text-green-200 mb-4">
+              <h4 className="mb-4 text-sm font-medium text-green-800 dark:text-green-200">
                 インポート結果
               </h4>
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -213,12 +217,12 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
         {/* 警告表示 */}
         {result.warnings && result.warnings.length > 0 && (
-          <Card className="w-full max-w-md mb-6 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+          <Card className="mb-6 w-full max-w-md border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
             <CardContent className="p-5">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
                 <div>
-                  <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">
+                  <h4 className="mb-2 text-sm font-medium text-amber-800 dark:text-amber-200">
                     注意事項
                   </h4>
                   <ul className="space-y-1">
@@ -239,7 +243,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
         <Button onClick={handleComplete} size="lg" className="gap-2 px-8">
           プロジェクトを開く
-          <ArrowRight className="w-5 h-5" />
+          <ArrowRight className="h-5 w-5" />
         </Button>
       </div>
     )
@@ -247,14 +251,12 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
 
   // 完了（失敗）
   return (
-    <div className="flex flex-col items-center justify-center h-full py-8">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-destructive/10 flex items-center justify-center">
-          <XCircle className="w-10 h-10 text-destructive" />
+    <div className="flex h-full flex-col items-center justify-center py-8">
+      <div className="mb-8 text-center">
+        <div className="bg-destructive/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
+          <XCircle className="text-destructive h-10 w-10" />
         </div>
-        <h3 className="text-xl font-semibold mb-2">
-          インポートに失敗しました
-        </h3>
+        <h3 className="mb-2 text-xl font-semibold">インポートに失敗しました</h3>
         <p className="text-destructive max-w-md">{result?.error}</p>
       </div>
 

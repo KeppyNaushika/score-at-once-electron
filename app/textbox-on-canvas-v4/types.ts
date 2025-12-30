@@ -248,14 +248,14 @@ export interface CanvasManagementHook {
     x: number,
     y: number,
     anchorDirection: AnchorDirection,
-    textSize: number,
+    textSize: number
   ) => Promise<void>
   /** Canvas全体を再描画する関数 */
   redrawCanvas: (
     textBoxes: TextBox[],
     currentDrag: DragState | null,
     isCreatingAnchor: boolean,
-    backgroundImageUrl?: string,
+    backgroundImageUrl?: string
   ) => Promise<void>
 }
 
@@ -274,13 +274,25 @@ export interface CoordinateConversionOptions {
  */
 export interface CoordinateConversionUtils {
   /** 相対座標を絶対座標に変換 */
-  relativeToAbsolute: (point: Point, options: CoordinateConversionOptions) => Point
+  relativeToAbsolute: (
+    point: Point,
+    options: CoordinateConversionOptions
+  ) => Point
   /** 絶対座標を相対座標に変換 */
-  absoluteToRelative: (point: Point, options: CoordinateConversionOptions) => Point
+  absoluteToRelative: (
+    point: Point,
+    options: CoordinateConversionOptions
+  ) => Point
   /** TextBoxを相対座標系に変換 */
-  textBoxToRelative: (textBox: TextBox, options: CoordinateConversionOptions) => TextBox
+  textBoxToRelative: (
+    textBox: TextBox,
+    options: CoordinateConversionOptions
+  ) => TextBox
   /** TextBoxを絶対座標系に変換 */
-  textBoxToAbsolute: (textBox: TextBox, options: CoordinateConversionOptions) => TextBox
+  textBoxToAbsolute: (
+    textBox: TextBox,
+    options: CoordinateConversionOptions
+  ) => TextBox
 }
 
 /**
@@ -306,7 +318,7 @@ export interface TextBoxOperationsHook {
   getSelectedTextBox: () => TextBox | null
   updateTextBoxAnchorDirection: (
     id: string,
-    anchorDirection: AnchorDirection,
+    anchorDirection: AnchorDirection
   ) => void
   updateTextBoxSize: (id: string, textSize: number) => void
 

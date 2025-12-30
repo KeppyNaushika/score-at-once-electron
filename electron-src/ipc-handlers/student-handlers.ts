@@ -39,7 +39,6 @@ export function setupStudentHandlers(): void {
     }
   })
 
-
   ipcMain.handle(
     "create-student",
     async (_event, studentData: Prisma.StudentCreateInput) => {
@@ -49,7 +48,7 @@ export function setupStudentHandlers(): void {
         console.error("Error creating student:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -61,7 +60,7 @@ export function setupStudentHandlers(): void {
         console.error("Error updating student:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-student", async (_event, id: string) => {
@@ -78,7 +77,7 @@ export function setupStudentHandlers(): void {
     "create-student-class-membership",
     async (
       _event,
-      membershipData: Prisma.StudentClassMembershipCreateInput,
+      membershipData: Prisma.StudentClassMembershipCreateInput
     ) => {
       try {
         return await createStudentClassMembership(membershipData)
@@ -86,7 +85,7 @@ export function setupStudentHandlers(): void {
         console.error("Error creating student class membership:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -94,7 +93,7 @@ export function setupStudentHandlers(): void {
     async (
       _event,
       id: string,
-      membershipData: Prisma.StudentClassMembershipUpdateInput,
+      membershipData: Prisma.StudentClassMembershipUpdateInput
     ) => {
       try {
         return await updateStudentClassMembership(id, membershipData)
@@ -102,7 +101,7 @@ export function setupStudentHandlers(): void {
         console.error("Error updating student class membership:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -114,7 +113,7 @@ export function setupStudentHandlers(): void {
         console.error("Error deleting student class membership:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -126,7 +125,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting current memberships by student ID:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -138,7 +137,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting all memberships by student ID:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -150,7 +149,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting current memberships by class ID:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -161,7 +160,7 @@ export function setupStudentHandlers(): void {
       classId: string,
       startDate?: Date,
       attendanceNumber?: number,
-      notes?: string,
+      notes?: string
     ) => {
       try {
         const dateToUse = startDate ? new Date(startDate) : new Date()
@@ -171,14 +170,14 @@ export function setupStudentHandlers(): void {
           classId,
           dateToUse,
           attendanceNumber,
-          notes,
+          notes
         )
         return result
       } catch (err) {
         console.error("Error adding student to class:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -190,7 +189,7 @@ export function setupStudentHandlers(): void {
         console.error("Error ending student membership:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -202,7 +201,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting memberships by date range:", err)
         throw err
       }
-    },
+    }
   )
 
   // Project-Student relationship handlers
@@ -215,7 +214,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting students for project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -227,7 +226,7 @@ export function setupStudentHandlers(): void {
         console.error("Error adding students to project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -239,7 +238,7 @@ export function setupStudentHandlers(): void {
         console.error("Error removing students from project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -248,7 +247,7 @@ export function setupStudentHandlers(): void {
       _event,
       projectId: string,
       studentId: string,
-      status: "participating" | "expected" | "absent",
+      status: "participating" | "expected" | "absent"
     ) => {
       try {
         return await updateStudentProjectStatus(projectId, studentId, status)
@@ -256,7 +255,7 @@ export function setupStudentHandlers(): void {
         console.error("Error updating student project status:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -268,7 +267,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting classes not in project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -280,7 +279,7 @@ export function setupStudentHandlers(): void {
         console.error("Error getting students not in project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -296,7 +295,7 @@ export function setupStudentHandlers(): void {
           error: err instanceof Error ? err.message : "Unknown error",
         }
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -304,7 +303,7 @@ export function setupStudentHandlers(): void {
     async (
       _event,
       projectId: string,
-      studentOrders: { studentId: string; customOrder: number }[],
+      studentOrders: { studentId: string; customOrder: number }[]
     ) => {
       try {
         return await updateStudentOrders(projectId, studentOrders)
@@ -312,7 +311,7 @@ export function setupStudentHandlers(): void {
         console.error("Error updating student orders:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -324,6 +323,6 @@ export function setupStudentHandlers(): void {
         console.error("Error getting student exam results:", err)
         throw err
       }
-    },
+    }
   )
 }

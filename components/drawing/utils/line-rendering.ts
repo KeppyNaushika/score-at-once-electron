@@ -16,7 +16,7 @@ export function drawWaveLine(
   startX: number,
   startY: number,
   endX: number,
-  endY: number,
+  endY: number
 ): void {
   const dx = endX - startX
   const dy = endY - startY
@@ -53,7 +53,7 @@ export function drawZigzagLine(
   startX: number,
   startY: number,
   endX: number,
-  endY: number,
+  endY: number
 ): void {
   const segments = 10
   const amplitude = 15
@@ -85,7 +85,7 @@ export function drawArrowHead(
   fromX: number,
   fromY: number,
   toX: number,
-  toY: number,
+  toY: number
 ): void {
   const angle = Math.atan2(toY - fromY, toX - fromX)
   const arrowLength = 15
@@ -95,12 +95,12 @@ export function drawArrowHead(
   ctx.moveTo(toX, toY)
   ctx.lineTo(
     toX - arrowLength * Math.cos(angle - arrowAngle),
-    toY - arrowLength * Math.sin(angle - arrowAngle),
+    toY - arrowLength * Math.sin(angle - arrowAngle)
   )
   ctx.moveTo(toX, toY)
   ctx.lineTo(
     toX - arrowLength * Math.cos(angle + arrowAngle),
-    toY - arrowLength * Math.sin(angle + arrowAngle),
+    toY - arrowLength * Math.sin(angle + arrowAngle)
   )
   ctx.stroke()
 }

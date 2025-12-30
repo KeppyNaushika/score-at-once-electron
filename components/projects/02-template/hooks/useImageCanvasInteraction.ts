@@ -40,7 +40,7 @@ export function useImageCanvasInteraction({
   const [dragging, setDragging] = useState(false)
   const [dragStartCoords, setDragStartCoords] = useState<DragState | null>(null)
   const [dragCurrentCoords, setDragCurrentCoords] = useState<DragState | null>(
-    null,
+    null
   )
   const [resizing, setResizing] = useState<ResizeState | null>(null)
   const [moving, setMoving] = useState<MoveState | null>(null)

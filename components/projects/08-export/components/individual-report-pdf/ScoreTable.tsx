@@ -44,27 +44,31 @@ export function ScoreTable({ report, options }: ScoreTableProps) {
         {data.map((item, index) => {
           const isAlt = index % 2 === 1
           const label = isDetailMode
-            ? (item as typeof report.scoringData.scores[0]).questionLabel
-            : (item as typeof report.scoringData.subtotalScores[0]).subtotalLabel
+            ? (item as (typeof report.scoringData.scores)[0]).questionLabel
+            : (item as (typeof report.scoringData.subtotalScores)[0])
+                .subtotalLabel
           const maxScore = isDetailMode
-            ? (item as typeof report.scoringData.scores[0]).maxScore
-            : (item as typeof report.scoringData.subtotalScores[0]).maxScore
+            ? (item as (typeof report.scoringData.scores)[0]).maxScore
+            : (item as (typeof report.scoringData.subtotalScores)[0]).maxScore
           const score = isDetailMode
-            ? (item as typeof report.scoringData.scores[0]).score
-            : (item as typeof report.scoringData.subtotalScores[0]).score
+            ? (item as (typeof report.scoringData.scores)[0]).score
+            : (item as (typeof report.scoringData.subtotalScores)[0]).score
 
           // 正答率を取得
           let correctRate = 0
           if (isDetailMode) {
-            const questionId = (item as typeof report.scoringData.scores[0]).questionId
-            correctRate = report.statistics.questionCorrectRates[questionId] ?? 0
+            const questionId = (item as (typeof report.scoringData.scores)[0])
+              .questionId
+            correctRate =
+              report.statistics.questionCorrectRates[questionId] ?? 0
           }
 
           // 評価マークを取得
           let mark = ""
           let markStyle = {}
           if (isDetailMode) {
-            const status = (item as typeof report.scoringData.scores[0]).status
+            const status = (item as (typeof report.scoringData.scores)[0])
+              .status
             switch (status) {
               case "correct":
                 mark = "○"
@@ -95,9 +99,7 @@ export function ScoreTable({ report, options }: ScoreTableProps) {
                 {label.length > 20 ? label.substring(0, 20) + "..." : label}
               </Text>
               <Text style={styles.tableCellNumber}>{maxScore}</Text>
-              <Text style={styles.tableCellNumber}>
-                {score ?? "-"}
-              </Text>
+              <Text style={styles.tableCellNumber}>{score ?? "-"}</Text>
               {isDetailMode && options.showMarks && (
                 <Text style={{ ...styles.tableCellMark, ...markStyle }}>
                   {mark}
@@ -124,8 +126,11 @@ export function ScoreTable({ report, options }: ScoreTableProps) {
           )}
           <Text style={styles.tableCellNumber}>
             {Math.round(
-              (report.scoringData.totalScore / report.scoringData.totalMaxScore) * 100
-            )}%
+              (report.scoringData.totalScore /
+                report.scoringData.totalMaxScore) *
+                100
+            )}
+            %
           </Text>
         </View>
       </View>

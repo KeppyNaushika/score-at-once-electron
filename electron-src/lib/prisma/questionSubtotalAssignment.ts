@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // CropSubtotal を作成 (QuestionSubtotalAssignment の新版)
 export const createQuestionSubtotalAssignment = async (
-  data: Prisma.CropSubtotalUncheckedCreateInput, // cropRegionId と subtotalId を直接含める
+  data: Prisma.CropSubtotalUncheckedCreateInput // cropRegionId と subtotalId を直接含める
 ) => {
   return prisma.cropSubtotal.create({
     data,
@@ -16,7 +16,7 @@ export const createQuestionSubtotalAssignment = async (
 
 // 複数の CropSubtotal を作成
 export const createManyQuestionSubtotalAssignments = async (
-  assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+  assignments: Prisma.CropSubtotalUncheckedCreateInput[]
 ) => {
   return prisma.cropSubtotal.createMany({
     data: assignments,
@@ -32,7 +32,7 @@ export const deleteQuestionSubtotalAssignment = async (id: string) => {
 
 // CropRegion ID で CropSubtotal を削除
 export const deleteAssignmentsByQuestionLayoutRegionId = async (
-  cropRegionId: string,
+  cropRegionId: string
 ) => {
   return prisma.cropSubtotal.deleteMany({
     where: { cropRegionId },
@@ -41,7 +41,7 @@ export const deleteAssignmentsByQuestionLayoutRegionId = async (
 
 // Subtotal ID で CropSubtotal を削除
 export const deleteAssignmentsByQuestionGroupItemId = async (
-  subtotalId: string,
+  subtotalId: string
 ) => {
   return prisma.cropSubtotal.deleteMany({
     where: { subtotalId },
@@ -50,7 +50,7 @@ export const deleteAssignmentsByQuestionGroupItemId = async (
 
 // CropRegion ID で CropSubtotal を取得
 export const getAssignmentsByQuestionLayoutRegionId = async (
-  cropRegionId: string,
+  cropRegionId: string
 ) => {
   return prisma.cropSubtotal.findMany({
     where: { cropRegionId },
@@ -62,7 +62,7 @@ export const getAssignmentsByQuestionLayoutRegionId = async (
 
 // Subtotal ID で CropSubtotal を取得
 export const getAssignmentsByQuestionGroupItemId = async (
-  subtotalId: string,
+  subtotalId: string
 ) => {
   return prisma.cropSubtotal.findMany({
     where: { subtotalId },

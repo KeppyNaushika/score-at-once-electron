@@ -13,7 +13,7 @@ import React from "react"
  */
 export function getRelativeCoordinates(
   event: React.MouseEvent,
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement
 ): { x: number; y: number } {
   const rect = canvas.getBoundingClientRect()
   const x = (event.clientX - rect.left) / rect.width
@@ -31,7 +31,7 @@ export function getRelativeCoordinates(
 export function getAbsoluteCoordinates(
   relativeX: number,
   relativeY: number,
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement
 ): { x: number; y: number } {
   return {
     x: relativeX * canvas.width,

@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // ProjectPage を作成
 export const createProjectPage = async (
-  data: Prisma.ProjectPageUncheckedCreateInput,
+  data: Prisma.ProjectPageUncheckedCreateInput
 ) => {
   return prisma.projectPage.create({
     data,
@@ -16,7 +16,7 @@ export const createProjectPage = async (
 
 // 複数の ProjectPage を作成
 export const createManyProjectPages = async (
-  data: Prisma.ProjectPageCreateManyInput[],
+  data: Prisma.ProjectPageCreateManyInput[]
 ) => {
   return prisma.projectPage.createMany({
     data,
@@ -26,7 +26,7 @@ export const createManyProjectPages = async (
 // ProjectPage を更新
 export const updateProjectPage = async (
   id: string,
-  data: Prisma.ProjectPageUpdateInput,
+  data: Prisma.ProjectPageUpdateInput
 ) => {
   return prisma.projectPage.update({
     where: { id },
