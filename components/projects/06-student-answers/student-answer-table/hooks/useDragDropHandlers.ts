@@ -31,7 +31,6 @@ interface UseDragDropHandlersParams {
     }>
   ) => void
   setActiveFile: (file: UnifiedFile | null) => void
-  setIsDraggingFromTrash: (isDragging: boolean) => void
   fileStatesRef: React.MutableRefObject<FileState[]>
   initialFileStatesRef: React.MutableRefObject<FileState[]>
 }
@@ -49,7 +48,6 @@ export function useDragDropHandlers({
   mode,
   onUpdatePendingChanges,
   setActiveFile,
-  setIsDraggingFromTrash,
   fileStatesRef,
   initialFileStatesRef,
 }: UseDragDropHandlersParams) {
@@ -67,13 +65,11 @@ export function useDragDropHandlers({
 
       if (activeFileFromEnabled) {
         setActiveFile(activeFileFromEnabled)
-        setIsDraggingFromTrash(false)
       } else if (activeFileFromDisabled) {
         setActiveFile(activeFileFromDisabled)
-        setIsDraggingFromTrash(true)
       }
     },
-    [getEnabledFiles, getDisabledFiles, setActiveFile, setIsDraggingFromTrash]
+    [getEnabledFiles, getDisabledFiles, setActiveFile]
   )
 
   const handleDragEnd = useCallback(
@@ -81,7 +77,6 @@ export function useDragDropHandlers({
       const { active, over } = event
       if (!over) {
         setActiveFile(null)
-        setIsDraggingFromTrash(false)
         return
       }
 
@@ -90,7 +85,6 @@ export function useDragDropHandlers({
 
       if (activeId === overId) {
         setActiveFile(null)
-        setIsDraggingFromTrash(false)
         return
       }
 
@@ -178,7 +172,6 @@ export function useDragDropHandlers({
       }
 
       setActiveFile(null)
-      setIsDraggingFromTrash(false)
     },
     [
       files,
@@ -190,7 +183,6 @@ export function useDragDropHandlers({
       modelAnswerCount,
       onUpdatePendingChanges,
       setActiveFile,
-      setIsDraggingFromTrash,
       fileStatesRef,
       initialFileStatesRef,
     ]

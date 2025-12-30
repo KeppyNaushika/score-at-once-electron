@@ -390,7 +390,6 @@ export default function StudentTable() {
           isOpen={isSpreadsheetImportModalOpen}
           onClose={() => setIsSpreadsheetImportModalOpen(false)}
           onImportSuccess={onStudentsImported}
-          existingClasses={classes}
         />
       )}
     </div>

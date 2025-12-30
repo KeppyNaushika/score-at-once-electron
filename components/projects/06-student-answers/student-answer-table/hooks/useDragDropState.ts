@@ -1,8 +1,5 @@
 import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
-import {
-  buildDnDArrayFromFileStates,
-  updateFileStatesFromDnDArray,
-} from "@/components/projects/06-student-answers/student-answer-table/utils/drag-drop-utils"
+import { buildDnDArrayFromFileStates } from "@/components/projects/06-student-answers/student-answer-table/utils/drag-drop-utils"
 import type {
   PlacementStrategy,
   UnifiedFile,
@@ -31,7 +28,6 @@ export function useDragDropState({
   onFilesChange,
 }: UseDragDropStateParams) {
   const [activeFile, setActiveFile] = useState<UnifiedFile | null>(null)
-  const [isDraggingFromTrash, setIsDraggingFromTrash] = useState(false)
 
   // メイン状態: 3つ組を管理
   const fileStatesRef = useRef<FileState[]>([])
@@ -51,14 +47,6 @@ export function useDragDropState({
       )
     },
     [students, modelAnswerCount, files]
-  )
-
-  // DnD配列から3つ組を更新する関数（メモ化）
-  const updateFileStates = useCallback(
-    (dndArray: UnifiedFile[]): FileState[] => {
-      return updateFileStatesFromDnDArray(dndArray)
-    },
-    []
   )
 
   // 1. 初期化: DB → 3つ組（実データから直接生成）
@@ -98,11 +86,7 @@ export function useDragDropState({
   return {
     activeFile,
     setActiveFile,
-    isDraggingFromTrash,
-    setIsDraggingFromTrash,
     fileStatesRef,
     initialFileStatesRef,
-    buildDnDArray,
-    updateFileStates,
   }
 }
