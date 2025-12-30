@@ -1392,10 +1392,21 @@ export interface MyAPI {
   }
 }
 
+// パスワード保護PDF変換用のコールバック型
+interface ConvertedImage {
+  name: string
+  type: string
+  buffer: ArrayBuffer
+}
+
 declare global {
   interface Window {
     electronAPI: MyAPI
     mathJaxReady?: boolean
-    MathJax?: any
+    MathJax?: typeof import("mathjax") | undefined
+    // パスワード保護PDF変換用のグローバルコールバック
+    __masterAnswerPasswordResolve?: ((images: ConvertedImage[]) => void) | null
+    __masterAnswerPasswordReject?: ((error: Error) => void) | null
+    __masterAnswerPasswordFile?: File | null
   }
 }

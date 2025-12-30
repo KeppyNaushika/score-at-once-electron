@@ -97,9 +97,9 @@ export function useMasterAnswers(
           }))
           
           // グローバルスコープで解決関数を保存
-          ;(window as any).__masterAnswerPasswordResolve = resolve
-          ;(window as any).__masterAnswerPasswordReject = reject
-          ;(window as any).__masterAnswerPasswordFile = file
+          window.__masterAnswerPasswordResolve = resolve
+          window.__masterAnswerPasswordReject = reject
+          window.__masterAnswerPasswordFile = file
         })
       } else {
         // その他のエラーはそのまま投げる
@@ -213,9 +213,9 @@ export function useMasterAnswers(
 
   // パスワード送信処理
   const handlePasswordSubmit = useCallback(async (password: string) => {
-    const file = (window as any).__masterAnswerPasswordFile
-    const resolve = (window as any).__masterAnswerPasswordResolve
-    const reject = (window as any).__masterAnswerPasswordReject
+    const file = window.__masterAnswerPasswordFile
+    const resolve = window.__masterAnswerPasswordResolve
+    const reject = window.__masterAnswerPasswordReject
     
     if (!file || !resolve || !reject) {
       return
@@ -246,10 +246,10 @@ export function useMasterAnswers(
       }))
       
       // グローバル変数をクリア
-      ;(window as any).__masterAnswerPasswordResolve = null
-      ;(window as any).__masterAnswerPasswordReject = null
-      ;(window as any).__masterAnswerPasswordFile = null
-      
+      window.__masterAnswerPasswordResolve = null
+      window.__masterAnswerPasswordReject = null
+      window.__masterAnswerPasswordFile = null
+
       resolve(pdfImages)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -276,18 +276,18 @@ export function useMasterAnswers(
         }))
         
         // グローバル変数をクリア
-        ;(window as any).__masterAnswerPasswordResolve = null
-        ;(window as any).__masterAnswerPasswordReject = null
-        ;(window as any).__masterAnswerPasswordFile = null
-        
-        reject(error)
+        window.__masterAnswerPasswordResolve = null
+        window.__masterAnswerPasswordReject = null
+        window.__masterAnswerPasswordFile = null
+
+        reject(error instanceof Error ? error : new Error(String(error)))
       }
     }
   }, [])
 
   // パスワードダイアログを閉じる
   const handlePasswordCancel = useCallback(() => {
-    const reject = (window as any).__masterAnswerPasswordReject
+    const reject = window.__masterAnswerPasswordReject
     
     setState(prev => ({
       ...prev,
@@ -302,10 +302,10 @@ export function useMasterAnswers(
     }))
     
     // グローバル変数をクリア
-    ;(window as any).__masterAnswerPasswordResolve = null
-    ;(window as any).__masterAnswerPasswordReject = null
-    ;(window as any).__masterAnswerPasswordFile = null
-    
+    window.__masterAnswerPasswordResolve = null
+    window.__masterAnswerPasswordReject = null
+    window.__masterAnswerPasswordFile = null
+
     // Promise を拒否
     if (reject) {
       reject(new Error('Password input cancelled'))
