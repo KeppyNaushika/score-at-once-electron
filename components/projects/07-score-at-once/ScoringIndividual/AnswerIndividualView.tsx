@@ -1,16 +1,20 @@
 "use client"
 
-import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { useCommand } from "../hooks/useCommand"
+import { useMemo } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
-import { ZOOM_SETTINGS } from "./constants/drawing-constants"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
-import { useTextboxV4Integration } from "./hooks/text/useTextboxIntegration"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
+import {
+  useZoomAndScroll,
+  useDrawingToolShortcuts,
+  useQuestionAutoScroll,
+  useCanvasV4Integration,
+  useTextInputStateNotifier,
+  useAllStudentAnnotations,
+} from "./hooks/view"
 import type {
   AnswerIndividualViewProps,
   LineStyle,
@@ -33,9 +37,6 @@ export default function AnswerIndividualView({
   const { zoom, position, onZoomChange, onPositionChange } =
     useImageNavigation()
 
-  // V4統合: 常にV4モードを使用
-  const useV4Integration = true
-
   // 現在表示中の採点データを取得
   const currentScoringData =
     scoringDatas.find(
@@ -56,8 +57,6 @@ export default function AnswerIndividualView({
   }, [questionScores, currentStudentId, currentCropRegion])
 
   // 描画状態管理（データベース統合対応）
-  // questionScoresから正しいQuestionScore.idを取得して渡す
-  // 見つからない場合はnullを渡し、context情報でバックエンドがQuestionScoreを自動作成する
   const drawingState = useDrawingState(
     currentQuestionScoreId,
     true, // データベース永続化を有効化
@@ -69,61 +68,16 @@ export default function AnswerIndividualView({
   )
 
   // 透明度制御用：全設問のアノテーション読み込み
-  const [allStudentAnnotations, setAllStudentAnnotations] = useState<
-    DrawingAnnotation[]
-  >([])
-
-  // 現在の学生とプロジェクトの全アノテーションを読み込み（透明度制御用）
-  useEffect(() => {
-    const loadAllAnnotations = async () => {
-      if (!currentStudentId || !currentCropRegion?.projectPage?.projectId) {
-        setAllStudentAnnotations([])
-        return
-      }
-
-      try {
-        console.log("🎨 透明度制御: 全設問アノテーション読み込み開始", {
-          studentId: currentStudentId,
-          projectId: currentCropRegion.projectPage.projectId,
-        })
-
-        // ElectronAPIを直接呼び出してフック依存関係を回避
-        const result = await window.electronAPI.drawing.getByStudent(
-          currentStudentId,
-          currentCropRegion.projectPage.projectId
-        )
-
-        if (result.success && result.data) {
-          console.log("🎨 透明度制御: 読み込み完了", {
-            annotationCount: result.data.length,
-            currentCropRegionId: currentCropRegion?.id,
-          })
-          setAllStudentAnnotations(result.data)
-        } else {
-          console.error("全設問アノテーション読み込みエラー:", result.error)
-          setAllStudentAnnotations([])
-        }
-      } catch (error) {
-        console.error("全設問アノテーション読み込みエラー:", error)
-        setAllStudentAnnotations([])
-      }
-    }
-
-    loadAllAnnotations()
-  }, [
+  const { allStudentAnnotations } = useAllStudentAnnotations({
     currentStudentId,
-    currentCropRegion?.projectPage?.projectId,
-    currentCropRegion?.id,
-  ])
+    currentCropRegion,
+  })
 
   // テキスト入力状態変更の通知
-  useEffect(() => {
-    if (onTextInputStateChange) {
-      onTextInputStateChange(drawingState.showTextInput)
-    }
-  }, [drawingState.showTextInput, onTextInputStateChange])
-
-  // currentCropRegionはすでにpropsで渡されている（派生済み）
+  useTextInputStateNotifier({
+    showTextInput: drawingState.showTextInput,
+    onTextInputStateChange,
+  })
 
   // 画像とキャンバス管理（透明度制御統合）
   const {
@@ -162,63 +116,52 @@ export default function AnswerIndividualView({
     hoveredElementId: drawingState.hoveredElementId,
   })
 
-  // V4統合フック（画像サイズが確定してから初期化）
-  const canvasWidth = loadedImages.length > 0 ? loadedImages[0].width : 800
-  const canvasHeight = loadedImages.length > 0 ? loadedImages[0].height : 600
-
-  // 画像アスペクト比（Shift制約で正円/正方形にするため）
-  const imageAspectRatio = useMemo(() => {
-    if (loadedImages.length > 0) {
-      const img = loadedImages[0]
-      return img.naturalWidth / img.naturalHeight
-    }
-    return 1
-  }, [loadedImages])
-
-  // 答案画像のURL取得
-  const backgroundImageUrl = currentScoringData
-    ? currentScoringData.imageUrl.replace("appimg://", "file://")
-    : undefined
-
-  const v4Integration = useTextboxV4Integration({
+  // Canvas・V4統合フック
+  const {
     canvasWidth,
     canvasHeight,
+    imageAspectRatio,
+    backgroundImageUrl,
+    v4Integration,
+    handleTextAnchorClick,
+    handleTextElementReClick,
+  } = useCanvasV4Integration({
+    loadedImages,
     drawingElements: drawingState.drawingElements,
-    updateDrawingElements: drawingState.setDrawingElements,
+    setDrawingElements: drawingState.setDrawingElements,
     addDrawingElement: drawingState.addDrawingElement,
     updateDrawingElement: drawingState.updateDrawingElement,
+    currentScoringData,
   })
 
-  // V4統合: テキストアンカークリック処理
-  const handleTextAnchorClick = useCallback(
-    (position: { x: number; y: number }) => {
-      if (useV4Integration) {
-        // V4統合モード: V4統合モーダルを開く
-        v4Integration.openV4Modal(position)
-      } else {
-        // レガシーモード: 古いモーダルを開く（既存のロジック維持）
-        // 注：この部分は将来的に削除予定
-        console.warn(
-          "レガシーテキストモードは非推奨です。V4統合モードをご利用ください。"
-        )
-      }
-    },
-    [useV4Integration, v4Integration]
-  )
+  // ズーム・スクロール操作フック
+  const { handleZoomIn, handleZoomOut, handleMaximizeView, handleCropView } =
+    useZoomAndScroll({
+      containerRef,
+      zoom,
+      onZoomChange,
+      imageLoaded,
+      loadedImages,
+      pageSpacing,
+      currentCropRegion,
+    })
 
-  // V4統合: テキスト要素の再編集処理
-  const handleTextElementReClick = useCallback(
-    (element: { x: number; y: number; text?: string; id: string; color?: string }) => {
-      // V4統合モード: V4統合モーダルを開く
-      v4Integration.openV4Modal(
-        { x: element.x, y: element.y },
-        element.text || "",
-        element.id
-      )
-      v4Integration.setCurrentTextColor(element.color || "#000000")
-    },
-    [v4Integration]
-  )
+  // 描画ツールキーボードショートカット
+  useDrawingToolShortcuts({
+    setCurrentTool: drawingState.setCurrentTool,
+    handleMaximizeView,
+    handleCropView,
+  })
+
+  // 設問変更時の自動スクロール
+  useQuestionAutoScroll({
+    containerRef,
+    zoom,
+    imageLoaded,
+    loadedImages,
+    pageSpacing,
+    currentCropRegion,
+  })
 
   // イベントハンドリング
   const { handlePointerDown, handlePointerMove, handlePointerUp } =
@@ -296,406 +239,6 @@ export default function AnswerIndividualView({
       // テキスト境界キャッシュ（ヒットテスト用）
       textBoundsCache,
     })
-
-  // ズーム操作（CSS scale + scroll 方式）
-  const handleZoomIn = useCallback(() => {
-    if (!containerRef.current) return
-
-    const container = containerRef.current
-    const viewportCenterX = container.offsetWidth / 2
-    const viewportCenterY = container.offsetHeight / 2
-
-    const newZoom = Math.min(
-      zoom * ZOOM_SETTINGS.zoomInDelta,
-      ZOOM_SETTINGS.max
-    )
-
-    // 現在のスクロール位置から、ビューポート中心の画像上の座標を計算
-    const currentScrollCenterX = container.scrollLeft + viewportCenterX
-    const currentScrollCenterY = container.scrollTop + viewportCenterY
-
-    // スケール前の画像上の座標（zoom倍される前の実座標）
-    const imageCenterX = currentScrollCenterX / zoom
-    const imageCenterY = currentScrollCenterY / zoom
-
-    // 新しいズームでの同じ画像位置の画面座標
-    const newScrollCenterX = imageCenterX * newZoom
-    const newScrollCenterY = imageCenterY * newZoom
-
-    // ビューポート中心を維持するための新しいスクロール位置
-    const newScrollLeft = newScrollCenterX - viewportCenterX
-    const newScrollTop = newScrollCenterY - viewportCenterY
-
-    onZoomChange(newZoom)
-
-    // スクロール位置を調整（次のフレームで実行）
-    requestAnimationFrame(() => {
-      container.scrollTo(newScrollLeft, newScrollTop)
-    })
-  }, [zoom, onZoomChange, containerRef])
-
-  const handleZoomOut = useCallback(() => {
-    if (!containerRef.current) return
-
-    const container = containerRef.current
-    const viewportCenterX = container.offsetWidth / 2
-    const viewportCenterY = container.offsetHeight / 2
-
-    const newZoom = Math.max(zoom * ZOOM_SETTINGS.wheelDelta, ZOOM_SETTINGS.min)
-
-    // 現在のスクロール位置から、ビューポート中心の画像上の座標を計算
-    const currentScrollCenterX = container.scrollLeft + viewportCenterX
-    const currentScrollCenterY = container.scrollTop + viewportCenterY
-
-    // スケール前の画像上の座標（zoom倍される前の実座標）
-    const imageCenterX = currentScrollCenterX / zoom
-    const imageCenterY = currentScrollCenterY / zoom
-
-    // 新しいズームでの同じ画像位置の画面座標
-    const newScrollCenterX = imageCenterX * newZoom
-    const newScrollCenterY = imageCenterY * newZoom
-
-    // ビューポート中心を維持するための新しいスクロール位置
-    const newScrollLeft = newScrollCenterX - viewportCenterX
-    const newScrollTop = newScrollCenterY - viewportCenterY
-
-    onZoomChange(newZoom)
-
-    // スクロール位置を調整（次のフレームで実行）
-    requestAnimationFrame(() => {
-      container.scrollTo(newScrollLeft, newScrollTop)
-    })
-  }, [zoom, onZoomChange, containerRef])
-
-  // 全体表示（CSS scale + scroll 方式）
-  const handleMaximizeView = useCallback(() => {
-    if (!containerRef.current || !imageLoaded || loadedImages.length === 0)
-      return
-
-    const container = containerRef.current
-    const availableWidth = container.offsetWidth
-    const availableHeight = container.offsetHeight
-
-    // パディングを考慮
-    const padding = 40
-    const effectiveWidth = availableWidth - padding
-    const effectiveHeight = availableHeight - padding
-
-    // 全画像の合計サイズを計算
-    const firstImg = loadedImages[0]
-    const totalWidth = firstImg.naturalWidth
-    const totalHeight = loadedImages.reduce(
-      (total, img, index) =>
-        total +
-        img.naturalHeight +
-        (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-      0
-    )
-
-    // 全体をコンテナに収めるためのズームを計算
-    const zoomByWidth = effectiveWidth / totalWidth
-    const zoomByHeight = effectiveHeight / totalHeight
-    const newZoom = Math.min(zoomByWidth, zoomByHeight)
-
-    // ズーム制限を適用
-    const constrainedZoom = Math.min(
-      Math.max(newZoom, ZOOM_SETTINGS.min),
-      ZOOM_SETTINGS.max
-    )
-
-    onZoomChange(constrainedZoom)
-
-    // 中央に配置するためのスクロール位置を計算
-    const scaledWidth = totalWidth * constrainedZoom
-    const scaledHeight = totalHeight * constrainedZoom
-    const scrollLeft = (scaledWidth - availableWidth) / 2
-    const scrollTop = (scaledHeight - availableHeight) / 2
-
-    // スクロール位置を設定（次のフレームで実行）
-    requestAnimationFrame(() => {
-      container.scrollTo(Math.max(0, scrollLeft), Math.max(0, scrollTop))
-    })
-  }, [containerRef, imageLoaded, loadedImages, pageSpacing, onZoomChange])
-
-  // 設問表示（CSS scale + scroll 方式）
-  const handleCropView = useCallback(() => {
-    if (
-      !currentCropRegion ||
-      !containerRef.current ||
-      !imageLoaded ||
-      loadedImages.length === 0
-    )
-      return
-
-    const container = containerRef.current
-    const availableWidth = container.offsetWidth
-    const availableHeight = container.offsetHeight
-
-    // 余白の比率: 2:6:2（左右/上下に20%ずつの余白、中央60%に設問を表示）
-    const marginRatio = 0.2
-    const contentRatio = 1 - marginRatio * 2 // 0.6
-    const effectiveWidth = availableWidth * contentRatio
-    const effectiveHeight = availableHeight * contentRatio
-
-    // 設問が属するページの画像を使用
-    const questionPageNumber = currentCropRegion.projectPage?.pageNumber || 1
-    const questionPageIndex = questionPageNumber - 1 // 1ベース→0ベースに変換
-
-    const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
-    if (!questionImg) {
-      return
-    }
-
-    // 設問領域の実際のサイズ（ピクセル）
-    const questionWidth = currentCropRegion.width * questionImg.naturalWidth
-    const questionHeight = currentCropRegion.height * questionImg.naturalHeight
-
-    // 設問領域をコンテナに収めるためのズームを計算
-    const zoomByWidth = effectiveWidth / questionWidth
-    const zoomByHeight = effectiveHeight / questionHeight
-    let newZoom = Math.min(zoomByWidth, zoomByHeight)
-
-    // ズーム制限を適用
-    newZoom = Math.min(newZoom, ZOOM_SETTINGS.max)
-    newZoom = Math.max(newZoom, ZOOM_SETTINGS.min)
-
-    // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
-    const questionCenterX =
-      (currentCropRegion.x + currentCropRegion.width / 2) *
-      questionImg.naturalWidth
-    const questionCenterY =
-      (currentCropRegion.y + currentCropRegion.height / 2) *
-      questionImg.naturalHeight
-
-    // 複数ページ表示の場合、設問が属するページのオフセットを計算
-    let pageOffsetY = 0
-
-    if (loadedImages.length > 1) {
-      const spacing = pageSpacing || 20
-
-      for (let i = 0; i < questionPageIndex; i++) {
-        if (i < loadedImages.length) {
-          pageOffsetY += loadedImages[i].naturalHeight + spacing
-        }
-      }
-    }
-
-    // 画像の中央配置オフセットを考慮（Canvas幅は最初の画像幅）
-    const canvasWidth = loadedImages[0].naturalWidth
-    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
-
-    onZoomChange(newZoom)
-
-    // ズーム変更後に正しいCanvas座標で再計算（次のフレームで実行）
-    requestAnimationFrame(() => {
-      // 設問の実際のCanvas上での位置（ズーム適用後）
-      const questionCenterScreenX = (questionCenterX + imageOffsetX) * newZoom
-      const questionCenterScreenY = (questionCenterY + pageOffsetY) * newZoom
-
-      // コンテナ中心座標（現在のコンテナサイズを使用）
-      const containerCenterX = container.offsetWidth / 2
-      const containerCenterY = container.offsetHeight / 2
-
-      // 設問中心をコンテナ中心に配置するためのスクロール位置
-      const scrollLeft = questionCenterScreenX - containerCenterX
-      const scrollTop = questionCenterScreenY - containerCenterY
-
-      // スクロール位置を設定
-      container.scrollTo(scrollLeft, scrollTop)
-    })
-  }, [
-    currentCropRegion,
-    containerRef,
-    imageLoaded,
-    loadedImages,
-    onZoomChange,
-    pageSpacing,
-  ])
-
-  // キーボードショートカット: 全体表示（個別モード専用）
-  useCommand("view.fullView", handleMaximizeView, {
-    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
-    metadata: {
-      title: "全体表示",
-      category: "表示制御",
-      description: "個別採点時にページ全体を表示します",
-    },
-  })
-
-  // キーボードショートカット: 設問表示（個別モード専用）
-  useCommand("view.questionView", handleCropView, {
-    when: "!inputFocus && !modalOpen && gradingMode == 'individual'",
-    metadata: {
-      title: "設問表示",
-      category: "表示制御",
-      description: "個別採点時に設問領域をフィットして表示します",
-    },
-  })
-
-  // ============================================
-  // 描画ツールのキーボードショートカット
-  // ============================================
-
-  // ハンドツール
-  useCommand(
-    "tool.hand",
-    useCallback(() => drawingState.setCurrentTool("hand"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "ハンドツール",
-        category: "描画ツール",
-        description: "画面のパン操作を行います",
-      },
-    }
-  )
-
-  // 選択ツール
-  useCommand(
-    "tool.select",
-    useCallback(() => drawingState.setCurrentTool("select"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "選択ツール",
-        category: "描画ツール",
-        description: "図形を選択・移動・編集します",
-      },
-    }
-  )
-
-  // テキストツール
-  useCommand(
-    "tool.text",
-    useCallback(() => drawingState.setCurrentTool("text"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "テキストツール",
-        category: "描画ツール",
-        description: "テキストを追加します",
-      },
-    }
-  )
-
-  // 線ツール
-  useCommand(
-    "tool.line",
-    useCallback(() => drawingState.setCurrentTool("line"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "線ツール",
-        category: "描画ツール",
-        description: "直線を描画します",
-      },
-    }
-  )
-
-  // 矩形ツール
-  useCommand(
-    "tool.rectangle",
-    useCallback(() => drawingState.setCurrentTool("rectangle"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "矩形ツール",
-        category: "描画ツール",
-        description: "矩形を描画します",
-      },
-    }
-  )
-
-  // 楕円ツール
-  useCommand(
-    "tool.ellipse",
-    useCallback(() => drawingState.setCurrentTool("ellipse"), [drawingState]),
-    {
-      when: "!inputFocus && !modalOpen && !textEditorActive && gradingMode == 'individual'",
-      metadata: {
-        title: "楕円ツール",
-        category: "描画ツール",
-        description: "楕円・円を描画します",
-      },
-    }
-  )
-
-  // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
-  useEffect(() => {
-    if (
-      !currentCropRegion ||
-      !containerRef.current ||
-      !imageLoaded ||
-      loadedImages.length === 0
-    )
-      return
-
-    const container = containerRef.current
-
-    // 設問が属するページの画像を使用
-    const questionPageNumber = currentCropRegion.projectPage?.pageNumber || 1
-    const questionPageIndex = questionPageNumber - 1
-
-    const questionImg = loadedImages[questionPageIndex] || loadedImages[0]
-    if (!questionImg) return
-
-    // 設問領域の中心座標（設問ページの画像内の実際のピクセル座標）
-    const questionCenterX =
-      (currentCropRegion.x + currentCropRegion.width / 2) *
-      questionImg.naturalWidth
-    const questionCenterY =
-      (currentCropRegion.y + currentCropRegion.height / 2) *
-      questionImg.naturalHeight
-
-    // 複数ページ表示の場合、設問が属するページのオフセットを計算
-    let pageOffsetY = 0
-    if (loadedImages.length > 1) {
-      const spacing = pageSpacing || 20
-      for (let i = 0; i < questionPageIndex; i++) {
-        if (i < loadedImages.length) {
-          pageOffsetY += loadedImages[i].naturalHeight + spacing
-        }
-      }
-    }
-
-    // 画像の中央配置オフセットを考慮
-    const canvasWidth = loadedImages[0].naturalWidth
-    const imageOffsetX = (canvasWidth - questionImg.naturalWidth) / 2
-
-    // 次のフレームでスクロール位置を調整
-    requestAnimationFrame(() => {
-      // 設問の実際のCanvas上での位置（ズーム適用後）
-      const questionCenterScreenX = (questionCenterX + imageOffsetX) * zoom
-      const questionCenterScreenY = (questionCenterY + pageOffsetY) * zoom
-
-      // コンテナ中心座標
-      const containerCenterX = container.offsetWidth / 2
-      const containerCenterY = container.offsetHeight / 2
-
-      // 理想的なスクロール位置（設問を中央に）
-      const idealScrollLeft = questionCenterScreenX - containerCenterX
-      const idealScrollTop = questionCenterScreenY - containerCenterY
-
-      // はみ出さないように制限
-      const maxScrollLeft = container.scrollWidth - container.offsetWidth
-      const maxScrollTop = container.scrollHeight - container.offsetHeight
-      const scrollLeft = Math.max(0, Math.min(idealScrollLeft, maxScrollLeft))
-      const scrollTop = Math.max(0, Math.min(idealScrollTop, maxScrollTop))
-
-      container.scrollTo({
-        left: scrollLeft,
-        top: scrollTop,
-        behavior: "smooth",
-      })
-    })
-  }, [
-    currentCropRegion,
-    containerRef,
-    imageLoaded,
-    loadedImages,
-    pageSpacing,
-    zoom,
-  ])
 
   // 採点データが選択されていない場合の早期リターン
   if (!currentScoringData) {
@@ -941,7 +484,7 @@ export default function AnswerIndividualView({
           // Image loaded - canvas will use imageRef
         }}
         onError={(e) => {
-          console.error("🚫 Hidden img element failed to load:", e)
+          console.error("Hidden img element failed to load:", e)
         }}
       />
     </div>

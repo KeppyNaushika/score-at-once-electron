@@ -13,25 +13,21 @@ import {
 import { ShortcutProvider } from "@/components/projects/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { usePartialScore } from "@/components/projects/07-score-at-once/ScoringMain/hooks/usePartialScore"
+import { useScoringActions } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringActions"
 import { useScoringData } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringData"
 import { useScoringDataLoader } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringDataLoader"
+import { useScoringEffects } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringEffects"
 import { useScoringFilter } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringFilter"
 import { useScoringMainState } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringMainState"
 import { useScoringNavigation } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringNavigation"
 import { useScoringSettings } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringSettings"
+import { useScoringShortcuts } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
+import { useStudentAnswerManagement } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
 import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
-import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
 import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
 import Head from "next/head"
 import { useParams } from "next/navigation"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { useCallback, useMemo, useState } from "react"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -92,26 +88,6 @@ function ScoringMainViewContent() {
     manualSelectionVersion,
   } = useScoringMainState()
 
-  /** 個別表示モードでは単一選択を維持 */
-  useEffect(() => {
-    if (gradingMode === "individual" && selectedPageImageIds.size > 1) {
-      const firstSelected = Array.from(selectedPageImageIds)[0]
-      setSelectedPageImageIds(new Set([firstSelected]))
-    }
-  }, [gradingMode, selectedPageImageIds, setSelectedPageImageIds])
-
-  /** 設問未選択時は最初の設問を自動選択 */
-  useEffect(() => {
-    if (cropRegions.length > 0 && !currentCropRegionId) {
-      const firstQuestionRegion = cropRegions.find(
-        (region) => region.type === "QUESTION_ANSWER"
-      )
-      if (firstQuestionRegion) {
-        setCurrentCropRegionId(firstQuestionRegion.id)
-      }
-    }
-  }, [cropRegions, currentCropRegionId, setCurrentCropRegionId])
-
   /** 現在の答案と設問 */
   const currentAnswerSheet = useMemo(() => {
     if (gradingMode === "individual" && selectedPageImageIds.size > 0) {
@@ -124,39 +100,29 @@ function ScoringMainViewContent() {
   const currentCropRegion = cropRegions.find(
     (r) => r.id === currentCropRegionId
   )
-  /** 個別表示用のナビゲーション関数 */
-  const handleStudentChange = useCallback(
-    (studentId: string) => {
-      const studentSheets = pageImages.filter(
-        (sheet) => sheet.student?.id === studentId
-      )
-      if (studentSheets.length > 0) {
-        // 現在の設問ページに対応するpageImageを優先選択
-        // currentCropRegionのprojectPageIdと一致するものを探す
-        const currentPageSheet = currentCropRegion
-          ? studentSheets.find(
-              (sheet) => sheet.projectPageId === currentCropRegion.projectPageId
-            )
-          : null
 
-        const targetSheet = currentPageSheet || studentSheets[0]
-        setSelectedPageImageIds(new Set([targetSheet.id]))
+  /** Effect処理フック */
+  useScoringEffects({
+    gradingMode,
+    selectedPageImageIds,
+    pageImages,
+    cropRegions,
+    currentCropRegionId,
+    setSelectedPageImageIds,
+    setCurrentCropRegionId,
+    setQuestionChangeVersion,
+  })
 
-        const studentIndex = pageImages.findIndex(
-          (sheet) => sheet.id === targetSheet.id
-        )
-        if (studentIndex !== -1) {
-          setCurrentStudentIndex(studentIndex)
-        }
-      }
-    },
-    [
+  /** 生徒・答案管理フック */
+  const { students, handleStudentChange, handleIndividualNextStudent } =
+    useStudentAnswerManagement({
       pageImages,
+      selectedPageImageIds,
+      gradingMode,
+      currentCropRegion,
       setSelectedPageImageIds,
       setCurrentStudentIndex,
-      currentCropRegion,
-    ]
-  )
+    })
 
   /** 採点データ管理hook */
   const {
@@ -201,154 +167,12 @@ function ScoringMainViewContent() {
     manualSelectionVersion,
   })
 
-  const previousCropRegionIdRef = useRef<string | null>(currentCropRegionId)
-  // 設問変更時のeffectで使用するためのrefs（依存配列の問題を回避）
-  const pageImagesRef = useRef(pageImages)
-  const selectedPageImageIdsRef = useRef(selectedPageImageIds)
-  const cropRegionsRef = useRef(cropRegions)
-  useLayoutEffect(() => {
-    pageImagesRef.current = pageImages
-    selectedPageImageIdsRef.current = selectedPageImageIds
-    cropRegionsRef.current = cropRegions
-  })
-
   const handleReplaceSelection = useCallback(
     (ids: string[]) => {
       replaceSelection(ids)
     },
     [replaceSelection]
   )
-
-  /** 設問変更時の選択更新 */
-  useEffect(() => {
-    // 設問が変更されていない場合は何もしない
-    if (
-      !previousCropRegionIdRef.current ||
-      !currentCropRegionId ||
-      previousCropRegionIdRef.current === currentCropRegionId
-    ) {
-      previousCropRegionIdRef.current = currentCropRegionId
-      return
-    }
-
-    if (gradingMode === "grid") {
-      // グリッドモード: 選択をリセット
-      setSelectedPageImageIds(new Set())
-      const scheduleIncrement = () =>
-        setQuestionChangeVersion((version) => version + 1)
-      if (typeof queueMicrotask === "function") {
-        queueMicrotask(scheduleIncrement)
-      } else {
-        Promise.resolve().then(scheduleIncrement)
-      }
-    } else {
-      // 個別モード: 現在選択中の生徒の新しい設問ページに対応するpageImageに更新
-      const currentSelectedIds = selectedPageImageIdsRef.current
-      const currentPageImages = pageImagesRef.current
-      const currentCropRegions = cropRegionsRef.current
-
-      if (currentSelectedIds.size > 0) {
-        const currentAnswerId = Array.from(currentSelectedIds)[0]
-        const currentAnswer = currentPageImages.find(
-          (a) => a.id === currentAnswerId
-        )
-        if (currentAnswer?.student?.id) {
-          // 新しい設問のcropRegionを取得
-          const newCropRegion = currentCropRegions.find(
-            (r) => r.id === currentCropRegionId
-          )
-          if (newCropRegion) {
-            // 同じ生徒の新しいページに対応するpageImageを探す
-            const studentId = currentAnswer.student?.id
-            const newPageImage = currentPageImages.find(
-              (a) =>
-                a.student?.id === studentId &&
-                a.projectPageId === newCropRegion.projectPageId
-            )
-            if (newPageImage) {
-              setSelectedPageImageIds(new Set([newPageImage.id]))
-            }
-          }
-        }
-      }
-    }
-
-    previousCropRegionIdRef.current = currentCropRegionId
-  }, [gradingMode, currentCropRegionId, setSelectedPageImageIds])
-
-  /** 個別表示用の生徒データ（pageImagesから抽出、useMemoで安定化） */
-  const students = useMemo(() => {
-    if (!pageImages || pageImages.length === 0) return []
-
-    const uniqueStudents = new Map()
-
-    pageImages.forEach((sheet) => {
-      if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
-        const studentData = {
-          id: sheet.student.id,
-          studentId: sheet.student.studentId,
-          lastName: sheet.student.lastName,
-          firstName: sheet.student.firstName,
-          customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
-        }
-        uniqueStudents.set(sheet.student.id, studentData)
-      }
-    })
-
-    const sortedStudents = Array.from(uniqueStudents.values()).sort(
-      (a, b) => a.customOrder - b.customOrder
-    )
-    return sortedStudents
-  }, [pageImages])
-
-  useEffect(() => {
-    if (
-      gradingMode === "individual" &&
-      students.length > 0 &&
-      selectedPageImageIds.size === 0
-    ) {
-      const sortedStudents = [...students].sort(
-        (a, b) => a.customOrder - b.customOrder
-      )
-      handleStudentChange(sortedStudents[0].id)
-    }
-  }, [gradingMode, students, selectedPageImageIds.size, handleStudentChange])
-
-  const handleIndividualNextStudent = useCallback(() => {
-    if (selectedPageImageIds.size === 0) return
-
-    const currentAnswerId = Array.from(selectedPageImageIds)[0]
-    const currentAnswer = pageImages.find((a) => a.id === currentAnswerId)
-    if (!currentAnswer) return
-
-    const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder
-    )
-    const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student?.id
-    )
-    if (currentIndex < sortedStudents.length - 1) {
-      const nextStudent = sortedStudents[currentIndex + 1]
-      // 現在の設問ページに対応するpageImageを優先選択
-      const nextStudentSheets = pageImages.filter(
-        (a) => a.student?.id === nextStudent.id
-      )
-      const nextStudentAnswer = currentCropRegion
-        ? nextStudentSheets.find(
-            (a) => a.projectPageId === currentCropRegion.projectPageId
-          ) || nextStudentSheets[0]
-        : nextStudentSheets[0]
-      if (nextStudentAnswer) {
-        setSelectedPageImageIds(new Set([nextStudentAnswer.id]))
-      }
-    }
-  }, [
-    students,
-    selectedPageImageIds,
-    pageImages,
-    setSelectedPageImageIds,
-    currentCropRegion,
-  ])
 
   const {
     handleNextQuestion,
@@ -386,9 +210,22 @@ function ScoringMainViewContent() {
       handleNextQuestion,
     })
 
-  const handleToggleStudentNames = useCallback(() => {
-    setShowStudentNames(!showStudentNames)
-  }, [showStudentNames, setShowStudentNames])
+  /** 採点アクションフック */
+  const {
+    handleToggleStudentNames,
+    handleItemsPerLineChange,
+    handleAutoScrollChange,
+  } = useScoringActions({
+    projectId,
+    loading,
+    project,
+    loadQuestionScores,
+    setQuestionScores,
+    showStudentNames,
+    setShowStudentNames,
+    setItemsPerLine,
+    setAutoScroll,
+  })
 
   const {
     partialScoreInput,
@@ -405,268 +242,30 @@ function ScoringMainViewContent() {
     onAutoAdvance: handleAutoAdvance,
   })
 
+  /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)
   useContextValue("hasSelectedAnswers", selectedPageImageIds.size > 0)
   useContextValue("sidePanelVisible", showSidePanel)
   useContextValue("partialScoreModalOpen", showPartialScoreModal)
   useContextValue("modalOpen", showPartialScoreModal || showScoreComparison)
 
-  useCommand("view.toggleStudentNames", handleToggleStudentNames, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "生徒名表示切り替え",
-      category: "表示",
-      description: "グリッド内の生徒名表示を切り替えます",
-    },
-  })
-
-  useCommand("filter.refresh", handleRefreshFilter, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "フィルタ更新",
-      category: "フィルタ",
-      description: "フィルタ条件を適用して表示を更新します",
-    },
-  })
-
-  useCommand("navigation.nextQuestionArrow", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "次の問題へ（→）",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.prevQuestionArrow", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "前の問題へ（←）",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.nextQuestion", handleNextQuestion, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "次の問題へ（Shift+D）",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.prevQuestion", handlePrevQuestion, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "前の問題へ（Shift+A）",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.moveUp", () => handleGridNavigation("w"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "上に移動",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.moveDown", () => handleGridNavigation("s"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "下に移動",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.moveLeft", () => handleGridNavigation("a"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "左に移動",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.moveRight", () => handleGridNavigation("d"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "右に移動",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.zoomIn", handleZoomIn, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "ズームイン",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.zoomOut", handleZoomOut, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "ズームアウト",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand("navigation.resetZoom", handleResetZoom, {
-    when: "!inputFocus && !modalOpen",
-    metadata: {
-      title: "ズームリセット",
-      category: "ナビゲーション",
-    },
-  })
-
-  useCommand(
-    "modal.confirmPartial",
-    () => handlePartialScoreConfirm("partial"),
-    {
-      when: "partialScoreModalOpen",
-      metadata: {
-        title: "部分点として確定",
-        category: "モーダル",
-        description: "入力した部分点を確定します",
-      },
-    }
-  )
-
-  useCommand(
-    "modal.confirmPending",
-    () => handlePartialScoreConfirm("pending"),
-    {
-      when: "partialScoreModalOpen",
-      metadata: {
-        title: "保留として確定",
-        category: "モーダル",
-        description: "保留として確定します",
-      },
-    }
-  )
-
-  useCommand("modal.cancel", handlePartialScoreCancel, {
-    when: "modalOpen",
-    metadata: {
-      title: "モーダルを閉じる",
-      category: "モーダル",
-    },
-  })
-
-  useCommand("modal.backspace", handlePartialScoreBackspace, {
-    when: "partialScoreModalOpen",
-    metadata: {
-      title: "文字削除",
-      category: "モーダル",
-    },
-  })
-
-  useCommand("modal.input0", () => handlePartialScoreInput("0"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "0を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input1", () => handlePartialScoreInput("1"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "1を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input2", () => handlePartialScoreInput("2"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "2を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input3", () => handlePartialScoreInput("3"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "3を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input4", () => handlePartialScoreInput("4"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "4を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input5", () => handlePartialScoreInput("5"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "5を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input6", () => handlePartialScoreInput("6"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "6を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input7", () => handlePartialScoreInput("7"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "7を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input8", () => handlePartialScoreInput("8"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "8を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.input9", () => handlePartialScoreInput("9"), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "9を入力", category: "モーダル" },
-  })
-
-  useCommand("modal.inputDot", () => handlePartialScoreInput("."), {
-    when: "partialScoreModalOpen",
-    metadata: { title: "小数点を入力", category: "モーダル" },
-  })
-
-  useCommand("scoring.openPartialWith0", () => handlePartialScoreInput("0"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "0キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith1", () => handlePartialScoreInput("1"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "1キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith2", () => handlePartialScoreInput("2"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "2キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith3", () => handlePartialScoreInput("3"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "3キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith4", () => handlePartialScoreInput("4"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "4キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith5", () => handlePartialScoreInput("5"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "5キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith6", () => handlePartialScoreInput("6"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "6キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith7", () => handlePartialScoreInput("7"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "7キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith8", () => handlePartialScoreInput("8"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "8キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWith9", () => handlePartialScoreInput("9"), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: "9キーで部分点入力", category: "採点" },
-  })
-
-  useCommand("scoring.openPartialWithDot", () => handlePartialScoreInput("."), {
-    when: "!inputFocus && !modalOpen && hasSelectedAnswers && gradingMode == 'grid'",
-    metadata: { title: ".キーで部分点入力", category: "採点" },
+  /** キーボードショートカット登録 */
+  useScoringShortcuts({
+    handleToggleStudentNames,
+    handleRefreshFilter,
+    handleNextQuestion,
+    handlePrevQuestion,
+    handleGridNavigation,
+    handleZoomIn,
+    handleZoomOut,
+    handleResetZoom,
+    handlePartialScoreInput,
+    handlePartialScoreConfirmPartial: () =>
+      handlePartialScoreConfirm("partial"),
+    handlePartialScoreConfirmPending: () =>
+      handlePartialScoreConfirm("pending"),
+    handlePartialScoreCancel,
+    handlePartialScoreBackspace,
   })
 
   const currentStudentId = useMemo(() => {
@@ -679,29 +278,6 @@ function ScoringMainViewContent() {
   }, [selectedPageImageIds, pageImages])
 
   const [_showTextInput, setShowTextInput] = useState(false)
-
-  useEffect(() => {
-    const initializeGradingData = async () => {
-      if (!loading && project) {
-        try {
-          const existingScores = await loadQuestionScores(projectId)
-          setQuestionScores(existingScores)
-        } catch (error) {
-          console.error("Failed to initialize grading data:", error)
-        }
-      }
-    }
-
-    initializeGradingData()
-  }, [projectId, loading, project, loadQuestionScores, setQuestionScores])
-
-  const handleItemsPerLineChange = (value: number[]) => {
-    setItemsPerLine(value)
-  }
-
-  const handleAutoScrollChange = (enabled: boolean) => {
-    setAutoScroll(enabled)
-  }
 
   const questionProgress = calculateQuestionProgress()
 
