@@ -687,7 +687,7 @@ export default function AnswerIndividualView({
       })
     })
   }, [
-    currentCropRegion?.id,
+    currentCropRegion,
     containerRef,
     imageLoaded,
     loadedImages,

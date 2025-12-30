@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useAuth } from "@/contexts/AuthContext"
-import { Plus, Settings, User } from "lucide-react"
+import { Plus, Settings, User as UserIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { UserCreateModal } from "./UserCreateModal"
@@ -95,7 +95,7 @@ export default function UserSelection() {
             >
               <CardContent className="p-6 text-center">
                 <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 transition-all duration-200 group-hover:from-blue-600 group-hover:to-purple-700">
-                  <User className="h-10 w-10 text-white" />
+                  <UserIcon className="h-10 w-10 text-white" />
                 </div>
                 <h3 className="mb-2 text-xl font-semibold text-gray-900">
                   {user.name}
