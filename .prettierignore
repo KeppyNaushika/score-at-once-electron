@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+main/
+dist/
+
+# Public assets (third-party libraries)
+public/
+
+# Database
+prisma/data/
+
+# Cache directories
+.mypy_cache/
+
+# Generated files
+*.min.js
+*.min.css

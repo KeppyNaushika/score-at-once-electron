@@ -11,7 +11,6 @@ interface UseElementMovementProps {
   selectedElementIds: string[]
   isDraggingElement: boolean
   lineEditMode: LineEditMode
-  dragElementOffset: { x: number; y: number }
   isShiftPressed: boolean
 
   // Actions
@@ -39,7 +38,6 @@ export function useElementMovement({
   selectedElementIds,
   isDraggingElement,
   lineEditMode,
-  dragElementOffset: _dragElementOffset,
   isShiftPressed,
   setIsDraggingElement,
   setDragElementOffset,
@@ -48,8 +46,6 @@ export function useElementMovement({
   updateDrawingElement,
   setIsResizingElement = () => {},
   setResizeHandle = () => {},
-  hitTestElement,
-  hitTestHandle = () => null,
 }: UseElementMovementProps) {
   // パフォーマンス最適化: デバウンス用のタイマー
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -95,118 +91,6 @@ export function useElementMovement({
       }
     >
   } | null>(null)
-
-  // 要素移動の開始チェック（マウスダウン時のみ実行される想定）
-  const checkMovementStart = useCallback(
-    (imageCoords: { x: number; y: number }) => {
-      if (
-        currentTool !== "select" ||
-        isDraggingElement ||
-        selectedElementIds.length === 0
-      ) {
-        return false
-      }
-
-      // まずハンドル（リサイズ）をチェック
-      for (const selectedId of selectedElementIds) {
-        const selectedElement = drawingElements.find(
-          (el) => el.id === selectedId
-        )
-        if (selectedElement) {
-          const handle = hitTestHandle(
-            selectedElement,
-            imageCoords.x,
-            imageCoords.y
-          )
-          if (handle) {
-            // リサイズ開始
-            setIsResizingElement(true)
-            setResizeHandle(handle)
-            resizeStartRef.current = {
-              element: selectedElement,
-              handle,
-              startX: imageCoords.x,
-              startY: imageCoords.y,
-              originalX: selectedElement.x,
-              originalY: selectedElement.y,
-              originalWidth:
-                selectedElement.width || selectedElement.textBoxWidth || 0,
-              originalHeight:
-                selectedElement.height || selectedElement.textBoxHeight || 0,
-            }
-            return true
-          }
-        }
-      }
-
-      // 次に移動をチェック
-      for (const selectedId of selectedElementIds) {
-        const selectedElement = drawingElements.find(
-          (el) => el.id === selectedId
-        )
-        if (
-          selectedElement &&
-          hitTestElement(selectedElement, imageCoords.x, imageCoords.y)
-        ) {
-          setIsDraggingElement(true)
-          const dragOffsetX = imageCoords.x - selectedElement.x
-          const dragOffsetY = imageCoords.y - selectedElement.y
-          setDragElementOffset({
-            x: dragOffsetX,
-            y: dragOffsetY,
-          })
-
-          // 移動開始時の全選択要素の座標を保存
-          const elementsMap = new Map<
-            string,
-            {
-              x: number
-              y: number
-              endX?: number
-              endY?: number
-              displayX?: number
-              displayY?: number
-              type?: string
-            }
-          >()
-          for (const elemId of selectedElementIds) {
-            const elem = drawingElements.find((el) => el.id === elemId)
-            if (elem) {
-              elementsMap.set(elemId, {
-                x: elem.x,
-                y: elem.y,
-                endX: elem.endX,
-                endY: elem.endY,
-                displayX: elem.displayX,
-                displayY: elem.displayY,
-                type: elem.type,
-              })
-            }
-          }
-          moveStartRef.current = {
-            startMouseX: imageCoords.x,
-            startMouseY: imageCoords.y,
-            elements: elementsMap,
-          }
-
-          return true
-        }
-      }
-      return false
-    },
-    [
-      currentTool,
-      isDraggingElement,
-      selectedElementIds,
-      drawingElements,
-      hitTestElement,
-      hitTestHandle,
-      setIsDraggingElement,
-      setDragElementOffset,
-      setIsResizingElement,
-      setResizeHandle,
-    ]
-  )
 
   // リサイズ処理
   const handleElementResize = useCallback(
@@ -544,9 +428,7 @@ export function useElementMovement({
   )
 
   return {
-    checkMovementStart,
     handleElementMovement,
-    handleElementResize,
     handleMovementEnd,
     initializeMoveStart,
   }

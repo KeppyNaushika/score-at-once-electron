@@ -11,7 +11,7 @@ import { useState } from "react"
 type RegionDetailsTableProps = {
   regions: CropRegionWithDetails[]
   setRegions: React.Dispatch<React.SetStateAction<CropRegionWithDetails[]>>
-  disabled: boolean
+  disabled?: boolean
   selectedRowIndex: number | null
   setSelectedRowIndex: React.Dispatch<React.SetStateAction<number | null>>
   selectedMasterImageId?: string
@@ -20,7 +20,7 @@ type RegionDetailsTableProps = {
 const RegionDetailsTable = ({
   regions,
   setRegions,
-  disabled,
+  disabled = false,
   selectedRowIndex,
   setSelectedRowIndex,
   selectedMasterImageId,

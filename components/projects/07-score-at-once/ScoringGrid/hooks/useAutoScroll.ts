@@ -1,16 +1,13 @@
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { RefObject, useEffect, useRef, useCallback, useMemo } from "react"
 
 interface UseAutoScrollProps {
   selectedAnswers: Set<string>
-  layoutDirection: LayoutDirection
   autoScroll: boolean
   containerRef: RefObject<HTMLDivElement | null>
 }
 
 export function useAutoScroll({
   selectedAnswers,
-  layoutDirection: _layoutDirection,
   autoScroll,
   containerRef,
 }: UseAutoScrollProps) {

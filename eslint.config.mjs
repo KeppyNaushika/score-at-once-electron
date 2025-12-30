@@ -88,7 +88,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": typescriptEslint,
-      "react": reactPlugin,
+      react: reactPlugin,
       "react-hooks": reactHooksPlugin,
       "@next/next": nextPlugin,
     },

@@ -17,7 +17,6 @@ export function useStudentAnswerUpload(
   const [files, setFiles] = useState<UnifiedFile[]>([])
   const [pdfProcessingProgress, setPdfProcessingProgress] = useState(0)
   const [fileOrder, setFileOrder] = useState<PlacementStrategy>("page-first")
-  const [uploadProgress, setUploadProgress] = useState(0)
 
   // PDFパスワード処理
   const [passwordDialog, setPasswordDialog] = useState<{
@@ -192,7 +191,6 @@ export function useStudentAnswerUpload(
       }
 
       setIsUploading(true)
-      setUploadProgress(0)
 
       try {
         let successCount = 0
@@ -214,8 +212,6 @@ export function useStudentAnswerUpload(
           } else {
             console.error(`Upload failed for ${data.name}:`, result.error)
           }
-
-          setUploadProgress(Math.round(((i + 1) / uploadData.length) * 100))
         }
 
         if (successCount > 0) {
@@ -241,7 +237,6 @@ export function useStudentAnswerUpload(
         toast.error("アップロードに失敗しました")
       } finally {
         setIsUploading(false)
-        setUploadProgress(0)
       }
     },
     [onUploadComplete, projectId]
@@ -254,14 +249,12 @@ export function useStudentAnswerUpload(
     files,
     pdfProcessingProgress,
     fileOrder,
-    uploadProgress,
     passwordDialog,
     observerRef,
 
     // Actions
     setFiles,
     setFileOrder,
-    setPasswordDialog,
     handleDrop,
     handleUpload,
   }

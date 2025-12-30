@@ -274,10 +274,8 @@ export function useCropRegionSave(
   )
 
   return {
-    saveRegion,
     autoSaveRegions,
     createRegion,
     updateRegion,
-    isSaving: isSavingRef.current,
   }
 }

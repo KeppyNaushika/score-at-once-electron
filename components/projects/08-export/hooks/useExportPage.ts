@@ -63,8 +63,6 @@ export function useExportPage() {
     "processing" | "completed" | "error"
   >("processing")
   const [currentStep, setCurrentStep] = useState("")
-  const [currentStepIndex, setCurrentStepIndex] = useState(0)
-  const [totalSteps, setTotalSteps] = useState(7)
   const [isExporting, setIsExporting] = useState(false)
 
   // データ読み込み
@@ -137,8 +135,6 @@ export function useExportPage() {
     const removeListener = window.electronAPI.onExportProgress?.((progress) => {
       setExportProgress(progress.percentage)
       setCurrentStep(progress.step)
-      setCurrentStepIndex(progress.currentStepIndex || 0)
-      setTotalSteps(progress.totalSteps || 7)
     })
 
     return removeListener
@@ -207,14 +203,7 @@ export function useExportPage() {
     setExportStatus,
     currentStep,
     setCurrentStep,
-    currentStepIndex,
-    setCurrentStepIndex,
-    totalSteps,
-    setTotalSteps,
     isExporting,
     setIsExporting,
-
-    // アクション
-    loadStudentData,
   }
 }

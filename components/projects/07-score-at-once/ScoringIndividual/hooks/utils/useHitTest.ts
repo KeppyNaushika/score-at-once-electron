@@ -407,6 +407,5 @@ export function useHitTestUtils({
   return {
     hitTestElement,
     hitTestHandle,
-    hitTestElementWithHandle,
   }
 }

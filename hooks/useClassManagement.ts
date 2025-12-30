@@ -243,7 +243,6 @@ export function useClassManagement(classId: string) {
     setIsStudentImportModalOpen,
     isMembershipModalOpen,
     setIsMembershipModalOpen,
-    membershipToEdit,
     setMembershipToEdit,
     handleSaveClass,
     handleStudentImportSuccess,
@@ -251,7 +250,6 @@ export function useClassManagement(classId: string) {
     handleDeleteMembership,
     handleBulkDeleteMemberships,
     handleDeleteClass,
-    fetchData,
   }
 }
 

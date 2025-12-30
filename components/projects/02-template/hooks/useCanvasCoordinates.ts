@@ -73,7 +73,6 @@ export function useCanvasCoordinates(
   )
 
   return {
-    getImageBounds,
     getRelativeCoords,
   }
 }

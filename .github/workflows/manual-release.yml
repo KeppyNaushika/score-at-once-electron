@@ -4,30 +4,30 @@ on:
   workflow_dispatch:
     inputs:
       version_type:
-        description: 'Version bump type'
+        description: "Version bump type"
         required: true
-        default: 'patch'
+        default: "patch"
         type: choice
         options:
-          - 'patch'
-          - 'minor'
-          - 'major'
+          - "patch"
+          - "minor"
+          - "major"
       prerelease_type:
-        description: 'Prerelease type (leave empty for stable release)'
+        description: "Prerelease type (leave empty for stable release)"
         required: false
         type: choice
         options:
-          - ''
-          - 'alpha'
-          - 'beta'
-          - 'rc'
+          - ""
+          - "alpha"
+          - "beta"
+          - "rc"
 
 permissions:
   contents: write
   actions: write
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: "22"
 
 jobs:
   create-release:
@@ -45,7 +45,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
 
       - name: Configure Git
         run: |

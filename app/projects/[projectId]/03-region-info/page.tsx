@@ -35,7 +35,6 @@ export default function RegionInfoPage() {
   }>({})
 
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, _setIsSaving] = useState(false)
 
   const loadInitialData = useCallback(async () => {
     if (!projectId) {
@@ -286,7 +285,7 @@ export default function RegionInfoPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
+                    <div className="relative flex aspect-3/4 items-center justify-center overflow-hidden rounded-lg border bg-gray-100">
                       <div className="text-muted-foreground text-sm">
                         画像が見つかりません
                       </div>
@@ -300,7 +299,7 @@ export default function RegionInfoPage() {
 
         {/* Right: Region Details Table */}
         <div className="flex flex-1 flex-col overflow-hidden">
-          <div className="flex-shrink-0 p-4 pb-0">
+          <div className="shrink-0 p-4 pb-0">
             <div className="mb-4">
               <h3 className="text-lg font-medium">
                 領域情報テーブル（全ページ統一順序）
@@ -322,7 +321,6 @@ export default function RegionInfoPage() {
             <RegionDetailsTable
               regions={cropRegions}
               setRegions={handleRegionsChange}
-              disabled={isSaving}
               selectedRowIndex={selectedRowIndex}
               setSelectedRowIndex={setSelectedRowIndex}
               selectedMasterImageId={selectedProjectPage?.id}

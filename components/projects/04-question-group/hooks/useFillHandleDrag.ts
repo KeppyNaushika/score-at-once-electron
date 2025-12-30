@@ -191,7 +191,6 @@ export function useFillHandleDrag({
   // }, [state.isDragging, state.selectedRange])
 
   return {
-    fillHandleState: state,
     handleFillHandleMouseDown,
     handleCellMouseEnter,
     handleMouseUp,

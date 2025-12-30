@@ -24,7 +24,6 @@ export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
   currentCropRegion,
-  onScoringDataScore: _onScoringDataScore,
   pageImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,

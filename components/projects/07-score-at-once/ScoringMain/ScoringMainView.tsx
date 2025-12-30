@@ -36,14 +36,8 @@ function ScoringMainViewContent() {
   const { helpButton } = usePageHelp()
 
   /** データローダーフック */
-  const {
-    loading,
-    project,
-    pageImages,
-    cropRegions,
-    currentUserId,
-    error: _error,
-  } = useScoringDataLoader(projectId)
+  const { loading, project, pageImages, cropRegions, currentUserId } =
+    useScoringDataLoader(projectId)
 
   /** 設定管理フック */
   const {
@@ -183,9 +177,6 @@ function ScoringMainViewContent() {
     handleGridNavigation,
   } = useScoringNavigation({
     answerSheetsLength: pageImages.length,
-    cropRegionsLength: cropRegions.length,
-    currentStudentIndex: currentStudentIndex,
-    setCurrentStudentIndex: setCurrentStudentIndex,
     currentCropRegionId: currentCropRegionId,
     setCurrentCropRegionId: setCurrentCropRegionId,
     selectedPageImageIds: selectedPageImageIds,
@@ -277,8 +268,6 @@ function ScoringMainViewContent() {
     return ""
   }, [selectedPageImageIds, pageImages])
 
-  const [_showTextInput, setShowTextInput] = useState(false)
-
   const questionProgress = calculateQuestionProgress()
 
   if (loading) {
@@ -336,12 +325,10 @@ function ScoringMainViewContent() {
             handleAnswerSelect(dataId, isSelected, pageImages)
           }
           onScoringDataReplace={handleReplaceSelection}
-          onScoringDataScore={handleBatchScoreWithProgress}
           layoutDirection={layoutDirection}
           itemsPerLine={itemsPerLine}
           autoScroll={autoScroll}
           showStudentNames={showStudentNames}
-          onTextInputStateChange={setShowTextInput}
           currentStudentId={currentStudentId || undefined}
           currentUserId={currentUserId || undefined}
           questionScores={questionScores}
@@ -366,7 +353,6 @@ function ScoringMainViewContent() {
             onToggleFilter={handleToggleFilter}
             onRefreshFilter={handleRefreshFilter}
             partialScoreInput={partialScoreInput}
-            modifierKeyLabel={modifierKeyLabel}
             layoutDirection={layoutDirection}
             visibleAnswersCount={visibleAnswers.length}
             totalAnswersCount={pageImages.length}

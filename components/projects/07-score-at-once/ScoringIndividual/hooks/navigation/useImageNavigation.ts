@@ -18,10 +18,6 @@ export interface UseImageNavigationReturn {
   zoom: number
   /** 現在の位置 */
   position: ImagePosition
-  /** ズーム設定関数 */
-  setZoom: (zoom: number) => void
-  /** 位置設定関数 */
-  setPosition: (position: ImagePosition) => void
   /** ズーム変更ハンドラー */
   onZoomChange: (zoom: number) => void
   /** 位置変更ハンドラー */
@@ -58,8 +54,6 @@ export function useImageNavigation(): UseImageNavigationReturn {
   return {
     zoom,
     position,
-    setZoom,
-    setPosition,
     onZoomChange,
     onPositionChange,
   }

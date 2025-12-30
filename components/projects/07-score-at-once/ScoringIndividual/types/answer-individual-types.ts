@@ -4,7 +4,6 @@ import type {
   PageImageWithProjectStudents,
   QuestionScore,
   ScoringData,
-  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
 // 線種の型定義
@@ -75,13 +74,6 @@ export interface AnswerIndividualViewProps {
 
   // 設問情報（派生済みオブジェクト）
   currentCropRegion?: CropRegionWithProjectPage | null // 現在の設問領域
-
-  // 操作関数
-  onScoringDataScore?: (
-    statusOrAnswerIds: string | string[],
-    statusOrPartialScore?: ScoringStatus | number,
-    partialScore?: number
-  ) => void
 
   // QuestionScore自動作成用のコンテキスト情報
   currentStudentId?: string

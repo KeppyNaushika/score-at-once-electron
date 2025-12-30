@@ -26,7 +26,6 @@ export function ProjectStudentAddModalContainer({
     activeTab,
     setActiveTab,
     availableClasses,
-    availableStudents,
     searchTerm,
     setSearchTerm,
     filterClassId,
@@ -78,7 +77,6 @@ export function ProjectStudentAddModalContainer({
             />
 
             <IndividualSelectionTab
-              availableStudents={availableStudents}
               availableClasses={availableClasses}
               searchTerm={searchTerm}
               filterClassId={filterClassId}

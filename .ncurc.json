@@ -1,6 +1,3 @@
 {
-  "reject": [
-    "@prisma/client",
-    "prisma"
-  ]
+  "reject": ["@prisma/client", "prisma"]
 }

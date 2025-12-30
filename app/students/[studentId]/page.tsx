@@ -80,10 +80,7 @@ export default function StudentDetailPage() {
 
   return (
     <div className="container mx-auto max-w-6xl p-6">
-      <StudentDetailHeader
-        onEditStudent={handleEditStudentClick}
-        onDeleteStudent={handleDeleteStudent}
-      />
+      <StudentDetailHeader />
 
       <StudentInfoCard
         student={student}

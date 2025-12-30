@@ -12,7 +12,6 @@ import type {
   LayoutDirection,
   MasterGridItem,
   ScoringData,
-  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { useEffect, useRef, useState } from "react"
 
@@ -27,7 +26,6 @@ export interface AnswerGridViewProps {
   /** 操作関数 */
   onScoringDataSelect: (id: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
-  onScoringDataScore: (id: string | string[], _status: ScoringStatus) => void
 
   /** 表示設定 */
   layoutDirection: LayoutDirection
@@ -47,7 +45,6 @@ export default function AnswerGridView({
   selectedScoringDataIds,
   onScoringDataSelect,
   onScoringDataReplace,
-  onScoringDataScore: _onScoringDataScore,
   layoutDirection,
   itemsPerRow: externalItemsPerRow,
   autoScroll = true,
@@ -126,7 +123,6 @@ export default function AnswerGridView({
   /** 自動スクロール制御 */
   useAutoScroll({
     selectedAnswers: selectedScoringDataIds,
-    layoutDirection,
     autoScroll,
     containerRef,
   })

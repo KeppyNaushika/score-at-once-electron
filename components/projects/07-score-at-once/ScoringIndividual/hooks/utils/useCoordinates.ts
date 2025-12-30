@@ -25,24 +25,6 @@ export interface UseCoordinatesReturn {
     x: number
     y: number
   }
-  /** スクリーン座標から画像相対座標へ変換 */
-  screenToImageCoords: (
-    screenX: number,
-    screenY: number,
-    displayWidth: number,
-    displayHeight: number,
-    offsetX: number,
-    offsetY: number
-  ) => { x: number; y: number }
-  /** 画像相対座標からスクリーン座標へ変換 */
-  imageToScreenCoords: (
-    imageX: number,
-    imageY: number,
-    displayWidth: number,
-    displayHeight: number,
-    offsetX: number,
-    offsetY: number
-  ) => { x: number; y: number }
 }
 
 /**
@@ -127,66 +109,8 @@ export function useCoordinates({
     []
   )
 
-  /**
-   * スクリーン座標から画像相対座標へ変換
-   *
-   * @param screenX - スクリーンX座標
-   * @param screenY - スクリーンY座標
-   * @param displayWidth - 表示幅
-   * @param displayHeight - 表示高さ
-   * @param offsetX - Xオフセット
-   * @param offsetY - Yオフセット
-   * @returns 画像相対座標（0-1）
-   */
-  const screenToImageCoords = useCallback(
-    (
-      screenX: number,
-      screenY: number,
-      displayWidth: number,
-      displayHeight: number,
-      offsetX: number,
-      offsetY: number
-    ): { x: number; y: number } => {
-      return {
-        x: (screenX - offsetX) / displayWidth,
-        y: (screenY - offsetY) / displayHeight,
-      }
-    },
-    []
-  )
-
-  /**
-   * 画像相対座標からスクリーン座標へ変換
-   *
-   * @param imageX - 画像X座標（0-1）
-   * @param imageY - 画像Y座標（0-1）
-   * @param displayWidth - 表示幅
-   * @param displayHeight - 表示高さ
-   * @param offsetX - Xオフセット
-   * @param offsetY - Yオフセット
-   * @returns スクリーン座標
-   */
-  const imageToScreenCoords = useCallback(
-    (
-      imageX: number,
-      imageY: number,
-      displayWidth: number,
-      displayHeight: number,
-      offsetX: number,
-      offsetY: number
-    ): { x: number; y: number } => {
-      return {
-        x: imageX * displayWidth + offsetX,
-        y: imageY * displayHeight + offsetY,
-      }
-    },
-    []
-  )
-
   return {
     getImageCoordinatesFromEvent,
     getScreenCoordinatesFromEvent,
-    screenToImageCoords,
-    imageToScreenCoords,
   }
 }

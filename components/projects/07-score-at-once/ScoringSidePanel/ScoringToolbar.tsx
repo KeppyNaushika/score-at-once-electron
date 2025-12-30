@@ -40,7 +40,6 @@ interface ScoringToolbarProps {
   onToggleFilter?: (key: string) => void
   onRefreshFilter?: () => void
   partialScoreInput: string
-  modifierKeyLabel: string
   gradingMode?: "grid" | "individual" // 採点モード
 }
 
@@ -161,7 +160,6 @@ export default function ScoringToolbar({
   onToggleFilter,
   onRefreshFilter,
   partialScoreInput,
-  modifierKeyLabel: _modifierKeyLabel,
   gradingMode = "grid",
 }: ScoringToolbarProps) {
   // 新しいショートカットシステム: キーバインディング取得

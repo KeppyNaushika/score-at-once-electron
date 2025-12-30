@@ -83,8 +83,5 @@ export function useGridNavigation({
 
   return {
     itemsPerRow,
-    handleItemsPerRowChange,
-    incrementItemsPerRow,
-    decrementItemsPerRow,
   }
 }

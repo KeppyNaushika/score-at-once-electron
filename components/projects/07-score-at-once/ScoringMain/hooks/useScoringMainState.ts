@@ -27,9 +27,7 @@ export function useScoringMainState() {
   /** サイドパネル表示状態 */
   const [showSidePanel, setShowSidePanel] = useState(true)
   /** ショートカットで利用する修飾キー表示ラベル */
-  const [modifierKeyLabel, setModifierKeyLabel] = useState(
-    () => getModifierKeyLabel() || "Alt"
-  )
+  const [modifierKeyLabel] = useState(() => getModifierKeyLabel() || "Alt")
 
   /**
    * 単一クリック・ショートカットによる選択更新
@@ -96,7 +94,6 @@ export function useScoringMainState() {
     setShowKeyboardHelp,
     setShowScoreComparison,
     setShowSidePanel,
-    setModifierKeyLabel,
     /** ヘルパー関数 */
     handleAnswerSelect,
     replaceSelection,

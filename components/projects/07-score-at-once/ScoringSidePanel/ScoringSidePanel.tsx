@@ -42,7 +42,6 @@ interface ScoringSidePanelProps {
   onToggleFilter: (filterId: string) => void
   onRefreshFilter: () => void
   partialScoreInput: string
-  modifierKeyLabel: string
   // Navigation Controls props
   layoutDirection: LayoutDirection
   visibleAnswersCount: number
@@ -86,7 +85,6 @@ export function ScoringSidePanel({
   onToggleFilter,
   onRefreshFilter,
   partialScoreInput,
-  modifierKeyLabel,
   layoutDirection,
   visibleAnswersCount,
   totalAnswersCount,
@@ -128,7 +126,6 @@ export function ScoringSidePanel({
         onToggleFilter={onToggleFilter}
         onRefreshFilter={onRefreshFilter}
         partialScoreInput={partialScoreInput}
-        modifierKeyLabel={modifierKeyLabel}
         gradingMode={gradingMode}
       />
 

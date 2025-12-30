@@ -119,7 +119,6 @@ export function useProjectDetail(projectId: string) {
     modelAnswerCount,
     answerSheetCount,
     cropRegionCount,
-    loadProject,
     updateProject,
   }
 }

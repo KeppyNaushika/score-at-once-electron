@@ -242,7 +242,6 @@ export function useProjectStudentAddModal({
     activeTab,
     setActiveTab,
     availableClasses,
-    availableStudents,
     searchTerm,
     setSearchTerm,
     filterClassId,

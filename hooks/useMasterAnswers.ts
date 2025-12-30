@@ -77,11 +77,6 @@ export function useMasterAnswers(
     }
   }, [initialAnswers])
 
-  // パスワード処理用の状態
-  const [_pendingFiles, setPendingFiles] = useState<File[]>([])
-  const [_currentFileIndex, setCurrentFileIndex] = useState(0)
-  const [_currentPassword, setCurrentPassword] = useState<string>("")
-
   const convertPdfToImagesWithPassword = useCallback(
     async (file: File): Promise<ConvertedImage[]> => {
       try {
@@ -139,15 +134,12 @@ export function useMasterAnswers(
       }
 
       setState((prev) => ({ ...prev, isUploading: true }))
-      setPendingFiles(files)
-      setCurrentFileIndex(0)
 
       try {
         const allFilesData: ConvertedImage[] = []
 
         for (let i = 0; i < files.length; i++) {
           const file = files[i]
-          setCurrentFileIndex(i)
 
           if (file.type === "application/pdf") {
             try {
@@ -240,9 +232,6 @@ export function useMasterAnswers(
         toast.error("ファイルのアップロードに失敗しました。")
       } finally {
         setState((prev) => ({ ...prev, isUploading: false }))
-        setPendingFiles([])
-        setCurrentFileIndex(0)
-        setCurrentPassword("")
       }
     },
     [projectId, onAnswersChange, convertPdfToImagesWithPassword]
@@ -348,10 +337,6 @@ export function useMasterAnswers(
     if (reject) {
       reject(new Error("Password input cancelled"))
     }
-
-    setPendingFiles([])
-    setCurrentFileIndex(0)
-    setCurrentPassword("")
   }, [])
 
   const deleteAnswer = useCallback(

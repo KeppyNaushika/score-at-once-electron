@@ -2,14 +2,11 @@
 
 import { useAuth } from "@/contexts/AuthContext"
 import type { ProjectWithDetails } from "@/types/electron"
-import type { Prisma } from "@prisma/client"
 import { useEffect, useState } from "react"
 
 export const useProjects = () => {
   const { user } = useAuth()
   const [projects, setProjects] = useState<ProjectWithDetails[]>([])
-  const [selectedProject, setSelectedProject] =
-    useState<ProjectWithDetails | null>(null)
 
   const loadProjects = async () => {
     try {
@@ -54,50 +51,9 @@ export const useProjects = () => {
     }
   }
 
-  const updateProject = async (
-    projectId: string,
-    data: Prisma.ProjectUpdateInput
-  ) => {
-    try {
-      const updatedProject = await window.electronAPI.updateProject(
-        projectId,
-        data
-      )
-      if (updatedProject) {
-        // プロジェクトリストを再読み込みして最新の状態を取得
-        await loadProjects()
-      }
-    } catch (error) {
-      console.error("Failed to update project:", error)
-    }
-  }
-
-  const deleteProject = async (projectToDelete: ProjectWithDetails) => {
-    if (!projectToDelete) return
-    try {
-      const deletedProject = await window.electronAPI.deleteProject(
-        projectToDelete.id
-      )
-      if (deletedProject) {
-        // プロジェクトリストを再読み込み
-        await loadProjects()
-        // 削除されたプロジェクトが選択中だった場合は選択を解除
-        if (selectedProject && selectedProject.id === projectToDelete.id) {
-          setSelectedProject(null)
-        }
-      }
-    } catch (error) {
-      console.error("Failed to delete project:", error)
-    }
-  }
-
   return {
     projects,
-    selectedProject,
-    setSelectedProject,
     loadProjects,
     createProject,
-    updateProject,
-    deleteProject,
   }
 }

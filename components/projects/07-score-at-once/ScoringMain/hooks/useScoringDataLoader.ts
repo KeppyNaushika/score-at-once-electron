@@ -12,7 +12,6 @@ interface ScoringDataLoaderResult {
   pageImages: PageImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
   currentUserId: string | null
-  error: string | null
 }
 
 export function useScoringDataLoader(
@@ -27,13 +26,11 @@ export function useScoringDataLoader(
     []
   )
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
-        setError(null)
 
         // プロジェクトデータの読み込み
         const projectData = await window.electronAPI.fetchProjectById(projectId)
@@ -79,9 +76,6 @@ export function useScoringDataLoader(
         }
       } catch (error) {
         console.error("データの読み込みに失敗しました:", error)
-        setError(
-          error instanceof Error ? error.message : "不明なエラーが発生しました"
-        )
         toast.error("データの読み込みに失敗しました")
       } finally {
         setLoading(false)
@@ -99,6 +93,5 @@ export function useScoringDataLoader(
     pageImages,
     cropRegions,
     currentUserId,
-    error,
   }
 }

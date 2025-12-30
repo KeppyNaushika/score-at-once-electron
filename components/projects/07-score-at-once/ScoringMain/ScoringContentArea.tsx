@@ -10,7 +10,6 @@ import type {
   PageImageWithProjectStudents,
   QuestionScore,
   ScoringData,
-  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
 interface ScoringContentAreaProps {
@@ -28,11 +27,6 @@ interface ScoringContentAreaProps {
   /** 操作関数（両View共通） */
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
-  onScoringDataScore: (
-    statusOrAnswerIds: ScoringStatus | string | string[],
-    statusOrPartialScore?: ScoringStatus | number | null,
-    partialScore?: number | null
-  ) => void
 
   /** GridView設定 */
   layoutDirection: LayoutDirection
@@ -42,11 +36,6 @@ interface ScoringContentAreaProps {
 
   /** IndividualView設定 */
   pageImages?: PageImageWithProjectStudents[]
-
-  /** 生徒データコールバック（個別表示でサイドパネルに渡すため） */
-  onStudentsExtracted?: (
-    students: { id: string; studentId: string; studentName: string }[]
-  ) => void
 
   /** テキスト入力状態変更のコールバック（ショートカット制御用） */
   onTextInputStateChange?: (showTextInput: boolean) => void
@@ -68,13 +57,11 @@ export function ScoringContentArea({
   currentCropRegion,
   onScoringDataSelect,
   onScoringDataReplace,
-  onScoringDataScore,
   layoutDirection,
   itemsPerLine,
   autoScroll,
   showStudentNames,
   pageImages,
-  onStudentsExtracted: _onStudentsExtracted,
   onTextInputStateChange,
   currentStudentId,
   currentUserId,
@@ -98,19 +85,6 @@ export function ScoringContentArea({
       currentScoringDataId={currentScoringDataId}
       currentCropRegion={currentCropRegion}
       pageImages={pageImages}
-      onScoringDataScore={(
-        statusOrAnswerIds,
-        statusOrPartialScore,
-        partialScore
-      ) => {
-        if (currentScoringDataId) {
-          onScoringDataScore(
-            [currentScoringDataId],
-            statusOrPartialScore,
-            partialScore
-          )
-        }
-      }}
       onTextInputStateChange={onTextInputStateChange}
       currentStudentId={currentStudentId}
       currentUserId={currentUserId}
@@ -126,7 +100,6 @@ export function ScoringContentArea({
       layoutDirection={layoutDirection}
       onScoringDataSelect={onScoringDataSelect}
       onScoringDataReplace={onScoringDataReplace}
-      onScoringDataScore={onScoringDataScore}
       itemsPerRow={itemsPerLine}
       autoScroll={autoScroll}
       showStudentNames={showStudentNames}

@@ -38,7 +38,6 @@ export default function ClassDetailPage() {
     setIsStudentImportModalOpen,
     isMembershipModalOpen,
     setIsMembershipModalOpen,
-    membershipToEdit: _membershipToEdit,
     setMembershipToEdit,
     handleSaveClass,
     handleStudentImportSuccess,

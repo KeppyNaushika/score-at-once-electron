@@ -111,7 +111,6 @@ export default function StudentAnswersPage() {
             onTabChange={(tab) => setActiveTab(tab as StudentAnswerTab)}
           >
             <StudentAnswersTabContent
-              activeTab={activeTab}
               projectId={projectId}
               students={students}
               modelAnswerCount={modelAnswerCount}
