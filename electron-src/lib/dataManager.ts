@@ -124,7 +124,7 @@ export const migrateFromApplicationSupport = async (): Promise<boolean> => {
       // 旧フォルダを削除
       await fs.rm(oldProjectsPath, { recursive: true, force: true })
       hasMigrated = true
-    } catch (error) {
+    } catch {
       // 旧データが存在しない場合はスキップ
     }
 
@@ -137,7 +137,7 @@ export const migrateFromApplicationSupport = async (): Promise<boolean> => {
       await fs.unlink(oldDbPath)
 
       hasMigrated = true
-    } catch (error) {
+    } catch {
       // 旧データベースが存在しない場合はスキップ
     }
 
@@ -189,7 +189,7 @@ const getDirectorySize = async (dirPath: string): Promise<number> => {
         totalSize += stats.size
       }
     }
-  } catch (error) {
+  } catch {
     // ディレクトリが存在しない場合など
     console.warn("Could not read directory:", dirPath)
   }

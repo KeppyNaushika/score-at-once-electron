@@ -1,6 +1,6 @@
 "use client"
 
-import type { WorkflowStats } from "@/types/workflow.types"
+import type { WorkflowStats } from "@/components/projects/detail/types"
 
 interface QuickStatsProps {
   stats: WorkflowStats

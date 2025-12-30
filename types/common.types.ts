@@ -4,81 +4,82 @@
  * このファイルは複数のモジュールで共有される型定義を提供します。
  * 方針:
  * 1. Prisma型を第一優先で使用（型再宣言しない）
- * 2. IPC通信でのシリアライゼーション拡張は一箇所に集約
+ * 2. IPC通信ではDateオブジェクトをそのまま渡す（Structured Clone対応）
  * 3. 未使用の型は削除
  */
 
-import type { PageImage, Student } from "@prisma/client"
-import type { ProjectPayload } from "@/electron-src/lib/prisma/project"
-
-// =============================================================================
-// シリアライゼーション型 - IPC通信でDate→stringに変換される問題に対応
-// =============================================================================
+import type { Prisma } from "@prisma/client"
 
 /**
- * Date型をstring型に変換する再帰的ユーティリティ型
- * IPC通信でオブジェクトがJSON.stringify/parseされる際に使用
+ * IPCハンドラーが返すProject型
+ * getProjectsクエリの戻り値 + 平坦化されたcropRegionsとanswerImages
  */
-export type Serialized<T> = T extends Date
-  ? string
-  : T extends (infer U)[]
-    ? Serialized<U>[]
-    : T extends object
-      ? { [K in keyof T]: Serialized<T[K]> }
-      : T
-
-/**
- * Prisma型ベースのシリアライゼーション済みProject型
- * IPCハンドラーで追加されるプロパティを含む
- */
-export type SerializedProject = Serialized<ProjectPayload> & {
-  /** IPCハンドラーで平坦化されるcropRegions（questionScoresを含む） */
-  cropRegions?: Serialized<
-    NonNullable<ProjectPayload["projectPages"][number]["cropRegions"]>[number]
-  >[]
+export type ProjectWithDetails = Prisma.ProjectGetPayload<{
+  include: {
+    userProjects: { include: { user: true } }
+    projectPages: {
+      include: {
+        pageImages: { include: { student: true } }
+        cropRegions: {
+          include: {
+            questionScores: { include: { student: true; scoredByUser: true } }
+          }
+        }
+      }
+    }
+    projectSubtotalGroups: {
+      include: { subtotalGroup: { include: { subtotals: true } } }
+    }
+    projectStudents: true
+  }
+}> & {
+  /** IPCハンドラーで平坦化されるcropRegions */
+  cropRegions?: Prisma.CropRegionGetPayload<{
+    include: {
+      questionScores: { include: { student: true; scoredByUser: true } }
+    }
+  }>[]
   /** IPCハンドラーで抽出されるanswerImages */
-  answerImages?: {
-    id: string
-    projectPageId: string
-    studentId: string | null
-    imagePath: string
-    imageType: string
+  answerImages?: (Prisma.PageImageGetPayload<{
+    include: { student: true }
+  }> & {
     pageNumber: number
-    createdAt: string
-    updatedAt: string
-    student?: Serialized<Student> | null
-  }[]
+  })[]
 }
 
-/** ProjectWithDetailsはSerializedProjectのエイリアス */
-export type ProjectWithDetails = SerializedProject
+/** @deprecated Use ProjectWithDetails instead */
+export type SerializedProject = ProjectWithDetails
 
 // =============================================================================
 // 型ガード関数
 // =============================================================================
 
 /**
- * データがSerializedProject型かどうかを検証する型ガード
+ * データがProjectWithDetails型かどうかを検証する型ガード
  * @param data - 検証対象のデータ
- * @returns SerializedProject型の場合true
+ * @returns ProjectWithDetails型の場合true
  */
-export function isValidProject(data: unknown): data is SerializedProject {
+export function isValidProject(data: unknown): data is ProjectWithDetails {
   if (typeof data !== "object" || data === null) return false
 
   const obj = data as Record<string, unknown>
 
+  // DateはIPC経由でDateオブジェクトとして渡される
+  const isValidDate = (val: unknown): boolean =>
+    val instanceof Date || typeof val === "string"
+
   return (
     typeof obj.id === "string" &&
     typeof obj.examName === "string" &&
-    (obj.examDate === null || typeof obj.examDate === "string") &&
+    (obj.examDate === null || isValidDate(obj.examDate)) &&
     (obj.subject === undefined ||
       obj.subject === null ||
       typeof obj.subject === "string") &&
     (obj.description === undefined ||
       obj.description === null ||
       typeof obj.description === "string") &&
-    typeof obj.createdAt === "string" &&
-    typeof obj.updatedAt === "string" &&
+    isValidDate(obj.createdAt) &&
+    isValidDate(obj.updatedAt) &&
     (obj.projectPages === undefined || Array.isArray(obj.projectPages)) &&
     (obj.cropRegions === undefined || Array.isArray(obj.cropRegions)) &&
     (obj.projectStudents === undefined || Array.isArray(obj.projectStudents)) &&
@@ -133,7 +134,7 @@ export interface CropRegionArea {
 // =============================================================================
 
 /**
- * QuestionScoreのシリアライズ済みデータ型
+ * QuestionScoreのデータ型
  * IPC通信およびUI表示で使用
  */
 export interface QuestionScoreData {
@@ -200,25 +201,6 @@ export interface CropRegionUpdateData {
 }
 
 // =============================================================================
-// 後方互換性エイリアス - 段階的移行用
-// =============================================================================
-
-/** @deprecated CropRegionAreaTypeを使用してください */
-export type LayoutRegionAreaType = CropRegionAreaType
-
-/** @deprecated CROP_REGION_AREA_TYPESを使用してください */
-export const LAYOUT_REAGION_AREA_TYPES = CROP_REGION_AREA_TYPES
-
-/** @deprecated CropRegionAreaを使用してください */
-export type LayoutRegionArea = CropRegionArea
-
-/** @deprecated CropRegionCreateDataを使用してください */
-export type LayoutRegionCreateData = CropRegionCreateData
-
-/** @deprecated CropRegionUpdateDataを使用してください */
-export type LayoutRegionUpdateData = CropRegionUpdateData
-
-// =============================================================================
 // その他の共有型
 // =============================================================================
 
@@ -234,38 +216,4 @@ export interface StudentData {
   admissionYear?: number
   createdAt: Date
   updatedAt: Date
-}
-
-/**
- * 01-upload等で使用するマスター解答データ型
- * 後方互換性のために維持
- */
-export interface MasterAnswerData {
-  id: string
-  projectId: string
-  imagePath: string
-  pageNumber: number
-  createdAt: Date
-  updatedAt: Date
-}
-
-/**
- * 採点マーク設定型
- * PDF出力時のマーク表示設定
- */
-export interface ScoringMarkConfig {
-  position:
-    | "top-left"
-    | "top-center"
-    | "top-right"
-    | "center-left"
-    | "center"
-    | "center-right"
-    | "bottom-left"
-    | "bottom-center"
-    | "bottom-right"
-  size: number
-  showCorrect: boolean
-  showIncorrect: boolean
-  showPartial: boolean
 }

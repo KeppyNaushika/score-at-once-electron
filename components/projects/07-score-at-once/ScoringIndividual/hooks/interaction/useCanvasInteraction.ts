@@ -214,7 +214,7 @@ export function useCanvasInteraction({
   })
 
   // リサイズ
-  const { getResizeHandle, handleElementResize, applyShiftConstraint } =
+  const { getResizeHandle, handleElementResize, applyShiftConstraint: _applyShiftConstraint } =
     useElementResize({
       isShiftPressed,
       imageAspectRatio,
@@ -230,7 +230,6 @@ export function useCanvasInteraction({
     isCtrlPressed,
     toggleSelection,
     setSelectedElementIds,
-    clearSelection,
     setLineEditMode,
     setRectangleEditMode,
     hitTestElement,

@@ -5,8 +5,8 @@ import { RegionTableRow } from "@/components/projects/03-region-info/components/
 import { useDragAndDrop } from "@/components/projects/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/projects/03-region-info/hooks/useKeyboardNavigation"
 import type { CropRegionWithDetails } from "@/types/electron"
-import { useState } from "react"
 import { Palette } from "lucide-react"
+import { useState } from "react"
 
 type RegionDetailsTableProps = {
   regions: CropRegionWithDetails[]
@@ -51,15 +51,15 @@ const RegionDetailsTable = ({
   const handleRegionChange = (
     globalIndex: number,
     field: string,
-    value: any,
+    value: string | number | null
   ) => {
     const newRegions = [...regions]
-    if (field === "points" && value !== "") {
+    if (field === "points" && value !== "" && value !== null) {
       newRegions[globalIndex] = {
         ...newRegions[globalIndex],
-        [field]: parseFloat(value),
+        [field]: parseFloat(String(value)),
       }
-    } else if (field === "points" && value === "") {
+    } else if (field === "points" && (value === "" || value === null)) {
       newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: null }
     } else {
       newRegions[globalIndex] = { ...newRegions[globalIndex], [field]: value }
@@ -101,15 +101,15 @@ const RegionDetailsTable = ({
             .filter((update) => update.id) // IDがあるもののみ
 
           if (
-            (window as any).electronAPI?.updateLayoutRegionOrders &&
+            window.electronAPI?.updateLayoutRegionOrders &&
             updates.length > 0
           ) {
-            await (window as any).electronAPI.updateLayoutRegionOrders(updates)
+            await window.electronAPI.updateLayoutRegionOrders(updates)
           }
         } catch (orderError) {
           console.error(
             "Error updating region order after deletion:",
-            orderError,
+            orderError
           )
         }
 
@@ -138,7 +138,7 @@ const RegionDetailsTable = ({
   if (filteredRegions.length === 0) {
     return (
       <div className="p-8 text-center">
-        <Palette className="mx-auto mb-4 h-12 w-12 text-muted-foreground/70" />
+        <Palette className="text-muted-foreground/70 mx-auto mb-4 h-12 w-12" />
         <h3 className="mb-2 text-lg font-medium">
           {selectedMasterImageId
             ? "このページに領域がありません"
@@ -155,67 +155,67 @@ const RegionDetailsTable = ({
 
   return (
     <div className="h-full overflow-auto p-6">
-        <table className="border-border w-full border-collapse border">
-          <thead>
-            <tr className="bg-muted/50">
-              <th className="border-border w-8 border px-2 py-1 text-left font-medium"></th>
-              <th className="border-border w-16 border px-2 py-1 text-left font-medium">
-                #
-              </th>
-              <th className="border-border w-16 border px-2 py-1 text-left font-medium">
-                ページ
-              </th>
-              <th className="border-border w-36 border px-2 py-1 text-left font-medium">
-                種類
-              </th>
-              <th className="border-border w-40 border px-2 py-1 text-left font-medium">
-                ラベル
-              </th>
-              <th className="border-border w-24 border px-2 py-1 text-left font-medium">
-                配点
-              </th>
-              <th className="border-border w-20 border px-2 py-1 text-center font-medium">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRegions.map((region, globalIndex) => {
-              const isSelected = selectedRowIndex === globalIndex
-              const isDragged = dragState.draggedIndex === globalIndex
-              const isDraggedOver = dragState.dragOverIndex === globalIndex
+      <table className="border-border w-full border-collapse border">
+        <thead>
+          <tr className="bg-muted/50">
+            <th className="border-border w-8 border px-2 py-1 text-left font-medium"></th>
+            <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+              #
+            </th>
+            <th className="border-border w-16 border px-2 py-1 text-left font-medium">
+              ページ
+            </th>
+            <th className="border-border w-36 border px-2 py-1 text-left font-medium">
+              種類
+            </th>
+            <th className="border-border w-40 border px-2 py-1 text-left font-medium">
+              ラベル
+            </th>
+            <th className="border-border w-24 border px-2 py-1 text-left font-medium">
+              配点
+            </th>
+            <th className="border-border w-20 border px-2 py-1 text-center font-medium">
+              操作
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredRegions.map((region, globalIndex) => {
+            const isSelected = selectedRowIndex === globalIndex
+            const isDragged = dragState.draggedIndex === globalIndex
+            const isDraggedOver = dragState.dragOverIndex === globalIndex
 
-              return (
-                <RegionTableRow
-                  key={region.id || `region-${globalIndex}`}
-                  region={region}
-                  globalIndex={globalIndex}
-                  isSelected={isSelected}
-                  isDragged={isDragged}
-                  isDraggedOver={isDraggedOver}
-                  disabled={disabled}
-                  onRegionChange={handleRegionChange}
-                  onKeyDown={handleKeyDown}
-                  onCompositionStart={handleCompositionStart}
-                  onCompositionEnd={handleCompositionEnd}
-                  onDelete={handleDeleteRegion}
-                  onSelect={setSelectedRowIndex}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                />
-              )
-            })}
-          </tbody>
-        </table>
+            return (
+              <RegionTableRow
+                key={region.id || `region-${globalIndex}`}
+                region={region}
+                globalIndex={globalIndex}
+                isSelected={isSelected}
+                isDragged={isDragged}
+                isDraggedOver={isDraggedOver}
+                disabled={disabled}
+                onRegionChange={handleRegionChange}
+                onKeyDown={handleKeyDown}
+                onCompositionStart={handleCompositionStart}
+                onCompositionEnd={handleCompositionEnd}
+                onDelete={handleDeleteRegion}
+                onSelect={setSelectedRowIndex}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onDragEnd={handleDragEnd}
+              />
+            )
+          })}
+        </tbody>
+      </table>
 
-        <DeleteConfirmModal
-          isOpen={deleteModalOpen}
-          onClose={() => setDeleteModalOpen(false)}
-          onConfirm={confirmDeleteRegion}
-        />
+      <DeleteConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDeleteRegion}
+      />
     </div>
   )
 }

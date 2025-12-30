@@ -1,6 +1,5 @@
 "use client"
 
-import type { ComponentType } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -27,6 +26,7 @@ import {
   Trophy,
   User,
 } from "lucide-react"
+import type { ComponentType } from "react"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {
@@ -60,11 +60,15 @@ type RegionTableRowProps = {
   isDragged: boolean
   isDraggedOver: boolean
   disabled: boolean
-  onRegionChange: (globalIndex: number, field: string, value: any) => void
+  onRegionChange: (
+    globalIndex: number,
+    field: string,
+    value: string | number | null
+  ) => void
   onKeyDown: (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: string,
+    fieldName: string
   ) => void
   onCompositionStart: () => void
   onCompositionEnd: () => void
@@ -135,7 +139,7 @@ export const RegionTableRow = ({
       <td className="border-border border px-2 py-1">
         <div className="flex items-center space-x-2">
           <IconComponent
-            className={`h-4 w-4 flex-shrink-0 ${
+            className={`h-4 w-4 shrink-0 ${
               isSelected ? "text-primary" : "text-muted-foreground"
             }`}
           />
@@ -153,10 +157,7 @@ export const RegionTableRow = ({
           onValueChange={(value) => onRegionChange(globalIndex, "type", value)}
           disabled={disabled}
         >
-          <SelectTrigger
-            className="w-full"
-            onFocus={ensureSelected}
-          >
+          <SelectTrigger className="w-full" onFocus={ensureSelected}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

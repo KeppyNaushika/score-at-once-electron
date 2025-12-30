@@ -65,15 +65,6 @@ npx prisma migrate dev
 npx prisma studio
 ```
 
-## 🎯 最新実装状況 (2025年7月11日)
-
-- **完成度**: 98%超（プロダクションレベル）
-- **主要機能**: 全て実装完了（採点・出力・管理機能）
-- **キーボード操作**: 完全カスタマイズ対応（macOS対応済み）
-- **コードリファクタリング**: 大規模ファイルの分割完了（Excel出力機能含む）
-- **TypeDoc対応**: 全Excel出力関数にTypeDoc形式コメント付与
-- **残タスク**: 個人成績表PDF出力のみ
-
 ## 🔄 大規模ファイル分割の実装
 
 ### 実装済み分割
@@ -134,7 +125,7 @@ npx prisma studio
 │   ├── /login               # ログイン
 │   ├── /signup              # サインアップ
 │   ├── /projects            # プロジェクト管理
-│   │   └── /[projectId]     # 個別プロジェクト（6段階ワークフロー）
+│   │   └── /[projectId]     # 個別プロジェクト（8段階ワークフロー）
 │   │       ├── /01-upload           # 模範解答アップロード
 │   │       ├── /02-template         # 採点領域作成
 │   │       ├── /03-region-info      # 領域情報
@@ -171,7 +162,7 @@ npx prisma studio
 │   │   └── PageHelpContent.tsx
 │   ├── /hooks               # コンポーネント固有のカスタムフック
 │   ├── /layout              # レイアウト関連
-│   ├── /projects            # プロジェクト関連（6段階ワークフロー対応）
+│   ├── /projects            # プロジェクト関連（8段階ワークフロー対応）
 │   │   ├── /01-upload       # 模範解答アップロード
 │   │   ├── /02-template     # 採点領域作成
 │   │   ├── /03-region-info  # 領域情報
@@ -451,6 +442,74 @@ import { validateFile } from "./utils/file-processing"
 3. **チーム開発の効率化**: 新規参入者にも理解しやすい構造
 4. **機能削除の安全性**: ディレクトリごと削除可能
 5. **依存関係の可視化**: import文で使用範囲が明確
+
+### 🔷 型管理の方針
+
+#### 基本原則
+
+1. **Prisma型を最優先**: データベースモデルはPrisma生成型をそのまま使用
+2. **anyとasは原則禁止**: 型安全性を損なう記述は避ける
+
+#### 型定義の配置ルール
+
+**単一ファイルで使用する型**:
+- そのファイル内で宣言する
+- 例: hooksの引数・返り値の型、コンポーネントのProps型
+
+```typescript
+// ファイル内で完結する型
+interface UseScoringOptions {
+  projectId: string
+  onComplete?: () => void
+}
+
+export function useScoring(options: UseScoringOptions) { ... }
+```
+
+**複数ファイルで使用する型**:
+- 上位ディレクトリの`types.ts`に配置
+- 例: 機能ディレクトリ内の複数コンポーネントで共有する型
+
+```typescript
+// /components/projects/07-score-at-once/types.ts
+export interface ScoringState { ... }
+export type ScoreStatus = 'correct' | 'incorrect' | 'partial' | ...
+```
+
+**アプリケーション全体で使用する型**:
+- `/types/`ディレクトリに配置
+- 大規模で主要な機能の型はここに置くと全体像が把握しやすい
+
+```typescript
+// /types/project-archive.types.ts - インポート/エクスポート機能の型
+// /types/common.types.ts - 汎用的な共通型
+```
+
+#### Prisma型の拡張
+
+IPCでの受け渡し時にDecimal→number変換が必要な場合など、Prisma型の拡張は`types/prisma-extensions.ts`に集約します。
+
+```typescript
+// types/prisma-extensions.ts
+import type { QuestionScore } from '@prisma/client'
+
+// IPC用にシリアライズされた型
+export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialScore'> {
+  partialScore: number | null  // Decimal → number
+}
+```
+
+#### 判断フロー
+
+```
+新しい型を定義する
+    ↓
+このファイル内でのみ使用？ → Yes → ファイル内で宣言
+    ↓ No
+この機能内の複数ファイルで使用？ → Yes → 機能ディレクトリのtypes.tsへ
+    ↓ No
+アプリ全体で使用 or 主要機能の型？ → Yes → /types/へ
+```
 
 ### PDF・画像処理
 

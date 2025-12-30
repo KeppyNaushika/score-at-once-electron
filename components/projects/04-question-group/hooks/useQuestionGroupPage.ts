@@ -1,7 +1,12 @@
 "use client"
 
-import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
-import type { CropSubtotal, Subtotal, SubtotalGroup } from "@prisma/client"
+import {
+  CropRegionWithDetails,
+  CropSubtotalWithRelations,
+  ProjectSubtotalGroupWithSubtotalGroup,
+  SubtotalGroupWithItems,
+} from "@/types/electron"
+import type { Subtotal, SubtotalGroup } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
 interface SubtotalData {
@@ -14,13 +19,14 @@ interface SubtotalData {
 }
 
 export function useQuestionGroupPage(projectId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [project, setProject] = useState<any>(null)
   const [subtotalGroups, setSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
-  const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
-    SubtotalGroupWithItems[]
-  >([])
+  // API returns simplified structure without projectSubtotalGroups
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<any[]>([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
   const [subtotalRegions, setSubtotalRegions] = useState<
     CropRegionWithDetails[]
@@ -58,19 +64,19 @@ export function useQuestionGroupPage(projectId: string) {
         subtotalGroupsResponse.forEach(
           (
             group: SubtotalGroup & { subtotals: Subtotal[] },
-            groupIndex: number,
+            groupIndex: number
           ) => {
             console.log(`📋 Group ${groupIndex + 1} (${group.name}):`, group)
             if (group.subtotals && group.subtotals.length > 0) {
               group.subtotals.forEach(
                 (subtotal: Subtotal, subtotalIndex: number) => {
                   console.log(
-                    `  📝 Subtotal ${subtotalIndex + 1}: ${subtotal.name} (order: ${subtotal.order})`,
+                    `  📝 Subtotal ${subtotalIndex + 1}: ${subtotal.name} (order: ${subtotal.order})`
                   )
-                },
+                }
               )
             }
-          },
+          }
         )
       }
 
@@ -91,7 +97,7 @@ export function useQuestionGroupPage(projectId: string) {
       ) {
         const activeGroups =
           activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
-            (psg: any) => psg.subtotalGroup,
+            (psg: ProjectSubtotalGroupWithSubtotalGroup) => psg.subtotalGroup
           ) || []
         setActiveSubtotalGroups(activeGroups)
       }
@@ -99,13 +105,13 @@ export function useQuestionGroupPage(projectId: string) {
       if (cropRegionsResponse) {
         // 設問タイプの領域のみフィルタリング
         const questionRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER",
+          (region: CropRegionWithDetails) => region.type === "QUESTION_ANSWER"
         )
         setCropRegions(questionRegions)
 
         // 小計点タイプの領域のみフィルタリング
         const subtotalRegions = cropRegionsResponse.filter(
-          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE",
+          (region: CropRegionWithDetails) => region.type === "SUBTOTAL_SCORE"
         )
         setSubtotalRegions(subtotalRegions)
       }
@@ -114,7 +120,7 @@ export function useQuestionGroupPage(projectId: string) {
     } catch (err) {
       console.error("❌ loadData error:", err)
       setError(
-        err instanceof Error ? err.message : "データの読み込みに失敗しました",
+        err instanceof Error ? err.message : "データの読み込みに失敗しました"
       )
     } finally {
       setLoading(false)
@@ -135,35 +141,21 @@ export function useQuestionGroupPage(projectId: string) {
           // この subtotal に関連付けられた設問を取得
           try {
             const assignmentsResult =
-              (await window.electronAPI.getCropSubtotalsBySubtotalId(
-                subtotal.id,
-              )) as any
+              await window.electronAPI.getCropSubtotalsBySubtotalId(subtotal.id)
 
             if (assignmentsResult && Array.isArray(assignmentsResult)) {
               const questionLabels = assignmentsResult
                 .map(
-                  (
-                    cropSubtotal: CropSubtotal & {
-                      cropRegion?: {
-                        label?: string
-                        orderIndex?: number | null
-                        points?: number | null
-                      }
-                    },
-                  ) =>
+                  (cropSubtotal: CropSubtotalWithRelations) =>
                     cropSubtotal.cropRegion?.label ||
-                    `問${cropSubtotal.cropRegion?.orderIndex || 1}`,
+                    `問${cropSubtotal.cropRegion?.orderIndex || 1}`
                 )
                 .filter(Boolean)
 
               const totalPoints = assignmentsResult.reduce(
-                (
-                  sum: number,
-                  cropSubtotal: CropSubtotal & {
-                    cropRegion?: { points?: number | null }
-                  },
-                ) => sum + (cropSubtotal.cropRegion?.points || 0),
-                0,
+                (sum: number, cropSubtotal: CropSubtotalWithRelations) =>
+                  sum + (cropSubtotal.cropRegion?.points || 0),
+                0
               )
 
               data[group.id][subtotal.id] = {
@@ -176,7 +168,7 @@ export function useQuestionGroupPage(projectId: string) {
                 totalPoints: 0,
               }
             }
-          } catch (error) {
+          } catch {
             data[group.id][subtotal.id] = {
               questions: [],
               totalPoints: 0,
@@ -206,12 +198,12 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "グループの作成に失敗しました",
+          err instanceof Error ? err.message : "グループの作成に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // SubtotalGroup更新
@@ -229,12 +221,12 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "グループの更新に失敗しました",
+          err instanceof Error ? err.message : "グループの更新に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // SubtotalGroup削除
@@ -251,12 +243,12 @@ export function useQuestionGroupPage(projectId: string) {
         return true
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "グループの削除に失敗しました",
+          err instanceof Error ? err.message : "グループの削除に失敗しました"
         )
         return false
       }
     },
-    [selectedSubtotalGroupId, loadData],
+    [selectedSubtotalGroupId, loadData]
   )
 
   // Subtotal作成
@@ -275,12 +267,12 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "項目の作成に失敗しました",
+          err instanceof Error ? err.message : "項目の作成に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // Subtotal更新
@@ -298,12 +290,12 @@ export function useQuestionGroupPage(projectId: string) {
         return false
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "項目の更新に失敗しました",
+          err instanceof Error ? err.message : "項目の更新に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // Subtotal削除
@@ -315,12 +307,12 @@ export function useQuestionGroupPage(projectId: string) {
         return true
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "項目の削除に失敗しました",
+          err instanceof Error ? err.message : "項目の削除に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // Subtotal順序更新
@@ -340,12 +332,12 @@ export function useQuestionGroupPage(projectId: string) {
       } catch (err) {
         console.error("❌ updateQuestionGroupItemOrders error:", err)
         setError(
-          err instanceof Error ? err.message : "順序の更新に失敗しました",
+          err instanceof Error ? err.message : "順序の更新に失敗しました"
         )
         return false
       }
     },
-    [loadData],
+    [loadData]
   )
 
   // 設問とサブトータルの関連付け更新
@@ -354,7 +346,7 @@ export function useQuestionGroupPage(projectId: string) {
       try {
         // 既存の関連付けを削除
         await window.electronAPI.deleteCropSubtotalsByCropRegionId(
-          questionCropRegionId,
+          questionCropRegionId
         )
 
         // 新しい関連付けを作成
@@ -372,12 +364,12 @@ export function useQuestionGroupPage(projectId: string) {
         return true
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "関連付けの更新に失敗しました",
+          err instanceof Error ? err.message : "関連付けの更新に失敗しました"
         )
         return false
       }
     },
-    [calculateSubtotalData],
+    [calculateSubtotalData]
   )
 
   // 小計点とサブトータルの関連付け更新
@@ -386,7 +378,7 @@ export function useQuestionGroupPage(projectId: string) {
       try {
         // 既存の関連付けを削除
         await window.electronAPI.deleteCropSubtotalsByCropRegionId(
-          subtotalCropRegionId,
+          subtotalCropRegionId
         )
 
         // 新しい関連付けを作成
@@ -405,12 +397,12 @@ export function useQuestionGroupPage(projectId: string) {
         setError(
           err instanceof Error
             ? err.message
-            : "小計点関連付けの更新に失敗しました",
+            : "小計点関連付けの更新に失敗しました"
         )
         return false
       }
     },
-    [],
+    []
   )
 
   // 初期化

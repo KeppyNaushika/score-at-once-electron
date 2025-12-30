@@ -11,20 +11,20 @@ import {
 } from "react"
 
 interface AreaRendererProps {
-  areas: any[]
+  areas: CropRegionArea[]
   selectedAreaIndex: number | null
   onSelectArea: (index: number) => void
   onResizeMouseDown: (
     event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
     areaIndex: number,
-    handle: "nw" | "ne" | "sw" | "se",
+    handle: "nw" | "ne" | "sw" | "se"
   ) => void
   onMoveMouseDown: (
     event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
-    areaIndex: number,
+    areaIndex: number
   ) => void
   imageDimensions: { width: number; height: number } | null
-  containerRef: RefObject<HTMLDivElement>
+  containerRef: RefObject<HTMLDivElement | null>
   zoom: number
 }
 
@@ -75,7 +75,7 @@ export function AreaRenderer({
   }, [containerRef])
 
   const convertAreaToDisplayCoords = useCallback(
-    (area: any) => {
+    (area: CropRegionArea) => {
       if (!imageDimensions || !containerSize) {
         return { left: 0, top: 0, width: 0, height: 0 }
       }
@@ -97,7 +97,7 @@ export function AreaRenderer({
         height: area.height * scaledImageHeight,
       }
     },
-    [imageDimensions, zoom, containerSize],
+    [imageDimensions, zoom, containerSize]
   )
 
   const isReady = useMemo(() => {

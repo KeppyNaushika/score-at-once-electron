@@ -7,7 +7,7 @@ import type {
   StudentAnswerTableProps,
   UploadModalState,
 } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
-import type { UploadData } from "@/types/student-answer.types"
+import type { UploadData } from "@/components/projects/06-student-answers/types"
 import { useCallback, useEffect, useState } from "react"
 
 /**

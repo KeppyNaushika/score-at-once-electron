@@ -56,14 +56,6 @@ export const DEFAULT_KEYBINDINGS: KeyBinding = {
   "filter.toggleIncorrect": "Alt+o",
   "filter.toggleNoAnswer": "Alt+p",
 
-  // Ctrl + 数字キー (フィルタ切り替え)
-  "filter.toggle1": "Ctrl+1",
-  "filter.toggle2": "Ctrl+2",
-  "filter.toggle3": "Ctrl+3",
-  "filter.toggle4": "Ctrl+4",
-  "filter.toggle5": "Ctrl+5",
-  "filter.toggle6": "Ctrl+6",
-
   // フィルタ更新
   "filter.refresh": "r",
 

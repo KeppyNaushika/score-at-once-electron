@@ -28,7 +28,7 @@ export function TextboxPreview({ textBox }: { textBox: TextBox }) {
 
           // SVG変換と完全に同じMathJax処理を実行
           await processMathJaxContent(previewRef.current!, htmlContent)
-        } catch (error) {
+        } catch {
           // DIVプレビュー処理エラー
         }
       }

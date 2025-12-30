@@ -10,18 +10,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
+import {
+  CropRegionWithDetails,
+  CropSubtotalWithRelations,
+  SubtotalGroupWithItems,
+} from "@/types/electron"
 import { Calculator, RotateCcw } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useFillHandleDrag, type FillUpdate } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
-import { useFillHandleDrag, type CellPosition, type FillUpdate } from "../hooks/useFillHandleDrag"
 
 interface SubtotalAssignmentMatrixWithFillHandleProps {
   subtotalGroups: SubtotalGroupWithItems[]
   subtotalRegions: CropRegionWithDetails[] // SUBTOTAL_SCORE type regions
   onUpdateSubtotalAssignments: (
     subtotalCropRegionId: string,
-    subtotalIds: string[],
+    subtotalIds: string[]
   ) => Promise<boolean>
 }
 
@@ -52,7 +56,6 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
   // フィルハンドルのドラッグ管理
   const {
-    fillHandleState,
     handleFillHandleMouseDown,
     handleCellMouseEnter,
     handleMouseUp,
@@ -97,7 +100,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
           await onUpdateSubtotalAssignments(
             subtotalRegionId,
-            Array.from(updatedAssignments),
+            Array.from(updatedAssignments)
           )
 
           // 成功時にoriginalAssignmentsも更新
@@ -126,14 +129,15 @@ export function SubtotalAssignmentMatrixWithFillHandle({
 
     for (const region of subtotalRegions) {
       try {
-        const result =
-          (await window.electronAPI.getCropSubtotalsByCropRegionId(
-            region.id,
-          )) as any
+        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
+          region.id
+        )
 
         if (result && Array.isArray(result)) {
           newAssignments[region.id] = new Set(
-            result.map((definition: any) => definition.subtotalId),
+            result.map(
+              (definition: CropSubtotalWithRelations) => definition.subtotalId
+            )
           )
         } else {
           newAssignments[region.id] = new Set()
@@ -141,7 +145,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       } catch (error) {
         console.error(
           `Error loading subtotal assignments for region ${region.id}:`,
-          error,
+          error
         )
         newAssignments[region.id] = new Set()
       }
@@ -153,8 +157,8 @@ export function SubtotalAssignmentMatrixWithFillHandle({
         Object.entries(newAssignments).map(([key, value]) => [
           key,
           Array.from(value),
-        ]),
-      ),
+        ])
+      )
     )
     setLoading(false)
   }
@@ -172,7 +176,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
   const handleAssignmentChange = async (
     subtotalRegionId: string,
     itemId: string,
-    checked: boolean,
+    checked: boolean
   ) => {
     // UI状態を即座に更新
     setAssignments((prev) => {
@@ -207,7 +211,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       // データベースに即座に保存
       await onUpdateSubtotalAssignments(
         subtotalRegionId,
-        Array.from(updatedAssignments),
+        Array.from(updatedAssignments)
       )
 
       // 成功時にoriginalAssignmentsも更新
@@ -218,7 +222,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       })
 
       console.log(
-        `✅ 小計点関連付け保存成功: 小計点${subtotalRegionId}, 項目${itemId}, チェック:${checked}`,
+        `✅ 小計点関連付け保存成功: 小計点${subtotalRegionId}, 項目${itemId}, チェック:${checked}`
       )
     } catch (error) {
       console.error("❌ 小計点関連付け保存エラー:", error)
@@ -248,7 +252,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
     const resetAssignments: SubtotalAssignmentState = {}
     for (const [regionId, itemIds] of Object.entries(originalAssignments)) {
       resetAssignments[regionId] = new Set(
-        Array.isArray(itemIds) ? itemIds : [],
+        Array.isArray(itemIds) ? itemIds : []
       )
     }
     setAssignments(resetAssignments)
@@ -328,14 +332,12 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       </div>
 
       {/* マトリックステーブル */}
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <div className="border-b bg-gray-50 px-4 py-3">
-          <h3 className="text-base font-medium">
-            小計点関連付けマトリックス
-          </h3>
+          <h3 className="text-base font-medium">小計点関連付けマトリックス</h3>
         </div>
         <div
-          className="relative w-full min-h-96 overflow-auto"
+          className="relative min-h-96 w-full overflow-auto"
           style={{
             scrollbarWidth: "thin",
             scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
@@ -347,8 +349,12 @@ export function SubtotalAssignmentMatrixWithFillHandle({
             <TableHeader>
               <TableRow>
                 <TableHead
-                  className="sticky left-0 top-0 z-30 border-r-2 border-gray-200 bg-white text-center px-2 py-1"
-                  style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                  className="sticky top-0 left-0 z-30 border-r-2 border-gray-200 bg-white px-2 py-1 text-center"
+                  style={{
+                    width: "128px",
+                    minWidth: "128px",
+                    maxWidth: "128px",
+                  }}
                 >
                   小計点領域
                 </TableHead>
@@ -366,8 +372,12 @@ export function SubtotalAssignmentMatrixWithFillHandle({
               </TableRow>
               <TableRow>
                 <TableHead
-                  className="sticky left-0 top-[41px] z-30 border-r-2 border-gray-200 bg-white"
-                  style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                  className="sticky top-10.25 left-0 z-30 border-r-2 border-gray-200 bg-white"
+                  style={{
+                    width: "128px",
+                    minWidth: "128px",
+                    maxWidth: "128px",
+                  }}
                 >
                   {/* 空のセル */}
                 </TableHead>
@@ -375,13 +385,13 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                   group.subtotals.map((subtotal) => (
                     <TableHead
                       key={subtotal.id}
-                      className="sticky top-[41px] z-20 bg-gray-50/50 text-center px-2"
+                      className="sticky top-10.25 z-20 bg-gray-50/50 px-2 text-center"
                     >
                       <div className="text-muted-foreground text-xs">
                         {subtotal.name}
                       </div>
                     </TableHead>
-                  )),
+                  ))
                 )}
               </TableRow>
             </TableHeader>
@@ -390,15 +400,19 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                 <TableRow key={region.id}>
                   <TableCell
                     className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white px-2 py-1"
-                    style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                    style={{
+                      width: "128px",
+                      minWidth: "128px",
+                      maxWidth: "128px",
+                    }}
                   >
                     <div className="flex items-center gap-1 overflow-hidden">
-                      <div className="font-medium flex-1 text-sm">
+                      <div className="flex-1 text-sm font-medium">
                         {region.label || `小計${region.orderIndex || 1}`}
                       </div>
                       <Badge
                         variant="outline"
-                        className="bg-green-50 text-xs text-green-700 flex-shrink-0"
+                        className="shrink-0 bg-green-50 text-xs text-green-700"
                       >
                         小計点
                       </Badge>
@@ -412,7 +426,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                         return (
                           <TableCell
                             key={subtotal.id}
-                            className="text-center p-0"
+                            className="p-0 text-center"
                             onMouseEnter={() =>
                               handleCellMouseEnter({
                                 rowId: region.id,
@@ -424,13 +438,14 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                           >
                             <CheckboxCellWithFillHandle
                               checked={
-                                assignments[region.id]?.has(subtotal.id) || false
+                                assignments[region.id]?.has(subtotal.id) ||
+                                false
                               }
                               onChange={(checked) =>
                                 handleAssignmentChange(
                                   region.id,
                                   subtotal.id,
-                                  checked,
+                                  checked
                                 )
                               }
                               onFillHandleDragStart={(e, initialValue) => {
@@ -442,18 +457,26 @@ export function SubtotalAssignmentMatrixWithFillHandle({
                                     rowIndex,
                                     colIndex: currentColIndex,
                                   },
-                                  initialValue,
+                                  initialValue
                                 )
                               }}
-                              onCellClick={() => handleCellClick(region.id, subtotal.id)}
-                              isSelected={isCellSelected(region.id, subtotal.id)}
+                              onCellClick={() =>
+                                handleCellClick(region.id, subtotal.id)
+                              }
+                              isSelected={isCellSelected(
+                                region.id,
+                                subtotal.id
+                              )}
                               disabled={saving}
-                              isInFillRange={isInFillRange(region.id, subtotal.id)}
+                              isInFillRange={isInFillRange(
+                                region.id,
+                                subtotal.id
+                              )}
                               disableFillHandle={false}
                             />
                           </TableCell>
                         )
-                      }),
+                      })
                     )
                   })()}
                 </TableRow>
@@ -464,7 +487,7 @@ export function SubtotalAssignmentMatrixWithFillHandle({
       </div>
 
       {/* 計算ロジック説明 */}
-      <div className="rounded-lg bg-green-50 p-4 text-sm text-muted-foreground">
+      <div className="text-muted-foreground rounded-lg bg-green-50 p-4 text-sm">
         <h4 className="mb-2 font-medium text-green-800">計算ロジック:</h4>
         <ul className="ml-4 space-y-1">
           <li>

@@ -20,6 +20,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragEndEvent,
 } from "@dnd-kit/core"
 import {
   arrayMove,
@@ -56,7 +57,7 @@ function SortableSubtotalItem({
 }: {
   subtotal: SubtotalFormData
   index: number
-  onUpdate: (index: number, field: keyof SubtotalFormData, value: any) => void
+  onUpdate: (index: number, field: keyof SubtotalFormData, value: string | number) => void
   onDelete: (index: number) => void
 }) {
   const {
@@ -168,7 +169,7 @@ export function SubtotalGroupModal({
   const updateSubtotal = (
     index: number,
     field: keyof SubtotalFormData,
-    value: any
+    value: string | number
   ) => {
     const updated = [...subtotals]
     updated[index] = { ...updated[index], [field]: value }
@@ -181,7 +182,7 @@ export function SubtotalGroupModal({
   }
 
   // ドラッグ終了時の処理
-  const handleDragEnd = ({ active, over }: any) => {
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
     if (!over) return
 
     const activeIndex = subtotals.findIndex((item) => item.id === active.id)

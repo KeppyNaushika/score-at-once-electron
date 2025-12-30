@@ -10,8 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import type { ClassWithMemberships } from "@/types/electron"
 import { AlertCircle, Upload } from "lucide-react"
 import { useState } from "react"
+
+// ClassWithMembershipsのmemberships配列の要素型を抽出
+type ClassMembership = ClassWithMemberships["memberships"][number]
 
 interface ClassStudentImportModalProps {
   isOpen: boolean
@@ -62,7 +66,7 @@ export default function ClassStudentImportModal({
         row.studentId.trim() !== "" ||
         row.attendanceNumber.trim() !== "" ||
         row.startDate.trim() !== "" ||
-        row.endDate.trim() !== "",
+        row.endDate.trim() !== ""
     )
 
     if (nonEmptyData.length === 0) {
@@ -89,21 +93,21 @@ export default function ClassStudentImportModal({
       // 日付のバリデーション
       if (row.startDate.trim() && !isValidDate(row.startDate.trim())) {
         errors.push(
-          `行${index + 1}: 開始日の形式が不正です。YYYY/M/D形式で入力してください。`,
+          `行${index + 1}: 開始日の形式が不正です。YYYY/M/D形式で入力してください。`
         )
         return
       }
 
       if (row.endDate.trim() && !isValidDate(row.endDate.trim())) {
         errors.push(
-          `行${index + 1}: 終了日の形式が不正です。YYYY/M/D形式で入力してください。`,
+          `行${index + 1}: 終了日の形式が不正です。YYYY/M/D形式で入力してください。`
         )
         return
       }
 
       if (studentIds.has(studentId)) {
         errors.push(
-          `行${index + 1}: 学籍番号「${studentId}」が重複しています。`,
+          `行${index + 1}: 学籍番号「${studentId}」が重複しています。`
         )
         return
       }
@@ -146,13 +150,13 @@ export default function ClassStudentImportModal({
             const classes = await window.electronAPI.fetchClasses()
             const targetClass = classes.find((c) => c.id === classId)
             const existingMembership = targetClass?.memberships.find(
-              (m) => m.student.id === student.id,
+              (m: ClassMembership) => m.student.id === student.id
             )
 
             if (existingMembership) {
               // 既存のメンバーシップがある場合は終了してから新規追加
               await window.electronAPI.endStudentMembership(
-                existingMembership.id,
+                existingMembership.id
               )
             }
 
@@ -165,17 +169,17 @@ export default function ClassStudentImportModal({
               student.id,
               classId,
               startDate,
-              attendanceNumber ? parseInt(attendanceNumber) : undefined,
+              attendanceNumber ? parseInt(attendanceNumber) : undefined
             )
 
             const verifyClasses = await window.electronAPI.fetchClasses()
             const verifyClass = verifyClasses.find((c) => c.id === classId)
             const addedMembership = verifyClass?.memberships
-              .filter((m) => m.student.id === student.id)
+              .filter((m: ClassMembership) => m.student.id === student.id)
               .sort(
-                (a, b) =>
+                (a: ClassMembership, b: ClassMembership) =>
                   new Date(b.startDate).getTime() -
-                  new Date(a.startDate).getTime(),
+                  new Date(a.startDate).getTime()
               )[0]
 
             if (!addedMembership) {
@@ -188,16 +192,16 @@ export default function ClassStudentImportModal({
               const newTargetClass = newClasses.find((c) => c.id === classId)
               // 最新のメンバーシップを取得（開始日でソート）
               const newMembership = newTargetClass?.memberships
-                .filter((m) => m.student.id === student.id)
+                .filter((m: ClassMembership) => m.student.id === student.id)
                 .sort(
-                  (a, b) =>
+                  (a: ClassMembership, b: ClassMembership) =>
                     new Date(b.startDate).getTime() -
-                    new Date(a.startDate).getTime(),
+                    new Date(a.startDate).getTime()
                 )[0]
               if (newMembership) {
                 await window.electronAPI.endStudentMembership(
                   newMembership.id,
-                  new Date(endDateStr.replace(/\//g, "-")),
+                  new Date(endDateStr.replace(/\//g, "-"))
                 )
               }
             }
@@ -209,14 +213,14 @@ export default function ClassStudentImportModal({
         } catch (error) {
           console.error(`学籍番号 ${row.studentId} の追加に失敗:`, error)
           alert(
-            `学籍番号 ${row.studentId} の追加中にエラーが発生しました: ${error}`,
+            `学籍番号 ${row.studentId} の追加中にエラーが発生しました: ${error}`
           )
         }
       }
 
       if (notFoundStudents.length > 0) {
         alert(
-          `次の学籍番号の生徒が見つかりませんでした:\n${notFoundStudents.join(", ")}\n\nまず生徒マスターに登録してください。`,
+          `次の学籍番号の生徒が見つかりませんでした:\n${notFoundStudents.join(", ")}\n\nまず生徒マスターに登録してください。`
         )
       }
 
@@ -290,7 +294,7 @@ export default function ClassStudentImportModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             {className}への生徒一括追加
@@ -311,7 +315,7 @@ export default function ClassStudentImportModal({
           <ValidationMessages validation={validation} />
         </div>
 
-        <DialogFooter className="flex-shrink-0 border-t pt-4">
+        <DialogFooter className="shrink-0 border-t pt-4">
           <Button variant="outline" onClick={onClose}>
             キャンセル
           </Button>

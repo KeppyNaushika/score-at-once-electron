@@ -36,7 +36,7 @@ export function useMouseHandlers({
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   projectPageId: string | null
-  areas: any[]
+  areas: { x: number; y: number; width: number; height: number; label?: string }[]
   onAddAreaByDrag: (
     type: import("@/types/common.types").CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },

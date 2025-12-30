@@ -11,7 +11,7 @@ async function createRelease() {
     // Check if gh CLI is installed
     try {
       execSync("gh --version", { stdio: "ignore" })
-    } catch (error) {
+    } catch {
       console.error("❌ GitHub CLI (gh) is not installed.")
       console.log("Please install it: https://cli.github.com/")
       process.exit(1)
@@ -20,7 +20,7 @@ async function createRelease() {
     // Check if user is authenticated
     try {
       execSync("gh auth status", { stdio: "ignore" })
-    } catch (error) {
+    } catch {
       console.error("❌ Not authenticated with GitHub.")
       console.log("Please run: gh auth login")
       process.exit(1)
@@ -89,7 +89,7 @@ async function createRelease() {
         stdio: "inherit",
       })
       execSync(`git push origin ${tagName}`, { stdio: "inherit" })
-    } catch (error) {
+    } catch {
       console.log(`⚠️  Tag ${tagName} may already exist, continuing...`)
     }
 

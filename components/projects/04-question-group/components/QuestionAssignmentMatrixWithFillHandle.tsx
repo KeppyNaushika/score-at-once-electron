@@ -10,18 +10,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
+import {
+  CropRegionWithDetails,
+  CropSubtotalWithRelations,
+  SubtotalGroupWithItems,
+} from "@/types/electron"
 import { Grid3X3, RotateCcw } from "lucide-react"
 import { useEffect, useState } from "react"
+import { useFillHandleDrag, type FillUpdate } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
-import { useFillHandleDrag, type CellPosition, type FillUpdate } from "../hooks/useFillHandleDrag"
 
 interface QuestionAssignmentMatrixWithFillHandleProps {
   subtotalGroups: SubtotalGroupWithItems[]
   cropRegions: CropRegionWithDetails[]
   onUpdateAssignments: (
     questionCropRegionId: string,
-    subtotalIds: string[],
+    subtotalIds: string[]
   ) => Promise<boolean>
 }
 
@@ -52,7 +56,6 @@ export function QuestionAssignmentMatrixWithFillHandle({
 
   // フィルハンドルのドラッグ管理
   const {
-    fillHandleState,
     handleFillHandleMouseDown,
     handleCellMouseEnter,
     handleMouseUp,
@@ -123,18 +126,20 @@ export function QuestionAssignmentMatrixWithFillHandle({
 
     for (const region of cropRegions) {
       try {
-        const result =
-          (await window.electronAPI.getCropSubtotalsByCropRegionId(
-            region.id,
-          )) as any
+        const result = await window.electronAPI.getCropSubtotalsByCropRegionId(
+          region.id
+        )
         if (result && Array.isArray(result)) {
           newAssignments[region.id] = new Set(
-            result.map((cropSubtotal: any) => cropSubtotal.subtotalId),
+            result.map(
+              (cropSubtotal: CropSubtotalWithRelations) =>
+                cropSubtotal.subtotalId
+            )
           )
         } else {
           newAssignments[region.id] = new Set()
         }
-      } catch (error) {
+      } catch {
         newAssignments[region.id] = new Set()
       }
     }
@@ -145,8 +150,8 @@ export function QuestionAssignmentMatrixWithFillHandle({
         Object.entries(newAssignments).map(([key, value]) => [
           key,
           Array.from(value),
-        ]),
-      ),
+        ])
+      )
     )
     setLoading(false)
   }
@@ -164,7 +169,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
   const handleAssignmentChange = async (
     questionId: string,
     itemId: string,
-    checked: boolean,
+    checked: boolean
   ) => {
     // UI状態を即座に更新
     setAssignments((prev) => {
@@ -207,7 +212,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
       })
 
       console.log(
-        `✅ 関連付け保存成功: 設問${questionId}, 項目${itemId}, チェック:${checked}`,
+        `✅ 関連付け保存成功: 設問${questionId}, 項目${itemId}, チェック:${checked}`
       )
     } catch (error) {
       console.error("❌ 関連付け保存エラー:", error)
@@ -237,7 +242,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
     const resetAssignments: AssignmentState = {}
     for (const [questionId, itemIds] of Object.entries(originalAssignments)) {
       resetAssignments[questionId] = new Set(
-        Array.isArray(itemIds) ? itemIds : [],
+        Array.isArray(itemIds) ? itemIds : []
       )
     }
     setAssignments(resetAssignments)
@@ -315,12 +320,12 @@ export function QuestionAssignmentMatrixWithFillHandle({
       </div>
 
       {/* マトリックステーブル */}
-      <div className="border rounded-lg">
+      <div className="rounded-lg border">
         <div className="border-b bg-gray-50 px-4 py-3">
           <h3 className="text-base font-medium">関連付けマトリックス</h3>
         </div>
         <div
-          className="relative w-full min-h-96 overflow-auto"
+          className="relative min-h-96 w-full overflow-auto"
           style={{
             scrollbarWidth: "thin",
             scrollbarColor: "rgba(0, 0, 0, 0.2) transparent",
@@ -332,8 +337,12 @@ export function QuestionAssignmentMatrixWithFillHandle({
             <TableHeader>
               <TableRow>
                 <TableHead
-                  className="sticky left-0 top-0 z-30 border-r-2 border-gray-200 bg-white text-center px-2 py-1"
-                  style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                  className="sticky top-0 left-0 z-30 border-r-2 border-gray-200 bg-white px-2 py-1 text-center"
+                  style={{
+                    width: "128px",
+                    minWidth: "128px",
+                    maxWidth: "128px",
+                  }}
                 >
                   設問
                 </TableHead>
@@ -351,8 +360,12 @@ export function QuestionAssignmentMatrixWithFillHandle({
               </TableRow>
               <TableRow>
                 <TableHead
-                  className="sticky left-0 top-[41px] z-30 border-r-2 border-gray-200 bg-white"
-                  style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                  className="sticky top-10.25 left-0 z-30 border-r-2 border-gray-200 bg-white"
+                  style={{
+                    width: "128px",
+                    minWidth: "128px",
+                    maxWidth: "128px",
+                  }}
                 >
                   {/* 空のセル */}
                 </TableHead>
@@ -360,13 +373,13 @@ export function QuestionAssignmentMatrixWithFillHandle({
                   group.subtotals.map((subtotal) => (
                     <TableHead
                       key={subtotal.id}
-                      className="sticky top-[41px] z-20 bg-gray-50/50 text-center px-2"
+                      className="sticky top-10.25 z-20 bg-gray-50/50 px-2 text-center"
                     >
                       <div className="text-muted-foreground text-xs">
                         {subtotal.name}
                       </div>
                     </TableHead>
-                  )),
+                  ))
                 )}
               </TableRow>
             </TableHeader>
@@ -375,13 +388,17 @@ export function QuestionAssignmentMatrixWithFillHandle({
                 <TableRow key={region.id}>
                   <TableCell
                     className="sticky left-0 z-10 border-r-2 border-gray-200 bg-white px-2 py-1"
-                    style={{ width: "128px", minWidth: "128px", maxWidth: "128px" }}
+                    style={{
+                      width: "128px",
+                      minWidth: "128px",
+                      maxWidth: "128px",
+                    }}
                   >
                     <div className="flex items-center gap-1 overflow-hidden">
-                      <div className="font-medium flex-1 text-sm">
+                      <div className="flex-1 text-sm font-medium">
                         {region.label || `問${region.orderIndex || 1}`}
                       </div>
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
+                      <Badge variant="outline" className="shrink-0 text-xs">
                         {region.points || 0}
                       </Badge>
                     </div>
@@ -394,7 +411,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
                         return (
                           <TableCell
                             key={subtotal.id}
-                            className="text-center p-0"
+                            className="p-0 text-center"
                             onMouseEnter={() =>
                               handleCellMouseEnter({
                                 rowId: region.id,
@@ -406,13 +423,14 @@ export function QuestionAssignmentMatrixWithFillHandle({
                           >
                             <CheckboxCellWithFillHandle
                               checked={
-                                assignments[region.id]?.has(subtotal.id) || false
+                                assignments[region.id]?.has(subtotal.id) ||
+                                false
                               }
                               onChange={(checked) =>
                                 handleAssignmentChange(
                                   region.id,
                                   subtotal.id,
-                                  checked,
+                                  checked
                                 )
                               }
                               onFillHandleDragStart={(e, initialValue) => {
@@ -424,18 +442,26 @@ export function QuestionAssignmentMatrixWithFillHandle({
                                     rowIndex,
                                     colIndex: currentColIndex,
                                   },
-                                  initialValue,
+                                  initialValue
                                 )
                               }}
-                              onCellClick={() => handleCellClick(region.id, subtotal.id)}
-                              isSelected={isCellSelected(region.id, subtotal.id)}
+                              onCellClick={() =>
+                                handleCellClick(region.id, subtotal.id)
+                              }
+                              isSelected={isCellSelected(
+                                region.id,
+                                subtotal.id
+                              )}
                               disabled={saving}
-                              isInFillRange={isInFillRange(region.id, subtotal.id)}
+                              isInFillRange={isInFillRange(
+                                region.id,
+                                subtotal.id
+                              )}
                               disableFillHandle={false}
                             />
                           </TableCell>
                         )
-                      }),
+                      })
                     )
                   })()}
                 </TableRow>

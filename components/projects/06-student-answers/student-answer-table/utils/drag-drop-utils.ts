@@ -3,7 +3,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
 
 /**
  * 3つ組からDnD配列を構築する関数（戦略ベース順序）

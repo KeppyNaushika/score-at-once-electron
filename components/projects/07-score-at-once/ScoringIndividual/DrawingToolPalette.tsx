@@ -22,6 +22,7 @@ import { TextToolPopover } from "./TextToolPopover"
 import type {
   DrawingElement,
   DrawingTool,
+  LineStyle,
 } from "./types/answer-individual-types"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
@@ -52,7 +53,7 @@ interface DrawingToolPaletteProps {
   // 選択中の要素（スタイル編集用）
   selectedElements?: DrawingElement[]
   onUpdateSelectedElements?: (
-    updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+    updates: Array<{ id: string; updates: Partial<DrawingElement> }>
   ) => void
   onClearSelection?: () => void
 }
@@ -79,10 +80,10 @@ export function DrawingToolPalette({
   // 選択中の各タイプの要素を取得（複数選択対応）
   const selectedLines = selectedElements.filter((el) => el.type === "line")
   const selectedRectangles = selectedElements.filter(
-    (el) => el.type === "rectangle",
+    (el) => el.type === "rectangle"
   )
   const selectedEllipses = selectedElements.filter(
-    (el) => el.type === "ellipse",
+    (el) => el.type === "ellipse"
   )
   const selectedTexts = selectedElements.filter((el) => el.type === "text")
 
@@ -120,7 +121,7 @@ export function DrawingToolPalette({
       }
       onStrokeColorChange(color)
     },
-    [selectedLines, onUpdateSelectedElements, onStrokeColorChange],
+    [selectedLines, onUpdateSelectedElements, onStrokeColorChange]
   )
 
   const handleLineWidthChange = useCallback(
@@ -134,7 +135,7 @@ export function DrawingToolPalette({
       }
       onStrokeWidthChange(width)
     },
-    [selectedLines, onUpdateSelectedElements, onStrokeWidthChange],
+    [selectedLines, onUpdateSelectedElements, onStrokeWidthChange]
   )
 
   const handleLineStyleChange = useCallback(
@@ -142,13 +143,13 @@ export function DrawingToolPalette({
       if (selectedLines.length > 0 && onUpdateSelectedElements) {
         const updates = selectedLines.map((el) => ({
           id: el.id,
-          updates: { lineStyle: style as any },
+          updates: { lineStyle: style as LineStyle },
         }))
         onUpdateSelectedElements(updates)
       }
       onLineStyleChange(style)
     },
-    [selectedLines, onUpdateSelectedElements, onLineStyleChange],
+    [selectedLines, onUpdateSelectedElements, onLineStyleChange]
   )
 
   // ===== 長方形用ハンドラ（長方形のみに適用） =====
@@ -163,7 +164,7 @@ export function DrawingToolPalette({
       }
       onStrokeColorChange(color)
     },
-    [selectedRectangles, onUpdateSelectedElements, onStrokeColorChange],
+    [selectedRectangles, onUpdateSelectedElements, onStrokeColorChange]
   )
 
   const handleRectWidthChange = useCallback(
@@ -177,7 +178,7 @@ export function DrawingToolPalette({
       }
       onStrokeWidthChange(width)
     },
-    [selectedRectangles, onUpdateSelectedElements, onStrokeWidthChange],
+    [selectedRectangles, onUpdateSelectedElements, onStrokeWidthChange]
   )
 
   // ===== 楕円用ハンドラ（楕円のみに適用） =====
@@ -192,7 +193,7 @@ export function DrawingToolPalette({
       }
       onStrokeColorChange(color)
     },
-    [selectedEllipses, onUpdateSelectedElements, onStrokeColorChange],
+    [selectedEllipses, onUpdateSelectedElements, onStrokeColorChange]
   )
 
   const handleEllipseWidthChange = useCallback(
@@ -206,7 +207,7 @@ export function DrawingToolPalette({
       }
       onStrokeWidthChange(width)
     },
-    [selectedEllipses, onUpdateSelectedElements, onStrokeWidthChange],
+    [selectedEllipses, onUpdateSelectedElements, onStrokeWidthChange]
   )
 
   // ===== テキスト用ハンドラ（テキストのみに適用） =====
@@ -221,7 +222,7 @@ export function DrawingToolPalette({
       }
       onStrokeColorChange(color)
     },
-    [selectedTexts, onUpdateSelectedElements, onStrokeColorChange],
+    [selectedTexts, onUpdateSelectedElements, onStrokeColorChange]
   )
   const [isVisible, setIsVisible] = useState(true)
   const [isHovered, setIsHovered] = useState(false)
@@ -298,7 +299,7 @@ export function DrawingToolPalette({
     "bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95",
     "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
     "data-[side=right]:slide-in-from-left-2",
-    "z-50 w-fit rounded-md px-3 py-1.5 text-xs",
+    "z-50 w-fit rounded-md px-3 py-1.5 text-xs"
   )
 
   return (

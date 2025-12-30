@@ -1,40 +1,29 @@
-import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 import { PasswordDialogState } from "@/components/projects/01-upload/types"
-
-/**
- * グローバル変数のキー定義
- */
-const GLOBAL_KEYS = {
-  RESOLVE: "__masterImagePasswordResolve",
-  REJECT: "__masterImagePasswordReject",
-  FILE: "__masterImagePasswordFile",
-} as const
+import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
 
 /**
  * パスワード処理用のグローバル変数をクリアする
  */
 export const clearPasswordGlobals = (): void => {
-  const win = window as any
-  win[GLOBAL_KEYS.RESOLVE] = null
-  win[GLOBAL_KEYS.REJECT] = null
-  win[GLOBAL_KEYS.FILE] = null
+  window.__masterImagePasswordResolve = null
+  window.__masterImagePasswordReject = null
+  window.__masterImagePasswordFile = null
 }
 
 /**
  * パスワード処理用のグローバル変数を設定する
  * @param {(value: ConvertedImage[]) => void} resolve - Promise resolve関数
- * @param {(reason?: any) => void} reject - Promise reject関数
+ * @param {(reason?: unknown) => void} reject - Promise reject関数
  * @param {File} file - 処理対象のファイル
  */
 export const setPasswordGlobals = (
   resolve: (value: ConvertedImage[]) => void,
-  reject: (reason?: any) => void,
-  file: File,
+  reject: (reason?: unknown) => void,
+  file: File
 ): void => {
-  const win = window as any
-  win[GLOBAL_KEYS.RESOLVE] = resolve
-  win[GLOBAL_KEYS.REJECT] = reject
-  win[GLOBAL_KEYS.FILE] = file
+  window.__masterImagePasswordResolve = resolve
+  window.__masterImagePasswordReject = reject
+  window.__masterImagePasswordFile = file
 }
 
 /**
@@ -43,14 +32,13 @@ export const setPasswordGlobals = (
  */
 export const getPasswordGlobals = (): {
   resolve: ((value: ConvertedImage[]) => void) | null
-  reject: ((reason?: any) => void) | null
+  reject: ((reason?: unknown) => void) | null
   file: File | null
 } => {
-  const win = window as any
   return {
-    resolve: win[GLOBAL_KEYS.RESOLVE],
-    reject: win[GLOBAL_KEYS.REJECT],
-    file: win[GLOBAL_KEYS.FILE],
+    resolve: window.__masterImagePasswordResolve ?? null,
+    reject: window.__masterImagePasswordReject ?? null,
+    file: window.__masterImagePasswordFile ?? null,
   }
 }
 
@@ -63,7 +51,7 @@ export const getPasswordGlobals = (): {
  */
 export const convertPdfWithPassword = async (
   file: File,
-  password?: string,
+  password?: string
 ): Promise<ConvertedImage[]> => {
   try {
     return await convertPdfToImages(file, password)
@@ -93,7 +81,7 @@ export const convertPdfWithPassword = async (
 export const createPasswordDialogState = (
   fileName: string,
   isInvalidPassword: boolean = false,
-  currentAttempts: number = 0,
+  currentAttempts: number = 0
 ): PasswordDialogState => {
   return {
     isOpen: true,
@@ -124,7 +112,7 @@ export const createClosedPasswordDialogState = (): PasswordDialogState => {
  * @returns {PasswordDialogState} ローディング状態
  */
 export const createPasswordLoadingState = (
-  currentState: PasswordDialogState,
+  currentState: PasswordDialogState
 ): PasswordDialogState => {
   return {
     ...currentState,
@@ -139,7 +127,7 @@ export const createPasswordLoadingState = (
  * @returns {PasswordDialogState} エラー状態
  */
 export const createPasswordErrorState = (
-  currentState: PasswordDialogState,
+  currentState: PasswordDialogState
 ): PasswordDialogState => {
   return {
     ...currentState,

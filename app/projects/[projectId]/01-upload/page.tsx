@@ -3,9 +3,9 @@
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { MasterAnswerManager } from "@/components/projects/01-upload/components/MasterAnswerManager"
+import type { MasterAnswer } from "@/components/projects/01-upload/types"
 import { convertProjectPagesToMasterAnswers } from "@/components/projects/01-upload/utils/image-utils"
 import { Button } from "@/components/ui/button"
-import type { MasterAnswerData } from "@/types/common.types"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
@@ -31,7 +31,7 @@ export default function MasterAnswerStepPage() {
   const projectId =
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
-  const [masterAnswers, setMasterAnswers] = useState<MasterAnswerData[]>([])
+  const [masterAnswers, setMasterAnswers] = useState<MasterAnswer[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   /**
@@ -77,7 +77,7 @@ export default function MasterAnswerStepPage() {
    * @param updatedImages - 更新された画像データリスト
    */
   const handleAnswersChange = useCallback(
-    (updatedAnswers: MasterAnswerData[]) => {
+    (updatedAnswers: MasterAnswer[]) => {
       // MasterImageManager内でAPI呼び出しと状態更新が行われるため、
       // ここでは基本的に何もしないか、追加のUIフィードバックを行う程度。
       // 必要であれば、このコールバックで再度 project を fetch して整合性を確認することも可能。

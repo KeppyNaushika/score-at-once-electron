@@ -1,7 +1,9 @@
 import type {
+  MarkPosition,
   ScoreTextConfig,
   ScoringMarkConfig,
   ScoringStatus,
+  TextAlignment,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
 import {
   defaultConfig,
@@ -10,8 +12,21 @@ import {
   STORAGE_KEY,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
 
+/** 旧形式の設定（マイグレーション用） */
+interface LegacyScoreConfig {
+  scorePosition?: MarkPosition
+  scoreOffsetX?: number
+  scoreOffsetY?: number
+  scoreSize?: number
+  scoreAlignment?: TextAlignment
+  partialScore?: ScoreTextConfig
+  summaryScore?: ScoreTextConfig
+  showMarkForStatus?: Record<string, boolean>
+  showScoreForStatus?: Record<string, boolean>
+}
+
 // 既存設定からpartialScoreを作成（マイグレーション用）
-function migrateToPartialScore(parsed: any): ScoreTextConfig {
+function migrateToPartialScore(parsed: LegacyScoreConfig): ScoreTextConfig {
   // 既存のscore*設定がある場合はそれを使用
   if (parsed.scorePosition || parsed.scoreSize) {
     return {
@@ -32,7 +47,7 @@ export function loadConfigFromStorage(): ScoringMarkConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored)
+      const parsed = JSON.parse(stored) as LegacyScoreConfig & Partial<ScoringMarkConfig>
 
       // partialScoreとsummaryScoreのマイグレーション処理
       const partialScore = parsed.partialScore || migrateToPartialScore(parsed)

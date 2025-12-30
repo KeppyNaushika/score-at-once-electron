@@ -2,18 +2,22 @@
 
 import PartialScoreModal from "@/components/projects/07-score-at-once/ScoringMain/PartialScoreModal"
 import ScoreComparisonModal from "@/components/projects/07-score-at-once/ScoringMain/ScoreComparisonModal"
+import type {
+  CropRegionWithProjectPage,
+  PageImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types"
 
 interface ScoringModalsProps {
   // Partial Score Modal props
   showPartialScoreModal: boolean
   partialScoreInput: string
-  currentCropRegion?: any
+  currentCropRegion?: CropRegionWithProjectPage
   onPartialScoreClose: () => void
   onPartialScoreChange: (value: string) => void
   // Score Comparison Modal props
   showScoreComparison: boolean
   onScoreComparisonClose: () => void
-  currentAnswerSheet?: any
+  currentAnswerSheet?: PageImageWithProjectStudents
 }
 
 export function ScoringModals({
@@ -51,7 +55,7 @@ export function ScoringModals({
         }
         maxScore={currentCropRegion?.points || 0}
         studentName={
-          currentAnswerSheet
+          currentAnswerSheet?.student
             ? `${currentAnswerSheet.student.lastName} ${currentAnswerSheet.student.firstName}`
             : ""
         }

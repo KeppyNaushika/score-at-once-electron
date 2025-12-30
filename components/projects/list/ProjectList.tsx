@@ -29,9 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { 
-  ProjectWithDetails, 
-  SerializedProject, 
+import {
+  ProjectWithDetails,
   isValidProject
 } from "@/types/common.types"
 import { getProjectStatus } from "@/utils/projectStatus"

@@ -2,49 +2,50 @@ import type { ScoringDataRecord } from "@/components/projects/07-score-at-once/S
 
 /**
  * Auto-finalization logic for collaborative grading
+ * 複数教員が同一採点を行った場合に自動的に最終決定を行う
  */
 export async function checkForAutoFinalization(
   studentId: string,
   cropRegionId: string,
   currentUserId: string | null,
-  setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>,
+  setScoringData: React.Dispatch<React.SetStateAction<ScoringDataRecord>>
 ): Promise<void> {
   if (!currentUserId) return
 
   try {
     const comparison = await window.electronAPI.getQuestionScoreComparison(
       studentId,
-      cropRegionId,
+      cropRegionId
     )
 
     if (
-      (comparison as any).success &&
-      (comparison as any).proposedScores &&
-      (comparison as any).proposedScores.length > 1
+      comparison.success &&
+      comparison.proposedScores &&
+      comparison.proposedScores.length > 1
     ) {
       // Check if all proposed scores are identical
-      const firstScore = (comparison as any).proposedScores[0]
-      const allMatch = (comparison as any).proposedScores.every(
-        (score: any) =>
-          score.score === firstScore.score &&
-          score.status === firstScore.status,
+      const firstScore = comparison.proposedScores[0]
+      const allMatch = comparison.proposedScores.every(
+        (score) =>
+          Number(score.partialScore) === Number(firstScore.partialScore) &&
+          score.status === firstScore.status
       )
 
       if (allMatch) {
         // Auto-finalize if all scores match
         const finalizeData = {
-          partialScore: firstScore.score,
+          partialScore: Number(firstScore.partialScore) || 0,
           status: "final",
-          comments: firstScore.comment || "",
+          comments: "",
         }
         const result = await window.electronAPI.finalizeQuestionScore(
           studentId,
           cropRegionId,
           currentUserId,
-          finalizeData,
+          finalizeData
         )
 
-        if ((result as any).success) {
+        if (result.success && result.score) {
           // Update local scoring data to reflect finalization
           const key = `${studentId}-${cropRegionId}`
           setScoringData((prev) => ({
@@ -52,11 +53,7 @@ export async function checkForAutoFinalization(
             [key]: {
               ...prev[key],
               status: "final",
-              version:
-                (result as any).score?.version || (result as any).version,
-              updatedAt: new Date(
-                (result as any).score?.updatedAt || (result as any).updatedAt,
-              ),
+              updatedAt: new Date(result.score!.updatedAt),
             },
           }))
         }

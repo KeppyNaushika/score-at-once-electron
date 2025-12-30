@@ -17,7 +17,7 @@ export default function MathJaxOfflineTestPage() {
   const [renderCount, setRenderCount] = useState(0)
 
   const triggerMathJaxRender = useCallback(async () => {
-    const MathJax = (window as any).MathJax
+    const MathJax = window.MathJax
     if (MathJax && MathJax.typesetPromise) {
       try {
         await MathJax.typesetPromise([document.body])
@@ -32,7 +32,7 @@ export default function MathJaxOfflineTestPage() {
   useEffect(() => {
     // MathJax初期化の確認
     const checkMathJax = () => {
-      if ((window as any).mathJaxReady) {
+      if (window.mathJaxReady) {
         setMathJaxReady(true)
         triggerMathJaxRender()
       }

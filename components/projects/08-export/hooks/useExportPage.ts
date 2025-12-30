@@ -10,7 +10,6 @@ import {
   ScoringMarkConfig,
   loadConfigFromStorage,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
-import type { Student as PrismaStudent } from "@prisma/client"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
@@ -19,6 +18,7 @@ export function useExportPage() {
   const projectId = params.projectId as string
 
   // 基本状態
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [project, setProject] = useState<any>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,7 +32,7 @@ export function useExportPage() {
 
   // 選択状態
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(
-    new Set(),
+    new Set()
   )
 
   // 出力設定
@@ -49,7 +49,7 @@ export function useExportPage() {
   })
 
   const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
-    loadConfigFromStorage(),
+    loadConfigFromStorage()
   )
 
   // 個人成績表オプション
@@ -83,10 +83,7 @@ export function useExportPage() {
       if (studentsResponse && studentsResponse.success) {
         // 受験生徒順（customOrder）でソート
         const sortedStudents = (studentsResponse.students || []).sort(
-          (
-            a: PrismaStudent & { customOrder?: number | null },
-            b: PrismaStudent & { customOrder?: number | null },
-          ) => {
+          (a, b) => {
             // customOrderが設定されている場合はそれを優先
             if (
               a.customOrder !== null &&
@@ -100,8 +97,8 @@ export function useExportPage() {
             if (b.customOrder !== null && b.customOrder !== undefined) return 1
 
             // customOrderが未設定の場合は出席番号順をフォールバック
-            const aAttendanceNumber = (a as any).memberships?.[0]?.attendanceNumber
-            const bAttendanceNumber = (b as any).memberships?.[0]?.attendanceNumber
+            const aAttendanceNumber = a.memberships?.[0]?.attendanceNumber
+            const bAttendanceNumber = b.memberships?.[0]?.attendanceNumber
 
             if (aAttendanceNumber && bAttendanceNumber) {
               return aAttendanceNumber - bAttendanceNumber
@@ -113,17 +110,14 @@ export function useExportPage() {
             const aName = `${a.lastName}${a.firstName}`
             const bName = `${b.lastName}${b.firstName}`
             return aName.localeCompare(bName, "ja")
-          },
+          }
         )
 
         setStudents(sortedStudents)
         // デフォルトで参加中の学生を選択
         const participatingStudents = sortedStudents
-          .filter(
-            (s: PrismaStudent & { status?: string }) =>
-              s.status === "participating",
-          )
-          .map((s: PrismaStudent) => s.id)
+          .filter((s) => s.status === "participating")
+          .map((s) => s.id)
         setSelectedStudents(new Set(participatingStudents))
       }
     } catch (error) {
@@ -173,8 +167,8 @@ export function useExportPage() {
     new Map(
       students
         .flatMap((s) => s.memberships.map((m) => m.class))
-        .map((cls) => [cls.id, cls]),
-    ).values(),
+        .map((cls) => [cls.id, cls])
+    ).values()
   )
 
   return {

@@ -7,9 +7,9 @@ import { toast } from "sonner"
 
 interface DeleteProjectModalProps {
   project: Project & {
-    masterImages?: any[]
-    answerSheets?: any[]
-    cropRegions?: any[]
+    masterImages?: unknown[]
+    answerSheets?: unknown[]
+    cropRegions?: unknown[]
   }
   open: boolean
   onOpenChange: (open: boolean) => void

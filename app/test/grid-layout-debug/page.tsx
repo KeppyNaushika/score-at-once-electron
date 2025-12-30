@@ -17,7 +17,7 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const parentRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 })
-  const [parentSize, setParentSize] = useState({ width: 0, height: 0 })
+  const [_parentSize, setParentSize] = useState({ width: 0, height: 0 })
   const [canvasCssSize, setCanvasCssSize] = useState({ width: 0, height: 0 })
 
   const calculateAndDraw = useCallback(() => {
@@ -33,7 +33,7 @@ function TestImage({ index, isColumnLayout, itemsPerRow, aspectRatio, containerR
 
     // 方法2: グリッドコンテナから計算
     const containerWidth = container.offsetWidth
-    const containerHeight = container.offsetHeight
+    const _containerHeight = container.offsetHeight
     const gap = 8 // gap-2 = 8px
     const padding = 4 // p-1 = 4px
 

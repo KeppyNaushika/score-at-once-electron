@@ -15,7 +15,6 @@ export const KEYBOARD_SHORTCUTS = {
     TOGGLE_FILTER: { key: "採点キー", label: "フィルタ切替" },
     PARTIAL_INPUT: { key: "0-9,.", label: "部分点入力" },
     PARTIAL_RESET: { key: "Backspace", label: "部分点リセット" },
-    FILTER_TOGGLE_NUMBERS: { key: "Ctrl+1-6", label: "フィルタ切替(数字)" },
   },
 } as const
 

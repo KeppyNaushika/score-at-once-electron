@@ -61,7 +61,7 @@ function preprocessMathSyntax(text: string): string {
   })
 
   // \[ \] → $$...$$ 変換（ディスプレイ数式）
-  text = text.replace(/\\[\[]\s*(.*?)\s*\\[\]]/g, (_match, content) => {
+  text = text.replace(/\\\[\s*(.*?)\s*\\\]/g, (_match, content) => {
     const safeContent = sanitizeMathContent(content)
     return `$$${safeContent}$$`
   })
@@ -80,8 +80,8 @@ function isInMathContext(text: string, position: number): boolean {
   const mathPatterns = [
     /\$\$[\s\S]*?\$\$/g,  // $$...$$
     /\$[^$\n]*?\$/g,      // $...$
-    /\\[\[]([\s\S]*?)\\[\]]/g,  // \[...\]
-    /\\[(]([\s\S]*?)\\[)]/g     // \(...\)
+    /\\\[([\s\S]*?)\\\]/g,  // \[...\]
+    /\\\(([\s\S]*?)\\\)/g     // \(...\)
   ]
 
   for (const pattern of mathPatterns) {
@@ -107,7 +107,7 @@ function isInMathContext(text: string, position: number): boolean {
 function safeReplace(
   text: string,
   searchRegex: RegExp,
-  replacement: string | ((match: string, ...args: any[]) => string)
+  replacement: string | ((match: string, ...args: string[]) => string)
 ): string {
   let result = text
   let match

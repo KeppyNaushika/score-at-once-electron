@@ -246,7 +246,7 @@ export async function associateStudentAnswerWithStudent(
 // 答案の欠席状態を設定
 export async function setStudentAnswerAbsent(
   answerSheetId: string,
-  isAbsent: boolean,
+  _isAbsent: boolean,
 ) {
   try {
     const answerSheet = await prisma.pageImage.update({
@@ -319,7 +319,7 @@ export async function getStudentAnswerById(answerSheetId: string) {
 export async function updateStudentAnswerPlacement(
   answerSheetId: string,
   studentId: string | null,
-  pageNumber: number,
+  _pageNumber: number,
 ) {
   try {
     // まず現在の答案情報を取得してprojectIdを確認

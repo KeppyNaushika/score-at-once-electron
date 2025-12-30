@@ -130,7 +130,7 @@ export interface ScoringData {
 
 export type MasterStatus = "master"
 
-export interface MasterAnswerData {
+export interface MasterGridItem {
   id: string
   studentId: "MASTER"
   studentName: string
@@ -174,7 +174,9 @@ export function getScoringStatusFromArray(
 /**
  * Prisma.Decimalを安全にnumberに変換
  */
-export function decimalToNumber(decimal: any): number | null {
+export function decimalToNumber(
+  decimal: Prisma.Decimal | number | string | null | undefined,
+): number | null {
   if (decimal === null || decimal === undefined) return null
   return Number(decimal.toString())
 }

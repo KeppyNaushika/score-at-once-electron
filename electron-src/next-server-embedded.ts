@@ -1,11 +1,14 @@
 import { delimiter, join } from "path"
 import { app } from "electron"
+import type { Server } from "http"
+import type { IncomingMessage, ServerResponse } from "http"
+import type { NextServer } from "next/dist/server/next"
 
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged
 
-let nextApp: any = null
-let httpServer: any = null
+let nextApp: NextServer | null = null
+let httpServer: Server | null = null
 
 /**
  * packaged環境では .next が Resources 配下に置かれ、node_modules は app.asar 内にある。
@@ -15,7 +18,7 @@ let httpServer: any = null
 const ensurePackagedNodePath = (basePath: string) => {
   try {
     const fs = require('fs')
-    const Module = require('module') as any
+    const Module = require('module') as typeof import('module') & { _initPaths(): void }
 
     const candidatePaths = [
       join(basePath, 'app.asar', 'node_modules'),
@@ -96,18 +99,18 @@ export async function startEmbeddedNextServer(): Promise<void> {
     }
     
     const next = require('next')
-    nextApp = next({ 
-      dev: false, 
-      hostname, 
+    nextApp = next({
+      dev: false,
+      hostname,
       port,
       dir: appDir
-    })
-    
+    }) as NextServer
+
     const handle = nextApp.getRequestHandler()
-    
+
     await nextApp.prepare()
     
-    httpServer = createServer(async (req: any, res: any) => {
+    httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
       try {
         await handle(req, res)
       } catch (err) {
@@ -117,16 +120,15 @@ export async function startEmbeddedNextServer(): Promise<void> {
       }
     })
     
-    return new Promise((resolve, reject) => {
-      httpServer.listen(port, hostname, (err: any) => {
-        if (err) {
-          console.error('Failed to start Next.js server:', err)
-          reject(err)
-        } else {
-          console.log(`✓ Next.js server started successfully on http://${hostname}:${port}`)
-          console.log('Next.js server is now ready to accept connections')
-          resolve()
-        }
+    return new Promise<void>((resolve, reject) => {
+      httpServer!.listen(port, hostname, () => {
+        console.log(`✓ Next.js server started successfully on http://${hostname}:${port}`)
+        console.log('Next.js server is now ready to accept connections')
+        resolve()
+      })
+      httpServer!.on('error', (err: Error) => {
+        console.error('Failed to start Next.js server:', err)
+        reject(err)
       })
     })
   } catch (error) {

@@ -1,6 +1,6 @@
 const { execSync } = require("child_process")
 const { notifyRelease } = require("./discord-notify").default
-const { createRelease } = require("./release")
+const { createRelease: _createRelease } = require("./release")
 require("dotenv").config()
 
 async function createPrerelease(prereleaseType) {
@@ -11,7 +11,7 @@ async function createPrerelease(prereleaseType) {
     console.log(`🚀 Creating pre-release (${prereleaseType})...`)
 
     // 現在のコミットハッシュを保存（ロールバック用）
-    const originalCommit = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
+    const _originalCommit = execSync("git rev-parse HEAD", { encoding: "utf-8" }).trim()
 
     // Bump version with prerelease
     execSync(`npm version pre${prereleaseType}`, { stdio: "inherit" })
@@ -68,7 +68,7 @@ async function createPrereleaseGitHub(version) {
     // Check if gh CLI is installed
     try {
       execSync("gh --version", { stdio: "ignore" })
-    } catch (error) {
+    } catch {
       console.error("❌ GitHub CLI (gh) is not installed.")
       console.log("Please install it: https://cli.github.com/")
       process.exit(1)
@@ -77,7 +77,7 @@ async function createPrereleaseGitHub(version) {
     // Check if user is authenticated
     try {
       execSync("gh auth status", { stdio: "ignore" })
-    } catch (error) {
+    } catch {
       console.error("❌ Not authenticated with GitHub.")
       console.log("Please run: gh auth login")
       process.exit(1)

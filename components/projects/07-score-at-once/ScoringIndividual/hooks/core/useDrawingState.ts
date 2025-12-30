@@ -34,7 +34,7 @@ export function useDrawingState(
     currentStudentId?: string
     currentCropRegionId?: string
     currentUserId?: string
-  },
+  }
 ): DrawingState &
   DrawingActions & {
     // データベース統合機能
@@ -46,13 +46,13 @@ export function useDrawingState(
   // 基本的な描画設定
   const [currentTool, setCurrentTool] = useState<DrawingTool>("hand")
   const [strokeColor, setStrokeColor] = useState(
-    DEFAULT_DRAWING_SETTINGS.strokeColor,
+    DEFAULT_DRAWING_SETTINGS.strokeColor
   )
   const [strokeWidth, setStrokeWidth] = useState(
-    DEFAULT_DRAWING_SETTINGS.strokeWidth,
+    DEFAULT_DRAWING_SETTINGS.strokeWidth
   )
   const [lineStyle, setLineStyle] = useState<LineStyle>(
-    DEFAULT_DRAWING_SETTINGS.lineStyle,
+    DEFAULT_DRAWING_SETTINGS.lineStyle
   )
   const [fontSize, setFontSize] = useState(DEFAULT_DRAWING_SETTINGS.fontSize)
 
@@ -121,7 +121,7 @@ export function useDrawingState(
     syncElements,
   } = useDrawingAnnotations(
     enablePersistence ? persistenceCallbacks : undefined,
-    context,
+    context
   )
 
   // questionScoreIdが変更された時にDBから自動読み込み
@@ -136,7 +136,7 @@ export function useDrawingState(
 
       // 設問変更時は即座にdrawingElementsと選択をクリア
       // useLayoutEffectにより、描画effectが実行される前にクリアが完了する
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- 意図的：設問変更時に古いデータ表示を防ぐため描画前にクリアが必要
+
       setDrawingElements([])
       setSelectedElementIds([])
 
@@ -156,7 +156,7 @@ export function useDrawingState(
 
     // annotationsをdrawingElementsに変換（同期的に更新）
     const elements = annotations.map(convertAnnotationToElement)
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 意図的：DBアノテーション変更時にローカル状態を同期するため必要
+
     setDrawingElements(elements)
   }, [annotations])
 
@@ -177,7 +177,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, saveElement],
+    [enablePersistence, questionScoreId, saveElement]
   )
 
   const updateDrawingElement = useCallback(
@@ -197,30 +197,32 @@ export function useDrawingState(
       })
 
       // データベース更新（バックグラウンド）
-      if (enablePersistence && questionScoreId && previousElement) {
+      if (enablePersistence && questionScoreId && previousElement !== null) {
+        const elementToUpdate: DrawingElement = previousElement
         try {
-          const updatedElement = { ...(previousElement as any), ...updates }
+          const updatedElement: DrawingElement = {
+            ...elementToUpdate,
+            ...updates,
+          }
           await updateElement(updatedElement)
         } catch (error) {
           console.error("描画要素更新エラー:", error)
           // 更新に失敗した場合、ローカル状態をロールバック
-          if (previousElement) {
-            setDrawingElements((prev) =>
-              prev.map((element) =>
-                element.id === id ? previousElement! : element,
-              ),
+          setDrawingElements((prev) =>
+            prev.map((element) =>
+              element.id === id ? elementToUpdate : element
             )
-          }
+          )
         }
       }
     },
-    [enablePersistence, questionScoreId, updateElement],
+    [enablePersistence, questionScoreId, updateElement]
   )
 
   // 複数要素を一括更新（1回のsetStateで全て更新）
   const updateDrawingElements = useCallback(
     async (
-      updates: Array<{ id: string; updates: Partial<DrawingElement> }>,
+      updates: Array<{ id: string; updates: Partial<DrawingElement> }>
     ) => {
       const previousElements: Map<string, DrawingElement> = new Map()
       const updateMap = new Map(updates.map((u) => [u.id, u.updates]))
@@ -252,7 +254,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, updateElement],
+    [enablePersistence, questionScoreId, updateElement]
   )
 
   const removeDrawingElement = useCallback(
@@ -267,7 +269,7 @@ export function useDrawingState(
 
       // 複数選択からも削除
       setSelectedElementIds((prev) =>
-        prev.filter((elementId) => elementId !== id),
+        prev.filter((elementId) => elementId !== id)
       )
 
       // データベースから削除（バックグラウンド）
@@ -283,7 +285,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, deleteElement],
+    [enablePersistence, questionScoreId, deleteElement]
   )
 
   // 複数選択操作
@@ -293,7 +295,7 @@ export function useDrawingState(
 
   const removeFromSelection = useCallback((id: string) => {
     setSelectedElementIds((prev) =>
-      prev.filter((elementId) => elementId !== id),
+      prev.filter((elementId) => elementId !== id)
     )
   }, [])
 
@@ -364,7 +366,7 @@ export function useDrawingState(
         elementTop > rectBottom
       )
     },
-    [],
+    []
   )
 
   const selectElementsInRectangle = useCallback(
@@ -377,7 +379,7 @@ export function useDrawingState(
         setSelectedElementIds(elementsInRect)
       }
     },
-    [drawingElements, isElementInRectangle],
+    [drawingElements, isElementInRectangle]
   )
 
   const clearDrawing = useCallback(async () => {

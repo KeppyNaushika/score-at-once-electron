@@ -28,13 +28,13 @@ if (process.platform === "win32" && app.isPackaged) {
         const message = args.join(" ") + "\n"
         try {
           fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${message}`)
-        } catch (logError) {
+        } catch {
           // ログ書き込みエラーでもアプリを止めない
         }
       }
       console.error = console.log
       console.warn = console.log
-    } catch (error) {
+    } catch {
       // フォールバック: 何もしない
     }
   }

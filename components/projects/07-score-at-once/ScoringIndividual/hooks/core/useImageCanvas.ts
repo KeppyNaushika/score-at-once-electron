@@ -1,16 +1,19 @@
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import { useDrawingStyleUtils } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/utils/useDrawingStyle"
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type {
+  DrawingElement,
+  SelectionRectangle,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
+import type { DrawingAnnotationWithQuestionScore } from "@/types/drawing-annotation.types"
 import {
   useCallback,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "react"
@@ -35,13 +38,13 @@ interface UseImageCanvasProps {
   isShiftPressed: boolean
   selectedElementIds: string[]
   isDrawingSelection: boolean
-  selectionRectangle: any
+  selectionRectangle: SelectionRectangle | null
   showMultiplePages?: boolean
   pageSpacing?: number
   // ドラッグ中の軽量化用
   isDraggingElement?: boolean
   // 透明度制御用の全アノテーション
-  allAnnotations?: any[]
+  allAnnotations?: DrawingAnnotationWithQuestionScore[]
   currentCropRegionId?: string | null
   // ホバー中の要素ID（ハンドル表示用）
   hoveredElementId?: string | null
@@ -52,15 +55,15 @@ export function useImageCanvas({
   currentCropRegion,
   pageImages,
   zoom,
-  position,
+  position: _position,
   drawingElements,
-  currentDrawing,
+  currentDrawing: _currentDrawing,
   isDrawing,
-  isCreatingTextBox,
-  strokeColor,
-  strokeWidth,
-  lineStyle,
-  isShiftPressed,
+  isCreatingTextBox: _isCreatingTextBox,
+  strokeColor: _strokeColor,
+  strokeWidth: _strokeWidth,
+  lineStyle: _lineStyle,
+  isShiftPressed: _isShiftPressed,
   selectedElementIds,
   isDrawingSelection,
   selectionRectangle,
@@ -82,7 +85,7 @@ export function useImageCanvas({
   const containerRef = useRef<HTMLDivElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
   const [loadedImages, setLoadedImages] = useState<HTMLImageElement[]>([])
-  const isPreRenderingRef = useRef(false)
+  const _isPreRenderingRef = useRef(false)
 
   // ドラッグ状態を同期的に追跡するref（React状態更新の遅延を回避）
   const isDraggingRef = useRef(isDraggingElement ?? false)
@@ -102,7 +105,7 @@ export function useImageCanvas({
   // 採点記号画像のキャッシュ
   const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement>>(new Map())
 
-  const { drawLineWithStyle } = useDrawingStyleUtils()
+  const { drawLineWithStyle: _drawLineWithStyle } = useDrawingStyleUtils()
 
   // 採点記号画像のプリロード
   useEffect(() => {
@@ -131,7 +134,7 @@ export function useImageCanvas({
 
   // アノテーションをDrawingElement形式に変換する関数
   const convertAnnotationToDrawingElement = useCallback(
-    (annotation: any): DrawingElement => {
+    (annotation: DrawingAnnotationWithQuestionScore): DrawingElement => {
       return {
         id: annotation.id,
         type: annotation.type as DrawingElement["type"],
@@ -1004,7 +1007,7 @@ export function useImageCanvas({
             isCurrentQuestion ? 1.0 : 0.3, // 現在設問100%、他設問30%
           )
           return { element, result, isCurrentQuestion }
-        } catch (error) {
+        } catch {
           return null
         }
       }),
@@ -1042,7 +1045,7 @@ export function useImageCanvas({
               1.0, // 100%
             )
             return { element, result }
-          } catch (error) {
+          } catch {
             return null
           }
         }),

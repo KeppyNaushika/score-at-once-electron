@@ -3,19 +3,15 @@
  * @description 全描画ツールの統合CRUD操作（自動バックアップ付き）
  */
 
-import prisma from "./client"
-import { execSync } from "child_process"
-import { existsSync } from "fs"
-import { createQuestionScore } from "./questionScore"
 import type {
   DrawingAnnotation,
-  DrawingCreateData,
-  DrawingUpdateData,
-  DrawingType,
   DrawingAnnotationStats,
-  DrawingBatchCreateData,
-  DrawingBatchUpdateData,
+  DrawingCreateData,
+  DrawingType,
+  DrawingUpdateData,
 } from "../../../types/drawing-annotation.types"
+import prisma from "./client"
+import { createQuestionScore } from "./questionScore"
 
 /**
  * 描画アノテーションを作成する
@@ -23,28 +19,39 @@ import type {
  * @returns Promise<DrawingAnnotation> 作成された描画アノテーション
  */
 export async function createDrawingAnnotation(
-  data: DrawingCreateData,
+  data: DrawingCreateData
 ): Promise<DrawingAnnotation> {
   try {
     // 🔍 デバッグ情報：入力データの検証
     console.log("🔍 DrawingAnnotation作成データ検証:")
-    console.log("  questionScoreId:", data.questionScoreId, typeof data.questionScoreId)
-    console.log("  createdByUserId:", data.createdByUserId, typeof data.createdByUserId)
+    console.log(
+      "  questionScoreId:",
+      data.questionScoreId,
+      typeof data.questionScoreId
+    )
+    console.log(
+      "  createdByUserId:",
+      data.createdByUserId,
+      typeof data.createdByUserId
+    )
     console.log("  type:", data.type, typeof data.type)
 
     // 🔍 外部キー制約の事前検証と自動作成
     if (data.questionScoreId) {
       const questionScoreExists = await prisma.questionScore.findUnique({
         where: { id: data.questionScoreId },
-        select: { id: true }
+        select: { id: true },
       })
-      console.log("  QuestionScore存在確認:", questionScoreExists ? "存在する" : "存在しない")
-      
+      console.log(
+        "  QuestionScore存在確認:",
+        questionScoreExists ? "存在する" : "存在しない"
+      )
+
       if (!questionScoreExists) {
         // QuestionScoreが存在しない場合、自動作成を試行
         if (data.studentId && data.cropRegionId && data.scoredByUserId) {
           console.log("  📝 未採点QuestionScoreを自動作成中...")
-          
+
           try {
             const result = await createQuestionScore({
               studentId: data.studentId,
@@ -52,22 +59,28 @@ export async function createDrawingAnnotation(
               scoredByUserId: data.scoredByUserId,
               partialScore: undefined, // undefined を使用（未採点時は部分点なし）
               status: "unscored",
-              comment: undefined // 未採点時はコメントなし
+              comment: undefined, // 未採点時はコメントなし
             })
-            
+
             if (result.success && result.score) {
               // 作成されたQuestionScoreのIDを使用
               data.questionScoreId = result.score.id
               console.log(`  ✅ QuestionScore自動作成成功: ${result.score.id}`)
             } else {
-              throw new Error(`QuestionScore creation failed: ${(result as any).error || 'Unknown error'}`)
+              throw new Error(
+                `QuestionScore creation failed: ${"error" in result ? result.error : "Unknown error"}`
+              )
             }
           } catch (createError) {
             console.error("  🚫 QuestionScore自動作成失敗:", createError)
-            throw new Error(`QuestionScore not found and auto-creation failed: ${data.questionScoreId}. Original error: ${createError instanceof Error ? createError.message : String(createError)}`)
+            throw new Error(
+              `QuestionScore not found and auto-creation failed: ${data.questionScoreId}. Original error: ${createError instanceof Error ? createError.message : String(createError)}`
+            )
           }
         } else {
-          throw new Error(`QuestionScore not found: ${data.questionScoreId}. To auto-create, provide studentId, cropRegionId, and scoredByUserId`)
+          throw new Error(
+            `QuestionScore not found: ${data.questionScoreId}. To auto-create, provide studentId, cropRegionId, and scoredByUserId`
+          )
         }
       }
     } else {
@@ -77,10 +90,10 @@ export async function createDrawingAnnotation(
     if (data.createdByUserId) {
       const userExists = await prisma.user.findUnique({
         where: { id: data.createdByUserId },
-        select: { id: true }
+        select: { id: true },
       })
       console.log("  User存在確認:", userExists ? "存在する" : "存在しない")
-      
+
       if (!userExists) {
         throw new Error(`User not found: ${data.createdByUserId}`)
       }
@@ -124,13 +137,13 @@ export async function createDrawingAnnotation(
     return result as DrawingAnnotation
   } catch (error) {
     console.error("🚫 描画アノテーション作成エラー:", error)
-    
+
     // 🔍 より詳細なエラー情報を出力
     if (error instanceof Error) {
       console.error("  エラーメッセージ:", error.message)
       console.error("  スタックトレース:", error.stack)
     }
-    
+
     throw error
   }
 }
@@ -143,7 +156,7 @@ export async function createDrawingAnnotation(
  */
 export async function getDrawingAnnotationsByQuestionScore(
   questionScoreId: string,
-  type?: DrawingType,
+  type?: DrawingType
 ): Promise<DrawingAnnotation[]> {
   // 読み取り専用操作のためバックアップ不要
   try {
@@ -181,7 +194,7 @@ export async function getDrawingAnnotationsByQuestionScore(
 export async function getDrawingAnnotationsByStudent(
   studentId: string,
   projectId: string,
-  type?: DrawingType,
+  type?: DrawingType
 ): Promise<DrawingAnnotation[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
@@ -235,7 +248,7 @@ export async function getDrawingAnnotationsByStudent(
  */
 export async function getDrawingAnnotationsByProject(
   projectId: string,
-  type?: DrawingType,
+  type?: DrawingType
 ): Promise<DrawingAnnotation[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
@@ -301,7 +314,7 @@ export async function getDrawingAnnotationsByProject(
  */
 export async function updateDrawingAnnotation(
   id: string,
-  data: DrawingUpdateData,
+  data: DrawingUpdateData
 ): Promise<DrawingAnnotation> {
   try {
     const result = await prisma.drawingAnnotation.update({
@@ -346,7 +359,7 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
  */
 export async function deleteDrawingAnnotationsByQuestionScore(
   questionScoreId: string,
-  type?: DrawingType,
+  type?: DrawingType
 ): Promise<void> {
   try {
     const result = await prisma.drawingAnnotation.deleteMany({
@@ -369,14 +382,14 @@ export async function deleteDrawingAnnotationsByQuestionScore(
  * @returns Promise<DrawingAnnotation[]> 作成された描画アノテーション配列
  */
 export async function batchCreateDrawingAnnotations(
-  annotations: DrawingCreateData[],
+  annotations: DrawingCreateData[]
 ): Promise<DrawingAnnotation[]> {
   try {
     // 各アノテーションに対してcreateDrawingAnnotation関数を使用（QuestionScore自動作成機能を含む）
     const results = await Promise.all(
       annotations.map(async (data) => {
         return await createDrawingAnnotation(data)
-      }),
+      })
     )
 
     console.log(`✅ 描画アノテーション一括作成成功: ${results.length}件作成`)
@@ -393,7 +406,7 @@ export async function batchCreateDrawingAnnotations(
  * @returns Promise<DrawingAnnotation[]> 更新された描画アノテーション配列
  */
 export async function batchUpdateDrawingAnnotations(
-  updates: Array<{ id: string; data: DrawingUpdateData }>,
+  updates: Array<{ id: string; data: DrawingUpdateData }>
 ): Promise<DrawingAnnotation[]> {
   try {
     const results = await Promise.all(
@@ -406,7 +419,7 @@ export async function batchUpdateDrawingAnnotations(
             updatedAt: new Date(),
           },
         })
-      }),
+      })
     )
 
     console.log(`✅ 描画アノテーション一括更新成功: ${results.length}件更新`)
@@ -423,7 +436,7 @@ export async function batchUpdateDrawingAnnotations(
  * @returns Promise<DrawingAnnotationStats> 統計情報
  */
 export async function getDrawingAnnotationStats(
-  questionScoreId: string,
+  questionScoreId: string
 ): Promise<DrawingAnnotationStats> {
   try {
     const annotations = await prisma.drawingAnnotation.findMany({
@@ -459,7 +472,7 @@ export async function getDrawingAnnotationStats(
  * @returns Promise<DrawingAnnotation | null> 描画アノテーション
  */
 export async function getDrawingAnnotationById(
-  id: string,
+  id: string
 ): Promise<DrawingAnnotation | null> {
   try {
     const result = await prisma.drawingAnnotation.findUnique({

@@ -49,7 +49,7 @@ export function PasscodeModal({ isOpen, onClose, user, onPasscodeVerified }: Pas
       } else {
         setError("パスコードが正しくありません")
       }
-    } catch (err) {
+    } catch {
       setError("パスコードの確認に失敗しました")
     } finally {
       setIsLoading(false)

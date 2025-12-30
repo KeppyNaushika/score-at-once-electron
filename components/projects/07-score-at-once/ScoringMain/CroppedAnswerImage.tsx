@@ -125,7 +125,7 @@ export default function CroppedAnswerImage({
       className={`relative ${containerClass} ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
     >
       {/* Canvas描画用の画像データ取得のため、Next.js Imageではなく通常のimgタグを使用 */}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
+      { }
       <img
         ref={imageRef}
         src={imageUrl}

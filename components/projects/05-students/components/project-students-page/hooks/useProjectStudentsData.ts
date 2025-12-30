@@ -39,7 +39,7 @@ export function useProjectStudentsData({ projectId }: UseProjectStudentsDataProp
     if (studentsResult.success && studentsResult.students) {
       // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
       const sortedStudents = [...studentsResult.students].sort(
-        (a: any, b: any) => {
+        (a: Student, b: Student) => {
           // customOrderが設定されている場合はそれを優先
           if (
             a.customOrder !== null &&

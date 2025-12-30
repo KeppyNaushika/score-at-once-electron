@@ -38,7 +38,7 @@ function sanitizeMathContent(content: string): string {
   // 数学記号、英数字、基本的なLaTeX記号のみ許可
   return content.replace(
     /[^a-zA-Z0-9\s+\-*/=(){}[\]^_\\{|}.,\u03B1-\u03C9\u0391-\u03A9]/g,
-    "",
+    ""
   )
 }
 
@@ -60,7 +60,7 @@ function preprocessMathSyntax(text: string): string {
   })
 
   // \[ \] → $$...$$ 変換（ディスプレイ数式）
-  text = text.replace(/\\[\[]\s*(.*?)\s*\\[\]]/g, (_match, content) => {
+  text = text.replace(/\\\[\s*(.*?)\s*\\\]/g, (_match, content) => {
     const safeContent = sanitizeMathContent(content)
     return `$$${safeContent}$$`
   })
@@ -79,8 +79,8 @@ function isInMathContext(text: string, position: number): boolean {
   const mathPatterns = [
     /\$\$[\s\S]*?\$\$/g, // $$...$$
     /\$[^$\n]*?\$/g, // $...$
-    /\\[\[]([\s\S]*?)\\[\]]/g, // \[...\]
-    /\\[(]([\s\S]*?)\\[)]/g, // \(...\)
+    /\\\[([\s\S]*?)\\\]/g, // \[...\]
+    /\\\(([\s\S]*?)\\\)/g, // \(...\)
   ]
 
   for (const pattern of mathPatterns) {
@@ -106,7 +106,7 @@ function isInMathContext(text: string, position: number): boolean {
 function safeReplace(
   text: string,
   searchRegex: RegExp,
-  replacement: string | ((match: string, ...args: any[]) => string),
+  replacement: string | ((match: string, ...args: unknown[]) => string)
 ): string {
   let result = text
   let match
@@ -117,7 +117,7 @@ function safeReplace(
     searchRegex.source,
     searchRegex.flags.includes("g")
       ? searchRegex.flags
-      : searchRegex.flags + "g",
+      : searchRegex.flags + "g"
   )
 
   while ((match = globalRegex.exec(text)) !== null) {
@@ -183,7 +183,9 @@ export function parseTextWithMath(text: string): string {
  * @param fontSize フォントサイズ（デフォルト: FONT_SETTINGS.DEFAULT_SIZE）
  * @returns 新しいDIV要素
  */
-function createMathJaxContainer(fontSize: number = FONT_SETTINGS.DEFAULT_SIZE): HTMLDivElement {
+function createMathJaxContainer(
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
+): HTMLDivElement {
   const container = document.createElement("div")
   container.style.cssText = `
     position: absolute;
@@ -223,7 +225,7 @@ function destroyMathJaxContainer(container: HTMLDivElement): void {
  */
 export async function processMathJaxContent(
   container: HTMLDivElement,
-  htmlContent: string,
+  htmlContent: string
 ): Promise<void> {
   // 1. HTML内容を設定
   container.innerHTML = htmlContent
@@ -232,7 +234,7 @@ export async function processMathJaxContent(
   await waitForRenderingComplete(2)
 
   // 3. MathJax初期化確認
-  const MathJax = (window as any).MathJax
+  const MathJax = window.MathJax
   if (!MathJax) {
     return
   }
@@ -261,7 +263,7 @@ export async function processMathJaxContent(
  */
 async function convertContainerToSvg(
   container: HTMLDivElement,
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): Promise<SVGSVGElement | null> {
   try {
     // MathJax処理済みのHTML内容を取得
@@ -320,7 +322,7 @@ export async function convertTextToSvg(
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top",
   textSize: number = FONT_SETTINGS.DEFAULT_SIZE,
-  textColor: string = "#000000",
+  textColor: string = "#000000"
 ): Promise<SVGSVGElement | null> {
   if (!text.trim()) {
     return null
@@ -357,9 +359,9 @@ export async function convertTextToSvg(
       horizontalAlign,
       verticalAlign,
       textColor,
-      textSize,
+      textSize
     )
-  } catch (error) {
+  } catch {
     return null
   }
 }
@@ -373,7 +375,7 @@ export async function convertTextToSvg(
  */
 async function convertSingleLineToSvg(
   lineText: string,
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): Promise<SVGSVGElement | null> {
   if (!lineText.trim()) {
     return null
@@ -406,7 +408,7 @@ async function convertSingleLineToSvg(
  */
 async function processSingleLineMathJax(
   container: HTMLDivElement,
-  htmlContent: string,
+  htmlContent: string
 ): Promise<void> {
   // 1. HTML内容を設定（改行禁止スタイル適用）
   container.innerHTML = `<div style="white-space: nowrap; overflow: hidden;">${htmlContent}</div>`
@@ -430,7 +432,7 @@ function combineLineSvgs(
   horizontalAlign: "left" | "center" | "right" = "left",
   verticalAlign: "top" | "center" | "bottom" = "top",
   textColor: string = "#000000",
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): SVGSVGElement {
   // 各行のサイズを取得
   const lineInfos = lineSvgs.map((svg) => ({
@@ -510,7 +512,7 @@ function combineLineSvgs(
               </style>
               ${content}
             </div>
-          `,
+          `
             )
             .join("")}
         </div>

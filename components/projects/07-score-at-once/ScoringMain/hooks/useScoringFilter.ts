@@ -2,13 +2,14 @@ import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/cons
 import type {
   CropRegionWithProjectPage,
   GradingMode,
-  MasterAnswerData,
+  MasterGridItem,
   PageImageWithProjectStudents,
   QuestionScore,
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
+import type { ProjectWithDetails } from "@/types/common.types"
 import {
   useCallback,
   useEffect,
@@ -46,7 +47,7 @@ interface UseScoringFilterProps {
   questionScores: QuestionScore[]
   selectedPageImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
-  project: any
+  project: ProjectWithDetails | null
   gradingMode: GradingMode
   questionChangeVersion: number
   manualSelectionVersion: number
@@ -535,17 +536,17 @@ export function useScoringFilter({
     return () => clearTimeout(timeoutId)
   }, [questionChangeVersion, gradingMode, setSelectedPageImageIds])
 
-  const masterAnswerData = useMemo((): MasterAnswerData | null => {
+  const masterAnswerData = useMemo((): MasterGridItem | null => {
     if (!currentCropRegion || !project?.projectPages) return null
 
     const projectPage = project.projectPages.find(
-      (page: any) => page.id === currentCropRegion.projectPageId,
+      (page) => page.id === currentCropRegion.projectPageId,
     )
 
     if (!projectPage) return null
 
     const masterImage = projectPage.pageImages?.find(
-      (img: any) => img.imageType === "MODEL_ANSWER",
+      (img) => img.imageType === "MODEL_ANSWER",
     )
     const masterImagePath = masterImage?.imagePath
 
@@ -569,14 +570,17 @@ export function useScoringFilter({
     }))
   }, [allScoringData, selectedPageImageIds])
 
-  const getGridAnswerData = useCallback(() => {
-    const filteredAnswers = visibleAnswers
+  const getGridAnswerData = useCallback((): (ScoringData & {
+    isSelected: boolean
+  })[] => {
+    return visibleAnswers
       .map((answerId) =>
         getAllGridAnswerData.find((answer) => answer.id === answerId),
       )
-      .filter(Boolean)
-
-    return filteredAnswers
+      .filter(
+        (answer): answer is ScoringData & { isSelected: boolean } =>
+          answer !== undefined,
+      )
   }, [getAllGridAnswerData, visibleAnswers])
 
   const handleRefreshFilter = useCallback(() => {

@@ -17,7 +17,7 @@ import type { MeasuredSize } from "../types"
  * @returns Promise<void>
  */
 export async function waitForRenderingComplete(
-  frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES,
+  frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES
 ): Promise<void> {
   for (let i = 0; i < frames; i++) {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -30,7 +30,7 @@ export async function waitForRenderingComplete(
  * @returns Promise<void>
  */
 export async function processMathJax(container: HTMLElement): Promise<void> {
-  const MathJax = (window as any).MathJax
+  const MathJax = window.MathJax
 
   if (!MathJax) {
     return
@@ -38,10 +38,10 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
 
   try {
     // MathJaxが完全に初期化されるまで待機（非同期読み込み対応）
-    if (!MathJax.startup?.document && !(window as any).mathJaxReady) {
+    if (!MathJax.startup?.document && !window.mathJaxReady) {
       await new Promise((resolve) => {
         // 既に初期化済みの場合
-        if ((window as any).mathJaxReady || (MathJax.startup?.document)) {
+        if (window.mathJaxReady || MathJax.startup?.document) {
           resolve(void 0)
           return
         }
@@ -51,7 +51,11 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
 
         const checkReady = () => {
           attempts++
-          if ((window as any).mathJaxReady || MathJax.startup?.document || MathJax.typesetPromise) {
+          if (
+            window.mathJaxReady ||
+            MathJax.startup?.document ||
+            MathJax.typesetPromise
+          ) {
             resolve(void 0)
           } else if (attempts >= maxAttempts) {
             resolve(void 0)
@@ -66,7 +70,7 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
           () => {
             resolve(void 0)
           },
-          { once: true },
+          { once: true }
         )
 
         checkReady()
@@ -74,7 +78,10 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
     }
 
     // typesetPromiseが利用可能な場合
-    if (MathJax.typesetPromise && typeof MathJax.typesetPromise === 'function') {
+    if (
+      MathJax.typesetPromise &&
+      typeof MathJax.typesetPromise === "function"
+    ) {
       try {
         const typesetTimeout = new Promise((_, reject) => {
           setTimeout(() => reject(new Error("MathJax typeset timeout")), 8000)
@@ -86,23 +93,28 @@ export async function processMathJax(container: HTMLElement): Promise<void> {
         ])
       } catch {
         // フォールバック: 同期typeset
-        if (MathJax.typeset && typeof MathJax.typeset === 'function') {
+        if (MathJax.typeset && typeof MathJax.typeset === "function") {
           MathJax.typeset([container])
         }
       }
     }
     // typesetが利用可能な場合
-    else if (MathJax.typeset && typeof MathJax.typeset === 'function') {
+    else if (MathJax.typeset && typeof MathJax.typeset === "function") {
       MathJax.typeset([container])
     }
     // どちらも利用不可な場合
     else {
       // 最終フォールバック: 手動再初期化を試行
-      if (MathJax.startup && typeof MathJax.startup.defaultReady === 'function') {
+      if (
+        MathJax.startup &&
+        typeof MathJax.startup.defaultReady === "function"
+      ) {
         try {
           await MathJax.startup.defaultReady()
-          if (MathJax.typeset) {
-            MathJax.typeset([container])
+          // 再初期化後にMathJaxを再取得（状態が変わっている可能性があるため）
+          const refreshedMathJax = window.MathJax
+          if (refreshedMathJax?.typeset) {
+            refreshedMathJax.typeset([container])
           }
         } catch {
           // 再初期化失敗
@@ -161,7 +173,7 @@ export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
   initialHeight: number,
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): Promise<MeasuredSize> {
   // 一時的なDOM要素を作成（scrollWidth/scrollHeight専用設定）
   const tempDiv = document.createElement("div")
@@ -243,10 +255,10 @@ function extractMathJaxDefs(): string {
  * 既にdefsが存在する場合は即座に完了
  * @returns Promise<boolean> 初期化が完了したかどうか
  */
-async function waitForMathJaxDefsGeneration(): Promise<boolean> {
+async function _waitForMathJaxDefsGeneration(): Promise<boolean> {
   // 既にグローバルdefsが存在するかチェック
   const existingGlobalDefs = document.querySelector(
-    "#MJX-SVG-global-cache defs",
+    "#MJX-SVG-global-cache defs"
   )
   if (existingGlobalDefs && existingGlobalDefs.innerHTML.length > 100) {
     return true
@@ -271,7 +283,7 @@ async function waitForMathJaxDefsGeneration(): Promise<boolean> {
 export async function createOptimizedSVG(
   htmlContent: string,
   measuredSize: MeasuredSize,
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): Promise<SVGSVGElement> {
   // MathJax defsを抽出（軽量化）
   const mathJaxDefs = extractMathJaxDefs()
@@ -326,14 +338,14 @@ export async function createMathJaxSVG(
   htmlContent: string,
   initialWidth: number,
   initialHeight: number,
-  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE,
+  fontSize: number = FONT_SETTINGS.DEFAULT_SIZE
 ): Promise<SVGSVGElement> {
   // MathJax処理後の正確なサイズを測定（fontSizeを渡す）
   const measuredSize = await measureMathJaxContentSize(
     htmlContent,
     initialWidth,
     initialHeight,
-    fontSize,
+    fontSize
   )
 
   // 測定結果に基づいて最適なSVGを生成（fontSizeを渡す）

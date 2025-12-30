@@ -5,7 +5,7 @@
  * - 箱ひげ図
  */
 
-import type { BoxPlotData, SubtotalStatistics } from "@/electron-src/lib/export/individual-report/types"
+import type { BoxPlotData } from "@/electron-src/lib/export/individual-report/types"
 
 /** グラフ描画の共通設定 */
 export interface ChartConfig {

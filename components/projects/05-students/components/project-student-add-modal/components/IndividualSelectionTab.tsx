@@ -36,7 +36,7 @@ interface IndividualSelectionTabProps {
 }
 
 export function IndividualSelectionTab({
-  availableStudents,
+  availableStudents: _availableStudents,
   availableClasses,
   searchTerm,
   filterClassId,

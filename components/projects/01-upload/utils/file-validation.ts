@@ -104,7 +104,8 @@ export function isValidFileSize(file: File, maxSizeInBytes: number): boolean {
 export function isValidFileName(fileName: string): boolean {
   if (!fileName || fileName.trim().length === 0) return false
 
-  // 危険な文字を含まないかチェック
+  // 危険な文字を含まないかチェック（制御文字を意図的に含む正規表現）
+  // eslint-disable-next-line no-control-regex
   const dangerousChars = /[<>:"/\\|?*\x00-\x1f]/
   if (dangerousChars.test(fileName)) return false
 

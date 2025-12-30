@@ -9,7 +9,7 @@ import {
 } from "@/components/projects/06-student-answers/student-answer-management/utils/reorderFilesByStrategy"
 import { StudentAnswerTable } from "@/components/projects/06-student-answers/student-answer-table/components/StudentAnswerTable"
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import type { PlacementStrategy } from "@/types/student-answer.types"
+import type { PlacementStrategy } from "@/components/projects/06-student-answers/types"
 import { useCallback, useEffect } from "react"
 
 export function StudentAnswerUpload({

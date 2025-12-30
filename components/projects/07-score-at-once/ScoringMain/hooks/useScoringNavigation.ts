@@ -1,4 +1,12 @@
+import type {
+  CropRegionWithProjectPage,
+  LayoutDirection,
+  ScoringData,
+} from "@/components/projects/07-score-at-once/types"
 import { useCallback, useState } from "react"
+
+/** ScoringDataに選択状態を追加した型 */
+type ScoringDataWithSelection = ScoringData & { isSelected: boolean }
 
 interface UseScoringNavigationProps {
   answerSheetsLength: number
@@ -9,10 +17,10 @@ interface UseScoringNavigationProps {
   setCurrentCropRegionId: (id: string | null) => void
   selectedPageImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
-  layoutDirection: "right-down" | "left-down" | "down-right" | "down-left"
-  getGridAnswerData: () => any[]
-  effectiveColumns?: number // 実際の表示数（行あたり/列あたり）
-  cropRegions?: any[] // ナビゲーション用のcropRegions配列
+  layoutDirection: LayoutDirection
+  getGridAnswerData: () => ScoringDataWithSelection[]
+  effectiveColumns?: number
+  cropRegions?: CropRegionWithProjectPage[]
 }
 
 export function useScoringNavigation({
@@ -90,10 +98,15 @@ export function useScoringNavigation({
 
   // 模範解答をスキップして次の有効な答案を見つける関数
   const findNextValidAnswer = useCallback(
-    (startIndex: number, direction: number, gridAnswers: any[]): number => {
+    (
+      startIndex: number,
+      direction: number,
+      gridAnswers: ScoringDataWithSelection[],
+    ): number => {
       const totalAnswers = gridAnswers.length
       for (let i = startIndex; i >= 0 && i < totalAnswers; i += direction) {
-        if (!gridAnswers[i].id.startsWith("master-")) {
+        const answer = gridAnswers[i]
+        if (!answer.id.startsWith("master-")) {
           return i
         }
       }
@@ -131,7 +144,7 @@ export function useScoringNavigation({
               actualItemsPerLine = parsed[0]
             }
           }
-        } catch (error) {
+        } catch {
           // localStorageエラーの場合はfallback値を使用
           actualItemsPerLine = 4
         }
@@ -209,7 +222,8 @@ export function useScoringNavigation({
           }
           break
 
-        case "down-right": // 下→右方向
+        case "down-right": {
+          // 下→右方向
           // 列表示では1列あたりの表示件数が実際の列の高さ（行数）となる
           const columnsForDownRight = actualItemsPerLine // 1列あたりの表示件数
           switch (key) {
@@ -233,8 +247,10 @@ export function useScoringNavigation({
               break
           }
           break
+        }
 
-        case "down-left": // 下→左方向
+        case "down-left": {
+          // 下→左方向
           // 列表示では1列あたりの表示件数が実際の列の高さ（行数）となる
           const columnsForDownLeft = actualItemsPerLine // 1列あたりの表示件数
           switch (key) {
@@ -258,6 +274,7 @@ export function useScoringNavigation({
               break
           }
           break
+        }
       }
 
       // 範囲チェックして模範解答をスキップ
@@ -267,7 +284,7 @@ export function useScoringNavigation({
         newIndex !== currentIndex
       ) {
         const targetAnswer = gridAnswers[newIndex]
-        if (targetAnswer && !targetAnswer.id.startsWith("master-")) {
+        if (!targetAnswer.id.startsWith("master-")) {
           setSelectedPageImageIds(new Set([targetAnswer.id]))
         } else {
           // 模範解答の場合、方向に応じて次の有効な答案を探す

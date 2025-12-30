@@ -126,7 +126,7 @@ export default function SpreadsheetImportModal({
         onImportSuccess(imported)
         onClose()
       }
-    } catch (error) {
+    } catch {
       alert("生徒のインポートに失敗しました。")
     }
   }

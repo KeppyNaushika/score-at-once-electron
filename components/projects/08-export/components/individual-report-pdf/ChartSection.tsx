@@ -173,7 +173,7 @@ interface RadarChartProps {
   showAverageLine: boolean
 }
 
-function RadarChart({ data, statistics, showAverageLine }: RadarChartProps) {
+function RadarChart({ data, statistics: _statistics, showAverageLine: _showAverageLine }: RadarChartProps) {
   const width = 150
   const height = 100
   const centerX = width / 2

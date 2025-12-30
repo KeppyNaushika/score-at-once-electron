@@ -4,9 +4,15 @@ import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 
+/** プロジェクト情報の最小型（存在チェックのみに使用） */
+interface ProjectInfo {
+  id: string
+  examName: string
+}
+
 interface ScoringStatesProps {
   loading: boolean
-  project?: any
+  project?: ProjectInfo | null
   answerSheetsLength: number
   cropRegionsLength: number
   projectId: string

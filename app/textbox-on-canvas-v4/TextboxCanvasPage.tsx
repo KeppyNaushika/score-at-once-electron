@@ -21,6 +21,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { useCallback, useEffect, useState } from "react"
 
+// 型定義
+import type { AnchorDirection } from "./types"
+
 // 分離されたコンポーネントとフック
 import {
   TextboxCanvasPreview,
@@ -58,7 +61,7 @@ export default function TextboxCanvasPage() {
     getSelectedTextBox,
     updateTextBoxAnchorDirection,
     updateTextBoxSize,
-    setTextBoxes,
+    setTextBoxes: _setTextBoxes,
   } = useTextBoxOperations()
 
   // 選択されたテキストボックス
@@ -71,7 +74,7 @@ export default function TextboxCanvasPage() {
 
   // アンカー方向変更のハンドラー
   const handleAnchorDirectionChange = useCallback(
-    (direction: any) => {
+    (direction: AnchorDirection) => {
       if (!selectedTextBoxId) return
       updateTextBoxAnchorDirection(selectedTextBoxId, direction)
     },

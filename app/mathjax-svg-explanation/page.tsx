@@ -1,9 +1,44 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
+
+/**
+ * ステップ結果の型定義
+ */
+interface StepResult {
+  // Step 0: テキスト準備
+  processed?: string
+  original?: string
+  // Step 1: HTML変換
+  htmlContent?: string
+  container?: HTMLDivElement
+  // Step 2: MathJax処理
+  processedHTML?: string
+  hasMathJax?: boolean
+  // Step 3: スタイルクリーンアップ
+  cleaned?: boolean
+  description?: string
+  // Step 4: サイズ測定
+  size?: {
+    width: number
+    height: number
+    boundingWidth?: number
+    boundingHeight?: number
+    scrollWidth?: number
+    scrollHeight?: number
+    mathJaxHeight?: number
+  }
+  // Step 5: SVG作成
+  svgCreated?: boolean
+  svgSize?: { width: number; height: number }
+  // Step 6: Canvas描画
+  canvas?: HTMLCanvasElement
+  completed?: boolean
+}
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// Tabs components are available for future use
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Textarea } from "@/components/ui/textarea"
 import { Info, Play, Code, ArrowRight } from "lucide-react"
@@ -11,8 +46,8 @@ import { Info, Play, Code, ArrowRight } from "lucide-react"
 export default function MathJaxSVGExplanation() {
   const [currentStep, setCurrentStep] = useState(0)
   const [demoText, setDemoText] = useState("$E = mc^2$ とは **アインシュタイン**の有名な公式です。")
-  const [stepResults, setStepResults] = useState<Record<number, any>>({})
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [stepResults, setStepResults] = useState<Record<number, StepResult>>({})
+  const _containerRef = useRef<HTMLDivElement>(null)
 
   const steps = [
     {
@@ -620,10 +655,10 @@ console.log('Canvas描画完了:', finalCanvas)`,
                         {currentStep === 4 && stepResults[4] && (
                           <div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div><strong>測定幅:</strong> {stepResults[4].size.width}px</div>
-                              <div><strong>測定高さ:</strong> {stepResults[4].size.height}px</div>
-                              <div><strong>Bounding幅:</strong> {stepResults[4].size.boundingWidth}px</div>
-                              <div><strong>Scroll幅:</strong> {stepResults[4].size.scrollWidth}px</div>
+                              <div><strong>測定幅:</strong> {stepResults[4].size?.width}px</div>
+                              <div><strong>測定高さ:</strong> {stepResults[4].size?.height}px</div>
+                              <div><strong>Bounding幅:</strong> {stepResults[4].size?.boundingWidth}px</div>
+                              <div><strong>Scroll幅:</strong> {stepResults[4].size?.scrollWidth}px</div>
                             </div>
                           </div>
                         )}
@@ -633,7 +668,7 @@ console.log('Canvas描画完了:', finalCanvas)`,
                               ✅ {stepResults[5].description}
                             </p>
                             <div className="text-sm">
-                              <strong>SVGサイズ:</strong> {stepResults[5].svgSize.width} × {stepResults[5].svgSize.height}px
+                              <strong>SVGサイズ:</strong> {stepResults[5].svgSize?.width} × {stepResults[5].svgSize?.height}px
                             </div>
                           </div>
                         )}

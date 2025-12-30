@@ -19,9 +19,7 @@ import {
   createQuestionSubtotalAssignment,
   createManyQuestionSubtotalAssignments,
   deleteQuestionSubtotalAssignment,
-  deleteAssignmentsByQuestionLayoutRegionId,
   deleteAssignmentsByQuestionGroupItemId,
-  getAssignmentsByQuestionLayoutRegionId,
   getAssignmentsByQuestionGroupItemId,
 } from "../lib/prisma/questionSubtotalAssignment"
 import {
@@ -29,7 +27,6 @@ import {
   createManySubtotalDefinitions,
   deleteSubtotalDefinition,
   deleteSubtotalDefinitionsByCropRegionId,
-  getSubtotalDefinitionsByCropRegionId,
   getSubtotalDefinitionsByQuestionGroupItemId,
 } from "../lib/prisma/subtotalDefinition"
 

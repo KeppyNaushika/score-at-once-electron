@@ -7,7 +7,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback } from "react"
@@ -24,7 +24,7 @@ interface UseDragDropHandlersParams {
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
   ) => void
   setActiveFile: (file: UnifiedFile | null) => void
   setIsDraggingFromTrash: (isDragging: boolean) => void

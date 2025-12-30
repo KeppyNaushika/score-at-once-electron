@@ -26,7 +26,7 @@ export function useTextBoxOperations() {
     null,
   )
   const [currentDrag, setCurrentDrag] = useState<DragState | null>(null)
-  const [isCreatingAnchor, setIsCreatingAnchor] = useState<boolean>(false)
+  const [isCreatingAnchor, _setIsCreatingAnchor] = useState<boolean>(false)
   const [isDraggingAnchor, setIsDraggingAnchor] = useState<boolean>(false)
 
   // テキスト入力関連の状態

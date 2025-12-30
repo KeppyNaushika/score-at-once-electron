@@ -115,7 +115,7 @@ export function useCursor({
       }
 
       switch (element.type) {
-        case "line":
+        case "line": {
           if (element.endX === undefined || element.endY === undefined) {
             return "move"
           }
@@ -133,6 +133,7 @@ export function useCursor({
           } else {
             return deltaX * deltaY > 0 ? "nwse-resize" : "nesw-resize"
           }
+        }
 
         case "rectangle":
         case "ellipse":

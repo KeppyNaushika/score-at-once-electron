@@ -32,7 +32,7 @@ export function setupDebugPreview(
     const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`
     state.setSvgDataUrl(svgDataUrl)
     state.setSvgInfo(`生成SVG: ${width}x${height}px`)
-  } catch (error) {
+  } catch {
     state.setSvgDataUrl(null)
     state.setSvgInfo("プレビュー生成エラー")
   }
@@ -126,19 +126,19 @@ export async function renderSvgToCanvas(
             width: width,
             height: height,
           })
-        } catch (drawError) {
+        } catch {
           URL.revokeObjectURL(svgUrl)
           resolve({ width: 0, height: 0 })
         }
       }
 
-      img.onerror = (error) => {
+      img.onerror = () => {
         URL.revokeObjectURL(svgUrl)
         resolve({ width: 0, height: 0 })
       }
 
       img.src = svgUrl
-    } catch (error) {
+    } catch {
       resolve({ width: 0, height: 0 })
     }
   })
@@ -249,7 +249,7 @@ export function drawCreatingTextBox(
 /**
  * Lucide AnchorアイコンのSVGパスデータ
  */
-const ANCHOR_SVG_PATH = "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
+const _ANCHOR_SVG_PATH = "M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 6c0-5.5-4.5-10-10-10S-2 3.5-2 9c0 3.9 2.2 7.3 5.5 9l1.5-1.5V14h2v2.5l1.5 1.5c3.3-1.7 5.5-5.1 5.5-9z"
 
 /**
  * LucideのAnchorアイコンをCanvasに描画する
@@ -267,7 +267,7 @@ export async function drawAnchor(
   return new Promise((resolve) => {
     try {
       const size = CANVAS_SETTINGS.ANCHOR_RADIUS * 2
-      const color = isSelected
+      const _color = isSelected
         ? CANVAS_SETTINGS.SELECTED_ANCHOR_COLOR
         : CANVAS_SETTINGS.ANCHOR_COLOR
       const strokeColor = isSelected ? "#1d4ed8" : "#2563eb"
@@ -296,7 +296,7 @@ export async function drawAnchor(
           ctx.drawImage(img, drawX, drawY, size, size)
           URL.revokeObjectURL(svgUrl)
           resolve()
-        } catch (error) {
+        } catch {
           URL.revokeObjectURL(svgUrl)
           resolve()
         }
@@ -308,7 +308,7 @@ export async function drawAnchor(
       }
 
       img.src = svgUrl
-    } catch (error) {
+    } catch {
       resolve()
     }
   })

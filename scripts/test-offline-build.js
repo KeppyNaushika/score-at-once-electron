@@ -100,9 +100,9 @@ function runDryBuild() {
 
 function simulatePackaging() {
   console.log('\n📁 パッケージ構造シミュレーション...')
-  
+
   // 仮想的なElectronパッケージ構造をチェック
-  const resourcePaths = [
+  const _resourcePaths = [
     'Contents/Resources/public/js/mathjax/tex-svg.js',  // macOS
     'Contents/Resources/public/js/pdf.worker.min.mjs',
     'resources/public/js/mathjax/tex-svg.js',          // Windows/Linux

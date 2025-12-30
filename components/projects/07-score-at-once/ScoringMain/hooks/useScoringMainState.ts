@@ -1,4 +1,7 @@
-import type { GradingMode } from "@/components/projects/07-score-at-once/types"
+import type {
+  GradingMode,
+  PageImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platform-utils"
 import { useCallback, useRef, useState } from "react"
 
@@ -32,7 +35,11 @@ export function useScoringMainState() {
    * 単一クリック・ショートカットによる選択更新
    */
   const handleAnswerSelect = useCallback(
-    (answerId: string, isSelected: boolean, pageImages: any[]) => {
+    (
+      answerId: string,
+      isSelected: boolean,
+      pageImages: PageImageWithProjectStudents[],
+    ) => {
       if (suppressSelectionUpdateRef.current) {
         return
       }

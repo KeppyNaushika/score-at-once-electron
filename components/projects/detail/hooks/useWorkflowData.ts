@@ -1,4 +1,4 @@
-import type { ProjectWorkflowData, WorkflowPhase, WorkflowStats } from "@/types/workflow.types"
+import type { ProjectWorkflowData, WorkflowPhase, WorkflowStats, WorkflowStep } from "@/components/projects/detail/types"
 import type { ProjectWithDetails } from "@/types/common.types"
 import { getProjectProgress, getStepCompletionStatus } from "@/utils/projectStatus"
 import { useMemo } from "react"
@@ -11,7 +11,7 @@ import { useMemo } from "react"
  */
 export function useWorkflowData(
   stats: WorkflowStats,
-  project: any | null
+  project: ProjectWithDetails | null
 ): ProjectWorkflowData {
   const {
     masterImageCount,
@@ -24,7 +24,7 @@ export function useWorkflowData(
   return useMemo(() => {
     // プロジェクトデータがない場合はフォールバック
     const progress = project ? getProjectProgress(project) : null
-    const stepCompletions = project ? getStepCompletionStatus(project) : Array(8).fill(false)
+    const _stepCompletions = project ? getStepCompletionStatus(project) : Array(8).fill(false)
 
     // Phase 1: 試験前準備
     const phase1Steps = [
@@ -189,7 +189,7 @@ export function useWorkflowData(
     const activePhase = phases.find(phase => phase.isActive)
     const nextAction = activePhase?.nextStepId
       ? (() => {
-          const nextStep = activePhase.steps.find(step => step.id === activePhase.nextStepId)
+          const nextStep = activePhase.steps.find((step: WorkflowStep) => step.id === activePhase.nextStepId)
           return nextStep
             ? {
                 title: nextStep.title,

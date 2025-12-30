@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
+// 呼び出し元との互換性を持たせた型定義
 interface StudentClassMembershipModalProps {
   isOpen: boolean
   onClose: () => void
@@ -44,14 +45,14 @@ interface StudentClassMembershipModalProps {
   availableClasses: Array<{
     id: string
     name: string
-    classCode?: string
+    classCode?: string | null
   }>
   membershipToEdit?: {
     id: string
     studentId: string
     classId: string
-    attendanceNumber?: number
-    notes?: string
+    attendanceNumber?: number | null
+    notes?: string | null
   } | null
 }
 

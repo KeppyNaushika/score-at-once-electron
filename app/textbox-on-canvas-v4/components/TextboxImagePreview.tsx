@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 /**
  * @fileoverview Imageプレビューコンポーネント
  * @description SVG→Image変換後の状態を表示
@@ -41,7 +40,7 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
             estimatedHeight,
             "left",
             "top",
-            textBox.textSize,
+            textBox.textSize
           )
 
           if (isCancelled) return
@@ -84,7 +83,7 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
               setRenderingStatus("SVG生成失敗")
             }
           }
-        } catch (error) {
+        } catch {
           if (!isCancelled) {
             // Imageプレビュー処理エラー
             setImageUrl(null)
@@ -127,7 +126,7 @@ export function TextboxImagePreview({ textBox }: { textBox: TextBox }) {
         ID: {textBox.id.substring(0, 8)}... | Imageサイズ:{" "}
         {imageSize ? `${imageSize.width} × ${imageSize.height}` : "N/A"}
       </div>
-      <div className="flex min-h-[60px] items-center justify-center rounded border border-gray-200 bg-white p-2">
+      <div className="flex min-h-15 items-center justify-center rounded border border-gray-200 bg-white p-2">
         {imageUrl ? (
           <img
             src={imageUrl}

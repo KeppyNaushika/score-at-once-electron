@@ -100,10 +100,6 @@ export default function ScoringKeyboardHelp({
                 <span>部分点リセット</span>
                 <code className="rounded bg-gray-100 px-2 py-1">Backspace</code>
               </div>
-              <div className="flex justify-between">
-                <span>フィルタ切替(数字)</span>
-                <code className="rounded bg-gray-100 px-2 py-1">Ctrl+1-6</code>
-              </div>
             </div>
           </div>
         </div>

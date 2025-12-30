@@ -7,7 +7,7 @@ interface DragPreviewProps {
   dragStartCoords: { x: number; y: number } | null
   dragCurrentCoords: { x: number; y: number } | null
   imageDimensions: { width: number; height: number } | null
-  containerRef: RefObject<HTMLDivElement>
+  containerRef: RefObject<HTMLDivElement | null>
   zoom: number
 }
 

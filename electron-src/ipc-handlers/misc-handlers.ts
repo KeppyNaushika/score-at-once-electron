@@ -1,4 +1,3 @@
-import type { PageImage } from "@prisma/client"
 import { Prisma } from "@prisma/client"
 import { ipcMain } from "electron"
 import * as fs from "fs/promises"
@@ -219,7 +218,7 @@ export function setupMiscHandlers(): void {
           return { success: false, error: result.error }
         }
         const serializedStudentAnswers = (result.answerSheets || []).map(
-          (answer: any) => ({
+          (answer) => ({
             ...answer,
           }),
         )
@@ -553,11 +552,8 @@ export function setupMiscHandlers(): void {
     async (_event, projectId: string) => {
       try {
         const masterAnswers = await getMasterAnswersByProjectId(projectId)
-        return masterAnswers.map((answer: PageImage & { createdAt: Date; updatedAt: Date }) => ({
-          ...answer,
-          createdAt: answer.createdAt.toISOString(),
-          updatedAt: answer.updatedAt.toISOString(),
-        }))
+        // Dateオブジェクトをそのまま返す
+        return masterAnswers
       } catch (err) {
         console.error("Error getting master images by project ID:", err)
         throw err

@@ -51,7 +51,7 @@ export function useDrawingStyleUtils() {
           ctx.lineTo(length, 0)
           ctx.stroke()
           break
-        case "wave":
+        case "wave": {
           ctx.setLineDash([])
           ctx.beginPath()
           ctx.moveTo(0, 0)
@@ -63,7 +63,8 @@ export function useDrawingStyleUtils() {
           }
           ctx.stroke()
           break
-        case "zigzag":
+        }
+        case "zigzag": {
           ctx.setLineDash([])
           ctx.beginPath()
           ctx.moveTo(0, 0)
@@ -76,7 +77,8 @@ export function useDrawingStyleUtils() {
           ctx.lineTo(length, 0)
           ctx.stroke()
           break
-        case "double":
+        }
+        case "double": {
           ctx.setLineDash([])
           const offset = strokeWidth + 2
           ctx.beginPath()
@@ -86,6 +88,7 @@ export function useDrawingStyleUtils() {
           ctx.lineTo(length, offset / 2)
           ctx.stroke()
           break
+        }
       }
 
       ctx.restore()

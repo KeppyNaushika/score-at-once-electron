@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 
 import type { ExtendedDisabledState } from "@/components/projects/06-student-answers/student-answer-table/types"
-import type { UnifiedStudent } from "@/types/student-answer.types"
+import type { UnifiedStudent } from "@/components/projects/06-student-answers/types"
 
 export function useDisabledState() {
   const [disabledState, setDisabledState] = useState<ExtendedDisabledState>({

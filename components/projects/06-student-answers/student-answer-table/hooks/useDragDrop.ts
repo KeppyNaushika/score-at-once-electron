@@ -28,7 +28,7 @@ export function useDragDrop({
     setIsDraggingFromTrash,
     fileStatesRef,
     initialFileStatesRef,
-    buildDnDArray,
+    buildDnDArray: _buildDnDArray,
   } = useDragDropState({
     files,
     students,

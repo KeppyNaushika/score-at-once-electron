@@ -6,7 +6,6 @@ import type {
 import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/data-loader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progress-calculator"
 import {
-  calculateActualScore,
   findQuestionScore,
   getScoringStatusFromArray,
   type QuestionScore,
@@ -55,7 +54,7 @@ export function useScoringData({
   )
 
   const getActualScoreCallback = useCallback(
-    (studentId: string, questionId?: string, maxScore: number = 0) => {
+    (studentId: string, questionId?: string, _maxScore: number = 0) => {
       if (!questionId) return null
       const score = findQuestionScore(questionScores, studentId, questionId)
       // QuestionScoreの場合はpartialScoreが既にnumberに変換されているので、そのまま使用

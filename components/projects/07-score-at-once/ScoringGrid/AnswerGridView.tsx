@@ -10,7 +10,7 @@ import { useGridSelection } from "@/components/projects/07-score-at-once/Scoring
 import { useSelectionBorder } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useSelectionBorder"
 import type {
   LayoutDirection,
-  MasterAnswerData,
+  MasterGridItem,
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
@@ -20,14 +20,14 @@ export interface AnswerGridViewProps {
   /** 統一されたデータ引数 */
   allScoringData: ScoringData[]
   /** Grid表示用の模範解答データ */
-  masterAnswerData: MasterAnswerData | null
+  masterAnswerData: MasterGridItem | null
   filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
 
   /** 操作関数 */
   onScoringDataSelect: (id: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
-  onScoringDataScore: (id: string | string[], status: ScoringStatus) => void
+  onScoringDataScore: (id: string | string[], _status: ScoringStatus) => void
 
   /** 表示設定 */
   layoutDirection: LayoutDirection
@@ -47,7 +47,7 @@ export default function AnswerGridView({
   selectedScoringDataIds,
   onScoringDataSelect,
   onScoringDataReplace,
-  onScoringDataScore,
+  onScoringDataScore: _onScoringDataScore,
   layoutDirection,
   itemsPerRow: externalItemsPerRow,
   autoScroll = true,

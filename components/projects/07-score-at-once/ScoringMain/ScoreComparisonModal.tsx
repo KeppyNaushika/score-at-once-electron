@@ -14,6 +14,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import type {
+  QuestionScoreComparisonResult,
+  QuestionScoreWithUser,
+} from "@/types/electron.d"
 import {
   AlertTriangle,
   CheckCircle,
@@ -24,38 +28,6 @@ import {
   X,
 } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-
-// 採点結果の型定義
-interface QuestionScore {
-  id: string
-  score: number
-  maxScore: number
-  status:
-    | "ungraded"
-    | "correct"
-    | "incorrect"
-    | "partial"
-    | "pending"
-    | "proposed"
-    | "final"
-  comment: string
-  scoredByUserId: string
-  scoredByUser: {
-    id: string
-    name: string
-    username: string
-  }
-  createdAt: string
-  updatedAt: string
-  scoreVersion: number
-}
-
-// 比較データの型定義
-interface ScoreComparison {
-  finalScore?: QuestionScore
-  proposedScores: QuestionScore[]
-  hasConflict: boolean
-}
 
 interface ScoreComparisonModalProps {
   isOpen: boolean
@@ -68,6 +40,9 @@ interface ScoreComparisonModalProps {
   onScoreFinalized?: () => void
 }
 
+/**
+ * 複数教員による採点結果の比較・最終決定モーダル
+ */
 export default function ScoreComparisonModal({
   isOpen,
   onClose,
@@ -78,7 +53,8 @@ export default function ScoreComparisonModal({
   studentName,
   onScoreFinalized,
 }: ScoreComparisonModalProps) {
-  const [comparison, setComparison] = useState<ScoreComparison | null>(null)
+  const [comparison, setComparison] =
+    useState<QuestionScoreComparisonResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [finalizing, setFinalizing] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
@@ -90,25 +66,26 @@ export default function ScoreComparisonModal({
 
     setLoading(true)
     try {
+      // 引数順序は (studentId, cropRegionId)
       const result = await window.electronAPI.getQuestionScoreComparison(
         studentId,
-        cropRegionId,
+        cropRegionId
       )
 
-      if (result && typeof result === "object") {
-        setComparison(result as any)
+      if (result.success) {
+        setComparison(result)
 
         // 既存の最終結果がある場合はフォームに設定
-        if ((result as any).finalScore) {
-          setFinalScore((result as any).finalScore.score)
-          setFinalComment((result as any).finalScore.comment || "")
-        } else if ((result as any).proposedScores?.length === 1) {
+        if (result.finalScore) {
+          setFinalScore(Number(result.finalScore.partialScore) || 0)
+          setFinalComment("")
+        } else if (result.proposedScores?.length === 1) {
           // 採点結果が1つだけの場合は自動で設定
-          setFinalScore((result as any).proposedScores[0].score)
-          setFinalComment((result as any).proposedScores[0].comment || "")
+          setFinalScore(Number(result.proposedScores[0].partialScore) || 0)
+          setFinalComment("")
         }
       } else {
-        console.error("Failed to fetch score comparison:", result)
+        console.error("Failed to fetch score comparison:", result.error)
       }
     } catch (error) {
       console.error("Failed to fetch score comparison:", error)
@@ -132,21 +109,21 @@ export default function ScoreComparisonModal({
     try {
       const finalizeData = {
         partialScore: finalScore,
-        status: "finalized",
+        status: "final",
         comments: finalComment,
       }
       const result = await window.electronAPI.finalizeQuestionScore(
         studentId,
         cropRegionId,
         "current-user", // TODO: 認証システムと連携
-        finalizeData,
+        finalizeData
       )
 
-      if (result && result.id) {
+      if (result.success && result.score) {
         onScoreFinalized?.()
         onClose()
       } else {
-        console.error("Failed to finalize score:", result)
+        console.error("Failed to finalize score:", result.error)
       }
     } catch (error) {
       console.error("Failed to finalize score:", error)
@@ -156,7 +133,7 @@ export default function ScoreComparisonModal({
   }
 
   // 採点結果のスタイルを取得
-  const getScoreStyle = (score: QuestionScore) => {
+  const getScoreStyle = (score: QuestionScoreWithUser) => {
     switch (score.status) {
       case "correct":
         return "border-green-200 bg-green-50"
@@ -177,13 +154,13 @@ export default function ScoreComparisonModal({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "correct":
-        return <Badge className="bg-green-600">🔵 正答</Badge>
+        return <Badge className="bg-green-600">正答</Badge>
       case "incorrect":
-        return <Badge variant="destructive">❌ 誤答</Badge>
+        return <Badge variant="destructive">誤答</Badge>
       case "partial":
-        return <Badge variant="secondary">🔸 部分点</Badge>
+        return <Badge variant="secondary">部分点</Badge>
       case "pending":
-        return <Badge variant="outline">⏸️ 保留</Badge>
+        return <Badge variant="outline">保留</Badge>
       case "final":
         return (
           <Badge className="bg-purple-600">
@@ -229,29 +206,23 @@ export default function ScoreComparisonModal({
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-lg font-semibold">
-                        {comparison.finalScore.score} /{" "}
-                        {comparison.finalScore.maxScore} 点
+                        {Number(comparison.finalScore.partialScore) || 0} /{" "}
+                        {maxScore} 点
                       </div>
-                      <div className="text-muted-foreground text-sm">
-                        決定者: {comparison.finalScore.scoredByUser.name}
-                      </div>
+                      {comparison.finalScore.scoredByUser && (
+                        <div className="text-muted-foreground text-sm">
+                          決定者: {comparison.finalScore.scoredByUser.name}
+                        </div>
+                      )}
                       <div className="text-muted-foreground text-sm">
                         決定日時:{" "}
                         {new Date(
-                          comparison.finalScore.updatedAt,
+                          comparison.finalScore.updatedAt
                         ).toLocaleString()}
                       </div>
                     </div>
                     {getStatusBadge(comparison.finalScore.status)}
                   </div>
-                  {comparison.finalScore.comment && (
-                    <div className="mt-3 rounded border bg-white p-3">
-                      <div className="mb-1 text-sm font-medium">コメント:</div>
-                      <div className="text-sm">
-                        {comparison.finalScore.comment}
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             )}
@@ -271,34 +242,29 @@ export default function ScoreComparisonModal({
                           <div className="mb-2 flex items-center justify-between">
                             <div className="flex items-center space-x-3">
                               <div className="text-lg font-semibold">
-                                {score.score} / {score.maxScore} 点
+                                {Number(score.partialScore) || 0} / {maxScore}{" "}
+                                点
                               </div>
                               {getStatusBadge(score.status)}
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-medium">
-                                {score.scoredByUser.name}
-                              </div>
+                              {score.scoredByUser && (
+                                <div className="text-sm font-medium">
+                                  {score.scoredByUser.name}
+                                </div>
+                              )}
                               <div className="text-muted-foreground text-xs">
                                 {new Date(score.updatedAt).toLocaleString()}
                               </div>
                             </div>
                           </div>
-                          {score.comment && (
-                            <div className="mt-2 rounded border bg-white p-2">
-                              <div className="mb-1 text-xs font-medium">
-                                コメント:
-                              </div>
-                              <div className="text-sm">{score.comment}</div>
-                            </div>
-                          )}
                           <div className="mt-2 flex gap-2">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                setFinalScore(score.score)
-                                setFinalComment(score.comment || "")
+                                setFinalScore(Number(score.partialScore) || 0)
+                                setFinalComment("")
                               }}
                             >
                               この結果を採用

@@ -34,14 +34,14 @@ export default function StudentDetailPage() {
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false)
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false)
   const [membershipToEdit, setMembershipToEdit] = useState<Membership | null>(
-    null,
+    null
   )
 
   const handleEditStudentClick = () => {
     setIsStudentModalOpen(true)
   }
 
-  const handleSaveStudentData = async (id: string, studentData: any) => {
+  const handleSaveStudentData = async (_id: string, studentData: Record<string, unknown>) => {
     const success = await handleEditStudent(studentData)
     if (success) {
       setIsStudentModalOpen(false)
@@ -59,7 +59,7 @@ export default function StudentDetailPage() {
   }
 
   const handleSaveMembershipData = async (
-    membershipData: Partial<StudentClassMembership> & { classId: string },
+    membershipData: Partial<StudentClassMembership> & { classId: string }
   ) => {
     const success = await handleSaveMembership(membershipData, membershipToEdit)
     if (success) {
@@ -110,7 +110,7 @@ export default function StudentDetailPage() {
           onClose={() => setIsStudentModalOpen(false)}
           onSave={() => {}} // Not used for editing
           onUpdate={handleSaveStudentData}
-          studentToEdit={student as any}
+          studentToEdit={student}
         />
       )}
 
@@ -131,8 +131,8 @@ export default function StudentDetailPage() {
               firstNameKana: student.firstNameKana,
             },
           ]}
-          availableClasses={classes as any}
-          membershipToEdit={membershipToEdit as any}
+          availableClasses={classes}
+          membershipToEdit={membershipToEdit}
         />
       )}
     </div>

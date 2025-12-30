@@ -237,7 +237,7 @@ export function RichTextEditorModalV4({
 
       setAnchorDirection(newDirection)
     },
-    [anchorDirection],
+    [anchorDirection, setAnchorDirection],
   )
 
   const setVerticalAlign = useCallback(
@@ -257,7 +257,7 @@ export function RichTextEditorModalV4({
 
       setAnchorDirection(newDirection)
     },
-    [anchorDirection],
+    [anchorDirection, setAnchorDirection],
   )
 
   // キーボードショートカット

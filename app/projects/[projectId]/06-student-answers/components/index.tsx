@@ -5,14 +5,14 @@
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import { ConfirmChangesModal } from "@/components/projects/06-student-answers/student-answer-table/components/ConfirmChangesModal"
-import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
-import { Eye, FileEdit, Grid3X3 } from "lucide-react"
+import { Eye, Grid3X3 } from "lucide-react"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"
@@ -87,7 +87,7 @@ interface StudentAnswersTabContentProps {
   onUploadComplete: () => void
   onStudentAnswerUpdate: () => void
   onUpdatePendingChanges: (
-    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
   ) => void
   isConfirmModalOpen: boolean
   onCloseConfirmModal: () => void

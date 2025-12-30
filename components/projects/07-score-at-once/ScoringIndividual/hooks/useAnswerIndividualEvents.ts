@@ -1,4 +1,11 @@
-import type { DrawingTool } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type {
+  DrawingElement,
+  DrawingTool,
+  LineEditMode,
+  LineStyle,
+  RectangleEditMode,
+  SelectionRectangle,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback } from "react"
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"
@@ -23,21 +30,21 @@ interface UseAnswerDisplayEventsProps {
 
   // Drawing state
   currentTool: DrawingTool
-  drawingElements: any[]
+  drawingElements: DrawingElement[]
   selectedElementIds: string[]
   isDraggingElement: boolean
   isDrawing: boolean
-  currentDrawing: any
+  currentDrawing: Partial<DrawingElement> | null
   strokeColor: string
   strokeWidth: number
-  lineStyle: any
+  lineStyle: LineStyle
   isShiftPressed: boolean
   isCtrlPressed: boolean
   dragElementOffset: { x: number; y: number }
   isDrawingSelection: boolean
-  selectionRectangle: any
-  lineEditMode: any
-  rectangleEditMode: any
+  selectionRectangle: SelectionRectangle | null
+  lineEditMode: LineEditMode
+  rectangleEditMode: RectangleEditMode
   // テキストボックス関連の状態
   isCreatingTextBox: boolean
   showTextInput: boolean
@@ -62,14 +69,26 @@ interface UseAnswerDisplayEventsProps {
   toggleSelection: (id: string) => void
   clearSelection: () => void
   setIsDrawingSelection: (drawing: boolean) => void
-  setSelectionRectangle: (rect: any) => void
-  selectElementsInRectangle: (rect: any) => void
+  setSelectionRectangle: (
+    rect:
+      | SelectionRectangle
+      | null
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+  ) => void
+  selectElementsInRectangle: (rect: SelectionRectangle) => void
   setIsDraggingElement: (dragging: boolean) => void
   setIsDrawing: (drawing: boolean) => void
-  setCurrentDrawing: (drawing: any) => void
+  setCurrentDrawing: (
+    drawing:
+      | Partial<DrawingElement>
+      | null
+      | ((
+          prev: Partial<DrawingElement> | null,
+        ) => Partial<DrawingElement> | null),
+  ) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
-  setLineEditMode: (mode: any) => void
-  setRectangleEditMode: (mode: any) => void
+  setLineEditMode: (mode: LineEditMode) => void
+  setRectangleEditMode: (mode: RectangleEditMode) => void
   setIsCreatingTextBox: (creating: boolean) => void
   setShowTextInput: (show: boolean) => void
   setTextInputPosition: (position: { x: number; y: number }) => void
@@ -79,13 +98,15 @@ interface UseAnswerDisplayEventsProps {
   setIsDraggingHandle: (dragging: boolean) => void
   setCurrentHandle: (handle: string | null) => void
   setHoveredElementId: (id: string | null) => void
-  setDrawingElements: (elements: any[] | ((prev: any[]) => any[])) => void
-  addDrawingElement: (element: any) => void
-  updateDrawingElement: (id: string, updates: any) => void
+  setDrawingElements: (
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+  ) => void
+  addDrawingElement: (element: DrawingElement) => void
+  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
   removeDrawingElement: (id: string) => void
 
   // テキスト再編集
-  onTextElementReClick?: (element: any) => void
+  onTextElementReClick?: (element: DrawingElement) => void
 
   // 画像アスペクト比（Shift制約用）
   imageAspectRatio?: number

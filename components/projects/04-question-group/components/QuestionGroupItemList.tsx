@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubtotalGroupWithItems } from "@/types/electron"
+import type { Subtotal } from "@prisma/client"
 import {
   closestCenter,
   DndContext,
@@ -44,10 +45,10 @@ interface QuestionGroupItemListProps {
 }
 
 interface SortableItemProps {
-  item: any
+  item: Subtotal
   index: number
-  onEdit: (item: any) => void
-  onDelete: (item: any) => void
+  onEdit: (item: Subtotal) => void
+  onDelete: (item: Subtotal) => void
 }
 
 function SortableItem({ item, index, onEdit, onDelete }: SortableItemProps) {
@@ -107,7 +108,7 @@ export function QuestionGroupItemList({
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [newItemName, setNewItemName] = useState("")
-  const [editingItem, setEditingItem] = useState<any>(null)
+  const [editingItem, setEditingItem] = useState<Subtotal | null>(null)
   const [editItemName, setEditItemName] = useState("")
   const [items, setItems] = useState(subtotalGroup.subtotals)
 
@@ -168,7 +169,7 @@ export function QuestionGroupItemList({
     }
   }
 
-  const handleDeleteItem = async (item: any) => {
+  const handleDeleteItem = async (item: Subtotal) => {
     if (
       window.confirm(
         `項目「${item.name}」を削除しますか？\n関連する設問の関連付けも削除されます。`,

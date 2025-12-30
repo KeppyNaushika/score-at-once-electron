@@ -1,4 +1,5 @@
 import { CropRegionArea } from "@/types/common.types"
+import type { CropRegionWithDetails } from "@/types/prisma-extensions"
 import { User } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
@@ -24,13 +25,13 @@ export function useCropRegionSave(
    *
    * @param region - 保存する領域データ
    * @param operation - 実行する操作（'create' | 'update'）
-   * @returns Promise<any | null> 保存結果
+   * @returns Promise<CropRegionWithDetails | null> 保存結果
    */
   const saveRegion = useCallback(
     async (
       region: CropRegionArea,
       operation: DatabaseOperation,
-    ): Promise<any | null> => {
+    ): Promise<CropRegionWithDetails | null> => {
       if (!projectId || !currentUser) {
         console.warn("Missing projectId or currentUser for saveRegion")
         return null
@@ -96,7 +97,7 @@ export function useCropRegionSave(
       try {
         const saveResults: Array<{
           originalIndex: number
-          result: any
+          result: CropRegionWithDetails | null
           wasUpdate: boolean
         }> = []
 

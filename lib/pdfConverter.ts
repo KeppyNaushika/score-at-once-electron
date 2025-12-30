@@ -1,7 +1,9 @@
 "use client"
 
+import type * as PDFJS from "pdfjs-dist"
+
 // PDF.jsの動的インポートでSSRエラーを回避
-let pdfjsLib: any = null
+let pdfjsLib: typeof PDFJS | null = null
 
 // PDF.js初期化（クライアントサイドのみ）
 const initializePdfjs = async () => {

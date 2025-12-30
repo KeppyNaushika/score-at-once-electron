@@ -8,12 +8,12 @@ import QuickStats from "@/components/projects/detail/QuickStats"
 import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
-import { useWorkflowData } from "@/hooks/useWorkflowData"
-import { toast } from "sonner"
+import { useWorkflowData } from "@/components/projects/detail/hooks/useWorkflowData"
 import type { Project } from "@prisma/client"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
+import { toast } from "sonner"
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -50,7 +50,7 @@ export default function ProjectDetailPage() {
   const handleProjectUpdated = async (
     updatedProjectData: Partial<
       Pick<Project, "examName" | "description" | "examDate" | "subject">
-    >,
+    >
   ) => {
     const success = await updateProject(updatedProjectData)
     if (success) {
@@ -71,7 +71,7 @@ export default function ProjectDetailPage() {
     })
 
     try {
-      const result = await (window as any).electronAPI.archive.exportProject({
+      const result = await window.electronAPI.archive.exportProject({
         projectId,
       })
 
@@ -159,19 +159,14 @@ export default function ProjectDetailPage() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {workflowData.phases.map((phase) => (
-              <PhaseCard
-                key={phase.id}
-                phase={phase}
-                projectId={projectId}
-              />
+              <PhaseCard key={phase.id} phase={phase} projectId={projectId} />
             ))}
           </div>
-
 
           {/* Modals */}
           {project && showEditModal && (
             <EditProjectWindow
-              projectToEdit={project as any}
+              projectToEdit={project}
               setIsShowEditProjectWindow={setShowEditModal}
               onSave={handleProjectUpdated}
             />

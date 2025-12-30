@@ -1,4 +1,8 @@
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type {
+  DrawingElement,
+  LineEditMode,
+  RectangleEditMode,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback, useRef } from "react"
 
 interface UseElementSelectionProps {
@@ -10,14 +14,13 @@ interface UseElementSelectionProps {
   // Actions
   toggleSelection: (id: string) => void
   setSelectedElementIds: (ids: string[]) => void
-  clearSelection: () => void
-  setLineEditMode: (mode: any) => void
-  setRectangleEditMode: (mode: any) => void
+  setLineEditMode: (mode: LineEditMode) => void
+  setRectangleEditMode: (mode: RectangleEditMode) => void
 
   // Utils
-  hitTestElement: (element: any, x: number, y: number) => boolean
-  getLineEditMode: (element: any, x: number, y: number) => any
-  getRectangleEditMode: (element: any, x: number, y: number) => any
+  hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
+  getLineEditMode: (element: DrawingElement, x: number, y: number) => LineEditMode
+  getRectangleEditMode: (element: DrawingElement, x: number, y: number) => RectangleEditMode
 
   // Optional callback for text element re-click
   onTextElementReClick?: (element: DrawingElement) => void
@@ -30,7 +33,6 @@ export function useElementSelection({
   isCtrlPressed,
   toggleSelection,
   setSelectedElementIds,
-  clearSelection,
   setLineEditMode,
   setRectangleEditMode,
   hitTestElement,
@@ -53,7 +55,7 @@ export function useElementSelection({
 
       // 既存要素の選択チェック
       let elementSelected = false
-      let clickedElement: any = null
+      let clickedElement: DrawingElement | null = null
 
       // 要素がない場合は早期リターン
       if (drawingElements.length === 0) {
@@ -126,8 +128,8 @@ export function useElementSelection({
           )
           setRectangleEditMode(editMode)
         }
-      } else {
       }
+      // No element selected - nothing to do
 
       return { elementSelected, clickedElement, clickedCoords: imageCoords }
     },
