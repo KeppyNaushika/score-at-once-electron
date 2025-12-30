@@ -67,15 +67,6 @@ function ValidationMessages({
   )
 }
 
-interface ClassWithMemberships {
-  id: string
-  name: string
-  classCode?: string | null
-  grade?: number | null
-  description?: string | null
-  isVisible?: boolean
-}
-
 interface StudentWithMemberships {
   id: string
   studentId: string
@@ -102,14 +93,12 @@ interface SpreadsheetImportModalProps {
   isOpen: boolean
   onClose: () => void
   onImportSuccess: (importedStudents: StudentWithMemberships[]) => void
-  existingClasses: ClassWithMemberships[]
 }
 
 export default function SpreadsheetImportModal({
   isOpen,
   onClose,
   onImportSuccess,
-  existingClasses,
 }: SpreadsheetImportModalProps) {
   const {
     studentData,
@@ -117,7 +106,7 @@ export default function SpreadsheetImportModal({
     isProcessing,
     handleStudentDataChange,
     handleImportStudents,
-  } = useStudentImport(existingClasses)
+  } = useStudentImport()
 
   const handleStudentImport = async () => {
     try {

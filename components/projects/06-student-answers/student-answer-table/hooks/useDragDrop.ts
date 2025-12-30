@@ -22,21 +22,15 @@ export function useDragDrop({
   onUpdatePendingChanges,
 }: UseDragDropParams): UseDragDropReturn {
   // 状態管理
-  const {
-    activeFile,
-    setActiveFile,
-    setIsDraggingFromTrash,
-    fileStatesRef,
-    initialFileStatesRef,
-    buildDnDArray: _buildDnDArray,
-  } = useDragDropState({
-    files,
-    students,
-    modelAnswerCount,
-    mode,
-    fileOrder,
-    onFilesChange,
-  })
+  const { activeFile, setActiveFile, fileStatesRef, initialFileStatesRef } =
+    useDragDropState({
+      files,
+      students,
+      modelAnswerCount,
+      mode,
+      fileOrder,
+      onFilesChange,
+    })
 
   // イベントハンドラー
   const { handleDragStart, handleDragEnd } = useDragDropHandlers({
@@ -51,7 +45,6 @@ export function useDragDrop({
     onReloadData,
     onUpdatePendingChanges,
     setActiveFile,
-    setIsDraggingFromTrash,
     fileStatesRef,
     initialFileStatesRef,
   })
