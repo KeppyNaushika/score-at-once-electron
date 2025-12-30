@@ -28,7 +28,7 @@ import {
 } from "lucide-react"
 
 import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
-import type { LineStyle } from "@/types/drawing-annotation.types"
+import type { LineStyle } from "@/types/drawingAnnotation.types"
 
 /**
  * ツールバーのプロパティ

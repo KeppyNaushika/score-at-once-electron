@@ -20,13 +20,13 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { DEFAULT_KEYBINDINGS } from "../../constants/scoring-keybindings"
+import { DEFAULT_KEYBINDINGS } from "../../constants/scoringKeybindings"
 import type {
   CommandHandler,
   KeyBinding,
   ScoringContextState,
   ShortcutContextValue,
-} from "./ShortcutContextTypes"
+} from "./shortcutContextTypes"
 
 // ============================================
 // コンテキスト作成

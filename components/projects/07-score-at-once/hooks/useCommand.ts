@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import type {
   CommandHandler,
   CommandMetadata,
-} from "../ScoringMain/contexts/ShortcutContextTypes"
+} from "../ScoringMain/contexts/shortcutContextTypes"
 import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
 
 /**

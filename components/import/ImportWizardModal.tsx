@@ -14,7 +14,7 @@ import { ModeSelectStep } from "./steps/ModeSelectStep"
 import { MatchingConfigStep } from "./steps/MatchingConfigStep"
 import { ConflictResolveStep } from "./steps/ConflictResolveStep"
 import { ExecuteStep } from "./steps/ExecuteStep"
-import type { ImportWizardStep } from "@/types/project-archive.types"
+import type { ImportWizardStep } from "@/types/projectArchive.types"
 import { ChevronLeft, X, AlertCircle, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 

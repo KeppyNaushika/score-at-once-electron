@@ -5,8 +5,8 @@
  * - アノテーション変換
  */
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
-import type { DrawingAnnotationWithQuestionScore } from "@/types/drawing-annotation.types"
+import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
+import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 import { useCallback } from "react"
 import { renderTextElementV4 } from "../../utils/canvasTextRendererV4"
 

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react"
-import { smartFillCheckbox } from "../utils/smart-fill"
+import { smartFillCheckbox } from "../utils/smartFill"
 
 /**
  * セル位置を表す型

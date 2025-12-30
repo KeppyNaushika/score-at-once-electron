@@ -1,8 +1,8 @@
-import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
+import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
   AnchorDirection,
   DrawingElement,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback, useMemo } from "react"
 
 /**

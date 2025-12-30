@@ -9,7 +9,7 @@ import type {
   ConflictResolutions,
   CategoryConflictResolution,
   ConflictCategory,
-} from "@/types/project-archive.types"
+} from "@/types/projectArchive.types"
 
 /**
  * インポートウィザードの状態管理フック

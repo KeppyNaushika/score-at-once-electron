@@ -1,6 +1,6 @@
 "use client"
 
-import { KeyboardShortcutSection } from "@/app/settings/components/keyboard-shortcut-section"
+import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
 import { useKeyboardSettings } from "@/app/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"

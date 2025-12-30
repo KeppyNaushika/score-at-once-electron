@@ -1,9 +1,9 @@
-import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawing-constants"
+import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback } from "react"
 
 export function useEditModeUtils() {

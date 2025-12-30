@@ -4,13 +4,13 @@
 import type {
   DrawingElement,
   SelectionRectangle,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
-import type { DrawingAnnotationWithQuestionScore } from "@/types/drawing-annotation.types"
+import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 
 /**
  * useImageCanvasのプロパティ

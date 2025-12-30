@@ -6,7 +6,7 @@ import type { PreviewMode } from "@/components/projects/06-student-answers/stude
 import type {
   StudentAnswerTableProps,
   UploadModalState,
-} from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
+} from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
 import type { UploadData } from "@/components/projects/06-student-answers/types"
 import { useCallback, useEffect, useState } from "react"
 

@@ -2,7 +2,7 @@ import type {
   CellData,
   ExtendedDisabledState,
 } from "@/components/projects/06-student-answers/student-answer-table/types"
-import { getEnabledFiles } from "@/components/projects/06-student-answers/student-answer-table/utils/table-data-utils"
+import { getEnabledFiles } from "@/components/projects/06-student-answers/student-answer-table/utils/tableDataUtils"
 import type {
   PlacementStrategy,
   UnifiedFile,

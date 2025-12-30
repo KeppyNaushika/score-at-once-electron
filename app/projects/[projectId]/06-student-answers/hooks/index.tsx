@@ -6,9 +6,9 @@ import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/projects/06-student-answers/types"
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
-import type { StudentWithMemberships } from "@/types/prisma-extensions"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 import type { ProjectPageWithDetails } from "@/types/electron.d"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"

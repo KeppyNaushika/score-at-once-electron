@@ -16,7 +16,7 @@ import { TableFilters } from "@/components/projects/05-students/components/sorta
 import { TableHeaderRow } from "@/components/projects/05-students/components/sortable-student-table/components/TableHeaderRow"
 import { DragOverlayContent } from "@/components/projects/05-students/components/sortable-student-table/components/DragOverlayContent"
 import { useSortableStudentTable } from "@/components/projects/05-students/components/sortable-student-table/hooks/useSortableStudentTable"
-import type { SortableStudentTableProps } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import type { SortableStudentTableProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 export function SortableStudentTableContainer(
   props: SortableStudentTableProps

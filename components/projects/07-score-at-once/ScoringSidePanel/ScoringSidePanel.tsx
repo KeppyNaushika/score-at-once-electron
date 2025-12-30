@@ -5,7 +5,7 @@ import NavigationControls from "@/components/projects/07-score-at-once/ScoringSi
 import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/ProjectProgressCard"
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringToolbar"
-import { QuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
+import { QuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,

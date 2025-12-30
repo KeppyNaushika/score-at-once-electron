@@ -6,7 +6,7 @@ import type {
   DrawingElement,
   LineStyle,
   SelectionRectangle,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback, useState } from "react"
 
 import { useCursor } from "@/components/projects/07-score-at-once/ScoringIndividual/hooks/utils/useCursor"

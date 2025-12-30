@@ -2,7 +2,7 @@ import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
-} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback, useRef } from "react"
 
 interface UseElementMovementProps {

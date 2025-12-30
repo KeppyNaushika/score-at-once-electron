@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Keyboard } from "lucide-react"
-import { KEYBOARD_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboard-shortcuts"
+import { KEYBOARD_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
 
 interface KeyboardHelpDialogProps {
   showKeyboardHelp: boolean

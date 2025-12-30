@@ -14,7 +14,7 @@ import { Plus, UserPlus } from "lucide-react"
 import { ClassSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/ClassSelectionTab"
 import { IndividualSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/IndividualSelectionTab"
 import { useProjectStudentAddModal } from "@/components/projects/05-students/components/project-student-add-modal/hooks/useProjectStudentAddModal"
-import type { ProjectStudentAddModalProps } from "@/components/projects/05-students/components/project-student-add-modal/types/project-student-add-types"
+import type { ProjectStudentAddModalProps } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 
 export function ProjectStudentAddModalContainer({
   isOpen,

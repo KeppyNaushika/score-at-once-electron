@@ -4,7 +4,7 @@ import type {
   ClassGroup,
   Student,
   StudentStatus,
-} from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+} from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 import {
   DragEndEvent,
   DragStartEvent,

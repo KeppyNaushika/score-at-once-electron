@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import type {
   AvailableClass,
   AvailableStudent,
-} from "@/components/projects/05-students/components/project-student-add-modal/types/project-student-add-types"
+} from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 
 interface UseProjectStudentAddModalProps {
   isOpen: boolean

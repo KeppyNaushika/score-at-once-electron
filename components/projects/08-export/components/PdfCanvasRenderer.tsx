@@ -4,7 +4,7 @@ import type {
   RenderProgress,
   RenderedPageData,
 } from "@/app/projects/[projectId]/08-export/types"
-import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   preloadScoringMarkImages,
@@ -13,7 +13,7 @@ import {
   type ScoringMarkConfigForPdf,
   type SubtotalDataForPdf,
   type TotalScoreDataForPdf,
-} from "../utils/pdf-canvas-renderer"
+} from "../utils/pdfCanvasRenderer"
 
 /**
  * PDF出力ページデータ

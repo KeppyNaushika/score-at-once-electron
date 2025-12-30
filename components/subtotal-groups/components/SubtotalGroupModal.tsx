@@ -33,7 +33,7 @@ import { CSS } from "@dnd-kit/utilities"
 import type {
   SubtotalGroup,
   SubtotalGroupFormData,
-} from "@/components/subtotal-groups/types/subtotal-group-types"
+} from "@/components/subtotal-groups/types/subtotalGroupTypes"
 
 interface SubtotalGroupModalProps {
   isOpen: boolean

@@ -2,7 +2,7 @@ import type {
   GradingMode,
   PageImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
-import { getModifierKeyLabel } from "@/lib/platform-utils"
+import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { useCallback, useRef, useState } from "react"
 
 export function useScoringMainState() {

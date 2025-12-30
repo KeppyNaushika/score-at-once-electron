@@ -1,6 +1,6 @@
 "use client"
 
-import type { Student } from "@/components/projects/05-students/components/project-students-page/types/project-students-types"
+import type { Student } from "@/components/projects/05-students/components/project-students-page/types/projectStudentsTypes"
 
 interface StudentStatisticsCardsProps {
   students: Student[]

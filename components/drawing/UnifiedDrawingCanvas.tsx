@@ -9,9 +9,9 @@ import {
   useDrawingAnnotations,
   type DrawingTool,
 } from "@/hooks/useDrawingAnnotations"
-import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
+import type { DrawingAnnotation } from "@/types/drawingAnnotation.types"
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { redrawCanvas } from "./utils/canvas-renderer"
+import { redrawCanvas } from "./utils/canvasRenderer"
 import { useCanvasMouseEvents } from "./hooks/useCanvasMouseEvents"
 
 /**

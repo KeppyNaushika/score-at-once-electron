@@ -1,7 +1,7 @@
 "use client"
 
 import { ScoringMarkSettingsContainer } from "@/components/projects/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
-import type { ScoringMarkConfig } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
+import type { ScoringMarkConfig } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 // Re-export types for backward compatibility
 export type {
@@ -12,19 +12,19 @@ export type {
   PageOrientation,
   ScoringMarkConfig,
   ScoreTextConfig,
-} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
+} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 // Re-export utilities
 export {
   loadConfigFromStorage,
   saveConfigToStorage,
-} from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoring-mark-utils"
+} from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 
 export {
   defaultConfig as defaultScoringMarkConfig,
   defaultPartialScoreConfig,
   defaultSummaryScoreConfig,
-} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
+} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 
 interface ScoringMarkSettingsProps {
   config: ScoringMarkConfig

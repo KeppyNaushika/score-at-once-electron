@@ -3,7 +3,7 @@
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { GripVertical } from "lucide-react"
-import type { Student } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import type { Student } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 interface TableHeaderRowProps {
   sortedStudents: Student[]

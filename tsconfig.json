@@ -40,7 +40,7 @@
   "exclude": [
     "node_modules",
     "playwright.config.ts",
-    "playwright-electron.config.ts",
+    "playwrightElectron.config.ts",
     "tests/**/*",
     "e2e/**/*"
   ]

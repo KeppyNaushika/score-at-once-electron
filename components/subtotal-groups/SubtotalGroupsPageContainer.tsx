@@ -7,7 +7,7 @@ import { Plus, Search } from "lucide-react"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"
 import { SubtotalGroupModal } from "@/components/subtotal-groups/components/SubtotalGroupModal"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotal-group-types"
+import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 
 export function SubtotalGroupsPageContainer() {
   const [subtotalGroups, setSubtotalGroups] = useState<SubtotalGroup[]>([])

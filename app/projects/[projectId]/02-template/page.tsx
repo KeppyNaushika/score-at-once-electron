@@ -12,7 +12,7 @@ import {
   AreaType,
   RegionCoordinates,
 } from "@/components/projects/02-template/types"
-import { canProceedToNextStep } from "@/components/projects/02-template/utils/template-actions"
+import { canProceedToNextStep } from "@/components/projects/02-template/utils/templateActions"
 import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
 import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
 import { useCropRegionSave } from "@/components/projects/02-template/hooks/useCropRegionSave"

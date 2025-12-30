@@ -4,7 +4,7 @@
  */
 import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
 import { useCallback } from "react"
-import type { DrawingTool } from "../../types/answer-individual-types"
+import type { DrawingTool } from "../../types/answerIndividualTypes"
 
 /** 描画ツールキーボードショートカットフックのパラメータ */
 export interface UseDrawingToolShortcutsParams {

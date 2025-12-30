@@ -1,8 +1,8 @@
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import {
   compareFileStates,
   updateFileStatesFromDnDArray,
-} from "@/components/projects/06-student-answers/student-answer-table/utils/drag-drop-utils"
+} from "@/components/projects/06-student-answers/student-answer-table/utils/dragDropUtils"
 import type {
   PlacementStrategy,
   UnifiedFile,

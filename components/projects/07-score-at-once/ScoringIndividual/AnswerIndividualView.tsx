@@ -18,7 +18,7 @@ import {
 import type {
   AnswerIndividualViewProps,
   LineStyle,
-} from "./types/answer-individual-types"
+} from "./types/answerIndividualTypes"
 
 export default function AnswerIndividualView({
   scoringDatas,

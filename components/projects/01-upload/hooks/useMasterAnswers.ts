@@ -15,7 +15,7 @@ import {
   generateUploadSuccessMessage,
   moveImageInList,
   sortImagesByPageNumber,
-} from "../utils/image-utils"
+} from "../utils/imageUtils"
 import {
   clearPasswordGlobals,
   convertPdfWithPassword,
@@ -25,7 +25,7 @@ import {
   createPasswordLoadingState,
   getPasswordGlobals,
   setPasswordGlobals,
-} from "../utils/password-utils"
+} from "../utils/passwordUtils"
 
 /**
  * マスター解答管理フック

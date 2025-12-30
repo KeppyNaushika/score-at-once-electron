@@ -23,7 +23,7 @@ import type {
   DrawingElement,
   DrawingTool,
   LineStyle,
-} from "./types/answer-individual-types"
+} from "./types/answerIndividualTypes"
 
 const FADE_OUT_DELAY = 3000 // 3秒無操作でフェードアウト
 

@@ -9,7 +9,7 @@ import type {
   DrawingCreateData,
   DrawingType,
   DrawingUpdateData,
-} from "../../../types/drawing-annotation.types"
+} from "../../../types/drawingAnnotation.types"
 import prisma from "./client"
 import { createQuestionScore } from "./questionScore"
 

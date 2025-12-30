@@ -12,7 +12,7 @@ import { useCallback, useState } from "react"
 import type {
   AnchorDirection,
   DrawingElement,
-} from "../../types/answer-individual-types"
+} from "../../types/answerIndividualTypes"
 
 interface UseTextboxV4IntegrationProps {
   /** Canvas/画像の幅（px） */

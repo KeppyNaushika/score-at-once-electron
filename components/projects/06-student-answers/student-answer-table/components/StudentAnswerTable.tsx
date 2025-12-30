@@ -5,7 +5,7 @@ import { TableDragOverlay } from "@/components/projects/06-student-answers/stude
 import { TableHeader } from "@/components/projects/06-student-answers/student-answer-table/components/TableHeader"
 import { UploadModalWrapper } from "@/components/projects/06-student-answers/student-answer-table/components/UploadModalWrapper"
 import { useStudentAnswerTableLogic } from "@/components/projects/06-student-answers/student-answer-table/hooks/useStudentAnswerTableLogic"
-import type { StudentAnswerTableProps } from "@/components/projects/06-student-answers/student-answer-table/types/local-types"
+import type { StudentAnswerTableProps } from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
 import { Card, CardContent } from "@/components/ui/card"
 import { closestCenter, DndContext } from "@dnd-kit/core"
 import { FileImage } from "lucide-react"
