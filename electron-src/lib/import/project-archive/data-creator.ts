@@ -35,12 +35,12 @@ export interface DataCreationResult {
  */
 export async function createImportedData(
   data: ExtractedArchiveData,
-  mappings: IdMappings,
+  mappings: IdMappings
 ): Promise<DataCreationResult> {
   const warnings: string[] = []
   const newProjectId = remapIdRequired(
     data.projectData.project.id,
-    mappings.project,
+    mappings.project
   )
 
   try {
@@ -87,9 +87,7 @@ export async function createImportedData(
               studentId: newStudentId,
               classId: newClassId,
               startDate: new Date(membership.startDate),
-              endDate: membership.endDate
-                ? new Date(membership.endDate)
-                : null,
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
               attendanceNumber: membership.attendanceNumber,
               notes: membership.notes,
             },
@@ -111,7 +109,7 @@ export async function createImportedData(
       }
       if (data.usersData.users.length > 0) {
         warnings.push(
-          "インポートされたユーザーのパスコードは空に設定されています。必要に応じて再設定してください。",
+          "インポートされたユーザーのパスコードは空に設定されています。必要に応じて再設定してください。"
         )
       }
 
@@ -133,7 +131,7 @@ export async function createImportedData(
             name: s.name,
             subtotalGroupId: remapIdRequired(
               s.subtotalGroupId,
-              mappings.subtotalGroup,
+              mappings.subtotalGroup
             ),
             order: s.order,
           },
@@ -171,7 +169,7 @@ export async function createImportedData(
       for (const psg of data.projectData.projectSubtotalGroups) {
         const newSubtotalGroupId = remapId(
           psg.subtotalGroupId,
-          mappings.subtotalGroup,
+          mappings.subtotalGroup
         )
         if (newSubtotalGroupId) {
           await tx.projectSubtotalGroup.create({
@@ -218,7 +216,7 @@ export async function createImportedData(
             id: remapIdRequired(region.id, mappings.cropRegion),
             projectPageId: remapIdRequired(
               region.projectPageId,
-              mappings.projectPage,
+              mappings.projectPage
             ),
             label: region.label,
             type: region.type,
@@ -260,7 +258,9 @@ export async function createImportedData(
               id: remapIdRequired(qs.id, mappings.questionScore),
               cropRegionId: newCropRegionId,
               studentId: newStudentId,
-              partialScore: qs.partialScore ? parseFloat(qs.partialScore) : null,
+              partialScore: qs.partialScore
+                ? parseFloat(qs.partialScore)
+                : null,
               status: qs.status,
               scoredByUserId: newScoredByUserId,
             },
@@ -272,7 +272,7 @@ export async function createImportedData(
       for (const da of data.scoresData.drawingAnnotations) {
         const newQuestionScoreId = remapId(
           da.questionScoreId,
-          mappings.questionScore,
+          mappings.questionScore
         )
         const newCreatedByUserId = remapId(da.createdByUserId, mappings.user)
 
@@ -335,9 +335,7 @@ export async function createImportedData(
     return {
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : "データの作成に失敗しました",
+        error instanceof Error ? error.message : "データの作成に失敗しました",
     }
   }
 }
@@ -347,7 +345,7 @@ export async function createImportedData(
  */
 async function copyImages(
   data: ExtractedArchiveData,
-  newProjectId: string,
+  newProjectId: string
 ): Promise<void> {
   const dataDir = getDataDirectory()
   const projectDir = path.join(dataDir, "projects", newProjectId)
@@ -369,7 +367,7 @@ async function copyImages(
   for (const srcPath of data.answerSheetPaths) {
     // 相対パス構造を維持
     const relativePath = srcPath.substring(
-      srcPath.indexOf("answer-sheets") + "answer-sheets".length + 1,
+      srcPath.indexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const destPath = path.join(answerSheetsDir, relativePath)
 
@@ -384,7 +382,7 @@ async function copyImages(
  */
 async function createPageImageRecords(
   data: ExtractedArchiveData,
-  mappings: IdMappings,
+  mappings: IdMappings
 ): Promise<void> {
   for (const img of data.projectData.pageImages) {
     const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
@@ -402,9 +400,13 @@ async function createPageImageRecords(
     } else {
       // STUDENT_ANSWERの場合、元のパス構造を維持
       const relativePath = img.imagePath.substring(
-        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1,
+        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
       )
-      newImagePath = `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
+      newImagePath =
+        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
+          /\\/g,
+          "/"
+        )
     }
 
     await prisma.pageImage.create({

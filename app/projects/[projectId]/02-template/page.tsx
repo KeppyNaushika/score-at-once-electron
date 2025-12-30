@@ -8,7 +8,10 @@ import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 
 // Refactored imports
-import { AreaType, RegionCoordinates } from "@/components/projects/02-template/types"
+import {
+  AreaType,
+  RegionCoordinates,
+} from "@/components/projects/02-template/types"
 import { canProceedToNextStep } from "@/components/projects/02-template/utils/template-actions"
 import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
 import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
@@ -37,7 +40,7 @@ export default function TemplateStepPage() {
 
   const { autoSaveRegions, createRegion, updateRegion } = useCropRegionSave(
     projectId,
-    initialData.currentUser,
+    initialData.currentUser
   )
 
   // 初期データの読み込み初期化
@@ -64,7 +67,7 @@ export default function TemplateStepPage() {
       initialData.selectedMasterImage,
       autoSaveRegions,
       handleMasterImageChange,
-    ],
+    ]
   )
 
   // 領域変更処理の効率化
@@ -72,7 +75,7 @@ export default function TemplateStepPage() {
     async (
       newRegions:
         | CropRegionArea[]
-        | ((prev: CropRegionArea[]) => CropRegionArea[]),
+        | ((prev: CropRegionArea[]) => CropRegionArea[])
     ) => {
       const finalRegions =
         typeof newRegions === "function"
@@ -85,7 +88,7 @@ export default function TemplateStepPage() {
       // 互換性のためのautoSaveRegions
       await autoSaveRegions(finalRegions)
     },
-    [initialData.cropRegions, updateCropRegions, autoSaveRegions],
+    [initialData.cropRegions, updateCropRegions, autoSaveRegions]
   )
 
   // 新規領域作成ハンドラー
@@ -100,7 +103,7 @@ export default function TemplateStepPage() {
         type,
         coords,
         initialData.selectedMasterImage.id,
-        initialData.cropRegions,
+        initialData.cropRegions
       )
 
       if (newRegion) {
@@ -114,7 +117,7 @@ export default function TemplateStepPage() {
       createRegion,
       updateCropRegions,
       updateLayoutId,
-    ],
+    ]
   )
 
   // 領域更新ハンドラー
@@ -137,7 +140,7 @@ export default function TemplateStepPage() {
         }
       }
     },
-    [initialData.cropRegions, updateRegion, updateCropRegions],
+    [initialData.cropRegions, updateRegion, updateCropRegions]
   )
 
   // 次のステップへの遷移
@@ -150,8 +153,9 @@ export default function TemplateStepPage() {
   // 現在選択中の画像に対応する領域があるかチェック
   const hasRegionsForCurrentImage =
     initialData.selectedMasterImage &&
-    initialData.cropRegions.filter((r) => r.projectPageId === initialData.selectedMasterImage?.id)
-      .length > 0
+    initialData.cropRegions.filter(
+      (r) => r.projectPageId === initialData.selectedMasterImage?.id
+    ).length > 0
 
   // ローディング・エラー状態の表示
   if (isLoading || !projectId) {
@@ -161,10 +165,7 @@ export default function TemplateStepPage() {
   return (
     <div className="flex h-full flex-col">
       {/* ヘッダー */}
-      <PageHeader
-        title="答案の採点領域作成"
-        helpButton={helpButton}
-      >
+      <PageHeader title="答案の採点領域作成" helpButton={helpButton}>
         {hasRegionsForCurrentImage && (
           <Button onClick={goToNextStep}>次へ: 採点領域の詳細情報設定</Button>
         )}

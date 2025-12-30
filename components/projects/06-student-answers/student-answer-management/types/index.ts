@@ -1,4 +1,5 @@
 // Import and re-export from student-answer.types for consistency
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import type {
   PendingChange,
   PlacementStrategy,
@@ -6,7 +7,6 @@ import type {
   UnifiedStudent,
   UploadData,
 } from "@/components/projects/06-student-answers/types"
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 
 export type {
   PendingChange,
@@ -48,10 +48,13 @@ export interface StudentAnswerUploadProps {
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
+    changedFiles: Array<{
+      fileId: string
+      fromState: FileState
+      toState: FileState
+    }>
   ) => void
 }
-
 
 export interface FileUploadZoneProps {
   onDrop: (files: File[]) => void

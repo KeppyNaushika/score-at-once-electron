@@ -39,7 +39,7 @@ export interface StudentWithAnswers {
   isSelected: boolean
   hasExistingAnswers: boolean
   overwrite: boolean
-  status?: 'participating' | 'expected' | 'absent'
+  status?: "participating" | "expected" | "absent"
   customOrder?: number | null
   attendanceNumber?: number | null
 }
@@ -54,7 +54,7 @@ export interface UseStudentAnswerUploadProps {
     firstNameKana: string
     studentId: string
     attendanceNumber?: number | null
-    status?: 'participating' | 'expected' | 'absent'
+    status?: "participating" | "expected" | "absent"
     customOrder?: number | null
   }>
   onUploadComplete?: () => void

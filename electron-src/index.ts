@@ -13,16 +13,16 @@ if (process.platform === "win32" && app.isPackaged) {
     try {
       const path = require("path")
       const fs = require("fs")
-      
+
       // データディレクトリにログファイルを配置
       const { getDataDirectory } = require("./lib/dataManager")
       const dataDir = getDataDirectory()
-      
+
       // データディレクトリが存在しない場合は作成
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 })
       }
-      
+
       const logPath = path.join(dataDir, "debug.log")
       console.log = (...args) => {
         const message = args.join(" ") + "\n"

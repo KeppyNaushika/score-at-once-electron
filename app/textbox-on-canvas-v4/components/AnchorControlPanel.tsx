@@ -103,7 +103,7 @@ export function AnchorControlPanel({
   const increaseTextSize = () => {
     const newSize = Math.min(
       TEXTBOX_SETTINGS.MAX_TEXT_SIZE,
-      currentTextSize + TEXTBOX_SETTINGS.TEXT_SIZE_STEP,
+      currentTextSize + TEXTBOX_SETTINGS.TEXT_SIZE_STEP
     )
     onTextSizeChange(newSize)
   }
@@ -114,7 +114,7 @@ export function AnchorControlPanel({
   const decreaseTextSize = () => {
     const newSize = Math.max(
       TEXTBOX_SETTINGS.MIN_TEXT_SIZE,
-      currentTextSize - TEXTBOX_SETTINGS.TEXT_SIZE_STEP,
+      currentTextSize - TEXTBOX_SETTINGS.TEXT_SIZE_STEP
     )
     onTextSizeChange(newSize)
   }

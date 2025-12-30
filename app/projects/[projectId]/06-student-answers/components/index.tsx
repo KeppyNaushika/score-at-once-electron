@@ -43,7 +43,6 @@ export function LoadingSpinner() {
   )
 }
 
-
 interface StudentAnswersTabsNavigationProps {
   activeTab: StudentAnswerTab
   onTabChange: (tab: string) => void
@@ -87,7 +86,11 @@ interface StudentAnswersTabContentProps {
   onUploadComplete: () => void
   onStudentAnswerUpdate: () => void
   onUpdatePendingChanges: (
-    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
+    changedFiles: Array<{
+      fileId: string
+      fromState: FileState
+      toState: FileState
+    }>
   ) => void
   isConfirmModalOpen: boolean
   onCloseConfirmModal: () => void

@@ -65,7 +65,7 @@ const CropRegionList = ({
       <div className="scrollbar-overlay flex-1 overflow-auto p-4">
         {areas.length === 0 ? (
           <div className="text-muted-foreground border-muted-foreground/25 rounded-lg border-2 border-dashed py-8 text-center">
-            <Palette className="mx-auto mb-3 h-10 w-10 text-muted-foreground/70" />
+            <Palette className="text-muted-foreground/70 mx-auto mb-3 h-10 w-10" />
             <p className="text-base font-medium">領域を作成してください</p>
             <p className="mt-2 text-sm">
               左の模範解答上でマウスをドラッグして領域を作成できます

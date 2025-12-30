@@ -71,7 +71,7 @@ export function useDisabledState() {
         disabledState.positions.has(position)
       )
     },
-    [disabledState],
+    [disabledState]
   )
 
   // 初期化関数（現在は何もしない）
@@ -99,7 +99,7 @@ export function useDisabledState() {
         }))
       }
     },
-    [],
+    []
   )
 
   return {

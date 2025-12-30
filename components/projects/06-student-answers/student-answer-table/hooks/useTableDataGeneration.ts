@@ -19,7 +19,7 @@ interface UseTableDataGenerationParams {
   mode?: "upload" | "view"
   enhancedIsPositionDisabled: (
     studentIndex: number,
-    pageIndex: number,
+    pageIndex: number
   ) => boolean
   allowOverwrite?: boolean
   existingStudentAnswers?: Array<{
@@ -152,7 +152,7 @@ export function useTableDataGeneration({
           if (answerSheet.studentId && answerSheet.pageNumber) {
             // 既存答案の学生IDとページ番号から位置を特定
             const studentIndex = sortedStudents.findIndex(
-              (s) => s.id === answerSheet.studentId,
+              (s) => s.id === answerSheet.studentId
             )
             const pageIndex = answerSheet.pageNumber - 1
             if (studentIndex >= 0 && pageIndex >= 0) {

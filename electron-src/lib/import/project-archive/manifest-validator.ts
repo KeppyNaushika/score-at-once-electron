@@ -50,14 +50,14 @@ function compareVersions(v1: string, v2: string): number {
  * @returns 互換性情報
  */
 export function validateCompatibility(
-  manifest: ArchiveManifest,
+  manifest: ArchiveManifest
 ): CompatibilityInfo {
   const warnings: string[] = []
 
   // アーカイブバージョンが現在より新しい場合はエラー
   const versionCompare = compareVersions(
     manifest.version,
-    CURRENT_ARCHIVE_VERSION,
+    CURRENT_ARCHIVE_VERSION
   )
   if (versionCompare > 0) {
     return {
@@ -86,7 +86,7 @@ export function validateCompatibility(
   if (versionCompare < 0) {
     warnings.push(
       `このアーカイブは古いバージョン(${manifest.version})で作成されています。` +
-        `一部のデータが欠損している可能性があります。`,
+        `一部のデータが欠損している可能性があります。`
     )
   }
 
@@ -110,9 +110,7 @@ export function validateCompatibility(
  * @param manifest - 検証するマニフェスト
  * @returns エラーメッセージ（問題なければnull）
  */
-export function validateManifestFields(
-  manifest: unknown,
-): string | null {
+export function validateManifestFields(manifest: unknown): string | null {
   if (!manifest || typeof manifest !== "object") {
     return "マニフェストが不正です"
   }

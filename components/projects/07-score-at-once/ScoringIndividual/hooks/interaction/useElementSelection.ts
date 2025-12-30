@@ -19,8 +19,16 @@ interface UseElementSelectionProps {
 
   // Utils
   hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
-  getLineEditMode: (element: DrawingElement, x: number, y: number) => LineEditMode
-  getRectangleEditMode: (element: DrawingElement, x: number, y: number) => RectangleEditMode
+  getLineEditMode: (
+    element: DrawingElement,
+    x: number,
+    y: number
+  ) => LineEditMode
+  getRectangleEditMode: (
+    element: DrawingElement,
+    x: number,
+    y: number
+  ) => RectangleEditMode
 
   // Optional callback for text element re-click
   onTextElementReClick?: (element: DrawingElement) => void
@@ -117,14 +125,14 @@ export function useElementSelection({
           const editMode = getLineEditMode(
             firstSelectedElement,
             imageCoords.x,
-            imageCoords.y,
+            imageCoords.y
           )
           setLineEditMode(editMode)
         } else if (firstSelectedElement?.type === "rectangle") {
           const editMode = getRectangleEditMode(
             firstSelectedElement,
             imageCoords.x,
-            imageCoords.y,
+            imageCoords.y
           )
           setRectangleEditMode(editMode)
         }
@@ -146,7 +154,7 @@ export function useElementSelection({
       getRectangleEditMode,
       setRectangleEditMode,
       onTextElementReClick,
-    ],
+    ]
   )
 
   return {

@@ -43,7 +43,7 @@ export function useScoringNavigation({
     if (!currentCropRegionId || !cropRegions.length) return
 
     const currentIndex = cropRegions.findIndex(
-      (region) => region.id === currentCropRegionId,
+      (region) => region.id === currentCropRegionId
     )
     if (currentIndex === -1 || currentIndex >= cropRegions.length - 1) return
 
@@ -57,7 +57,7 @@ export function useScoringNavigation({
     if (!currentCropRegionId || !cropRegions.length) return
 
     const currentIndex = cropRegions.findIndex(
-      (region) => region.id === currentCropRegionId,
+      (region) => region.id === currentCropRegionId
     )
     if (currentIndex <= 0) return
 
@@ -101,7 +101,7 @@ export function useScoringNavigation({
     (
       startIndex: number,
       direction: number,
-      gridAnswers: ScoringDataWithSelection[],
+      gridAnswers: ScoringDataWithSelection[]
     ): number => {
       const totalAnswers = gridAnswers.length
       for (let i = startIndex; i >= 0 && i < totalAnswers; i += direction) {
@@ -112,7 +112,7 @@ export function useScoringNavigation({
       }
       return -1
     },
-    [],
+    []
   )
 
   // WASD移動ハンドラー（レイアウト方向とフィルタリングに対応）
@@ -157,7 +157,7 @@ export function useScoringNavigation({
       if (selectedPageImageIds.size >= 1) {
         const selectedId = Array.from(selectedPageImageIds)[0]
         currentIndex = gridAnswers.findIndex(
-          (answer) => answer.id === selectedId,
+          (answer) => answer.id === selectedId
         )
       }
 
@@ -292,7 +292,7 @@ export function useScoringNavigation({
           const validIndex = findNextValidAnswer(
             newIndex + direction,
             direction,
-            gridAnswers,
+            gridAnswers
           )
           if (validIndex !== -1) {
             setSelectedPageImageIds(new Set([gridAnswers[validIndex].id]))
@@ -308,7 +308,7 @@ export function useScoringNavigation({
       layoutDirection,
       findNextValidAnswer,
       effectiveColumns,
-    ],
+    ]
   )
 
   return {

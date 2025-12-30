@@ -21,13 +21,11 @@ export default function RegionInfoPage() {
     typeof paramsProjectId === "string" ? paramsProjectId : paramsProjectId?.[0]
 
   const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(
-    null,
+    null
   )
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>(
-    [],
-  )
+  const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
 
   const [projectPages, setProjectPages] = useState<ProjectPage[]>([])
   const [selectedProjectPage, setSelectedProjectPage] =
@@ -58,7 +56,7 @@ export default function RegionInfoPage() {
           fetchedProject.projectPages.length > 0
         ) {
           const sortedProjectPages = [...fetchedProject.projectPages].sort(
-            (a, b) => a.pageNumber - b.pageNumber,
+            (a, b) => a.pageNumber - b.pageNumber
           )
           setProjectPages(sortedProjectPages)
           setSelectedProjectPage(sortedProjectPages[0])
@@ -66,10 +64,12 @@ export default function RegionInfoPage() {
           // 全ページの画像URLを取得
           const urls: { [key: string]: string } = {}
           for (const page of sortedProjectPages) {
-            const masterImage = page.pageImages?.find(img => img.imageType === 'MODEL_ANSWER')
+            const masterImage = page.pageImages?.find(
+              (img) => img.imageType === "MODEL_ANSWER"
+            )
             if (masterImage) {
               const url = await window.electronAPI.resolveFileProtocolPath(
-                masterImage.imagePath,
+                masterImage.imagePath
               )
               urls[page.id] = url
             }
@@ -136,11 +136,10 @@ export default function RegionInfoPage() {
           if (area.id) {
             return await window.electronAPI.updateCropRegion(
               area.id,
-              regionData,
+              regionData
             )
           } else {
-            const { orderIndex: _ignoredOrderIndex, ...createData } =
-              regionData
+            const { orderIndex: _ignoredOrderIndex, ...createData } = regionData
             return await window.electronAPI.createCropRegion(createData)
           }
         })
@@ -150,27 +149,25 @@ export default function RegionInfoPage() {
         if (savedRegions.length > 0) {
           setCropRegions(
             savedRegions.filter(
-              (region): region is CropRegionWithDetails => region !== null,
-            ),
+              (region): region is CropRegionWithDetails => region !== null
+            )
           )
         }
       } catch (error) {
         console.error("Auto-save failed:", error)
       }
     },
-    [projectId, currentUser],
+    [projectId, currentUser]
   )
 
   const handleRegionsChange = useCallback(
     (
       newRegions:
         | CropRegionWithDetails[]
-        | ((prev: CropRegionWithDetails[]) => CropRegionWithDetails[]),
+        | ((prev: CropRegionWithDetails[]) => CropRegionWithDetails[])
     ) => {
       const updatedRegions =
-        typeof newRegions === "function"
-          ? newRegions(cropRegions)
-          : newRegions
+        typeof newRegions === "function" ? newRegions(cropRegions) : newRegions
 
       setCropRegions(updatedRegions)
 
@@ -186,7 +183,7 @@ export default function RegionInfoPage() {
 
       setSaveTimeoutId(timeoutId)
     },
-    [saveTimeoutId, autoSaveRegions, cropRegions],
+    [saveTimeoutId, autoSaveRegions, cropRegions]
   )
 
   if (isLoading) {
@@ -208,7 +205,9 @@ export default function RegionInfoPage() {
     <div className="flex h-screen flex-col">
       <PageHeader title="採点領域の詳細情報設定" helpButton={helpButton}>
         <Button
-          onClick={() => router.push(`/projects/${projectId}/04-question-group`)}
+          onClick={() =>
+            router.push(`/projects/${projectId}/04-question-group`)
+          }
         >
           次へ: 小計点の設定
         </Button>
@@ -227,7 +226,7 @@ export default function RegionInfoPage() {
               const displayPageNumber = page.pageNumber
               const imageUrl = backgroundImageUrls[page.id]
               const pageRegions = cropRegions.filter(
-                (region) => region.projectPage?.id === page.id,
+                (region) => region.projectPage?.id === page.id
               )
 
               return (
@@ -256,7 +255,7 @@ export default function RegionInfoPage() {
                       />
                       {pageRegions.map((area, index) => {
                         const globalIndex = cropRegions.findIndex(
-                          (r) => r.id === area.id,
+                          (r) => r.id === area.id
                         )
                         const isSelected = selectedRowIndex === globalIndex
                         return (

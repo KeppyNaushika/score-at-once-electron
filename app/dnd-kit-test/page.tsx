@@ -134,7 +134,7 @@ export default function DndKitTestPage() {
 
       return files[index]
     },
-    [files, placementStrategy],
+    [files, placementStrategy]
   )
 
   // クライアントサイドマウント状態
@@ -168,7 +168,7 @@ export default function DndKitTestPage() {
       activationConstraint: {
         distance: 8,
       },
-    }),
+    })
   )
 
   // ドラッグ開始処理
@@ -179,7 +179,7 @@ export default function DndKitTestPage() {
       setActiveFile(file || null)
       setDraggedFileId(activeId)
     },
-    [files],
+    [files]
   )
 
   // ドラッグ終了処理（dragend時にデータ確定）
@@ -320,7 +320,7 @@ export default function DndKitTestPage() {
                       draggedFileId={draggedFileId}
                     />
                   )
-                }),
+                })
               )}
             </div>
           </SortableContext>
@@ -355,7 +355,7 @@ export default function DndKitTestPage() {
             {JSON.stringify(
               files.map((f) => ({ id: f.id, name: f.name })),
               null,
-              2,
+              2
             )}
           </pre>
         </div>
@@ -387,7 +387,7 @@ export default function DndKitTestPage() {
                     <div className="font-medium">{file?.name || "空き"}</div>
                   </div>
                 )
-              }),
+              })
             )}
           </div>
         </div>

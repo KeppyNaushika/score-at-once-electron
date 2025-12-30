@@ -46,7 +46,7 @@ export function MultiSelect({
     onChange(
       selectedValues.includes(value)
         ? selectedValues.filter((v) => v !== value)
-        : [...selectedValues, value],
+        : [...selectedValues, value]
     )
   }
 
@@ -110,7 +110,7 @@ export function MultiSelect({
                       "mr-2 h-4 w-4",
                       selectedValues.includes(option.value)
                         ? "opacity-100"
-                        : "opacity-0",
+                        : "opacity-0"
                     )}
                   />
                   {option.label}

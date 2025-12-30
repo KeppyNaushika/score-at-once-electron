@@ -9,7 +9,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Calendar, Download, Edit, Info, MoreVertical, Tag, Trash2 } from "lucide-react"
+import {
+  Calendar,
+  Download,
+  Edit,
+  Info,
+  MoreVertical,
+  Tag,
+  Trash2,
+} from "lucide-react"
 import Link from "next/link"
 
 interface ProjectData {

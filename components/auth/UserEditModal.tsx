@@ -28,7 +28,12 @@ interface UserEditModalProps {
   user: User | null
 }
 
-export function UserEditModal({ isOpen, onClose, onUserUpdated, user }: UserEditModalProps) {
+export function UserEditModal({
+  isOpen,
+  onClose,
+  onUserUpdated,
+  user,
+}: UserEditModalProps) {
   const [formData, setFormData] = useState({
     username: user?.username || "",
     name: user?.name || "",
@@ -66,7 +71,9 @@ export function UserEditModal({ isOpen, onClose, onUserUpdated, user }: UserEdit
       onUserUpdated()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ユーザーの更新に失敗しました")
+      setError(
+        err instanceof Error ? err.message : "ユーザーの更新に失敗しました"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -94,26 +101,28 @@ export function UserEditModal({ isOpen, onClose, onUserUpdated, user }: UserEdit
             <Input
               id="username"
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
               placeholder="ユーザー名を入力"
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="name">表示名</Label>
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="表示名を入力"
               required
             />
           </div>
 
-          {error && (
-            <div className="text-sm text-red-500">{error}</div>
-          )}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>

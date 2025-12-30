@@ -125,7 +125,7 @@ export type ProjectWithDetailsPayload = PrismaTypes.PromiseReturnType<
 // Project作成
 export const createProject = async (
   data: Omit<PrismaTypes.ProjectCreateInput, "userProjects">,
-  userId: string,
+  userId: string
 ) => {
   return prisma.project.create({
     data: {
@@ -165,7 +165,7 @@ export const createProject = async (
 // Project更新
 export const updateProject = async (
   id: string,
-  data: PrismaTypes.ProjectUpdateInput,
+  data: PrismaTypes.ProjectUpdateInput
 ) => {
   return prisma.project.update({
     where: { id },
@@ -179,4 +179,3 @@ export const deleteProject = async (id: string) => {
     where: { id },
   })
 }
-

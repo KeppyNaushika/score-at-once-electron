@@ -29,7 +29,7 @@ export interface ResolvedConflict {
  */
 function compareTimestamps(
   importData: Record<string, unknown>,
-  existingData: Record<string, unknown>,
+  existingData: Record<string, unknown>
 ): Resolution {
   const importUpdatedAt = importData.updatedAt
   const existingUpdatedAt = existingData.updatedAt
@@ -50,7 +50,7 @@ function compareTimestamps(
  */
 export function resolveConflict(
   item: ConflictItem,
-  categoryResolution: CategoryConflictResolution | undefined,
+  categoryResolution: CategoryConflictResolution | undefined
 ): Resolution {
   if (!categoryResolution) {
     // デフォルトはタイムスタンプ比較
@@ -92,7 +92,7 @@ export function resolveConflict(
  */
 export function resolveAllConflicts(
   conflicts: ConflictItem[],
-  resolutions: ConflictResolutions,
+  resolutions: ConflictResolutions
 ): ResolvedConflict[] {
   const resolved: ResolvedConflict[] = []
 
@@ -115,7 +115,7 @@ export function resolveAllConflicts(
 export function resolveCategoryConflicts(
   category: ConflictCategory,
   conflicts: ConflictItem[],
-  resolution: CategoryConflictResolution | undefined,
+  resolution: CategoryConflictResolution | undefined
 ): ResolvedConflict[] {
   return conflicts
     .filter((c) => c.category === category)
@@ -142,9 +142,7 @@ export function createDefaultResolutions(): ConflictResolutions {
 /**
  * 解決結果の統計を計算
  */
-export function calculateResolutionStats(
-  resolved: ResolvedConflict[],
-): {
+export function calculateResolutionStats(resolved: ResolvedConflict[]): {
   importWins: number
   existingWins: number
   skipped: number

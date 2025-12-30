@@ -34,7 +34,7 @@ export function useDrawingStyleUtils() {
       x2: number,
       y2: number,
       style: LineStyle,
-      strokeWidth: number,
+      strokeWidth: number
     ) => {
       const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
       const angle = Math.atan2(y2 - y1, x2 - x1)
@@ -93,7 +93,7 @@ export function useDrawingStyleUtils() {
 
       ctx.restore()
     },
-    [],
+    []
   )
 
   return {

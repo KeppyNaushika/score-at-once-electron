@@ -27,7 +27,7 @@ const targetDir = path.join(
   "output",
   "chtml",
   "fonts",
-  "woff-v2",
+  "woff-v2"
 )
 
 const ensureDir = (dir) => {
@@ -48,17 +48,16 @@ const copyRecursive = (src, dest) => {
   }
 }
 
-const sourceDir =
-  CANDIDATE_PATHS.map((segments) =>
-    path.join(repoRoot, "node_modules", ...segments),
-  ).find((candidate) => fs.existsSync(candidate))
+const sourceDir = CANDIDATE_PATHS.map((segments) =>
+  path.join(repoRoot, "node_modules", ...segments)
+).find((candidate) => fs.existsSync(candidate))
 
 if (!sourceDir) {
   console.error(
     "MathJaxフォントのソースが見つかりません: " +
       CANDIDATE_PATHS.map((segments) =>
-        path.join("node_modules", ...segments),
-      ).join(", "),
+        path.join("node_modules", ...segments)
+      ).join(", ")
   )
   process.exit(1)
 }
@@ -124,6 +123,8 @@ if (!fs.existsSync(notoSansJpFontsDir)) {
       console.warn(`⚠ フォントファイルが見つかりません: ${fontFile}`)
     }
   }
-  console.log(`✓ Noto Sans JP fonts copied (${copiedCount}/${notoSansJpFonts.length} files)`)
+  console.log(
+    `✓ Noto Sans JP fonts copied (${copiedCount}/${notoSansJpFonts.length} files)`
+  )
   console.log(`  to ${notoSansJpTargetDir}`)
 }

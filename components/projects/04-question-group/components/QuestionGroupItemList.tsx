@@ -13,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubtotalGroupWithItems } from "@/types/electron"
-import type { Subtotal } from "@prisma/client"
 import {
   closestCenter,
   DndContext,
@@ -31,6 +30,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+import type { Subtotal } from "@prisma/client"
 import { Edit, GripVertical, Plus, Tag, Trash2 } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -40,7 +40,7 @@ interface QuestionGroupItemListProps {
   onUpdateItem: (id: string, name: string) => Promise<boolean>
   onDeleteItem: (id: string) => Promise<boolean>
   onUpdateItemOrders: (
-    orders: { id: string; order: number }[],
+    orders: { id: string; order: number }[]
   ) => Promise<boolean>
 }
 
@@ -125,7 +125,7 @@ export function QuestionGroupItemList({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   )
 
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -172,7 +172,7 @@ export function QuestionGroupItemList({
   const handleDeleteItem = async (item: Subtotal) => {
     if (
       window.confirm(
-        `項目「${item.name}」を削除しますか？\n関連する設問の関連付けも削除されます。`,
+        `項目「${item.name}」を削除しますか？\n関連する設問の関連付けも削除されます。`
       )
     ) {
       await onDeleteItem(item.id)

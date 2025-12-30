@@ -24,7 +24,13 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 interface UserCreateModalProps {
   isOpen: boolean
@@ -34,7 +40,11 @@ interface UserCreateModalProps {
 
 type PasscodeType = "none" | "4digit" | "6digit" | "alphanumeric"
 
-export function UserCreateModal({ isOpen, onClose, onUserCreated }: UserCreateModalProps) {
+export function UserCreateModal({
+  isOpen,
+  onClose,
+  onUserCreated,
+}: UserCreateModalProps) {
   const [formData, setFormData] = useState({
     username: "",
     name: "",
@@ -81,11 +91,13 @@ export function UserCreateModal({ isOpen, onClose, onUserCreated }: UserCreateMo
       setFormData({ username: "", name: "" })
       setPasscodeType("none")
       setPasscode("")
-      
+
       onUserCreated()
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : "ユーザーの作成に失敗しました")
+      setError(
+        err instanceof Error ? err.message : "ユーザーの作成に失敗しました"
+      )
     } finally {
       setIsLoading(false)
     }
@@ -173,18 +185,22 @@ export function UserCreateModal({ isOpen, onClose, onUserCreated }: UserCreateMo
             <Input
               id="username"
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
               placeholder="ユーザー名を入力"
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="name">表示名</Label>
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="表示名を入力"
               required
             />
@@ -200,10 +216,13 @@ export function UserCreateModal({ isOpen, onClose, onUserCreated }: UserCreateMo
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="passcodeType">パスコードタイプ</Label>
-                <Select value={passcodeType} onValueChange={(value: PasscodeType) => {
-                  setPasscodeType(value)
-                  setPasscode("")
-                }}>
+                <Select
+                  value={passcodeType}
+                  onValueChange={(value: PasscodeType) => {
+                    setPasscodeType(value)
+                    setPasscode("")
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="パスコードタイプを選択" />
                   </SelectTrigger>
@@ -215,14 +234,12 @@ export function UserCreateModal({ isOpen, onClose, onUserCreated }: UserCreateMo
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {renderPasscodeInput()}
             </CardContent>
           </Card>
 
-          {error && (
-            <div className="text-sm text-red-500">{error}</div>
-          )}
+          {error && <div className="text-sm text-red-500">{error}</div>}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>

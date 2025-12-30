@@ -2,7 +2,16 @@
  * グラフセクションコンポーネント
  * 棒グラフ、レーダーチャート、箱ひげ図をSVGで描画
  */
-import { Text, View, Svg, Rect, Line, Circle, Path, G } from "@react-pdf/renderer"
+import {
+  Text,
+  View,
+  Svg,
+  Rect,
+  Line,
+  Circle,
+  Path,
+  G,
+} from "@react-pdf/renderer"
 import type {
   IndividualReportData,
   IndividualReportOptions,
@@ -77,8 +86,22 @@ function BarChart({ data, average, maxTotal, showAverageLine }: BarChartProps) {
   return (
     <Svg width={width} height={height}>
       {/* 背景グリッド */}
-      <Line x1={10} y1={height - 15} x2={width - 10} y2={height - 15} stroke="#ccc" strokeWidth={0.5} />
-      <Line x1={10} y1={height - 15 - maxBarHeight / 2} x2={width - 10} y2={height - 15 - maxBarHeight / 2} stroke="#eee" strokeWidth={0.5} />
+      <Line
+        x1={10}
+        y1={height - 15}
+        x2={width - 10}
+        y2={height - 15}
+        stroke="#ccc"
+        strokeWidth={0.5}
+      />
+      <Line
+        x1={10}
+        y1={height - 15 - maxBarHeight / 2}
+        x2={width - 10}
+        y2={height - 15 - maxBarHeight / 2}
+        stroke="#eee"
+        strokeWidth={0.5}
+      />
 
       {/* 棒グラフ */}
       {data.map((item, index) => {
@@ -141,25 +164,79 @@ function BoxPlotChart({ boxPlot, yourScore, maxScore }: BoxPlotChartProps) {
   return (
     <Svg width={width} height={height}>
       {/* 軸 */}
-      <Line x1={20} y1={height - 10} x2={width - 20} y2={height - 10} stroke="#ccc" strokeWidth={0.5} />
+      <Line
+        x1={20}
+        y1={height - 10}
+        x2={width - 20}
+        y2={height - 10}
+        stroke="#ccc"
+        strokeWidth={0.5}
+      />
 
       {/* ひげ（min-q1, q3-max） */}
-      <Line x1={minX} y1={centerY} x2={q1X} y2={centerY} stroke="#666" strokeWidth={1} />
-      <Line x1={q3X} y1={centerY} x2={maxX} y2={centerY} stroke="#666" strokeWidth={1} />
+      <Line
+        x1={minX}
+        y1={centerY}
+        x2={q1X}
+        y2={centerY}
+        stroke="#666"
+        strokeWidth={1}
+      />
+      <Line
+        x1={q3X}
+        y1={centerY}
+        x2={maxX}
+        y2={centerY}
+        stroke="#666"
+        strokeWidth={1}
+      />
 
       {/* 端点 */}
-      <Line x1={minX} y1={centerY - 8} x2={minX} y2={centerY + 8} stroke="#666" strokeWidth={1} />
-      <Line x1={maxX} y1={centerY - 8} x2={maxX} y2={centerY + 8} stroke="#666" strokeWidth={1} />
+      <Line
+        x1={minX}
+        y1={centerY - 8}
+        x2={minX}
+        y2={centerY + 8}
+        stroke="#666"
+        strokeWidth={1}
+      />
+      <Line
+        x1={maxX}
+        y1={centerY - 8}
+        x2={maxX}
+        y2={centerY + 8}
+        stroke="#666"
+        strokeWidth={1}
+      />
 
       {/* 箱（q1-q3） */}
-      <Rect x={q1X} y={centerY - 15} width={q3X - q1X} height={30} fill="#e0e7ff" stroke="#6366f1" strokeWidth={1} />
+      <Rect
+        x={q1X}
+        y={centerY - 15}
+        width={q3X - q1X}
+        height={30}
+        fill="#e0e7ff"
+        stroke="#6366f1"
+        strokeWidth={1}
+      />
 
       {/* 中央値 */}
-      <Line x1={medianX} y1={centerY - 15} x2={medianX} y2={centerY + 15} stroke="#6366f1" strokeWidth={2} />
+      <Line
+        x1={medianX}
+        y1={centerY - 15}
+        x2={medianX}
+        y2={centerY + 15}
+        stroke="#6366f1"
+        strokeWidth={2}
+      />
 
       {/* あなたの得点 */}
       <Circle cx={yourX} cy={centerY} r={5} fill={colors.primary} />
-      <Text x={yourX} y={centerY - 20} style={{ fontSize: 7, textAnchor: "middle" }}>
+      <Text
+        x={yourX}
+        y={centerY - 20}
+        style={{ fontSize: 7, textAnchor: "middle" }}
+      >
         あなた
       </Text>
     </Svg>
@@ -173,7 +250,11 @@ interface RadarChartProps {
   showAverageLine: boolean
 }
 
-function RadarChart({ data, statistics: _statistics, showAverageLine: _showAverageLine }: RadarChartProps) {
+function RadarChart({
+  data,
+  statistics: _statistics,
+  showAverageLine: _showAverageLine,
+}: RadarChartProps) {
   const width = 150
   const height = 100
   const centerX = width / 2
@@ -196,7 +277,11 @@ function RadarChart({ data, statistics: _statistics, showAverageLine: _showAvera
   // パスを生成
   const createPath = (values: number[], maxValues: number[]) => {
     const points = values.map((v, i) => getPoint(i, v, maxValues[i]))
-    return points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ") + " Z"
+    return (
+      points
+        .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+        .join(" ") + " Z"
+    )
   }
 
   const yourPath = createPath(
@@ -207,25 +292,52 @@ function RadarChart({ data, statistics: _statistics, showAverageLine: _showAvera
   // 背景の正多角形（外枠）
   const outerPoints = data.map((_, i) => {
     const angle = (Math.PI * 2 * i) / n - Math.PI / 2
-    return { x: centerX + radius * Math.cos(angle), y: centerY + radius * Math.sin(angle) }
+    return {
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+    }
   })
-  const outerPath = outerPoints.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ") + " Z"
+  const outerPath =
+    outerPoints
+      .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+      .join(" ") + " Z"
 
   return (
     <Svg width={width} height={height}>
       {/* 背景グリッド */}
       <Path d={outerPath} fill="none" stroke="#ddd" strokeWidth={0.5} />
       {outerPoints.map((p, i) => (
-        <Line key={i} x1={centerX} y1={centerY} x2={p.x} y2={p.y} stroke="#eee" strokeWidth={0.5} />
+        <Line
+          key={i}
+          x1={centerX}
+          y1={centerY}
+          x2={p.x}
+          y2={p.y}
+          stroke="#eee"
+          strokeWidth={0.5}
+        />
       ))}
 
       {/* あなたのデータ */}
-      <Path d={yourPath} fill="rgba(59, 130, 246, 0.3)" stroke={colors.primary} strokeWidth={1.5} />
+      <Path
+        d={yourPath}
+        fill="rgba(59, 130, 246, 0.3)"
+        stroke={colors.primary}
+        strokeWidth={1.5}
+      />
 
       {/* 頂点のドット */}
       {data.map((d, i) => {
         const point = getPoint(i, d.score, d.maxScore)
-        return <Circle key={i} cx={point.x} cy={point.y} r={3} fill={colors.primary} />
+        return (
+          <Circle
+            key={i}
+            cx={point.x}
+            cy={point.y}
+            r={3}
+            fill={colors.primary}
+          />
+        )
       })}
     </Svg>
   )

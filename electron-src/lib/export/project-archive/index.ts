@@ -20,7 +20,7 @@ import { getProjectById } from "../../prisma/project"
  * @returns エクスポート結果
  */
 export async function exportProject(
-  options: ExportProjectOptions,
+  options: ExportProjectOptions
 ): Promise<ExportProjectResult> {
   const { projectId, outputPath } = options
 
@@ -45,9 +45,7 @@ export async function exportProject(
       const result = await dialog.showSaveDialog({
         title: "プロジェクトをエクスポート",
         defaultPath: defaultFileName,
-        filters: [
-          { name: "Score at Once アーカイブ", extensions: ["score"] },
-        ],
+        filters: [{ name: "Score at Once アーカイブ", extensions: ["score"] }],
       })
 
       if (result.canceled || !result.filePath) {
@@ -88,9 +86,7 @@ export async function exportProject(
     return {
       success: false,
       error:
-        error instanceof Error
-          ? error.message
-          : "エクスポートに失敗しました",
+        error instanceof Error ? error.message : "エクスポートに失敗しました",
     }
   }
 }
@@ -106,7 +102,7 @@ export async function selectExportSavePath(options: {
   canceled?: boolean
 }> {
   const defaultFileName = generateExportFileName(
-    options.projectName || "project",
+    options.projectName || "project"
   )
 
   const result = await dialog.showSaveDialog({

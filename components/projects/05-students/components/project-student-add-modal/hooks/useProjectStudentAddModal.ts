@@ -40,7 +40,7 @@ export function useProjectStudentAddModal({
           classesResult.classes.map((cls) => ({
             ...cls,
             isSelected: false,
-          })),
+          }))
         )
       }
 
@@ -52,7 +52,7 @@ export function useProjectStudentAddModal({
           studentsResult.students.map((student) => ({
             ...student,
             isSelected: false,
-          })),
+          }))
         )
       }
     } catch (error) {
@@ -72,7 +72,7 @@ export function useProjectStudentAddModal({
   // 学級選択の処理
   const handleClassSelection = (classId: string, isSelected: boolean) => {
     setAvailableClasses((prev) =>
-      prev.map((cls) => (cls.id === classId ? { ...cls, isSelected } : cls)),
+      prev.map((cls) => (cls.id === classId ? { ...cls, isSelected } : cls))
     )
   }
 
@@ -85,8 +85,8 @@ export function useProjectStudentAddModal({
   const handleStudentSelection = (studentId: string, isSelected: boolean) => {
     setAvailableStudents((prev) =>
       prev.map((student) =>
-        student.id === studentId ? { ...student, isSelected } : student,
-      ),
+        student.id === studentId ? { ...student, isSelected } : student
+      )
     )
   }
 
@@ -112,7 +112,7 @@ export function useProjectStudentAddModal({
         // 学級の生徒を出席番号順にソート（所属履歴のある全生徒）
         const sortedStudents = [...fullClassData.memberships]
           .filter(
-            (membership) => membership.student, // 生徒データが存在することを確認
+            (membership) => membership.student // 生徒データが存在することを確認
             // endDateの有無は問わない - 過去の所属生徒も追加可能にする
           )
           .sort((a, b) => {
@@ -130,13 +130,13 @@ export function useProjectStudentAddModal({
           // プロジェクトに生徒を追加
           const result = await window.electronAPI.addStudentsToProject(
             projectId,
-            studentIds,
+            studentIds
           )
 
           if (!result.success) {
             throw new Error(
               result.error ||
-                `Failed to add students from class ${classItem.name}`,
+                `Failed to add students from class ${classItem.name}`
             )
           }
 
@@ -148,13 +148,13 @@ export function useProjectStudentAddModal({
 
           const orderResult = await window.electronAPI.updateStudentOrders(
             projectId,
-            studentOrders,
+            studentOrders
           )
 
           if (!orderResult.success) {
             console.warn(
               `Failed to update student orders for class ${classItem.name}:`,
-              orderResult.error,
+              orderResult.error
             )
           }
 
@@ -168,7 +168,7 @@ export function useProjectStudentAddModal({
       console.error("Failed to add class students:", error)
       alert(
         "学級の追加に失敗しました: " +
-          (error instanceof Error ? error.message : "Unknown error"),
+          (error instanceof Error ? error.message : "Unknown error")
       )
     } finally {
       setIsAdding(false)
@@ -180,13 +180,13 @@ export function useProjectStudentAddModal({
     setIsAdding(true)
     try {
       const selectedStudents = availableStudents.filter(
-        (student) => student.isSelected,
+        (student) => student.isSelected
       )
       const studentIds = selectedStudents.map((student) => student.id)
 
       const result = await window.electronAPI.addStudentsToProject(
         projectId,
-        studentIds,
+        studentIds
       )
       if (!result.success) {
         throw new Error(result.error || "Failed to add students")
@@ -225,17 +225,17 @@ export function useProjectStudentAddModal({
     const matchesClass =
       filterClassId === "all" ||
       student.memberships?.some(
-        (membership) => membership.class.id === filterClassId,
+        (membership) => membership.class.id === filterClassId
       )
 
     return matchesSearch && matchesClass
   })
 
   const selectedClassCount = availableClasses.filter(
-    (cls) => cls.isSelected,
+    (cls) => cls.isSelected
   ).length
   const selectedStudentCount = availableStudents.filter(
-    (student) => student.isSelected,
+    (student) => student.isSelected
   ).length
 
   return {

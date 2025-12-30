@@ -47,7 +47,8 @@ export function loadConfigFromStorage(): ScoringMarkConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const parsed = JSON.parse(stored) as LegacyScoreConfig & Partial<ScoringMarkConfig>
+      const parsed = JSON.parse(stored) as LegacyScoreConfig &
+        Partial<ScoringMarkConfig>
 
       // partialScoreとsummaryScoreのマイグレーション処理
       const partialScore = parsed.partialScore || migrateToPartialScore(parsed)
@@ -87,7 +88,10 @@ export function saveConfigToStorage(config: ScoringMarkConfig) {
 }
 
 // マーク画像パスを取得
-export function getMarkImagePath(status: ScoringStatus, useTransparent: boolean): string {
+export function getMarkImagePath(
+  status: ScoringStatus,
+  useTransparent: boolean
+): string {
   const prefix = useTransparent ? "tranceparent_" : ""
   switch (status) {
     case "unscored":

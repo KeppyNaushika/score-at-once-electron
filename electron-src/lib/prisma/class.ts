@@ -34,7 +34,7 @@ export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
 }
 
 export const createClass = async (
-  classData: Prisma.ClassCreateInput,
+  classData: Prisma.ClassCreateInput
 ): Promise<ClassWithStudents> => {
   try {
     return await prisma.class.create({
@@ -59,7 +59,7 @@ export const createClass = async (
 }
 
 export const updateClass = async (
-  classData: Prisma.ClassUpdateInput & { id: string },
+  classData: Prisma.ClassUpdateInput & { id: string }
 ): Promise<ClassWithStudents> => {
   const { id, ...data } = classData
   try {
@@ -96,7 +96,7 @@ export const deleteClass = async (classId: string): Promise<Class | void> => {
     })
     if (membershipCount > 0) {
       throw new Error(
-        `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`,
+        `学級を削除できません: ${membershipCount} 人の生徒がまだ所属しています。`
       )
     }
     return await prisma.class.delete({ where: { id: classId } })

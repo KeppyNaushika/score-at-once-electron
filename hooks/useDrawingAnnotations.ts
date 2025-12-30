@@ -52,27 +52,27 @@ export interface UseDrawingAnnotationsReturn {
   // データ操作
   loadAnnotations: (
     questionScoreId: string,
-    type?: DrawingType,
+    type?: DrawingType
   ) => Promise<void>
   createAnnotation: (
-    data: DrawingCreateData,
+    data: DrawingCreateData
   ) => Promise<DrawingAnnotation | null>
   updateAnnotation: (
     id: string,
-    data: DrawingUpdateData,
+    data: DrawingUpdateData
   ) => Promise<DrawingAnnotation | null>
   deleteAnnotation: (id: string) => Promise<boolean>
   deleteByType: (
     questionScoreId: string,
-    type?: DrawingType,
+    type?: DrawingType
   ) => Promise<boolean>
 
   // バッチ操作
   batchCreate: (
-    annotations: DrawingCreateData[],
+    annotations: DrawingCreateData[]
   ) => Promise<DrawingAnnotation[]>
   batchUpdate: (
-    updates: Array<{ id: string; data: DrawingUpdateData }>,
+    updates: Array<{ id: string; data: DrawingUpdateData }>
   ) => Promise<DrawingAnnotation[]>
 
   // ツール操作
@@ -87,12 +87,12 @@ export interface UseDrawingAnnotationsReturn {
   processMathJaxText: (
     htmlContent: string,
     width?: number,
-    height?: number,
+    height?: number
   ) => Promise<SVGSVGElement>
   measureTextSize: (
     htmlContent: string,
     width?: number,
-    height?: number,
+    height?: number
   ) => Promise<{ width: number; height: number }>
 
   // ユーティリティ
@@ -107,7 +107,7 @@ export interface UseDrawingAnnotationsReturn {
  */
 export function useDrawingAnnotations(
   callbacks?: Partial<DrawingCallbacks>,
-  context?: DrawingContext,
+  context?: DrawingContext
 ): UseDrawingAnnotationsReturn {
   // 基本状態
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
@@ -145,7 +145,7 @@ export function useDrawingAnnotations(
         })
         const result = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
-          type,
+          type
         )
 
         if (result.success && result.data) {
@@ -168,7 +168,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [],
+    []
   )
 
   /**
@@ -218,7 +218,7 @@ export function useDrawingAnnotations(
       context?.currentStudentId,
       context?.currentCropRegionId,
       context?.currentUserId,
-    ],
+    ]
   )
 
   /**
@@ -227,7 +227,7 @@ export function useDrawingAnnotations(
   const updateAnnotation = useCallback(
     async (
       id: string,
-      data: DrawingUpdateData,
+      data: DrawingUpdateData
     ): Promise<DrawingAnnotation | null> => {
       try {
         console.log(`✏️ アノテーション更新: ${id}`)
@@ -235,7 +235,7 @@ export function useDrawingAnnotations(
 
         if (result.success && result.data) {
           setAnnotations((prev) =>
-            prev.map((ann) => (ann.id === id ? result.data! : ann)),
+            prev.map((ann) => (ann.id === id ? result.data! : ann))
           )
           callbacksRef.current.onUpdateAnnotation?.(id, data)
           return result.data
@@ -254,7 +254,7 @@ export function useDrawingAnnotations(
         return null
       }
     },
-    [],
+    []
   )
 
   /**
@@ -292,7 +292,7 @@ export function useDrawingAnnotations(
         console.log(`🗑️ タイプ別削除:`, { questionScoreId, type })
         const result = await window.electronAPI.drawing.deleteByQuestionScore(
           questionScoreId,
-          type,
+          type
         )
 
         if (result.success) {
@@ -315,7 +315,7 @@ export function useDrawingAnnotations(
         return false
       }
     },
-    [],
+    []
   )
 
   /**
@@ -323,7 +323,7 @@ export function useDrawingAnnotations(
    */
   const batchCreate = useCallback(
     async (
-      annotationsData: DrawingCreateData[],
+      annotationsData: DrawingCreateData[]
     ): Promise<DrawingAnnotation[]> => {
       try {
         console.log(`🎨 バッチ作成: ${annotationsData.length}件`)
@@ -346,7 +346,7 @@ export function useDrawingAnnotations(
         return []
       }
     },
-    [],
+    []
   )
 
   /**
@@ -354,7 +354,7 @@ export function useDrawingAnnotations(
    */
   const batchUpdate = useCallback(
     async (
-      updates: Array<{ id: string; data: DrawingUpdateData }>,
+      updates: Array<{ id: string; data: DrawingUpdateData }>
     ): Promise<DrawingAnnotation[]> => {
       try {
         console.log(`✏️ バッチ更新: ${updates.length}件`)
@@ -363,7 +363,7 @@ export function useDrawingAnnotations(
         if (result.success && result.data) {
           const updatedMap = new Map(result.data.map((ann) => [ann.id, ann]))
           setAnnotations((prev) =>
-            prev.map((ann) => updatedMap.get(ann.id) || ann),
+            prev.map((ann) => updatedMap.get(ann.id) || ann)
           )
           return result.data
         } else {
@@ -379,7 +379,7 @@ export function useDrawingAnnotations(
         return []
       }
     },
-    [],
+    []
   )
 
   /**
@@ -395,7 +395,7 @@ export function useDrawingAnnotations(
           tool === "select" ? prev.selectedAnnotationId : null,
       }))
     },
-    [drawingState.currentTool],
+    [drawingState.currentTool]
   )
 
   /**
@@ -416,7 +416,7 @@ export function useDrawingAnnotations(
 
       callbacksRef.current.onSelectAnnotation?.(selectedAnnotation)
     },
-    [annotations],
+    [annotations]
   )
 
   /**
@@ -432,7 +432,7 @@ export function useDrawingAnnotations(
         selectedAnnotationId: null,
       }))
     },
-    [],
+    []
   )
 
   /**
@@ -452,7 +452,7 @@ export function useDrawingAnnotations(
         }
       })
     },
-    [],
+    []
   )
 
   /**
@@ -534,7 +534,7 @@ export function useDrawingAnnotations(
     async (
       htmlContent: string,
       width: number = 200,
-      height: number = 50,
+      height: number = 50
     ): Promise<SVGSVGElement> => {
       setDrawingState((prev) => ({ ...prev, isProcessingMathJax: true }))
 
@@ -550,7 +550,7 @@ export function useDrawingAnnotations(
         setDrawingState((prev) => ({ ...prev, isProcessingMathJax: false }))
       }
     },
-    [],
+    []
   )
 
   /**
@@ -560,7 +560,7 @@ export function useDrawingAnnotations(
     async (
       htmlContent: string,
       width: number = 200,
-      height: number = 50,
+      height: number = 50
     ): Promise<{ width: number; height: number }> => {
       try {
         console.log("📏 MathJaxサイズ測定開始:", { htmlContent, width, height })
@@ -572,7 +572,7 @@ export function useDrawingAnnotations(
         throw error
       }
     },
-    [],
+    []
   )
 
   /**
@@ -598,7 +598,7 @@ export function useDrawingAnnotations(
         setError(errorMessage)
       }
     },
-    [],
+    []
   )
 
   /**

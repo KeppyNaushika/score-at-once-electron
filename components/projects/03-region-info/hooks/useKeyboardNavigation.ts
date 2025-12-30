@@ -21,7 +21,7 @@ export const useKeyboardNavigation = ({
   const handleKeyDown = (
     e: React.KeyboardEvent,
     rowIndex: number,
-    fieldName: string,
+    fieldName: string
   ) => {
     // IME入力中はEnterキーとTabキーでの移動をスキップ
     if ((e.key === "Enter" || e.key === "Tab") && isComposingRef.current) {
@@ -34,7 +34,7 @@ export const useKeyboardNavigation = ({
       const nextRowIndex = rowIndex + 1
       if (nextRowIndex < filteredRegions.length) {
         const nextInput = document.querySelector(
-          `[data-row="${nextRowIndex}"][data-field="${fieldName}"]`,
+          `[data-row="${nextRowIndex}"][data-field="${fieldName}"]`
         ) as HTMLInputElement
         if (nextInput) {
           nextInput.focus()
@@ -47,7 +47,7 @@ export const useKeyboardNavigation = ({
       const prevRowIndex = rowIndex - 1
       if (prevRowIndex >= 0) {
         const prevInput = document.querySelector(
-          `[data-row="${prevRowIndex}"][data-field="${fieldName}"]`,
+          `[data-row="${prevRowIndex}"][data-field="${fieldName}"]`
         ) as HTMLInputElement
         if (prevInput) {
           prevInput.focus()
@@ -62,7 +62,7 @@ export const useKeyboardNavigation = ({
       if (currentFieldIndex < fieldOrder.length - 1) {
         const nextField = fieldOrder[currentFieldIndex + 1]
         const nextInput = document.querySelector(
-          `[data-row="${rowIndex}"][data-field="${nextField}"]`,
+          `[data-row="${rowIndex}"][data-field="${nextField}"]`
         ) as HTMLInputElement
         if (nextInput && !nextInput.disabled) {
           nextInput.focus()
@@ -73,7 +73,7 @@ export const useKeyboardNavigation = ({
         const nextRowIndex = rowIndex + 1
         if (nextRowIndex < filteredRegions.length) {
           const nextInput = document.querySelector(
-            `[data-row="${nextRowIndex}"][data-field="label"]`,
+            `[data-row="${nextRowIndex}"][data-field="label"]`
           ) as HTMLInputElement
           if (nextInput) {
             nextInput.focus()
@@ -89,7 +89,7 @@ export const useKeyboardNavigation = ({
       if (currentFieldIndex > 0) {
         const prevField = fieldOrder[currentFieldIndex - 1]
         const prevInput = document.querySelector(
-          `[data-row="${rowIndex}"][data-field="${prevField}"]`,
+          `[data-row="${rowIndex}"][data-field="${prevField}"]`
         ) as HTMLInputElement
         if (prevInput) {
           prevInput.focus()
@@ -100,7 +100,7 @@ export const useKeyboardNavigation = ({
         const prevRowIndex = rowIndex - 1
         if (prevRowIndex >= 0) {
           const prevInput = document.querySelector(
-            `[data-row="${prevRowIndex}"][data-field="points"]`,
+            `[data-row="${prevRowIndex}"][data-field="points"]`
           ) as HTMLInputElement
           if (prevInput && !prevInput.disabled) {
             prevInput.focus()
@@ -108,7 +108,7 @@ export const useKeyboardNavigation = ({
           } else {
             // Fall back to label
             const labelInput = document.querySelector(
-              `[data-row="${prevRowIndex}"][data-field="label"]`,
+              `[data-row="${prevRowIndex}"][data-field="label"]`
             ) as HTMLInputElement
             if (labelInput) {
               labelInput.focus()

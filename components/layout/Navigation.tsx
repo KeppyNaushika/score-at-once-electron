@@ -66,13 +66,13 @@ export default function Navigation({
     <aside
       className={cn(
         "bg-background fixed top-0 left-0 z-40 flex h-screen flex-col border-r transition-[width] duration-300 ease-in-out",
-        isSidebarMinimized ? "w-16" : "w-64",
+        isSidebarMinimized ? "w-16" : "w-64"
       )}
     >
       <div
         className={cn(
           "flex h-16 items-center border-b px-2",
-          isSidebarMinimized ? "justify-center" : "justify-between px-6",
+          isSidebarMinimized ? "justify-center" : "justify-between px-6"
         )}
       >
         {!isSidebarMinimized && (
@@ -128,7 +128,7 @@ export default function Navigation({
                     {item.label}
                   </Button>
                 </Link>
-              ),
+              )
             )}
           </nav>
         </TooltipProvider>

@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // QuestionGroup を作成 (SubtotalGroup として実装)
 export const createQuestionGroup = async (
-  data: Prisma.SubtotalGroupUncheckedCreateInput,
+  data: Prisma.SubtotalGroupUncheckedCreateInput
 ) => {
   return prisma.subtotalGroup.create({
     data,
@@ -16,7 +16,7 @@ export const createQuestionGroup = async (
 // QuestionGroup を更新
 export const updateQuestionGroup = async (
   id: string,
-  data: Prisma.SubtotalGroupUpdateInput,
+  data: Prisma.SubtotalGroupUpdateInput
 ) => {
   return prisma.subtotalGroup.update({
     where: { id },
@@ -58,7 +58,7 @@ export const getQuestionGroupsByProjectId = async (projectId: string) => {
   })
 
   // SubtotalGroupのリストを返す（互換性のため）
-  return projectSubtotalGroups.map(psg => ({
+  return projectSubtotalGroups.map((psg) => ({
     ...psg.subtotalGroup,
     items: psg.subtotalGroup.subtotals, // 互換性のためitemsという名前でsubtotalsを公開
     projectId, // 互換性のためprojectIdを追加

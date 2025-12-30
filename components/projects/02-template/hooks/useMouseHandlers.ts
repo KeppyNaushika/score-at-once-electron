@@ -2,8 +2,12 @@
  * Mouse event handlers for canvas interactions
  */
 
+import {
+  DragState,
+  MoveState,
+  ResizeState,
+} from "@/components/projects/02-template/types"
 import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
-import { DragState, MoveState, ResizeState } from "@/components/projects/02-template/types"
 
 /**
  * Custom hook for handling mouse events on the canvas
@@ -36,19 +40,25 @@ export function useMouseHandlers({
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   projectPageId: string | null
-  areas: { x: number; y: number; width: number; height: number; label?: string }[]
+  areas: {
+    x: number
+    y: number
+    width: number
+    height: number
+    label?: string
+  }[]
   onAddAreaByDrag: (
     type: import("@/types/common.types").CropRegionAreaType,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (
     index: number,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   getRelativeCoords: (
     clientX: number,
     clientY: number,
-    ref: React.RefObject<HTMLDivElement>,
+    ref: React.RefObject<HTMLDivElement>
   ) => { x: number; y: number }
   imageContainerRef: React.RefObject<HTMLDivElement>
   dragging: boolean
@@ -70,7 +80,7 @@ export function useMouseHandlers({
    * @param event - React mouse event
    */
   const handleMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
+    event: ReactMouseEvent<HTMLDivElement, MouseEvent>
   ) => {
     if (
       disabled ||
@@ -84,7 +94,7 @@ export function useMouseHandlers({
     const coords = getRelativeCoords(
       event.clientX,
       event.clientY,
-      imageContainerRef,
+      imageContainerRef
     )
 
     setDragStartCoords(coords)
@@ -102,7 +112,7 @@ export function useMouseHandlers({
   const handleResizeMouseDown = (
     event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
     areaIndex: number,
-    handle: "nw" | "ne" | "sw" | "se",
+    handle: "nw" | "ne" | "sw" | "se"
   ) => {
     event.stopPropagation()
     if (!imageContainerRef.current) return
@@ -110,7 +120,7 @@ export function useMouseHandlers({
     const coords = getRelativeCoords(
       event.clientX,
       event.clientY,
-      imageContainerRef,
+      imageContainerRef
     )
     const area = areas[areaIndex]
 
@@ -135,7 +145,7 @@ export function useMouseHandlers({
    */
   const handleMoveMouseDown = (
     event: ReactMouseEvent<HTMLDivElement, MouseEvent>,
-    areaIndex: number,
+    areaIndex: number
   ) => {
     event.stopPropagation()
     if (!imageContainerRef.current) return
@@ -143,7 +153,7 @@ export function useMouseHandlers({
     const coords = getRelativeCoords(
       event.clientX,
       event.clientY,
-      imageContainerRef,
+      imageContainerRef
     )
     const area = areas[areaIndex]
 
@@ -171,7 +181,7 @@ export function useMouseHandlers({
       const coords = getRelativeCoords(
         event.clientX,
         event.clientY,
-        imageContainerRef,
+        imageContainerRef
       )
 
       if (dragging && dragStartCoords) {
@@ -222,11 +232,11 @@ export function useMouseHandlers({
           ...originalArea,
           x: Math.max(
             0,
-            Math.min(1 - originalArea.width, originalArea.x + deltaX),
+            Math.min(1 - originalArea.width, originalArea.x + deltaX)
           ),
           y: Math.max(
             0,
-            Math.min(1 - originalArea.height, originalArea.y + deltaY),
+            Math.min(1 - originalArea.height, originalArea.y + deltaY)
           ),
         }
 
@@ -242,7 +252,7 @@ export function useMouseHandlers({
       onUpdateArea,
       imageContainerRef,
       setDragCurrentCoords,
-    ],
+    ]
   )
 
   /**

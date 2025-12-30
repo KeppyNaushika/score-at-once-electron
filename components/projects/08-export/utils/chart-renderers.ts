@@ -48,7 +48,7 @@ export function drawBarChart(
   x: number,
   y: number,
   config: ChartConfig,
-  showAverageLine: boolean = true,
+  showAverageLine: boolean = true
 ): void {
   const { width, height, padding, colors, fontSize } = config
 
@@ -56,8 +56,8 @@ export function drawBarChart(
 
   const chartWidth = width - padding * 2
   const chartHeight = height - padding * 2 - fontSize * 2
-  const barWidth = chartWidth / data.length * 0.7
-  const barGap = chartWidth / data.length * 0.3
+  const barWidth = (chartWidth / data.length) * 0.7
+  const barGap = (chartWidth / data.length) * 0.3
 
   ctx.save()
   ctx.translate(x, y)
@@ -123,7 +123,7 @@ export function drawBarChart(
     ctx.fillText(
       item.label.length > 6 ? item.label.substring(0, 6) + "..." : item.label,
       barX + barWidth / 2,
-      graphY + graphHeight + fontSize,
+      graphY + graphHeight + fontSize
     )
   })
 
@@ -139,7 +139,7 @@ export function drawRadarChart(
   x: number,
   y: number,
   config: ChartConfig,
-  showAverageLine: boolean = true,
+  showAverageLine: boolean = true
 ): void {
   const { width, height, padding, colors, fontSize } = config
 
@@ -187,7 +187,7 @@ export function drawRadarChart(
     ctx.moveTo(centerX, centerY)
     ctx.lineTo(
       centerX + Math.cos(angle) * radius,
-      centerY + Math.sin(angle) * radius,
+      centerY + Math.sin(angle) * radius
     )
     ctx.stroke()
   })
@@ -246,7 +246,8 @@ export function drawRadarChart(
     const labelRadius = radius + fontSize
     const lx = centerX + Math.cos(angle) * labelRadius
     const ly = centerY + Math.sin(angle) * labelRadius
-    const label = item.label.length > 6 ? item.label.substring(0, 6) + "..." : item.label
+    const label =
+      item.label.length > 6 ? item.label.substring(0, 6) + "..." : item.label
     ctx.fillText(label, lx, ly)
   })
 
@@ -263,7 +264,7 @@ export function drawBoxPlot(
   maxScore: number,
   x: number,
   y: number,
-  config: ChartConfig,
+  config: ChartConfig
 ): void {
   const { width, height, padding, colors, fontSize } = config
 
@@ -303,7 +304,11 @@ export function drawBoxPlot(
     ctx.moveTo(tickX, graphY + graphHeight / 2 - 3)
     ctx.lineTo(tickX, graphY + graphHeight / 2 + 3)
     ctx.stroke()
-    ctx.fillText(String(Math.round(value)), tickX, graphY + graphHeight + fontSize * 0.8)
+    ctx.fillText(
+      String(Math.round(value)),
+      tickX,
+      graphY + graphHeight + fontSize * 0.8
+    )
   }
 
   const boxHeight = graphHeight * 0.6

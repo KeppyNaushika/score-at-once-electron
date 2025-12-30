@@ -13,7 +13,7 @@ export function buildDnDArrayFromFileStates(
   strategy: PlacementStrategy,
   students: UnifiedStudent[],
   masterImageCount: number,
-  files: UnifiedFile[],
+  files: UnifiedFile[]
 ): UnifiedFile[] {
   if (!students || !masterImageCount || fileStates.length === 0) return []
 
@@ -60,13 +60,13 @@ export function buildDnDArrayFromFileStates(
     const matchingFileState = fileStates.find(
       (state) =>
         state.studentId === position.studentId &&
-        state.pageNumber === position.pageNumber,
+        state.pageNumber === position.pageNumber
     )
 
     if (matchingFileState) {
       // 元のfiles配列から実際のUnifiedFileオブジェクトを取得
       const actualFile = files.find(
-        (file) => file.id === matchingFileState.fileId,
+        (file) => file.id === matchingFileState.fileId
       )
       if (actualFile) {
         orderedFiles.push(actualFile)
@@ -81,7 +81,7 @@ export function buildDnDArrayFromFileStates(
  * DnD配列から3つ組を更新する関数（ファイル実データを直接使用）
  */
 export function updateFileStatesFromDnDArray(
-  dndArray: UnifiedFile[],
+  dndArray: UnifiedFile[]
 ): FileState[] {
   // ファイルの実データをそのまま使用（推測ではない）
   return dndArray.map((file) => ({
@@ -96,7 +96,7 @@ export function updateFileStatesFromDnDArray(
  */
 export function compareFileStates(
   initialStates: FileState[],
-  currentStates: FileState[],
+  currentStates: FileState[]
 ) {
   const changedFiles: Array<{
     fileId: string
@@ -107,7 +107,7 @@ export function compareFileStates(
   // 各ファイルについて、初期状態と現在状態を比較
   currentStates.forEach((currentState) => {
     const initialState = initialStates.find(
-      (state) => state.fileId === currentState.fileId,
+      (state) => state.fileId === currentState.fileId
     )
 
     if (initialState) {

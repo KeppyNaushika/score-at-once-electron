@@ -12,7 +12,7 @@ export interface GradingDataInfo {
  */
 export const checkGradingDataForStudent = async (
   projectId: string,
-  studentId: string,
+  studentId: string
 ): Promise<GradingDataInfo> => {
   try {
     // 答案シート数をカウント
@@ -38,7 +38,6 @@ export const checkGradingDataForStudent = async (
       },
     })
 
-
     const totalGradingItems = answerSheetCount + questionScoreCount
     const hasData = totalGradingItems > 0
 
@@ -59,7 +58,7 @@ export const checkGradingDataForStudent = async (
  */
 export const checkGradingDataForStudents = async (
   projectId: string,
-  studentIds: string[],
+  studentIds: string[]
 ): Promise<{
   hasAnyData: boolean
   totalGradingItems: number
@@ -94,7 +93,7 @@ export const checkGradingDataForStudents = async (
  */
 export const deleteAllGradingDataForStudent = async (
   projectId: string,
-  studentId: string,
+  studentId: string
 ): Promise<void> => {
   try {
     await prisma.$transaction(async (tx) => {
@@ -120,7 +119,6 @@ export const deleteAllGradingDataForStudent = async (
           },
         },
       })
-
     })
   } catch (error) {
     console.error("Failed to delete grading data for student:", error)

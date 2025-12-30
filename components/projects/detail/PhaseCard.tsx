@@ -39,13 +39,13 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
     return IconComponent ? <IconComponent className="h-4 w-4" /> : null
   }
 
-  const getStatusColor = (step: typeof phase.steps[0]) => {
+  const getStatusColor = (step: (typeof phase.steps)[0]) => {
     if (step.isCompleted) return "text-green-600"
     if (step.canStart) return "text-blue-600"
     return "text-gray-400"
   }
 
-  const getStepRowClass = (step: typeof phase.steps[0]) => {
+  const getStepRowClass = (step: (typeof phase.steps)[0]) => {
     if (step.isCompleted) return "bg-green-50"
     if (step.canStart) return "bg-blue-50"
     return "bg-gray-50"
@@ -57,8 +57,8 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
         phase.isActive
           ? "border-blue-300 shadow-lg"
           : phase.isCompleted
-          ? "border-green-300"
-          : "border-gray-200"
+            ? "border-green-300"
+            : "border-gray-200"
       }`}
     >
       <CardHeader className="pb-4">
@@ -67,7 +67,7 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
             <span className="text-2xl">{phase.emoji}</span>
             <div>
               <h3 className="text-lg font-semibold">{phase.title}</h3>
-              <p className="text-sm text-gray-600 font-normal">
+              <p className="text-sm font-normal text-gray-600">
                 {phase.description}
               </p>
             </div>
@@ -89,16 +89,16 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
             <Link
               key={step.id}
               href={`/projects/${projectId}${step.path}`}
-              className={`block p-3 rounded-lg transition-all hover:shadow-sm cursor-pointer ${getStepRowClass(
+              className={`block cursor-pointer rounded-lg p-3 transition-all hover:shadow-sm ${getStepRowClass(
                 step
               )}`}
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
+                <div className="flex flex-1 items-center gap-3">
                   <div className={getStatusColor(step)}>
                     {step.isCompleted ? (
-                      <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
-                        <span className="text-white text-xs">✓</span>
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
+                        <span className="text-xs text-white">✓</span>
                       </div>
                     ) : (
                       getStepIcon(step.icon)
@@ -106,11 +106,11 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
                   </div>
                   <div className="flex-1">
                     <h4
-                      className={`font-medium text-sm ${getStatusColor(step)}`}
+                      className={`text-sm font-medium ${getStatusColor(step)}`}
                     >
                       {step.title}
                     </h4>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="mt-1 text-xs text-gray-600">
                       {step.description}
                     </p>
                   </div>
@@ -126,9 +126,11 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
 
         {/* Next Action Button */}
         {phase.isActive && phase.nextStepId && (
-          <div className="mt-4 pt-4 border-t">
+          <div className="mt-4 border-t pt-4">
             {(() => {
-              const nextStep = phase.steps.find((s) => s.id === phase.nextStepId)
+              const nextStep = phase.steps.find(
+                (s) => s.id === phase.nextStepId
+              )
               return nextStep ? (
                 <Link href={`/projects/${projectId}${nextStep.path}`}>
                   <Button className="w-full" size="sm">
@@ -142,8 +144,8 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
 
         {/* Phase Completed */}
         {phase.isCompleted && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="text-center text-green-600 font-medium text-sm">
+          <div className="mt-4 border-t pt-4">
+            <div className="text-center text-sm font-medium text-green-600">
               ✓ Phase {phase.id} 完了
             </div>
           </div>
@@ -151,8 +153,8 @@ export default function PhaseCard({ phase, projectId }: PhaseCardProps) {
 
         {/* Phase Waiting */}
         {!phase.isActive && !phase.isCompleted && !phase.canStart && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="text-center text-gray-500 font-medium text-sm">
+          <div className="mt-4 border-t pt-4">
+            <div className="text-center text-sm font-medium text-gray-500">
               前のPhaseの完了を待機中
             </div>
           </div>

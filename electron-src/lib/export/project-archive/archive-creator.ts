@@ -46,11 +46,7 @@ interface CreateArchiveOptions {
  */
 function getSchemaVersion(): string {
   try {
-    const migrationsDir = path.join(
-      app.getAppPath(),
-      "prisma",
-      "migrations",
-    )
+    const migrationsDir = path.join(app.getAppPath(), "prisma", "migrations")
     if (fs.existsSync(migrationsDir)) {
       const migrations = fs
         .readdirSync(migrationsDir)
@@ -73,7 +69,7 @@ function createManifest(
   projectId: string,
   projectName: string,
   counts: CollectedData["counts"],
-  exportedBy?: string,
+  exportedBy?: string
 ): ArchiveManifest {
   return {
     version: "1.0.0",
@@ -104,7 +100,7 @@ function getDataDir(): string {
  * @returns 作成されたアーカイブのパス
  */
 export async function createArchive(
-  options: CreateArchiveOptions,
+  options: CreateArchiveOptions
 ): Promise<{ success: boolean; outputPath?: string; error?: string }> {
   const { collectedData, projectName, projectId, outputPath, exportedBy } =
     options
@@ -124,9 +120,7 @@ export async function createArchive(
       })
 
       output.on("close", () => {
-        console.log(
-          `Archive created: ${archive.pointer()} total bytes`,
-        )
+        console.log(`Archive created: ${archive.pointer()} total bytes`)
         resolve({ success: true, outputPath })
       })
 
@@ -153,7 +147,7 @@ export async function createArchive(
         projectId,
         projectName,
         collectedData.counts,
-        exportedBy,
+        exportedBy
       )
       archive.append(JSON.stringify(manifest, null, 2), {
         name: "manifest.json",

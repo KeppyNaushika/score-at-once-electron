@@ -21,7 +21,11 @@ const workflowSteps = [
   { id: "03-region-info", label: "3. 領域情報", path: "03-region-info" },
   { id: "04-question-group", label: "4. 小計点", path: "04-question-group" },
   { id: "05-students", label: "5. 受験生徒", path: "05-students" },
-  { id: "06-student-answers", label: "6. 生徒答案", path: "06-student-answers" },
+  {
+    id: "06-student-answers",
+    label: "6. 生徒答案",
+    path: "06-student-answers",
+  },
   { id: "07-score-at-once", label: "7. 採点", path: "07-score-at-once" },
   { id: "08-export", label: "8. 結果", path: "08-export" },
 ]

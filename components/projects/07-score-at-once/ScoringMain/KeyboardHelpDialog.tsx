@@ -50,7 +50,7 @@ export function KeyboardHelpDialog({
                       {shortcut.key}
                     </code>
                   </div>
-                ),
+                )
               )}
             </div>
           </div>
@@ -67,7 +67,7 @@ export function KeyboardHelpDialog({
                         : shortcut.key}
                     </code>
                   </div>
-                ),
+                )
               )}
             </div>
           </div>

@@ -14,7 +14,6 @@ export function useAutoScroll({
   autoScroll,
   containerRef,
 }: UseAutoScrollProps) {
-
   const selectedAnswerId = useMemo(() => {
     if (!autoScroll || selectedAnswers.size !== 1) {
       return null
@@ -70,7 +69,7 @@ export function useAutoScroll({
         behavior: "smooth",
       })
     },
-    [autoScroll, containerRef],
+    [autoScroll, containerRef]
   )
 
   // 選択された答案を画面中央にスクロール（自動スクロール設定に基づく）
@@ -81,7 +80,7 @@ export function useAutoScroll({
 
     const container = containerRef.current
     const selectedElement = container.querySelector(
-      `[data-answer-id="${selectedAnswerId}"]`,
+      `[data-answer-id="${selectedAnswerId}"]`
     ) as HTMLElement | null
 
     if (!selectedElement) {
@@ -103,7 +102,7 @@ export function useAutoScroll({
 
       const container = containerRef.current
       const element = container.querySelector(
-        `[data-answer-id="${answerId}"]`,
+        `[data-answer-id="${answerId}"]`
       ) as HTMLElement | null
 
       if (!element) return

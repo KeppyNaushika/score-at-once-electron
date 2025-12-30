@@ -21,13 +21,13 @@ export interface UseElementResizeProps {
   imageAspectRatio?: number
   /** 描画要素配列設定 */
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
   ) => void
   /** ヒットテストハンドル関数 */
   hitTestHandle: (
     element: DrawingElement,
     x: number,
-    y: number,
+    y: number
   ) => string | null
 }
 
@@ -37,7 +37,7 @@ export interface UseElementResizeReturn {
   getResizeHandle: (
     normalizedX: number,
     normalizedY: number,
-    element: DrawingElement,
+    element: DrawingElement
   ) => string | null
   /** 要素をリサイズ */
   handleElementResize: (
@@ -45,12 +45,12 @@ export interface UseElementResizeReturn {
     normalizedY: number,
     handle: string,
     element: DrawingElement,
-    originalBounds: ResizeOriginalBounds,
+    originalBounds: ResizeOriginalBounds
   ) => void
   /** Shift制約を適用（正方形/正円） */
   applyShiftConstraint: (
     width: number,
-    height: number,
+    height: number
   ) => { width: number; height: number }
 }
 
@@ -104,7 +104,7 @@ export function useElementResize({
         height: normalizedHeight,
       }
     },
-    [],
+    []
   )
 
   /**
@@ -135,7 +135,7 @@ export function useElementResize({
         height: clampedHeight,
       }
     },
-    [normalizeNegativeDimensions],
+    [normalizeNegativeDimensions]
   )
 
   /**
@@ -173,7 +173,7 @@ export function useElementResize({
         }
       }
     },
-    [isShiftPressed, imageAspectRatio],
+    [isShiftPressed, imageAspectRatio]
   )
 
   /**
@@ -192,14 +192,14 @@ export function useElementResize({
     (
       normalizedX: number,
       normalizedY: number,
-      element: DrawingElement,
+      element: DrawingElement
     ): string | null => {
       if (element.type === "line") {
         return null
       }
       return hitTestHandle(element, normalizedX, normalizedY)
     },
-    [hitTestHandle],
+    [hitTestHandle]
   )
 
   /**
@@ -221,7 +221,7 @@ export function useElementResize({
       normalizedY: number,
       handle: string,
       element: DrawingElement,
-      originalBounds: ResizeOriginalBounds,
+      originalBounds: ResizeOriginalBounds
     ) => {
       const clampedMouseX = Math.max(0, Math.min(1, normalizedX))
       const clampedMouseY = Math.max(0, Math.min(1, normalizedY))
@@ -305,10 +305,10 @@ export function useElementResize({
             }
           }
           return el
-        }),
+        })
       )
     },
-    [isShiftPressed, applyShiftConstraint, clampNormalized, setDrawingElements],
+    [isShiftPressed, applyShiftConstraint, clampNormalized, setDrawingElements]
   )
 
   return {

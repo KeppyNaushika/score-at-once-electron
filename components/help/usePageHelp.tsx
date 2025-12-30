@@ -36,8 +36,8 @@ const pageHelpComponents: {
   "07-score-at-once": ScoringHelpContent,
   "08-export": ExportHelpContent,
   "subtotal-groups": SubtotalGroupsHelpContent,
-  "classes": ClassesHelpContent,
-  "students": StudentsHelpContent,
+  classes: ClassesHelpContent,
+  students: StudentsHelpContent,
 }
 
 export function usePageHelp() {
@@ -67,7 +67,7 @@ export function usePageHelp() {
 
     // 部分一致での検索（従来の方法）
     return Object.keys(pageHelpComponents).find((key) =>
-      lastSegment.includes(key.split("-")[1]),
+      lastSegment.includes(key.split("-")[1])
     )
   }
 

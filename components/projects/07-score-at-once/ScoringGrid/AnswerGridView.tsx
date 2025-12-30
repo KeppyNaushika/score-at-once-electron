@@ -140,7 +140,7 @@ export default function AnswerGridView({
 
       const distance = Math.sqrt(
         Math.pow(currentX - dragStart.x, 2) +
-          Math.pow(currentY - dragStart.y, 2),
+          Math.pow(currentY - dragStart.y, 2)
       )
       if (distance > 5 && !isDragging) {
         updateDrag(currentX, currentY)
@@ -176,7 +176,11 @@ export default function AnswerGridView({
   const GRID_GAP = 8 // gap-2 = 8px
   const GRID_PADDING = 4 // p-1 = 4px
   const calculatedCellHeight = isColumnLayout
-    ? (containerSize.height - OUTER_PADDING * 2 - GRID_PADDING * 2 - GRID_GAP * (itemsPerRow[0] - 1)) / itemsPerRow[0]
+    ? (containerSize.height -
+        OUTER_PADDING * 2 -
+        GRID_PADDING * 2 -
+        GRID_GAP * (itemsPerRow[0] - 1)) /
+      itemsPerRow[0]
     : 0
 
   return (

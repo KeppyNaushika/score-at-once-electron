@@ -161,7 +161,7 @@ const BaseModal = React.memo(
         </ModalContent>
       </Modal>
     )
-  },
+  }
 )
 
 BaseModal.displayName = "BaseModal"

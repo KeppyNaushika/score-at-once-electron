@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return ipcRenderer.invoke("update-project", projectId, data)
   },
   deleteProject: (
-    projectId: string, // project オブジェクトではなく projectId を直接渡す
+    projectId: string // project オブジェクトではなく projectId を直接渡す
   ) => ipcRenderer.invoke("delete-project", projectId),
   // Tag functions temporarily disabled
   // createTag: (tagText: string) => ipcRenderer.invoke("create-tag", tagText),
@@ -54,14 +54,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-user-by-token", token),
   updateUser: (
     userId: string,
-    userData: { username?: string; name?: string },
+    userData: { username?: string; name?: string }
   ) => ipcRenderer.invoke("update-user", userId, userData),
   updateUserPassword: (userId: string, newPassword: string) =>
     ipcRenderer.invoke("update-user-password", userId, newPassword),
   updateUserPasscode: (
     userId: string,
     passcode?: string,
-    passcodeType?: string,
+    passcodeType?: string
   ) =>
     ipcRenderer.invoke("update-user-passcode", userId, passcode, passcodeType),
   verifyPasscode: (userId: string, passcode: string) =>
@@ -82,7 +82,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       buffer: ArrayBuffer
       studentId?: string
       pageNumber?: number
-    }[],
+    }[]
   ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
   getStudentAnswersByProjectId: (projectId: string) =>
     ipcRenderer.invoke("get-answer-sheets-by-project-id", projectId),
@@ -90,12 +90,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("delete-answer-sheet", answerSheetId),
   associateStudentAnswerWithStudent: (
     answerSheetId: string,
-    studentId: string,
+    studentId: string
   ) =>
     ipcRenderer.invoke(
       "associate-answer-sheet-with-student",
       answerSheetId,
-      studentId,
+      studentId
     ),
   setStudentAnswerAbsent: (answerSheetId: string, isAbsent: boolean) =>
     ipcRenderer.invoke("set-answer-sheet-absent", answerSheetId, isAbsent),
@@ -104,31 +104,31 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateStudentAnswerPlacement: (
     answerSheetId: string,
     studentId: string | null,
-    pageNumber: number,
+    pageNumber: number
   ) =>
     ipcRenderer.invoke(
       "update-answer-sheet-placement",
       answerSheetId,
       studentId,
-      pageNumber,
+      pageNumber
     ),
   swapStudentAnswerPlacements: (
     answerSheetId1: string,
-    answerSheetId2: string,
+    answerSheetId2: string
   ) =>
     ipcRenderer.invoke(
       "swap-answer-sheet-placements",
       answerSheetId1,
-      answerSheetId2,
+      answerSheetId2
     ),
   swapStudentAnswerPlacementsWithScoring: (
     answerSheetId1: string,
-    answerSheetId2: string,
+    answerSheetId2: string
   ) =>
     ipcRenderer.invoke(
       "swap-answer-sheet-placements-with-scoring",
       answerSheetId1,
-      answerSheetId2,
+      answerSheetId2
     ),
   batchUpdateStudentAnswerPlacements: (
     moves: Array<{
@@ -136,12 +136,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       finalStudentId: string | null
       finalPageNumber: number
     }>,
-    withScoring: boolean,
+    withScoring: boolean
   ) =>
     ipcRenderer.invoke(
       "batch-update-answer-sheet-placements",
       moves,
-      withScoring,
+      withScoring
     ),
   getImageData: (relativePath: string) =>
     ipcRenderer.invoke("get-image-data", relativePath),
@@ -168,11 +168,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Student Class Membership related
   createStudentClassMembership: (
-    membershipData: Prisma.StudentClassMembershipCreateInput,
+    membershipData: Prisma.StudentClassMembershipCreateInput
   ) => ipcRenderer.invoke("create-student-class-membership", membershipData),
   updateStudentClassMembership: (
     id: string,
-    membershipData: Prisma.StudentClassMembershipUpdateInput,
+    membershipData: Prisma.StudentClassMembershipUpdateInput
   ) =>
     ipcRenderer.invoke("update-student-class-membership", id, membershipData),
   deleteStudentClassMembership: (id: string) =>
@@ -188,7 +188,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     classId: string,
     startDate?: Date,
     attendanceNumber?: number,
-    notes?: string,
+    notes?: string
   ) =>
     ipcRenderer.invoke(
       "add-student-to-class",
@@ -196,7 +196,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       classId,
       startDate,
       attendanceNumber,
-      notes,
+      notes
     ),
   endStudentMembership: (membershipId: string, endDate?: Date) =>
     ipcRenderer.invoke("end-student-membership", membershipId, endDate),
@@ -206,12 +206,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // MasterAnswer related
   uploadMasterAnswers: (
     projectId: string,
-    filesData: { name: string; type: string; buffer: ArrayBuffer }[],
+    filesData: { name: string; type: string; buffer: ArrayBuffer }[]
   ) => ipcRenderer.invoke("upload-master-answers", projectId, filesData),
   deleteMasterAnswer: (answerId: string) =>
     ipcRenderer.invoke("delete-master-answer", answerId),
   updateMasterAnswersOrder: (
-    answerOrders: { id: string; pageNumber: number }[],
+    answerOrders: { id: string; pageNumber: number }[]
   ) => ipcRenderer.invoke("update-master-answers-order", answerOrders),
 
   // New API to resolve file path for display
@@ -241,7 +241,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getCropRegionById: (id: string) =>
     ipcRenderer.invoke("get-crop-region-by-id", id),
   updateCropRegionOrders: (
-    updates: Array<{ id: string; orderIndex: number }>,
+    updates: Array<{ id: string; orderIndex: number }>
   ) => ipcRenderer.invoke("update-crop-region-orders", updates),
 
   // Project-Student relationship
@@ -254,19 +254,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateStudentProjectStatus: (
     projectId: string,
     studentId: string,
-    status: "participating" | "expected" | "absent",
+    status: "participating" | "expected" | "absent"
   ) =>
     ipcRenderer.invoke(
       "update-student-project-status",
       projectId,
       studentId,
-      status,
+      status
     ),
   checkGradingDataForStudents: (projectId: string, studentIds: string[]) =>
     ipcRenderer.invoke(
       "check-grading-data-for-students",
       projectId,
-      studentIds,
+      studentIds
     ),
   getClassesNotInProject: (projectId: string) =>
     ipcRenderer.invoke("get-classes-not-in-project", projectId),
@@ -274,7 +274,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("get-students-not-in-project", projectId),
   updateStudentOrders: (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
 
   // QuestionScore related functions
@@ -287,7 +287,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   updateQuestionScore: (
     id: string,
     data: QuestionScoreUpdateData,
-    expectedVersion: number,
+    expectedVersion: number
   ) => ipcRenderer.invoke("update-question-score", id, data, expectedVersion),
   deleteQuestionScore: (id: string) =>
     ipcRenderer.invoke("delete-question-score", id),
@@ -295,20 +295,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke(
       "get-question-score-comparison",
       answerSheetId,
-      cropRegionId,
+      cropRegionId
     ),
   finalizeQuestionScore: (
     answerSheetId: string,
     cropRegionId: string,
     scoredByUserId: string,
-    scoreData: QuestionScoreUpdateData,
+    scoreData: QuestionScoreUpdateData
   ) =>
     ipcRenderer.invoke(
       "finalize-question-score",
       answerSheetId,
       cropRegionId,
       scoredByUserId,
-      scoreData,
+      scoreData
     ),
   getAnswerSheetProgress: (answerSheetId: string) =>
     ipcRenderer.invoke("get-answer-sheet-progress", answerSheetId),
@@ -324,7 +324,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   }) => ipcRenderer.invoke("create-subtotal-group", data),
   updateSubtotalGroup: (
     id: string,
-    data: { name: string; subtotals: { name: string; order: number }[] },
+    data: { name: string; subtotals: { name: string; order: number }[] }
   ) => ipcRenderer.invoke("update-subtotal-group", id, data),
   deleteSubtotalGroup: (id: string) =>
     ipcRenderer.invoke("delete-subtotal-group", id),
@@ -343,16 +343,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke(
       "add-subtotal-group-to-project",
       projectId,
-      subtotalGroupId,
+      subtotalGroupId
     ),
   removeSubtotalGroupFromProject: (
     projectId: string,
-    subtotalGroupId: string,
+    subtotalGroupId: string
   ) =>
     ipcRenderer.invoke(
       "remove-subtotal-group-from-project",
       projectId,
-      subtotalGroupId,
+      subtotalGroupId
     ),
 
   // Subtotal related (renamed from QuestionGroupItem)
@@ -371,7 +371,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createCropSubtotal: (data: Prisma.CropSubtotalUncheckedCreateInput) =>
     ipcRenderer.invoke("create-crop-subtotal", data),
   createManyCropSubtotals: (
-    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
   deleteCropSubtotal: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
@@ -386,7 +386,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSubtotalDefinitionsByCropRegionId: (cropRegionId: string) =>
     ipcRenderer.invoke(
       "get-subtotal-definitions-by-crop-region-id",
-      cropRegionId,
+      cropRegionId
     ),
 
   // 互換性関数（段階的移行のため古い名前も残す）
@@ -401,7 +401,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getLayoutRegionById: (id: string) =>
     ipcRenderer.invoke("get-crop-region-by-id", id),
   updateLayoutRegionOrders: (
-    updates: Array<{ id: string; orderIndex: number }>,
+    updates: Array<{ id: string; orderIndex: number }>
   ) => ipcRenderer.invoke("update-crop-region-orders", updates),
 
   createQuestionGroup: (data: Prisma.SubtotalGroupUncheckedCreateInput) =>
@@ -418,7 +418,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createQuestionGroupItem: (data: Prisma.SubtotalUncheckedCreateInput) =>
     ipcRenderer.invoke("create-subtotal", data),
   createManyQuestionGroupItems: (
-    items: Prisma.SubtotalUncheckedCreateInput[],
+    items: Prisma.SubtotalUncheckedCreateInput[]
   ) => ipcRenderer.invoke("create-many-subtotals", items),
   updateQuestionGroupItem: (id: string, data: Prisma.SubtotalUpdateInput) =>
     ipcRenderer.invoke("update-subtotal", id, data),
@@ -432,10 +432,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("update-subtotal-orders", orders),
 
   createQuestionSubtotalAssignment: (
-    data: Prisma.CropSubtotalUncheckedCreateInput,
+    data: Prisma.CropSubtotalUncheckedCreateInput
   ) => ipcRenderer.invoke("create-crop-subtotal", data),
   createManyQuestionSubtotalAssignments: (
-    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => ipcRenderer.invoke("create-many-crop-subtotals", assignments),
   deleteQuestionSubtotalAssignment: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
@@ -451,7 +451,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createSubtotalDefinition: (data: Prisma.CropSubtotalUncheckedCreateInput) =>
     ipcRenderer.invoke("create-crop-subtotal", data),
   createManySubtotalDefinitions: (
-    definitions: Prisma.CropSubtotalUncheckedCreateInput[],
+    definitions: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => ipcRenderer.invoke("create-many-crop-subtotals", definitions),
   deleteSubtotalDefinition: (id: string) =>
     ipcRenderer.invoke("delete-crop-subtotal", id),
@@ -483,9 +483,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       width?: number
       height?: number
     }) => ipcRenderer.invoke("export:convertSvgToPng", options),
-    selectPdfSavePath: (options: {
-      projectName?: string
-    }) => ipcRenderer.invoke("export:selectPdfSavePath", options),
+    selectPdfSavePath: (options: { projectName?: string }) =>
+      ipcRenderer.invoke("export:selectPdfSavePath", options),
     // ストリーミングPDF生成API
     createPdfStreamingSession: (options: {
       totalPages: number
@@ -510,8 +509,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     }) => ipcRenderer.invoke("export:getIndividualReportData", options),
     selectIndividualReportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("export:selectIndividualReportSavePath", options),
-    saveIndividualReportPdf: (options: { filePath: string; pdfBuffer: ArrayBuffer }) =>
-      ipcRenderer.invoke("export:saveIndividualReportPdf", options),
+    saveIndividualReportPdf: (options: {
+      filePath: string
+      pdfBuffer: ArrayBuffer
+    }) => ipcRenderer.invoke("export:saveIndividualReportPdf", options),
   },
 
   // Excel Export related
@@ -533,7 +534,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       total: number
       step: string
       percentage: number
-    }) => void,
+    }) => void
   ) => {
     ipcRenderer.on("export-progress", (_event, progress) => callback(progress))
     return () => ipcRenderer.removeAllListeners("export-progress")
@@ -556,12 +557,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke(
         "drawing:deleteByQuestionScore",
         questionScoreId,
-        type,
+        type
       ),
     batchCreate: (annotations: Partial<DrawingAnnotation>[]) =>
       ipcRenderer.invoke("drawing:batchCreate", annotations),
     batchUpdate: (
-      updates: Array<{ id: string; data: Partial<DrawingAnnotation> }>,
+      updates: Array<{ id: string; data: Partial<DrawingAnnotation> }>
     ) => ipcRenderer.invoke("drawing:batchUpdate", updates),
     getStats: (questionScoreId: string) =>
       ipcRenderer.invoke("drawing:getStats", questionScoreId),

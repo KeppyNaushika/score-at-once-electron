@@ -62,7 +62,7 @@ export function useDragDrop({
       activationConstraint: {
         distance: 8,
       },
-    }),
+    })
   )
 
   return {

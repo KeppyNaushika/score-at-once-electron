@@ -22,7 +22,7 @@ export function StudentGridRow({
     return (
       files.find(
         (file) =>
-          file.studentId === student.id && file.pageNumber === pageNumber,
+          file.studentId === student.id && file.pageNumber === pageNumber
       ) || null
     )
   }

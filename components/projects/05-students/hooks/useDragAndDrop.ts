@@ -17,7 +17,7 @@ interface UseDragAndDropProps {
   projectId: string
   onStudentOrderUpdate: (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => Promise<void>
 }
 
@@ -36,7 +36,7 @@ export const useDragAndDrop = ({
         distance: 8,
       },
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor)
   )
 
   const handleDragStart = (event: DragStartEvent) => {

@@ -1,11 +1,19 @@
-import type { ProjectWorkflowData, WorkflowPhase, WorkflowStats, WorkflowStep } from "@/components/projects/detail/types"
+import type {
+  ProjectWorkflowData,
+  WorkflowPhase,
+  WorkflowStats,
+  WorkflowStep,
+} from "@/components/projects/detail/types"
 import type { ProjectWithDetails } from "@/types/common.types"
-import { getProjectProgress, getStepCompletionStatus } from "@/utils/projectStatus"
+import {
+  getProjectProgress,
+  getStepCompletionStatus,
+} from "@/utils/projectStatus"
 import { useMemo } from "react"
 
 /**
  * ワークフローデータを生成するカスタムフック
- * 
+ *
  * 統計データとプロジェクト詳細から3フェーズのワークフロー情報を構築し、
  * 現在のフェーズと次のアクションを決定する（精密な判定ロジック使用）
  */
@@ -24,7 +32,9 @@ export function useWorkflowData(
   return useMemo(() => {
     // プロジェクトデータがない場合はフォールバック
     const progress = project ? getProjectProgress(project) : null
-    const _stepCompletions = project ? getStepCompletionStatus(project) : Array(8).fill(false)
+    const _stepCompletions = project
+      ? getStepCompletionStatus(project)
+      : Array(8).fill(false)
 
     // Phase 1: 試験前準備
     const phase1Steps = [
@@ -34,7 +44,7 @@ export function useWorkflowData(
         description: "試験問題の模範解答画像をアップロード",
         path: "/01-upload",
         icon: "FileImage",
-        isCompleted: progress?.hasImages ?? (masterImageCount > 0),
+        isCompleted: progress?.hasImages ?? masterImageCount > 0,
         canStart: true,
       },
       {
@@ -43,8 +53,8 @@ export function useWorkflowData(
         description: "各設問の採点範囲を視覚的に設定",
         path: "/02-template",
         icon: "Settings",
-        isCompleted: progress?.hasLayout ?? (cropRegionCount > 0),
-        canStart: progress?.hasImages ?? (masterImageCount > 0),
+        isCompleted: progress?.hasLayout ?? cropRegionCount > 0,
+        canStart: progress?.hasImages ?? masterImageCount > 0,
         dependsOn: ["01-upload"],
       },
       {
@@ -53,8 +63,8 @@ export function useWorkflowData(
         description: "各領域の種類、配点、ラベルを設定",
         path: "/03-region-info",
         icon: "Edit",
-        isCompleted: progress?.hasRegionInfo ?? (questionRegionCount > 0),
-        canStart: progress?.hasLayout ?? (cropRegionCount > 0),
+        isCompleted: progress?.hasRegionInfo ?? questionRegionCount > 0,
+        canStart: progress?.hasLayout ?? cropRegionCount > 0,
         dependsOn: ["02-template"],
       },
       {
@@ -63,8 +73,9 @@ export function useWorkflowData(
         description: "設問グループと小計点の関連付けを設定",
         path: "/04-question-group",
         icon: "Calculator",
-        isCompleted: progress?.hasSubtotalGroupSetting ?? (questionRegionCount > 0),
-        canStart: progress?.hasRegionInfo ?? (questionRegionCount > 0),
+        isCompleted:
+          progress?.hasSubtotalGroupSetting ?? questionRegionCount > 0,
+        canStart: progress?.hasRegionInfo ?? questionRegionCount > 0,
         dependsOn: ["03-region-info"],
       },
       {
@@ -73,8 +84,8 @@ export function useWorkflowData(
         description: "プロジェクトに参加する生徒を管理",
         path: "/05-students",
         icon: "Users",
-        isCompleted: progress?.hasStudents ?? (studentCount > 0),
-        canStart: progress?.hasSubtotalGroupSetting ?? (questionRegionCount > 0),
+        isCompleted: progress?.hasStudents ?? studentCount > 0,
+        canStart: progress?.hasSubtotalGroupSetting ?? questionRegionCount > 0,
         dependsOn: ["04-question-group"],
       },
     ]
@@ -87,8 +98,8 @@ export function useWorkflowData(
         description: "スキャンした生徒の答案画像をアップロード",
         path: "/06-student-answers",
         icon: "Upload",
-        isCompleted: progress?.hasAnswers ?? (answerSheetCount > 0),
-        canStart: progress?.hasStudents ?? (studentCount > 0),
+        isCompleted: progress?.hasAnswers ?? answerSheetCount > 0,
+        canStart: progress?.hasStudents ?? studentCount > 0,
         dependsOn: ["05-students"],
       },
       {
@@ -98,8 +109,9 @@ export function useWorkflowData(
         path: "/07-score-at-once",
         icon: "BarChart3",
         isCompleted: progress?.hasScoring ?? false,
-        canStart: (progress?.hasAnswers && progress?.hasRegionInfo) ?? 
-                  (answerSheetCount > 0 && questionRegionCount > 0),
+        canStart:
+          (progress?.hasAnswers && progress?.hasRegionInfo) ??
+          (answerSheetCount > 0 && questionRegionCount > 0),
         dependsOn: ["06-student-answers"],
       },
     ]
@@ -119,13 +131,19 @@ export function useWorkflowData(
     ]
 
     // フェーズの完了状況を計算
-    const phase1CompletedSteps = phase1Steps.filter(step => step.isCompleted).length
+    const phase1CompletedSteps = phase1Steps.filter(
+      (step) => step.isCompleted
+    ).length
     const phase1IsCompleted = phase1CompletedSteps === phase1Steps.length
 
-    const phase2CompletedSteps = phase2Steps.filter(step => step.isCompleted).length
+    const phase2CompletedSteps = phase2Steps.filter(
+      (step) => step.isCompleted
+    ).length
     const phase2IsCompleted = phase2CompletedSteps === phase2Steps.length
 
-    const phase3CompletedSteps = phase3Steps.filter(step => step.isCompleted).length
+    const phase3CompletedSteps = phase3Steps.filter(
+      (step) => step.isCompleted
+    ).length
     // Phase 3（出力）は完了判定から除外
     const phase3IsCompleted = false
 
@@ -150,7 +168,9 @@ export function useWorkflowData(
         canStart: true,
         completedSteps: phase1CompletedSteps,
         totalSteps: phase1Steps.length,
-        nextStepId: phase1Steps.find(step => !step.isCompleted && step.canStart)?.id,
+        nextStepId: phase1Steps.find(
+          (step) => !step.isCompleted && step.canStart
+        )?.id,
       },
       {
         id: 2,
@@ -163,7 +183,9 @@ export function useWorkflowData(
         canStart: phase1IsCompleted,
         completedSteps: phase2CompletedSteps,
         totalSteps: phase2Steps.length,
-        nextStepId: phase2Steps.find(step => !step.isCompleted && step.canStart)?.id,
+        nextStepId: phase2Steps.find(
+          (step) => !step.isCompleted && step.canStart
+        )?.id,
       },
       {
         id: 3,
@@ -176,7 +198,9 @@ export function useWorkflowData(
         canStart: phase1IsCompleted && phase2IsCompleted,
         completedSteps: phase3CompletedSteps,
         totalSteps: phase3Steps.length,
-        nextStepId: phase3Steps.find(step => !step.isCompleted && step.canStart)?.id,
+        nextStepId: phase3Steps.find(
+          (step) => !step.isCompleted && step.canStart
+        )?.id,
       },
     ]
 
@@ -186,10 +210,12 @@ export function useWorkflowData(
     const overallProgress = (totalCompletedSteps / totalSteps) * 100
 
     // 次のアクションを決定
-    const activePhase = phases.find(phase => phase.isActive)
+    const activePhase = phases.find((phase) => phase.isActive)
     const nextAction = activePhase?.nextStepId
       ? (() => {
-          const nextStep = activePhase.steps.find((step: WorkflowStep) => step.id === activePhase.nextStepId)
+          const nextStep = activePhase.steps.find(
+            (step: WorkflowStep) => step.id === activePhase.nextStepId
+          )
           return nextStep
             ? {
                 title: nextStep.title,

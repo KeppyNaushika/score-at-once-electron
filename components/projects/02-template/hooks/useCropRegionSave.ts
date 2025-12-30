@@ -1,9 +1,13 @@
+import {
+  AreaType,
+  DatabaseOperation,
+  RegionCoordinates,
+} from "@/components/projects/02-template/types"
 import { CropRegionArea } from "@/types/common.types"
 import type { CropRegionWithDetails } from "@/types/prisma-extensions"
 import { User } from "@prisma/client"
 import { useCallback, useRef } from "react"
 import { toast } from "sonner"
-import { AreaType, DatabaseOperation, RegionCoordinates } from "@/components/projects/02-template/types"
 
 /**
  * 領域保存処理を担当するカスタムフック
@@ -15,7 +19,7 @@ import { AreaType, DatabaseOperation, RegionCoordinates } from "@/components/pro
  */
 export function useCropRegionSave(
   projectId: string | undefined,
-  currentUser: User | null,
+  currentUser: User | null
 ) {
   const isSavingRef = useRef(false)
 
@@ -30,7 +34,7 @@ export function useCropRegionSave(
   const saveRegion = useCallback(
     async (
       region: CropRegionArea,
-      operation: DatabaseOperation,
+      operation: DatabaseOperation
     ): Promise<CropRegionWithDetails | null> => {
       if (!projectId || !currentUser) {
         console.warn("Missing projectId or currentUser for saveRegion")
@@ -40,7 +44,7 @@ export function useCropRegionSave(
       try {
         if (!region.projectPageId) {
           throw new Error(
-            `Layout region ${region.label || "Unnamed"} is missing projectPageId.`,
+            `Layout region ${region.label || "Unnamed"} is missing projectPageId.`
           )
         }
 
@@ -63,7 +67,7 @@ export function useCropRegionSave(
           // 既存領域の更新
           return await window.electronAPI.updateCropRegion(
             region.id,
-            regionData,
+            regionData
           )
         } else if (operation === "create") {
           // 新規領域の作成
@@ -71,7 +75,7 @@ export function useCropRegionSave(
           return await window.electronAPI.createCropRegion(createData)
         } else {
           throw new Error(
-            `Invalid operation: ${operation} for region with ID: ${region.id}`,
+            `Invalid operation: ${operation} for region with ID: ${region.id}`
           )
         }
       } catch (error) {
@@ -79,7 +83,7 @@ export function useCropRegionSave(
         throw error
       }
     },
-    [projectId, currentUser],
+    [projectId, currentUser]
   )
 
   /**
@@ -132,7 +136,7 @@ export function useCropRegionSave(
             // 既存領域の更新
             const result = await window.electronAPI.updateCropRegion(
               area.id,
-              regionData,
+              regionData
             )
             saveResults.push({ originalIndex: i, result, wasUpdate: true })
           } else {
@@ -151,7 +155,7 @@ export function useCropRegionSave(
         isSavingRef.current = false
       }
     },
-    [projectId, currentUser],
+    [projectId, currentUser]
   )
 
   /**
@@ -169,7 +173,7 @@ export function useCropRegionSave(
       type: AreaType,
       coords: RegionCoordinates,
       projectPageId: string,
-      existingRegions: CropRegionArea[],
+      existingRegions: CropRegionArea[]
     ): Promise<CropRegionArea | null> => {
       // タイプに応じたラベルと配点を設定
       let label = ""
@@ -235,7 +239,7 @@ export function useCropRegionSave(
         return null
       }
     },
-    [saveRegion],
+    [saveRegion]
   )
 
   /**
@@ -249,7 +253,7 @@ export function useCropRegionSave(
   const updateRegion = useCallback(
     async (
       region: CropRegionArea,
-      coords: RegionCoordinates,
+      coords: RegionCoordinates
     ): Promise<CropRegionArea | null> => {
       if (!region.id) {
         console.warn("Cannot update region without ID")
@@ -266,7 +270,7 @@ export function useCropRegionSave(
         return null
       }
     },
-    [saveRegion],
+    [saveRegion]
   )
 
   return {

@@ -188,11 +188,14 @@ export function useDrawingAnnotations(
   /**
    * エラーハンドリング
    */
-  const handleError = useCallback((message: string, originalError?: unknown) => {
-    console.error("描画アノテーションエラー:", message, originalError)
-    setError(message)
-    callbacksRef.current.onError?.(message)
-  }, [])
+  const handleError = useCallback(
+    (message: string, originalError?: unknown) => {
+      console.error("描画アノテーションエラー:", message, originalError)
+      setError(message)
+      callbacksRef.current.onError?.(message)
+    },
+    []
+  )
 
   /**
    * アノテーション読み込み

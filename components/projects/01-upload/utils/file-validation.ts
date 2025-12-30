@@ -32,13 +32,13 @@ export function isValidMasterImageFile(file: File): boolean {
   // ファイル名から拡張子を取得
   const fileName = file.name.toLowerCase()
   const hasValidExtension = SUPPORTED_EXTENSIONS.some((ext) =>
-    fileName.endsWith(ext),
+    fileName.endsWith(ext)
   )
 
   // MIMEタイプの検証
   const mimeType = file.type.toLowerCase()
   const hasValidMimeType = Object.values(SUPPORTED_FILE_TYPES).some(
-    (type) => mimeType === type.toLowerCase() || mimeType.startsWith("image/"),
+    (type) => mimeType === type.toLowerCase() || mimeType.startsWith("image/")
   )
 
   return hasValidExtension && hasValidMimeType
@@ -76,7 +76,7 @@ export function isImageFile(file: File): boolean {
 
   const imageExtensions = [".png", ".jpg", ".jpeg"]
   const hasImageExtension = imageExtensions.some((ext) =>
-    fileName.endsWith(ext),
+    fileName.endsWith(ext)
   )
   const hasImageMimeType = mimeType.startsWith("image/")
 

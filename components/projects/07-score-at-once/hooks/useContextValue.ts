@@ -37,7 +37,7 @@ import { useShortcutContext } from "../ScoringMain/contexts/ShortcutProvider"
  */
 export function useContextValue<K extends keyof ScoringContextState>(
   key: K,
-  value: ScoringContextState[K],
+  value: ScoringContextState[K]
 ) {
   const { setContextValue } = useShortcutContext()
 

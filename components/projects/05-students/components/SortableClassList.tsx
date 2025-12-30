@@ -92,7 +92,7 @@ export default function SortableClassList({
         tolerance: 5,
       },
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor)
   )
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -118,7 +118,7 @@ export default function SortableClassList({
       const reorderedClasses = arrayMove(selectedClasses, oldIndex, newIndex)
       onReorder(reorderedClasses)
     },
-    [selectedClasses, onReorder],
+    [selectedClasses, onReorder]
   )
 
   const activeClass = activeId

@@ -13,13 +13,13 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
   const { state, selectFile } = wizard
 
   return (
-    <div className="flex flex-col items-center justify-center h-full py-8">
+    <div className="flex h-full flex-col items-center justify-center py-8">
       {/* メインコンテンツ */}
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <FileArchive className="w-10 h-10 text-primary" />
+      <div className="mb-8 text-center">
+        <div className="bg-primary/10 mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl">
+          <FileArchive className="text-primary h-10 w-10" />
         </div>
-        <h3 className="text-xl font-semibold text-foreground mb-2">
+        <h3 className="text-foreground mb-2 text-xl font-semibold">
           プロジェクトアーカイブを選択
         </h3>
         <p className="text-muted-foreground max-w-md">
@@ -33,33 +33,33 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
         onClick={selectFile}
         disabled={state.isProcessing}
         size="lg"
-        className="gap-2 px-8 h-12 text-base"
+        className="h-12 gap-2 px-8 text-base"
       >
         {state.isProcessing ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
             読み込み中...
           </>
         ) : (
           <>
-            <Upload className="w-5 h-5" />
+            <Upload className="h-5 w-5" />
             ファイルを選択
           </>
         )}
       </Button>
 
       {/* 対応ファイル形式 */}
-      <Card className="mt-10 w-full max-w-md bg-muted/50 border-muted">
+      <Card className="bg-muted/50 border-muted mt-10 w-full max-w-md">
         <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Info className="w-4 h-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium text-foreground">
+          <div className="mb-3 flex items-center gap-2">
+            <Info className="text-muted-foreground h-4 w-4" />
+            <h4 className="text-foreground text-sm font-medium">
               対応ファイル形式
             </h4>
           </div>
           <ul className="space-y-2">
-            <li className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <li className="text-muted-foreground flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
               Score at Once アーカイブ (.score)
             </li>
           </ul>

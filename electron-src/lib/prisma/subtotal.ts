@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // Subtotal を作成
 export const createSubtotal = async (
-  data: Prisma.SubtotalUncheckedCreateInput, // subtotalGroupId を直接含める
+  data: Prisma.SubtotalUncheckedCreateInput // subtotalGroupId を直接含める
 ) => {
   return prisma.subtotal.create({
     data,
@@ -12,7 +12,7 @@ export const createSubtotal = async (
 
 // 複数の Subtotal を作成 (特定の SubtotalGroup に対して)
 export const createManySubtotals = async (
-  items: Prisma.SubtotalUncheckedCreateInput[],
+  items: Prisma.SubtotalUncheckedCreateInput[]
 ) => {
   return prisma.subtotal.createMany({
     data: items,
@@ -22,7 +22,7 @@ export const createManySubtotals = async (
 // Subtotal を更新
 export const updateSubtotal = async (
   id: string,
-  data: Prisma.SubtotalUpdateInput,
+  data: Prisma.SubtotalUpdateInput
 ) => {
   return prisma.subtotal.update({
     where: { id },
@@ -39,9 +39,7 @@ export const deleteSubtotal = async (id: string) => {
 }
 
 // SubtotalGroup ID で Subtotal を取得
-export const getSubtotalsByGroupId = async (
-  subtotalGroupId: string,
-) => {
+export const getSubtotalsByGroupId = async (subtotalGroupId: string) => {
   return prisma.subtotal.findMany({
     where: { subtotalGroupId },
     orderBy: {
@@ -70,7 +68,7 @@ export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
 
 // Subtotal の順序を一括更新
 export const updateSubtotalOrders = async (
-  orders: { id: string; order: number }[],
+  orders: { id: string; order: number }[]
 ) => {
   console.log("🔄 DB: updateSubtotalOrders called with:", orders)
 
@@ -78,7 +76,7 @@ export const updateSubtotalOrders = async (
     prisma.subtotal.update({
       where: { id },
       data: { order },
-    }),
+    })
   )
 
   console.log("🔄 DB: Executing transaction with", updates.length, "updates")

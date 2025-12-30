@@ -63,7 +63,7 @@ export function StudentSelectionCard({
   const deselectAllFiltered = () => {
     const filteredIds = new Set(students.map((s) => s.id))
     const newSelection = new Set(
-      [...selectedStudents].filter((id) => !filteredIds.has(id)),
+      [...selectedStudents].filter((id) => !filteredIds.has(id))
     )
     setSelectedStudents(newSelection)
   }

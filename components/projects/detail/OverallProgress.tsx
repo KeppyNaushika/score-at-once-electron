@@ -27,38 +27,40 @@ export default function OverallProgress({
       </CardHeader>
       <CardContent>
         <Progress value={overallProgress} className="mb-4 h-3" />
-        
+
         <div className="grid grid-cols-3 gap-4">
           {phases.map((phase) => (
             <div
               key={phase.id}
-              className={`text-center p-3 rounded-lg transition-all ${
+              className={`rounded-lg p-3 text-center transition-all ${
                 phase.id === currentPhase
-                  ? "bg-blue-50 border-2 border-blue-200"
+                  ? "border-2 border-blue-200 bg-blue-50"
                   : phase.isCompleted
-                  ? "bg-green-50 border-2 border-green-200"
-                  : "bg-gray-50 border-2 border-gray-200"
+                    ? "border-2 border-green-200 bg-green-50"
+                    : "border-2 border-gray-200 bg-gray-50"
               }`}
             >
-              <div className="text-2xl mb-1">{phase.emoji}</div>
-              <h3 className="font-medium text-sm mb-1">{phase.title}</h3>
+              <div className="mb-1 text-2xl">{phase.emoji}</div>
+              <h3 className="mb-1 text-sm font-medium">{phase.title}</h3>
               <div className="text-xs text-gray-600">
-                {phase.id === 3 ? "利用可能" : `${phase.completedSteps}/${phase.totalSteps} 完了`}
+                {phase.id === 3
+                  ? "利用可能"
+                  : `${phase.completedSteps}/${phase.totalSteps} 完了`}
               </div>
               <div
-                className={`text-xs font-medium mt-1 ${
+                className={`mt-1 text-xs font-medium ${
                   phase.id === currentPhase
                     ? "text-blue-600"
                     : phase.isCompleted
-                    ? "text-green-600"
-                    : "text-gray-500"
+                      ? "text-green-600"
+                      : "text-gray-500"
                 }`}
               >
                 {phase.isCompleted
                   ? "✓ 完了"
                   : phase.id === currentPhase
-                  ? "実行中"
-                  : "待機中"}
+                    ? "実行中"
+                    : "待機中"}
               </div>
             </div>
           ))}

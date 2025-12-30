@@ -33,7 +33,7 @@ export function useStudentAnswerUploadMain({
     "page-then-student" | "student-then-page"
   >("page-then-student")
   const [assignmentMode, setAssignmentMode] = useState<"auto" | "manual">(
-    "auto",
+    "auto"
   )
   const [sortMode, setSortMode] = useState<
     "natural" | "alphabetical" | "upload-order"
@@ -57,7 +57,7 @@ export function useStudentAnswerUploadMain({
     try {
       const selectedFiles = fileProcessing.files.filter((f) => f.isSelected)
       const selectedStudents = studentManagement.studentsWithAnswers.filter(
-        (s) => s.isSelected,
+        (s) => s.isSelected
       )
 
       if (selectedFiles.length === 0) {
@@ -93,7 +93,7 @@ export function useStudentAnswerUploadMain({
       // ElectronAPI呼び出し
       const result = await window.electronAPI.uploadStudentAnswers(
         projectId,
-        uploadData,
+        uploadData
       )
 
       if (result.success) {
@@ -129,7 +129,7 @@ export function useStudentAnswerUploadMain({
         })
       }
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   // ヘルパー関数
@@ -137,25 +137,25 @@ export function useStudentAnswerUploadMain({
     (acceptedFiles: File[]) => {
       fileProcessing.processFiles(acceptedFiles)
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   const removeFile = useCallback(
     (fileId: string) => {
       fileProcessing.setFiles((prev) => prev.filter((f) => f.id !== fileId))
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   const toggleFileSelection = useCallback(
     (fileId: string) => {
       fileProcessing.setFiles((prev) =>
         prev.map((f) =>
-          f.id === fileId ? { ...f, isSelected: !f.isSelected } : f,
-        ),
+          f.id === fileId ? { ...f, isSelected: !f.isSelected } : f
+        )
       )
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   const moveFile = useCallback(
@@ -168,7 +168,7 @@ export function useStudentAnswerUploadMain({
         return newFiles
       })
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   const handleUpload = uploadAnswerSheets
@@ -181,7 +181,7 @@ export function useStudentAnswerUploadMain({
       try {
         const newFiles = await fileProcessing.convertFilesToImages(
           [fileProcessing.currentPdfFile],
-          password,
+          password
         )
         fileProcessing.setFiles((prev) => [...prev, ...newFiles])
 
@@ -210,14 +210,14 @@ export function useStudentAnswerUploadMain({
         fileProcessing.setIsPasswordProcessing(false)
       }
     },
-    [fileProcessing],
+    [fileProcessing]
   )
 
   const selectedFilesCount = fileProcessing.files.filter(
-    (f) => f.isSelected,
+    (f) => f.isSelected
   ).length
   const selectedStudentsCount = studentManagement.studentsWithAnswers.filter(
-    (s) => s.isSelected,
+    (s) => s.isSelected
   ).length
 
   return {
@@ -271,11 +271,11 @@ export function useStudentAnswerUploadMain({
     getStudentName: useCallback(
       (studentId: string) => {
         const student = studentManagement.studentsWithAnswers.find(
-          (s) => s.id === studentId,
+          (s) => s.id === studentId
         )
         return student ? `${student.lastName} ${student.firstName}` : ""
       },
-      [studentManagement.studentsWithAnswers],
+      [studentManagement.studentsWithAnswers]
     ),
   }
 }

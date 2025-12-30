@@ -54,7 +54,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
         "Failed to load image:",
         answer.imagePath,
         "using URL:",
-        imageUrl,
+        imageUrl
       )
     }
 
@@ -127,7 +127,7 @@ const MasterAnswerCard = React.memo<MasterAnswerCardProps>(
         </div>
       </div>
     )
-  },
+  }
 )
 
 MasterAnswerCard.displayName = "MasterAnswerCard"

@@ -10,7 +10,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Search } from "lucide-react"
-import type { ClassGroup, StudentStatus } from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
+import type {
+  ClassGroup,
+  StudentStatus,
+} from "@/components/projects/05-students/components/sortable-student-table/types/student-table-types"
 
 interface TableFiltersProps {
   searchTerm: string

@@ -33,16 +33,16 @@ export function useStudentDetail(studentId: string) {
                     grade?: number | null
                     classCode?: string | null
                   }
-                },
+                }
               ) => ({
                 ...membership,
                 startDate: new Date(
-                  membership.startDate || membership.createdAt,
+                  membership.startDate || membership.createdAt
                 ),
                 endDate: membership.endDate
                   ? new Date(membership.endDate)
                   : null,
-              }),
+              })
             ),
           }
           setStudent(transformedStudent)
@@ -64,7 +64,7 @@ export function useStudentDetail(studentId: string) {
     try {
       const updatedStudent = await window.electronAPI.updateStudent(
         studentId,
-        studentData,
+        studentData
       )
       // Transform the updated student data to match the expected interface
       const transformedStudent = {
@@ -79,12 +79,12 @@ export function useStudentDetail(studentId: string) {
                   grade?: number | null
                   classCode?: string | null
                 }
-              },
+              }
             ) => ({
               ...membership,
               startDate: new Date(membership.startDate || membership.createdAt),
               endDate: membership.endDate ? new Date(membership.endDate) : null,
-            }),
+            })
           ) || [],
       }
       setStudent(transformedStudent)
@@ -99,7 +99,7 @@ export function useStudentDetail(studentId: string) {
   const handleDeleteStudent = async () => {
     if (
       window.confirm(
-        "本当にこの生徒を削除しますか？\nこの操作は取り消すことができません。",
+        "本当にこの生徒を削除しますか？\nこの操作は取り消すことができません。"
       )
     ) {
       try {
@@ -117,18 +117,18 @@ export function useStudentDetail(studentId: string) {
 
   const handleSaveMembership = async (
     membershipData: Partial<StudentClassMembership> & { classId: string },
-    membershipToEdit?: Membership | null,
+    membershipToEdit?: Membership | null
   ) => {
     try {
       if (membershipToEdit) {
         await window.electronAPI.updateStudentClassMembership(
           membershipToEdit.id,
-          membershipData,
+          membershipData
         )
       } else {
         await window.electronAPI.addStudentToClass(
           studentId,
-          membershipData.classId,
+          membershipData.classId
         )
       }
 
@@ -149,16 +149,16 @@ export function useStudentDetail(studentId: string) {
                     grade?: number | null
                     classCode?: string | null
                   }
-                },
+                }
               ) => ({
                 ...membership,
                 startDate: new Date(
-                  membership.startDate || membership.createdAt,
+                  membership.startDate || membership.createdAt
                 ),
                 endDate: membership.endDate
                   ? new Date(membership.endDate)
                   : null,
-              }),
+              })
             ) || [],
         }
         setStudent(transformedStudent)
@@ -193,16 +193,16 @@ export function useStudentDetail(studentId: string) {
                       grade?: number | null
                       classCode?: string | null
                     }
-                  },
+                  }
                 ) => ({
                   ...membership,
                   startDate: new Date(
-                    membership.startDate || membership.createdAt,
+                    membership.startDate || membership.createdAt
                   ),
                   endDate: membership.endDate
                     ? new Date(membership.endDate)
                     : null,
-                }),
+                })
               ) || [],
           }
           setStudent(transformedStudent)

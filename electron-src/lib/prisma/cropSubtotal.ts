@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // CropSubtotal を作成
 export const createCropSubtotal = async (
-  data: Prisma.CropSubtotalUncheckedCreateInput,
+  data: Prisma.CropSubtotalUncheckedCreateInput
 ) => {
   // データ整合性チェック
   const cropRegion = await prisma.cropRegion.findUnique({
@@ -39,7 +39,8 @@ export const createCropSubtotal = async (
   }
 
   // 小計項目がプロジェクトで有効化されているかチェック
-  const isSubtotalActiveInProject = subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+  const isSubtotalActiveInProject =
+    subtotal.subtotalGroup.projectSubtotalGroups.length > 0
 
   if (!isSubtotalActiveInProject) {
     throw new Error(
@@ -58,7 +59,7 @@ export const createCropSubtotal = async (
 
 // 複数の CropSubtotal を作成
 export const createManyCropSubtotals = async (
-  data: Prisma.CropSubtotalUncheckedCreateInput[],
+  data: Prisma.CropSubtotalUncheckedCreateInput[]
 ) => {
   // 各CropSubtotalについてデータ整合性をチェック
   for (const item of data) {
@@ -72,7 +73,9 @@ export const createManyCropSubtotals = async (
     })
 
     if (!cropRegion) {
-      throw new Error(`指定された設問領域が見つかりません: ${item.cropRegionId}`)
+      throw new Error(
+        `指定された設問領域が見つかりません: ${item.cropRegionId}`
+      )
     }
 
     const subtotal = await prisma.subtotal.findUnique({
@@ -95,7 +98,8 @@ export const createManyCropSubtotals = async (
     }
 
     // 小計項目がプロジェクトで有効化されているかチェック
-    const isSubtotalActiveInProject = subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+    const isSubtotalActiveInProject =
+      subtotal.subtotalGroup.projectSubtotalGroups.length > 0
 
     if (!isSubtotalActiveInProject) {
       throw new Error(
@@ -112,7 +116,7 @@ export const createManyCropSubtotals = async (
 // CropSubtotal を更新
 export const updateCropSubtotal = async (
   id: string,
-  data: Prisma.CropSubtotalUpdateInput,
+  data: Prisma.CropSubtotalUpdateInput
 ) => {
   return prisma.cropSubtotal.update({
     where: { id },
@@ -132,7 +136,9 @@ export const deleteCropSubtotal = async (id: string) => {
 }
 
 // CropRegion ID で CropSubtotal をすべて削除
-export const deleteCropSubtotalsByCropRegionId = async (cropRegionId: string) => {
+export const deleteCropSubtotalsByCropRegionId = async (
+  cropRegionId: string
+) => {
   return prisma.cropSubtotal.deleteMany({
     where: { cropRegionId },
   })
@@ -167,11 +173,13 @@ export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
 }
 
 // CropRegion ID とassignmentTypeで CropSubtotal を取得（旧SubtotalDefinition互換）
-export const getSubtotalDefinitionsByCropRegionId = async (cropRegionId: string) => {
+export const getSubtotalDefinitionsByCropRegionId = async (
+  cropRegionId: string
+) => {
   return prisma.cropSubtotal.findMany({
-    where: { 
+    where: {
       cropRegionId,
-      assignmentType: 'SUBTOTAL_DEFINITION'
+      assignmentType: "SUBTOTAL_DEFINITION",
     },
     include: {
       subtotal: {
@@ -184,11 +192,13 @@ export const getSubtotalDefinitionsByCropRegionId = async (cropRegionId: string)
 }
 
 // CropRegion ID とassignmentTypeで CropSubtotal を取得（旧QuestionSubtotalAssignment互換）
-export const getQuestionSubtotalAssignmentsByCropRegionId = async (cropRegionId: string) => {
+export const getQuestionSubtotalAssignmentsByCropRegionId = async (
+  cropRegionId: string
+) => {
   return prisma.cropSubtotal.findMany({
-    where: { 
+    where: {
       cropRegionId,
-      assignmentType: 'QUESTION_ASSIGNMENT'
+      assignmentType: "QUESTION_ASSIGNMENT",
     },
     include: {
       subtotal: {

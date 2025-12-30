@@ -13,7 +13,7 @@ interface UsePartialScoreProps {
     status: ScoringStatus,
     score?: number | null,
     partialScore?: number | null,
-    selectedAnswers?: Set<string>,
+    selectedAnswers?: Set<string>
   ) => void
   onAutoAdvance?: () => void // 自動進行コールバック
 }
@@ -96,7 +96,7 @@ export function usePartialScore({
       partialScoreInput,
       showPartialScoreModal,
       showExceedsMaxPointsToast,
-    ],
+    ]
   )
 
   // F/Jキーで部分点確定
@@ -147,7 +147,7 @@ export function usePartialScore({
       onAutoAdvance,
       blurActiveElement,
       setContextValue,
-    ],
+    ]
   )
 
   // モーダルキャンセル（Escape等）
@@ -199,7 +199,7 @@ export function usePartialScore({
         setPartialScoreInput(value)
       }
     },
-    [currentCropRegion, showExceedsMaxPointsToast],
+    [currentCropRegion, showExceedsMaxPointsToast]
   )
 
   useEffect(() => {

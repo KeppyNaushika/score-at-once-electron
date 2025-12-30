@@ -37,7 +37,11 @@ export interface StudentAnswerTableProps {
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
+    changedFiles: Array<{
+      fileId: string
+      fromState: FileState
+      toState: FileState
+    }>
   ) => void
 
   // 上書き制御用（アップロードモードでの既存答案情報）

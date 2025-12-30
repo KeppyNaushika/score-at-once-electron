@@ -298,16 +298,19 @@ npx prisma studio
 #### 🔄 多対多関係の強化（2025年7月29日更新）
 
 **Project-User関係の多対多化**:
+
 - Projectは複数のUserが参加可能（協調採点の実現）
 - UserProjectテーブルによる中間テーブル管理
 - ユーザーごとのロール・権限管理の準備
 
 **SubtotalGroup-Project関係の多対多化**:
+
 - SubtotalGroupは複数のProjectで再利用可能
 - ProjectSubtotalGroupテーブルによる中間テーブル管理
 - 同一設問構成の試験における集計設定の統一化
 
 **新規Subject（教科）テーブルの追加**:
+
 - Subject (id, name) テーブルの新設
 - SubjectSubtotalGroupテーブルによるSubject-SubtotalGroup多対多関係
 - 教科別フィルタリング・分析機能の基盤
@@ -315,11 +318,13 @@ npx prisma studio
 #### 🎯 期待される機能向上
 
 **個人成績の横断分析**:
+
 - 複数Project間でのSubtotal推移追跡
 - 教科別成績分析とフィルタリング表示
 - 長期的な学習進度の可視化
 
 **協調採点機能の完全実現**:
+
 - 複数教員による同一プロジェクトへの参加
 - 教員間での採点作業分担と競合解決
 - 採点進捗の全体把握と効率的な作業配分
@@ -453,6 +458,7 @@ import { validateFile } from "./utils/file-processing"
 #### 型定義の配置ルール
 
 **単一ファイルで使用する型**:
+
 - そのファイル内で宣言する
 - 例: hooksの引数・返り値の型、コンポーネントのProps型
 
@@ -467,6 +473,7 @@ export function useScoring(options: UseScoringOptions) { ... }
 ```
 
 **複数ファイルで使用する型**:
+
 - 上位ディレクトリの`types.ts`に配置
 - 例: 機能ディレクトリ内の複数コンポーネントで共有する型
 
@@ -477,6 +484,7 @@ export type ScoreStatus = 'correct' | 'incorrect' | 'partial' | ...
 ```
 
 **アプリケーション全体で使用する型**:
+
 - `/types/`ディレクトリに配置
 - 大規模で主要な機能の型はここに置くと全体像が把握しやすい
 
@@ -491,11 +499,14 @@ IPCでの受け渡し時にDecimal→number変換が必要な場合など、Pris
 
 ```typescript
 // types/prisma-extensions.ts
-import type { QuestionScore } from '@prisma/client'
+import type { QuestionScore } from "@prisma/client"
 
 // IPC用にシリアライズされた型
-export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialScore'> {
-  partialScore: number | null  // Decimal → number
+export interface SerializedQuestionScore extends Omit<
+  QuestionScore,
+  "partialScore"
+> {
+  partialScore: number | null // Decimal → number
 }
 ```
 
@@ -521,12 +532,14 @@ export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialSco
 ### ファイル分割基準
 
 #### 分割対象の基準
+
 - **200行以上**: 分割を検討
 - **500行以上**: 分割を強く推奨
 - **複数の責任**: 異なる機能が混在している場合
 - **再利用性**: コンポーネントやフックが他の場所で使用される可能性
 
 #### 分割後の構造
+
 ```
 /large-feature/
 ├── types.ts              # 型定義
@@ -643,11 +656,13 @@ export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialSco
 ## 📊 分割実績
 
 ### 完了した分割
+
 1. **生徒詳細ページ**: 574行 → 6コンポーネント + 1フック + 1型定義
 2. **設定ページ**: 543行 → 1コンポーネント + 1フック + 1定数定義
 3. **Excel出力**: 720行 → 新しい構造への移行（互換性維持）
 
 ### 分割効果
+
 - **開発効率**: 必要な機能だけを素早く特定・編集
 - **保守性**: バグの発生箇所を特定しやすい
 - **再利用性**: コンポーネントとフックの独立性
@@ -655,6 +670,7 @@ export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialSco
 - **型安全性**: 機能別型定義による明確な管理
 
 ### 今後の分割候補
+
 - `/app/projects/[projectId]/02-template/page.tsx` (521行)
 - `/app/projects/[projectId]/03-region-info/page.tsx` (390行)
 - その他200行を超えるファイル
@@ -662,12 +678,14 @@ export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialSco
 ## 🔧 ファイル分割のガイドライン
 
 ### 分割の判断基準
+
 - **行数**: 200行以上で検討、500行以上で必須
 - **責任**: 複数の異なる責任が混在している
 - **再利用性**: 他の場所で使用される可能性がある
 - **可読性**: 1つのファイルが複雑すぎる
 
 ### 分割の実行手順
+
 1. **型定義の分離**: `types.ts`に型定義を抽出
 2. **定数の分離**: `constants.ts`に定数を抽出
 3. **ロジックの分離**: `hooks/`にカスタムフックを作成
@@ -675,13 +693,15 @@ export interface SerializedQuestionScore extends Omit<QuestionScore, 'partialSco
 5. **メインファイルの簡素化**: インポートと組み立てのみに限定
 
 ### 分割後の保守
+
 - インポートパスの整理
 - 型定義の一貫性確保
 - 相対パスと絶対パスの使い分け
 - 循環参照の回避
 
 # important-instruction-reminders
+
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.

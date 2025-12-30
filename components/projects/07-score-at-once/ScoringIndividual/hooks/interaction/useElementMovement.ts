@@ -26,7 +26,11 @@ interface UseElementMovementProps {
 
   // Utils
   hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
-  hitTestHandle?: (element: DrawingElement, x: number, y: number) => string | null
+  hitTestHandle?: (
+    element: DrawingElement,
+    x: number,
+    y: number
+  ) => string | null
 }
 
 export function useElementMovement({
@@ -49,7 +53,9 @@ export function useElementMovement({
 }: UseElementMovementProps) {
   // パフォーマンス最適化: デバウンス用のタイマー
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const pendingUpdatesRef = useRef<Map<string, Partial<DrawingElement>>>(new Map())
+  const pendingUpdatesRef = useRef<Map<string, Partial<DrawingElement>>>(
+    new Map()
+  )
 
   // 即時更新関数（デバウンスなし）
   const debouncedUpdate = useCallback(
@@ -57,7 +63,7 @@ export function useElementMovement({
       // 即座に更新を実行
       updateDrawingElement(elementId, updates)
     },
-    [updateDrawingElement],
+    [updateDrawingElement]
   )
 
   // リサイズ状態
@@ -104,13 +110,13 @@ export function useElementMovement({
       // まずハンドル（リサイズ）をチェック
       for (const selectedId of selectedElementIds) {
         const selectedElement = drawingElements.find(
-          (el) => el.id === selectedId,
+          (el) => el.id === selectedId
         )
         if (selectedElement) {
           const handle = hitTestHandle(
             selectedElement,
             imageCoords.x,
-            imageCoords.y,
+            imageCoords.y
           )
           if (handle) {
             // リサイズ開始
@@ -136,7 +142,7 @@ export function useElementMovement({
       // 次に移動をチェック
       for (const selectedId of selectedElementIds) {
         const selectedElement = drawingElements.find(
-          (el) => el.id === selectedId,
+          (el) => el.id === selectedId
         )
         if (
           selectedElement &&
@@ -199,7 +205,7 @@ export function useElementMovement({
       setDragElementOffset,
       setIsResizingElement,
       setResizeHandle,
-    ],
+    ]
   )
 
   // リサイズ処理
@@ -284,7 +290,7 @@ export function useElementMovement({
       debouncedUpdate(element.id, updates)
       return true
     },
-    [isShiftPressed, debouncedUpdate],
+    [isShiftPressed, debouncedUpdate]
   )
 
   // 要素移動処理
@@ -448,7 +454,7 @@ export function useElementMovement({
       isShiftPressed,
       debouncedUpdate,
       handleElementResize,
-    ],
+    ]
   )
 
   // 要素移動終了処理
@@ -534,7 +540,7 @@ export function useElementMovement({
         elements: elementsMap,
       }
     },
-    [drawingElements],
+    [drawingElements]
   )
 
   return {

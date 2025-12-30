@@ -31,7 +31,7 @@ interface ScoringContentAreaProps {
   onScoringDataScore: (
     statusOrAnswerIds: ScoringStatus | string | string[],
     statusOrPartialScore?: ScoringStatus | number | null,
-    partialScore?: number | null,
+    partialScore?: number | null
   ) => void
 
   /** GridView設定 */
@@ -44,7 +44,9 @@ interface ScoringContentAreaProps {
   pageImages?: PageImageWithProjectStudents[]
 
   /** 生徒データコールバック（個別表示でサイドパネルに渡すため） */
-  onStudentsExtracted?: (students: { id: string; studentId: string; studentName: string }[]) => void
+  onStudentsExtracted?: (
+    students: { id: string; studentId: string; studentName: string }[]
+  ) => void
 
   /** テキスト入力状態変更のコールバック（ショートカット制御用） */
   onTextInputStateChange?: (showTextInput: boolean) => void
@@ -99,13 +101,13 @@ export function ScoringContentArea({
       onScoringDataScore={(
         statusOrAnswerIds,
         statusOrPartialScore,
-        partialScore,
+        partialScore
       ) => {
         if (currentScoringDataId) {
           onScoringDataScore(
             [currentScoringDataId],
             statusOrPartialScore,
-            partialScore,
+            partialScore
           )
         }
       }}

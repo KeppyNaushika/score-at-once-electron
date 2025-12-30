@@ -76,7 +76,7 @@ export interface UseCommandOptions {
 export function useCommand(
   commandId: string,
   handler: () => void,
-  options: UseCommandOptions = {},
+  options: UseCommandOptions = {}
 ) {
   const { registerCommand, unregisterCommand } = useShortcutContext()
 
@@ -94,7 +94,7 @@ export function useCommand(
   // メタデータを安定化（内容が変わらない限り再登録しない）
   const metadataSignature = useMemo(
     () => createMetadataSignature(options.metadata),
-    [options.metadata],
+    [options.metadata]
   )
   // eslint-disable-next-line react-hooks/exhaustive-deps -- metadataSignature already reflects changes to options.metadata
   const stableMetadata = useMemo(() => options.metadata, [metadataSignature])

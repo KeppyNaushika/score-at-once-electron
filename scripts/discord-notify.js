@@ -101,7 +101,7 @@ async function addReactionToWebhookMessage(webhookUrl, messageId, emoji) {
           resolve(data)
         } else {
           reject(
-            new Error(`Discord reaction API error: ${res.statusCode} ${data}`),
+            new Error(`Discord reaction API error: ${res.statusCode} ${data}`)
           )
         }
       })
@@ -267,7 +267,7 @@ async function notifyRelease(version, releaseUrl, isPrerelease = false) {
 
   if (!webhookUrl) {
     console.log(
-      "⚠️ DISCORD_WEBHOOK_URL環境変数が設定されていません。Discord通知をスキップします。",
+      "⚠️ DISCORD_WEBHOOK_URL環境変数が設定されていません。Discord通知をスキップします。"
     )
     return
   }
@@ -289,7 +289,7 @@ async function notifyRelease(version, releaseUrl, isPrerelease = false) {
       } catch (reactionError) {
         console.error(
           "⚠️ リアクション追加に失敗しました:",
-          reactionError.message,
+          reactionError.message
         )
         // リアクション失敗は致命的ではないので続行
       }

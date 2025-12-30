@@ -46,7 +46,10 @@ export function calculateBoxPlotData(values: number[]): BoxPlotData {
 /**
  * パーセンタイル値を計算（線形補間）
  */
-function calculatePercentile(sortedValues: number[], percentile: number): number {
+function calculatePercentile(
+  sortedValues: number[],
+  percentile: number
+): number {
   if (sortedValues.length === 0) return 0
   if (sortedValues.length === 1) return sortedValues[0]
 
@@ -62,7 +65,11 @@ function calculatePercentile(sortedValues: number[], percentile: number): number
 /**
  * 偏差値を計算
  */
-export function calculateDeviation(score: number, average: number, stdDev: number): number {
+export function calculateDeviation(
+  score: number,
+  average: number,
+  stdDev: number
+): number {
   if (stdDev === 0) return 50
   return Math.round(((score - average) / stdDev) * 10 + 50)
 }
@@ -79,7 +86,7 @@ export function calculateRank(score: number, allScores: number[]): number {
  * 設問別正答率を計算
  */
 export function calculateQuestionCorrectRates(
-  allScoringData: ScoringData[],
+  allScoringData: ScoringData[]
 ): Record<string, number> {
   const rates: Record<string, number> = {}
 
@@ -98,7 +105,11 @@ export function calculateQuestionCorrectRates(
         totalCount++
         if (score.status === "correct") {
           correctCount++
-        } else if (score.status === "partial" && score.score !== null && score.maxScore > 0) {
+        } else if (
+          score.status === "partial" &&
+          score.score !== null &&
+          score.maxScore > 0
+        ) {
           // 部分点の場合は得点率を考慮
           correctCount += score.score / score.maxScore
         }
@@ -115,20 +126,27 @@ export function calculateQuestionCorrectRates(
  * 小計別統計データを計算
  */
 export function calculateSubtotalStatistics(
-  allScoringData: ScoringData[],
+  allScoringData: ScoringData[]
 ): SubtotalStatistics[] {
-  if (allScoringData.length === 0 || allScoringData[0].subtotalScores.length === 0) {
+  if (
+    allScoringData.length === 0 ||
+    allScoringData[0].subtotalScores.length === 0
+  ) {
     return []
   }
 
-  const subtotalIds = allScoringData[0].subtotalScores.map((s) => s.subtotalRegionId)
+  const subtotalIds = allScoringData[0].subtotalScores.map(
+    (s) => s.subtotalRegionId
+  )
 
   return subtotalIds.map((subtotalId) => {
     const scores: number[] = []
     let label = ""
 
     for (const data of allScoringData) {
-      const subtotal = data.subtotalScores.find((s) => s.subtotalRegionId === subtotalId)
+      const subtotal = data.subtotalScores.find(
+        (s) => s.subtotalRegionId === subtotalId
+      )
       if (subtotal) {
         scores.push(subtotal.score)
         label = subtotal.subtotalLabel
@@ -153,7 +171,7 @@ export function calculateStatisticsForStudent(
   studentScore: number,
   allScoringData: ScoringData[],
   classScoringData: ScoringData[],
-  questionCorrectRates: Record<string, number>,
+  questionCorrectRates: Record<string, number>
 ): StatisticsData {
   // 全体のスコア配列
   const allScores = allScoringData.map((d) => d.totalScore)
@@ -170,7 +188,11 @@ export function calculateStatisticsForStudent(
   const classBoxPlot = calculateBoxPlotData(classScores)
 
   // 個人統計
-  const deviation = calculateDeviation(studentScore, overallAverage, overallStdDev)
+  const deviation = calculateDeviation(
+    studentScore,
+    overallAverage,
+    overallStdDev
+  )
   const overallRank = calculateRank(studentScore, allScores)
   const classRank = calculateRank(studentScore, classScores)
 

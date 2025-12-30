@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [selectionBorderColor, setSelectionBorderColor] = useState(
-    getSelectionBorderSettings().color,
+    getSelectionBorderSettings().color
   )
 
   const loadUsers = useCallback(async () => {
@@ -183,7 +183,7 @@ export default function SettingsPage() {
                           <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500" />
                         )}
                       </button>
-                    ),
+                    )
                   )}
                 </div>
               </div>

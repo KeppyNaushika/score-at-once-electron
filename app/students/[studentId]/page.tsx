@@ -41,7 +41,10 @@ export default function StudentDetailPage() {
     setIsStudentModalOpen(true)
   }
 
-  const handleSaveStudentData = async (_id: string, studentData: Record<string, unknown>) => {
+  const handleSaveStudentData = async (
+    _id: string,
+    studentData: Record<string, unknown>
+  ) => {
     const success = await handleEditStudent(studentData)
     if (success) {
       setIsStudentModalOpen(false)

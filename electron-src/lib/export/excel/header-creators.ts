@@ -12,7 +12,7 @@ import { applyCellStyle } from "../../shared/utilities/excel-utilities"
 export async function createSheetHeaders(
   worksheet: ExcelJS.Worksheet,
   questionRegions: CropRegion[],
-  subtotalRegions: CropRegion[],
+  subtotalRegions: CropRegion[]
 ) {
   const row = worksheet.addRow([
     "受験状態",
@@ -24,10 +24,12 @@ export async function createSheetHeaders(
     "氏名",
     "合計点",
     ...subtotalRegions.map(
-      (region: CropRegion) => region.label || `小計${(region.orderIndex ?? 0) + 1}`,
+      (region: CropRegion) =>
+        region.label || `小計${(region.orderIndex ?? 0) + 1}`
     ),
     ...questionRegions.map(
-      (region: CropRegion) => region.label || `問${(region.orderIndex ?? 0) + 1}`,
+      (region: CropRegion) =>
+        region.label || `問${(region.orderIndex ?? 0) + 1}`
     ),
   ])
 

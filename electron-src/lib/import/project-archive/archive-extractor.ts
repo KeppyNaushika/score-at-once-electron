@@ -58,7 +58,7 @@ export async function extractArchive(archivePath: string): Promise<{
   // 一時ディレクトリを作成
   const tempDir = path.join(
     os.tmpdir(),
-    `project-archive-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+    `project-archive-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
   )
 
   try {
@@ -78,26 +78,26 @@ export async function extractArchive(archivePath: string): Promise<{
       return { success: false, error: "マニフェストファイルが見つかりません" }
     }
     const manifest: ArchiveManifest = JSON.parse(
-      fs.readFileSync(manifestPath, "utf-8"),
+      fs.readFileSync(manifestPath, "utf-8")
     )
 
     // 各JSONファイルを読み込み
     const projectData = readJsonFile<ArchiveProjectData>(
       tempDir,
-      "project.json",
+      "project.json"
     )
     const studentsData = readJsonFile<ArchiveStudentsData>(
       tempDir,
-      "students.json",
+      "students.json"
     )
     const classesData = readJsonFile<ArchiveClassesData>(
       tempDir,
-      "classes.json",
+      "classes.json"
     )
     const usersData = readJsonFile<ArchiveUsersData>(tempDir, "users.json")
     const subtotalsData = readJsonFile<ArchiveSubtotalsData>(
       tempDir,
-      "subtotals.json",
+      "subtotals.json"
     )
     const scoresData = readJsonFile<ArchiveScoresData>(tempDir, "scores.json")
 

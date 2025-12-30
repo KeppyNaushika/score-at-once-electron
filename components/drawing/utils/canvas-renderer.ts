@@ -3,7 +3,11 @@
  * @description アノテーションの描画とプレビュー表示を行う
  */
 
-import type { DrawingAnnotation, DrawingCreateData, DrawingType } from "@/types/drawing-annotation.types"
+import type {
+  DrawingAnnotation,
+  DrawingCreateData,
+  DrawingType,
+} from "@/types/drawing-annotation.types"
 import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
 import { CANVAS_SETTINGS } from "@/app/textbox-on-canvas-v3/constants"
 import { getAbsoluteCoordinates } from "./coordinate-utils"
@@ -46,7 +50,7 @@ function drawAnnotation(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   annotation: DrawingAnnotation,
-  isSelected: boolean,
+  isSelected: boolean
 ): void {
   const absStart = getAbsoluteCoordinates(annotation.x, annotation.y, canvas)
 
@@ -63,7 +67,11 @@ function drawAnnotation(
   // アノテーション種類別の描画（MathJax処理なし）
   switch (annotation.type as DrawingType) {
     case "line": {
-      const absEnd = getAbsoluteCoordinates(annotation.endX, annotation.endY, canvas)
+      const absEnd = getAbsoluteCoordinates(
+        annotation.endX,
+        annotation.endY,
+        canvas
+      )
 
       ctx.beginPath()
       ctx.moveTo(absStart.x, absStart.y)
@@ -132,7 +140,7 @@ function drawAnnotation(
         absHeight / 2,
         0,
         0,
-        2 * Math.PI,
+        2 * Math.PI
       )
       ctx.stroke()
 
@@ -162,7 +170,11 @@ function drawAnnotation(
       if (annotation.text) {
         ctx.fillStyle = annotation.color
         ctx.font = `${annotation.fontSize}px Arial`
-        ctx.fillText(annotation.text, absStart.x, absStart.y + annotation.fontSize)
+        ctx.fillText(
+          annotation.text,
+          absStart.x,
+          absStart.y + annotation.fontSize
+        )
       }
       break
     }
@@ -184,10 +196,14 @@ function drawDrawingPreview(
   startPoint: { x: number; y: number },
   currentPoint: { x: number; y: number },
   currentTool: DrawingTool,
-  strokeWidth: number,
+  strokeWidth: number
 ): void {
   const absStart = getAbsoluteCoordinates(startPoint.x, startPoint.y, canvas)
-  const absCurrent = getAbsoluteCoordinates(currentPoint.x, currentPoint.y, canvas)
+  const absCurrent = getAbsoluteCoordinates(
+    currentPoint.x,
+    currentPoint.y,
+    canvas
+  )
 
   ctx.strokeStyle = CANVAS_SETTINGS.CREATING_BORDER_COLOR
   ctx.lineWidth = strokeWidth
@@ -209,7 +225,7 @@ function drawDrawingPreview(
         Math.min(absStart.x, absCurrent.x),
         Math.min(absStart.y, absCurrent.y),
         width,
-        height,
+        height
       )
       break
 
@@ -227,7 +243,7 @@ function drawDrawingPreview(
         Math.min(absStart.x, absCurrent.x),
         Math.min(absStart.y, absCurrent.y),
         width,
-        height,
+        height
       )
       break
   }
@@ -241,7 +257,14 @@ function drawDrawingPreview(
  */
 export function redrawCanvas(params: CanvasDrawParams): void {
   const { canvas, backgroundImage, annotations, selectedAnnotationId } = params
-  const { isDrawing, drawingAnnotation, startPoint, currentPoint, currentTool, strokeWidth } = params
+  const {
+    isDrawing,
+    drawingAnnotation,
+    startPoint,
+    currentPoint,
+    currentTool,
+    strokeWidth,
+  } = params
 
   const ctx = canvas.getContext("2d")
   if (!ctx) return
@@ -262,6 +285,13 @@ export function redrawCanvas(params: CanvasDrawParams): void {
 
   // 現在描画中のアノテーション描画
   if (isDrawing && drawingAnnotation && startPoint && currentPoint) {
-    drawDrawingPreview(ctx, canvas, startPoint, currentPoint, currentTool, strokeWidth)
+    drawDrawingPreview(
+      ctx,
+      canvas,
+      startPoint,
+      currentPoint,
+      currentTool,
+      strokeWidth
+    )
   }
 }

@@ -60,12 +60,12 @@ export function CheckboxCellWithFillHandle({
     <div
       className={cn(
         "group relative flex items-center justify-center",
-        "h-full w-full min-h-[36px] py-1", // セルの高さを小さく、paddingを最小化
+        "h-full min-h-[36px] w-full py-1", // セルの高さを小さく、paddingを最小化
         // フィル範囲内のセルはハイライト
         isInFillRange && "bg-blue-100 dark:bg-blue-900/20",
         // 選択されているセルは枠線表示
         isSelected && "ring-2 ring-blue-500 ring-inset",
-        className,
+        className
       )}
       onClick={onCellClick}
     >
@@ -81,14 +81,14 @@ export function CheckboxCellWithFillHandle({
         <div
           className={cn(
             // 基本スタイル
-            "absolute -bottom-0.5 -right-0.5 z-10",
+            "absolute -right-0.5 -bottom-0.5 z-10",
             "h-1.5 w-1.5 rounded-sm",
             "border border-white dark:border-gray-800",
             "bg-blue-500 dark:bg-blue-600",
             "cursor-crosshair",
             "transition-all duration-150",
             // フィルハンドル自体のホバー時は拡大
-            "hover:h-2 hover:w-2 hover:-bottom-1 hover:-right-1",
+            "hover:-right-1 hover:-bottom-1 hover:h-2 hover:w-2"
           )}
           onMouseDown={(e) => {
             e.preventDefault()

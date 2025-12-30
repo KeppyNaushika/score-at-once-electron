@@ -29,7 +29,11 @@ export interface UseDragDropParams {
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
+    changedFiles: Array<{
+      fileId: string
+      fromState: FileState
+      toState: FileState
+    }>
   ) => void
 }
 

@@ -49,7 +49,7 @@ export function useWheelZoom({
           e.deltaY > 0 ? ZOOM_SETTINGS.wheelDelta : ZOOM_SETTINGS.zoomInDelta
         const newZoom = Math.min(
           Math.max(zoom * zoomDelta, ZOOM_SETTINGS.min),
-          ZOOM_SETTINGS.max,
+          ZOOM_SETTINGS.max
         )
 
         // マウス位置を基準とした座標計算

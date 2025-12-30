@@ -51,7 +51,7 @@ export function useHandTool({
       })
       return true
     },
-    [currentTool, setIsDraggingElement, setDragElementOffset],
+    [currentTool, setIsDraggingElement, setDragElementOffset]
   )
 
   // handツールのマウス移動処理
@@ -84,7 +84,7 @@ export function useHandTool({
       dragElementOffset.x,
       dragElementOffset.y,
       setDragElementOffset,
-    ],
+    ]
   )
 
   // handツールのマウスアップ処理

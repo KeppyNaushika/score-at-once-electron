@@ -57,7 +57,7 @@ export interface UseKeyBindingsResult {
    */
   findConflictingCommand: (
     key: string,
-    excludeCommandId?: string,
+    excludeCommandId?: string
   ) => string | undefined
 }
 
@@ -77,11 +77,11 @@ export function useKeyBindings(): UseKeyBindingsResult {
    */
   const findConflictingCommand = (
     key: string,
-    excludeCommandId?: string,
+    excludeCommandId?: string
   ): string | undefined => {
     return Object.entries(keyBindings).find(
       ([commandId, bindingKey]) =>
-        bindingKey === key && commandId !== excludeCommandId,
+        bindingKey === key && commandId !== excludeCommandId
     )?.[0]
   }
 

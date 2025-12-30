@@ -95,7 +95,7 @@ export function setupQuestionGroupHandlers(): void {
         console.error("Error getting question groups by project id:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("get-question-group-by-id", async (_event, id) => {
@@ -153,7 +153,7 @@ export function setupQuestionGroupHandlers(): void {
         console.error("Error getting question group items by group id:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("get-question-group-item-by-id", async (_event, id) => {
@@ -165,17 +165,23 @@ export function setupQuestionGroupHandlers(): void {
     }
   })
 
-  ipcMain.handle("update-question-group-item-orders", async (_event, orders) => {
-    try {
-      console.log("🔄 IPC: update-question-group-item-orders called with:", orders)
-      const result = await updateQuestionGroupItemOrders(orders)
-      console.log("✅ IPC: update-question-group-item-orders result:", result)
-      return result
-    } catch (err) {
-      console.error("❌ IPC: Error updating question group item orders:", err)
-      throw err
+  ipcMain.handle(
+    "update-question-group-item-orders",
+    async (_event, orders) => {
+      try {
+        console.log(
+          "🔄 IPC: update-question-group-item-orders called with:",
+          orders
+        )
+        const result = await updateQuestionGroupItemOrders(orders)
+        console.log("✅ IPC: update-question-group-item-orders result:", result)
+        return result
+      } catch (err) {
+        console.error("❌ IPC: Error updating question group item orders:", err)
+        throw err
+      }
     }
-  })
+  )
 
   // QuestionSubtotalAssignment handlers
   ipcMain.handle(
@@ -187,7 +193,7 @@ export function setupQuestionGroupHandlers(): void {
         console.error("Error creating question subtotal assignment:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -199,7 +205,7 @@ export function setupQuestionGroupHandlers(): void {
         console.error("Error creating many question subtotal assignments:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-question-subtotal-assignment", async (_event, id) => {
@@ -221,11 +227,11 @@ export function setupQuestionGroupHandlers(): void {
       } catch (err) {
         console.error(
           "Error deleting assignments by question group item id:",
-          err,
+          err
         )
         throw err
       }
-    },
+    }
   )
 
   // Note: get-assignments-by-question-crop-region-id handler moved to crop-region-handlers.ts
@@ -243,14 +249,14 @@ export function setupQuestionGroupHandlers(): void {
       } catch (err) {
         console.error(
           "Error getting assignments by question group item id:",
-          err,
+          err
         )
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",
         }
       }
-    },
+    }
   )
 
   // SubtotalDefinition handlers
@@ -272,7 +278,7 @@ export function setupQuestionGroupHandlers(): void {
         console.error("Error creating many subtotal definitions:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-subtotal-definition", async (_event, id) => {
@@ -292,28 +298,27 @@ export function setupQuestionGroupHandlers(): void {
       } catch (err) {
         console.error(
           "Error deleting subtotal definitions by layout region id:",
-          err,
+          err
         )
         throw err
       }
-    },
+    }
   )
-
 
   ipcMain.handle(
     "get-subtotal-definitions-by-question-group-item-id",
     async (_event, questionGroupItemId) => {
       try {
         return await getSubtotalDefinitionsByQuestionGroupItemId(
-          questionGroupItemId,
+          questionGroupItemId
         )
       } catch (err) {
         console.error(
           "Error getting subtotal definitions by question group item id:",
-          err,
+          err
         )
         throw err
       }
-    },
+    }
   )
 }

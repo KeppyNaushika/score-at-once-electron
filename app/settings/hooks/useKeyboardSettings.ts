@@ -88,12 +88,12 @@ export function useKeyboardSettings() {
 
     // 重複チェック
     const existingKey = Object.entries(shortcuts).find(
-      ([key, value]) => key !== editingKey && value === pendingKey,
+      ([key, value]) => key !== editingKey && value === pendingKey
     )
 
     if (existingKey) {
       toast.error(
-        `キー "${pendingKey}" は既に "${existingKey[0]}" で使用されています`,
+        `キー "${pendingKey}" は既に "${existingKey[0]}" で使用されています`
       )
       return
     }

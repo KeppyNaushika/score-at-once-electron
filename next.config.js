@@ -32,19 +32,17 @@ const nextConfig = {
   // モジュールトレースから@react-pdf関連パッケージを除外
   // これによりハッシュ付きシンボリックリンクの生成を防ぐ
   outputFileTracingExcludes: {
-    "*": [
-      "node_modules/@react-pdf/**",
-    ],
+    "*": ["node_modules/@react-pdf/**"],
   },
   // PDF.jsワーカーファイルを静的ファイルとして配信
   async headers() {
     return [
       {
-        source: '/js/pdf.worker.min.mjs',
+        source: "/js/pdf.worker.min.mjs",
         headers: [
           {
-            key: 'Content-Type',
-            value: 'application/javascript',
+            key: "Content-Type",
+            value: "application/javascript",
           },
         ],
       },

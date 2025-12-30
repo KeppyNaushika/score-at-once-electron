@@ -18,7 +18,7 @@ export function getCanvasCoordinates(
   clientX: number,
   clientY: number,
   canvas: HTMLCanvasElement,
-  zoom: number,
+  zoom: number
 ): Point {
   const rect = canvas.getBoundingClientRect()
   const x = (clientX - rect.left) / zoom
@@ -37,10 +37,10 @@ export function getCanvasCoordinates(
 export function isPointNearAnchor(
   point: Point,
   anchor: { x: number; y: number },
-  radius: number = CANVAS_SETTINGS.ANCHOR_RADIUS,
+  radius: number = CANVAS_SETTINGS.ANCHOR_RADIUS
 ): boolean {
   const distance = Math.sqrt(
-    Math.pow(point.x - anchor.x, 2) + Math.pow(point.y - anchor.y, 2),
+    Math.pow(point.x - anchor.x, 2) + Math.pow(point.y - anchor.y, 2)
   )
   return distance <= radius
 }
@@ -53,11 +53,11 @@ export function isPointNearAnchor(
  */
 export function findTextBoxAtPoint(
   textBoxes: TextBox[],
-  point: Point,
+  point: Point
 ): TextBox | null {
   return (
     textBoxes.find((textBox) =>
-      isPointNearAnchor(point, { x: textBox.x, y: textBox.y }),
+      isPointNearAnchor(point, { x: textBox.x, y: textBox.y })
     ) || null
   )
 }
@@ -97,7 +97,7 @@ export function generateTextBoxId(): string {
  */
 export function createAnchorFromClick(
   point: Point,
-  text: string = "",
+  text: string = ""
 ): TextBox {
   return {
     id: generateTextBoxId(),
@@ -118,7 +118,7 @@ export function createAnchorFromClick(
  */
 export function updateTextBoxSelection(
   textBoxes: TextBox[],
-  selectedId: string | null,
+  selectedId: string | null
 ): TextBox[] {
   return textBoxes.map((textBox) => ({
     ...textBox,
@@ -136,10 +136,10 @@ export function updateTextBoxSelection(
 export function updateTextBoxContent(
   textBoxes: TextBox[],
   id: string,
-  newText: string,
+  newText: string
 ): TextBox[] {
   return textBoxes.map((textBox) =>
-    textBox.id === id ? { ...textBox, text: newText } : textBox,
+    textBox.id === id ? { ...textBox, text: newText } : textBox
   )
 }
 
@@ -163,7 +163,7 @@ export function removeTextBox(textBoxes: TextBox[], id: string): TextBox[] {
 export function isValidTextBoxSize(
   rect: { width: number; height: number },
   minWidth: number = 10,
-  minHeight: number = 10,
+  minHeight: number = 10
 ): boolean {
   return rect.width >= minWidth && rect.height >= minHeight
 }
@@ -178,7 +178,7 @@ export function isValidTextBoxSize(
 export function isValidDragForTextBox(
   dragState: DragState,
   minWidth: number = 10,
-  minHeight: number = 10,
+  minHeight: number = 10
 ): boolean {
   const rect = createRectFromDrag(dragState)
   return isValidTextBoxSize(rect, minWidth, minHeight)

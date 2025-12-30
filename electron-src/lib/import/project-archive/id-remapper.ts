@@ -163,7 +163,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
  */
 export function remapId(
   oldId: string | null | undefined,
-  mapping: Record<string, string>,
+  mapping: Record<string, string>
 ): string | null {
   if (!oldId) return null
   return mapping[oldId] ?? null
@@ -179,7 +179,7 @@ export function remapId(
  */
 export function remapIdRequired(
   oldId: string,
-  mapping: Record<string, string>,
+  mapping: Record<string, string>
 ): string {
   const newId = mapping[oldId]
   if (!newId) {

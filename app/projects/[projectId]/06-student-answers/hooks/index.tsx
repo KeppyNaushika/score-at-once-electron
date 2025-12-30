@@ -23,7 +23,9 @@ interface ProjectStudentData extends StudentWithMemberships {
 
 export function useStudentAnswersData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
-  const [studentAnswers, setStudentAnswers] = useState<ProcessedStudentAnswer[]>([])
+  const [studentAnswers, setStudentAnswers] = useState<
+    ProcessedStudentAnswer[]
+  >([])
   const [modelAnswerCount, setModelAnswerCount] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -89,7 +91,11 @@ export function useStudentAnswersData(projectId: string) {
           await window.electronAPI.getProjectPagesByProjectId(projectId)
         const maxPages =
           modelAnswers && modelAnswers.length > 0
-            ? Math.max(...modelAnswers.map((page: ProjectPageWithDetails) => page.pageNumber))
+            ? Math.max(
+                ...modelAnswers.map(
+                  (page: ProjectPageWithDetails) => page.pageNumber
+                )
+              )
             : 0
         setModelAnswerCount(maxPages)
       } catch (error) {
@@ -116,17 +122,23 @@ export function useStudentAnswersData(projectId: string) {
 export function usePendingChanges(
   onDataReload: () => Promise<void>,
   students?: StudentData[],
-  studentAnswers?: ProcessedStudentAnswer[],
+  studentAnswers?: ProcessedStudentAnswer[]
 ) {
   const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([])
   const [affectedCells, setAffectedCells] = useState<Set<string>>(new Set())
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
   const handleUpdatePendingChanges = useCallback(
-    (changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>) => {
+    (
+      changedFiles: Array<{
+        fileId: string
+        fromState: FileState
+        toState: FileState
+      }>
+    ) => {
       console.log(
         "🔄 Creating pending changes from changed files:",
-        changedFiles,
+        changedFiles
       )
 
       // PendingChange配列を一括作成
@@ -134,7 +146,7 @@ export function usePendingChanges(
         ({ fileId, fromState, toState }) => {
           // 生徒名を解決
           const fromStudent = students?.find(
-            (s) => s.id === fromState.studentId,
+            (s) => s.id === fromState.studentId
           )
           const toStudent = students?.find((s) => s.id === toState.studentId)
 
@@ -144,7 +156,7 @@ export function usePendingChanges(
             (sheet) =>
               sheet.studentId === toState.studentId &&
               sheet.pageNumber === toState.pageNumber &&
-              sheet.id !== fileId, // 移動されたファイル自体は除外
+              sheet.id !== fileId // 移動されたファイル自体は除外
           )
 
           console.log("🎯 Target file search:", {
@@ -181,14 +193,14 @@ export function usePendingChanges(
             },
           }
           return change
-        },
+        }
       )
 
       // 一括更新
       setPendingChanges(newPendingChanges)
       setAffectedCells(new Set(changedFiles.map(({ fileId }) => fileId)))
     },
-    [students, studentAnswers],
+    [students, studentAnswers]
   )
 
   const handleApplyChanges = useCallback(
@@ -223,7 +235,7 @@ export function usePendingChanges(
         const result =
           await window.electronAPI.batchUpdateStudentAnswerPlacements(
             allMoves,
-            option === "with-scoring",
+            option === "with-scoring"
           )
 
         console.log("✅ Batch placement update result:", result)
@@ -243,7 +255,7 @@ export function usePendingChanges(
         const optionText =
           option === "with-scoring" ? "採点情報込み" : "答案画像のみ"
         toast.success(
-          `${pendingChanges.length}件の変更を適用しました（${optionText}）`,
+          `${pendingChanges.length}件の変更を適用しました（${optionText}）`
         )
       } catch (error) {
         console.error("変更の適用に失敗しました:", error)
@@ -255,7 +267,7 @@ export function usePendingChanges(
         throw error
       }
     },
-    [pendingChanges, onDataReload],
+    [pendingChanges, onDataReload]
   )
 
   const handleResetChanges = useCallback(async () => {

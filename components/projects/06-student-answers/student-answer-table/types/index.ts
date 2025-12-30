@@ -22,7 +22,12 @@ export interface CellData {
   student?: UnifiedStudent
   pageNumber?: number
   file?: UnifiedFile
-  disabledReason?: "row" | "column" | "position" | "existing_answer" | "absent_student"
+  disabledReason?:
+    | "row"
+    | "column"
+    | "position"
+    | "existing_answer"
+    | "absent_student"
 }
 
 // Component props interfaces
@@ -35,7 +40,7 @@ export interface FilePreviewCellProps {
   getFileColor: (file: UnifiedFile) => string
   drawNameRegionCanvas: (
     file: UnifiedFile,
-    pageNumber: number,
+    pageNumber: number
   ) => Promise<string | null>
   imageLoadState?: "pending" | "loading" | "loaded" | "error"
 }

@@ -40,16 +40,16 @@ export async function calculateSubtotalScoreForStudent(
   studentId: string,
   subtotalRegionId: string,
   allQuestionScores: QuestionScoreData[],
-  cropRegions: CropRegion[],
+  cropRegions: CropRegion[]
 ): Promise<number> {
   try {
     console.log(
-      `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`,
+      `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`
     )
 
     // この生徒の全採点データを取得
     const studentScores = allQuestionScores.filter(
-      (score) => score.studentId === studentId,
+      (score) => score.studentId === studentId
     )
 
     // 小計点領域に関連付けられたグループ項目を取得
@@ -59,12 +59,12 @@ export async function calculateSubtotalScoreForStudent(
     // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!cropSubtotals || cropSubtotals.length === 0) {
       console.log(
-        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`,
+        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`
       )
       return calculateStudentTotalScore(
         studentId,
         allQuestionScores,
-        cropRegions,
+        cropRegions
       )
     }
 
@@ -85,12 +85,12 @@ export async function calculateSubtotalScoreForStudent(
 
     if (groupMap.size === 0) {
       console.log(
-        `No valid groups found, calculating total of all questions for student`,
+        `No valid groups found, calculating total of all questions for student`
       )
       return calculateStudentTotalScore(
         studentId,
         allQuestionScores,
-        cropRegions,
+        cropRegions
       )
     }
 
@@ -114,7 +114,7 @@ export async function calculateSubtotalScoreForStudent(
         } catch (error) {
           console.error(
             `Error getting crop subtotals for item ${itemId}:`,
-            error,
+            error
           )
         }
       }
@@ -132,7 +132,7 @@ export async function calculateSubtotalScoreForStudent(
 
       for (const questionId of firstGroup) {
         const existsInAllGroups = groupQuestionSets.every((group) =>
-          group.has(questionId),
+          group.has(questionId)
         )
         if (existsInAllGroups) {
           finalQuestionIds.add(questionId)
@@ -143,7 +143,7 @@ export async function calculateSubtotalScoreForStudent(
     // 該当する設問の点数を合計
     let totalScore = 0
     console.log(
-      `Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`,
+      `Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`
     )
 
     for (const questionId of finalQuestionIds) {
@@ -162,7 +162,7 @@ export async function calculateSubtotalScoreForStudent(
   } catch (error) {
     console.error(
       `Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`,
-      error,
+      error
     )
     return 0
   }
@@ -174,10 +174,10 @@ export async function calculateSubtotalScoreForStudent(
 function calculateStudentTotalScore(
   studentId: string,
   allQuestionScores: QuestionScoreData[],
-  cropRegions: CropRegion[],
+  cropRegions: CropRegion[]
 ): number {
   const studentScores = allQuestionScores.filter(
-    (score) => score.studentId === studentId,
+    (score) => score.studentId === studentId
   )
 
   let totalScore = 0
@@ -199,20 +199,20 @@ function calculateStudentTotalScore(
  */
 export async function calculateSubtotalScore(
   subtotalRegionId: string,
-  studentScores: SubtotalScoreDetail[],
+  studentScores: SubtotalScoreDetail[]
 ): Promise<SubtotalResult> {
   console.warn(
-    "calculateSubtotalScore is deprecated, use calculateSubtotalScoreForStudent instead",
+    "calculateSubtotalScore is deprecated, use calculateSubtotalScoreForStudent instead"
   )
 
   // フォールバック: 全設問の合計を返す
   const totalScore = studentScores.reduce(
     (sum, score) => sum + (score.score || 0),
-    0,
+    0
   )
   const totalMaxScore = studentScores.reduce(
     (sum, score) => sum + score.maxScore,
-    0,
+    0
   )
   return { score: totalScore, maxScore: totalMaxScore }
 }
@@ -223,10 +223,12 @@ export async function calculateSubtotalScore(
  */
 export async function buildSubtotalTargetMap(
   _subtotalRegions: CropRegion[],
-  _questionRegions: CropRegion[],
+  _questionRegions: CropRegion[]
 ): Promise<SubtotalTargetMap> {
   // 正誤一覧シートの互換性のため維持（点数一覧では使用されない）
-  console.warn('buildSubtotalTargetMap is deprecated and returns empty map - subtotal scores are now calculated directly')
+  console.warn(
+    "buildSubtotalTargetMap is deprecated and returns empty map - subtotal scores are now calculated directly"
+  )
   return {}
 }
 
@@ -236,8 +238,10 @@ export async function buildSubtotalTargetMap(
  */
 export async function getTargetQuestionIndicesForSubtotal(
   _subtotalRegionId: string,
-  _scores: SubtotalScoreDetail[],
+  _scores: SubtotalScoreDetail[]
 ): Promise<number[]> {
-  console.warn('getTargetQuestionIndicesForSubtotal is deprecated, use calculateSubtotalScoreForStudent instead')
+  console.warn(
+    "getTargetQuestionIndicesForSubtotal is deprecated, use calculateSubtotalScoreForStudent instead"
+  )
   return []
 }

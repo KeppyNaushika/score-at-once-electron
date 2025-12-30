@@ -13,7 +13,7 @@ export function reorderFilesByStrategy(
   currentFiles: UnifiedFile[],
   students: UnifiedStudent[],
   modelAnswerCount: number,
-  newFileOrder: PlacementStrategy,
+  newFileOrder: PlacementStrategy
 ): UnifiedFile[] {
   // 1. 実際のファイル（空でないもの）を抽出
   const actualFiles = currentFiles.filter((file) => file && file.id)
@@ -68,7 +68,7 @@ export function reorderFilesByStrategy(
     const matchingFile = actualFiles.find(
       (file) =>
         file.studentId === targetStudent.id &&
-        file.pageNumber === targetPageNumber,
+        file.pageNumber === targetPageNumber
     )
 
     if (matchingFile) {
@@ -87,7 +87,7 @@ export function buildOrderedFileArrayFromStudentAnswers(
   studentAnswers: ProcessedStudentAnswer[],
   students: UnifiedStudent[],
   modelAnswerCount: number,
-  fileOrder: PlacementStrategy,
+  fileOrder: PlacementStrategy
 ): UnifiedFile[] {
   // 基本的なファイル変換を実行
   const basicFiles: UnifiedFile[] = convertAnswerSheetsToFiles(studentAnswers)
@@ -137,7 +137,7 @@ export function buildOrderedFileArrayFromStudentAnswers(
     const matchingFile = basicFiles.find(
       (file) =>
         file.studentId === targetStudent.id &&
-        file.pageNumber === targetPageNumber,
+        file.pageNumber === targetPageNumber
     )
 
     if (matchingFile) {

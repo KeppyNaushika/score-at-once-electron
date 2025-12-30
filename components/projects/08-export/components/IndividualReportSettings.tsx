@@ -24,7 +24,7 @@ export function IndividualReportSettings({
 }: IndividualReportSettingsProps) {
   const updateOption = <K extends keyof IndividualReportOptions>(
     key: K,
-    value: IndividualReportOptions[K],
+    value: IndividualReportOptions[K]
   ) => {
     onChange({ ...options, [key]: value })
   }
@@ -37,7 +37,9 @@ export function IndividualReportSettings({
           <Label>表示形式</Label>
           <Select
             value={options.displayMode}
-            onValueChange={(v) => updateOption("displayMode", v as "detail" | "subtotal_only")}
+            onValueChange={(v) =>
+              updateOption("displayMode", v as "detail" | "subtotal_only")
+            }
           >
             <SelectTrigger className="w-48">
               <SelectValue />
@@ -68,7 +70,12 @@ export function IndividualReportSettings({
           <Label className="w-32">平均点</Label>
           <Select
             value={options.showAverage}
-            onValueChange={(v) => updateOption("showAverage", v as "class" | "overall" | "both" | "none")}
+            onValueChange={(v) =>
+              updateOption(
+                "showAverage",
+                v as "class" | "overall" | "both" | "none"
+              )
+            }
           >
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -85,7 +92,12 @@ export function IndividualReportSettings({
           <Label className="w-32">得点率形式</Label>
           <Select
             value={options.scoreRateFormat}
-            onValueChange={(v) => updateOption("scoreRateFormat", v as "percentage" | "grade5" | "gradeAE")}
+            onValueChange={(v) =>
+              updateOption(
+                "scoreRateFormat",
+                v as "percentage" | "grade5" | "gradeAE"
+              )
+            }
           >
             <SelectTrigger className="w-40">
               <SelectValue />
@@ -114,11 +126,13 @@ export function IndividualReportSettings({
           onChange={(v) => updateOption("showRank", v)}
         />
         {options.showRank && (
-          <div className="flex items-center gap-4 ml-8">
+          <div className="ml-8 flex items-center gap-4">
             <Label className="w-24">順位種類</Label>
             <Select
               value={options.rankType}
-              onValueChange={(v) => updateOption("rankType", v as "class" | "overall" | "both")}
+              onValueChange={(v) =>
+                updateOption("rankType", v as "class" | "overall" | "both")
+              }
             >
               <SelectTrigger className="w-40">
                 <SelectValue />
@@ -148,28 +162,40 @@ export function IndividualReportSettings({
               label="棒グラフ"
               checked={options.graphOptions.showBarChart}
               onChange={(v) =>
-                updateOption("graphOptions", { ...options.graphOptions, showBarChart: v })
+                updateOption("graphOptions", {
+                  ...options.graphOptions,
+                  showBarChart: v,
+                })
               }
             />
             <ToggleRow
               label="レーダーチャート"
               checked={options.graphOptions.showRadarChart}
               onChange={(v) =>
-                updateOption("graphOptions", { ...options.graphOptions, showRadarChart: v })
+                updateOption("graphOptions", {
+                  ...options.graphOptions,
+                  showRadarChart: v,
+                })
               }
             />
             <ToggleRow
               label="箱ひげ図"
               checked={options.graphOptions.showBoxPlot}
               onChange={(v) =>
-                updateOption("graphOptions", { ...options.graphOptions, showBoxPlot: v })
+                updateOption("graphOptions", {
+                  ...options.graphOptions,
+                  showBoxPlot: v,
+                })
               }
             />
             <ToggleRow
               label="平均線を表示"
               checked={options.graphOptions.showAverageLine}
               onChange={(v) =>
-                updateOption("graphOptions", { ...options.graphOptions, showAverageLine: v })
+                updateOption("graphOptions", {
+                  ...options.graphOptions,
+                  showAverageLine: v,
+                })
               }
             />
           </div>
@@ -235,7 +261,9 @@ export function IndividualReportSettings({
                       onValueChange={(v) =>
                         updateOption("adviceOptions", {
                           ...options.adviceOptions,
-                          differentiatingFilterMode: v as "top_n" | "all_matching",
+                          differentiatingFilterMode: v as
+                            | "top_n"
+                            | "all_matching",
                         })
                       }
                     >
@@ -247,7 +275,8 @@ export function IndividualReportSettings({
                         <SelectItem value="all_matching">全て</SelectItem>
                       </SelectContent>
                     </Select>
-                    {options.adviceOptions.differentiatingFilterMode === "top_n" && (
+                    {options.adviceOptions.differentiatingFilterMode ===
+                      "top_n" && (
                       <Input
                         type="number"
                         className="w-16"
@@ -353,10 +382,16 @@ export function IndividualReportSettings({
   )
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
   return (
     <div className="space-y-3">
-      <h4 className="font-semibold text-sm text-muted-foreground">{title}</h4>
+      <h4 className="text-muted-foreground text-sm font-semibold">{title}</h4>
       <div className="space-y-2">{children}</div>
     </div>
   )

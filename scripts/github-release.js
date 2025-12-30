@@ -6,25 +6,37 @@ require("dotenv").config()
  * @param {string} versionType - version bump type (patch, minor, major)
  * @param {string} prereleaseType - prerelease type (alpha, beta, rc, or empty for stable)
  */
-async function triggerGitHubRelease(versionType = "patch", prereleaseType = "") {
+async function triggerGitHubRelease(
+  versionType = "patch",
+  prereleaseType = ""
+) {
   try {
     console.log("🚀 Triggering GitHub Actions release workflow...")
 
     // GitHub CLI でワークフローをトリガー
     const command = [
-      "gh", "workflow", "run", "manual-release.yml",
-      "-f", `version_type=${versionType}`,
-      "-f", `prerelease_type=${prereleaseType}`
+      "gh",
+      "workflow",
+      "run",
+      "manual-release.yml",
+      "-f",
+      `version_type=${versionType}`,
+      "-f",
+      `prerelease_type=${prereleaseType}`,
     ].join(" ")
 
     console.log(`Executing: ${command}`)
     execSync(command, { stdio: "inherit" })
 
     console.log("✅ GitHub Actions workflow triggered successfully!")
-    console.log("📝 Check the Actions tab in your repository to monitor the build progress.")
-    
+    console.log(
+      "📝 Check the Actions tab in your repository to monitor the build progress."
+    )
   } catch (error) {
-    console.error("❌ Failed to trigger GitHub Actions workflow:", error.message)
+    console.error(
+      "❌ Failed to trigger GitHub Actions workflow:",
+      error.message
+    )
     process.exit(1)
   }
 }
@@ -43,7 +55,9 @@ if (require.main === module) {
   }
 
   if (prereleaseType && !["alpha", "beta", "rc"].includes(prereleaseType)) {
-    console.error("❌ Invalid prerelease type. Use: alpha, beta, rc, or leave empty")
+    console.error(
+      "❌ Invalid prerelease type. Use: alpha, beta, rc, or leave empty"
+    )
     process.exit(1)
   }
 

@@ -189,9 +189,7 @@ export default function ClassModal({
                 value={grade === undefined ? "" : grade.toString()}
                 onChange={(e) =>
                   setGrade(
-                    e.target.value === ""
-                      ? undefined
-                      : parseInt(e.target.value),
+                    e.target.value === "" ? undefined : parseInt(e.target.value)
                   )
                 }
                 placeholder="例: 1 (任意)"

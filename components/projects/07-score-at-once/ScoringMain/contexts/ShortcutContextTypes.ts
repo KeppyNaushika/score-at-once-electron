@@ -80,7 +80,7 @@ export interface ShortcutContextValue {
   /** コンテキスト値を更新する関数 */
   setContextValue: <K extends keyof ScoringContextState>(
     key: K,
-    value: ScoringContextState[K],
+    value: ScoringContextState[K]
   ) => void
 
   /** コマンドを登録する関数 */

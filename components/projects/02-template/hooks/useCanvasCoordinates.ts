@@ -13,7 +13,7 @@ import { useCallback } from "react"
  */
 export function useCanvasCoordinates(
   imageDimensions: { width: number; height: number } | null,
-  zoom: number,
+  zoom: number
 ) {
   /**
    * Calculate the bounds of the image within the container
@@ -36,7 +36,7 @@ export function useCanvasCoordinates(
         height: scaledImageHeight,
       }
     },
-    [imageDimensions, zoom],
+    [imageDimensions, zoom]
   )
 
   /**
@@ -51,7 +51,7 @@ export function useCanvasCoordinates(
     (
       clientX: number,
       clientY: number,
-      imageContainerRef: React.RefObject<HTMLDivElement>,
+      imageContainerRef: React.RefObject<HTMLDivElement>
     ) => {
       if (!imageContainerRef.current) return { x: 0, y: 0 }
 
@@ -69,7 +69,7 @@ export function useCanvasCoordinates(
         y: Math.max(0, Math.min(1, y)),
       }
     },
-    [getImageBounds],
+    [getImageBounds]
   )
 
   return {

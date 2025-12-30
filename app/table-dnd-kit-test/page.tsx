@@ -332,18 +332,17 @@ export default function TableDndKitTestPage() {
     )
   }
 
-
   // 有効なファイルのみ取得（dnd-kit用）
   const getEnabledFiles = () => {
     return files.filter(
-      (file) => file && file.id && !disabledState.files.has(file.id),
+      (file) => file && file.id && !disabledState.files.has(file.id)
     )
   }
 
   // 無効化されたファイルのみ取得
   const getDisabledFiles = () => {
     return files.filter(
-      (file) => file && file.id && disabledState.files.has(file.id),
+      (file) => file && file.id && disabledState.files.has(file.id)
     )
   }
 
@@ -402,7 +401,7 @@ export default function TableDndKitTestPage() {
           } else {
             return { type: "empty", position }
           }
-        }),
+        })
       )
 
       // 列優先でファイルを配置
@@ -473,7 +472,6 @@ export default function TableDndKitTestPage() {
     })
   }
 
-
   const handleUploadToCell = (position: number) => {
     // 後日実装予定のアップロード機能
     const row = Math.floor(position / 5)
@@ -513,7 +511,7 @@ export default function TableDndKitTestPage() {
       activationConstraint: {
         distance: 8,
       },
-    }),
+    })
   )
 
   // ドラッグ開始処理（simple-dnd-kit-test完全準拠）

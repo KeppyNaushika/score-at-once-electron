@@ -290,7 +290,7 @@ function KanbanLists({
     if (activeContainer !== overContainer && overContainer && activeContainer) {
       setItems((prevItems) => {
         return prevItems.map((item) =>
-          item.id === activeId ? { ...item, columnId: overContainer } : item,
+          item.id === activeId ? { ...item, columnId: overContainer } : item
         )
       })
     }
@@ -500,7 +500,7 @@ function GridTable({
     if (activeContainer !== overContainer && overContainer && activeContainer) {
       setGridItems((prevItems) => {
         return prevItems.map((item) =>
-          item.id === activeId ? { ...item, columnId: overContainer } : item,
+          item.id === activeId ? { ...item, columnId: overContainer } : item
         )
       })
     }
@@ -723,7 +723,7 @@ export default function SimpleDndKitTestPage() {
       activationConstraint: {
         distance: 8,
       },
-    }),
+    })
   )
 
   // アイテムがどのコンテナにあるかを見つける関数（recursive-dnd-kanban-board準拠）

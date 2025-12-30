@@ -57,7 +57,7 @@ export function setupScoringHandlers(): void {
         console.error("Error getting question scores for project:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -76,7 +76,7 @@ export function setupScoringHandlers(): void {
         console.error("Error getting question scores for student:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -94,7 +94,7 @@ export function setupScoringHandlers(): void {
         console.error("Error creating question score:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -103,7 +103,7 @@ export function setupScoringHandlers(): void {
       _event,
       id: string,
       data: UpdateQuestionScoreData,
-      expectedVersion?: number,
+      expectedVersion?: number
     ) => {
       try {
         const result = await updateQuestionScore(id, data, expectedVersion)
@@ -117,7 +117,7 @@ export function setupScoringHandlers(): void {
         console.error("Error updating question score:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("delete-question-score", async (_event, id: string) => {
@@ -138,7 +138,7 @@ export function setupScoringHandlers(): void {
         console.error("Error getting question score comparison:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -152,14 +152,14 @@ export function setupScoringHandlers(): void {
         partialScore?: number
         status: string
         comment?: string
-      },
+      }
     ) => {
       try {
         const result = await finalizeQuestionScore(
           studentId,
           cropRegionId,
           scoredByUserId,
-          scoreData,
+          scoreData
         )
 
         if (!result.success || !("score" in result)) {
@@ -171,7 +171,7 @@ export function setupScoringHandlers(): void {
         console.error("Error finalizing question score:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle(
@@ -183,7 +183,7 @@ export function setupScoringHandlers(): void {
         console.error("Error getting answer sheet progress:", err)
         throw err
       }
-    },
+    }
   )
 
   ipcMain.handle("get-project-progress", async (_event, projectId: string) => {
@@ -205,6 +205,6 @@ export function setupScoringHandlers(): void {
         console.error("Error initializing scoring records:", err)
         throw err
       }
-    },
+    }
   )
 }

@@ -39,7 +39,7 @@ export interface CollectedData {
  * @returns 収集されたデータ
  */
 export async function collectProjectData(
-  projectId: string,
+  projectId: string
 ): Promise<{ success: boolean; data?: CollectedData; error?: string }> {
   try {
     // 1. プロジェクト基本データを取得
@@ -134,7 +134,7 @@ export async function collectProjectData(
 
     // 7. 小計グループと小計を取得
     const subtotalGroupIds = new Set(
-      project.projectSubtotalGroups.map((psg) => psg.subtotalGroupId),
+      project.projectSubtotalGroups.map((psg) => psg.subtotalGroupId)
     )
     const subtotalGroups = await prisma.subtotalGroup.findMany({
       where: { id: { in: Array.from(subtotalGroupIds) } },
@@ -254,7 +254,7 @@ export async function collectProjectData(
           orderIndex: region.orderIndex,
           createdAt: region.createdAt.toISOString(),
           updatedAt: region.updatedAt.toISOString(),
-        })),
+        }))
       ),
       pageImages: project.projectPages.flatMap((page) =>
         page.pageImages.map((img) => ({
@@ -265,7 +265,7 @@ export async function collectProjectData(
           imageType: img.imageType,
           createdAt: img.createdAt.toISOString(),
           updatedAt: img.updatedAt.toISOString(),
-        })),
+        }))
       ),
       projectStudents: project.projectStudents.map((ps) => ({
         id: ps.id,
@@ -357,7 +357,7 @@ export async function collectProjectData(
           order: s.order,
           createdAt: s.createdAt.toISOString(),
           updatedAt: s.updatedAt.toISOString(),
-        })),
+        }))
       ),
       cropSubtotals: cropSubtotals.map((cs) => ({
         id: cs.id,
@@ -406,7 +406,8 @@ export async function collectProjectData(
     console.error("Error collecting project data:", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "データ収集に失敗しました",
+      error:
+        error instanceof Error ? error.message : "データ収集に失敗しました",
     }
   }
 }

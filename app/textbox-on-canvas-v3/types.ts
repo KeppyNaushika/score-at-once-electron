@@ -22,9 +22,9 @@ export interface TextBox {
   /** 選択状態 */
   isSelected: boolean
   /** 水平方向の配置 */
-  horizontalAlign: 'left' | 'center' | 'right'
+  horizontalAlign: "left" | "center" | "right"
   /** 垂直方向の配置 */
-  verticalAlign: 'top' | 'center' | 'bottom'
+  verticalAlign: "top" | "center" | "bottom"
 }
 
 /**

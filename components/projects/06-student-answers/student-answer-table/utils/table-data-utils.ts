@@ -1,10 +1,15 @@
 import type { ExtendedDisabledState } from "@/components/projects/06-student-answers/student-answer-table/types"
-import type { UnifiedFile, UnifiedStudent } from "@/components/projects/06-student-answers/types"
+import type {
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/components/projects/06-student-answers/types"
 
 /**
  * 生徒をcustomOrder順にソートする
  */
-export function sortStudentsByCustomOrder(students: UnifiedStudent[]): UnifiedStudent[] {
+export function sortStudentsByCustomOrder(
+  students: UnifiedStudent[]
+): UnifiedStudent[] {
   return [...students].sort((a, b) => {
     const aOrder = a.customOrder ?? Number.MAX_SAFE_INTEGER
     const bOrder = b.customOrder ?? Number.MAX_SAFE_INTEGER
@@ -20,7 +25,7 @@ export function calculateDynamicDisabledPositions(
   sortedStudents: UnifiedStudent[],
   masterImageCount: number,
   disabledState: ExtendedDisabledState,
-  mode?: "upload" | "view",
+  mode?: "upload" | "view"
 ): Set<number> {
   const dynamicDisabled = new Set<number>()
 
@@ -51,7 +56,7 @@ export function calculateDynamicDisabledPositions(
           (file) =>
             file.studentId === student.id &&
             file.pageNumber === pageNumber &&
-            !disabledState.files.has(file.id),
+            !disabledState.files.has(file.id)
         )
 
         // 答案がない場合は動的無効化
@@ -79,7 +84,7 @@ export function calculatePositionsWithExistingAnswers(
     id: string
     studentId: string | null
     pageNumber: number
-  }>,
+  }>
 ): Set<number> {
   const positions = new Set<number>()
 
@@ -102,7 +107,7 @@ export function calculatePositionsWithExistingAnswers(
         // アップロードモード: existingAnswerSheets から判定
         hasAnswerForPosition = existingAnswerSheets.some(
           (sheet) =>
-            sheet.studentId === student.id && sheet.pageNumber === pageNumber,
+            sheet.studentId === student.id && sheet.pageNumber === pageNumber
         )
       } else {
         // 確認モード: files から判定
@@ -110,7 +115,7 @@ export function calculatePositionsWithExistingAnswers(
           (file) =>
             file.studentId === student.id &&
             file.pageNumber === pageNumber &&
-            !disabledState.files.has(file.id),
+            !disabledState.files.has(file.id)
         )
       }
 
@@ -128,7 +133,7 @@ export function calculatePositionsWithExistingAnswers(
  */
 export function getEnabledFiles(
   files: UnifiedFile[],
-  disabledState: ExtendedDisabledState,
+  disabledState: ExtendedDisabledState
 ): UnifiedFile[] {
   return files.filter((file) => !disabledState.files.has(file.id))
 }
@@ -138,7 +143,7 @@ export function getEnabledFiles(
  */
 export function getDisabledFiles(
   files: UnifiedFile[],
-  disabledState: ExtendedDisabledState,
+  disabledState: ExtendedDisabledState
 ): UnifiedFile[] {
   return files.filter((file) => disabledState.files.has(file.id))
 }

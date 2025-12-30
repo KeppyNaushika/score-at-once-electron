@@ -23,7 +23,7 @@ import {
 export function useTextBoxOperations() {
   const [textBoxes, setTextBoxes] = useState<TextBox[]>([])
   const [selectedTextBoxId, setSelectedTextBoxId] = useState<string | null>(
-    null,
+    null
   )
   const [currentDrag, setCurrentDrag] = useState<DragState | null>(null)
   const [isCreatingAnchor, _setIsCreatingAnchor] = useState<boolean>(false)
@@ -88,7 +88,7 @@ export function useTextBoxOperations() {
         }
       }
     },
-    [textBoxes, selectedTextBoxId],
+    [textBoxes, selectedTextBoxId]
   )
 
   /**
@@ -106,11 +106,11 @@ export function useTextBoxOperations() {
         prev.map((textBox) =>
           textBox.id === selectedTextBoxId
             ? { ...textBox, x: coords.x, y: coords.y }
-            : textBox,
-        ),
+            : textBox
+        )
       )
     },
-    [isDraggingAnchor, selectedTextBoxId],
+    [isDraggingAnchor, selectedTextBoxId]
   )
 
   /**
@@ -132,7 +132,7 @@ export function useTextBoxOperations() {
     }
 
     setTextBoxes(
-      updateTextBoxContent(textBoxes, selectedTextBoxId, textInputValue),
+      updateTextBoxContent(textBoxes, selectedTextBoxId, textInputValue)
     )
     setShowTextInput(false)
     setTextInputValue("")
@@ -161,11 +161,11 @@ export function useTextBoxOperations() {
     (id: string, anchorDirection: AnchorDirection): void => {
       setTextBoxes((prev) =>
         prev.map((textBox) =>
-          textBox.id === id ? { ...textBox, anchorDirection } : textBox,
-        ),
+          textBox.id === id ? { ...textBox, anchorDirection } : textBox
+        )
       )
     },
-    [],
+    []
   )
 
   /**
@@ -175,15 +175,15 @@ export function useTextBoxOperations() {
     (id: string, textSize: number): void => {
       const clampedSize = Math.max(
         TEXTBOX_SETTINGS.MIN_TEXT_SIZE,
-        Math.min(TEXTBOX_SETTINGS.MAX_TEXT_SIZE, textSize),
+        Math.min(TEXTBOX_SETTINGS.MAX_TEXT_SIZE, textSize)
       )
       setTextBoxes((prev) =>
         prev.map((textBox) =>
-          textBox.id === id ? { ...textBox, textSize: clampedSize } : textBox,
-        ),
+          textBox.id === id ? { ...textBox, textSize: clampedSize } : textBox
+        )
       )
     },
-    [],
+    []
   )
 
   return {

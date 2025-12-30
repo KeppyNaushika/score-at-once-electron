@@ -27,43 +27,47 @@ export function useAsync<T, Args extends unknown[] = []>(
     onSuccess,
     onError,
     showErrorToast = true,
-    errorToastMessage
+    errorToastMessage,
   } = options
 
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const execute = useCallback(async (...args: Args): Promise<T | null> => {
-    try {
-      setLoading(true)
-      setError(null)
+  const execute = useCallback(
+    async (...args: Args): Promise<T | null> => {
+      try {
+        setLoading(true)
+        setError(null)
 
-      const result = await asyncFn(...args)
-      setData(result)
+        const result = await asyncFn(...args)
+        setData(result)
 
-      if (onSuccess) {
-        onSuccess(result)
+        if (onSuccess) {
+          onSuccess(result)
+        }
+
+        return result
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "不明なエラーが発生しました"
+        setError(errorMessage)
+
+        if (showErrorToast) {
+          toast.error(errorToastMessage || errorMessage)
+        }
+
+        if (onError) {
+          onError(err instanceof Error ? err : new Error(errorMessage))
+        }
+
+        return null
+      } finally {
+        setLoading(false)
       }
-
-      return result
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "不明なエラーが発生しました"
-      setError(errorMessage)
-
-      if (showErrorToast) {
-        toast.error(errorToastMessage || errorMessage)
-      }
-
-      if (onError) {
-        onError(err instanceof Error ? err : new Error(errorMessage))
-      }
-
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }, [asyncFn, onSuccess, onError, showErrorToast, errorToastMessage])
+    },
+    [asyncFn, onSuccess, onError, showErrorToast, errorToastMessage]
+  )
 
   const reset = useCallback(() => {
     setData(null)
@@ -83,7 +87,7 @@ export function useAsync<T, Args extends unknown[] = []>(
     loading,
     error,
     execute,
-    reset
+    reset,
   }
 }
 
@@ -95,6 +99,6 @@ export function useElectronAsync<T, Args extends unknown[] = []>(
 ): UseAsyncResult<T, Args> {
   return useAsync(apiCall, deps, {
     showErrorToast: true,
-    ...options
+    ...options,
   })
 }

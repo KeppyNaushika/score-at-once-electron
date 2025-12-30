@@ -11,10 +11,10 @@ export function StudentStatisticsCards({
 }: StudentStatisticsCardsProps) {
   const totalStudents = students.length
   const participatingStudents = students.filter(
-    (s) => s.status === "participating",
+    (s) => s.status === "participating"
   ).length
   const expectedStudents = students.filter(
-    (s) => s.status === "expected",
+    (s) => s.status === "expected"
   ).length
   const absentStudents = students.filter((s) => s.status === "absent").length
 
@@ -22,28 +22,28 @@ export function StudentStatisticsCards({
     <div className="flex flex-shrink-0 flex-wrap items-center gap-4">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">総生徒数</span>
-        <span className="rounded-md bg-white px-3 text-lg font-bold text-gray-900 shadow-sm border">
+        <span className="rounded-md border bg-white px-3 text-lg font-bold text-gray-900 shadow-sm">
           {totalStudents}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">受験者</span>
-        <span className="rounded-md bg-green-100 px-3 text-lg font-bold text-green-700 border border-green-200">
+        <span className="rounded-md border border-green-200 bg-green-100 px-3 text-lg font-bold text-green-700">
           {participatingStudents}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">見込受験</span>
-        <span className="rounded-md bg-blue-100 px-3 text-lg font-bold text-blue-700 border border-blue-200">
+        <span className="rounded-md border border-blue-200 bg-blue-100 px-3 text-lg font-bold text-blue-700">
           {expectedStudents}
         </span>
       </div>
 
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">欠席者</span>
-        <span className="rounded-md bg-red-100 px-3 text-lg font-bold text-red-700 border border-red-200">
+        <span className="rounded-md border border-red-200 bg-red-100 px-3 text-lg font-bold text-red-700">
           {absentStudents}
         </span>
       </div>

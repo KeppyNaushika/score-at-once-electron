@@ -4,9 +4,7 @@ import {
   getAbsolutePathFromData,
   initializeDataDirectory,
 } from "./lib/dataManager"
-import {
-  optimizeDatabaseForSharedDrive,
-} from "./lib/prisma/databaseInitializer"
+import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseInitializer"
 
 export async function initializeApp(): Promise<void> {
   try {
@@ -17,9 +15,9 @@ export async function initializeApp(): Promise<void> {
     try {
       const { DatabaseSetup } = await import("./lib/database-setup")
       const dbSetup = new DatabaseSetup()
-      
+
       const wasSetupRequired = await dbSetup.setupIfNeeded()
-      
+
       if (wasSetupRequired) {
         console.log("Database initialized and seeded successfully")
       } else {
@@ -27,20 +25,23 @@ export async function initializeApp(): Promise<void> {
       }
     } catch (dbError) {
       console.error("Database setup failed:", dbError)
-      throw new Error(`Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`)
+      throw new Error(
+        `Database initialization failed: ${dbError instanceof Error ? dbError.message : dbError}`
+      )
     }
 
     // 共有ドライブ用の最適化
     await optimizeDatabaseForSharedDrive()
 
     // データベース接続テスト
-    const { checkDatabaseHealth } = await import("./lib/prisma/databaseInitializer")
+    const { checkDatabaseHealth } =
+      await import("./lib/prisma/databaseInitializer")
     const isHealthy = await checkDatabaseHealth()
-    
+
     if (!isHealthy) {
       throw new Error("Database health check failed")
     }
-    
+
     console.log("Application initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize application:", error)
@@ -53,7 +54,7 @@ export async function initializeApp(): Promise<void> {
   protocol.handle("appimg", async (request) => {
     try {
       const relativePathInData = request.url.substring("appimg://".length)
-      
+
       // より確実なデコード処理
       let decodedRelativePath
       try {
@@ -68,7 +69,7 @@ export async function initializeApp(): Promise<void> {
           decodedRelativePath = relativePathInData
         }
       }
-      
+
       const absolutePath = getAbsolutePathFromData(decodedRelativePath)
 
       // ファイル存在確認
@@ -84,13 +85,13 @@ export async function initializeApp(): Promise<void> {
         protocol: "file:",
         slashes: true,
       })
-      
+
       const response = await net.fetch(fileURL)
       return response
     } catch (error) {
       console.error(
         `Failed to handle 'appimg' protocol request ${request.url}:`,
-        error,
+        error
       )
 
       return new Response("File not found", { status: 404 })

@@ -5,8 +5,6 @@ import type {
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
-
-
 export interface QuestionProgress {
   [questionId: string]: {
     totalAnswers: number

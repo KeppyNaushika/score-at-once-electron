@@ -24,11 +24,11 @@ interface UseSortableStudentTableProps {
   onSelectAll: (isSelected: boolean) => void
   onStudentOrderUpdate: (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => Promise<void>
   onStudentStatusUpdate: (
     studentId: string,
-    status: StudentStatus,
+    status: StudentStatus
   ) => Promise<void>
   projectId: string
 }
@@ -46,7 +46,7 @@ export function useSortableStudentTable({
   const [sortedStudents, setSortedStudents] = useState<Student[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
-    null,
+    null
   )
 
   // センサーの設定（マウスとキーボード対応）
@@ -56,7 +56,7 @@ export function useSortableStudentTable({
         distance: 8, // 8px移動したらドラッグ開始
       },
     }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor)
   )
 
   // 生徒の並び順を初期化・更新
@@ -129,10 +129,10 @@ export function useSortableStudentTable({
       }
 
       const oldIndex = sortedStudents.findIndex(
-        (student) => student.id === active.id,
+        (student) => student.id === active.id
       )
       const newIndex = sortedStudents.findIndex(
-        (student) => student.id === over.id,
+        (student) => student.id === over.id
       )
 
       if (oldIndex === -1 || newIndex === -1) {
@@ -141,7 +141,7 @@ export function useSortableStudentTable({
 
       // 選択されている生徒を取得
       const selectedStudentsList = sortedStudents.filter((student) =>
-        selectedStudents.has(student.id),
+        selectedStudents.has(student.id)
       )
 
       // ドラッグされた生徒が選択されている場合は、選択されたすべての生徒を一緒に移動
@@ -156,7 +156,7 @@ export function useSortableStudentTable({
         const selectedStudentsData = selectedStudentsList
           .map((student) => {
             const index = newSortedStudents.findIndex(
-              (s) => s.id === student.id,
+              (s) => s.id === student.id
             )
             return newSortedStudents.splice(index, 1)[0]
           })
@@ -192,7 +192,7 @@ export function useSortableStudentTable({
         await onStudentOrderUpdate(projectId, studentOrders)
       }
     },
-    [sortedStudents, selectedStudents, onStudentOrderUpdate, projectId],
+    [sortedStudents, selectedStudents, onStudentOrderUpdate, projectId]
   )
 
   // チェックボックスのトグル（Shiftキー対応）
@@ -229,7 +229,7 @@ export function useSortableStudentTable({
       selectedStudents,
       onStudentSelectionChange,
       lastSelectedIndex,
-    ],
+    ]
   )
 
   // 全選択のトグル
@@ -238,7 +238,7 @@ export function useSortableStudentTable({
       onSelectAll(checked)
       setLastSelectedIndex(null)
     },
-    [onSelectAll],
+    [onSelectAll]
   )
 
   // リセットボタン（デフォルトの並び順に戻す）

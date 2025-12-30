@@ -108,7 +108,7 @@ export default function CroppedAnswerImage({
       0,
       0,
       canvas.width,
-      canvas.height,
+      canvas.height
     )
   }, [imageLoaded, cropRegion, isColumnLayout, calculatedCellHeight])
 
@@ -125,7 +125,7 @@ export default function CroppedAnswerImage({
       className={`relative ${containerClass} ${isSelected ? "ring-2 ring-blue-500 ring-inset" : ""} ${className}`}
     >
       {/* Canvas描画用の画像データ取得のため、Next.js Imageではなく通常のimgタグを使用 */}
-      { }
+      {}
       <img
         ref={imageRef}
         src={imageUrl}

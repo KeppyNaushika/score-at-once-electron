@@ -12,7 +12,13 @@ import { LucideIcon } from "lucide-react"
 interface ActionButtonProps {
   icon: LucideIcon
   label: string
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link"
+  variant?:
+    | "default"
+    | "destructive"
+    | "outline"
+    | "secondary"
+    | "ghost"
+    | "link"
   size?: "default" | "sm" | "lg" | "icon"
   onClick: () => void
   disabled?: boolean
@@ -49,9 +55,7 @@ export default function ActionButton({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger asChild>
-            {buttonContent}
-          </TooltipTrigger>
+          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
           <TooltipContent>
             <p>{tooltip}</p>
           </TooltipContent>

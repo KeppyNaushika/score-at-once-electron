@@ -1,7 +1,11 @@
 import { CropRegionArea } from "@/types/common.types"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
-import { AreaType, ImageDimensions, InitialDataState } from "@/components/projects/02-template/types"
+import {
+  AreaType,
+  ImageDimensions,
+  InitialDataState,
+} from "@/components/projects/02-template/types"
 type MasterImage = {
   id: string
   projectId: string
@@ -54,7 +58,7 @@ export function useTemplateData(projectId: string | undefined) {
         img.src = imageUrl
       })
     },
-    [],
+    []
   )
 
   /**
@@ -105,11 +109,11 @@ export function useTemplateData(projectId: string | undefined) {
         // projectPagesからmaster imagesを抽出してソート
         const masterImages = fetchedProject.projectPages
           .filter((page) =>
-            page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER"),
+            page.pageImages?.some((img) => img.imageType === "MODEL_ANSWER")
           )
           .map((page) => {
             const masterImage = page.pageImages?.find(
-              (img) => img.imageType === "MODEL_ANSWER",
+              (img) => img.imageType === "MODEL_ANSWER"
             )
             return {
               id: page.id,
@@ -127,7 +131,7 @@ export function useTemplateData(projectId: string | undefined) {
 
         // 最初の画像のURLと寸法を取得
         backgroundUrl = await window.electronAPI.resolveFileProtocolPath(
-          selectedImage.imagePath,
+          selectedImage.imagePath
         )
         dimensions = await loadImageDimensions(backgroundUrl)
       }
@@ -147,7 +151,7 @@ export function useTemplateData(projectId: string | undefined) {
           const firstMasterImageId = selectedImage?.id
           const currentImageRegions = firstMasterImageId
             ? existingRegions.filter(
-                (region) => region.projectPage?.id === firstMasterImageId,
+                (region) => region.projectPage?.id === firstMasterImageId
               )
             : []
 
@@ -202,7 +206,7 @@ export function useTemplateData(projectId: string | undefined) {
       try {
         // 新しい画像のURLと寸法を取得
         const url = await window.electronAPI.resolveFileProtocolPath(
-          image.imagePath,
+          image.imagePath
         )
         const dimensions = await loadImageDimensions(url)
 
@@ -210,7 +214,7 @@ export function useTemplateData(projectId: string | undefined) {
         const allRegions =
           await window.electronAPI.getCropRegionsByProjectId(projectId)
         const currentImageRegions = allRegions.filter(
-          (region) => region.projectPage?.id === image.id,
+          (region) => region.projectPage?.id === image.id
         )
 
         const mappedRegions: CropRegionArea[] =
@@ -241,7 +245,7 @@ export function useTemplateData(projectId: string | undefined) {
         console.error("Failed to change master image:", error)
       }
     },
-    [initialData.masterImages, projectId, loadImageDimensions],
+    [initialData.masterImages, projectId, loadImageDimensions]
   )
 
   /**

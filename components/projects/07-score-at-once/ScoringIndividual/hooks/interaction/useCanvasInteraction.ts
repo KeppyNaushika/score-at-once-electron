@@ -64,7 +64,7 @@ export interface UseCanvasInteractionProps {
     rect:
       | SelectionRectangle
       | null
-      | ((prev: SelectionRectangle | null) => SelectionRectangle | null),
+      | ((prev: SelectionRectangle | null) => SelectionRectangle | null)
   ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   setIsDrawing: (drawing: boolean) => void
@@ -73,15 +73,15 @@ export interface UseCanvasInteractionProps {
       | Partial<DrawingElement>
       | null
       | ((
-          prev: Partial<DrawingElement> | null,
-        ) => Partial<DrawingElement> | null),
+          prev: Partial<DrawingElement> | null
+        ) => Partial<DrawingElement> | null)
   ) => void
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
   setLineEditMode: (mode: "start" | "end" | "move" | null) => void
   setRectangleEditMode: (mode: "resize" | "move" | null) => void
   setDrawingElements: (
-    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[]),
+    elements: DrawingElement[] | ((prev: DrawingElement[]) => DrawingElement[])
   ) => void
   addDrawingElement: (element: DrawingElement) => void
   updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
@@ -92,17 +92,17 @@ export interface UseCanvasInteractionProps {
   hitTestHandle: (
     element: DrawingElement,
     x: number,
-    y: number,
+    y: number
   ) => string | null
   getLineEditMode: (
     element: DrawingElement,
     x: number,
-    y: number,
+    y: number
   ) => "start" | "end" | "move" | null
   getRectangleEditMode: (
     element: DrawingElement,
     x: number,
-    y: number,
+    y: number
   ) => "resize" | "move" | null
 
   // コールバック
@@ -115,7 +115,7 @@ export interface UseCanvasInteractionProps {
 export interface UseCanvasInteractionReturn {
   handleSelectionMouseDown: (
     imageCoords: { x: number; y: number },
-    originalEvent?: PointerEvent | MouseEvent,
+    originalEvent?: PointerEvent | MouseEvent
   ) => boolean
   handleSelectionMouseMove: (imageCoords: { x: number; y: number }) => boolean
   handleSelectionMouseUp: (originalEvent?: PointerEvent | MouseEvent) => boolean
@@ -184,7 +184,7 @@ export function useCanvasInteraction({
   const [resizeOriginalBounds, setResizeOriginalBounds] =
     useState<ResizeOriginalBounds | null>(null)
   const [capturedPointerId, setCapturedPointerId] = useState<number | null>(
-    null,
+    null
   )
 
   // カーソル管理
@@ -214,13 +214,16 @@ export function useCanvasInteraction({
   })
 
   // リサイズ
-  const { getResizeHandle, handleElementResize, applyShiftConstraint: _applyShiftConstraint } =
-    useElementResize({
-      isShiftPressed,
-      imageAspectRatio,
-      setDrawingElements,
-      hitTestHandle,
-    })
+  const {
+    getResizeHandle,
+    handleElementResize,
+    applyShiftConstraint: _applyShiftConstraint,
+  } = useElementResize({
+    isShiftPressed,
+    imageAspectRatio,
+    setDrawingElements,
+    hitTestHandle,
+  })
 
   // 要素選択
   const { handleElementSelection } = useElementSelection({
@@ -283,7 +286,7 @@ export function useCanvasInteraction({
   const calcDistance = useCallback(
     (x1: number, y1: number, x2: number, y2: number) =>
       Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2),
-    [],
+    []
   )
 
   /**
@@ -292,7 +295,7 @@ export function useCanvasInteraction({
   const handleSelectionMouseDown = useCallback(
     (
       imageCoords: { x: number; y: number },
-      originalEvent?: PointerEvent | MouseEvent,
+      originalEvent?: PointerEvent | MouseEvent
     ): boolean => {
       if (currentTool !== "select") return false
 
@@ -310,7 +313,7 @@ export function useCanvasInteraction({
           const editMode = getLineEditMode(
             element,
             imageCoords.x,
-            imageCoords.y,
+            imageCoords.y
           )
           if (editMode === "start" || editMode === "end") {
             const handleX =
@@ -325,7 +328,7 @@ export function useCanvasInteraction({
                 imageCoords.x,
                 imageCoords.y,
                 handleX,
-                handleY,
+                handleY
               ),
             })
           }
@@ -333,7 +336,7 @@ export function useCanvasInteraction({
           const handleName = getResizeHandle(
             imageCoords.x,
             imageCoords.y,
-            element,
+            element
           )
           if (handleName === "anchor") {
             handleHits.push({
@@ -344,7 +347,7 @@ export function useCanvasInteraction({
                 imageCoords.x,
                 imageCoords.y,
                 element.x,
-                element.y,
+                element.y
               ),
             })
           }
@@ -352,7 +355,7 @@ export function useCanvasInteraction({
           const handleName = getResizeHandle(
             imageCoords.x,
             imageCoords.y,
-            element,
+            element
           )
           if (handleName) {
             const width = element.width || 0
@@ -369,7 +372,7 @@ export function useCanvasInteraction({
                 imageCoords.x,
                 imageCoords.y,
                 handleX,
-                handleY,
+                handleY
               ),
             })
           }
@@ -379,7 +382,7 @@ export function useCanvasInteraction({
       // 最も近いハンドルを選択
       if (handleHits.length > 0) {
         const closest = handleHits.reduce((a, b) =>
-          a.distance < b.distance ? a : b,
+          a.distance < b.distance ? a : b
         )
 
         // ポインターキャプチャのヘルパー
@@ -503,7 +506,7 @@ export function useCanvasInteraction({
       initializeMoveStart,
       onTextElementReClick,
       calcDistance,
-    ],
+    ]
   )
 
   /**
@@ -533,7 +536,7 @@ export function useCanvasInteraction({
       }
       return { hasElement: false, elementId: null, elementType: null }
     },
-    [currentTool, drawingElements, hitTestElement],
+    [currentTool, drawingElements, hitTestElement]
   )
 
   /**
@@ -554,7 +557,7 @@ export function useCanvasInteraction({
         resizeOriginalBounds
       ) {
         const resizeElement = drawingElements.find(
-          (el) => el.id === resizeElementId,
+          (el) => el.id === resizeElementId
         )
         if (resizeElement) {
           handleElementResize(
@@ -562,7 +565,7 @@ export function useCanvasInteraction({
             imageCoords.y,
             resizeHandle,
             resizeElement,
-            resizeOriginalBounds,
+            resizeOriginalBounds
           )
           return true
         }
@@ -577,7 +580,7 @@ export function useCanvasInteraction({
       } else if (isDraggingElement) {
         if (lineEditMode === "start" || lineEditMode === "end") {
           const selectedElement = drawingElements.find((el) =>
-            selectedElementIds.includes(el.id),
+            selectedElementIds.includes(el.id)
           )
           if (selectedElement) {
             const cursor = getResizeCursor(selectedElement, lineEditMode)
@@ -598,7 +601,7 @@ export function useCanvasInteraction({
             const editMode = getLineEditMode(
               element,
               imageCoords.x,
-              imageCoords.y,
+              imageCoords.y
             )
             if (editMode === "start" || editMode === "end") {
               const cursor = getResizeCursor(element, editMode)
@@ -610,7 +613,7 @@ export function useCanvasInteraction({
             const handleName = getResizeHandle(
               imageCoords.x,
               imageCoords.y,
-              element,
+              element
             )
             if (handleName === "anchor") {
               setCursor("move")
@@ -621,7 +624,7 @@ export function useCanvasInteraction({
             const handleName = getResizeHandle(
               imageCoords.x,
               imageCoords.y,
-              element,
+              element
             )
             if (handleName) {
               const cursor = getResizeCursor(element, handleName)
@@ -683,7 +686,7 @@ export function useCanvasInteraction({
       getResizeCursor,
       checkElementHover,
       setHoveredElementId,
-    ],
+    ]
   )
 
   /**
@@ -717,7 +720,7 @@ export function useCanvasInteraction({
 
         if (resizeElementId) {
           const resizedElement = drawingElements.find(
-            (el) => el.id === resizeElementId,
+            (el) => el.id === resizeElementId
           )
           if (resizedElement) {
             const updates: Partial<DrawingElement> = {
@@ -771,7 +774,7 @@ export function useCanvasInteraction({
       completeRectangleSelection,
       resetCursor,
       setIsDraggingElement,
-    ],
+    ]
   )
 
   return {

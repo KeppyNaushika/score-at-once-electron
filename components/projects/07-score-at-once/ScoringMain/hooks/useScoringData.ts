@@ -50,7 +50,7 @@ export function useScoringData({
     (studentId: string, questionId?: string) => {
       return getScoringStatusFromArray(questionScores, studentId, questionId)
     },
-    [questionScores],
+    [questionScores]
   )
 
   const getActualScoreCallback = useCallback(
@@ -61,7 +61,7 @@ export function useScoringData({
       if (!score) return null
       return score.partialScore !== null ? score.partialScore : null
     },
-    [questionScores],
+    [questionScores]
   )
 
   // Progress calculation function

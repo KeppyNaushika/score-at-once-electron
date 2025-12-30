@@ -101,7 +101,7 @@ interface DrawingElement {
  * DrawingAnnotationをDrawingElementに変換
  */
 function convertAnnotationToDrawingElement(
-  annotation: DrawingAnnotation,
+  annotation: DrawingAnnotation
 ): DrawingElement {
   return {
     id: annotation.id,
@@ -134,7 +134,7 @@ async function drawElement(
   imageWidth: number,
   imageHeight: number,
   offsetX: number = 0,
-  offsetY: number = 0,
+  offsetY: number = 0
 ): Promise<void> {
   // 座標計算（テキストも含めてelement.x/yを使用 - 一括採点個別表示と同じ）
   const currentX = element.x * imageWidth + offsetX
@@ -147,7 +147,8 @@ async function drawElement(
   switch (element.type) {
     case "text":
       if (element.text) {
-        const anchorDir = (element.anchorDirection || "top-left") as AnchorDirection
+        const anchorDir = (element.anchorDirection ||
+          "top-left") as AnchorDirection
         const fontSize = element.fontSize ?? 16
         const textColor = element.color || "#000000"
 
@@ -159,7 +160,7 @@ async function drawElement(
             "left",
             "top",
             fontSize,
-            textColor,
+            textColor
           )
 
           if (svgElement) {
@@ -169,7 +170,9 @@ async function drawElement(
             const hasMathJaxElements =
               svgData.includes("mjx-container") || svgData.includes("<use")
             if (hasMathJaxElements) {
-              const globalDefs = document.querySelector("#MJX-SVG-global-cache defs")
+              const globalDefs = document.querySelector(
+                "#MJX-SVG-global-cache defs"
+              )
               if (globalDefs && globalDefs.innerHTML.length > 10) {
                 const defsContent = globalDefs.outerHTML
                 svgData = svgData.replace(/(<svg[^>]*>)/, `$1${defsContent}`)
@@ -185,7 +188,8 @@ async function drawElement(
               const img = new Image()
               await new Promise<void>((resolve, reject) => {
                 img.onload = () => resolve()
-                img.onerror = () => reject(new Error("Failed to load converted PNG"))
+                img.onerror = () =>
+                  reject(new Error("Failed to load converted PNG"))
                 img.src = result.dataUrl!
               })
 
@@ -198,7 +202,7 @@ async function drawElement(
                 currentY,
                 width,
                 height,
-                anchorDir,
+                anchorDir
               )
 
               ctx.drawImage(img, textPosition.x, textPosition.y, width, height)
@@ -319,11 +323,11 @@ async function drawElement(
             ctx.moveTo(currentEndX, currentEndY)
             ctx.lineTo(
               currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6)
             )
             ctx.lineTo(
               currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6)
             )
             ctx.closePath()
             ctx.fill()
@@ -341,11 +345,11 @@ async function drawElement(
             ctx.moveTo(currentEndX, currentEndY)
             ctx.lineTo(
               currentEndX - arrowSize * Math.cos(angle - Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle - Math.PI / 6)
             )
             ctx.lineTo(
               currentEndX - arrowSize * Math.cos(angle + Math.PI / 6),
-              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6),
+              currentEndY - arrowSize * Math.sin(angle + Math.PI / 6)
             )
             ctx.closePath()
             ctx.fill()
@@ -355,11 +359,11 @@ async function drawElement(
             ctx.moveTo(currentX, currentY)
             ctx.lineTo(
               currentX + arrowSize * Math.cos(angle - Math.PI / 6),
-              currentY + arrowSize * Math.sin(angle - Math.PI / 6),
+              currentY + arrowSize * Math.sin(angle - Math.PI / 6)
             )
             ctx.lineTo(
               currentX + arrowSize * Math.cos(angle + Math.PI / 6),
-              currentY + arrowSize * Math.sin(angle + Math.PI / 6),
+              currentY + arrowSize * Math.sin(angle + Math.PI / 6)
             )
             ctx.closePath()
             ctx.fill()
@@ -400,7 +404,7 @@ async function drawElement(
           Math.abs(rectHeight) / 2,
           0,
           0,
-          2 * Math.PI,
+          2 * Math.PI
         )
         ctx.stroke()
       }
@@ -417,7 +421,7 @@ function calculateMarkPosition(
   regionWidth: number,
   regionHeight: number,
   markSize: number,
-  position: string,
+  position: string
 ): { x: number; y: number } {
   const padding = 5
 
@@ -480,7 +484,7 @@ function calculatePartialScorePosition(
   regionHeight: number,
   position: string,
   offsetX: number,
-  offsetY: number,
+  offsetY: number
 ): { x: number; y: number } {
   let baseX: number
   let baseY: number
@@ -544,7 +548,7 @@ function drawScoringMark(
   region: ScoringDataForPdf["cropRegion"],
   config: ScoringMarkConfigForPdf,
   imageWidth: number,
-  imageHeight: number,
+  imageHeight: number
 ): void {
   const regionX = region.x * imageWidth
   const regionY = region.y * imageHeight
@@ -554,7 +558,7 @@ function drawScoringMark(
   const markSize = Math.min(
     config.markSize,
     regionWidth * 0.8,
-    regionHeight * 0.8,
+    regionHeight * 0.8
   )
   const { x, y } = calculateMarkPosition(
     regionX,
@@ -562,7 +566,7 @@ function drawScoringMark(
     regionWidth,
     regionHeight,
     markSize,
-    config.markPosition,
+    config.markPosition
   )
 
   ctx.drawImage(markImage, x, y, markSize, markSize)
@@ -578,7 +582,7 @@ function drawScoreText(
   region: ScoringDataForPdf["cropRegion"],
   config: ScoringMarkConfigForPdf,
   imageWidth: number,
-  imageHeight: number,
+  imageHeight: number
 ): void {
   if (!config.showPartialScore) return
 
@@ -594,7 +598,7 @@ function drawScoreText(
     regionHeight,
     config.partialScorePosition,
     config.partialScoreOffsetX,
-    config.partialScoreOffsetY,
+    config.partialScoreOffsetY
   )
 
   ctx.save()
@@ -614,7 +618,7 @@ function drawSubtotalScoreText(
   subtotalData: SubtotalDataForPdf,
   config: ScoringMarkConfigForPdf,
   imageWidth: number,
-  imageHeight: number,
+  imageHeight: number
 ): void {
   const regionX = subtotalData.x * imageWidth
   const regionY = subtotalData.y * imageHeight
@@ -642,7 +646,7 @@ function drawTotalScoreText(
   totalScoreData: TotalScoreDataForPdf,
   config: ScoringMarkConfigForPdf,
   imageWidth: number,
-  imageHeight: number,
+  imageHeight: number
 ): void {
   const regionX = totalScoreData.x * imageWidth
   const regionY = totalScoreData.y * imageHeight
@@ -683,7 +687,7 @@ export async function renderAnswerSheetToCanvas(
   config: ScoringMarkConfigForPdf,
   scoringMarkImages: Map<string, HTMLImageElement>,
   subtotalDataList: SubtotalDataForPdf[] = [],
-  totalScoreDataList: TotalScoreDataForPdf[] = [],
+  totalScoreDataList: TotalScoreDataForPdf[] = []
 ): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) {
@@ -731,14 +735,14 @@ export async function renderAnswerSheetToCanvas(
         scoringData.cropRegion,
         config,
         imageWidth,
-        imageHeight,
+        imageHeight
       )
     }
 
     // 点数テキストの描画
     // showScoreForStatusがある場合はステータスごとに判定、ない場合は後方互換性のためpartialのみ
     const shouldShowScore = config.showScoreForStatus
-      ? config.showScoreForStatus[scoringData.status] ?? false
+      ? (config.showScoreForStatus[scoringData.status] ?? false)
       : scoringData.status === "partial"
 
     if (shouldShowScore) {
@@ -750,7 +754,10 @@ export async function renderAnswerSheetToCanvas(
       } else if (scoringData.status === "partial") {
         // 部分点: 部分点を表示
         scoreToDisplay = scoringData.partialScore ?? null
-      } else if (scoringData.status === "incorrect" || scoringData.status === "no_answer") {
+      } else if (
+        scoringData.status === "incorrect" ||
+        scoringData.status === "no_answer"
+      ) {
         // 誤答/無答: 0点を表示
         scoreToDisplay = 0
       }
@@ -762,7 +769,7 @@ export async function renderAnswerSheetToCanvas(
           scoringData.cropRegion,
           config,
           imageWidth,
-          imageHeight,
+          imageHeight
         )
       }
     }
@@ -795,7 +802,7 @@ export async function renderAnswerSheetToCanvas(
         }
       },
       "image/png",
-      1.0,
+      1.0
     )
   })
 }
@@ -806,7 +813,7 @@ export async function renderAnswerSheetToCanvas(
  * fetchしてBlobからObjectURLを作成することで、Canvasのtainted問題を回避
  */
 export async function preloadScoringMarkImages(
-  useTransparent: boolean,
+  useTransparent: boolean
 ): Promise<Map<string, HTMLImageElement>> {
   const prefix = useTransparent ? "tp_" : ""
   const markTypes = ["correct", "partial", "hold", "incorrect"]
@@ -847,7 +854,7 @@ export async function preloadScoringMarkImages(
         })
         images.set(type, img)
       }
-    }),
+    })
   )
 
   return images

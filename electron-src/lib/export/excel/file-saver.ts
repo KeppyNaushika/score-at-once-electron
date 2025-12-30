@@ -8,7 +8,7 @@ import { ExportResult } from "../../shared/types/export-types"
  * @returns サニタイズされた名前
  */
 function sanitizeFileName(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '_').trim()
+  return name.replace(/[\\/:*?"<>|]/g, "_").trim()
 }
 
 /**
@@ -22,7 +22,7 @@ function sanitizeFileName(name: string): string {
 export async function saveWorkbook(
   workbook: ExcelJS.Workbook,
   outputPath?: string,
-  projectName?: string,
+  projectName?: string
 ): Promise<ExportResult> {
   try {
     let finalOutputPath = outputPath
@@ -30,10 +30,10 @@ export async function saveWorkbook(
     if (!finalOutputPath) {
       const dateStr = new Date().toISOString().slice(0, 10)
       const safeProjectName = projectName ? sanitizeFileName(projectName) : null
-      const fileName = safeProjectName 
+      const fileName = safeProjectName
         ? `採点結果_${safeProjectName}_${dateStr}.xlsx`
         : `採点結果_${dateStr}.xlsx`
-        
+
       const result = await dialog.showSaveDialog({
         title: "Excel出力先を選択",
         defaultPath: fileName,

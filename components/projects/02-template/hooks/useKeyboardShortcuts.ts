@@ -14,7 +14,7 @@ import { useEffect } from "react"
 
 export function useKeyboardShortcuts(
   selectedAreaIndex: number | null,
-  onDeleteArea: (index: number) => void,
+  onDeleteArea: (index: number) => void
 ) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

@@ -81,8 +81,7 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error:
-          error instanceof Error ? error.message : "エラーが発生しました",
+        error: error instanceof Error ? error.message : "エラーが発生しました",
       }))
       return false
     }
@@ -108,7 +107,7 @@ export function useImportWizard() {
         },
       }))
     },
-    [],
+    []
   )
 
   // 競合検出
@@ -156,8 +155,7 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error:
-          error instanceof Error ? error.message : "エラーが発生しました",
+        error: error instanceof Error ? error.message : "エラーが発生しました",
       }))
       return false
     }
@@ -174,7 +172,7 @@ export function useImportWizard() {
         },
       }))
     },
-    [],
+    []
   )
 
   // 実行へ進む
@@ -208,8 +206,7 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error:
-          error instanceof Error ? error.message : "エラーが発生しました",
+        error: error instanceof Error ? error.message : "エラーが発生しました",
       }))
       return null
     }
@@ -243,8 +240,7 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error:
-          error instanceof Error ? error.message : "エラーが発生しました",
+        error: error instanceof Error ? error.message : "エラーが発生しました",
       }))
       return null
     }

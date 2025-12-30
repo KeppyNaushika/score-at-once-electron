@@ -118,7 +118,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
-                "toggle-show-unscored",
+                "toggle-show-unscored"
               ),
           },
           {
@@ -145,7 +145,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
-                "toggle-show-incorrect",
+                "toggle-show-incorrect"
               ),
           },
           {
@@ -155,7 +155,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
-                "toggle-show-noanswer", // Corrected
+                "toggle-show-noanswer" // Corrected
               ),
           },
         ],
@@ -228,7 +228,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
               click: () =>
                 mainWindow.webContents.send(
                   "score-panel",
-                  `partial-point-${v}`,
+                  `partial-point-${v}`
                 ),
             }
             return menuItem
@@ -239,7 +239,7 @@ const menu = (app: Electron.App, mainWindow: BrowserWindow, page: string) => {
             click: () =>
               mainWindow.webContents.send(
                 "score-panel",
-                "partial-point-backspace",
+                "partial-point-backspace"
               ),
           },
         ],

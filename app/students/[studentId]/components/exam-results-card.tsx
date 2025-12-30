@@ -64,11 +64,7 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
         </Badge>
       )
     }
-    return (
-      <Badge variant="secondary">
-        未採点
-      </Badge>
-    )
+    return <Badge variant="secondary">未採点</Badge>
   }
 
   const getScoreDisplay = (result: ExamResult) => {
@@ -134,7 +130,9 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
                     key={result.projectId}
                     className="hover:bg-muted/50 cursor-pointer"
                     onClick={() =>
-                      router.push(`/projects/${result.projectId}/07-score-at-once`)
+                      router.push(
+                        `/projects/${result.projectId}/07-score-at-once`
+                      )
                     }
                   >
                     <TableCell className="font-medium">

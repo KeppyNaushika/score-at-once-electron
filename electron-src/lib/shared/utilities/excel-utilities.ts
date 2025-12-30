@@ -40,7 +40,7 @@ export function getStatusSymbol(status: string, score?: number): string {
  */
 export function applyCellStyle(
   cell: ExcelJS.Cell,
-  style: "header" | "data" | "total" | "subtotal",
+  style: "header" | "data" | "total" | "subtotal"
 ) {
   // フォント設定（メイリオUI統一）
   cell.font = {
@@ -88,7 +88,7 @@ export function applyCellStyle(
 export function autoFitColumns(
   worksheet: ExcelJS.Worksheet,
   minWidth = 8,
-  maxWidth = 30,
+  maxWidth = 30
 ) {
   worksheet.columns.forEach((column: Partial<ExcelJS.Column>) => {
     if (!column) return

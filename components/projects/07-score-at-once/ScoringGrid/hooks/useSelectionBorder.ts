@@ -3,7 +3,7 @@ import { getSelectionBorderSettings } from "@/lib/utils"
 
 export function useSelectionBorder() {
   const [selectionBorderSettings, setSelectionBorderSettings] = useState(
-    getSelectionBorderSettings(),
+    getSelectionBorderSettings()
   )
 
   // 選択枠色の設定変更を監視
@@ -20,7 +20,7 @@ export function useSelectionBorder() {
       window.removeEventListener("storage", handleStorageChange)
       window.removeEventListener(
         "selectionBorderColorChanged",
-        handleStorageChange,
+        handleStorageChange
       )
     }
   }, [])

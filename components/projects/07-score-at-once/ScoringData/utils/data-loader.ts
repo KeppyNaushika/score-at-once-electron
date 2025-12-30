@@ -5,7 +5,7 @@ import { decimalToNumber } from "@/components/projects/07-score-at-once/types"
  * 既存の採点データを読み込む関数（QuestionScore配列で返す）
  */
 export async function loadQuestionScores(
-  projectId: string,
+  projectId: string
 ): Promise<QuestionScore[]> {
   try {
     const result =

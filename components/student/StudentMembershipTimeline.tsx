@@ -53,7 +53,7 @@ export default function StudentMembershipTimeline({
   showActions = true,
 }: StudentMembershipTimelineProps) {
   const sortedMemberships = [...memberships].sort(
-    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
   )
 
   if (memberships.length === 0) {

@@ -3,7 +3,7 @@ import prisma from "./client"
 
 // Subtotal を作成
 export const createSubtotalDefinition = async (
-  data: Prisma.SubtotalUncheckedCreateInput, // cropRegionId と subtotalId を直接含める
+  data: Prisma.SubtotalUncheckedCreateInput // cropRegionId と subtotalId を直接含める
 ) => {
   return prisma.subtotal.create({
     data,
@@ -16,7 +16,7 @@ export const createSubtotalDefinition = async (
 
 // 複数の Subtotal を作成 (特定の LayoutRegion に対して)
 export const createManySubtotalDefinitions = async (
-  definitions: Prisma.SubtotalUncheckedCreateInput[],
+  definitions: Prisma.SubtotalUncheckedCreateInput[]
 ) => {
   return prisma.subtotal.createMany({
     data: definitions,
@@ -33,36 +33,41 @@ export const deleteSubtotalDefinition = async (id: string) => {
 // CropRegion ID で Subtotal を削除 (特定の採点領域の定義をすべて削除)
 // TODO: This function needs to be rewritten for new schema
 export const deleteSubtotalDefinitionsByCropRegionId = async (
-  _cropRegionId: string,
+  _cropRegionId: string
 ) => {
-  console.warn("deleteSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
+  console.warn(
+    "deleteSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema"
+  )
   return { count: 0 }
 }
 
 // QuestionGroupItem ID で Subtotal を取得 (特定のグループ項目を参照する集計定義を取得)
-// TODO: This function needs to be rewritten for new schema  
+// TODO: This function needs to be rewritten for new schema
 export const getSubtotalDefinitionsByQuestionGroupItemId = async (
-  _questionGroupItemId: string,
+  _questionGroupItemId: string
 ) => {
-  console.warn("getSubtotalDefinitionsByQuestionGroupItemId needs rewriting for new schema")
+  console.warn(
+    "getSubtotalDefinitionsByQuestionGroupItemId needs rewriting for new schema"
+  )
   return []
 }
 
 // CropRegion ID で Subtotal を取得 (特定の採点領域が持つ集計定義を取得)
 // TODO: This function needs to be rewritten for new schema
 export const getSubtotalDefinitionsByCropRegionId = async (
-  _cropRegionId: string,
+  _cropRegionId: string
 ) => {
-  console.warn("getSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
+  console.warn(
+    "getSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema"
+  )
   return []
 }
 
-export type SubtotalWithRelations =
-  Prisma.SubtotalGetPayload<{
-    include: {
-      subtotalGroup: true
-      cropSubtotals: true
-    }
-  }>
+export type SubtotalWithRelations = Prisma.SubtotalGetPayload<{
+  include: {
+    subtotalGroup: true
+    cropSubtotals: true
+  }
+}>
 
 export type SubtotalPayload = Subtotal

@@ -1,10 +1,10 @@
 // PDF.js type definitions
 
-declare module 'pdfjs-dist/legacy/build/pdf.min.mjs' {
-  export * from 'pdfjs-dist'
+declare module "pdfjs-dist/legacy/build/pdf.min.mjs" {
+  export * from "pdfjs-dist"
 }
 
-declare module 'pdfjs-dist' {
+declare module "pdfjs-dist" {
   export interface PDFDocumentProxy {
     numPages: number
     getPage(pageNum: number): Promise<PDFPageProxy>

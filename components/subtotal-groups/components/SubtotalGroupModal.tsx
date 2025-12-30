@@ -57,7 +57,11 @@ function SortableSubtotalItem({
 }: {
   subtotal: SubtotalFormData
   index: number
-  onUpdate: (index: number, field: keyof SubtotalFormData, value: string | number) => void
+  onUpdate: (
+    index: number,
+    field: keyof SubtotalFormData,
+    value: string | number
+  ) => void
   onDelete: (index: number) => void
 }) {
   const {
@@ -79,14 +83,14 @@ function SortableSubtotalItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 p-3 border rounded-lg bg-background"
+      className="bg-background flex items-center gap-3 rounded-lg border p-3"
     >
       <div
         {...attributes}
         {...listeners}
         className="cursor-grab hover:cursor-grabbing"
       >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <GripVertical className="text-muted-foreground h-4 w-4" />
       </div>
       <Badge variant="outline" className="w-8 text-center">
         {index + 1}
@@ -255,7 +259,7 @@ export function SubtotalGroupModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingGroup ? "小計点グループを編集" : "新しい小計点グループ"}
@@ -283,7 +287,7 @@ export function SubtotalGroupModal({
             <div className="flex items-center justify-between">
               <div>
                 <Label className="text-base font-medium">小計項目</Label>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   項目数: {totalItems}項目
                 </div>
               </div>
@@ -294,7 +298,7 @@ export function SubtotalGroupModal({
             </div>
 
             {subtotals.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+              <div className="text-muted-foreground rounded-lg border-2 border-dashed py-8 text-center">
                 小計項目がありません。「項目を追加」ボタンで追加してください。
               </div>
             ) : (

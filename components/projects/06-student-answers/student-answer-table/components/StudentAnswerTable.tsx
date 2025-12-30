@@ -96,29 +96,29 @@ export function StudentAnswerTable(props: StudentAnswerTableProps) {
           <CardContent className="p-4">
             <div className="min-h-96">
               <TableContent
-              tableData={tableData}
-              sortedStudents={sortedStudents}
-              maxPages={maxPages}
-              disabledState={disabledState}
-              mode={mode}
-              previewMode={previewMode}
-              nameRegionAvailable={nameRegionAvailable}
-              positionsWithExistingAnswers={positionsWithExistingAnswers}
-              allowOverwrite={allowOverwrite}
-              files={props.files}
-              affectedCells={affectedCells}
-              imageLoadStates={imageLoadStates}
-              observerRef={observerRef}
-              getEnabledFiles={getEnabledFiles}
-              getFileColor={getFileColor}
-              drawNameRegionCanvas={drawNameRegionCanvas}
-              toggleRowDisabled={toggleRowDisabled}
-              toggleColDisabled={toggleColDisabled}
-              togglePositionDisabled={togglePositionDisabled}
-              toggleFileDisabled={toggleFileDisabled}
-              onUploadModalOpen={handleUploadModalOpen}
-              onDeleteAnswerSheet={handleDeleteAnswerSheet}
-            />
+                tableData={tableData}
+                sortedStudents={sortedStudents}
+                maxPages={maxPages}
+                disabledState={disabledState}
+                mode={mode}
+                previewMode={previewMode}
+                nameRegionAvailable={nameRegionAvailable}
+                positionsWithExistingAnswers={positionsWithExistingAnswers}
+                allowOverwrite={allowOverwrite}
+                files={props.files}
+                affectedCells={affectedCells}
+                imageLoadStates={imageLoadStates}
+                observerRef={observerRef}
+                getEnabledFiles={getEnabledFiles}
+                getFileColor={getFileColor}
+                drawNameRegionCanvas={drawNameRegionCanvas}
+                toggleRowDisabled={toggleRowDisabled}
+                toggleColDisabled={toggleColDisabled}
+                togglePositionDisabled={togglePositionDisabled}
+                toggleFileDisabled={toggleFileDisabled}
+                onUploadModalOpen={handleUploadModalOpen}
+                onDeleteAnswerSheet={handleDeleteAnswerSheet}
+              />
             </div>
           </CardContent>
         </Card>

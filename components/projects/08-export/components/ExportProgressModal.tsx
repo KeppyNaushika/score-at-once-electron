@@ -8,12 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
-import {
-  CheckCircle,
-  Circle,
-  Loader2,
-  XCircle,
-} from "lucide-react"
+import { CheckCircle, Circle, Loader2, XCircle } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
 interface ExportProgressModalProps {
@@ -60,12 +55,22 @@ export default function ExportProgressModal({
     if (status === "completed") return "complete"
     if (progress < 10) return "initializing"
     // Canvas描画完了でも埋め込み未完了なら描画フェーズのまま
-    if (canvasRenderingComplete && totalPagesCount > 0 && embeddedPagesCount < totalPagesCount) {
+    if (
+      canvasRenderingComplete &&
+      totalPagesCount > 0 &&
+      embeddedPagesCount < totalPagesCount
+    ) {
       return "rendering"
     }
     if (progress < 95) return "rendering"
     return "saving"
-  }, [progress, status, canvasRenderingComplete, totalPagesCount, embeddedPagesCount])
+  }, [
+    progress,
+    status,
+    canvasRenderingComplete,
+    totalPagesCount,
+    embeddedPagesCount,
+  ])
 
   // currentStepからCanvas/PDF進捗を抽出
   const progressDetails = useMemo(() => {
@@ -85,18 +90,22 @@ export default function ExportProgressModal({
 
   // 保存先選択待ちかどうか
   const isWaitingForSavePath = useMemo(() => {
-    return currentStep.includes("保存先を選択") || currentStep.includes("保存先の選択を待っています")
+    return (
+      currentStep.includes("保存先を選択") ||
+      currentStep.includes("保存先の選択を待っています")
+    )
   }, [currentStep])
 
   // フェーズインデックスを取得
   const currentPhaseIndex = useMemo(() => {
-    return PHASES.findIndex(p => p.id === currentPhase)
+    return PHASES.findIndex((p) => p.id === currentPhase)
   }, [currentPhase])
 
   // ページ完了グリッド用の計算値（propsから直接取得）
   const gridInfo = useMemo(() => {
     // propsのtotalPagesCountを優先、なければcurrentStepから抽出
-    const total = totalPagesCount > 0 ? totalPagesCount : progressDetails.canvasTotal
+    const total =
+      totalPagesCount > 0 ? totalPagesCount : progressDetails.canvasTotal
     const embedded = embeddedPagesCount
 
     if (total === 0) return null
@@ -104,7 +113,12 @@ export default function ExportProgressModal({
     const displayCount = Math.min(total, 40)
     const groupSize = total > 40 ? Math.ceil(total / 40) : 1
 
-    return { displayCount, groupSize, canvasTotal: total, pdfEmbedded: embedded }
+    return {
+      displayCount,
+      groupSize,
+      canvasTotal: total,
+      pdfEmbedded: embedded,
+    }
   }, [totalPagesCount, embeddedPagesCount, progressDetails.canvasTotal])
 
   // isOpenがtrueになったらisClosingをリセット（モーダルが開く時）
@@ -181,22 +195,30 @@ export default function ExportProgressModal({
 
                   return (
                     <div key={phase.id} className="flex items-center">
-                      <div className={`flex items-center gap-1 rounded-full px-2 py-1 ${
-                        isCurrent
-                          ? "bg-blue-100 text-blue-700 font-medium"
-                          : isCompleted
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-400"
-                      }`}>
+                      <div
+                        className={`flex items-center gap-1 rounded-full px-2 py-1 ${
+                          isCurrent
+                            ? "bg-blue-100 font-medium text-blue-700"
+                            : isCompleted
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-400"
+                        }`}
+                      >
                         {isCompleted && <CheckCircle className="h-3 w-3" />}
-                        {isCurrent && <Loader2 className="h-3 w-3 animate-spin" />}
+                        {isCurrent && (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        )}
                         {isPending && <Circle className="h-3 w-3" />}
                         <span>{phase.label}</span>
                       </div>
                       {index < PHASES.length - 1 && (
-                        <div className={`mx-1 h-0.5 w-4 ${
-                          index < currentPhaseIndex ? "bg-green-400" : "bg-gray-200"
-                        }`} />
+                        <div
+                          className={`mx-1 h-0.5 w-4 ${
+                            index < currentPhaseIndex
+                              ? "bg-green-400"
+                              : "bg-gray-200"
+                          }`}
+                        />
                       )}
                     </div>
                   )
@@ -204,63 +226,86 @@ export default function ExportProgressModal({
               </div>
 
               {/* 保存先選択待ち + 埋め込み進行中でない場合の特別表示 */}
-              {isWaitingForSavePath && !(canvasRenderingComplete && totalPagesCount > 0 && embeddedPagesCount < totalPagesCount) && (
-                <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
-                  <div className="flex items-start space-x-3">
-                    <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-600" />
-                    <div className="flex-1">
-                      <p className="font-medium text-amber-800">
-                        保存先を選択してください
-                      </p>
-                      <p className="mt-1 text-xs text-amber-700">
-                        バックグラウンドで処理を進めています
-                      </p>
+              {isWaitingForSavePath &&
+                !(
+                  canvasRenderingComplete &&
+                  totalPagesCount > 0 &&
+                  embeddedPagesCount < totalPagesCount
+                ) && (
+                  <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
+                    <div className="flex items-start space-x-3">
+                      <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-amber-600" />
+                      <div className="flex-1">
+                        <p className="font-medium text-amber-800">
+                          保存先を選択してください
+                        </p>
+                        <p className="mt-1 text-xs text-amber-700">
+                          バックグラウンドで処理を進めています
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* 描画フェーズの詳細表示（Canvas完了後の埋め込み中も表示） */}
-              {(currentPhase === "rendering" || (canvasRenderingComplete && totalPagesCount > 0 && embeddedPagesCount < totalPagesCount)) && (
+              {(currentPhase === "rendering" ||
+                (canvasRenderingComplete &&
+                  totalPagesCount > 0 &&
+                  embeddedPagesCount < totalPagesCount)) && (
                 <div className="space-y-4 rounded-lg bg-gray-50 p-3">
                   {/* Canvas描画完了・埋め込み待機中の表示 */}
-                  {canvasRenderingComplete && totalPagesCount > 0 && embeddedPagesCount < totalPagesCount && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-2">
-                      <div className="flex items-center gap-2 text-sm text-blue-700">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>Canvas描画完了</span>
-                        <span className="text-blue-500">→</span>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>PDF埋め込み中...</span>
+                  {canvasRenderingComplete &&
+                    totalPagesCount > 0 &&
+                    embeddedPagesCount < totalPagesCount && (
+                      <div className="rounded-lg border border-blue-200 bg-blue-50 p-2">
+                        <div className="flex items-center gap-2 text-sm text-blue-700">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span>Canvas描画完了</span>
+                          <span className="text-blue-500">→</span>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>PDF埋め込み中...</span>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* 並列処理状況 */}
-                  {progressDetails.canvasTotal > 0 && !canvasRenderingComplete && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">Canvas描画</span>
-                        <span className="font-medium">
-                          {progressDetails.canvasCompleted}/{progressDetails.canvasTotal}ページ
-                        </span>
-                      </div>
-                      <Progress
-                        value={(progressDetails.canvasCompleted / progressDetails.canvasTotal) * 100}
-                        className="h-2"
-                      />
-                      {progressDetails.parallelCount > 0 && (
-                        <div className="flex items-center gap-2 text-xs text-blue-600">
-                          <div className="flex gap-1">
-                            {Array.from({ length: progressDetails.parallelCount }).map((_, i) => (
-                              <div key={i} className="h-3 w-3 animate-pulse rounded bg-blue-400" />
-                            ))}
-                          </div>
-                          <span>{progressDetails.parallelCount}並列描画中</span>
+                  {progressDetails.canvasTotal > 0 &&
+                    !canvasRenderingComplete && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Canvas描画</span>
+                          <span className="font-medium">
+                            {progressDetails.canvasCompleted}/
+                            {progressDetails.canvasTotal}ページ
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <Progress
+                          value={
+                            (progressDetails.canvasCompleted /
+                              progressDetails.canvasTotal) *
+                            100
+                          }
+                          className="h-2"
+                        />
+                        {progressDetails.parallelCount > 0 && (
+                          <div className="flex items-center gap-2 text-xs text-blue-600">
+                            <div className="flex gap-1">
+                              {Array.from({
+                                length: progressDetails.parallelCount,
+                              }).map((_, i) => (
+                                <div
+                                  key={i}
+                                  className="h-3 w-3 animate-pulse rounded bg-blue-400"
+                                />
+                              ))}
+                            </div>
+                            <span>
+                              {progressDetails.parallelCount}並列描画中
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                   {/* ページ完了グリッド */}
                   {gridInfo && (
@@ -272,24 +317,28 @@ export default function ExportProgressModal({
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-0.5">
-                        {Array.from({ length: gridInfo.displayCount }).map((_, i) => {
-                          const pageIndex = i * gridInfo.groupSize
-                          // 全ページ埋め込み完了時は全て緑に
-                          const isEmbedded = gridInfo.pdfEmbedded >= gridInfo.canvasTotal || pageIndex < gridInfo.pdfEmbedded
-                          return (
-                            <div
-                              key={i}
-                              className={`h-2 w-2 rounded-sm ${
-                                isEmbedded ? "bg-green-500" : "bg-gray-200"
-                              }`}
-                              title={
-                                gridInfo.groupSize > 1
-                                  ? `ページ ${pageIndex + 1}-${Math.min((i + 1) * gridInfo.groupSize, gridInfo.canvasTotal)}`
-                                  : `ページ ${i + 1}`
-                              }
-                            />
-                          )
-                        })}
+                        {Array.from({ length: gridInfo.displayCount }).map(
+                          (_, i) => {
+                            const pageIndex = i * gridInfo.groupSize
+                            // 全ページ埋め込み完了時は全て緑に
+                            const isEmbedded =
+                              gridInfo.pdfEmbedded >= gridInfo.canvasTotal ||
+                              pageIndex < gridInfo.pdfEmbedded
+                            return (
+                              <div
+                                key={i}
+                                className={`h-2 w-2 rounded-sm ${
+                                  isEmbedded ? "bg-green-500" : "bg-gray-200"
+                                }`}
+                                title={
+                                  gridInfo.groupSize > 1
+                                    ? `ページ ${pageIndex + 1}-${Math.min((i + 1) * gridInfo.groupSize, gridInfo.canvasTotal)}`
+                                    : `ページ ${i + 1}`
+                                }
+                              />
+                            )
+                          }
+                        )}
                       </div>
                     </div>
                   )}
@@ -302,8 +351,12 @@ export default function ExportProgressModal({
                   <div className="flex items-center space-x-3">
                     <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
                     <div>
-                      <p className="font-medium text-blue-800">PDFを保存中...</p>
-                      <p className="text-xs text-blue-600">しばらくお待ちください</p>
+                      <p className="font-medium text-blue-800">
+                        PDFを保存中...
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        しばらくお待ちください
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -333,9 +386,7 @@ export default function ExportProgressModal({
               </div>
               <div className="rounded-lg bg-red-50 p-3">
                 <p className="text-sm text-red-700">{currentStep}</p>
-                {error && (
-                  <p className="mt-1 text-xs text-red-600">{error}</p>
-                )}
+                {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
               </div>
             </div>
           )}

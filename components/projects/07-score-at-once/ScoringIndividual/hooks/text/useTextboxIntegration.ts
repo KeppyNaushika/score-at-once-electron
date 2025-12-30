@@ -28,7 +28,7 @@ interface UseTextboxV4IntegrationProps {
   /** 描画要素更新関数（DB永続化対応） */
   updateDrawingElement?: (
     id: string,
-    updates: Partial<DrawingElement>,
+    updates: Partial<DrawingElement>
   ) => void | Promise<void>
 }
 
@@ -39,7 +39,7 @@ interface UseTextboxV4IntegrationReturn {
   openV4Modal: (
     position: { x: number; y: number },
     initialText?: string,
-    elementId?: string,
+    elementId?: string
   ) => void
   /** V4統合モーダルを閉じる */
   closeV4Modal: () => void
@@ -94,7 +94,7 @@ export function useTextboxV4Integration({
     (
       position: { x: number; y: number },
       initialText: string = "",
-      elementId?: string,
+      elementId?: string
     ) => {
       setCurrentPosition(position)
       setCurrentTextValue(initialText)
@@ -103,12 +103,12 @@ export function useTextboxV4Integration({
       // 既存要素を編集する場合、その要素のfontSizeとanchorDirectionを取得
       if (elementId) {
         const existingElement = drawingElements.find(
-          (el) => el.id === elementId,
+          (el) => el.id === elementId
         )
         if (existingElement && existingElement.type === "text") {
           setCurrentFontSize(existingElement.fontSize ?? 16)
           setCurrentAnchorDirection(
-            existingElement.anchorDirection ?? "top-left",
+            existingElement.anchorDirection ?? "top-left"
           )
         }
       } else {
@@ -119,7 +119,7 @@ export function useTextboxV4Integration({
 
       setShowV4Modal(true)
     },
-    [drawingElements],
+    [drawingElements]
   )
 
   // V4統合モーダルを閉じる
@@ -228,10 +228,10 @@ export function useTextboxV4Integration({
           fontSize: element.fontSize,
           color: element.color,
         },
-        { canvasWidth, canvasHeight },
+        { canvasWidth, canvasHeight }
       )
     },
-    [canvasWidth, canvasHeight],
+    [canvasWidth, canvasHeight]
   )
 
   // TextBoxをDrawingElementに変換
@@ -253,7 +253,7 @@ export function useTextboxV4Integration({
         fontSize: drawingElementData.fontSize,
       }
     },
-    [canvasWidth, canvasHeight],
+    [canvasWidth, canvasHeight]
   )
 
   return {

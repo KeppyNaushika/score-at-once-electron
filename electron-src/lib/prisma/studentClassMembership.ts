@@ -36,7 +36,7 @@ type ClassWithMemberships = Prisma.ClassGetPayload<{
 }>
 
 export const createStudentClassMembership = async (
-  membershipData: Prisma.StudentClassMembershipCreateInput,
+  membershipData: Prisma.StudentClassMembershipCreateInput
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
     return await prisma.studentClassMembership.create({
@@ -54,7 +54,7 @@ export const createStudentClassMembership = async (
 
 export const updateStudentClassMembership = async (
   id: string,
-  membershipData: Prisma.StudentClassMembershipUpdateInput,
+  membershipData: Prisma.StudentClassMembershipUpdateInput
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
     return await prisma.studentClassMembership.update({
@@ -72,7 +72,7 @@ export const updateStudentClassMembership = async (
 }
 
 export const deleteStudentClassMembership = async (
-  id: string,
+  id: string
 ): Promise<void> => {
   try {
     await prisma.studentClassMembership.delete({ where: { id } })
@@ -84,7 +84,7 @@ export const deleteStudentClassMembership = async (
 
 // 学生の現在の所属クラス一覧を取得
 export const getCurrentMembershipsByStudentId = async (
-  studentId: string,
+  studentId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
   try {
     return await prisma.studentClassMembership.findMany({
@@ -108,7 +108,7 @@ export const getCurrentMembershipsByStudentId = async (
 
 // 学生の全所属履歴を取得
 export const getAllMembershipsByStudentId = async (
-  studentId: string,
+  studentId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
   try {
     return await prisma.studentClassMembership.findMany({
@@ -129,7 +129,7 @@ export const getAllMembershipsByStudentId = async (
 
 // クラスの現在の所属学生一覧を取得（出席番号順）
 export const getCurrentMembershipsByClassId = async (
-  classId: string,
+  classId: string
 ): Promise<StudentClassMembershipWithDetails[]> => {
   try {
     return await prisma.studentClassMembership.findMany({
@@ -155,7 +155,7 @@ export const addStudentToClass = async (
   classId: string,
   startDate: Date = new Date(),
   attendanceNumber?: number,
-  notes?: string,
+  notes?: string
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
     const result = await createStudentClassMembership({
@@ -176,7 +176,7 @@ export const addStudentToClass = async (
 // 学生のクラス所属を終了
 export const endStudentMembership = async (
   membershipId: string,
-  endDate: Date = new Date(),
+  endDate: Date = new Date()
 ): Promise<StudentClassMembershipWithDetails> => {
   try {
     return await updateStudentClassMembership(membershipId, {
@@ -191,7 +191,7 @@ export const endStudentMembership = async (
 // 特定期間の所属情報を取得
 export const getMembershipsByDateRange = async (
   startDate: Date,
-  endDate?: Date,
+  endDate?: Date
 ): Promise<StudentClassMembershipWithDetails[]> => {
   try {
     const whereCondition: Prisma.StudentClassMembershipWhereInput = {

@@ -1,6 +1,9 @@
 "use client"
 
-import type { RenderProgress, RenderedPageData } from "@/app/projects/[projectId]/08-export/types"
+import type {
+  RenderProgress,
+  RenderedPageData,
+} from "@/app/projects/[projectId]/08-export/types"
 import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -111,7 +114,7 @@ interface PdfCanvasRendererProps {
       studentId: string
       pageNumber: number
       imageData: ArrayBuffer
-    }>,
+    }>
   ) => void | Promise<void>
   /** エラー発生時のコールバック */
   onError?: (error: Error) => void
@@ -134,7 +137,9 @@ export function PdfCanvasRenderer({
   onError,
 }: PdfCanvasRendererProps) {
   const [isRendering, setIsRendering] = useState(false)
-  const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(null)
+  const scoringMarkImagesRef = useRef<Map<string, HTMLImageElement> | null>(
+    null
+  )
   const canvasPoolRef = useRef<CanvasPoolItem[]>([])
   const isCancelledRef = useRef(false)
 
@@ -143,7 +148,7 @@ export function PdfCanvasRenderer({
    */
   const initCanvasPool = useCallback((size: number): CanvasPoolItem[] => {
     // 既存のCanvasを削除
-    canvasPoolRef.current.forEach(item => {
+    canvasPoolRef.current.forEach((item) => {
       if (item.canvas.parentNode) {
         item.canvas.parentNode.removeChild(item.canvas)
       }
@@ -153,7 +158,8 @@ export function PdfCanvasRenderer({
     const pool: CanvasPoolItem[] = []
     for (let i = 0; i < size; i++) {
       const canvas = document.createElement("canvas")
-      canvas.style.cssText = "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none"
+      canvas.style.cssText =
+        "position:absolute;left:-9999px;top:-9999px;visibility:hidden;pointer-events:none"
       document.body.appendChild(canvas)
       pool.push({ canvas, busy: false, pageIndex: null })
     }
@@ -164,7 +170,7 @@ export function PdfCanvasRenderer({
    * Canvas Poolをクリーンアップ
    */
   const cleanupCanvasPool = useCallback(() => {
-    canvasPoolRef.current.forEach(item => {
+    canvasPoolRef.current.forEach((item) => {
       if (item.canvas.parentNode) {
         item.canvas.parentNode.removeChild(item.canvas)
       }
@@ -175,142 +181,167 @@ export function PdfCanvasRenderer({
   /**
    * 画像を読み込む
    */
-  const loadImage = useCallback(async (url: string): Promise<HTMLImageElement> => {
-    if (url.startsWith("data:")) {
-      return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = () => reject(new Error(`Failed to load image from data URL`))
-        img.src = url
-      })
-    }
+  const loadImage = useCallback(
+    async (url: string): Promise<HTMLImageElement> => {
+      if (url.startsWith("data:")) {
+        return new Promise((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => resolve(img)
+          img.onerror = () =>
+            reject(new Error(`Failed to load image from data URL`))
+          img.src = url
+        })
+      }
 
-    try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
+      try {
+        const response = await fetch(url)
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
 
-      return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => {
-          URL.revokeObjectURL(objectUrl)
-          resolve(img)
-        }
-        img.onerror = () => {
-          URL.revokeObjectURL(objectUrl)
-          reject(new Error(`Failed to load image: ${url}`))
-        }
-        img.src = objectUrl
-      })
-    } catch {
-      return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.crossOrigin = "anonymous"
-        img.onload = () => resolve(img)
-        img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
-        img.src = url
-      })
-    }
-  }, [])
+        return new Promise((resolve, reject) => {
+          const img = new Image()
+          img.onload = () => {
+            URL.revokeObjectURL(objectUrl)
+            resolve(img)
+          }
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl)
+            reject(new Error(`Failed to load image: ${url}`))
+          }
+          img.src = objectUrl
+        })
+      } catch {
+        return new Promise((resolve, reject) => {
+          const img = new Image()
+          img.crossOrigin = "anonymous"
+          img.onload = () => resolve(img)
+          img.onerror = () => reject(new Error(`Failed to load image: ${url}`))
+          img.src = url
+        })
+      }
+    },
+    []
+  )
 
   /**
    * 1ページを描画
    */
-  const renderSinglePage = useCallback(async (
-    canvas: HTMLCanvasElement,
-    page: PdfExportPageData,
-    pageIndex: number,
-    markImages: Map<string, HTMLImageElement>
-  ): Promise<RenderedPageData> => {
-    const image = await loadImage(page.imageUrl)
+  const renderSinglePage = useCallback(
+    async (
+      canvas: HTMLCanvasElement,
+      page: PdfExportPageData,
+      pageIndex: number,
+      markImages: Map<string, HTMLImageElement>
+    ): Promise<RenderedPageData> => {
+      const image = await loadImage(page.imageUrl)
 
-    const scoringDataForPdf: ScoringDataForPdf[] = page.scoringData.map((sd) => ({
-      questionScoreId: sd.questionScoreId,
-      status: sd.status,
-      partialScore: sd.partialScore,
-      cropRegion: {
-        id: sd.cropRegion.id,
-        x: sd.cropRegion.x,
-        y: sd.cropRegion.y,
-        width: sd.cropRegion.width,
-        height: sd.cropRegion.height,
-        label: sd.cropRegion.label,
-        maxScore: sd.cropRegion.maxScore,
-      },
-    }))
+      const scoringDataForPdf: ScoringDataForPdf[] = page.scoringData.map(
+        (sd) => ({
+          questionScoreId: sd.questionScoreId,
+          status: sd.status,
+          partialScore: sd.partialScore,
+          cropRegion: {
+            id: sd.cropRegion.id,
+            x: sd.cropRegion.x,
+            y: sd.cropRegion.y,
+            width: sd.cropRegion.width,
+            height: sd.cropRegion.height,
+            label: sd.cropRegion.label,
+            maxScore: sd.cropRegion.maxScore,
+          },
+        })
+      )
 
-    const annotations: DrawingAnnotation[] = page.annotations.map((a) => ({
-      id: a.id,
-      questionScoreId: a.questionScoreId,
-      type: a.type as "text" | "line" | "rectangle" | "ellipse",
-      x: a.x,
-      y: a.y,
-      color: a.color,
-      strokeWidth: a.strokeWidth,
-      width: a.width,
-      height: a.height,
-      endX: a.endX,
-      endY: a.endY,
-      lineStyle: a.lineStyle as "solid" | "wave" | "zigzag" | "double" | "arrow" | "both_arrow",
-      text: a.text,
-      fontSize: a.fontSize,
-      textBoxWidth: 0,
-      textBoxHeight: 0,
-      horizontalAlign: "left" as const,
-      verticalAlign: "top" as const,
-      displayX: a.displayX,
-      displayY: a.displayY,
-      anchorDirection: a.anchorDirection as
-        | "top-left" | "top" | "top-right"
-        | "left" | "center" | "right"
-        | "bottom-left" | "bottom" | "bottom-right",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      createdByUserId: null,
-    }))
+      const annotations: DrawingAnnotation[] = page.annotations.map((a) => ({
+        id: a.id,
+        questionScoreId: a.questionScoreId,
+        type: a.type as "text" | "line" | "rectangle" | "ellipse",
+        x: a.x,
+        y: a.y,
+        color: a.color,
+        strokeWidth: a.strokeWidth,
+        width: a.width,
+        height: a.height,
+        endX: a.endX,
+        endY: a.endY,
+        lineStyle: a.lineStyle as
+          | "solid"
+          | "wave"
+          | "zigzag"
+          | "double"
+          | "arrow"
+          | "both_arrow",
+        text: a.text,
+        fontSize: a.fontSize,
+        textBoxWidth: 0,
+        textBoxHeight: 0,
+        horizontalAlign: "left" as const,
+        verticalAlign: "top" as const,
+        displayX: a.displayX,
+        displayY: a.displayY,
+        anchorDirection: a.anchorDirection as
+          | "top-left"
+          | "top"
+          | "top-right"
+          | "left"
+          | "center"
+          | "right"
+          | "bottom-left"
+          | "bottom"
+          | "bottom-right",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdByUserId: null,
+      }))
 
-    const subtotalDataForPdf: SubtotalDataForPdf[] = (page.subtotalData || []).map((st) => ({
-      regionId: st.regionId,
-      label: st.label,
-      score: st.score,
-      x: st.x,
-      y: st.y,
-      width: st.width,
-      height: st.height,
-      pageNumber: st.pageNumber,
-    }))
+      const subtotalDataForPdf: SubtotalDataForPdf[] = (
+        page.subtotalData || []
+      ).map((st) => ({
+        regionId: st.regionId,
+        label: st.label,
+        score: st.score,
+        x: st.x,
+        y: st.y,
+        width: st.width,
+        height: st.height,
+        pageNumber: st.pageNumber,
+      }))
 
-    const totalScoreDataForPdf: TotalScoreDataForPdf[] = (page.totalScoreData || []).map((ts) => ({
-      regionId: ts.regionId,
-      score: ts.score,
-      maxScore: ts.maxScore,
-      x: ts.x,
-      y: ts.y,
-      width: ts.width,
-      height: ts.height,
-      pageNumber: ts.pageNumber,
-    }))
+      const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
+        page.totalScoreData || []
+      ).map((ts) => ({
+        regionId: ts.regionId,
+        score: ts.score,
+        maxScore: ts.maxScore,
+        x: ts.x,
+        y: ts.y,
+        width: ts.width,
+        height: ts.height,
+        pageNumber: ts.pageNumber,
+      }))
 
-    const blob = await renderAnswerSheetToCanvas(
-      canvas,
-      image,
-      scoringDataForPdf,
-      annotations,
-      scoringMarkConfig,
-      markImages,
-      subtotalDataForPdf,
-      totalScoreDataForPdf,
-    )
+      const blob = await renderAnswerSheetToCanvas(
+        canvas,
+        image,
+        scoringDataForPdf,
+        annotations,
+        scoringMarkConfig,
+        markImages,
+        subtotalDataForPdf,
+        totalScoreDataForPdf
+      )
 
-    const arrayBuffer = await blob.arrayBuffer()
+      const arrayBuffer = await blob.arrayBuffer()
 
-    return {
-      pageIndex,
-      studentId: page.studentId,
-      pageNumber: page.pageNumber,
-      imageData: arrayBuffer,
-    }
-  }, [loadImage, scoringMarkConfig])
+      return {
+        pageIndex,
+        studentId: page.studentId,
+        pageNumber: page.pageNumber,
+        imageData: arrayBuffer,
+      }
+    },
+    [loadImage, scoringMarkConfig]
+  )
 
   /**
    * 全ページを並列レンダリング
@@ -338,7 +369,7 @@ export function PdfCanvasRenderer({
           currentPages: [],
         })
         scoringMarkImagesRef.current = await preloadScoringMarkImages(
-          scoringMarkConfig.useTransparent,
+          scoringMarkConfig.useTransparent
         )
       }
 
@@ -410,7 +441,7 @@ export function PdfCanvasRenderer({
 
       // Pool サイズ分の並列描画を開始
       await Promise.all(
-        canvasPoolRef.current.map(poolItem => renderNext(poolItem))
+        canvasPoolRef.current.map((poolItem) => renderNext(poolItem))
       )
 
       // キャンセルされていたら終了

@@ -39,7 +39,7 @@ const BreadcrumbsNavigation: React.FC<BreadcrumbsNavigationProps> = ({
                     : "text-muted-foreground",
                 step.isDisabled && currentStepId !== step.id
                   ? "cursor-not-allowed opacity-50"
-                  : "hover:underline",
+                  : "hover:underline"
               )}
               aria-current={currentStepId === step.id ? "page" : undefined}
             >

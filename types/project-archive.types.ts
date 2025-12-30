@@ -89,10 +89,10 @@ export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
  * 競合解決ポリシー
  */
 export type ConflictPolicy =
-  | "import_wins"   // インポートデータで上書き
+  | "import_wins" // インポートデータで上書き
   | "existing_wins" // 既存データを維持
-  | "timestamp"     // updatedAtが新しい方を採用
-  | "manual"        // 手動で個別選択
+  | "timestamp" // updatedAtが新しい方を採用
+  | "manual" // 手動で個別選択
 
 /**
  * 競合カテゴリ
@@ -470,7 +470,7 @@ export interface ArchiveScoresData {
     id: string
     cropRegionId: string
     studentId: string | null
-    partialScore: string | null  // Decimal as string
+    partialScore: string | null // Decimal as string
     status: string
     scoredByUserId: string | null
     createdAt: string
@@ -512,11 +512,11 @@ export interface ArchiveScoresData {
  * ウィザードのステップ
  */
 export type ImportWizardStep =
-  | "file_select"      // Step 1: ファイル選択
-  | "mode_select"      // Step 2: モード選択
-  | "matching_config"  // Step 3: マッチング設定
+  | "file_select" // Step 1: ファイル選択
+  | "mode_select" // Step 2: モード選択
+  | "matching_config" // Step 3: マッチング設定
   | "conflict_resolve" // Step 4: 競合解決
-  | "execute"          // Step 5: 実行
+  | "execute" // Step 5: 実行
 
 /**
  * ウィザードの状態

@@ -54,37 +54,52 @@ interface ValidationResult {
 
 export function useStudentImport(existingClasses: ClassWithMemberships[]) {
   const [studentData, setStudentData] = useState<StudentImportRow[]>([
-    { studentId: '', lastName: '', firstName: '', lastNameKana: '', firstNameKana: '', enrollmentYear: '' },
+    {
+      studentId: "",
+      lastName: "",
+      firstName: "",
+      lastNameKana: "",
+      firstNameKana: "",
+      enrollmentYear: "",
+    },
   ])
-  
-  const [classAssignmentData, setClassAssignmentData] = useState<ClassAssignmentRow[]>([
-    { studentId: '', classCode: '' },
-  ])
-  
-  const [studentValidation, setStudentValidation] = useState<ValidationResult>({ 
-    valid: 0, errors: [], warnings: [] 
+
+  const [classAssignmentData, setClassAssignmentData] = useState<
+    ClassAssignmentRow[]
+  >([{ studentId: "", classCode: "" }])
+
+  const [studentValidation, setStudentValidation] = useState<ValidationResult>({
+    valid: 0,
+    errors: [],
+    warnings: [],
   })
-  const [classValidation, setClassValidation] = useState<ValidationResult>({ 
-    valid: 0, errors: [], warnings: [] 
+  const [classValidation, setClassValidation] = useState<ValidationResult>({
+    valid: 0,
+    errors: [],
+    warnings: [],
   })
   const [isProcessing, setIsProcessing] = useState(false)
-  const [importedStudents, setImportedStudents] = useState<StudentWithMemberships[]>([])
+  const [importedStudents, setImportedStudents] = useState<
+    StudentWithMemberships[]
+  >([])
 
   // 学級コードと名前のマッピングを作成
   const classMap = new Map<string, ClassWithMemberships>()
-  existingClasses.filter(cls => cls.isVisible !== false).forEach(cls => {
-    classMap.set(cls.name, cls)
-    if (cls.classCode) {
-      classMap.set(cls.classCode, cls)
-    }
-  })
+  existingClasses
+    .filter((cls) => cls.isVisible !== false)
+    .forEach((cls) => {
+      classMap.set(cls.name, cls)
+      if (cls.classCode) {
+        classMap.set(cls.classCode, cls)
+      }
+    })
 
   const handleStudentDataChange = (data: StudentImportRow[]) => {
     // 重複チェックとフラグ設定
-    markDuplicateStudents(data).then(updatedData => {
+    markDuplicateStudents(data).then((updatedData) => {
       setStudentData(updatedData)
-      validateStudentData(updatedData).catch(error => {
-        console.error('Validation failed:', error)
+      validateStudentData(updatedData).catch((error) => {
+        console.error("Validation failed:", error)
       })
     })
   }
@@ -94,15 +109,15 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     let existingStudentIds: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map(s => s.studentId))
+      existingStudentIds = new Set(existingStudents.map((s) => s.studentId))
     } catch (error) {
-      console.warn('既存生徒の取得に失敗しました:', error)
+      console.warn("既存生徒の取得に失敗しました:", error)
     }
 
     // 重複フラグを設定
-    return data.map(row => ({
+    return data.map((row) => ({
       ...row,
-      isDuplicate: existingStudentIds.has(row.studentId?.trim() || '')
+      isDuplicate: existingStudentIds.has(row.studentId?.trim() || ""),
     }))
   }
 
@@ -121,13 +136,14 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     let existingStudentIds: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map(s => s.studentId))
+      existingStudentIds = new Set(existingStudents.map((s) => s.studentId))
     } catch (error) {
-      console.warn('既存生徒の取得に失敗しました:', error)
+      console.warn("既存生徒の取得に失敗しました:", error)
     }
 
-    const filteredData = data.filter(row => 
-      row.studentId?.trim() || row.lastName?.trim() || row.firstName?.trim()
+    const filteredData = data.filter(
+      (row) =>
+        row.studentId?.trim() || row.lastName?.trim() || row.firstName?.trim()
     )
 
     filteredData.forEach((row, index) => {
@@ -154,7 +170,9 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
 
       // 既存生徒チェック
       if (existingStudentIds.has(row.studentId.trim())) {
-        warnings.push(`行${rowNum}: 学籍番号「${row.studentId}」は既に登録済みです（上書きされます）`)
+        warnings.push(
+          `行${rowNum}: 学籍番号「${row.studentId}」は既に登録済みです（上書きされます）`
+        )
       }
 
       if (!row.lastNameKana?.trim()) {
@@ -177,12 +195,12 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
 
     const availableStudentIds = new Set(
       studentData
-        .filter(s => s.studentId?.trim())
-        .map(s => s.studentId.trim())
+        .filter((s) => s.studentId?.trim())
+        .map((s) => s.studentId.trim())
     )
 
-    const filteredData = data.filter(row => 
-      row.studentId?.trim() || row.classCode?.trim()
+    const filteredData = data.filter(
+      (row) => row.studentId?.trim() || row.classCode?.trim()
     )
 
     filteredData.forEach((row, index) => {
@@ -198,11 +216,15 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
       }
 
       if (!availableStudentIds.has(row.studentId.trim())) {
-        warnings.push(`行${rowNum}: 学籍番号「${row.studentId}」の生徒が見つかりません`)
+        warnings.push(
+          `行${rowNum}: 学籍番号「${row.studentId}」の生徒が見つかりません`
+        )
       }
 
       if (!classMap.has(row.classCode.trim())) {
-        warnings.push(`行${rowNum}: クラスコード「${row.classCode}」が見つかりません`)
+        warnings.push(
+          `行${rowNum}: クラスコード「${row.classCode}」が見つかりません`
+        )
       }
 
       validCount++
@@ -221,30 +243,40 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
 
       // 既存の生徒データを取得
       const existingStudents = await window.electronAPI.fetchStudents()
-      const existingStudentIds = new Set(existingStudents.map(s => s.studentId))
+      const existingStudentIds = new Set(
+        existingStudents.map((s) => s.studentId)
+      )
 
-      const validStudentData = studentData.filter(row => 
-        row.studentId?.trim() && row.lastName?.trim() && row.firstName?.trim()
+      const validStudentData = studentData.filter(
+        (row) =>
+          row.studentId?.trim() && row.lastName?.trim() && row.firstName?.trim()
       )
 
       for (const row of validStudentData) {
         const studentId = row.studentId.trim()
-        
+
         const studentData = {
           studentId,
           lastName: row.lastName.trim(),
           firstName: row.firstName.trim(),
-          lastNameKana: row.lastNameKana?.trim() || '',
-          firstNameKana: row.firstNameKana?.trim() || '',
-          enrollmentYear: row.enrollmentYear ? parseInt(row.enrollmentYear) : undefined,
+          lastNameKana: row.lastNameKana?.trim() || "",
+          firstNameKana: row.firstNameKana?.trim() || "",
+          enrollmentYear: row.enrollmentYear
+            ? parseInt(row.enrollmentYear)
+            : undefined,
         }
 
         // 既存チェック - 上書きまたは新規作成
         if (existingStudentIds.has(studentId)) {
-          const existingStudent = existingStudents.find(s => s.studentId === studentId)
+          const existingStudent = existingStudents.find(
+            (s) => s.studentId === studentId
+          )
           if (existingStudent) {
             // 既存生徒を更新
-            const updatedStudent = await window.electronAPI.updateStudent(existingStudent.id, studentData)
+            const updatedStudent = await window.electronAPI.updateStudent(
+              existingStudent.id,
+              studentData
+            )
             imported.push(updatedStudent)
           }
         } else {
@@ -255,10 +287,10 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
       }
 
       setImportedStudents(imported)
-      
+
       return imported
     } catch (error) {
-      console.error('Student import failed:', error)
+      console.error("Student import failed:", error)
       throw error
     } finally {
       setIsProcessing(false)
@@ -271,35 +303,35 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     setIsProcessing(true)
 
     try {
-      const studentMap = new Map(importedStudents.map(s => [s.studentId, s]))
+      const studentMap = new Map(importedStudents.map((s) => [s.studentId, s]))
 
-      const validClassAssignmentData = classAssignmentData.filter(row => 
-        row.studentId?.trim() && row.classCode?.trim()
+      const validClassAssignmentData = classAssignmentData.filter(
+        (row) => row.studentId?.trim() && row.classCode?.trim()
       )
 
       for (const row of validClassAssignmentData) {
         const student = studentMap.get(row.studentId.trim())
         const classRecord = classMap.get(row.classCode.trim())
-        
+
         if (student && classRecord) {
           await window.electronAPI.addStudentToClass(
             student.id,
             classRecord.id,
             new Date(),
             undefined, // attendanceNumber
-            undefined  // notes
+            undefined // notes
           )
         }
       }
 
       const updatedStudents = await window.electronAPI.fetchStudents()
-      const finalImportedStudents = updatedStudents.filter(s =>
-        importedStudents.some(imported => imported.id === s.id)
+      const finalImportedStudents = updatedStudents.filter((s) =>
+        importedStudents.some((imported) => imported.id === s.id)
       )
 
       return finalImportedStudents
     } catch (error) {
-      console.error('Class assignment failed:', error)
+      console.error("Class assignment failed:", error)
       throw error
     } finally {
       setIsProcessing(false)
@@ -314,10 +346,10 @@ export function useStudentImport(existingClasses: ClassWithMemberships[]) {
     classValidation,
     isProcessing,
     importedStudents,
-    
+
     // Helpers
     classMap,
-    
+
     // Actions
     handleStudentDataChange,
     handleClassAssignmentDataChange,
