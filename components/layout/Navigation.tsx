@@ -37,11 +37,6 @@ const navItems = [
   { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
   { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
   {
-    href: "/textbox-on-canvas-v3",
-    label: "Textbox Canvas V3",
-    icon: FlaskConical,
-  },
-  {
     href: "/textbox-on-canvas-v4",
     label: "Textbox Canvas V4",
     icon: FlaskConical,

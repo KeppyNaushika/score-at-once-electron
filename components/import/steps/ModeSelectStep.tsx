@@ -71,7 +71,7 @@ export function ModeSelectStep({ wizard }: ModeSelectStepProps) {
                   採点 {manifest.counts.scores}件
                 </Badge>
                 <Badge variant="secondary" className="gap-1">
-                  <Image className="w-3 h-3" />
+                  <Image className="w-3 h-3" aria-hidden="true" />
                   画像 {manifest.counts.masterImages + manifest.counts.answerSheetImages}枚
                 </Badge>
               </div>

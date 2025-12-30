@@ -119,7 +119,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                  <Image className="w-4 h-4 text-muted-foreground" />
+                  <Image className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium">画像</p>
