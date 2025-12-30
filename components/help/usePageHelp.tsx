@@ -119,6 +119,5 @@ export function usePageHelp() {
 
   return {
     helpButton: createHelpButton(),
-    hasHelp: !!CurrentHelpComponent,
   }
 }

@@ -212,8 +212,6 @@ export function usePartialScore({
   return {
     partialScoreInput,
     showPartialScoreModal,
-    setPartialScoreInput,
-    setShowPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,

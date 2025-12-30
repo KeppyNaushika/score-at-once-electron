@@ -318,7 +318,6 @@ export function useProjectStudentsData({
     setShowAddDialog,
     showRemovalConfirm,
     setShowRemovalConfirm,
-    studentsToRemove,
     setStudentsToRemove,
     selectedStudentsForRemoval,
     gradingDataInfo,

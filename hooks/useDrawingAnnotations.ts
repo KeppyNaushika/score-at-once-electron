@@ -5,7 +5,6 @@
 
 import type {
   DrawingAnnotation,
-  DrawingAnnotationStats,
   DrawingCreateData,
   DrawingTool,
   DrawingType,
@@ -14,10 +13,7 @@ import type {
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // MathJax処理
-import {
-  createMathJaxSVG,
-  measureMathJaxContentSize,
-} from "@/app/textbox-on-canvas-v3/utils/mathJaxUtils"
+import { measureMathJaxContentSize } from "@/app/textbox-on-canvas-v3/utils/mathJaxUtils"
 
 interface DrawingState {
   currentTool: DrawingTool
@@ -45,7 +41,6 @@ export interface UseDrawingAnnotationsReturn {
   // 状態
   annotations: DrawingAnnotation[]
   drawingState: DrawingState
-  stats: DrawingAnnotationStats | null
   isLoading: boolean
   error: string | null
 
@@ -54,26 +49,11 @@ export interface UseDrawingAnnotationsReturn {
     questionScoreId: string,
     type?: DrawingType
   ) => Promise<void>
-  createAnnotation: (
-    data: DrawingCreateData
-  ) => Promise<DrawingAnnotation | null>
   updateAnnotation: (
     id: string,
     data: DrawingUpdateData
   ) => Promise<DrawingAnnotation | null>
   deleteAnnotation: (id: string) => Promise<boolean>
-  deleteByType: (
-    questionScoreId: string,
-    type?: DrawingType
-  ) => Promise<boolean>
-
-  // バッチ操作
-  batchCreate: (
-    annotations: DrawingCreateData[]
-  ) => Promise<DrawingAnnotation[]>
-  batchUpdate: (
-    updates: Array<{ id: string; data: DrawingUpdateData }>
-  ) => Promise<DrawingAnnotation[]>
 
   // ツール操作
   setCurrentTool: (tool: DrawingTool) => void
@@ -84,21 +64,11 @@ export interface UseDrawingAnnotationsReturn {
   cancelDrawing: () => void
 
   // MathJax処理
-  processMathJaxText: (
-    htmlContent: string,
-    width?: number,
-    height?: number
-  ) => Promise<SVGSVGElement>
   measureTextSize: (
     htmlContent: string,
     width?: number,
     height?: number
   ) => Promise<{ width: number; height: number }>
-
-  // ユーティリティ
-  getStats: (questionScoreId: string) => Promise<void>
-  clearAnnotations: () => void
-  resetAll: () => void
 }
 
 /**
@@ -111,7 +81,6 @@ export function useDrawingAnnotations(
 ): UseDrawingAnnotationsReturn {
   // 基本状態
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
-  const [stats, setStats] = useState<DrawingAnnotationStats | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -284,105 +253,6 @@ export function useDrawingAnnotations(
   }, [])
 
   /**
-   * タイプ別削除
-   */
-  const deleteByType = useCallback(
-    async (questionScoreId: string, type?: DrawingType): Promise<boolean> => {
-      try {
-        console.log(`🗑️ タイプ別削除:`, { questionScoreId, type })
-        const result = await window.electronAPI.drawing.deleteByQuestionScore(
-          questionScoreId,
-          type
-        )
-
-        if (result.success) {
-          if (type) {
-            setAnnotations((prev) => prev.filter((ann) => ann.type !== type))
-          } else {
-            setAnnotations([])
-          }
-          return true
-        } else {
-          console.error("❌ タイプ別削除エラー:", result.error)
-          setError(result.error || "タイプ別削除に失敗しました")
-          return false
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "タイプ別削除に失敗しました"
-        console.error("💥 タイプ別削除失敗:", err)
-        setError(errorMessage)
-        return false
-      }
-    },
-    []
-  )
-
-  /**
-   * バッチ作成
-   */
-  const batchCreate = useCallback(
-    async (
-      annotationsData: DrawingCreateData[]
-    ): Promise<DrawingAnnotation[]> => {
-      try {
-        console.log(`🎨 バッチ作成: ${annotationsData.length}件`)
-        const result =
-          await window.electronAPI.drawing.batchCreate(annotationsData)
-
-        if (result.success && result.data) {
-          setAnnotations((prev) => [...prev, ...result.data!])
-          return result.data
-        } else {
-          console.error("❌ バッチ作成エラー:", result.error)
-          setError(result.error || "バッチ作成に失敗しました")
-          return []
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "バッチ作成に失敗しました"
-        console.error("💥 バッチ作成失敗:", err)
-        setError(errorMessage)
-        return []
-      }
-    },
-    []
-  )
-
-  /**
-   * バッチ更新
-   */
-  const batchUpdate = useCallback(
-    async (
-      updates: Array<{ id: string; data: DrawingUpdateData }>
-    ): Promise<DrawingAnnotation[]> => {
-      try {
-        console.log(`✏️ バッチ更新: ${updates.length}件`)
-        const result = await window.electronAPI.drawing.batchUpdate(updates)
-
-        if (result.success && result.data) {
-          const updatedMap = new Map(result.data.map((ann) => [ann.id, ann]))
-          setAnnotations((prev) =>
-            prev.map((ann) => updatedMap.get(ann.id) || ann)
-          )
-          return result.data
-        } else {
-          console.error("❌ バッチ更新エラー:", result.error)
-          setError(result.error || "バッチ更新に失敗しました")
-          return []
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "バッチ更新に失敗しました"
-        console.error("💥 バッチ更新失敗:", err)
-        setError(errorMessage)
-        return []
-      }
-    },
-    []
-  )
-
-  /**
    * ツール設定
    */
   const setCurrentTool = useCallback(
@@ -528,32 +398,6 @@ export function useDrawingAnnotations(
   }, [])
 
   /**
-   * MathJax処理
-   */
-  const processMathJaxText = useCallback(
-    async (
-      htmlContent: string,
-      width: number = 200,
-      height: number = 50
-    ): Promise<SVGSVGElement> => {
-      setDrawingState((prev) => ({ ...prev, isProcessingMathJax: true }))
-
-      try {
-        console.log("🔢 MathJax SVG変換開始:", { htmlContent, width, height })
-        const svgElement = await createMathJaxSVG(htmlContent, width, height)
-        console.log("✅ MathJax SVG変換完了")
-        return svgElement
-      } catch (error) {
-        console.error("💥 MathJax SVG変換失敗:", error)
-        throw error
-      } finally {
-        setDrawingState((prev) => ({ ...prev, isProcessingMathJax: false }))
-      }
-    },
-    []
-  )
-
-  /**
    * MathJaxサイズ測定
    */
   const measureTextSize = useCallback(
@@ -575,77 +419,17 @@ export function useDrawingAnnotations(
     []
   )
 
-  /**
-   * 統計取得
-   */
-  const getStats = useCallback(
-    async (questionScoreId: string): Promise<void> => {
-      try {
-        console.log(`📊 統計取得: ${questionScoreId}`)
-        const result =
-          await window.electronAPI.drawing.getStats(questionScoreId)
-
-        if (result.success && result.data) {
-          setStats(result.data)
-        } else {
-          console.error("❌ 統計取得エラー:", result.error)
-          setError(result.error || "統計取得に失敗しました")
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "統計取得に失敗しました"
-        console.error("💥 統計取得失敗:", err)
-        setError(errorMessage)
-      }
-    },
-    []
-  )
-
-  /**
-   * アノテーションクリア
-   */
-  const clearAnnotations = useCallback((): void => {
-    console.log("🧹 アノテーションクリア")
-    setAnnotations([])
-    setStats(null)
-    setError(null)
-  }, [])
-
-  /**
-   * 全状態リセット
-   */
-  const resetAll = useCallback((): void => {
-    console.log("🔄 全状態リセット")
-    setAnnotations([])
-    setStats(null)
-    setError(null)
-    setDrawingState({
-      currentTool: "select",
-      selectedAnnotationId: null,
-      drawingAnnotation: null,
-      isDrawing: false,
-      isProcessingMathJax: false,
-    })
-  }, [])
-
   return {
     // 状態
     annotations,
     drawingState,
-    stats,
     isLoading,
     error,
 
     // データ操作
     loadAnnotations,
-    createAnnotation,
     updateAnnotation,
     deleteAnnotation,
-    deleteByType,
-
-    // バッチ操作
-    batchCreate,
-    batchUpdate,
 
     // ツール操作
     setCurrentTool,
@@ -656,13 +440,7 @@ export function useDrawingAnnotations(
     cancelDrawing,
 
     // MathJax処理
-    processMathJaxText,
     measureTextSize,
-
-    // ユーティリティ
-    getStats,
-    clearAnnotations,
-    resetAll,
   }
 }
 

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import {
   CropRegionWithDetails,
   ProjectSubtotalGroupWithSubtotalGroup,
-  ProjectWithDetails,
   SubtotalGroupWithItems,
 } from "@/types/electron"
 import { Calculator } from "lucide-react"
@@ -23,11 +22,7 @@ export default function SubtotalGroupPage() {
   const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
-  const [_project, setProject] = useState<ProjectWithDetails | null>(null)
   const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
-    SubtotalGroupWithItems[]
-  >([])
-  const [_availableSubtotalGroups, setAvailableSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
@@ -43,22 +38,13 @@ export default function SubtotalGroupPage() {
       setLoading(true)
       setError(null)
 
-      // プロジェクト基本情報とCropRegionsのみ取得
-      const [projectResponse, cropRegionsResponse] = await Promise.all([
-        window.electronAPI.fetchProjectById(projectId),
-        window.electronAPI.getCropRegionsByProjectId(projectId),
-      ])
+      // CropRegionsを取得
+      const cropRegionsResponse =
+        await window.electronAPI.getCropRegionsByProjectId(projectId)
 
       // 小計点グループの取得
-      const [activeSubtotalGroupsResponse, availableSubtotalGroupsResponse] =
-        await Promise.all([
-          window.electronAPI.getActiveSubtotalGroupsForProject(projectId),
-          window.electronAPI.getAvailableSubtotalGroupsForProject(projectId),
-        ])
-
-      if (projectResponse) {
-        setProject(projectResponse)
-      }
+      const activeSubtotalGroupsResponse =
+        await window.electronAPI.getActiveSubtotalGroupsForProject(projectId)
 
       if (
         activeSubtotalGroupsResponse &&
@@ -70,15 +56,6 @@ export default function SubtotalGroupPage() {
               psg.subtotalGroup as SubtotalGroupWithItems
           ) || []
         setActiveSubtotalGroups(activeGroups)
-      }
-
-      if (
-        availableSubtotalGroupsResponse &&
-        availableSubtotalGroupsResponse.success
-      ) {
-        setAvailableSubtotalGroups(
-          availableSubtotalGroupsResponse.subtotalGroups || []
-        )
       }
 
       if (cropRegionsResponse) {

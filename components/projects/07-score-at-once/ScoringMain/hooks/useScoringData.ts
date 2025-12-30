@@ -5,11 +5,7 @@ import type {
 } from "@/components/projects/07-score-at-once/ScoringData/types/scoring-data-types"
 import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/data-loader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progress-calculator"
-import {
-  findQuestionScore,
-  getScoringStatusFromArray,
-  type QuestionScore,
-} from "@/components/projects/07-score-at-once/types"
+import { type QuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useState } from "react"
 
 interface UseScoringDataProps {
@@ -45,25 +41,6 @@ export function useScoringData({
     return await loadQuestionScores(projectId)
   }, [])
 
-  // Status and score getter functions
-  const getScoringStatusCallback = useCallback(
-    (studentId: string, questionId?: string) => {
-      return getScoringStatusFromArray(questionScores, studentId, questionId)
-    },
-    [questionScores]
-  )
-
-  const getActualScoreCallback = useCallback(
-    (studentId: string, questionId?: string, _maxScore: number = 0) => {
-      if (!questionId) return null
-      const score = findQuestionScore(questionScores, studentId, questionId)
-      // QuestionScoreの場合はpartialScoreが既にnumberに変換されているので、そのまま使用
-      if (!score) return null
-      return score.partialScore !== null ? score.partialScore : null
-    },
-    [questionScores]
-  )
-
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {
     return calculateQuestionProgress(cropRegions, pageImages, questionScores)
@@ -73,8 +50,6 @@ export function useScoringData({
     questionScores,
     setQuestionScores,
     loadQuestionScores: loadQuestionScoresCallback,
-    getScoringStatus: getScoringStatusCallback,
-    getActualScore: getActualScoreCallback,
     handleBatchScore,
     calculateQuestionProgress: calculateQuestionProgressCallback,
   }

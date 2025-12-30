@@ -3,16 +3,13 @@ import type {
   LayoutDirection,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useState } from "react"
+import { useCallback } from "react"
 
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }
 
 interface UseScoringNavigationProps {
   answerSheetsLength: number
-  cropRegionsLength: number
-  currentStudentIndex: number
-  setCurrentStudentIndex: (index: number) => void
   currentCropRegionId: string | null
   setCurrentCropRegionId: (id: string | null) => void
   selectedPageImageIds: Set<string>
@@ -25,8 +22,6 @@ interface UseScoringNavigationProps {
 
 export function useScoringNavigation({
   answerSheetsLength,
-  currentStudentIndex,
-  setCurrentStudentIndex,
   currentCropRegionId,
   setCurrentCropRegionId,
   selectedPageImageIds,
@@ -36,8 +31,6 @@ export function useScoringNavigation({
   effectiveColumns,
   cropRegions = [],
 }: UseScoringNavigationProps) {
-  const [viewMode, setViewMode] = useState<"question" | "full">("question") // 設問拡大 or 全体表示
-
   // ナビゲーション関数
   const handleNextQuestion = useCallback(() => {
     if (!currentCropRegionId || !cropRegions.length) return
@@ -67,18 +60,6 @@ export function useScoringNavigation({
     }
   }, [currentCropRegionId, cropRegions, setCurrentCropRegionId])
 
-  const handleNextStudent = useCallback(() => {
-    if (currentStudentIndex < answerSheetsLength - 1) {
-      setCurrentStudentIndex(currentStudentIndex + 1)
-    }
-  }, [currentStudentIndex, answerSheetsLength, setCurrentStudentIndex])
-
-  const handlePrevStudent = useCallback(() => {
-    if (currentStudentIndex > 0) {
-      setCurrentStudentIndex(currentStudentIndex - 1)
-    }
-  }, [currentStudentIndex, setCurrentStudentIndex])
-
   // プレースホルダー関数（Individual View内で実装される）
   const handleZoomIn = useCallback(() => {
     // Individual View内で実装される
@@ -90,10 +71,6 @@ export function useScoringNavigation({
 
   const handleResetZoom = useCallback(() => {
     // Individual View内で実装される
-  }, [])
-
-  const toggleViewMode = useCallback(() => {
-    setViewMode((prev) => (prev === "question" ? "full" : "question"))
   }, [])
 
   // 模範解答をスキップして次の有効な答案を見つける関数
@@ -312,16 +289,11 @@ export function useScoringNavigation({
   )
 
   return {
-    viewMode,
-    setViewMode,
     handleNextQuestion,
     handlePrevQuestion,
-    handleNextStudent,
-    handlePrevStudent,
     handleZoomIn,
     handleZoomOut,
     handleResetZoom,
-    toggleViewMode,
     handleGridNavigation,
   }
 }

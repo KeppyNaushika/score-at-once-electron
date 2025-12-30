@@ -24,7 +24,6 @@ import type {
 } from "@/components/projects/05-students/components/project-student-add-modal/types/project-student-add-types"
 
 interface IndividualSelectionTabProps {
-  availableStudents: AvailableStudent[]
   availableClasses: AvailableClass[]
   searchTerm: string
   filterClassId: string
@@ -36,7 +35,6 @@ interface IndividualSelectionTabProps {
 }
 
 export function IndividualSelectionTab({
-  availableStudents: _availableStudents,
   availableClasses,
   searchTerm,
   filterClassId,

@@ -42,12 +42,6 @@ export interface UseCursorReturn {
     element: DrawingElement | null,
     handle: string
   ) => CursorStyle
-  /** リサイズハンドルをチェックしてカーソルを返す */
-  checkResizeHandle: (
-    element: DrawingElement,
-    testX: number,
-    testY: number
-  ) => CursorStyle | null
 }
 
 /**
@@ -60,10 +54,7 @@ export interface UseCursorReturn {
  * @param props - フックのプロパティ
  * @returns カーソル管理関数
  */
-export function useCursor({
-  canvasRef,
-  hitTestHandle,
-}: UseCursorProps): UseCursorReturn {
+export function useCursor({ canvasRef }: UseCursorProps): UseCursorReturn {
   /**
    * カーソルスタイルを設定
    *
@@ -162,35 +153,9 @@ export function useCursor({
     []
   )
 
-  /**
-   * リサイズハンドルをチェックしてカーソルを返す
-   *
-   * @param element - 対象要素
-   * @param testX - テストX座標
-   * @param testY - テストY座標
-   * @returns カーソルスタイルまたはnull
-   */
-  const checkResizeHandle = useCallback(
-    (
-      element: DrawingElement,
-      testX: number,
-      testY: number
-    ): CursorStyle | null => {
-      if (!hitTestHandle) return null
-
-      const handle = hitTestHandle(element, testX, testY)
-      if (handle) {
-        return getResizeCursor(element, handle)
-      }
-      return null
-    },
-    [hitTestHandle, getResizeCursor]
-  )
-
   return {
     setCursor,
     resetCursor,
     getResizeCursor,
-    checkResizeHandle,
   }
 }

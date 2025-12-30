@@ -46,8 +46,7 @@ export function useImageCanvasInteraction({
   const [moving, setMoving] = useState<MoveState | null>(null)
 
   // Coordinate calculations
-  const { getImageBounds: _getImageBounds, getRelativeCoords } =
-    useCanvasCoordinates(imageDimensions, zoom)
+  const { getRelativeCoords } = useCanvasCoordinates(imageDimensions, zoom)
 
   // Mouse event handlers
   const {

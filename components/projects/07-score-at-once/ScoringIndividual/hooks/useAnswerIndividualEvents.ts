@@ -188,7 +188,6 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
     lineStyle: props.lineStyle,
     lineEditMode: props.lineEditMode,
     rectangleEditMode: props.rectangleEditMode,
-    dragElementOffset: props.dragElementOffset,
     setSelectedElementIds: props.setSelectedElementIds,
     toggleSelection: props.toggleSelection,
     clearSelection: props.clearSelection,

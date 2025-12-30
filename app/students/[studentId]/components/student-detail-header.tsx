@@ -17,15 +17,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-interface StudentDetailHeaderProps {
-  onEditStudent: () => void
-  onDeleteStudent: () => void
-}
-
-export function StudentDetailHeader({
-  onEditStudent: _onEditStudent,
-  onDeleteStudent: _onDeleteStudent,
-}: StudentDetailHeaderProps) {
+export function StudentDetailHeader() {
   const router = useRouter()
 
   return (
@@ -47,7 +39,7 @@ export function StudentDetailHeader({
               <Info className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[500px]" align="start" side="bottom">
+          <PopoverContent className="w-125" align="start" side="bottom">
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

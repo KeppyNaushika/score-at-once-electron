@@ -47,11 +47,6 @@ export interface UseElementResizeReturn {
     element: DrawingElement,
     originalBounds: ResizeOriginalBounds
   ) => void
-  /** Shift制約を適用（正方形/正円） */
-  applyShiftConstraint: (
-    width: number,
-    height: number
-  ) => { width: number; height: number }
 }
 
 /**
@@ -314,6 +309,5 @@ export function useElementResize({
   return {
     getResizeHandle,
     handleElementResize,
-    applyShiftConstraint,
   }
 }

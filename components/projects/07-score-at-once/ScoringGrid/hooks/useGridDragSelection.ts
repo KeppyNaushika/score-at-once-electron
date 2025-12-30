@@ -147,7 +147,6 @@ export function useGridDragSelection({
 
   return {
     handleMouseDown,
-    handleShiftSelect,
     getDragSelectionRect,
     handleDragSelection,
   }

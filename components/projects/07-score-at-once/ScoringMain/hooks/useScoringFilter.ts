@@ -1,4 +1,3 @@
-import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoring-keybindings"
 import type {
   CropRegionWithProjectPage,
   GradingMode,
@@ -181,16 +180,6 @@ export function useScoringFilter({
 
     return studentScoringData
   }, [currentCropRegion, pageImages, questionScores])
-
-  const getScoringStatus = useCallback(
-    (studentId: string, questionId?: string): ScoringStatus => {
-      if (!questionId) return "unscored"
-
-      const score = findQuestionScore(questionScores, studentId, questionId)
-      return (score?.status as ScoringStatus) ?? "unscored"
-    },
-    [questionScores]
-  )
 
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {
@@ -603,33 +592,6 @@ export function useScoringFilter({
     [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers]
   )
 
-  const handleToggleFilterByScoreKey = useCallback(
-    (scoreKey: string) => {
-      const scoreToFilterMap: { [key: string]: keyof typeof filterSettings } = {
-        [DEFAULT_KEYBINDINGS["scoring.unscored"]]: "unscored",
-        [DEFAULT_KEYBINDINGS["scoring.correct"]]: "correct",
-        [DEFAULT_KEYBINDINGS["scoring.incorrect"]]: "incorrect",
-        [DEFAULT_KEYBINDINGS["scoring.partial"]]: "partial",
-        [DEFAULT_KEYBINDINGS["scoring.pending"]]: "pending",
-        [DEFAULT_KEYBINDINGS["scoring.noAnswer"]]: "no_answer",
-      }
-
-      const filterKey = scoreToFilterMap[scoreKey]
-      if (filterKey) {
-        const newFilterSettings = {
-          ...filterSettings,
-          [filterKey]: !filterSettings[filterKey],
-        }
-        setFilterSettings(newFilterSettings)
-
-        updateVisibleAnswers(newFilterSettings)
-
-        setRecentlyScoredAnswers(new Set())
-      }
-    },
-    [filterSettings, updateVisibleAnswers, setRecentlyScoredAnswers]
-  )
-
   return {
     allScoringData,
     masterAnswerData,
@@ -637,15 +599,10 @@ export function useScoringFilter({
     selectedScoringDataIds: selectedPageImageIds,
 
     filterSettings,
-    setFilterSettings,
     visibleAnswers,
-    recentlyScoredAnswers,
     setRecentlyScoredAnswers,
-    getAllGridAnswerData,
     getGridAnswerData,
     handleRefreshFilter,
     handleToggleFilter,
-    handleToggleFilterByScoreKey,
-    getScoringStatus,
   }
 }

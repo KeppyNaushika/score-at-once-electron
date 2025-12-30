@@ -218,7 +218,6 @@ export function useStudentAnswerTableLogic({
     toggleFileDisabled,
     sortedStudents,
     getEnabledFiles,
-    getDisabledFiles,
     getFileColor,
     tableData,
     positionsWithExistingAnswers,

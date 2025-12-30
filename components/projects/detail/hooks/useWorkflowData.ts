@@ -5,10 +5,7 @@ import type {
   WorkflowStep,
 } from "@/components/projects/detail/types"
 import type { ProjectWithDetails } from "@/types/common.types"
-import {
-  getProjectProgress,
-  getStepCompletionStatus,
-} from "@/utils/projectStatus"
+import { getProjectProgress } from "@/utils/projectStatus"
 import { useMemo } from "react"
 
 /**
@@ -32,9 +29,6 @@ export function useWorkflowData(
   return useMemo(() => {
     // プロジェクトデータがない場合はフォールバック
     const progress = project ? getProjectProgress(project) : null
-    const _stepCompletions = project
-      ? getStepCompletionStatus(project)
-      : Array(8).fill(false)
 
     // Phase 1: 試験前準備
     const phase1Steps = [

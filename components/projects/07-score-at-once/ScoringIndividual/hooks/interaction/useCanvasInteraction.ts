@@ -50,8 +50,6 @@ export interface UseCanvasInteractionProps {
   lineEditMode: "start" | "end" | "move" | null
   /** 矩形編集モード */
   rectangleEditMode: "resize" | "move" | null
-  /** ドラッグオフセット */
-  dragElementOffset: { x: number; y: number }
   /** 画像のアスペクト比（width/height） */
   imageAspectRatio?: number
 
@@ -153,7 +151,6 @@ export function useCanvasInteraction({
   strokeWidth,
   lineStyle,
   lineEditMode,
-  dragElementOffset,
   imageAspectRatio = 1,
   setSelectedElementIds,
   toggleSelection,
@@ -214,11 +211,7 @@ export function useCanvasInteraction({
   })
 
   // リサイズ
-  const {
-    getResizeHandle,
-    handleElementResize,
-    applyShiftConstraint: _applyShiftConstraint,
-  } = useElementResize({
+  const { getResizeHandle, handleElementResize } = useElementResize({
     isShiftPressed,
     imageAspectRatio,
     setDrawingElements,
@@ -249,7 +242,6 @@ export function useCanvasInteraction({
       selectedElementIds,
       isDraggingElement,
       lineEditMode,
-      dragElementOffset,
       isShiftPressed,
       setIsDraggingElement,
       setDragElementOffset,

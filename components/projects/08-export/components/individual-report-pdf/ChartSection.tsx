@@ -57,11 +57,7 @@ export function ChartSection({ report, options }: ChartSectionProps) {
         {graphOptions.showRadarChart && subtotalScores.length >= 3 && (
           <View style={styles.chartContainer}>
             <Text style={styles.chartTitle}>レーダーチャート</Text>
-            <RadarChart
-              data={subtotalScores}
-              statistics={report.statistics.subtotalStatistics}
-              showAverageLine={graphOptions.showAverageLine}
-            />
+            <RadarChart data={subtotalScores} />
           </View>
         )}
       </View>
@@ -246,15 +242,9 @@ function BoxPlotChart({ boxPlot, yourScore, maxScore }: BoxPlotChartProps) {
 // レーダーチャート
 interface RadarChartProps {
   data: { subtotalLabel: string; score: number; maxScore: number }[]
-  statistics: { subtotalId: string; average: number }[]
-  showAverageLine: boolean
 }
 
-function RadarChart({
-  data,
-  statistics: _statistics,
-  showAverageLine: _showAverageLine,
-}: RadarChartProps) {
+function RadarChart({ data }: RadarChartProps) {
   const width = 150
   const height = 100
   const centerX = width / 2

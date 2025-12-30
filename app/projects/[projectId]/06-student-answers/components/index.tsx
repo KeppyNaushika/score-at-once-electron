@@ -76,7 +76,6 @@ export function StudentAnswersTabsNavigation({
 }
 
 interface StudentAnswersTabContentProps {
-  activeTab: StudentAnswerTab
   projectId: string
   students: StudentData[]
   modelAnswerCount: number
@@ -99,7 +98,6 @@ interface StudentAnswersTabContentProps {
 }
 
 export function StudentAnswersTabContent({
-  activeTab: _activeTab,
   projectId,
   students,
   modelAnswerCount,

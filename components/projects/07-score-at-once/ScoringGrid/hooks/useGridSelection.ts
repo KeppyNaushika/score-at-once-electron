@@ -34,12 +34,6 @@ export function useGridSelection() {
     setDragCurrent(null)
   }
 
-  const resetDrag = () => {
-    setDragStart(null)
-    setIsDragging(false)
-    setDragCurrent(null)
-  }
-
   return {
     dragStart,
     isDragging,
@@ -47,6 +41,5 @@ export function useGridSelection() {
     startDrag,
     updateDrag,
     endDrag,
-    resetDrag,
   }
 }
