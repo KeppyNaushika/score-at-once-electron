@@ -9,19 +9,19 @@ interface UseAsyncOptions<T> {
   errorToastMessage?: string
 }
 
-interface UseAsyncResult<T> {
+interface UseAsyncResult<T, Args extends unknown[]> {
   data: T | null
   loading: boolean
   error: string | null
-  execute: (...args: any[]) => Promise<T | null>
+  execute: (...args: Args) => Promise<T | null>
   reset: () => void
 }
 
-export function useAsync<T>(
-  asyncFn: (...args: any[]) => Promise<T>,
+export function useAsync<T, Args extends unknown[] = []>(
+  asyncFn: (...args: Args) => Promise<T>,
   deps: React.DependencyList = [],
   options: UseAsyncOptions<T> = {}
-): UseAsyncResult<T> {
+): UseAsyncResult<T, Args> {
   const {
     immediate = true,
     onSuccess,
@@ -34,7 +34,7 @@ export function useAsync<T>(
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const execute = useCallback(async (...args: any[]): Promise<T | null> => {
+  const execute = useCallback(async (...args: Args): Promise<T | null> => {
     try {
       setLoading(true)
       setError(null)
@@ -73,7 +73,8 @@ export function useAsync<T>(
 
   useEffect(() => {
     if (immediate) {
-      execute()
+      // immediate呼び出しでは引数なしで実行される（Args = [] の場合に対応）
+      execute(...([] as unknown as Args))
     }
   }, [execute, immediate, deps])
 
@@ -87,11 +88,11 @@ export function useAsync<T>(
 }
 
 // プリセット関数：ElectronAPIの一般的なパターン用
-export function useElectronAsync<T>(
-  apiCall: (...args: any[]) => Promise<T>,
+export function useElectronAsync<T, Args extends unknown[] = []>(
+  apiCall: (...args: Args) => Promise<T>,
   deps: React.DependencyList = [],
   options: UseAsyncOptions<T> = {}
-) {
+): UseAsyncResult<T, Args> {
   return useAsync(apiCall, deps, {
     showErrorToast: true,
     ...options

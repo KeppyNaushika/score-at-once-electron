@@ -1,6 +1,9 @@
-import type { GradingMode } from "@/components/projects/07-score-at-once/types"
+import type { GradingMode, ScoringData, ScoringStatus } from "@/components/projects/07-score-at-once/types"
 import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import { useCallback } from "react"
+
+/** ScoringDataに選択状態を追加した型 */
+type ScoringDataWithSelection = ScoringData & { isSelected: boolean }
 
 interface UseBatchScoringWithProgressParams {
   selectedAnswers: Set<string>
@@ -10,12 +13,12 @@ interface UseBatchScoringWithProgressParams {
     callback: (prev: Set<string>) => Set<string>,
   ) => void
   handleBatchScore: (
-    statusOrAnswerIds: any,
-    statusOrPartialScore?: any,
-    partialScore?: any,
+    statusOrAnswerIds: ScoringStatus | string | string[],
+    statusOrPartialScore?: ScoringStatus | number | null,
+    partialScore?: number | null,
     selectedAnswers?: Set<string>,
   ) => Promise<void>
-  getGridAnswerData: () => any[]
+  getGridAnswerData: () => ScoringDataWithSelection[]
   setSelectedAnswers: (answers: Set<string>) => void
   handleGridNavigation: (direction: string) => void
   handleNextStudent: () => void
@@ -37,9 +40,9 @@ export function useBatchScoringWithProgress({
   // 自動進行機能付きのhandleBatchScore（ラッパー）
   const handleBatchScoreWithProgress = useCallback(
     async (
-      statusOrAnswerIds: any,
-      statusOrPartialScore?: any,
-      partialScore?: any,
+      statusOrAnswerIds: ScoringStatus | string | string[],
+      statusOrPartialScore?: ScoringStatus | number | null,
+      partialScore?: number | null,
     ) => {
       // 採点実行開始
 

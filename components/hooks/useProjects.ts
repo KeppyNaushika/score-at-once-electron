@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext"
 import type { ProjectWithDetails } from "@/types/electron"
+import type { Prisma } from "@prisma/client"
 import { useEffect, useState } from "react"
 
 export const useProjects = () => {
@@ -44,7 +45,7 @@ export const useProjects = () => {
     try {
       const createdProject = await window.electronAPI.createProject(
         createProjectArgs,
-        user.id,
+        user.id
       )
       return createdProject
     } catch (error) {
@@ -53,11 +54,14 @@ export const useProjects = () => {
     }
   }
 
-  const updateProject = async (project: ProjectWithDetails) => {
+  const updateProject = async (
+    projectId: string,
+    data: Prisma.ProjectUpdateInput
+  ) => {
     try {
       const updatedProject = await window.electronAPI.updateProject(
-        project.id,
-        project as any,
+        projectId,
+        data
       )
       if (updatedProject) {
         // プロジェクトリストを再読み込みして最新の状態を取得
@@ -72,7 +76,7 @@ export const useProjects = () => {
     if (!projectToDelete) return
     try {
       const deletedProject = await window.electronAPI.deleteProject(
-        projectToDelete.id,
+        projectToDelete.id
       )
       if (deletedProject) {
         // プロジェクトリストを再読み込み

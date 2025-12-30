@@ -397,7 +397,7 @@ function drawCharts(
   options: IndividualReportOptions,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  _contentWidth: number,
 ): number {
   const { margin, colors } = config
   let y = startY
@@ -490,7 +490,7 @@ function drawLearningAdvice(
   reportData: IndividualReportData,
   config: ReportRenderConfig,
   startY: number,
-  contentWidth: number,
+  _contentWidth: number,
 ): number {
   const { margin, fontSize, colors } = config
   let y = startY

@@ -1,4 +1,4 @@
-import { ja } from "date-fns/locale"
+import { ja, type Locale } from "date-fns/locale"
 import dayjs from "dayjs"
 import React from "react"
 import DatePicker from "react-datepicker"
@@ -43,7 +43,7 @@ const DatePickerInputBox = (props: {
               </button>
             </div>
           )}
-          locale={ja as any}
+          locale={ja as Locale}
           className="w-96 border-b-2 p-4 outline-none placeholder:opacity-0"
           selected={date}
           onChange={(date: Date | null) => {

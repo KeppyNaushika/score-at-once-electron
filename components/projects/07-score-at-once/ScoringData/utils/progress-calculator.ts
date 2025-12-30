@@ -18,7 +18,7 @@ export function calculateQuestionProgress(
 ): QuestionProgress {
   const progress: QuestionProgress = {}
 
-  cropRegions.forEach((cropRegion, cropRegionIndex) => {
+  cropRegions.forEach((cropRegion, _cropRegionIndex) => {
     // このCropRegionが属するProjectPageのID
     const cropRegionProjectPageId = cropRegion.projectPageId
 
@@ -43,7 +43,7 @@ export function calculateQuestionProgress(
     const totalAnswers = relevantPageImages.length
     let gradedAnswers = 0
 
-    relevantPageImages.forEach((pageImage, index) => {
+    relevantPageImages.forEach((pageImage, _index) => {
       if (!pageImage.studentId) return // studentIdがnullの場合はスキップ
 
       const score = findQuestionScore(

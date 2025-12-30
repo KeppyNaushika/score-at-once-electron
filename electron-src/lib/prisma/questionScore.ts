@@ -372,7 +372,7 @@ export const finalizeQuestionScore = async (
 /**
  * 答案シートの採点進捗を取得
  */
-export const getAnswerSheetProgress = async (answerSheetId: string) => {
+export const getAnswerSheetProgress = async (_answerSheetId: string) => {
   try {
     // TODO: This function needs to be rewritten for new schema
     // In new schema, there's no direct answerSheet table

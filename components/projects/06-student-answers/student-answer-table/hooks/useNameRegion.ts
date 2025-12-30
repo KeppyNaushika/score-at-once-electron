@@ -1,4 +1,4 @@
-import type { UnifiedFile } from "@/types/student-answer.types"
+import type { UnifiedFile } from "@/components/projects/06-student-answers/types"
 import { useCallback, useRef, useState } from "react"
 
 export function useNameRegion(projectId: string) {

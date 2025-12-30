@@ -178,3 +178,20 @@ export interface DrawingAnnotationResponse {
   data?: DrawingAnnotation | DrawingAnnotation[]
   error?: string
 }
+
+// QuestionScore情報を含む拡張型（透明度制御用）
+export interface DrawingAnnotationWithQuestionScore extends DrawingAnnotation {
+  questionScore?: {
+    id: string
+    cropRegionId: string
+    cropRegion?: {
+      id: string
+      label: string
+    }
+  } | null
+  createdByUser?: {
+    id: string
+    username: string
+    name: string | null
+  } | null
+}

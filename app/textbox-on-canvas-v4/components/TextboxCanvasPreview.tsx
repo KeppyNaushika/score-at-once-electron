@@ -73,7 +73,7 @@ export function TextboxCanvasPreview({ textBox }: { textBox: TextBox }) {
             setCanvasSize(null)
             setRenderingStatus("SVG生成失敗")
           }
-        } catch (error) {
+        } catch {
           // Canvasプレビュー処理エラー
           setCanvasSize(null)
           setRenderingStatus("Canvas描画エラー")

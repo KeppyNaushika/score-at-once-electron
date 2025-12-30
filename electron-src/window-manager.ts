@@ -1,5 +1,6 @@
 import { join } from "path"
-import { BrowserWindow, app, Menu } from "electron"
+import { BrowserWindow, app, Menu, Event, RenderProcessGoneDetails } from "electron"
+import type { IncomingMessage } from "electron"
 import menu from "./menu"
 
 // Electron公式推奨の環境判定方法
@@ -49,7 +50,7 @@ export function createMainWindow(): BrowserWindow {
 
   
   // webContentsのクラッシュイベントをキャッチ
-  mainWindow.webContents.on('render-process-gone', (event: any, details: any) => {
+  mainWindow.webContents.on('render-process-gone', (_event: Event, details: RenderProcessGoneDetails) => {
     console.error('❌ Render process gone:', details)
   })
   
@@ -79,7 +80,7 @@ export function createMainWindow(): BrowserWindow {
         const request = net.request(url)
         
         return new Promise((resolve) => {
-          request.on('response', (response: any) => {
+          request.on('response', (response: IncomingMessage) => {
             resolve(response.statusCode === 200)
           })
           request.on('error', () => {

@@ -1,35 +1,12 @@
 "use client"
 
-import type {
-  CropRegion,
-  PageImage,
-  Project,
-  ProjectPage,
-  ProjectStudent,
-  ProjectSubtotalGroup,
-} from "@prisma/client"
+import type { ProjectWithDetails } from "@/types/electron"
+import type { PageImage, Project } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-interface ProjectData extends Project {
-  userProjects?: Array<{
-    user: {
-      id: string
-      name: string
-      role: string
-      username: string
-    }
-  }>
-  projectPages?: (ProjectPage & {
-    pageImages?: PageImage[]
-    cropRegions?: CropRegion[]
-  })[]
-  projectSubtotalGroups?: ProjectSubtotalGroup[]
-  projectStudents?: ProjectStudent[]
-}
-
 export function useProjectDetail(projectId: string) {
-  const [project, setProject] = useState<ProjectData | null>(null)
+  const [project, setProject] = useState<ProjectWithDetails | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [studentCount, setStudentCount] = useState(0)
   const [questionRegionCount, setQuestionRegionCount] = useState(0)
@@ -58,7 +35,7 @@ export function useProjectDetail(projectId: string) {
           const questionRegions = regionsResult.filter(
             (region) =>
               region.type === "QUESTION_ANSWER" &&
-              (region.orderIndex || region.label),
+              (region.orderIndex || region.label)
           )
           setQuestionRegionCount(questionRegions.length)
         }
@@ -80,7 +57,7 @@ export function useProjectDetail(projectId: string) {
     async (
       projectData: Partial<
         Pick<Project, "examName" | "description" | "examDate" | "subject">
-      >,
+      >
     ) => {
       if (!project) return false
 
@@ -92,7 +69,7 @@ export function useProjectDetail(projectId: string) {
             description: projectData.description,
             examDate: projectData.examDate,
             subject: projectData.subject,
-          },
+          }
         )
         setProject(updatedProject)
         toast.success("プロジェクトを更新しました")
@@ -103,7 +80,7 @@ export function useProjectDetail(projectId: string) {
         return false
       }
     },
-    [project],
+    [project]
   )
 
   useEffect(() => {
@@ -115,23 +92,23 @@ export function useProjectDetail(projectId: string) {
       (count, page) =>
         count +
         (page.pageImages?.filter(
-          (img: PageImage) => img.imageType === "MODEL_ANSWER",
+          (img: PageImage) => img.imageType === "MODEL_ANSWER"
         )?.length || 0),
-      0,
+      0
     ) || 0
   const answerSheetCount =
     project?.projectPages?.reduce(
       (count, page) =>
         count +
         (page.pageImages?.filter(
-          (img: PageImage) => img.imageType === "STUDENT_ANSWER",
+          (img: PageImage) => img.imageType === "STUDENT_ANSWER"
         )?.length || 0),
-      0,
+      0
     ) || 0
   const cropRegionCount =
     project?.projectPages?.reduce(
       (count, page) => count + (page.cropRegions?.length || 0),
-      0,
+      0
     ) || 0
 
   return {

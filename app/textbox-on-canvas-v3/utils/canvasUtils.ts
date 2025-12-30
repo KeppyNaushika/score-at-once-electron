@@ -32,7 +32,7 @@ export function setupDebugPreview(
     const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`
     state.setSvgDataUrl(svgDataUrl)
     state.setSvgInfo(`生成SVG: ${width}x${height}px`)
-  } catch (error) {
+  } catch {
     state.setSvgDataUrl(null)
     state.setSvgInfo("プレビュー生成エラー")
   }
@@ -109,19 +109,19 @@ export async function renderSvgToCanvas(
             width: scaledWidth,
             height: scaledHeight,
           })
-        } catch (drawError) {
+        } catch {
           URL.revokeObjectURL(svgUrl)
           resolve({ width: 0, height: 0 })
         }
       }
 
-      img.onerror = (error) => {
+      img.onerror = () => {
         URL.revokeObjectURL(svgUrl)
         resolve({ width: 0, height: 0 })
       }
 
       img.src = svgUrl
-    } catch (error) {
+    } catch {
       resolve({ width: 0, height: 0 })
     }
   })

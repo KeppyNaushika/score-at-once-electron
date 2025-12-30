@@ -124,15 +124,3 @@ export interface FileUploadDropzoneProps {
   disabled?: boolean
 }
 
-/**
- * マスター解答ページの状態管理Props
- * @interface MasterAnswerPageState
- * @property {MasterAnswer[]} masterAnswers - マスター解答リスト
- * @property {boolean} isLoading - ローディング状態
- * @property {any} project - プロジェクトデータ
- */
-export interface MasterAnswerPageState {
-  masterAnswers: MasterAnswer[]
-  isLoading: boolean
-  project: any
-}

@@ -10,7 +10,7 @@ interface UseAutoScrollProps {
 
 export function useAutoScroll({
   selectedAnswers,
-  layoutDirection,
+  layoutDirection: _layoutDirection,
   autoScroll,
   containerRef,
 }: UseAutoScrollProps) {

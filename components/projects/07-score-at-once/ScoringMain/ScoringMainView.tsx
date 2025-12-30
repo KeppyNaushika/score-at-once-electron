@@ -24,7 +24,14 @@ import { useCommand } from "@/components/projects/07-score-at-once/hooks/useComm
 import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
 import Head from "next/head"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
@@ -79,7 +86,6 @@ function ScoringMainViewContent() {
     setShowKeyboardHelp,
     setShowScoreComparison,
     setShowSidePanel,
-    setModifierKeyLabel,
     /** ヘルパー関数 */
     handleAnswerSelect,
     replaceSelection,
@@ -98,7 +104,7 @@ function ScoringMainViewContent() {
   useEffect(() => {
     if (cropRegions.length > 0 && !currentCropRegionId) {
       const firstQuestionRegion = cropRegions.find(
-        (region) => region.type === "QUESTION_ANSWER",
+        (region) => region.type === "QUESTION_ANSWER"
       )
       if (firstQuestionRegion) {
         setCurrentCropRegionId(firstQuestionRegion.id)
@@ -116,21 +122,20 @@ function ScoringMainViewContent() {
   }, [gradingMode, selectedPageImageIds, pageImages, currentStudentIndex])
 
   const currentCropRegion = cropRegions.find(
-    (r) => r.id === currentCropRegionId,
+    (r) => r.id === currentCropRegionId
   )
   /** 個別表示用のナビゲーション関数 */
   const handleStudentChange = useCallback(
     (studentId: string) => {
       const studentSheets = pageImages.filter(
-        (sheet: any) => sheet.student.id === studentId,
+        (sheet) => sheet.student?.id === studentId
       )
       if (studentSheets.length > 0) {
         // 現在の設問ページに対応するpageImageを優先選択
         // currentCropRegionのprojectPageIdと一致するものを探す
         const currentPageSheet = currentCropRegion
           ? studentSheets.find(
-              (sheet: any) =>
-                sheet.projectPageId === currentCropRegion.projectPageId,
+              (sheet) => sheet.projectPageId === currentCropRegion.projectPageId
             )
           : null
 
@@ -138,14 +143,19 @@ function ScoringMainViewContent() {
         setSelectedPageImageIds(new Set([targetSheet.id]))
 
         const studentIndex = pageImages.findIndex(
-          (sheet: any) => sheet.id === targetSheet.id,
+          (sheet) => sheet.id === targetSheet.id
         )
         if (studentIndex !== -1) {
           setCurrentStudentIndex(studentIndex)
         }
       }
     },
-    [pageImages, setSelectedPageImageIds, setCurrentStudentIndex, currentCropRegion],
+    [
+      pageImages,
+      setSelectedPageImageIds,
+      setCurrentStudentIndex,
+      currentCropRegion,
+    ]
   )
 
   /** 採点データ管理hook */
@@ -178,7 +188,6 @@ function ScoringMainViewContent() {
     getGridAnswerData,
     handleRefreshFilter,
     handleToggleFilter,
-    handleToggleFilterByScoreKey,
   } = useScoringFilter({
     pageImages,
     cropRegions,
@@ -207,7 +216,7 @@ function ScoringMainViewContent() {
     (ids: string[]) => {
       replaceSelection(ids)
     },
-    [replaceSelection],
+    [replaceSelection]
   )
 
   /** 設問変更時の選択更新 */
@@ -241,20 +250,20 @@ function ScoringMainViewContent() {
       if (currentSelectedIds.size > 0) {
         const currentAnswerId = Array.from(currentSelectedIds)[0]
         const currentAnswer = currentPageImages.find(
-          (a: any) => a.id === currentAnswerId,
+          (a) => a.id === currentAnswerId
         )
         if (currentAnswer?.student?.id) {
           // 新しい設問のcropRegionを取得
           const newCropRegion = currentCropRegions.find(
-            (r) => r.id === currentCropRegionId,
+            (r) => r.id === currentCropRegionId
           )
           if (newCropRegion) {
             // 同じ生徒の新しいページに対応するpageImageを探す
             const studentId = currentAnswer.student?.id
             const newPageImage = currentPageImages.find(
-              (a: any) =>
+              (a) =>
                 a.student?.id === studentId &&
-                a.projectPageId === newCropRegion.projectPageId,
+                a.projectPageId === newCropRegion.projectPageId
             )
             if (newPageImage) {
               setSelectedPageImageIds(new Set([newPageImage.id]))
@@ -273,7 +282,7 @@ function ScoringMainViewContent() {
 
     const uniqueStudents = new Map()
 
-    pageImages.forEach((sheet, index) => {
+    pageImages.forEach((sheet) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
         const studentData = {
           id: sheet.student.id,
@@ -287,7 +296,7 @@ function ScoringMainViewContent() {
     })
 
     const sortedStudents = Array.from(uniqueStudents.values()).sort(
-      (a, b) => a.customOrder - b.customOrder,
+      (a, b) => a.customOrder - b.customOrder
     )
     return sortedStudents
   }, [pageImages])
@@ -299,7 +308,7 @@ function ScoringMainViewContent() {
       selectedPageImageIds.size === 0
     ) {
       const sortedStudents = [...students].sort(
-        (a, b) => a.customOrder - b.customOrder,
+        (a, b) => a.customOrder - b.customOrder
       )
       handleStudentChange(sortedStudents[0].id)
     }
@@ -309,73 +318,44 @@ function ScoringMainViewContent() {
     if (selectedPageImageIds.size === 0) return
 
     const currentAnswerId = Array.from(selectedPageImageIds)[0]
-    const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
+    const currentAnswer = pageImages.find((a) => a.id === currentAnswerId)
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder,
+      (a, b) => a.customOrder - b.customOrder
     )
     const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student?.id,
+      (s) => s.id === currentAnswer.student?.id
     )
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
       // 現在の設問ページに対応するpageImageを優先選択
       const nextStudentSheets = pageImages.filter(
-        (a: any) => a.student?.id === nextStudent.id,
+        (a) => a.student?.id === nextStudent.id
       )
       const nextStudentAnswer = currentCropRegion
         ? nextStudentSheets.find(
-            (a: any) => a.projectPageId === currentCropRegion.projectPageId,
+            (a) => a.projectPageId === currentCropRegion.projectPageId
           ) || nextStudentSheets[0]
         : nextStudentSheets[0]
       if (nextStudentAnswer) {
         setSelectedPageImageIds(new Set([nextStudentAnswer.id]))
       }
     }
-  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds, currentCropRegion])
-
-  const handleIndividualPrevStudent = useCallback(() => {
-    if (selectedPageImageIds.size === 0) return
-
-    const currentAnswerId = Array.from(selectedPageImageIds)[0]
-    const currentAnswer = pageImages.find((a: any) => a.id === currentAnswerId)
-    if (!currentAnswer) return
-
-    const sortedStudents = [...students].sort(
-      (a, b) => a.customOrder - b.customOrder,
-    )
-    const currentIndex = sortedStudents.findIndex(
-      (s) => s.id === currentAnswer.student?.id,
-    )
-    if (currentIndex > 0) {
-      const prevStudent = sortedStudents[currentIndex - 1]
-      // 現在の設問ページに対応するpageImageを優先選択
-      const prevStudentSheets = pageImages.filter(
-        (a: any) => a.student?.id === prevStudent.id,
-      )
-      const prevStudentAnswer = currentCropRegion
-        ? prevStudentSheets.find(
-            (a: any) => a.projectPageId === currentCropRegion.projectPageId,
-          ) || prevStudentSheets[0]
-        : prevStudentSheets[0]
-      if (prevStudentAnswer) {
-        setSelectedPageImageIds(new Set([prevStudentAnswer.id]))
-      }
-    }
-  }, [students, selectedPageImageIds, pageImages, setSelectedPageImageIds, currentCropRegion])
+  }, [
+    students,
+    selectedPageImageIds,
+    pageImages,
+    setSelectedPageImageIds,
+    currentCropRegion,
+  ])
 
   const {
-    viewMode,
-    setViewMode,
     handleNextQuestion,
     handlePrevQuestion,
-    handleNextStudent,
-    handlePrevStudent,
     handleZoomIn,
     handleZoomOut,
     handleResetZoom,
-    toggleViewMode,
     handleGridNavigation,
   } = useScoringNavigation({
     answerSheetsLength: pageImages.length,
@@ -413,8 +393,6 @@ function ScoringMainViewContent() {
   const {
     partialScoreInput,
     showPartialScoreModal,
-    setPartialScoreInput,
-    setShowPartialScoreModal,
     handlePartialScoreInput,
     handlePartialScoreConfirm,
     handlePartialScoreCancel,
@@ -539,54 +517,6 @@ function ScoringMainViewContent() {
     },
   })
 
-  useCommand("filter.toggle1", () => handleToggleFilter("1"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ1切り替え",
-      category: "フィルタ",
-    },
-  })
-
-  useCommand("filter.toggle2", () => handleToggleFilter("2"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ2切り替え",
-      category: "フィルタ",
-    },
-  })
-
-  useCommand("filter.toggle3", () => handleToggleFilter("3"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ3切り替え",
-      category: "フィルタ",
-    },
-  })
-
-  useCommand("filter.toggle4", () => handleToggleFilter("4"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ4切り替え",
-      category: "フィルタ",
-    },
-  })
-
-  useCommand("filter.toggle5", () => handleToggleFilter("5"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ5切り替え",
-      category: "フィルタ",
-    },
-  })
-
-  useCommand("filter.toggle6", () => handleToggleFilter("6"), {
-    when: "!inputFocus && !modalOpen && gradingMode == 'grid'",
-    metadata: {
-      title: "フィルタ6切り替え",
-      category: "フィルタ",
-    },
-  })
-
   useCommand(
     "modal.confirmPartial",
     () => handlePartialScoreConfirm("partial"),
@@ -597,7 +527,7 @@ function ScoringMainViewContent() {
         category: "モーダル",
         description: "入力した部分点を確定します",
       },
-    },
+    }
   )
 
   useCommand(
@@ -610,7 +540,7 @@ function ScoringMainViewContent() {
         category: "モーダル",
         description: "保留として確定します",
       },
-    },
+    }
   )
 
   useCommand("modal.cancel", handlePartialScoreCancel, {
@@ -742,38 +672,13 @@ function ScoringMainViewContent() {
   const currentStudentId = useMemo(() => {
     if (selectedPageImageIds.size > 0) {
       const selectedAnswerId = Array.from(selectedPageImageIds)[0]
-      const selectedAnswer = pageImages.find(
-        (a: any) => a.id === selectedAnswerId,
-      )
+      const selectedAnswer = pageImages.find((a) => a.id === selectedAnswerId)
       return selectedAnswer?.student?.id || ""
     }
     return ""
   }, [selectedPageImageIds, pageImages])
 
-  const convertScoreStatus = useCallback(
-    (
-      status:
-        | "CORRECT"
-        | "INCORRECT"
-        | "PARTIAL"
-        | "BLANK"
-        | "PENDING"
-        | "SKIP",
-    ) => {
-      const statusMap = {
-        CORRECT: "correct",
-        INCORRECT: "incorrect",
-        PARTIAL: "partial",
-        BLANK: "no_answer",
-        PENDING: "pending",
-        SKIP: "proposed",
-      } as const
-      return statusMap[status] as any
-    },
-    [],
-  )
-
-  const [showTextInput, setShowTextInput] = useState(false)
+  const [_showTextInput, setShowTextInput] = useState(false)
 
   useEffect(() => {
     const initializeGradingData = async () => {

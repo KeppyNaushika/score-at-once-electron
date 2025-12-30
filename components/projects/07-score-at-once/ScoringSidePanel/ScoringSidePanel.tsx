@@ -9,6 +9,7 @@ import { QuestionProgress } from "@/components/projects/07-score-at-once/Scoring
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,
+  PageImageWithProjectStudents,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { Separator } from "@/components/ui/separator"
@@ -64,7 +65,7 @@ interface ScoringSidePanelProps {
   }[]
   onStudentChange?: (studentId: string) => void
   selectedPageImageIds?: Set<string>
-  pageImages?: any[] // PageImageWithProjectStudents[] - 具体的な型に変更予定
+  pageImages?: PageImageWithProjectStudents[]
   scoringBehavior?: "next-student" | "next-question" | "stay"
   onScoringBehaviorChange?: (
     behavior: "next-student" | "next-question" | "stay",

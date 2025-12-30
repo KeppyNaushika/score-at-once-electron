@@ -48,7 +48,7 @@ export function TextboxSvgPreview({ textBox }: { textBox: TextBox }) {
             setSvgElement(null)
             setRenderingStatus("SVG生成失敗")
           }
-        } catch (error) {
+        } catch {
           if (!isCancelled) {
             // SVGプレビュー処理エラー
             setSvgElement(null)

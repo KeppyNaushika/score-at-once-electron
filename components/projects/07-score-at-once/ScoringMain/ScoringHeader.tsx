@@ -6,9 +6,18 @@ import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, PanelRightClose, PanelRightOpen } from "lucide-react"
 
+interface ScoringProject {
+  examName: string
+}
+
+interface ScoringQuestion {
+  label: string | null
+  orderIndex: number | null
+}
+
 interface ScoringHeaderProps {
-  project: any
-  currentQuestion: any
+  project: ScoringProject | null
+  currentQuestion: ScoringQuestion | null
   gradingMode: GradingMode
   showKeyboardHelp: boolean
   showSidePanel: boolean

@@ -112,7 +112,7 @@ export default function QuestionNavigator({
               <SelectValue placeholder="設問を選択" />
             </SelectTrigger>
             <SelectContent>
-              {questionRegions.map((question, index) => {
+              {questionRegions.map((question, _index) => {
                 const progress = questionProgress?.[question.id]
                 return (
                   <SelectItem
@@ -178,7 +178,7 @@ export default function QuestionNavigator({
             設問一覧（クリックで移動）
           </div>
           <div className="flex flex-wrap gap-2">
-            {questionRegions.map((question, index) => {
+            {questionRegions.map((question, _index) => {
               const progress = questionProgress?.[question.id]
               const isActive = question.id === currentCropRegion?.id
               return (

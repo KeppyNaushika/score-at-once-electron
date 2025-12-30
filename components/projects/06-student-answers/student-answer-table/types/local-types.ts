@@ -4,7 +4,8 @@ import type {
   UnifiedFile,
   UnifiedStudent,
   UploadData,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
+import type { FileState } from "./drag-drop-types"
 
 // ============================================================================
 // StudentAnswerTable専用の型定義
@@ -36,7 +37,7 @@ export interface StudentAnswerTableProps {
   pendingChanges?: PendingChange[]
   affectedCells?: Set<string>
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
   ) => void
 
   // 上書き制御用（アップロードモードでの既存答案情報）

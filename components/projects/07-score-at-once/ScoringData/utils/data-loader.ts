@@ -1,7 +1,4 @@
-import type {
-  QuestionScore,
-  ScoringStatus,
-} from "@/components/projects/07-score-at-once/types"
+import type { QuestionScore } from "@/components/projects/07-score-at-once/types"
 import { decimalToNumber } from "@/components/projects/07-score-at-once/types"
 
 /**
@@ -15,7 +12,7 @@ export async function loadQuestionScores(
       await window.electronAPI.getQuestionScoresForProject(projectId)
 
     // Handle both direct array and { success, scores } format
-    let scores
+    let scores: QuestionScore[]
     if (Array.isArray(result)) {
       scores = result
     } else if (result?.success && Array.isArray(result.scores)) {
@@ -25,7 +22,7 @@ export async function loadQuestionScores(
     }
 
     // Prisma.DecimalをNumberに変換してQuestionScore配列として返す
-    return scores.map((score: any) => ({
+    return scores.map((score) => ({
       ...score,
       partialScore: decimalToNumber(score.partialScore),
     })) as QuestionScore[]

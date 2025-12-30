@@ -5,11 +5,21 @@
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/drag-drop-types"
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
+import type { StudentWithMemberships } from "@/types/prisma-extensions"
+import type { ProjectPageWithDetails } from "@/types/electron.d"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { StudentData } from "../components"
+
+// APIから返される生徒データの型（StudentWithMembershipsにプロジェクト固有フィールドを追加）
+interface ProjectStudentData extends StudentWithMemberships {
+  status: "participating" | "expected" | "absent"
+  isInProject: boolean
+  customOrder: number | null
+}
 
 export function useStudentAnswersData(projectId: string) {
   const [students, setStudents] = useState<StudentData[]>([])
@@ -28,7 +38,7 @@ export function useStudentAnswersData(projectId: string) {
         await window.electronAPI.getStudentsForProject(projectId)
       if (projectStudentsResult.success && projectStudentsResult.students) {
         const sortedStudents = projectStudentsResult.students
-          .sort((a: any, b: any) => {
+          .sort((a: ProjectStudentData, b: ProjectStudentData) => {
             if (
               a.customOrder !== null &&
               a.customOrder !== undefined &&
@@ -50,7 +60,7 @@ export function useStudentAnswersData(projectId: string) {
             const bName = `${b.lastName}${b.firstName}`
             return aName.localeCompare(bName)
           })
-          .map((student: any) => ({
+          .map((student: ProjectStudentData) => ({
             id: student.id,
             lastName: student.lastName,
             firstName: student.firstName,
@@ -79,7 +89,7 @@ export function useStudentAnswersData(projectId: string) {
           await window.electronAPI.getProjectPagesByProjectId(projectId)
         const maxPages =
           modelAnswers && modelAnswers.length > 0
-            ? Math.max(...modelAnswers.map((page: any) => page.pageNumber))
+            ? Math.max(...modelAnswers.map((page: ProjectPageWithDetails) => page.pageNumber))
             : 0
         setModelAnswerCount(maxPages)
       } catch (error) {
@@ -113,7 +123,7 @@ export function usePendingChanges(
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
   const handleUpdatePendingChanges = useCallback(
-    (changedFiles: Array<{ fileId: string; fromState: any; toState: any }>) => {
+    (changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>) => {
       console.log(
         "🔄 Creating pending changes from changed files:",
         changedFiles,

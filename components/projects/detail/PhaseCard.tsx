@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { WorkflowPhase } from "@/types/workflow.types"
+import type { WorkflowPhase } from "@/components/projects/detail/types"
 import {
   BarChart3,
   Calculator,
@@ -10,6 +10,7 @@ import {
   Edit,
   FileImage,
   FileOutput,
+  type LucideIcon,
   Settings,
   Upload,
   Users,
@@ -21,7 +22,7 @@ interface PhaseCardProps {
   projectId: string
 }
 
-const iconMap: Record<string, React.ComponentType<any>> = {
+const iconMap: Record<string, LucideIcon> = {
   FileImage,
   Settings,
   Edit,

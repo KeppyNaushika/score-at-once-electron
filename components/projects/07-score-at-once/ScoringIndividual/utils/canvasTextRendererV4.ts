@@ -1,15 +1,18 @@
-import type { DrawingElement } from "../types/answer-individual-types"
 import type { AnchorDirection } from "../../../../../app/textbox-on-canvas-v4/types"
-import { convertTextToSvg } from "../../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
 import {
-  renderSvgToCanvas,
   drawAnchor,
   getTextPositionFromAnchor,
-  isAnchorClicked
+  isAnchorClicked,
+  renderSvgToCanvas,
 } from "../../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
+import { convertTextToSvg } from "../../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
+import type { DrawingElement } from "../types/answer-individual-types"
 
 /** SVGキャッシュ（elementId → {text, color, fontSize, svg}） */
-const svgCache = new Map<string, { text: string; color: string; fontSize: number; svg: SVGSVGElement }>()
+const svgCache = new Map<
+  string,
+  { text: string; color: string; fontSize: number; svg: SVGSVGElement }
+>()
 
 /**
  * SVGキャッシュをクリアする
@@ -26,9 +29,19 @@ export function clearSvgCache(elementId?: string): void {
 /**
  * キャッシュからSVGを取得する
  */
-function getCachedSvg(elementId: string, text: string, color: string, fontSize: number): SVGSVGElement | null {
+function getCachedSvg(
+  elementId: string,
+  text: string,
+  color: string,
+  fontSize: number
+): SVGSVGElement | null {
   const cached = svgCache.get(elementId)
-  if (cached && cached.text === text && cached.color === color && cached.fontSize === fontSize) {
+  if (
+    cached &&
+    cached.text === text &&
+    cached.color === color &&
+    cached.fontSize === fontSize
+  ) {
     return cached.svg.cloneNode(true) as SVGSVGElement
   }
   return null
@@ -37,8 +50,19 @@ function getCachedSvg(elementId: string, text: string, color: string, fontSize: 
 /**
  * SVGをキャッシュに保存する
  */
-function cacheSvg(elementId: string, text: string, color: string, fontSize: number, svg: SVGSVGElement): void {
-  svgCache.set(elementId, { text, color, fontSize, svg: svg.cloneNode(true) as SVGSVGElement })
+function cacheSvg(
+  elementId: string,
+  text: string,
+  color: string,
+  fontSize: number,
+  svg: SVGSVGElement
+): void {
+  svgCache.set(elementId, {
+    text,
+    color,
+    fontSize,
+    svg: svg.cloneNode(true) as SVGSVGElement,
+  })
 }
 
 export interface V4TextRenderResult {
@@ -50,31 +74,11 @@ export interface V4TextRenderResult {
 }
 
 /**
- * DrawingElementからAnchorDirectionに変換する
+ * DrawingElementからAnchorDirectionを取得する
+ * anchorDirectionが未設定の場合はデフォルト値を返す
  */
-function convertToAnchorDirection(element: DrawingElement): AnchorDirection {
-  if ((element as any).anchorDirection) {
-    return (element as any).anchorDirection as AnchorDirection
-  }
-
-  const horizontal = (element as any).horizontalAlign || "left"
-  const vertical = (element as any).verticalAlign || "top"
-
-  if (vertical === "top") {
-    if (horizontal === "left") return "top-left"
-    if (horizontal === "center") return "top"
-    if (horizontal === "right") return "top-right"
-  } else if (vertical === "center") {
-    if (horizontal === "left") return "left"
-    if (horizontal === "center") return "center"
-    if (horizontal === "right") return "right"
-  } else if (vertical === "bottom") {
-    if (horizontal === "left") return "bottom-left"
-    if (horizontal === "center") return "bottom"
-    if (horizontal === "right") return "bottom-right"
-  }
-
-  return "top-left"
+function getAnchorDirection(element: DrawingElement): AnchorDirection {
+  return element.anchorDirection ?? "top-left"
 }
 
 /**
@@ -104,13 +108,13 @@ export async function renderTextElementV4(
         width: 0,
         height: 0,
         anchorPosition: { x: 0, y: 0 },
-        textBounds: { x: 0, y: 0, width: 0, height: 0 }
+        textBounds: { x: 0, y: 0, width: 0, height: 0 },
       }
     }
 
     const anchorX = element.x * canvasWidth
     const anchorY = element.y * canvasHeight
-    const anchorDirection = convertToAnchorDirection(element)
+    const anchorDirection = getAnchorDirection(element)
     const textColor = element.color || "#000000"
     const fontSize = element.fontSize ?? 16
 
@@ -138,7 +142,7 @@ export async function renderTextElementV4(
         width: 0,
         height: 0,
         anchorPosition: { x: anchorX, y: anchorY },
-        textBounds: { x: 0, y: 0, width: 0, height: 0 }
+        textBounds: { x: 0, y: 0, width: 0, height: 0 },
       }
     }
 
@@ -173,16 +177,19 @@ export async function renderTextElementV4(
         x: textPosition.x,
         y: textPosition.y,
         width: renderResult.width,
-        height: renderResult.height
-      }
+        height: renderResult.height,
+      },
     }
   } catch {
     return {
       success: false,
       width: 0,
       height: 0,
-      anchorPosition: { x: element.x * canvasWidth, y: element.y * canvasHeight },
-      textBounds: { x: 0, y: 0, width: 0, height: 0 }
+      anchorPosition: {
+        x: element.x * canvasWidth,
+        y: element.y * canvasHeight,
+      },
+      textBounds: { x: 0, y: 0, width: 0, height: 0 },
     }
   }
 }
@@ -216,7 +223,7 @@ export async function renderTextElementsV4(
   selectedElementIds: string[] = []
 ): Promise<V4TextRenderResult[]> {
   const results: V4TextRenderResult[] = []
-  const textElements = elements.filter(el => el.type === "text" && el.text)
+  const textElements = elements.filter((el) => el.type === "text" && el.text)
 
   for (const element of textElements) {
     const isSelected = selectedElementIds.includes(element.id)
@@ -254,8 +261,10 @@ export function hitTestTextElement(
   if (renderResult && renderResult.success) {
     const { x, y, width, height } = renderResult.textBounds
     if (
-      mouseX >= x && mouseX <= x + width &&
-      mouseY >= y && mouseY <= y + height
+      mouseX >= x &&
+      mouseX <= x + width &&
+      mouseY >= y &&
+      mouseY <= y + height
     ) {
       return "text"
     }

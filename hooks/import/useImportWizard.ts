@@ -7,12 +7,8 @@ import type {
   ImportMode,
   MatchingConfig,
   ConflictResolutions,
-  ArchiveManifest,
-  ConflictDetectionResult,
   CategoryConflictResolution,
   ConflictCategory,
-  DEFAULT_MATCHING_CONFIG,
-  INITIAL_WIZARD_STATE,
 } from "@/types/project-archive.types"
 
 /**

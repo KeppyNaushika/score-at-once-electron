@@ -10,7 +10,7 @@ import {
   TableRow,
   TableHeader as UITableHeader,
 } from "@/components/ui/table"
-import type { UnifiedFile, UnifiedStudent } from "@/types/student-answer.types"
+import type { UnifiedFile, UnifiedStudent } from "@/components/projects/06-student-answers/types"
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 
 interface TableContentProps {

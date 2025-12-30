@@ -62,7 +62,7 @@ export function IndividualReportDocument({
 }: IndividualReportDocumentProps) {
   return (
     <Document>
-      {reports.map((report, index) => (
+      {reports.map((report, _index) => (
         <Page
           key={report.studentInfo.id}
           size="A4"

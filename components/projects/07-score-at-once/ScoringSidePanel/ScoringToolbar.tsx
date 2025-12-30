@@ -161,7 +161,7 @@ export default function ScoringToolbar({
   onToggleFilter,
   onRefreshFilter,
   partialScoreInput,
-  modifierKeyLabel,
+  modifierKeyLabel: _modifierKeyLabel,
   gradingMode = "grid",
 }: ScoringToolbarProps) {
   // 新しいショートカットシステム: キーバインディング取得

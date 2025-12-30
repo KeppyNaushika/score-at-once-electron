@@ -187,7 +187,7 @@ export interface UseImageCanvasInteractionProps {
   backgroundImageUrl: string | null
   imageDimensions: { width: number; height: number } | null
   projectPageId: string | null
-  areas: any[]
+  areas: CropRegionArea[]
   onAddAreaByDrag: (
     type: import("@/types/common.types").CropRegionAreaType,
     coords: { x: number; y: number; width: number; height: number },

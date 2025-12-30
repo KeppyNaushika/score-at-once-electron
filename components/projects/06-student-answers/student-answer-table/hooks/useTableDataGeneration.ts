@@ -7,7 +7,7 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
 import { useMemo } from "react"
 
 interface UseTableDataGenerationParams {

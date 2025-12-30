@@ -17,7 +17,7 @@ import type { MeasuredSize } from "../types"
  * @returns Promise<void>
  */
 export async function waitForRenderingComplete(
-  frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES,
+  frames: number = MATHJAX_SETTINGS.DEFAULT_WAIT_FRAMES
 ): Promise<void> {
   for (let i = 0; i < frames; i++) {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -30,7 +30,7 @@ export async function waitForRenderingComplete(
  * @returns Promise<void>
  */
 export async function processMathJax(container: HTMLElement): Promise<void> {
-  const MathJax = (window as any).MathJax
+  const MathJax = window.MathJax
 
   if (!MathJax || !MathJax.typesetPromise) {
     return
@@ -87,7 +87,7 @@ export function cleanupElementStyles(container: HTMLElement): void {
 export async function measureMathJaxContentSize(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number,
+  initialHeight: number
 ): Promise<MeasuredSize> {
   // 一時的なDOM要素を作成（scrollWidth/scrollHeight専用設定）
   const tempDiv = document.createElement("div")
@@ -151,7 +151,7 @@ export async function measureMathJaxContentSize(
  */
 export function createOptimizedSVG(
   htmlContent: string,
-  measuredSize: MeasuredSize,
+  measuredSize: MeasuredSize
 ): SVGSVGElement {
   const svgString = `
     <svg xmlns="${SVG_SETTINGS.NAMESPACE}"
@@ -199,13 +199,13 @@ export function createOptimizedSVG(
 export async function createMathJaxSVG(
   htmlContent: string,
   initialWidth: number,
-  initialHeight: number,
+  initialHeight: number
 ): Promise<SVGSVGElement> {
   // MathJax処理後の正確なサイズを測定
   const measuredSize = await measureMathJaxContentSize(
     htmlContent,
     initialWidth,
-    initialHeight,
+    initialHeight
   )
 
   // 測定結果に基づいて最適なSVGを生成

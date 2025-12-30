@@ -1,5 +1,7 @@
 import type {
   DrawingElement,
+  LineEditMode,
+  RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback } from "react"
@@ -23,8 +25,8 @@ interface UseRectangleSelectionProps {
   ) => void
   selectElementsInRectangle: (rect: SelectionRectangle) => void
   setSelectedElementIds: (ids: string[]) => void
-  setLineEditMode: (mode: any) => void
-  setRectangleEditMode: (mode: any) => void
+  setLineEditMode: (mode: LineEditMode) => void
+  setRectangleEditMode: (mode: RectangleEditMode) => void
 }
 
 export function useRectangleSelection({

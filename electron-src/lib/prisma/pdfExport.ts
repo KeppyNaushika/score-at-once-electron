@@ -1,15 +1,19 @@
+import type { CropRegion } from "@prisma/client"
+import crypto from "crypto"
 import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
-import crypto from "crypto"
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotal-calculator"
 import { getCropRegionsByProjectId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
 import { getProjectById } from "./project"
 import { getStudentsForProject } from "./projectStudent"
-import { getQuestionScoresForProject, calculateActualScore } from "./questionScore"
+import {
+  calculateActualScore,
+  getQuestionScoresForProject,
+} from "./questionScore"
 import { getStudentAnswersByProjectId } from "./studentAnswer"
 
 /**
@@ -18,7 +22,7 @@ import { getStudentAnswersByProjectId } from "./studentAnswer"
  * @returns サニタイズされた名前
  */
 function sanitizeFileName(name: string): string {
-  return name.replace(/[\\/:*?"<>|]/g, '_').trim()
+  return name.replace(/[\\/:*?"<>|]/g, "_").trim()
 }
 
 /**
@@ -160,7 +164,8 @@ export async function getPdfExportData(options: {
     if (!studentAnswersResult.success || !studentAnswersResult.answerSheets) {
       return { success: false, error: "答案画像の取得に失敗しました" }
     }
-    const studentAnswers: StudentAnswerData[] = studentAnswersResult.answerSheets
+    const studentAnswers: StudentAnswerData[] =
+      studentAnswersResult.answerSheets
 
     // 選択された生徒のみフィルタリング
     const selectedStudents = allStudents.filter((s) =>
@@ -178,7 +183,9 @@ export async function getPdfExportData(options: {
       if (studentAnswerList.length === 0) continue
 
       for (const studentAnswer of studentAnswerList) {
-        const imagePath = getAbsolutePathFromData(studentAnswer.originalImagePath)
+        const imagePath = getAbsolutePathFromData(
+          studentAnswer.originalImagePath
+        )
 
         if (!imagePath || !fs.existsSync(imagePath)) continue
 
@@ -195,12 +202,13 @@ export async function getPdfExportData(options: {
           .map((region) => {
             // projectPageは必ず存在する（getCropRegionsByProjectIdでincludeしている）
             if (!region.projectPage) {
-              console.warn(`CropRegion ${region.id} has no projectPage, skipping`)
+              console.warn(
+                `CropRegion ${region.id} has no projectPage, skipping`
+              )
               return null
             }
             const score = allScores.find(
-              (s) =>
-                s.cropRegionId === region.id && s.studentId === student.id
+              (s) => s.cropRegionId === region.id && s.studentId === student.id
             )
             return {
               questionScoreId: score?.id || "",
@@ -221,7 +229,10 @@ export async function getPdfExportData(options: {
               },
             }
           })
-          .filter((sd): sd is NonNullable<typeof sd> => sd !== null && sd.questionScoreId !== "")
+          .filter(
+            (sd): sd is NonNullable<typeof sd> =>
+              sd !== null && sd.questionScoreId !== ""
+          )
 
         // アノテーションを取得
         const annotations: PdfExportPageData["annotations"] = []
@@ -258,7 +269,12 @@ export async function getPdfExportData(options: {
         try {
           const imageBuffer = fs.readFileSync(imagePath)
           const ext = path.extname(imagePath).toLowerCase()
-          const mimeType = ext === ".png" ? "image/png" : ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" : "image/png"
+          const mimeType =
+            ext === ".png"
+              ? "image/png"
+              : ext === ".jpg" || ext === ".jpeg"
+                ? "image/jpeg"
+                : "image/png"
           imageUrl = `data:${mimeType};base64,${imageBuffer.toString("base64")}`
         } catch (imgError) {
           console.error(`Failed to read image: ${imagePath}`, imgError)
@@ -280,14 +296,15 @@ export async function getPdfExportData(options: {
             student.id,
             subtotalRegion.id,
             allScores
-              .filter(s => s.studentId !== null)
-              .map(s => ({
+              .filter((s) => s.studentId !== null)
+              .map((s) => ({
                 studentId: s.studentId as string,
                 cropRegionId: s.cropRegionId,
                 status: s.status,
-                partialScore: s.partialScore !== null ? Number(s.partialScore) : null,
+                partialScore:
+                  s.partialScore !== null ? Number(s.partialScore) : null,
               })),
-            cropRegions as any, // CropRegion型として渡す
+            cropRegions as CropRegion[]
           )
 
           subtotalData.push({
@@ -316,7 +333,13 @@ export async function getPdfExportData(options: {
             const maxScore = region.points !== null ? Number(region.points) : 0
             totalMaxScore += maxScore
             const actualScore = calculateActualScore(
-              { status: score.status, partialScore: score.partialScore !== null ? Number(score.partialScore) : null },
+              {
+                status: score.status,
+                partialScore:
+                  score.partialScore !== null
+                    ? Number(score.partialScore)
+                    : null,
+              },
               maxScore
             )
             totalScore += actualScore ?? 0
@@ -363,7 +386,9 @@ export async function getPdfExportData(options: {
 
     // ページを生徒順・ページ番号順でソート
     pages.sort((a, b) => {
-      const studentCompare = selectedStudentIds.indexOf(a.studentId) - selectedStudentIds.indexOf(b.studentId)
+      const studentCompare =
+        selectedStudentIds.indexOf(a.studentId) -
+        selectedStudentIds.indexOf(b.studentId)
       if (studentCompare !== 0) return studentCompare
       return a.pageNumber - b.pageNumber
     })
@@ -403,7 +428,13 @@ export async function createPdfFromRenderedImages(options: {
     totalSteps: number
   }) => void
 }): Promise<{ success: boolean; outputPath?: string; error?: string }> {
-  const { projectId, renderedPages, pdfOrientation = "portrait", outputPath: providedOutputPath, progressCallback } = options
+  const {
+    projectId,
+    renderedPages,
+    pdfOrientation = "portrait",
+    outputPath: providedOutputPath,
+    progressCallback,
+  } = options
 
   try {
     // プロジェクト情報を取得
@@ -415,7 +446,9 @@ export async function createPdfFromRenderedImages(options: {
     // 保存先を決定（事前に指定されている場合はダイアログをスキップ）
     let outputPath = providedOutputPath
     if (!outputPath) {
-      const sanitizedExamName = sanitizeFileName(project.examName || "採点済み答案")
+      const sanitizedExamName = sanitizeFileName(
+        project.examName || "採点済み答案"
+      )
       const { filePath, canceled } = await dialog.showSaveDialog({
         title: "採点済み答案PDFの保存先",
         defaultPath: `${sanitizedExamName}_採点済み.pdf`,
@@ -439,15 +472,20 @@ export async function createPdfFromRenderedImages(options: {
 
     // PDFドキュメントを作成
     const pdfDoc = await PDFDocument.create()
-    const pageSize = pdfOrientation === "landscape"
-      ? [PageSizes.A4[1], PageSizes.A4[0]] as [number, number]
-      : PageSizes.A4
+    const pageSize =
+      pdfOrientation === "landscape"
+        ? ([PageSizes.A4[1], PageSizes.A4[0]] as [number, number])
+        : PageSizes.A4
 
     // バッチサイズ（並列embedPng）
     const BATCH_SIZE = 4
 
     // 各ページを追加（バッチ処理）
-    for (let batchStart = 0; batchStart < renderedPages.length; batchStart += BATCH_SIZE) {
+    for (
+      let batchStart = 0;
+      batchStart < renderedPages.length;
+      batchStart += BATCH_SIZE
+    ) {
       const batch = renderedPages.slice(batchStart, batchStart + BATCH_SIZE)
 
       progressCallback?.({
@@ -533,7 +571,7 @@ export async function createPdfFromRenderedImages(options: {
 // ストリーミングPDF生成API
 // ============================================================
 
-import type { PDFPage, PDFImage } from "pdf-lib"
+import type { PDFImage, PDFPage } from "pdf-lib"
 
 /** ストリーミングセッションの状態 */
 interface PdfStreamingSession {
@@ -559,9 +597,10 @@ export async function createPdfStreamingSession(options: {
 
   try {
     const pdfDoc = await PDFDocument.create()
-    const pageSize: [number, number] = pdfOrientation === "landscape"
-      ? [PageSizes.A4[1], PageSizes.A4[0]]
-      : [PageSizes.A4[0], PageSizes.A4[1]]
+    const pageSize: [number, number] =
+      pdfOrientation === "landscape"
+        ? [PageSizes.A4[1], PageSizes.A4[0]]
+        : [PageSizes.A4[0], PageSizes.A4[1]]
 
     // 全ページ分の空ページを作成
     const pages: PDFPage[] = []
@@ -611,7 +650,10 @@ export async function addPageToStreamingSession(options: {
     }
 
     if (pageIndex < 0 || pageIndex >= session.totalPages) {
-      return { success: false, error: `ページインデックスが範囲外です: ${pageIndex}` }
+      return {
+        success: false,
+        error: `ページインデックスが範囲外です: ${pageIndex}`,
+      }
     }
 
     const page = session.pages[pageIndex]

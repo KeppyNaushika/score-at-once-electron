@@ -59,11 +59,11 @@ export async function initializeApp(): Promise<void> {
       try {
         // まずdecodeURIComponentを試す
         decodedRelativePath = decodeURIComponent(relativePathInData)
-      } catch (err) {
+      } catch {
         try {
           // 失敗したらdecodeURIを試す
           decodedRelativePath = decodeURI(relativePathInData)
-        } catch (err2) {
+        } catch {
           // 両方失敗したら生のパスを使用
           decodedRelativePath = relativePathInData
         }
@@ -75,7 +75,7 @@ export async function initializeApp(): Promise<void> {
       const fs = await import("fs/promises")
       try {
         await fs.access(absolutePath)
-      } catch (accessError) {
+      } catch {
         return new Response("File not found", { status: 404 })
       }
 

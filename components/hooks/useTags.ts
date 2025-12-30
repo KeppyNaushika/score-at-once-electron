@@ -4,7 +4,7 @@ export interface ReactTagType {
   id: string
   text: string
   className?: string
-  [key: string]: any
+  [key: string]: string | undefined
 }
 
 const defaultSuggestions: ReactTagType[] = [

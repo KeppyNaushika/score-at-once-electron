@@ -34,7 +34,7 @@ interface DrawingContext {
 export function convertElementToCreateData(
   element: DrawingElement,
   questionScoreId: string,
-  context?: DrawingContext,
+  context?: DrawingContext
 ): DrawingCreateData {
   return {
     id: element.id, // フロントエンドで生成したUUIDをDBでも使用
@@ -71,7 +71,7 @@ export function convertElementToCreateData(
  * DrawingAnnotationから既存DrawingElementへの変換
  */
 export function convertAnnotationToElement(
-  annotation: DrawingAnnotation,
+  annotation: DrawingAnnotation
 ): DrawingElement {
   return {
     id: annotation.id,
@@ -123,40 +123,40 @@ export interface UseDrawingAnnotationsReturn {
   // CRUD操作
   loadAnnotations: (
     questionScoreId: string,
-    type?: DrawingType,
+    type?: DrawingType
   ) => Promise<boolean>
   loadAllStudentAnnotations: (
     studentId: string,
     projectId: string,
-    type?: DrawingType,
+    type?: DrawingType
   ) => Promise<DrawingAnnotation[]>
   saveElement: (
     element: DrawingElement,
-    questionScoreId: string,
+    questionScoreId: string
   ) => Promise<DrawingAnnotation | null>
   updateElement: (element: DrawingElement) => Promise<DrawingAnnotation | null>
   deleteElement: (elementId: string) => Promise<boolean>
   deleteByType: (
     questionScoreId: string,
-    type?: DrawingType,
+    type?: DrawingType
   ) => Promise<boolean>
 
   // バッチ操作
   syncElements: (
     elements: DrawingElement[],
-    questionScoreId: string,
+    questionScoreId: string
   ) => Promise<DrawingAnnotation[]>
 
   // MathJax処理（textbox-on-canvas-v3統合）
   processMathJaxText: (
     htmlContent: string,
     width?: number,
-    height?: number,
+    height?: number
   ) => Promise<SVGSVGElement>
   measureTextSize: (
     htmlContent: string,
     width?: number,
-    height?: number,
+    height?: number
   ) => Promise<{ width: number; height: number }>
 
   // ユーティリティ
@@ -169,7 +169,7 @@ export interface UseDrawingAnnotationsReturn {
  */
 export function useDrawingAnnotations(
   callbacks?: DrawingPersistenceCallbacks,
-  context?: DrawingContext,
+  context?: DrawingContext
 ): UseDrawingAnnotationsReturn {
   // 状態管理
   const [annotations, setAnnotations] = useState<DrawingAnnotation[]>([])
@@ -188,7 +188,7 @@ export function useDrawingAnnotations(
   /**
    * エラーハンドリング
    */
-  const handleError = useCallback((message: string, originalError?: any) => {
+  const handleError = useCallback((message: string, originalError?: unknown) => {
     console.error("描画アノテーションエラー:", message, originalError)
     setError(message)
     callbacksRef.current.onError?.(message)
@@ -205,7 +205,7 @@ export function useDrawingAnnotations(
       try {
         const result = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
-          type,
+          type
         )
         if (result.success && result.data) {
           setAnnotations(result.data)
@@ -221,7 +221,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -231,36 +231,36 @@ export function useDrawingAnnotations(
     async (
       studentId: string,
       projectId: string,
-      type?: DrawingType,
+      type?: DrawingType
     ): Promise<DrawingAnnotation[]> => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const result = await (window as any).electronAPI.drawing.getByStudent(
+        const result = await window.electronAPI.drawing.getByStudent(
           studentId,
           projectId,
-          type,
+          type
         )
         if (result.success && result.data) {
           return result.data
         } else {
           handleError(
-            result.error || "全設問アノテーション読み込みに失敗しました",
+            result.error || "全設問アノテーション読み込みに失敗しました"
           )
           return []
         }
       } catch (error) {
         handleError(
           "全設問アノテーション読み込み中にエラーが発生しました",
-          error,
+          error
         )
         return []
       } finally {
         setIsLoading(false)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -269,7 +269,7 @@ export function useDrawingAnnotations(
   const saveElement = useCallback(
     async (
       element: DrawingElement,
-      questionScoreId: string,
+      questionScoreId: string
     ): Promise<DrawingAnnotation | null> => {
       setIsLoading(true)
       setError(null)
@@ -278,7 +278,7 @@ export function useDrawingAnnotations(
         const createData = convertElementToCreateData(
           element,
           questionScoreId,
-          context,
+          context
         )
         const result = await window.electronAPI.drawing.create(createData)
 
@@ -297,7 +297,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError, context],
+    [handleError, context]
   )
 
   /**
@@ -330,14 +330,14 @@ export function useDrawingAnnotations(
 
         const result = await window.electronAPI.drawing.update(
           element.id,
-          updateData,
+          updateData
         )
 
         if (result.success && result.data) {
           setAnnotations((prev) =>
             prev.map((annotation) =>
-              annotation.id === element.id ? result.data! : annotation,
-            ),
+              annotation.id === element.id ? result.data! : annotation
+            )
           )
           callbacksRef.current.onAnnotationUpdated?.(result.data!)
           return result.data!
@@ -352,7 +352,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -368,7 +368,7 @@ export function useDrawingAnnotations(
 
         if (result.success) {
           setAnnotations((prev) =>
-            prev.filter((annotation) => annotation.id !== elementId),
+            prev.filter((annotation) => annotation.id !== elementId)
           )
           callbacksRef.current.onAnnotationDeleted?.(elementId)
           return true
@@ -383,7 +383,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -397,7 +397,7 @@ export function useDrawingAnnotations(
       try {
         const result = await window.electronAPI.drawing.deleteByQuestionScore(
           questionScoreId,
-          type,
+          type
         )
 
         if (result.success) {
@@ -409,14 +409,14 @@ export function useDrawingAnnotations(
                   !(
                     annotation.questionScoreId === questionScoreId &&
                     annotation.type === type
-                  ),
-              ),
+                  )
+              )
             )
           } else {
             setAnnotations((prev) =>
               prev.filter(
-                (annotation) => annotation.questionScoreId !== questionScoreId,
-              ),
+                (annotation) => annotation.questionScoreId !== questionScoreId
+              )
             )
           }
           return true
@@ -431,7 +431,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -440,7 +440,7 @@ export function useDrawingAnnotations(
   const syncElements = useCallback(
     async (
       elements: DrawingElement[],
-      questionScoreId: string,
+      questionScoreId: string
     ): Promise<DrawingAnnotation[]> => {
       setIsLoading(true)
       setError(null)
@@ -451,7 +451,7 @@ export function useDrawingAnnotations(
 
         // 新しい要素を一括作成
         const createDataList = elements.map((element) =>
-          convertElementToCreateData(element, questionScoreId, context),
+          convertElementToCreateData(element, questionScoreId, context)
         )
 
         const result =
@@ -471,7 +471,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError, deleteByType, context],
+    [handleError, deleteByType, context]
   )
 
   /**
@@ -481,7 +481,7 @@ export function useDrawingAnnotations(
     async (
       htmlContent: string,
       width: number = 200,
-      height: number = 50,
+      height: number = 50
     ): Promise<SVGSVGElement> => {
       try {
         return await createMathJaxSVG(htmlContent, width, height)
@@ -490,7 +490,7 @@ export function useDrawingAnnotations(
         throw error
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -500,7 +500,7 @@ export function useDrawingAnnotations(
     async (
       htmlContent: string,
       width: number = 200,
-      height: number = 50,
+      height: number = 50
     ): Promise<{ width: number; height: number }> => {
       try {
         return await measureMathJaxContentSize(htmlContent, width, height)
@@ -509,7 +509,7 @@ export function useDrawingAnnotations(
         return { width, height }
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**
@@ -529,7 +529,7 @@ export function useDrawingAnnotations(
         handleError("統計情報取得中にエラーが発生しました", error)
       }
     },
-    [handleError],
+    [handleError]
   )
 
   /**

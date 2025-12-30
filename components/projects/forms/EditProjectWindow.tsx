@@ -42,9 +42,10 @@ const EditProjectWindow = ({
       : new Date(projectToEdit.examDate)
   })
   const [description, setDescription] = useState<string | null>(
-    projectToEdit.description ?? null,
+    projectToEdit.description ?? null
   )
-  const [tags, setTags] = useState<Tag[]>((projectToEdit as any).tags || [])
+  // タグ機能は未実装のため、空の配列で初期化
+  const [tags, setTags] = useState<Tag[]>([])
   const [currentTagInput, setCurrentTagInput] = useState("")
   const [editingTagId, setEditingTagId] = useState<string | null>(null)
   const [editingTagText, setEditingTagText] = useState<string>("")
@@ -93,7 +94,7 @@ const EditProjectWindow = ({
   const handleDeleteTagFromDb = async (_tagIdToDelete: string) => {
     if (
       window.confirm(
-        "このタグをデータベースから完全に削除しますか？関連する他のプロジェクトからも削除されます。",
+        "このタグをデータベースから完全に削除しますか？関連する他のプロジェクトからも削除されます。"
       )
     ) {
       try {
@@ -139,7 +140,7 @@ const EditProjectWindow = ({
   }
 
   const handleEditingTagInputKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
+    e: React.KeyboardEvent<HTMLInputElement>
   ) => {
     if (e.key === "Enter") {
       e.preventDefault()
@@ -188,7 +189,7 @@ const EditProjectWindow = ({
               value={examDate ? examDate.toISOString().split("T")[0] : ""}
               onChange={(e) =>
                 setExamDate(
-                  e.target.value ? new Date(e.target.value) : undefined,
+                  e.target.value ? new Date(e.target.value) : undefined
                 )
               }
               className="col-span-3"
@@ -203,7 +204,7 @@ const EditProjectWindow = ({
               id="edit-description"
               value={description ?? ""}
               onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3 min-h-[80px]"
+              className="col-span-3 min-h-20"
               placeholder="プロジェクトの説明（任意）"
             />
           </div>
@@ -218,7 +219,7 @@ const EditProjectWindow = ({
                   value={currentTagInput}
                   onChange={(e) => setCurrentTagInput(e.target.value)}
                   onKeyDown={handleTagInputKeyDown}
-                  className="flex-grow"
+                  className="grow"
                   placeholder="科目を入力してEnter"
                 />
                 <Button type="button" onClick={handleAddTag} variant="outline">
@@ -244,7 +245,7 @@ const EditProjectWindow = ({
                           // もし自動保存したい場合は handleSaveEditedTag() を呼ぶ
                           // もしキャンセルしたい場合は setEditingTagId(null) を呼ぶ
                         }}
-                        className="mr-1 h-6 flex-grow px-1 text-xs"
+                        className="mr-1 h-6 grow px-1 text-xs"
                         autoFocus
                       />
                     ) : (

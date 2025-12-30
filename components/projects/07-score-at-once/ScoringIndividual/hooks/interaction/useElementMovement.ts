@@ -1,4 +1,8 @@
-import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
+import type {
+  DrawingElement,
+  LineEditMode,
+  RectangleEditMode,
+} from "@/components/projects/07-score-at-once/ScoringIndividual/types/answer-individual-types"
 import { useCallback, useRef } from "react"
 
 interface UseElementMovementProps {
@@ -6,23 +10,23 @@ interface UseElementMovementProps {
   drawingElements: DrawingElement[]
   selectedElementIds: string[]
   isDraggingElement: boolean
-  lineEditMode: any
+  lineEditMode: LineEditMode
   dragElementOffset: { x: number; y: number }
   isShiftPressed: boolean
 
   // Actions
   setIsDraggingElement: (dragging: boolean) => void
   setDragElementOffset: (offset: { x: number; y: number }) => void
-  setLineEditMode: (mode: any) => void
-  setRectangleEditMode: (mode: any) => void
-  updateDrawingElement: (id: string, updates: any) => void
+  setLineEditMode: (mode: LineEditMode) => void
+  setRectangleEditMode: (mode: RectangleEditMode) => void
+  updateDrawingElement: (id: string, updates: Partial<DrawingElement>) => void
   // リサイズ操作用の追加
   setIsResizingElement?: (resizing: boolean) => void
   setResizeHandle?: (handle: string | null) => void
 
   // Utils
-  hitTestElement: (element: any, x: number, y: number) => boolean
-  hitTestHandle?: (element: any, x: number, y: number) => string | null
+  hitTestElement: (element: DrawingElement, x: number, y: number) => boolean
+  hitTestHandle?: (element: DrawingElement, x: number, y: number) => string | null
 }
 
 export function useElementMovement({
@@ -31,7 +35,7 @@ export function useElementMovement({
   selectedElementIds,
   isDraggingElement,
   lineEditMode,
-  dragElementOffset,
+  dragElementOffset: _dragElementOffset,
   isShiftPressed,
   setIsDraggingElement,
   setDragElementOffset,
@@ -45,11 +49,11 @@ export function useElementMovement({
 }: UseElementMovementProps) {
   // パフォーマンス最適化: デバウンス用のタイマー
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const pendingUpdatesRef = useRef<Map<string, any>>(new Map())
+  const pendingUpdatesRef = useRef<Map<string, Partial<DrawingElement>>>(new Map())
 
   // 即時更新関数（デバウンスなし）
   const debouncedUpdate = useCallback(
-    (elementId: string, updates: any) => {
+    (elementId: string, updates: Partial<DrawingElement>) => {
       // 即座に更新を実行
       updateDrawingElement(elementId, updates)
     },
@@ -268,7 +272,7 @@ export function useElementMovement({
         }
       }
 
-      const updates: any = { x: newX, y: newY }
+      const updates: Partial<DrawingElement> = { x: newX, y: newY }
       if (element.type === "rectangle" || element.type === "ellipse") {
         updates.width = newWidth
         updates.height = newHeight
@@ -370,7 +374,7 @@ export function useElementMovement({
           selectedElementIds.forEach((elementId) => {
             const originalCoords = moveStartRef.current?.elements.get(elementId)
             if (originalCoords) {
-              const updates: any = {
+              const updates: Partial<DrawingElement> = {
                 x: originalCoords.x + deltaX,
                 y: originalCoords.y + deltaY,
               }
@@ -406,7 +410,7 @@ export function useElementMovement({
         selectedElementIds.forEach((elementId) => {
           const originalCoords = moveStartRef.current?.elements.get(elementId)
           if (originalCoords) {
-            const updates: any = {
+            const updates: Partial<DrawingElement> = {
               x: originalCoords.x + deltaX,
               y: originalCoords.y + deltaY,
             }

@@ -2,7 +2,8 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
+import type { ProcessedStudentAnswer } from "../types"
 import { convertAnswerSheetsToFiles } from "./convertStudentAnswersToFiles"
 
 /**
@@ -83,7 +84,7 @@ export function reorderFilesByStrategy(
  * 既存の答案データから配置戦略に基づく統一ファイル配列を構築
  */
 export function buildOrderedFileArrayFromStudentAnswers(
-  studentAnswers: any[],
+  studentAnswers: ProcessedStudentAnswer[],
   students: UnifiedStudent[],
   modelAnswerCount: number,
   fileOrder: PlacementStrategy,

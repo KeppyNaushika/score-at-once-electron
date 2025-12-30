@@ -14,6 +14,31 @@ import {
 } from "../lib/prisma/questionScore"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"
 
+/**
+ * QuestionScoreをIPC用に変換（DecimalをnumberにDateはそのまま）
+ */
+function serializeScore(score: {
+  id: string
+  cropRegionId: string
+  studentId: string | null
+  partialScore: { toNumber(): number } | null
+  status: string
+  scoredByUserId: string | null
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: score.id,
+    cropRegionId: score.cropRegionId,
+    studentId: score.studentId,
+    partialScore: score.partialScore ? score.partialScore.toNumber() : null,
+    status: score.status,
+    scoredByUserId: score.scoredByUserId,
+    createdAt: score.createdAt,
+    updatedAt: score.updatedAt,
+  }
+}
+
 export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー
   ipcMain.handle(
@@ -26,22 +51,8 @@ export function setupScoringHandlers(): void {
           return result
         }
 
-        // Create plain serializable objects
-        const serializedScores =
-          result.scores?.map((score) => ({
-            id: score.id,
-            cropRegionId: score.cropRegionId,
-            studentId: score.studentId,
-            partialScore: score.partialScore
-              ? score.partialScore.toString()
-              : null,
-            status: score.status,
-            scoredByUserId: score.scoredByUserId,
-            createdAt: score.createdAt.toISOString(),
-            updatedAt: score.updatedAt.toISOString(),
-          })) || []
-
-        return { success: true, scores: serializedScores }
+        const scores = result.scores?.map(serializeScore) || []
+        return { success: true, scores }
       } catch (err) {
         console.error("Error getting question scores for project:", err)
         throw err
@@ -59,29 +70,14 @@ export function setupScoringHandlers(): void {
           return result
         }
 
-        // Create plain serializable objects
-        const serializedScores =
-          result.scores?.map((score) => ({
-            id: score.id,
-            cropRegionId: score.cropRegionId,
-            studentId: score.studentId,
-            partialScore: score.partialScore
-              ? score.partialScore.toString()
-              : null,
-            status: score.status,
-            scoredByUserId: score.scoredByUserId,
-            createdAt: score.createdAt.toISOString(),
-            updatedAt: score.updatedAt.toISOString(),
-          })) || []
-
-        return { success: true, scores: serializedScores }
+        const scores = result.scores?.map(serializeScore) || []
+        return { success: true, scores }
       } catch (err) {
         console.error("Error getting question scores for student:", err)
         throw err
       }
     },
   )
-
 
   ipcMain.handle(
     "create-question-score",
@@ -93,28 +89,13 @@ export function setupScoringHandlers(): void {
           return result
         }
 
-        // Create plain serializable object
-        const serializedScore = {
-          id: result.score.id,
-          cropRegionId: result.score.cropRegionId,
-          studentId: result.score.studentId,
-          partialScore: result.score.partialScore
-            ? result.score.partialScore.toString()
-            : null,
-          status: result.score.status,
-          scoredByUserId: result.score.scoredByUserId,
-          createdAt: result.score.createdAt.toISOString(),
-          updatedAt: result.score.updatedAt.toISOString(),
-        }
-
-        return { success: true, score: serializedScore }
+        return { success: true, score: serializeScore(result.score) }
       } catch (err) {
         console.error("Error creating question score:", err)
         throw err
       }
     },
   )
-
 
   ipcMain.handle(
     "update-question-score",
@@ -131,21 +112,7 @@ export function setupScoringHandlers(): void {
           return result
         }
 
-        // Create plain serializable object
-        const serializedScore = {
-          id: result.score.id,
-          cropRegionId: result.score.cropRegionId,
-          studentId: result.score.studentId,
-          partialScore: result.score.partialScore
-            ? result.score.partialScore.toString()
-            : null,
-          status: result.score.status,
-          scoredByUserId: result.score.scoredByUserId,
-          createdAt: result.score.createdAt.toISOString(),
-          updatedAt: result.score.updatedAt.toISOString(),
-        }
-
-        return { success: true, score: serializedScore }
+        return { success: true, score: serializeScore(result.score) }
       } catch (err) {
         console.error("Error updating question score:", err)
         throw err
@@ -199,21 +166,7 @@ export function setupScoringHandlers(): void {
           return result
         }
 
-        // Create plain serializable object
-        const serializedScore = {
-          id: result.score.id,
-          cropRegionId: result.score.cropRegionId,
-          studentId: result.score.studentId,
-          partialScore: result.score.partialScore
-            ? result.score.partialScore.toString()
-            : null,
-          status: result.score.status,
-          scoredByUserId: result.score.scoredByUserId,
-          createdAt: result.score.createdAt.toISOString(),
-          updatedAt: result.score.updatedAt.toISOString(),
-        }
-
-        return { success: true, score: serializedScore }
+        return { success: true, score: serializeScore(result.score) }
       } catch (err) {
         console.error("Error finalizing question score:", err)
         throw err

@@ -40,7 +40,7 @@ async function sendDiscordNotification(webhookUrl, payload) {
           try {
             const messageData = JSON.parse(data)
             resolve(messageData)
-          } catch (e) {
+          } catch {
             resolve(data)
           }
         } else {
@@ -197,7 +197,7 @@ function getPreviousVersion(currentVersion) {
 function createReleaseMessage(version, releaseUrl, isPrerelease = false) {
   const packageJson = require("../package.json")
 
-  const releaseType = isPrerelease ? "プレリリース" : "正式版"
+  const _releaseType = isPrerelease ? "プレリリース" : "正式版"
   const color = isPrerelease ? 0xffa500 : 0x00ff00 // オレンジ or 緑
 
   // 説明文を動的に生成

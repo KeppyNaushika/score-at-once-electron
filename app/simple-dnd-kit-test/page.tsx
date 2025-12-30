@@ -255,7 +255,7 @@ function KanbanLists({
   activeItem: SimpleItem | null
   setActiveItem: React.Dispatch<React.SetStateAction<SimpleItem | null>>
   findContainer: (id: string) => string | null
-  sensors: any
+  sensors: ReturnType<typeof useSensors>
 }) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const getItemsInContainer = (containerId: string) => {
@@ -464,7 +464,7 @@ function GridTable({
   activeItem: SimpleItem | null
   setActiveItem: React.Dispatch<React.SetStateAction<SimpleItem | null>>
   findContainer: (id: string) => string | null
-  sensors: any
+  sensors: ReturnType<typeof useSensors>
   placementStrategy: "row-first" | "col-first"
 }) {
   const [isGridPopoverOpen, setIsGridPopoverOpen] = useState(false)

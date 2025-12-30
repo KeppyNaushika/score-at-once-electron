@@ -2,7 +2,13 @@ import type {
   PlacementStrategy,
   UnifiedFile,
   UnifiedStudent,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
+import type {
+  DragEndEvent,
+  DragStartEvent,
+  SensorDescriptor,
+  SensorOptions,
+} from "@dnd-kit/core"
 
 // ファイル状態管理用の型定義
 export interface FileState {
@@ -23,14 +29,14 @@ export interface UseDragDropParams {
   fileOrder?: PlacementStrategy
   onReloadData?: () => void
   onUpdatePendingChanges?: (
-    changedFiles: Array<{ fileId: string; fromState: any; toState: any }>,
+    changedFiles: Array<{ fileId: string; fromState: FileState; toState: FileState }>,
   ) => void
 }
 
 // ドラッグ&ドロップフックの戻り値型
 export interface UseDragDropReturn {
-  sensors: any
+  sensors: SensorDescriptor<SensorOptions>[]
   activeFile: UnifiedFile | null
-  handleDragStart: (event: any) => void
-  handleDragEnd: (event: any) => void
+  handleDragStart: (event: DragStartEvent) => void
+  handleDragEnd: (event: DragEndEvent) => void
 }

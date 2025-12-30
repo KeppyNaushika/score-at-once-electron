@@ -30,11 +30,11 @@ type ImageCanvasProps = {
   onSelectArea: (index: number) => void
   onAddAreaByDrag: (
     type: CropRegionAreaType,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   onUpdateArea: (
     index: number,
-    coords: { x: number; y: number; width: number; height: number },
+    coords: { x: number; y: number; width: number; height: number }
   ) => void
   onDeleteArea: (index: number) => void
   disabled: boolean
@@ -84,7 +84,7 @@ const ImageCanvas = ({
       width: imageDimensions ? imageDimensions.width * zoom : 0,
       height: imageDimensions ? imageDimensions.height * zoom : 0,
     }),
-    [imageDimensions, zoom],
+    [imageDimensions, zoom]
   )
 
   return (
@@ -124,7 +124,7 @@ const ImageCanvas = ({
             onResizeMouseDown={handleResizeMouseDown}
             onMoveMouseDown={handleMoveMouseDown}
             imageDimensions={imageDimensions}
-            containerRef={imageContainerRef as any}
+            containerRef={imageContainerRef}
             zoom={zoom}
           />
 
@@ -133,7 +133,7 @@ const ImageCanvas = ({
             dragStartCoords={dragStartCoords}
             dragCurrentCoords={dragCurrentCoords}
             imageDimensions={imageDimensions}
-            containerRef={imageContainerRef as any}
+            containerRef={imageContainerRef}
             zoom={zoom}
           />
         </div>

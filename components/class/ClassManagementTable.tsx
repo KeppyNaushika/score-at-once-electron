@@ -49,7 +49,7 @@ export default function ClassManagementTable() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isClassModalOpen, setIsClassModalOpen] = useState(false)
   const [classToEdit, setClassToEdit] = useState<ClassWithMemberships | null>(
-    null,
+    null
   )
 
   // Data fetching
@@ -99,7 +99,13 @@ export default function ClassManagementTable() {
     }
   }
 
-  const handleSaveClass = async (classData: any) => {
+  const handleSaveClass = async (classData: {
+    name: string
+    classCode?: string
+    grade?: number
+    description?: string
+    isVisible?: boolean
+  }) => {
     try {
       if (classToEdit) {
         const updatedClass = await window.electronAPI.updateClass({
@@ -107,7 +113,7 @@ export default function ClassManagementTable() {
           ...classData,
         })
         setClasses(
-          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c)),
+          classes.map((c) => (c.id === updatedClass.id ? updatedClass : c))
         )
       } else {
         const newClass = await window.electronAPI.createClass(classData)
@@ -136,7 +142,7 @@ export default function ClassManagementTable() {
   return (
     <div className="flex h-full flex-col gap-4">
       {/* Controls */}
-      <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <Search className="text-muted-foreground h-4 w-4" />

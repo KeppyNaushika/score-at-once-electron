@@ -32,7 +32,7 @@ export default function StudentsPage() {
     setShowAddDialog,
     showRemovalConfirm,
     setShowRemovalConfirm,
-    studentsToRemove,
+    studentsToRemove: _studentsToRemove,
     setStudentsToRemove,
     selectedStudentsForRemoval,
     gradingDataInfo,

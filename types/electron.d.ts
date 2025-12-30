@@ -14,6 +14,60 @@ import type {
   UserProject,
 } from "@prisma/client"
 
+// ProjectWithDetails は common.types から（IPC用の拡張型）
+export type { ProjectWithDetails, SerializedProject } from "./common.types"
+
+// Prisma拡張型を prisma-extensions.ts から再エクスポート
+export type {
+  // Student関連
+  ClassWithMemberships,
+  ClassWithStudents,
+  // CropRegion関連
+  CropRegionWithDetails,
+  // CropSubtotal関連
+  CropSubtotalWithRelations,
+  MasterAnswerPayload,
+  PageImageWithDetails,
+  // ProjectPage/PageImage関連
+  ProjectPageWithDetails,
+  ProjectSubtotalGroupWithProject,
+  ProjectSubtotalGroupWithSubtotalGroup,
+  QuestionGroupItemWithDetails,
+  QuestionGroupWithItems,
+  QuestionScoreWithRelations,
+  // QuestionScore関連
+  QuestionScoreWithUser,
+  QuestionSubtotalAssignmentWithRelations,
+  // Answer関連
+  StudentAnswerWithDetails,
+  StudentClassMembershipWithDetails,
+  StudentWithClass,
+  StudentWithMemberships,
+  SubtotalDefinitionWithRelations,
+  // SubtotalGroup/Subtotal関連
+  SubtotalGroupWithItems,
+  SubtotalWithDetails,
+  // UserProject/ProjectSubtotalGroup関連
+  UserProjectWithDetails,
+  UserProjectWithProject,
+  UserProjectWithUser,
+} from "./prisma-extensions"
+
+// 内部使用のためのインポート（型ガード等で使用）
+import type { ProjectWithDetails } from "./common.types"
+import type {
+  CropRegionWithDetails,
+  CropSubtotalWithRelations,
+  PageImageWithDetails,
+  ProjectPageWithDetails,
+  QuestionScoreWithRelations,
+  QuestionScoreWithUser,
+  StudentClassMembershipWithDetails,
+  StudentWithMemberships,
+  SubtotalGroupWithItems,
+  SubtotalWithDetails,
+} from "./prisma-extensions"
+
 // PDF.js module declarations
 declare module "pdfjs-dist/legacy/build/pdf.min.mjs" {
   export * from "pdfjs-dist"
@@ -45,41 +99,9 @@ declare module "pdfjs-dist" {
   }
 }
 
-// Student answer related types (updated for new structure)
-// New: Based on PageImage instead of StudentAnswer
-export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
-  include: {
-    student: {
-      include: {
-        projectStudents: {
-          select: {
-            customOrder: true
-          }
-        }
-      }
-    }
-    projectPage: {
-      include: {
-        project: true
-      }
-    }
-  }
-}>
-
-// Legacy StudentAnswer type for backward compatibility
-export type LegacyStudentAnswerWithDetails = Prisma.StudentAnswerGetPayload<{
-  include: {
-    student: true
-    project: true
-    questionScores: {
-      include: {
-        cropRegion: true
-        scoredByUser: true
-        student: true
-      }
-    }
-  }
-}>
+// =============================================================================
+// インターフェース型（Prisma拡張ではない型）
+// =============================================================================
 
 export interface UploadStudentAnswerFileData {
   name: string
@@ -91,44 +113,6 @@ export interface UploadStudentAnswerFileData {
   pageNumber: number
   overwrite: boolean
 }
-
-// Prismaの型を拡張してリレーションを含む型を定義
-type ClassWithMemberships = Prisma.ClassGetPayload<{
-  include: {
-    memberships: {
-      include: {
-        student: true
-      }
-      where: {
-        endDate: null
-      }
-    }
-  }
-}>
-
-type StudentWithMemberships = Prisma.StudentGetPayload<{
-  include: {
-    memberships: {
-      include: {
-        class: true
-      }
-      where: {
-        endDate: null
-      }
-      orderBy: {
-        startDate: "desc"
-      }
-    }
-  }
-}>
-
-type StudentClassMembershipWithDetails =
-  Prisma.StudentClassMembershipGetPayload<{
-    include: {
-      student: true
-      class: true
-    }
-  }>
 
 // Student exam result type
 interface StudentExamResult {
@@ -143,33 +127,22 @@ interface StudentExamResult {
   status: "complete" | "partial" | "unscored"
 }
 
-// Legacy types for backward compatibility
-type ClassWithStudents = ClassWithMemberships
-type StudentWithClass = StudentWithMemberships
+// QuestionScore comparison result type
+export interface QuestionScoreComparisonResult {
+  success: boolean
+  finalScore?: QuestionScoreWithUser
+  proposedScores?: QuestionScoreWithUser[]
+  hasConflict?: boolean
+  error?: string
+}
 
-// Project related types (updated for new structure)
-export type ProjectWithDetails = Prisma.ProjectGetPayload<{
-  include: {
-    userProjects: { include: { user: true } }
-    projectPages: {
-      include: {
-        pageImages: true
-        cropRegions: {
-          include: {
-            cropSubtotals: { include: { subtotal: true } }
-            questionScores: { include: { student: true; scoredByUser: true } }
-          }
-        }
-      }
-      orderBy: { pageNumber: "asc" }
-    }
-    projectSubtotalGroups: {
-      include: { subtotalGroup: { include: { subtotals: true } } }
-    }
-    studentAnswers: { include: { student: true; questionScores: true } }
-    projectStudents: { include: { student: true } }
-  }
-}>
+// QuestionScore operation result type (create/update)
+export interface QuestionScoreOperationResult {
+  success: boolean
+  score?: QuestionScoreWithRelations
+  error?: string
+  conflictData?: QuestionScore
+}
 
 // Replaced BackendCreateProjectProps with a more specific type based on Project model
 export interface CreateProjectArgs {
@@ -183,36 +156,13 @@ export interface UpdateProjectArgs extends Partial<CreateProjectArgs> {
   id: string
 }
 
-// CropRegion related types (updated from LayoutRegion)
-export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
-  include: {
-    projectPage: { include: { project: true } }
-    cropSubtotals: {
-      include: { subtotal: { include: { subtotalGroup: true } } }
-    }
-    questionScores: { include: { student: true; scoredByUser: true } }
-  }
-}>
-
+// CropRegion作成/更新用の引数型
 export type SaveCropRegionArgs = Omit<
   Prisma.CropRegionUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 > & { id?: string; projectPageId: string }
 
-// SubtotalGroup and Subtotal related types (updated from QuestionGroup/Item)
-export type SubtotalGroupWithItems = Prisma.SubtotalGroupGetPayload<{
-  include: {
-    subtotals: { orderBy: { order: "asc" } }
-    projectSubtotalGroups: { include: { project: true } }
-  }
-}>
-export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
-  include: {
-    subtotalGroup: true
-    cropSubtotals: { include: { cropRegion: true } }
-  }
-}>
-
+// SubtotalGroup作成/更新用の引数型
 export type CreateSubtotalGroupArgs = Omit<
   Prisma.SubtotalGroupUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
@@ -221,72 +171,44 @@ export type UpdateSubtotalGroupArgs = Partial<CreateSubtotalGroupArgs> & {
   id: string
 }
 
+// Subtotal作成/更新用の引数型
 export type CreateSubtotalArgs = Omit<
   Prisma.SubtotalUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt" | "subtotalGroupId"
 >
 export type UpdateSubtotalArgs = Partial<CreateSubtotalArgs> & { id: string }
 
-// Backward compatibility aliases
-export type QuestionGroupWithItems = SubtotalGroupWithItems
-export type QuestionGroupItemWithDetails = SubtotalWithDetails
+// Backward compatibility aliases for args types
 export type CreateQuestionGroupArgs = CreateSubtotalGroupArgs
 export type UpdateQuestionGroupArgs = UpdateSubtotalGroupArgs
 export type CreateQuestionGroupItemArgs = CreateSubtotalArgs
 export type UpdateQuestionGroupItemArgs = UpdateSubtotalArgs
 
-// CropSubtotal related types (unified from SubtotalDefinition + QuestionSubtotalAssignment)
-export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
-  include: {
-    cropRegion: { include: { projectPage: true } }
-    subtotal: { include: { subtotalGroup: true } }
-  }
-}>
+// CropSubtotal作成用の引数型
 export type CreateCropSubtotalArgs = Omit<
   Prisma.CropSubtotalUncheckedCreateInput,
   "id" | "createdAt" | "updatedAt"
 >
 
-// Backward compatibility aliases
-export type SubtotalDefinitionWithRelations = CropSubtotalWithRelations
+// Backward compatibility aliases for args types
 export type CreateSubtotalDefinitionArgs = CreateCropSubtotalArgs
-export type QuestionSubtotalAssignmentWithRelations = CropSubtotalWithRelations
 export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
-
-// ProjectPage and PageImage related types (updated from MasterAnswer)
-export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
-  include: {
-    project: true
-    cropRegions: true
-    pageImages: { include: { student: true } }
-  }
-}>
-
-export type PageImageWithDetails = Prisma.PageImageGetPayload<{
-  include: {
-    projectPage: { include: { project: true } }
-    student: true
-  }
-}>
 
 export interface MasterAnswerDeletionResult {
   deletedAnswer: PageImage | null
   projectPages: ProjectPageWithDetails[]
 }
 
-// Backward compatibility aliases
-export type MasterAnswerPayload = ProjectPageWithDetails
-
 export interface MyAPI {
   fetchProjects: () => Promise<ProjectWithDetails[]>
   fetchProjectById: (projectId: string) => Promise<ProjectWithDetails | null>
   createProject: (
     projectData: CreateProjectArgs,
-    userId: string,
+    userId: string
   ) => Promise<ProjectWithDetails>
   updateProject: (
     projectId: string,
-    data: Prisma.ProjectUpdateInput,
+    data: Prisma.ProjectUpdateInput
   ) => Promise<ProjectWithDetails>
   deleteProject: (projectId: string) => Promise<Project | void>
 
@@ -300,19 +222,19 @@ export interface MyAPI {
   }) => Promise<User>
   updateUser: (
     userId: string,
-    userData: { username?: string; name?: string },
+    userData: { username?: string; name?: string }
   ) => Promise<User>
   verifyPasscode: (userId: string, passcode: string) => Promise<boolean>
   updateUserPasscode: (
     userId: string,
     passcode?: string,
-    passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric",
+    passcodeType?: "none" | "4digit" | "6digit" | "alphanumeric"
   ) => Promise<User>
 
   // Authentication related (legacy - may be deprecated)
   loginUser: (
     username: string,
-    password: string,
+    password: string
   ) => Promise<{
     success: boolean
     user?: { id: string; username: string; name: string; role: string }
@@ -326,7 +248,7 @@ export interface MyAPI {
   }>
   updateUserPassword: (
     userId: string,
-    newPassword: string,
+    newPassword: string
   ) => Promise<{
     success: boolean
     error?: string
@@ -334,7 +256,7 @@ export interface MyAPI {
 
   // Auth token persistence (electron-store)
   saveAuthToken: (
-    token: string,
+    token: string
   ) => Promise<{ success: boolean; error?: string }>
   getAuthToken: () => Promise<{
     success: boolean
@@ -352,7 +274,7 @@ export interface MyAPI {
   // Student answer related
   uploadStudentAnswers: (
     projectId: string,
-    filesData: UploadStudentAnswerFileData[],
+    filesData: UploadStudentAnswerFileData[]
   ) => Promise<{
     success: boolean
     studentAnswers?: StudentAnswerWithDetails[]
@@ -385,7 +307,7 @@ export interface MyAPI {
   }>
   associateStudentAnswerWithStudent: (
     studentAnswerId: string,
-    studentId: string,
+    studentId: string
   ) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
@@ -393,7 +315,7 @@ export interface MyAPI {
   }>
   setStudentAnswerAbsent: (
     studentAnswerId: string,
-    isAbsent: boolean,
+    isAbsent: boolean
   ) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
@@ -407,7 +329,7 @@ export interface MyAPI {
   updateStudentAnswerPlacement: (
     studentAnswerId: string,
     studentId: string | null,
-    pageNumber: number,
+    pageNumber: number
   ) => Promise<{
     success: boolean
     answerSheet?: AnswerSheetWithDetails
@@ -415,7 +337,7 @@ export interface MyAPI {
   }>
   swapStudentAnswerPlacements: (
     studentAnswerId1: string,
-    studentAnswerId2: string,
+    studentAnswerId2: string
   ) => Promise<{
     success: boolean
     answerSheets?: AnswerSheetWithDetails[]
@@ -423,7 +345,7 @@ export interface MyAPI {
   }>
   swapStudentAnswerPlacementsWithScoring: (
     studentAnswerId1: string,
-    studentAnswerId2: string,
+    studentAnswerId2: string
   ) => Promise<{
     success: boolean
     answerSheets?: AnswerSheetWithDetails[]
@@ -435,7 +357,7 @@ export interface MyAPI {
       finalStudentId: string | null
       finalPageNumber: number
     }>,
-    withScoring: boolean,
+    withScoring: boolean
   ) => Promise<{
     success: boolean
     error?: string
@@ -464,63 +386,63 @@ export interface MyAPI {
     error?: string
   }>
   createClass: (
-    classData: Prisma.ClassCreateWithoutTeachersInput,
+    classData: Prisma.ClassCreateWithoutTeachersInput
   ) => Promise<ClassWithStudents>
   updateClass: (
-    classData: Prisma.ClassUpdateInput & { id: string },
+    classData: Prisma.ClassUpdateInput & { id: string }
   ) => Promise<ClassWithStudents> // Ensure id is part of update
   deleteClass: (classId: string) => Promise<Class | void>
 
   // Student related
   fetchStudents: () => Promise<StudentWithMemberships[]>
   createStudent: (
-    studentData: Prisma.StudentCreateInput,
+    studentData: Prisma.StudentCreateInput
   ) => Promise<StudentWithMemberships>
   updateStudent: (
     id: string,
-    studentData: Prisma.StudentUpdateInput,
+    studentData: Prisma.StudentUpdateInput
   ) => Promise<StudentWithMemberships>
   deleteStudent: (id: string) => Promise<Student | void>
   getStudentExamResults: (studentId: string) => Promise<StudentExamResult[]>
 
   // Student Class Membership related
   createStudentClassMembership: (
-    membershipData: Prisma.StudentClassMembershipCreateInput,
+    membershipData: Prisma.StudentClassMembershipCreateInput
   ) => Promise<StudentClassMembershipWithDetails>
   updateStudentClassMembership: (
     id: string,
-    membershipData: Prisma.StudentClassMembershipUpdateInput,
+    membershipData: Prisma.StudentClassMembershipUpdateInput
   ) => Promise<StudentClassMembershipWithDetails>
   deleteStudentClassMembership: (id: string) => Promise<void>
   getCurrentMembershipsByStudentId: (
-    studentId: string,
+    studentId: string
   ) => Promise<StudentClassMembershipWithDetails[]>
   getAllMembershipsByStudentId: (
-    studentId: string,
+    studentId: string
   ) => Promise<StudentClassMembershipWithDetails[]>
   getCurrentMembershipsByClassId: (
-    classId: string,
+    classId: string
   ) => Promise<StudentClassMembershipWithDetails[]>
   addStudentToClass: (
     studentId: string,
     classId: string,
     startDate?: Date,
     attendanceNumber?: number,
-    notes?: string,
+    notes?: string
   ) => Promise<StudentClassMembershipWithDetails>
   endStudentMembership: (
     membershipId: string,
-    endDate?: Date,
+    endDate?: Date
   ) => Promise<StudentClassMembershipWithDetails>
   getMembershipsByDateRange: (
     startDate: Date,
-    endDate?: Date,
+    endDate?: Date
   ) => Promise<StudentClassMembershipWithDetails[]>
 
   // ProjectPage and PageImage related (updated from MasterAnswer)
   createProjectPage: (
     projectId: string,
-    pageNumber: number,
+    pageNumber: number
   ) => Promise<ProjectPageWithDetails>
   uploadPageImages: (
     projectId: string,
@@ -532,11 +454,11 @@ export interface MyAPI {
       pageNumber: number
       imageType: "MODEL_ANSWER" | "STUDENT_ANSWER"
       studentId?: string | null
-    }[],
+    }[]
   ) => Promise<PageImageWithDetails[]>
   deletePageImage: (imageId: string) => Promise<PageImage | void>
   updateProjectPagesOrder: (
-    pageOrders: { id: string; pageNumber: number }[],
+    pageOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
   resolveFileProtocolPath: (relativePath: string) => Promise<string>
   readFileAsBase64: (filePath: string) => Promise<{
@@ -552,10 +474,10 @@ export interface MyAPI {
     error?: string
   }>
   getProjectPagesByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<ProjectPageWithDetails[]>
   getPageImagesByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<PageImageWithDetails[]>
 
   // Backward compatibility aliases
@@ -566,60 +488,67 @@ export interface MyAPI {
       type: string
       buffer: ArrayBuffer
       path?: string
-    }[],
+    }[]
   ) => Promise<ProjectPageWithDetails[]>
   deleteMasterAnswer: (answerId: string) => Promise<MasterAnswerDeletionResult>
   updateMasterAnswersOrder: (
-    answerOrders: { id: string; pageNumber: number }[],
+    answerOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
   getMasterAnswersByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<ProjectPageWithDetails[]>
   getProjectPagesByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<ProjectPageWithDetails[]>
 
   // CropRegion related (updated from LayoutRegion)
   createCropRegion: (
-    data: Prisma.CropRegionUncheckedCreateInput,
+    data: Prisma.CropRegionUncheckedCreateInput
   ) => Promise<CropRegionWithDetails>
   createManyCropRegions: (
-    data: Prisma.CropRegionCreateManyInput[],
+    data: Prisma.CropRegionCreateManyInput[]
   ) => Promise<Prisma.BatchPayload>
   updateCropRegion: (
     id: string,
-    data: Prisma.CropRegionUpdateInput,
+    data: Prisma.CropRegionUpdateInput
   ) => Promise<CropRegionWithDetails>
   deleteCropRegion: (id: string) => Promise<CropRegion | void>
   getCropRegionsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<CropRegionWithDetails[]>
   getQuestionAnswerRegionsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<CropRegionWithDetails[]>
   getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateCropRegionOrders: (
-    updates: Array<{ id: string; orderIndex: number }>,
+    updates: Array<{ id: string; orderIndex: number }>
   ) => Promise<CropRegion[]>
 
   // Backward compatibility aliases
   createLayoutRegion: (
-    data: Prisma.CropRegionUncheckedCreateInput,
+    data: Prisma.CropRegionUncheckedCreateInput
   ) => Promise<CropRegionWithDetails>
   createManyLayoutRegions: (
-    data: Prisma.CropRegionCreateManyInput[],
+    data: Prisma.CropRegionCreateManyInput[]
   ) => Promise<Prisma.BatchPayload>
   updateLayoutRegion: (
     id: string,
-    data: Prisma.CropRegionUpdateInput,
+    data: Prisma.CropRegionUpdateInput
   ) => Promise<CropRegionWithDetails>
   deleteLayoutRegion: (id: string) => Promise<CropRegion | void>
+  getLayoutRegionsByProjectId: (
+    projectId: string
+  ) => Promise<CropRegionWithDetails[]>
+  getLayoutRegionById: (id: string) => Promise<CropRegionWithDetails | null>
+  updateLayoutRegionOrders: (
+    updates: Array<{ id: string; orderIndex: number }>
+  ) => Promise<CropRegion[]>
   getCropRegionsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<CropRegionWithDetails[]>
   getCropRegionById: (id: string) => Promise<CropRegionWithDetails | null>
   updateCropRegionOrders: (
-    updates: Array<{ id: string; orderIndex: number }>,
+    updates: Array<{ id: string; orderIndex: number }>
   ) => Promise<CropRegion[]>
 
   // SubtotalGroup related (updated from QuestionGroup)
@@ -647,7 +576,7 @@ export interface MyAPI {
         name: string
         order: number
       }[]
-    },
+    }
   ) => Promise<{
     success: boolean
     subtotalGroup?: SubtotalGroupWithItems
@@ -658,7 +587,7 @@ export interface MyAPI {
     error?: string
   }>
   getSubtotalGroupsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<SubtotalGroupWithItems[]>
   getSubtotalGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
   getAvailableSubtotalGroupsForProject: (projectId: string) => Promise<{
@@ -681,7 +610,7 @@ export interface MyAPI {
   }>
   addSubtotalGroupToProject: (
     projectId: string,
-    subtotalGroupId: string,
+    subtotalGroupId: string
   ) => Promise<{
     success: boolean
     projectSubtotalGroup?: Prisma.ProjectSubtotalGroupGetPayload<{
@@ -697,7 +626,7 @@ export interface MyAPI {
   }>
   removeSubtotalGroupFromProject: (
     projectId: string,
-    subtotalGroupId: string,
+    subtotalGroupId: string
   ) => Promise<{
     success: boolean
     error?: string
@@ -705,125 +634,125 @@ export interface MyAPI {
 
   // Backward compatibility aliases
   createQuestionGroup: (
-    data: Prisma.SubtotalGroupUncheckedCreateInput,
+    data: Prisma.SubtotalGroupUncheckedCreateInput
   ) => Promise<SubtotalGroupWithItems>
   updateQuestionGroup: (
     id: string,
-    data: Prisma.SubtotalGroupUpdateInput,
+    data: Prisma.SubtotalGroupUpdateInput
   ) => Promise<SubtotalGroupWithItems>
   deleteQuestionGroup: (id: string) => Promise<SubtotalGroup | void>
   getQuestionGroupsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<SubtotalGroupWithItems[]>
   getQuestionGroupById: (id: string) => Promise<SubtotalGroupWithItems | null>
 
   // Subtotal related (updated from QuestionGroupItem)
   createSubtotal: (
-    data: Prisma.SubtotalUncheckedCreateInput,
+    data: Prisma.SubtotalUncheckedCreateInput
   ) => Promise<SubtotalWithDetails>
   createManySubtotals: (
-    items: Prisma.SubtotalUncheckedCreateInput[],
+    items: Prisma.SubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   updateSubtotal: (
     id: string,
-    data: Prisma.SubtotalUpdateInput,
+    data: Prisma.SubtotalUpdateInput
   ) => Promise<SubtotalWithDetails>
   deleteSubtotal: (id: string) => Promise<Subtotal | void>
   getSubtotalsByGroupId: (
-    subtotalGroupId: string,
+    subtotalGroupId: string
   ) => Promise<SubtotalWithDetails[]>
   getSubtotalById: (id: string) => Promise<SubtotalWithDetails | null>
   updateSubtotalOrders: (
-    orders: { id: string; order: number }[],
+    orders: { id: string; order: number }[]
   ) => Promise<Prisma.BatchPayload>
 
   // Backward compatibility aliases
   createQuestionGroupItem: (
-    data: Prisma.SubtotalUncheckedCreateInput,
+    data: Prisma.SubtotalUncheckedCreateInput
   ) => Promise<SubtotalWithDetails>
   createManyQuestionGroupItems: (
-    items: Prisma.SubtotalUncheckedCreateInput[],
+    items: Prisma.SubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   updateQuestionGroupItem: (
     id: string,
-    data: Prisma.SubtotalUpdateInput,
+    data: Prisma.SubtotalUpdateInput
   ) => Promise<SubtotalWithDetails>
   deleteQuestionGroupItem: (id: string) => Promise<Subtotal | void>
   getQuestionGroupItemsByGroupId: (
-    questionGroupId: string,
+    questionGroupId: string
   ) => Promise<SubtotalWithDetails[]>
   getQuestionGroupItemById: (id: string) => Promise<SubtotalWithDetails | null>
   updateQuestionGroupItemOrders: (
-    orders: { id: string; order: number }[],
+    orders: { id: string; order: number }[]
   ) => Promise<Prisma.BatchPayload>
 
   // CropSubtotal related (unified from SubtotalDefinition)
   createCropSubtotal: (
-    data: Prisma.CropSubtotalUncheckedCreateInput,
+    data: Prisma.CropSubtotalUncheckedCreateInput
   ) => Promise<CropSubtotalWithRelations>
   createManyCropSubtotals: (
-    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   deleteCropSubtotal: (id: string) => Promise<CropSubtotal | void>
   deleteCropSubtotalsByCropRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<Prisma.BatchPayload>
   getCropSubtotalsByCropRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<CropSubtotalWithRelations[]>
   getCropSubtotalsBySubtotalId: (
-    subtotalId: string,
+    subtotalId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
   // Backward compatibility aliases
   createSubtotalDefinition: (
-    data: Prisma.CropSubtotalUncheckedCreateInput,
+    data: Prisma.CropSubtotalUncheckedCreateInput
   ) => Promise<CropSubtotalWithRelations>
   createManySubtotalDefinitions: (
-    definitions: Prisma.CropSubtotalUncheckedCreateInput[],
+    definitions: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   deleteSubtotalDefinition: (id: string) => Promise<CropSubtotal | void>
   deleteSubtotalDefinitionsByCropRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<Prisma.BatchPayload>
   getSubtotalDefinitionsByCropRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
   // Backward compatibility aliases
   deleteSubtotalDefinitionsByLayoutRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<Prisma.BatchPayload>
   getSubtotalDefinitionsByCropRegionId: (
-    cropRegionId: string,
+    cropRegionId: string
   ) => Promise<CropSubtotalWithRelations[]>
   getSubtotalDefinitionsByQuestionGroupItemId: (
-    questionGroupItemId: string,
+    questionGroupItemId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
   // UserProject and ProjectSubtotalGroup related (new many-to-many relations)
   createUserProject: (
-    data: Prisma.UserProjectUncheckedCreateInput,
+    data: Prisma.UserProjectUncheckedCreateInput
   ) => Promise<
     Prisma.UserProjectGetPayload<{ include: { user: true; project: true } }>
   >
   deleteUserProject: (id: string) => Promise<UserProject | void>
   getUserProjectsByUserId: (
-    userId: string,
+    userId: string
   ) => Promise<Prisma.UserProjectGetPayload<{ include: { project: true } }>[]>
   getUserProjectsByProjectId: (
-    projectId: string,
+    projectId: string
   ) => Promise<Prisma.UserProjectGetPayload<{ include: { user: true } }>[]>
 
   createProjectSubtotalGroup: (
-    data: Prisma.ProjectSubtotalGroupUncheckedCreateInput,
+    data: Prisma.ProjectSubtotalGroupUncheckedCreateInput
   ) => Promise<
     Prisma.ProjectSubtotalGroupGetPayload<{
       include: { project: true; subtotalGroup: true }
     }>
   >
   deleteProjectSubtotalGroup: (
-    id: string,
+    id: string
   ) => Promise<ProjectSubtotalGroup | void>
   getProjectSubtotalGroupsByProjectId: (projectId: string) => Promise<
     Prisma.ProjectSubtotalGroupGetPayload<{
@@ -833,28 +762,28 @@ export interface MyAPI {
 
   // Backward compatibility aliases (redirects to CropSubtotal)
   createQuestionSubtotalAssignment: (
-    data: Prisma.CropSubtotalUncheckedCreateInput,
+    data: Prisma.CropSubtotalUncheckedCreateInput
   ) => Promise<CropSubtotalWithRelations>
   createManyQuestionSubtotalAssignments: (
-    assignments: Prisma.CropSubtotalUncheckedCreateInput[],
+    assignments: Prisma.CropSubtotalUncheckedCreateInput[]
   ) => Promise<Prisma.BatchPayload>
   deleteQuestionSubtotalAssignment: (id: string) => Promise<CropSubtotal | void>
   deleteAssignmentsByQuestionCropRegionId: (
-    questionCropRegionId: string,
+    questionCropRegionId: string
   ) => Promise<Prisma.BatchPayload>
 
   // Backward compatibility alias
   deleteAssignmentsByQuestionLayoutRegionId: (
-    questionLayoutRegionId: string,
+    questionLayoutRegionId: string
   ) => Promise<Prisma.BatchPayload>
   deleteAssignmentsByQuestionGroupItemId: (
-    questionGroupItemId: string,
+    questionGroupItemId: string
   ) => Promise<Prisma.BatchPayload>
   getAssignmentsByQuestionCropRegionId: (
-    questionCropRegionId: string,
+    questionCropRegionId: string
   ) => Promise<CropSubtotalWithRelations[]>
   getAssignmentsByQuestionGroupItemId: (
-    questionGroupItemId: string,
+    questionGroupItemId: string
   ) => Promise<CropSubtotalWithRelations[]>
 
   // Project-Student relationship
@@ -863,19 +792,20 @@ export interface MyAPI {
     students?: (StudentWithMemberships & {
       status: "participating" | "expected" | "absent"
       isInProject: boolean
+      customOrder: number | null
     })[]
     error?: string
   }>
   addStudentsToProject: (
     projectId: string,
-    studentIds: string[],
+    studentIds: string[]
   ) => Promise<{
     success: boolean
     error?: string
   }>
   removeStudentsFromProject: (
     projectId: string,
-    studentIds: string[],
+    studentIds: string[]
   ) => Promise<{
     success: boolean
     error?: string
@@ -883,21 +813,21 @@ export interface MyAPI {
   updateStudentProjectStatus: (
     projectId: string,
     studentId: string,
-    status: "participating" | "expected" | "absent",
+    status: "participating" | "expected" | "absent"
   ) => Promise<{
     success: boolean
     error?: string
   }>
   updateStudentOrders: (
     projectId: string,
-    studentOrders: { studentId: string; customOrder: number }[],
+    studentOrders: { studentId: string; customOrder: number }[]
   ) => Promise<{
     success: boolean
     error?: string
   }>
   checkGradingDataForStudents: (
     projectId: string,
-    studentIds: string[],
+    studentIds: string[]
   ) => Promise<{
     success: boolean
     hasAnyData?: boolean
@@ -939,7 +869,7 @@ export interface MyAPI {
       | "proposed"
       | "final"
     scoredByUserId?: string | null
-  }) => Promise<QuestionScore>
+  }) => Promise<QuestionScoreOperationResult>
 
   // Backward compatibility alias
   createQuestionScoreLegacy: (data: {
@@ -974,37 +904,29 @@ export interface MyAPI {
       comment?: string
       version?: number
     },
-    expectedVersion?: number,
-  ) => Promise<QuestionScore>
+    expectedVersion?: number
+  ) => Promise<QuestionScoreOperationResult>
   deleteQuestionScore: (id: string) => Promise<QuestionScore | void>
   getQuestionScoreComparison: (
-    cropRegionId: string,
     studentId: string,
-  ) => Promise<{
-    current?: QuestionScore
-    competing?: QuestionScore[]
-    needsResolution: boolean
-  }>
+    cropRegionId: string
+  ) => Promise<QuestionScoreComparisonResult>
   finalizeQuestionScore: (
-    cropRegionId: string,
     studentId: string,
+    cropRegionId: string,
     scoredByUserId: string,
     scoreData: {
       partialScore?: number
       status: string
       comments?: string
-    },
-  ) => Promise<QuestionScore>
+    }
+  ) => Promise<QuestionScoreOperationResult>
 
   // Backward compatibility aliases
   getQuestionScoreComparisonLegacy: (
     studentAnswerId: string,
-    layoutRegionId: string,
-  ) => Promise<{
-    current?: QuestionScore
-    competing?: QuestionScore[]
-    needsResolution: boolean
-  }>
+    layoutRegionId: string
+  ) => Promise<QuestionScoreComparisonResult>
   finalizeQuestionScoreLegacy: (
     studentAnswerId: string,
     layoutRegionId: string,
@@ -1013,7 +935,7 @@ export interface MyAPI {
       partialScore?: number
       status: string
       comments?: string
-    },
+    }
   ) => Promise<QuestionScore>
   getStudentAnswerProgress: (studentAnswerId: string) => Promise<{
     totalQuestions: number
@@ -1109,15 +1031,13 @@ export interface MyAPI {
     }) => Promise<{
       success: boolean
       dataUrl?: string
-      width?: number   // 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため）
+      width?: number // 描画時に使用すべき論理サイズ（Retinaでimg.widthは2倍になるため）
       height?: number
       error?: string
     }>
 
     // PDF保存先選択ダイアログ（Canvas描画前に呼び出す）
-    selectPdfSavePath: (options: {
-      projectName?: string
-    }) => Promise<{
+    selectPdfSavePath: (options: { projectName?: string }) => Promise<{
       success: boolean
       filePath?: string
       canceled?: boolean
@@ -1228,43 +1148,41 @@ export interface MyAPI {
      * プロジェクトをZIPアーカイブとしてエクスポート
      */
     exportProject: (
-      options: import("./project-archive.types").ExportProjectOptions,
+      options: import("./project-archive.types").ExportProjectOptions
     ) => Promise<import("./project-archive.types").ExportProjectResult>
 
     /**
      * アーカイブファイルを解析してプレビュー情報を取得
      */
     analyzeArchive: (
-      options: import("./project-archive.types").AnalyzeArchiveOptions,
+      options: import("./project-archive.types").AnalyzeArchiveOptions
     ) => Promise<import("./project-archive.types").AnalyzeArchiveResult>
 
     /**
      * アーカイブを新規プロジェクトとしてインポート
      */
     importAsNew: (
-      options: import("./project-archive.types").ImportAsNewOptions,
+      options: import("./project-archive.types").ImportAsNewOptions
     ) => Promise<import("./project-archive.types").ImportAsNewResult>
 
     /**
      * 競合を検出（マージインポート用ドライラン）
      */
     detectConflicts: (
-      options: import("./project-archive.types").DetectConflictsOptions,
+      options: import("./project-archive.types").DetectConflictsOptions
     ) => Promise<import("./project-archive.types").ConflictDetectionResult>
 
     /**
      * マージインポートを実行
      */
     mergeImport: (
-      options: import("./project-archive.types").MergeImportOptions,
+      options: import("./project-archive.types").MergeImportOptions
     ) => Promise<import("./project-archive.types").MergeImportResult>
 
     /**
      * エクスポート保存先選択ダイアログ
      */
-    selectExportSavePath: (options: {
-      projectName?: string
-    }) => Promise<{
+    selectExportSavePath: (options: { projectName?: string }) => Promise<{
       success: boolean
       filePath?: string
       canceled?: boolean
@@ -1308,13 +1226,13 @@ export interface MyAPI {
       percentage: number
       currentStepIndex?: number
       totalSteps?: number
-    }) => void,
+    }) => void
   ) => () => void
 
   // Drawing Annotation related
   drawing: {
     create: (
-      data: import("./drawing-annotation.types").DrawingCreateData,
+      data: import("./drawing-annotation.types").DrawingCreateData
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation
@@ -1322,7 +1240,7 @@ export interface MyAPI {
     }>
     getByQuestionScore: (
       questionScoreId: string,
-      type?: import("./drawing-annotation.types").DrawingType,
+      type?: import("./drawing-annotation.types").DrawingType
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1331,7 +1249,7 @@ export interface MyAPI {
     getByStudent: (
       studentId: string,
       projectId: string,
-      type?: import("./drawing-annotation.types").DrawingType,
+      type?: import("./drawing-annotation.types").DrawingType
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1339,7 +1257,7 @@ export interface MyAPI {
     }>
     getByProject: (
       projectId: string,
-      type?: import("./drawing-annotation.types").DrawingType,
+      type?: import("./drawing-annotation.types").DrawingType
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1347,7 +1265,7 @@ export interface MyAPI {
     }>
     update: (
       id: string,
-      data: import("./drawing-annotation.types").DrawingUpdateData,
+      data: import("./drawing-annotation.types").DrawingUpdateData
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation
@@ -1359,13 +1277,13 @@ export interface MyAPI {
     }>
     deleteByQuestionScore: (
       questionScoreId: string,
-      type?: import("./drawing-annotation.types").DrawingType,
+      type?: import("./drawing-annotation.types").DrawingType
     ) => Promise<{
       success: boolean
       error?: string
     }>
     batchCreate: (
-      annotations: import("./drawing-annotation.types").DrawingCreateData[],
+      annotations: import("./drawing-annotation.types").DrawingCreateData[]
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1375,7 +1293,7 @@ export interface MyAPI {
       updates: Array<{
         id: string
         data: import("./drawing-annotation.types").DrawingUpdateData
-      }>,
+      }>
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1401,12 +1319,27 @@ interface ConvertedImage {
   buffer: ArrayBuffer
 }
 
+// MathJax 3 ブラウザ版の型定義
+interface MathJaxObject {
+  startup?: {
+    document?: unknown
+    defaultReady?: () => void | Promise<void>
+  }
+  typesetPromise?: (elements?: (Element | null)[]) => Promise<void>
+  typeset?: (elements?: (Element | null)[]) => void
+  tex2svg?: (tex: string, options?: Record<string, unknown>) => Element
+}
+
 declare global {
   interface Window {
     electronAPI: MyAPI
     mathJaxReady?: boolean
-    MathJax?: typeof import("mathjax") | undefined
-    // パスワード保護PDF変換用のグローバルコールバック
+    MathJax?: MathJaxObject
+    // パスワード保護PDF変換用のグローバルコールバック（01-upload/utils/password-utils.ts用）
+    __masterImagePasswordResolve?: ((images: ConvertedImage[]) => void) | null
+    __masterImagePasswordReject?: ((reason?: unknown) => void) | null
+    __masterImagePasswordFile?: File | null
+    // パスワード保護PDF変換用のグローバルコールバック（hooks/useMasterAnswers.ts用）
     __masterAnswerPasswordResolve?: ((images: ConvertedImage[]) => void) | null
     __masterAnswerPasswordReject?: ((error: Error) => void) | null
     __masterAnswerPasswordFile?: File | null

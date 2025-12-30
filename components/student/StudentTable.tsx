@@ -18,13 +18,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { StudentData } from "@/types/common.types"
 import { Edit, PlusCircle, Search, Trash2, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import StudentModal from "@/components/student/StudentModal"
+import type { Prisma } from "@prisma/client"
 
 interface StudentWithMemberships {
   id: string
@@ -126,14 +126,15 @@ export default function StudentTable() {
 
       if (filterClassId !== "all") {
         const belongsToClass = student.memberships.some(
-          (m) => m.class.id === filterClassId && isCurrentMembership(m),
+          (m) => m.class.id === filterClassId && isCurrentMembership(m)
         )
         if (!belongsToClass) return false
       }
 
       if (filterMembershipStatus === "current") {
         return (
-          matchesSearch && student.memberships.some((m) => isCurrentMembership(m))
+          matchesSearch &&
+          student.memberships.some((m) => isCurrentMembership(m))
         )
       } else if (filterMembershipStatus === "past") {
         return (
@@ -149,7 +150,7 @@ export default function StudentTable() {
     .sort((a, b) => {
       // Sort by name
       return `${a.lastName}${a.firstName}`.localeCompare(
-        `${b.lastName}${b.firstName}`,
+        `${b.lastName}${b.firstName}`
       )
     })
 
@@ -176,28 +177,35 @@ export default function StudentTable() {
     }
   }
 
-  const handleSaveStudent = async (studentData: Partial<StudentData>) => {
+  const handleCreateStudent = async (
+    studentData: Prisma.StudentCreateInput
+  ) => {
     try {
-      if (studentToEdit) {
-        const updatedStudent = await window.electronAPI.updateStudent(
-          studentToEdit.id,
-          studentData,
-        )
-        setStudents(
-          students.map((s) =>
-            s.id === updatedStudent.id ? updatedStudent : s,
-          ),
-        )
-      } else {
-        const newStudent = await window.electronAPI.createStudent(
-          studentData as any,
-        )
-        setStudents([...students, newStudent])
-      }
+      const newStudent = await window.electronAPI.createStudent(studentData)
+      setStudents([...students, newStudent])
       setIsStudentModalOpen(false)
     } catch (error) {
-      console.error("Failed to save student:", error)
-      alert("生徒の保存に失敗しました。")
+      console.error("Failed to create student:", error)
+      alert("生徒の作成に失敗しました。")
+    }
+  }
+
+  const handleUpdateStudent = async (
+    id: string,
+    studentData: Prisma.StudentUpdateInput
+  ) => {
+    try {
+      const updatedStudent = await window.electronAPI.updateStudent(
+        id,
+        studentData
+      )
+      setStudents(
+        students.map((s) => (s.id === updatedStudent.id ? updatedStudent : s))
+      )
+      setIsStudentModalOpen(false)
+    } catch (error) {
+      console.error("Failed to update student:", error)
+      alert("生徒の更新に失敗しました。")
     }
   }
 
@@ -205,7 +213,7 @@ export default function StudentTable() {
     setStudents((prevStudents) => {
       const existingStudentIds = new Set(prevStudents.map((s) => s.id))
       const newStudents = importedStudents.filter(
-        (s) => !existingStudentIds.has(s.id),
+        (s) => !existingStudentIds.has(s.id)
       )
       return [...prevStudents, ...newStudents]
     })
@@ -222,176 +230,169 @@ export default function StudentTable() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-        {/* Controls */}
-        <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3">
-          <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <Search className="text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="生徒名・学籍番号で検索"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-60"
-              />
-            </div>
-            <Select value={filterClassId} onValueChange={setFilterClassId}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="学級フィルタ" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべての学級</SelectItem>
-                {classes
-                  .filter((c) => c.isVisible !== false)
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={filterMembershipStatus}
-              onValueChange={setFilterMembershipStatus}
-            >
-              <SelectTrigger className="w-36">
-                <SelectValue placeholder="所属状況" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">すべて</SelectItem>
-                <SelectItem value="current">現在所属中</SelectItem>
-                <SelectItem value="past">過去の所属</SelectItem>
-                <SelectItem value="unassigned">未所属</SelectItem>
-              </SelectContent>
-            </Select>
-            <span className="text-muted-foreground text-sm">
-              {filteredStudents.length}名
-            </span>
+      {/* Controls */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <Search className="text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="生徒名・学籍番号で検索"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-60"
+            />
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleAddNewStudent}
-              size="sm"
-              variant="outline"
-            >
-              <PlusCircle className="mr-2 h-4 w-4" />
-              生徒追加
-            </Button>
-            <Button
-              onClick={() => setIsSpreadsheetImportModalOpen(true)}
-              size="sm"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              表形式インポート
-            </Button>
-          </div>
+          <Select value={filterClassId} onValueChange={setFilterClassId}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="学級フィルタ" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべての学級</SelectItem>
+              {classes
+                .filter((c) => c.isVisible !== false)
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={filterMembershipStatus}
+            onValueChange={setFilterMembershipStatus}
+          >
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="所属状況" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">すべて</SelectItem>
+              <SelectItem value="current">現在所属中</SelectItem>
+              <SelectItem value="past">過去の所属</SelectItem>
+              <SelectItem value="unassigned">未所属</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground text-sm">
+            {filteredStudents.length}名
+          </span>
         </div>
+        <div className="flex gap-2">
+          <Button onClick={handleAddNewStudent} size="sm" variant="outline">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            生徒追加
+          </Button>
+          <Button
+            onClick={() => setIsSpreadsheetImportModalOpen(true)}
+            size="sm"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            表形式インポート
+          </Button>
+        </div>
+      </div>
 
-        {/* Students Table */}
-        <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>学籍番号</TableHead>
-                <TableHead>氏名</TableHead>
-                <TableHead>入学年度</TableHead>
-                <TableHead>所属学級</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredStudents.map((student) => {
-                const currentClasses = getCurrentClasses(student)
+      {/* Students Table */}
+      <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>学籍番号</TableHead>
+              <TableHead>氏名</TableHead>
+              <TableHead>入学年度</TableHead>
+              <TableHead>所属学級</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredStudents.map((student) => {
+              const currentClasses = getCurrentClasses(student)
 
-                return (
-                  <TableRow
-                    key={student.id}
-                    onClick={() => router.push(`/students/${student.id}`)}
-                    className="hover:bg-muted/50 cursor-pointer"
-                  >
-                    <TableCell>{student.studentId}</TableCell>
-                    <TableCell>
-                      {student.lastName} {student.firstName}
-                    </TableCell>
-                    <TableCell>
-                      {student.enrollmentYear || "未設定"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {currentClasses.map((cls, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {cls.name}
-                          </Badge>
-                        ))}
-                        {currentClasses.length === 0 && (
-                          <span className="text-muted-foreground text-sm">
-                            未所属
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditStudent(student)
-                          }}
+              return (
+                <TableRow
+                  key={student.id}
+                  onClick={() => router.push(`/students/${student.id}`)}
+                  className="hover:bg-muted/50 cursor-pointer"
+                >
+                  <TableCell>{student.studentId}</TableCell>
+                  <TableCell>
+                    {student.lastName} {student.firstName}
+                  </TableCell>
+                  <TableCell>{student.enrollmentYear || "未設定"}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {currentClasses.map((cls, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs"
                         >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteStudent(student.id)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-              {filteredStudents.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    該当する生徒が見つかりません。
+                          {cls.name}
+                        </Badge>
+                      ))}
+                      {currentClasses.length === 0 && (
+                        <span className="text-muted-foreground text-sm">
+                          未所属
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEditStudent(student)
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteStudent(student.id)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              )
+            })}
+            {filteredStudents.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center">
+                  該当する生徒が見つかりません。
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-        {/* Modals */}
-        {isStudentModalOpen && (
-          <StudentModal
-            isOpen={isStudentModalOpen}
-            onClose={() => setIsStudentModalOpen(false)}
-            onSave={handleSaveStudent as any}
-            onUpdate={handleSaveStudent as any}
-            studentToEdit={studentToEdit as any}
-          />
-        )}
+      {/* Modals */}
+      {isStudentModalOpen && (
+        <StudentModal
+          isOpen={isStudentModalOpen}
+          onClose={() => setIsStudentModalOpen(false)}
+          onSave={handleCreateStudent}
+          onUpdate={handleUpdateStudent}
+          studentToEdit={studentToEdit}
+        />
+      )}
 
-
-        {isSpreadsheetImportModalOpen && (
-          <SpreadsheetImportModal
-            isOpen={isSpreadsheetImportModalOpen}
-            onClose={() => setIsSpreadsheetImportModalOpen(false)}
-            onImportSuccess={onStudentsImported}
-            existingClasses={classes}
-          />
-        )}
+      {isSpreadsheetImportModalOpen && (
+        <SpreadsheetImportModal
+          isOpen={isSpreadsheetImportModalOpen}
+          onClose={() => setIsSpreadsheetImportModalOpen(false)}
+          onImportSuccess={onStudentsImported}
+          existingClasses={classes}
+        />
+      )}
     </div>
   )
 }

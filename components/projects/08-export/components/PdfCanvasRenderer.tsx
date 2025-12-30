@@ -395,16 +395,16 @@ export function PdfCanvasRenderer({
           poolItem.busy = false
           poolItem.pageIndex = null
           currentlyRendering.delete(pageIndex)
+        }
 
-          // キャンセルされていたら終了
-          if (isCancelledRef.current) return
+        // キャンセルされていたら終了
+        if (isCancelledRef.current) return
 
-          updateProgress()
+        updateProgress()
 
-          // 次のページがあれば描画
-          if (pendingQueue.length > 0) {
-            await renderNext(poolItem)
-          }
+        // 次のページがあれば描画
+        if (pendingQueue.length > 0) {
+          await renderNext(poolItem)
         }
       }
 

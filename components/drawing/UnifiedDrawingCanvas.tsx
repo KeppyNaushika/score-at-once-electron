@@ -42,8 +42,6 @@ export interface UnifiedDrawingCanvasProps {
   className?: string
   /** 描画完了コールバック */
   onDrawingComplete?: (annotation: DrawingAnnotation) => void
-  /** 選択変更コールバック */
-  onSelectionChange?: (annotationId: string | null) => void
 }
 
 /**
@@ -87,7 +85,6 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
   strokeWidth = 3,
   className = "",
   onDrawingComplete,
-  onSelectionChange,
 }) => {
   // 参照
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -121,9 +118,7 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
     finishDrawing,
     cancelDrawing,
     deleteAnnotation,
-    processMathJaxText,
     measureTextSize,
-    clearAnnotations,
   } = useDrawingAnnotations()
   
   // ローカル状態でのアノテーション管理（編集中のリアルタイム更新用）
@@ -284,234 +279,6 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
   )
 
   /**
-   * アノテーション描画
-   */
-  const drawAnnotation = useCallback(
-    (
-      ctx: CanvasRenderingContext2D,
-      annotation: DrawingAnnotation,
-      canvas: HTMLCanvasElement,
-    ) => {
-      const absStart = getAbsoluteCoordinates(
-        annotation.x,
-        annotation.y,
-        canvas,
-      )
-
-      ctx.strokeStyle = annotation.color
-      ctx.lineWidth = annotation.strokeWidth
-      ctx.fillStyle = annotation.color
-
-      // 選択状態の表示
-      const isSelected = drawingState.selectedAnnotationId === annotation.id
-      if (isSelected) {
-        ctx.strokeStyle = CANVAS_SETTINGS.SELECTED_BORDER_COLOR
-        ctx.lineWidth = annotation.strokeWidth + 2
-      }
-
-      switch (annotation.type as DrawingType) {
-        case "line": {
-          const absEnd = getAbsoluteCoordinates(
-            annotation.endX,
-            annotation.endY,
-            canvas,
-          )
-
-          ctx.beginPath()
-          ctx.moveTo(absStart.x, absStart.y)
-
-          // 線のスタイルに応じた描画
-          switch (annotation.lineStyle) {
-            case "wave":
-              drawWaveLine(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
-              break
-            case "zigzag":
-              drawZigzagLine(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
-              break
-            case "double":
-              ctx.lineTo(absEnd.x, absEnd.y)
-              ctx.stroke()
-              ctx.beginPath()
-              const offset = annotation.strokeWidth + 2
-              ctx.moveTo(absStart.x, absStart.y + offset)
-              ctx.lineTo(absEnd.x, absEnd.y + offset)
-              break
-            case "arrow":
-              ctx.lineTo(absEnd.x, absEnd.y)
-              ctx.stroke()
-              drawArrowHead(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
-              break
-            case "both_arrow":
-              ctx.lineTo(absEnd.x, absEnd.y)
-              ctx.stroke()
-              drawArrowHead(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
-              drawArrowHead(ctx, absEnd.x, absEnd.y, absStart.x, absStart.y)
-              break
-            default:
-              ctx.lineTo(absEnd.x, absEnd.y)
-          }
-          ctx.stroke()
-          break
-        }
-
-        case "rectangle": {
-          const absWidth = annotation.width * canvas.width
-          const absHeight = annotation.height * canvas.height
-
-          ctx.beginPath()
-          ctx.rect(absStart.x, absStart.y, absWidth, absHeight)
-          ctx.stroke()
-
-          if (isSelected) {
-            ctx.fillStyle = CANVAS_SETTINGS.SELECTED_BACKGROUND_COLOR
-            ctx.fill()
-          }
-          break
-        }
-
-        case "ellipse": {
-          const absWidth = annotation.width * canvas.width
-          const absHeight = annotation.height * canvas.height
-          const centerX = absStart.x + absWidth / 2
-          const centerY = absStart.y + absHeight / 2
-
-          ctx.beginPath()
-          ctx.ellipse(
-            centerX,
-            centerY,
-            absWidth / 2,
-            absHeight / 2,
-            0,
-            0,
-            2 * Math.PI,
-          )
-          ctx.stroke()
-
-          if (isSelected) {
-            ctx.fillStyle = CANVAS_SETTINGS.SELECTED_BACKGROUND_COLOR
-            ctx.fill()
-          }
-          break
-        }
-
-        case "text": {
-          // テキストボックスの境界線描画
-          if (annotation.textBoxWidth > 0 && annotation.textBoxHeight > 0) {
-            const absWidth = annotation.textBoxWidth * canvas.width
-            const absHeight = annotation.textBoxHeight * canvas.height
-
-            ctx.strokeStyle = isSelected
-              ? CANVAS_SETTINGS.SELECTED_BORDER_COLOR
-              : CANVAS_SETTINGS.UNSELECTED_BORDER_COLOR
-            ctx.lineWidth = 1
-            ctx.setLineDash([5, 5])
-            ctx.strokeRect(absStart.x, absStart.y, absWidth, absHeight)
-            ctx.setLineDash([])
-          }
-
-          // テキスト描画（MathJax処理済みの場合はSVGとして描画）
-          if (annotation.text) {
-            ctx.fillStyle = annotation.color
-            ctx.font = `${annotation.fontSize}px Arial`
-            ctx.fillText(
-              annotation.text,
-              absStart.x,
-              absStart.y + annotation.fontSize,
-            )
-          }
-          break
-        }
-      }
-    },
-    [
-      drawArrowHead,
-      drawWaveLine,
-      drawZigzagLine,
-      drawingState.selectedAnnotationId,
-    ],
-  )
-
-  /**
-   * 一時的なアノテーション描画（描画中）
-   */
-  const drawTemporaryAnnotation = useCallback(
-    (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-      if (!startPoint || !currentPoint || !drawingState.drawingAnnotation)
-        return
-
-      const absStart = getAbsoluteCoordinates(
-        startPoint.x,
-        startPoint.y,
-        canvas,
-      )
-      const absCurrent = getAbsoluteCoordinates(
-        currentPoint.x,
-        currentPoint.y,
-        canvas,
-      )
-
-      ctx.strokeStyle = CANVAS_SETTINGS.CREATING_BORDER_COLOR
-      ctx.lineWidth = strokeWidth
-      ctx.setLineDash([5, 5])
-
-      const width = Math.abs(absCurrent.x - absStart.x)
-      const height = Math.abs(absCurrent.y - absStart.y)
-
-      switch (currentTool) {
-        case "line":
-          ctx.beginPath()
-          ctx.moveTo(absStart.x, absStart.y)
-          ctx.lineTo(absCurrent.x, absCurrent.y)
-          ctx.stroke()
-          break
-
-        case "rectangle":
-          ctx.strokeRect(
-            Math.min(absStart.x, absCurrent.x),
-            Math.min(absStart.y, absCurrent.y),
-            width,
-            height,
-          )
-          break
-
-        case "ellipse":
-          const centerX = (absStart.x + absCurrent.x) / 2
-          const centerY = (absStart.y + absCurrent.y) / 2
-          ctx.beginPath()
-          ctx.ellipse(
-            centerX,
-            centerY,
-            width / 2,
-            height / 2,
-            0,
-            0,
-            2 * Math.PI,
-          )
-          ctx.stroke()
-          break
-
-        case "text":
-          ctx.strokeRect(
-            Math.min(absStart.x, absCurrent.x),
-            Math.min(absStart.y, absCurrent.y),
-            width,
-            height,
-          )
-          break
-      }
-
-      ctx.setLineDash([])
-    },
-    [
-      startPoint,
-      currentPoint,
-      drawingState.drawingAnnotation,
-      currentTool,
-      strokeWidth,
-    ],
-  )
-
-  /**
    * ポイントがアノテーション内にあるかチェック
    */
   const isPointInAnnotation = useCallback(
@@ -637,7 +404,7 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
             case "zigzag":
               drawZigzagLine(ctx, absStart.x, absStart.y, absEnd.x, absEnd.y)
               break
-            case "double":
+            case "double": {
               ctx.lineTo(absEnd.x, absEnd.y)
               ctx.stroke()
               ctx.beginPath()
@@ -645,6 +412,7 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
               ctx.moveTo(absStart.x, absStart.y + offset)
               ctx.lineTo(absEnd.x, absEnd.y + offset)
               break
+            }
             case "arrow":
               ctx.lineTo(absEnd.x, absEnd.y)
               ctx.stroke()
@@ -775,7 +543,7 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
           )
           break
 
-        case "ellipse":
+        case "ellipse": {
           const centerX = (absStart.x + absCurrent.x) / 2
           const centerY = (absStart.y + absCurrent.y) / 2
           ctx.beginPath()
@@ -790,6 +558,7 @@ export const UnifiedDrawingCanvas: React.FC<UnifiedDrawingCanvasProps> = ({
           )
           ctx.stroke()
           break
+        }
 
         case "text":
           ctx.strokeRect(

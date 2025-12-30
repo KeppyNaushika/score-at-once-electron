@@ -7,7 +7,7 @@ import { QuestionAssignmentMatrixWithFillHandle } from "@/components/projects/04
 import { SubtotalAssignmentMatrixWithFillHandle } from "@/components/projects/04-question-group/components/SubtotalAssignmentMatrixWithFillHandle"
 import { SubtotalGroupSelector } from "@/components/projects/04-question-group/components/SubtotalGroupSelector"
 import { Button } from "@/components/ui/button"
-import { CropRegionWithDetails, SubtotalGroupWithItems } from "@/types/electron"
+import { CropRegionWithDetails, ProjectSubtotalGroupWithSubtotalGroup, ProjectWithDetails, SubtotalGroupWithItems } from "@/types/electron"
 import { Calculator } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
@@ -18,11 +18,11 @@ export default function SubtotalGroupPage() {
   const { helpButton } = usePageHelp()
   const projectId = params.projectId as string
 
-  const [project, setProject] = useState<any>(null)
+  const [_project, setProject] = useState<ProjectWithDetails | null>(null)
   const [activeSubtotalGroups, setActiveSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
-  const [availableSubtotalGroups, setAvailableSubtotalGroups] = useState<
+  const [_availableSubtotalGroups, setAvailableSubtotalGroups] = useState<
     SubtotalGroupWithItems[]
   >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithDetails[]>([])
@@ -61,7 +61,7 @@ export default function SubtotalGroupPage() {
       ) {
         const activeGroups =
           activeSubtotalGroupsResponse.projectSubtotalGroups?.map(
-            (psg: any) => psg.subtotalGroup,
+            (psg: ProjectSubtotalGroupWithSubtotalGroup) => psg.subtotalGroup as SubtotalGroupWithItems,
           ) || []
         setActiveSubtotalGroups(activeGroups)
       }

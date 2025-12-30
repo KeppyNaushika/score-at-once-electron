@@ -1,5 +1,5 @@
 import type { ExtendedDisabledState } from "@/components/projects/06-student-answers/student-answer-table/types"
-import type { UnifiedFile, UnifiedStudent } from "@/types/student-answer.types"
+import type { UnifiedFile, UnifiedStudent } from "@/components/projects/06-student-answers/types"
 
 /**
  * 生徒をcustomOrder順にソートする

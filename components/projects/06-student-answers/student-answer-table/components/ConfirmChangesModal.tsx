@@ -14,7 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import type {
   PendingChange,
   ScoringDataOption,
-} from "@/types/student-answer.types"
+} from "@/components/projects/06-student-answers/types"
 import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
 import { useState } from "react"
 
@@ -82,7 +82,7 @@ export function ConfirmChangesModal({
                   key={change.id}
                   className="flex items-center gap-4 rounded-lg border bg-gray-50 p-3"
                 >
-                  <span className="min-w-[30px] font-mono text-sm text-gray-500">
+                  <span className="min-w-7.5 font-mono text-sm text-gray-500">
                     #{index + 1}
                   </span>
                   <div className="flex-1 text-sm">
@@ -130,7 +130,7 @@ export function ConfirmChangesModal({
                   <RadioGroupItem
                     value="with-scoring"
                     id="with-scoring"
-                    className="mt-1 flex-shrink-0"
+                    className="mt-1 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <Label
@@ -139,7 +139,7 @@ export function ConfirmChangesModal({
                     >
                       <div className="flex flex-wrap items-center gap-2 font-medium text-blue-800">
                         採点情報も一緒に入れ替え
-                        <span className="flex-shrink-0 rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
+                        <span className="shrink-0 rounded-full bg-blue-600 px-2 py-1 text-xs text-white">
                           推奨
                         </span>
                       </div>
@@ -157,7 +157,7 @@ export function ConfirmChangesModal({
                   <RadioGroupItem
                     value="image-only"
                     id="image-only"
-                    className="mt-1 flex-shrink-0"
+                    className="mt-1 shrink-0"
                   />
                   <div className="min-w-0 flex-1">
                     <Label
@@ -165,14 +165,14 @@ export function ConfirmChangesModal({
                       className="block cursor-pointer"
                     >
                       <div className="flex flex-wrap items-center gap-2 font-medium text-orange-800">
-                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
                         答案画像のみ入れ替え
                       </div>
                       <div className="mt-2 text-sm text-orange-700">
                         採点情報は元の位置に残します。
                       </div>
                       <div className="mt-2 flex items-center gap-1 text-sm font-medium text-red-600">
-                        <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
                         注意: 答案と評価結果の不整合が発生します
                       </div>
                     </Label>
@@ -185,7 +185,7 @@ export function ConfirmChangesModal({
             {selectedOption === "image-only" && (
               <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
                   <div className="min-w-0 flex-1">
                     <div className="mb-3 font-medium text-red-800">
                       ⚠️ データ整合性への影響

@@ -2,8 +2,8 @@
 import type {
   CropRegionWithProjectPage,
   PageImageWithProjectStudents,
-  ScoringStatus,
   QuestionScore,
+  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
@@ -33,7 +33,7 @@ export function useBatchScoring({
       statusOrAnswerIds: ScoringStatus | string | string[],
       statusOrPartialScore?: ScoringStatus | number | null,
       partialScore?: number | null,
-      selectedAnswers: Set<string> = new Set(),
+      selectedAnswers: Set<string> = new Set()
     ) => {
       // 引数の解析
       let answerIds: string | string[]
@@ -56,9 +56,7 @@ export function useBatchScoring({
         status = statusOrAnswerIds as ScoringStatus
         answerIds = Array.from(selectedAnswers)
         inputPartialScore =
-          typeof statusOrPartialScore === "number"
-            ? statusOrPartialScore
-            : null
+          typeof statusOrPartialScore === "number" ? statusOrPartialScore : null
       } else {
         // 旧形式: handleBatchScore(answerIds, status)
         answerIds = statusOrAnswerIds as string | string[]
@@ -84,7 +82,7 @@ export function useBatchScoring({
 
       const ids = Array.isArray(answerIds) ? answerIds : [answerIds]
       const currentCropRegion = cropRegions.find(
-        (r) => r.id === currentCropRegionId,
+        (r) => r.id === currentCropRegionId
       )
 
       if (!currentCropRegion) return
@@ -98,7 +96,7 @@ export function useBatchScoring({
         const currentScore = findQuestionScore(
           questionScores,
           pageImage.studentId,
-          currentCropRegion.id,
+          currentCropRegion.id
         )
 
         let newScore: number | null = 0
@@ -155,25 +153,22 @@ export function useBatchScoring({
             }
             const result = await window.electronAPI.updateQuestionScore(
               currentScore.id,
-              updateData,
+              updateData
             )
 
-            if ((result as any).success || result) {
+            if (result.success && result.score) {
+              const updatedScore = result.score
               setQuestionScores((prev) =>
                 prev.map((score) =>
                   score.id === currentScore.id
-                    ? ({
+                    ? {
                         ...score,
-                        partialScore: newScore !== null ? newScore : null,
+                        partialScore: updatedScore.partialScore,
                         status: scoringStatus,
-                        updatedAt: new Date(
-                          (result as any).score?.updatedAt ||
-                            result.updatedAt ||
-                            Date.now(),
-                        ),
-                      } as QuestionScore)
-                    : score,
-                ),
+                        updatedAt: new Date(updatedScore.updatedAt),
+                      }
+                    : score
+                )
               )
             }
           } else {
@@ -188,18 +183,18 @@ export function useBatchScoring({
             const result =
               await window.electronAPI.createQuestionScore(scoreData)
 
-            if ((result as any).success || result.id) {
-              const createdScore = (result as any).score || result
-              const newQuestionScore = {
+            if (result.success && result.score) {
+              const createdScore = result.score
+              const newQuestionScore: QuestionScore = {
                 id: createdScore.id,
-                cropRegionId: currentCropRegion.id,
-                studentId: pageImage.studentId,
-                partialScore: newScore !== null ? newScore : null,
-                status: scoringStatus,
-                scoredByUserId: effectiveUserId,
-                createdAt: new Date(createdScore.createdAt || Date.now()),
-                updatedAt: new Date(createdScore.updatedAt || Date.now()),
-              } as QuestionScore
+                cropRegionId: createdScore.cropRegionId,
+                studentId: createdScore.studentId,
+                partialScore: createdScore.partialScore,
+                status: createdScore.status,
+                scoredByUserId: createdScore.scoredByUserId,
+                createdAt: createdScore.createdAt,
+                updatedAt: createdScore.updatedAt,
+              }
 
               setQuestionScores((prev) => [...prev, newQuestionScore])
             }
@@ -225,7 +220,7 @@ export function useBatchScoring({
         } catch (error) {
           console.error("Error in batch scoring:", error)
           toast.error(
-            `採点中にエラーが発生しました: ${pageImage.student?.lastName || "不明な生徒"}`,
+            `採点中にエラーが発生しました: ${pageImage.student?.lastName || "不明な生徒"}`
           )
         }
       }
@@ -238,7 +233,7 @@ export function useBatchScoring({
       pageImages,
       questionScores,
       setQuestionScores,
-    ],
+    ]
   )
 
   return {

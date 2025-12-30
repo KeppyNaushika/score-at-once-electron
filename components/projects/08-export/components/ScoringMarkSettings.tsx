@@ -1,6 +1,7 @@
 "use client"
 
 import { ScoringMarkSettingsContainer } from "@/components/projects/08-export/components/scoring-mark-settings/components/ScoringMarkSettingsContainer"
+import type { ScoringMarkConfig } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoring-mark-types"
 
 // Re-export types for backward compatibility
 export type {
@@ -26,8 +27,8 @@ export {
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoring-mark-constants"
 
 interface ScoringMarkSettingsProps {
-  config: any
-  onChange: (config: any) => void
+  config: ScoringMarkConfig
+  onChange: (config: ScoringMarkConfig) => void
 }
 
 export default function ScoringMarkSettings(props: ScoringMarkSettingsProps) {

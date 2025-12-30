@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import type { DrawingAnnotation } from "@/types/drawing-annotation.types"
@@ -12,13 +11,16 @@ import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useTextboxV4Integration } from "./hooks/text/useTextboxIntegration"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
-import type { AnswerIndividualViewProps } from "./types/answer-individual-types"
+import type {
+  AnswerIndividualViewProps,
+  LineStyle,
+} from "./types/answer-individual-types"
 
 export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
   currentCropRegion,
-  onScoringDataScore,
+  onScoringDataScore: _onScoringDataScore,
   pageImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
@@ -37,7 +39,7 @@ export default function AnswerIndividualView({
   // 現在表示中の採点データを取得
   const currentScoringData =
     scoringDatas.find(
-      (scoringData) => scoringData.id === currentScoringDataId,
+      (scoringData) => scoringData.id === currentScoringDataId
     ) ?? null
 
   // 正しいQuestionScore.idを取得（studentIdとcropRegionIdで検索）
@@ -48,7 +50,7 @@ export default function AnswerIndividualView({
     const found = questionScores.find(
       (qs) =>
         qs.studentId === currentStudentId &&
-        qs.cropRegionId === currentCropRegion.id,
+        qs.cropRegionId === currentCropRegion.id
     )
     return found?.id ?? null
   }, [questionScores, currentStudentId, currentCropRegion])
@@ -63,7 +65,7 @@ export default function AnswerIndividualView({
       currentStudentId,
       currentCropRegionId: currentCropRegion?.id,
       currentUserId,
-    },
+    }
   )
 
   // 透明度制御用：全設問のアノテーション読み込み
@@ -88,7 +90,7 @@ export default function AnswerIndividualView({
         // ElectronAPIを直接呼び出してフック依存関係を回避
         const result = await window.electronAPI.drawing.getByStudent(
           currentStudentId,
-          currentCropRegion.projectPage.projectId,
+          currentCropRegion.projectPage.projectId
         )
 
         if (result.success && result.data) {
@@ -197,25 +199,25 @@ export default function AnswerIndividualView({
         // レガシーモード: 古いモーダルを開く（既存のロジック維持）
         // 注：この部分は将来的に削除予定
         console.warn(
-          "レガシーテキストモードは非推奨です。V4統合モードをご利用ください。",
+          "レガシーテキストモードは非推奨です。V4統合モードをご利用ください。"
         )
       }
     },
-    [useV4Integration, v4Integration],
+    [useV4Integration, v4Integration]
   )
 
   // V4統合: テキスト要素の再編集処理
   const handleTextElementReClick = useCallback(
-    (element: any) => {
+    (element: { x: number; y: number; text?: string; id: string; color?: string }) => {
       // V4統合モード: V4統合モーダルを開く
       v4Integration.openV4Modal(
         { x: element.x, y: element.y },
         element.text || "",
-        element.id,
+        element.id
       )
       v4Integration.setCurrentTextColor(element.color || "#000000")
     },
-    [v4Integration],
+    [v4Integration]
   )
 
   // イベントハンドリング
@@ -305,7 +307,7 @@ export default function AnswerIndividualView({
 
     const newZoom = Math.min(
       zoom * ZOOM_SETTINGS.zoomInDelta,
-      ZOOM_SETTINGS.max,
+      ZOOM_SETTINGS.max
     )
 
     // 現在のスクロール位置から、ビューポート中心の画像上の座標を計算
@@ -387,7 +389,7 @@ export default function AnswerIndividualView({
         total +
         img.naturalHeight +
         (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-      0,
+      0
     )
 
     // 全体をコンテナに収めるためのズームを計算
@@ -398,7 +400,7 @@ export default function AnswerIndividualView({
     // ズーム制限を適用
     const constrainedZoom = Math.min(
       Math.max(newZoom, ZOOM_SETTINGS.min),
-      ZOOM_SETTINGS.max,
+      ZOOM_SETTINGS.max
     )
 
     onZoomChange(constrainedZoom)
@@ -545,7 +547,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "画面のパン操作を行います",
       },
-    },
+    }
   )
 
   // 選択ツール
@@ -559,7 +561,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "図形を選択・移動・編集します",
       },
-    },
+    }
   )
 
   // テキストツール
@@ -573,7 +575,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "テキストを追加します",
       },
-    },
+    }
   )
 
   // 線ツール
@@ -587,7 +589,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "直線を描画します",
       },
-    },
+    }
   )
 
   // 矩形ツール
@@ -601,7 +603,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "矩形を描画します",
       },
-    },
+    }
   )
 
   // 楕円ツール
@@ -615,7 +617,7 @@ export default function AnswerIndividualView({
         category: "描画ツール",
         description: "楕円・円を描画します",
       },
-    },
+    }
   )
 
   // 設問変更時に選択設問を画面内で中央寄せ表示（ズームは維持）
@@ -740,7 +742,7 @@ export default function AnswerIndividualView({
                         (index < loadedImages.length - 1
                           ? pageSpacing || 20
                           : 0),
-                      0,
+                      0
                     ) * zoom
                   }px`
                 : `${600 * zoom}px`,
@@ -759,7 +761,7 @@ export default function AnswerIndividualView({
                       total +
                       img.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0,
+                    0
                   )
                 : 600
             }
@@ -779,7 +781,7 @@ export default function AnswerIndividualView({
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
-                        0,
+                        0
                       ) * zoom
                     }px`
                   : `${600 * zoom}px`,
@@ -803,7 +805,7 @@ export default function AnswerIndividualView({
                       total +
                       img.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0,
+                    0
                   )
                 : 600
             }
@@ -823,7 +825,7 @@ export default function AnswerIndividualView({
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
-                        0,
+                        0
                       ) * zoom
                     }px`
                   : `${600 * zoom}px`,
@@ -842,7 +844,7 @@ export default function AnswerIndividualView({
                       total +
                       img.naturalHeight +
                       (index < loadedImages.length - 1 ? pageSpacing || 20 : 0),
-                    0,
+                    0
                   )
                 : 600
             }
@@ -862,7 +864,7 @@ export default function AnswerIndividualView({
                           (index < loadedImages.length - 1
                             ? pageSpacing || 20
                             : 0),
-                        0,
+                        0
                       ) * zoom
                     }px`
                   : `${600 * zoom}px`,
@@ -898,9 +900,11 @@ export default function AnswerIndividualView({
         lineStyle={drawingState.lineStyle}
         onStrokeColorChange={drawingState.setStrokeColor}
         onStrokeWidthChange={drawingState.setStrokeWidth}
-        onLineStyleChange={(style) => drawingState.setLineStyle(style as any)}
+        onLineStyleChange={(style) =>
+          drawingState.setLineStyle(style as LineStyle)
+        }
         selectedElements={drawingState.drawingElements.filter((el) =>
-          drawingState.selectedElementIds.includes(el.id),
+          drawingState.selectedElementIds.includes(el.id)
         )}
         onUpdateSelectedElements={drawingState.updateDrawingElements}
         onClearSelection={drawingState.clearSelection}
@@ -933,8 +937,8 @@ export default function AnswerIndividualView({
         className="hidden"
         alt="Answer sheet for canvas drawing"
         draggable={false}
-        onLoad={(e) => {
-          const img = e.target as HTMLImageElement
+        onLoad={() => {
+          // Image loaded - canvas will use imageRef
         }}
         onError={(e) => {
           console.error("🚫 Hidden img element failed to load:", e)

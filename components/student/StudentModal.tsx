@@ -11,18 +11,26 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Prisma } from "@prisma/client"
+import type { Prisma } from "@prisma/client"
 import { useEffect, useState } from "react"
 
-type StudentWithClass = Prisma.StudentGetPayload<{
-  include: { memberships: { include: { class: true } } }
-}>
+// StudentModalに必要な最小限のフィールド（createdAt/updatedAtは不要）
+interface StudentForEdit {
+  id: string
+  studentId: string
+  lastName: string
+  firstName: string
+  lastNameKana: string
+  firstNameKana: string
+  enrollmentYear?: number | null
+}
+
 interface StudentModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (studentData: Prisma.StudentCreateInput) => void
   onUpdate: (id: string, studentData: Prisma.StudentUpdateInput) => void
-  studentToEdit: StudentWithClass | null
+  studentToEdit: StudentForEdit | null
 }
 
 export default function StudentModal({
@@ -38,7 +46,7 @@ export default function StudentModal({
   const [lastNameKana, setLastNameKana] = useState("")
   const [firstNameKana, setFirstNameKana] = useState("")
   const [enrollmentYear, setEnrollmentYear] = useState<number | undefined>(
-    undefined,
+    undefined
   )
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
 
@@ -223,9 +231,7 @@ export default function StudentModal({
                 }
                 onChange={(e) =>
                   setEnrollmentYear(
-                    e.target.value === ""
-                      ? undefined
-                      : parseInt(e.target.value),
+                    e.target.value === "" ? undefined : parseInt(e.target.value)
                   )
                 }
                 placeholder="例: 2024 (任意)"

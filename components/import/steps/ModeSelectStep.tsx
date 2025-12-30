@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ImportMode } from "@/types/project-archive.types"
 import {
   FilePlus2,
   GitMerge,

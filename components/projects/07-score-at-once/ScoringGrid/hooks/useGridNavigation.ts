@@ -16,7 +16,7 @@ export function useGridNavigation({
         setItemsPerRow(externalItemsPerRow)
       } else {
         const stored = localStorage.getItem("answerGridView-itemsPerLine")
-        let initialValue = [5] // デフォルト値
+        let _initialValue = [5] // デフォルト値
         if (stored) {
           try {
             const parsed = JSON.parse(stored)
@@ -27,7 +27,7 @@ export function useGridNavigation({
               parsed[0] >= 1 &&
               parsed[0] <= 10
             ) {
-              initialValue = parsed
+              _initialValue = parsed
               setItemsPerRow(parsed)
             }
           } catch (error) {

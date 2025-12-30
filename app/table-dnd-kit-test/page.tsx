@@ -254,7 +254,7 @@ function SortableListItem({
 }: {
   id: string
   children: React.ReactNode
-  data?: any
+  data?: Record<string, unknown>
 }) {
   const {
     attributes,

@@ -2,7 +2,7 @@
  * 個人成績表用統計計算ロジック
  */
 
-import type { ScoringData, ScoreDetail } from "../../shared/types/export-types"
+import type { ScoringData } from "../../shared/types/export-types"
 import type { BoxPlotData, StatisticsData, SubtotalStatistics } from "./types"
 
 /**

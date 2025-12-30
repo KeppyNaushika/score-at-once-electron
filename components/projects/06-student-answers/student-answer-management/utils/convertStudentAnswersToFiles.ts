@@ -1,5 +1,5 @@
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
-import type { UnifiedFile } from "@/types/student-answer.types"
+import type { UnifiedFile } from "@/components/projects/06-student-answers/types"
 
 // For backward compatibility, support both processed and raw formats
 type AnswerSheetInput =

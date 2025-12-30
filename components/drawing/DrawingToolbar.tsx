@@ -23,7 +23,6 @@ import {
   Minus,
   Square,
   Circle,
-  Palette,
   Trash2,
   RotateCcw
 } from 'lucide-react'

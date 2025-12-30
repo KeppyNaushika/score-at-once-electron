@@ -2,7 +2,8 @@
 "use no memo"
 
 import { Button } from "@/components/ui/button"
-import { ColumnDef, flexRender, getCoreRowModel } from "@tanstack/react-table"
+import type { CellContext, ColumnDef, Row } from "@tanstack/react-table"
+import { flexRender, getCoreRowModel } from "@tanstack/react-table"
 import type { TableOptions, TableOptionsResolved } from "@tanstack/table-core"
 import { createTable } from "@tanstack/table-core"
 import { Plus, Trash2 } from "lucide-react"
@@ -15,17 +16,22 @@ interface EditableTableProps<T> {
   allowInsertRow?: boolean
   allowDeleteRow?: boolean
   className?: string
-  getRowProps?: (row: any) => { className?: string }
+  getRowProps?: (row: Row<T>) => { className?: string }
 }
 
-interface EditableCellProps {
-  getValue: () => any
-  row: any
-  column: any
-  table: any
+/** Table meta with updateData function for editable cells */
+interface TableMeta {
+  updateData: (rowIndex: number, columnId: string, value: string) => void
 }
 
-function EditableCell({ getValue, row, column, table }: EditableCellProps) {
+type EditableCellProps<T> = CellContext<T, unknown>
+
+function EditableCell<T>({
+  getValue,
+  row,
+  column,
+  table,
+}: EditableCellProps<T>) {
   const initialValue = getValue()
   const [value, setValue] = useState(initialValue)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -35,7 +41,8 @@ function EditableCell({ getValue, row, column, table }: EditableCellProps) {
   }, [initialValue])
 
   const onBlur = () => {
-    table.options.meta?.updateData(row.index, column.id, value)
+    const meta = table.options.meta as TableMeta | undefined
+    meta?.updateData(row.index, column.id, String(value ?? ""))
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -59,15 +66,17 @@ function EditableCell({ getValue, row, column, table }: EditableCellProps) {
     }
   }
 
+  const meta = column.columnDef.meta as { placeholder?: string } | undefined
+
   return (
     <input
       ref={inputRef}
-      value={value || ""}
+      value={String(value ?? "")}
       onChange={(e) => setValue(e.target.value)}
       onBlur={onBlur}
       onKeyDown={onKeyDown}
       className="absolute inset-0 h-full w-full border-none bg-transparent px-4 py-2 text-sm focus:bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
-      placeholder={column.columnDef.meta?.placeholder || ""}
+      placeholder={meta?.placeholder || ""}
     />
   )
 }
@@ -79,7 +88,7 @@ function useLocalReactTable<TData>(options: TableOptions<TData>) {
       onStateChange: () => {},
       renderFallbackValue: null,
       ...options,
-    } as TableOptionsResolved<TData>),
+    } as TableOptionsResolved<TData>)
   )
 
   const [internalState, setInternalState] = useState(() => table.initialState)
@@ -100,7 +109,7 @@ function useLocalReactTable<TData>(options: TableOptions<TData>) {
   return table
 }
 
-export function EditableTable<T extends Record<string, any>>({
+export function EditableTable<T extends object>({
   data,
   columns,
   onDataChange,
@@ -121,15 +130,15 @@ export function EditableTable<T extends Record<string, any>>({
       setTableData(newData)
       setTimeout(() => onDataChange(newData), 0)
     },
-    [tableData, setTableData, onDataChange],
+    [tableData, setTableData, onDataChange]
   )
 
   const addRowAfter = useCallback(
     (index: number) => {
-      const newRow = columns.reduce((acc, col) => {
-        ;(acc as any)[col.id as string] = ""
+      const newRow = columns.reduce<Record<string, string>>((acc, col) => {
+        acc[col.id as string] = ""
         return acc
-      }, {} as T)
+      }, {}) as T
 
       const newData = [
         ...tableData.slice(0, index + 1),
@@ -139,7 +148,7 @@ export function EditableTable<T extends Record<string, any>>({
       setTableData(newData)
       setTimeout(() => onDataChange(newData), 0)
     },
-    [columns, tableData, setTableData, onDataChange],
+    [columns, tableData, setTableData, onDataChange]
   )
 
   const editableColumns = useMemo(
@@ -152,7 +161,7 @@ export function EditableTable<T extends Record<string, any>>({
       {
         id: "addRow",
         header: "",
-        cell: ({ row }: { row: any }) => (
+        cell: ({ row }: { row: Row<T> }) => (
           <Button
             variant="ghost"
             size="sm"
@@ -170,7 +179,7 @@ export function EditableTable<T extends Record<string, any>>({
             {
               id: "actions",
               header: "",
-              cell: ({ row }: { row: any }) => (
+              cell: ({ row }: { row: Row<T> }) => (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -185,7 +194,7 @@ export function EditableTable<T extends Record<string, any>>({
           ]
         : []),
     ],
-    [columns, allowDeleteRow, deleteRow, addRowAfter],
+    [columns, allowDeleteRow, deleteRow, addRowAfter]
   )
 
   const table = useLocalReactTable({
@@ -193,7 +202,7 @@ export function EditableTable<T extends Record<string, any>>({
     columns: editableColumns,
     getCoreRowModel: getCoreRowModel(),
     meta: {
-      updateData: (rowIndex: number, columnId: string, value: any) => {
+      updateData: (rowIndex: number, columnId: string, value: string) => {
         setTableData((old) => {
           const newData = old.map((row, index) => {
             if (index === rowIndex) {
@@ -213,10 +222,10 @@ export function EditableTable<T extends Record<string, any>>({
   })
 
   const addRow = () => {
-    const newRow = columns.reduce((acc, col) => {
-      ;(acc as any)[col.id as string] = ""
+    const newRow = columns.reduce<Record<string, string>>((acc, col) => {
+      acc[col.id as string] = ""
       return acc
-    }, {} as T)
+    }, {}) as T
 
     const newData = [...tableData, newRow]
     setTableData(newData)
@@ -224,11 +233,13 @@ export function EditableTable<T extends Record<string, any>>({
   }
 
   const addMultipleRows = (count: number) => {
-    const newRows = Array.from({ length: count }, () =>
-      columns.reduce((acc, col) => {
-        ;(acc as any)[col.id as string] = ""
-        return acc
-      }, {} as T),
+    const newRows = Array.from(
+      { length: count },
+      () =>
+        columns.reduce<Record<string, string>>((acc, col) => {
+          acc[col.id as string] = ""
+          return acc
+        }, {}) as T
     )
 
     const newData = [...tableData, ...newRows]
@@ -246,10 +257,10 @@ export function EditableTable<T extends Record<string, any>>({
 
     const pastedData = rows.map((row) => {
       const cells = row.split("\t")
-      return columns.reduce((acc, col, index) => {
-        ;(acc as any)[col.id as string] = cells[index] || ""
+      return columns.reduce<Record<string, string>>((acc, col, index) => {
+        acc[col.id as string] = cells[index] || ""
         return acc
-      }, {} as T)
+      }, {}) as T
     })
 
     setTableData(pastedData)
@@ -273,10 +284,10 @@ export function EditableTable<T extends Record<string, any>>({
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext(),
+                          header.getContext()
                         )}
                   </th>
-                )),
+                ))
               )}
             </tr>
           </thead>
@@ -291,7 +302,7 @@ export function EditableTable<T extends Record<string, any>>({
                       <div className="flex h-full items-center px-4 py-2">
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext(),
+                          cell.getContext()
                         )}
                       </div>
                     </td>

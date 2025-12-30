@@ -6,7 +6,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
-import type { AnchorDirection, TextBox } from "../types"
+import type { AnchorDirection, DragState, TextBox } from "../types"
 import {
   drawAnchor,
   drawBackgroundImage,
@@ -30,7 +30,7 @@ export function useCanvasManagement() {
       anchorX: number,
       anchorY: number,
       anchorDirection: AnchorDirection,
-      textSize: number,
+      textSize: number
     ): Promise<void> => {
       const canvas = canvasRef.current
       if (!canvas || !text.trim()) return
@@ -51,7 +51,7 @@ export function useCanvasManagement() {
           estimatedHeight,
           "left",
           "top",
-          textSize,
+          textSize
         )
 
         if (svgElement) {
@@ -62,18 +62,18 @@ export function useCanvasManagement() {
             ctx,
             anchorX,
             anchorY,
-            anchorDirection,
+            anchorDirection
           )
           setStatus("描画完了")
         } else {
           setStatus("SVG生成失敗")
         }
-      } catch (error) {
+      } catch {
         // Canvas描画エラー
         setStatus("描画エラー")
       }
     },
-    [],
+    []
   )
 
   /**
@@ -82,9 +82,9 @@ export function useCanvasManagement() {
   const redrawCanvas = useCallback(
     async (
       textBoxes: TextBox[],
-      currentDrag: any,
+      currentDrag: DragState | null,
       isCreatingAnchor: boolean,
-      backgroundImageUrl?: string,
+      backgroundImageUrl?: string
     ): Promise<void> => {
       const canvas = canvasRef.current
       if (!canvas) return
@@ -117,18 +117,18 @@ export function useCanvasManagement() {
               textBox.x,
               textBox.y,
               textBox.anchorDirection,
-              textBox.textSize,
+              textBox.textSize
             )
           }
         }
 
         setStatus("描画完了")
-      } catch (error) {
+      } catch {
         // Canvas再描画エラー
         setStatus("描画エラー")
       }
     },
-    [renderTextToCanvas],
+    [renderTextToCanvas]
   )
 
   return {

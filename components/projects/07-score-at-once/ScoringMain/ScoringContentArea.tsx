@@ -6,10 +6,11 @@ import type {
   CropRegionWithProjectPage,
   GradingMode,
   LayoutDirection,
-  MasterAnswerData,
+  MasterGridItem,
   PageImageWithProjectStudents,
   QuestionScore,
   ScoringData,
+  ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 
 interface ScoringContentAreaProps {
@@ -17,7 +18,7 @@ interface ScoringContentAreaProps {
 
   /** 採点データ管理（両View共通） */
   allScoringData: ScoringData[]
-  masterAnswerData: MasterAnswerData | null
+  masterAnswerData: MasterGridItem | null
   filteredScoringDataIds: string[]
   selectedScoringDataIds: Set<string>
 
@@ -28,9 +29,9 @@ interface ScoringContentAreaProps {
   onScoringDataSelect: (dataId: string, isSelected: boolean) => void
   onScoringDataReplace?: (ids: string[]) => void
   onScoringDataScore: (
-    statusOrAnswerIds: any,
-    statusOrPartialScore?: any,
-    partialScore?: any,
+    statusOrAnswerIds: ScoringStatus | string | string[],
+    statusOrPartialScore?: ScoringStatus | number | null,
+    partialScore?: number | null,
   ) => void
 
   /** GridView設定 */
@@ -43,7 +44,7 @@ interface ScoringContentAreaProps {
   pageImages?: PageImageWithProjectStudents[]
 
   /** 生徒データコールバック（個別表示でサイドパネルに渡すため） */
-  onStudentsExtracted?: (students: any[]) => void
+  onStudentsExtracted?: (students: { id: string; studentId: string; studentName: string }[]) => void
 
   /** テキスト入力状態変更のコールバック（ショートカット制御用） */
   onTextInputStateChange?: (showTextInput: boolean) => void
@@ -71,7 +72,7 @@ export function ScoringContentArea({
   autoScroll,
   showStudentNames,
   pageImages,
-  onStudentsExtracted,
+  onStudentsExtracted: _onStudentsExtracted,
   onTextInputStateChange,
   currentStudentId,
   currentUserId,

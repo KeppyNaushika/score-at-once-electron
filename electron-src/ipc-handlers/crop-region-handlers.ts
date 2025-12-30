@@ -10,6 +10,51 @@ import {
   createManyCropRegions as dbCreateManyCropRegions,
   updateCropRegionOrders as dbUpdateCropRegionOrders,
 } from "../lib/prisma/cropRegion"
+
+/**
+ * QuestionScoreをIPC用にシリアライズ（DecimalをnumberにDateはそのまま）
+ */
+function serializeQuestionScore(score: {
+  id: string
+  cropRegionId: string
+  studentId: string | null
+  partialScore: { toNumber(): number } | null
+  status: string
+  scoredByUserId: string | null
+  createdAt: Date
+  updatedAt: Date
+}) {
+  return {
+    id: score.id,
+    cropRegionId: score.cropRegionId,
+    studentId: score.studentId,
+    partialScore: score.partialScore ? score.partialScore.toNumber() : null,
+    status: score.status,
+    scoredByUserId: score.scoredByUserId,
+    createdAt: score.createdAt,
+    updatedAt: score.updatedAt,
+  }
+}
+
+/**
+ * CropRegionをIPC用にシリアライズ（questionScoresのDecimalを変換）
+ */
+function serializeCropRegion<T extends { questionScores?: Array<{
+  id: string
+  cropRegionId: string
+  studentId: string | null
+  partialScore: { toNumber(): number } | null
+  status: string
+  scoredByUserId: string | null
+  createdAt: Date
+  updatedAt: Date
+}> }>(region: T) {
+  return {
+    ...region,
+    questionScores: region.questionScores?.map(serializeQuestionScore) || [],
+  }
+}
+
 import {
   createSubtotal as dbCreateSubtotal,
   updateSubtotal as dbUpdateSubtotal,
@@ -125,8 +170,8 @@ export function setupCropRegionHandlers(): void {
           "regions",
         )
 
-        // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
-        return JSON.parse(JSON.stringify(result))
+        // questionScoresのDecimalをnumberに変換
+        return result?.map(serializeCropRegion) || []
       } catch (error) {
         console.error("❌ IPC: get-crop-regions-by-project-id error:", error)
         throw error
@@ -149,8 +194,8 @@ export function setupCropRegionHandlers(): void {
           "regions",
         )
 
-        // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
-        return JSON.parse(JSON.stringify(result))
+        // questionScoresのDecimalをnumberに変換
+        return result?.map(serializeCropRegion) || []
       } catch (error) {
         console.error("❌ IPC: get-question-answer-regions-by-project-id error:", error)
         throw error
@@ -164,8 +209,8 @@ export function setupCropRegionHandlers(): void {
       const result = await dbGetCropRegionById(id)
       console.log("✅ IPC: get-crop-region-by-id result:", result)
 
-      // JSON.stringify/parseで循環参照を除去し、確実にシリアライズ可能にする
-      return result ? JSON.parse(JSON.stringify(result)) : null
+      // questionScoresのDecimalをnumberに変換
+      return result ? serializeCropRegion(result) : null
     } catch (error) {
       console.error("❌ IPC: get-crop-region-by-id error:", error)
       throw error

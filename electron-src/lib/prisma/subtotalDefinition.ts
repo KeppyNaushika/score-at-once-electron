@@ -33,7 +33,7 @@ export const deleteSubtotalDefinition = async (id: string) => {
 // CropRegion ID で Subtotal を削除 (特定の採点領域の定義をすべて削除)
 // TODO: This function needs to be rewritten for new schema
 export const deleteSubtotalDefinitionsByCropRegionId = async (
-  cropRegionId: string,
+  _cropRegionId: string,
 ) => {
   console.warn("deleteSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
   return { count: 0 }
@@ -42,7 +42,7 @@ export const deleteSubtotalDefinitionsByCropRegionId = async (
 // QuestionGroupItem ID で Subtotal を取得 (特定のグループ項目を参照する集計定義を取得)
 // TODO: This function needs to be rewritten for new schema  
 export const getSubtotalDefinitionsByQuestionGroupItemId = async (
-  questionGroupItemId: string,
+  _questionGroupItemId: string,
 ) => {
   console.warn("getSubtotalDefinitionsByQuestionGroupItemId needs rewriting for new schema")
   return []
@@ -51,7 +51,7 @@ export const getSubtotalDefinitionsByQuestionGroupItemId = async (
 // CropRegion ID で Subtotal を取得 (特定の採点領域が持つ集計定義を取得)
 // TODO: This function needs to be rewritten for new schema
 export const getSubtotalDefinitionsByCropRegionId = async (
-  cropRegionId: string,
+  _cropRegionId: string,
 ) => {
   console.warn("getSubtotalDefinitionsByLayoutRegionId needs rewriting for new schema")
   return []

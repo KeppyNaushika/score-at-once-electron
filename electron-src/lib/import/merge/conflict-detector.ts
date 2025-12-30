@@ -15,8 +15,6 @@ import type {
 import type { ExtractedArchiveData } from "../project-archive/archive-extractor"
 import {
   performAllMatching,
-  buildIdMappings,
-  type AllMatchResults,
   type MatchResult,
 } from "./matcher"
 
@@ -216,8 +214,8 @@ export async function detectAllConflicts(
  */
 export async function detectScoreConflicts(
   importData: ExtractedArchiveData,
-  studentIdMapping: Record<string, string>,
-  cropRegionIdMapping: Record<string, string>,
+  _studentIdMapping: Record<string, string>,
+  _cropRegionIdMapping: Record<string, string>,
 ): Promise<CategoryMatchingResult[]> {
   const results: CategoryMatchingResult[] = []
 
