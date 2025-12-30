@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -18,9 +19,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/useTableSort"
 import { Edit, PlusCircle, Search, Trash2, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
 import StudentModal from "@/components/student/StudentModal"
@@ -77,6 +79,15 @@ interface ClassWithMemberships {
   }>
 }
 
+// ソート用の型
+interface StudentSortable {
+  id: string
+  studentId: string
+  fullName: string
+  enrollmentYear: number | null
+  original: StudentWithMemberships
+}
+
 export default function StudentTable() {
   const router = useRouter()
   const [students, setStudents] = useState<StudentWithMemberships[]>([])
@@ -114,9 +125,9 @@ export default function StudentTable() {
     return new Date(m.endDate) >= new Date()
   }
 
-  // Filter and sort students
-  const filteredStudents = students
-    .filter((student) => {
+  // Filter students
+  const filteredStudents = useMemo(() => {
+    return students.filter((student) => {
       const fullName = `${student.lastName} ${student.firstName}`
       const fullNameKana = `${student.lastNameKana} ${student.firstNameKana}`
       const matchesSearch =
@@ -147,12 +158,23 @@ export default function StudentTable() {
       }
       return matchesSearch
     })
-    .sort((a, b) => {
-      // Sort by name
-      return `${a.lastName}${a.firstName}`.localeCompare(
-        `${b.lastName}${b.firstName}`
-      )
-    })
+  }, [students, searchTerm, filterClassId, filterMembershipStatus])
+
+  // ソート用のデータ変換
+  const sortableData = useMemo<StudentSortable[]>(() => {
+    return filteredStudents.map((student) => ({
+      id: student.id,
+      studentId: student.studentId,
+      fullName: `${student.lastName}${student.firstName}`,
+      enrollmentYear: student.enrollmentYear ?? null,
+      original: student,
+    }))
+  }, [filteredStudents])
+
+  // ソート機能
+  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
+    defaultSort: { key: "fullName", direction: "asc" },
+  })
 
   // Event handlers
   const handleAddNewStudent = () => {
@@ -229,21 +251,21 @@ export default function StudentTable() {
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-5">
       {/* Controls */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
+        <div className="border-border/50 bg-card flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <Search className="text-muted-foreground h-4 w-4" />
             <Input
               placeholder="生徒名・学籍番号で検索"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-60"
+              className="border-border/50 bg-muted/20 focus:bg-background h-9 w-64 rounded-lg transition-colors"
             />
           </div>
           <Select value={filterClassId} onValueChange={setFilterClassId}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="h-9 w-44 rounded-lg">
               <SelectValue placeholder="学級フィルタ" />
             </SelectTrigger>
             <SelectContent>
@@ -262,7 +284,7 @@ export default function StudentTable() {
             value={filterMembershipStatus}
             onValueChange={setFilterMembershipStatus}
           >
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="h-9 w-36 rounded-lg">
               <SelectValue placeholder="所属状況" />
             </SelectTrigger>
             <SelectContent>
@@ -272,18 +294,22 @@ export default function StudentTable() {
               <SelectItem value="unassigned">未所属</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground text-sm">
-            {filteredStudents.length}名
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {sortedData.length}名
           </span>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleAddNewStudent} size="sm" variant="outline">
+        <div className="flex gap-3">
+          <Button
+            onClick={handleAddNewStudent}
+            variant="outline"
+            className="rounded-lg"
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             生徒追加
           </Button>
           <Button
             onClick={() => setIsSpreadsheetImportModalOpen(true)}
-            size="sm"
+            className="rounded-lg"
           >
             <Upload className="mr-2 h-4 w-4" />
             表形式インポート
@@ -292,39 +318,66 @@ export default function StudentTable() {
       </div>
 
       {/* Students Table */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>学籍番号</TableHead>
-              <TableHead>氏名</TableHead>
-              <TableHead>入学年度</TableHead>
+      <div className="border-border/50 bg-card min-h-0 flex-1 overflow-hidden rounded-xl border shadow-sm">
+        <Table wrapperClassName="h-full">
+          <TableHeader className="bg-card sticky top-0 z-10 shadow-[0_1px_3px_0_rgba(0,0,0,0.05)]">
+            <TableRow className="hover:bg-muted/40">
+              <SortableTableHead
+                sortKey="studentId"
+                currentSortKey={sortConfig.key as string | null}
+                currentDirection={sortConfig.direction}
+                onSort={(key) => requestSort(key as keyof StudentSortable)}
+              >
+                学籍番号
+              </SortableTableHead>
+              <SortableTableHead
+                sortKey="fullName"
+                currentSortKey={sortConfig.key as string | null}
+                currentDirection={sortConfig.direction}
+                onSort={(key) => requestSort(key as keyof StudentSortable)}
+              >
+                氏名
+              </SortableTableHead>
+              <SortableTableHead
+                sortKey="enrollmentYear"
+                currentSortKey={sortConfig.key as string | null}
+                currentDirection={sortConfig.direction}
+                onSort={(key) => requestSort(key as keyof StudentSortable)}
+              >
+                入学年度
+              </SortableTableHead>
               <TableHead>所属学級</TableHead>
               <TableHead className="text-right">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => {
+            {sortedData.map(({ original: student }) => {
               const currentClasses = getCurrentClasses(student)
 
               return (
                 <TableRow
                   key={student.id}
                   onClick={() => router.push(`/students/${student.id}`)}
-                  className="hover:bg-muted/50 cursor-pointer"
+                  className="group cursor-pointer"
                 >
-                  <TableCell>{student.studentId}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {student.studentId}
+                  </TableCell>
+                  <TableCell className="font-medium">
                     {student.lastName} {student.firstName}
                   </TableCell>
-                  <TableCell>{student.enrollmentYear || "未設定"}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {student.enrollmentYear || (
+                      <span className="text-muted-foreground">未設定</span>
+                    )}
+                  </TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1.5">
                       {currentClasses.map((cls, idx) => (
                         <Badge
                           key={idx}
                           variant="secondary"
-                          className="text-xs"
+                          className="rounded-full px-2.5 py-0.5 text-xs font-normal"
                         >
                           {cls.name}
                         </Badge>
@@ -337,10 +390,11 @@ export default function StudentTable() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleEditStudent(student)
@@ -350,22 +404,26 @@ export default function StudentTable() {
                       </Button>
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
+                        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteStudent(student.id)
                         }}
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               )
             })}
-            {filteredStudents.length === 0 && (
+            {sortedData.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell
+                  colSpan={5}
+                  className="text-muted-foreground h-32 text-center"
+                >
                   該当する生徒が見つかりません。
                 </TableCell>
               </TableRow>
