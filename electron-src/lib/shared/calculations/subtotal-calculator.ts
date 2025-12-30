@@ -2,6 +2,8 @@ import type { CropRegion } from "@prisma/client"
 import {
   getCropSubtotalsByCropRegionId,
   getCropSubtotalsBySubtotalId,
+  type CropSubtotalWithSubtotal,
+  type CropSubtotalWithCropRegion,
 } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "../../prisma/questionScore"
 
@@ -69,16 +71,16 @@ export async function calculateSubtotalScoreForStudent(
     // グループ別に項目をまとめる
     const groupMap = new Map<string, string[]>()
 
-    for (const cropSubtotal of cropSubtotals) {
+    for (const cropSubtotal of cropSubtotals as CropSubtotalWithSubtotal[]) {
       if (!cropSubtotal || typeof cropSubtotal !== "object") continue
 
-      const groupId = (cropSubtotal as any).subtotal?.subtotalGroupId
+      const groupId = cropSubtotal.subtotal?.subtotalGroupId
       if (!groupId) continue
 
       if (!groupMap.has(groupId)) {
         groupMap.set(groupId, [])
       }
-      groupMap.get(groupId)!.push((cropSubtotal as any).subtotalId)
+      groupMap.get(groupId)!.push(cropSubtotal.subtotalId)
     }
 
     if (groupMap.size === 0) {
@@ -101,13 +103,13 @@ export async function calculateSubtotalScoreForStudent(
       // 各項目に関連付けられた設問を取得
       for (const itemId of itemIds) {
         try {
-          const cropSubtotals = await getCropSubtotalsBySubtotalId(itemId)
-          if (cropSubtotals && cropSubtotals.length > 0) {
-            cropSubtotals.forEach((cropSubtotal: any) => {
+          const itemCropSubtotals = await getCropSubtotalsBySubtotalId(itemId)
+          if (itemCropSubtotals && itemCropSubtotals.length > 0) {
+            for (const cropSubtotal of itemCropSubtotals as CropSubtotalWithCropRegion[]) {
               if (cropSubtotal.assignmentType === "QUESTION_ASSIGNMENT") {
                 groupQuestionIds.add(cropSubtotal.cropRegionId)
               }
-            })
+            }
           }
         } catch (error) {
           console.error(
