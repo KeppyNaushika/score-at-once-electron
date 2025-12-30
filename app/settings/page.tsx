@@ -1,7 +1,7 @@
 "use client"
 
 import { KeyboardShortcutSection } from "@/app/settings/components/keyboard-shortcut-section"
-import { useKeyboardSettings } from "@/app/settings/hooks/use-keyboard-settings"
+import { useKeyboardSettings } from "@/app/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { UserEditModal } from "@/components/auth/UserEditModal"

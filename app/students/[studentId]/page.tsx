@@ -9,7 +9,7 @@ import {
 import { MembershipHistoryCard } from "@/app/students/[studentId]/components/membership-history-card"
 import { StudentDetailHeader } from "@/app/students/[studentId]/components/student-detail-header"
 import { StudentInfoCard } from "@/app/students/[studentId]/components/student-info-card"
-import { useStudentDetail } from "@/app/students/[studentId]/hooks/use-student-detail"
+import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDetail"
 import { Membership } from "@/app/students/[studentId]/types"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
