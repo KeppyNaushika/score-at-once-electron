@@ -174,9 +174,10 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
   })
 
   // ========================================
-  // モーダル内ショートカット
+  // モーダル内ショートカット（採点キーと共通）
   // ========================================
-  useCommand("modal.confirmPartial", handlePartialScoreConfirmPartial, {
+  // 部分点/保留キーはモーダル内でも同じキーで確定動作
+  useCommand("scoring.partial", handlePartialScoreConfirmPartial, {
     when: "partialScoreModalOpen",
     metadata: {
       title: "部分点として確定",
@@ -185,7 +186,7 @@ export function useScoringShortcuts(handlers: ScoringShortcutHandlers): void {
     },
   })
 
-  useCommand("modal.confirmPending", handlePartialScoreConfirmPending, {
+  useCommand("scoring.pending", handlePartialScoreConfirmPending, {
     when: "partialScoreModalOpen",
     metadata: {
       title: "保留として確定",

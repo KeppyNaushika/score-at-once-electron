@@ -1,20 +1,26 @@
-import { SCORE_STATUS_CONFIG } from "@/components/projects/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
+import {
+  getDynamicScoreStatusConfig,
+  type DynamicScoreStatusConfig,
+  type ScoreStatusKey,
+} from "@/components/projects/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"
 import CroppedAnswerImage from "@/components/projects/07-score-at-once/ScoringMain/CroppedAnswerImage"
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
+import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 
-const SCORE_STATUS_KEYS = Object.keys(SCORE_STATUS_CONFIG) as Array<
-  keyof typeof SCORE_STATUS_CONFIG
->
+const VALID_STATUS_KEYS: ScoreStatusKey[] = [
+  "unscored",
+  "correct",
+  "partial",
+  "pending",
+  "incorrect",
+  "no_answer",
+  "master",
+]
 
-type ScoreStatusConfig =
-  (typeof SCORE_STATUS_CONFIG)[keyof typeof SCORE_STATUS_CONFIG]
-
-const isScoreStatusKey = (
-  status: keyof typeof SCORE_STATUS_CONFIG
-): status is keyof typeof SCORE_STATUS_CONFIG =>
-  SCORE_STATUS_KEYS.includes(status)
+const isValidStatusKey = (status: string): status is ScoreStatusKey =>
+  VALID_STATUS_KEYS.includes(status as ScoreStatusKey)
 
 interface GridCellProps {
   answer: GridAnswerItem
@@ -22,9 +28,8 @@ interface GridCellProps {
   showStudentNames: boolean
   layoutDirection: LayoutDirection
   calculatedCellHeight: number
-  selectionBorderSettings: {
-    tailwindClass: string
-  }
+  selectionBorderColor: string
+  scoringColors: ScoringStatusColors
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
 }
 
@@ -34,33 +39,39 @@ export function GridCell({
   showStudentNames,
   layoutDirection,
   calculatedCellHeight,
-  selectionBorderSettings,
+  selectionBorderColor,
+  scoringColors,
   onMouseDown,
 }: GridCellProps) {
-  const statusKey: keyof typeof SCORE_STATUS_CONFIG = isScoreStatusKey(
-    answer.status
-  )
+  const statusConfig = getDynamicScoreStatusConfig(scoringColors)
+  const statusKey: ScoreStatusKey = isValidStatusKey(answer.status)
     ? answer.status
     : "unscored"
-  const config: ScoreStatusConfig =
-    SCORE_STATUS_CONFIG[statusKey] ?? SCORE_STATUS_CONFIG.unscored
+  const config = statusConfig[statusKey]
   const Icon = config.icon
   const isMaster =
     answer.studentId === "MASTER" || answer.studentName === "模範解答"
 
-  const cellClasses = ["flex flex-shrink-0 flex-col gap-1 p-2"]
+  // 基本のセルクラス
+  const cellClasses = ["flex flex-shrink-0 flex-col gap-1 p-2 border-2"]
+
+  // スタイルを構築
+  let cellBgStyle: React.CSSProperties = {}
 
   if (isMaster) {
-    cellClasses.push("border-2 border-black bg-white")
+    cellClasses.push("border-black bg-white")
   } else {
-    cellClasses.push("border-2")
     if (isSelected) {
-      cellClasses.push(
-        selectionBorderSettings.tailwindClass,
-        config.selectedBgColor
-      )
+      cellBgStyle = {
+        ...config.selectedBgStyle,
+        borderColor: selectionBorderColor,
+      }
     } else {
-      cellClasses.push(config.borderColor, config.bgColor ?? "bg-white")
+      cellBgStyle = {
+        ...config.bgStyle,
+        borderColor: "transparent",
+      }
+      cellClasses.push("border-transparent")
     }
   }
 
@@ -82,14 +93,15 @@ export function GridCell({
   const isColumnLayout =
     layoutDirection === "down-right" || layoutDirection === "down-left"
 
-  // 列レイアウト時は明示的に高さを設定
-  const cellStyle: React.CSSProperties = isColumnLayout
-    ? {
-        height: calculatedCellHeight,
-        maxHeight: calculatedCellHeight,
-        overflow: "hidden",
-      }
-    : {}
+  // 列レイアウト時は明示的に高さを設定、背景色・ボーダー色を適用
+  const cellStyle: React.CSSProperties = {
+    ...(isColumnLayout && {
+      height: calculatedCellHeight,
+      maxHeight: calculatedCellHeight,
+      overflow: "hidden",
+    }),
+    ...cellBgStyle,
+  }
 
   return (
     <div
@@ -123,6 +135,7 @@ export function GridCell({
             className={`block max-w-full truncate text-xs ${
               isMaster ? "font-bold text-black" : "font-medium"
             }`}
+            style={isMaster ? undefined : config.textStyle}
           >
             {isMaster
               ? answer.studentName
@@ -148,7 +161,7 @@ export function GridCell({
         </div>
 
         {!isMaster && (
-          <Icon className={`h-3 w-3 ${config.textColor} shrink-0`} />
+          <Icon className="h-3 w-3 shrink-0" style={config.iconStyle} />
         )}
       </div>
     </div>

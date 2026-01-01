@@ -11,6 +11,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
+import type { ScoringStatusType } from "@/lib/scoringStatusColors"
 import {
   AlertTriangle,
   CheckCircle,
@@ -43,114 +45,64 @@ interface ScoringToolbarProps {
   gradingMode?: "grid" | "individual" // 採点モード
 }
 
-// 採点ボタン設定
+// ScoringStatus -> ScoringStatusType へのマッピング
+const STATUS_MAP: Record<ScoringStatus, ScoringStatusType> = {
+  unscored: "ungraded",
+  correct: "correct",
+  partial: "partial",
+  pending: "pending",
+  incorrect: "incorrect",
+  no_answer: "no_answer",
+}
+
+// 採点ボタン設定（色はuseScoringStatusColorsから動的取得）
 const SCORING_BUTTONS = [
   {
     status: "unscored" as ScoringStatus,
-    shortcutKey: "unscored",
     label: "未採点",
     icon: Circle,
-    color: "bg-gray-100 text-gray-700 hover:bg-gray-200",
     description: "未採点にする",
   },
   {
     status: "correct" as ScoringStatus,
-    shortcutKey: "correct",
     label: "正答",
     icon: CheckCircle,
-    color: "bg-green-100 text-green-700 hover:bg-green-200",
     description: "正答にする",
   },
   {
     status: "partial" as ScoringStatus,
-    shortcutKey: "partial",
     label: "部分点",
     icon: AlertTriangle,
-    color: "bg-yellow-100 text-yellow-700 hover:bg-yellow-200",
     description: "部分点にする",
   },
   {
     status: "pending" as ScoringStatus,
-    shortcutKey: "pending",
     label: "保留",
     icon: Clock,
-    color: "bg-blue-100 text-blue-700 hover:bg-blue-200",
     description: "保留にする",
   },
   {
     status: "incorrect" as ScoringStatus,
-    shortcutKey: "incorrect",
     label: "誤答",
     icon: X,
-    color: "bg-red-100 text-red-700 hover:bg-red-200",
     description: "誤答にする",
   },
   {
     status: "no_answer" as ScoringStatus,
-    shortcutKey: "no_answer",
     label: "無答",
     icon: Minus,
-    color: "bg-purple-100 text-purple-700 hover:bg-purple-200",
     description: "無答にする",
   },
 ] as const
 
-// フィルターボタン設定
+// フィルターボタン設定（色はuseScoringStatusColorsから動的取得）
 const FILTER_BUTTONS = [
-  {
-    key: "unscored",
-    filterKey: "unscored",
-    shortcutKey: "unscored",
-    label: "未採点",
-    icon: Circle,
-    color: "border-gray-400 text-gray-600",
-    activeColor: "bg-gray-300 border-gray-700 text-gray-900",
-  },
-  {
-    key: "correct",
-    filterKey: "correct",
-    shortcutKey: "correct",
-    label: "正答",
-    icon: CheckCircle,
-    color: "border-green-400 text-green-600",
-    activeColor: "bg-green-300 border-green-700 text-green-900",
-  },
-  {
-    key: "incorrect",
-    filterKey: "incorrect",
-    shortcutKey: "incorrect",
-    label: "誤答",
-    icon: X,
-    color: "border-red-400 text-red-600",
-    activeColor: "bg-red-300 border-red-700 text-red-900",
-  },
-  {
-    key: "partial",
-    filterKey: "partial",
-    shortcutKey: "partial",
-    label: "部分点",
-    icon: AlertTriangle,
-    color: "border-yellow-400 text-yellow-600",
-    activeColor: "bg-yellow-300 border-yellow-700 text-yellow-900",
-  },
-  {
-    key: "pending",
-    filterKey: "pending",
-    shortcutKey: "pending",
-    label: "保留",
-    icon: Clock,
-    color: "border-blue-400 text-blue-600",
-    activeColor: "bg-blue-300 border-blue-700 text-blue-900",
-  },
-  {
-    key: "no_answer",
-    filterKey: "no_answer",
-    shortcutKey: "no_answer",
-    label: "無答",
-    icon: Minus,
-    color: "border-purple-400 text-purple-600",
-    activeColor: "bg-purple-300 border-purple-700 text-purple-900",
-  },
+  { key: "unscored", filterKey: "unscored", label: "未採点", icon: Circle },
+  { key: "correct", filterKey: "correct", label: "正答", icon: CheckCircle },
+  { key: "incorrect", filterKey: "incorrect", label: "誤答", icon: X },
+  { key: "partial", filterKey: "partial", label: "部分点", icon: AlertTriangle },
+  { key: "pending", filterKey: "pending", label: "保留", icon: Clock },
+  { key: "no_answer", filterKey: "no_answer", label: "無答", icon: Minus },
 ] as const
 
 export default function ScoringToolbar({
@@ -164,6 +116,8 @@ export default function ScoringToolbar({
 }: ScoringToolbarProps) {
   // 新しいショートカットシステム: キーバインディング取得
   const { keyBindings } = useKeyBindings()
+  // 動的採点状態色を取得
+  const scoringColors = useScoringStatusColors()
 
   // コンテキスト値の設定（不要だがサンプルとして残す）
   // hasSelectedAnswers は ScoringMainView で設定済み
@@ -328,17 +282,25 @@ export default function ScoringToolbar({
             // コマンドIDからキーバインディングを取得
             const commandId = `scoring.${button.status === "no_answer" ? "noAnswer" : button.status}`
             const keyBinding = keyBindings[commandId] || "?"
+            // 動的色を取得
+            const statusType = STATUS_MAP[button.status]
+            const colors = scoringColors[statusType]
             return (
               <Tooltip key={button.status}>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className={`${button.color} flex h-12 flex-col gap-1 border-2 ${
+                    className={`flex h-12 flex-col gap-1 border-2 ${
                       selectedAnswersCount === 0
                         ? "cursor-not-allowed opacity-50"
-                        : ""
+                        : "hover:opacity-80"
                     }`}
+                    style={{
+                      backgroundColor: colors.bg,
+                      color: colors.text,
+                      borderColor: colors.bg,
+                    }}
                     onClick={() => onScore(button.status)}
                     disabled={selectedAnswersCount === 0}
                   >
@@ -397,15 +359,29 @@ export default function ScoringToolbar({
                     : button.key.charAt(0).toUpperCase() + button.key.slice(1)
                 const commandId = `filter.toggle${statusKey}`
                 const keyBinding = keyBindings[commandId] || "?"
+                // 動的色を取得
+                const statusType = STATUS_MAP[button.key as ScoringStatus]
+                const colors = scoringColors[statusType]
                 return (
                   <Tooltip key={button.key}>
                     <TooltipTrigger asChild>
                       <Button
                         variant="outline"
                         size="sm"
-                        className={`flex h-10 items-center gap-2 border-2 ${
-                          isActive ? button.activeColor : button.color
-                        }`}
+                        className="flex h-10 items-center gap-2 border-2"
+                        style={
+                          isActive
+                            ? {
+                                backgroundColor: colors.bg,
+                                color: colors.text,
+                                borderColor: colors.icon,
+                              }
+                            : {
+                                backgroundColor: "transparent",
+                                color: colors.icon,
+                                borderColor: colors.icon,
+                              }
+                        }
                         onClick={() => onToggleFilter(button.key)}
                       >
                         <Icon className="h-3 w-3" />

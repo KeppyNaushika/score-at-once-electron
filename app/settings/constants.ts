@@ -50,23 +50,13 @@ export const SHORTCUT_LABELS: {
   "navigation.zoomOut": "縮小",
   "navigation.resetZoom": "ズームリセット",
 
-  // フィルタ - Alt + 採点キー
+  // フィルタ
   "filter.toggleUnscored": "未採点フィルタ",
   "filter.toggleCorrect": "正答フィルタ",
   "filter.togglePartial": "部分点フィルタ",
   "filter.togglePending": "保留フィルタ",
   "filter.toggleIncorrect": "誤答フィルタ",
   "filter.toggleNoAnswer": "無答フィルタ",
-
-  // フィルタ - Ctrl + 数字
-  "filter.toggle1": "フィルタ1",
-  "filter.toggle2": "フィルタ2",
-  "filter.toggle3": "フィルタ3",
-  "filter.toggle4": "フィルタ4",
-  "filter.toggle5": "フィルタ5",
-  "filter.toggle6": "フィルタ6",
-
-  // フィルタ - 更新
   "filter.refresh": "フィルタ更新",
 
   // 表示
@@ -76,8 +66,6 @@ export const SHORTCUT_LABELS: {
   "view.questionView": "設問表示",
 
   // モーダル
-  "modal.confirmPartial": "部分点として確定",
-  "modal.confirmPending": "保留として確定",
   "modal.cancel": "キャンセル",
   "modal.backspace": "文字削除",
   "modal.input0": "0",
@@ -91,12 +79,10 @@ export const SHORTCUT_LABELS: {
   "modal.input8": "8",
   "modal.input9": "9",
   "modal.inputDot": ".",
-
-  // 保存
-  "save.all": "すべて保存",
 }
 
 // カテゴリ別の設定項目（新しいコマンドID形式）
+// 順序: 採点操作 → モーダル操作 → フィルタ → ナビゲーション → 表示制御
 export const SHORTCUT_CATEGORIES = {
   scoring: {
     label: "採点操作",
@@ -109,6 +95,38 @@ export const SHORTCUT_CATEGORIES = {
       "scoring.noAnswer",
     ] as const,
     description: "採点状態を設定するキー",
+  },
+  modal: {
+    label: "モーダル操作",
+    keys: [
+      "modal.cancel",
+      "modal.backspace",
+      "modal.input0",
+      "modal.input1",
+      "modal.input2",
+      "modal.input3",
+      "modal.input4",
+      "modal.input5",
+      "modal.input6",
+      "modal.input7",
+      "modal.input8",
+      "modal.input9",
+      "modal.inputDot",
+    ] as const,
+    description: "部分点入力モーダル内の操作（確定キーは採点操作と共通）",
+  },
+  filter: {
+    label: "フィルタ",
+    keys: [
+      "filter.toggleUnscored",
+      "filter.toggleCorrect",
+      "filter.togglePartial",
+      "filter.togglePending",
+      "filter.toggleIncorrect",
+      "filter.toggleNoAnswer",
+      "filter.refresh",
+    ] as const,
+    description: "フィルタの切り替え・更新",
   },
   navigation: {
     label: "ナビゲーション",
@@ -129,25 +147,6 @@ export const SHORTCUT_CATEGORIES = {
     ] as const,
     description: "設問・生徒の移動、ズーム操作",
   },
-  filter: {
-    label: "フィルタ",
-    keys: [
-      "filter.toggleUnscored",
-      "filter.toggleCorrect",
-      "filter.togglePartial",
-      "filter.togglePending",
-      "filter.toggleIncorrect",
-      "filter.toggleNoAnswer",
-      "filter.toggle1",
-      "filter.toggle2",
-      "filter.toggle3",
-      "filter.toggle4",
-      "filter.toggle5",
-      "filter.toggle6",
-      "filter.refresh",
-    ] as const,
-    description: "フィルタの切り替え・更新",
-  },
   view: {
     label: "表示制御",
     keys: [
@@ -157,31 +156,5 @@ export const SHORTCUT_CATEGORIES = {
       "view.questionView",
     ] as const,
     description: "表示の切り替え",
-  },
-  modal: {
-    label: "モーダル操作",
-    keys: [
-      "modal.confirmPartial",
-      "modal.confirmPending",
-      "modal.cancel",
-      "modal.backspace",
-      "modal.input0",
-      "modal.input1",
-      "modal.input2",
-      "modal.input3",
-      "modal.input4",
-      "modal.input5",
-      "modal.input6",
-      "modal.input7",
-      "modal.input8",
-      "modal.input9",
-      "modal.inputDot",
-    ] as const,
-    description: "部分点入力モーダル内の操作",
-  },
-  save: {
-    label: "保存",
-    keys: ["save.all"] as const,
-    description: "保存操作",
   },
 } as const

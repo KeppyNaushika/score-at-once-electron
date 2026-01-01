@@ -6,8 +6,99 @@ import {
   Minus,
   X,
 } from "lucide-react"
+import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 
-// 採点状態のアイコンと色を定義
+// アイコンとキーバインドの定義（静的）
+export const SCORE_STATUS_ICONS = {
+  unscored: { icon: Circle, key: "q" },
+  correct: { icon: CheckCircle, key: "e" },
+  partial: { icon: AlertTriangle, key: "f" },
+  pending: { icon: Clock, key: "j" },
+  incorrect: { icon: X, key: "o" },
+  no_answer: { icon: Minus, key: "p" },
+  master: { icon: CheckCircle, key: "" },
+} as const
+
+// ステータス名のマッピング（SCORE_STATUS_CONFIG のキー → ScoringStatusColors のキー）
+const STATUS_KEY_MAP: Record<string, keyof ScoringStatusColors> = {
+  unscored: "ungraded",
+  correct: "correct",
+  partial: "partial",
+  pending: "pending",
+  incorrect: "incorrect",
+  no_answer: "no_answer",
+  master: "ungraded", // masterは特殊扱い
+}
+
+/**
+ * 動的な採点状態色設定を生成
+ * @param colors - 採点状態色（useScoringStatusColorsから取得）
+ */
+export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
+  return {
+    unscored: {
+      icon: Circle,
+      bgStyle: { backgroundColor: colors.ungraded.bg },
+      selectedBgStyle: { backgroundColor: colors.ungraded.bg, opacity: 0.8 },
+      textStyle: { color: colors.ungraded.text },
+      iconStyle: { color: colors.ungraded.icon },
+      key: "q",
+    },
+    correct: {
+      icon: CheckCircle,
+      bgStyle: { backgroundColor: colors.correct.bg },
+      selectedBgStyle: { backgroundColor: colors.correct.bg, opacity: 0.8 },
+      textStyle: { color: colors.correct.text },
+      iconStyle: { color: colors.correct.icon },
+      key: "e",
+    },
+    partial: {
+      icon: AlertTriangle,
+      bgStyle: { backgroundColor: colors.partial.bg },
+      selectedBgStyle: { backgroundColor: colors.partial.bg, opacity: 0.8 },
+      textStyle: { color: colors.partial.text },
+      iconStyle: { color: colors.partial.icon },
+      key: "f",
+    },
+    pending: {
+      icon: Clock,
+      bgStyle: { backgroundColor: colors.pending.bg },
+      selectedBgStyle: { backgroundColor: colors.pending.bg, opacity: 0.8 },
+      textStyle: { color: colors.pending.text },
+      iconStyle: { color: colors.pending.icon },
+      key: "j",
+    },
+    incorrect: {
+      icon: X,
+      bgStyle: { backgroundColor: colors.incorrect.bg },
+      selectedBgStyle: { backgroundColor: colors.incorrect.bg, opacity: 0.8 },
+      textStyle: { color: colors.incorrect.text },
+      iconStyle: { color: colors.incorrect.icon },
+      key: "o",
+    },
+    no_answer: {
+      icon: Minus,
+      bgStyle: { backgroundColor: colors.no_answer.bg },
+      selectedBgStyle: { backgroundColor: colors.no_answer.bg, opacity: 0.8 },
+      textStyle: { color: colors.no_answer.text },
+      iconStyle: { color: colors.no_answer.icon },
+      key: "p",
+    },
+    master: {
+      icon: CheckCircle,
+      bgStyle: { backgroundColor: "#EFF6FF" }, // blue-50 固定
+      selectedBgStyle: { backgroundColor: "#DBEAFE" }, // blue-100 固定
+      textStyle: { color: "#1E40AF" }, // blue-800 固定
+      iconStyle: { color: "#1E40AF" },
+      key: "",
+    },
+  }
+}
+
+export type DynamicScoreStatusConfig = ReturnType<typeof getDynamicScoreStatusConfig>
+export type ScoreStatusKey = keyof DynamicScoreStatusConfig
+
+// 後方互換のため旧定義も維持（Tailwindクラスベース）
 export const SCORE_STATUS_CONFIG = {
   unscored: {
     icon: Circle,

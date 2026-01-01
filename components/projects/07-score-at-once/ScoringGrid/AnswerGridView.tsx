@@ -13,6 +13,7 @@ import type {
   MasterGridItem,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
+import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import { useEffect, useRef, useState } from "react"
 
 export interface AnswerGridViewProps {
@@ -103,7 +104,8 @@ export default function AnswerGridView({
   const { dragStart, isDragging, dragCurrent, startDrag, updateDrag, endDrag } =
     useGridSelection()
 
-  const selectionBorderSettings = useSelectionBorder()
+  const selectionBorderColor = useSelectionBorder()
+  const scoringColors = useScoringStatusColors()
 
   const { effectiveGridSize, sortedAnswers } = useGridLayout({
     answers,
@@ -221,7 +223,8 @@ export default function AnswerGridView({
               showStudentNames={showStudentNames}
               layoutDirection={layoutDirection}
               calculatedCellHeight={calculatedCellHeight}
-              selectionBorderSettings={selectionBorderSettings}
+              selectionBorderColor={selectionBorderColor}
+              scoringColors={scoringColors}
               onMouseDown={onCellMouseDown}
             />
           )
