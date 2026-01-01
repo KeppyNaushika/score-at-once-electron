@@ -8,42 +8,15 @@ import {
 } from "@/app/projects/[projectId]/08-export/types"
 import {
   ScoringMarkConfig,
-  loadConfigFromStorage,
+  defaultScoringMarkConfig,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
 import { useParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
-
-const INDIVIDUAL_REPORT_OPTIONS_KEY = "individualReportOptions"
-
-function loadIndividualReportOptionsFromStorage(): IndividualReportOptions {
-  if (typeof window === "undefined") return DEFAULT_INDIVIDUAL_REPORT_OPTIONS
-  try {
-    const stored = localStorage.getItem(INDIVIDUAL_REPORT_OPTIONS_KEY)
-    if (stored) {
-      const parsed = JSON.parse(stored)
-      // デフォルト値とマージして、新しいプロパティが追加されても対応
-      return { ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS, ...parsed }
-    }
-  } catch {
-    // パースエラーの場合はデフォルト値を返す
-  }
-  return DEFAULT_INDIVIDUAL_REPORT_OPTIONS
-}
-
-function saveIndividualReportOptionsToStorage(
-  options: IndividualReportOptions
-): void {
-  if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(INDIVIDUAL_REPORT_OPTIONS_KEY, JSON.stringify(options))
-  } catch {
-    // 保存エラーは無視
-  }
-}
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export function useExportPage() {
   const params = useParams()
   const projectId = params.projectId as string
+  const initializedRef = useRef(false)
 
   // 基本状態
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,22 +45,92 @@ export function useExportPage() {
     markPosition: "bottom-right",
     markSize: 50,
     showMarks: true,
-    pdfOrientation: "portrait", // デフォルトはA4縦
-    parallelCount: 4, // デフォルト並列数
+    pdfOrientation: "portrait",
+    parallelCount: 4,
   })
 
-  const [scoringMarkConfig, setScoringMarkConfig] = useState<ScoringMarkConfig>(
-    loadConfigFromStorage()
+  const [scoringMarkConfig, setScoringMarkConfigState] = useState<ScoringMarkConfig>(
+    defaultScoringMarkConfig
   )
 
-  // 個人成績表オプション（localStorageから復元）
-  const [individualReportOptions, setIndividualReportOptions] =
-    useState<IndividualReportOptions>(loadIndividualReportOptionsFromStorage)
+  const [individualReportOptions, setIndividualReportOptionsState] =
+    useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
 
-  // 個人成績表オプションが変更されたらlocalStorageに保存
+  // プロジェクト設定の読み込み
   useEffect(() => {
-    saveIndividualReportOptionsToStorage(individualReportOptions)
-  }, [individualReportOptions])
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    const loadProjectSettings = async () => {
+      if (projectId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
+          if (result.success && result.settings) {
+            if (result.settings.scoringMarkConfig) {
+              setScoringMarkConfigState({
+                ...defaultScoringMarkConfig,
+                ...result.settings.scoringMarkConfig,
+              })
+            }
+            if (result.settings.individualReportOptions) {
+              setIndividualReportOptionsState({
+                ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+                ...result.settings.individualReportOptions,
+              })
+            }
+          }
+        } catch (error) {
+          console.error("プロジェクト設定の読み込みに失敗しました:", error)
+        }
+      }
+    }
+
+    loadProjectSettings()
+  }, [projectId])
+
+  // 採点マーク設定の保存
+  const setScoringMarkConfig = useCallback(
+    async (config: ScoringMarkConfig | ((prev: ScoringMarkConfig) => ScoringMarkConfig)) => {
+      const newConfig = typeof config === "function" ? config(scoringMarkConfig) : config
+      setScoringMarkConfigState(newConfig)
+
+      if (projectId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
+          const currentSettings = result.success && result.settings ? result.settings : {}
+          await window.electronAPI.settings.saveProjectExportSettings(projectId, {
+            ...currentSettings,
+            scoringMarkConfig: newConfig,
+          })
+        } catch (error) {
+          console.error("採点マーク設定の保存に失敗しました:", error)
+        }
+      }
+    },
+    [projectId, scoringMarkConfig]
+  )
+
+  // 個人成績表オプションの保存
+  const setIndividualReportOptions = useCallback(
+    async (options: IndividualReportOptions | ((prev: IndividualReportOptions) => IndividualReportOptions)) => {
+      const newOptions = typeof options === "function" ? options(individualReportOptions) : options
+      setIndividualReportOptionsState(newOptions)
+
+      if (projectId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
+          const currentSettings = result.success && result.settings ? result.settings : {}
+          await window.electronAPI.settings.saveProjectExportSettings(projectId, {
+            ...currentSettings,
+            individualReportOptions: newOptions,
+          })
+        } catch (error) {
+          console.error("個人成績表オプションの保存に失敗しました:", error)
+        }
+      }
+    },
+    [projectId, individualReportOptions]
+  )
 
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)

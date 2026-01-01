@@ -9,18 +9,20 @@ datasource db {
 }
 
 model User {
-  id                    String                  @id @default(uuid())
-  username              String                  @unique
-  passcode              String?
-  name                  String
-  role                  String                  @default("teacher")
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
-  passcodeType          String?                 @default("none")
-  drawingAnnotations    DrawingAnnotation[]
-  questionScores        QuestionScore[]
-  userProjects          UserProject[]
-  invitedUserProjects   UserProject[]           @relation("InvitedByUser")
+  id                  String                 @id @default(uuid())
+  username            String                 @unique
+  passcode            String?
+  name                String
+  role                String                 @default("teacher")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  passcodeType        String?                @default("none")
+  drawingAnnotations  DrawingAnnotation[]
+  questionScores      QuestionScore[]
+  userProjects        UserProject[]
+  invitedUserProjects UserProject[]          @relation("InvitedByUser")
+  keyboardShortcuts   UserKeyboardShortcut[]
+  scoringPreference   UserScoringPreference?
 }
 
 model Class {
@@ -86,6 +88,8 @@ model Project {
   projectSubtotalGroups ProjectSubtotalGroup[]
   userProjects          UserProject[]
   projectClasses        ProjectClass[]
+  markingFormats        ProjectMarkingFormat[]
+  exportSettings        ProjectExportSettings?
 }
 
 model ProjectStudent {
@@ -129,31 +133,32 @@ model PageImage {
 }
 
 model CropRegion {
-  id             String          @id @default(uuid())
-  projectPageId  String
-  label          String
-  type           String
-  x              Float
-  y              Float
-  width          Float
-  height         Float
-  points         Int?
-  orderIndex     Int?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt
-  projectPage    ProjectPage     @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  cropSubtotals  CropSubtotal[]
-  questionScores QuestionScore[]
+  id               String                      @id @default(uuid())
+  projectPageId    String
+  label            String
+  type             String
+  x                Float
+  y                Float
+  width            Float
+  height           Float
+  points           Int?
+  orderIndex       Int?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @default(now()) @updatedAt
+  projectPage      ProjectPage                 @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropSubtotals    CropSubtotal[]
+  questionScores   QuestionScore[]
+  markingOverrides CropRegionMarkingOverride[]
 }
 
 model SubtotalGroup {
-  id                     String                  @id @default(uuid())
-  name                   String
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @default(now()) @updatedAt
-  projectSubtotalGroups  ProjectSubtotalGroup[]
-  subtotals              Subtotal[]
-  subjectSubtotalGroups  SubjectSubtotalGroup[]
+  id                    String                 @id @default(uuid())
+  name                  String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @default(now()) @updatedAt
+  projectSubtotalGroups ProjectSubtotalGroup[]
+  subtotals             Subtotal[]
+  subjectSubtotalGroups SubjectSubtotalGroup[]
 }
 
 model Subtotal {
@@ -184,9 +189,9 @@ model UserProject {
   id        String   @id @default(uuid())
   userId    String
   projectId String
-  role      String   @default("GRADER")  // "OWNER" | "GRADER"
+  role      String   @default("GRADER") // "OWNER" | "GRADER"
   invitedAt DateTime @default(now())
-  invitedBy String?  // Null for OWNER (project creator)
+  invitedBy String? // Null for OWNER (project creator)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -255,15 +260,13 @@ model DrawingAnnotation {
   @@index([createdAt])
 }
 
-// === v0.3.0 新規モデル ===
-
 model ProjectClass {
   id           String   @id @default(uuid())
   projectId    String
   classId      String
   administered Boolean  @default(false) // 学級・出席番号表示の対象
   statistics   Boolean  @default(false) // 統計集計の対象
-  order        Int      @default(0)     // 複数クラス時の優先順位（小さいほど優先）
+  order        Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -297,4 +300,77 @@ model SubjectSubtotalGroup {
   @@unique([subjectId, subtotalGroupId])
   @@index([subjectId])
   @@index([subtotalGroupId])
+}
+
+model UserKeyboardShortcut {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  key       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, action])
+  @@index([userId])
+}
+
+model UserScoringPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  showStudentNames     Boolean  @default(true)
+  autoScroll           Boolean  @default(true)
+  itemsPerLine         Int      @default(5)
+  layoutDirection      String   @default("right-down")
+  selectionBorderColor String?
+  scoringStatusColors  String?
+  scoringColorPresetId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectMarkingFormat {
+  id          String   @id @default(uuid())
+  projectId   String
+  markType    String
+  symbol      String
+  color       String
+  fontSize    Int?
+  strokeWidth Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, markType])
+  @@index([projectId])
+}
+
+model ProjectExportSettings {
+  id           String   @id @default(uuid())
+  projectId    String   @unique
+  settingsJson String // JSON形式で保存
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model CropRegionMarkingOverride {
+  id           String   @id @default(uuid())
+  cropRegionId String
+  markType     String
+  symbol       String?
+  color        String?
+  visible      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cropRegion CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+
+  @@unique([cropRegionId, markType])
+  @@index([cropRegionId])
 }

@@ -29,7 +29,6 @@ import {
   defaultSummaryScoreConfig,
   positionLabels,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import { saveConfigToStorage } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 
 interface ScoringMarkSettingsContainerProps {
   config: ScoringMarkConfig
@@ -49,7 +48,6 @@ export function ScoringMarkSettingsContainer({
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
     const newConfig = { ...config, ...updates }
     onChange(newConfig)
-    saveConfigToStorage(newConfig)
   }
 
   const updatePartialScore = (updates: Partial<ScoreTextConfig>) => {
@@ -81,7 +79,6 @@ export function ScoringMarkSettingsContainer({
 
   const resetToDefaults = () => {
     onChange(defaultConfig)
-    saveConfigToStorage(defaultConfig)
   }
 
   const renderScoreSettings = (

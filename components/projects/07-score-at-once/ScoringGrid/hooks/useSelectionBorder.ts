@@ -1,31 +1,60 @@
-import { useEffect, useState } from "react"
-import { getSelectionBorderSettings } from "@/lib/utils"
-
 /**
  * 選択枠の色を取得・監視するフック
- * @returns 選択枠の色（HEX形式）
+ * 機能G: ユーザー設定の永続化
  */
+
+import { useAuth } from "@/contexts/AuthContext"
+import { useEffect, useRef, useState } from "react"
+
+const DEFAULT_SELECTION_BORDER_COLOR = "#F97316" // orange-500
+
 export function useSelectionBorder(): string {
-  const [color, setColor] = useState(() => getSelectionBorderSettings().color)
+  const { user } = useAuth()
+  const userId = user?.id
+  const [color, setColor] = useState(DEFAULT_SELECTION_BORDER_COLOR)
+  const initializedRef = useRef(false)
 
-  // 選択枠色の設定変更を監視
+  // 設定を読み込む
   useEffect(() => {
-    const handleStorageChange = () => {
-      setColor(getSelectionBorderSettings().color)
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    const loadColor = async () => {
+      if (userId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          if (result.success && result.preference?.selectionBorderColor) {
+            setColor(result.preference.selectionBorderColor)
+          }
+        } catch (error) {
+          console.error("選択枠色の読み込みに失敗しました:", error)
+        }
+      }
     }
 
-    window.addEventListener("storage", handleStorageChange)
-    // カスタムイベントでも監視（同じページ内での変更）
-    window.addEventListener("selectionBorderColorChanged", handleStorageChange)
+    loadColor()
+  }, [userId])
 
+  // 選択枠色の設定変更を監視（設定画面からの変更）
+  useEffect(() => {
+    const handleColorChange = async () => {
+      if (userId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          if (result.success && result.preference?.selectionBorderColor) {
+            setColor(result.preference.selectionBorderColor)
+          }
+        } catch (error) {
+          console.error("選択枠色の読み込みに失敗しました:", error)
+        }
+      }
+    }
+
+    window.addEventListener("selectionBorderColorChanged", handleColorChange)
     return () => {
-      window.removeEventListener("storage", handleStorageChange)
-      window.removeEventListener(
-        "selectionBorderColorChanged",
-        handleStorageChange
-      )
+      window.removeEventListener("selectionBorderColorChanged", handleColorChange)
     }
-  }, [])
+  }, [userId])
 
   return color
 }
