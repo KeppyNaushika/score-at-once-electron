@@ -1,52 +1,41 @@
+import { useAuth } from "@/contexts/AuthContext"
 import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoringKeybindings"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 
-// localStorage キー
-const STORAGE_KEY = "scoringKeyBindings"
-
-// キーバインディング取得関数（新システム版）
-function getKeyboardShortcuts() {
-  if (typeof window === "undefined") return DEFAULT_KEYBINDINGS
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      return { ...DEFAULT_KEYBINDINGS, ...JSON.parse(stored) }
-    }
-  } catch (error) {
-    console.error("Failed to load keyboard shortcuts:", error)
-  }
-  return DEFAULT_KEYBINDINGS
-}
-
-// キーバインディング保存関数（新システム版）
-function saveKeyboardShortcuts(shortcuts: typeof DEFAULT_KEYBINDINGS) {
-  if (typeof window === "undefined") return
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(shortcuts))
-  } catch (error) {
-    console.error("Failed to save keyboard shortcuts:", error)
-  }
-}
-
 export function useKeyboardSettings() {
+  const { user } = useAuth()
+  const userId = user?.id
+  const initializedRef = useRef(false)
+
   const [shortcuts, setShortcuts] = useState(DEFAULT_KEYBINDINGS)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [pendingKey, setPendingKey] = useState<string>("")
   const [modifierKeyLabel, setModifierKeyLabel] = useState("Alt")
 
-  // 初期化時にlocalStorageから読み込み
+  // 初期化時にDBから読み込み
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setShortcuts(getKeyboardShortcuts())
-      setModifierKeyLabel(getModifierKeyLabel())
-    })
+    if (initializedRef.current) return
+    initializedRef.current = true
 
-    return () => cancelAnimationFrame(frame)
-  }, [])
+    const loadShortcuts = async () => {
+      setModifierKeyLabel(getModifierKeyLabel())
+
+      if (userId && window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
+          if (result.success && result.shortcuts) {
+            setShortcuts({ ...DEFAULT_KEYBINDINGS, ...result.shortcuts })
+          }
+        } catch (error) {
+          console.error("キーバインディングの読み込みに失敗しました:", error)
+        }
+      }
+    }
+
+    loadShortcuts()
+  }, [userId])
 
   // キー入力をキャプチャ
   useEffect(() => {
@@ -83,7 +72,7 @@ export function useKeyboardSettings() {
     setPendingKey("")
   }
 
-  const handleKeySave = () => {
+  const handleKeySave = useCallback(async () => {
     if (!editingKey || !pendingKey) return
 
     // 重複チェック
@@ -98,31 +87,52 @@ export function useKeyboardSettings() {
       return
     }
 
-    // 新しいショートカットを保存
+    // 新しいショートカットを保存（楽観的更新）
     const newShortcuts = {
       ...shortcuts,
       [editingKey]: pendingKey,
     }
 
     setShortcuts(newShortcuts)
-    saveKeyboardShortcuts(newShortcuts)
     setEditingKey(null)
     setPendingKey("")
-    toast.success("ショートカットキーを更新しました")
-  }
+
+    // DBに保存
+    if (userId && window.electronAPI?.settings) {
+      try {
+        await window.electronAPI.settings.saveUserKeyboardShortcuts(userId, newShortcuts)
+        toast.success("ショートカットキーを更新しました")
+      } catch (error) {
+        console.error("キーバインディングの保存に失敗しました:", error)
+        toast.error("ショートカットキーの保存に失敗しました")
+      }
+    } else {
+      toast.success("ショートカットキーを更新しました")
+    }
+  }, [editingKey, pendingKey, shortcuts, userId])
 
   const handleKeyCancel = () => {
     setEditingKey(null)
     setPendingKey("")
   }
 
-  const handleReset = () => {
+  const handleReset = useCallback(async () => {
     if (confirm("すべてのショートカットキーをデフォルトに戻しますか？")) {
       setShortcuts(DEFAULT_KEYBINDINGS)
-      saveKeyboardShortcuts(DEFAULT_KEYBINDINGS)
-      toast.success("ショートカットキーをデフォルトに戻しました")
+
+      if (userId && window.electronAPI?.settings) {
+        try {
+          await window.electronAPI.settings.resetUserKeyboardShortcuts(userId)
+          toast.success("ショートカットキーをデフォルトに戻しました")
+        } catch (error) {
+          console.error("キーバインディングのリセットに失敗しました:", error)
+          toast.error("ショートカットキーのリセットに失敗しました")
+        }
+      } else {
+        toast.success("ショートカットキーをデフォルトに戻しました")
+      }
     }
-  }
+  }, [userId])
 
   const getKeyDisplayName = (key: string) => {
     const KEY_DISPLAY_NAMES: { [key: string]: string } = {

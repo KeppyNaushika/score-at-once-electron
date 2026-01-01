@@ -6,17 +6,19 @@
  *
  * 主な機能:
  * - コマンドの登録・解除（コンポーネントのライフサイクルに連動）
- * - キーバインディングの管理（localStorage連携、カスタマイズ可能）
+ * - キーバインディングの管理（DB連携、カスタマイズ可能）
  * - コンテキスト状態の管理（実行条件の判定）
  * - when句による柔軟な実行条件制御
  * - macOSデッドキー対応
  */
 
+import { useAuth } from "@/contexts/AuthContext"
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -163,6 +165,10 @@ interface ShortcutProviderProps {
 }
 
 export function ShortcutProvider({ children }: ShortcutProviderProps) {
+  const { user } = useAuth()
+  const userId = user?.id
+  const initializedRef = useRef(false)
+
   // ============================================
   // 状態管理
   // ============================================
@@ -183,18 +189,31 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     new Map()
   )
 
-  // キーバインディング（localStorageから読み込み）
-  const [keyBindings, setKeyBindings] = useState<KeyBinding>(() => {
-    if (typeof window === "undefined") return DEFAULT_KEYBINDINGS
-    try {
-      const stored = localStorage.getItem("scoring-keybindings")
-      return stored
-        ? { ...DEFAULT_KEYBINDINGS, ...JSON.parse(stored) }
-        : DEFAULT_KEYBINDINGS
-    } catch {
-      return DEFAULT_KEYBINDINGS
+  // キーバインディング
+  const [keyBindings, setKeyBindings] =
+    useState<KeyBinding>(DEFAULT_KEYBINDINGS)
+
+  // キーバインディングを読み込む
+  useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    const loadKeyBindings = async () => {
+      if (userId && window.electronAPI?.settings) {
+        try {
+          const result =
+            await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
+          if (result.success && result.shortcuts) {
+            setKeyBindings({ ...DEFAULT_KEYBINDINGS, ...result.shortcuts })
+          }
+        } catch (error) {
+          console.error("キーバインディングの読み込みに失敗しました:", error)
+        }
+      }
     }
-  })
+
+    loadKeyBindings()
+  }, [userId])
 
   // ============================================
   // コンテキスト値の更新
@@ -250,28 +269,35 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
 
   const updateKeyBinding = useCallback(
-    (commandId: string, key: string) => {
+    async (commandId: string, key: string) => {
       const newBindings = { ...keyBindings, [commandId]: key }
       setKeyBindings(newBindings)
 
-      // localStorageに保存
-      try {
-        localStorage.setItem("scoring-keybindings", JSON.stringify(newBindings))
-      } catch (error) {
-        console.error("Failed to save keybindings to localStorage:", error)
+      // 設定を保存
+      if (userId && window.electronAPI?.settings) {
+        try {
+          await window.electronAPI.settings.saveUserKeyboardShortcuts(
+            userId,
+            newBindings
+          )
+        } catch (error) {
+          console.error("キーバインディングの保存に失敗しました:", error)
+        }
       }
     },
-    [keyBindings]
+    [keyBindings, userId]
   )
 
-  const resetKeyBindings = useCallback(() => {
+  const resetKeyBindings = useCallback(async () => {
     setKeyBindings(DEFAULT_KEYBINDINGS)
-    try {
-      localStorage.removeItem("scoring-keybindings")
-    } catch (error) {
-      console.error("Failed to remove keybindings from localStorage:", error)
+    if (userId && window.electronAPI?.settings) {
+      try {
+        await window.electronAPI.settings.resetUserKeyboardShortcuts(userId)
+      } catch (error) {
+        console.error("キーバインディングのリセットに失敗しました:", error)
+      }
     }
-  }, [])
+  }, [userId])
 
   // ============================================
   // 全コマンド取得

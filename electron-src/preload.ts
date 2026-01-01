@@ -1,6 +1,6 @@
 import type { DrawingAnnotation } from "@prisma/client"
 import { Prisma } from "@prisma/client"
-import { contextBridge, ipcRenderer, IpcRenderer } from "electron"
+import { contextBridge, ipcRenderer, IpcRenderer, webUtils } from "electron"
 import {
   CropRegionCreateData,
   CropRegionUpdateData,
@@ -616,7 +616,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
   },
 
-  // v0.3.0: ProjectClass related
+  // ProjectClass
   projectClass: {
     getAll: (projectId: string) =>
       ipcRenderer.invoke("project-class:get-all", projectId),
@@ -659,7 +659,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ),
   },
 
-  // v0.3.0: UserProject (権限管理) related
+  // UserProject
   userProject: {
     getMembers: (projectId: string) =>
       ipcRenderer.invoke("user-project:get-members", projectId),
@@ -695,6 +695,157 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("user-project:get-owner", projectId),
     searchUsers: (projectId: string, query: string) =>
       ipcRenderer.invoke("user-project:search-users", projectId, query),
+  },
+
+  // Settings
+  settings: {
+    // UserKeyboardShortcut
+    getUserKeyboardShortcuts: (userId: string) =>
+      ipcRenderer.invoke("settings:getUserKeyboardShortcuts", userId),
+    saveUserKeyboardShortcuts: (
+      userId: string,
+      shortcuts: Record<string, string>
+    ) =>
+      ipcRenderer.invoke(
+        "settings:saveUserKeyboardShortcuts",
+        userId,
+        shortcuts
+      ),
+    resetUserKeyboardShortcuts: (userId: string) =>
+      ipcRenderer.invoke("settings:resetUserKeyboardShortcuts", userId),
+
+    // UserScoringPreference
+    getUserScoringPreference: (userId: string) =>
+      ipcRenderer.invoke("settings:getUserScoringPreference", userId),
+    upsertUserScoringPreference: (
+      userId: string,
+      data: {
+        showStudentNames?: boolean
+        autoScroll?: boolean
+        itemsPerLine?: number
+        layoutDirection?: string
+        selectionBorderColor?: string | null
+        scoringStatusColors?: string | null
+        scoringColorPresetId?: string | null
+      }
+    ) =>
+      ipcRenderer.invoke("settings:upsertUserScoringPreference", userId, data),
+
+    // ProjectMarkingFormat
+    getProjectMarkingFormats: (projectId: string) =>
+      ipcRenderer.invoke("settings:getProjectMarkingFormats", projectId),
+    saveProjectMarkingFormats: (
+      projectId: string,
+      formats: Array<{
+        markType: string
+        symbol: string
+        color: string
+        fontSize?: number | null
+        strokeWidth?: number | null
+      }>
+    ) =>
+      ipcRenderer.invoke(
+        "settings:saveProjectMarkingFormats",
+        projectId,
+        formats
+      ),
+
+    // ProjectExportSettings
+    getProjectExportSettings: (projectId: string) =>
+      ipcRenderer.invoke("settings:getProjectExportSettings", projectId),
+    saveProjectExportSettings: (
+      projectId: string,
+      settings: Record<string, unknown>
+    ) =>
+      ipcRenderer.invoke(
+        "settings:saveProjectExportSettings",
+        projectId,
+        settings
+      ),
+
+    // CropRegionMarkingOverride (機能H)
+    getCropRegionMarkingOverrides: (cropRegionId: string) =>
+      ipcRenderer.invoke(
+        "settings:getCropRegionMarkingOverrides",
+        cropRegionId
+      ),
+    saveCropRegionMarkingOverrides: (
+      cropRegionId: string,
+      overrides: Array<{
+        markType: string
+        symbol?: string | null
+        color?: string | null
+        visible?: boolean
+      }>
+    ) =>
+      ipcRenderer.invoke(
+        "settings:saveCropRegionMarkingOverrides",
+        cropRegionId,
+        overrides
+      ),
+    resetCropRegionMarkingOverrides: (cropRegionId: string) =>
+      ipcRenderer.invoke(
+        "settings:resetCropRegionMarkingOverrides",
+        cropRegionId
+      ),
+    getProjectCropRegionMarkingOverrides: (projectId: string) =>
+      ipcRenderer.invoke(
+        "settings:getProjectCropRegionMarkingOverrides",
+        projectId
+      ),
+  },
+
+  // PDF Tools related
+  pdfTools: {
+    mergePdfs: (options: {
+      pages: Array<{
+        filePath: string
+        pageNumber: number
+        rotation?: 0 | 90 | 180 | 270
+      }>
+      outputPath: string
+    }) => ipcRenderer.invoke("pdf-tools:merge-pdfs", options),
+    splitPdf: (options: {
+      filePath: string
+      outputDir: string
+      prefix?: string
+    }) => ipcRenderer.invoke("pdf-tools:split-pdf", options),
+    applyNUp: (options: {
+      filePath: string
+      layout: "2x1" | "1x2"
+      order: "left-right" | "right-left"
+      outputPath: string
+    }) => ipcRenderer.invoke("pdf-tools:apply-nup", options),
+    rotatePages: (options: {
+      filePath: string
+      rotations: Array<{ pageNumber: number; rotation: 0 | 90 | 180 | 270 }>
+      outputPath: string
+    }) => ipcRenderer.invoke("pdf-tools:rotate-pages", options),
+    exportAsPng: (options: {
+      imageBuffers: Array<{
+        buffer: Buffer
+        name: string
+        rotation?: 0 | 90 | 180 | 270
+      }>
+      outputDir: string
+    }) => ipcRenderer.invoke("pdf-tools:export-as-png", options),
+    selectSavePath: (options: { type: "pdf" | "directory"; defaultName?: string }) =>
+      ipcRenderer.invoke("pdf-tools:select-save-path", options),
+    selectFiles: () =>
+      ipcRenderer.invoke("pdf-tools:select-files") as Promise<{
+        success: boolean
+        filePaths?: string[]
+        canceled?: boolean
+      }>,
+    getPdfInfo: (filePath: string) =>
+      ipcRenderer.invoke("pdf-tools:get-pdf-info", filePath) as Promise<{
+        success: boolean
+        pageCount?: number
+        name?: string
+        error?: string
+      }>,
+    // ドラッグ&ドロップされたFileオブジェクトからパスを取得
+    getPathForFile: (file: File) => webUtils.getPathForFile(file),
   },
 })
 

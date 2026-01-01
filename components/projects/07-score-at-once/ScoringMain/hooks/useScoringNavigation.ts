@@ -103,29 +103,7 @@ export function useScoringNavigation({
       if (totalAnswers === 0) return
 
       // effectiveColumnsから実際の1行/列あたりの表示件数を取得
-      let actualItemsPerLine = effectiveColumns || 4
-
-      // effectiveColumnsが正しく設定されていない場合のフォールバック
-      if (!effectiveColumns || effectiveColumns <= 0) {
-        try {
-          const stored = localStorage.getItem("scoring-itemsPerLine")
-          if (stored) {
-            const parsed = JSON.parse(stored)
-            if (
-              Array.isArray(parsed) &&
-              parsed.length === 1 &&
-              typeof parsed[0] === "number" &&
-              parsed[0] >= 1 &&
-              parsed[0] <= 10
-            ) {
-              actualItemsPerLine = parsed[0]
-            }
-          }
-        } catch {
-          // localStorageエラーの場合はfallback値を使用
-          actualItemsPerLine = 4
-        }
-      }
+      const actualItemsPerLine = effectiveColumns && effectiveColumns > 0 ? effectiveColumns : 4
 
       const cols = Math.max(1, actualItemsPerLine) // 実際の表示数を使用、最低1は確保
 

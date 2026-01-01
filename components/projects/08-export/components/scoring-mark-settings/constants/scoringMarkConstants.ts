@@ -65,9 +65,6 @@ export const defaultConfig: ScoringMarkConfig = {
   marginPercent: 5, // 5%の余白
 }
 
-// localStorageのキー
-export const STORAGE_KEY = "scoring-mark-config"
-
 // 位置のラベル
 export const positionLabels: Record<MarkPosition, string> = {
   "top-left": "左上",

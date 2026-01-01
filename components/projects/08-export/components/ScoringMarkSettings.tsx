@@ -14,12 +14,6 @@ export type {
   ScoreTextConfig,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
-// Re-export utilities
-export {
-  loadConfigFromStorage,
-  saveConfigToStorage,
-} from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
-
 export {
   defaultConfig as defaultScoringMarkConfig,
   defaultPartialScoreConfig,

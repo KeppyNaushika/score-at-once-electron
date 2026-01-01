@@ -1,18 +1,15 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
-  getSelectionBorderSettings,
-  saveSelectionBorderColor,
-  SELECTION_BORDER_PRESETS,
-} from "@/lib/utils"
-import {
   getScoringStatusColors,
+  loadScoringStatusColors,
   saveScoringStatusColors,
   applyScoringColorPreset,
   getCurrentPresetId,
@@ -24,10 +21,24 @@ import {
 } from "@/lib/scoringStatusColors"
 import { RotateCcw } from "lucide-react"
 
+const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
+const SELECTION_BORDER_PRESETS = [
+  "#F97316", // オレンジ
+  "#3B82F6", // 青
+  "#EF4444", // 赤
+  "#10B981", // エメラルド
+  "#8B5CF6", // バイオレット
+  "#F59E0B", // アンバー
+]
+
 export function DisplaySettingsTab() {
+  const { user } = useAuth()
+  const userId = user?.id
+  const initializedRef = useRef(false)
+
   // 選択枠色の状態
   const [selectionBorderColor, setSelectionBorderColor] = useState(
-    getSelectionBorderSettings().color
+    DEFAULT_SELECTION_BORDER_COLOR
   )
 
   // 採点状態色の状態
@@ -40,29 +51,66 @@ export function DisplaySettingsTab() {
 
   // 初期値をロード
   useEffect(() => {
-    setScoringColors(getScoringStatusColors())
-    setCurrentPresetId(getCurrentPresetId())
-  }, [])
+    if (initializedRef.current || !userId) return
+    initializedRef.current = true
+
+    const loadSettings = async () => {
+      if (window.electronAPI?.settings) {
+        try {
+          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          if (result.success && result.preference?.selectionBorderColor) {
+            setSelectionBorderColor(result.preference.selectionBorderColor)
+          }
+        } catch (error) {
+          console.error("選択枠色の読み込みに失敗しました:", error)
+        }
+      }
+
+      // 採点状態色をDBから読み込み
+      await loadScoringStatusColors(userId)
+      setScoringColors(getScoringStatusColors())
+      setCurrentPresetId(getCurrentPresetId())
+    }
+
+    loadSettings()
+  }, [userId])
 
   // 選択枠色の変更
-  const handleSelectionBorderColorChange = useCallback((color: string) => {
-    setSelectionBorderColor(color.toUpperCase())
-    saveSelectionBorderColor(color)
-    window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
-    toast.success("選択枠色が変更されました")
-  }, [])
+  const handleSelectionBorderColorChange = useCallback(
+    async (color: string) => {
+      const upperColor = color.toUpperCase()
+      setSelectionBorderColor(upperColor)
+
+      if (userId && window.electronAPI?.settings) {
+        try {
+          await window.electronAPI.settings.upsertUserScoringPreference(userId, {
+            selectionBorderColor: upperColor,
+          })
+          window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
+          toast.success("選択枠色が変更されました")
+        } catch (error) {
+          console.error("選択枠色の保存に失敗しました:", error)
+          toast.error("選択枠色の保存に失敗しました")
+        }
+      }
+    },
+    [userId]
+  )
 
   // プリセット選択
-  const handlePresetSelect = useCallback((presetId: string) => {
-    applyScoringColorPreset(presetId)
-    setScoringColors(getScoringStatusColors())
-    setCurrentPresetId(presetId)
-    toast.success("カラープリセットが適用されました")
-  }, [])
+  const handlePresetSelect = useCallback(
+    async (presetId: string) => {
+      await applyScoringColorPreset(presetId, userId || undefined)
+      setScoringColors(getScoringStatusColors())
+      setCurrentPresetId(presetId)
+      toast.success("カラープリセットが適用されました")
+    },
+    [userId]
+  )
 
   // 個別の色変更
   const handleStatusColorChange = useCallback(
-    (status: ScoringStatusType, type: "bg" | "text" | "icon", color: string) => {
+    async (status: ScoringStatusType, type: "bg" | "text" | "icon", color: string) => {
       const updated: ScoringStatusColors = {
         ...scoringColors,
         [status]: {
@@ -71,16 +119,15 @@ export function DisplaySettingsTab() {
         },
       }
       setScoringColors(updated)
-      saveScoringStatusColors(updated)
-      setCurrentPresetId(null) // カスタム変更したのでプリセットをクリア
+      setCurrentPresetId(null)
+      await saveScoringStatusColors(updated, userId || undefined)
     },
-    [scoringColors]
+    [scoringColors, userId]
   )
 
   // リセット
-  const handleReset = useCallback(() => {
-    handlePresetSelect("default")
-    toast.success("デフォルト設定にリセットしました")
+  const handleReset = useCallback(async () => {
+    await handlePresetSelect("default")
   }, [handlePresetSelect])
 
   const isPresetSelected = (presetId: string) => currentPresetId === presetId

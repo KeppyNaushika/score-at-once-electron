@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { useEffect, useRef, useState } from "react"
 import {
   getScoringStatusColors,
+  loadScoringStatusColors,
   type ScoringStatusColors,
 } from "@/lib/scoringStatusColors"
 
@@ -10,9 +12,25 @@ import {
  * 設定画面で色が変更された際にリアルタイムで反映される
  */
 export function useScoringStatusColors(): ScoringStatusColors {
+  const { user } = useAuth()
+  const userId = user?.id
+  const initializedRef = useRef(false)
+
   const [colors, setColors] = useState<ScoringStatusColors>(
     getScoringStatusColors
   )
+
+  // 初期化時にDBから読み込み
+  useEffect(() => {
+    if (initializedRef.current || !userId) return
+    initializedRef.current = true
+
+    const init = async () => {
+      await loadScoringStatusColors(userId)
+      setColors(getScoringStatusColors())
+    }
+    init()
+  }, [userId])
 
   useEffect(() => {
     const handleChange = () => {
@@ -21,12 +39,9 @@ export function useScoringStatusColors(): ScoringStatusColors {
 
     // 設定画面からの変更イベントを監視
     window.addEventListener("scoringStatusColorsChanged", handleChange)
-    // 他タブからのlocalStorage変更も監視
-    window.addEventListener("storage", handleChange)
 
     return () => {
       window.removeEventListener("scoringStatusColorsChanged", handleChange)
-      window.removeEventListener("storage", handleChange)
     }
   }, [])
 

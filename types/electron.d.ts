@@ -1352,9 +1352,7 @@ export interface MyAPI {
     }>
   }
 
-  // =============================================================================
-  // v0.3.0: ProjectClass関連
-  // =============================================================================
+  // ProjectClass関連
   projectClass: {
     /**
      * プロジェクトに関連付けられた全クラスを取得
@@ -1445,9 +1443,7 @@ export interface MyAPI {
     ) => Promise<StudentClassInfo>
   }
 
-  // =============================================================================
-  // v0.3.0: UserProject権限管理関連
-  // =============================================================================
+  // UserProject権限管理関連
   userProject: {
     /**
      * プロジェクトのメンバー一覧を取得
@@ -1529,10 +1525,144 @@ export interface MyAPI {
       query: string
     ) => Promise<{ id: string; username: string; name: string }[]>
   }
+
+  // Settings
+  settings: {
+    // UserKeyboardShortcut
+    getUserKeyboardShortcuts: (userId: string) => Promise<{
+      success: boolean
+      shortcuts?: Record<string, string>
+      error?: string
+    }>
+    saveUserKeyboardShortcuts: (
+      userId: string,
+      shortcuts: Record<string, string>
+    ) => Promise<{ success: boolean; error?: string }>
+    resetUserKeyboardShortcuts: (
+      userId: string
+    ) => Promise<{ success: boolean; error?: string }>
+
+    // UserScoringPreference
+    getUserScoringPreference: (userId: string) => Promise<{
+      success: boolean
+      preference?: UserScoringPreference | null
+      error?: string
+    }>
+    upsertUserScoringPreference: (
+      userId: string,
+      data: {
+        showStudentNames?: boolean
+        autoScroll?: boolean
+        itemsPerLine?: number
+        layoutDirection?: string
+        selectionBorderColor?: string | null
+        scoringStatusColors?: string | null
+        scoringColorPresetId?: string | null
+      }
+    ) => Promise<{
+      success: boolean
+      preference?: UserScoringPreference
+      error?: string
+    }>
+
+    // ProjectMarkingFormat
+    getProjectMarkingFormats: (projectId: string) => Promise<{
+      success: boolean
+      formats?: ProjectMarkingFormat[]
+      error?: string
+    }>
+    saveProjectMarkingFormats: (
+      projectId: string,
+      formats: MarkingFormatData[]
+    ) => Promise<{ success: boolean; error?: string }>
+
+    // ProjectExportSettings
+    getProjectExportSettings: (projectId: string) => Promise<{
+      success: boolean
+      settings?: Record<string, unknown> | null
+      error?: string
+    }>
+    saveProjectExportSettings: (
+      projectId: string,
+      settings: Record<string, unknown>
+    ) => Promise<{ success: boolean; error?: string }>
+
+    // CropRegionMarkingOverride (機能H)
+    getCropRegionMarkingOverrides: (cropRegionId: string) => Promise<{
+      success: boolean
+      overrides?: CropRegionMarkingOverride[]
+      error?: string
+    }>
+    saveCropRegionMarkingOverrides: (
+      cropRegionId: string,
+      overrides: MarkingOverrideData[]
+    ) => Promise<{ success: boolean; error?: string }>
+    resetCropRegionMarkingOverrides: (
+      cropRegionId: string
+    ) => Promise<{ success: boolean; error?: string }>
+    getProjectCropRegionMarkingOverrides: (projectId: string) => Promise<{
+      success: boolean
+      overrides?: CropRegionMarkingOverrideWithRegion[]
+      error?: string
+    }>
+  }
+
+  // PDF Tools related
+  pdfTools: {
+    mergePdfs: (options: {
+      pages: Array<{
+        filePath: string
+        pageNumber: number
+        rotation?: 0 | 90 | 180 | 270
+      }>
+      outputPath: string
+    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    splitPdf: (options: {
+      filePath: string
+      outputDir: string
+      prefix?: string
+    }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
+    applyNUp: (options: {
+      filePath: string
+      layout: "2x1" | "1x2"
+      order: "left-right" | "right-left"
+      outputPath: string
+    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    rotatePages: (options: {
+      filePath: string
+      rotations: Array<{ pageNumber: number; rotation: 0 | 90 | 180 | 270 }>
+      outputPath: string
+    }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
+    exportAsPng: (options: {
+      imageBuffers: Array<{
+        buffer: Buffer
+        name: string
+        rotation?: 0 | 90 | 180 | 270
+      }>
+      outputDir: string
+    }) => Promise<{ success: boolean; outputPaths?: string[]; error?: string }>
+    selectSavePath: (options: {
+      type: "pdf" | "directory"
+      defaultName?: string
+    }) => Promise<{ success: boolean; path?: string; canceled?: boolean }>
+    selectFiles: () => Promise<{
+      success: boolean
+      filePaths?: string[]
+      canceled?: boolean
+    }>
+    getPdfInfo: (filePath: string) => Promise<{
+      success: boolean
+      pageCount?: number
+      name?: string
+      error?: string
+    }>
+    /** ドラッグ&ドロップされたFileオブジェクトからパスを取得 */
+    getPathForFile: (file: File) => string
+  }
 }
 
 // =============================================================================
-// v0.3.0: ProjectClass関連型
+// ProjectClass関連型
 // =============================================================================
 
 /**
@@ -1621,7 +1751,7 @@ export interface StudentClassMembershipWithStudent {
 }
 
 // =============================================================================
-// v0.3.0: UserProject権限管理関連型
+// UserProject権限管理関連型
 // =============================================================================
 
 /**
@@ -1658,6 +1788,89 @@ export interface UserProjectWithProjectDetails {
   createdAt: Date
   updatedAt: Date
   project: Project
+}
+
+// =============================================================================
+// Settings関連型
+// =============================================================================
+
+/**
+ * ユーザー採点設定
+ */
+export interface UserScoringPreference {
+  id: string
+  userId: string
+  showStudentNames: boolean
+  autoScroll: boolean
+  itemsPerLine: number
+  layoutDirection: string
+  selectionBorderColor: string | null
+  scoringStatusColors: string | null
+  scoringColorPresetId: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * プロジェクト採点記号設定
+ */
+export interface ProjectMarkingFormat {
+  id: string
+  projectId: string
+  markType: string
+  symbol: string
+  color: string
+  fontSize: number | null
+  strokeWidth: number | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * 設問別採点記号オーバーライド設定（機能H）
+ */
+export interface CropRegionMarkingOverride {
+  id: string
+  cropRegionId: string
+  markType: string
+  symbol: string | null
+  color: string | null
+  visible: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+/**
+ * 設問別採点記号オーバーライド設定（CropRegion情報付き）
+ */
+export interface CropRegionMarkingOverrideWithRegion
+  extends CropRegionMarkingOverride {
+  cropRegion: {
+    id: string
+    label: string | null
+    type: string
+  }
+}
+
+/**
+ * ProjectMarkingFormat作成/更新用データ
+ */
+export interface MarkingFormatData {
+  markType: string
+  symbol: string
+  color: string
+  fontSize?: number | null
+  strokeWidth?: number | null
+}
+
+/**
+ * CropRegionMarkingOverride作成/更新用データ
+ */
+export interface MarkingOverrideData {
+  markType: string
+  symbol?: string | null
+  color?: string | null
+  visible?: boolean
 }
 
 // パスワード保護PDF変換用のコールバック型
