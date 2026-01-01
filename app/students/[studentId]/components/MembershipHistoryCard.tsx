@@ -20,7 +20,7 @@ export function MembershipHistoryCard({
   onEndMembership,
 }: MembershipHistoryCardProps) {
   return (
-    <Card>
+    <Card className="border-border/50 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Clock className="h-5 w-5" />

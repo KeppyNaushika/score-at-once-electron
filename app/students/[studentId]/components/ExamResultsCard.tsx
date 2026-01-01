@@ -2,6 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -10,9 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/useTableSort"
 import { ClipboardList } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 interface ExamResult {
   projectId: string
@@ -24,6 +26,15 @@ interface ExamResult {
   scoredCount: number
   totalQuestions: number
   status: "complete" | "partial" | "unscored"
+}
+
+interface ExamResultSortable {
+  projectId: string
+  examName: string
+  subject: string | null
+  examDate: string | null
+  totalScore: number
+  original: ExamResult
 }
 
 interface ExamResultsCardProps {
@@ -49,27 +60,60 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
     fetchResults()
   }, [studentId])
 
+  // ソート用のデータ変換
+  const sortableData = useMemo<ExamResultSortable[]>(() => {
+    return results.map((result) => ({
+      projectId: result.projectId,
+      examName: result.examName,
+      subject: result.subject,
+      examDate: result.examDate
+        ? new Date(result.examDate).toISOString()
+        : null,
+      totalScore: result.totalScore,
+      original: result,
+    }))
+  }, [results])
+
+  // ソート機能
+  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
+    defaultSort: { key: "examDate", direction: "desc" },
+  })
+
   const formatDate = (date: Date | null) => {
-    if (!date) return "-"
+    if (!date) return "—"
     return new Date(date).toLocaleDateString("ja-JP")
   }
 
   const getStatusBadge = (result: ExamResult) => {
     if (result.status === "complete") {
-      return <Badge className="bg-green-500">採点完了</Badge>
+      return (
+        <Badge className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-normal">
+          採点完了
+        </Badge>
+      )
     } else if (result.status === "partial") {
       return (
-        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+        <Badge
+          variant="outline"
+          className="rounded-full border-yellow-500 px-2.5 py-0.5 text-xs font-normal text-yellow-600"
+        >
           採点中 ({result.scoredCount}/{result.totalQuestions})
         </Badge>
       )
     }
-    return <Badge variant="secondary">未採点</Badge>
+    return (
+      <Badge
+        variant="secondary"
+        className="rounded-full px-2.5 py-0.5 text-xs font-normal"
+      >
+        未採点
+      </Badge>
+    )
   }
 
   const getScoreDisplay = (result: ExamResult) => {
     if (result.status === "unscored") {
-      return <span className="text-muted-foreground">-</span>
+      return <span className="text-muted-foreground">—</span>
     }
     const percentage =
       result.maxScore > 0
@@ -77,17 +121,19 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
         : 0
     return (
       <div className="flex items-center gap-2">
-        <span className="font-medium">
+        <span className="font-medium tabular-nums">
           {result.totalScore} / {result.maxScore}
         </span>
-        <span className="text-muted-foreground text-sm">({percentage}%)</span>
+        <span className="text-muted-foreground text-sm tabular-nums">
+          ({percentage}%)
+        </span>
       </div>
     )
   }
 
   if (loading) {
     return (
-      <Card className="mb-6">
+      <Card className="border-border/50 mb-8 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5" />
@@ -95,7 +141,7 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-muted-foreground py-4 text-center">
+          <div className="text-muted-foreground py-8 text-center">
             読み込み中...
           </div>
         </CardContent>
@@ -104,31 +150,70 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="border-border/50 mb-8 shadow-sm">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ClipboardList className="h-5 w-5" />
-          試験成績 ({results.length}件)
+          試験成績
+          <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
+            ({results.length}件)
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {results.length > 0 ? (
-          <div className="rounded-md border">
+        {sortedData.length > 0 ? (
+          <div className="border-border/50 overflow-hidden rounded-xl border">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>試験名</TableHead>
-                  <TableHead>教科</TableHead>
-                  <TableHead>実施日</TableHead>
-                  <TableHead>得点</TableHead>
+                <TableRow className="hover:bg-muted/40">
+                  <SortableTableHead
+                    sortKey="examName"
+                    currentSortKey={sortConfig.key as string | null}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) =>
+                      requestSort(key as keyof ExamResultSortable)
+                    }
+                  >
+                    試験名
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="subject"
+                    currentSortKey={sortConfig.key as string | null}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) =>
+                      requestSort(key as keyof ExamResultSortable)
+                    }
+                  >
+                    教科
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="examDate"
+                    currentSortKey={sortConfig.key as string | null}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) =>
+                      requestSort(key as keyof ExamResultSortable)
+                    }
+                  >
+                    実施日
+                  </SortableTableHead>
+                  <SortableTableHead
+                    sortKey="totalScore"
+                    currentSortKey={sortConfig.key as string | null}
+                    currentDirection={sortConfig.direction}
+                    onSort={(key) =>
+                      requestSort(key as keyof ExamResultSortable)
+                    }
+                  >
+                    得点
+                  </SortableTableHead>
                   <TableHead>状態</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {results.map((result) => (
+                {sortedData.map(({ original: result }) => (
                   <TableRow
                     key={result.projectId}
-                    className="hover:bg-muted/50 cursor-pointer"
+                    className="group cursor-pointer"
                     onClick={() =>
                       router.push(
                         `/projects/${result.projectId}/07-score-at-once`
@@ -138,8 +223,14 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
                     <TableCell className="font-medium">
                       {result.examName}
                     </TableCell>
-                    <TableCell>{result.subject || "-"}</TableCell>
-                    <TableCell>{formatDate(result.examDate)}</TableCell>
+                    <TableCell>
+                      {result.subject || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatDate(result.examDate)}
+                    </TableCell>
                     <TableCell>{getScoreDisplay(result)}</TableCell>
                     <TableCell>{getStatusBadge(result)}</TableCell>
                   </TableRow>
@@ -148,8 +239,8 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
             </Table>
           </div>
         ) : (
-          <div className="text-muted-foreground py-8 text-center">
-            <ClipboardList className="mx-auto mb-2 h-12 w-12 opacity-50" />
+          <div className="text-muted-foreground py-12 text-center">
+            <ClipboardList className="mx-auto mb-3 h-12 w-12 opacity-30" />
             <p>試験の記録がありません</p>
           </div>
         )}

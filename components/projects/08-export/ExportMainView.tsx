@@ -1,6 +1,5 @@
 "use client"
 
-import { pdf } from "@react-pdf/renderer"
 import type {
   RenderProgress,
   RenderedPageData,
@@ -8,24 +7,26 @@ import type {
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import { ExportOptionsCard } from "@/components/projects/08-export/components/ExportOptionsCard"
+import {
+  ExportOptionsCard,
+  type ExportTabType,
+} from "@/components/projects/08-export/components/ExportOptionsCard"
 import ExportProgressModal from "@/components/projects/08-export/components/ExportProgressModal"
 import ExportWarningModal from "@/components/projects/08-export/components/ExportWarningModal"
-import {
-  IndividualReportDocument,
-  registerFonts,
-} from "@/components/projects/08-export/components/individual-report-pdf"
+import { generatePrintHtml } from "@/components/projects/08-export/components/individual-report/generatePrintHtml"
 import {
   PdfCanvasRenderer,
   type PdfExportPageData,
 } from "@/components/projects/08-export/components/PdfCanvasRenderer"
 import { StudentSelectionCard } from "@/components/projects/08-export/components/StudentSelectionCard"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
+import { useIndividualReportPreview } from "@/components/projects/08-export/hooks/useIndividualReportPreview"
 import type { ScoringMarkConfigForPdf } from "@/components/projects/08-export/utils/pdfCanvasRenderer"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 export default function ExportMainView() {
   const { helpButton } = usePageHelp()
+  const [exportTab, setExportTab] = useState<ExportTabType>("scored-answers")
   const [showWarningModal, setShowWarningModal] = useState(false)
   const [warningData, setWarningData] = useState({
     noScoringData: [] as string[],
@@ -82,6 +83,35 @@ export default function ExportMainView() {
     isExporting,
     setIsExporting,
   } = useExportPage()
+
+  // プレビュー用のデータ取得
+  const selectedStudentIds = useMemo(
+    () => Array.from(selectedStudents),
+    [selectedStudents]
+  )
+
+  const {
+    previewData,
+    isLoading: isPreviewLoading,
+    error: previewError,
+    previewStudentId,
+    setPreviewStudentId,
+  } = useIndividualReportPreview({
+    projectId: project?.id || "",
+    selectedStudentIds,
+    options: individualReportOptions,
+    enabled: !!project?.id && selectedStudents.size > 0,
+  })
+
+  // プレビュー用の生徒リスト
+  const previewStudentList = useMemo(() => {
+    return students
+      .filter((s) => selectedStudents.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        name: `${s.lastName} ${s.firstName}`,
+      }))
+  }, [students, selectedStudents])
 
   /**
    * scoringMarkConfigをScoringMarkConfigForPdf形式に変換
@@ -547,34 +577,10 @@ export default function ExportMainView() {
 
     try {
       setIsExporting(true)
-      setShowProgressModal(true)
-      setExportProgress(0)
-      setExportStatus("processing")
-      setCurrentStep("データを取得中...")
 
       const selectedStudentIds = Array.from(selectedStudents)
 
-      // 1. 保存先選択
-      setCurrentStep("保存先を選択してください...")
-      const savePathResult =
-        await window.electronAPI.export.selectIndividualReportSavePath({
-          projectName: project?.examName,
-        })
-
-      if (
-        !savePathResult.success ||
-        savePathResult.canceled ||
-        !savePathResult.filePath
-      ) {
-        setShowProgressModal(false)
-        setIsExporting(false)
-        return
-      }
-
-      setExportProgress(10)
-      setCurrentStep("個人成績表データを生成中...")
-
-      // 2. データ取得（統計・アドバイス含む）
+      // 1. データ取得（統計・アドバイス含む）
       const dataResult =
         await window.electronAPI.export.getIndividualReportData({
           projectId: project.id,
@@ -586,64 +592,26 @@ export default function ExportMainView() {
         throw new Error(dataResult.error || "データ取得に失敗しました")
       }
 
-      setExportProgress(30)
-      setCurrentStep(`${dataResult.reports.length}名分のレポートを生成中...`)
-
-      // 3. React-PDFでPDFを生成
-      setExportProgress(50)
-      setCurrentStep("PDFを生成中...")
-
-      // フォント登録（初回のみ実行される）
-      registerFonts()
-
-      const pdfDocument = (
-        <IndividualReportDocument
-          reports={dataResult.reports}
-          options={individualReportOptions}
-        />
+      // 2. HTMLを生成（プレビューと同じ構造）
+      const html = generatePrintHtml(
+        dataResult.reports,
+        individualReportOptions
       )
 
-      const blob = await pdf(pdfDocument).toBlob()
-      const arrayBuffer = await blob.arrayBuffer()
+      // 3. 印刷ダイアログを開く
+      const result = await window.electronAPI.export.openPrintDialog({
+        html,
+        title: `個人成績表 - ${project?.examName || ""}`,
+      })
 
-      setExportProgress(80)
-      setCurrentStep("PDFを保存中...")
-
-      // 4. PDFを保存
-      const saveResult =
-        await window.electronAPI.export.saveIndividualReportPdf({
-          filePath: savePathResult.filePath,
-          pdfBuffer: arrayBuffer,
-        })
-
-      if (!saveResult.success) {
-        throw new Error(saveResult.error || "PDF保存に失敗しました")
+      if (!result.success) {
+        throw new Error(result.error || "印刷ダイアログを開けませんでした")
       }
-
-      setExportProgress(100)
-      setExportStatus("completed")
-      setCurrentStep("完了しました")
-
-      // 少し待ってからモーダルを閉じる
-      setTimeout(() => {
-        setShowProgressModal(false)
-        setExportProgress(0)
-        setExportStatus("processing")
-        setCurrentStep("")
-      }, 1500)
     } catch (error) {
       console.error("Individual report export error:", error)
-      setExportStatus("error")
-      setCurrentStep(
+      alert(
         `エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
       )
-      // エラー時は3秒後にモーダルを閉じる
-      setTimeout(() => {
-        setShowProgressModal(false)
-        setExportProgress(0)
-        setExportStatus("processing")
-        setCurrentStep("")
-      }, 3000)
     } finally {
       setIsExporting(false)
     }
@@ -675,11 +643,21 @@ export default function ExportMainView() {
               setSelectedStatuses={setSelectedStatuses}
               selectedStudents={selectedStudents}
               setSelectedStudents={setSelectedStudents}
+              // プレビュー関連
+              exportTab={exportTab}
+              previewData={previewData}
+              isPreviewLoading={isPreviewLoading}
+              previewError={previewError}
+              previewStudentId={previewStudentId ?? undefined}
+              onPreviewStudentChange={setPreviewStudentId}
+              previewStudentList={previewStudentList}
+              individualReportOptions={individualReportOptions}
             />
           </div>
 
           <div className="h-full min-h-0">
             <ExportOptionsCard
+              projectId={project?.id ?? ""}
               exportOptions={exportOptions}
               setExportOptions={setExportOptions}
               scoringMarkConfig={scoringMarkConfig}
@@ -691,6 +669,8 @@ export default function ExportMainView() {
               onExportScoredAnswers={handleExportScoredAnswers}
               onExportGradingData={handleExportGradingData}
               onExportIndividualReports={handleExportIndividualReports}
+              activeTab={exportTab}
+              onTabChange={setExportTab}
             />
           </div>
         </div>

@@ -12,8 +12,9 @@ import {
   calculateActualScore,
   getQuestionScoresForProject,
 } from "../../prisma/questionScore"
+import { getActiveSubtotalGroupsForProject } from "../../prisma/subtotalGroup"
 import {
-  calculateSubtotalScoreForStudent,
+  calculateSubtotalScoreBySubtotalId,
   QuestionScoreData,
 } from "../../shared/calculations/subtotalCalculator"
 import {
@@ -21,6 +22,17 @@ import {
   ScoringData,
   SubtotalScore,
 } from "../../shared/types/exportTypes"
+
+/** SubtotalGroup情報（Excel出力用） */
+interface SubtotalGroupData {
+  groupId: string
+  groupName: string
+  subtotals: Array<{
+    id: string
+    name: string
+    order: number
+  }>
+}
 
 /**
  * 出力用データの取得結果
@@ -124,11 +136,27 @@ export async function fetchExportData(
       .filter((region: CropRegion) => region.type === "SUBTOTAL_SCORE")
       .sort(sortByOrderIndex)
 
+    // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
+    const subtotalGroupsResult =
+      await getActiveSubtotalGroupsForProject(projectId)
+    const subtotalGroupsData: SubtotalGroupData[] =
+      subtotalGroupsResult.success && subtotalGroupsResult.projectSubtotalGroups
+        ? subtotalGroupsResult.projectSubtotalGroups.map((psg) => ({
+            groupId: psg.subtotalGroup.id,
+            groupName: psg.subtotalGroup.name,
+            subtotals: psg.subtotalGroup.subtotals.map((s) => ({
+              id: s.id,
+              name: s.name,
+              order: s.order,
+            })),
+          }))
+        : []
+
     // 採点データの構造化
     const scoringData = await buildScoringData(
       selectedStudents,
       questionRegions,
-      subtotalRegions,
+      subtotalGroupsData,
       questionScores
     )
 
@@ -155,7 +183,7 @@ export async function fetchExportData(
  *
  * @param selectedStudents - 選択された生徒配列
  * @param questionRegions - 設問領域配列
- * @param subtotalRegions - 小計領域配列
+ * @param subtotalGroups - 小計点グループ配列
  * @param questionScores - 設問スコア
  * @returns 構造化された採点データ
  */
@@ -168,7 +196,7 @@ async function buildScoringData(
     status?: "participating" | "expected" | "absent"
   })[],
   questionRegions: CropRegion[],
-  subtotalRegions: CropRegion[],
+  subtotalGroups: SubtotalGroupData[],
   questionScores: { success: boolean; scores?: QuestionScore[] }
 ): Promise<ScoringData[]> {
   return Promise.all(
@@ -182,9 +210,9 @@ async function buildScoringData(
       const scores = buildScoreDetails(studentScores, questionRegions)
       const subtotalScores = await buildSubtotalScores(
         student.id,
-        subtotalRegions,
+        subtotalGroups,
         questionRegions,
-        questionScores.scores || [] // 全てのスコアを渡す（学生フィルタリングは計算関数内で行う）
+        questionScores.scores || []
       )
 
       const totalScore = scores.reduce(
@@ -260,33 +288,22 @@ function buildScoreDetails(
 }
 
 /**
- * 小計スコアを構築する
+ * 小計スコアを構築する（Subtotal単位）
  *
  * @param studentId - 生徒ID
- * @param subtotalRegions - 小計領域配列
+ * @param subtotalGroups - 小計点グループ配列
  * @param questionRegions - 設問領域配列
- * @param studentScores - 生徒の設問スコア配列
+ * @param allQuestionScores - 全生徒の設問スコア配列
  * @returns 小計スコア配列
  */
 async function buildSubtotalScores(
   studentId: string,
-  subtotalRegions: CropRegion[],
+  subtotalGroups: SubtotalGroupData[],
   questionRegions: CropRegion[],
-  studentScores: QuestionScore[]
+  allQuestionScores: QuestionScore[]
 ): Promise<SubtotalScore[]> {
-  console.log(
-    `🔍 [Excel Export] Building subtotal scores for student: ${studentId}`
-  )
-  console.log(
-    `📊 [Excel Export] Subtotal regions count: ${subtotalRegions.length}`
-  )
-  console.log(
-    `📊 [Excel Export] Question regions count: ${questionRegions.length}`
-  )
-  console.log(`📊 [Excel Export] Student scores count: ${studentScores.length}`)
-
-  // 設問スコアデータを新しい形式に変換
-  const questionScoreData: QuestionScoreData[] = studentScores
+  // 設問スコアデータを変換
+  const questionScoreData: QuestionScoreData[] = allQuestionScores
     .filter((score) => score.studentId !== null)
     .map((score) => ({
       studentId: score.studentId!,
@@ -295,60 +312,28 @@ async function buildSubtotalScores(
       partialScore: score.partialScore ? Number(score.partialScore) : null,
     }))
 
-  console.log(
-    `🔄 [Excel Export] Converted question score data count: ${questionScoreData.length}`
-  )
-  console.log(
-    `🔍 [Excel Export] Sample question score data:`,
-    questionScoreData.slice(0, 3)
-  )
+  const results: SubtotalScore[] = []
 
-  // この学生のスコアをフィルタリング
-  const studentQuestionScores = questionScoreData.filter(
-    (score) => score.studentId === studentId
-  )
-  console.log(
-    `👤 [Excel Export] Student ${studentId} specific scores count: ${studentQuestionScores.length}`
-  )
-
-  const results = await Promise.all(
-    subtotalRegions.map(async (subtotalRegion: CropRegion, index: number) => {
-      console.log(
-        `🧮 [Excel Export] Processing subtotal region ${index + 1}/${subtotalRegions.length}: ${subtotalRegion.id} (${subtotalRegion.label})`
-      )
-
-      const score = await calculateSubtotalScoreForStudent(
+  for (const group of subtotalGroups) {
+    for (const subtotal of group.subtotals) {
+      const scoreResult = await calculateSubtotalScoreBySubtotalId(
         studentId,
-        subtotalRegion.id,
+        subtotal.id,
         questionScoreData,
         questionRegions
       )
 
-      console.log(
-        `✅ [Excel Export] Calculated subtotal score: ${score} for region ${subtotalRegion.id}`
-      )
+      results.push({
+        subtotalId: subtotal.id,
+        subtotalGroupId: group.groupId,
+        subtotalGroupName: group.groupName,
+        subtotalLabel: subtotal.name,
+        score: scoreResult.score,
+        maxScore: scoreResult.maxScore,
+        hasQuestionAssignments: scoreResult.hasQuestionAssignments,
+      })
+    }
+  }
 
-      // 最大点数を計算（この小計に含まれる設問の最大点数の合計）
-      // 現在は簡略化して全設問の最大点数を使用
-      const maxScore = questionRegions
-        .filter((region) => region.type === "QUESTION_ANSWER")
-        .reduce((sum, region) => sum + (region.points || 0), 0)
-
-      const result = {
-        subtotalRegionId: subtotalRegion.id,
-        subtotalLabel:
-          subtotalRegion.label || `小計${(subtotalRegion.orderIndex ?? 0) + 1}`,
-        score,
-        maxScore,
-      }
-
-      console.log(`📝 [Excel Export] Subtotal result:`, result)
-      return result
-    })
-  )
-
-  console.log(
-    `🏁 [Excel Export] Completed building subtotal scores for student ${studentId}`
-  )
   return results
 }

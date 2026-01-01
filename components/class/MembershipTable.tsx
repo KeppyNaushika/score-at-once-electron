@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -13,14 +14,28 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Membership } from "@/hooks/useClassManagement"
+import { useTableSort } from "@/hooks/useTableSort"
+import { cn } from "@/lib/utils"
 import { Calendar, Edit, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 interface MembershipTableProps {
   memberships: Membership[]
   onEdit: (membership: Membership) => void
   onDelete: (membershipId: string) => void
   onBulkDelete?: (membershipIds: string[]) => void
+}
+
+// ソート用の型
+interface MembershipSortable {
+  id: string
+  studentId: string
+  attendanceNumber: number | null
+  fullName: string
+  startDate: string
+  endDate: string | null
+  isCurrent: boolean
+  original: Membership
 }
 
 export default function MembershipTable({
@@ -37,26 +52,41 @@ export default function MembershipTable({
     return new Date(m.endDate) >= new Date()
   }
 
-  // すべての所属を現在の所属を優先してソート
-  const sortedMemberships = memberships.sort((a, b) => {
-    // 現在の所属を先に表示
-    const aIsCurrent = isCurrentMembership(a)
-    const bIsCurrent = isCurrentMembership(b)
-    if (aIsCurrent && !bIsCurrent) return -1
-    if (!aIsCurrent && bIsCurrent) return 1
+  // ソート用のデータ変換
+  const sortableData = useMemo<MembershipSortable[]>(() => {
+    return memberships.map((m) => ({
+      id: m.id,
+      studentId: m.student.studentId,
+      attendanceNumber: m.attendanceNumber ?? null,
+      fullName: `${m.student.lastName}${m.student.firstName}`,
+      startDate: m.startDate.toISOString(),
+      endDate: m.endDate ? m.endDate.toISOString() : null,
+      isCurrent: isCurrentMembership(m),
+      original: m,
+    }))
+  }, [memberships])
 
-    // 両方とも現在の所属または両方とも終了した所属の場合、出席番号順
-    if (a.attendanceNumber && b.attendanceNumber) {
-      return a.attendanceNumber - b.attendanceNumber
-    }
-    if (a.attendanceNumber) return -1
-    if (b.attendanceNumber) return 1
-    return 0
+  // ソート機能
+  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
+    defaultSort: { key: "attendanceNumber", direction: "asc" },
   })
+
+  // 現在の所属を優先表示（ソート後）
+  const displayData = useMemo(() => {
+    // デフォルトソートの場合のみ、現在の所属を優先
+    if (sortConfig.key === "attendanceNumber" || sortConfig.key === null) {
+      return [...sortedData].sort((a, b) => {
+        if (a.isCurrent && !b.isCurrent) return -1
+        if (!a.isCurrent && b.isCurrent) return 1
+        return 0
+      })
+    }
+    return sortedData
+  }, [sortedData, sortConfig.key])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(sortedMemberships.map((m) => m.id)))
+      setSelectedIds(new Set(displayData.map((m) => m.id)))
     } else {
       setSelectedIds(new Set())
     }
@@ -86,17 +116,20 @@ export default function MembershipTable({
   return (
     <div className="space-y-6">
       {/* 全所属一覧 */}
-      <Card>
+      <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              所属一覧 ({sortedMemberships.length}名)
+              所属一覧
+              <span className="text-muted-foreground ml-1 text-lg font-normal tabular-nums">
+                ({displayData.length}名)
+              </span>
             </CardTitle>
             {selectedIds.size > 0 && (
               <Button
-                size="sm"
                 variant="destructive"
+                className="rounded-lg"
                 onClick={handleBulkDelete}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -106,36 +139,84 @@ export default function MembershipTable({
           </div>
         </CardHeader>
         <CardContent>
-          {sortedMemberships.length > 0 ? (
-            <div className="rounded-md border">
+          {displayData.length > 0 ? (
+            <div className="border-border/50 overflow-hidden rounded-xl border">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[50px]">
+                  <TableRow className="hover:bg-muted/40">
+                    <TableHead className="w-14 px-4">
                       <Checkbox
                         checked={
-                          selectedIds.size === sortedMemberships.length &&
-                          sortedMemberships.length > 0
+                          selectedIds.size === displayData.length &&
+                          displayData.length > 0
                         }
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead>学籍番号</TableHead>
-                    <TableHead>出席番号</TableHead>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>開始日</TableHead>
-                    <TableHead>終了日</TableHead>
+                    <SortableTableHead
+                      sortKey="studentId"
+                      currentSortKey={sortConfig.key as string | null}
+                      currentDirection={sortConfig.direction}
+                      onSort={(key) =>
+                        requestSort(key as keyof MembershipSortable)
+                      }
+                    >
+                      学籍番号
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="attendanceNumber"
+                      currentSortKey={sortConfig.key as string | null}
+                      currentDirection={sortConfig.direction}
+                      onSort={(key) =>
+                        requestSort(key as keyof MembershipSortable)
+                      }
+                    >
+                      出席番号
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="fullName"
+                      currentSortKey={sortConfig.key as string | null}
+                      currentDirection={sortConfig.direction}
+                      onSort={(key) =>
+                        requestSort(key as keyof MembershipSortable)
+                      }
+                    >
+                      氏名
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="startDate"
+                      currentSortKey={sortConfig.key as string | null}
+                      currentDirection={sortConfig.direction}
+                      onSort={(key) =>
+                        requestSort(key as keyof MembershipSortable)
+                      }
+                    >
+                      開始日
+                    </SortableTableHead>
+                    <SortableTableHead
+                      sortKey="endDate"
+                      currentSortKey={sortConfig.key as string | null}
+                      currentDirection={sortConfig.direction}
+                      onSort={(key) =>
+                        requestSort(key as keyof MembershipSortable)
+                      }
+                    >
+                      終了日
+                    </SortableTableHead>
                     <TableHead>備考</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedMemberships.map((membership) => (
+                  {displayData.map(({ original: membership, isCurrent }) => (
                     <TableRow
                       key={membership.id}
-                      className={membership.endDate ? "opacity-60" : ""}
+                      className={cn(
+                        "group",
+                        !isCurrent && "bg-muted/20 opacity-50"
+                      )}
                     >
-                      <TableCell>
+                      <TableCell className="px-4">
                         <Checkbox
                           checked={selectedIds.has(membership.id)}
                           onCheckedChange={(checked) =>
@@ -143,51 +224,62 @@ export default function MembershipTable({
                           }
                         />
                       </TableCell>
-                      <TableCell className="font-mono">
+                      <TableCell className="font-mono text-sm">
                         {membership.student.studentId}
                       </TableCell>
-                      <TableCell className="text-center">
-                        {membership.attendanceNumber || "-"}
+                      <TableCell className="tabular-nums">
+                        {membership.attendanceNumber || (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           {membership.student.lastName}{" "}
                           {membership.student.firstName}
-                          {isCurrentMembership(membership) && (
-                            <Badge variant="default" className="text-xs">
+                          {isCurrent ? (
+                            <Badge
+                              variant="default"
+                              className="rounded-full px-2 py-0.5 text-xs font-normal"
+                            >
                               在籍中
                             </Badge>
-                          )}
-                          {!isCurrentMembership(membership) && (
-                            <Badge variant="secondary" className="text-xs">
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className="rounded-full px-2 py-0.5 text-xs font-normal"
+                            >
                               終了
                             </Badge>
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="tabular-nums">
                         {membership.startDate.toLocaleDateString("ja-JP")}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="tabular-nums">
                         {membership.endDate
                           ? membership.endDate.toLocaleDateString("ja-JP")
-                          : "-"}
+                          : "—"}
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {membership.notes}
+                      <TableCell className="max-w-xs truncate text-sm">
+                        {membership.notes || (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
                           <Button
-                            size="sm"
-                            variant="outline"
+                            variant="ghost"
+                            size="icon"
+                            className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
                             onClick={() => onEdit(membership)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="destructive"
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
                             onClick={() => onDelete(membership.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -200,7 +292,7 @@ export default function MembershipTable({
               </Table>
             </div>
           ) : (
-            <div className="text-muted-foreground py-8 text-center">
+            <div className="text-muted-foreground py-12 text-center">
               所属している生徒はいません
             </div>
           )}

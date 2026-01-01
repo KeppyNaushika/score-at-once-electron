@@ -1,4 +1,5 @@
 import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+import { CropRegionWithDetails } from "@/types/prismaExtensions"
 import { User } from "@prisma/client"
 import { toast } from "sonner"
 
@@ -53,21 +54,26 @@ export async function saveTemplate(
       }
     })
 
-    const savedRegions = await Promise.all(savePromises)
+    const savedRegions: CropRegionWithDetails[] =
+      await Promise.all(savePromises)
 
     // 保存された領域データを整形
     const formattedRegions: CropRegionArea[] = savedRegions
-      .filter((region) => region !== null)
-      .map((region) => ({
-        id: region!.id,
-        type: region!.type as CropRegionAreaType,
-        x: region!.x,
-        y: region!.y,
-        width: region!.width,
-        height: region!.height,
-        label: region!.label || "",
-        points: region!.points,
-        projectPageId: region!.projectPageId || "",
+      .filter(
+        (
+          region: CropRegionWithDetails | null
+        ): region is CropRegionWithDetails => region !== null
+      )
+      .map((region: CropRegionWithDetails) => ({
+        id: region.id,
+        type: region.type as CropRegionAreaType,
+        x: region.x,
+        y: region.y,
+        width: region.width,
+        height: region.height,
+        label: region.label || "",
+        points: region.points,
+        projectPageId: region.projectPageId || "",
       }))
 
     toast.success(`採点枠を保存しました。`)

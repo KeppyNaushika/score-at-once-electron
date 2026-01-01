@@ -39,9 +39,9 @@ function serializeQuestionScore(score: {
 }
 
 export function setupProjectHandlers(): void {
-  ipcMain.handle("fetch-projects", async () => {
+  ipcMain.handle("fetch-projects", async (_event, userId: string) => {
     try {
-      const projects = await dbFetchProjects()
+      const projects = await dbFetchProjects(userId)
 
       // Dateオブジェクトをそのまま返す（Structured Clone AlgorithmでDate対応）
       // Decimalオブジェクトはnumberに変換（Structured Clone非対応のため）

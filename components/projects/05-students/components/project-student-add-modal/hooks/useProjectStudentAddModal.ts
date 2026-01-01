@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
 import type {
   AvailableClass,
   AvailableStudent,
 } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
+import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectStudentAddModalProps {
   isOpen: boolean
@@ -100,7 +100,21 @@ export function useProjectStudentAddModal({
       let currentOrder = 0
 
       for (const classItem of selectedClasses) {
-        // 学級の全生徒を取得
+        // 1. ProjectClass(administered=true) を作成
+        // 既に存在する場合は何もしない（upsertの挙動を利用）
+        try {
+          await window.electronAPI.projectClass.add({
+            projectId,
+            classId: classItem.id,
+            administered: true,
+            statistics: true,
+          })
+        } catch {
+          // 既に存在する場合のエラーは無視
+          console.log(`ProjectClass may already exist for ${classItem.name}`)
+        }
+
+        // 2. 学級の全生徒を取得
         const allClasses = await window.electronAPI.fetchClasses()
         const fullClassData = allClasses.find((cls) => cls.id === classItem.id)
 

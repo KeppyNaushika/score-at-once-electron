@@ -565,21 +565,14 @@ export function setupMiscHandlers(): void {
     try {
       const { getDataDirectory, calculateDataSize } =
         await import("../lib/dataManager")
-      const { getProjects: dbFetchProjects } =
-        await import("../lib/prisma/project")
 
       const dataDirectory = getDataDirectory()
       const size = await calculateDataSize()
-
-      // プロジェクト数を取得
-      const projects = await dbFetchProjects()
-      const projectCount = Array.isArray(projects) ? projects.length : 0
 
       return {
         success: true,
         directory: dataDirectory,
         size,
-        projectCount,
       }
     } catch (err) {
       console.error("Error getting data directory info:", err)

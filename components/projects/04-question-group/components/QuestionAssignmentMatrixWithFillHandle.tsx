@@ -15,6 +15,7 @@ import {
   CropSubtotalWithRelations,
   SubtotalGroupWithItems,
 } from "@/types/electron"
+import type { Subtotal } from "@prisma/client"
 import { Grid3X3, RotateCcw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useFillHandleDrag, type FillUpdate } from "../hooks/useFillHandleDrag"
@@ -370,7 +371,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
                   {/* 空のセル */}
                 </TableHead>
                 {subtotalGroups.map((group) =>
-                  group.subtotals.map((subtotal) => (
+                  group.subtotals.map((subtotal: Subtotal) => (
                     <TableHead
                       key={subtotal.id}
                       className="sticky top-10.25 z-20 bg-gray-50/50 px-2 text-center"
@@ -406,7 +407,7 @@ export function QuestionAssignmentMatrixWithFillHandle({
                   {(() => {
                     let colIndex = 0
                     return subtotalGroups.map((group) =>
-                      group.subtotals.map((subtotal) => {
+                      group.subtotals.map((subtotal: Subtotal) => {
                         const currentColIndex = colIndex++
                         return (
                           <TableCell

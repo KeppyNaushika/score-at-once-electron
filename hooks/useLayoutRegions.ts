@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
 import { CropRegionAreaType } from "@/types/common.types"
+import { CropRegionWithDetails } from "@/types/prismaExtensions"
+import { useCallback, useRef, useState } from "react"
 import { toast } from "sonner"
 
 export interface CropRegion {
@@ -102,25 +103,31 @@ export function useCropRegions(projectId?: string) {
           }
         })
 
-        const savedRegions = await Promise.all(savePromises.filter(Boolean))
+        const savedRegions: CropRegionWithDetails[] = await Promise.all(
+          savePromises.filter(Boolean)
+        )
 
         if (savedRegions.length > 0) {
           const formattedRegions: CropRegion[] = savedRegions
-            .filter((region) => region !== null)
-            .map((region) => ({
-              id: region!.id,
-              type: region!.type as CropRegionAreaType,
-              x: region!.x,
-              y: region!.y,
-              width: region!.width,
-              height: region!.height,
-              label: region!.label || "",
-              points: region!.points ? String(region!.points) : null,
+            .filter(
+              (
+                region: CropRegionWithDetails | null
+              ): region is CropRegionWithDetails => region !== null
+            )
+            .map((region: CropRegionWithDetails) => ({
+              id: region.id,
+              type: region.type as CropRegionAreaType,
+              x: region.x,
+              y: region.y,
+              width: region.width,
+              height: region.height,
+              label: region.label || "",
+              points: region.points ? String(region.points) : null,
               orderIndex:
-                region!.orderIndex !== undefined && region!.orderIndex !== null
-                  ? region!.orderIndex
+                region.orderIndex !== undefined && region.orderIndex !== null
+                  ? region.orderIndex
                   : null,
-              masterImageId: region!.projectPage?.id || "",
+              masterImageId: region.projectPage?.id || "",
             }))
 
           setRegions(formattedRegions)

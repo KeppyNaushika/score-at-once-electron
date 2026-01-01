@@ -5,6 +5,7 @@ import type {
   PageImage,
   Prisma,
   Project,
+  ProjectClass,
   ProjectSubtotalGroup,
   QuestionScore,
   Student,
@@ -200,7 +201,7 @@ export interface MasterAnswerDeletionResult {
 }
 
 export interface MyAPI {
-  fetchProjects: () => Promise<ProjectWithDetails[]>
+  fetchProjects: (userId: string) => Promise<ProjectWithDetails[]>
   fetchProjectById: (projectId: string) => Promise<ProjectWithDetails | null>
   createProject: (
     projectData: CreateProjectArgs,
@@ -1096,6 +1097,13 @@ export interface MyAPI {
       import("../electron-src/lib/export/individual-report").GetIndividualReportDataResult
     >
 
+    // 個人成績表用小計点グループ一覧取得
+    getSubtotalGroupsForReport: (
+      projectId: string
+    ) => Promise<
+      import("../electron-src/lib/export/individual-report").SubtotalGroupsForReportResult
+    >
+
     // 個人成績表PDF保存先選択ダイアログ
     selectIndividualReportSavePath: (options: {
       projectName?: string
@@ -1110,6 +1118,40 @@ export interface MyAPI {
       filePath: string
       pdfBuffer: ArrayBuffer
     }) => Promise<{
+      success: boolean
+      error?: string
+    }>
+
+    // HTMLからPDFを生成（ブラウザ印刷機能を使用）
+    printHtmlToPdf: (options: {
+      html: string
+      filePath: string
+      pageSize?: "A4" | "Letter"
+      landscape?: boolean
+      margins?: {
+        top?: number
+        bottom?: number
+        left?: number
+        right?: number
+      }
+    }) => Promise<{
+      success: boolean
+      error?: string
+    }>
+
+    // 複数のHTMLページからPDFを生成（バッチ処理）
+    printMultipleHtmlToPdf: (options: {
+      htmlPages: string[]
+      filePath: string
+      pageSize?: "A4" | "Letter"
+      landscape?: boolean
+    }) => Promise<{
+      success: boolean
+      error?: string
+    }>
+
+    // 印刷ダイアログを開く
+    openPrintDialog: (options: { html: string; title?: string }) => Promise<{
       success: boolean
       error?: string
     }>
@@ -1205,7 +1247,6 @@ export interface MyAPI {
     success: boolean
     directory?: string
     size?: number
-    projectCount?: number
     error?: string
   }>
   openDataDirectory: () => Promise<{
@@ -1310,6 +1351,313 @@ export interface MyAPI {
       error?: string
     }>
   }
+
+  // =============================================================================
+  // v0.3.0: ProjectClass関連
+  // =============================================================================
+  projectClass: {
+    /**
+     * プロジェクトに関連付けられた全クラスを取得
+     */
+    getAll: (projectId: string) => Promise<ProjectClassWithClass[]>
+
+    /**
+     * 受験生徒追加用クラスを取得 (administered=true)
+     */
+    getAdministered: (projectId: string) => Promise<ProjectClassWithClass[]>
+
+    /**
+     * 統計集計用クラスを取得 (statistics=true)
+     */
+    getStatistics: (projectId: string) => Promise<ProjectClassWithClass[]>
+
+    /**
+     * プロジェクトに追加可能なクラスを取得（まだProjectClassに含まれていないクラス）
+     */
+    getAvailable: (projectId: string) => Promise<AvailableClass[]>
+
+    /**
+     * プロジェクトにクラスを追加
+     */
+    add: (options: {
+      projectId: string
+      classId: string
+      administered?: boolean
+      statistics?: boolean
+    }) => Promise<ProjectClassWithDetails>
+
+    /**
+     * ProjectClassを更新
+     */
+    update: (options: {
+      id: string
+      administered?: boolean
+      statistics?: boolean
+      order?: number
+    }) => Promise<ProjectClassWithDetails>
+
+    /**
+     * ProjectClassを削除 (idで指定)
+     */
+    remove: (id: string) => Promise<ProjectClass>
+
+    /**
+     * ProjectClassの順序を一括更新
+     */
+    reorder: (options: {
+      projectId: string
+      orderedIds: string[]
+    }) => Promise<void>
+
+    /**
+     * ProjectClassを削除 (projectIdとclassIdで指定)
+     */
+    removeByIds: (projectId: string, classId: string) => Promise<ProjectClass>
+
+    /**
+     * クラスから生徒をプロジェクトに追加（B案: 統合型フロー）
+     * 1. ProjectClass を作成（administered=true）
+     * 2. クラスの生徒を出席番号順で ProjectStudent に追加
+     */
+    addStudentsFromClass: (
+      projectId: string,
+      classId: string
+    ) => Promise<{
+      added: number
+      skipped: number
+      projectClass: ProjectClass
+    }>
+
+    /**
+     * プロジェクト内の全生徒の学級・出席番号情報を取得
+     * ProjectClass (administered=true) 経由で解決
+     */
+    getStudentClassInfo: (
+      projectId: string
+    ) => Promise<Record<string, StudentClassInfo>>
+
+    /**
+     * 単一生徒の学級・出席番号情報を取得
+     */
+    getStudentClassInfoSingle: (
+      projectId: string,
+      studentId: string
+    ) => Promise<StudentClassInfo>
+  }
+
+  // =============================================================================
+  // v0.3.0: UserProject権限管理関連
+  // =============================================================================
+  userProject: {
+    /**
+     * プロジェクトのメンバー一覧を取得
+     */
+    getMembers: (projectId: string) => Promise<UserProjectWithUserAndInviter[]>
+
+    /**
+     * ユーザーのプロジェクト内ロールを取得
+     */
+    getRole: (userId: string, projectId: string) => Promise<UserRole | null>
+
+    /**
+     * ユーザーがプロジェクトのオーナーか確認
+     */
+    isOwner: (userId: string, projectId: string) => Promise<boolean>
+
+    /**
+     * ユーザーがプロジェクトのメンバーか確認
+     */
+    isMember: (userId: string, projectId: string) => Promise<boolean>
+
+    /**
+     * プロジェクトのオーナーを設定（プロジェクト作成時）
+     */
+    setOwner: (options: {
+      projectId: string
+      userId: string
+    }) => Promise<UserProject>
+
+    /**
+     * メンバーを招待（GRADERとして追加）
+     */
+    invite: (options: {
+      projectId: string
+      userId: string
+      invitedBy: string
+    }) => Promise<UserProjectWithUserAndInviter>
+
+    /**
+     * メンバーを削除
+     */
+    remove: (
+      projectId: string,
+      userId: string,
+      removedBy: string
+    ) => Promise<UserProject>
+
+    /**
+     * オーナー権限を移譲
+     */
+    transferOwnership: (
+      projectId: string,
+      newOwnerId: string,
+      currentOwnerId: string
+    ) => Promise<{
+      previousOwner: UserProject
+      newOwner: UserProject
+    }>
+
+    /**
+     * ユーザーが参加している全プロジェクトを取得
+     */
+    getUserProjects: (
+      userId: string
+    ) => Promise<UserProjectWithProjectDetails[]>
+
+    /**
+     * プロジェクトのオーナーを取得
+     */
+    getOwner: (
+      projectId: string
+    ) => Promise<UserProjectWithUserAndInviter | null>
+
+    /**
+     * 招待可能なユーザーを検索（既存メンバー除外）
+     */
+    searchUsers: (
+      projectId: string,
+      query: string
+    ) => Promise<{ id: string; username: string; name: string }[]>
+  }
+}
+
+// =============================================================================
+// v0.3.0: ProjectClass関連型
+// =============================================================================
+
+/**
+ * ProjectClass with class details
+ */
+export interface ProjectClassWithDetails {
+  id: string
+  projectId: string
+  classId: string
+  administered: boolean
+  statistics: boolean
+  order: number
+  createdAt: Date
+  updatedAt: Date
+  class: Class
+  project: Project
+}
+
+/**
+ * ProjectClass with class and membership details
+ */
+export interface ProjectClassWithClass {
+  id: string
+  projectId: string
+  classId: string
+  administered: boolean
+  statistics: boolean
+  order: number
+  createdAt: Date
+  updatedAt: Date
+  class: ClassWithMemberships
+}
+
+/**
+ * Available class for adding to ProjectClass
+ */
+export interface AvailableClass {
+  id: string
+  name: string
+  classCode: string | null
+  grade: number | null
+  studentCount: number
+}
+
+/**
+ * 生徒の学級・出席番号情報（ProjectClass経由で取得）
+ */
+export interface StudentClassInfo {
+  className: string | null
+  classCode: string | null
+  grade: number | null
+  attendanceNumber: number | null
+  /** ProjectClass の並び順 */
+  classOrder: number | null
+}
+
+/**
+ * Class with current memberships
+ */
+export interface ClassWithMemberships {
+  id: string
+  name: string
+  classCode: string | null
+  grade: number | null
+  description: string | null
+  isVisible: boolean
+  createdAt: Date
+  updatedAt: Date
+  memberships: StudentClassMembershipWithStudent[]
+}
+
+/**
+ * StudentClassMembership with student details
+ */
+export interface StudentClassMembershipWithStudent {
+  id: string
+  studentId: string
+  classId: string
+  startDate: Date
+  endDate: Date | null
+  attendanceNumber: number | null
+  notes: string | null
+  createdAt: Date
+  updatedAt: Date
+  student: Student
+}
+
+// =============================================================================
+// v0.3.0: UserProject権限管理関連型
+// =============================================================================
+
+/**
+ * UserProject ロール
+ */
+export type UserRole = "OWNER" | "GRADER"
+
+/**
+ * UserProject with user and inviter details
+ */
+export interface UserProjectWithUserAndInviter {
+  id: string
+  userId: string
+  projectId: string
+  role: string
+  invitedAt: Date
+  invitedBy: string | null
+  createdAt: Date
+  updatedAt: Date
+  user: User
+  inviter: User | null
+}
+
+/**
+ * UserProject with project details
+ */
+export interface UserProjectWithProjectDetails {
+  id: string
+  userId: string
+  projectId: string
+  role: string
+  invitedAt: Date
+  invitedBy: string | null
+  createdAt: Date
+  updatedAt: Date
+  project: Project
 }
 
 // パスワード保護PDF変換用のコールバック型

@@ -1,13 +1,15 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
-import { Prisma } from "@prisma/client"
+import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
+import { PageImage, Prisma } from "@prisma/client"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { convertPdfToImages, ConvertedImage } from "@/lib/pdfConverter"
 
 type MasterAnswer = Prisma.PageImageGetPayload<{
   include: { projectPage: true }
 }>
+
+type PageImageWithStudent = PageImage & { student: unknown }
 
 export interface MasterAnswersState {
   answers: MasterAnswer[]
@@ -351,8 +353,13 @@ export function useMasterAnswers(
         const updatedAnswers = result.projectPages
           .flatMap((page) =>
             page.pageImages
-              .filter((img) => img.imageType === "MODEL_ANSWER")
-              .map((img) => ({ ...img, projectPage: page }))
+              .filter(
+                (img: PageImageWithStudent) => img.imageType === "MODEL_ANSWER"
+              )
+              .map((img: PageImageWithStudent) => ({
+                ...img,
+                projectPage: page,
+              }))
           )
           .sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
 

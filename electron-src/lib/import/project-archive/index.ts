@@ -2,22 +2,27 @@
  * プロジェクトアーカイブ インポート機能
  *
  * ZIPアーカイブからプロジェクトをインポート
+ * v0.2.z (archive format 1.0.0) 互換対応
  */
 
-import {
-  extractArchive,
-  cleanupTempDir,
-  readManifestOnly,
-} from "./archiveExtractor"
-import { validateManifest } from "./manifestValidator"
-import { generateNewIdMappings } from "./idRemapper"
-import { createImportedData } from "./dataCreator"
 import type {
-  ImportAsNewOptions,
-  ImportAsNewResult,
   AnalyzeArchiveOptions,
   AnalyzeArchiveResult,
+  ImportAsNewOptions,
+  ImportAsNewResult,
 } from "../../../../types/projectArchive.types"
+import {
+  requiresTransformation,
+  transformArchiveData,
+} from "../versionedImporter"
+import {
+  cleanupTempDir,
+  extractArchive,
+  readManifestOnly,
+} from "./archiveExtractor"
+import { createImportedData } from "./dataCreator"
+import { generateNewIdMappings } from "./idRemapper"
+import { validateManifest } from "./manifestValidator"
 
 /**
  * アーカイブを解析（プレビュー用）
@@ -92,11 +97,21 @@ export async function importAsNew(
     // 互換性警告を収集
     const warnings: string[] = validationResult.compatibility?.warnings || []
 
-    // 3. 新しいIDマッピングを生成
-    const mappings = generateNewIdMappings(extractResult.data)
+    // 3. バージョン変換を適用（必要な場合）
+    let processedData = extractResult.data
+    if (requiresTransformation(extractResult.data.manifest)) {
+      console.log("Applying version transformation...")
+      const transformedData = transformArchiveData(extractResult.data)
+      processedData = transformedData
+      // 変換時の警告を追加
+      warnings.push(...transformedData.transformWarnings)
+    }
 
-    // 4. データを作成
-    const createResult = await createImportedData(extractResult.data, mappings)
+    // 4. 新しいIDマッピングを生成
+    const mappings = generateNewIdMappings(processedData)
+
+    // 5. データを作成
+    const createResult = await createImportedData(processedData, mappings)
     if (!createResult.success) {
       return { success: false, error: createResult.error }
     }
@@ -131,6 +146,6 @@ export async function importAsNew(
 
 // Re-export for convenience
 export * from "./archiveExtractor"
-export * from "./manifestValidator"
-export * from "./idRemapper"
 export * from "./dataCreator"
+export * from "./idRemapper"
+export * from "./manifestValidator"

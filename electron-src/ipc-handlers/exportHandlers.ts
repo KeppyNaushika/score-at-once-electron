@@ -1,15 +1,18 @@
-import { ipcMain, BrowserWindow, dialog } from "electron"
+import { BrowserWindow, dialog, ipcMain } from "electron"
+import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
+import {
+  fetchIndividualReportData,
+  fetchSubtotalGroupsForReport,
+} from "../lib/export/individual-report"
 import { exportGradingDataExcel } from "../lib/prisma/excelExport"
 import {
-  createPdfFromRenderedImages,
-  getPdfExportData,
-  createPdfStreamingSession,
   addPageToStreamingSession,
-  finalizeStreamingSession,
   cancelStreamingSession,
+  createPdfFromRenderedImages,
+  createPdfStreamingSession,
+  finalizeStreamingSession,
+  getPdfExportData,
 } from "../lib/prisma/pdfExport"
-import { fetchIndividualReportData } from "../lib/export/individual-report"
-import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 
 export function setupExportHandlers(): void {
   // Excel Export handlers
@@ -324,6 +327,22 @@ export function setupExportHandlers(): void {
     }
   )
 
+  // 個人成績表用小計点グループ一覧取得
+  ipcMain.handle(
+    "export:getSubtotalGroupsForReport",
+    async (_event, projectId: string) => {
+      try {
+        return await fetchSubtotalGroupsForReport(projectId)
+      } catch (err) {
+        console.error("Error getting subtotal groups for report:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    }
+  )
+
   // 個人成績表PDF保存先選択ダイアログ
   ipcMain.handle(
     "export:selectIndividualReportSavePath",
@@ -384,6 +403,258 @@ export function setupExportHandlers(): void {
           error:
             err instanceof Error ? err.message : "ファイル保存に失敗しました",
         }
+      }
+    }
+  )
+
+  // HTMLからPDFを生成（ブラウザ印刷機能を使用）
+  ipcMain.handle(
+    "export:printHtmlToPdf",
+    async (
+      _event,
+      options: {
+        html: string
+        filePath: string
+        pageSize?: "A4" | "Letter"
+        landscape?: boolean
+        margins?: {
+          top?: number
+          bottom?: number
+          left?: number
+          right?: number
+        }
+      }
+    ): Promise<{ success: boolean; error?: string }> => {
+      const fs = require("fs").promises
+      const path = require("path")
+      const { app } = require("electron")
+
+      // 一時ファイルにHTMLを書き込む（data URIは長すぎると失敗するため）
+      const tempDir = app.getPath("temp")
+      const tempHtmlPath = path.join(tempDir, `report-${Date.now()}.html`)
+
+      const win = new BrowserWindow({
+        width: 794, // A4 at 96 DPI
+        height: 1123,
+        show: false,
+        webPreferences: {
+          offscreen: true,
+        },
+      })
+
+      try {
+        // HTMLを一時ファイルに書き込み
+        await fs.writeFile(tempHtmlPath, options.html, "utf-8")
+
+        // file:// URLでロード
+        await win.loadFile(tempHtmlPath)
+
+        // レンダリング完了を待つ
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        // PDFを生成（マージンはインチ単位、デフォルト5mm ≈ 0.2インチ）
+        const margins = options.margins || {}
+        const pdfBuffer = await win.webContents.printToPDF({
+          pageSize: options.pageSize || "A4",
+          landscape: options.landscape || false,
+          printBackground: true,
+          margins: {
+            marginType: "custom",
+            top: margins.top ?? 0.2,
+            bottom: margins.bottom ?? 0.2,
+            left: margins.left ?? 0.2,
+            right: margins.right ?? 0.2,
+          },
+        })
+
+        // ファイルに保存
+        await fs.writeFile(options.filePath, pdfBuffer)
+
+        return { success: true }
+      } catch (err) {
+        console.error("Error printing HTML to PDF:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
+        }
+      } finally {
+        win.destroy()
+        // 一時ファイルを削除
+        try {
+          await fs.unlink(tempHtmlPath)
+        } catch {
+          // 削除に失敗しても無視
+        }
+      }
+    }
+  )
+
+  // 複数のHTMLページからPDFを生成（バッチ処理）
+  ipcMain.handle(
+    "export:printMultipleHtmlToPdf",
+    async (
+      _event,
+      options: {
+        htmlPages: string[]
+        filePath: string
+        pageSize?: "A4" | "Letter"
+        landscape?: boolean
+        onProgress?: (current: number, total: number) => void
+      }
+    ): Promise<{ success: boolean; error?: string }> => {
+      const win = new BrowserWindow({
+        width: 794,
+        height: 1123,
+        show: false,
+        webPreferences: {
+          offscreen: true,
+        },
+      })
+
+      try {
+        // 全ページを1つのHTMLに結合（ページ区切り付き）
+        const combinedHtml = `
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              @page { size: A4; margin: 5mm; }
+              .page-break { page-break-after: always; }
+              .page-break:last-child { page-break-after: auto; }
+            </style>
+          </head>
+          <body>
+            ${options.htmlPages
+              .map(
+                (html, index) => `
+              <div class="${index < options.htmlPages.length - 1 ? "page-break" : ""}">
+                ${html}
+              </div>
+            `
+              )
+              .join("")}
+          </body>
+          </html>
+        `
+
+        const dataUri = `data:text/html;charset=utf-8,${encodeURIComponent(combinedHtml)}`
+        await win.loadURL(dataUri)
+
+        // レンダリング完了を待つ
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        // PDFを生成（マージンはインチ単位、5mm ≈ 0.2インチ）
+        const pdfBuffer = await win.webContents.printToPDF({
+          pageSize: options.pageSize || "A4",
+          landscape: options.landscape || false,
+          printBackground: true,
+          margins: {
+            marginType: "custom",
+            top: 0.2,
+            bottom: 0.2,
+            left: 0.2,
+            right: 0.2,
+          },
+        })
+
+        // ファイルに保存
+        const fs = require("fs").promises
+        await fs.writeFile(options.filePath, pdfBuffer)
+
+        return { success: true }
+      } catch (err) {
+        console.error("Error printing multiple HTML to PDF:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
+        }
+      } finally {
+        win.destroy()
+      }
+    }
+  )
+
+  // ============================================================
+  // 印刷ダイアログを表示するAPI
+  // ============================================================
+
+  // HTMLからPDFを生成してプレビューで開く
+  ipcMain.handle(
+    "export:openPrintDialog",
+    async (
+      _event,
+      options: {
+        html: string
+        title?: string
+      }
+    ): Promise<{ success: boolean; error?: string }> => {
+      const fs = require("fs").promises
+      const path = require("path")
+      const { app, shell } = require("electron")
+
+      const tempDir = app.getPath("temp")
+      const tempHtmlPath = path.join(tempDir, `print-${Date.now()}.html`)
+      const tempPdfPath = path.join(
+        tempDir,
+        `${options.title || "個人成績表"}-${Date.now()}.pdf`
+      )
+
+      const win = new BrowserWindow({
+        width: 794, // A4 at 96 DPI
+        height: 1123,
+        show: false,
+        webPreferences: {
+          offscreen: true,
+        },
+      })
+
+      try {
+        // HTMLを一時ファイルに書き込み
+        await fs.writeFile(tempHtmlPath, options.html, "utf-8")
+
+        // file:// URLでロード
+        await win.loadFile(tempHtmlPath)
+
+        // レンダリング完了を待つ
+        await new Promise((resolve) => setTimeout(resolve, 500))
+
+        // PDFを生成（マージンはインチ単位、5mm ≈ 0.2インチ）
+        const pdfBuffer = await win.webContents.printToPDF({
+          pageSize: "A4",
+          landscape: false,
+          printBackground: true,
+          margins: {
+            marginType: "custom",
+            top: 0.2,
+            bottom: 0.2,
+            left: 0.2,
+            right: 0.2,
+          },
+        })
+
+        // PDFを一時ファイルに保存
+        await fs.writeFile(tempPdfPath, pdfBuffer)
+
+        // プレビュー.appで開く（ユーザーがそこから印刷・保存可能）
+        await shell.openPath(tempPdfPath)
+
+        return { success: true }
+      } catch (err) {
+        console.error("Error generating PDF:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "PDF生成に失敗しました",
+        }
+      } finally {
+        win.destroy()
+        // HTMLの一時ファイルを削除
+        try {
+          await fs.unlink(tempHtmlPath)
+        } catch {
+          // 削除に失敗しても無視
+        }
+        // PDFは開いているので削除しない（ユーザーが保存する可能性がある）
       }
     }
   )

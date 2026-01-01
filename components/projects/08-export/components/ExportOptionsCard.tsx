@@ -5,17 +5,23 @@ import {
   IndividualReportOptions,
   PdfOrientation,
 } from "@/app/projects/[projectId]/08-export/types"
+import { IndividualReportSettings } from "@/components/projects/08-export/components/IndividualReportSettings"
 import ScoringMarkSettings, {
   ScoringMarkConfig,
 } from "@/components/projects/08-export/components/ScoringMarkSettings"
-import { IndividualReportSettings } from "@/components/projects/08-export/components/IndividualReportSettings"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Download } from "lucide-react"
 
+export type ExportTabType =
+  | "scored-answers"
+  | "grading-data"
+  | "individual-reports"
+
 interface ExportOptionsCardProps {
+  projectId: string
   exportOptions: ExportOptions
   setExportOptions: (options: ExportOptions) => void
   scoringMarkConfig: ScoringMarkConfig
@@ -27,9 +33,12 @@ interface ExportOptionsCardProps {
   onExportScoredAnswers: () => void
   onExportGradingData: () => void
   onExportIndividualReports: () => void
+  activeTab: ExportTabType
+  onTabChange: (tab: ExportTabType) => void
 }
 
 export function ExportOptionsCard({
+  projectId,
   exportOptions,
   setExportOptions,
   scoringMarkConfig,
@@ -41,6 +50,8 @@ export function ExportOptionsCard({
   onExportScoredAnswers,
   onExportGradingData,
   onExportIndividualReports,
+  activeTab,
+  onTabChange,
 }: ExportOptionsCardProps) {
   const handleOrientationChange = (value: PdfOrientation) => {
     setExportOptions({
@@ -57,8 +68,12 @@ export function ExportOptionsCard({
   }
 
   return (
-    <Tabs defaultValue="scored-answers" className="flex h-full w-full flex-col">
-      <TabsList className="grid w-full flex-shrink-0 grid-cols-3">
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => onTabChange(v as ExportTabType)}
+      className="flex h-full w-full flex-col"
+    >
+      <TabsList className="grid w-full shrink-0 grid-cols-3">
         <TabsTrigger value="scored-answers" className="text-xs">
           採点済み答案PDF
         </TabsTrigger>
@@ -207,8 +222,9 @@ export function ExportOptionsCard({
           )}
         </div>
 
-        {/* 個人成績表設定 */}
+        {/* 設定パネル */}
         <IndividualReportSettings
+          projectId={projectId}
           options={individualReportOptions}
           onChange={setIndividualReportOptions}
         />

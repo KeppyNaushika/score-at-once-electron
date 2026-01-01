@@ -15,11 +15,20 @@ export type ScoreRateFormat = "percentage" | "grade5" | "gradeAE"
 /** 平均点表示タイプ */
 export type AverageDisplayType = "class" | "overall" | "both" | "none"
 
-/** 問題フィルタリング方式 */
-export type QuestionFilterMode = "top_n" | "all_matching"
-
 /** 順位表示タイプ */
 export type RankDisplayType = "class" | "overall" | "both"
+
+/** テーブル列数（最大10列） */
+export type TableColumns = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10
+
+/** 設問テーブル列数 */
+export type QuestionTableColumns = TableColumns
+
+/** 小計点テーブル列数 */
+export type SubtotalTableColumns = TableColumns
+
+/** フォントサイズ（px単位） */
+export type FontSizeOption = number
 
 // ================== オプション関連 ==================
 
@@ -28,23 +37,25 @@ export interface GraphOptions {
   showBarChart: boolean
   showRadarChart: boolean
   showBoxPlot: boolean
-  showAverageLine: boolean
+  // 箱ひげ図の詳細オプション
+  showBoxPlotMin: boolean // 最小値のヒゲを表示
+  showBoxPlotQ1: boolean // Q1（第1四分位数）を表示
+  showBoxPlotMedian: boolean // 中央値を表示
+  showBoxPlotQ3: boolean // Q3（第3四分位数）を表示
+  showBoxPlotMax: boolean // 最大値のヒゲを表示
+  showAverageLine: boolean // 平均線を表示
+  showStudentMarker: boolean // 生徒の得点マーカーを表示
+  // 箱ひげ図のサイズオプション
+  boxPlotFontSize: number // フォントサイズ（px）、箱の高さもこれに比例
+  boxPlotItemHeight: number // 項目間の間隔（px）
 }
 
 /** 学習アドバイスオプション */
 export interface AdviceOptions {
-  // 差がつく問題
-  showDifferentiatingQuestions: boolean
-  differentiatingRateMin: number
-  differentiatingRateMax: number
-  differentiatingFilterMode: QuestionFilterMode
-  differentiatingTopN: number
-
-  // 必ず復習問題
-  showMustReviewQuestions: boolean
-  mustReviewRateMin: number
-  mustReviewFilterMode: QuestionFilterMode
-  mustReviewTopN: number
+  // 復習問題の条件（nullは条件なし）
+  reviewRateMin: number | null // 正答率の下限（この値以上）、nullで条件なし
+  reviewRateMax: number | null // 正答率の上限（この値以下）、nullで条件なし
+  reviewQuestionCount: number | null // 表示する問題数、nullで全て表示
 }
 
 /** 個人成績表オプション */
@@ -63,9 +74,28 @@ export interface IndividualReportOptions {
   showRank: boolean
   rankType: RankDisplayType
 
-  // グラフ
+  // 小計点関連
+  showSubtotalTable: boolean
+  subtotalTableColumns: SubtotalTableColumns
+  subtotalTableFontSize: FontSizeOption
   showGraph: boolean
   graphOptions: GraphOptions
+  tableSubtotalGroupSelection: SubtotalGroupSelection // 小計点テーブル用グループ選択
+  boxPlotSubtotalGroupSelection: SubtotalGroupSelection // 箱ひげ図用グループ選択
+  hideUnassignedSubtotals: boolean // 設問と関連付けのない小計点を非表示
+  showGroupSubtotals: boolean // グループごとの合計を表示
+  /** 箱ひげ図に含める受験状態（チェックされた状態のみ統計に含める） */
+  boxPlotIncludeStatuses: {
+    participating: boolean
+    expected: boolean
+    absent: boolean
+  }
+
+  // 設問関連
+  showQuestionTable: boolean
+  questionTableColumns: QuestionTableColumns
+  questionTableFontSize: FontSizeOption
+  showCorrectRate: boolean // 正答率を表示
 
   // 学習アドバイス
   showLearningAdvice: boolean
@@ -108,13 +138,45 @@ export interface BoxPlotData {
   max: number
 }
 
+/** 生徒ごとの小計点データ（renderer側計算用） */
+export interface StudentSubtotalScore {
+  studentId: string
+  score: number
+  status: "participating" | "expected" | "absent"
+}
+
+/** 小計別生スコアデータ（renderer側でのbox plot計算用） */
+export interface SubtotalRawScores {
+  subtotalId: string
+  scores: StudentSubtotalScore[]
+}
+
 /** 小計別統計データ */
 export interface SubtotalStatistics {
   subtotalId: string
   subtotalLabel: string
+  maxScore: number
   average: number
   stdDev: number
   boxPlot: BoxPlotData
+  /** SubtotalGroup ID */
+  subtotalGroupId: string
+  /** SubtotalGroup名 */
+  subtotalGroupName: string
+}
+
+/** SubtotalGroup情報（選択UI用） */
+export interface SubtotalGroupInfo {
+  id: string
+  name: string
+  /** このグループに属するSubtotalのID */
+  subtotalIds: string[]
+}
+
+/** SubtotalGroup選択オプション */
+export interface SubtotalGroupSelection {
+  enabled: boolean
+  selectedGroupIds: string[]
 }
 
 /** 統計データ */
@@ -147,6 +209,9 @@ export interface StatisticsData {
 
   // 小計別統計
   subtotalStatistics: SubtotalStatistics[]
+
+  // 小計別生スコア（renderer側でのbox plot再計算用）
+  subtotalRawScores: SubtotalRawScores[]
 }
 
 /** 学習アドバイス用問題データ */
@@ -160,8 +225,7 @@ export interface AdviceQuestion {
 
 /** 学習アドバイスデータ */
 export interface LearningAdviceData {
-  differentiatingQuestions: AdviceQuestion[]
-  mustReviewQuestions: AdviceQuestion[]
+  reviewQuestions: AdviceQuestion[]
 }
 
 /** 個人成績表1枚分のデータ */
@@ -194,6 +258,13 @@ export interface GetIndividualReportDataResult {
   }
 }
 
+/** SubtotalGroup一覧取得結果 */
+export interface SubtotalGroupsForReportResult {
+  success: boolean
+  subtotalGroups?: SubtotalGroupInfo[]
+  error?: string
+}
+
 // ================== デフォルト値 ==================
 
 /** デフォルトのグラフオプション */
@@ -201,21 +272,22 @@ export const DEFAULT_GRAPH_OPTIONS: GraphOptions = {
   showBarChart: true,
   showRadarChart: true,
   showBoxPlot: true,
+  showBoxPlotMin: true,
+  showBoxPlotQ1: true,
+  showBoxPlotMedian: true,
+  showBoxPlotQ3: true,
+  showBoxPlotMax: true,
   showAverageLine: true,
+  showStudentMarker: true,
+  boxPlotFontSize: 11,
+  boxPlotItemHeight: 20, // 項目間の間隔（px）
 }
 
 /** デフォルトのアドバイスオプション */
 export const DEFAULT_ADVICE_OPTIONS: AdviceOptions = {
-  showDifferentiatingQuestions: true,
-  differentiatingRateMin: 40,
-  differentiatingRateMax: 60,
-  differentiatingFilterMode: "top_n",
-  differentiatingTopN: 3,
-
-  showMustReviewQuestions: true,
-  mustReviewRateMin: 80,
-  mustReviewFilterMode: "top_n",
-  mustReviewTopN: 3,
+  reviewRateMin: 70, // 正答率70%以上
+  reviewRateMax: null, // 上限なし
+  reviewQuestionCount: 5, // 上位5問を表示
 }
 
 /** デフォルトの個人成績表オプション */
@@ -228,8 +300,30 @@ export const DEFAULT_INDIVIDUAL_REPORT_OPTIONS: IndividualReportOptions = {
   showDeviation: true,
   showRank: true,
   rankType: "both",
+  showSubtotalTable: true,
+  subtotalTableColumns: 1,
+  subtotalTableFontSize: 10,
   showGraph: true,
   graphOptions: DEFAULT_GRAPH_OPTIONS,
+  tableSubtotalGroupSelection: {
+    enabled: false,
+    selectedGroupIds: [],
+  },
+  boxPlotSubtotalGroupSelection: {
+    enabled: false,
+    selectedGroupIds: [],
+  },
+  hideUnassignedSubtotals: true,
+  showGroupSubtotals: true,
+  boxPlotIncludeStatuses: {
+    participating: true,
+    expected: true,
+    absent: false,
+  },
+  showQuestionTable: true,
+  questionTableColumns: 1,
+  questionTableFontSize: 10,
+  showCorrectRate: true,
   showLearningAdvice: true,
   adviceOptions: DEFAULT_ADVICE_OPTIONS,
   showComment: false,

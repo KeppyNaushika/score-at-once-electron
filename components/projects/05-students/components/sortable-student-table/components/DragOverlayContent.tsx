@@ -19,7 +19,7 @@ export function DragOverlayContent({
         {activeStudent.lastName} {activeStudent.firstName}
       </div>
       <div className="text-muted-foreground text-sm">
-        {activeStudent.memberships[0]?.class.name}
+        {activeStudent.projectClassInfo?.className ?? "-"}
         {selectedStudents.size > 1 && ` (+${selectedStudents.size - 1}名)`}
       </div>
     </div>

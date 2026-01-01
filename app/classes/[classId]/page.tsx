@@ -102,27 +102,30 @@ export default function ClassDetailPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto max-w-6xl p-6">
       {/* ヘッダー */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-8 flex items-start justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-3 flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
+              className="rounded-lg"
               onClick={() => router.push("/classes")}
             >
               <ArrowLeft className="mr-1 h-4 w-4" />
               戻る
             </Button>
-            <h1 className="text-3xl font-bold">{classData.name}</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {classData.name}
+            </h1>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Info className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[500px]" align="start" side="bottom">
+              <PopoverContent className="w-125" align="start" side="bottom">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
@@ -207,37 +210,46 @@ export default function ClassDetailPage() {
           {classData.description && (
             <p className="text-muted-foreground">{classData.description}</p>
           )}
-          <div className="mt-2 flex gap-2">
+          <div className="mt-3 flex gap-2">
             {classData.classCode && (
-              <span className="bg-muted rounded px-2 py-1 text-sm">
-                コード: {classData.classCode}
+              <span className="bg-muted/50 rounded-lg px-3 py-1.5 text-sm font-medium">
+                {classData.classCode}
               </span>
             )}
             {classData.grade && (
-              <span className="bg-muted rounded px-2 py-1 text-sm">
-                学年: {classData.grade}
+              <span className="bg-muted/50 rounded-lg px-3 py-1.5 text-sm font-medium">
+                {classData.grade}年
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             variant="outline"
+            className="rounded-lg"
             onClick={() => setIsStudentImportModalOpen(true)}
           >
             <Upload className="mr-2 h-4 w-4" />
             生徒インポート
           </Button>
-          <Button onClick={handleAddMembership}>
+          <Button className="rounded-lg" onClick={handleAddMembership}>
             <Plus className="mr-2 h-4 w-4" />
             生徒を追加
           </Button>
-          <Button variant="outline" onClick={() => setIsClassModalOpen(true)}>
+          <Button
+            variant="outline"
+            className="rounded-lg"
+            onClick={() => setIsClassModalOpen(true)}
+          >
             <Edit className="mr-2 h-4 w-4" />
             編集
           </Button>
-          <Button variant="destructive" onClick={handleDeleteWithNavigation}>
+          <Button
+            variant="destructive"
+            className="rounded-lg"
+            onClick={handleDeleteWithNavigation}
+          >
             <Trash2 className="mr-2 h-4 w-4" />
             削除
           </Button>
@@ -245,48 +257,55 @@ export default function ClassDetailPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
+      <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <Card className="border-border/50 shadow-sm transition-shadow hover:shadow-md">
+          <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
               総生徒数
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold tabular-nums">
               {classData.memberships.length}
+              <span className="text-muted-foreground ml-1 text-lg font-normal">
+                名
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="border-border/50 shadow-sm transition-shadow hover:shadow-md">
+          <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
               現在の所属
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-green-600 tabular-nums">
               {
                 classData.memberships.filter((m) => isCurrentMembership(m))
                   .length
               }
+              <span className="ml-1 text-lg font-normal text-green-600/70">
+                名
+              </span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="border-border/50 shadow-sm transition-shadow hover:shadow-md">
+          <CardHeader className="pb-3">
             <CardTitle className="text-muted-foreground text-sm font-medium">
               終了した所属
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">
+            <div className="text-3xl font-bold text-gray-500 tabular-nums">
               {
                 classData.memberships.filter((m) => !isCurrentMembership(m))
                   .length
               }
+              <span className="ml-1 text-lg font-normal text-gray-400">名</span>
             </div>
           </CardContent>
         </Card>

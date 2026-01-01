@@ -2,6 +2,15 @@
  * 個人成績表用データ取得・統合ロジック
  */
 
+import type { CropRegion, QuestionScore } from "@prisma/client"
+import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
+import { getQuestionScoresForProject } from "../../prisma/questionScore"
+import { getActiveSubtotalGroupsForProject } from "../../prisma/subtotalGroup"
+import {
+  calculateSubtotalScoreBySubtotalId,
+  type QuestionScoreData,
+} from "../../shared/calculations/subtotalCalculator"
+import type { SubtotalScore } from "../../shared/types/exportTypes"
 import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
@@ -14,10 +23,13 @@ import type {
   GetIndividualReportDataResult,
   IndividualReportData,
   StudentInfoForReport,
+  SubtotalGroupInfo,
+  SubtotalGroupsForReportResult,
 } from "./types"
 
 /**
  * 個人成績表用データを取得
+ * SubtotalGroup単位で小計点を計算（CropRegionに依存しない）
  */
 export async function fetchIndividualReportData(
   options: GetIndividualReportDataOptions
@@ -47,8 +59,8 @@ export async function fetchIndividualReportData(
     }
 
     const project = allDataResult.project
-    const allScoringData = allDataResult.scoringData || []
-    const selectedScoringData = selectedDataResult.scoringData || []
+    const allScoringDataFromExcel = allDataResult.scoringData || []
+    const selectedScoringDataFromExcel = selectedDataResult.scoringData || []
 
     // 試験情報
     const examInfo: ExamInfoForReport = {
@@ -56,6 +68,45 @@ export async function fetchIndividualReportData(
       examDate: project.examDate,
       subject: project.subject,
     }
+
+    // プロジェクトのactiveなSubtotalGroupsとSubtotalsを取得
+    const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(projectId)
+
+    // CropRegionsと採点データを取得
+    const cropRegions = await getCropRegionsByProjectId(projectId)
+    const questionRegions = cropRegions.filter(
+      (r) => r.type === "QUESTION_ANSWER"
+    )
+    const questionScoresResult = await getQuestionScoresForProject(projectId)
+    const allQuestionScores = questionScoresResult.success
+      ? questionScoresResult.scores || []
+      : []
+
+    // 全生徒の小計点を計算（Subtotal単位）
+    const allScoringData = await Promise.all(
+      allScoringDataFromExcel.map(async (data) => {
+        const subtotalScores = await buildSubtotalScoresFromGroups(
+          data.studentId,
+          subtotalGroupsData,
+          allQuestionScores,
+          questionRegions
+        )
+        return { ...data, subtotalScores }
+      })
+    )
+
+    // 選択された生徒の小計点を計算
+    const selectedScoringData = await Promise.all(
+      selectedScoringDataFromExcel.map(async (data) => {
+        const subtotalScores = await buildSubtotalScoresFromGroups(
+          data.studentId,
+          subtotalGroupsData,
+          allQuestionScores,
+          questionRegions
+        )
+        return { ...data, subtotalScores }
+      })
+    )
 
     // 設問別正答率を計算（全生徒データを使用）
     const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
@@ -80,7 +131,7 @@ export async function fetchIndividualReportData(
             d.grade === scoringData.grade
         )
 
-        // 統計データ
+        // 統計データ（subtotalScoresから直接グループ情報を取得可能）
         const statistics = calculateStatisticsForStudent(
           scoringData.studentId,
           scoringData.totalScore,
@@ -126,6 +177,84 @@ export async function fetchIndividualReportData(
 }
 
 /**
+ * SubtotalGroupとSubtotalの情報を取得
+ */
+interface SubtotalGroupData {
+  groupId: string
+  groupName: string
+  subtotals: Array<{
+    id: string
+    name: string
+    order: number
+  }>
+}
+
+async function getSubtotalGroupsWithSubtotals(
+  projectId: string
+): Promise<SubtotalGroupData[]> {
+  const result = await getActiveSubtotalGroupsForProject(projectId)
+  if (!result.success || !result.projectSubtotalGroups) {
+    return []
+  }
+
+  return result.projectSubtotalGroups.map((psg) => ({
+    groupId: psg.subtotalGroup.id,
+    groupName: psg.subtotalGroup.name,
+    subtotals: psg.subtotalGroup.subtotals.map((s) => ({
+      id: s.id,
+      name: s.name,
+      order: s.order,
+    })),
+  }))
+}
+
+/**
+ * SubtotalGroup単位で小計点を計算
+ * CropRegion（SUBTOTAL_SCORE）を使わず、Subtotalから直接計算
+ */
+async function buildSubtotalScoresFromGroups(
+  studentId: string,
+  subtotalGroups: SubtotalGroupData[],
+  allQuestionScores: QuestionScore[],
+  questionRegions: CropRegion[]
+): Promise<SubtotalScore[]> {
+  // 採点データを変換
+  const questionScoreData: QuestionScoreData[] = allQuestionScores
+    .filter((score) => score.studentId !== null)
+    .map((score) => ({
+      studentId: score.studentId!,
+      cropRegionId: score.cropRegionId,
+      status: score.status,
+      partialScore: score.partialScore ? Number(score.partialScore) : null,
+    }))
+
+  const results: SubtotalScore[] = []
+
+  for (const group of subtotalGroups) {
+    for (const subtotal of group.subtotals) {
+      const scoreResult = await calculateSubtotalScoreBySubtotalId(
+        studentId,
+        subtotal.id,
+        questionScoreData,
+        questionRegions
+      )
+
+      results.push({
+        subtotalId: subtotal.id,
+        subtotalGroupId: group.groupId,
+        subtotalGroupName: group.groupName,
+        subtotalLabel: subtotal.name,
+        score: scoreResult.score,
+        maxScore: scoreResult.maxScore,
+        hasQuestionAssignments: scoreResult.hasQuestionAssignments,
+      })
+    }
+  }
+
+  return results
+}
+
+/**
  * 警告情報を収集
  */
 function collectWarnings(
@@ -157,5 +286,45 @@ function collectWarnings(
   return {
     hasWarnings: noScoringData.length > 0 || ungraded.length > 0,
     data: { noScoringData, ungraded },
+  }
+}
+
+/**
+ * プロジェクトの小計点グループ一覧を取得（個人成績表用）
+ * CropRegionに依存せず、Subtotal単位で管理
+ */
+export async function fetchSubtotalGroupsForReport(
+  projectId: string
+): Promise<SubtotalGroupsForReportResult> {
+  try {
+    const activeGroupsResult =
+      await getActiveSubtotalGroupsForProject(projectId)
+    if (
+      !activeGroupsResult.success ||
+      !activeGroupsResult.projectSubtotalGroups
+    ) {
+      return {
+        success: false,
+        error: "小計点グループの取得に失敗しました",
+      }
+    }
+
+    const subtotalGroups: SubtotalGroupInfo[] =
+      activeGroupsResult.projectSubtotalGroups.map((psg) => ({
+        id: psg.subtotalGroup.id,
+        name: psg.subtotalGroup.name,
+        subtotalIds: psg.subtotalGroup.subtotals.map((s) => s.id),
+      }))
+
+    return {
+      success: true,
+      subtotalGroups,
+    }
+  } catch (error) {
+    console.error("Error fetching subtotal groups for report:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }
   }
 }

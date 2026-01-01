@@ -2,15 +2,19 @@
 
 import { useAuth } from "@/contexts/AuthContext"
 import type { ProjectWithDetails } from "@/types/electron"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 export const useProjects = () => {
   const { user } = useAuth()
   const [projects, setProjects] = useState<ProjectWithDetails[]>([])
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
+    if (!user) {
+      setProjects([])
+      return
+    }
     try {
-      const fetchedProjects = await window.electronAPI.fetchProjects()
+      const fetchedProjects = await window.electronAPI.fetchProjects(user.id)
       if (fetchedProjects) {
         setProjects(fetchedProjects)
       } else {
@@ -19,7 +23,7 @@ export const useProjects = () => {
     } catch (error) {
       console.error("Failed to fetch projects:", error)
     }
-  }
+  }, [user])
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -27,7 +31,7 @@ export const useProjects = () => {
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [])
+  }, [loadProjects])
 
   const createProject = async (createProjectArgs: {
     examName: string

@@ -3,7 +3,12 @@
  */
 
 import type { ScoringData } from "../../shared/types/exportTypes"
-import type { BoxPlotData, StatisticsData, SubtotalStatistics } from "./types"
+import type {
+  BoxPlotData,
+  StatisticsData,
+  SubtotalRawScores,
+  SubtotalStatistics,
+} from "./types"
 
 /**
  * 配列の平均値を計算
@@ -25,6 +30,8 @@ export function calculateStdDev(values: number[]): number {
 
 /**
  * 配列をソートして四分位数・中央値を計算（箱ひげ図用）
+ * Tukey法: データを半分に分けて中央値を取る方法
+ * 全数調査（試験の成績など）に適した計算方法
  */
 export function calculateBoxPlotData(values: number[]): BoxPlotData {
   if (values.length === 0) {
@@ -36,30 +43,36 @@ export function calculateBoxPlotData(values: number[]): BoxPlotData {
 
   const min = sorted[0]
   const max = sorted[n - 1]
-  const median = calculatePercentile(sorted, 50)
-  const q1 = calculatePercentile(sorted, 25)
-  const q3 = calculatePercentile(sorted, 75)
+  const median = calculateMedian(sorted)
+
+  // Tukey法: データを下位半分と上位半分に分けて、それぞれの中央値を取る
+  // nが奇数の場合、中央値は両方の半分から除外する
+  const midIndex = Math.floor(n / 2)
+  const lowerHalf = sorted.slice(0, midIndex)
+  const upperHalf = sorted.slice(n % 2 === 0 ? midIndex : midIndex + 1)
+
+  const q1 = calculateMedian(lowerHalf)
+  const q3 = calculateMedian(upperHalf)
 
   return { min, q1, median, q3, max }
 }
 
 /**
- * パーセンタイル値を計算（線形補間）
+ * 配列の中央値を計算
  */
-function calculatePercentile(
-  sortedValues: number[],
-  percentile: number
-): number {
-  if (sortedValues.length === 0) return 0
-  if (sortedValues.length === 1) return sortedValues[0]
+function calculateMedian(sortedValues: number[]): number {
+  const n = sortedValues.length
+  if (n === 0) return 0
+  if (n === 1) return sortedValues[0]
 
-  const index = (percentile / 100) * (sortedValues.length - 1)
-  const lower = Math.floor(index)
-  const upper = Math.ceil(index)
-  const weight = index - lower
-
-  if (lower === upper) return sortedValues[lower]
-  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+  const mid = Math.floor(n / 2)
+  if (n % 2 === 0) {
+    // 偶数個: 中央2つの平均
+    return (sortedValues[mid - 1] + sortedValues[mid]) / 2
+  } else {
+    // 奇数個: 中央の値
+    return sortedValues[mid]
+  }
 }
 
 /**
@@ -124,6 +137,7 @@ export function calculateQuestionCorrectRates(
 
 /**
  * 小計別統計データを計算
+ * SubtotalScoreから直接グループ情報を取得（CropRegion経由のマッピング不要）
  */
 export function calculateSubtotalStatistics(
   allScoringData: ScoringData[]
@@ -135,30 +149,77 @@ export function calculateSubtotalStatistics(
     return []
   }
 
-  const subtotalIds = allScoringData[0].subtotalScores.map(
-    (s) => s.subtotalRegionId
-  )
+  // 最初の生徒から小計点リストを取得
+  const subtotalTemplate = allScoringData[0].subtotalScores
 
-  return subtotalIds.map((subtotalId) => {
+  return subtotalTemplate.map((template) => {
     const scores: number[] = []
-    let label = ""
 
     for (const data of allScoringData) {
       const subtotal = data.subtotalScores.find(
-        (s) => s.subtotalRegionId === subtotalId
+        (s) => s.subtotalId === template.subtotalId
       )
       if (subtotal) {
         scores.push(subtotal.score)
-        label = subtotal.subtotalLabel
       }
     }
 
     return {
-      subtotalId,
-      subtotalLabel: label,
+      subtotalId: template.subtotalId,
+      subtotalLabel: template.subtotalLabel,
+      maxScore: template.maxScore,
       average: calculateAverage(scores),
       stdDev: calculateStdDev(scores),
       boxPlot: calculateBoxPlotData(scores),
+      subtotalGroupId: template.subtotalGroupId,
+      subtotalGroupName: template.subtotalGroupName,
+    }
+  })
+}
+
+/**
+ * 小計別生スコアデータを収集（renderer側でのbox plot再計算用）
+ * 各小計ごとに全生徒のスコアと受験状態を収集
+ */
+export function collectSubtotalRawScores(
+  allScoringData: ScoringData[]
+): SubtotalRawScores[] {
+  if (
+    allScoringData.length === 0 ||
+    allScoringData[0].subtotalScores.length === 0
+  ) {
+    return []
+  }
+
+  // 最初の生徒から小計点リストを取得
+  const subtotalTemplate = allScoringData[0].subtotalScores
+
+  return subtotalTemplate.map((template) => {
+    const scores = allScoringData
+      .map((data) => {
+        const subtotal = data.subtotalScores.find(
+          (s) => s.subtotalId === template.subtotalId
+        )
+        if (!subtotal) return null
+        return {
+          studentId: data.studentId,
+          score: subtotal.score,
+          status: data.status || ("participating" as const),
+        }
+      })
+      .filter(
+        (
+          s
+        ): s is {
+          studentId: string
+          score: number
+          status: "participating" | "expected" | "absent"
+        } => s !== null
+      )
+
+    return {
+      subtotalId: template.subtotalId,
+      scores,
     }
   })
 }
@@ -196,8 +257,11 @@ export function calculateStatisticsForStudent(
   const overallRank = calculateRank(studentScore, allScores)
   const classRank = calculateRank(studentScore, classScores)
 
-  // 小計別統計
+  // 小計別統計（SubtotalScoreから直接グループ情報を取得）
   const subtotalStatistics = calculateSubtotalStatistics(allScoringData)
+
+  // 小計別生スコア（renderer側でのbox plot再計算用）
+  const subtotalRawScores = collectSubtotalRawScores(allScoringData)
 
   return {
     overall: {
@@ -219,5 +283,6 @@ export function calculateStatisticsForStudent(
     },
     questionCorrectRates,
     subtotalStatistics,
+    subtotalRawScores,
   }
 }
