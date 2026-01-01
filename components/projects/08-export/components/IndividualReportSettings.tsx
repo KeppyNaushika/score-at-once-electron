@@ -1,24 +1,23 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import type {
+  IndividualReportOptions,
+  QuestionTableColumns,
+  SubtotalTableColumns,
+} from "@/app/projects/[projectId]/08-export/types"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import type { IndividualReportOptions } from "@/app/projects/[projectId]/08-export/types"
+import { Label } from "@/components/ui/label"
+import { SubtotalGroupSelector } from "./individual-report/SubtotalGroupSelector"
 
 interface IndividualReportSettingsProps {
+  projectId: string
   options: IndividualReportOptions
   onChange: (options: IndividualReportOptions) => void
 }
 
 export function IndividualReportSettings({
+  projectId,
   options,
   onChange,
 }: IndividualReportSettingsProps) {
@@ -31,352 +30,530 @@ export function IndividualReportSettings({
 
   return (
     <div className="space-y-6">
-      {/* 表示モード */}
-      <Section title="表示モード">
-        <div className="flex items-center gap-4">
-          <Label>表示形式</Label>
-          <Select
-            value={options.displayMode}
-            onValueChange={(v) =>
-              updateOption("displayMode", v as "detail" | "subtotal_only")
+      {/* 基本表示/統計情報 */}
+      <Section title="基本表示/統計情報">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <OptionCard
+            label="点数"
+            checked={options.showScore}
+            onChange={(v) => updateOption("showScore", v)}
+          />
+          <OptionCard
+            label="学級平均"
+            checked={
+              options.showAverage === "class" || options.showAverage === "both"
             }
-          >
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="detail">設問詳細</SelectItem>
-              <SelectItem value="subtotal_only">小計のみ</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(v) => {
+              const showOverall =
+                options.showAverage === "overall" ||
+                options.showAverage === "both"
+              if (v && showOverall) updateOption("showAverage", "both")
+              else if (v) updateOption("showAverage", "class")
+              else if (showOverall) updateOption("showAverage", "overall")
+              else updateOption("showAverage", "none")
+            }}
+          />
+          <OptionCard
+            label="全体平均"
+            checked={
+              options.showAverage === "overall" ||
+              options.showAverage === "both"
+            }
+            onChange={(v) => {
+              const showClass =
+                options.showAverage === "class" ||
+                options.showAverage === "both"
+              if (v && showClass) updateOption("showAverage", "both")
+              else if (v) updateOption("showAverage", "overall")
+              else if (showClass) updateOption("showAverage", "class")
+              else updateOption("showAverage", "none")
+            }}
+          />
+          <OptionCard
+            label="偏差値"
+            checked={options.showDeviation}
+            onChange={(v) => updateOption("showDeviation", v)}
+          />
+          <OptionCard
+            label="学級順位"
+            checked={
+              options.showRank &&
+              (options.rankType === "class" || options.rankType === "both")
+            }
+            onChange={(v) => {
+              const showOverall =
+                options.showRank &&
+                (options.rankType === "overall" || options.rankType === "both")
+              if (v && showOverall) {
+                onChange({ ...options, showRank: true, rankType: "both" })
+              } else if (v) {
+                onChange({ ...options, showRank: true, rankType: "class" })
+              } else if (showOverall) {
+                onChange({ ...options, rankType: "overall" })
+              } else {
+                onChange({ ...options, showRank: false })
+              }
+            }}
+          />
+          <OptionCard
+            label="全体順位"
+            checked={
+              options.showRank &&
+              (options.rankType === "overall" || options.rankType === "both")
+            }
+            onChange={(v) => {
+              const showClass =
+                options.showRank &&
+                (options.rankType === "class" || options.rankType === "both")
+              if (v && showClass) {
+                onChange({ ...options, showRank: true, rankType: "both" })
+              } else if (v) {
+                onChange({ ...options, showRank: true, rankType: "overall" })
+              } else if (showClass) {
+                onChange({ ...options, rankType: "class" })
+              } else {
+                onChange({ ...options, showRank: false })
+              }
+            }}
+          />
         </div>
       </Section>
 
-      <Separator />
+      {/* 小計点関連 */}
+      <Section title="小計点関連">
+        <div className="flex flex-col gap-2">
+          {/* 共通オプション */}
+          <OptionCard
+            label="設問と関連付けのない小計点を非表示"
+            checked={options.hideUnassignedSubtotals}
+            onChange={(v) => updateOption("hideUnassignedSubtotals", v)}
+          />
 
-      {/* 基本表示 */}
-      <Section title="基本表示">
-        <ToggleRow
-          label="点数を表示"
-          checked={options.showScore}
-          onChange={(v) => updateOption("showScore", v)}
-        />
-        <ToggleRow
-          label="マルバツを表示"
-          checked={options.showMarks}
-          onChange={(v) => updateOption("showMarks", v)}
-        />
-        <div className="flex items-center gap-4">
-          <Label className="w-32">平均点</Label>
-          <Select
-            value={options.showAverage}
-            onValueChange={(v) =>
-              updateOption(
-                "showAverage",
-                v as "class" | "overall" | "both" | "none"
-              )
+          {/* 小計点の表 */}
+          <OptionCardWithChildren
+            label="小計点の表"
+            checked={options.showSubtotalTable}
+            onChange={(v) => updateOption("showSubtotalTable", v)}
+          >
+            {options.showSubtotalTable && (
+              <div className="mt-2 flex flex-col gap-4">
+                <SubtotalGroupSelector
+                  projectId={projectId}
+                  selection={options.tableSubtotalGroupSelection}
+                  onChange={(selection) =>
+                    updateOption("tableSubtotalGroupSelection", selection)
+                  }
+                />
+                <OptionCard
+                  label="グループごとの小計"
+                  checked={options.showGroupSubtotals}
+                  onChange={(v) => updateOption("showGroupSubtotals", v)}
+                  variant="sub"
+                />
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">列数</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className="h-6 flex-1 text-xs"
+                    value={options.subtotalTableColumns}
+                    onChange={(e) => {
+                      const v = Math.min(
+                        10,
+                        Math.max(1, Number(e.target.value))
+                      )
+                      updateOption(
+                        "subtotalTableColumns",
+                        v as SubtotalTableColumns
+                      )
+                    }}
+                  />
+                </div>
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">文字</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-6 flex-1 text-xs"
+                    value={options.subtotalTableFontSize}
+                    onChange={(e) => {
+                      const v = Math.max(1, Number(e.target.value))
+                      if (!isNaN(v)) {
+                        updateOption("subtotalTableFontSize", v)
+                      }
+                    }}
+                  />
+                  <span className="text-muted-foreground text-xs">px</span>
+                </div>
+              </div>
+            )}
+          </OptionCardWithChildren>
+
+          {/* 箱ひげ図 */}
+          <OptionCardWithChildren
+            label="箱ひげ図"
+            checked={options.graphOptions.showBoxPlot}
+            onChange={(v) =>
+              updateOption("graphOptions", {
+                ...options.graphOptions,
+                showBoxPlot: v,
+              })
             }
           >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">非表示</SelectItem>
-              <SelectItem value="class">学級のみ</SelectItem>
-              <SelectItem value="overall">全体のみ</SelectItem>
-              <SelectItem value="both">両方</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center gap-4">
-          <Label className="w-32">得点率形式</Label>
-          <Select
-            value={options.scoreRateFormat}
-            onValueChange={(v) =>
-              updateOption(
-                "scoreRateFormat",
-                v as "percentage" | "grade5" | "gradeAE"
-              )
-            }
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percentage">パーセント</SelectItem>
-              <SelectItem value="grade5">5段階評価</SelectItem>
-              <SelectItem value="gradeAE">A〜E評定</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </Section>
-
-      <Separator />
-
-      {/* 統計情報 */}
-      <Section title="統計情報">
-        <ToggleRow
-          label="偏差値を表示"
-          checked={options.showDeviation}
-          onChange={(v) => updateOption("showDeviation", v)}
-        />
-        <ToggleRow
-          label="順位を表示"
-          checked={options.showRank}
-          onChange={(v) => updateOption("showRank", v)}
-        />
-        {options.showRank && (
-          <div className="ml-8 flex items-center gap-4">
-            <Label className="w-24">順位種類</Label>
-            <Select
-              value={options.rankType}
-              onValueChange={(v) =>
-                updateOption("rankType", v as "class" | "overall" | "both")
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="class">学級のみ</SelectItem>
-                <SelectItem value="overall">全体のみ</SelectItem>
-                <SelectItem value="both">両方</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </Section>
-
-      <Separator />
-
-      {/* グラフ */}
-      <Section title="グラフ">
-        <ToggleRow
-          label="グラフを表示"
-          checked={options.showGraph}
-          onChange={(v) => updateOption("showGraph", v)}
-        />
-        {options.showGraph && (
-          <div className="ml-8 space-y-2">
-            <ToggleRow
-              label="棒グラフ"
-              checked={options.graphOptions.showBarChart}
-              onChange={(v) =>
-                updateOption("graphOptions", {
-                  ...options.graphOptions,
-                  showBarChart: v,
-                })
-              }
-            />
-            <ToggleRow
-              label="レーダーチャート"
-              checked={options.graphOptions.showRadarChart}
-              onChange={(v) =>
-                updateOption("graphOptions", {
-                  ...options.graphOptions,
-                  showRadarChart: v,
-                })
-              }
-            />
-            <ToggleRow
-              label="箱ひげ図"
-              checked={options.graphOptions.showBoxPlot}
-              onChange={(v) =>
-                updateOption("graphOptions", {
-                  ...options.graphOptions,
-                  showBoxPlot: v,
-                })
-              }
-            />
-            <ToggleRow
-              label="平均線を表示"
-              checked={options.graphOptions.showAverageLine}
-              onChange={(v) =>
-                updateOption("graphOptions", {
-                  ...options.graphOptions,
-                  showAverageLine: v,
-                })
-              }
-            />
-          </div>
-        )}
-      </Section>
-
-      <Separator />
-
-      {/* 学習アドバイス */}
-      <Section title="学習アドバイス">
-        <ToggleRow
-          label="学習アドバイスを表示"
-          checked={options.showLearningAdvice}
-          onChange={(v) => updateOption("showLearningAdvice", v)}
-        />
-        {options.showLearningAdvice && (
-          <div className="ml-8 space-y-4">
-            {/* 差がつく問題 */}
-            <div className="space-y-2">
-              <ToggleRow
-                label="差がつく問題"
-                checked={options.adviceOptions.showDifferentiatingQuestions}
-                onChange={(v) =>
-                  updateOption("adviceOptions", {
-                    ...options.adviceOptions,
-                    showDifferentiatingQuestions: v,
-                  })
-                }
-              />
-              {options.adviceOptions.showDifferentiatingQuestions && (
-                <div className="ml-8 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">正答率</Label>
-                    <Input
-                      type="number"
-                      className="w-16"
-                      value={options.adviceOptions.differentiatingRateMin}
-                      onChange={(e) =>
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          differentiatingRateMin: Number(e.target.value),
+            {options.graphOptions.showBoxPlot && (
+              <div className="mt-2 flex flex-col gap-4">
+                <SubtotalGroupSelector
+                  projectId={projectId}
+                  selection={options.boxPlotSubtotalGroupSelection}
+                  onChange={(selection) =>
+                    updateOption("boxPlotSubtotalGroupSelection", selection)
+                  }
+                />
+                {/* 受験状態フィルタ */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-muted-foreground text-xs">
+                    統計に含める受験状態
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    <OptionCard
+                      label="受験"
+                      checked={options.boxPlotIncludeStatuses.participating}
+                      onChange={(v) =>
+                        updateOption("boxPlotIncludeStatuses", {
+                          ...options.boxPlotIncludeStatuses,
+                          participating: v,
                         })
                       }
+                      variant="sub"
                     />
-                    <span>〜</span>
-                    <Input
-                      type="number"
-                      className="w-16"
-                      value={options.adviceOptions.differentiatingRateMax}
-                      onChange={(e) =>
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          differentiatingRateMax: Number(e.target.value),
+                    <OptionCard
+                      label="見込"
+                      checked={options.boxPlotIncludeStatuses.expected}
+                      onChange={(v) =>
+                        updateOption("boxPlotIncludeStatuses", {
+                          ...options.boxPlotIncludeStatuses,
+                          expected: v,
                         })
                       }
+                      variant="sub"
                     />
-                    <span>%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">表示数</Label>
-                    <Select
-                      value={options.adviceOptions.differentiatingFilterMode}
-                      onValueChange={(v) =>
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          differentiatingFilterMode: v as
-                            | "top_n"
-                            | "all_matching",
+                    <OptionCard
+                      label="欠席"
+                      checked={options.boxPlotIncludeStatuses.absent}
+                      onChange={(v) =>
+                        updateOption("boxPlotIncludeStatuses", {
+                          ...options.boxPlotIncludeStatuses,
+                          absent: v,
                         })
                       }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="top_n">上位N問</SelectItem>
-                        <SelectItem value="all_matching">全て</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {options.adviceOptions.differentiatingFilterMode ===
-                      "top_n" && (
-                      <Input
-                        type="number"
-                        className="w-16"
-                        value={options.adviceOptions.differentiatingTopN}
-                        onChange={(e) =>
-                          updateOption("adviceOptions", {
-                            ...options.adviceOptions,
-                            differentiatingTopN: Number(e.target.value),
-                          })
-                        }
-                      />
-                    )}
+                      variant="sub"
+                    />
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* 必ず復習問題 */}
-            <div className="space-y-2">
-              <ToggleRow
-                label="必ず復習問題"
-                checked={options.adviceOptions.showMustReviewQuestions}
-                onChange={(v) =>
-                  updateOption("adviceOptions", {
-                    ...options.adviceOptions,
-                    showMustReviewQuestions: v,
-                  })
-                }
-              />
-              {options.adviceOptions.showMustReviewQuestions && (
-                <div className="ml-8 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">正答率</Label>
+                <div className="flex flex-wrap gap-2">
+                  <OptionCard
+                    label="最小"
+                    checked={options.graphOptions.showBoxPlotMin}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showBoxPlotMin: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="Q1"
+                    checked={options.graphOptions.showBoxPlotQ1}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showBoxPlotQ1: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="中央値"
+                    checked={options.graphOptions.showBoxPlotMedian}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showBoxPlotMedian: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="Q3"
+                    checked={options.graphOptions.showBoxPlotQ3}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showBoxPlotQ3: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="最大"
+                    checked={options.graphOptions.showBoxPlotMax}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showBoxPlotMax: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="平均線"
+                    checked={options.graphOptions.showAverageLine}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showAverageLine: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="あなたの得点"
+                    checked={options.graphOptions.showStudentMarker}
+                    onChange={(v) =>
+                      updateOption("graphOptions", {
+                        ...options.graphOptions,
+                        showStudentMarker: v,
+                      })
+                    }
+                    variant="sub"
+                  />
+                </div>
+                {/* サイズ調整 */}
+                <div className="flex flex-wrap gap-2">
+                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                    <Label className="text-xs whitespace-nowrap">文字</Label>
                     <Input
                       type="number"
-                      className="w-16"
-                      value={options.adviceOptions.mustReviewRateMin}
-                      onChange={(e) =>
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          mustReviewRateMin: Number(e.target.value),
-                        })
-                      }
-                    />
-                    <span>% 以上</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">表示数</Label>
-                    <Select
-                      value={options.adviceOptions.mustReviewFilterMode}
-                      onValueChange={(v) =>
-                        updateOption("adviceOptions", {
-                          ...options.adviceOptions,
-                          mustReviewFilterMode: v as "top_n" | "all_matching",
-                        })
-                      }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="top_n">上位N問</SelectItem>
-                        <SelectItem value="all_matching">全て</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {options.adviceOptions.mustReviewFilterMode === "top_n" && (
-                      <Input
-                        type="number"
-                        className="w-16"
-                        value={options.adviceOptions.mustReviewTopN}
-                        onChange={(e) =>
-                          updateOption("adviceOptions", {
-                            ...options.adviceOptions,
-                            mustReviewTopN: Number(e.target.value),
+                      min={6}
+                      max={16}
+                      className="h-6 w-16 text-xs"
+                      value={options.graphOptions.boxPlotFontSize ?? 11}
+                      onChange={(e) => {
+                        const v = Math.min(
+                          16,
+                          Math.max(6, Number(e.target.value))
+                        )
+                        if (!isNaN(v)) {
+                          updateOption("graphOptions", {
+                            ...options.graphOptions,
+                            boxPlotFontSize: v,
                           })
                         }
-                      />
-                    )}
+                      }}
+                    />
+                    <span className="text-muted-foreground text-xs">px</span>
+                  </div>
+                  <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                    <Label className="text-xs whitespace-nowrap">間隔</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={40}
+                      className="h-6 w-16 text-xs"
+                      value={options.graphOptions.boxPlotItemHeight ?? 20}
+                      onChange={(e) => {
+                        const v = Math.min(
+                          40,
+                          Math.max(0, Number(e.target.value))
+                        )
+                        if (!isNaN(v)) {
+                          updateOption("graphOptions", {
+                            ...options.graphOptions,
+                            boxPlotItemHeight: v,
+                          })
+                        }
+                      }}
+                    />
+                    <span className="text-muted-foreground text-xs">px</span>
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
+          </OptionCardWithChildren>
+        </div>
       </Section>
 
-      <Separator />
+      {/* 設問関連 */}
+      <Section title="設問関連">
+        <div className="flex flex-col gap-2">
+          <OptionCardWithChildren
+            label="設問の表"
+            checked={options.showQuestionTable}
+            onChange={(v) => updateOption("showQuestionTable", v)}
+          >
+            {options.showQuestionTable && (
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <OptionCard
+                    label="マルバツ表示"
+                    checked={options.showMarks}
+                    onChange={(v) => updateOption("showMarks", v)}
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="正答率表示"
+                    checked={options.showCorrectRate}
+                    onChange={(v) => updateOption("showCorrectRate", v)}
+                    variant="sub"
+                  />
+                </div>
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">列数</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className="h-6 flex-1 text-xs"
+                    value={options.questionTableColumns}
+                    onChange={(e) => {
+                      const v = Math.min(
+                        10,
+                        Math.max(1, Number(e.target.value))
+                      )
+                      updateOption(
+                        "questionTableColumns",
+                        v as QuestionTableColumns
+                      )
+                    }}
+                  />
+                </div>
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">文字</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-6 flex-1 text-xs"
+                    value={options.questionTableFontSize}
+                    onChange={(e) => {
+                      const v = Math.max(1, Number(e.target.value))
+                      if (!isNaN(v)) {
+                        updateOption("questionTableFontSize", v)
+                      }
+                    }}
+                  />
+                  <span className="text-muted-foreground text-xs">px</span>
+                </div>
+              </div>
+            )}
+          </OptionCardWithChildren>
+
+          <OptionCardWithChildren
+            label="学習アドバイス"
+            checked={options.showLearningAdvice}
+            onChange={(v) => updateOption("showLearningAdvice", v)}
+          >
+            {options.showLearningAdvice && (
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">正答率</Label>
+                  <Input
+                    type="text"
+                    className="h-6 flex-1 text-xs"
+                    placeholder="なし"
+                    value={options.adviceOptions.reviewRateMin ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        updateOption("adviceOptions", {
+                          ...options.adviceOptions,
+                          reviewRateMin: null,
+                        })
+                      } else {
+                        const num = Number(val)
+                        if (!isNaN(num)) {
+                          updateOption("adviceOptions", {
+                            ...options.adviceOptions,
+                            reviewRateMin: num,
+                          })
+                        }
+                      }
+                    }}
+                  />
+                  <span className="text-muted-foreground text-xs">%以上</span>
+                  <Input
+                    type="text"
+                    className="h-6 flex-1 text-xs"
+                    placeholder="なし"
+                    value={options.adviceOptions.reviewRateMax ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        updateOption("adviceOptions", {
+                          ...options.adviceOptions,
+                          reviewRateMax: null,
+                        })
+                      } else {
+                        const num = Number(val)
+                        if (!isNaN(num)) {
+                          updateOption("adviceOptions", {
+                            ...options.adviceOptions,
+                            reviewRateMax: num,
+                          })
+                        }
+                      }
+                    }}
+                  />
+                  <span className="text-muted-foreground text-xs">%以下</span>
+                </div>
+                <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
+                  <Label className="text-xs whitespace-nowrap">問題数</Label>
+                  <Input
+                    type="text"
+                    className="h-6 flex-1 text-xs"
+                    placeholder="全て"
+                    value={options.adviceOptions.reviewQuestionCount ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      if (val === "") {
+                        updateOption("adviceOptions", {
+                          ...options.adviceOptions,
+                          reviewQuestionCount: null,
+                        })
+                      } else {
+                        const num = Number(val)
+                        if (!isNaN(num)) {
+                          updateOption("adviceOptions", {
+                            ...options.adviceOptions,
+                            reviewQuestionCount: num,
+                          })
+                        }
+                      }
+                    }}
+                  />
+                  <span className="text-muted-foreground text-xs">問</span>
+                </div>
+              </div>
+            )}
+          </OptionCardWithChildren>
+        </div>
+      </Section>
 
       {/* 行政要素 */}
       <Section title="行政要素">
-        <ToggleRow
-          label="コメント欄"
-          checked={options.showComment}
-          onChange={(v) => updateOption("showComment", v)}
-        />
-        <ToggleRow
-          label="署名・押印欄"
-          checked={options.showSignature}
-          onChange={(v) => updateOption("showSignature", v)}
-        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          <OptionCard
+            label="コメント欄"
+            checked={options.showComment}
+            onChange={(v) => updateOption("showComment", v)}
+          />
+          <OptionCard
+            label="署名・押印欄"
+            checked={options.showSignature}
+            onChange={(v) => updateOption("showSignature", v)}
+          />
+        </div>
       </Section>
     </div>
   )
@@ -390,26 +567,81 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-3">
-      <h4 className="text-muted-foreground text-sm font-semibold">{title}</h4>
-      <div className="space-y-2">{children}</div>
+    <div>
+      <h4 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+        {title}
+      </h4>
+      {children}
     </div>
   )
 }
 
-function ToggleRow({
+function OptionCard({
   label,
   checked,
   onChange,
+  variant = "default",
 }: {
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
+  variant?: "default" | "sub"
+}) {
+  const baseClasses =
+    "flex items-center gap-2 rounded-lg border p-2 cursor-pointer"
+  const variantClasses =
+    variant === "sub"
+      ? checked
+        ? "bg-primary/5 border-primary/30"
+        : "bg-muted/50 border-muted"
+      : checked
+        ? "bg-primary/5 border-primary"
+        : "bg-background hover:bg-muted/50"
+
+  return (
+    <div
+      className={`${baseClasses} ${variantClasses}`}
+      onClick={() => onChange(!checked)}
+    >
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(v) => onChange(v === true)}
+        onClick={(e) => e.stopPropagation()}
+      />
+      <Label className="cursor-pointer text-xs">{label}</Label>
+    </div>
+  )
+}
+
+function OptionCardWithChildren({
+  label,
+  checked,
+  onChange,
+  children,
+}: {
+  label: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  children?: React.ReactNode
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <Label>{label}</Label>
-      <Switch checked={checked} onCheckedChange={onChange} />
+    <div
+      className={`rounded-lg border p-2 ${
+        checked ? "bg-primary/5 border-primary" : "bg-background"
+      }`}
+    >
+      <div
+        className="flex cursor-pointer items-center gap-2"
+        onClick={() => onChange(!checked)}
+      >
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(v) => onChange(v === true)}
+          onClick={(e) => e.stopPropagation()}
+        />
+        <Label className="cursor-pointer text-xs">{label}</Label>
+      </div>
+      {children}
     </div>
   )
 }

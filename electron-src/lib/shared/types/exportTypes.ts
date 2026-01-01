@@ -22,10 +22,20 @@ export interface ScoringData {
 }
 
 export interface SubtotalScore {
-  subtotalRegionId: string
+  /** Subtotal ID */
+  subtotalId: string
+  /** SubtotalGroup ID */
+  subtotalGroupId: string
+  /** SubtotalGroup名 */
+  subtotalGroupName: string
+  /** 小計点ラベル（Subtotal.name） */
   subtotalLabel: string
+  /** 得点 */
   score: number
+  /** 最大点 */
   maxScore: number
+  /** QUESTION_ASSIGNMENTが存在するか（設問と関連付けられているか） */
+  hasQuestionAssignments: boolean
 }
 
 export interface ScoreDetail {

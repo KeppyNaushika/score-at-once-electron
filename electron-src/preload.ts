@@ -19,7 +19,8 @@ declare global {
 }
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  fetchProjects: () => ipcRenderer.invoke("fetch-projects"),
+  fetchProjects: (userId: string) =>
+    ipcRenderer.invoke("fetch-projects", userId),
   fetchProjectById: (projectId: string) =>
     ipcRenderer.invoke("fetch-project-by-id", projectId),
   createProject: (props: CreateProjectArgs, userId: string) => {
@@ -507,12 +508,36 @@ contextBridge.exposeInMainWorld("electronAPI", {
       selectedStudentIds: string[]
       options: import("./lib/export/individual-report").IndividualReportOptions
     }) => ipcRenderer.invoke("export:getIndividualReportData", options),
+    getSubtotalGroupsForReport: (projectId: string) =>
+      ipcRenderer.invoke("export:getSubtotalGroupsForReport", projectId),
     selectIndividualReportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("export:selectIndividualReportSavePath", options),
     saveIndividualReportPdf: (options: {
       filePath: string
       pdfBuffer: ArrayBuffer
     }) => ipcRenderer.invoke("export:saveIndividualReportPdf", options),
+    // HTML to PDF (ブラウザ印刷機能)
+    printHtmlToPdf: (options: {
+      html: string
+      filePath: string
+      pageSize?: "A4" | "Letter"
+      landscape?: boolean
+      margins?: {
+        top?: number
+        bottom?: number
+        left?: number
+        right?: number
+      }
+    }) => ipcRenderer.invoke("export:printHtmlToPdf", options),
+    printMultipleHtmlToPdf: (options: {
+      htmlPages: string[]
+      filePath: string
+      pageSize?: "A4" | "Letter"
+      landscape?: boolean
+    }) => ipcRenderer.invoke("export:printMultipleHtmlToPdf", options),
+    // 印刷ダイアログを開く
+    openPrintDialog: (options: { html: string; title?: string }) =>
+      ipcRenderer.invoke("export:openPrintDialog", options),
   },
 
   // Excel Export related
@@ -589,6 +614,87 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectExportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("archive:selectExportSavePath", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
+  },
+
+  // v0.3.0: ProjectClass related
+  projectClass: {
+    getAll: (projectId: string) =>
+      ipcRenderer.invoke("project-class:get-all", projectId),
+    getAdministered: (projectId: string) =>
+      ipcRenderer.invoke("project-class:get-administered", projectId),
+    getStatistics: (projectId: string) =>
+      ipcRenderer.invoke("project-class:get-statistics", projectId),
+    getAvailable: (projectId: string) =>
+      ipcRenderer.invoke("project-class:get-available", projectId),
+    add: (options: {
+      projectId: string
+      classId: string
+      administered?: boolean
+      statistics?: boolean
+    }) => ipcRenderer.invoke("project-class:add", options),
+    update: (options: {
+      id: string
+      administered?: boolean
+      statistics?: boolean
+      order?: number
+    }) => ipcRenderer.invoke("project-class:update", options),
+    remove: (id: string) => ipcRenderer.invoke("project-class:remove", id),
+    reorder: (options: { projectId: string; orderedIds: string[] }) =>
+      ipcRenderer.invoke("project-class:reorder", options),
+    removeByIds: (projectId: string, classId: string) =>
+      ipcRenderer.invoke("project-class:remove-by-ids", projectId, classId),
+    addStudentsFromClass: (projectId: string, classId: string) =>
+      ipcRenderer.invoke(
+        "project-class:add-students-from-class",
+        projectId,
+        classId
+      ),
+    getStudentClassInfo: (projectId: string) =>
+      ipcRenderer.invoke("project-class:get-student-class-info", projectId),
+    getStudentClassInfoSingle: (projectId: string, studentId: string) =>
+      ipcRenderer.invoke(
+        "project-class:get-student-class-info-single",
+        projectId,
+        studentId
+      ),
+  },
+
+  // v0.3.0: UserProject (権限管理) related
+  userProject: {
+    getMembers: (projectId: string) =>
+      ipcRenderer.invoke("user-project:get-members", projectId),
+    getRole: (userId: string, projectId: string) =>
+      ipcRenderer.invoke("user-project:get-role", userId, projectId),
+    isOwner: (userId: string, projectId: string) =>
+      ipcRenderer.invoke("user-project:is-owner", userId, projectId),
+    isMember: (userId: string, projectId: string) =>
+      ipcRenderer.invoke("user-project:is-member", userId, projectId),
+    setOwner: (options: { projectId: string; userId: string }) =>
+      ipcRenderer.invoke("user-project:set-owner", options),
+    invite: (options: {
+      projectId: string
+      userId: string
+      invitedBy: string
+    }) => ipcRenderer.invoke("user-project:invite", options),
+    remove: (projectId: string, userId: string, removedBy: string) =>
+      ipcRenderer.invoke("user-project:remove", projectId, userId, removedBy),
+    transferOwnership: (
+      projectId: string,
+      newOwnerId: string,
+      currentOwnerId: string
+    ) =>
+      ipcRenderer.invoke(
+        "user-project:transfer-ownership",
+        projectId,
+        newOwnerId,
+        currentOwnerId
+      ),
+    getUserProjects: (userId: string) =>
+      ipcRenderer.invoke("user-project:get-user-projects", userId),
+    getOwner: (projectId: string) =>
+      ipcRenderer.invoke("user-project:get-owner", projectId),
+    searchUsers: (projectId: string, query: string) =>
+      ipcRenderer.invoke("user-project:search-users", projectId, query),
   },
 })
 

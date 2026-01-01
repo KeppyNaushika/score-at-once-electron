@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 export type SortDirection = "asc" | "desc" | null
 
@@ -139,10 +139,6 @@ export function useTableSort<T extends object>(
     })
   }, [])
 
-  const clearSort = useCallback(() => {
-    setSortConfig({ key: null, direction: null })
-  }, [])
-
   /**
    * ソート設定を直接指定する
    */
@@ -154,7 +150,6 @@ export function useTableSort<T extends object>(
     sortedData,
     sortConfig,
     requestSort,
-    clearSort,
     setSort,
   }
 }

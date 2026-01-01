@@ -1,16 +1,10 @@
 /**
  * 学習アドバイス生成ロジック
- * - 差がつく問題: 正答率が中程度で、生徒が間違えた問題
- * - 必ず復習問題: 正答率が高いのに、生徒が間違えた問題
+ * 復習問題: 正答率が閾値以上で、生徒が間違えた問題
  */
 
 import type { ScoreDetail } from "../../shared/types/exportTypes"
-import type {
-  AdviceOptions,
-  AdviceQuestion,
-  LearningAdviceData,
-  QuestionFilterMode,
-} from "./types"
+import type { AdviceOptions, AdviceQuestion, LearningAdviceData } from "./types"
 
 /**
  * 生徒が間違えた問題かどうかを判定
@@ -26,86 +20,52 @@ function isIncorrectAnswer(score: ScoreDetail): boolean {
 }
 
 /**
- * 差がつく問題を抽出
- * 正答率が中程度（デフォルト40%〜60%）で、生徒が間違えた問題
+ * 復習問題を抽出
+ * 正答率が閾値以上の問題で、生徒が間違えたもの
  */
-export function findDifferentiatingQuestions(
+export function findReviewQuestions(
   scores: ScoreDetail[],
   questionCorrectRates: Record<string, number>,
-  options: {
-    rateMin: number
-    rateMax: number
-    filterMode: QuestionFilterMode
-    topN: number
-  }
+  options: AdviceOptions
 ): AdviceQuestion[] {
-  const { rateMin, rateMax, filterMode, topN } = options
-
   // 生徒が間違えた問題をフィルタリング
   const incorrectQuestions = scores.filter(isIncorrectAnswer)
 
-  // 正答率が中程度の問題を抽出
-  const candidates = incorrectQuestions
-    .map((score) => {
-      const correctRate = questionCorrectRates[score.questionId] ?? 0
-      return {
-        questionId: score.questionId,
-        label: score.questionLabel,
-        correctRate,
-        yourScore: score.score ?? 0,
-        maxScore: score.maxScore,
-      }
-    })
-    .filter((q) => q.correctRate >= rateMin && q.correctRate <= rateMax)
-    // 正答率が50%に近い順にソート（差がつきやすい問題を優先）
-    .sort((a, b) => Math.abs(a.correctRate - 50) - Math.abs(b.correctRate - 50))
+  // 問題データを構築
+  let candidates = incorrectQuestions.map((score) => {
+    const correctRate = questionCorrectRates[score.questionId] ?? 0
+    return {
+      questionId: score.questionId,
+      label: score.questionLabel,
+      correctRate,
+      yourScore: score.score ?? 0,
+      maxScore: score.maxScore,
+    }
+  })
 
-  // フィルタリング方式に応じて返却
-  if (filterMode === "all_matching") {
-    return candidates
+  // 正答率の下限でフィルタリング（nullの場合はフィルタリングなし）
+  if (options.reviewRateMin !== null) {
+    candidates = candidates.filter(
+      (q) => q.correctRate >= options.reviewRateMin!
+    )
   }
-  return candidates.slice(0, topN)
-}
 
-/**
- * 必ず復習問題を抽出
- * 正答率が高い（デフォルト80%以上）のに、生徒が間違えた問題
- */
-export function findMustReviewQuestions(
-  scores: ScoreDetail[],
-  questionCorrectRates: Record<string, number>,
-  options: {
-    rateMin: number
-    filterMode: QuestionFilterMode
-    topN: number
+  // 正答率の上限でフィルタリング（nullの場合はフィルタリングなし）
+  if (options.reviewRateMax !== null) {
+    candidates = candidates.filter(
+      (q) => q.correctRate <= options.reviewRateMax!
+    )
   }
-): AdviceQuestion[] {
-  const { rateMin, filterMode, topN } = options
 
-  // 生徒が間違えた問題をフィルタリング
-  const incorrectQuestions = scores.filter(isIncorrectAnswer)
+  // 正答率が高い順にソート（より多くの人ができた問題を優先）
+  candidates.sort((a, b) => b.correctRate - a.correctRate)
 
-  // 正答率が高い問題を抽出
-  const candidates = incorrectQuestions
-    .map((score) => {
-      const correctRate = questionCorrectRates[score.questionId] ?? 0
-      return {
-        questionId: score.questionId,
-        label: score.questionLabel,
-        correctRate,
-        yourScore: score.score ?? 0,
-        maxScore: score.maxScore,
-      }
-    })
-    .filter((q) => q.correctRate >= rateMin)
-    // 正答率が高い順にソート（より多くの人ができた問題を優先）
-    .sort((a, b) => b.correctRate - a.correctRate)
-
-  // フィルタリング方式に応じて返却
-  if (filterMode === "all_matching") {
-    return candidates
+  // 問題数で制限（nullの場合は全て表示）
+  if (options.reviewQuestionCount !== null) {
+    candidates = candidates.slice(0, options.reviewQuestionCount)
   }
-  return candidates.slice(0, topN)
+
+  return candidates
 }
 
 /**
@@ -116,25 +76,13 @@ export function generateLearningAdvice(
   questionCorrectRates: Record<string, number>,
   options: AdviceOptions
 ): LearningAdviceData {
-  const differentiatingQuestions = options.showDifferentiatingQuestions
-    ? findDifferentiatingQuestions(scores, questionCorrectRates, {
-        rateMin: options.differentiatingRateMin,
-        rateMax: options.differentiatingRateMax,
-        filterMode: options.differentiatingFilterMode,
-        topN: options.differentiatingTopN,
-      })
-    : []
-
-  const mustReviewQuestions = options.showMustReviewQuestions
-    ? findMustReviewQuestions(scores, questionCorrectRates, {
-        rateMin: options.mustReviewRateMin,
-        filterMode: options.mustReviewFilterMode,
-        topN: options.mustReviewTopN,
-      })
-    : []
+  const reviewQuestions = findReviewQuestions(
+    scores,
+    questionCorrectRates,
+    options
+  )
 
   return {
-    differentiatingQuestions,
-    mustReviewQuestions,
+    reviewQuestions,
   }
 }

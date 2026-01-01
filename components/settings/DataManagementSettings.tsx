@@ -24,7 +24,6 @@ export default function DataManagementSettings({
 }: DataManagementSettingsProps) {
   const [dataDirectory, setDataDirectory] = useState<string>("")
   const [dataSize, setDataSize] = useState<number>(0)
-  const [projectCount, setProjectCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,7 +40,6 @@ export default function DataManagementSettings({
       if (dataInfo.success) {
         setDataDirectory(dataInfo.directory || "")
         setDataSize(dataInfo.size || 0)
-        setProjectCount(dataInfo.projectCount || 0)
       }
     } catch (error) {
       console.error("Failed to load data info:", error)
@@ -150,14 +148,6 @@ export default function DataManagementSettings({
               <div className="mt-1 flex items-center gap-2">
                 <Database className="text-muted-foreground h-4 w-4" />
                 <span className="text-sm">{formatBytes(dataSize)}</span>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium">プロジェクト数</Label>
-              <div className="mt-1 flex items-center gap-2">
-                <FolderOpen className="text-muted-foreground h-4 w-4" />
-                <span className="text-sm">{projectCount}個</span>
               </div>
             </div>
           </div>

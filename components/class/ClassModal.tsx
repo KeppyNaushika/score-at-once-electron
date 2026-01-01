@@ -117,10 +117,13 @@ export default function ClassModal({
             学級の詳細情報を入力してください。
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-5 py-4">
           {/* 学級名 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="className" className="text-right">
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
+            <Label
+              htmlFor="className"
+              className="text-muted-foreground text-right font-normal"
+            >
               学級名
             </Label>
             <div className="col-span-3">
@@ -138,8 +141,11 @@ export default function ClassModal({
           </div>
 
           {/* クラスコード */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="classCode" className="text-right">
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
+            <Label
+              htmlFor="classCode"
+              className="text-muted-foreground text-right font-normal"
+            >
               クラスコード
             </Label>
             <div className="col-span-3">
@@ -156,8 +162,11 @@ export default function ClassModal({
           </div>
 
           {/* 表示設定 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="isVisible" className="text-right">
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
+            <Label
+              htmlFor="isVisible"
+              className="text-muted-foreground text-right font-normal"
+            >
               表示設定
             </Label>
             <div className="col-span-3 flex items-center space-x-2">
@@ -178,8 +187,11 @@ export default function ClassModal({
           </div>
 
           {/* 学年 */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="grade" className="text-right">
+          <div className="grid grid-cols-4 items-center gap-x-4 gap-y-1">
+            <Label
+              htmlFor="grade"
+              className="text-muted-foreground text-right font-normal"
+            >
               学年
             </Label>
             <div className="col-span-3">
@@ -200,8 +212,11 @@ export default function ClassModal({
           </div>
 
           {/* 説明 */}
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label htmlFor="classDescription" className="pt-2 text-right">
+          <div className="grid grid-cols-4 items-start gap-x-4 gap-y-1">
+            <Label
+              htmlFor="classDescription"
+              className="text-muted-foreground pt-2 text-right font-normal"
+            >
               説明
             </Label>
             <div className="col-span-3">
@@ -215,11 +230,13 @@ export default function ClassModal({
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="gap-3 border-t pt-4">
+          <Button variant="outline" className="rounded-lg" onClick={onClose}>
             キャンセル
           </Button>
-          <Button onClick={handleSubmit}>保存</Button>
+          <Button className="rounded-lg" onClick={handleSubmit}>
+            保存
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

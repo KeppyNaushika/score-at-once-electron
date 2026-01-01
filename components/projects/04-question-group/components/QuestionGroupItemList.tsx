@@ -110,7 +110,7 @@ export function QuestionGroupItemList({
   const [newItemName, setNewItemName] = useState("")
   const [editingItem, setEditingItem] = useState<Subtotal | null>(null)
   const [editItemName, setEditItemName] = useState("")
-  const [items, setItems] = useState(subtotalGroup.subtotals)
+  const [items, setItems] = useState<Subtotal[]>(subtotalGroup.subtotals)
 
   // Sync local items with props when subtotalGroup changes
   useEffect(() => {

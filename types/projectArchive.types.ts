@@ -363,6 +363,8 @@ export interface ArchiveProjectData {
     userId: string
     projectId: string
     role: string
+    invitedAt: string
+    invitedBy: string | null
     createdAt: string
     updatedAt: string
   }>

@@ -1,12 +1,12 @@
 "use client"
 
+import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
-import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 export function SortableTableRow({
   student,
@@ -61,7 +61,7 @@ export function SortableTableRow({
         </div>
       </TableCell>
       <TableCell className="text-center font-medium">
-        {student.memberships[0]?.attendanceNumber || "-"}
+        {student.projectClassInfo?.attendanceNumber ?? "-"}
       </TableCell>
       <TableCell className="font-mono">{student.studentId}</TableCell>
       <TableCell className="font-medium">
@@ -70,7 +70,7 @@ export function SortableTableRow({
       <TableCell className="text-muted-foreground">
         {student.lastNameKana} {student.firstNameKana}
       </TableCell>
-      <TableCell>{student.memberships[0]?.class.name || "未所属"}</TableCell>
+      <TableCell>{student.projectClassInfo?.className ?? "-"}</TableCell>
       <TableCell>
         <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <Button

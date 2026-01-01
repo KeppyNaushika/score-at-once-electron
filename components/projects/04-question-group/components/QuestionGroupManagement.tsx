@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubtotalGroupWithItems } from "@/types/electron"
+import type { Subtotal } from "@prisma/client"
 import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
 import { useState } from "react"
 
@@ -184,7 +185,7 @@ export function QuestionGroupManagement({
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-1">
-                    {group.subtotals.slice(0, 3).map((subtotal) => (
+                    {group.subtotals.slice(0, 3).map((subtotal: Subtotal) => (
                       <div
                         key={subtotal.id}
                         className="text-muted-foreground text-sm"

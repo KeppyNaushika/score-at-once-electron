@@ -148,7 +148,9 @@ export default function RegionInfoPage() {
         if (savedRegions.length > 0) {
           setCropRegions(
             savedRegions.filter(
-              (region): region is CropRegionWithDetails => region !== null
+              (
+                region: CropRegionWithDetails | null
+              ): region is CropRegionWithDetails => region !== null
             )
           )
         }

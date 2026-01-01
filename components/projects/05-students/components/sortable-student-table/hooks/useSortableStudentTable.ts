@@ -1,7 +1,6 @@
 "use client"
 
 import type {
-  ClassGroup,
   Student,
   StudentStatus,
 } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
@@ -17,7 +16,6 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
 
 interface UseSortableStudentTableProps {
-  classes: ClassGroup[]
   filteredStudents: Student[]
   selectedStudents: Set<string>
   onStudentSelectionChange: (studentId: string, isSelected: boolean) => void
@@ -34,7 +32,6 @@ interface UseSortableStudentTableProps {
 }
 
 export function useSortableStudentTable({
-  classes,
   filteredStudents,
   selectedStudents,
   onStudentSelectionChange,
@@ -62,56 +59,41 @@ export function useSortableStudentTable({
   // 生徒の並び順を初期化・更新
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      // まず学級順→出席番号順でソート
-      const classMap = new Map<string, ClassGroup>()
-      classes.forEach((cls) => classMap.set(cls.id, cls))
+      // 単一パスでソート（customOrder優先、なければデフォルト順）
+      const sorted = filteredStudents.slice().sort((a, b) => {
+        const aHasCustomOrder =
+          a.customOrder !== null && a.customOrder !== undefined
+        const bHasCustomOrder =
+          b.customOrder !== null && b.customOrder !== undefined
 
-      const defaultSorted = filteredStudents.slice().sort((a, b) => {
-        const aClass = a.memberships[0]?.class.name || ""
-        const bClass = b.memberships[0]?.class.name || ""
-        const aAttendance = a.memberships[0]?.attendanceNumber || 99999
-        const bAttendance = b.memberships[0]?.attendanceNumber || 99999
-
-        // 学級名でソート
-        if (aClass !== bClass) {
-          return aClass.localeCompare(bClass)
+        // 両方customOrderがある場合
+        if (aHasCustomOrder && bHasCustomOrder) {
+          return a.customOrder! - b.customOrder!
         }
 
-        // 同じ学級内では出席番号でソート
+        // 片方だけcustomOrderがある場合、customOrderがある方を前に
+        if (aHasCustomOrder) return -1
+        if (bHasCustomOrder) return 1
+
+        // 両方customOrderがない場合はデフォルトソート
+        // ProjectClass順（order）→学級内出席番号順
+        const aClassOrder = a.projectClassInfo?.classOrder ?? 99999
+        const bClassOrder = b.projectClassInfo?.classOrder ?? 99999
+
+        if (aClassOrder !== bClassOrder) {
+          return aClassOrder - bClassOrder
+        }
+
+        const aAttendance = a.projectClassInfo?.attendanceNumber ?? 99999
+        const bAttendance = b.projectClassInfo?.attendanceNumber ?? 99999
         return aAttendance - bAttendance
       })
 
-      // カスタムオーダーがある場合はそれを優先
-      const withCustomOrder = defaultSorted.slice().sort((a, b) => {
-        // カスタムオーダーが両方ある場合
-        if (
-          a.customOrder !== null &&
-          a.customOrder !== undefined &&
-          b.customOrder !== null &&
-          b.customOrder !== undefined
-        ) {
-          return a.customOrder - b.customOrder
-        }
-
-        // aにのみカスタムオーダーがある場合
-        if (a.customOrder !== null && a.customOrder !== undefined) {
-          return -1
-        }
-
-        // bにのみカスタムオーダーがある場合
-        if (b.customOrder !== null && b.customOrder !== undefined) {
-          return 1
-        }
-
-        // 両方カスタムオーダーがない場合はデフォルトの順序を維持
-        return 0
-      })
-
-      setSortedStudents(withCustomOrder)
+      setSortedStudents(sorted)
     })
 
     return () => cancelAnimationFrame(frame)
-  }, [filteredStudents, classes])
+  }, [filteredStudents])
 
   // ドラッグ開始
   const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -241,24 +223,29 @@ export function useSortableStudentTable({
     [onSelectAll]
   )
 
-  // リセットボタン（デフォルトの並び順に戻す）
+  // リセット実行（統計学級順→出席番号順でcustomOrderを再設定）
   const handleResetOrder = useCallback(async () => {
-    // customOrderをすべてnullにリセット
-    const studentOrders = sortedStudents.map((student) => ({
+    // デフォルト順（統計学級順→出席番号順）でソート
+    const defaultSorted = [...sortedStudents].sort((a, b) => {
+      const aClassOrder = a.projectClassInfo?.classOrder ?? 99999
+      const bClassOrder = b.projectClassInfo?.classOrder ?? 99999
+
+      if (aClassOrder !== bClassOrder) {
+        return aClassOrder - bClassOrder
+      }
+
+      const aAttendance = a.projectClassInfo?.attendanceNumber ?? 99999
+      const bAttendance = b.projectClassInfo?.attendanceNumber ?? 99999
+      return aAttendance - bAttendance
+    })
+
+    // 新しいcustomOrderを割り当て
+    const newOrders = defaultSorted.map((student, index) => ({
       studentId: student.id,
-      customOrder: 0, // 一時的に0を設定
+      customOrder: index,
     }))
 
-    // データベースを更新してからリロード
-    await onStudentOrderUpdate(projectId, studentOrders)
-
-    // その後、customOrderをnullにするため、負の値で再更新
-    const resetOrders = sortedStudents.map((student) => ({
-      studentId: student.id,
-      customOrder: -1, // 負の値でリセットの合図
-    }))
-
-    await onStudentOrderUpdate(projectId, resetOrders)
+    await onStudentOrderUpdate(projectId, newOrders)
   }, [sortedStudents, onStudentOrderUpdate, projectId])
 
   const activeStudent = activeId

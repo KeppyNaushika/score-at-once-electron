@@ -13,6 +13,34 @@ import {
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
+const INDIVIDUAL_REPORT_OPTIONS_KEY = "individualReportOptions"
+
+function loadIndividualReportOptionsFromStorage(): IndividualReportOptions {
+  if (typeof window === "undefined") return DEFAULT_INDIVIDUAL_REPORT_OPTIONS
+  try {
+    const stored = localStorage.getItem(INDIVIDUAL_REPORT_OPTIONS_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      // デフォルト値とマージして、新しいプロパティが追加されても対応
+      return { ...DEFAULT_INDIVIDUAL_REPORT_OPTIONS, ...parsed }
+    }
+  } catch {
+    // パースエラーの場合はデフォルト値を返す
+  }
+  return DEFAULT_INDIVIDUAL_REPORT_OPTIONS
+}
+
+function saveIndividualReportOptionsToStorage(
+  options: IndividualReportOptions
+): void {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(INDIVIDUAL_REPORT_OPTIONS_KEY, JSON.stringify(options))
+  } catch {
+    // 保存エラーは無視
+  }
+}
+
 export function useExportPage() {
   const params = useParams()
   const projectId = params.projectId as string
@@ -52,9 +80,14 @@ export function useExportPage() {
     loadConfigFromStorage()
   )
 
-  // 個人成績表オプション
+  // 個人成績表オプション（localStorageから復元）
   const [individualReportOptions, setIndividualReportOptions] =
-    useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
+    useState<IndividualReportOptions>(loadIndividualReportOptionsFromStorage)
+
+  // 個人成績表オプションが変更されたらlocalStorageに保存
+  useEffect(() => {
+    saveIndividualReportOptionsToStorage(individualReportOptions)
+  }, [individualReportOptions])
 
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)

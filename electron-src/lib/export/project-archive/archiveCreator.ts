@@ -5,12 +5,12 @@
  */
 
 import archiver from "archiver"
+import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
-import { app } from "electron"
-import type { CollectedData } from "./dataCollector"
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
+import type { CollectedData } from "./dataCollector"
 
 /**
  * アプリバージョンを取得
@@ -72,7 +72,7 @@ function createManifest(
   exportedBy?: string
 ): ArchiveManifest {
   return {
-    version: "1.0.0",
+    version: "1.1.0", // v0.3.0: UserProject拡張対応
     schemaVersion: getSchemaVersion(),
     appVersion: getAppVersion(),
     exportedAt: new Date().toISOString(),

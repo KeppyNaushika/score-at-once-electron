@@ -11,14 +11,30 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type {
+  IndividualReportData,
+  IndividualReportOptions,
+} from "@/electron-src/lib/export/individual-report/types"
+import {
   Check,
   CheckSquare,
+  Eye,
   Search,
   Square,
   UserCheck,
   Users,
   UserX,
 } from "lucide-react"
+import { useState } from "react"
+import type { ExportTabType } from "./ExportOptionsCard"
+import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
 
 interface StudentSelectionCardProps {
   students: Student[]
@@ -31,6 +47,15 @@ interface StudentSelectionCardProps {
   setSelectedStatuses: (statuses: string[]) => void
   selectedStudents: Set<string>
   setSelectedStudents: (students: Set<string>) => void
+  // プレビュー関連
+  exportTab?: ExportTabType
+  previewData?: IndividualReportData | null
+  isPreviewLoading?: boolean
+  previewError?: string | null
+  previewStudentId?: string
+  onPreviewStudentChange?: (studentId: string) => void
+  previewStudentList?: Array<{ id: string; name: string }>
+  individualReportOptions?: IndividualReportOptions
 }
 
 export function StudentSelectionCard({
@@ -44,7 +69,27 @@ export function StudentSelectionCard({
   setSelectedStatuses,
   selectedStudents,
   setSelectedStudents,
+  exportTab,
+  previewData,
+  isPreviewLoading,
+  previewError,
+  previewStudentId,
+  onPreviewStudentChange,
+  previewStudentList,
+  individualReportOptions,
 }: StudentSelectionCardProps) {
+  const [activeTab, setActiveTab] = useState<"selection" | "preview">(
+    "selection"
+  )
+
+  // exportTabからpreviewTypeを導出
+  const previewType =
+    exportTab === "individual-reports"
+      ? "individual-report"
+      : exportTab === "grading-data"
+        ? "excel"
+        : "scored-answers"
+
   const toggleStudentSelection = (studentId: string) => {
     const newSelection = new Set(selectedStudents)
     if (newSelection.has(studentId)) {
@@ -85,158 +130,245 @@ export function StudentSelectionCard({
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* タイトル */}
-      <div className="mb-2 flex items-center gap-2">
-        <Users className="h-5 w-5" />
-        <h3 className="text-lg font-semibold">生徒選択</h3>
-      </div>
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => setActiveTab(v as "selection" | "preview")}
+      className="flex h-full flex-col"
+    >
+      {/* タブヘッダー */}
+      <TabsList className="mb-2 grid w-full grid-cols-2">
+        <TabsTrigger value="selection" className="gap-1">
+          <Users className="h-4 w-4" />
+          生徒選択
+        </TabsTrigger>
+        <TabsTrigger value="preview" className="gap-1">
+          <Eye className="h-4 w-4" />
+          プレビュー
+        </TabsTrigger>
+      </TabsList>
 
-      {/* 1行目: 検索のみ */}
-      <div className="mb-2 flex items-center">
-        {/* 検索 */}
-        <div className="relative w-full">
-          <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
-          <Input
-            placeholder="名前または学籍番号で検索"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 pl-8 text-sm"
-          />
-        </div>
-      </div>
-
-      {/* 2行目: 学級 | 状態 | 選択 */}
-      <div className="mb-2 flex items-center justify-between">
-        {/* 学級フィルタ */}
-        <div>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs whitespace-nowrap"
-              >
-                学級({selectedClasses.length})
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-2">
-              <div className="space-y-1">
-                <h4 className="mb-2 text-sm font-medium">学級を選択</h4>
-                {availableClasses.map((cls) => (
-                  <Button
-                    key={cls.id}
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-full justify-between px-2"
-                    onClick={() => toggleClassFilter(cls.id)}
-                  >
-                    <span className="text-sm">{cls.name}</span>
-                    {selectedClasses.includes(cls.id) && (
-                      <Check className="h-4 w-4" />
-                    )}
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+      {/* 生徒選択タブ */}
+      <TabsContent
+        value="selection"
+        className="mt-0 flex min-h-0 flex-1 flex-col"
+      >
+        {/* 1行目: 検索のみ */}
+        <div className="mb-2 flex items-center">
+          {/* 検索 */}
+          <div className="relative w-full">
+            <Search className="text-muted-foreground absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
+            <Input
+              placeholder="名前または学籍番号で検索"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 pl-8 text-sm"
+            />
+          </div>
         </div>
 
-        {/* 状態フィルタ（アイコン付き）*/}
-        <div className="flex gap-1">
-          {[
-            { value: "participating", label: "受験", icon: UserCheck },
-            { value: "expected", label: "見込", icon: Users },
-            { value: "absent", label: "欠席", icon: UserX },
-          ].map((status) => {
-            const Icon = status.icon
-            return (
-              <Button
-                key={status.value}
-                variant={
-                  selectedStatuses.includes(status.value)
-                    ? "default"
-                    : "outline"
-                }
-                size="sm"
-                className="h-8 px-2 text-xs"
-                onClick={() => toggleStatusFilter(status.value)}
-              >
-                <Icon className="mr-1 h-3 w-3" />
-                {status.label}
-              </Button>
-            )
-          })}
-        </div>
-
-        {/* 一括選択 */}
-        <div className="flex gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={selectAllFiltered}
-          >
-            <CheckSquare className="mr-1 h-3 w-3" />
-            全選択
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs"
-            onClick={deselectAllFiltered}
-          >
-            <Square className="mr-1 h-3 w-3" />
-            全解除
-          </Button>
-        </div>
-      </div>
-
-      {/* 3行目: 生徒リスト - 残りの高さを使用 */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
-          <span>生徒一覧</span>
-          <span>
-            {selectedStudents.size}人選択中 / {students.length}人表示中
-          </span>
-        </div>
-        <div className="flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
-          {students.map((student) => (
-            <div
-              key={student.id}
-              className="hover:bg-muted flex items-center space-x-2 rounded p-1"
-            >
-              <Checkbox
-                id={`student-${student.id}`}
-                checked={selectedStudents.has(student.id)}
-                onCheckedChange={() => toggleStudentSelection(student.id)}
-                className="h-4 w-4"
-              />
-              <Label
-                htmlFor={`student-${student.id}`}
-                className="flex-1 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs">
-                    {student.lastName} {student.firstName}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {student.customOrder !== null &&
-                      student.customOrder !== undefined && (
-                        <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
-                          {student.customOrder}
-                        </span>
+        {/* 2行目: 学級 | 状態 | 選択 */}
+        <div className="mb-2 flex items-center justify-between">
+          {/* 学級フィルタ */}
+          <div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs whitespace-nowrap"
+                >
+                  学級({selectedClasses.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-2">
+                <div className="space-y-1">
+                  <h4 className="mb-2 text-sm font-medium">学級を選択</h4>
+                  {availableClasses.map((cls) => (
+                    <Button
+                      key={cls.id}
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-full justify-between px-2"
+                      onClick={() => toggleClassFilter(cls.id)}
+                    >
+                      <span className="text-sm">{cls.name}</span>
+                      {selectedClasses.includes(cls.id) && (
+                        <Check className="h-4 w-4" />
                       )}
-                    <span className="text-muted-foreground text-xs">
-                      {student.studentId}
-                    </span>
-                  </div>
+                    </Button>
+                  ))}
                 </div>
-              </Label>
-            </div>
-          ))}
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 状態フィルタ（アイコン付き）*/}
+          <div className="flex gap-1">
+            {[
+              { value: "participating", label: "受験", icon: UserCheck },
+              { value: "expected", label: "見込", icon: Users },
+              { value: "absent", label: "欠席", icon: UserX },
+            ].map((status) => {
+              const Icon = status.icon
+              return (
+                <Button
+                  key={status.value}
+                  variant={
+                    selectedStatuses.includes(status.value)
+                      ? "default"
+                      : "outline"
+                  }
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={() => toggleStatusFilter(status.value)}
+                >
+                  <Icon className="mr-1 h-3 w-3" />
+                  {status.label}
+                </Button>
+              )
+            })}
+          </div>
+
+          {/* 一括選択 */}
+          <div className="flex gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={selectAllFiltered}
+            >
+              <CheckSquare className="mr-1 h-3 w-3" />
+              全選択
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={deselectAllFiltered}
+            >
+              <Square className="mr-1 h-3 w-3" />
+              全解除
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+
+        {/* 3行目: 生徒リスト - 残りの高さを使用 */}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="text-muted-foreground mb-1 flex items-center justify-between text-xs">
+            <span>生徒一覧</span>
+            <span>
+              {selectedStudents.size}人選択中 / {students.length}人表示中
+            </span>
+          </div>
+          <div className="flex-1 space-y-0.5 overflow-y-auto rounded-md border p-1.5">
+            {students.map((student) => (
+              <div
+                key={student.id}
+                className="hover:bg-muted flex items-center space-x-2 rounded p-1"
+              >
+                <Checkbox
+                  id={`student-${student.id}`}
+                  checked={selectedStudents.has(student.id)}
+                  onCheckedChange={() => toggleStudentSelection(student.id)}
+                  className="h-4 w-4"
+                />
+                <Label
+                  htmlFor={`student-${student.id}`}
+                  className="flex-1 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">
+                      {student.lastName} {student.firstName}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {student.customOrder !== null &&
+                        student.customOrder !== undefined && (
+                          <span className="text-muted-foreground bg-muted rounded px-1 text-xs">
+                            {student.customOrder}
+                          </span>
+                        )}
+                      <span className="text-muted-foreground text-xs">
+                        {student.studentId}
+                      </span>
+                    </div>
+                  </div>
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      </TabsContent>
+
+      {/* プレビュータブ */}
+      <TabsContent
+        value="preview"
+        className="mt-0 flex min-h-0 flex-1 flex-col"
+      >
+        {/* 個人成績表の場合のみ生徒選択を表示 */}
+        {previewType === "individual-report" &&
+          previewStudentList &&
+          previewStudentList.length > 0 && (
+            <div className="mb-2 flex items-center gap-2">
+              <Label className="text-sm whitespace-nowrap">生徒:</Label>
+              <Select
+                value={previewStudentId || ""}
+                onValueChange={(v) => onPreviewStudentChange?.(v)}
+              >
+                <SelectTrigger className="h-8 flex-1">
+                  <SelectValue placeholder="選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {previewStudentList.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+        {/* プレビューコンテンツ */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto rounded-md border bg-gray-100 p-2">
+          {previewType === "individual-report" ? (
+            // 個人成績表プレビュー
+            isPreviewLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-muted-foreground text-sm">読み込み中...</p>
+              </div>
+            ) : previewError ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-destructive text-sm">{previewError}</p>
+              </div>
+            ) : previewData && individualReportOptions ? (
+              <div className="mx-auto">
+                <IndividualReportPreview
+                  report={previewData}
+                  options={individualReportOptions}
+                  scale={0.45}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-muted-foreground text-sm">
+                  {selectedStudents.size === 0
+                    ? "生徒を選択してください"
+                    : "プレビューする生徒を選択してください"}
+                </p>
+              </div>
+            )
+          ) : (
+            // 採点済み答案 / Excel は準備中
+            <div className="flex flex-1 items-center justify-center">
+              <p className="text-muted-foreground text-sm">
+                {previewType === "scored-answers"
+                  ? "採点済み答案プレビューは準備中です"
+                  : "Excelプレビューは準備中です"}
+              </p>
+            </div>
+          )}
+        </div>
+      </TabsContent>
+    </Tabs>
   )
 }

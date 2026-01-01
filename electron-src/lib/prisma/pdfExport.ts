@@ -292,7 +292,7 @@ export async function getPdfExportData(options: {
           if (!subtotalRegion.projectPage) continue
 
           // 小計点を計算
-          const subtotalScore = await calculateSubtotalScoreForStudent(
+          const subtotalResult = await calculateSubtotalScoreForStudent(
             student.id,
             subtotalRegion.id,
             allScores
@@ -310,7 +310,7 @@ export async function getPdfExportData(options: {
           subtotalData.push({
             regionId: subtotalRegion.id,
             label: subtotalRegion.label,
-            score: subtotalScore,
+            score: subtotalResult.score,
             x: subtotalRegion.x,
             y: subtotalRegion.y,
             width: subtotalRegion.width,

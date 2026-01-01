@@ -1,9 +1,16 @@
 import type { Prisma as PrismaTypes } from "@prisma/client"
 import prisma from "./client"
 
-// Project一覧を取得 (関連情報も含む)
-export const getProjects = async () => {
+// Project一覧を取得 (ユーザーでフィルタリング)
+export const getProjects = async (userId: string) => {
   return prisma.project.findMany({
+    where: {
+      userProjects: {
+        some: {
+          userId,
+        },
+      },
+    },
     include: {
       userProjects: {
         include: {
@@ -133,7 +140,7 @@ export const createProject = async (
       userProjects: {
         create: {
           userId: userId,
-          role: "CREATOR",
+          role: "OWNER",
         },
       },
     },

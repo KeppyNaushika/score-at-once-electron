@@ -1,14 +1,16 @@
-import { setupProjectHandlers } from "./projectHandlers"
-import { setupStudentHandlers } from "./studentHandlers"
+import { registerArchiveHandlers } from "./archiveHandlers"
+import { setupAuthHandlers } from "./authHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
-import { setupScoringHandlers } from "./scoringHandlers"
+import { setupDrawingHandlers } from "./drawingHandlers"
 import { setupExportHandlers } from "./exportHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
+import { setupProjectClassHandlers } from "./projectClassHandlers"
+import { setupProjectHandlers } from "./projectHandlers"
 import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
-import { setupAuthHandlers } from "./authHandlers"
+import { setupScoringHandlers } from "./scoringHandlers"
+import { setupStudentHandlers } from "./studentHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
-import { setupDrawingHandlers } from "./drawingHandlers"
-import { registerArchiveHandlers } from "./archiveHandlers"
+import { setupUserProjectHandlers } from "./userProjectHandlers"
 
 export function setupAllIPCHandlers(): void {
   setupProjectHandlers()
@@ -22,6 +24,8 @@ export function setupAllIPCHandlers(): void {
   setupSubtotalGroupHandlers()
   setupDrawingHandlers() // 描画アノテーション handlers
   registerArchiveHandlers() // プロジェクトアーカイブ handlers
+  setupProjectClassHandlers() // v0.3.0: ProjectClass handlers
+  setupUserProjectHandlers() // v0.3.0: UserProject 権限管理 handlers
 
   console.log("✅ All IPC handlers setup completed")
 }

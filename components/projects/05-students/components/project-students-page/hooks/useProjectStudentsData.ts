@@ -5,6 +5,7 @@ import type {
   GradingDataInfo,
   Student,
   StudentForRemoval,
+  StudentMembership,
   StudentStatus,
 } from "@/components/projects/05-students/components/project-students-page/types/projectStudentsTypes"
 import { useCallback, useEffect, useState } from "react"
@@ -35,12 +36,22 @@ export function useProjectStudentsData({
 
   // データの再読み込み
   const refreshStudentData = useCallback(async () => {
-    const studentsResult =
-      await window.electronAPI.getStudentsForProject(projectId)
+    const [studentsResult, classInfoResult] = await Promise.all([
+      window.electronAPI.getStudentsForProject(projectId),
+      window.electronAPI.projectClass.getStudentClassInfo(projectId),
+    ])
 
     if (studentsResult.success && studentsResult.students) {
+      // ProjectClass経由の学級情報をマージ
+      const studentsWithClassInfo = studentsResult.students.map(
+        (student: Student) => ({
+          ...student,
+          projectClassInfo: classInfoResult?.[student.id] ?? null,
+        })
+      )
+
       // 受験生徒をcustomOrder順で並び替え（ProjectStudentテーブルの順序が基準）
-      const sortedStudents = [...studentsResult.students].sort(
+      const sortedStudents = [...studentsWithClassInfo].sort(
         (a: Student, b: Student) => {
           // customOrderが設定されている場合はそれを優先
           if (
@@ -66,7 +77,7 @@ export function useProjectStudentsData({
 
       sortedStudents.forEach((student) => {
         // 各生徒の全所属履歴を確認
-        student.memberships?.forEach((membership) => {
+        student.memberships?.forEach((membership: StudentMembership) => {
           if (!uniqueClasses.has(membership.class.id)) {
             uniqueClasses.set(membership.class.id, {
               id: membership.class.id,

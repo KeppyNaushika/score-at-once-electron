@@ -4,16 +4,16 @@
  * プロジェクトに関連する全データをエクスポート用に収集する
  */
 
-import prisma from "../../prisma/client"
 import type {
-  ArchiveProjectData,
-  ArchiveStudentsData,
   ArchiveClassesData,
-  ArchiveUsersData,
-  ArchiveSubtotalsData,
-  ArchiveScoresData,
   ArchiveDataCounts,
+  ArchiveProjectData,
+  ArchiveScoresData,
+  ArchiveStudentsData,
+  ArchiveSubtotalsData,
+  ArchiveUsersData,
 } from "../../../../types/projectArchive.types"
+import prisma from "../../prisma/client"
 
 /**
  * 収集結果
@@ -281,6 +281,8 @@ export async function collectProjectData(
         userId: up.userId,
         projectId: up.projectId,
         role: up.role,
+        invitedAt: up.invitedAt.toISOString(),
+        invitedBy: up.invitedBy,
         createdAt: up.createdAt.toISOString(),
         updatedAt: up.updatedAt.toISOString(),
       })),

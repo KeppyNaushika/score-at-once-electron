@@ -1,18 +1,20 @@
 // 個人成績表用型定義をre-export
+export {
+  DEFAULT_ADVICE_OPTIONS,
+  DEFAULT_GRAPH_OPTIONS,
+  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
+} from "@/electron-src/lib/export/individual-report/types"
 export type {
-  IndividualReportOptions,
-  GraphOptions,
   AdviceOptions,
+  AverageDisplayType,
+  FontSizeOption,
+  GraphOptions,
+  IndividualReportOptions,
+  QuestionTableColumns,
+  RankDisplayType,
   ReportDisplayMode,
   ScoreRateFormat,
-  AverageDisplayType,
-  QuestionFilterMode,
-  RankDisplayType,
-} from "@/electron-src/lib/export/individual-report/types"
-export {
-  DEFAULT_INDIVIDUAL_REPORT_OPTIONS,
-  DEFAULT_GRAPH_OPTIONS,
-  DEFAULT_ADVICE_OPTIONS,
+  SubtotalTableColumns,
 } from "@/electron-src/lib/export/individual-report/types"
 
 // 生徒の状態を表す型

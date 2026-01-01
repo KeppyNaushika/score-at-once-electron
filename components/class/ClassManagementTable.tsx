@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { SortableTableHead } from "@/components/ui/SortableTableHead"
 import {
   Table,
   TableBody,
@@ -11,9 +12,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/useTableSort"
 import { Edit, PlusCircle, Search, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import ClassModal from "@/components/class/ClassModal"
 
@@ -43,6 +45,16 @@ interface ClassWithMemberships {
   }>
 }
 
+// ソート用の型
+interface ClassSortable {
+  id: string
+  name: string
+  classCode: string | null
+  grade: number | null
+  memberCount: number
+  original: ClassWithMemberships
+}
+
 export default function ClassManagementTable() {
   const router = useRouter()
   const [classes, setClasses] = useState<ClassWithMemberships[]>([])
@@ -65,16 +77,33 @@ export default function ClassManagementTable() {
     fetchClasses()
   }, [])
 
-  // Filter classes - always sort by name
-  const filteredClasses = classes
-    .filter((classItem) => {
+  // Filter classes
+  const filteredClasses = useMemo(() => {
+    return classes.filter((classItem) => {
       const matchesSearch = classItem.name
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
       const isVisible = classItem.isVisible !== false
       return matchesSearch && isVisible
     })
-    .sort((a, b) => a.name.localeCompare(b.name))
+  }, [classes, searchTerm])
+
+  // ソート用のデータ変換
+  const sortableData = useMemo<ClassSortable[]>(() => {
+    return filteredClasses.map((classItem) => ({
+      id: classItem.id,
+      name: classItem.name,
+      classCode: classItem.classCode ?? null,
+      grade: classItem.grade ?? null,
+      memberCount: classItem.memberships.length,
+      original: classItem,
+    }))
+  }, [filteredClasses])
+
+  // ソート機能
+  const { sortedData, sortConfig, requestSort } = useTableSort(sortableData, {
+    defaultSort: { key: "name", direction: "asc" },
+  })
 
   // Event handlers
   const handleAddNewClass = () => {
@@ -126,121 +155,154 @@ export default function ClassManagementTable() {
     }
   }
 
-  // Sort students by attendance number within each class
-  const getClassWithSortedStudents = (classItem: ClassWithMemberships) => {
-    const sortedMemberships = [...classItem.memberships].sort((a, b) => {
-      if (a.attendanceNumber && b.attendanceNumber) {
-        return a.attendanceNumber - b.attendanceNumber
-      }
-      if (a.attendanceNumber) return -1
-      if (b.attendanceNumber) return 1
-      return 0
-    })
-    return { ...classItem, memberships: sortedMemberships }
-  }
-
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex h-full flex-col gap-5">
       {/* Controls */}
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="bg-muted/30 flex flex-wrap items-center gap-3 rounded-lg p-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4">
+        <div className="border-border/50 bg-card flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-sm">
           <div className="flex items-center gap-2">
             <Search className="text-muted-foreground h-4 w-4" />
             <Input
               placeholder="学級名で検索"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-60"
+              className="border-border/50 bg-muted/20 focus:bg-background h-9 w-64 rounded-lg transition-colors"
             />
           </div>
-          <span className="text-muted-foreground text-sm">
-            {filteredClasses.length}学級
+          <span className="text-muted-foreground text-sm tabular-nums">
+            {sortedData.length}学級
           </span>
         </div>
-        <Button onClick={handleAddNewClass} size="sm">
+        <Button onClick={handleAddNewClass} className="rounded-lg">
           <PlusCircle className="mr-2 h-4 w-4" />
           学級追加
         </Button>
       </div>
 
       {/* Classes Table */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>学級名・コード</TableHead>
-              <TableHead>学年</TableHead>
-              <TableHead>説明</TableHead>
-              <TableHead>現在の所属数</TableHead>
-              <TableHead className="text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredClasses.map((classItem) => {
-              const sortedClass = getClassWithSortedStudents(classItem)
-              return (
-                <TableRow
-                  key={classItem.id}
-                  onClick={() => router.push(`/classes/${classItem.id}`)}
-                  className="hover:bg-muted/50 cursor-pointer"
+      <div className="border-border/50 bg-card min-h-0 flex-1 overflow-hidden rounded-xl border shadow-sm">
+        <div className="h-full overflow-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-muted/40">
+                <SortableTableHead
+                  sortKey="name"
+                  currentSortKey={sortConfig.key as string | null}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key as keyof ClassSortable)}
                 >
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span>{classItem.name}</span>
-                      {classItem.classCode && (
-                        <Badge variant="outline" className="text-xs">
+                  学級名
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="classCode"
+                  currentSortKey={sortConfig.key as string | null}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                >
+                  コード
+                </SortableTableHead>
+                <SortableTableHead
+                  sortKey="grade"
+                  currentSortKey={sortConfig.key as string | null}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                >
+                  学年
+                </SortableTableHead>
+                <TableHead>説明</TableHead>
+                <SortableTableHead
+                  sortKey="memberCount"
+                  currentSortKey={sortConfig.key as string | null}
+                  currentDirection={sortConfig.direction}
+                  onSort={(key) => requestSort(key as keyof ClassSortable)}
+                >
+                  所属数
+                </SortableTableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedData.map(({ original: classItem, memberCount }) => {
+                return (
+                  <TableRow
+                    key={classItem.id}
+                    onClick={() => router.push(`/classes/${classItem.id}`)}
+                    className="group cursor-pointer"
+                  >
+                    <TableCell className="font-medium">
+                      {classItem.name}
+                    </TableCell>
+                    <TableCell>
+                      {classItem.classCode ? (
+                        <Badge
+                          variant="outline"
+                          className="rounded-full px-2.5 py-0.5 text-xs font-normal"
+                        >
                           {classItem.classCode}
                         </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{classItem.grade || "未設定"}</TableCell>
-                  <TableCell>
-                    {classItem.description ? (
-                      <span className="text-sm">{classItem.description}</span>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">
-                        なし
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>{sortedClass.memberships.length}名</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEditClass(classItem)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteClass(classItem.id)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {classItem.grade || (
+                        <span className="text-muted-foreground">未設定</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {classItem.description ? (
+                        <span className="max-w-xs truncate text-sm">
+                          {classItem.description}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {memberCount}名
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1.5 opacity-60 transition-opacity group-hover:opacity-100">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-muted h-8 w-8 rounded-lg transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditClass(classItem)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive h-8 w-8 rounded-lg transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteClass(classItem.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {sortedData.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-muted-foreground h-32 text-center"
+                  >
+                    該当する学級が見つかりません。
                   </TableCell>
                 </TableRow>
-              )
-            })}
-            {filteredClasses.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center">
-                  該当する学級が見つかりません。
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Modals */}

@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SubtotalGroupWithItems } from "@/types/electron"
+import type { Subtotal } from "@prisma/client"
 import { BarChart3, Calculator } from "lucide-react"
 
 interface SubtotalData {
@@ -136,7 +137,7 @@ export function SubtotalPreview({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {group.subtotals.map((subtotal) => {
+                        {group.subtotals.map((subtotal: Subtotal) => {
                           const subtotalData = groupData[subtotal.id] || {
                             questions: [],
                             totalPoints: 0,

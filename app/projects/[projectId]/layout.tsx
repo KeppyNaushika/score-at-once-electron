@@ -1,5 +1,6 @@
 "use client"
 
+import { MemberInviteDialog } from "@/components/projects/shared/MemberInviteDialog"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,6 +10,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
+import { Users } from "lucide-react"
 import Head from "next/head"
 import Link from "next/link"
 import { useParams, usePathname } from "next/navigation"
@@ -37,8 +40,10 @@ export default function ProjectWorkflowLayout({
 }) {
   const params = useParams()
   const pathname = usePathname()
+  const { user } = useAuth()
   const projectId = params.projectId as string
   const [projectName, setProjectName] = useState<string>("")
+  const [showMemberDialog, setShowMemberDialog] = useState(false)
 
   // プロジェクト情報を取得
   useEffect(() => {
@@ -92,6 +97,16 @@ export default function ProjectWorkflowLayout({
 
           {/* 右側のナビゲーション要素 */}
           <div className="flex items-center space-x-2">
+            {/* メンバー管理ボタン */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMemberDialog(true)}
+            >
+              <Users className="mr-2 h-4 w-4" />
+              メンバー
+            </Button>
+
             {/* プロジェクト詳細に戻るボタン */}
             <Button variant="outline" size="sm" asChild>
               <Link href={`/projects/${projectId}`}>プロジェクト詳細</Link>
@@ -109,6 +124,17 @@ export default function ProjectWorkflowLayout({
         </header>
         <main className="min-h-0 flex-1 overflow-auto">{children}</main>
       </div>
+
+      {/* メンバー管理ダイアログ */}
+      {user && (
+        <MemberInviteDialog
+          isOpen={showMemberDialog}
+          onClose={() => setShowMemberDialog(false)}
+          projectId={projectId}
+          currentUserId={user.id}
+          projectName={projectName}
+        />
+      )}
     </>
   )
 }

@@ -1,3 +1,5 @@
+import type { StudentClassInfo } from "@/types/electron.d"
+
 // 生徒の状態を表す型
 export type StudentStatus = "participating" | "expected" | "absent"
 
@@ -18,6 +20,8 @@ export interface Student {
       name: string
     }
   }[]
+  /** ProjectClass(administered=true)から取得した学級情報 */
+  projectClassInfo?: StudentClassInfo | null
   status: StudentStatus
   isInProject: boolean
   customOrder?: number | null

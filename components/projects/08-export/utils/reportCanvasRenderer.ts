@@ -6,12 +6,12 @@ import type {
   IndividualReportData,
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
-import { drawBarChart, drawBoxPlot, drawRadarChart } from "./chartRenderers"
 import type {
   BarChartData,
   ChartConfig,
   RadarChartData,
 } from "./chartRenderers"
+import { drawBarChart, drawBoxPlot, drawRadarChart } from "./chartRenderers"
 
 /** レポート描画設定 */
 export interface ReportRenderConfig {
@@ -479,7 +479,7 @@ function drawCharts(
   const chartData: BarChartData[] = reportData.scoringData.subtotalScores.map(
     (st) => {
       const stats = reportData.statistics.subtotalStatistics.find(
-        (s) => s.subtotalId === st.subtotalRegionId
+        (s) => s.subtotalId === st.subtotalId
       )
       return {
         label: st.subtotalLabel,
@@ -555,13 +555,9 @@ function drawLearningAdvice(
   const { margin, fontSize, colors } = config
   let y = startY
 
-  const { differentiatingQuestions, mustReviewQuestions } =
-    reportData.learningAdvice
+  const { reviewQuestions } = reportData.learningAdvice
 
-  if (
-    differentiatingQuestions.length === 0 &&
-    mustReviewQuestions.length === 0
-  ) {
+  if (reviewQuestions.length === 0) {
     return y
   }
 
@@ -571,23 +567,12 @@ function drawLearningAdvice(
   ctx.fillText("学習アドバイス", margin.left, y + fontSize.header)
   y += fontSize.header + 10
 
-  // 差がつく問題
-  if (differentiatingQuestions.length > 0) {
-    ctx.font = `${fontSize.body}px sans-serif`
-    ctx.fillStyle = colors.primary
-    const labels = differentiatingQuestions.map((q) => q.label).join(", ")
-    ctx.fillText(`差がつく問題: ${labels}`, margin.left, y + fontSize.body)
-    y += fontSize.body + 8
-  }
-
-  // 必ず復習問題
-  if (mustReviewQuestions.length > 0) {
-    ctx.font = `${fontSize.body}px sans-serif`
-    ctx.fillStyle = colors.incorrect
-    const labels = mustReviewQuestions.map((q) => q.label).join(", ")
-    ctx.fillText(`必ず復習: ${labels}`, margin.left, y + fontSize.body)
-    y += fontSize.body + 8
-  }
+  // 復習問題
+  ctx.font = `${fontSize.body}px sans-serif`
+  ctx.fillStyle = colors.primary
+  const labels = reviewQuestions.map((q) => q.label).join(", ")
+  ctx.fillText(`復習しよう！: ${labels}`, margin.left, y + fontSize.body)
+  y += fontSize.body + 8
 
   y += 15
 

@@ -6,12 +6,12 @@
 
 import * as fs from "fs"
 import * as path from "path"
-import prisma from "../../prisma/client"
+import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
+import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { IdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
-import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
 
 /**
  * データ作成結果
@@ -153,6 +153,9 @@ export async function createImportedData(
       // 8. UserProjectを作成
       for (const up of data.projectData.userProjects) {
         const newUserId = remapId(up.userId, mappings.user)
+        const newInvitedBy = up.invitedBy
+          ? remapId(up.invitedBy, mappings.user)
+          : null
         if (newUserId) {
           await tx.userProject.create({
             data: {
@@ -160,6 +163,8 @@ export async function createImportedData(
               userId: newUserId,
               projectId: newProjectId,
               role: up.role,
+              invitedAt: up.invitedAt ? new Date(up.invitedAt) : new Date(),
+              invitedBy: newInvitedBy,
             },
           })
         }

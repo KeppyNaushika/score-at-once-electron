@@ -130,7 +130,7 @@ async function setSubtotalCells(
       if (isScoreSheet) {
         // 点数一覧：計算済みの小計点を直接使用
         console.log(
-          `📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for region ${subtotalScore.subtotalRegionId}`
+          `📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for subtotal ${subtotalScore.subtotalId}`
         )
         if (subtotalScore.score !== null && subtotalScore.score !== undefined) {
           // 採点済みデータがあれば0点でも表示
@@ -141,8 +141,9 @@ async function setSubtotalCells(
         }
       } else {
         // 正誤一覧：従来のロジックを使用（Excel関数が必要）
+        // NOTE: buildSubtotalTargetMapは非推奨で空のマップを返すため、このロジックは機能しない
         const targetQuestionIndices =
-          subtotalTargetMap[subtotalScore.subtotalRegionId] || []
+          subtotalTargetMap[subtotalScore.subtotalId] || []
 
         if (targetQuestionIndices.length > 0) {
           const targetCells = targetQuestionIndices.map((index) => {

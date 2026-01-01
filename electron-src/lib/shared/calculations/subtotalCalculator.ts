@@ -2,8 +2,8 @@ import type { CropRegion } from "@prisma/client"
 import {
   getCropSubtotalsByCropRegionId,
   getCropSubtotalsBySubtotalId,
-  type CropSubtotalWithSubtotal,
   type CropSubtotalWithCropRegion,
+  type CropSubtotalWithSubtotal,
 } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "../../prisma/questionScore"
 
@@ -28,6 +28,13 @@ export interface SubtotalResult {
   maxScore: number
 }
 
+export interface SubtotalScoreResult {
+  score: number
+  maxScore: number
+  /** QUESTION_ASSIGNMENTが存在するか */
+  hasQuestionAssignments: boolean
+}
+
 export interface SubtotalTargetMap {
   [subtotalRegionId: string]: number[]
 }
@@ -35,13 +42,15 @@ export interface SubtotalTargetMap {
 /**
  * 生徒の小計点を計算する関数（PDFエクスポートと同じロジック）
  * GROUP内OR、GROUP間ANDのロジックを完全実装
+ *
+ * @returns スコアと最大点の両方を返す
  */
 export async function calculateSubtotalScoreForStudent(
   studentId: string,
   subtotalRegionId: string,
   allQuestionScores: QuestionScoreData[],
   cropRegions: CropRegion[]
-): Promise<number> {
+): Promise<SubtotalScoreResult> {
   try {
     console.log(
       `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`
@@ -61,7 +70,7 @@ export async function calculateSubtotalScoreForStudent(
       console.log(
         `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`
       )
-      return calculateStudentTotalScore(
+      return calculateStudentTotalScoreWithMax(
         studentId,
         allQuestionScores,
         cropRegions
@@ -87,7 +96,7 @@ export async function calculateSubtotalScoreForStudent(
       console.log(
         `No valid groups found, calculating total of all questions for student`
       )
-      return calculateStudentTotalScore(
+      return calculateStudentTotalScoreWithMax(
         studentId,
         allQuestionScores,
         cropRegions
@@ -140,47 +149,59 @@ export async function calculateSubtotalScoreForStudent(
       }
     }
 
-    // 該当する設問の点数を合計
+    // 該当する設問の点数と最大点を合計
+    // scoreDataがある設問のみを対象にする（scoreと同じ設問）
     let totalScore = 0
-    console.log(
-      `Final question IDs for subtotal: ${Array.from(finalQuestionIds)}`
-    )
+    let totalMaxScore = 0
 
     for (const questionId of finalQuestionIds) {
       const scoreData = studentScores.find((s) => s.cropRegionId === questionId)
       if (scoreData) {
         const cropRegion = cropRegions.find((r) => r.id === questionId)
-        const maxScore = cropRegion?.points || 10
-        const actualScore = calculateActualScore(scoreData, maxScore)
-        console.log(`Question ${questionId}: score ${actualScore}`)
+        const questionMaxScore = cropRegion?.points || 0
+        totalMaxScore += questionMaxScore
+        const actualScore = calculateActualScore(scoreData, questionMaxScore)
         totalScore += actualScore || 0
       }
     }
 
-    console.log(`Total subtotal score for student ${studentId}: ${totalScore}`)
-    return totalScore
+    return {
+      score: totalScore,
+      maxScore: totalMaxScore,
+      hasQuestionAssignments: true,
+    }
   } catch (error) {
     console.error(
       `Error calculating subtotal score for student ${studentId}, region ${subtotalRegionId}:`,
       error
     )
-    return 0
+    return { score: 0, maxScore: 0, hasQuestionAssignments: false }
   }
 }
 
 /**
- * 生徒の全設問合計点を計算する（フォールバック用）
+ * 生徒の全設問合計点とその最大点を計算する（フォールバック用）
  */
-function calculateStudentTotalScore(
+function calculateStudentTotalScoreWithMax(
   studentId: string,
   allQuestionScores: QuestionScoreData[],
   cropRegions: CropRegion[]
-): number {
+): SubtotalScoreResult {
   const studentScores = allQuestionScores.filter(
     (score) => score.studentId === studentId
   )
 
   let totalScore = 0
+  let totalMaxScore = 0
+
+  // 全設問領域から最大点を計算（採点データの有無に関わらず）
+  for (const region of cropRegions) {
+    if (region.type === "QUESTION_ANSWER") {
+      totalMaxScore += region.points || 10
+    }
+  }
+
+  // 採点データがある設問の得点を合計
   for (const scoreData of studentScores) {
     const cropRegion = cropRegions.find((r) => r.id === scoreData.cropRegionId)
     if (cropRegion && cropRegion.type === "QUESTION_ANSWER") {
@@ -190,12 +211,96 @@ function calculateStudentTotalScore(
     }
   }
 
-  return totalScore
+  return {
+    score: totalScore,
+    maxScore: totalMaxScore,
+    hasQuestionAssignments: true,
+  }
+}
+
+/**
+ * Subtotal IDから直接小計点を計算する関数（個人成績表用）
+ * SUBTOTAL_SCORE CropRegionを介さず、Subtotalから直接計算
+ *
+ * @param studentId 生徒ID
+ * @param subtotalId Subtotal ID
+ * @param allQuestionScores 全採点データ
+ * @param cropRegions 全CropRegion（QUESTION_ANSWER用）
+ * @returns 小計点と最大点
+ */
+export async function calculateSubtotalScoreBySubtotalId(
+  studentId: string,
+  subtotalId: string,
+  allQuestionScores: QuestionScoreData[],
+  cropRegions: CropRegion[]
+): Promise<SubtotalScoreResult> {
+  try {
+    // この生徒の全採点データを取得
+    const studentScores = allQuestionScores.filter(
+      (score) => score.studentId === studentId
+    )
+
+    // SubtotalからQUESTION_ASSIGNMENTのCropSubtotalを直接取得
+    const cropSubtotals = await getCropSubtotalsBySubtotalId(subtotalId)
+
+    // QUESTION_ASSIGNMENTタイプのみをフィルタリング
+    const allQuestionAssignments = (
+      cropSubtotals as CropSubtotalWithCropRegion[]
+    ).filter((cs) => cs.assignmentType === "QUESTION_ASSIGNMENT")
+
+    // 現在のプロジェクトのCropRegion IDでフィルタリング
+    // （SubtotalGroupは複数プロジェクトで共有されるため）
+    const projectCropRegionIds = new Set(cropRegions.map((r) => r.id))
+    const questionAssignments = allQuestionAssignments.filter((cs) =>
+      projectCropRegionIds.has(cs.cropRegionId)
+    )
+
+    const hasQuestionAssignments = questionAssignments.length > 0
+
+    if (!hasQuestionAssignments) {
+      return { score: 0, maxScore: 0, hasQuestionAssignments: false }
+    }
+
+    // 関連するQUESTION_ANSWER CropRegion IDを取得
+    const questionCropRegionIds = new Set(
+      questionAssignments.map((cs) => cs.cropRegionId)
+    )
+
+    // 該当する設問の点数と最大点を合計
+    let totalScore = 0
+    let totalMaxScore = 0
+
+    for (const questionId of questionCropRegionIds) {
+      const cropRegion = cropRegions.find((r) => r.id === questionId)
+      if (!cropRegion || cropRegion.type !== "QUESTION_ANSWER") continue
+
+      const questionMaxScore = cropRegion.points || 0
+      totalMaxScore += questionMaxScore
+
+      const scoreData = studentScores.find((s) => s.cropRegionId === questionId)
+      if (scoreData) {
+        const actualScore = calculateActualScore(scoreData, questionMaxScore)
+        totalScore += actualScore || 0
+      }
+    }
+
+    return {
+      score: totalScore,
+      maxScore: totalMaxScore,
+      hasQuestionAssignments: true,
+    }
+  } catch (error) {
+    console.error(
+      `Error calculating subtotal score for student ${studentId}, subtotal ${subtotalId}:`,
+      error
+    )
+    return { score: 0, maxScore: 0, hasQuestionAssignments: false }
+  }
 }
 
 /**
  * 小計点を計算する関数（互換性のため維持、新しい実装を推奨）
- * @deprecated Use calculateSubtotalScoreForStudent instead
+ * @deprecated Use calculateSubtotalScoreBySubtotalId instead
  */
 export async function calculateSubtotalScore(
   subtotalRegionId: string,
