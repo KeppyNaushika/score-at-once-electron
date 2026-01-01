@@ -1,21 +1,14 @@
 "use client"
 
+import { DisplaySettingsTab } from "@/app/settings/components/DisplaySettingsTab"
 import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
+import { UserManagementTab } from "@/app/settings/components/UserManagementTab"
 import { useKeyboardSettings } from "@/app/settings/hooks/useKeyboardSettings"
 import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { UserEditModal } from "@/components/auth/UserEditModal"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import {
-  getSelectionBorderSettings,
-  saveSelectionBorderColor,
-  SELECTION_BORDER_COLORS,
-} from "@/lib/utils"
-import { Edit3, UserPen } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Keyboard, Monitor, Users } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -44,9 +37,6 @@ export default function SettingsPage() {
   const [isPasscodeEditOpen, setIsPasscodeEditOpen] = useState(false)
   const [isUserEditOpen, setIsUserEditOpen] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [selectionBorderColor, setSelectionBorderColor] = useState(
-    getSelectionBorderSettings().color
-  )
 
   const loadUsers = useCallback(async () => {
     try {
@@ -81,15 +71,7 @@ export default function SettingsPage() {
   }
 
   const handlePasscodeUpdated = () => {
-    void loadUsers() // ユーザー一覧を再読み込み
-  }
-
-  const handleSelectionBorderColorChange = (color: string) => {
-    setSelectionBorderColor(color)
-    saveSelectionBorderColor(color)
-    // カスタムイベントを発火して他のコンポーネントに通知
-    window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
-    toast.success("選択枠色が変更されました")
+    void loadUsers()
   }
 
   return (
@@ -102,162 +84,48 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>ユーザー管理</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {users.map((user) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div>
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-muted-foreground text-sm">
-                        @{user.username} • {user.role}
-                        {user.passcodeType && user.passcodeType !== "none" && (
-                          <span className="ml-2 rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                            パスコード: {user.passcodeType}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditUser(user)}
-                      >
-                        <Edit3 className="mr-2 h-4 w-4" />
-                        ユーザー情報編集
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditPasscode(user)}
-                      >
-                        <UserPen className="mr-2 h-4 w-4" />
-                        パスコード編集
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="keyboard" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="keyboard" className="gap-2">
+              <Keyboard className="h-4 w-4" />
+              キーボード
+            </TabsTrigger>
+            <TabsTrigger value="display" className="gap-2">
+              <Monitor className="h-4 w-4" />
+              表示設定
+            </TabsTrigger>
+            <TabsTrigger value="user" className="gap-2">
+              <Users className="h-4 w-4" />
+              ユーザー管理
+            </TabsTrigger>
+          </TabsList>
 
-          <Separator />
+          <TabsContent value="keyboard">
+            <KeyboardShortcutSection
+              shortcuts={shortcuts}
+              editingKey={editingKey}
+              pendingKey={pendingKey}
+              modifierKeyLabel={modifierKeyLabel}
+              onKeyEdit={handleKeyEdit}
+              onKeySave={handleKeySave}
+              onKeyCancel={handleKeyCancel}
+              onReset={handleReset}
+              getKeyDisplayName={getKeyDisplayName}
+            />
+          </TabsContent>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>表示設定</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="text-base font-medium">選択枠の色</Label>
-                <p className="text-muted-foreground mb-3 text-sm">
-                  答案選択時の枠色を変更できます
-                </p>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(SELECTION_BORDER_COLORS).map(
-                    ([colorValue, config]) => (
-                      <button
-                        key={colorValue}
-                        onClick={() =>
-                          handleSelectionBorderColorChange(colorValue)
-                        }
-                        className={`relative flex items-center justify-center rounded-lg border-2 p-3 transition-all hover:scale-105 ${
-                          selectionBorderColor === colorValue
-                            ? "border-gray-800 shadow-md"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div
-                          className="h-8 w-8 rounded border-2"
-                          style={{ borderColor: config.color }}
-                        />
-                        {selectionBorderColor === colorValue && (
-                          <div className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500" />
-                        )}
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="display">
+            <DisplaySettingsTab />
+          </TabsContent>
 
-          <Separator />
-
-          <KeyboardShortcutSection
-            shortcuts={shortcuts}
-            editingKey={editingKey}
-            pendingKey={pendingKey}
-            modifierKeyLabel={modifierKeyLabel}
-            onKeyEdit={handleKeyEdit}
-            onKeySave={handleKeySave}
-            onKeyCancel={handleKeyCancel}
-            onReset={handleReset}
-            getKeyDisplayName={getKeyDisplayName}
-          />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>画像前処理設定</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid w-full max-w-sm items-center gap-1.5">
-                <Label htmlFor="setting-threshold">二値化閾値</Label>
-                <Input
-                  type="number"
-                  id="setting-threshold"
-                  placeholder="例: 128"
-                />
-              </div>
-              <Button>保存</Button>
-            </CardContent>
-          </Card>
-
-          <Separator />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>デフォルト出力先設定</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid w-full max-w-lg items-center gap-1.5">
-                <Label htmlFor="setting-output-excel">
-                  Excel出力先フォルダ
-                </Label>
-                <div className="flex space-x-2">
-                  <Input
-                    type="text"
-                    id="setting-output-excel"
-                    placeholder="未設定"
-                    readOnly
-                  />
-                  <Button variant="outline">選択</Button>
-                </div>
-              </div>
-              <div className="grid w-full max-w-lg items-center gap-1.5">
-                <Label htmlFor="setting-output-pdf">PDF出力先フォルダ</Label>
-                <div className="flex space-x-2">
-                  <Input
-                    type="text"
-                    id="setting-output-pdf"
-                    placeholder="未設定"
-                    readOnly
-                  />
-                  <Button variant="outline">選択</Button>
-                </div>
-              </div>
-              <Button>保存</Button>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="user">
+            <UserManagementTab
+              users={users}
+              onEditUser={handleEditUser}
+              onEditPasscode={handleEditPasscode}
+            />
+          </TabsContent>
+        </Tabs>
 
         <UserEditModal
           isOpen={isUserEditOpen}

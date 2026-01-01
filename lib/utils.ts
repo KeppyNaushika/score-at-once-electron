@@ -8,35 +8,46 @@ export function cn(...inputs: ClassValue[]) {
 // 選択枠色の設定
 export interface SelectionBorderSettings {
   color: string
-  tailwindClass: string
+  isPreset: boolean
 }
 
-export const DEFAULT_SELECTION_BORDER_COLOR = "#f97316" // orange-500
-export const SELECTION_BORDER_COLORS = {
-  "#f97316": { color: "#f97316", tailwindClass: "border-orange-500" }, // オレンジ
-  "#3b82f6": { color: "#3b82f6", tailwindClass: "border-blue-500" }, // 青
-  "#ef4444": { color: "#ef4444", tailwindClass: "border-red-500" }, // 赤
-  "#10b981": { color: "#10b981", tailwindClass: "border-emerald-500" }, // エメラルド
-  "#8b5cf6": { color: "#8b5cf6", tailwindClass: "border-violet-500" }, // バイオレット
-  "#f59e0b": { color: "#f59e0b", tailwindClass: "border-amber-500" }, // アンバー
+export const DEFAULT_SELECTION_BORDER_COLOR = "#F97316" // orange-500
+
+// プリセット色（大文字HEXで統一）
+export const SELECTION_BORDER_COLORS: Record<string, { color: string }> = {
+  "#F97316": { color: "#F97316" }, // オレンジ
+  "#3B82F6": { color: "#3B82F6" }, // 青
+  "#EF4444": { color: "#EF4444" }, // 赤
+  "#10B981": { color: "#10B981" }, // エメラルド
+  "#8B5CF6": { color: "#8B5CF6" }, // バイオレット
+  "#F59E0B": { color: "#F59E0B" }, // アンバー
 }
 
+// プリセット色の配列（設定画面で使用）
+export const SELECTION_BORDER_PRESETS = Object.keys(SELECTION_BORDER_COLORS)
+
+/**
+ * 選択枠色の設定を取得
+ * プリセット色またはカスタム色を返す
+ */
 export function getSelectionBorderSettings(): SelectionBorderSettings {
   if (typeof window === "undefined") {
-    return SELECTION_BORDER_COLORS[DEFAULT_SELECTION_BORDER_COLOR]
+    return { color: DEFAULT_SELECTION_BORDER_COLOR, isPreset: true }
   }
 
   const stored = localStorage.getItem("selectionBorderColor")
-  const color = stored || DEFAULT_SELECTION_BORDER_COLOR
+  const color = stored?.toUpperCase() || DEFAULT_SELECTION_BORDER_COLOR
+  const isPreset = color in SELECTION_BORDER_COLORS
 
-  return (
-    SELECTION_BORDER_COLORS[color as keyof typeof SELECTION_BORDER_COLORS] ||
-    SELECTION_BORDER_COLORS[DEFAULT_SELECTION_BORDER_COLOR]
-  )
+  return { color, isPreset }
 }
 
+/**
+ * 選択枠色を保存
+ * @param color HEX形式の色（例: #F97316）
+ */
 export function saveSelectionBorderColor(color: string): void {
   if (typeof window !== "undefined") {
-    localStorage.setItem("selectionBorderColor", color)
+    localStorage.setItem("selectionBorderColor", color.toUpperCase())
   }
 }
