@@ -117,10 +117,6 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
     (region) => region.orderIndex === null
   )
   if (regionsWithNullOrder.length > 0) {
-    console.log(
-      `Found ${regionsWithNullOrder.length} regions with null orderIndex, fixing...`
-    )
-
     // orderIndex順で並べ替え済みの結果を使用してorderIndexを設定
     const updates = regions.map((region, index) =>
       prisma.cropRegion.update({
@@ -195,10 +191,6 @@ export const getQuestionAnswerRegionsByProjectId = async (
     (region) => region.orderIndex === null
   )
   if (regionsWithNullOrder.length > 0) {
-    console.log(
-      `Found ${regionsWithNullOrder.length} question answer regions with null orderIndex, fixing...`
-    )
-
     // 同じ修正ロジック
     for (let i = 0; i < regionsWithNullOrder.length; i++) {
       const region = regionsWithNullOrder[i]

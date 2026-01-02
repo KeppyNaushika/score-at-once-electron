@@ -103,7 +103,8 @@ export function useScoringNavigation({
       if (totalAnswers === 0) return
 
       // effectiveColumnsから実際の1行/列あたりの表示件数を取得
-      const actualItemsPerLine = effectiveColumns && effectiveColumns > 0 ? effectiveColumns : 4
+      const actualItemsPerLine =
+        effectiveColumns && effectiveColumns > 0 ? effectiveColumns : 4
 
       const cols = Math.max(1, actualItemsPerLine) // 実際の表示数を使用、最低1は確保
 

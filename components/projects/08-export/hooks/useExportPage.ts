@@ -49,9 +49,8 @@ export function useExportPage() {
     parallelCount: 4,
   })
 
-  const [scoringMarkConfig, setScoringMarkConfigState] = useState<ScoringMarkConfig>(
-    defaultScoringMarkConfig
-  )
+  const [scoringMarkConfig, setScoringMarkConfigState] =
+    useState<ScoringMarkConfig>(defaultScoringMarkConfig)
 
   const [individualReportOptions, setIndividualReportOptionsState] =
     useState<IndividualReportOptions>(DEFAULT_INDIVIDUAL_REPORT_OPTIONS)
@@ -64,7 +63,10 @@ export function useExportPage() {
     const loadProjectSettings = async () => {
       if (projectId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
+          const result =
+            await window.electronAPI.settings.getProjectExportSettings(
+              projectId
+            )
           if (result.success && result.settings) {
             if (result.settings.scoringMarkConfig) {
               setScoringMarkConfigState({
@@ -90,18 +92,30 @@ export function useExportPage() {
 
   // 採点マーク設定の保存
   const setScoringMarkConfig = useCallback(
-    async (config: ScoringMarkConfig | ((prev: ScoringMarkConfig) => ScoringMarkConfig)) => {
-      const newConfig = typeof config === "function" ? config(scoringMarkConfig) : config
+    async (
+      config:
+        | ScoringMarkConfig
+        | ((prev: ScoringMarkConfig) => ScoringMarkConfig)
+    ) => {
+      const newConfig =
+        typeof config === "function" ? config(scoringMarkConfig) : config
       setScoringMarkConfigState(newConfig)
 
       if (projectId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
-          const currentSettings = result.success && result.settings ? result.settings : {}
-          await window.electronAPI.settings.saveProjectExportSettings(projectId, {
-            ...currentSettings,
-            scoringMarkConfig: newConfig,
-          })
+          const result =
+            await window.electronAPI.settings.getProjectExportSettings(
+              projectId
+            )
+          const currentSettings =
+            result.success && result.settings ? result.settings : {}
+          await window.electronAPI.settings.saveProjectExportSettings(
+            projectId,
+            {
+              ...currentSettings,
+              scoringMarkConfig: newConfig,
+            }
+          )
         } catch (error) {
           console.error("採点マーク設定の保存に失敗しました:", error)
         }
@@ -112,18 +126,32 @@ export function useExportPage() {
 
   // 個人成績表オプションの保存
   const setIndividualReportOptions = useCallback(
-    async (options: IndividualReportOptions | ((prev: IndividualReportOptions) => IndividualReportOptions)) => {
-      const newOptions = typeof options === "function" ? options(individualReportOptions) : options
+    async (
+      options:
+        | IndividualReportOptions
+        | ((prev: IndividualReportOptions) => IndividualReportOptions)
+    ) => {
+      const newOptions =
+        typeof options === "function"
+          ? options(individualReportOptions)
+          : options
       setIndividualReportOptionsState(newOptions)
 
       if (projectId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getProjectExportSettings(projectId)
-          const currentSettings = result.success && result.settings ? result.settings : {}
-          await window.electronAPI.settings.saveProjectExportSettings(projectId, {
-            ...currentSettings,
-            individualReportOptions: newOptions,
-          })
+          const result =
+            await window.electronAPI.settings.getProjectExportSettings(
+              projectId
+            )
+          const currentSettings =
+            result.success && result.settings ? result.settings : {}
+          await window.electronAPI.settings.saveProjectExportSettings(
+            projectId,
+            {
+              ...currentSettings,
+              individualReportOptions: newOptions,
+            }
+          )
         } catch (error) {
           console.error("個人成績表オプションの保存に失敗しました:", error)
         }

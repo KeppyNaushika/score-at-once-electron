@@ -57,7 +57,8 @@ export function DisplaySettingsTab() {
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          const result =
+            await window.electronAPI.settings.getUserScoringPreference(userId)
           if (result.success && result.preference?.selectionBorderColor) {
             setSelectionBorderColor(result.preference.selectionBorderColor)
           }
@@ -83,9 +84,12 @@ export function DisplaySettingsTab() {
 
       if (userId && window.electronAPI?.settings) {
         try {
-          await window.electronAPI.settings.upsertUserScoringPreference(userId, {
-            selectionBorderColor: upperColor,
-          })
+          await window.electronAPI.settings.upsertUserScoringPreference(
+            userId,
+            {
+              selectionBorderColor: upperColor,
+            }
+          )
           window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
           toast.success("選択枠色が変更されました")
         } catch (error) {
@@ -110,7 +114,11 @@ export function DisplaySettingsTab() {
 
   // 個別の色変更
   const handleStatusColorChange = useCallback(
-    async (status: ScoringStatusType, type: "bg" | "text" | "icon", color: string) => {
+    async (
+      status: ScoringStatusType,
+      type: "bg" | "text" | "icon",
+      color: string
+    ) => {
       const updated: ScoringStatusColors = {
         ...scoringColors,
         [status]: {
@@ -152,7 +160,7 @@ export function DisplaySettingsTab() {
               className={cn(
                 "h-8 w-8 rounded-lg border-2 transition-all hover:scale-105",
                 selectionBorderColor === color
-                  ? "border-gray-800 shadow-md scale-110"
+                  ? "scale-110 border-gray-800 shadow-md"
                   : "border-gray-200 hover:border-gray-300"
               )}
               style={{ backgroundColor: color }}
@@ -237,7 +245,9 @@ export function DisplaySettingsTab() {
                   {/* 色設定 */}
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">背景</span>
+                      <span className="text-muted-foreground text-xs">
+                        背景
+                      </span>
                       <ColorPicker
                         value={colors.bg}
                         onChange={(c) =>
@@ -246,7 +256,9 @@ export function DisplaySettingsTab() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground text-xs">文字</span>
+                      <span className="text-muted-foreground text-xs">
+                        文字
+                      </span>
                       <ColorPicker
                         value={colors.text}
                         onChange={(c) =>

@@ -128,10 +128,13 @@ export async function loadScoringStatusColors(userId: string): Promise<void> {
 
   try {
     currentUserId = userId
-    const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+    const result =
+      await window.electronAPI.settings.getUserScoringPreference(userId)
     if (result.success && result.preference) {
       if (result.preference.scoringStatusColors) {
-        cachedColors = JSON.parse(result.preference.scoringStatusColors) as ScoringStatusColors
+        cachedColors = JSON.parse(
+          result.preference.scoringStatusColors
+        ) as ScoringStatusColors
       }
       cachedPresetId = result.preference.scoringColorPresetId || null
     }
@@ -166,10 +169,13 @@ export async function saveScoringStatusColors(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    await window.electronAPI.settings.upsertUserScoringPreference(targetUserId, {
-      scoringStatusColors: JSON.stringify(colors),
-      scoringColorPresetId: null,
-    })
+    await window.electronAPI.settings.upsertUserScoringPreference(
+      targetUserId,
+      {
+        scoringStatusColors: JSON.stringify(colors),
+        scoringColorPresetId: null,
+      }
+    )
   } catch (error) {
     console.error("Failed to save scoring status colors:", error)
   }
@@ -207,10 +213,13 @@ export async function applyScoringColorPreset(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    await window.electronAPI.settings.upsertUserScoringPreference(targetUserId, {
-      scoringStatusColors: JSON.stringify(preset.colors),
-      scoringColorPresetId: presetId,
-    })
+    await window.electronAPI.settings.upsertUserScoringPreference(
+      targetUserId,
+      {
+        scoringStatusColors: JSON.stringify(preset.colors),
+        scoringColorPresetId: presetId,
+      }
+    )
   } catch (error) {
     console.error("Failed to apply scoring color preset:", error)
   }

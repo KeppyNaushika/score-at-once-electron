@@ -30,6 +30,4 @@ export function setupAllIPCHandlers(): void {
   setupUserProjectHandlers()
   registerSettingsHandlers()
   setupPdfToolsHandlers()
-
-  console.log("✅ All IPC handlers setup completed")
 }

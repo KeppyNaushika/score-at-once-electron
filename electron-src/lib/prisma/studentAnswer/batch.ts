@@ -17,15 +17,6 @@ export async function batchUpdateStudentAnswerPlacements(
   }>,
   withScoring: boolean = false
 ) {
-  console.log("🔄 [Electron] Starting batch placement update:", {
-    movesCount: moves.length,
-    withScoring,
-    moves: moves.map((m) => ({
-      fileId: m.fileId.substring(0, 8) + "...",
-      to: `${m.finalStudentId?.substring(0, 8) || "null"}...p${m.finalPageNumber}`,
-    })),
-  })
-
   try {
     const result = await prisma.$transaction(async (tx) => {
       // 移動対象の答案情報と採点データを取得
@@ -45,11 +36,6 @@ export async function batchUpdateStudentAnswerPlacements(
             },
           })
         )
-      )
-
-      console.log(
-        "📄 [Electron] Found answer sheets:",
-        answerSheets.filter(Boolean).length
       )
 
       // 見つからない答案をチェック
@@ -73,11 +59,6 @@ export async function batchUpdateStudentAnswerPlacements(
         //     }
         //   },
         // })
-
-        console.log(
-          "📊 [Electron] Found question scores:",
-          allQuestionScores.length
-        )
 
         // TODO: Delete scoring data needs to be updated for new schema
         // 一時的に採点データを削除（制約回避）
@@ -129,14 +110,12 @@ export async function batchUpdateStudentAnswerPlacements(
         })
       }
 
-      console.log("✅ [Electron] Batch placement update transaction completed")
       return { success: true }
     })
 
-    console.log("✅ [Electron] Batch placement update completed successfully")
     return result
   } catch (error) {
-    console.error("❌ [Electron] Error in batch placement update:", error)
+    console.error("Error in batch placement update:", error)
     return {
       success: false,
       error:
@@ -152,13 +131,6 @@ export async function swapStudentAnswerPlacementsWithScoring(
   answerSheetId1: string,
   answerSheetId2: string
 ) {
-  console.log(
-    "🔄 [Electron] Starting swap with scoring:",
-    answerSheetId1,
-    "↔",
-    answerSheetId2
-  )
-  console.log("🔄 [Electron] Transaction starting...")
   try {
     // トランザクション内で答案交換を実行
     const result = await prisma.$transaction(async (tx) => {
@@ -190,21 +162,6 @@ export async function swapStudentAnswerPlacementsWithScoring(
         }),
       ])
 
-      console.log("📄 [Electron] Found answer sheets:", {
-        answerSheet1: answerSheet1
-          ? {
-              studentId: answerSheet1.studentId,
-              pageNumber: answerSheet1.projectPage.pageNumber,
-            }
-          : null,
-        answerSheet2: answerSheet2
-          ? {
-              studentId: answerSheet2.studentId,
-              pageNumber: answerSheet2.projectPage.pageNumber,
-            }
-          : null,
-      })
-
       if (!answerSheet1 || !answerSheet2) {
         throw new Error("答案が見つかりません")
       }
@@ -219,11 +176,6 @@ export async function swapStudentAnswerPlacementsWithScoring(
       //     where: { studentId: answerSheet2.studentId },
       //   }),
       // ])
-
-      console.log("📊 [Electron] Found question scores:", {
-        questionScores1Count: questionScores1.length,
-        questionScores2Count: questionScores2.length,
-      })
 
       // TODO: Score deletion needs to be updated for new schema
       // 採点データを一時的に削除（制約回避のため）
@@ -331,32 +283,15 @@ export async function swapStudentAnswerPlacementsWithScoring(
         }),
       ])
 
-      console.log("✅ [Electron] Transaction completed successfully")
-      console.log("📝 [Electron] Final answer sheet positions:", {
-        answerSheet1: {
-          id: answerSheetId1,
-          studentId: updatedAnswerSheet1?.studentId,
-          pageNumber: updatedAnswerSheet1?.projectPage?.pageNumber,
-        },
-        answerSheet2: {
-          id: answerSheetId2,
-          studentId: updatedAnswerSheet2?.studentId,
-          pageNumber: updatedAnswerSheet2?.projectPage?.pageNumber,
-        },
-      })
       return { updatedAnswerSheet1, updatedAnswerSheet2 }
     })
 
-    console.log("✅ [Electron] Swap with scoring completed successfully")
     return {
       success: true,
       answerSheets: [result.updatedAnswerSheet1, result.updatedAnswerSheet2],
     }
   } catch (error) {
-    console.error(
-      "❌ [Electron] Error swapping answer sheet placements with scoring:",
-      error
-    )
+    console.error("Error swapping answer sheet placements with scoring:", error)
     return {
       success: false,
       error:

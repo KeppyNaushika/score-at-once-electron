@@ -24,7 +24,8 @@ export function useKeyboardSettings() {
 
       if (userId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
+          const result =
+            await window.electronAPI.settings.getUserKeyboardShortcuts(userId)
           if (result.success && result.shortcuts) {
             setShortcuts({ ...DEFAULT_KEYBINDINGS, ...result.shortcuts })
           }
@@ -100,7 +101,10 @@ export function useKeyboardSettings() {
     // DBに保存
     if (userId && window.electronAPI?.settings) {
       try {
-        await window.electronAPI.settings.saveUserKeyboardShortcuts(userId, newShortcuts)
+        await window.electronAPI.settings.saveUserKeyboardShortcuts(
+          userId,
+          newShortcuts
+        )
         toast.success("ショートカットキーを更新しました")
       } catch (error) {
         console.error("キーバインディングの保存に失敗しました:", error)

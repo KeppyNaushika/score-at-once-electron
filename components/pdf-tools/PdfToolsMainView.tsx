@@ -56,7 +56,8 @@ export default function PdfToolsMainView() {
     if (!isDragging.current || !containerRef.current) return
 
     const containerRect = containerRef.current.getBoundingClientRect()
-    const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100
+    const newWidth =
+      ((e.clientX - containerRect.left) / containerRect.width) * 100
 
     // 20% ~ 80% の範囲に制限
     const clampedWidth = Math.min(Math.max(newWidth, 20), 80)
@@ -105,9 +106,7 @@ export default function PdfToolsMainView() {
       </div>
 
       {/* 右パネル */}
-      <div
-        className="h-full min-w-0 flex-1 overflow-hidden"
-      >
+      <div className="h-full min-w-0 flex-1 overflow-hidden">
         <ExportPanel
           importedFiles={importedFiles}
           outputPages={outputPages}

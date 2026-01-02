@@ -1847,8 +1847,7 @@ export interface CropRegionMarkingOverride {
 /**
  * 設問別採点記号オーバーライド設定（CropRegion情報付き）
  */
-export interface CropRegionMarkingOverrideWithRegion
-  extends CropRegionMarkingOverride {
+export interface CropRegionMarkingOverrideWithRegion extends CropRegionMarkingOverride {
   cropRegion: {
     id: string
     label: string | null

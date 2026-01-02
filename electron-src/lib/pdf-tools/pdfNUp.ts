@@ -132,7 +132,8 @@ export async function applyNUp(
 
         // 上から順に配置 (left-right = ページ1が上)
         const topPage = order === "left-right" ? embeddedPage1 : embeddedPage2
-        const bottomPage = order === "left-right" ? embeddedPage2 : embeddedPage1
+        const bottomPage =
+          order === "left-right" ? embeddedPage2 : embeddedPage1
         const topScale = order === "left-right" ? scale1 : scale2
         const bottomScale = order === "left-right" ? scale2 : scale1
         const topOffsetX = order === "left-right" ? offset1X : offset2X

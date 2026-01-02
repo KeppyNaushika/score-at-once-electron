@@ -86,9 +86,9 @@ export default function ImportedFileItem({
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="rounded-lg border bg-card">
+      <div className="bg-card rounded-lg border">
         <CollapsibleTrigger asChild>
-          <div className="flex cursor-pointer items-center gap-2 p-3 hover:bg-muted/50">
+          <div className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 p-3">
             {isOpen ? (
               <ChevronDown className="h-4 w-4 shrink-0" />
             ) : (
@@ -199,7 +199,7 @@ export default function ImportedFileItem({
                     )}
                     <span
                       className={cn(
-                        "absolute bottom-0 left-0 right-0 bg-black/60 py-0.5 text-center text-xs text-white",
+                        "absolute right-0 bottom-0 left-0 bg-black/60 py-0.5 text-center text-xs text-white",
                         !isSelected && "opacity-50"
                       )}
                     >

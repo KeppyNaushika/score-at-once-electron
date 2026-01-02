@@ -52,10 +52,6 @@ export async function calculateSubtotalScoreForStudent(
   cropRegions: CropRegion[]
 ): Promise<SubtotalScoreResult> {
   try {
-    console.log(
-      `Calculating subtotal for student ${studentId}, region ${subtotalRegionId}`
-    )
-
     // この生徒の全採点データを取得
     const studentScores = allQuestionScores.filter(
       (score) => score.studentId === studentId
@@ -63,13 +59,9 @@ export async function calculateSubtotalScoreForStudent(
 
     // 小計点領域に関連付けられたグループ項目を取得
     const cropSubtotals = await getCropSubtotalsByCropRegionId(subtotalRegionId)
-    console.log(`Found ${cropSubtotals?.length || 0} crop subtotals`)
 
     // グループ定義がない場合は、この生徒の全設問の合計点を返す（フォールバック）
     if (!cropSubtotals || cropSubtotals.length === 0) {
-      console.log(
-        `No crop subtotals found for region ${subtotalRegionId}, calculating total of all questions for student`
-      )
       return calculateStudentTotalScoreWithMax(
         studentId,
         allQuestionScores,
@@ -93,9 +85,6 @@ export async function calculateSubtotalScoreForStudent(
     }
 
     if (groupMap.size === 0) {
-      console.log(
-        `No valid groups found, calculating total of all questions for student`
-      )
       return calculateStudentTotalScoreWithMax(
         studentId,
         allQuestionScores,

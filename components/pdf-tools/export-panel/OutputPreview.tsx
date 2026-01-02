@@ -65,7 +65,10 @@ export default function OutputPreview({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={pages.map((p) => p.id)} strategy={rectSortingStrategy}>
+      <SortableContext
+        items={pages.map((p) => p.id)}
+        strategy={rectSortingStrategy}
+      >
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {pages.map((page, index) => (
             <SortablePageItem
@@ -103,9 +106,10 @@ function SortablePageItem({ page, index, disabled }: SortablePageItemProps) {
   }
 
   // ファイル名の短縮表示
-  const shortFileName = page.sourceFileName.length > 8
-    ? page.sourceFileName.slice(0, 6) + "…"
-    : page.sourceFileName
+  const shortFileName =
+    page.sourceFileName.length > 8
+      ? page.sourceFileName.slice(0, 6) + "…"
+      : page.sourceFileName
 
   // 回転スタイル
   const rotationStyle = {
@@ -148,9 +152,11 @@ function SortablePageItem({ page, index, disabled }: SortablePageItemProps) {
       </div>
 
       {/* ページ情報 */}
-      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5">
+      <div className="absolute right-0 bottom-0 left-0 bg-black/60 px-1 py-0.5">
         <div className="flex items-center justify-between">
-          <span className="truncate text-[10px] text-white">{shortFileName}</span>
+          <span className="truncate text-[10px] text-white">
+            {shortFileName}
+          </span>
           <span className="text-[10px] text-white/80">
             {page.isNUpCombined && page.combinedPages
               ? page.combinedPages.join("+")

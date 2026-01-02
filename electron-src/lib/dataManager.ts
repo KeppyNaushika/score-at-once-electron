@@ -82,8 +82,6 @@ export const initializeDataDirectory = async (): Promise<void> => {
 
     await fs.mkdir(projectsDir, { recursive: true, mode: 0o755 })
     await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
-
-    console.log("Data directory initialization completed successfully")
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
     console.error("Data directory path:", dataDir)

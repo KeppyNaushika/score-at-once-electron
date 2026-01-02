@@ -13,13 +13,10 @@ export async function getUserKeyboardShortcuts(userId: string) {
     where: { userId },
   })
   // action -> key のマッピングに変換
-  return shortcuts.reduce<Record<string, string>>(
-    (acc, s) => {
-      acc[s.action] = s.key
-      return acc
-    },
-    {}
-  )
+  return shortcuts.reduce<Record<string, string>>((acc, s) => {
+    acc[s.action] = s.key
+    return acc
+  }, {})
 }
 
 export async function upsertUserKeyboardShortcut(
@@ -52,7 +49,10 @@ export async function bulkUpsertUserKeyboardShortcuts(
   return prisma.$transaction(operations)
 }
 
-export async function deleteUserKeyboardShortcut(userId: string, action: string) {
+export async function deleteUserKeyboardShortcut(
+  userId: string,
+  action: string
+) {
   return prisma.userKeyboardShortcut.deleteMany({
     where: { userId, action },
   })

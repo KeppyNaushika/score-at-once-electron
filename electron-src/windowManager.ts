@@ -67,7 +67,7 @@ export function createMainWindow(): BrowserWindow {
   })
 
   mainWindow.webContents.on("responsive", () => {
-    console.log("✅ WebContents became responsive again")
+    // WebContents recovered from unresponsive state
   })
 
   // Windowsでは即座にウィンドウを表示（デバッグ用）

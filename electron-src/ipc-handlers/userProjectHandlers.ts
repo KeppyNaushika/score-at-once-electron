@@ -163,6 +163,4 @@ export function setupUserProjectHandlers(): void {
       }
     }
   )
-
-  console.log("✅ UserProject IPC handlers setup completed")
 }

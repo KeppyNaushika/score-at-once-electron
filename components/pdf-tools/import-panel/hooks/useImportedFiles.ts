@@ -74,7 +74,10 @@ export function useImportedFiles() {
           }
 
           // サムネイルを生成（パスからファイルを読み込んで）
-          const thumbnails = await generateThumbnailsFromPath(filePath, info.pageCount)
+          const thumbnails = await generateThumbnailsFromPath(
+            filePath,
+            info.pageCount
+          )
 
           // 全ページを選択状態で初期化
           const selectedPages = new Set<number>()
@@ -96,7 +99,11 @@ export function useImportedFiles() {
             },
             rotation: 0,
           }
-          console.log("Created ImportedFile:", { id: importedFile.id, name: importedFile.name, path: importedFile.path })
+          console.log("Created ImportedFile:", {
+            id: importedFile.id,
+            name: importedFile.name,
+            path: importedFile.path,
+          })
 
           processedFiles.push(importedFile)
         } catch (error) {

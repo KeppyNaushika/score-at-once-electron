@@ -70,8 +70,6 @@ export type SubtotalWithDetails = Prisma.SubtotalGetPayload<{
 export const updateSubtotalOrders = async (
   orders: { id: string; order: number }[]
 ) => {
-  console.log("🔄 DB: updateSubtotalOrders called with:", orders)
-
   const updates = orders.map(({ id, order }) =>
     prisma.subtotal.update({
       where: { id },
@@ -79,14 +77,10 @@ export const updateSubtotalOrders = async (
     })
   )
 
-  console.log("🔄 DB: Executing transaction with", updates.length, "updates")
   const result = await prisma.$transaction(updates)
-  console.log("✅ DB: Transaction completed, result:", result)
 
   // BatchPayload形式で返す
-  const batchResult = { count: result.length }
-  console.log("✅ DB: Returning batch result:", batchResult)
-  return batchResult
+  return { count: result.length }
 }
 
 export type SubtotalPayload = Subtotal

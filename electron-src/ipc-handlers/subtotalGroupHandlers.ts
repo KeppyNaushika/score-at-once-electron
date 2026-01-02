@@ -11,8 +11,6 @@ import {
 } from "../lib/prisma/subtotalGroup"
 
 export function setupSubtotalGroupHandlers(): void {
-  console.log("🔄 Setting up SubtotalGroup IPC handlers...")
-
   // 小計点グループ一覧取得
   ipcMain.handle("get-subtotal-groups", async () => {
     try {
@@ -156,6 +154,4 @@ export function setupSubtotalGroupHandlers(): void {
       }
     }
   )
-
-  console.log("✅ SubtotalGroup IPC handlers setup completed")
 }

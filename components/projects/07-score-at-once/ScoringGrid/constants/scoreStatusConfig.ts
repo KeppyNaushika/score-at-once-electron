@@ -95,7 +95,9 @@ export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
   }
 }
 
-export type DynamicScoreStatusConfig = ReturnType<typeof getDynamicScoreStatusConfig>
+export type DynamicScoreStatusConfig = ReturnType<
+  typeof getDynamicScoreStatusConfig
+>
 export type ScoreStatusKey = keyof DynamicScoreStatusConfig
 
 // 後方互換のため旧定義も維持（Tailwindクラスベース）

@@ -48,7 +48,6 @@ export class AuthStoreManager {
     const data = this.readAuthData()
     data.authToken = token
     this.writeAuthData(data)
-    console.log("✅ AuthToken saved to file")
   }
 
   /**
@@ -56,10 +55,6 @@ export class AuthStoreManager {
    */
   static getAuthToken(): string | null {
     const data = this.readAuthData()
-    console.log(
-      "🔍 AuthToken retrieved from file:",
-      data.authToken ? "exists" : "not found"
-    )
     return data.authToken
   }
 
@@ -70,7 +65,6 @@ export class AuthStoreManager {
     const data = this.readAuthData()
     data.authToken = null
     this.writeAuthData(data)
-    console.log("🗑️ AuthToken cleared from file")
   }
 
   /**
