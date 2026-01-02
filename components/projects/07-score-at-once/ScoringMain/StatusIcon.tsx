@@ -75,10 +75,7 @@ export function StatusIcon({
   if (useDynamicColors) {
     const colors = getScoringStatusColors()
     return (
-      <Icon
-        className={className}
-        style={{ color: colors[statusType].icon }}
-      />
+      <Icon className={className} style={{ color: colors[statusType].icon }} />
     )
   }
 
@@ -101,14 +98,6 @@ export function StatusIcon({
  * @param useDynamicColors - 動的色を使用するかどうか
  * @returns Tailwindクラス文字列またはCSSスタイルオブジェクト
  */
-export function getStatusColor(
-  status: ScoringStatus,
-  useDynamicColors?: false
-): string
-export function getStatusColor(
-  status: ScoringStatus,
-  useDynamicColors: true
-): React.CSSProperties
 export function getStatusColor(
   status: ScoringStatus,
   useDynamicColors = false
