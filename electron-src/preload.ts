@@ -279,8 +279,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   ) => ipcRenderer.invoke("update-student-orders", projectId, studentOrders),
 
   // QuestionScore related functions
-  getQuestionScoresForProject: (projectId: string) =>
-    ipcRenderer.invoke("get-question-scores-for-project", projectId),
+  getQuestionScoresForProject: (projectId: string, userId?: string) =>
+    ipcRenderer.invoke("get-question-scores-for-project", projectId, userId),
   getQuestionScoresForAnswerSheet: (answerSheetId: string) =>
     ipcRenderer.invoke("get-question-scores-for-answer-sheet", answerSheetId),
   createQuestionScore: (data: QuestionScoreCreateData) =>
@@ -569,12 +569,32 @@ contextBridge.exposeInMainWorld("electronAPI", {
   drawing: {
     create: (data: Partial<DrawingAnnotation>) =>
       ipcRenderer.invoke("drawing:create", data),
-    getByQuestionScore: (questionScoreId: string, type?: string) =>
-      ipcRenderer.invoke("drawing:getByQuestionScore", questionScoreId, type),
-    getByStudent: (studentId: string, projectId: string, type?: string) =>
-      ipcRenderer.invoke("drawing:getByStudent", studentId, projectId, type),
-    getByProject: (projectId: string, type?: string) =>
-      ipcRenderer.invoke("drawing:getByProject", projectId, type),
+    getByQuestionScore: (
+      questionScoreId: string,
+      type?: string,
+      userId?: string
+    ) =>
+      ipcRenderer.invoke(
+        "drawing:getByQuestionScore",
+        questionScoreId,
+        type,
+        userId
+      ),
+    getByStudent: (
+      studentId: string,
+      projectId: string,
+      type?: string,
+      userId?: string
+    ) =>
+      ipcRenderer.invoke(
+        "drawing:getByStudent",
+        studentId,
+        projectId,
+        type,
+        userId
+      ),
+    getByProject: (projectId: string, type?: string, userId?: string) =>
+      ipcRenderer.invoke("drawing:getByProject", projectId, type, userId),
     update: (id: string, data: Partial<DrawingAnnotation>) =>
       ipcRenderer.invoke("drawing:update", id, data),
     delete: (id: string) => ipcRenderer.invoke("drawing:delete", id),
@@ -596,11 +616,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Project Archive (Export/Import) related
   archive: {
-    exportProject: (options: { projectId: string; outputPath?: string }) =>
-      ipcRenderer.invoke("archive:exportProject", options),
+    exportProject: (options: {
+      projectId: string
+      userId: string
+      outputPath?: string
+    }) => ipcRenderer.invoke("archive:exportProject", options),
     analyzeArchive: (options: { archivePath: string }) =>
       ipcRenderer.invoke("archive:analyzeArchive", options),
-    importAsNew: (options: { archivePath: string }) =>
+    importAsNew: (options: { archivePath: string; currentUserId: string }) =>
       ipcRenderer.invoke("archive:importAsNew", options),
     detectConflicts: (options: {
       archivePath: string

@@ -5,13 +5,13 @@
  */
 
 import { app, dialog } from "electron"
-import { collectProjectData } from "./dataCollector"
-import { createArchive, generateExportFileName } from "./archiveCreator"
 import type {
   ExportProjectOptions,
   ExportProjectResult,
 } from "../../../../types/projectArchive.types"
 import { getProjectById } from "../../prisma/project"
+import { createArchive, generateExportFileName } from "./archiveCreator"
+import { collectProjectData } from "./dataCollector"
 
 /**
  * プロジェクトをエクスポート
@@ -22,7 +22,7 @@ import { getProjectById } from "../../prisma/project"
 export async function exportProject(
   options: ExportProjectOptions
 ): Promise<ExportProjectResult> {
-  const { projectId, outputPath } = options
+  const { projectId, userId, outputPath } = options
 
   try {
     // 1. プロジェクト情報を取得
@@ -31,8 +31,8 @@ export async function exportProject(
       return { success: false, error: "プロジェクトが見つかりません" }
     }
 
-    // 2. データを収集
-    const collectResult = await collectProjectData(projectId)
+    // 2. データを収集（ログインユーザーのデータのみ）
+    const collectResult = await collectProjectData(projectId, userId)
     if (!collectResult.success || !collectResult.data) {
       return { success: false, error: collectResult.error }
     }
@@ -44,7 +44,9 @@ export async function exportProject(
       const result = await dialog.showSaveDialog({
         title: "プロジェクトをエクスポート",
         defaultPath: defaultFileName,
-        filters: [{ name: "Score at Once アーカイブ", extensions: ["score"] }],
+        filters: [
+          { name: "一括採点プロジェクトデータ", extensions: ["score"] },
+        ],
       })
 
       if (result.canceled || !result.filePath) {
@@ -70,8 +72,8 @@ export async function exportProject(
       success: true,
       outputPath: archiveResult.outputPath,
       manifest: {
-        version: "1.0.0",
-        schemaVersion: "unknown",
+        version: "1.1.0", // v0.3.z format
+        schemaVersion: "v0.3.0",
         appVersion: app.getVersion(),
         exportedAt: new Date().toISOString(),
         projectId,
@@ -106,7 +108,7 @@ export async function selectExportSavePath(options: {
   const result = await dialog.showSaveDialog({
     title: "プロジェクトをエクスポート",
     defaultPath: defaultFileName,
-    filters: [{ name: "Score at Once アーカイブ", extensions: ["score"] }],
+    filters: [{ name: "一括採点プロジェクトデータ", extensions: ["score"] }],
   })
 
   if (result.canceled) {
@@ -117,5 +119,5 @@ export async function selectExportSavePath(options: {
 }
 
 // Re-export types
-export * from "./dataCollector"
 export * from "./archiveCreator"
+export * from "./dataCollector"

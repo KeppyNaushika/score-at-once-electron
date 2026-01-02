@@ -42,12 +42,13 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle(
     "drawing:getByQuestionScore",
-    async (_, questionScoreId: string, type?: DrawingType) => {
+    async (_, questionScoreId: string, type?: DrawingType, userId?: string) => {
       try {
         const result =
           await drawingService.getDrawingAnnotationsByQuestionScore(
             questionScoreId,
-            type
+            type,
+            userId
           )
         return { success: true, data: result }
       } catch (error) {
@@ -68,12 +69,19 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle(
     "drawing:getByStudent",
-    async (_, studentId: string, projectId: string, type?: DrawingType) => {
+    async (
+      _,
+      studentId: string,
+      projectId: string,
+      type?: DrawingType,
+      userId?: string
+    ) => {
       try {
         const result = await drawingService.getDrawingAnnotationsByStudent(
           studentId,
           projectId,
-          type
+          type,
+          userId
         )
         return { success: true, data: result }
       } catch (error) {
@@ -94,11 +102,12 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle(
     "drawing:getByProject",
-    async (_, projectId: string, type?: DrawingType) => {
+    async (_, projectId: string, type?: DrawingType, userId?: string) => {
       try {
         const result = await drawingService.getDrawingAnnotationsByProject(
           projectId,
-          type
+          type,
+          userId
         )
         return { success: true, data: result }
       } catch (error) {

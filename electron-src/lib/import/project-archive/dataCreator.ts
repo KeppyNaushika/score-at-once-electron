@@ -28,14 +28,17 @@ export interface DataCreationResult {
  * 新規作成モードでデータをインポート
  *
  * 全てのデータを新規UUIDで作成し、参照関係を維持
+ * v0.3.0以降: userIdは現在ログインしているユーザーで上書き
  *
  * @param data - 展開されたアーカイブデータ
  * @param mappings - IDマッピング
+ * @param currentUserId - 現在ログインしているユーザーID
  * @returns 作成結果
  */
 export async function createImportedData(
   data: ExtractedArchiveData,
-  mappings: IdMappings
+  mappings: IdMappings,
+  currentUserId: string
 ): Promise<DataCreationResult> {
   const warnings: string[] = []
   const newProjectId = remapIdRequired(
@@ -95,23 +98,8 @@ export async function createImportedData(
         }
       }
 
-      // 4. ユーザーを作成（パスコードなしで作成）
-      for (const user of data.usersData.users) {
-        await tx.user.create({
-          data: {
-            id: remapIdRequired(user.id, mappings.user),
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            passcode: "", // パスコードは空で作成
-          },
-        })
-      }
-      if (data.usersData.users.length > 0) {
-        warnings.push(
-          "インポートされたユーザーのパスコードは空に設定されています。必要に応じて再設定してください。"
-        )
-      }
+      // 4. ユーザー作成をスキップ
+      // v0.3.0以降: アーカイブ内のユーザーは作成せず、現在のログインユーザーを使用
 
       // 5. 小計グループを作成
       for (const sg of data.subtotalsData.subtotalGroups) {
@@ -150,25 +138,17 @@ export async function createImportedData(
         },
       })
 
-      // 8. UserProjectを作成
-      for (const up of data.projectData.userProjects) {
-        const newUserId = remapId(up.userId, mappings.user)
-        const newInvitedBy = up.invitedBy
-          ? remapId(up.invitedBy, mappings.user)
-          : null
-        if (newUserId) {
-          await tx.userProject.create({
-            data: {
-              id: remapIdRequired(up.id, mappings.userProject),
-              userId: newUserId,
-              projectId: newProjectId,
-              role: up.role,
-              invitedAt: up.invitedAt ? new Date(up.invitedAt) : new Date(),
-              invitedBy: newInvitedBy,
-            },
-          })
-        }
-      }
+      // 8. UserProjectを作成（現在のログインユーザーのみ）
+      // v0.3.0以降: アーカイブ内のUserProjectは無視し、現在のユーザーをOWNERとして作成
+      await tx.userProject.create({
+        data: {
+          userId: currentUserId,
+          projectId: newProjectId,
+          role: "OWNER",
+          invitedAt: new Date(),
+          invitedBy: null,
+        },
+      })
 
       // 9. ProjectSubtotalGroupを作成
       for (const psg of data.projectData.projectSubtotalGroups) {
@@ -182,6 +162,23 @@ export async function createImportedData(
               id: remapIdRequired(psg.id, mappings.projectSubtotalGroup),
               projectId: newProjectId,
               subtotalGroupId: newSubtotalGroupId,
+            },
+          })
+        }
+      }
+
+      // 9.5. ProjectClassを作成 (v1.1.0+)
+      for (const pc of data.projectData.projectClasses || []) {
+        const newClassId = remapId(pc.classId, mappings.class)
+        if (newClassId) {
+          await tx.projectClass.create({
+            data: {
+              id: remapIdRequired(pc.id, mappings.projectClass),
+              projectId: newProjectId,
+              classId: newClassId,
+              administered: pc.administered,
+              statistics: pc.statistics,
+              order: pc.order,
             },
           })
         }
@@ -252,10 +249,10 @@ export async function createImportedData(
       }
 
       // 14. QuestionScoreを作成
+      // v0.3.0以降: scoredByUserIdを現在のログインユーザーで上書き
       for (const qs of data.scoresData.questionScores) {
         const newCropRegionId = remapId(qs.cropRegionId, mappings.cropRegion)
         const newStudentId = remapId(qs.studentId, mappings.student)
-        const newScoredByUserId = remapId(qs.scoredByUserId, mappings.user)
 
         if (newCropRegionId) {
           await tx.questionScore.create({
@@ -267,19 +264,19 @@ export async function createImportedData(
                 ? parseFloat(qs.partialScore)
                 : null,
               status: qs.status,
-              scoredByUserId: newScoredByUserId,
+              scoredByUserId: currentUserId,
             },
           })
         }
       }
 
       // 15. DrawingAnnotationを作成
+      // v0.3.0以降: createdByUserIdを現在のログインユーザーで上書き
       for (const da of data.scoresData.drawingAnnotations) {
         const newQuestionScoreId = remapId(
           da.questionScoreId,
           mappings.questionScore
         )
-        const newCreatedByUserId = remapId(da.createdByUserId, mappings.user)
 
         if (newQuestionScoreId) {
           await tx.drawingAnnotation.create({
@@ -305,7 +302,7 @@ export async function createImportedData(
               anchorDirection: da.anchorDirection,
               displayX: da.displayX,
               displayY: da.displayY,
-              createdByUserId: newCreatedByUserId,
+              createdByUserId: currentUserId,
             },
           })
         }

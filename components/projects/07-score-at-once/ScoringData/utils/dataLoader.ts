@@ -3,13 +3,18 @@ import { decimalToNumber } from "@/components/projects/07-score-at-once/types"
 
 /**
  * 既存の採点データを読み込む関数（QuestionScore配列で返す）
+ * @param projectId プロジェクトID
+ * @param userId ユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
 export async function loadQuestionScores(
-  projectId: string
+  projectId: string,
+  userId?: string
 ): Promise<QuestionScore[]> {
   try {
-    const result =
-      await window.electronAPI.getQuestionScoresForProject(projectId)
+    const result = await window.electronAPI.getQuestionScoresForProject(
+      projectId,
+      userId
+    )
 
     // Handle both direct array and { success, scores } format
     let scores: QuestionScore[]

@@ -2,22 +2,22 @@
  * プロジェクトアーカイブ（エクスポート/インポート）IPCハンドラー
  */
 
-import { ipcMain, dialog } from "electron"
+import { dialog, ipcMain } from "electron"
+import type {
+  ConflictResolutions,
+  MatchingConfig,
+} from "../../types/projectArchive.types"
 import {
   exportProject,
   selectExportSavePath,
 } from "../lib/export/project-archive"
+import { detectAllConflicts, executeMergeImport } from "../lib/import/merge"
 import {
   analyzeArchive,
-  importAsNew,
-  extractArchive,
   cleanupTempDir,
+  extractArchive,
+  importAsNew,
 } from "../lib/import/project-archive"
-import { detectAllConflicts, executeMergeImport } from "../lib/import/merge"
-import type {
-  MatchingConfig,
-  ConflictResolutions,
-} from "../../types/projectArchive.types"
 
 /**
  * アーカイブ関連のIPCハンドラーを登録
@@ -26,7 +26,10 @@ export function registerArchiveHandlers(): void {
   // エクスポート
   ipcMain.handle(
     "archive:exportProject",
-    async (_event, options: { projectId: string; outputPath?: string }) => {
+    async (
+      _event,
+      options: { projectId: string; userId: string; outputPath?: string }
+    ) => {
       try {
         return await exportProject(options)
       } catch (error) {
@@ -66,7 +69,9 @@ export function registerArchiveHandlers(): void {
     try {
       const result = await dialog.showOpenDialog({
         title: "プロジェクトをインポート",
-        filters: [{ name: "Score at Once アーカイブ", extensions: ["score"] }],
+        filters: [
+          { name: "一括採点プロジェクトデータ", extensions: ["score"] },
+        ],
         properties: ["openFile"],
       })
 
@@ -109,7 +114,7 @@ export function registerArchiveHandlers(): void {
   // 新規作成インポート
   ipcMain.handle(
     "archive:importAsNew",
-    async (_event, options: { archivePath: string }) => {
+    async (_event, options: { archivePath: string; currentUserId: string }) => {
       try {
         return await importAsNew(options)
       } catch (error) {

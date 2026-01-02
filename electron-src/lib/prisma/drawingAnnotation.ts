@@ -121,11 +121,13 @@ export async function createDrawingAnnotation(
  * QuestionScoreに紐づく描画アノテーションを取得する
  * @param questionScoreId QuestionScoreのID
  * @param type フィルタする描画タイプ（オプション）
+ * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列
  */
 export async function getDrawingAnnotationsByQuestionScore(
   questionScoreId: string,
-  type?: DrawingType
+  type?: DrawingType,
+  userId?: string
 ): Promise<DrawingAnnotation[]> {
   // 読み取り専用操作のためバックアップ不要
   try {
@@ -133,6 +135,8 @@ export async function getDrawingAnnotationsByQuestionScore(
       where: {
         questionScoreId,
         ...(type && { type }),
+        // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
+        ...(userId && { createdByUserId: userId }),
       },
       orderBy: { createdAt: "asc" },
       include: {
@@ -158,12 +162,14 @@ export async function getDrawingAnnotationsByQuestionScore(
  * @param studentId 学生ID
  * @param projectId プロジェクトID
  * @param type フィルタする描画タイプ（オプション）
+ * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotationWithQuestionScore[]> 描画アノテーション配列（設問情報付き）
  */
 export async function getDrawingAnnotationsByStudent(
   studentId: string,
   projectId: string,
-  type?: DrawingType
+  type?: DrawingType,
+  userId?: string
 ): Promise<DrawingAnnotation[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
@@ -177,6 +183,8 @@ export async function getDrawingAnnotationsByStudent(
           },
         },
         ...(type && { type }),
+        // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
+        ...(userId && { createdByUserId: userId }),
       },
       orderBy: { createdAt: "asc" },
       include: {
@@ -213,11 +221,13 @@ export async function getDrawingAnnotationsByStudent(
  * プロジェクト全体の描画アノテーションを取得する（PDF出力用）
  * @param projectId プロジェクトID
  * @param type フィルタする描画タイプ（オプション）
+ * @param userId 作成者のユーザーID（指定時はそのユーザーのアノテーションのみ取得）
  * @returns Promise<DrawingAnnotation[]> 描画アノテーション配列（設問情報付き）
  */
 export async function getDrawingAnnotationsByProject(
   projectId: string,
-  type?: DrawingType
+  type?: DrawingType,
+  userId?: string
 ): Promise<DrawingAnnotation[]> {
   try {
     const result = await prisma.drawingAnnotation.findMany({
@@ -230,6 +240,8 @@ export async function getDrawingAnnotationsByProject(
           },
         },
         ...(type && { type }),
+        // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
+        ...(userId && { createdByUserId: userId }),
       },
       orderBy: [
         { questionScore: { studentId: "asc" } },

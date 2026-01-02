@@ -37,9 +37,13 @@ export function useScoringData({
   })
 
   // Data loading function wrapper
-  const loadQuestionScoresCallback = useCallback(async (projectId: string) => {
-    return await loadQuestionScores(projectId)
-  }, [])
+  // currentUserIdを使って、ログインユーザーの採点データのみを取得
+  const loadQuestionScoresCallback = useCallback(
+    async (projectId: string) => {
+      return await loadQuestionScores(projectId, currentUserId ?? undefined)
+    },
+    [currentUserId]
+  )
 
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {

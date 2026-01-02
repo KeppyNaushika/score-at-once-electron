@@ -199,6 +199,7 @@ export function useDrawingAnnotations(
 
   /**
    * アノテーション読み込み
+   * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
    */
   const loadAnnotations = useCallback(
     async (questionScoreId: string, type?: DrawingType): Promise<boolean> => {
@@ -208,7 +209,8 @@ export function useDrawingAnnotations(
       try {
         const result = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
-          type
+          type,
+          context?.currentUserId
         )
         if (result.success && result.data) {
           setAnnotations(result.data)
@@ -224,11 +226,12 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError]
+    [handleError, context?.currentUserId]
   )
 
   /**
    * 学生の全設問のアノテーションを読み込み（透明度制御用）
+   * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
    */
   const loadAllStudentAnnotations = useCallback(
     async (
@@ -243,7 +246,8 @@ export function useDrawingAnnotations(
         const result = await window.electronAPI.drawing.getByStudent(
           studentId,
           projectId,
-          type
+          type,
+          context?.currentUserId
         )
         if (result.success && result.data) {
           return result.data
@@ -263,7 +267,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    [handleError]
+    [handleError, context?.currentUserId]
   )
 
   /**
