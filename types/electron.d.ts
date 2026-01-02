@@ -846,7 +846,10 @@ export interface MyAPI {
   }>
 
   // QuestionScore関連のAPI
-  getQuestionScoresForProject: (projectId: string) => Promise<{
+  getQuestionScoresForProject: (
+    projectId: string,
+    userId?: string
+  ) => Promise<{
     success: boolean
     scores?: QuestionScore[]
     error?: string
@@ -1281,7 +1284,8 @@ export interface MyAPI {
     }>
     getByQuestionScore: (
       questionScoreId: string,
-      type?: import("./drawing-annotation.types").DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
+      userId?: string
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1290,7 +1294,8 @@ export interface MyAPI {
     getByStudent: (
       studentId: string,
       projectId: string,
-      type?: import("./drawing-annotation.types").DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
+      userId?: string
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]
@@ -1298,7 +1303,8 @@ export interface MyAPI {
     }>
     getByProject: (
       projectId: string,
-      type?: import("./drawing-annotation.types").DrawingType
+      type?: import("./drawing-annotation.types").DrawingType,
+      userId?: string
     ) => Promise<{
       success: boolean
       data?: import("./drawing-annotation.types").DrawingAnnotation[]

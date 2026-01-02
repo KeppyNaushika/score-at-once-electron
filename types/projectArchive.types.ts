@@ -213,6 +213,8 @@ export interface ImportOptions {
  */
 export interface ExportProjectOptions {
   projectId: string
+  /** ログインユーザーID（このユーザーのデータのみエクスポート） */
+  userId: string
   outputPath?: string
 }
 
@@ -261,6 +263,8 @@ export interface DetectConflictsOptions {
  */
 export interface ImportAsNewOptions {
   archivePath: string
+  /** 現在ログインしているユーザーID（このユーザーのデータとしてインポート） */
+  currentUserId: string
 }
 
 /**
@@ -372,6 +376,17 @@ export interface ArchiveProjectData {
     id: string
     projectId: string
     subtotalGroupId: string
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.1.0+ ProjectClass関係 */
+  projectClasses: Array<{
+    id: string
+    projectId: string
+    classId: string
+    administered: boolean
+    statistics: boolean
+    order: number
     createdAt: string
     updatedAt: string
   }>

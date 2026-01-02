@@ -1,22 +1,22 @@
 "use client"
 
-import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
-import { FileSelectStep } from "./steps/FileSelectStep"
-import { ModeSelectStep } from "./steps/ModeSelectStep"
-import { MatchingConfigStep } from "./steps/MatchingConfigStep"
+import { cn } from "@/lib/utils"
+import type { ImportWizardStep } from "@/types/projectArchive.types"
+import { AlertCircle, Check, ChevronLeft, X } from "lucide-react"
+import { useEffect } from "react"
 import { ConflictResolveStep } from "./steps/ConflictResolveStep"
 import { ExecuteStep } from "./steps/ExecuteStep"
-import type { ImportWizardStep } from "@/types/projectArchive.types"
-import { ChevronLeft, X, AlertCircle, Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { FileSelectStep } from "./steps/FileSelectStep"
+import { MatchingConfigStep } from "./steps/MatchingConfigStep"
+import { ModeSelectStep } from "./steps/ModeSelectStep"
 
 interface ImportWizardModalProps {
   isOpen: boolean
@@ -71,7 +71,7 @@ export function ImportWizardModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col gap-0 p-0">
+      <DialogContent className="flex max-h-[90vh] min-w-2xl flex-col gap-0 p-0">
         {/* ヘッダー */}
         <DialogHeader className="bg-muted/30 border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ export function ImportWizardModal({
           </div>
 
           {/* ステップインジケーター */}
-          <div className="flex items-center justify-center gap-1 pt-4">
+          <div className="flex items-center justify-center pt-4">
             {effectiveSteps.map((step, index) => {
               const isActive = step === state.currentStep
               const isCompleted =
@@ -92,12 +92,12 @@ export function ImportWizardModal({
                   {index > 0 && (
                     <div
                       className={cn(
-                        "mx-1 h-0.5 w-12 transition-colors",
+                        "h-0.5 w-8 transition-colors",
                         isCompleted ? "bg-primary" : "bg-muted-foreground/20"
                       )}
                     />
                   )}
-                  <div className="flex flex-col items-center gap-1">
+                  <div className="flex w-24 flex-col items-center gap-y-3">
                     <div
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all",
@@ -113,7 +113,7 @@ export function ImportWizardModal({
                     </div>
                     <span
                       className={cn(
-                        "text-xs font-medium whitespace-nowrap",
+                        "text-center text-xs font-medium",
                         isActive && "text-primary",
                         !isActive && "text-muted-foreground"
                       )}
@@ -131,7 +131,7 @@ export function ImportWizardModal({
         {state.error && (
           <div className="bg-destructive/10 border-destructive/20 mx-6 mt-4 rounded-lg border p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="text-destructive mt-0.5 h-5 w-5 flex-shrink-0" />
+              <AlertCircle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
               <div className="flex-1">
                 <p className="text-destructive text-sm font-medium">エラー</p>
                 <p className="text-destructive/80 mt-1 text-sm">
@@ -151,7 +151,7 @@ export function ImportWizardModal({
         )}
 
         {/* ステップコンテンツ */}
-        <div className="min-h-[400px] flex-1 overflow-y-auto px-6 py-6">
+        <div className="min-h-100 flex-1 overflow-y-auto px-6 py-6">
           {state.currentStep === "file_select" && (
             <FileSelectStep wizard={wizard} />
           )}

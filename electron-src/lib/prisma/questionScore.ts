@@ -66,9 +66,14 @@ export interface UpdateQuestionScoreData {
 }
 
 /**
- * プロジェクトの全採点データを取得
+ * プロジェクトの採点データを取得
+ * @param projectId プロジェクトID
+ * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
-export const getQuestionScoresForProject = async (projectId: string) => {
+export const getQuestionScoresForProject = async (
+  projectId: string,
+  userId?: string
+) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
@@ -77,6 +82,8 @@ export const getQuestionScoresForProject = async (projectId: string) => {
             projectId,
           },
         },
+        // userIdが指定されている場合、そのユーザーの採点データのみ取得
+        ...(userId && { scoredByUserId: userId }),
       },
       include: {
         student: true,
@@ -106,12 +113,19 @@ export const getQuestionScoresForProject = async (projectId: string) => {
 
 /**
  * 特定の生徒の採点データを取得
+ * @param studentId 生徒ID
+ * @param userId 採点者のユーザーID（指定時はそのユーザーの採点データのみ取得）
  */
-export const getQuestionScoresForStudent = async (studentId: string) => {
+export const getQuestionScoresForStudent = async (
+  studentId: string,
+  userId?: string
+) => {
   try {
     const scores = await prisma.questionScore.findMany({
       where: {
         studentId: studentId,
+        // userIdが指定されている場合、そのユーザーの採点データのみ取得
+        ...(userId && { scoredByUserId: userId }),
       },
       include: {
         cropRegion: true,

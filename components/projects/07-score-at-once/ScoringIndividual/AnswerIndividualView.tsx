@@ -67,9 +67,11 @@ export default function AnswerIndividualView({
   )
 
   // 透明度制御用：全設問のアノテーション読み込み
+  // currentUserIdを渡してログインユーザーのアノテーションのみ取得
   const { allStudentAnnotations } = useAllStudentAnnotations({
     currentStudentId,
     currentCropRegion,
+    currentUserId,
   })
 
   // テキスト入力状態変更の通知

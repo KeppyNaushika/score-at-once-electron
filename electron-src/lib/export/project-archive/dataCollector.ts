@@ -36,10 +36,12 @@ export interface CollectedData {
  * プロジェクトの全関連データを収集
  *
  * @param projectId - 対象プロジェクトID
+ * @param userId - ログインユーザーID（このユーザーのデータのみ収集）
  * @returns 収集されたデータ
  */
 export async function collectProjectData(
-  projectId: string
+  projectId: string,
+  userId: string
 ): Promise<{ success: boolean; data?: CollectedData; error?: string }> {
   try {
     // 1. プロジェクト基本データを取得
@@ -65,6 +67,7 @@ export async function collectProjectData(
         projectStudents: true,
         userProjects: true,
         projectSubtotalGroups: true,
+        projectClasses: true,
       },
     })
 
@@ -103,25 +106,10 @@ export async function collectProjectData(
       where: { id: { in: Array.from(classIds) } },
     })
 
-    // 5. 関連するユーザーIDを収集
-    const userIds = new Set<string>()
-    for (const up of project.userProjects) {
-      userIds.add(up.userId)
-    }
-    for (const page of project.projectPages) {
-      for (const region of page.cropRegions) {
-        for (const score of region.questionScores) {
-          if (score.scoredByUserId) userIds.add(score.scoredByUserId)
-          for (const ann of score.drawingAnnotations) {
-            if (ann.createdByUserId) userIds.add(ann.createdByUserId)
-          }
-        }
-      }
-    }
-
-    // 6. ユーザーデータを取得（パスコードは除外）
-    const users = await prisma.user.findMany({
-      where: { id: { in: Array.from(userIds) } },
+    // 5. 現在のユーザーのみを取得（パスコードは除外）
+    // v0.3.0以降: ログインユーザーのデータのみをエクスポート
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
       select: {
         id: true,
         username: true,
@@ -131,6 +119,12 @@ export async function collectProjectData(
         updatedAt: true,
       },
     })
+
+    if (!currentUser) {
+      return { success: false, error: "ユーザーが見つかりません" }
+    }
+
+    const users = [currentUser]
 
     // 7. 小計グループと小計を取得
     const subtotalGroupIds = new Set(
@@ -173,12 +167,18 @@ export async function collectProjectData(
     }
 
     // 9. QuestionScoreとDrawingAnnotationを収集
+    // v0.3.0以降: ログインユーザーのデータのみをエクスポート
     const questionScores: ArchiveScoresData["questionScores"] = []
     const drawingAnnotations: ArchiveScoresData["drawingAnnotations"] = []
 
     for (const page of project.projectPages) {
       for (const region of page.cropRegions) {
         for (const score of region.questionScores) {
+          // ログインユーザーの採点データのみを収集
+          if (score.scoredByUserId !== userId) {
+            continue
+          }
+
           questionScores.push({
             id: score.id,
             cropRegionId: score.cropRegionId,
@@ -191,6 +191,11 @@ export async function collectProjectData(
           })
 
           for (const ann of score.drawingAnnotations) {
+            // ログインユーザーのアノテーションのみを収集
+            if (ann.createdByUserId !== userId) {
+              continue
+            }
+
             drawingAnnotations.push({
               id: ann.id,
               questionScoreId: ann.questionScoreId,
@@ -276,22 +281,24 @@ export async function collectProjectData(
         createdAt: ps.createdAt.toISOString(),
         updatedAt: ps.updatedAt.toISOString(),
       })),
-      userProjects: project.userProjects.map((up) => ({
-        id: up.id,
-        userId: up.userId,
-        projectId: up.projectId,
-        role: up.role,
-        invitedAt: up.invitedAt.toISOString(),
-        invitedBy: up.invitedBy,
-        createdAt: up.createdAt.toISOString(),
-        updatedAt: up.updatedAt.toISOString(),
-      })),
+      // v0.3.0以降: UserProjectは無視（インポート時に現在のユーザーで作成）
+      userProjects: [],
       projectSubtotalGroups: project.projectSubtotalGroups.map((psg) => ({
         id: psg.id,
         projectId: psg.projectId,
         subtotalGroupId: psg.subtotalGroupId,
         createdAt: psg.createdAt.toISOString(),
         updatedAt: psg.updatedAt.toISOString(),
+      })),
+      projectClasses: project.projectClasses.map((pc) => ({
+        id: pc.id,
+        projectId: pc.projectId,
+        classId: pc.classId,
+        administered: pc.administered,
+        statistics: pc.statistics,
+        order: pc.order,
+        createdAt: pc.createdAt.toISOString(),
+        updatedAt: pc.updatedAt.toISOString(),
       })),
     }
 

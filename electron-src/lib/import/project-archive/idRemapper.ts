@@ -25,6 +25,8 @@ export interface IdMappings {
   userProject: Record<string, string>
   /** ProjectSubtotalGroup ID: 旧ID -> 新ID */
   projectSubtotalGroup: Record<string, string>
+  /** ProjectClass ID: 旧ID -> 新ID (v1.1.0+) */
+  projectClass: Record<string, string>
   /** Student ID: 旧ID -> 新ID */
   student: Record<string, string>
   /** Class ID: 旧ID -> 新ID */
@@ -62,6 +64,7 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     projectStudent: {},
     userProject: {},
     projectSubtotalGroup: {},
+    projectClass: {},
     student: {},
     class: {},
     membership: {},
@@ -104,6 +107,11 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // ProjectSubtotalGroup
   for (const psg of data.projectData.projectSubtotalGroups) {
     mappings.projectSubtotalGroup[psg.id] = randomUUID()
+  }
+
+  // ProjectClass (v1.1.0+)
+  for (const pc of data.projectData.projectClasses || []) {
+    mappings.projectClass[pc.id] = randomUUID()
   }
 
   // 生徒

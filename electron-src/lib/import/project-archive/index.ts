@@ -69,6 +69,7 @@ export async function analyzeArchive(
  * 新規作成モードでインポート
  *
  * 全てのデータを新規UUIDで作成
+ * v0.3.0以降: userIdは現在ログインしているユーザーで上書き
  *
  * @param options - インポートオプション
  * @returns インポート結果
@@ -107,8 +108,12 @@ export async function importAsNew(
     // 4. 新しいIDマッピングを生成
     const mappings = generateNewIdMappings(processedData)
 
-    // 5. データを作成
-    const createResult = await createImportedData(processedData, mappings)
+    // 5. データを作成（現在のログインユーザーIDを渡す）
+    const createResult = await createImportedData(
+      processedData,
+      mappings,
+      options.currentUserId
+    )
     if (!createResult.success) {
       return { success: false, error: createResult.error }
     }

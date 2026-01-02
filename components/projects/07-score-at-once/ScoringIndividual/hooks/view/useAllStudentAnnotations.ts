@@ -12,6 +12,8 @@ export interface UseAllStudentAnnotationsParams {
   currentStudentId?: string
   /** 現在の設問領域（プロジェクトID取得用） */
   currentCropRegion?: CropRegionWithProjectPage | null
+  /** 現在のユーザーID（アノテーション取得のフィルタリング用） */
+  currentUserId?: string
 }
 
 /** 全設問アノテーション読み込みフックの戻り値 */
@@ -26,6 +28,7 @@ export interface UseAllStudentAnnotationsReturn {
  * @description
  * 透明度制御用に、現在の学生とプロジェクトの全アノテーションを読み込むフック。
  * Electron APIを直接呼び出してフック依存関係を回避する。
+ * currentUserIdを使って、ログインユーザーのアノテーションのみ取得する。
  *
  * @param params - フックパラメータ
  * @returns 全設問のアノテーション
@@ -33,6 +36,7 @@ export interface UseAllStudentAnnotationsReturn {
 export function useAllStudentAnnotations({
   currentStudentId,
   currentCropRegion,
+  currentUserId,
 }: UseAllStudentAnnotationsParams): UseAllStudentAnnotationsReturn {
   const [allStudentAnnotations, setAllStudentAnnotations] = useState<
     DrawingAnnotation[]
@@ -49,12 +53,16 @@ export function useAllStudentAnnotations({
         console.log("🎨 透明度制御: 全設問アノテーション読み込み開始", {
           studentId: currentStudentId,
           projectId: currentCropRegion.projectPage.projectId,
+          userId: currentUserId,
         })
 
         // ElectronAPIを直接呼び出してフック依存関係を回避
+        // currentUserIdを渡してログインユーザーのアノテーションのみ取得
         const result = await window.electronAPI.drawing.getByStudent(
           currentStudentId,
-          currentCropRegion.projectPage.projectId
+          currentCropRegion.projectPage.projectId,
+          undefined, // type
+          currentUserId
         )
 
         if (result.success && result.data) {
@@ -78,6 +86,7 @@ export function useAllStudentAnnotations({
     currentStudentId,
     currentCropRegion?.projectPage?.projectId,
     currentCropRegion?.id,
+    currentUserId,
   ])
 
   return { allStudentAnnotations }

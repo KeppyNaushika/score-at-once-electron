@@ -72,14 +72,17 @@ export function detectArchiveVersion(
 
 /**
  * v0.2.z (1.0.0) のUserProject形式
+ *
+ * v0.2.20時点では role は存在する（デフォルト "OWNER"）
+ * v0.2.z では invitedAt, invitedBy がない
  */
 interface V1_0_0_UserProject {
   id: string
   userId: string
   projectId: string
+  role?: string // v0.2.20では存在する
   createdAt: string
   updatedAt: string
-  // v0.2.z では role, invitedAt, invitedBy がない
 }
 
 /**
@@ -131,32 +134,40 @@ export class V1_0_0_Transformer implements VersionTransformer {
   supportedVersion: ArchiveVersion = "1.0.0"
 
   transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
-    // UserProjectにデフォルトのrole, invitedAt, invitedByを追加
-    const transformedUserProjects = data.userProjects.map((up) => {
+    // UserProjectにinvitedAt, invitedByを追加
+    // v0.2.20では role は既に存在するので、あれば保持、なければデフォルト値を設定
+    const transformedUserProjects = data.userProjects.map((up, index) => {
       const v1Up = up as unknown as V1_0_0_UserProject
+
+      // roleが存在する場合は保持、なければデフォルト値を設定
+      // 最初のユーザーはOWNER、それ以外はGRADER
+      const role = v1Up.role ?? (index === 0 ? "OWNER" : "GRADER")
+
       const v11Up: V1_1_0_UserProject = {
         ...v1Up,
-        // v0.2.zの最初のユーザーをOWNERとして扱う
-        role: "OWNER",
+        role,
         invitedAt: v1Up.createdAt,
         invitedBy: null,
       }
       return v11Up as unknown as ArchiveProjectData["userProjects"][0]
     })
 
-    // 最初以外のユーザーはGRADERとして設定
+    // invitedByを設定（最初のユーザー以外）
     if (transformedUserProjects.length > 1) {
       const ownerUserId = transformedUserProjects[0]?.userId
       for (let i = 1; i < transformedUserProjects.length; i++) {
         const up = transformedUserProjects[i] as unknown as V1_1_0_UserProject
-        up.role = "GRADER"
         up.invitedBy = ownerUserId || null
       }
     }
 
+    // v0.2.zにはprojectClassesがないので空の配列を追加
+    const projectClasses = data.projectClasses ?? []
+
     return {
       ...data,
       userProjects: transformedUserProjects,
+      projectClasses,
     }
   }
 

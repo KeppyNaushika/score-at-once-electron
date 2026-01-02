@@ -43,9 +43,9 @@ export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー
   ipcMain.handle(
     "get-question-scores-for-project",
-    async (_event, projectId: string) => {
+    async (_event, projectId: string, userId?: string) => {
       try {
-        const result = await getQuestionScoresForProject(projectId)
+        const result = await getQuestionScoresForProject(projectId, userId)
 
         if (!result.success) {
           return result
@@ -62,9 +62,9 @@ export function setupScoringHandlers(): void {
 
   ipcMain.handle(
     "get-question-scores-for-student",
-    async (_event, studentId: string) => {
+    async (_event, studentId: string, userId?: string) => {
       try {
-        const result = await getQuestionScoresForStudent(studentId)
+        const result = await getQuestionScoresForStudent(studentId, userId)
 
         if (!result.success) {
           return result

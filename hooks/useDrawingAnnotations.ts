@@ -102,6 +102,7 @@ export function useDrawingAnnotations(
 
   /**
    * アノテーション読み込み
+   * contextのcurrentUserIdを使って、ログインユーザーのアノテーションのみ取得
    */
   const loadAnnotations = useCallback(
     async (questionScoreId: string, type?: DrawingType): Promise<void> => {
@@ -111,10 +112,12 @@ export function useDrawingAnnotations(
       try {
         console.log(`📖 手動アノテーション読み込み: ${questionScoreId}`, {
           type,
+          userId: context?.currentUserId,
         })
         const result = await window.electronAPI.drawing.getByQuestionScore(
           questionScoreId,
-          type
+          type,
+          context?.currentUserId
         )
 
         if (result.success && result.data) {
@@ -137,7 +140,7 @@ export function useDrawingAnnotations(
         setIsLoading(false)
       }
     },
-    []
+    [context?.currentUserId]
   )
 
   /**
