@@ -1614,6 +1614,10 @@ export interface MyAPI {
         filePath: string
         pageNumber: number
         rotation?: 0 | 90 | 180 | 270
+        // 2-in-1用
+        isNUpCombined?: boolean
+        combinedPages?: number[]
+        nUpLayout?: "2x1" | "1x2"
       }>
       outputPath: string
     }) => Promise<{ success: boolean; outputPath?: string; error?: string }>
