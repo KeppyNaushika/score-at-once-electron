@@ -1,6 +1,5 @@
 import {
   getDynamicScoreStatusConfig,
-  type DynamicScoreStatusConfig,
   type ScoreStatusKey,
 } from "@/components/projects/07-score-at-once/ScoringGrid/constants/scoreStatusConfig"
 import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"

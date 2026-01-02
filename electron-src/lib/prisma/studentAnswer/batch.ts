@@ -8,6 +8,10 @@ import prisma from "../client"
 
 /**
  * 複数の答案の配置を一括で変更（採点情報の移行も対応）
+ *
+ * @param moves - 移動情報の配列（ファイルID、移動先生徒ID、ページ番号）
+ * @param withScoring - 採点情報も一緒に移行するかどうか
+ * @returns 成功/失敗結果
  */
 export async function batchUpdateStudentAnswerPlacements(
   moves: Array<{
@@ -126,6 +130,10 @@ export async function batchUpdateStudentAnswerPlacements(
 
 /**
  * 2つの答案の配置を交換（採点情報も一緒に入れ替え）
+ *
+ * @param answerSheetId1 - 交換する1つ目の答案ID
+ * @param answerSheetId2 - 交換する2つ目の答案ID
+ * @returns 成功時は更新後の答案情報、失敗時はエラー情報
  */
 export async function swapStudentAnswerPlacementsWithScoring(
   answerSheetId1: string,
@@ -166,9 +174,8 @@ export async function swapStudentAnswerPlacementsWithScoring(
         throw new Error("答案が見つかりません")
       }
 
-      // 両方の答案に関連する採点データを取得
       // TODO: QuestionScore queries need to be updated for new schema
-      const [questionScores1, questionScores2] = [[], []] // await Promise.all([
+      // await Promise.all([
       //   tx.questionScore.findMany({
       //     where: { studentId: answerSheet1.studentId },
       //   }),

@@ -7,11 +7,11 @@ import type {
   InterleaveConfig,
   OutputPage,
 } from "@/types/pdfTools.types"
+import { useEffect } from "react"
+import ExportActions from "./ExportActions"
 import ExportModeSelector from "./ExportModeSelector"
 import InterleaveSettings from "./InterleaveSettings"
 import OutputPreview from "./OutputPreview"
-import ExportActions from "./ExportActions"
-import { useEffect } from "react"
 
 interface ExportPanelProps {
   importedFiles: ImportedFile[]
@@ -25,6 +25,11 @@ interface ExportPanelProps {
   onProcessingChange: (processing: boolean) => void
 }
 
+/**
+ * PDFエクスポートパネルコンポーネント
+ *
+ * エクスポートモード選択、交互挿入設定、出力プレビュー、エクスポート実行を管理する
+ */
 export default function ExportPanel({
   importedFiles,
   outputPages,
@@ -44,7 +49,7 @@ export default function ExportPanel({
       interleaveConfig
     )
     onOutputPagesChange(pages)
-  }, [importedFiles, exportMode, interleaveConfig])
+  }, [importedFiles, exportMode, interleaveConfig, onOutputPagesChange])
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -95,6 +100,14 @@ export default function ExportPanel({
   )
 }
 
+/**
+ * インポートされたファイルから出力ページリストを生成
+ *
+ * @param files - インポートされたファイル一覧
+ * @param mode - エクスポートモード（merge, split, interleave）
+ * @param interleaveConfig - 交互挿入設定
+ * @returns 生成された出力ページ配列
+ */
 function generateOutputPages(
   files: ImportedFile[],
   mode: ExportMode,

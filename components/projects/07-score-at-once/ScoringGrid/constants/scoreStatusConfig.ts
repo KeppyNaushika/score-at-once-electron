@@ -1,3 +1,4 @@
+import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 import {
   AlertTriangle,
   CheckCircle,
@@ -6,7 +7,6 @@ import {
   Minus,
   X,
 } from "lucide-react"
-import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 
 // アイコンとキーバインドの定義（静的）
 export const SCORE_STATUS_ICONS = {
@@ -19,20 +19,11 @@ export const SCORE_STATUS_ICONS = {
   master: { icon: CheckCircle, key: "" },
 } as const
 
-// ステータス名のマッピング（SCORE_STATUS_CONFIG のキー → ScoringStatusColors のキー）
-const STATUS_KEY_MAP: Record<string, keyof ScoringStatusColors> = {
-  unscored: "ungraded",
-  correct: "correct",
-  partial: "partial",
-  pending: "pending",
-  incorrect: "incorrect",
-  no_answer: "no_answer",
-  master: "ungraded", // masterは特殊扱い
-}
-
 /**
  * 動的な採点状態色設定を生成
+ *
  * @param colors - 採点状態色（useScoringStatusColorsから取得）
+ * @returns 採点状態ごとのスタイル設定オブジェクト
  */
 export function getDynamicScoreStatusConfig(colors: ScoringStatusColors) {
   return {

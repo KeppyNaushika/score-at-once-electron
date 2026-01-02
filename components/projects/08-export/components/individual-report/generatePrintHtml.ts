@@ -5,12 +5,10 @@
  */
 import type {
   AdviceOptions,
-  GraphOptions,
   IndividualReportData,
   IndividualReportOptions,
-  SubtotalGroupSelection,
-  SubtotalRawScores,
   StatisticsData,
+  SubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/types"
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 
@@ -1022,7 +1020,7 @@ function generateQuestionTable(
   const columnWidth = `${100 / columns}%`
 
   const columnsHtml = columnData
-    .map((colData, colIndex) => {
+    .map((colData) => {
       const rowsHtml = colData
         .map((item, index) => {
           const isAlt = index % 2 === 1

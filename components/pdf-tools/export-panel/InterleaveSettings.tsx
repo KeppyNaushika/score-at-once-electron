@@ -1,6 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -18,7 +17,7 @@ import type {
   RotationDegree,
 } from "@/types/pdfTools.types"
 import { RotateCw, Settings2 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 interface InterleaveSettingsProps {
   files: ImportedFile[]
@@ -27,16 +26,29 @@ interface InterleaveSettingsProps {
   disabled: boolean
 }
 
+/**
+ * 交互挿入設定コンポーネント
+ *
+ * 複数ファイルの交互挿入設定（N-up、回転など）を管理する
+ */
 export default function InterleaveSettings({
   files,
   config,
   onConfigChange,
   disabled,
 }: InterleaveSettingsProps) {
+  // useRefで最新の値を保持（依存配列に入れずに最新値を参照するため）
+  const configRef = useRef(config)
+  configRef.current = config
+
+  const onConfigChangeRef = useRef(onConfigChange)
+  onConfigChangeRef.current = onConfigChange
+
   // ファイルが変更されたらtransformsを同期
   useEffect(() => {
+    const currentConfig = configRef.current
     const currentFileIds = new Set(files.map((f) => f.id))
-    const existingTransforms = config.transforms.filter((t) =>
+    const existingTransforms = currentConfig.transforms.filter((t) =>
       currentFileIds.has(t.fileId)
     )
 
@@ -51,11 +63,11 @@ export default function InterleaveSettings({
       }))
 
     if (
-      existingTransforms.length !== config.transforms.length ||
+      existingTransforms.length !== currentConfig.transforms.length ||
       newTransforms.length > 0
     ) {
-      onConfigChange({
-        ...config,
+      onConfigChangeRef.current({
+        ...currentConfig,
         transforms: [...existingTransforms, ...newTransforms],
       })
     }
