@@ -1,6 +1,4 @@
-import type {
-  ScoringStatus,
-} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import type { ScoringStatus } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 // マーク画像パスを取得
 export function getMarkImagePath(

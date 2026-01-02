@@ -129,9 +129,6 @@ async function setSubtotalCells(
     if (subtotalScore) {
       if (isScoreSheet) {
         // 点数一覧：計算済みの小計点を直接使用
-        console.log(
-          `📝 [Excel Export] Setting subtotal score: ${subtotalScore.score} for subtotal ${subtotalScore.subtotalId}`
-        )
         if (subtotalScore.score !== null && subtotalScore.score !== undefined) {
           // 採点済みデータがあれば0点でも表示
           row.getCell(col).value = subtotalScore.score

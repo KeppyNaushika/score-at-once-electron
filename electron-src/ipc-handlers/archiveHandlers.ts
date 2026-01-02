@@ -208,6 +208,4 @@ export function registerArchiveHandlers(): void {
       }
     }
   )
-
-  console.log("Archive handlers registered")
 }

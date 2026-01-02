@@ -22,7 +22,8 @@ export function useSelectionBorder(): string {
     const loadColor = async () => {
       if (userId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          const result =
+            await window.electronAPI.settings.getUserScoringPreference(userId)
           if (result.success && result.preference?.selectionBorderColor) {
             setColor(result.preference.selectionBorderColor)
           }
@@ -40,7 +41,8 @@ export function useSelectionBorder(): string {
     const handleColorChange = async () => {
       if (userId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          const result =
+            await window.electronAPI.settings.getUserScoringPreference(userId)
           if (result.success && result.preference?.selectionBorderColor) {
             setColor(result.preference.selectionBorderColor)
           }
@@ -52,7 +54,10 @@ export function useSelectionBorder(): string {
 
     window.addEventListener("selectionBorderColorChanged", handleColorChange)
     return () => {
-      window.removeEventListener("selectionBorderColorChanged", handleColorChange)
+      window.removeEventListener(
+        "selectionBorderColorChanged",
+        handleColorChange
+      )
     }
   }, [userId])
 

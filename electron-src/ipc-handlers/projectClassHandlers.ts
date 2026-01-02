@@ -170,6 +170,4 @@ export function setupProjectClassHandlers(): void {
       }
     }
   )
-
-  console.log("✅ ProjectClass IPC handlers setup completed")
 }

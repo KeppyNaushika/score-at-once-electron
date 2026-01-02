@@ -833,8 +833,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
       }>
       outputDir: string
     }) => ipcRenderer.invoke("pdf-tools:export-as-png", options),
-    selectSavePath: (options: { type: "pdf" | "directory"; defaultName?: string }) =>
-      ipcRenderer.invoke("pdf-tools:select-save-path", options),
+    selectSavePath: (options: {
+      type: "pdf" | "directory"
+      defaultName?: string
+    }) => ipcRenderer.invoke("pdf-tools:select-save-path", options),
     selectFiles: () =>
       ipcRenderer.invoke("pdf-tools:select-files") as Promise<{
         success: boolean

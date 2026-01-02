@@ -1,7 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -80,8 +84,8 @@ export function ColorPicker({
         <Button
           variant="outline"
           className={cn(
-            "h-9 w-9 p-0 border-2",
-            disabled && "opacity-50 cursor-not-allowed",
+            "h-9 w-9 border-2 p-0",
+            disabled && "cursor-not-allowed opacity-50",
             className
           )}
           style={{ backgroundColor: value }}
@@ -115,7 +119,7 @@ export function ColorPicker({
           {/* プリセット色 */}
           {presets.length > 0 && (
             <div>
-              <p className="mb-2 text-xs text-muted-foreground">プリセット</p>
+              <p className="text-muted-foreground mb-2 text-xs">プリセット</p>
               <div className="flex flex-wrap gap-1">
                 {presets.map((color) => (
                   <button
@@ -178,9 +182,9 @@ export function InlineColorPicker({
           className={cn(
             "h-8 w-8 rounded-lg border-2 transition-all",
             value === color
-              ? "border-gray-800 shadow-md scale-110"
-              : "border-gray-200 hover:border-gray-300 hover:scale-105",
-            disabled && "opacity-50 cursor-not-allowed"
+              ? "scale-110 border-gray-800 shadow-md"
+              : "border-gray-200 hover:scale-105 hover:border-gray-300",
+            disabled && "cursor-not-allowed opacity-50"
           )}
           style={{ backgroundColor: color }}
           aria-label={`色 ${color}`}
@@ -192,9 +196,7 @@ export function InlineColorPicker({
         value={isPresetColor ? "#808080" : value}
         onChange={onChange}
         disabled={disabled}
-        className={cn(
-          !isPresetColor && "ring-2 ring-gray-400"
-        )}
+        className={cn(!isPresetColor && "ring-2 ring-gray-400")}
       />
     </div>
   )

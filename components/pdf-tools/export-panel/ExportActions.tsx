@@ -106,7 +106,10 @@ export default function ExportActions({
       const imageBuffers = await Promise.all(
         outputPages.map(async (page, index) => {
           // data:image/png;base64,... 形式からBufferを作成
-          const base64Data = page.thumbnail.replace(/^data:image\/\w+;base64,/, "")
+          const base64Data = page.thumbnail.replace(
+            /^data:image\/\w+;base64,/,
+            ""
+          )
           const buffer = Buffer.from(base64Data, "base64")
           const paddedIndex = String(index + 1).padStart(3, "0")
           return {

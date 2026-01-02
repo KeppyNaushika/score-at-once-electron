@@ -51,22 +51,16 @@ export async function mergePdfs(
     const pdfCache: Map<string, PDFDocument> = new Map()
 
     for (const page of pages) {
-      console.log("Processing page:", {
-        filePath: page.filePath,
-        pageNumber: page.pageNumber,
-        isNUpCombined: page.isNUpCombined,
-        combinedPages: page.combinedPages,
-      })
-
       // パスを解決
       const resolvedPath = resolveFilePath(page.filePath)
-      console.log("Resolved path:", resolvedPath)
 
       // PDFをキャッシュから取得または読み込み
       let sourcePdf = pdfCache.get(resolvedPath)
       if (!sourcePdf) {
         if (!fs.existsSync(resolvedPath)) {
-          console.warn(`File not found: ${resolvedPath} (original: ${page.filePath})`)
+          console.warn(
+            `File not found: ${resolvedPath} (original: ${page.filePath})`
+          )
           continue
         }
         const fileBuffer = fs.readFileSync(resolvedPath)
@@ -75,13 +69,25 @@ export async function mergePdfs(
       }
 
       // 2-in-1モードの処理
-      if (page.isNUpCombined && page.combinedPages && page.combinedPages.length > 0) {
-        await addNUpPage(mergedPdf, sourcePdf, page.combinedPages, page.nUpLayout || "2x1", page.rotation)
+      if (
+        page.isNUpCombined &&
+        page.combinedPages &&
+        page.combinedPages.length > 0
+      ) {
+        await addNUpPage(
+          mergedPdf,
+          sourcePdf,
+          page.combinedPages,
+          page.nUpLayout || "2x1",
+          page.rotation
+        )
       } else {
         // 通常モード: 単一ページをコピー
         const pageIndex = page.pageNumber - 1
         if (pageIndex < 0 || pageIndex >= sourcePdf.getPageCount()) {
-          console.warn(`Invalid page number ${page.pageNumber} for ${resolvedPath}`)
+          console.warn(
+            `Invalid page number ${page.pageNumber} for ${resolvedPath}`
+          )
           continue
         }
 
@@ -125,7 +131,11 @@ async function addNUpPage(
   const newPage = targetPdf.addPage([A4_WIDTH, A4_HEIGHT])
 
   // 各ページを埋め込み
-  const embeddedPages: { page: Awaited<ReturnType<typeof targetPdf.embedPages>>[0]; width: number; height: number }[] = []
+  const embeddedPages: {
+    page: Awaited<ReturnType<typeof targetPdf.embedPages>>[0]
+    width: number
+    height: number
+  }[] = []
 
   for (const pageNum of pageNumbers) {
     const pageIndex = pageNum - 1

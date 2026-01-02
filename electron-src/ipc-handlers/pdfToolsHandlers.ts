@@ -8,7 +8,10 @@ import { PDFDocument } from "pdf-lib"
 import { mergePdfs, type MergePageInput } from "../lib/pdf-tools/pdfMerger"
 import { splitPdf } from "../lib/pdf-tools/pdfSplitter"
 import { applyNUp } from "../lib/pdf-tools/pdfNUp"
-import { rotatePdfPages, type RotatePageInput } from "../lib/pdf-tools/pdfRotator"
+import {
+  rotatePdfPages,
+  type RotatePageInput,
+} from "../lib/pdf-tools/pdfRotator"
 import { exportPagesToPng } from "../lib/pdf-tools/pdfToPng"
 import type {
   MergePdfsOptions,
@@ -30,11 +33,6 @@ export function setupPdfToolsHandlers(): void {
         outputPath: string
       }
     ): Promise<PdfToolsResult> => {
-      console.log("pdf-tools:merge-pdfs received:", {
-        pagesCount: options.pages?.length,
-        firstPage: options.pages?.[0],
-        outputPath: options.outputPath,
-      })
       return await mergePdfs(options.pages, options.outputPath)
     }
   )
@@ -57,10 +55,7 @@ export function setupPdfToolsHandlers(): void {
   // 2-in-1変換
   ipcMain.handle(
     "pdf-tools:apply-nup",
-    async (
-      _event,
-      options: NUpOptions
-    ): Promise<PdfToolsResult> => {
+    async (_event, options: NUpOptions): Promise<PdfToolsResult> => {
       return await applyNUp(
         options.filePath,
         options.layout,
@@ -95,7 +90,11 @@ export function setupPdfToolsHandlers(): void {
     async (
       _event,
       options: {
-        imageBuffers: { buffer: Buffer; name: string; rotation?: RotationDegree }[]
+        imageBuffers: {
+          buffer: Buffer
+          name: string
+          rotation?: RotationDegree
+        }[]
         outputDir: string
       }
     ): Promise<PdfToolsResult> => {
@@ -106,7 +105,11 @@ export function setupPdfToolsHandlers(): void {
   // ファイル選択ダイアログ（インポート用）
   ipcMain.handle(
     "pdf-tools:select-files",
-    async (): Promise<{ success: boolean; filePaths?: string[]; canceled?: boolean }> => {
+    async (): Promise<{
+      success: boolean
+      filePaths?: string[]
+      canceled?: boolean
+    }> => {
       try {
         const mainWindow = BrowserWindow.getFocusedWindow()
         const result = await dialog.showOpenDialog(mainWindow!, {

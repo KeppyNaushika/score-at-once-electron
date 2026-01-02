@@ -42,13 +42,15 @@ export function useScoringSettings() {
     const loadSettings = async () => {
       if (userId && window.electronAPI?.settings) {
         try {
-          const result = await window.electronAPI.settings.getUserScoringPreference(userId)
+          const result =
+            await window.electronAPI.settings.getUserScoringPreference(userId)
           if (result.success && result.preference) {
             setSettings({
               itemsPerLine: [result.preference.itemsPerLine],
               autoScroll: result.preference.autoScroll,
               showStudentNames: result.preference.showStudentNames,
-              layoutDirection: result.preference.layoutDirection as LayoutDirection,
+              layoutDirection: result.preference
+                .layoutDirection as LayoutDirection,
             })
           }
         } catch (error) {

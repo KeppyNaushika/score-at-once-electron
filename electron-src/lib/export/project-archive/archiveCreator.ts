@@ -120,7 +120,6 @@ export async function createArchive(
       })
 
       output.on("close", () => {
-        console.log(`Archive created: ${archive.pointer()} total bytes`)
         resolve({ success: true, outputPath })
       })
 
@@ -183,7 +182,6 @@ export async function createArchive(
           // master-images/ディレクトリ配下に配置
           const archivePath = `master-images/${path.basename(relativePath)}`
           archive.file(absolutePath, { name: archivePath })
-          console.log(`Added master image: ${absolutePath} -> ${archivePath}`)
         } else {
           console.warn(`Master image not found: ${absolutePath}`)
         }
@@ -196,7 +194,6 @@ export async function createArchive(
           // answer-sheets/ディレクトリ配下に配置
           const archivePath = `answer-sheets/${path.basename(relativePath)}`
           archive.file(absolutePath, { name: archivePath })
-          console.log(`Added answer sheet: ${absolutePath} -> ${archivePath}`)
         } else {
           console.warn(`Answer sheet not found: ${absolutePath}`)
         }

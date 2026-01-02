@@ -108,7 +108,7 @@ export default function InterleaveSettings({
             return (
               <div
                 key={transform.fileId}
-                className="rounded-lg border bg-card p-3"
+                className="bg-card rounded-lg border p-3"
               >
                 <div className="mb-2 flex items-center gap-2">
                   <Settings2 className="text-muted-foreground h-4 w-4" />
@@ -118,7 +118,9 @@ export default function InterleaveSettings({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Select
-                    value={transform.nUp.enabled ? transform.nUp.layout : "1in1"}
+                    value={
+                      transform.nUp.enabled ? transform.nUp.layout : "1in1"
+                    }
                     onValueChange={(value) => {
                       const enabled = value !== "1in1"
                       const layout =

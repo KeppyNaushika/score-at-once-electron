@@ -22,57 +22,35 @@ export async function createDrawingAnnotation(
   data: DrawingCreateData
 ): Promise<DrawingAnnotation> {
   try {
-    // 🔍 デバッグ情報：入力データの検証
-    console.log("🔍 DrawingAnnotation作成データ検証:")
-    console.log(
-      "  questionScoreId:",
-      data.questionScoreId,
-      typeof data.questionScoreId
-    )
-    console.log(
-      "  createdByUserId:",
-      data.createdByUserId,
-      typeof data.createdByUserId
-    )
-    console.log("  type:", data.type, typeof data.type)
-
-    // 🔍 外部キー制約の事前検証と自動作成
+    // 外部キー制約の事前検証と自動作成
     if (data.questionScoreId) {
       const questionScoreExists = await prisma.questionScore.findUnique({
         where: { id: data.questionScoreId },
         select: { id: true },
       })
-      console.log(
-        "  QuestionScore存在確認:",
-        questionScoreExists ? "存在する" : "存在しない"
-      )
 
       if (!questionScoreExists) {
         // QuestionScoreが存在しない場合、自動作成を試行
         if (data.studentId && data.cropRegionId && data.scoredByUserId) {
-          console.log("  📝 未採点QuestionScoreを自動作成中...")
-
           try {
             const result = await createQuestionScore({
               studentId: data.studentId,
               cropRegionId: data.cropRegionId,
               scoredByUserId: data.scoredByUserId,
-              partialScore: undefined, // undefined を使用（未採点時は部分点なし）
+              partialScore: undefined,
               status: "unscored",
-              comment: undefined, // 未採点時はコメントなし
+              comment: undefined,
             })
 
             if (result.success && result.score) {
-              // 作成されたQuestionScoreのIDを使用
               data.questionScoreId = result.score.id
-              console.log(`  ✅ QuestionScore自動作成成功: ${result.score.id}`)
             } else {
               throw new Error(
                 `QuestionScore creation failed: ${"error" in result ? result.error : "Unknown error"}`
               )
             }
           } catch (createError) {
-            console.error("  🚫 QuestionScore自動作成失敗:", createError)
+            console.error("QuestionScore自動作成失敗:", createError)
             throw new Error(
               `QuestionScore not found and auto-creation failed: ${data.questionScoreId}. Original error: ${createError instanceof Error ? createError.message : String(createError)}`
             )
@@ -92,7 +70,6 @@ export async function createDrawingAnnotation(
         where: { id: data.createdByUserId },
         select: { id: true },
       })
-      console.log("  User存在確認:", userExists ? "存在する" : "存在しない")
 
       if (!userExists) {
         throw new Error(`User not found: ${data.createdByUserId}`)
@@ -133,17 +110,9 @@ export async function createDrawingAnnotation(
       },
     })
 
-    console.log(`✅ 描画アノテーション作成成功: ${result.type} (${result.id})`)
     return result as DrawingAnnotation
   } catch (error) {
-    console.error("🚫 描画アノテーション作成エラー:", error)
-
-    // 🔍 より詳細なエラー情報を出力
-    if (error instanceof Error) {
-      console.error("  エラーメッセージ:", error.message)
-      console.error("  スタックトレース:", error.stack)
-    }
-
+    console.error("描画アノテーション作成エラー:", error)
     throw error
   }
 }
@@ -179,7 +148,7 @@ export async function getDrawingAnnotationsByQuestionScore(
 
     return result as DrawingAnnotation[]
   } catch (error) {
-    console.error("🚫 描画アノテーション取得エラー:", error)
+    console.error("描画アノテーション取得エラー:", error)
     throw error
   }
 }
@@ -235,7 +204,7 @@ export async function getDrawingAnnotationsByStudent(
 
     return result as DrawingAnnotation[]
   } catch (error) {
-    console.error("🚫 学生別描画アノテーション取得エラー:", error)
+    console.error("学生別描画アノテーション取得エラー:", error)
     throw error
   }
 }
@@ -301,7 +270,7 @@ export async function getDrawingAnnotationsByProject(
 
     return result as DrawingAnnotation[]
   } catch (error) {
-    console.error("🚫 プロジェクト別描画アノテーション取得エラー:", error)
+    console.error("プロジェクト別描画アノテーション取得エラー:", error)
     throw error
   }
 }
@@ -325,10 +294,9 @@ export async function updateDrawingAnnotation(
       },
     })
 
-    console.log(`✅ 描画アノテーション更新成功: ${result.type} (${id})`)
     return result as DrawingAnnotation
   } catch (error) {
-    console.error("🚫 描画アノテーション更新エラー:", error)
+    console.error("描画アノテーション更新エラー:", error)
     throw error
   }
 }
@@ -343,10 +311,8 @@ export async function deleteDrawingAnnotation(id: string): Promise<void> {
     await prisma.drawingAnnotation.delete({
       where: { id },
     })
-
-    console.log(`✅ 描画アノテーション削除成功: (${id})`)
   } catch (error) {
-    console.error("🚫 描画アノテーション削除エラー:", error)
+    console.error("描画アノテーション削除エラー:", error)
     throw error
   }
 }
@@ -362,16 +328,14 @@ export async function deleteDrawingAnnotationsByQuestionScore(
   type?: DrawingType
 ): Promise<void> {
   try {
-    const result = await prisma.drawingAnnotation.deleteMany({
+    await prisma.drawingAnnotation.deleteMany({
       where: {
         questionScoreId,
         ...(type && { type }),
       },
     })
-
-    console.log(`✅ 描画アノテーション一括削除成功: ${result.count}件削除`)
   } catch (error) {
-    console.error("🚫 描画アノテーション一括削除エラー:", error)
+    console.error("描画アノテーション一括削除エラー:", error)
     throw error
   }
 }
@@ -392,10 +356,9 @@ export async function batchCreateDrawingAnnotations(
       })
     )
 
-    console.log(`✅ 描画アノテーション一括作成成功: ${results.length}件作成`)
     return results as DrawingAnnotation[]
   } catch (error) {
-    console.error("🚫 描画アノテーション一括作成エラー:", error)
+    console.error("描画アノテーション一括作成エラー:", error)
     throw error
   }
 }
@@ -422,10 +385,9 @@ export async function batchUpdateDrawingAnnotations(
       })
     )
 
-    console.log(`✅ 描画アノテーション一括更新成功: ${results.length}件更新`)
     return results as DrawingAnnotation[]
   } catch (error) {
-    console.error("🚫 描画アノテーション一括更新エラー:", error)
+    console.error("描画アノテーション一括更新エラー:", error)
     throw error
   }
 }
@@ -461,7 +423,7 @@ export async function getDrawingAnnotationStats(
 
     return stats
   } catch (error) {
-    console.error("🚫 描画アノテーション統計取得エラー:", error)
+    console.error("描画アノテーション統計取得エラー:", error)
     throw error
   }
 }
@@ -490,7 +452,7 @@ export async function getDrawingAnnotationById(
 
     return result as DrawingAnnotation | null
   } catch (error) {
-    console.error("🚫 描画アノテーション単体取得エラー:", error)
+    console.error("描画アノテーション単体取得エラー:", error)
     throw error
   }
 }

@@ -41,7 +41,7 @@ export class DatabaseSetup {
       const classCount = await this.prisma.class.count()
       return userCount === 0 && classCount === 0
     } catch (error) {
-      console.log("❌ Database content check failed:", error)
+      console.error("❌ Database content check failed:", error)
       return true // エラーの場合は空とみなす
     }
   }
@@ -68,8 +68,6 @@ export class DatabaseSetup {
    */
   async runSeed(): Promise<void> {
     try {
-      console.log("🌱 Starting integrated seed...")
-
       // デフォルトユーザーの作成
       await this.prisma.user.upsert({
         where: { username: "admin" },
@@ -190,8 +188,6 @@ export class DatabaseSetup {
           })
         }
       }
-
-      console.log("🎉 Integrated seed completed successfully!")
     } catch (error) {
       console.error("❌ Error during seed:", error)
       throw error
@@ -243,7 +239,6 @@ export class DatabaseSetup {
   async testConnection(): Promise<boolean> {
     try {
       await this.prisma.$connect()
-      console.log("✅ Database connection test successful")
       return true
     } catch (error) {
       console.error("❌ Database connection test failed:", error)

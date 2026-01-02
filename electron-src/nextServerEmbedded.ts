@@ -42,9 +42,6 @@ const ensurePackagedNodePath = (basePath: string) => {
 
     process.env.NODE_PATH = updated.join(delimiter)
     Module._initPaths()
-    console.log(
-      `Adjusted NODE_PATH for packaged runtime: ${updated.join(", ")}`
-    )
   } catch (error) {
     console.warn("Failed to extend NODE_PATH for packaged runtime:", error)
   }
@@ -69,18 +66,11 @@ export async function startEmbeddedNextServer(): Promise<void> {
       // .next から next 本体を解決できるよう NODE_PATH を追加
       ensurePackagedNodePath(appDir)
 
-      console.log(`Using Resources directory as app directory: ${appDir}`)
-
       // .nextとpublicディレクトリの存在確認
       try {
         const fs = require("fs")
         const nextDir = join(appDir, ".next")
         const publicDir = join(appDir, "public")
-
-        console.log(`Checking if ${nextDir} exists: ${fs.existsSync(nextDir)}`)
-        console.log(
-          `Checking if ${publicDir} exists: ${fs.existsSync(publicDir)}`
-        )
 
         if (!fs.existsSync(nextDir)) {
           console.warn(`⚠ Warning: .next directory not found at ${nextDir}`)
@@ -91,13 +81,8 @@ export async function startEmbeddedNextServer(): Promise<void> {
 
         // PDF workerファイルの存在確認
         const pdfWorkerPath = join(publicDir, "js", "pdf.worker.min.mjs")
-        console.log(
-          `Checking if PDF worker exists: ${fs.existsSync(pdfWorkerPath)}`
-        )
         if (!fs.existsSync(pdfWorkerPath)) {
           console.error(`❌ PDF worker file not found at ${pdfWorkerPath}`)
-        } else {
-          console.log(`✓ PDF worker file found at ${pdfWorkerPath}`)
         }
       } catch (error) {
         console.error(`❌ Error checking directories:`, error)
@@ -105,7 +90,6 @@ export async function startEmbeddedNextServer(): Promise<void> {
     } else {
       // 開発環境の場合
       appDir = process.cwd()
-      console.log(`Development Next.js app directory: ${appDir}`)
     }
 
     const next = require("next")
@@ -134,9 +118,6 @@ export async function startEmbeddedNextServer(): Promise<void> {
 
     return new Promise<void>((resolve, reject) => {
       httpServer!.listen(port, hostname, () => {
-        console.log(
-          `✓ Next.js server started successfully on http://${hostname}:${port}`
-        )
         console.log("Next.js server is now ready to accept connections")
         resolve()
       })

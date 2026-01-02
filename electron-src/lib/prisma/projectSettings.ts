@@ -22,7 +22,10 @@ export async function getProjectMarkingFormats(projectId: string) {
   })
 }
 
-export async function getProjectMarkingFormat(projectId: string, markType: string) {
+export async function getProjectMarkingFormat(
+  projectId: string,
+  markType: string
+) {
   return prisma.projectMarkingFormat.findUnique({
     where: {
       projectId_markType: { projectId, markType },
@@ -75,7 +78,10 @@ export async function bulkUpsertProjectMarkingFormats(
   return prisma.$transaction(operations)
 }
 
-export async function deleteProjectMarkingFormat(projectId: string, markType: string) {
+export async function deleteProjectMarkingFormat(
+  projectId: string,
+  markType: string
+) {
   return prisma.projectMarkingFormat.deleteMany({
     where: { projectId, markType },
   })

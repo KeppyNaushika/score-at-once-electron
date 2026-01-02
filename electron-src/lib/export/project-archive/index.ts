@@ -32,7 +32,6 @@ export async function exportProject(
     }
 
     // 2. データを収集
-    console.log("Collecting project data...")
     const collectResult = await collectProjectData(projectId)
     if (!collectResult.success || !collectResult.data) {
       return { success: false, error: collectResult.error }
@@ -55,7 +54,6 @@ export async function exportProject(
     }
 
     // 4. アーカイブを作成
-    console.log("Creating archive...")
     const archiveResult = await createArchive({
       collectedData: collectResult.data,
       projectName: project.examName,

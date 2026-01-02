@@ -16,8 +16,6 @@ import type {
  * 全ての描画ツール（テキスト・直線・長方形・楕円）に対応
  */
 export function setupDrawingHandlers() {
-  console.log("🎨 描画アノテーションIPCハンドラー設定開始")
-
   // 基本CRUD操作
 
   /**
@@ -25,9 +23,7 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle("drawing:create", async (_, data: DrawingCreateData) => {
     try {
-      console.log(`🎨 描画アノテーション作成要求: ${data.type}`)
       const result = await drawingService.createDrawingAnnotation(data)
-      console.log(`✅ 描画アノテーション作成成功: ${result.id}`)
       return { success: true, data: result }
     } catch (error) {
       console.error("🚫 描画アノテーション作成エラー:", error)
@@ -48,15 +44,11 @@ export function setupDrawingHandlers() {
     "drawing:getByQuestionScore",
     async (_, questionScoreId: string, type?: DrawingType) => {
       try {
-        console.log(
-          `🎨 描画アノテーション取得要求: QuestionScore=${questionScoreId}, Type=${type || "ALL"}`
-        )
         const result =
           await drawingService.getDrawingAnnotationsByQuestionScore(
             questionScoreId,
             type
           )
-        console.log(`✅ 描画アノテーション取得成功: ${result.length}件`)
         return { success: true, data: result }
       } catch (error) {
         console.error("🚫 描画アノテーション取得エラー:", error)
@@ -78,15 +70,11 @@ export function setupDrawingHandlers() {
     "drawing:getByStudent",
     async (_, studentId: string, projectId: string, type?: DrawingType) => {
       try {
-        console.log(
-          `🎨 学生別描画アノテーション取得要求: Student=${studentId}, Project=${projectId}, Type=${type || "ALL"}`
-        )
         const result = await drawingService.getDrawingAnnotationsByStudent(
           studentId,
           projectId,
           type
         )
-        console.log(`✅ 学生別描画アノテーション取得成功: ${result.length}件`)
         return { success: true, data: result }
       } catch (error) {
         console.error("🚫 学生別描画アノテーション取得エラー:", error)
@@ -108,15 +96,9 @@ export function setupDrawingHandlers() {
     "drawing:getByProject",
     async (_, projectId: string, type?: DrawingType) => {
       try {
-        console.log(
-          `🎨 プロジェクト別描画アノテーション取得要求: Project=${projectId}, Type=${type || "ALL"}`
-        )
         const result = await drawingService.getDrawingAnnotationsByProject(
           projectId,
           type
-        )
-        console.log(
-          `✅ プロジェクト別描画アノテーション取得成功: ${result.length}件`
         )
         return { success: true, data: result }
       } catch (error) {
@@ -139,9 +121,7 @@ export function setupDrawingHandlers() {
     "drawing:update",
     async (_, id: string, data: DrawingUpdateData) => {
       try {
-        console.log(`🎨 描画アノテーション更新要求: ${id}`)
         const result = await drawingService.updateDrawingAnnotation(id, data)
-        console.log(`✅ 描画アノテーション更新成功: ${result.id}`)
         return { success: true, data: result }
       } catch (error) {
         console.error("🚫 描画アノテーション更新エラー:", error)
@@ -161,9 +141,7 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle("drawing:delete", async (_, id: string) => {
     try {
-      console.log(`🎨 描画アノテーション削除要求: ${id}`)
       await drawingService.deleteDrawingAnnotation(id)
-      console.log(`✅ 描画アノテーション削除成功: ${id}`)
       return { success: true }
     } catch (error) {
       console.error("🚫 描画アノテーション削除エラー:", error)
@@ -184,14 +162,10 @@ export function setupDrawingHandlers() {
     "drawing:deleteByQuestionScore",
     async (_, questionScoreId: string, type?: DrawingType) => {
       try {
-        console.log(
-          `🎨 描画アノテーション一括削除要求: QuestionScore=${questionScoreId}, Type=${type || "ALL"}`
-        )
         await drawingService.deleteDrawingAnnotationsByQuestionScore(
           questionScoreId,
           type
         )
-        console.log(`✅ 描画アノテーション一括削除成功`)
         return { success: true }
       } catch (error) {
         console.error("🚫 描画アノテーション一括削除エラー:", error)
@@ -215,12 +189,8 @@ export function setupDrawingHandlers() {
     "drawing:batchCreate",
     async (_, annotations: DrawingCreateData[]) => {
       try {
-        console.log(
-          `🎨 描画アノテーション一括作成要求: ${annotations.length}件`
-        )
         const result =
           await drawingService.batchCreateDrawingAnnotations(annotations)
-        console.log(`✅ 描画アノテーション一括作成成功: ${result.length}件`)
         return { success: true, data: result }
       } catch (error) {
         console.error("🚫 描画アノテーション一括作成エラー:", error)
@@ -242,10 +212,8 @@ export function setupDrawingHandlers() {
     "drawing:batchUpdate",
     async (_, updates: Array<{ id: string; data: DrawingUpdateData }>) => {
       try {
-        console.log(`🎨 描画アノテーション一括更新要求: ${updates.length}件`)
         const result =
           await drawingService.batchUpdateDrawingAnnotations(updates)
-        console.log(`✅ 描画アノテーション一括更新成功: ${result.length}件`)
         return { success: true, data: result }
       } catch (error) {
         console.error("🚫 描画アノテーション一括更新エラー:", error)
@@ -267,12 +235,8 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle("drawing:getStats", async (_, questionScoreId: string) => {
     try {
-      console.log(
-        `🎨 描画アノテーション統計取得要求: QuestionScore=${questionScoreId}`
-      )
       const result =
         await drawingService.getDrawingAnnotationStats(questionScoreId)
-      console.log(`✅ 描画アノテーション統計取得成功: 合計${result.total}件`)
       return { success: true, data: result }
     } catch (error) {
       console.error("🚫 描画アノテーション統計取得エラー:", error)
@@ -291,13 +255,7 @@ export function setupDrawingHandlers() {
    */
   ipcMain.handle("drawing:getById", async (_, id: string) => {
     try {
-      console.log(`🎨 描画アノテーション単体取得要求: ${id}`)
       const result = await drawingService.getDrawingAnnotationById(id)
-      if (result) {
-        console.log(`✅ 描画アノテーション単体取得成功: ${result.type}`)
-      } else {
-        console.log(`⚠️  描画アノテーションが見つかりません: ${id}`)
-      }
       return { success: true, data: result }
     } catch (error) {
       console.error("🚫 描画アノテーション単体取得エラー:", error)
@@ -310,8 +268,6 @@ export function setupDrawingHandlers() {
       }
     }
   })
-
-  console.log("✅ 描画アノテーションIPCハンドラー設定完了")
 }
 
 /**
@@ -335,6 +291,4 @@ export function removeDrawingHandlers() {
   handlers.forEach((handler) => {
     ipcMain.removeAllListeners(handler)
   })
-
-  console.log("🗑️  描画アノテーションIPCハンドラー削除完了")
 }

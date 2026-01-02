@@ -79,8 +79,6 @@ export async function importAsNew(
   let tempDir: string | null = null
 
   try {
-    console.log("Starting import (new mode):", options.archivePath)
-
     // 1. アーカイブを展開
     const extractResult = await extractArchive(options.archivePath)
     if (!extractResult.success || !extractResult.data) {
@@ -100,7 +98,6 @@ export async function importAsNew(
     // 3. バージョン変換を適用（必要な場合）
     let processedData = extractResult.data
     if (requiresTransformation(extractResult.data.manifest)) {
-      console.log("Applying version transformation...")
       const transformedData = transformArchiveData(extractResult.data)
       processedData = transformedData
       // 変換時の警告を追加
@@ -120,8 +117,6 @@ export async function importAsNew(
     if (createResult.warnings) {
       warnings.push(...createResult.warnings)
     }
-
-    console.log("Import completed successfully:", createResult.projectId)
 
     return {
       success: true,
