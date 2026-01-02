@@ -802,6 +802,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
         filePath: string
         pageNumber: number
         rotation?: 0 | 90 | 180 | 270
+        // 2-in-1用
+        isNUpCombined?: boolean
+        combinedPages?: number[]
+        nUpLayout?: "2x1" | "1x2"
       }>
       outputPath: string
     }) => ipcRenderer.invoke("pdf-tools:merge-pdfs", options),
