@@ -48,6 +48,11 @@ jobs:
             artifact_name: score-at-once-linux-x64
 
     steps:
+      - name: Configure Git line endings
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       - name: Checkout code
         uses: actions/checkout@v4
 
