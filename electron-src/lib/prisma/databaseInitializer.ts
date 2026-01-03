@@ -259,10 +259,13 @@ CREATE TABLE "UserProject" (
     "userId" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "role" TEXT NOT NULL DEFAULT 'GRADER',
+    "invitedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "invitedBy" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "UserProject_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "UserProject_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "UserProject_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -320,6 +323,103 @@ CREATE TABLE "DrawingAnnotation" (
     CONSTRAINT "DrawingAnnotation_questionScoreId_fkey" FOREIGN KEY ("questionScoreId") REFERENCES "QuestionScore" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "DrawingAnnotation_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
+
+-- CreateTable
+CREATE TABLE "ProjectClass" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectId" TEXT NOT NULL,
+    "classId" TEXT NOT NULL,
+    "administered" BOOLEAN NOT NULL DEFAULT false,
+    "statistics" BOOLEAN NOT NULL DEFAULT false,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "ProjectClass_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "ProjectClass_classId_fkey" FOREIGN KEY ("classId") REFERENCES "classes" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "Subject" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "SubjectSubtotalGroup" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "subjectId" TEXT NOT NULL,
+    "subtotalGroupId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "SubjectSubtotalGroup_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "Subject" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "SubjectSubtotalGroup_subtotalGroupId_fkey" FOREIGN KEY ("subtotalGroupId") REFERENCES "SubtotalGroup" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "UserKeyboardShortcut" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "UserKeyboardShortcut_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "UserScoringPreference" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "userId" TEXT NOT NULL,
+    "showStudentNames" BOOLEAN NOT NULL DEFAULT true,
+    "autoScroll" BOOLEAN NOT NULL DEFAULT true,
+    "itemsPerLine" INTEGER NOT NULL DEFAULT 5,
+    "layoutDirection" TEXT NOT NULL DEFAULT 'right-down',
+    "selectionBorderColor" TEXT,
+    "scoringStatusColors" TEXT,
+    "scoringColorPresetId" TEXT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "UserScoringPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "ProjectMarkingFormat" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectId" TEXT NOT NULL,
+    "markType" TEXT NOT NULL,
+    "symbol" TEXT NOT NULL,
+    "color" TEXT NOT NULL,
+    "fontSize" INTEGER,
+    "strokeWidth" INTEGER,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "ProjectMarkingFormat_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "ProjectExportSettings" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectId" TEXT NOT NULL,
+    "settingsJson" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "ProjectExportSettings_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+-- CreateTable
+CREATE TABLE "CropRegionMarkingOverride" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "cropRegionId" TEXT NOT NULL,
+    "markType" TEXT NOT NULL,
+    "symbol" TEXT,
+    "color" TEXT,
+    "visible" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL,
+    CONSTRAINT "CropRegionMarkingOverride_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
         `
 
         // 現在のスキーマに完全準拠したインデックス作成SQL（最新マイグレーションに基づく）
@@ -374,6 +474,57 @@ CREATE INDEX "DrawingAnnotation_type_idx" ON "DrawingAnnotation"("type");
 
 -- CreateIndex
 CREATE INDEX "DrawingAnnotation_createdAt_idx" ON "DrawingAnnotation"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserProject_userId_projectId_key" ON "UserProject"("userId", "projectId");
+
+-- CreateIndex
+CREATE INDEX "UserProject_projectId_idx" ON "UserProject"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProjectClass_projectId_classId_key" ON "ProjectClass"("projectId", "classId");
+
+-- CreateIndex
+CREATE INDEX "ProjectClass_projectId_idx" ON "ProjectClass"("projectId");
+
+-- CreateIndex
+CREATE INDEX "ProjectClass_classId_idx" ON "ProjectClass"("classId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Subject_name_key" ON "Subject"("name");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SubjectSubtotalGroup_subjectId_subtotalGroupId_key" ON "SubjectSubtotalGroup"("subjectId", "subtotalGroupId");
+
+-- CreateIndex
+CREATE INDEX "SubjectSubtotalGroup_subjectId_idx" ON "SubjectSubtotalGroup"("subjectId");
+
+-- CreateIndex
+CREATE INDEX "SubjectSubtotalGroup_subtotalGroupId_idx" ON "SubjectSubtotalGroup"("subtotalGroupId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserKeyboardShortcut_userId_action_key" ON "UserKeyboardShortcut"("userId", "action");
+
+-- CreateIndex
+CREATE INDEX "UserKeyboardShortcut_userId_idx" ON "UserKeyboardShortcut"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UserScoringPreference_userId_key" ON "UserScoringPreference"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProjectMarkingFormat_projectId_markType_key" ON "ProjectMarkingFormat"("projectId", "markType");
+
+-- CreateIndex
+CREATE INDEX "ProjectMarkingFormat_projectId_idx" ON "ProjectMarkingFormat"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProjectExportSettings_projectId_key" ON "ProjectExportSettings"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "CropRegionMarkingOverride"("cropRegionId", "markType");
+
+-- CreateIndex
+CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
         `
 
         // SQLを複数のステートメントに分割して実行
