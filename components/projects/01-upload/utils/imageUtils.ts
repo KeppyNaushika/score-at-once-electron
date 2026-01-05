@@ -140,10 +140,18 @@ type MinimalPageImage = {
   updatedAt: Date
 }
 
+type MinimalMasterImage = {
+  id: string
+  imagePath: string
+  createdAt: Date
+  updatedAt: Date
+}
+
 type MinimalProjectPage = {
   id: string
   projectId: string
   pageNumber: number
+  masterImages?: MinimalMasterImage[]
   pageImages?: MinimalPageImage[]
 }
 
@@ -153,26 +161,27 @@ export const convertProjectPagesToMasterAnswers = <
   projectPages: T[]
 ): MasterAnswer[] => {
   return projectPages.flatMap((page) => {
-    const masterAnswer = page.pageImages?.find(
-      (img) => img.imageType === "MODEL_ANSWER"
-    )
+    // 新スキーマでは masterImages、旧スキーマでは pageImages(MODEL_ANSWER) を参照する
+    const masterImages =
+      page.masterImages && page.masterImages.length > 0
+        ? page.masterImages
+        : page.pageImages?.filter((img) => img.imageType === "MODEL_ANSWER") ||
+          []
 
-    if (!masterAnswer) {
+    if (masterImages.length === 0) {
       console.warn(
-        `Project page ${page.id} is flagged as having a master answer but no MODEL_ANSWER image exists.`
+        `Project page ${page.id} has no master images (masterImages/pageImages MODEL_ANSWER not found).`
       )
       return []
     }
 
-    return [
-      {
-        id: masterAnswer.id,
-        projectId: page.projectId,
-        imagePath: masterAnswer.imagePath,
-        pageNumber: page.pageNumber,
-        createdAt: masterAnswer.createdAt,
-        updatedAt: masterAnswer.updatedAt,
-      },
-    ]
+    return masterImages.map((masterImage) => ({
+      id: masterImage.id,
+      projectId: page.projectId,
+      imagePath: masterImage.imagePath,
+      pageNumber: page.pageNumber,
+      createdAt: masterImage.createdAt,
+      updatedAt: masterImage.updatedAt,
+    }))
   })
 }
