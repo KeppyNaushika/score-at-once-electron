@@ -222,9 +222,9 @@ const CropRegionEditor = ({
       </div>
 
       {/* Right Side - Region List with independent scroll */}
-      <div className="bg-background relative w-80 flex-shrink-0 border-l">
+      <div className="bg-background relative flex h-full w-80 flex-shrink-0 flex-col overflow-hidden border-l">
         {/* 検出モード切替と設定 */}
-        <div className="space-y-3 border-b p-3">
+        <div className="flex-shrink-0 space-y-3 border-b p-3">
           <DetectionModeToggle
             mode={detectionMode}
             onModeChange={setDetectionMode}
