@@ -6,6 +6,16 @@ import { CheckCircle, FileImage, Loader2, XCircle } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef, useState } from "react"
 
+/**
+ * ファイルプレビューセルコンポーネント
+ *
+ * 答案画像のサムネイルを表示するセル。
+ * 既存画像の遅延読み込み、氏名欄プレビュー生成、各種状態オーバーレイ表示を行う。
+ *
+ * @remarks
+ * fileオブジェクトへの参照はuseRefで保持し、依存配列にはfile.idとfile.imagePathのみを含める。
+ * これにより親コンポーネントの再レンダリング時にuseEffectが不要に再実行されることを防ぐ。
+ */
 export function FilePreviewCell({
   file,
   pageNumber,
@@ -32,28 +42,38 @@ export function FilePreviewCell({
   const [isImageLoading, setIsImageLoading] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
 
-  // 既存画像の遅延読み込み
+  /** fileオブジェクトへの参照（useEffect内から最新の値にアクセスするため） */
+  const fileRef = useRef(file)
+  fileRef.current = file
+
+  /** ファイルIDが変わった時にプレビュー状態をリセット */
   useEffect(() => {
-    if (!imagePreview && file.imagePath && !isImageLoading) {
+    setImagePreview(file.preview || null)
+    setIsImageLoading(false)
+  }, [file.id, file.preview])
+
+  /**
+   * 既存画像の遅延読み込み
+   *
+   * DB保存済みの画像をElectron API経由でBase64として取得し表示する。
+   * 依存配列にはfile.idとfile.imagePathのみを含め、fileオブジェクト全体は含めない。
+   */
+  useEffect(() => {
+    const currentFile = fileRef.current
+    if (!imagePreview && currentFile.imagePath && !isImageLoading) {
       let cancelled = false
       const frame = requestAnimationFrame(() => {
-        if (cancelled) {
-          return
-        }
+        if (cancelled) return
 
         setIsImageLoading(true)
-        loadStudentAnswerImage(file)
+        loadStudentAnswerImage(currentFile)
           .then((dataUrl) => {
-            if (cancelled) {
-              return
-            }
+            if (cancelled) return
             setImagePreview(dataUrl)
             setIsImageLoading(false)
           })
           .catch((error) => {
-            if (cancelled) {
-              return
-            }
+            if (cancelled) return
             console.error("画像読み込みエラー:", error)
             setIsImageLoading(false)
           })
@@ -64,32 +84,30 @@ export function FilePreviewCell({
         cancelAnimationFrame(frame)
       }
     }
-  }, [file, imagePreview, isImageLoading])
+  }, [file.id, file.imagePath, imagePreview, isImageLoading])
 
-  // 氏名欄プレビューの生成
+  /**
+   * 氏名欄プレビューの生成
+   *
+   * previewModeが"name-only"の場合、画像から氏名欄領域を切り出して表示する。
+   */
   useEffect(() => {
+    const currentFile = fileRef.current
     if (previewMode === "name-only" && nameRegionAvailable && imagePreview) {
       let cancelled = false
       const frame = requestAnimationFrame(() => {
-        if (cancelled) {
-          return
-        }
+        if (cancelled) return
 
         setIsNameRegionLoading(true)
-        // imagePreviewを使用して氏名欄を描画
-        const tempFile = { ...file, preview: imagePreview }
+        const tempFile = { ...currentFile, preview: imagePreview }
         drawNameRegionCanvas(tempFile, pageNumber)
           .then((canvas) => {
-            if (cancelled) {
-              return
-            }
+            if (cancelled) return
             setNameRegionPreview(canvas)
             setIsNameRegionLoading(false)
           })
           .catch((error) => {
-            if (cancelled) {
-              return
-            }
+            if (cancelled) return
             console.error("氏名欄プレビュー生成エラー:", error)
             setIsNameRegionLoading(false)
           })
@@ -101,7 +119,7 @@ export function FilePreviewCell({
       }
     }
   }, [
-    file,
+    file.id,
     pageNumber,
     previewMode,
     nameRegionAvailable,
@@ -109,7 +127,10 @@ export function FilePreviewCell({
     imagePreview,
   ])
 
-  // 画像プレビューの表示
+  /**
+   * 画像プレビューをレンダリング
+   * @returns プレビューモードと読み込み状態に応じたJSX要素
+   */
   const renderImagePreview = () => {
     if (previewMode === "name-only") {
       if (!nameRegionAvailable) {
@@ -139,7 +160,6 @@ export function FilePreviewCell({
               height={200}
               unoptimized
             />
-            {/* デバッグ用オーバーレイ（開発環境のみ） */}
             {process.env.NODE_ENV === "development" && (
               <div className="bg-opacity-75 absolute top-0 left-0 bg-black p-1 font-mono text-xs text-white">
                 <div>ID: {file.id.slice(0, 8)}</div>
@@ -152,7 +172,6 @@ export function FilePreviewCell({
       }
     }
 
-    // フルプレビューまたは氏名欄が利用できない場合
     if (isImageLoading) {
       return (
         <div className="flex h-full items-center justify-center">
@@ -184,7 +203,10 @@ export function FilePreviewCell({
     )
   }
 
-  // 読み込み状態インジケーター
+  /**
+   * 読み込み状態インジケーターをレンダリング
+   * @returns imageLoadStateに応じたインジケーター要素
+   */
   const renderLoadingState = () => {
     switch (imageLoadState) {
       case "loading":
@@ -212,24 +234,20 @@ export function FilePreviewCell({
 
   return (
     <div className="relative h-full w-full">
-      {/* 画像プレビュー */}
       <div
         className={`h-full w-full ${isFileDisabled ? "opacity-50 grayscale" : ""}`}
       >
         {renderImagePreview()}
       </div>
 
-      {/* 変更予定オーバーレイ（赤色） */}
       {isPendingChange && (
         <div className="pointer-events-none absolute inset-0 z-40 animate-pulse border-4 border-red-500 bg-red-500/30" />
       )}
 
-      {/* 既存答案警告オーバーレイ（上書きオン時のみ表示） */}
       {hasExistingAnswer && allowOverwrite && (
         <div className="pointer-events-none absolute inset-0 z-30 border-2 border-orange-500 bg-orange-500/20" />
       )}
 
-      {/* 読み込み状態表示 */}
       {renderLoadingState()}
     </div>
   )
