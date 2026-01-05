@@ -6,6 +6,7 @@
  * - Zoom and pan functionality
  * - Keyboard shortcuts for area management
  * - Area rendering and interaction
+ * - Auto-detection overlay for detected frames
  *
  * @param props - Configuration properties for the canvas
  * @returns JSX component for the image canvas
@@ -18,7 +19,9 @@ import { useMemo } from "react"
 import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
 import { useZoomControls } from "../hooks/useZoomControls"
+import { DetectedRect, DetectionMode, DragSelectionResult } from "../types"
 import { AreaRenderer } from "./AreaRenderer"
+import { DetectedRectOverlay } from "./DetectedRectOverlay"
 import { DragPreview } from "./DragPreview"
 import { ZoomControls } from "./ZoomControls"
 
@@ -39,6 +42,16 @@ type ImageCanvasProps = {
   onDeleteArea: (index: number) => void
   disabled: boolean
   projectPageId: string | null
+  // 検出関連のプロパティ
+  detectedRects?: DetectedRect[]
+  detectionMode?: DetectionMode
+  onDetectedRectClick?: (rect: DetectedRect) => void
+  onSnapToDetectedRects?: (dragRect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }) => DragSelectionResult
 }
 
 const ImageCanvas = ({
@@ -52,6 +65,10 @@ const ImageCanvas = ({
   onDeleteArea,
   disabled,
   projectPageId,
+  detectedRects = [],
+  detectionMode = "manual",
+  onDetectedRectClick,
+  onSnapToDetectedRects,
 }: ImageCanvasProps) => {
   // Get zoom controls first
   const { zoom, showZoomHelp, setShowZoomHelp, imageContainerRef } =
@@ -74,6 +91,8 @@ const ImageCanvas = ({
     onUpdateArea,
     zoom,
     imageContainerRef: imageContainerRef as React.RefObject<HTMLDivElement>,
+    detectionMode,
+    onSnapToDetectedRects,
   })
 
   useKeyboardShortcuts(selectedAreaIndex, onDeleteArea)
@@ -117,6 +136,15 @@ const ImageCanvas = ({
           }}
           onMouseDown={handleMouseDown}
         >
+          {/* 検出枠オーバーレイ（確定済み領域より下に表示） */}
+          <DetectedRectOverlay
+            detectedRects={detectedRects}
+            imageDimensions={imageDimensions}
+            zoom={zoom}
+            visible={detectionMode !== "manual"}
+            onRectClick={onDetectedRectClick}
+          />
+
           <AreaRenderer
             areas={areas}
             selectedAreaIndex={selectedAreaIndex}

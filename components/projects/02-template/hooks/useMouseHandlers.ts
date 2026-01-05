@@ -3,6 +3,8 @@
  */
 
 import {
+  DetectionMode,
+  DragSelectionResult,
   DragState,
   MoveState,
   ResizeState,
@@ -35,6 +37,8 @@ export function useMouseHandlers({
   setDragCurrentCoords,
   setResizing,
   setMoving,
+  detectionMode = "manual",
+  onSnapToDetectedRects,
 }: {
   disabled: boolean
   backgroundImageUrl: string | null
@@ -71,6 +75,13 @@ export function useMouseHandlers({
   setDragCurrentCoords: (value: DragState | null) => void
   setResizing: (value: ResizeState | null) => void
   setMoving: (value: MoveState | null) => void
+  detectionMode?: DetectionMode
+  onSnapToDetectedRects?: (dragRect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }) => DragSelectionResult
 }) {
   const isCreatingRef = useRef(false) // 重複作成防止
 
@@ -281,12 +292,22 @@ export function useMouseHandlers({
 
       // Only create area if drag is large enough
       if (width > 0.01 && height > 0.01) {
-        onAddAreaByDrag("QUESTION_ANSWER", {
-          x: startX,
-          y: startY,
-          width,
-          height,
-        })
+        const dragRect = { x: startX, y: startY, width, height }
+
+        // 自動モードの場合は検出枠にスナップ
+        if (detectionMode === "auto" && onSnapToDetectedRects) {
+          const snapped = onSnapToDetectedRects(dragRect)
+          if (snapped.selectedRects.length > 0) {
+            // 検出枠にスナップした場合は、マージされた境界を使用
+            onAddAreaByDrag("QUESTION_ANSWER", snapped.mergedBounds)
+          } else {
+            // 検出枠にヒットしなかった場合は、元のドラッグ領域を使用
+            onAddAreaByDrag("QUESTION_ANSWER", dragRect)
+          }
+        } else {
+          // 手動モードの場合は通常通り
+          onAddAreaByDrag("QUESTION_ANSWER", dragRect)
+        }
       }
 
       // 即座にフラグをリセット（setTimeoutは不要）
@@ -310,6 +331,8 @@ export function useMouseHandlers({
     setDragging,
     setMoving,
     setResizing,
+    detectionMode,
+    onSnapToDetectedRects,
   ])
 
   return {
