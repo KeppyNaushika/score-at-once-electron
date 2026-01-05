@@ -9,6 +9,7 @@ import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
 import { useWorkflowData } from "@/components/projects/detail/hooks/useWorkflowData"
+import { useAuth } from "@/contexts/AuthContext"
 import type { Project } from "@prisma/client"
 import Head from "next/head"
 import { useParams, useRouter } from "next/navigation"
@@ -18,6 +19,7 @@ import { toast } from "sonner"
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
   const projectId = params.projectId as string
 
   const [showEditModal, setShowEditModal] = useState(false)
@@ -65,6 +67,13 @@ export default function ProjectDetailPage() {
   const handleExport = async () => {
     if (isExporting) return
 
+    if (!user?.id) {
+      toast.error("エクスポート失敗", {
+        description: "ログインが必要です。",
+      })
+      return
+    }
+
     setIsExporting(true)
     toast("エクスポート中...", {
       description: "プロジェクトをエクスポートしています。",
@@ -73,6 +82,7 @@ export default function ProjectDetailPage() {
     try {
       const result = await window.electronAPI.archive.exportProject({
         projectId,
+        userId: user.id,
       })
 
       if (result.success) {
