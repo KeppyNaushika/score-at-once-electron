@@ -71,14 +71,14 @@ export interface DrawingAnnotation {
 // 作成用データ型
 export interface DrawingCreateData {
   id?: string // フロントエンドで生成したUUIDを使用可能（指定なしの場合はDB側で自動生成）
-  questionScoreId: string
+  questionScoreId: string // 必須: QuestionScoreは事前に作成されている必要がある
   type: DrawingType
   x: number
   y: number
   color?: string
   strokeWidth?: number
 
-  // QuestionScore自動作成用の追加情報（questionScoreIdが存在しない場合に使用）
+  // コンテキスト情報（参照用、自動作成には使用しない）
   studentId?: string
   cropRegionId?: string
 

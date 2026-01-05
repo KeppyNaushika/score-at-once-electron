@@ -163,6 +163,15 @@ export function useDrawingState(
   // 描画要素操作（データベース統合対応）
   const addDrawingElement = useCallback(
     async (element: DrawingElement) => {
+      // questionScoreIdがない場合は追加できない
+      // （QuestionScoreは設問表示時に自動作成されるはず）
+      if (enablePersistence && !questionScoreId) {
+        console.error(
+          "描画要素の追加には QuestionScore が必要です。設問表示時に自動作成されるまでお待ちください。"
+        )
+        return
+      }
+
       // ローカル状態を即座に更新
       setDrawingElements((prev) => [...prev, element])
 
@@ -197,7 +206,8 @@ export function useDrawingState(
       })
 
       // データベース更新（バックグラウンド）
-      if (enablePersistence && questionScoreId && previousElement !== null) {
+      // 既存アノテーションの更新はアノテーションIDで行うためquestionScoreIdは不要
+      if (enablePersistence && previousElement !== null) {
         const elementToUpdate: DrawingElement = previousElement
         try {
           const updatedElement: DrawingElement = {
@@ -216,7 +226,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, updateElement]
+    [enablePersistence, updateElement]
   )
 
   // 複数要素を一括更新（1回のsetStateで全て更新）
@@ -240,7 +250,8 @@ export function useDrawingState(
       })
 
       // データベース更新（バックグラウンド、各要素を個別に更新）
-      if (enablePersistence && questionScoreId) {
+      // 既存アノテーションの更新はアノテーションIDで行うためquestionScoreIdは不要
+      if (enablePersistence) {
         for (const { id, updates: elementUpdates } of updates) {
           const previousElement = previousElements.get(id)
           if (previousElement) {
@@ -254,7 +265,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, updateElement]
+    [enablePersistence, updateElement]
   )
 
   const removeDrawingElement = useCallback(
@@ -273,7 +284,8 @@ export function useDrawingState(
       )
 
       // データベースから削除（バックグラウンド）
-      if (enablePersistence && questionScoreId) {
+      // 既存アノテーションの削除はアノテーションIDで行うためquestionScoreIdは不要
+      if (enablePersistence) {
         try {
           await deleteElement(id)
         } catch (error) {
@@ -285,7 +297,7 @@ export function useDrawingState(
         }
       }
     },
-    [enablePersistence, questionScoreId, deleteElement]
+    [enablePersistence, deleteElement]
   )
 
   // 複数選択操作

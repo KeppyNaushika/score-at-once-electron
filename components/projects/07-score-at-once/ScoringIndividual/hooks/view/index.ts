@@ -27,3 +27,9 @@ export type {
   UseAllStudentAnnotationsParams,
   UseAllStudentAnnotationsReturn,
 } from "./useAllStudentAnnotations"
+
+export { useAutoCreateQuestionScore } from "./useAutoCreateQuestionScore"
+export type {
+  UseAutoCreateQuestionScoreParams,
+  UseAutoCreateQuestionScoreReturn,
+} from "./useAutoCreateQuestionScore"

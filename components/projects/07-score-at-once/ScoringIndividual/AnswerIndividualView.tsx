@@ -1,6 +1,5 @@
 "use client"
 
-import { useMemo } from "react"
 import { DrawingToolPalette } from "./DrawingToolPalette"
 import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { useDrawingState } from "./hooks/core/useDrawingState"
@@ -8,12 +7,13 @@ import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
 import { useAnswerIndividualEvents } from "./hooks/useAnswerIndividualEvents"
 import {
-  useZoomAndScroll,
+  useAllStudentAnnotations,
+  useAutoCreateQuestionScore,
+  useCanvasV4Integration,
   useDrawingToolShortcuts,
   useQuestionAutoScroll,
-  useCanvasV4Integration,
   useTextInputStateNotifier,
-  useAllStudentAnnotations,
+  useZoomAndScroll,
 } from "./hooks/view"
 import type {
   AnswerIndividualViewProps,
@@ -31,6 +31,7 @@ export default function AnswerIndividualView({
   currentStudentId,
   currentUserId,
   questionScores,
+  onQuestionScoreCreated,
 }: AnswerIndividualViewProps) {
   // 画像ナビゲーション状態管理（内部管理）
   const { zoom, position, onZoomChange, onPositionChange } =
@@ -42,18 +43,14 @@ export default function AnswerIndividualView({
       (scoringData) => scoringData.id === currentScoringDataId
     ) ?? null
 
-  // 正しいQuestionScore.idを取得（studentIdとcropRegionIdで検索）
-  const currentQuestionScoreId = useMemo(() => {
-    if (!questionScores || !currentStudentId || !currentCropRegion?.id) {
-      return null
-    }
-    const found = questionScores.find(
-      (qs) =>
-        qs.studentId === currentStudentId &&
-        qs.cropRegionId === currentCropRegion.id
-    )
-    return found?.id ?? null
-  }, [questionScores, currentStudentId, currentCropRegion])
+  // QuestionScore自動作成フック（設問表示時にQuestionScoreが存在しない場合は自動作成）
+  const { currentQuestionScoreId } = useAutoCreateQuestionScore({
+    currentStudentId,
+    currentCropRegionId: currentCropRegion?.id,
+    currentUserId,
+    questionScores,
+    onQuestionScoreCreated,
+  })
 
   // 描画状態管理（データベース統合対応）
   const drawingState = useDrawingState(

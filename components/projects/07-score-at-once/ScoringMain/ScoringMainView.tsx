@@ -149,6 +149,12 @@ function ScoringMainViewContent() {
     cropRegions,
   })
 
+  /** QuestionScore作成後のリロードコールバック */
+  const handleQuestionScoreCreated = useCallback(async () => {
+    const scores = await loadQuestionScores(projectId)
+    setQuestionScores(scores)
+  }, [loadQuestionScores, projectId, setQuestionScores])
+
   /** フィルタリング管理hook */
   const {
     /** 新しいデータ構造 */
@@ -348,6 +354,7 @@ function ScoringMainViewContent() {
           currentStudentId={currentStudentId || undefined}
           currentUserId={currentUserId || undefined}
           questionScores={questionScores}
+          onQuestionScoreCreated={handleQuestionScoreCreated}
           expandMargin={expandMargin}
         />
 
