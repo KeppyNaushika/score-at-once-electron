@@ -9,7 +9,6 @@ import type {
   ProjectSubtotalGroup,
   QuestionScore,
   Student,
-  StudentAnswerImage,
   Subtotal,
   SubtotalGroup,
   User,

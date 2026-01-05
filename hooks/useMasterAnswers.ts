@@ -1,7 +1,7 @@
 "use client"
 
 import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
-import { MasterImage, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
