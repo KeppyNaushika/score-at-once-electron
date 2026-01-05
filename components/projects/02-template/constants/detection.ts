@@ -16,22 +16,22 @@ export const DEFAULT_DETECTION_SETTINGS: DetectionSettings = {
 /**
  * デフォルトの検出モード
  */
-export const DEFAULT_DETECTION_MODE: DetectionMode = "manual"
+export const DEFAULT_DETECTION_MODE: DetectionMode = "auto"
 
 /**
  * 検出モードのラベル
  */
 export const DETECTION_MODE_LABELS: Record<DetectionMode, string> = {
-  manual: "手動",
-  auto: "自動",
+  auto: "自動検出",
+  manual: "手動指定",
 }
 
 /**
  * 検出モードの説明
  */
 export const DETECTION_MODE_DESCRIPTIONS: Record<DetectionMode, string> = {
-  manual: "手動で領域を作成",
   auto: "枠を自動検出してスナップ補正",
+  manual: "手動で領域を作成",
 }
 
 /**

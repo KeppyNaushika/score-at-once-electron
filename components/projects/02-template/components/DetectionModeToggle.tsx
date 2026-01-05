@@ -5,11 +5,9 @@
 "use client"
 
 import { memo } from "react"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DetectionMode } from "../types"
-import {
-  DETECTION_MODE_LABELS,
-  DETECTION_MODE_DESCRIPTIONS,
-} from "../constants/detection"
+import { DETECTION_MODE_LABELS } from "../constants/detection"
 import { cn } from "@/lib/utils"
 
 interface DetectionModeToggleProps {
@@ -25,7 +23,8 @@ interface DetectionModeToggleProps {
   disabled?: boolean
 }
 
-const MODES: DetectionMode[] = ["manual", "auto"]
+/** モードの順序: 自動検出 → 手動指定 */
+const MODES: DetectionMode[] = ["auto", "manual"]
 
 /**
  * 検出モード切替コンポーネント
@@ -39,28 +38,24 @@ export const DetectionModeToggle = memo(function DetectionModeToggle({
 }: DetectionModeToggleProps) {
   return (
     <div className="flex flex-col gap-2">
-      {/* モード切替ボタン */}
-      <div className="flex items-center gap-1">
-        <span className="mr-2 text-xs text-gray-500">検出:</span>
-        {MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            className={cn(
-              "rounded px-2 py-1 text-xs transition-colors",
-              mode === m
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200",
-              disabled && "cursor-not-allowed opacity-50"
-            )}
-            onClick={() => onModeChange(m)}
-            disabled={disabled}
-            title={DETECTION_MODE_DESCRIPTIONS[m]}
-          >
-            {DETECTION_MODE_LABELS[m]}
-          </button>
-        ))}
-      </div>
+      {/* モード切替タブ */}
+      <Tabs
+        value={mode}
+        onValueChange={(value) => onModeChange(value as DetectionMode)}
+      >
+        <TabsList className="w-full">
+          {MODES.map((m) => (
+            <TabsTrigger
+              key={m}
+              value={m}
+              disabled={disabled}
+              className="flex-1 text-xs"
+            >
+              {DETECTION_MODE_LABELS[m]}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* 一括検出ボタン（モードがmanual以外のとき表示） */}
       {mode !== "manual" && onDetectAll && (
