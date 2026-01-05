@@ -1,7 +1,7 @@
 "use client"
 
 import type { ProjectWithDetails } from "@/types/electron"
-import type { PageImage, Project } from "@prisma/client"
+import type { Project } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -89,20 +89,12 @@ export function useProjectDetail(projectId: string) {
 
   const modelAnswerCount =
     project?.projectPages?.reduce(
-      (count, page) =>
-        count +
-        (page.pageImages?.filter(
-          (img: PageImage) => img.imageType === "MODEL_ANSWER"
-        )?.length || 0),
+      (count, page) => count + (page.masterImages?.length || 0),
       0
     ) || 0
   const answerSheetCount =
     project?.projectPages?.reduce(
-      (count, page) =>
-        count +
-        (page.pageImages?.filter(
-          (img: PageImage) => img.imageType === "STUDENT_ANSWER"
-        )?.length || 0),
+      (count, page) => count + (page.studentAnswerImages?.length || 0),
       0
     ) || 0
   const cropRegionCount =

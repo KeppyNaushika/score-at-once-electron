@@ -178,7 +178,7 @@ export function useBatchScoring({
               cropRegionId: currentCropRegion.id,
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
-              scoredByUserId: effectiveUserId,
+              userId: effectiveUserId,
             }
             const result =
               await window.electronAPI.createQuestionScore(scoreData)
@@ -191,7 +191,7 @@ export function useBatchScoring({
                 studentId: createdScore.studentId,
                 partialScore: createdScore.partialScore,
                 status: createdScore.status,
-                scoredByUserId: createdScore.scoredByUserId,
+                userId: createdScore.userId,
                 createdAt: createdScore.createdAt,
                 updatedAt: createdScore.updatedAt,
               }

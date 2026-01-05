@@ -19,10 +19,11 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
     userProjects: { include: { user: true } }
     projectPages: {
       include: {
-        pageImages: { include: { student: true } }
+        masterImages: true
+        studentAnswerImages: { include: { student: true } }
         cropRegions: {
           include: {
-            questionScores: { include: { student: true; scoredByUser: true } }
+            questionScores: { include: { student: true; user: true } }
           }
         }
       }
@@ -36,11 +37,11 @@ export type ProjectWithDetails = Prisma.ProjectGetPayload<{
   /** IPCハンドラーで平坦化されるcropRegions */
   cropRegions?: Prisma.CropRegionGetPayload<{
     include: {
-      questionScores: { include: { student: true; scoredByUser: true } }
+      questionScores: { include: { student: true; user: true } }
     }
   }>[]
   /** IPCハンドラーで抽出されるanswerImages */
-  answerImages?: (Prisma.PageImageGetPayload<{
+  answerImages?: (Prisma.StudentAnswerImageGetPayload<{
     include: { student: true }
   }> & {
     pageNumber: number
@@ -136,14 +137,15 @@ export interface CropRegionArea {
 /**
  * QuestionScoreのデータ型
  * IPC通信およびUI表示で使用
+ * v0.4.0+: studentId, userId は必須
  */
 export interface QuestionScoreData {
   id: string
   cropRegionId: string
-  studentId?: string | null
+  studentId: string
   partialScore: number | null
   status: string // unscored, correct, incorrect, partial, no_answer
-  scoredByUserId?: string | null
+  userId: string
   createdAt: Date
   updatedAt: Date
 }
@@ -151,12 +153,13 @@ export interface QuestionScoreData {
 /**
  * QuestionScore作成用データ型
  * preload.tsでIPC通信時に使用
+ * v0.4.0+: studentId, userId は必須
  */
 export interface QuestionScoreCreateData {
   cropRegionId: string
-  studentId?: string | null
+  studentId: string
   partialScore?: number | null
-  scoredByUserId?: string | null
+  userId: string
   status?: string
 }
 

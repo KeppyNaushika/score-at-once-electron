@@ -16,9 +16,8 @@ export const checkGradingDataForStudent = async (
 ): Promise<GradingDataInfo> => {
   try {
     // 答案シート数をカウント
-    const answerSheetCount = await prisma.pageImage.count({
+    const answerSheetCount = await prisma.studentAnswerImage.count({
       where: {
-        imageType: "STUDENT_ANSWER",
         studentId,
         projectPage: {
           projectId,
@@ -110,9 +109,8 @@ export const deleteAllGradingDataForStudent = async (
       })
 
       // 2. 答案シートを削除
-      await tx.pageImage.deleteMany({
+      await tx.studentAnswerImage.deleteMany({
         where: {
-          imageType: "STUDENT_ANSWER",
           studentId,
           projectPage: {
             projectId,

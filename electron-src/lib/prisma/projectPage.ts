@@ -8,7 +8,8 @@ export const createProjectPage = async (
   return prisma.projectPage.create({
     data,
     include: {
-      pageImages: true,
+      masterImages: true,
+      studentAnswerImages: true,
       cropRegions: true,
     },
   })
@@ -32,7 +33,8 @@ export const updateProjectPage = async (
     where: { id },
     data,
     include: {
-      pageImages: true,
+      masterImages: true,
+      studentAnswerImages: true,
       cropRegions: true,
     },
   })
@@ -40,7 +42,7 @@ export const updateProjectPage = async (
 
 // ProjectPage を削除
 export const deleteProjectPage = async (id: string) => {
-  // 関連する PageImage と CropRegion も削除される（onDelete: Cascade 設定済み）
+  // 関連する MasterImage, StudentAnswerImage, CropRegion も削除される（onDelete: Cascade 設定済み）
   return prisma.projectPage.delete({
     where: { id },
   })
@@ -51,7 +53,8 @@ export const getProjectPagesByProjectId = async (projectId: string) => {
   return prisma.projectPage.findMany({
     where: { projectId },
     include: {
-      pageImages: {
+      masterImages: true,
+      studentAnswerImages: {
         include: {
           student: true,
         },
@@ -67,7 +70,8 @@ export const getProjectPageById = async (id: string) => {
   return prisma.projectPage.findUnique({
     where: { id },
     include: {
-      pageImages: {
+      masterImages: true,
+      studentAnswerImages: {
         include: {
           student: true,
         },
@@ -79,7 +83,8 @@ export const getProjectPageById = async (id: string) => {
 
 export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
   include: {
-    pageImages: {
+    masterImages: true
+    studentAnswerImages: {
       include: {
         student: true
       }

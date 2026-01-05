@@ -47,7 +47,7 @@ export interface CreateQuestionScoreData {
     | "proposed"
     | "final"
   comment?: string
-  scoredByUserId: string
+  userId: string
 }
 
 export interface UpdateQuestionScoreData {
@@ -83,7 +83,7 @@ export const getQuestionScoresForProject = async (
           },
         },
         // userIdが指定されている場合、そのユーザーの採点データのみ取得
-        ...(userId && { scoredByUserId: userId }),
+        ...(userId && { userId: userId }),
       },
       include: {
         student: true,
@@ -92,7 +92,7 @@ export const getQuestionScoresForProject = async (
             projectPage: true,
           },
         },
-        scoredByUser: true,
+        user: true,
       },
       orderBy: [
         { student: { lastName: "asc" } },
@@ -125,11 +125,11 @@ export const getQuestionScoresForStudent = async (
       where: {
         studentId: studentId,
         // userIdが指定されている場合、そのユーザーの採点データのみ取得
-        ...(userId && { scoredByUserId: userId }),
+        ...(userId && { userId: userId }),
       },
       include: {
         cropRegion: true,
-        scoredByUser: true,
+        user: true,
       },
       orderBy: {
         cropRegion: { orderIndex: "asc" },
@@ -156,7 +156,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
       where: {
         studentId: data.studentId,
         cropRegionId: data.cropRegionId,
-        scoredByUserId: data.scoredByUserId,
+        userId: data.userId,
       },
     })
 
@@ -174,7 +174,7 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
         include: {
           student: true,
           cropRegion: true,
-          scoredByUser: true,
+          user: true,
         },
       })
       return { success: true, score: updated }
@@ -189,12 +189,12 @@ export const createQuestionScore = async (data: CreateQuestionScoreData) => {
               ? new Decimal(data.partialScore)
               : null,
           status: data.status,
-          scoredByUserId: data.scoredByUserId,
+          userId: data.userId,
         },
         include: {
           student: true,
           cropRegion: true,
-          scoredByUser: true,
+          user: true,
         },
       })
       return { success: true, score: created }
@@ -253,7 +253,7 @@ export const updateQuestionScore = async (
       include: {
         student: true,
         cropRegion: true,
-        scoredByUser: true,
+        user: true,
       },
     })
 
@@ -300,7 +300,7 @@ export const getQuestionScoreComparison = async (
         cropRegionId: cropRegionId,
       },
       include: {
-        scoredByUser: true,
+        user: true,
       },
       orderBy: {
         createdAt: "asc",
@@ -333,7 +333,7 @@ export const getQuestionScoreComparison = async (
 export const finalizeQuestionScore = async (
   studentId: string,
   cropRegionId: string,
-  scoredByUserId: string,
+  userId: string,
   scoreData: {
     partialScore?: number // 部分点・保留の場合のみ
     status: string
@@ -362,12 +362,12 @@ export const finalizeQuestionScore = async (
               ? new Decimal(scoreData.partialScore)
               : null,
           status: scoreData.status,
-          scoredByUserId,
+          userId,
         },
         include: {
           student: true,
           cropRegion: true,
-          scoredByUser: true,
+          user: true,
         },
       })
 

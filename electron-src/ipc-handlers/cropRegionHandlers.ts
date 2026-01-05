@@ -20,7 +20,7 @@ function serializeQuestionScore(score: {
   studentId: string | null
   partialScore: { toNumber(): number } | null
   status: string
-  scoredByUserId: string | null
+  userId: string | null
   createdAt: Date
   updatedAt: Date
 }) {
@@ -30,7 +30,7 @@ function serializeQuestionScore(score: {
     studentId: score.studentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: score.status,
-    scoredByUserId: score.scoredByUserId,
+    userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
   }
@@ -47,7 +47,7 @@ function serializeCropRegion<
       studentId: string | null
       partialScore: { toNumber(): number } | null
       status: string
-      scoredByUserId: string | null
+      userId: string | null
       createdAt: Date
       updatedAt: Date
     }>

@@ -7,7 +7,12 @@
 import type { Prisma, QuestionScore } from "@prisma/client"
 
 /** Prisma基本型をエクスポート */
-export type { CropRegion, PageImage, QuestionScore } from "@prisma/client"
+export type {
+  CropRegion,
+  MasterImage,
+  QuestionScore,
+  StudentAnswerImage,
+} from "@prisma/client"
 
 /**
  * 採点状態の型定義
@@ -22,19 +27,25 @@ export type ScoringStatus =
   | "no_answer"
 
 /**
- * PageImageを学生とProjectStudents情報で拡張したPrisma生成型
- * 変数名: pageImage, pageImages
+ * StudentAnswerImageを学生とProjectStudents情報で拡張したPrisma生成型
+ * 変数名: studentAnswerImage, studentAnswerImages
  */
-export type PageImageWithProjectStudents = Prisma.PageImageGetPayload<{
-  include: {
-    student: {
-      include: {
-        projectStudents: true
+export type StudentAnswerImageWithProjectStudents =
+  Prisma.StudentAnswerImageGetPayload<{
+    include: {
+      student: {
+        include: {
+          projectStudents: true
+        }
       }
+      projectPage: true
     }
-    projectPage: true
-  }
-}>
+  }>
+
+/**
+ * @deprecated Use StudentAnswerImageWithProjectStudents instead
+ */
+export type PageImageWithProjectStudents = StudentAnswerImageWithProjectStudents
 
 /**
  * CropRegionをProjectPage情報で拡張したPrisma生成型

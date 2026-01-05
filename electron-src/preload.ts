@@ -301,14 +301,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
   finalizeQuestionScore: (
     answerSheetId: string,
     cropRegionId: string,
-    scoredByUserId: string,
+    userId: string,
     scoreData: QuestionScoreUpdateData
   ) =>
     ipcRenderer.invoke(
       "finalize-question-score",
       answerSheetId,
       cropRegionId,
-      scoredByUserId,
+      userId,
       scoreData
     ),
   getAnswerSheetProgress: (answerSheetId: string) =>

@@ -19,7 +19,8 @@ export const getProjects = async (userId: string) => {
       },
       projectPages: {
         include: {
-          pageImages: {
+          masterImages: true,
+          studentAnswerImages: {
             include: {
               student: true,
             },
@@ -29,7 +30,7 @@ export const getProjects = async (userId: string) => {
               questionScores: {
                 include: {
                   student: true,
-                  scoredByUser: true,
+                  user: true,
                 },
               },
             },
@@ -76,7 +77,8 @@ export const getProjectById = async (id: string) => {
       },
       projectPages: {
         include: {
-          pageImages: {
+          masterImages: true,
+          studentAnswerImages: {
             include: {
               student: true,
             },
@@ -86,7 +88,7 @@ export const getProjectById = async (id: string) => {
               questionScores: {
                 include: {
                   student: true,
-                  scoredByUser: true,
+                  user: true,
                 },
               },
             },
@@ -152,7 +154,8 @@ export const createProject = async (
       },
       projectPages: {
         include: {
-          pageImages: true,
+          masterImages: true,
+          studentAnswerImages: true,
           cropRegions: true,
         },
       },

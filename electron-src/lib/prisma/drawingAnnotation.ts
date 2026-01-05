@@ -31,12 +31,12 @@ export async function createDrawingAnnotation(
 
       if (!questionScoreExists) {
         // QuestionScoreが存在しない場合、自動作成を試行
-        if (data.studentId && data.cropRegionId && data.scoredByUserId) {
+        if (data.studentId && data.cropRegionId && data.userId) {
           try {
             const result = await createQuestionScore({
               studentId: data.studentId,
               cropRegionId: data.cropRegionId,
-              scoredByUserId: data.scoredByUserId,
+              userId: data.userId,
               partialScore: undefined,
               status: "unscored",
               comment: undefined,
@@ -57,7 +57,7 @@ export async function createDrawingAnnotation(
           }
         } else {
           throw new Error(
-            `QuestionScore not found: ${data.questionScoreId}. To auto-create, provide studentId, cropRegionId, and scoredByUserId`
+            `QuestionScore not found: ${data.questionScoreId}. To auto-create, provide studentId, cropRegionId, and userId`
           )
         }
       }
@@ -65,15 +65,17 @@ export async function createDrawingAnnotation(
       throw new Error("questionScoreId is required but was undefined/null")
     }
 
-    if (data.createdByUserId) {
+    if (data.userId) {
       const userExists = await prisma.user.findUnique({
-        where: { id: data.createdByUserId },
+        where: { id: data.userId },
         select: { id: true },
       })
 
       if (!userExists) {
-        throw new Error(`User not found: ${data.createdByUserId}`)
+        throw new Error(`User not found: ${data.userId}`)
       }
+    } else {
+      throw new Error("userId is required but was undefined/null")
     }
 
     const result = await prisma.drawingAnnotation.create({
@@ -106,7 +108,7 @@ export async function createDrawingAnnotation(
         displayX: data.displayX || 0.0,
         displayY: data.displayY || 0.0,
         // メタデータ
-        createdByUserId: data.createdByUserId,
+        userId: data.userId,
       },
     })
 
@@ -136,11 +138,11 @@ export async function getDrawingAnnotationsByQuestionScore(
         questionScoreId,
         ...(type && { type }),
         // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
-        ...(userId && { createdByUserId: userId }),
+        ...(userId && { userId }),
       },
       orderBy: { createdAt: "asc" },
       include: {
-        createdByUser: {
+        user: {
           select: {
             id: true,
             username: true,
@@ -183,12 +185,14 @@ export async function getDrawingAnnotationsByStudent(
           },
         },
         ...(type && { type }),
-        // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
-        ...(userId && { createdByUserId: userId }),
+        // userIdが指定されている場合、そのユーザーのアノテーション、または作成者不明（null）のものを取得
+        ...(userId && {
+          userId,
+        }),
       },
       orderBy: { createdAt: "asc" },
       include: {
-        createdByUser: {
+        user: {
           select: {
             id: true,
             username: true,
@@ -240,8 +244,10 @@ export async function getDrawingAnnotationsByProject(
           },
         },
         ...(type && { type }),
-        // userIdが指定されている場合、そのユーザーのアノテーションのみ取得
-        ...(userId && { createdByUserId: userId }),
+        // userIdが指定されている場合、そのユーザーのアノテーション、または作成者不明（null）のものを取得
+        ...(userId && {
+          userId,
+        }),
       },
       orderBy: [
         { questionScore: { studentId: "asc" } },
@@ -249,7 +255,7 @@ export async function getDrawingAnnotationsByProject(
         { createdAt: "asc" },
       ],
       include: {
-        createdByUser: {
+        user: {
           select: {
             id: true,
             username: true,
@@ -452,7 +458,7 @@ export async function getDrawingAnnotationById(
     const result = await prisma.drawingAnnotation.findUnique({
       where: { id },
       include: {
-        createdByUser: {
+        user: {
           select: {
             id: true,
             username: true,

@@ -64,9 +64,9 @@ export type StudentClassMembershipWithDetails =
 // =============================================================================
 
 /**
- * 詳細情報を含む答案型（新構造：PageImageベース）
+ * 詳細情報を含む答案型（新構造：StudentAnswerImageベース）
  */
-export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
+export type StudentAnswerWithDetails = Prisma.StudentAnswerImageGetPayload<{
   include: {
     student: {
       include: {
@@ -94,7 +94,7 @@ export type StudentAnswerWithDetails = Prisma.PageImageGetPayload<{
  */
 export type QuestionScoreWithUser = Prisma.QuestionScoreGetPayload<{
   include: {
-    scoredByUser: true
+    user: true
   }
 }>
 
@@ -105,7 +105,7 @@ export type QuestionScoreWithRelations = Prisma.QuestionScoreGetPayload<{
   include: {
     student: true
     cropRegion: true
-    scoredByUser: true
+    user: true
   }
 }>
 
@@ -123,11 +123,12 @@ export type ProjectPayloadWithAllRelations = Prisma.ProjectGetPayload<{
     userProjects: { include: { user: true } }
     projectPages: {
       include: {
-        pageImages: true
+        masterImages: true
+        studentAnswerImages: { include: { student: true } }
         cropRegions: {
           include: {
             cropSubtotals: { include: { subtotal: true } }
-            questionScores: { include: { student: true; scoredByUser: true } }
+            questionScores: { include: { student: true; user: true } }
           }
         }
       }
@@ -136,7 +137,6 @@ export type ProjectPayloadWithAllRelations = Prisma.ProjectGetPayload<{
     projectSubtotalGroups: {
       include: { subtotalGroup: { include: { subtotals: true } } }
     }
-    studentAnswers: { include: { student: true; questionScores: true } }
     projectStudents: { include: { student: true } }
   }
 }>
@@ -154,7 +154,7 @@ export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
     cropSubtotals: {
       include: { subtotal: { include: { subtotalGroup: true } } }
     }
-    questionScores: { include: { student: true; scoredByUser: true } }
+    questionScores: { include: { student: true; user: true } }
   }
 }>
 
@@ -197,7 +197,7 @@ export type CropSubtotalWithRelations = Prisma.CropSubtotalGetPayload<{
 }>
 
 // =============================================================================
-// ProjectPage/PageImage関連型
+// ProjectPage/MasterImage/StudentAnswerImage関連型
 // =============================================================================
 
 /**
@@ -207,19 +207,34 @@ export type ProjectPageWithDetails = Prisma.ProjectPageGetPayload<{
   include: {
     project: true
     cropRegions: true
-    pageImages: { include: { student: true } }
+    masterImages: true
+    studentAnswerImages: { include: { student: true } }
   }
 }>
 
 /**
- * 詳細情報を含むPageImage型
+ * 詳細情報を含むMasterImage型
  */
-export type PageImageWithDetails = Prisma.PageImageGetPayload<{
+export type MasterImageWithDetails = Prisma.MasterImageGetPayload<{
+  include: {
+    projectPage: { include: { project: true } }
+  }
+}>
+
+/**
+ * 詳細情報を含むStudentAnswerImage型
+ */
+export type StudentAnswerImageWithDetails = Prisma.StudentAnswerImageGetPayload<{
   include: {
     projectPage: { include: { project: true } }
     student: true
   }
 }>
+
+/**
+ * @deprecated Use MasterImageWithDetails or StudentAnswerImageWithDetails instead
+ */
+export type PageImageWithDetails = StudentAnswerImageWithDetails
 
 // =============================================================================
 // UserProject/ProjectSubtotalGroup関連型

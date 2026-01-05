@@ -1,15 +1,15 @@
 "use client"
 
 import { ConvertedImage, convertPdfToImages } from "@/lib/pdfConverter"
-import { PageImage, Prisma } from "@prisma/client"
+import { MasterImage, Prisma } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
-type MasterAnswer = Prisma.PageImageGetPayload<{
+type MasterAnswer = Prisma.MasterImageGetPayload<{
   include: { projectPage: true }
 }>
 
-type PageImageWithStudent = PageImage & { student: unknown }
+// MasterImage type - projectPage is added when mapping
 
 export interface MasterAnswersState {
   answers: MasterAnswer[]
@@ -197,9 +197,7 @@ export function useMasterAnswers(
           if (updatedProject && updatedProject.projectPages) {
             // Extract master answers from project pages
             const masterAnswers = updatedProject.projectPages.flatMap((page) =>
-              page.pageImages
-                .filter((img) => img.imageType === "MODEL_ANSWER")
-                .map((img) => ({ ...img, projectPage: page }))
+              page.masterImages.map((img) => ({ ...img, projectPage: page }))
             )
 
             const sortedUpdatedAnswers = [...masterAnswers].sort(
@@ -352,14 +350,10 @@ export function useMasterAnswers(
         const result = await window.electronAPI.deleteMasterAnswer(answerId)
         const updatedAnswers = result.projectPages
           .flatMap((page) =>
-            page.pageImages
-              .filter(
-                (img: PageImageWithStudent) => img.imageType === "MODEL_ANSWER"
-              )
-              .map((img: PageImageWithStudent) => ({
-                ...img,
-                projectPage: page,
-              }))
+            page.masterImages.map((img) => ({
+              ...img,
+              projectPage: page,
+            }))
           )
           .sort((a, b) => a.projectPage.pageNumber - b.projectPage.pageNumber)
 

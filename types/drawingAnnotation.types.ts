@@ -65,7 +65,7 @@ export interface DrawingAnnotation {
   // メタデータ
   createdAt: Date
   updatedAt: Date
-  createdByUserId?: string | null
+  userId: string
 }
 
 // 作成用データ型
@@ -81,7 +81,6 @@ export interface DrawingCreateData {
   // QuestionScore自動作成用の追加情報（questionScoreIdが存在しない場合に使用）
   studentId?: string
   cropRegionId?: string
-  scoredByUserId?: string
 
   // 全プロパティ（デフォルト値はデータベース側で設定）
   width?: number
@@ -98,7 +97,7 @@ export interface DrawingCreateData {
   anchorDirection?: AnchorDirection
   displayX?: number
   displayY?: number
-  createdByUserId?: string | null
+  userId: string
 }
 
 // 更新用データ型
@@ -189,7 +188,7 @@ export interface DrawingAnnotationWithQuestionScore extends DrawingAnnotation {
       label: string
     }
   } | null
-  createdByUser?: {
+  user?: {
     id: string
     username: string
     name: string | null
