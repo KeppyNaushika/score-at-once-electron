@@ -7,6 +7,13 @@ import type {
   PageImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 
+/** キーバインディングの型 */
+interface ModalKeyBindings {
+  partialKey?: string
+  pendingKey?: string
+  cancelKey?: string
+}
+
 interface ScoringModalsProps {
   // Partial Score Modal props
   showPartialScoreModal: boolean
@@ -14,6 +21,9 @@ interface ScoringModalsProps {
   currentCropRegion?: CropRegionWithProjectPage
   onPartialScoreClose: () => void
   onPartialScoreChange: (value: string) => void
+  onPartialScoreConfirmPartial?: () => void
+  onPartialScoreConfirmPending?: () => void
+  keyBindings?: ModalKeyBindings
   // Score Comparison Modal props
   showScoreComparison: boolean
   onScoreComparisonClose: () => void
@@ -26,6 +36,9 @@ export function ScoringModals({
   currentCropRegion,
   onPartialScoreClose,
   onPartialScoreChange,
+  onPartialScoreConfirmPartial,
+  onPartialScoreConfirmPending,
+  keyBindings,
   showScoreComparison,
   onScoreComparisonClose,
   currentAnswerSheet,
@@ -42,6 +55,9 @@ export function ScoringModals({
         }
         onClose={onPartialScoreClose}
         onChange={onPartialScoreChange}
+        onConfirmPartial={onPartialScoreConfirmPartial}
+        onConfirmPending={onPartialScoreConfirmPending}
+        keyBindings={keyBindings}
       />
 
       {/* 採点比較モーダル */}

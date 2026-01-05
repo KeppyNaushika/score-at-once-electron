@@ -9,6 +9,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { useCallback } from "react"
+
+/** キーバインディングの型 */
+interface KeyBindings {
+  partialKey?: string
+  pendingKey?: string
+  cancelKey?: string
+}
+
+/** キー表示を整形する */
+function formatKeyDisplay(key: string | undefined): string {
+  if (!key) return ""
+  // 小文字キーは大文字に変換して表示
+  if (key.length === 1) {
+    return key.toUpperCase()
+  }
+  return key
+}
 
 interface PartialScoreModalProps {
   isOpen: boolean
@@ -17,6 +35,9 @@ interface PartialScoreModalProps {
   questionLabel: string
   onClose: () => void
   onChange?: (value: string) => void
+  onConfirmPartial?: () => void
+  onConfirmPending?: () => void
+  keyBindings?: KeyBindings
 }
 
 export default function PartialScoreModal({
@@ -26,7 +47,50 @@ export default function PartialScoreModal({
   questionLabel,
   onClose,
   onChange,
+  onConfirmPartial,
+  onConfirmPending,
+  keyBindings,
 }: PartialScoreModalProps) {
+  // デフォルト値を設定
+  const partialKey = keyBindings?.partialKey || "f"
+  const pendingKey = keyBindings?.pendingKey || "j"
+  const cancelKey = keyBindings?.cancelKey || "Escape"
+
+  const partialKeyDisplay = formatKeyDisplay(partialKey)
+  const pendingKeyDisplay = formatKeyDisplay(pendingKey)
+  const cancelKeyDisplay = formatKeyDisplay(cancelKey)
+
+  /** Input内でのキーボードハンドラー */
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      const key = e.key.toLowerCase()
+
+      // 部分点確定キー
+      if (key === partialKey.toLowerCase()) {
+        e.preventDefault()
+        e.stopPropagation()
+        onConfirmPartial?.()
+        return
+      }
+
+      // 保留確定キー
+      if (key === pendingKey.toLowerCase()) {
+        e.preventDefault()
+        e.stopPropagation()
+        onConfirmPending?.()
+        return
+      }
+
+      // キャンセルキー
+      if (e.key === cancelKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
+        return
+      }
+    },
+    [partialKey, pendingKey, cancelKey, onConfirmPartial, onConfirmPending, onClose]
+  )
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
@@ -51,6 +115,7 @@ export default function PartialScoreModal({
                   onChange(e.target.value)
                 }
               }}
+              onKeyDown={handleKeyDown}
               autoFocus
             />
             {value.endsWith(".") && (
@@ -77,15 +142,21 @@ export default function PartialScoreModal({
                 削除
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">F</kbd>{" "}
+                <kbd className="rounded border bg-white px-2 py-1">
+                  {partialKeyDisplay}
+                </kbd>{" "}
                 部分点で確定
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">J</kbd>{" "}
+                <kbd className="rounded border bg-white px-2 py-1">
+                  {pendingKeyDisplay}
+                </kbd>{" "}
                 保留で確定
               </div>
               <div>
-                <kbd className="rounded border bg-white px-2 py-1">Escape</kbd>{" "}
+                <kbd className="rounded border bg-white px-2 py-1">
+                  {cancelKeyDisplay}
+                </kbd>{" "}
                 キャンセル
               </div>
             </div>
@@ -100,31 +171,23 @@ export default function PartialScoreModal({
               variant="default"
               className="bg-yellow-600 hover:bg-yellow-700"
               onClick={() => {
-                // F キーのエミュレート - 実際の処理はキーボードハンドラーで
-                const event = new KeyboardEvent("keydown", {
-                  key: "f",
-                  code: "KeyF",
-                  bubbles: true,
-                })
-                document.dispatchEvent(event)
+                if (onConfirmPartial) {
+                  onConfirmPartial()
+                }
               }}
             >
-              部分点で確定 (F)
+              部分点で確定 ({partialKeyDisplay})
             </Button>
             <Button
               variant="default"
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => {
-                // J キーのエミュレート
-                const event = new KeyboardEvent("keydown", {
-                  key: "j",
-                  code: "KeyJ",
-                  bubbles: true,
-                })
-                document.dispatchEvent(event)
+                if (onConfirmPending) {
+                  onConfirmPending()
+                }
               }}
             >
-              保留で確定 (J)
+              保留で確定 ({pendingKeyDisplay})
             </Button>
           </div>
         </div>
