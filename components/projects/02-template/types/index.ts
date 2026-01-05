@@ -197,4 +197,68 @@ export interface UseImageCanvasInteractionProps {
     coords: { x: number; y: number; width: number; height: number }
   ) => void
   zoom: number
+  // 検出関連のプロパティ（オプション）
+  detectionMode?: DetectionMode
+  onSnapToDetectedRects?: (dragRect: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }) => DragSelectionResult
+}
+
+// ============================================================================
+// Frame Detection Types (採点枠自動認識)
+// ============================================================================
+
+/**
+ * 検出された長方形
+ */
+export interface DetectedRect {
+  /** 一意識別子（UUID） */
+  id: string
+  /** X座標（相対座標 0-1） */
+  x: number
+  /** Y座標（相対座標 0-1） */
+  y: number
+  /** 幅（相対座標 0-1） */
+  width: number
+  /** 高さ（相対座標 0-1） */
+  height: number
+  /** 検出信頼度 0-1 */
+  confidence: number
+}
+
+/**
+ * 検出設定（シンプル版）
+ */
+export interface DetectionSettings {
+  /** 線の延長ピクセル デフォルト: 0 */
+  lineExtension: number
+  /** 最小幅（相対座標）デフォルト: 0.02 */
+  minWidth: number
+  /** 最小高さ（相対座標）デフォルト: 0.01 */
+  minHeight: number
+}
+
+/**
+ * 検出モード
+ * - manual: 手動
+ * - auto: 自動（オーバーレイ表示 + スナップ補正）
+ */
+export type DetectionMode = "manual" | "auto"
+
+/**
+ * ドラッグ選択結果
+ */
+export interface DragSelectionResult {
+  /** 選択された検出枠 */
+  selectedRects: DetectedRect[]
+  /** マージされた境界 */
+  mergedBounds: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
 }

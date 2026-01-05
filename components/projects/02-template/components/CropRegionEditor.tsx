@@ -1,9 +1,13 @@
 "use client"
 
 import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
-import { useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+import { useFrameDetection } from "../hooks/useFrameDetection"
+import { DetectedRect } from "../types"
 import CropRegionList from "./CropRegionList"
+import { DetectionModeToggle } from "./DetectionModeToggle"
+import { DetectionSettingsPanel } from "./DetectionSettingsPanel"
 import ImageCanvas from "./ImageCanvas"
 
 type CropRegionEditorProps = {
@@ -35,6 +39,52 @@ const CropRegionEditor = ({
 }: CropRegionEditorProps) => {
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(
     null
+  )
+  const [settingsCollapsed, setSettingsCollapsed] = useState(true)
+
+  // 検出機能フック
+  const {
+    detectedRects,
+    isDetecting,
+    detectionMode,
+    settings,
+    setDetectionMode,
+    updateSettings,
+    resetSettings,
+    detectAll,
+    detectAtPoint: _detectAtPoint, // 将来のクリック検出モードで使用予定
+    findSnappedRects,
+    clearDetectedRects,
+  } = useFrameDetection({ imageUrl: backgroundImageUrl })
+
+  // 画像が変更されたら検出結果をクリア
+  useEffect(() => {
+    clearDetectedRects()
+  }, [backgroundImageUrl, clearDetectedRects])
+
+  // 検出モードが変更されたら一括検出を実行
+  useEffect(() => {
+    if (detectionMode !== "manual" && backgroundImageUrl) {
+      detectAll()
+    }
+  }, [detectionMode, backgroundImageUrl, detectAll])
+
+  // 検出枠クリック時のハンドラ
+  const handleDetectedRectClick = useCallback(
+    async (rect: DetectedRect) => {
+      if (!projectPageId) return
+
+      // クリックした検出枠を採点領域として作成
+      if (onCreateRegion) {
+        await onCreateRegion("QUESTION_ANSWER", {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        })
+      }
+    },
+    [projectPageId, onCreateRegion]
   )
 
   const handleUpdateArea = async (
@@ -164,11 +214,40 @@ const CropRegionEditor = ({
           onDeleteArea={handleDeleteArea}
           disabled={disabled}
           projectPageId={projectPageId}
+          detectedRects={detectedRects}
+          detectionMode={detectionMode}
+          onDetectedRectClick={handleDetectedRectClick}
+          onSnapToDetectedRects={findSnappedRects}
         />
       </div>
 
       {/* Right Side - Region List with independent scroll */}
       <div className="bg-background relative w-80 flex-shrink-0 border-l">
+        {/* 検出モード切替と設定 */}
+        <div className="space-y-3 border-b p-3">
+          <DetectionModeToggle
+            mode={detectionMode}
+            onModeChange={setDetectionMode}
+            isDetecting={isDetecting}
+            onDetectAll={detectAll}
+            disabled={disabled}
+          />
+          {detectionMode !== "manual" && (
+            <DetectionSettingsPanel
+              settings={settings}
+              onSettingsChange={updateSettings}
+              onReset={resetSettings}
+              collapsed={settingsCollapsed}
+              onToggleCollapse={() => setSettingsCollapsed(!settingsCollapsed)}
+            />
+          )}
+          {detectedRects.length > 0 && (
+            <div className="text-xs text-gray-500">
+              検出枠: {detectedRects.length}個
+            </div>
+          )}
+        </div>
+
         <CropRegionList
           areas={areas}
           selectedAreaIndex={selectedAreaIndex}

@@ -33,6 +33,8 @@ export function useImageCanvasInteraction({
   onUpdateArea,
   zoom,
   imageContainerRef,
+  detectionMode = "manual",
+  onSnapToDetectedRects,
 }: UseImageCanvasInteractionProps & {
   imageContainerRef: React.RefObject<HTMLDivElement>
 }) {
@@ -75,6 +77,8 @@ export function useImageCanvasInteraction({
     setDragCurrentCoords,
     setResizing,
     setMoving,
+    detectionMode,
+    onSnapToDetectedRects,
   })
 
   // Event listeners setup
