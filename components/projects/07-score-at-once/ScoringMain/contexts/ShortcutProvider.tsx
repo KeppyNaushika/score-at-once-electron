@@ -86,17 +86,43 @@ const DEAD_KEY_CODE_MAP: { [code: string]: string } = {
 }
 
 /**
+ * 大文字小文字を保持すべき特殊キー
+ * これらのキーはキーバインディング設定と同じ形式で返す
+ */
+const SPECIAL_KEYS = new Set([
+  "Escape",
+  "Backspace",
+  "Enter",
+  "Tab",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp",
+  "ArrowDown",
+  "Delete",
+  "Home",
+  "End",
+  "PageUp",
+  "PageDown",
+  "Insert",
+])
+
+/**
  * キー入力を正規化する
  * macOSデッドキー対応と修飾キーの処理を含む
  */
 function normalizeKey(event: KeyboardEvent): string {
-  let key = event.key.toLowerCase()
+  let key = event.key
 
   // macOSデッドキー対応
-  if (key === "dead" && event.code && DEAD_KEY_CODE_MAP[event.code]) {
+  if (key === "Dead" && event.code && DEAD_KEY_CODE_MAP[event.code]) {
     key = DEAD_KEY_CODE_MAP[event.code]
   } else if (event.code && DEAD_KEY_CODE_MAP[event.code]) {
     key = DEAD_KEY_CODE_MAP[event.code]
+  }
+
+  // 特殊キーは大文字小文字を保持、通常キーは小文字に正規化
+  if (!SPECIAL_KEYS.has(key)) {
+    key = key.toLowerCase()
   }
 
   // スペースキーの正規化
@@ -349,16 +375,21 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
         target instanceof HTMLTextAreaElement ||
         (target instanceof HTMLElement && target.isContentEditable)
 
-      // input要素内では、モーダル制御キー（F, J, Escape）以外をスルー
+      // input要素内では、モーダル制御キー以外をスルー
       // これにより、通常の文字入力（0-9, a-z, .等）とBackspace等は正常に動作する
       if (isInputElement) {
-        const modalControlKeys = ["f", "j", "Escape"]
+        // ユーザー設定から部分点・保留・キャンセルのキーを取得
+        const modalControlKeys = [
+          keyBindings["scoring.partial"],
+          keyBindings["scoring.pending"],
+          keyBindings["modal.cancel"],
+        ].filter(Boolean)
 
         if (!modalControlKeys.includes(key)) {
           // モーダル制御キー以外は通常の入力として処理（Backspace含む）
           return
         }
-        // F, J, Escapeの場合は、後続のコマンド評価に進む
+        // 部分点/保留/キャンセルキーの場合は、後続のコマンド評価に進む
       }
 
       // 逆引き: key -> commandId[] (複数のコマンドが同じキーにバインドされている可能性)

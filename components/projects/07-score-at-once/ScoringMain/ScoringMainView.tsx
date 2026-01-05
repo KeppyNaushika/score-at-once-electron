@@ -10,7 +10,10 @@ import {
   ScoringErrorState,
   ScoringLoadingState,
 } from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
-import { ShortcutProvider } from "@/components/projects/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
+import {
+  ShortcutProvider,
+  useShortcutContext,
+} from "@/components/projects/07-score-at-once/ScoringMain/contexts/ShortcutProvider"
 import { useBatchScoringWithProgress } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useBatchScoringWithProgress"
 import { usePartialScore } from "@/components/projects/07-score-at-once/ScoringMain/hooks/usePartialScore"
 import { useScoringActions } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringActions"
@@ -34,6 +37,17 @@ function ScoringMainViewContent() {
   const params = useParams()
   const projectId = params.projectId as string
   const { helpButton } = usePageHelp()
+  const { keyBindings } = useShortcutContext()
+
+  /** モーダル用のキーバインディング */
+  const modalKeyBindings = useMemo(
+    () => ({
+      partialKey: keyBindings["scoring.partial"],
+      pendingKey: keyBindings["scoring.pending"],
+      cancelKey: keyBindings["modal.cancel"],
+    }),
+    [keyBindings]
+  )
 
   /** データローダーフック */
   const { loading, project, pageImages, cropRegions, currentUserId } =
@@ -380,6 +394,9 @@ function ScoringMainViewContent() {
         currentCropRegion={currentCropRegion}
         onPartialScoreClose={handlePartialScoreCancel}
         onPartialScoreChange={handlePartialScoreChange}
+        onPartialScoreConfirmPartial={() => handlePartialScoreConfirm("partial")}
+        onPartialScoreConfirmPending={() => handlePartialScoreConfirm("pending")}
+        keyBindings={modalKeyBindings}
         showScoreComparison={showScoreComparison}
         onScoreComparisonClose={() => setShowScoreComparison(false)}
         currentAnswerSheet={currentAnswerSheet}
