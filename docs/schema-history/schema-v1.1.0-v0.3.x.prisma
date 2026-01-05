@@ -1,0 +1,376 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "darwin", "darwin-arm64", "windows", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                 @id @default(uuid())
+  username            String                 @unique
+  passcode            String?
+  name                String
+  role                String                 @default("teacher")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  passcodeType        String?                @default("none")
+  drawingAnnotations  DrawingAnnotation[]
+  questionScores      QuestionScore[]
+  userProjects        UserProject[]
+  invitedUserProjects UserProject[]          @relation("InvitedByUser")
+  keyboardShortcuts   UserKeyboardShortcut[]
+  scoringPreference   UserScoringPreference?
+}
+
+model Class {
+  id             String                   @id @default(uuid())
+  name           String                   @unique
+  classCode      String?
+  grade          Int?
+  description    String?
+  isVisible      Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  memberships    StudentClassMembership[]
+  projectClasses ProjectClass[]
+
+  @@map("classes")
+}
+
+model Student {
+  id              String                   @id @default(uuid())
+  studentId       String                   @unique
+  lastName        String
+  firstName       String
+  lastNameKana    String
+  firstNameKana   String
+  enrollmentYear  Int?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  pageImages      PageImage[]
+  projectStudents ProjectStudent[]
+  questionScores  QuestionScore[]
+  memberships     StudentClassMembership[]
+}
+
+model StudentClassMembership {
+  id               String    @id @default(uuid())
+  studentId        String
+  classId          String
+  startDate        DateTime  @default(now())
+  endDate          DateTime?
+  attendanceNumber Int?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class            Class     @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([classId])
+  @@index([classId, attendanceNumber])
+  @@index([startDate, endDate])
+}
+
+model Project {
+  id                    String                 @id @default(uuid())
+  examName              String
+  examDate              DateTime?
+  subject               String?
+  description           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @default(now()) @updatedAt
+  projectPages          ProjectPage[]
+  projectStudents       ProjectStudent[]
+  projectSubtotalGroups ProjectSubtotalGroup[]
+  userProjects          UserProject[]
+  projectClasses        ProjectClass[]
+  markingFormats        ProjectMarkingFormat[]
+  exportSettings        ProjectExportSettings?
+}
+
+model ProjectStudent {
+  id          String   @id @default(uuid())
+  projectId   String
+  studentId   String
+  status      String   @default("PARTICIPATING")
+  customOrder Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, studentId])
+  @@index([projectId])
+  @@index([studentId])
+  @@index([projectId, customOrder])
+}
+
+model ProjectPage {
+  id          String       @id @default(uuid())
+  projectId   String
+  pageNumber  Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
+  cropRegions CropRegion[]
+  pageImages  PageImage[]
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model PageImage {
+  id            String      @id @default(uuid())
+  projectPageId String
+  studentId     String?
+  imagePath     String
+  imageType     String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
+  projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model CropRegion {
+  id               String                      @id @default(uuid())
+  projectPageId    String
+  label            String
+  type             String
+  x                Float
+  y                Float
+  width            Float
+  height           Float
+  points           Int?
+  orderIndex       Int?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @default(now()) @updatedAt
+  projectPage      ProjectPage                 @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropSubtotals    CropSubtotal[]
+  questionScores   QuestionScore[]
+  markingOverrides CropRegionMarkingOverride[]
+}
+
+model SubtotalGroup {
+  id                    String                 @id @default(uuid())
+  name                  String
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @default(now()) @updatedAt
+  projectSubtotalGroups ProjectSubtotalGroup[]
+  subtotals             Subtotal[]
+  subjectSubtotalGroups SubjectSubtotalGroup[]
+}
+
+model Subtotal {
+  id              String         @id @default(uuid())
+  name            String
+  subtotalGroupId String
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @default(now()) @updatedAt
+  cropSubtotals   CropSubtotal[]
+  subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([subtotalGroupId, name], map: "sqlite_autoindex_Subtotal_2")
+}
+
+model CropSubtotal {
+  id             String     @id @default(uuid())
+  cropRegionId   String
+  subtotalId     String
+  assignmentType String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now()) @updatedAt
+  cropRegion     CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model UserProject {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      String   @default("GRADER") // "OWNER" | "GRADER"
+  invitedAt DateTime @default(now())
+  invitedBy String? // Null for OWNER (project creator)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  inviter   User?    @relation("InvitedByUser", fields: [invitedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+model ProjectSubtotalGroup {
+  id              String        @id @default(uuid())
+  projectId       String
+  subtotalGroupId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @default(now()) @updatedAt
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model QuestionScore {
+  id                 String              @id @default(uuid())
+  cropRegionId       String
+  studentId          String?
+  partialScore       Decimal?
+  status             String              @default("unscored")
+  scoredByUserId     String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+  drawingAnnotations DrawingAnnotation[]
+  cropRegion         CropRegion          @relation(fields: [cropRegionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student            Student?            @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  scoredByUser       User?               @relation(fields: [scoredByUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model DrawingAnnotation {
+  id              String        @id @default(uuid())
+  questionScoreId String
+  type            String
+  x               Float
+  y               Float
+  color           String        @default("#ef4444")
+  strokeWidth     Int           @default(3)
+  width           Float         @default(0.0)
+  height          Float         @default(0.0)
+  endX            Float         @default(0.0)
+  endY            Float         @default(0.0)
+  lineStyle       String        @default("solid")
+  text            String        @default("")
+  fontSize        Int           @default(16)
+  textBoxWidth    Float         @default(0.0)
+  textBoxHeight   Float         @default(0.0)
+  horizontalAlign String        @default("left")
+  verticalAlign   String        @default("top")
+  anchorDirection String        @default("top-left")
+  displayX        Float         @default(0.0)
+  displayY        Float         @default(0.0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  createdByUserId String?
+  createdByUser   User?         @relation(fields: [createdByUserId], references: [id])
+  questionScore   QuestionScore @relation(fields: [questionScoreId], references: [id], onDelete: Cascade)
+
+  @@index([questionScoreId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ProjectClass {
+  id           String   @id @default(uuid())
+  projectId    String
+  classId      String
+  administered Boolean  @default(false) // 学級・出席番号表示の対象
+  statistics   Boolean  @default(false) // 統計集計の対象
+  order        Int      @default(0) // 複数クラス時の優先順位（小さいほど優先）
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, classId])
+  @@index([projectId])
+  @@index([classId])
+}
+
+model Subject {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subjectSubtotalGroups SubjectSubtotalGroup[]
+}
+
+model SubjectSubtotalGroup {
+  id              String   @id @default(uuid())
+  subjectId       String
+  subtotalGroupId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subject       Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subtotalGroup SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, subtotalGroupId])
+  @@index([subjectId])
+  @@index([subtotalGroupId])
+}
+
+model UserKeyboardShortcut {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  key       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, action])
+  @@index([userId])
+}
+
+model UserScoringPreference {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  showStudentNames     Boolean  @default(true)
+  autoScroll           Boolean  @default(true)
+  itemsPerLine         Int      @default(5)
+  layoutDirection      String   @default("right-down")
+  selectionBorderColor String?
+  scoringStatusColors  String?
+  scoringColorPresetId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectMarkingFormat {
+  id          String   @id @default(uuid())
+  projectId   String
+  markType    String
+  symbol      String
+  color       String
+  fontSize    Int?
+  strokeWidth Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, markType])
+  @@index([projectId])
+}
+
+model ProjectExportSettings {
+  id           String   @id @default(uuid())
+  projectId    String   @unique
+  settingsJson String // JSON形式で保存
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model CropRegionMarkingOverride {
+  id           String   @id @default(uuid())
+  cropRegionId String
+  markType     String
+  symbol       String?
+  color        String?
+  visible      Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cropRegion CropRegion @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+
+  @@unique([cropRegionId, markType])
+  @@index([cropRegionId])
+}
