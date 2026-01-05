@@ -89,7 +89,14 @@ export default function PartialScoreModal({
         return
       }
     },
-    [partialKey, pendingKey, cancelKey, onConfirmPartial, onConfirmPending, onClose]
+    [
+      partialKey,
+      pendingKey,
+      cancelKey,
+      onConfirmPartial,
+      onConfirmPending,
+      onClose,
+    ]
   )
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

@@ -224,12 +224,13 @@ export type MasterImageWithDetails = Prisma.MasterImageGetPayload<{
 /**
  * 詳細情報を含むStudentAnswerImage型
  */
-export type StudentAnswerImageWithDetails = Prisma.StudentAnswerImageGetPayload<{
-  include: {
-    projectPage: { include: { project: true } }
-    student: true
-  }
-}>
+export type StudentAnswerImageWithDetails =
+  Prisma.StudentAnswerImageGetPayload<{
+    include: {
+      projectPage: { include: { project: true } }
+      student: true
+    }
+  }>
 
 /**
  * @deprecated Use MasterImageWithDetails or StudentAnswerImageWithDetails instead

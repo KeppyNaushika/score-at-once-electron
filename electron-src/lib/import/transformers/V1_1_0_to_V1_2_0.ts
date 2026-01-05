@@ -153,14 +153,12 @@ export class V1_1_0_to_V1_2_0_Transformer implements VersionTransformer {
         projectData: {
           ...data.projectData,
           // pageImagesは後方互換性のため維持（空にはしない）
-          masterImages:
-            masterImages as unknown as NonNullable<
-              typeof data.projectData.masterImages
-            >,
-          studentAnswerImages:
-            studentAnswerImages as unknown as NonNullable<
-              typeof data.projectData.studentAnswerImages
-            >,
+          masterImages: masterImages as unknown as NonNullable<
+            typeof data.projectData.masterImages
+          >,
+          studentAnswerImages: studentAnswerImages as unknown as NonNullable<
+            typeof data.projectData.studentAnswerImages
+          >,
         },
         scoresData: {
           questionScores:

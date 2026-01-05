@@ -4,17 +4,18 @@
 
 ## バージョン対応表
 
-| Archive Version | App Version | Git Tag | ファイル |
-|----------------|-------------|---------|---------|
-| 1.0.0 | v0.2.x | v0.2.21-alpha.0 | schema-v1.0.0-v0.2.x.prisma |
-| 1.1.0 | v0.3.x | v0.3.2-beta.0 | schema-v1.1.0-v0.3.x.prisma |
-| 1.2.0 | v0.4.x | (current) | schema-v1.2.0-v0.4.x.prisma |
+| Archive Version | App Version | Git Tag         | ファイル                    |
+| --------------- | ----------- | --------------- | --------------------------- |
+| 1.0.0           | v0.2.x      | v0.2.21-alpha.0 | schema-v1.0.0-v0.2.x.prisma |
+| 1.1.0           | v0.3.x      | v0.3.2-beta.0   | schema-v1.1.0-v0.3.x.prisma |
+| 1.2.0           | v0.4.x      | (current)       | schema-v1.2.0-v0.4.x.prisma |
 
 ## バージョン間の主な変更点
 
 ### v1.0.0 → v1.1.0 (v0.2.x → v0.3.x)
 
 #### 追加されたテーブル
+
 - `ProjectClass` - プロジェクトと学級の関連付け
 - `Subject` - 教科マスター
 - `SubjectSubtotalGroup` - 教科と小計グループの関連
@@ -25,6 +26,7 @@
 - `CropRegionMarkingOverride` - 領域別マーク上書き設定
 
 #### 変更されたテーブル
+
 - `UserProject`
   - `invitedAt` フィールド追加
   - `invitedBy` フィールド追加
@@ -47,13 +49,16 @@
 ### v1.1.0 → v1.2.0 (v0.3.x → v0.4.x)
 
 #### 追加されたテーブル
+
 - `MasterImage` - 模範解答画像（PageImageから分離）
 - `StudentAnswerImage` - 答案画像（PageImageから分離）
 
 #### 削除されたテーブル
+
 - `PageImage` - MasterImage/StudentAnswerImageに分離
 
 #### 変更されたテーブル
+
 - `QuestionScore`
   - `scoredByUserId` → `userId` にリネーム
   - `studentId` が非NULL化（必須フィールド）
@@ -72,11 +77,13 @@
 ## インポート時の変換ロジック
 
 ### v1.0.0 アーカイブのインポート
+
 1. `UserProject.invitedAt` = `createdAt` で補完
 2. `UserProject.invitedBy` = null で補完
 3. `projectClasses` = 空配列で初期化
 
 ### v1.1.0 アーカイブのインポート
+
 1. `pageImages` → `masterImages` / `studentAnswerImages` に変換
    - `imageType === "MODEL_ANSWER"` → `MasterImage`
    - `imageType === "STUDENT_ANSWER"` → `StudentAnswerImage`

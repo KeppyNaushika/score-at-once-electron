@@ -101,7 +101,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
         ...up,
         role,
         invitedAt: up.createdAt, // createdAtで代用
-        invitedBy: index === 0 ? null : userProjects[0]?.userId ?? null,
+        invitedBy: index === 0 ? null : (userProjects[0]?.userId ?? null),
       }
     })
   }

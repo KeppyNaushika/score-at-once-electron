@@ -19,7 +19,8 @@ export function useAutoScroll() {
   const { user } = useAuth()
   const userId = user?.id
 
-  const [autoScroll, setAutoScrollState] = useState<boolean>(DEFAULT_AUTO_SCROLL)
+  const [autoScroll, setAutoScrollState] =
+    useState<boolean>(DEFAULT_AUTO_SCROLL)
   const [isLoading, setIsLoading] = useState(true)
   const initializedRef = useRef(false)
 
