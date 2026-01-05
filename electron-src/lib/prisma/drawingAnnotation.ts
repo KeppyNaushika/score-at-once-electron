@@ -11,71 +11,45 @@ import type {
   DrawingUpdateData,
 } from "../../../types/drawingAnnotation.types"
 import prisma from "./client"
-import { createQuestionScore } from "./questionScore"
 
 /**
  * 描画アノテーションを作成する
- * @param data 作成データ
+ * @param data 作成データ（questionScoreIdは必須）
  * @returns Promise<DrawingAnnotation> 作成された描画アノテーション
  */
 export async function createDrawingAnnotation(
   data: DrawingCreateData
 ): Promise<DrawingAnnotation> {
   try {
-    // 外部キー制約の事前検証と自動作成
-    if (data.questionScoreId) {
-      const questionScoreExists = await prisma.questionScore.findUnique({
-        where: { id: data.questionScoreId },
-        select: { id: true },
-      })
-
-      if (!questionScoreExists) {
-        // QuestionScoreが存在しない場合、自動作成を試行
-        if (data.studentId && data.cropRegionId && data.userId) {
-          try {
-            const result = await createQuestionScore({
-              studentId: data.studentId,
-              cropRegionId: data.cropRegionId,
-              userId: data.userId,
-              partialScore: undefined,
-              status: "unscored",
-              comment: undefined,
-            })
-
-            if (result.success && result.score) {
-              data.questionScoreId = result.score.id
-            } else {
-              throw new Error(
-                `QuestionScore creation failed: ${"error" in result ? result.error : "Unknown error"}`
-              )
-            }
-          } catch (createError) {
-            console.error("QuestionScore自動作成失敗:", createError)
-            throw new Error(
-              `QuestionScore not found and auto-creation failed: ${data.questionScoreId}. Original error: ${createError instanceof Error ? createError.message : String(createError)}`
-            )
-          }
-        } else {
-          throw new Error(
-            `QuestionScore not found: ${data.questionScoreId}. To auto-create, provide studentId, cropRegionId, and userId`
-          )
-        }
-      }
-    } else {
-      throw new Error("questionScoreId is required but was undefined/null")
+    // questionScoreIdは必須
+    if (!data.questionScoreId) {
+      throw new Error(
+        "questionScoreId is required. QuestionScore must be created before adding annotations."
+      )
     }
 
-    if (data.userId) {
-      const userExists = await prisma.user.findUnique({
-        where: { id: data.userId },
-        select: { id: true },
-      })
+    // 外部キー制約の事前検証
+    const questionScoreExists = await prisma.questionScore.findUnique({
+      where: { id: data.questionScoreId },
+      select: { id: true },
+    })
 
-      if (!userExists) {
-        throw new Error(`User not found: ${data.userId}`)
-      }
-    } else {
+    if (!questionScoreExists) {
+      throw new Error(`QuestionScore not found: ${data.questionScoreId}`)
+    }
+
+    // ユーザー存在チェック
+    if (!data.userId) {
       throw new Error("userId is required but was undefined/null")
+    }
+
+    const userExists = await prisma.user.findUnique({
+      where: { id: data.userId },
+      select: { id: true },
+    })
+
+    if (!userExists) {
+      throw new Error(`User not found: ${data.userId}`)
     }
 
     const result = await prisma.drawingAnnotation.create({
@@ -109,6 +83,28 @@ export async function createDrawingAnnotation(
         displayY: data.displayY || 0.0,
         // メタデータ
         userId: data.userId,
+      },
+      // 透明度制御に必要なquestionScore情報を含める
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+          },
+        },
       },
     })
 
@@ -310,6 +306,28 @@ export async function updateDrawingAnnotation(
         ...data,
         updatedAt: new Date(),
       },
+      // 透明度制御に必要なquestionScore情報を含める
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            name: true,
+          },
+        },
+        questionScore: {
+          select: {
+            id: true,
+            cropRegionId: true,
+            cropRegion: {
+              select: {
+                id: true,
+                label: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     return result as DrawingAnnotation
@@ -398,6 +416,28 @@ export async function batchUpdateDrawingAnnotations(
           data: {
             ...data,
             updatedAt: new Date(),
+          },
+          // 透明度制御に必要なquestionScore情報を含める
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                name: true,
+              },
+            },
+            questionScore: {
+              select: {
+                id: true,
+                cropRegionId: true,
+                cropRegion: {
+                  select: {
+                    id: true,
+                    label: true,
+                  },
+                },
+              },
+            },
           },
         })
       })

@@ -30,11 +30,13 @@ interface DrawingContext {
 
 /**
  * 既存DrawingElementからDrawingCreateDataへの変換
+ * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
+ * @throws Error questionScoreIdがない場合
  */
 export function convertElementToCreateData(
   element: DrawingElement,
   questionScoreId: string,
-  context?: DrawingContext
+  userId: string
 ): DrawingCreateData {
   return {
     id: element.id, // フロントエンドで生成したUUIDをDBでも使用
@@ -60,10 +62,7 @@ export function convertElementToCreateData(
     }),
     horizontalAlign: "left", // デフォルト値
     verticalAlign: "top", // デフォルト値
-    // QuestionScore自動作成用の情報
-    studentId: context?.currentStudentId,
-    cropRegionId: context?.currentCropRegionId,
-    userId: context?.currentUserId || "",
+    userId,
   }
 }
 
@@ -272,6 +271,7 @@ export function useDrawingAnnotations(
 
   /**
    * 描画要素保存（新規作成）
+   * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
    */
   const saveElement = useCallback(
     async (
@@ -281,11 +281,18 @@ export function useDrawingAnnotations(
       setIsLoading(true)
       setError(null)
 
+      // userIdがない場合はエラー
+      if (!context?.currentUserId) {
+        handleError("ユーザーIDが設定されていません")
+        setIsLoading(false)
+        return null
+      }
+
       try {
         const createData = convertElementToCreateData(
           element,
           questionScoreId,
-          context
+          context.currentUserId
         )
         const result = await window.electronAPI.drawing.create(createData)
 
@@ -443,6 +450,7 @@ export function useDrawingAnnotations(
 
   /**
    * 描画要素の同期（既存システムからデータベースへ）
+   * questionScoreIdは必須（事前にQuestionScoreが作成されている必要がある）
    */
   const syncElements = useCallback(
     async (
@@ -452,13 +460,24 @@ export function useDrawingAnnotations(
       setIsLoading(true)
       setError(null)
 
+      // userIdがない場合はエラー
+      if (!context?.currentUserId) {
+        handleError("ユーザーIDが設定されていません")
+        setIsLoading(false)
+        return []
+      }
+
       try {
         // 既存のアノテーションをクリア
         await deleteByType(questionScoreId)
 
         // 新しい要素を一括作成
         const createDataList = elements.map((element) =>
-          convertElementToCreateData(element, questionScoreId, context)
+          convertElementToCreateData(
+            element,
+            questionScoreId,
+            context.currentUserId!
+          )
         )
 
         const result =

@@ -47,6 +47,9 @@ interface ScoringContentAreaProps {
 
   /** アノテーション用: QuestionScore配列 */
   questionScores?: QuestionScore[]
+
+  /** QuestionScore自動作成後のコールバック（リストの更新用） */
+  onQuestionScoreCreated?: () => void
 }
 
 export function ScoringContentArea({
@@ -68,6 +71,7 @@ export function ScoringContentArea({
   currentStudentId,
   currentUserId,
   questionScores,
+  onQuestionScoreCreated,
 }: ScoringContentAreaProps) {
   /** 個別表示時：selectedの最初の要素を利用 */
   const currentScoringDataId =
@@ -91,6 +95,7 @@ export function ScoringContentArea({
       currentStudentId={currentStudentId}
       currentUserId={currentUserId}
       questionScores={questionScores}
+      onQuestionScoreCreated={onQuestionScoreCreated}
     />
   ) : (
     /** Grid表示：paddingとスクロールを統合 */

@@ -82,6 +82,9 @@ export interface AnswerIndividualViewProps {
   // アノテーション用: QuestionScore配列（正しいquestionScoreIdを取得するため）
   questionScores?: QuestionScore[]
 
+  // QuestionScore自動作成後のコールバック（リストの更新用）
+  onQuestionScoreCreated?: () => void
+
   // Individual表示固有設定
   pageImages?: PageImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
