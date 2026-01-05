@@ -12,9 +12,7 @@ export type {
 
 export {
   buildSubtotalTargetMap,
-  calculateSubtotalScore,
   calculateSubtotalScoreForStudent,
-  getTargetQuestionIndicesForSubtotal,
 } from "./shared/calculations/subtotalCalculator"
 
 export {

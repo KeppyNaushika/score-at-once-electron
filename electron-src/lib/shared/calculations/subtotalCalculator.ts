@@ -23,11 +23,6 @@ export interface QuestionScoreData {
   partialScore?: number | null
 }
 
-export interface SubtotalResult {
-  score: number
-  maxScore: number
-}
-
 export interface SubtotalScoreResult {
   score: number
   maxScore: number
@@ -288,30 +283,6 @@ export async function calculateSubtotalScoreBySubtotalId(
 }
 
 /**
- * 小計点を計算する関数（互換性のため維持、新しい実装を推奨）
- * @deprecated Use calculateSubtotalScoreBySubtotalId instead
- */
-export async function calculateSubtotalScore(
-  subtotalRegionId: string,
-  studentScores: SubtotalScoreDetail[]
-): Promise<SubtotalResult> {
-  console.warn(
-    "calculateSubtotalScore is deprecated, use calculateSubtotalScoreForStudent instead"
-  )
-
-  // フォールバック: 全設問の合計を返す
-  const totalScore = studentScores.reduce(
-    (sum, score) => sum + (score.score || 0),
-    0
-  )
-  const totalMaxScore = studentScores.reduce(
-    (sum, score) => sum + score.maxScore,
-    0
-  )
-  return { score: totalScore, maxScore: totalMaxScore }
-}
-
-/**
  * 小計点の対象設問インデックスを事前に構築する関数
  * @deprecated This function is deprecated as it depends on old schema logic
  */
@@ -324,18 +295,4 @@ export async function buildSubtotalTargetMap(
     "buildSubtotalTargetMap is deprecated and returns empty map - subtotal scores are now calculated directly"
   )
   return {}
-}
-
-/**
- * 小計点の対象設問インデックスを取得する関数
- * @deprecated This function is deprecated as it depends on old schema logic
- */
-export async function getTargetQuestionIndicesForSubtotal(
-  _subtotalRegionId: string,
-  _scores: SubtotalScoreDetail[]
-): Promise<number[]> {
-  console.warn(
-    "getTargetQuestionIndicesForSubtotal is deprecated, use calculateSubtotalScoreForStudent instead"
-  )
-  return []
 }
