@@ -337,6 +337,7 @@ model UserScoringPreference {
   autoScroll           Boolean  @default(true)
   itemsPerLine         Int      @default(5)
   layoutDirection      String   @default("right-down")
+  expandMargin         Int      @default(0)
   selectionBorderColor String?
   scoringStatusColors  String?
   scoringColorPresetId String?

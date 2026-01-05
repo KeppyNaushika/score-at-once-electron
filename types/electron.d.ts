@@ -1567,6 +1567,7 @@ export interface MyAPI {
         autoScroll?: boolean
         itemsPerLine?: number
         layoutDirection?: string
+        expandMargin?: number
         selectionBorderColor?: string | null
         scoringStatusColors?: string | null
         scoringColorPresetId?: string | null
@@ -1574,6 +1575,24 @@ export interface MyAPI {
     ) => Promise<{
       success: boolean
       preference?: UserScoringPreference
+      error?: string
+    }>
+
+    // カラム別操作（楽観的更新対応）
+    getScoringPreferenceColumn: <K extends ScoringPreferenceColumnName>(
+      userId: string,
+      column: K
+    ) => Promise<{
+      success: boolean
+      value?: ScoringPreferenceColumns[K]
+      error?: string
+    }>
+    setScoringPreferenceColumn: <K extends ScoringPreferenceColumnName>(
+      userId: string,
+      column: K,
+      value: ScoringPreferenceColumns[K]
+    ) => Promise<{
+      success: boolean
       error?: string
     }>
 
@@ -1820,11 +1839,39 @@ export interface UserScoringPreference {
   autoScroll: boolean
   itemsPerLine: number
   layoutDirection: string
+  expandMargin: number
   selectionBorderColor: string | null
   scoringStatusColors: string | null
   scoringColorPresetId: string | null
   createdAt: Date
   updatedAt: Date
+}
+
+/**
+ * UserScoringPreferenceのカラム名
+ */
+export type ScoringPreferenceColumnName =
+  | "showStudentNames"
+  | "autoScroll"
+  | "itemsPerLine"
+  | "layoutDirection"
+  | "expandMargin"
+  | "selectionBorderColor"
+  | "scoringStatusColors"
+  | "scoringColorPresetId"
+
+/**
+ * カラム別の値の型マッピング
+ */
+export interface ScoringPreferenceColumns {
+  showStudentNames: boolean
+  autoScroll: boolean
+  itemsPerLine: number
+  layoutDirection: string
+  expandMargin: number
+  selectionBorderColor: string | null
+  scoringStatusColors: string | null
+  scoringColorPresetId: string | null
 }
 
 /**

@@ -32,6 +32,7 @@ interface CroppedAnswerImageProps {
   isColumnLayout?: boolean
   calculatedCellHeight?: number // 親から渡された計算済みセル高さ
   isSelected?: boolean
+  expandMargin?: number // 表示領域拡張率 (0-50%)
 }
 
 // セル内の固定オフセット（padding + gap + footer）
@@ -46,6 +47,7 @@ export default function CroppedAnswerImage({
   isColumnLayout = false,
   calculatedCellHeight = 0,
   isSelected = false,
+  expandMargin = 0,
 }: CroppedAnswerImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -59,9 +61,21 @@ export default function CroppedAnswerImage({
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // 採点領域のアスペクト比を計算
-    const sourceWidth = cropRegion.width * imageElement.naturalWidth
-    const sourceHeight = cropRegion.height * imageElement.naturalHeight
+    // 表示領域拡張の計算
+    const expandRatio = (expandMargin ?? 0) / 100
+    const expandX = cropRegion.width * expandRatio
+    const expandY = cropRegion.height * expandRatio
+
+    // 拡張後の座標（画像端でクリップ）
+    const newX = Math.max(0, cropRegion.x - expandX)
+    const newY = Math.max(0, cropRegion.y - expandY)
+    // 右端・下端がはみ出さないように制限
+    const newWidth = Math.min(1 - newX, cropRegion.width + expandX * 2)
+    const newHeight = Math.min(1 - newY, cropRegion.height + expandY * 2)
+
+    // 採点領域のアスペクト比を計算（拡張後の領域で計算）
+    const sourceWidth = newWidth * imageElement.naturalWidth
+    const sourceHeight = newHeight * imageElement.naturalHeight
     const aspectRatio = sourceWidth / sourceHeight
 
     let canvasWidth: number
@@ -94,11 +108,11 @@ export default function CroppedAnswerImage({
       canvas.style.flexShrink = ""
     }
 
-    // 採点領域をクロップして描画
-    const sourceX = cropRegion.x * imageElement.naturalWidth
-    const sourceY = cropRegion.y * imageElement.naturalHeight
+    // 拡張後の座標でクロップして描画
+    const sourceX = newX * imageElement.naturalWidth
+    const sourceY = newY * imageElement.naturalHeight
 
-    // 採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
+    // 拡張した採点領域を直接Canvas全体に描画（アスペクト比は既に調整済み）
     ctx.drawImage(
       imageElement,
       sourceX,
@@ -110,7 +124,13 @@ export default function CroppedAnswerImage({
       canvas.width,
       canvas.height
     )
-  }, [imageLoaded, cropRegion, isColumnLayout, calculatedCellHeight])
+  }, [
+    imageLoaded,
+    cropRegion,
+    isColumnLayout,
+    calculatedCellHeight,
+    expandMargin,
+  ])
 
   const handleImageLoad = () => {
     setImageLoaded(true)

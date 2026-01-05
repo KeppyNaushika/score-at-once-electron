@@ -24,6 +24,7 @@ import {
   ArrowRight,
   ArrowUp,
   Eye,
+  Maximize2,
   Navigation,
   RotateCcw,
   Settings,
@@ -45,6 +46,8 @@ interface NavigationControlsProps {
   autoScroll?: boolean
   onAutoScrollChange?: (enabled: boolean) => void
   gradingMode?: "grid" | "individual"
+  expandMargin?: number
+  onExpandMarginChange?: (value: number) => void
 }
 
 const LAYOUT_OPTIONS = [
@@ -68,6 +71,8 @@ export default function NavigationControls({
   autoScroll = true,
   onAutoScrollChange,
   gradingMode = "grid",
+  expandMargin,
+  onExpandMarginChange,
 }: NavigationControlsProps) {
   return (
     <TooltipProvider delayDuration={300}>
@@ -116,6 +121,30 @@ export default function NavigationControls({
           </div>
         </SidePanelSection>
       )}
+
+      {/* 表示領域拡張 - 一覧表示モードでのみ表示 */}
+      {gradingMode !== "individual" &&
+        expandMargin !== undefined &&
+        onExpandMarginChange && (
+          <SidePanelSection icon={Maximize2} title="表示領域拡張">
+            <div className="flex items-center space-x-4">
+              <Slider
+                value={[expandMargin]}
+                onValueChange={(value) => onExpandMarginChange(value[0])}
+                max={50}
+                min={0}
+                step={5}
+                className="flex-1"
+              />
+              <span className="text-muted-foreground min-w-[40px] text-sm">
+                {expandMargin}%
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              枠の外側を表示（スキャンズレ対策）
+            </p>
+          </SidePanelSection>
+        )}
 
       {/* 自動スクロール設定 - 一覧表示モードでのみ表示 */}
       {gradingMode !== "individual" && onAutoScrollChange && (

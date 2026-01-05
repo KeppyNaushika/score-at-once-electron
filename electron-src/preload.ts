@@ -747,12 +747,47 @@ contextBridge.exposeInMainWorld("electronAPI", {
         autoScroll?: boolean
         itemsPerLine?: number
         layoutDirection?: string
+        expandMargin?: number
         selectionBorderColor?: string | null
         scoringStatusColors?: string | null
         scoringColorPresetId?: string | null
       }
     ) =>
       ipcRenderer.invoke("settings:upsertUserScoringPreference", userId, data),
+
+    // カラム別操作（楽観的更新対応）
+    getScoringPreferenceColumn: (
+      userId: string,
+      column:
+        | "showStudentNames"
+        | "autoScroll"
+        | "itemsPerLine"
+        | "layoutDirection"
+        | "expandMargin"
+        | "selectionBorderColor"
+        | "scoringStatusColors"
+        | "scoringColorPresetId"
+    ) =>
+      ipcRenderer.invoke("settings:getScoringPreferenceColumn", userId, column),
+    setScoringPreferenceColumn: (
+      userId: string,
+      column:
+        | "showStudentNames"
+        | "autoScroll"
+        | "itemsPerLine"
+        | "layoutDirection"
+        | "expandMargin"
+        | "selectionBorderColor"
+        | "scoringStatusColors"
+        | "scoringColorPresetId",
+      value: boolean | number | string | null
+    ) =>
+      ipcRenderer.invoke(
+        "settings:setScoringPreferenceColumn",
+        userId,
+        column,
+        value
+      ),
 
     // ProjectMarkingFormat
     getProjectMarkingFormats: (projectId: string) =>

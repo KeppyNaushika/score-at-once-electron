@@ -29,6 +29,7 @@ interface GridCellProps {
   calculatedCellHeight: number
   selectionBorderColor: string
   scoringColors: ScoringStatusColors
+  expandMargin?: number
   onMouseDown: (e: React.MouseEvent, answerId: string) => void
 }
 
@@ -40,6 +41,7 @@ export function GridCell({
   calculatedCellHeight,
   selectionBorderColor,
   scoringColors,
+  expandMargin,
   onMouseDown,
 }: GridCellProps) {
   const statusConfig = getDynamicScoreStatusConfig(scoringColors)
@@ -122,6 +124,7 @@ export function GridCell({
         isColumnLayout={isColumnLayout}
         calculatedCellHeight={calculatedCellHeight}
         isSelected={isSelected}
+        expandMargin={expandMargin}
       />
 
       {/* 学生情報と採点状況 */}

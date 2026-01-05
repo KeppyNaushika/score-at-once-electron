@@ -385,6 +385,7 @@ CREATE TABLE "UserScoringPreference" (
     "autoScroll" BOOLEAN NOT NULL DEFAULT true,
     "itemsPerLine" INTEGER NOT NULL DEFAULT 5,
     "layoutDirection" TEXT NOT NULL DEFAULT 'right-down',
+    "expandMargin" INTEGER NOT NULL DEFAULT 0,
     "selectionBorderColor" TEXT,
     "scoringStatusColors" TEXT,
     "scoringColorPresetId" TEXT,

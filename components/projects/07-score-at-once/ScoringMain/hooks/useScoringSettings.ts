@@ -1,128 +1,84 @@
 /**
- * 採点設定フック
- * 機能G: ユーザー採点設定の永続化
+ * @fileoverview 採点設定フック（統合版）
+ * @description 機能G: ユーザー採点設定の永続化
+ *
+ * 各設定は独立したフックで管理され、このフックは互換性のために統合して返す。
+ * 楽観的更新時のレースコンディションを防ぐため、各設定は独立したstateを持つ。
  */
 
-import { useAuth } from "@/contexts/AuthContext"
-import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useItemsPerLine } from "./useItemsPerLine"
+import { useAutoScroll } from "./useAutoScroll"
+import { useShowStudentNames } from "./useShowStudentNames"
+import { useLayoutDirection } from "./useLayoutDirection"
+import { useExpandMargin } from "./useExpandMargin"
 
-const DEFAULT_LAYOUT_DIRECTION: LayoutDirection = "right-down"
-const DEFAULT_ITEMS_PER_LINE = [5]
-const DEFAULT_AUTO_SCROLL = true
-const DEFAULT_SHOW_STUDENT_NAMES = true
-
-interface ScoringSettings {
-  itemsPerLine: number[]
-  autoScroll: boolean
-  showStudentNames: boolean
-  layoutDirection: LayoutDirection
-}
-
-const DEFAULT_SETTINGS: ScoringSettings = {
-  itemsPerLine: DEFAULT_ITEMS_PER_LINE,
-  autoScroll: DEFAULT_AUTO_SCROLL,
-  showStudentNames: DEFAULT_SHOW_STUDENT_NAMES,
-  layoutDirection: DEFAULT_LAYOUT_DIRECTION,
-}
-
+/**
+ * 全採点設定を統合して返すフック
+ * @description 各設定は独立したフックで管理されるため、競合なく楽観的更新が可能
+ * @returns itemsPerLine - 1行あたりの表示件数（配列形式）
+ * @returns autoScroll - 自動スクロール設定
+ * @returns showStudentNames - 生徒名表示設定
+ * @returns layoutDirection - レイアウト方向
+ * @returns expandMargin - 表示領域拡張率
+ * @returns setItemsPerLine - 表示件数更新関数
+ * @returns setAutoScroll - 自動スクロール更新関数
+ * @returns setShowStudentNames - 生徒名表示更新関数
+ * @returns setLayoutDirection - レイアウト方向更新関数
+ * @returns setExpandMargin - 拡張率更新関数
+ * @returns isLoading - いずれかの設定が読み込み中かどうか
+ */
 export function useScoringSettings() {
-  const { user } = useAuth()
-  const userId = user?.id
+  const {
+    itemsPerLine,
+    setItemsPerLine,
+    isLoading: isLoadingItemsPerLine,
+  } = useItemsPerLine()
+  const {
+    autoScroll,
+    setAutoScroll,
+    isLoading: isLoadingAutoScroll,
+  } = useAutoScroll()
+  const {
+    showStudentNames,
+    setShowStudentNames,
+    isLoading: isLoadingShowStudentNames,
+  } = useShowStudentNames()
+  const {
+    layoutDirection,
+    setLayoutDirection,
+    isLoading: isLoadingLayoutDirection,
+  } = useLayoutDirection()
+  const {
+    expandMargin,
+    setExpandMargin,
+    isLoading: isLoadingExpandMargin,
+  } = useExpandMargin()
 
-  const [settings, setSettings] = useState<ScoringSettings>(DEFAULT_SETTINGS)
-  const [isLoading, setIsLoading] = useState(true)
-  const initializedRef = useRef(false)
-
-  // 設定を読み込む
-  useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
-
-    const loadSettings = async () => {
-      if (userId && window.electronAPI?.settings) {
-        try {
-          const result =
-            await window.electronAPI.settings.getUserScoringPreference(userId)
-          if (result.success && result.preference) {
-            setSettings({
-              itemsPerLine: [result.preference.itemsPerLine],
-              autoScroll: result.preference.autoScroll,
-              showStudentNames: result.preference.showStudentNames,
-              layoutDirection: result.preference
-                .layoutDirection as LayoutDirection,
-            })
-          }
-        } catch (error) {
-          console.error("設定の読み込みに失敗しました:", error)
-        }
-      }
-      setIsLoading(false)
-    }
-
-    loadSettings()
-  }, [userId])
-
-  // 設定を保存する共通関数
-  const saveSettings = useCallback(
-    async (newSettings: Partial<ScoringSettings>) => {
-      if (!userId || !window.electronAPI?.settings) return
-
-      try {
-        await window.electronAPI.settings.upsertUserScoringPreference(userId, {
-          itemsPerLine: newSettings.itemsPerLine?.[0],
-          autoScroll: newSettings.autoScroll,
-          showStudentNames: newSettings.showStudentNames,
-          layoutDirection: newSettings.layoutDirection,
-        })
-      } catch (error) {
-        console.error("設定の保存に失敗しました:", error)
-      }
-    },
-    [userId]
-  )
-
-  const setItemsPerLine = useCallback(
-    (value: number[]) => {
-      setSettings((prev) => ({ ...prev, itemsPerLine: value }))
-      saveSettings({ itemsPerLine: value })
-    },
-    [saveSettings]
-  )
-
-  const setAutoScroll = useCallback(
-    (value: boolean) => {
-      setSettings((prev) => ({ ...prev, autoScroll: value }))
-      saveSettings({ autoScroll: value })
-    },
-    [saveSettings]
-  )
-
-  const setShowStudentNames = useCallback(
-    (value: boolean) => {
-      setSettings((prev) => ({ ...prev, showStudentNames: value }))
-      saveSettings({ showStudentNames: value })
-    },
-    [saveSettings]
-  )
-
-  const setLayoutDirection = useCallback(
-    (value: LayoutDirection) => {
-      setSettings((prev) => ({ ...prev, layoutDirection: value }))
-      saveSettings({ layoutDirection: value })
-    },
-    [saveSettings]
-  )
+  const isLoading =
+    isLoadingItemsPerLine ||
+    isLoadingAutoScroll ||
+    isLoadingShowStudentNames ||
+    isLoadingLayoutDirection ||
+    isLoadingExpandMargin
 
   return {
-    itemsPerLine: settings.itemsPerLine,
-    autoScroll: settings.autoScroll,
-    showStudentNames: settings.showStudentNames,
-    layoutDirection: settings.layoutDirection,
+    itemsPerLine,
+    autoScroll,
+    showStudentNames,
+    layoutDirection,
+    expandMargin,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
+    setExpandMargin,
     isLoading,
   }
 }
+
+// 個別フックも再エクスポート
+export { useItemsPerLine } from "./useItemsPerLine"
+export { useAutoScroll } from "./useAutoScroll"
+export { useShowStudentNames } from "./useShowStudentNames"
+export { useLayoutDirection } from "./useLayoutDirection"
+export { useExpandMargin } from "./useExpandMargin"
