@@ -72,7 +72,7 @@ function createManifest(
   exportedBy?: string
 ): ArchiveManifest {
   return {
-    version: "1.1.0", // v0.3.0: UserProject拡張対応
+    version: "1.2.0", // v0.4.0: userId/studentId非NULL化
     schemaVersion: getSchemaVersion(),
     appVersion: getAppVersion(),
     exportedAt: new Date().toISOString(),

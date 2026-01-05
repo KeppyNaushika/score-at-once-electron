@@ -26,7 +26,7 @@ export async function batchUpdateStudentAnswerPlacements(
       // 移動対象の答案情報と採点データを取得
       const answerSheets = await Promise.all(
         moves.map((move) =>
-          tx.pageImage.findUnique({
+          tx.studentAnswerImage.findUnique({
             where: { id: move.fileId },
             select: {
               id: true,
@@ -53,64 +53,62 @@ export async function batchUpdateStudentAnswerPlacements(
       let allQuestionScores: QuestionScore[] = []
 
       if (withScoring) {
-        // 全ての採点データを取得
-        // TODO: QuestionScore querying needs to be updated for new schema
-        // In new schema, scores are linked to students and crop regions, not answer sheets directly
-        allQuestionScores = [] // await tx.questionScore.findMany({
-        //   where: {
-        //     studentId: {
-        //       in: moves.map(m => m.finalStudentId).filter(Boolean)
-        //     }
-        //   },
-        // })
-
-        // TODO: Delete scoring data needs to be updated for new schema
-        // 一時的に採点データを削除（制約回避）
-        // await tx.questionScore.deleteMany({
-        //   where: {
-        //     studentId: {
-        //       in: moves.map(m => m.finalStudentId).filter(Boolean)
-        //     }
-        //   },
-        // })
-      }
-
-      // 一時的に全ての答案をnull位置に移動（制約回避）
-      await Promise.all(
-        moves.map((_, index) =>
-          tx.pageImage.update({
-            where: { id: moves[index].fileId },
-            data: {
-              studentId: null,
-              // TODO: Handle temporary pageNumber assignment in new schema
+        // 全ての採点データを取得（studentIdベース）
+        const studentIds = moves
+          .map((m) => m.finalStudentId)
+          .filter((id): id is string => id !== null)
+        if (studentIds.length > 0) {
+          allQuestionScores = await tx.questionScore.findMany({
+            where: {
+              studentId: { in: studentIds },
             },
           })
-        )
-      )
+
+          // 一時的に採点データを削除（制約回避）
+          await tx.questionScore.deleteMany({
+            where: {
+              studentId: { in: studentIds },
+            },
+          })
+        }
+      }
+
+      // studentIdがnullの移動はStudentAnswerImageでは不可能なので、
+      // finalStudentIdがnullの場合は削除として扱う
+      const deleteMoves = moves.filter((m) => m.finalStudentId === null)
+      const updateMoves = moves.filter((m) => m.finalStudentId !== null)
+
+      // nullに設定される答案を削除
+      if (deleteMoves.length > 0) {
+        await tx.studentAnswerImage.deleteMany({
+          where: {
+            id: { in: deleteMoves.map((m) => m.fileId) },
+          },
+        })
+      }
 
       // 各答案を最終位置に移動
       await Promise.all(
-        moves.map((move) =>
-          tx.pageImage.update({
+        updateMoves.map((move) =>
+          tx.studentAnswerImage.update({
             where: { id: move.fileId },
             data: {
-              studentId: move.finalStudentId,
-              // TODO: Handle pageNumber assignment in new schema - might need to move to different ProjectPage
+              studentId: move.finalStudentId!,
             },
           })
         )
       )
 
       if (withScoring && allQuestionScores.length > 0) {
-        // 採点データを復元（答案IDは変更せず、位置情報が変わっただけ）
+        // 採点データを復元
         await tx.questionScore.createMany({
-          data: [], // TODO: Update for new schema
-          // allQuestionScores.map((score) => ({
-          //   cropRegionId: score.cropRegionId,
-          //   studentId: score.studentId,
-          //   status: score.status,
-          //   scoredByUserId: score.scoredByUserId,
-          // })),
+          data: allQuestionScores.map((score) => ({
+            cropRegionId: score.cropRegionId,
+            studentId: score.studentId,
+            status: score.status,
+            partialScore: score.partialScore,
+            userId: score.userId,
+          })),
         })
       }
 
@@ -144,7 +142,7 @@ export async function swapStudentAnswerPlacementsWithScoring(
     const result = await prisma.$transaction(async (tx) => {
       // 2つの答案の現在の配置情報を取得
       const [answerSheet1, answerSheet2] = await Promise.all([
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId1 },
           select: {
             studentId: true,
@@ -156,7 +154,7 @@ export async function swapStudentAnswerPlacementsWithScoring(
             },
           },
         }),
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId2 },
           select: {
             studentId: true,
@@ -174,83 +172,67 @@ export async function swapStudentAnswerPlacementsWithScoring(
         throw new Error("答案が見つかりません")
       }
 
-      // TODO: QuestionScore queries need to be updated for new schema
-      // await Promise.all([
-      //   tx.questionScore.findMany({
-      //     where: { studentId: answerSheet1.studentId },
-      //   }),
-      //   tx.questionScore.findMany({
-      //     where: { studentId: answerSheet2.studentId },
-      //   }),
-      // ])
+      // 採点データを取得
+      const [questionScores1, questionScores2] = await Promise.all([
+        tx.questionScore.findMany({
+          where: { studentId: answerSheet1.studentId },
+        }),
+        tx.questionScore.findMany({
+          where: { studentId: answerSheet2.studentId },
+        }),
+      ])
 
-      // TODO: Score deletion needs to be updated for new schema
       // 採点データを一時的に削除（制約回避のため）
-      // await Promise.all([
-      //   tx.questionScore.deleteMany({
-      //     where: { studentId: answerSheet1.studentId },
-      //   }),
-      //   tx.questionScore.deleteMany({
-      //     where: { studentId: answerSheet2.studentId },
-      //   }),
-      // ])
+      await Promise.all([
+        tx.questionScore.deleteMany({
+          where: { studentId: answerSheet1.studentId },
+        }),
+        tx.questionScore.deleteMany({
+          where: { studentId: answerSheet2.studentId },
+        }),
+      ])
 
-      // 一時的にanswerSheet1をnull配置に移動（制約回避）
-      await tx.pageImage.update({
+      // StudentAnswerImageのstudentIdを交換
+      // 一時的に新しいstudentIdを設定できないため、2段階で更新
+      // ユニーク制約がないので直接交換可能
+      await tx.studentAnswerImage.update({
         where: { id: answerSheetId1 },
-        data: {
-          studentId: null,
-          // TODO: Handle page swapping in new schema - might need to recreate PageImage in different ProjectPage
-        },
+        data: { studentId: answerSheet2.studentId },
       })
 
-      // answerSheet2をanswerSheet1の元の位置に移動
-      await tx.pageImage.update({
+      await tx.studentAnswerImage.update({
         where: { id: answerSheetId2 },
-        data: {
-          studentId: answerSheet1.studentId,
-          // TODO: Handle pageNumber in new schema
-        },
-      })
-
-      // answerSheet1をanswerSheet2の元の位置に移動
-      await tx.pageImage.update({
-        where: { id: answerSheetId1 },
-        data: {
-          studentId: answerSheet2.studentId,
-          // TODO: Handle pageNumber in new schema
-        },
+        data: { studentId: answerSheet1.studentId },
       })
 
       // 採点データを入れ替えて復元
-      // TODO: Score migration needs to be updated for new schema
-      // answerSheet1の採点データをanswerSheet2に移行
-      // if (questionScores1.length > 0) {
-      //   await tx.questionScore.createMany({
-      //     data: questionScores1.map((score) => ({
-      //       cropRegionId: score.cropRegionId,
-      //       studentId: answerSheet2.studentId,
-      //       status: score.status,
-      //       scoredByUserId: score.scoredByUserId,
-      //     })),
-      //   })
-      // }
+      if (questionScores1.length > 0) {
+        await tx.questionScore.createMany({
+          data: questionScores1.map((score) => ({
+            cropRegionId: score.cropRegionId,
+            studentId: answerSheet2.studentId,
+            status: score.status,
+            partialScore: score.partialScore,
+            userId: score.userId,
+          })),
+        })
+      }
 
-      // answerSheet2の採点データをanswerSheet1に移行
-      // if (questionScores2.length > 0) {
-      //   await tx.questionScore.createMany({
-      //     data: questionScores2.map((score) => ({
-      //       cropRegionId: score.cropRegionId,
-      //       studentId: answerSheet1.studentId,
-      //       status: score.status,
-      //       scoredByUserId: score.scoredByUserId,
-      //     })),
-      //   })
-      // }
+      if (questionScores2.length > 0) {
+        await tx.questionScore.createMany({
+          data: questionScores2.map((score) => ({
+            cropRegionId: score.cropRegionId,
+            studentId: answerSheet1.studentId,
+            status: score.status,
+            partialScore: score.partialScore,
+            userId: score.userId,
+          })),
+        })
+      }
 
       // 更新後の答案情報を取得
       const [updatedAnswerSheet1, updatedAnswerSheet2] = await Promise.all([
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId1 },
           include: {
             student: {
@@ -266,10 +248,9 @@ export async function swapStudentAnswerPlacementsWithScoring(
                 project: true,
               },
             },
-            // TODO: questionScores would need to be fetched separately in new schema
           },
         }),
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId2 },
           include: {
             student: {
@@ -285,7 +266,6 @@ export async function swapStudentAnswerPlacementsWithScoring(
                 project: true,
               },
             },
-            // TODO: questionScores would need to be fetched separately in new schema
           },
         }),
       ])

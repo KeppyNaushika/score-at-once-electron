@@ -121,10 +121,9 @@ export async function removeStudentsFromProject(
       },
     })
 
-    // 関連するAnswerSheetを削除 (PageImageから)
-    await prisma.pageImage.deleteMany({
+    // 関連するAnswerSheetを削除 (StudentAnswerImageから)
+    await prisma.studentAnswerImage.deleteMany({
       where: {
-        imageType: "STUDENT_ANSWER",
         studentId: {
           in: studentIds,
         },

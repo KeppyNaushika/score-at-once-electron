@@ -156,13 +156,13 @@ export function useDrawingAnnotations(
           ...data,
           studentId: data.studentId || context?.currentStudentId,
           cropRegionId: data.cropRegionId || context?.currentCropRegionId,
-          scoredByUserId: data.scoredByUserId || context?.currentUserId,
+          userId: data.userId || context?.currentUserId || "",
         }
 
         console.log("📝 補完されたデータ:", {
           studentId: enrichedData.studentId,
           cropRegionId: enrichedData.cropRegionId,
-          scoredByUserId: enrichedData.scoredByUserId,
+          userId: enrichedData.userId,
         })
 
         const result = await window.electronAPI.drawing.create(enrichedData)
@@ -363,11 +363,10 @@ export function useDrawingAnnotations(
         verticalAlign: drawingState.drawingAnnotation.verticalAlign || "top",
         displayX: drawingState.drawingAnnotation.displayX || 0,
         displayY: drawingState.drawingAnnotation.displayY || 0,
-        createdByUserId: drawingState.drawingAnnotation.createdByUserId,
         // QuestionScore自動作成用の情報（contextから取得）
         studentId: context?.currentStudentId,
         cropRegionId: context?.currentCropRegionId,
-        scoredByUserId: context?.currentUserId,
+        userId: context?.currentUserId || "",
       }
 
       const result = await createAnnotation(completeData)

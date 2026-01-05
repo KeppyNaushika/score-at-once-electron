@@ -63,7 +63,7 @@ export function convertElementToCreateData(
     // QuestionScore自動作成用の情報
     studentId: context?.currentStudentId,
     cropRegionId: context?.currentCropRegionId,
-    scoredByUserId: context?.currentUserId,
+    userId: context?.currentUserId || "",
   }
 }
 

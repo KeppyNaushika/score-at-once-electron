@@ -2,13 +2,14 @@ import type {
   Class,
   CropRegion,
   CropSubtotal,
-  PageImage,
+  MasterImage,
   Prisma,
   Project,
   ProjectClass,
   ProjectSubtotalGroup,
   QuestionScore,
   Student,
+  StudentAnswerImage,
   Subtotal,
   SubtotalGroup,
   User,
@@ -18,7 +19,7 @@ import type {
 // ProjectWithDetails は common.types から（IPC用の拡張型）
 export type { ProjectWithDetails, SerializedProject } from "./common.types"
 
-// Prisma拡張型を prisma-extensions.ts から再エクスポート
+// Prisma拡張型を prismaExtensions.ts から再エクスポート
 export type {
   // Student関連
   ClassWithMemberships,
@@ -28,8 +29,9 @@ export type {
   // CropSubtotal関連
   CropSubtotalWithRelations,
   MasterAnswerPayload,
+  // ProjectPage/MasterImage/StudentAnswerImage関連
+  MasterImageWithDetails,
   PageImageWithDetails,
-  // ProjectPage/PageImage関連
   ProjectPageWithDetails,
   ProjectSubtotalGroupWithProject,
   ProjectSubtotalGroupWithSubtotalGroup,
@@ -40,6 +42,7 @@ export type {
   QuestionScoreWithUser,
   QuestionSubtotalAssignmentWithRelations,
   // Answer関連
+  StudentAnswerImageWithDetails,
   StudentAnswerWithDetails,
   StudentClassMembershipWithDetails,
   StudentWithClass,
@@ -52,22 +55,23 @@ export type {
   UserProjectWithDetails,
   UserProjectWithProject,
   UserProjectWithUser,
-} from "./prisma-extensions"
+} from "./prismaExtensions"
 
 // 内部使用のためのインポート（型ガード等で使用）
 import type { ProjectWithDetails } from "./common.types"
 import type {
   CropRegionWithDetails,
   CropSubtotalWithRelations,
-  PageImageWithDetails,
+  MasterImageWithDetails,
   ProjectPageWithDetails,
   QuestionScoreWithRelations,
   QuestionScoreWithUser,
+  StudentAnswerImageWithDetails,
   StudentClassMembershipWithDetails,
   StudentWithMemberships,
   SubtotalGroupWithItems,
   SubtotalWithDetails,
-} from "./prisma-extensions"
+} from "./prismaExtensions"
 
 // PDF.js module declarations
 declare module "pdfjs-dist/legacy/build/pdf.min.mjs" {
@@ -196,7 +200,7 @@ export type CreateSubtotalDefinitionArgs = CreateCropSubtotalArgs
 export type CreateQuestionSubtotalAssignmentArgs = CreateCropSubtotalArgs
 
 export interface MasterAnswerDeletionResult {
-  deletedAnswer: PageImage | null
+  deletedAnswer: MasterImage | null
   projectPages: ProjectPageWithDetails[]
 }
 
@@ -440,12 +444,12 @@ export interface MyAPI {
     endDate?: Date
   ) => Promise<StudentClassMembershipWithDetails[]>
 
-  // ProjectPage and PageImage related (updated from MasterAnswer)
+  // ProjectPage and MasterImage/StudentAnswerImage related
   createProjectPage: (
     projectId: string,
     pageNumber: number
   ) => Promise<ProjectPageWithDetails>
-  uploadPageImages: (
+  uploadMasterImages: (
     projectId: string,
     filesData: {
       name: string
@@ -453,11 +457,9 @@ export interface MyAPI {
       buffer: ArrayBuffer
       path?: string
       pageNumber: number
-      imageType: "MODEL_ANSWER" | "STUDENT_ANSWER"
-      studentId?: string | null
     }[]
-  ) => Promise<PageImageWithDetails[]>
-  deletePageImage: (imageId: string) => Promise<PageImage | void>
+  ) => Promise<MasterImageWithDetails[]>
+  deleteMasterImage: (imageId: string) => Promise<MasterImage | void>
   updateProjectPagesOrder: (
     pageOrders: { id: string; pageNumber: number }[]
   ) => Promise<Prisma.BatchPayload>
@@ -477,9 +479,12 @@ export interface MyAPI {
   getProjectPagesByProjectId: (
     projectId: string
   ) => Promise<ProjectPageWithDetails[]>
-  getPageImagesByProjectId: (
+  getMasterImagesByProjectId: (
     projectId: string
-  ) => Promise<PageImageWithDetails[]>
+  ) => Promise<MasterImageWithDetails[]>
+  getStudentAnswerImagesByProjectId: (
+    projectId: string
+  ) => Promise<StudentAnswerImageWithDetails[]>
 
   // Backward compatibility aliases
   uploadMasterAnswers: (
@@ -860,8 +865,8 @@ export interface MyAPI {
     error?: string
   }>
   createQuestionScore: (data: {
-    cropRegionId: string // Updated: renamed from layoutRegionId
-    studentId?: string | null // Updated: now references student directly
+    cropRegionId: string
+    studentId: string // v0.4.0+: required
     partialScore?: number
     status:
       | "unscored"
@@ -872,7 +877,7 @@ export interface MyAPI {
       | "no_answer"
       | "proposed"
       | "final"
-    scoredByUserId?: string | null
+    userId: string // v0.4.0+: required
   }) => Promise<QuestionScoreOperationResult>
 
   // Backward compatibility alias
@@ -890,7 +895,7 @@ export interface MyAPI {
       | "proposed"
       | "final"
     comment?: string
-    scoredByUserId: string
+    userId: string
   }) => Promise<QuestionScore>
   updateQuestionScore: (
     id: string,
@@ -918,7 +923,7 @@ export interface MyAPI {
   finalizeQuestionScore: (
     studentId: string,
     cropRegionId: string,
-    scoredByUserId: string,
+    userId: string,
     scoreData: {
       partialScore?: number
       status: string
@@ -934,7 +939,7 @@ export interface MyAPI {
   finalizeQuestionScoreLegacy: (
     studentAnswerId: string,
     layoutRegionId: string,
-    scoredByUserId: string,
+    userId: string,
     scoreData: {
       partialScore?: number
       status: string
@@ -1006,6 +1011,7 @@ export interface MyAPI {
           displayX: number
           displayY: number
           anchorDirection: string
+          userId: string
         }>
       }>
       error?: string

@@ -50,7 +50,8 @@ export async function collectProjectData(
       include: {
         projectPages: {
           include: {
-            pageImages: true,
+            masterImages: true,
+            studentAnswerImages: true,
             cropRegions: {
               include: {
                 cropSubtotals: true,
@@ -81,12 +82,12 @@ export async function collectProjectData(
       studentIds.add(ps.studentId)
     }
     for (const page of project.projectPages) {
-      for (const img of page.pageImages) {
-        if (img.studentId) studentIds.add(img.studentId)
+      for (const img of page.studentAnswerImages) {
+        studentIds.add(img.studentId)
       }
       for (const region of page.cropRegions) {
         for (const score of region.questionScores) {
-          if (score.studentId) studentIds.add(score.studentId)
+          studentIds.add(score.studentId)
         }
       }
     }
@@ -157,12 +158,11 @@ export async function collectProjectData(
     const answerSheetPaths: string[] = []
 
     for (const page of project.projectPages) {
-      for (const img of page.pageImages) {
-        if (img.imageType === "MODEL_ANSWER") {
-          masterImagePaths.push(img.imagePath)
-        } else if (img.imageType === "STUDENT_ANSWER") {
-          answerSheetPaths.push(img.imagePath)
-        }
+      for (const img of page.masterImages) {
+        masterImagePaths.push(img.imagePath)
+      }
+      for (const img of page.studentAnswerImages) {
+        answerSheetPaths.push(img.imagePath)
       }
     }
 
@@ -175,7 +175,7 @@ export async function collectProjectData(
       for (const region of page.cropRegions) {
         for (const score of region.questionScores) {
           // ログインユーザーの採点データのみを収集
-          if (score.scoredByUserId !== userId) {
+          if (score.userId !== userId) {
             continue
           }
 
@@ -185,14 +185,14 @@ export async function collectProjectData(
             studentId: score.studentId,
             partialScore: score.partialScore?.toString() ?? null,
             status: score.status,
-            scoredByUserId: score.scoredByUserId,
+            userId: score.userId,
             createdAt: score.createdAt.toISOString(),
             updatedAt: score.updatedAt.toISOString(),
           })
 
           for (const ann of score.drawingAnnotations) {
             // ログインユーザーのアノテーションのみを収集
-            if (ann.createdByUserId !== userId) {
+            if (ann.userId !== userId) {
               continue
             }
 
@@ -218,7 +218,7 @@ export async function collectProjectData(
               anchorDirection: ann.anchorDirection,
               displayX: ann.displayX,
               displayY: ann.displayY,
-              createdByUserId: ann.createdByUserId,
+              userId: ann.userId,
               createdAt: ann.createdAt.toISOString(),
               updatedAt: ann.updatedAt.toISOString(),
             })
@@ -261,13 +261,24 @@ export async function collectProjectData(
           updatedAt: region.updatedAt.toISOString(),
         }))
       ),
-      pageImages: project.projectPages.flatMap((page) =>
-        page.pageImages.map((img) => ({
+      // v1.2.0+: pageImagesは空配列（後方互換性のため維持）
+      pageImages: [],
+      // v1.2.0+: 新形式
+      masterImages: project.projectPages.flatMap((page) =>
+        page.masterImages.map((img) => ({
+          id: img.id,
+          projectPageId: img.projectPageId,
+          imagePath: img.imagePath,
+          createdAt: img.createdAt.toISOString(),
+          updatedAt: img.updatedAt.toISOString(),
+        }))
+      ),
+      studentAnswerImages: project.projectPages.flatMap((page) =>
+        page.studentAnswerImages.map((img) => ({
           id: img.id,
           projectPageId: img.projectPageId,
           studentId: img.studentId,
           imagePath: img.imagePath,
-          imageType: img.imageType,
           createdAt: img.createdAt.toISOString(),
           updatedAt: img.updatedAt.toISOString(),
         }))

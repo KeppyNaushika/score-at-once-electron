@@ -193,16 +193,25 @@ CREATE TABLE "ProjectPage" (
 );
 
 -- CreateTable
-CREATE TABLE "PageImage" (
+CREATE TABLE "MasterImage" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "projectPageId" TEXT NOT NULL,
-    "studentId" TEXT,
     "imagePath" TEXT NOT NULL,
-    "imageType" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "PageImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
-    CONSTRAINT "PageImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+    CONSTRAINT "MasterImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
+);
+
+-- CreateTable
+CREATE TABLE "StudentAnswerImage" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "projectPageId" TEXT NOT NULL,
+    "studentId" TEXT NOT NULL,
+    "imagePath" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "StudentAnswerImage_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT "StudentAnswerImage_projectPageId_fkey" FOREIGN KEY ("projectPageId") REFERENCES "ProjectPage" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
 
 -- CreateTable
@@ -283,13 +292,13 @@ CREATE TABLE "ProjectSubtotalGroup" (
 CREATE TABLE "QuestionScore" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "cropRegionId" TEXT NOT NULL,
-    "studentId" TEXT,
+    "studentId" TEXT NOT NULL,
     "partialScore" DECIMAL,
     "status" TEXT NOT NULL DEFAULT 'unscored',
-    "scoredByUserId" TEXT,
+    "userId" TEXT NOT NULL,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "QuestionScore_scoredByUserId_fkey" FOREIGN KEY ("scoredByUserId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
+    CONSTRAINT "QuestionScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
     CONSTRAINT "QuestionScore_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "Student" ("id") ON DELETE CASCADE ON UPDATE NO ACTION,
     CONSTRAINT "QuestionScore_cropRegionId_fkey" FOREIGN KEY ("cropRegionId") REFERENCES "CropRegion" ("id") ON DELETE CASCADE ON UPDATE NO ACTION
 );
@@ -319,9 +328,9 @@ CREATE TABLE "DrawingAnnotation" (
     "displayY" REAL NOT NULL DEFAULT 0.0,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
-    "createdByUserId" TEXT,
+    "userId" TEXT NOT NULL,
     CONSTRAINT "DrawingAnnotation_questionScoreId_fkey" FOREIGN KEY ("questionScoreId") REFERENCES "QuestionScore" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "DrawingAnnotation_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+    CONSTRAINT "DrawingAnnotation_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE NO ACTION ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -525,6 +534,12 @@ CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "Cr
 
 -- CreateIndex
 CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
+
+-- CreateIndex (MasterImage/StudentAnswerImage)
+CREATE INDEX "StudentAnswerImage_projectPageId_idx" ON "StudentAnswerImage"("projectPageId");
+
+-- CreateIndex
+CREATE INDEX "StudentAnswerImage_studentId_idx" ON "StudentAnswerImage"("studentId");
         `
 
         // SQLを複数のステートメントに分割して実行

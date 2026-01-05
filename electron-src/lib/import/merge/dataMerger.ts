@@ -69,7 +69,8 @@ export async function executeMergeImport(
     project: {} as Record<string, string>,
     projectPage: {} as Record<string, string>,
     cropRegion: {} as Record<string, string>,
-    pageImage: {} as Record<string, string>,
+    masterImage: {} as Record<string, string>,
+    studentAnswerImage: {} as Record<string, string>,
     projectStudent: {} as Record<string, string>,
     userProject: {} as Record<string, string>,
     projectSubtotalGroup: {} as Record<string, string>,
@@ -392,11 +393,10 @@ export async function executeMergeImport(
         const newStudentId = qs.studentId
           ? idMappings.student[qs.studentId]
           : null
-        const newScoredByUserId = qs.scoredByUserId
-          ? idMappings.user[qs.scoredByUserId]
-          : null
+        const newUserId = qs.userId ? idMappings.user[qs.userId] : null
 
-        if (newRegionId) {
+        // studentIdとuserIdは必須フィールド
+        if (newRegionId && newStudentId && newUserId) {
           const newId = randomUUID()
           await tx.questionScore.create({
             data: {
@@ -407,7 +407,7 @@ export async function executeMergeImport(
                 ? parseFloat(qs.partialScore)
                 : null,
               status: qs.status,
-              scoredByUserId: newScoredByUserId,
+              userId: newUserId,
             },
           })
           idMappings.questionScore[qs.id] = newId
@@ -418,11 +418,10 @@ export async function executeMergeImport(
       // 14. DrawingAnnotation
       for (const da of data.scoresData.drawingAnnotations) {
         const newScoreId = idMappings.questionScore[da.questionScoreId]
-        const newCreatedByUserId = da.createdByUserId
-          ? idMappings.user[da.createdByUserId]
-          : null
+        const newUserId = da.userId ? idMappings.user[da.userId] : null
 
-        if (newScoreId) {
+        // userIdは必須フィールド
+        if (newScoreId && newUserId) {
           const newId = randomUUID()
           await tx.drawingAnnotation.create({
             data: {
@@ -447,7 +446,7 @@ export async function executeMergeImport(
               anchorDirection: da.anchorDirection,
               displayX: da.displayX,
               displayY: da.displayY,
-              createdByUserId: newCreatedByUserId,
+              userId: newUserId,
             },
           })
           idMappings.drawingAnnotation[da.id] = newId
@@ -493,8 +492,8 @@ export async function executeMergeImport(
     // 16. 画像ファイルをコピー
     await copyMergeImages(data, idMappings.project[data.projectData.project.id])
 
-    // 17. PageImageレコードを作成
-    await createMergePageImageRecords(data, idMappings)
+    // 17. 画像レコードを作成（MasterImage / StudentAnswerImage）
+    await createMergeImageRecords(data, idMappings)
 
     return {
       success: true,
@@ -548,55 +547,108 @@ async function copyMergeImages(
 }
 
 /**
- * PageImageレコードを作成
+ * 画像レコードを作成（MasterImage / StudentAnswerImage）
+ *
+ * v1.2.0+: masterImages と studentAnswerImages を使用
+ * v1.1.0以前: pageImages から変換
  */
-async function createMergePageImageRecords(
+async function createMergeImageRecords(
   data: ExtractedArchiveData,
   idMappings: Record<string, Record<string, string>>
 ): Promise<void> {
-  const dataDir = getDataDirectory()
   const newProjectId = Object.values(idMappings.project)[0]
 
-  for (const img of data.projectData.pageImages) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
-    const newStudentId = img.studentId
-      ? idMappings.student[img.studentId]
-      : null
+  // v1.2.0+ 形式: masterImages と studentAnswerImages が存在する場合
+  if (
+    data.projectData.masterImages &&
+    data.projectData.masterImages.length > 0
+  ) {
+    for (const img of data.projectData.masterImages) {
+      const newProjectPageId = idMappings.projectPage[img.projectPageId]
+      if (!newProjectPageId) continue
 
-    if (!newProjectPageId) continue
+      const filename = path.basename(img.imagePath)
+      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-    const filename = path.basename(img.imagePath)
-    let newImagePath: string
+      await prisma.masterImage.create({
+        data: {
+          id: randomUUID(),
+          projectPageId: newProjectPageId,
+          imagePath: newImagePath,
+        },
+      })
+    }
+  }
 
-    if (img.imageType === "MODEL_ANSWER") {
-      newImagePath = path.join(
-        dataDir,
-        "projects",
-        newProjectId,
-        "master-images",
-        filename
-      )
-    } else {
+  if (
+    data.projectData.studentAnswerImages &&
+    data.projectData.studentAnswerImages.length > 0
+  ) {
+    for (const img of data.projectData.studentAnswerImages) {
+      const newProjectPageId = idMappings.projectPage[img.projectPageId]
+      const newStudentId = idMappings.student[img.studentId]
+      if (!newProjectPageId || !newStudentId) continue
+
       const relativePath = img.imagePath.substring(
         img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
       )
-      newImagePath = path.join(
-        dataDir,
-        "projects",
-        newProjectId,
-        "answer-sheets",
-        relativePath
-      )
+      const newImagePath =
+        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
+          /\\/g,
+          "/"
+        )
+
+      await prisma.studentAnswerImage.create({
+        data: {
+          id: randomUUID(),
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+          imagePath: newImagePath,
+        },
+      })
     }
 
-    await prisma.pageImage.create({
-      data: {
-        id: randomUUID(),
-        projectPageId: newProjectPageId,
-        studentId: newStudentId,
-        imagePath: newImagePath,
-        imageType: img.imageType,
-      },
-    })
+    return
+  }
+
+  // v1.1.0以前: pageImages から変換（後方互換性）
+  for (const img of data.projectData.pageImages) {
+    const newProjectPageId = idMappings.projectPage[img.projectPageId]
+    if (!newProjectPageId) continue
+
+    const filename = path.basename(img.imagePath)
+
+    if (img.imageType === "MODEL_ANSWER") {
+      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+
+      await prisma.masterImage.create({
+        data: {
+          id: randomUUID(),
+          projectPageId: newProjectPageId,
+          imagePath: newImagePath,
+        },
+      })
+    } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
+      const newStudentId = idMappings.student[img.studentId]
+      if (!newStudentId) continue
+
+      const relativePath = img.imagePath.substring(
+        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      )
+      const newImagePath =
+        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
+          /\\/g,
+          "/"
+        )
+
+      await prisma.studentAnswerImage.create({
+        data: {
+          id: randomUUID(),
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+          imagePath: newImagePath,
+        },
+      })
+    }
   }
 }

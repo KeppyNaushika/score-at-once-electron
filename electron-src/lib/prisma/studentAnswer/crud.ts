@@ -43,20 +43,10 @@ export async function uploadStudentAnswers(
       const buffer = Buffer.from(fileData.buffer)
       await fs.writeFile(filePath, buffer)
 
-      // studentIdが必須の場合のみ処理を継続
+      // studentIdが必須
       if (!fileData.studentId) {
         throw new Error(`Student ID is required for file: ${fileData.name}`)
       }
-
-      // TODO: Fix this for new schema
-      // 既存レコードの確認
-      const existingRecord = null // await prisma.pageImage.findFirst({
-      //   where: {
-      //     projectPageId: projectPageId,
-      //     studentId: fileData.studentId,
-      //     imageType: "STUDENT_ANSWER"
-      //   },
-      // })
 
       // Find or create the appropriate ProjectPage for this pageNumber
       let projectPage = await prisma.projectPage.findFirst({
@@ -75,13 +65,20 @@ export async function uploadStudentAnswers(
         })
       }
 
-      // データベースに記録（upsertで重複回避）
-      const answerSheet = await prisma.pageImage.create({
+      // 既存レコードの確認
+      const existingRecord = await prisma.studentAnswerImage.findFirst({
+        where: {
+          projectPageId: projectPage.id,
+          studentId: fileData.studentId,
+        },
+      })
+
+      // データベースに記録
+      const answerSheet = await prisma.studentAnswerImage.create({
         data: {
-          projectPageId: projectPage.id, // Now using correct ProjectPage.id
+          projectPageId: projectPage.id,
           studentId: fileData.studentId,
           imagePath: relativePath,
-          imageType: "STUDENT_ANSWER",
         },
       })
 
@@ -112,20 +109,18 @@ export async function uploadStudentAnswers(
  */
 export async function getStudentAnswersByProjectId(projectId: string) {
   try {
-    const answerSheets = await prisma.pageImage.findMany({
+    const answerSheets = await prisma.studentAnswerImage.findMany({
       where: {
-        imageType: "STUDENT_ANSWER",
         projectPage: {
           projectId: projectId,
         },
-        studentId: { not: null }, // Only include images with assigned students
       },
       include: {
         student: {
           include: {
             projectStudents: {
               where: { projectId },
-              select: { customOrder: true, status: true }, // Include status to determine if absent
+              select: { customOrder: true, status: true },
             },
           },
         },
@@ -138,37 +133,35 @@ export async function getStudentAnswersByProjectId(projectId: string) {
       orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
     })
 
-    // Transform PageImage data to legacy format for backward compatibility
-    const processedAnswerSheets = answerSheets
-      .filter((sheet) => sheet.student) // Ensure student exists
-      .map((sheet) => {
-        // Get ProjectStudent status to determine if absent
-        const projectStudent = sheet.student?.projectStudents?.[0]
-        const isAbsent = projectStudent?.status === "ABSENT"
+    // Transform StudentAnswerImage data for backward compatibility
+    const processedAnswerSheets = answerSheets.map((sheet) => {
+      // Get ProjectStudent status to determine if absent
+      const projectStudent = sheet.student?.projectStudents?.[0]
+      const isAbsent = projectStudent?.status === "ABSENT"
 
-        return {
-          id: sheet.id,
-          studentId: sheet.studentId,
-          pageNumber: sheet.projectPage.pageNumber,
-          projectPageId: sheet.projectPage.id, // Add projectPageId for page filtering
-          imagePath: sheet.imagePath, // Keep imagePath for UI compatibility
-          originalImagePath: sheet.imagePath, // Map imagePath to originalImagePath for backward compatibility
-          isAbsent: isAbsent, // Properly determined from ProjectStudent.status
-          student: sheet.student
-            ? {
-                id: sheet.student.id,
-                lastName: sheet.student.lastName,
-                firstName: sheet.student.firstName,
-                lastNameKana: sheet.student.lastNameKana,
-                firstNameKana: sheet.student.firstNameKana,
-                studentId: sheet.student.studentId,
-                projectStudents: sheet.student.projectStudents, // Include projectStudents for customOrder access
-              }
-            : null,
-          projectId: sheet.projectPage.project.id,
-          status: "ready" as const,
-        }
-      })
+      return {
+        id: sheet.id,
+        studentId: sheet.studentId,
+        pageNumber: sheet.projectPage.pageNumber,
+        projectPageId: sheet.projectPage.id,
+        imagePath: sheet.imagePath,
+        originalImagePath: sheet.imagePath,
+        isAbsent: isAbsent,
+        student: sheet.student
+          ? {
+              id: sheet.student.id,
+              lastName: sheet.student.lastName,
+              firstName: sheet.student.firstName,
+              lastNameKana: sheet.student.lastNameKana,
+              firstNameKana: sheet.student.firstNameKana,
+              studentId: sheet.student.studentId,
+              projectStudents: sheet.student.projectStudents,
+            }
+          : null,
+        projectId: sheet.projectPage.project.id,
+        status: "ready" as const,
+      }
+    })
 
     return { success: true, answerSheets: processedAnswerSheets }
   } catch (error) {
@@ -186,7 +179,7 @@ export async function getStudentAnswersByProjectId(projectId: string) {
  */
 export async function deleteStudentAnswer(answerSheetId: string) {
   try {
-    const answerSheet = await prisma.pageImage.findUnique({
+    const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
     })
 
@@ -205,7 +198,7 @@ export async function deleteStudentAnswer(answerSheetId: string) {
     }
 
     // データベースから削除
-    await prisma.pageImage.delete({
+    await prisma.studentAnswerImage.delete({
       where: { id: answerSheetId },
     })
 
@@ -228,7 +221,7 @@ export async function associateStudentAnswerWithStudent(
   studentId: string
 ) {
   try {
-    const answerSheet = await prisma.pageImage.update({
+    const answerSheet = await prisma.studentAnswerImage.update({
       where: { id: answerSheetId },
       data: { studentId },
       include: {
@@ -259,7 +252,7 @@ export async function associateStudentAnswerWithStudent(
  */
 export async function getStudentAnswerById(answerSheetId: string) {
   try {
-    const answerSheet = await prisma.pageImage.findUnique({
+    const answerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
       include: {
         student: true,
@@ -276,7 +269,6 @@ export async function getStudentAnswerById(answerSheetId: string) {
             },
           },
         },
-        // TODO: questionScores would need to be fetched separately in new schema
       },
     })
 

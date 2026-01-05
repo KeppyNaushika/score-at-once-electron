@@ -40,7 +40,7 @@ export const initializeScoringRecords = async (projectId: string) => {
             where: {
               studentId: projectStudent.studentId,
               cropRegionId: region.id,
-              scoredByUserId: defaultUser.id,
+              userId: defaultUser.id,
             },
           })
 
@@ -50,7 +50,7 @@ export const initializeScoringRecords = async (projectId: string) => {
               cropRegionId: region.id,
               partialScore: null,
               status: "ungraded",
-              scoredByUserId: defaultUser.id,
+              userId: defaultUser.id,
             })
           }
         }

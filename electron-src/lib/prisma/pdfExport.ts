@@ -121,6 +121,7 @@ export interface PdfExportPageData {
     displayX: number
     displayY: number
     anchorDirection: string
+    userId: string
   }>
 }
 
@@ -260,6 +261,7 @@ export async function getPdfExportData(options: {
               displayX: annot.displayX,
               displayY: annot.displayY,
               anchorDirection: annot.anchorDirection,
+              userId: annot.userId,
             })
           }
         }

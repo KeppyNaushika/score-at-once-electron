@@ -82,6 +82,7 @@ export interface PdfExportPageData {
     displayX: number
     displayY: number
     anchorDirection: string
+    userId: string
   }>
 }
 
@@ -291,7 +292,7 @@ export function PdfCanvasRenderer({
           | "bottom-right",
         createdAt: new Date(),
         updatedAt: new Date(),
-        createdByUserId: null,
+        userId: a.userId,
       }))
 
       const subtotalDataForPdf: SubtotalDataForPdf[] = (

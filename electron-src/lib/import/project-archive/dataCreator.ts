@@ -249,12 +249,14 @@ export async function createImportedData(
       }
 
       // 14. QuestionScoreを作成
-      // v0.3.0以降: scoredByUserIdを現在のログインユーザーで上書き
+      // v0.3.0以降: userIdを現在のログインユーザーで上書き
+      // v0.4.0以降: studentIdは必須フィールド
       for (const qs of data.scoresData.questionScores) {
         const newCropRegionId = remapId(qs.cropRegionId, mappings.cropRegion)
         const newStudentId = remapId(qs.studentId, mappings.student)
 
-        if (newCropRegionId) {
+        // studentIdは必須フィールド
+        if (newCropRegionId && newStudentId) {
           await tx.questionScore.create({
             data: {
               id: remapIdRequired(qs.id, mappings.questionScore),
@@ -264,14 +266,14 @@ export async function createImportedData(
                 ? parseFloat(qs.partialScore)
                 : null,
               status: qs.status,
-              scoredByUserId: currentUserId,
+              userId: currentUserId,
             },
           })
         }
       }
 
       // 15. DrawingAnnotationを作成
-      // v0.3.0以降: createdByUserIdを現在のログインユーザーで上書き
+      // v0.3.0以降: userIdを現在のログインユーザーで上書き
       for (const da of data.scoresData.drawingAnnotations) {
         const newQuestionScoreId = remapId(
           da.questionScoreId,
@@ -302,7 +304,7 @@ export async function createImportedData(
               anchorDirection: da.anchorDirection,
               displayX: da.displayX,
               displayY: da.displayY,
-              createdByUserId: currentUserId,
+              userId: currentUserId,
             },
           })
         }
@@ -312,8 +314,8 @@ export async function createImportedData(
     // 16. 画像ファイルをコピー
     await copyImages(data, newProjectId)
 
-    // 17. PageImageレコードを作成（画像コピー後）
-    await createPageImageRecords(data, mappings)
+    // 17. 画像レコードを作成（画像コピー後）
+    await createImageRecords(data, mappings, newProjectId)
 
     return {
       success: true,
@@ -380,45 +382,107 @@ async function copyImages(
 }
 
 /**
- * PageImageレコードを作成
+ * 画像レコードを作成（MasterImage / StudentAnswerImage）
+ *
+ * v1.2.0+: masterImages と studentAnswerImages を使用
+ * v1.1.0以前: pageImages から変換
  */
-async function createPageImageRecords(
+async function createImageRecords(
   data: ExtractedArchiveData,
-  mappings: IdMappings
+  mappings: IdMappings,
+  newProjectId: string
 ): Promise<void> {
-  for (const img of data.projectData.pageImages) {
-    const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
-    const newStudentId = remapId(img.studentId, mappings.student)
-    const newProjectId = Object.values(mappings.project)[0]
+  // v1.2.0+ 形式: masterImages と studentAnswerImages が存在する場合
+  if (
+    data.projectData.masterImages &&
+    data.projectData.masterImages.length > 0
+  ) {
+    for (const img of data.projectData.masterImages) {
+      const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
+      if (!newProjectPageId) continue
 
-    if (!newProjectPageId) continue
+      const filename = path.basename(img.imagePath)
+      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-    // 新しいパスを計算（相対パスで保存）
-    const filename = path.basename(img.imagePath)
-    let newImagePath: string
+      await prisma.masterImage.create({
+        data: {
+          id: remapIdRequired(img.id, mappings.masterImage),
+          projectPageId: newProjectPageId,
+          imagePath: newImagePath,
+        },
+      })
+    }
+  }
 
-    if (img.imageType === "MODEL_ANSWER") {
-      newImagePath = `projects/${newProjectId}/master-images/${filename}`
-    } else {
-      // STUDENT_ANSWERの場合、元のパス構造を維持
+  if (
+    data.projectData.studentAnswerImages &&
+    data.projectData.studentAnswerImages.length > 0
+  ) {
+    for (const img of data.projectData.studentAnswerImages) {
+      const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
+      const newStudentId = remapId(img.studentId, mappings.student)
+      if (!newProjectPageId || !newStudentId) continue
+
       const relativePath = img.imagePath.substring(
         img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
       )
-      newImagePath =
+      const newImagePath =
         `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
           /\\/g,
           "/"
         )
+
+      await prisma.studentAnswerImage.create({
+        data: {
+          id: remapIdRequired(img.id, mappings.studentAnswerImage),
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+          imagePath: newImagePath,
+        },
+      })
     }
 
-    await prisma.pageImage.create({
-      data: {
-        id: remapIdRequired(img.id, mappings.pageImage),
-        projectPageId: newProjectPageId,
-        studentId: newStudentId,
-        imagePath: newImagePath,
-        imageType: img.imageType,
-      },
-    })
+    return
+  }
+
+  // v1.1.0以前: pageImages から変換（後方互換性）
+  for (const img of data.projectData.pageImages) {
+    const newProjectPageId = remapId(img.projectPageId, mappings.projectPage)
+    if (!newProjectPageId) continue
+
+    const filename = path.basename(img.imagePath)
+
+    if (img.imageType === "MODEL_ANSWER") {
+      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+
+      await prisma.masterImage.create({
+        data: {
+          id: remapIdRequired(img.id, mappings.pageImage),
+          projectPageId: newProjectPageId,
+          imagePath: newImagePath,
+        },
+      })
+    } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
+      const newStudentId = remapId(img.studentId, mappings.student)
+      if (!newStudentId) continue
+
+      const relativePath = img.imagePath.substring(
+        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      )
+      const newImagePath =
+        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
+          /\\/g,
+          "/"
+        )
+
+      await prisma.studentAnswerImage.create({
+        data: {
+          id: remapIdRequired(img.id, mappings.pageImage),
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+          imagePath: newImagePath,
+        },
+      })
+    }
   }
 }

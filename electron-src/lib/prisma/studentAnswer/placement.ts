@@ -15,7 +15,7 @@ export async function updateStudentAnswerPlacement(
 ) {
   try {
     // まず現在の答案情報を取得してprojectIdを確認
-    const currentAnswerSheet = await prisma.pageImage.findUnique({
+    const currentAnswerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
       select: {
         projectPage: {
@@ -30,11 +30,19 @@ export async function updateStudentAnswerPlacement(
       throw new Error("答案が見つかりません")
     }
 
-    const answerSheet = await prisma.pageImage.update({
+    // StudentAnswerImageではstudentIdは必須
+    // nullの場合は削除として扱う
+    if (studentId === null) {
+      await prisma.studentAnswerImage.delete({
+        where: { id: answerSheetId },
+      })
+      return { success: true, answerSheet: null, deleted: true }
+    }
+
+    const answerSheet = await prisma.studentAnswerImage.update({
       where: { id: answerSheetId },
       data: {
         studentId,
-        // TODO: Handle page changes in the new schema - might need to move to different ProjectPage
       },
       include: {
         student: {
@@ -50,7 +58,6 @@ export async function updateStudentAnswerPlacement(
             project: true,
           },
         },
-        // TODO: questionScores would need to be fetched separately in new schema
       },
     })
 
@@ -77,7 +84,7 @@ export async function swapStudentAnswerPlacements(
     const result = await prisma.$transaction(async (tx) => {
       // 2つの答案の現在の配置情報を取得
       const [answerSheet1, answerSheet2] = await Promise.all([
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId1 },
           select: {
             studentId: true,
@@ -89,7 +96,7 @@ export async function swapStudentAnswerPlacements(
             },
           },
         }),
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId2 },
           select: {
             studentId: true,
@@ -107,36 +114,20 @@ export async function swapStudentAnswerPlacements(
         throw new Error("答案が見つかりません")
       }
 
-      // 一時的にanswerSheet1をnull配置に移動（制約回避）
-      await tx.pageImage.update({
+      // StudentAnswerImageのstudentIdを交換
+      await tx.studentAnswerImage.update({
         where: { id: answerSheetId1 },
-        data: {
-          studentId: null,
-          // TODO: Handle page swapping in new schema - might need to recreate PageImage in different ProjectPage
-        },
+        data: { studentId: answerSheet2.studentId },
       })
 
-      // answerSheet2をanswerSheet1の元の位置に移動
-      await tx.pageImage.update({
+      await tx.studentAnswerImage.update({
         where: { id: answerSheetId2 },
-        data: {
-          studentId: answerSheet1.studentId,
-          // TODO: Handle pageNumber in new schema
-        },
-      })
-
-      // answerSheet1をanswerSheet2の元の位置に移動
-      await tx.pageImage.update({
-        where: { id: answerSheetId1 },
-        data: {
-          studentId: answerSheet2.studentId,
-          // TODO: Handle pageNumber in new schema
-        },
+        data: { studentId: answerSheet1.studentId },
       })
 
       // 更新後の答案情報を取得
       const [updatedAnswerSheet1, updatedAnswerSheet2] = await Promise.all([
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId1 },
           include: {
             student: {
@@ -152,10 +143,9 @@ export async function swapStudentAnswerPlacements(
                 project: true,
               },
             },
-            // TODO: questionScores would need to be fetched separately in new schema
           },
         }),
-        tx.pageImage.findUnique({
+        tx.studentAnswerImage.findUnique({
           where: { id: answerSheetId2 },
           include: {
             student: {
@@ -171,7 +161,6 @@ export async function swapStudentAnswerPlacements(
                 project: true,
               },
             },
-            // TODO: questionScores would need to be fetched separately in new schema
           },
         }),
       ])

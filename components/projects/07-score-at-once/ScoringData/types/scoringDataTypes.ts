@@ -31,7 +31,7 @@ export interface ScoreCreateData {
   partialScore?: number
   status: ScoringStatus
   comment: string
-  scoredByUserId: string
+  userId: string
 }
 
 export type {

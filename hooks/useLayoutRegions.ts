@@ -103,9 +103,9 @@ export function useCropRegions(projectId?: string) {
           }
         })
 
-        const savedRegions: CropRegionWithDetails[] = await Promise.all(
-          savePromises.filter(Boolean)
-        )
+        const savedRegions = (
+          await Promise.all(savePromises)
+        ).filter((region): region is CropRegionWithDetails => region !== null)
 
         if (savedRegions.length > 0) {
           const formattedRegions: CropRegion[] = savedRegions

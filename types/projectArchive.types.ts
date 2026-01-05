@@ -344,12 +344,30 @@ export interface ArchiveProjectData {
     createdAt: string
     updatedAt: string
   }>
+  /** @deprecated v1.2.0以降はmasterImages/studentAnswerImagesを使用 */
   pageImages: Array<{
     id: string
     projectPageId: string
     studentId: string | null
     imagePath: string
     imageType: string
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.2.0+ 模範解答画像 */
+  masterImages?: Array<{
+    id: string
+    projectPageId: string
+    imagePath: string
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.2.0+ 答案画像 */
+  studentAnswerImages?: Array<{
+    id: string
+    projectPageId: string
+    studentId: string
+    imagePath: string
     createdAt: string
     updatedAt: string
   }>
@@ -486,10 +504,10 @@ export interface ArchiveScoresData {
   questionScores: Array<{
     id: string
     cropRegionId: string
-    studentId: string | null
+    studentId: string
     partialScore: string | null // Decimal as string
     status: string
-    scoredByUserId: string | null
+    userId: string
     createdAt: string
     updatedAt: string
   }>
@@ -515,7 +533,7 @@ export interface ArchiveScoresData {
     anchorDirection: string
     displayX: number
     displayY: number
-    createdByUserId: string | null
+    userId: string
     createdAt: string
     updatedAt: string
   }>

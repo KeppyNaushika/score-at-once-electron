@@ -209,9 +209,9 @@ export default function ScoreComparisonModal({
                         {Number(comparison.finalScore.partialScore) || 0} /{" "}
                         {maxScore} 点
                       </div>
-                      {comparison.finalScore.scoredByUser && (
+                      {comparison.finalScore.user && (
                         <div className="text-muted-foreground text-sm">
-                          決定者: {comparison.finalScore.scoredByUser.name}
+                          決定者: {comparison.finalScore.user.name}
                         </div>
                       )}
                       <div className="text-muted-foreground text-sm">
@@ -248,9 +248,9 @@ export default function ScoreComparisonModal({
                               {getStatusBadge(score.status)}
                             </div>
                             <div className="text-right">
-                              {score.scoredByUser && (
+                              {score.user && (
                                 <div className="text-sm font-medium">
-                                  {score.scoredByUser.name}
+                                  {score.user.name}
                                 </div>
                               )}
                               <div className="text-muted-foreground text-xs">

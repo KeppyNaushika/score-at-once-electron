@@ -20,8 +20,11 @@ import type {
 
 /**
  * アーカイブバージョンの種類
+ * - 1.0.0: v0.2.z (UserProject.role nullable, invitedAt/invitedBy なし)
+ * - 1.1.0: v0.3.z (UserProject完全対応, ProjectClass追加)
+ * - 1.2.0: v0.4.z (userId/studentId非NULL化)
  */
-export type ArchiveVersion = "1.0.0" | "1.1.0" | "unknown"
+export type ArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "unknown"
 
 /**
  * バージョン文字列を比較
@@ -55,12 +58,20 @@ export function detectArchiveVersion(
     return "1.0.0"
   }
 
-  // v0.3.0+ (archive format 1.1.0)
+  // v0.3.z (archive format 1.1.0)
   if (
     compareVersions(version, "1.1.0") >= 0 &&
-    compareVersions(version, "2.0.0") < 0
+    compareVersions(version, "1.2.0") < 0
   ) {
     return "1.1.0"
+  }
+
+  // v0.4.z+ (archive format 1.2.0)
+  if (
+    compareVersions(version, "1.2.0") >= 0 &&
+    compareVersions(version, "2.0.0") < 0
+  ) {
+    return "1.2.0"
   }
 
   return "unknown"
@@ -207,12 +218,93 @@ export class V1_0_0_Transformer implements VersionTransformer {
 }
 
 /**
- * v1.1.0 (現行バージョン) の変換器
+ * v1.1.0 → v1.2.0 変換器
  *
- * 変換不要、パススルー
+ * v0.3.z のアーカイブを v0.4.0 形式に変換
+ * - QuestionScore: scoredByUserId → userId, studentId null対応
+ * - DrawingAnnotation: createdByUserId → userId
  */
 export class V1_1_0_Transformer implements VersionTransformer {
   supportedVersion: ArchiveVersion = "1.1.0"
+
+  transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
+    return data
+  }
+
+  transformStudentsData(data: ArchiveStudentsData): ArchiveStudentsData {
+    return data
+  }
+
+  transformClassesData(data: ArchiveClassesData): ArchiveClassesData {
+    return data
+  }
+
+  transformUsersData(data: ArchiveUsersData): ArchiveUsersData {
+    return data
+  }
+
+  transformSubtotalsData(data: ArchiveSubtotalsData): ArchiveSubtotalsData {
+    return data
+  }
+
+  transformScoresData(data: ArchiveScoresData): ArchiveScoresData {
+    // v1.1.0では scoredByUserId / createdByUserId が使われている可能性がある
+    // v1.2.0では userId に統一、かつ非NULL
+    const transformedScores = data.questionScores
+      .map((qs) => {
+        // 旧フィールド名からの変換
+        const rawScore = qs as unknown as Record<string, unknown>
+        const userId =
+          (rawScore.userId as string) ||
+          (rawScore.scoredByUserId as string) ||
+          ""
+        const studentId = qs.studentId || ""
+
+        // userId または studentId が空の場合はスキップ（後でフィルター）
+        return {
+          ...qs,
+          userId,
+          studentId,
+        }
+      })
+      .filter((qs) => qs.userId !== "" && qs.studentId !== "")
+
+    const transformedAnnotations = data.drawingAnnotations
+      .map((da) => {
+        const rawAnnotation = da as unknown as Record<string, unknown>
+        const userId =
+          (rawAnnotation.userId as string) ||
+          (rawAnnotation.createdByUserId as string) ||
+          ""
+
+        return {
+          ...da,
+          userId,
+        }
+      })
+      .filter((da) => da.userId !== "")
+
+    return {
+      questionScores: transformedScores,
+      drawingAnnotations: transformedAnnotations,
+    }
+  }
+
+  transformManifest(manifest: ArchiveManifest): ArchiveManifest {
+    return {
+      ...manifest,
+      version: "1.2.0",
+    }
+  }
+}
+
+/**
+ * v1.2.0 (現行バージョン) の変換器
+ *
+ * 変換不要、パススルー
+ */
+export class V1_2_0_Transformer implements VersionTransformer {
+  supportedVersion: ArchiveVersion = "1.2.0"
 
   transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
     return data
@@ -256,12 +348,14 @@ export function getTransformer(version: ArchiveVersion): VersionTransformer {
       return new V1_0_0_Transformer()
     case "1.1.0":
       return new V1_1_0_Transformer()
+    case "1.2.0":
+      return new V1_2_0_Transformer()
     default:
       // 未知のバージョンはパススルー（警告付き）
       console.warn(
         `Unknown archive version: ${version}, using passthrough transformer`
       )
-      return new V1_1_0_Transformer()
+      return new V1_2_0_Transformer()
   }
 }
 
@@ -325,6 +419,13 @@ export function transformArchiveData(
     )
   }
 
+  if (originalVersion === "1.1.0") {
+    warnings.push(
+      `アーカイブはv0.3.z形式(v${originalVersion})で作成されています。` +
+        `userId/studentIdがnullの採点データはスキップされます。`
+    )
+  }
+
   return {
     manifest: transformer.transformManifest(data.manifest),
     projectData: transformer.transformProjectData(data.projectData),
@@ -346,7 +447,7 @@ export function transformArchiveData(
  */
 export function requiresTransformation(manifest: ArchiveManifest): boolean {
   const version = detectArchiveVersion(manifest)
-  return version !== "1.1.0"
+  return version !== "1.2.0"
 }
 
 /**

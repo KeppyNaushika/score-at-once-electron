@@ -18,11 +18,11 @@ function serializeQuestionScore(score: {
   studentId: string | null
   partialScore: { toNumber(): number } | null
   status: string
-  scoredByUserId: string | null
+  userId: string | null
   createdAt: Date
   updatedAt: Date
   student?: unknown
-  scoredByUser?: unknown
+  user?: unknown
 }) {
   return {
     id: score.id,
@@ -30,11 +30,11 @@ function serializeQuestionScore(score: {
     studentId: score.studentId,
     partialScore: score.partialScore ? score.partialScore.toNumber() : null,
     status: score.status,
-    scoredByUserId: score.scoredByUserId,
+    userId: score.userId,
     createdAt: score.createdAt,
     updatedAt: score.updatedAt,
     student: score.student,
-    scoredByUser: score.scoredByUser,
+    user: score.user,
   }
 }
 
@@ -72,12 +72,10 @@ export function setupProjectHandlers(): void {
         answerImages:
           project.projectPages?.flatMap(
             (page) =>
-              page.pageImages
-                ?.filter((image) => image.imageType === "STUDENT_ANSWER")
-                ?.map((image) => ({
-                  ...image,
-                  pageNumber: page.pageNumber,
-                })) || []
+              page.studentAnswerImages?.map((image) => ({
+                ...image,
+                pageNumber: page.pageNumber,
+              })) || []
           ) || [],
       }))
 
@@ -124,12 +122,10 @@ export function setupProjectHandlers(): void {
         answerImages:
           project.projectPages?.flatMap(
             (page) =>
-              page.pageImages
-                ?.filter((image) => image.imageType === "STUDENT_ANSWER")
-                ?.map((image) => ({
-                  ...image,
-                  pageNumber: page.pageNumber,
-                })) || []
+              page.studentAnswerImages?.map((image) => ({
+                ...image,
+                pageNumber: page.pageNumber,
+              })) || []
           ) || [],
       }
     } catch (err) {

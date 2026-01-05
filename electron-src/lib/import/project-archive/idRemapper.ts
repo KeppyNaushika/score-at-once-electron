@@ -17,7 +17,11 @@ export interface IdMappings {
   projectPage: Record<string, string>
   /** CropRegion ID: 旧ID -> 新ID */
   cropRegion: Record<string, string>
-  /** PageImage ID: 旧ID -> 新ID */
+  /** MasterImage ID: 旧ID -> 新ID */
+  masterImage: Record<string, string>
+  /** StudentAnswerImage ID: 旧ID -> 新ID */
+  studentAnswerImage: Record<string, string>
+  /** @deprecated v1.2.0以降は masterImage/studentAnswerImage を使用 */
   pageImage: Record<string, string>
   /** ProjectStudent ID: 旧ID -> 新ID */
   projectStudent: Record<string, string>
@@ -60,6 +64,8 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     project: {},
     projectPage: {},
     cropRegion: {},
+    masterImage: {},
+    studentAnswerImage: {},
     pageImage: {},
     projectStudent: {},
     userProject: {},
@@ -89,7 +95,17 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     mappings.cropRegion[region.id] = randomUUID()
   }
 
-  // PageImage
+  // v1.2.0+: MasterImage
+  for (const img of data.projectData.masterImages || []) {
+    mappings.masterImage[img.id] = randomUUID()
+  }
+
+  // v1.2.0+: StudentAnswerImage
+  for (const img of data.projectData.studentAnswerImages || []) {
+    mappings.studentAnswerImage[img.id] = randomUUID()
+  }
+
+  // v1.1.0以前: PageImage（後方互換性）
   for (const img of data.projectData.pageImages) {
     mappings.pageImage[img.id] = randomUUID()
   }
