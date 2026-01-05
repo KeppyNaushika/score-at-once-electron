@@ -1,6 +1,9 @@
 /**
  * 選択枠の色を取得・監視するフック
  * 機能G: ユーザー設定の永続化
+ *
+ * カラム別楽観的更新パターン:
+ * - selectionBorderColorカラムのみを読み書き
  */
 
 import { useAuth } from "@/contexts/AuthContext"
@@ -14,7 +17,7 @@ export function useSelectionBorder(): string {
   const [color, setColor] = useState(DEFAULT_SELECTION_BORDER_COLOR)
   const initializedRef = useRef(false)
 
-  // 設定を読み込む
+  // 設定を読み込む（カラム別）
   useEffect(() => {
     if (initializedRef.current) return
     initializedRef.current = true
@@ -23,9 +26,12 @@ export function useSelectionBorder(): string {
       if (userId && window.electronAPI?.settings) {
         try {
           const result =
-            await window.electronAPI.settings.getUserScoringPreference(userId)
-          if (result.success && result.preference?.selectionBorderColor) {
-            setColor(result.preference.selectionBorderColor)
+            await window.electronAPI.settings.getScoringPreferenceColumn(
+              userId,
+              "selectionBorderColor"
+            )
+          if (result.success && result.value) {
+            setColor(result.value)
           }
         } catch (error) {
           console.error("選択枠色の読み込みに失敗しました:", error)
@@ -42,9 +48,12 @@ export function useSelectionBorder(): string {
       if (userId && window.electronAPI?.settings) {
         try {
           const result =
-            await window.electronAPI.settings.getUserScoringPreference(userId)
-          if (result.success && result.preference?.selectionBorderColor) {
-            setColor(result.preference.selectionBorderColor)
+            await window.electronAPI.settings.getScoringPreferenceColumn(
+              userId,
+              "selectionBorderColor"
+            )
+          if (result.success && result.value) {
+            setColor(result.value)
           }
         } catch (error) {
           console.error("選択枠色の読み込みに失敗しました:", error)

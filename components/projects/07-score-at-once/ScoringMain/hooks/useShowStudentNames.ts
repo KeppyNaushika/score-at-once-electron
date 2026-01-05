@@ -1,0 +1,79 @@
+/**
+ * @fileoverview 生徒名表示設定フック
+ * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
+ */
+
+import { useAuth } from "@/contexts/AuthContext"
+import { useCallback, useEffect, useState, useRef } from "react"
+
+/** デフォルト値 */
+const DEFAULT_SHOW_STUDENT_NAMES = true
+
+/**
+ * 生徒名表示設定を管理するフック
+ * @returns showStudentNames - 生徒名を表示するかどうか
+ * @returns setShowStudentNames - 設定を更新する関数
+ * @returns isLoading - 読み込み中フラグ
+ */
+export function useShowStudentNames() {
+  const { user } = useAuth()
+  const userId = user?.id
+
+  const [showStudentNames, setShowStudentNamesState] = useState<boolean>(
+    DEFAULT_SHOW_STUDENT_NAMES
+  )
+  const [isLoading, setIsLoading] = useState(true)
+  const initializedRef = useRef(false)
+
+  useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
+
+    const load = async () => {
+      if (!userId || !window.electronAPI?.settings) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const result =
+          await window.electronAPI.settings.getScoringPreferenceColumn(
+            userId,
+            "showStudentNames"
+          )
+        if (result.success && result.value !== undefined) {
+          setShowStudentNamesState(result.value)
+        }
+      } catch (error) {
+        console.error("showStudentNamesの読み込みに失敗しました:", error)
+      }
+      setIsLoading(false)
+    }
+
+    load()
+  }, [userId])
+
+  /**
+   * 楽観的更新: UI即時更新 + DB非同期保存
+   * @param value - 新しい生徒名表示設定
+   */
+  const setShowStudentNames = useCallback(
+    (value: boolean) => {
+      setShowStudentNamesState(value)
+      if (userId && window.electronAPI?.settings) {
+        window.electronAPI.settings
+          .setScoringPreferenceColumn(userId, "showStudentNames", value)
+          .catch((error) =>
+            console.error("showStudentNamesの保存に失敗しました:", error)
+          )
+      }
+    },
+    [userId]
+  )
+
+  return {
+    showStudentNames,
+    setShowStudentNames,
+    isLoading,
+  }
+}

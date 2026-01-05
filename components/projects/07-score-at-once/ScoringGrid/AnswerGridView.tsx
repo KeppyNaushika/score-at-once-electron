@@ -36,6 +36,8 @@ export interface AnswerGridViewProps {
   autoScroll?: boolean
   /** 生徒名表示設定 */
   showStudentNames?: boolean
+  /** 表示領域拡張率 (0-50%) */
+  expandMargin?: number
   className?: string
 }
 
@@ -50,6 +52,7 @@ export default function AnswerGridView({
   itemsPerRow: externalItemsPerRow,
   autoScroll = true,
   showStudentNames = true,
+  expandMargin,
   className = "",
 }: AnswerGridViewProps) {
   /** フィルタリングされた採点データ（模範解答 + 学生データ） */
@@ -225,6 +228,7 @@ export default function AnswerGridView({
               calculatedCellHeight={calculatedCellHeight}
               selectionBorderColor={selectionBorderColor}
               scoringColors={scoringColors}
+              expandMargin={expandMargin}
               onMouseDown={onCellMouseDown}
             />
           )

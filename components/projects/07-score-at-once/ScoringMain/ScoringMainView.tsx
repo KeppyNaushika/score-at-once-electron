@@ -59,10 +59,12 @@ function ScoringMainViewContent() {
     autoScroll,
     showStudentNames,
     layoutDirection,
+    expandMargin,
     setItemsPerLine,
     setAutoScroll,
     setShowStudentNames,
     setLayoutDirection,
+    setExpandMargin,
   } = useScoringSettings()
 
   const [questionChangeVersion, setQuestionChangeVersion] = useState(0)
@@ -346,6 +348,7 @@ function ScoringMainViewContent() {
           currentStudentId={currentStudentId || undefined}
           currentUserId={currentUserId || undefined}
           questionScores={questionScores}
+          expandMargin={expandMargin}
         />
 
         {/* 右側サイドパネル */}
@@ -378,6 +381,8 @@ function ScoringMainViewContent() {
             autoScroll={autoScroll}
             onAutoScrollChange={handleAutoScrollChange}
             gradingMode={gradingMode}
+            expandMargin={expandMargin}
+            onExpandMarginChange={setExpandMargin}
             students={students}
             onStudentChange={handleStudentChange}
             pageImages={pageImages}
@@ -394,8 +399,12 @@ function ScoringMainViewContent() {
         currentCropRegion={currentCropRegion}
         onPartialScoreClose={handlePartialScoreCancel}
         onPartialScoreChange={handlePartialScoreChange}
-        onPartialScoreConfirmPartial={() => handlePartialScoreConfirm("partial")}
-        onPartialScoreConfirmPending={() => handlePartialScoreConfirm("pending")}
+        onPartialScoreConfirmPartial={() =>
+          handlePartialScoreConfirm("partial")
+        }
+        onPartialScoreConfirmPending={() =>
+          handlePartialScoreConfirm("pending")
+        }
         keyBindings={modalKeyBindings}
         showScoreComparison={showScoreComparison}
         onScoreComparisonClose={() => setShowScoreComparison(false)}

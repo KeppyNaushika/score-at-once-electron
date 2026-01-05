@@ -9,7 +9,11 @@ import {
   resetUserKeyboardShortcuts,
   getUserScoringPreference,
   upsertUserScoringPreference,
+  getScoringPreferenceColumn,
+  setScoringPreferenceColumn,
   type ScoringPreferenceData,
+  type ScoringPreferenceColumnName,
+  type ScoringPreferenceColumns,
 } from "../lib/prisma/userSettings"
 import {
   getProjectMarkingFormats,
@@ -95,6 +99,53 @@ export function registerSettingsHandlers() {
         return { success: true, preference }
       } catch (error) {
         console.error("Failed to upsert scoring preference:", error)
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
+  // カラム別取得
+  ipcMain.handle(
+    "settings:getScoringPreferenceColumn",
+    async (
+      _event,
+      userId: string,
+      column: ScoringPreferenceColumnName
+    ): Promise<{
+      success: boolean
+      value?: ScoringPreferenceColumns[typeof column]
+      error?: string
+    }> => {
+      try {
+        const value = await getScoringPreferenceColumn(userId, column)
+        return { success: true, value }
+      } catch (error) {
+        console.error(
+          `Failed to get scoring preference column [${column}]:`,
+          error
+        )
+        return { success: false, error: String(error) }
+      }
+    }
+  )
+
+  // カラム別設定（楽観的更新用）
+  ipcMain.handle(
+    "settings:setScoringPreferenceColumn",
+    async (
+      _event,
+      userId: string,
+      column: ScoringPreferenceColumnName,
+      value: ScoringPreferenceColumns[typeof column]
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        await setScoringPreferenceColumn(userId, column, value)
+        return { success: true }
+      } catch (error) {
+        console.error(
+          `Failed to set scoring preference column [${column}]:`,
+          error
+        )
         return { success: false, error: String(error) }
       }
     }

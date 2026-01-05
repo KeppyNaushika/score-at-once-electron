@@ -33,6 +33,7 @@ interface ScoringContentAreaProps {
   itemsPerLine: number[]
   autoScroll: boolean
   showStudentNames: boolean
+  expandMargin?: number
 
   /** IndividualView設定 */
   pageImages?: PageImageWithProjectStudents[]
@@ -61,6 +62,7 @@ export function ScoringContentArea({
   itemsPerLine,
   autoScroll,
   showStudentNames,
+  expandMargin,
   pageImages,
   onTextInputStateChange,
   currentStudentId,
@@ -103,6 +105,7 @@ export function ScoringContentArea({
       itemsPerRow={itemsPerLine}
       autoScroll={autoScroll}
       showStudentNames={showStudentNames}
+      expandMargin={expandMargin}
       className="p-4"
     />
   )

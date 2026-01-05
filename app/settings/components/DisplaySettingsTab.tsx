@@ -49,7 +49,7 @@ export function DisplaySettingsTab() {
     getCurrentPresetId
   )
 
-  // 初期値をロード
+  // 初期値をロード（カラム別）
   useEffect(() => {
     if (initializedRef.current || !userId) return
     initializedRef.current = true
@@ -57,17 +57,21 @@ export function DisplaySettingsTab() {
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
         try {
+          // selectionBorderColorカラムのみ読み込み
           const result =
-            await window.electronAPI.settings.getUserScoringPreference(userId)
-          if (result.success && result.preference?.selectionBorderColor) {
-            setSelectionBorderColor(result.preference.selectionBorderColor)
+            await window.electronAPI.settings.getScoringPreferenceColumn(
+              userId,
+              "selectionBorderColor"
+            )
+          if (result.success && result.value) {
+            setSelectionBorderColor(result.value)
           }
         } catch (error) {
           console.error("選択枠色の読み込みに失敗しました:", error)
         }
       }
 
-      // 採点状態色をDBから読み込み
+      // 採点状態色をDBから読み込み（scoringStatusColorsは内部でカラム別読み込み）
       await loadScoringStatusColors(userId)
       setScoringColors(getScoringStatusColors())
       setCurrentPresetId(getCurrentPresetId())
@@ -76,7 +80,7 @@ export function DisplaySettingsTab() {
     loadSettings()
   }, [userId])
 
-  // 選択枠色の変更
+  // 選択枠色の変更（カラム別・楽観的更新）
   const handleSelectionBorderColorChange = useCallback(
     async (color: string) => {
       const upperColor = color.toUpperCase()
@@ -84,11 +88,10 @@ export function DisplaySettingsTab() {
 
       if (userId && window.electronAPI?.settings) {
         try {
-          await window.electronAPI.settings.upsertUserScoringPreference(
+          await window.electronAPI.settings.setScoringPreferenceColumn(
             userId,
-            {
-              selectionBorderColor: upperColor,
-            }
+            "selectionBorderColor",
+            upperColor
           )
           window.dispatchEvent(new CustomEvent("selectionBorderColorChanged"))
           toast.success("選択枠色が変更されました")

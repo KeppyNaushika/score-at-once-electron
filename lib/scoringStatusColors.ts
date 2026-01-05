@@ -1,13 +1,14 @@
 /**
- * 採点状態の表示色管理
+ * @fileoverview 採点状態の表示色管理
+ * @description 一括採点画面のPanel・一覧表示の背景色をカスタマイズ可能にする
  *
- * 一括採点画面のPanel・一覧表示の背景色をカスタマイズ可能にする
  * - 4つのプリセットパターン（標準、ビビッド、ソフト、色覚多様性対応）
  * - 各状態の個別カスタマイズ
- * - DBに保存（UserScoringPreference）
+ * - DBに保存（UserScoringPreference.scoringStatusColors, scoringColorPresetId）
+ * - カラム別楽観的更新対応
  */
 
-// 採点状態の種類（DBの値と一致）
+/** 採点状態の種類（DBの値と一致） */
 export type ScoringStatusType =
   | "ungraded"
   | "correct"
@@ -16,7 +17,7 @@ export type ScoringStatusType =
   | "incorrect"
   | "no_answer"
 
-// 各状態の色設定
+/** 各状態の色設定 */
 export interface StatusColorConfig {
   /** 背景色（HEX） */
   bg: string
@@ -26,10 +27,10 @@ export interface StatusColorConfig {
   icon: string
 }
 
-// 全状態の色設定
+/** 全状態の色設定 */
 export type ScoringStatusColors = Record<ScoringStatusType, StatusColorConfig>
 
-// プリセット定義
+/** カラープリセット定義 */
 export interface ScoringColorPreset {
   id: string
   name: string
@@ -37,7 +38,7 @@ export interface ScoringColorPreset {
   colors: ScoringStatusColors
 }
 
-// 状態のラベル（日本語）
+/** 状態のラベル（日本語） */
 export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
   ungraded: "未採点",
   correct: "正答",
@@ -47,7 +48,7 @@ export const SCORING_STATUS_LABELS: Record<ScoringStatusType, string> = {
   no_answer: "無答",
 }
 
-// 状態の表示順序
+/** 状態の表示順序 */
 export const SCORING_STATUS_ORDER: ScoringStatusType[] = [
   "ungraded",
   "correct",
@@ -115,29 +116,40 @@ export const SCORING_COLOR_PRESETS: ScoringColorPreset[] = [
   },
 ]
 
-// メモリキャッシュ（同期的なアクセス用）
+/** メモリキャッシュ（同期的なアクセス用） */
 let cachedColors: ScoringStatusColors = SCORING_COLOR_PRESETS[0].colors
+/** 現在選択中のプリセットID */
 let cachedPresetId: string | null = "default"
+/** 現在のユーザーID（保存時に使用） */
 let currentUserId: string | null = null
 
 /**
- * DBから採点状態色を読み込み（初期化用）
+ * DBから採点状態色を読み込み（初期化用・カラム別）
  */
 export async function loadScoringStatusColors(userId: string): Promise<void> {
   if (typeof window === "undefined" || !window.electronAPI?.settings) return
 
   try {
     currentUserId = userId
-    const result =
-      await window.electronAPI.settings.getUserScoringPreference(userId)
-    if (result.success && result.preference) {
-      if (result.preference.scoringStatusColors) {
-        cachedColors = JSON.parse(
-          result.preference.scoringStatusColors
-        ) as ScoringStatusColors
-      }
-      cachedPresetId = result.preference.scoringColorPresetId || null
+    // カラム別に並列で読み込み
+    const [colorsResult, presetIdResult] = await Promise.all([
+      window.electronAPI.settings.getScoringPreferenceColumn(
+        userId,
+        "scoringStatusColors"
+      ),
+      window.electronAPI.settings.getScoringPreferenceColumn(
+        userId,
+        "scoringColorPresetId"
+      ),
+    ])
+
+    if (colorsResult.success && colorsResult.value) {
+      cachedColors = JSON.parse(colorsResult.value) as ScoringStatusColors
     }
+    cachedPresetId =
+      presetIdResult.success && presetIdResult.value
+        ? presetIdResult.value
+        : null
   } catch (error) {
     console.error("Failed to load scoring status colors:", error)
   }
@@ -151,7 +163,7 @@ export function getScoringStatusColors(): ScoringStatusColors {
 }
 
 /**
- * 採点状態色を保存
+ * 採点状態色を保存（カラム別・楽観的更新）
  */
 export async function saveScoringStatusColors(
   colors: ScoringStatusColors,
@@ -169,13 +181,19 @@ export async function saveScoringStatusColors(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    await window.electronAPI.settings.upsertUserScoringPreference(
-      targetUserId,
-      {
-        scoringStatusColors: JSON.stringify(colors),
-        scoringColorPresetId: null,
-      }
-    )
+    // カラム別に並列で保存
+    await Promise.all([
+      window.electronAPI.settings.setScoringPreferenceColumn(
+        targetUserId,
+        "scoringStatusColors",
+        JSON.stringify(colors)
+      ),
+      window.electronAPI.settings.setScoringPreferenceColumn(
+        targetUserId,
+        "scoringColorPresetId",
+        null
+      ),
+    ])
   } catch (error) {
     console.error("Failed to save scoring status colors:", error)
   }
@@ -189,7 +207,7 @@ export function getCurrentPresetId(): string | null {
 }
 
 /**
- * プリセットを適用
+ * プリセットを適用（カラム別・楽観的更新）
  */
 export async function applyScoringColorPreset(
   presetId: string,
@@ -213,13 +231,19 @@ export async function applyScoringColorPreset(
   if (!targetUserId || !window.electronAPI?.settings) return
 
   try {
-    await window.electronAPI.settings.upsertUserScoringPreference(
-      targetUserId,
-      {
-        scoringStatusColors: JSON.stringify(preset.colors),
-        scoringColorPresetId: presetId,
-      }
-    )
+    // カラム別に並列で保存
+    await Promise.all([
+      window.electronAPI.settings.setScoringPreferenceColumn(
+        targetUserId,
+        "scoringStatusColors",
+        JSON.stringify(preset.colors)
+      ),
+      window.electronAPI.settings.setScoringPreferenceColumn(
+        targetUserId,
+        "scoringColorPresetId",
+        presetId
+      ),
+    ])
   } catch (error) {
     console.error("Failed to apply scoring color preset:", error)
   }

@@ -54,6 +54,9 @@ interface ScoringSidePanelProps {
   autoScroll: boolean
   onAutoScrollChange: (enabled: boolean) => void
   gradingMode: "grid" | "individual"
+  // 表示領域拡張
+  expandMargin?: number
+  onExpandMarginChange?: (value: number) => void
   // Individual mode props
   students?: {
     id: string
@@ -96,6 +99,8 @@ export function ScoringSidePanel({
   autoScroll,
   onAutoScrollChange,
   gradingMode,
+  expandMargin,
+  onExpandMarginChange,
   students,
   onStudentChange,
   selectedPageImageIds,
@@ -164,6 +169,8 @@ export function ScoringSidePanel({
         autoScroll={autoScroll}
         onAutoScrollChange={onAutoScrollChange}
         gradingMode={gradingMode}
+        expandMargin={expandMargin}
+        onExpandMarginChange={onExpandMarginChange}
       />
 
       <Separator />
