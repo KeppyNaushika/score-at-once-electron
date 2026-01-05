@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Calculator, Plus, Search, Trash2, ExternalLink } from "lucide-react"
+import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
 import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 import LoadingSpinner from "@/components/common/LoadingSpinner"
@@ -177,14 +177,13 @@ export function SubtotalGroupSelector({
               <span className="font-medium text-green-800">
                 新しいグループを作成
               </span>
-              <Link href="/subtotal-groups" target="_blank">
+              <Link href="/subtotal-groups">
                 <Button
                   size="sm"
                   className="bg-green-600 text-white hover:bg-green-700"
                 >
                   <Plus className="mr-1 h-4 w-4" />
                   新規作成
-                  <ExternalLink className="ml-1 h-4 w-4" />
                 </Button>
               </Link>
             </div>
