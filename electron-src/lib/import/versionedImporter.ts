@@ -1,7 +1,9 @@
 /**
  * バージョン別インポーター
  *
- * v0.2.z 以前のアーカイブ形式を v0.3.0 形式に変換
+ * 連鎖変換パターンを使用してアーカイブを最新形式に変換
+ *
+ * @see docs/schema-history/README.md
  */
 
 import type {
@@ -13,364 +15,36 @@ import type {
   ArchiveSubtotalsData,
   ArchiveUsersData,
 } from "../../../types/projectArchive.types"
+import {
+  CURRENT_VERSION,
+  SUPPORTED_VERSIONS,
+  detectArchiveVersion,
+  isSupportedVersion,
+  requiresTransformation,
+  transformToLatest,
+} from "./transformers"
+import type {
+  ArchiveData,
+  ArchiveVersion,
+  ChainTransformResult,
+} from "./transformers"
 
 // =============================================================================
-// Version Detection
+// Re-exports from transformers
 // =============================================================================
 
-/**
- * アーカイブバージョンの種類
- * - 1.0.0: v0.2.z (UserProject.role nullable, invitedAt/invitedBy なし)
- * - 1.1.0: v0.3.z (UserProject完全対応, ProjectClass追加)
- * - 1.2.0: v0.4.z (userId/studentId非NULL化)
- */
-export type ArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "unknown"
-
-/**
- * バージョン文字列を比較
- *
- * @returns 負: v1 < v2, 0: v1 == v2, 正: v1 > v2
- */
-function compareVersions(v1: string, v2: string): number {
-  const parts1 = v1.split(".").map(Number)
-  const parts2 = v2.split(".").map(Number)
-
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const p1 = parts1[i] || 0
-    const p2 = parts2[i] || 0
-    if (p1 !== p2) {
-      return p1 - p2
-    }
-  }
-  return 0
+export {
+  CURRENT_VERSION,
+  SUPPORTED_VERSIONS,
+  detectArchiveVersion,
+  isSupportedVersion,
+  requiresTransformation,
 }
 
-/**
- * マニフェストからバージョンを検出
- */
-export function detectArchiveVersion(
-  manifest: ArchiveManifest
-): ArchiveVersion {
-  const version = manifest.version
-
-  // v0.2.z (archive format 1.0.0)
-  if (compareVersions(version, "1.1.0") < 0) {
-    return "1.0.0"
-  }
-
-  // v0.3.z (archive format 1.1.0)
-  if (
-    compareVersions(version, "1.1.0") >= 0 &&
-    compareVersions(version, "1.2.0") < 0
-  ) {
-    return "1.1.0"
-  }
-
-  // v0.4.z+ (archive format 1.2.0)
-  if (
-    compareVersions(version, "1.2.0") >= 0 &&
-    compareVersions(version, "2.0.0") < 0
-  ) {
-    return "1.2.0"
-  }
-
-  return "unknown"
-}
+export type { ArchiveVersion }
 
 // =============================================================================
-// Data Transformation Types
-// =============================================================================
-
-/**
- * v0.2.z (1.0.0) のUserProject形式
- *
- * v0.2.20時点では role は存在する（デフォルト "OWNER"）
- * v0.2.z では invitedAt, invitedBy がない
- */
-interface V1_0_0_UserProject {
-  id: string
-  userId: string
-  projectId: string
-  role?: string // v0.2.20では存在する
-  createdAt: string
-  updatedAt: string
-}
-
-/**
- * v0.3.0 (1.1.0) のUserProject形式
- */
-interface V1_1_0_UserProject {
-  id: string
-  userId: string
-  projectId: string
-  role: string
-  invitedAt: string
-  invitedBy: string | null
-  createdAt: string
-  updatedAt: string
-}
-
-// =============================================================================
-// Version Transformers
-// =============================================================================
-
-/**
- * バージョン別変換インターフェース
- */
-export interface VersionTransformer {
-  /** 対応するアーカイブバージョン */
-  supportedVersion: ArchiveVersion
-  /** プロジェクトデータを変換 */
-  transformProjectData(data: ArchiveProjectData): ArchiveProjectData
-  /** 生徒データを変換 */
-  transformStudentsData(data: ArchiveStudentsData): ArchiveStudentsData
-  /** クラスデータを変換 */
-  transformClassesData(data: ArchiveClassesData): ArchiveClassesData
-  /** ユーザーデータを変換 */
-  transformUsersData(data: ArchiveUsersData): ArchiveUsersData
-  /** 小計データを変換 */
-  transformSubtotalsData(data: ArchiveSubtotalsData): ArchiveSubtotalsData
-  /** 採点データを変換 */
-  transformScoresData(data: ArchiveScoresData): ArchiveScoresData
-  /** マニフェストを変換 */
-  transformManifest(manifest: ArchiveManifest): ArchiveManifest
-}
-
-/**
- * v1.0.0 → v1.1.0 変換器
- *
- * v0.2.z のアーカイブを v0.3.0 形式に変換
- */
-export class V1_0_0_Transformer implements VersionTransformer {
-  supportedVersion: ArchiveVersion = "1.0.0"
-
-  transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
-    // UserProjectにinvitedAt, invitedByを追加
-    // v0.2.20では role は既に存在するので、あれば保持、なければデフォルト値を設定
-    const transformedUserProjects = data.userProjects.map((up, index) => {
-      const v1Up = up as unknown as V1_0_0_UserProject
-
-      // roleが存在する場合は保持、なければデフォルト値を設定
-      // 最初のユーザーはOWNER、それ以外はGRADER
-      const role = v1Up.role ?? (index === 0 ? "OWNER" : "GRADER")
-
-      const v11Up: V1_1_0_UserProject = {
-        ...v1Up,
-        role,
-        invitedAt: v1Up.createdAt,
-        invitedBy: null,
-      }
-      return v11Up as unknown as ArchiveProjectData["userProjects"][0]
-    })
-
-    // invitedByを設定（最初のユーザー以外）
-    if (transformedUserProjects.length > 1) {
-      const ownerUserId = transformedUserProjects[0]?.userId
-      for (let i = 1; i < transformedUserProjects.length; i++) {
-        const up = transformedUserProjects[i] as unknown as V1_1_0_UserProject
-        up.invitedBy = ownerUserId || null
-      }
-    }
-
-    // v0.2.zにはprojectClassesがないので空の配列を追加
-    const projectClasses = data.projectClasses ?? []
-
-    return {
-      ...data,
-      userProjects: transformedUserProjects,
-      projectClasses,
-    }
-  }
-
-  transformStudentsData(data: ArchiveStudentsData): ArchiveStudentsData {
-    // v0.2.z → v0.3.0 での生徒データの変更はなし
-    return data
-  }
-
-  transformClassesData(data: ArchiveClassesData): ArchiveClassesData {
-    // v0.2.z → v0.3.0 でのクラスデータの変更はなし
-    return data
-  }
-
-  transformUsersData(data: ArchiveUsersData): ArchiveUsersData {
-    // v0.2.z → v0.3.0 でのユーザーデータの変更はなし
-    return data
-  }
-
-  transformSubtotalsData(data: ArchiveSubtotalsData): ArchiveSubtotalsData {
-    // v0.2.z → v0.3.0 での小計データの変更はなし
-    return data
-  }
-
-  transformScoresData(data: ArchiveScoresData): ArchiveScoresData {
-    // v0.2.z → v0.3.0 での採点データの変更はなし
-    return data
-  }
-
-  transformManifest(manifest: ArchiveManifest): ArchiveManifest {
-    return {
-      ...manifest,
-      // バージョンを最新に更新
-      version: "1.1.0",
-      schemaVersion: manifest.schemaVersion || "unknown",
-    }
-  }
-}
-
-/**
- * v1.1.0 → v1.2.0 変換器
- *
- * v0.3.z のアーカイブを v0.4.0 形式に変換
- * - QuestionScore: scoredByUserId → userId, studentId null対応
- * - DrawingAnnotation: createdByUserId → userId
- */
-export class V1_1_0_Transformer implements VersionTransformer {
-  supportedVersion: ArchiveVersion = "1.1.0"
-
-  transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
-    return data
-  }
-
-  transformStudentsData(data: ArchiveStudentsData): ArchiveStudentsData {
-    return data
-  }
-
-  transformClassesData(data: ArchiveClassesData): ArchiveClassesData {
-    return data
-  }
-
-  transformUsersData(data: ArchiveUsersData): ArchiveUsersData {
-    return data
-  }
-
-  transformSubtotalsData(data: ArchiveSubtotalsData): ArchiveSubtotalsData {
-    return data
-  }
-
-  transformScoresData(data: ArchiveScoresData): ArchiveScoresData {
-    // v1.1.0では scoredByUserId / createdByUserId が使われている可能性がある
-    // v1.2.0では userId に統一、かつ非NULL
-    const transformedScores = data.questionScores
-      .map((qs) => {
-        // 旧フィールド名からの変換
-        const rawScore = qs as unknown as Record<string, unknown>
-        const userId =
-          (rawScore.userId as string) ||
-          (rawScore.scoredByUserId as string) ||
-          ""
-        const studentId = qs.studentId || ""
-
-        // userId または studentId が空の場合はスキップ（後でフィルター）
-        return {
-          ...qs,
-          userId,
-          studentId,
-        }
-      })
-      .filter((qs) => qs.userId !== "" && qs.studentId !== "")
-
-    const transformedAnnotations = data.drawingAnnotations
-      .map((da) => {
-        const rawAnnotation = da as unknown as Record<string, unknown>
-        const userId =
-          (rawAnnotation.userId as string) ||
-          (rawAnnotation.createdByUserId as string) ||
-          ""
-
-        return {
-          ...da,
-          userId,
-        }
-      })
-      .filter((da) => da.userId !== "")
-
-    return {
-      questionScores: transformedScores,
-      drawingAnnotations: transformedAnnotations,
-    }
-  }
-
-  transformManifest(manifest: ArchiveManifest): ArchiveManifest {
-    return {
-      ...manifest,
-      version: "1.2.0",
-    }
-  }
-}
-
-/**
- * v1.2.0 (現行バージョン) の変換器
- *
- * 変換不要、パススルー
- */
-export class V1_2_0_Transformer implements VersionTransformer {
-  supportedVersion: ArchiveVersion = "1.2.0"
-
-  transformProjectData(data: ArchiveProjectData): ArchiveProjectData {
-    return data
-  }
-
-  transformStudentsData(data: ArchiveStudentsData): ArchiveStudentsData {
-    return data
-  }
-
-  transformClassesData(data: ArchiveClassesData): ArchiveClassesData {
-    return data
-  }
-
-  transformUsersData(data: ArchiveUsersData): ArchiveUsersData {
-    return data
-  }
-
-  transformSubtotalsData(data: ArchiveSubtotalsData): ArchiveSubtotalsData {
-    return data
-  }
-
-  transformScoresData(data: ArchiveScoresData): ArchiveScoresData {
-    return data
-  }
-
-  transformManifest(manifest: ArchiveManifest): ArchiveManifest {
-    return manifest
-  }
-}
-
-// =============================================================================
-// Transformer Factory
-// =============================================================================
-
-/**
- * バージョンに応じた変換器を取得
- */
-export function getTransformer(version: ArchiveVersion): VersionTransformer {
-  switch (version) {
-    case "1.0.0":
-      return new V1_0_0_Transformer()
-    case "1.1.0":
-      return new V1_1_0_Transformer()
-    case "1.2.0":
-      return new V1_2_0_Transformer()
-    default:
-      // 未知のバージョンはパススルー（警告付き）
-      console.warn(
-        `Unknown archive version: ${version}, using passthrough transformer`
-      )
-      return new V1_2_0_Transformer()
-  }
-}
-
-/**
- * マニフェストから適切な変換器を取得
- */
-export function getTransformerFromManifest(
-  manifest: ArchiveManifest
-): VersionTransformer {
-  const version = detectArchiveVersion(manifest)
-  return getTransformer(version)
-}
-
-// =============================================================================
-// Archive Data Transformation
+// Extended Types for Archive Processing
 // =============================================================================
 
 /**
@@ -396,64 +70,89 @@ export interface ExtractedArchiveData {
  */
 export interface TransformedArchiveData extends ExtractedArchiveData {
   /** 変換前のバージョン */
-  originalVersion: ArchiveVersion
+  originalVersion: ArchiveVersion | "unknown"
   /** 変換時の警告 */
   transformWarnings: string[]
 }
 
+// =============================================================================
+// Archive Transformation
+// =============================================================================
+
 /**
  * アーカイブデータを最新形式に変換
+ *
+ * 連鎖変換パターンを使用:
+ * 1.0.0 → 1.1.0 → 1.2.0
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @returns 変換済みデータ
  */
 export function transformArchiveData(
   data: ExtractedArchiveData
 ): TransformedArchiveData {
   const originalVersion = detectArchiveVersion(data.manifest)
-  const transformer = getTransformer(originalVersion)
-  const warnings: string[] = []
 
-  // 古いバージョンからの変換の場合は警告を追加
-  if (originalVersion === "1.0.0") {
-    warnings.push(
-      `アーカイブは古い形式(v${originalVersion})で作成されています。` +
-        `一部のデータ（ユーザー権限等）はデフォルト値で補完されました。`
+  if (originalVersion === "unknown") {
+    // 未知のバージョンは警告付きでパススルー
+    console.warn(
+      `Unknown archive version: ${data.manifest.version}. ` +
+        `Attempting to process as ${CURRENT_VERSION}.`
     )
+
+    return {
+      ...data,
+      originalVersion: "unknown",
+      transformWarnings: [
+        `アーカイブバージョン ${data.manifest.version} は認識できません。` +
+          `処理は続行しますが、データの整合性を確認してください。`,
+      ],
+    }
   }
 
-  if (originalVersion === "1.1.0") {
-    warnings.push(
-      `アーカイブはv0.3.z形式(v${originalVersion})で作成されています。` +
-        `userId/studentIdがnullの採点データはスキップされます。`
-    )
+  // 変換不要の場合
+  if (originalVersion === CURRENT_VERSION) {
+    return {
+      ...data,
+      originalVersion,
+      transformWarnings: [],
+    }
+  }
+
+  // 連鎖変換を実行
+  const archiveData: ArchiveData = {
+    manifest: data.manifest,
+    projectData: data.projectData,
+    studentsData: data.studentsData,
+    classesData: data.classesData,
+    usersData: data.usersData,
+    subtotalsData: data.subtotalsData,
+    scoresData: data.scoresData,
+  }
+
+  const result: ChainTransformResult = transformToLatest(archiveData)
+
+  // ログ出力
+  if (result.appliedTransformations.length > 0) {
+    const transformPath = result.appliedTransformations
+      .map((t) => `${t.from}→${t.to}`)
+      .join(" → ")
+    console.info(`Archive transformation applied: ${transformPath}`)
   }
 
   return {
-    manifest: transformer.transformManifest(data.manifest),
-    projectData: transformer.transformProjectData(data.projectData),
-    studentsData: transformer.transformStudentsData(data.studentsData),
-    classesData: transformer.transformClassesData(data.classesData),
-    usersData: transformer.transformUsersData(data.usersData),
-    subtotalsData: transformer.transformSubtotalsData(data.subtotalsData),
-    scoresData: transformer.transformScoresData(data.scoresData),
+    manifest: result.data.manifest,
+    projectData: result.data.projectData,
+    studentsData: result.data.studentsData,
+    classesData: result.data.classesData,
+    usersData: result.data.usersData,
+    subtotalsData: result.data.subtotalsData,
+    scoresData: result.data.scoresData,
     tempDir: data.tempDir,
     masterImagePaths: data.masterImagePaths,
     answerSheetPaths: data.answerSheetPaths,
-    originalVersion,
-    transformWarnings: warnings,
+    originalVersion: result.originalVersion,
+    transformWarnings: result.warnings,
   }
 }
 
-/**
- * バージョン変換が必要か確認
- */
-export function requiresTransformation(manifest: ArchiveManifest): boolean {
-  const version = detectArchiveVersion(manifest)
-  return version !== "1.2.0"
-}
-
-/**
- * サポートされているバージョンか確認
- */
-export function isSupportedVersion(manifest: ArchiveManifest): boolean {
-  const version = detectArchiveVersion(manifest)
-  return version !== "unknown"
-}
