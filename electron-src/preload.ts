@@ -633,6 +633,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       archivePath: string
       matchingConfig: import("../types/projectArchive.types").MatchingConfig
       conflictResolutions: import("../types/projectArchive.types").ConflictResolutions
+      currentUserId: string
     }) => ipcRenderer.invoke("archive:mergeImport", options),
     selectExportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("archive:selectExportSavePath", options),

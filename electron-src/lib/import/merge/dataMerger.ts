@@ -46,11 +46,17 @@ function createEmptyCounts(): ArchiveDataCounts {
 
 /**
  * マージインポートを実行
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param config - マッチング設定
+ * @param resolutions - 競合解決設定
+ * @param currentUserId - 現在ログインしているユーザーID
  */
 export async function executeMergeImport(
   data: ExtractedArchiveData,
   config: MatchingConfig,
-  resolutions: ConflictResolutions
+  resolutions: ConflictResolutions,
+  currentUserId: string
 ): Promise<MergeImportResult> {
   const warnings: string[] = []
   const counts: MergeCounts = {
@@ -280,22 +286,18 @@ export async function executeMergeImport(
       })
       idMappings.project[project.id] = newProjectId
 
-      // 7. UserProject
-      for (const up of data.projectData.userProjects) {
-        const newUserId = idMappings.user[up.userId]
-        if (newUserId) {
-          const newId = randomUUID()
-          await tx.userProject.create({
-            data: {
-              id: newId,
-              userId: newUserId,
-              projectId: newProjectId,
-              role: up.role,
-            },
-          })
-          idMappings.userProject[up.id] = newId
-        }
-      }
+      // 7. UserProject - 現在のログインユーザーをOWNERとして追加
+      // アーカイブ内のUserProjectは無視し、現在のユーザーのみを追加
+      await tx.userProject.create({
+        data: {
+          id: randomUUID(),
+          userId: currentUserId,
+          projectId: newProjectId,
+          role: "OWNER",
+          invitedAt: new Date(),
+          invitedBy: null,
+        },
+      })
 
       // 8. ProjectSubtotalGroup
       for (const psg of data.projectData.projectSubtotalGroups) {
@@ -388,15 +390,15 @@ export async function executeMergeImport(
       }
 
       // 13. QuestionScore
+      // userIdは現在のログインユーザーで上書き
       for (const qs of data.scoresData.questionScores) {
         const newRegionId = idMappings.cropRegion[qs.cropRegionId]
         const newStudentId = qs.studentId
           ? idMappings.student[qs.studentId]
           : null
-        const newUserId = qs.userId ? idMappings.user[qs.userId] : null
 
-        // studentIdとuserIdは必須フィールド
-        if (newRegionId && newStudentId && newUserId) {
+        // studentIdは必須フィールド
+        if (newRegionId && newStudentId) {
           const newId = randomUUID()
           await tx.questionScore.create({
             data: {
@@ -407,7 +409,7 @@ export async function executeMergeImport(
                 ? parseFloat(qs.partialScore)
                 : null,
               status: qs.status,
-              userId: newUserId,
+              userId: currentUserId,
             },
           })
           idMappings.questionScore[qs.id] = newId
@@ -416,12 +418,11 @@ export async function executeMergeImport(
       }
 
       // 14. DrawingAnnotation
+      // userIdは現在のログインユーザーで上書き
       for (const da of data.scoresData.drawingAnnotations) {
         const newScoreId = idMappings.questionScore[da.questionScoreId]
-        const newUserId = da.userId ? idMappings.user[da.userId] : null
 
-        // userIdは必須フィールド
-        if (newScoreId && newUserId) {
+        if (newScoreId) {
           const newId = randomUUID()
           await tx.drawingAnnotation.create({
             data: {
@@ -446,7 +447,7 @@ export async function executeMergeImport(
               anchorDirection: da.anchorDirection,
               displayX: da.displayX,
               displayY: da.displayY,
-              userId: newUserId,
+              userId: currentUserId,
             },
           })
           idMappings.drawingAnnotation[da.id] = newId

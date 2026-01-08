@@ -177,6 +177,7 @@ export function registerArchiveHandlers(): void {
         archivePath: string
         matchingConfig: MatchingConfig
         conflictResolutions: ConflictResolutions
+        currentUserId: string
       }
     ) => {
       let tempDir: string | null = null
@@ -193,7 +194,8 @@ export function registerArchiveHandlers(): void {
         const result = await executeMergeImport(
           extractResult.data,
           options.matchingConfig,
-          options.conflictResolutions
+          options.conflictResolutions,
+          options.currentUserId
         )
 
         return result

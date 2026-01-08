@@ -287,6 +287,8 @@ export interface MergeImportOptions {
   archivePath: string
   matchingConfig: MatchingConfig
   conflictResolutions: ConflictResolutions
+  /** 現在ログインしているユーザーID（このユーザーをプロジェクトのOWNERとして追加） */
+  currentUserId: string
 }
 
 /**
