@@ -131,10 +131,14 @@ export default function ExportMainView() {
               offsetY: scoringMarkConfig.scoreOffsetY || 0,
             }
 
+      // 小計・合計点設定を取得（デフォルトは18px）
+      const summaryScoreSize = scoringMarkConfig.summaryScore?.size ?? 18
+
       console.log("[DEBUG] getScoringMarkConfigForPdf:", {
         useSeparateScoreSettings: scoringMarkConfig.useSeparateScoreSettings,
         partialScore: scoringMarkConfig.partialScore,
         partialScoreConfig,
+        summaryScoreSize,
       })
 
       return {
@@ -146,6 +150,8 @@ export default function ExportMainView() {
         partialScoreSize: partialScoreConfig.size || 14,
         partialScoreOffsetX: partialScoreConfig.offsetX || 0,
         partialScoreOffsetY: partialScoreConfig.offsetY || 0,
+        // 小計・合計点のサイズ設定
+        summaryScoreSize,
         // ステータスごとの点数表示設定
         showScoreForStatus: scoringMarkConfig.showScoreForStatus,
       }
