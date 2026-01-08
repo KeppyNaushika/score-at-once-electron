@@ -808,13 +808,17 @@ export async function renderAnswerSheetToCanvas(
   }
 
   // 5. 全アノテーションを描画
-  // pageOffset: UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
-  // アノテーションのy座標は1ページ目の高さで正規化されるため、
-  // 2ページ目以降のアノテーションはy > 1.0になる。
-  // pageNumber - 1 を引くことで正しいページ内座標に変換する。
-  const pageOffset = pageNumber - 1
+  // 座標系の互換性処理:
+  // - 旧データ: y座標がキャンバス全体に対する相対座標（2ページ目以降はy > 1.0）
+  // - 新データ: y座標がページ内の相対座標（常に0.0 - 1.0）
+  // y >= 1.0の場合は旧データとみなし、pageOffsetを引いて変換する
+  // y < 1.0の場合は新データとみなし、そのまま使用する
+  const basePageOffset = pageNumber - 1
   for (const annotation of annotations) {
     const element = convertAnnotationToDrawingElement(annotation)
+    // y座標が1.0以上の場合のみpageOffsetを適用（旧座標系の互換性対応）
+    const needsPageOffset = element.y >= 1.0 || (element.endY !== undefined && element.endY >= 1.0)
+    const pageOffset = needsPageOffset ? basePageOffset : 0
     await drawElement(ctx, element, imageWidth, imageHeight, 0, 0, pageOffset)
   }
 

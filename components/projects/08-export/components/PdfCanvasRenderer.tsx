@@ -329,7 +329,8 @@ export function PdfCanvasRenderer({
         scoringMarkConfig,
         markImages,
         subtotalDataForPdf,
-        totalScoreDataForPdf
+        totalScoreDataForPdf,
+        page.pageNumber
       )
 
       const arrayBuffer = await blob.arrayBuffer()

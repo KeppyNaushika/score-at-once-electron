@@ -172,6 +172,9 @@ export default function AnswerIndividualView({
       onZoomChange,
       onPositionChange,
       imageLoaded,
+      // 複数ページ対応
+      loadedImages,
+      pageSpacing,
       currentTool: drawingState.currentTool,
       drawingElements: drawingState.drawingElements,
       // 複数選択システム
