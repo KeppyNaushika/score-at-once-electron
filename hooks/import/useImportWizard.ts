@@ -262,7 +262,12 @@ export function useImportWizard() {
       }))
       return null
     }
-  }, [state.archivePath, state.matchingConfig, state.conflictResolutions, user?.id])
+  }, [
+    state.archivePath,
+    state.matchingConfig,
+    state.conflictResolutions,
+    user?.id,
+  ])
 
   // ステップを戻る
   const goBack = useCallback(() => {
