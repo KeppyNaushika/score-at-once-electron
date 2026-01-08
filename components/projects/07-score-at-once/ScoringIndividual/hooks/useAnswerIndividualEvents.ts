@@ -27,6 +27,9 @@ interface UseAnswerDisplayEventsProps {
   onZoomChange: (zoom: number) => void
   onPositionChange: (position: { x: number; y: number }) => void
   imageLoaded: boolean
+  // 複数ページ対応
+  loadedImages?: HTMLImageElement[]
+  pageSpacing?: number
 
   // Drawing state
   currentTool: DrawingTool
@@ -131,6 +134,8 @@ export function useAnswerIndividualEvents(props: UseAnswerDisplayEventsProps) {
       canvasRef,
       imageRef,
       zoom,
+      loadedImages: props.loadedImages,
+      pageSpacing: props.pageSpacing,
     })
 
   // Initialize wheel zoom handling

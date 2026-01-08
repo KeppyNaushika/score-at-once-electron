@@ -12,6 +12,10 @@ export interface UseCoordinatesProps {
   imageRef: React.RefObject<HTMLImageElement | null>
   /** ズーム倍率 */
   zoom: number
+  /** 読み込み済み画像配列（複数ページ対応用） */
+  loadedImages?: HTMLImageElement[]
+  /** ページ間のスペーシング */
+  pageSpacing?: number
 }
 
 /** 座標フックの戻り値 */
@@ -42,6 +46,8 @@ export function useCoordinates({
   canvasRef,
   imageRef,
   zoom,
+  loadedImages = [],
+  pageSpacing = 20,
 }: UseCoordinatesProps): UseCoordinatesReturn {
   /**
    * イベントから画像座標（正規化）を取得
@@ -49,6 +55,8 @@ export function useCoordinates({
    * @description
    * ポインターイベントからCSS scale方式を考慮して
    * 0-1の正規化座標を計算する。
+   * 複数ページ対応：クリック位置がどのページに属するかを判断し、
+   * そのページ内の相対座標（0-1）を返す。
    *
    * @param e - マウス/ポインターイベント
    * @returns 正規化座標またはnull
@@ -82,15 +90,43 @@ export function useCoordinates({
       const imageOffsetX = (canvasWidth - img.naturalWidth) / 2
 
       const imageX = actualX - imageOffsetX
-      const imageY = actualY
+      let imageY = actualY
 
-      // 画像サイズで正規化（0-1の範囲）
+      // 複数ページ対応：クリック位置がどのページに属するかを判断
+      // loadedImagesが2枚以上ある場合、Y座標をページ内座標に変換
+      if (loadedImages.length > 1) {
+        let pageOffsetY = 0
+        let targetPageHeight = img.naturalHeight // デフォルトは1ページ目の高さ
+
+        for (let i = 0; i < loadedImages.length; i++) {
+          const pageHeight = loadedImages[i].naturalHeight
+          const pageBottom = pageOffsetY + pageHeight
+
+          if (actualY < pageBottom || i === loadedImages.length - 1) {
+            // このページに属する
+            imageY = actualY - pageOffsetY
+            targetPageHeight = pageHeight
+            break
+          }
+
+          // 次のページへ
+          pageOffsetY += pageHeight + pageSpacing
+        }
+
+        // ページ内座標で正規化（0-1の範囲）
+        return {
+          x: imageX / img.naturalWidth,
+          y: imageY / targetPageHeight,
+        }
+      }
+
+      // 単一ページの場合：従来通りの正規化（0-1の範囲）
       return {
         x: imageX / img.naturalWidth,
         y: imageY / img.naturalHeight,
       }
     },
-    [canvasRef, imageRef, zoom]
+    [canvasRef, imageRef, zoom, loadedImages, pageSpacing]
   )
 
   /**
