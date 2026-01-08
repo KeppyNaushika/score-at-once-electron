@@ -446,7 +446,7 @@ export function setupExportHandlers(): void {
         // HTMLを一時ファイルに書き込み
         await fs.writeFile(tempHtmlPath, options.html, "utf-8")
 
-        // file:// URLでロード
+        // 一時HTMLファイルをロード
         await win.loadFile(tempHtmlPath)
 
         // レンダリング完了を待つ
@@ -613,7 +613,7 @@ export function setupExportHandlers(): void {
         // HTMLを一時ファイルに書き込み
         await fs.writeFile(tempHtmlPath, options.html, "utf-8")
 
-        // file:// URLでロード
+        // 一時HTMLファイルをロード
         await win.loadFile(tempHtmlPath)
 
         // レンダリング完了を待つ

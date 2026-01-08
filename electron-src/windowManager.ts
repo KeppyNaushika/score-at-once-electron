@@ -39,7 +39,7 @@ export function createMainWindow(): BrowserWindow {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      webSecurity: false,
+      webSecurity: true, // セキュリティ有効化（ローカルファイルアクセスはappimg://プロトコルで対応）
       backgroundThrottling: false,
     },
   })

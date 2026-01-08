@@ -42,7 +42,7 @@ export function useFileUpload(options: FileUploadOptions = {}) {
           if (type.startsWith(".")) {
             return file.name.toLowerCase().endsWith(type.toLowerCase())
           }
-          return file.type.match(type.replace("*", ".*"))
+          return file.type.match(type.replace(/\*/g, ".*"))
         })
 
         if (!isAccepted) {

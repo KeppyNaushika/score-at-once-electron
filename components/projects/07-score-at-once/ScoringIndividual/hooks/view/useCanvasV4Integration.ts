@@ -86,10 +86,8 @@ export function useCanvasV4Integration({
     return 1
   }, [loadedImages])
 
-  // 答案画像のURL取得
-  const backgroundImageUrl = currentScoringData
-    ? currentScoringData.imageUrl.replace("appimg://", "file://")
-    : undefined
+  // 答案画像のURL取得（appimg://プロトコルをそのまま使用）
+  const backgroundImageUrl = currentScoringData?.imageUrl
 
   // V4統合フック
   const v4Integration = useTextboxV4Integration({

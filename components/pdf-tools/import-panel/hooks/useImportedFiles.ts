@@ -154,8 +154,8 @@ async function generateThumbnailsFromPath(
   pageCount: number
 ): Promise<string[]> {
   try {
-    // file:// プロトコルでローカルファイルを読み込み
-    const response = await fetch(`file://${filePath}`)
+    // appimg:// プロトコルでローカルファイルを読み込み
+    const response = await fetch(`appimg://${filePath}`)
     const arrayBuffer = await response.arrayBuffer()
 
     // ArrayBufferからFileオブジェクトを作成

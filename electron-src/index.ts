@@ -1,5 +1,6 @@
-import { app } from "electron"
+import { app, protocol, net } from "electron"
 import { initializeApp } from "./appInitializer"
+import { pathToFileURL } from "url"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
@@ -40,8 +41,43 @@ if (process.platform === "win32" && app.isPackaged) {
   }
 }
 
+// カスタムプロトコル 'appimg://' を登録（webSecurity有効時にローカルファイルへアクセスするため）
+// 注意: app.whenReady() より前に protocol.registerSchemesAsPrivileged を呼ぶ必要がある
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "appimg",
+    privileges: {
+      secure: true,
+      standard: true,
+      supportFetchAPI: true,
+      stream: true,
+    },
+  },
+])
+
 app.on("ready", async () => {
   try {
+    // appimg:// プロトコルハンドラを登録
+    // appimg:///path/to/file → file:///path/to/file としてローカルファイルを読み込む
+    protocol.handle("appimg", (request) => {
+      try {
+        const url = new URL(request.url)
+        // pathnameをデコード（日本語やスペースを含むパス対応）
+        let filePath = decodeURIComponent(url.pathname)
+
+        // Windowsの場合、先頭の/を削除（/C:/path → C:/path）
+        if (process.platform === "win32" && filePath.startsWith("/")) {
+          filePath = filePath.slice(1)
+        }
+
+        const fileUrl = pathToFileURL(filePath).href
+        return net.fetch(fileUrl)
+      } catch (error) {
+        console.error("appimg:// protocol error:", error)
+        return new Response("File not found", { status: 404 })
+      }
+    })
+
     // アプリケーションの初期化
     await initializeApp()
 
