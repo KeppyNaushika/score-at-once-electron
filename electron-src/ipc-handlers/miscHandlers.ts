@@ -684,8 +684,8 @@ export function setupMiscHandlers(): void {
 
       const fullPath = path.join(publicDir, assetPath)
 
-      // file:// プロトコルを使用してパスを返す
-      return { success: true, path: `file://${fullPath}` }
+      // appimg:// プロトコルを使用してパスを返す（webSecurity有効時のローカルファイルアクセス用）
+      return { success: true, path: `appimg://${fullPath}` }
     } catch (err) {
       return {
         success: false,

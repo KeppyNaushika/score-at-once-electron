@@ -75,12 +75,12 @@ export function useImageLoader({
             reject(error)
           }
 
-          // ファイル存在確認して読み込み
+          // ファイル存在確認して読み込み（appimg://プロトコル使用）
           window.electronAPI
             .checkFileExists(imageInfo.path)
             .then((result) => {
               if (result.success && result.exists) {
-                img.src = `file://${result.path}`
+                img.src = `appimg://${result.path}`
               } else {
                 console.warn(`File does not exist: ${imageInfo.path}`)
                 reject(new Error(`File not found: ${imageInfo.path}`))
@@ -88,7 +88,7 @@ export function useImageLoader({
             })
             .catch((error) => {
               console.error("Error checking file existence:", error)
-              img.src = `file://${imageInfo.path}` // フォールバック
+              img.src = `appimg://${imageInfo.path}` // フォールバック
             })
         })
       })
