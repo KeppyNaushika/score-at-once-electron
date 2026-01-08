@@ -7,7 +7,7 @@
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
 
 /** 現在のアーカイブ形式バージョン */
-export const CURRENT_ARCHIVE_VERSION = "1.1.0"
+export const CURRENT_ARCHIVE_VERSION = "1.2.0"
 
 /** 対応可能な最小バージョン (v0.2.z 互換) */
 export const MIN_SUPPORTED_VERSION = "1.0.0"
