@@ -817,7 +817,8 @@ export async function renderAnswerSheetToCanvas(
   for (const annotation of annotations) {
     const element = convertAnnotationToDrawingElement(annotation)
     // y座標が1.0以上の場合のみpageOffsetを適用（旧座標系の互換性対応）
-    const needsPageOffset = element.y >= 1.0 || (element.endY !== undefined && element.endY >= 1.0)
+    const needsPageOffset =
+      element.y >= 1.0 || (element.endY !== undefined && element.endY >= 1.0)
     const pageOffset = needsPageOffset ? basePageOffset : 0
     await drawElement(ctx, element, imageWidth, imageHeight, 0, 0, pageOffset)
   }
