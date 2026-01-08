@@ -43,6 +43,8 @@ export interface ScoringMarkConfigForPdf {
   partialScoreSize: number
   partialScoreOffsetX: number
   partialScoreOffsetY: number
+  // 小計・合計点のサイズ設定
+  summaryScoreSize: number
   // ステータスごとの点数表示設定
   showScoreForStatus?: Record<string, boolean>
 }
@@ -127,6 +129,18 @@ function convertAnnotationToDrawingElement(
  * 単一の描画要素をCanvas上に描画
  *
  * useImageCanvas.ts の drawSingleElement を純粋関数として抽出
+ *
+ * @param ctx - Canvas 2D コンテキスト
+ * @param element - 描画要素
+ * @param imageWidth - 画像の幅
+ * @param imageHeight - 画像の高さ
+ * @param offsetX - X座標オフセット
+ * @param offsetY - Y座標オフセット
+ * @param pageOffset - ページオフセット（複数ページ対応用、デフォルト0）
+ *                     UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
+ *                     アノテーションのy座標は1ページ目の高さで正規化されるため
+ *                     2ページ目以降のアノテーションはy > 1.0になる。
+ *                     このオフセットを引くことで正しいページ内座標に変換する。
  */
 async function drawElement(
   ctx: CanvasRenderingContext2D,
@@ -134,11 +148,13 @@ async function drawElement(
   imageWidth: number,
   imageHeight: number,
   offsetX: number = 0,
-  offsetY: number = 0
+  offsetY: number = 0,
+  pageOffset: number = 0
 ): Promise<void> {
   // 座標計算（テキストも含めてelement.x/yを使用 - 一括採点個別表示と同じ）
+  // pageOffsetを引くことで、複数ページキャンバスからの座標をページ内座標に変換
   const currentX = element.x * imageWidth + offsetX
-  const currentY = element.y * imageHeight + offsetY
+  const currentY = (element.y - pageOffset) * imageHeight + offsetY
 
   ctx.strokeStyle = element.color
   ctx.fillStyle = element.color
@@ -230,7 +246,7 @@ async function drawElement(
     case "line":
       if (element.endX !== undefined && element.endY !== undefined) {
         const currentEndX = element.endX * imageWidth + offsetX
-        const currentEndY = element.endY * imageHeight + offsetY
+        const currentEndY = (element.endY - pageOffset) * imageHeight + offsetY
 
         ctx.save()
         ctx.strokeStyle = element.color
@@ -630,7 +646,7 @@ function drawSubtotalScoreText(
   const y = regionY + regionHeight / 2
 
   ctx.save()
-  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
+  ctx.font = `bold ${config.summaryScoreSize}px sans-serif`
   ctx.fillStyle = "#2563eb" // 小計点は青色
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
@@ -658,7 +674,7 @@ function drawTotalScoreText(
   const y = regionY + regionHeight / 2
 
   ctx.save()
-  ctx.font = `bold ${config.partialScoreSize}px sans-serif`
+  ctx.font = `bold ${config.summaryScoreSize}px sans-serif`
   ctx.fillStyle = "#2563eb" // 合計点も青色
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
@@ -677,6 +693,11 @@ function drawTotalScoreText(
  * @param scoringMarkImages - 採点マーク画像のMap
  * @param subtotalDataList - 小計点データのリスト
  * @param totalScoreDataList - 合計点データのリスト
+ * @param pageNumber - ページ番号（1-indexed、複数ページ対応用）
+ *                     UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
+ *                     アノテーションのy座標は1ページ目の高さで正規化されるため
+ *                     2ページ目以降のアノテーションはy > 1.0になる。
+ *                     このページ番号を使ってオフセットを計算し正しい座標に変換する。
  * @returns PNG Blob
  */
 export async function renderAnswerSheetToCanvas(
@@ -687,7 +708,8 @@ export async function renderAnswerSheetToCanvas(
   config: ScoringMarkConfigForPdf,
   scoringMarkImages: Map<string, HTMLImageElement>,
   subtotalDataList: SubtotalDataForPdf[] = [],
-  totalScoreDataList: TotalScoreDataForPdf[] = []
+  totalScoreDataList: TotalScoreDataForPdf[] = [],
+  pageNumber: number = 1
 ): Promise<Blob> {
   const ctx = canvas.getContext("2d")
   if (!ctx) {
@@ -786,9 +808,14 @@ export async function renderAnswerSheetToCanvas(
   }
 
   // 5. 全アノテーションを描画
+  // pageOffset: UI側で複数ページが縦に結合されたキャンバス上で描画された場合、
+  // アノテーションのy座標は1ページ目の高さで正規化されるため、
+  // 2ページ目以降のアノテーションはy > 1.0になる。
+  // pageNumber - 1 を引くことで正しいページ内座標に変換する。
+  const pageOffset = pageNumber - 1
   for (const annotation of annotations) {
     const element = convertAnnotationToDrawingElement(annotation)
-    await drawElement(ctx, element, imageWidth, imageHeight)
+    await drawElement(ctx, element, imageWidth, imageHeight, 0, 0, pageOffset)
   }
 
   // Canvas結果をBlobとして取得
