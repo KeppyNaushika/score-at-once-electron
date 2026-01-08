@@ -10,11 +10,13 @@ import type {
   CategoryConflictResolution,
   ConflictCategory,
 } from "@/types/projectArchive.types"
+import { useAuth } from "@/contexts/AuthContext"
 
 /**
  * インポートウィザードの状態管理フック
  */
 export function useImportWizard() {
+  const { user } = useAuth()
   const [state, setState] = useState<ImportWizardState>({
     currentStep: "file_select",
     archivePath: null,
@@ -183,12 +185,20 @@ export function useImportWizard() {
   // インポート実行（新規作成モード）
   const executeImportAsNew = useCallback(async () => {
     if (!state.archivePath) return null
+    if (!user?.id) {
+      setState((prev) => ({
+        ...prev,
+        error: "ログインが必要です",
+      }))
+      return null
+    }
 
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
     try {
       const result = await window.electronAPI.archive.importAsNew({
         archivePath: state.archivePath,
+        currentUserId: user.id,
       })
 
       setState((prev) => ({ ...prev, isProcessing: false }))
@@ -210,11 +220,18 @@ export function useImportWizard() {
       }))
       return null
     }
-  }, [state.archivePath])
+  }, [state.archivePath, user?.id])
 
   // インポート実行（マージモード）
   const executeMergeImport = useCallback(async () => {
     if (!state.archivePath) return null
+    if (!user?.id) {
+      setState((prev) => ({
+        ...prev,
+        error: "ログインが必要です",
+      }))
+      return null
+    }
 
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
@@ -223,6 +240,7 @@ export function useImportWizard() {
         archivePath: state.archivePath,
         matchingConfig: state.matchingConfig,
         conflictResolutions: state.conflictResolutions,
+        currentUserId: user.id,
       })
 
       setState((prev) => ({ ...prev, isProcessing: false }))
@@ -244,7 +262,7 @@ export function useImportWizard() {
       }))
       return null
     }
-  }, [state.archivePath, state.matchingConfig, state.conflictResolutions])
+  }, [state.archivePath, state.matchingConfig, state.conflictResolutions, user?.id])
 
   // ステップを戻る
   const goBack = useCallback(() => {
