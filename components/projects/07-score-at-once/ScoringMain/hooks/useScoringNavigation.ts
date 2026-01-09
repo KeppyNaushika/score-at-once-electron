@@ -12,7 +12,7 @@ interface UseScoringNavigationProps {
   answerSheetsLength: number
   currentCropRegionId: string | null
   setCurrentCropRegionId: (id: string | null) => void
-  selectedPageImageIds: Set<string>
+  selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
   layoutDirection: LayoutDirection
   getGridAnswerData: () => ScoringDataWithSelection[]
@@ -24,7 +24,7 @@ export function useScoringNavigation({
   answerSheetsLength,
   currentCropRegionId,
   setCurrentCropRegionId,
-  selectedPageImageIds,
+  selectedStudentAnswerImageIds,
   setSelectedPageImageIds,
   layoutDirection,
   getGridAnswerData,
@@ -110,8 +110,8 @@ export function useScoringNavigation({
 
       // 現在選択されている答案のインデックスを取得
       let currentIndex = -1
-      if (selectedPageImageIds.size >= 1) {
-        const selectedId = Array.from(selectedPageImageIds)[0]
+      if (selectedStudentAnswerImageIds.size >= 1) {
+        const selectedId = Array.from(selectedStudentAnswerImageIds)[0]
         currentIndex = gridAnswers.findIndex(
           (answer) => answer.id === selectedId
         )
@@ -259,7 +259,7 @@ export function useScoringNavigation({
     [
       answerSheetsLength,
       getGridAnswerData,
-      selectedPageImageIds,
+      selectedStudentAnswerImageIds,
       setSelectedPageImageIds,
       layoutDirection,
       findNextValidAnswer,

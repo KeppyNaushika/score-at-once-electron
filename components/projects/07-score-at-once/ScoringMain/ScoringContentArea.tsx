@@ -7,7 +7,7 @@ import type {
   GradingMode,
   LayoutDirection,
   MasterGridItem,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
@@ -36,7 +36,7 @@ interface ScoringContentAreaProps {
   expandMargin?: number
 
   /** IndividualView設定 */
-  pageImages?: PageImageWithProjectStudents[]
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[]
 
   /** テキスト入力状態変更のコールバック（ショートカット制御用） */
   onTextInputStateChange?: (showTextInput: boolean) => void
@@ -66,7 +66,7 @@ export function ScoringContentArea({
   autoScroll,
   showStudentNames,
   expandMargin,
-  pageImages,
+  studentAnswerImages,
   onTextInputStateChange,
   currentStudentId,
   currentUserId,
@@ -90,7 +90,7 @@ export function ScoringContentArea({
       scoringDatas={allScoringData}
       currentScoringDataId={currentScoringDataId}
       currentCropRegion={currentCropRegion}
-      pageImages={pageImages}
+      studentAnswerImages={studentAnswerImages}
       onTextInputStateChange={onTextInputStateChange}
       currentStudentId={currentStudentId}
       currentUserId={currentUserId}

@@ -106,10 +106,11 @@ export async function uploadStudentAnswers(
 
 /**
  * プロジェクトの答案一覧を取得
+ * Prismaの型をそのまま返す（StudentAnswerImageWithProjectStudents互換）
  */
 export async function getStudentAnswersByProjectId(projectId: string) {
   try {
-    const answerSheets = await prisma.studentAnswerImage.findMany({
+    const studentAnswerImages = await prisma.studentAnswerImage.findMany({
       where: {
         projectPage: {
           projectId: projectId,
@@ -120,52 +121,17 @@ export async function getStudentAnswersByProjectId(projectId: string) {
           include: {
             projectStudents: {
               where: { projectId },
-              select: { customOrder: true, status: true },
             },
           },
         },
-        projectPage: {
-          include: {
-            project: true,
-          },
-        },
+        projectPage: true,
       },
       orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
     })
 
-    // Transform StudentAnswerImage data for backward compatibility
-    const processedAnswerSheets = answerSheets.map((sheet) => {
-      // Get ProjectStudent status to determine if absent
-      const projectStudent = sheet.student?.projectStudents?.[0]
-      const isAbsent = projectStudent?.status === "ABSENT"
-
-      return {
-        id: sheet.id,
-        studentId: sheet.studentId,
-        pageNumber: sheet.projectPage.pageNumber,
-        projectPageId: sheet.projectPage.id,
-        imagePath: sheet.imagePath,
-        originalImagePath: sheet.imagePath,
-        isAbsent: isAbsent,
-        student: sheet.student
-          ? {
-              id: sheet.student.id,
-              lastName: sheet.student.lastName,
-              firstName: sheet.student.firstName,
-              lastNameKana: sheet.student.lastNameKana,
-              firstNameKana: sheet.student.firstNameKana,
-              studentId: sheet.student.studentId,
-              projectStudents: sheet.student.projectStudents,
-            }
-          : null,
-        projectId: sheet.projectPage.project.id,
-        status: "ready" as const,
-      }
-    })
-
-    return { success: true, answerSheets: processedAnswerSheets }
+    return { success: true, studentAnswerImages }
   } catch (error) {
-    console.error("Error fetching answer sheets:", error)
+    console.error("Error fetching student answer images:", error)
     return {
       success: false,
       error:

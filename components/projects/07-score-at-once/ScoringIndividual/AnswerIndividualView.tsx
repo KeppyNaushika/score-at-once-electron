@@ -24,7 +24,7 @@ export default function AnswerIndividualView({
   scoringDatas,
   currentScoringDataId,
   currentCropRegion,
-  pageImages,
+  studentAnswerImages,
   showMultiplePages = true, // 常に複数ページ表示
   pageSpacing = 20,
   onTextInputStateChange,
@@ -90,7 +90,7 @@ export default function AnswerIndividualView({
   } = useImageCanvas({
     currentScoringData,
     currentCropRegion,
-    pageImages,
+    studentAnswerImages,
     zoom,
     position,
     drawingElements: drawingState.drawingElements,

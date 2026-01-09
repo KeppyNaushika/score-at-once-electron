@@ -1,7 +1,7 @@
 import { useBatchScoring } from "@/components/projects/07-score-at-once/ScoringData/hooks/useBatchScoring"
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/dataLoader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progressCalculator"
@@ -12,7 +12,7 @@ interface UseScoringDataProps {
   currentUserId: string | null
   setCurrentUserId: (userId: string) => void
   currentCropRegionId: string | null
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
 }
 
@@ -20,14 +20,14 @@ export function useScoringData({
   currentUserId,
   setCurrentUserId,
   currentCropRegionId,
-  pageImages,
+  studentAnswerImages,
   cropRegions,
 }: UseScoringDataProps) {
   const [questionScores, setQuestionScores] = useState<QuestionScore[]>([])
 
   // Batch scoring hook
   const { handleBatchScore } = useBatchScoring({
-    pageImages,
+    studentAnswerImages,
     cropRegions,
     currentCropRegionId,
     currentUserId,
@@ -47,8 +47,12 @@ export function useScoringData({
 
   // Progress calculation function
   const calculateQuestionProgressCallback = useCallback(() => {
-    return calculateQuestionProgress(cropRegions, pageImages, questionScores)
-  }, [pageImages, cropRegions, questionScores])
+    return calculateQuestionProgress(
+      cropRegions,
+      studentAnswerImages,
+      questionScores
+    )
+  }, [studentAnswerImages, cropRegions, questionScores])
 
   return {
     questionScores,

@@ -1,7 +1,7 @@
 // Prisma型をインポート
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
@@ -86,7 +86,7 @@ export interface AnswerIndividualViewProps {
   onQuestionScoreCreated?: () => void
 
   // Individual表示固有設定
-  pageImages?: PageImageWithProjectStudents[] // 全答案データ
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[] // 全答案データ
   showMultiplePages?: boolean // 複数画像の縦並び表示設定
   pageSpacing?: number // ページ間の余白（ピクセル）
 

@@ -162,11 +162,37 @@ export async function getPdfExportData(options: {
 
     // 答案画像を取得
     const studentAnswersResult = await getStudentAnswersByProjectId(projectId)
-    if (!studentAnswersResult.success || !studentAnswersResult.answerSheets) {
+    if (
+      !studentAnswersResult.success ||
+      !studentAnswersResult.studentAnswerImages
+    ) {
       return { success: false, error: "答案画像の取得に失敗しました" }
     }
+    // Prisma型をStudentAnswerData型に変換
     const studentAnswers: StudentAnswerData[] =
-      studentAnswersResult.answerSheets
+      studentAnswersResult.studentAnswerImages.map((img) => ({
+        id: img.id,
+        studentId: img.studentId,
+        pageNumber: img.projectPage.pageNumber,
+        projectPageId: img.projectPageId,
+        imagePath: img.imagePath,
+        originalImagePath: img.imagePath,
+        isAbsent:
+          img.student?.projectStudents?.[0]?.status === "ABSENT" || false,
+        student: img.student
+          ? {
+              id: img.student.id,
+              lastName: img.student.lastName,
+              firstName: img.student.firstName,
+              lastNameKana: img.student.lastNameKana,
+              firstNameKana: img.student.firstNameKana,
+              studentId: img.student.studentId,
+              projectStudents: img.student.projectStudents,
+            }
+          : null,
+        projectId: img.projectPage.projectId,
+        status: "ready" as const,
+      }))
 
     // 選択された生徒のみフィルタリング
     const selectedStudents = allStudents.filter((s) =>

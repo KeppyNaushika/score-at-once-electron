@@ -286,23 +286,7 @@ export interface MyAPI {
   }>
   getStudentAnswersByProjectId: (projectId: string) => Promise<{
     success: boolean
-    studentAnswers?: Array<{
-      id: string
-      studentId: string | null
-      pageNumber: number
-      originalImagePath: string | null
-      isAbsent: boolean
-      student: {
-        id: string
-        lastName: string
-        firstName: string
-        lastNameKana: string
-        firstNameKana: string
-        studentId: string
-      } | null
-      projectId: string
-      status: "ready"
-    }>
+    studentAnswerImages?: StudentAnswerImageWithDetails[]
     error?: string
   }>
   deleteStudentAnswer: (studentAnswerId: string) => Promise<{

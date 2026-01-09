@@ -8,7 +8,7 @@
 import type {
   CropRegionWithProjectPage,
   GradingMode,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useEffect, useMemo } from "react"
 
@@ -33,9 +33,9 @@ export interface StudentData {
  */
 interface UseStudentAnswerManagementParams {
   /** ページ画像一覧 */
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithProjectStudents[]
   /** 選択中のページ画像ID集合 */
-  selectedPageImageIds: Set<string>
+  selectedStudentAnswerImageIds: Set<string>
   /** 現在の採点モード */
   gradingMode: GradingMode
   /** 現在の採点領域（ナビゲーション用） */
@@ -68,8 +68,8 @@ export function useStudentAnswerManagement(
   params: UseStudentAnswerManagementParams
 ): UseStudentAnswerManagementReturn {
   const {
-    pageImages,
-    selectedPageImageIds,
+    studentAnswerImages,
+    selectedStudentAnswerImageIds,
     gradingMode,
     currentCropRegion,
     setSelectedPageImageIds,
@@ -77,14 +77,14 @@ export function useStudentAnswerManagement(
   } = params
 
   /**
-   * 個別表示用の生徒データ（pageImagesから抽出、useMemoで安定化）
+   * 個別表示用の生徒データ（studentAnswerImagesから抽出、useMemoで安定化）
    */
   const students = useMemo(() => {
-    if (!pageImages || pageImages.length === 0) return []
+    if (!studentAnswerImages || studentAnswerImages.length === 0) return []
 
     const uniqueStudents = new Map<string, StudentData>()
 
-    pageImages.forEach((sheet) => {
+    studentAnswerImages.forEach((sheet) => {
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
         const studentData: StudentData = {
           id: sheet.student.id,
@@ -101,14 +101,14 @@ export function useStudentAnswerManagement(
       (a, b) => a.customOrder - b.customOrder
     )
     return sortedStudents
-  }, [pageImages])
+  }, [studentAnswerImages])
 
   /**
    * 個別表示用のナビゲーション関数
    */
   const handleStudentChange = useCallback(
     (studentId: string) => {
-      const studentSheets = pageImages.filter(
+      const studentSheets = studentAnswerImages.filter(
         (sheet) => sheet.student?.id === studentId
       )
       if (studentSheets.length > 0) {
@@ -123,7 +123,7 @@ export function useStudentAnswerManagement(
         const targetSheet = currentPageSheet || studentSheets[0]
         setSelectedPageImageIds(new Set([targetSheet.id]))
 
-        const studentIndex = pageImages.findIndex(
+        const studentIndex = studentAnswerImages.findIndex(
           (sheet) => sheet.id === targetSheet.id
         )
         if (studentIndex !== -1) {
@@ -132,7 +132,7 @@ export function useStudentAnswerManagement(
       }
     },
     [
-      pageImages,
+      studentAnswerImages,
       setSelectedPageImageIds,
       setCurrentStudentIndex,
       currentCropRegion,
@@ -146,23 +146,30 @@ export function useStudentAnswerManagement(
     if (
       gradingMode === "individual" &&
       students.length > 0 &&
-      selectedPageImageIds.size === 0
+      selectedStudentAnswerImageIds.size === 0
     ) {
       const sortedStudents = [...students].sort(
         (a, b) => a.customOrder - b.customOrder
       )
       handleStudentChange(sortedStudents[0].id)
     }
-  }, [gradingMode, students, selectedPageImageIds.size, handleStudentChange])
+  }, [
+    gradingMode,
+    students,
+    selectedStudentAnswerImageIds.size,
+    handleStudentChange,
+  ])
 
   /**
    * 次の生徒へ移動（個別表示用）
    */
   const handleIndividualNextStudent = useCallback(() => {
-    if (selectedPageImageIds.size === 0) return
+    if (selectedStudentAnswerImageIds.size === 0) return
 
-    const currentAnswerId = Array.from(selectedPageImageIds)[0]
-    const currentAnswer = pageImages.find((a) => a.id === currentAnswerId)
+    const currentAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
+    const currentAnswer = studentAnswerImages.find(
+      (a) => a.id === currentAnswerId
+    )
     if (!currentAnswer) return
 
     const sortedStudents = [...students].sort(
@@ -174,7 +181,7 @@ export function useStudentAnswerManagement(
     if (currentIndex < sortedStudents.length - 1) {
       const nextStudent = sortedStudents[currentIndex + 1]
       // 現在の設問ページに対応するpageImageを優先選択
-      const nextStudentSheets = pageImages.filter(
+      const nextStudentSheets = studentAnswerImages.filter(
         (a) => a.student?.id === nextStudent.id
       )
       const nextStudentAnswer = currentCropRegion
@@ -188,8 +195,8 @@ export function useStudentAnswerManagement(
     }
   }, [
     students,
-    selectedPageImageIds,
-    pageImages,
+    selectedStudentAnswerImageIds,
+    studentAnswerImages,
     setSelectedPageImageIds,
     currentCropRegion,
   ])

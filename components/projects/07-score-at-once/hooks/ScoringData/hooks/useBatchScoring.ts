@@ -1,6 +1,6 @@
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
@@ -9,7 +9,7 @@ import { useCallback } from "react"
 import { toast } from "sonner"
 
 interface UseBatchScoringProps {
-  pageImages: PageImageWithProjectStudents[]
+  pageImages: StudentAnswerImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
   currentCropRegionId: string | null
   currentUserId: string | null

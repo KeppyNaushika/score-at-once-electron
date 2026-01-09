@@ -5,7 +5,7 @@
  * - ファイル存在確認
  */
 import type {
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 import { useEffect, useState } from "react"
@@ -13,7 +13,7 @@ import type { ImageLoaderReturn } from "./types"
 
 interface UseImageLoaderProps {
   currentScoringData: ScoringData | null
-  pageImages?: PageImageWithProjectStudents[]
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[]
   showMultiplePages?: boolean
   imageRef: React.RefObject<HTMLImageElement | null>
 }
@@ -23,7 +23,7 @@ interface UseImageLoaderProps {
  */
 export function useImageLoader({
   currentScoringData,
-  pageImages,
+  studentAnswerImages,
   showMultiplePages,
   imageRef,
 }: UseImageLoaderProps): ImageLoaderReturn {
@@ -41,9 +41,9 @@ export function useImageLoader({
 
       let imagesToLoad: { path: string; pageNumber: number }[] = []
 
-      if (showMultiplePages && pageImages) {
+      if (showMultiplePages && studentAnswerImages) {
         // 複数ページ表示：同一生徒の全ページを取得
-        const studentAnswerSheets = pageImages
+        const studentAnswerSheets = studentAnswerImages
           .filter((sheet) => sheet.studentId === currentScoringData.studentId)
           .sort(
             (a, b) =>
@@ -132,7 +132,7 @@ export function useImageLoader({
     if (currentScoringData) {
       loadAnswerImages()
     }
-  }, [currentScoringData, pageImages, showMultiplePages, imageRef])
+  }, [currentScoringData, studentAnswerImages, showMultiplePages, imageRef])
 
   return {
     imageLoaded,

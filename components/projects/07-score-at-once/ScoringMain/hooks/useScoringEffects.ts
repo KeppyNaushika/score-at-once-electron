@@ -10,7 +10,7 @@
 import type {
   CropRegionWithProjectPage,
   GradingMode,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import { useEffect, useLayoutEffect, useRef } from "react"
 
@@ -21,9 +21,9 @@ interface UseScoringEffectsParams {
   /** 現在の採点モード */
   gradingMode: GradingMode
   /** 選択中のページ画像ID集合 */
-  selectedPageImageIds: Set<string>
+  selectedStudentAnswerImageIds: Set<string>
   /** ページ画像一覧 */
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithProjectStudents[]
   /** 採点領域一覧 */
   cropRegions: CropRegionWithProjectPage[]
   /** 現在選択中の採点領域ID */
@@ -44,8 +44,8 @@ interface UseScoringEffectsParams {
 export function useScoringEffects(params: UseScoringEffectsParams): void {
   const {
     gradingMode,
-    selectedPageImageIds,
-    pageImages,
+    selectedStudentAnswerImageIds,
+    studentAnswerImages,
     cropRegions,
     currentCropRegionId,
     setSelectedPageImageIds,
@@ -57,14 +57,14 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
   const previousCropRegionIdRef = useRef<string | null>(currentCropRegionId)
 
   // 設問変更時のeffectで使用するためのrefs（依存配列の問題を回避）
-  const pageImagesRef = useRef(pageImages)
-  const selectedPageImageIdsRef = useRef(selectedPageImageIds)
+  const studentAnswerImagesRef = useRef(studentAnswerImages)
+  const selectedStudentAnswerImageIdsRef = useRef(selectedStudentAnswerImageIds)
   const cropRegionsRef = useRef(cropRegions)
 
   // refsを常に最新の値で更新
   useLayoutEffect(() => {
-    pageImagesRef.current = pageImages
-    selectedPageImageIdsRef.current = selectedPageImageIds
+    studentAnswerImagesRef.current = studentAnswerImages
+    selectedStudentAnswerImageIdsRef.current = selectedStudentAnswerImageIds
     cropRegionsRef.current = cropRegions
   })
 
@@ -72,11 +72,14 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
    * 個別表示モードでは単一選択を維持
    */
   useEffect(() => {
-    if (gradingMode === "individual" && selectedPageImageIds.size > 1) {
-      const firstSelected = Array.from(selectedPageImageIds)[0]
+    if (
+      gradingMode === "individual" &&
+      selectedStudentAnswerImageIds.size > 1
+    ) {
+      const firstSelected = Array.from(selectedStudentAnswerImageIds)[0]
       setSelectedPageImageIds(new Set([firstSelected]))
     }
-  }, [gradingMode, selectedPageImageIds, setSelectedPageImageIds])
+  }, [gradingMode, selectedStudentAnswerImageIds, setSelectedPageImageIds])
 
   /**
    * 設問未選択時は最初の設問を自動選択
@@ -118,8 +121,8 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
       }
     } else {
       // 個別モード: 現在選択中の生徒の新しい設問ページに対応するpageImageに更新
-      const currentSelectedIds = selectedPageImageIdsRef.current
-      const currentPageImages = pageImagesRef.current
+      const currentSelectedIds = selectedStudentAnswerImageIdsRef.current
+      const currentPageImages = studentAnswerImagesRef.current
       const currentCropRegions = cropRegionsRef.current
 
       if (currentSelectedIds.size > 0) {
