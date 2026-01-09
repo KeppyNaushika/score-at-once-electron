@@ -6,12 +6,87 @@
 
 import * as fs from "fs"
 import * as path from "path"
+import type { PrismaClient } from "@prisma/client"
 import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "./archiveExtractor"
 import type { IdMappings } from "./idRemapper"
 import { remapId, remapIdRequired } from "./idRemapper"
+
+/** Prismaトランザクションクライアント型 */
+type TransactionClient = Omit<
+  PrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
+>
+
+/**
+ * 重複しないstudentIdを生成
+ *
+ * 既存のstudentIdがある場合は `_1`, `_2` のようなサフィックスを付与して
+ * 一意性を保証する
+ *
+ * @param tx - Prismaトランザクションクライアント
+ * @param originalStudentId - 元のstudentId
+ * @returns 一意なstudentId
+ */
+async function generateUniqueStudentId(
+  tx: TransactionClient,
+  originalStudentId: string
+): Promise<string> {
+  const existing = await tx.student.findUnique({
+    where: { studentId: originalStudentId },
+  })
+
+  if (!existing) {
+    return originalStudentId
+  }
+
+  // サフィックスを付けて重複を回避
+  let suffix = 1
+  let newStudentId = `${originalStudentId}_${suffix}`
+
+  while (await tx.student.findUnique({ where: { studentId: newStudentId } })) {
+    suffix++
+    newStudentId = `${originalStudentId}_${suffix}`
+  }
+
+  return newStudentId
+}
+
+/**
+ * 重複しない学級名を生成
+ *
+ * 既存の名前がある場合は `(2)`, `(3)` のようなサフィックスを付与して
+ * 一意性を保証する
+ *
+ * @param tx - Prismaトランザクションクライアント
+ * @param originalName - 元の学級名
+ * @returns 一意な学級名
+ */
+async function generateUniqueClassName(
+  tx: TransactionClient,
+  originalName: string
+): Promise<string> {
+  const existing = await tx.class.findUnique({
+    where: { name: originalName },
+  })
+
+  if (!existing) {
+    return originalName
+  }
+
+  // サフィックスを付けて重複を回避
+  let suffix = 2
+  let newName = `${originalName} (${suffix})`
+
+  while (await tx.class.findUnique({ where: { name: newName } })) {
+    suffix++
+    newName = `${originalName} (${suffix})`
+  }
+
+  return newName
+}
 
 /**
  * データ作成結果
@@ -49,12 +124,23 @@ export async function createImportedData(
   try {
     // トランザクションで全データを作成
     await prisma.$transaction(async (tx) => {
-      // 1. 生徒を作成
+      // 1. 生徒を作成（重複するstudentIdはサフィックスを付与）
       for (const student of data.studentsData.students) {
+        const uniqueStudentId = await generateUniqueStudentId(
+          tx,
+          student.studentId
+        )
+
+        if (uniqueStudentId !== student.studentId) {
+          warnings.push(
+            `生徒「${student.lastName} ${student.firstName}」のstudentIdを「${student.studentId}」から「${uniqueStudentId}」に変更しました`
+          )
+        }
+
         await tx.student.create({
           data: {
             id: remapIdRequired(student.id, mappings.student),
-            studentId: student.studentId,
+            studentId: uniqueStudentId,
             lastName: student.lastName,
             firstName: student.firstName,
             lastNameKana: student.lastNameKana,
@@ -64,12 +150,20 @@ export async function createImportedData(
         })
       }
 
-      // 2. 学級を作成
+      // 2. 学級を作成（重複する名前はサフィックスを付与）
       for (const cls of data.classesData.classes) {
+        const uniqueName = await generateUniqueClassName(tx, cls.name)
+
+        if (uniqueName !== cls.name) {
+          warnings.push(
+            `学級名を「${cls.name}」から「${uniqueName}」に変更しました`
+          )
+        }
+
         await tx.class.create({
           data: {
             id: remapIdRequired(cls.id, mappings.class),
-            name: cls.name,
+            name: uniqueName,
             classCode: cls.classCode,
             grade: cls.grade,
             description: cls.description,
@@ -346,6 +440,9 @@ export async function createImportedData(
 
 /**
  * 画像ファイルをプロジェクトディレクトリにコピー
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param newProjectId - 新規プロジェクトID
  */
 async function copyImages(
   data: ExtractedArchiveData,
@@ -384,8 +481,12 @@ async function copyImages(
 /**
  * 画像レコードを作成（MasterImage / StudentAnswerImage）
  *
- * v1.2.0+: masterImages と studentAnswerImages を使用
- * v1.1.0以前: pageImages から変換
+ * - v1.2.0+: masterImages と studentAnswerImages を使用
+ * - v1.1.0以前: pageImages から変換（後方互換性）
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param mappings - IDマッピング
+ * @param newProjectId - 新規プロジェクトID
  */
 async function createImageRecords(
   data: ExtractedArchiveData,

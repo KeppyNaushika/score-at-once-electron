@@ -20,9 +20,7 @@ import { performAllMatching } from "./matcher"
 import { resolveConflict } from "./conflictResolver"
 import { detectAllConflicts } from "./conflictDetector"
 
-/**
- * マージ操作のカウンター
- */
+/** マージ操作のカウンター */
 interface MergeCounts {
   created: ArchiveDataCounts
   updated: ArchiveDataCounts
@@ -47,10 +45,15 @@ function createEmptyCounts(): ArchiveDataCounts {
 /**
  * マージインポートを実行
  *
+ * 既存データとのマッチングを行い、競合解決設定に基づいてデータをマージする。
+ * ユニーク制約のあるフィールド（studentId, name, username）は
+ * マッチング方法に関わらず既存チェックを行い、重複を回避する。
+ *
  * @param data - 展開されたアーカイブデータ
  * @param config - マッチング設定
  * @param resolutions - 競合解決設定
  * @param currentUserId - 現在ログインしているユーザーID
+ * @returns マージインポート結果
  */
 export async function executeMergeImport(
   data: ExtractedArchiveData,
@@ -103,21 +106,34 @@ export async function executeMergeImport(
         const importStudent = result.importData
 
         if (!result.existingData) {
-          // 新規作成
-          const newId = randomUUID()
-          await tx.student.create({
-            data: {
-              id: newId,
-              studentId: importStudent.studentId,
-              lastName: importStudent.lastName,
-              firstName: importStudent.firstName,
-              lastNameKana: importStudent.lastNameKana,
-              firstNameKana: importStudent.firstNameKana,
-              enrollmentYear: importStudent.enrollmentYear,
-            },
+          // マッチングで見つからなかった場合でも、studentIdで既存チェック
+          const existingByStudentId = await tx.student.findUnique({
+            where: { studentId: importStudent.studentId },
           })
-          idMappings.student[importStudent.id] = newId
-          counts.created.students++
+
+          if (existingByStudentId) {
+            // studentIdで既存データが見つかった場合は再利用
+            idMappings.student[importStudent.id] = existingByStudentId.id
+            warnings.push(
+              `生徒「${importStudent.lastName} ${importStudent.firstName}」(studentId: ${importStudent.studentId}) は既存データを使用します`
+            )
+          } else {
+            // 新規作成
+            const newId = randomUUID()
+            await tx.student.create({
+              data: {
+                id: newId,
+                studentId: importStudent.studentId,
+                lastName: importStudent.lastName,
+                firstName: importStudent.firstName,
+                lastNameKana: importStudent.lastNameKana,
+                firstNameKana: importStudent.firstNameKana,
+                enrollmentYear: importStudent.enrollmentYear,
+              },
+            })
+            idMappings.student[importStudent.id] = newId
+            counts.created.students++
+          }
         } else {
           // 既存データとの競合チェック
           const conflictItem = conflictResult.results
@@ -158,18 +174,31 @@ export async function executeMergeImport(
         const importClass = result.importData
 
         if (!result.existingData) {
-          const newId = randomUUID()
-          await tx.class.create({
-            data: {
-              id: newId,
-              name: importClass.name,
-              classCode: importClass.classCode,
-              grade: importClass.grade,
-              description: importClass.description,
-            },
+          // マッチングで見つからなかった場合でも、nameで既存チェック
+          const existingByName = await tx.class.findUnique({
+            where: { name: importClass.name },
           })
-          idMappings.class[importClass.id] = newId
-          counts.created.classes++
+
+          if (existingByName) {
+            // nameで既存データが見つかった場合は再利用
+            idMappings.class[importClass.id] = existingByName.id
+            warnings.push(
+              `学級「${importClass.name}」は既存データを使用します`
+            )
+          } else {
+            const newId = randomUUID()
+            await tx.class.create({
+              data: {
+                id: newId,
+                name: importClass.name,
+                classCode: importClass.classCode,
+                grade: importClass.grade,
+                description: importClass.description,
+              },
+            })
+            idMappings.class[importClass.id] = newId
+            counts.created.classes++
+          }
         } else {
           const conflictItem = conflictResult.results
             .find((r) => r.category === "Class")
@@ -203,21 +232,34 @@ export async function executeMergeImport(
         const importUser = result.importData
 
         if (!result.existingData) {
-          const newId = randomUUID()
-          await tx.user.create({
-            data: {
-              id: newId,
-              username: importUser.username,
-              name: importUser.name,
-              role: importUser.role,
-              passcode: "",
-            },
+          // マッチングで見つからなかった場合でも、usernameで既存チェック
+          const existingByUsername = await tx.user.findUnique({
+            where: { username: importUser.username },
           })
-          idMappings.user[importUser.id] = newId
-          counts.created.users++
-          warnings.push(
-            `新規ユーザー "${importUser.name}" のパスコードは空です`
-          )
+
+          if (existingByUsername) {
+            // usernameで既存データが見つかった場合は再利用
+            idMappings.user[importUser.id] = existingByUsername.id
+            warnings.push(
+              `ユーザー "${importUser.name}" は既存データを使用します`
+            )
+          } else {
+            const newId = randomUUID()
+            await tx.user.create({
+              data: {
+                id: newId,
+                username: importUser.username,
+                name: importUser.name,
+                role: importUser.role,
+                passcode: "",
+              },
+            })
+            idMappings.user[importUser.id] = newId
+            counts.created.users++
+            warnings.push(
+              `新規ユーザー "${importUser.name}" のパスコードは空です`
+            )
+          }
         } else {
           // ユーザーは基本的に既存を維持
           idMappings.user[importUser.id] = result.existingData.id
@@ -515,7 +557,10 @@ export async function executeMergeImport(
 }
 
 /**
- * 画像ファイルをコピー
+ * 画像ファイルをプロジェクトディレクトリにコピー
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param newProjectId - 新規プロジェクトID
  */
 async function copyMergeImages(
   data: ExtractedArchiveData,
@@ -550,8 +595,11 @@ async function copyMergeImages(
 /**
  * 画像レコードを作成（MasterImage / StudentAnswerImage）
  *
- * v1.2.0+: masterImages と studentAnswerImages を使用
- * v1.1.0以前: pageImages から変換
+ * - v1.2.0+: masterImages と studentAnswerImages を使用
+ * - v1.1.0以前: pageImages から変換（後方互換性）
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param idMappings - IDマッピング
  */
 async function createMergeImageRecords(
   data: ExtractedArchiveData,
