@@ -182,9 +182,7 @@ export async function executeMergeImport(
           if (existingByName) {
             // nameで既存データが見つかった場合は再利用
             idMappings.class[importClass.id] = existingByName.id
-            warnings.push(
-              `学級「${importClass.name}」は既存データを使用します`
-            )
+            warnings.push(`学級「${importClass.name}」は既存データを使用します`)
           } else {
             const newId = randomUUID()
             await tx.class.create({
