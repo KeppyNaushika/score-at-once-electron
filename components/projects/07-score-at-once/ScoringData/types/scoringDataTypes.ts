@@ -1,6 +1,6 @@
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
@@ -36,7 +36,7 @@ export interface ScoreCreateData {
 
 export type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
 }

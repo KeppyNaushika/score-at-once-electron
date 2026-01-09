@@ -1,6 +1,6 @@
 import type {
   GradingMode,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { useCallback, useRef, useState } from "react"
@@ -9,9 +9,9 @@ export function useScoringMainState() {
   /** 採点モード状態 */
   const [gradingMode, setGradingMode] = useState<GradingMode>("grid")
   /** 選択中の答案ID集合 */
-  const [selectedPageImageIds, setSelectedPageImageIds] = useState<Set<string>>(
-    new Set()
-  )
+  const [selectedStudentAnswerImageIds, setSelectedPageImageIds] = useState<
+    Set<string>
+  >(new Set())
   const [manualSelectionVersion, setManualSelectionVersion] = useState(0)
   const suppressSelectionUpdateRef = useRef(false)
   /** 現在選択中の生徒インデックス */
@@ -36,7 +36,7 @@ export function useScoringMainState() {
     (
       answerId: string,
       isSelected: boolean,
-      pageImages: PageImageWithProjectStudents[]
+      studentAnswerImages: StudentAnswerImageWithProjectStudents[]
     ) => {
       if (suppressSelectionUpdateRef.current) {
         return
@@ -45,7 +45,9 @@ export function useScoringMainState() {
         return
       }
 
-      const answerExists = pageImages.some((sheet) => sheet.id === answerId)
+      const answerExists = studentAnswerImages.some(
+        (sheet) => sheet.id === answerId
+      )
       if (!answerExists) {
         return
       }
@@ -78,7 +80,7 @@ export function useScoringMainState() {
   return {
     /** 個別の状態 */
     gradingMode,
-    selectedPageImageIds,
+    selectedStudentAnswerImageIds,
     currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,

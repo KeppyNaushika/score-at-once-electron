@@ -1,15 +1,13 @@
-import {
-  CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
-} from "@/components/projects/07-score-at-once/types"
+import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { ProjectWithDetails, isValidProject } from "@/types/common.types"
+import { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 interface ScoringDataLoaderResult {
   loading: boolean
   project: ProjectWithDetails | null
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithDetails[]
   cropRegions: CropRegionWithProjectPage[]
   currentUserId: string | null
 }
@@ -19,9 +17,9 @@ export function useScoringDataLoader(
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<ProjectWithDetails | null>(null)
-  const [pageImages, setPageImages] = useState<PageImageWithProjectStudents[]>(
-    []
-  )
+  const [studentAnswerImages, setStudentAnswerImages] = useState<
+    StudentAnswerImageWithDetails[]
+  >([])
   const [cropRegions, setCropRegions] = useState<CropRegionWithProjectPage[]>(
     []
   )
@@ -49,10 +47,7 @@ export function useScoringDataLoader(
           throw new Error("答案データの読み込みに失敗しました")
         }
 
-        const pageImagesData = (answersResult.studentAnswers ||
-          []) as unknown as PageImageWithProjectStudents[]
-
-        setPageImages(pageImagesData)
+        setStudentAnswerImages(answersResult.studentAnswerImages ?? [])
 
         // 設問領域データの読み込み
         const regionsResult =
@@ -90,7 +85,7 @@ export function useScoringDataLoader(
   return {
     loading,
     project,
-    pageImages,
+    studentAnswerImages,
     cropRegions,
     currentUserId,
   }

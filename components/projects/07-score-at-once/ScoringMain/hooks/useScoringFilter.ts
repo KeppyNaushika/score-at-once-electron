@@ -2,7 +2,7 @@ import type {
   CropRegionWithProjectPage,
   GradingMode,
   MasterGridItem,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringData,
   ScoringStatus,
@@ -40,11 +40,11 @@ interface FilterSettings {
 }
 
 interface UseScoringFilterProps {
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
   currentCropRegionId: string | null
   questionScores: QuestionScore[]
-  selectedPageImageIds: Set<string>
+  selectedStudentAnswerImageIds: Set<string>
   setSelectedPageImageIds: (answers: Set<string>) => void
   project: ProjectWithDetails | null
   gradingMode: GradingMode
@@ -53,11 +53,11 @@ interface UseScoringFilterProps {
 }
 
 export function useScoringFilter({
-  pageImages,
+  studentAnswerImages,
   cropRegions,
   currentCropRegionId,
   questionScores,
-  selectedPageImageIds,
+  selectedStudentAnswerImageIds,
   setSelectedPageImageIds,
   project,
   gradingMode,
@@ -109,7 +109,7 @@ export function useScoringFilter({
   const allScoringData = useMemo((): ScoringData[] => {
     if (!currentCropRegion) return []
 
-    const pageFilteredSheets = pageImages.filter(
+    const pageFilteredSheets = studentAnswerImages.filter(
       (pageImage) => pageImage.projectPageId === currentCropRegion.projectPageId
     )
 
@@ -179,7 +179,7 @@ export function useScoringFilter({
     )
 
     return studentScoringData
-  }, [currentCropRegion, pageImages, questionScores])
+  }, [currentCropRegion, studentAnswerImages, questionScores])
 
   const updateVisibleAnswers = useCallback(
     (customFilterSettings?: FilterSettings) => {
@@ -204,7 +204,7 @@ export function useScoringFilter({
 
       const selectedIdsSet = questionVersionChanged
         ? new Set<string>()
-        : new Set(selectedPageImageIds)
+        : new Set(selectedStudentAnswerImageIds)
 
       for (const scoringData of allScoringData) {
         const status = scoringData.status
@@ -250,13 +250,13 @@ export function useScoringFilter({
       currentCropRegion,
       allScoringData,
       recentlyScoredAnswers,
-      selectedPageImageIds,
+      selectedStudentAnswerImageIds,
       questionChangeVersion,
     ]
   )
 
   useLayoutEffect(() => {
-    if (pageImages.length === 0 || cropRegions.length === 0) {
+    if (studentAnswerImages.length === 0 || cropRegions.length === 0) {
       return
     }
 
@@ -270,7 +270,7 @@ export function useScoringFilter({
       Promise.resolve().then(runUpdate)
     }
   }, [
-    pageImages.length,
+    studentAnswerImages.length,
     cropRegions.length,
     currentCropRegionId,
     updateVisibleAnswers,
@@ -308,7 +308,7 @@ export function useScoringFilter({
       return
     }
 
-    if (selectedPageImageIds.size > 1) {
+    if (selectedStudentAnswerImageIds.size > 1) {
       pendingGridSelectionRef.current = false
       return
     }
@@ -353,7 +353,7 @@ export function useScoringFilter({
     const filteredSelection =
       hasFreshSnapshot && snapshot?.filteredSelection
         ? snapshot.filteredSelection
-        : Array.from(selectedPageImageIds).filter(
+        : Array.from(selectedStudentAnswerImageIds).filter(
             (id) => visibleIds.has(id) && !id.startsWith("master-")
           )
     const firstStudentAnswerId =
@@ -371,7 +371,7 @@ export function useScoringFilter({
       if (shouldApplySelection) {
         if (cropRegionChanged) {
           if (visibleAnswers.length === 0 || !firstStudentAnswerId) {
-            if (selectedPageImageIds.size > 0) {
+            if (selectedStudentAnswerImageIds.size > 0) {
               setSelectedPageImageIds(new Set())
             }
             pendingGridSelectionRef.current = false
@@ -379,8 +379,8 @@ export function useScoringFilter({
           }
 
           if (
-            selectedPageImageIds.size !== 1 ||
-            !selectedPageImageIds.has(firstStudentAnswerId)
+            selectedStudentAnswerImageIds.size !== 1 ||
+            !selectedStudentAnswerImageIds.has(firstStudentAnswerId)
           ) {
             setSelectedPageImageIds(new Set([firstStudentAnswerId]))
           }
@@ -394,7 +394,7 @@ export function useScoringFilter({
             : filteredSelection.length > 0
 
         if (hasVisibleSelection) {
-          if (filteredSelection.length !== selectedPageImageIds.size) {
+          if (filteredSelection.length !== selectedStudentAnswerImageIds.size) {
             setSelectedPageImageIds(new Set(filteredSelection))
           }
           pendingGridSelectionRef.current = false
@@ -405,7 +405,7 @@ export function useScoringFilter({
         }
 
         if (visibleAnswers.length === 0 || !firstStudentAnswerId) {
-          if (selectedPageImageIds.size > 0) {
+          if (selectedStudentAnswerImageIds.size > 0) {
             setSelectedPageImageIds(new Set())
           }
           if (visibleAnswers.length > 0) {
@@ -418,8 +418,8 @@ export function useScoringFilter({
         }
 
         if (
-          selectedPageImageIds.size !== 1 ||
-          !selectedPageImageIds.has(firstStudentAnswerId)
+          selectedStudentAnswerImageIds.size !== 1 ||
+          !selectedStudentAnswerImageIds.has(firstStudentAnswerId)
         ) {
           setSelectedPageImageIds(new Set([firstStudentAnswerId]))
         }
@@ -433,7 +433,7 @@ export function useScoringFilter({
   }, [
     currentCropRegionId,
     gradingMode,
-    selectedPageImageIds,
+    selectedStudentAnswerImageIds,
     setSelectedPageImageIds,
     visibleAnswers,
     manualSelectionVersion,
@@ -458,7 +458,7 @@ export function useScoringFilter({
       return
     }
 
-    if (selectedPageImageIds.size === 0) {
+    if (selectedStudentAnswerImageIds.size === 0) {
       return
     }
 
@@ -473,7 +473,9 @@ export function useScoringFilter({
         : undefined
     const firstVisibleSelected = firstCandidateId
       ? firstCandidateId
-      : Array.from(selectedPageImageIds).find((id) => visibleIds.has(id))
+      : Array.from(selectedStudentAnswerImageIds).find((id) =>
+          visibleIds.has(id)
+        )
 
     if (!firstVisibleSelected) {
       return
@@ -486,7 +488,7 @@ export function useScoringFilter({
         })
       )
     }
-  }, [gradingMode, selectedPageImageIds, visibleAnswers])
+  }, [gradingMode, selectedStudentAnswerImageIds, visibleAnswers])
 
   // 設問変更時の選択処理用のref
   const questionChangeVersionForSelectionRef = useRef(questionChangeVersion)
@@ -550,9 +552,9 @@ export function useScoringFilter({
   const getAllGridAnswerData = useMemo(() => {
     return allScoringData.map((data) => ({
       ...data,
-      isSelected: selectedPageImageIds.has(data.id),
+      isSelected: selectedStudentAnswerImageIds.has(data.id),
     }))
-  }, [allScoringData, selectedPageImageIds])
+  }, [allScoringData, selectedStudentAnswerImageIds])
 
   const getGridAnswerData = useCallback((): (ScoringData & {
     isSelected: boolean
@@ -594,7 +596,7 @@ export function useScoringFilter({
     allScoringData,
     masterAnswerData,
     filteredScoringDataIds: visibleAnswers,
-    selectedScoringDataIds: selectedPageImageIds,
+    selectedScoringDataIds: selectedStudentAnswerImageIds,
 
     filterSettings,
     visibleAnswers,

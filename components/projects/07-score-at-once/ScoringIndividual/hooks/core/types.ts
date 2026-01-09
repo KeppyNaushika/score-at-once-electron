@@ -7,7 +7,7 @@ import type {
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
@@ -18,7 +18,7 @@ import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotati
 export interface UseImageCanvasProps {
   currentScoringData: ScoringData | null
   currentCropRegion?: CropRegionWithProjectPage | null
-  pageImages?: PageImageWithProjectStudents[]
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[]
   zoom: number
   position: { x: number; y: number }
   drawingElements: DrawingElement[]

@@ -23,7 +23,7 @@ import { useScoringMarks } from "./useScoringMarks"
 export function useImageCanvas({
   currentScoringData,
   currentCropRegion,
-  pageImages,
+  studentAnswerImages,
   zoom,
   drawingElements,
   isDrawing,
@@ -51,7 +51,7 @@ export function useImageCanvas({
   // 画像読み込み
   const { imageLoaded, loadedImages } = useImageLoader({
     currentScoringData,
-    pageImages,
+    studentAnswerImages,
     showMultiplePages,
     imageRef,
   })

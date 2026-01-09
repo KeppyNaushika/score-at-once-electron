@@ -1,7 +1,7 @@
 // import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
@@ -10,7 +10,7 @@ import { useCallback } from "react"
 import { toast } from "sonner"
 
 interface UseBatchScoringProps {
-  pageImages: PageImageWithProjectStudents[]
+  studentAnswerImages: StudentAnswerImageWithProjectStudents[]
   cropRegions: CropRegionWithProjectPage[]
   currentCropRegionId: string | null
   currentUserId: string | null
@@ -20,7 +20,7 @@ interface UseBatchScoringProps {
 }
 
 export function useBatchScoring({
-  pageImages,
+  studentAnswerImages,
   cropRegions,
   currentCropRegionId,
   currentUserId,
@@ -88,14 +88,16 @@ export function useBatchScoring({
       if (!currentCropRegion) return
 
       for (const answerId of ids) {
-        const pageImage = pageImages.find((image) => image.id === answerId)
-        if (!pageImage) continue
+        const studentAnswerImage = studentAnswerImages.find(
+          (image) => image.id === answerId
+        )
+        if (!studentAnswerImage) continue
 
-        if (!pageImage.studentId) continue // studentIdがnullの場合はスキップ
+        if (!studentAnswerImage.studentId) continue // studentIdがnullの場合はスキップ
 
         const currentScore = findQuestionScore(
           questionScores,
-          pageImage.studentId,
+          studentAnswerImage.studentId,
           currentCropRegion.id
         )
 
@@ -174,7 +176,7 @@ export function useBatchScoring({
           } else {
             // Create new score
             const scoreData = {
-              studentId: pageImage.studentId,
+              studentId: studentAnswerImage.studentId,
               cropRegionId: currentCropRegion.id,
               partialScore: newScore !== null ? newScore : undefined,
               status: scoringStatus,
@@ -202,9 +204,9 @@ export function useBatchScoring({
 
           // TODO: Check for auto-finalization in collaborative mode
           // Temporarily disabled during QuestionScore array migration
-          // if (scoringStatus === "pending" && pageImage.studentId) {
+          // if (scoringStatus === "pending" && studentAnswerImage.studentId) {
           //   await checkForAutoFinalization(
-          //     pageImage.studentId,
+          //     studentAnswerImage.studentId,
           //     currentCropRegion.id,
           //     currentUserId,
           //     setQuestionScores,
@@ -220,7 +222,7 @@ export function useBatchScoring({
         } catch (error) {
           console.error("Error in batch scoring:", error)
           toast.error(
-            `採点中にエラーが発生しました: ${pageImage.student?.lastName || "不明な生徒"}`
+            `採点中にエラーが発生しました: ${studentAnswerImage.student?.lastName || "不明な生徒"}`
           )
         }
       }
@@ -230,7 +232,7 @@ export function useBatchScoring({
       cropRegions,
       setCurrentUserId,
       currentCropRegionId,
-      pageImages,
+      studentAnswerImages,
       questionScores,
       setQuestionScores,
     ]

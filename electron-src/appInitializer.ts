@@ -1,9 +1,4 @@
-import { net, protocol } from "electron"
-import { format } from "url"
-import {
-  getAbsolutePathFromData,
-  initializeDataDirectory,
-} from "./lib/dataManager"
+import { initializeDataDirectory } from "./lib/dataManager"
 import { optimizeDatabaseForSharedDrive } from "./lib/prisma/databaseInitializer"
 
 export async function initializeApp(): Promise<void> {
@@ -49,52 +44,4 @@ export async function initializeApp(): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error)
     throw new Error(`Application initialization failed: ${errorMessage}`)
   }
-
-  // カスタムプロトコルの設定
-  protocol.handle("appimg", async (request) => {
-    try {
-      const relativePathInData = request.url.substring("appimg://".length)
-
-      // より確実なデコード処理
-      let decodedRelativePath
-      try {
-        // まずdecodeURIComponentを試す
-        decodedRelativePath = decodeURIComponent(relativePathInData)
-      } catch {
-        try {
-          // 失敗したらdecodeURIを試す
-          decodedRelativePath = decodeURI(relativePathInData)
-        } catch {
-          // 両方失敗したら生のパスを使用
-          decodedRelativePath = relativePathInData
-        }
-      }
-
-      const absolutePath = getAbsolutePathFromData(decodedRelativePath)
-
-      // ファイル存在確認
-      const fs = await import("fs/promises")
-      try {
-        await fs.access(absolutePath)
-      } catch {
-        return new Response("File not found", { status: 404 })
-      }
-
-      const fileURL = format({
-        pathname: absolutePath,
-        protocol: "file:",
-        slashes: true,
-      })
-
-      const response = await net.fetch(fileURL)
-      return response
-    } catch (error) {
-      console.error(
-        `Failed to handle 'appimg' protocol request ${request.url}:`,
-        error
-      )
-
-      return new Response("File not found", { status: 404 })
-    }
-  })
 }

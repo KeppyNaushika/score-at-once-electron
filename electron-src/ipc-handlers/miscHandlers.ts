@@ -216,14 +216,12 @@ export function setupMiscHandlers(): void {
         if (!result.success) {
           return { success: false, error: result.error }
         }
-        const serializedStudentAnswers = (result.answerSheets || []).map(
-          (answer) => ({
-            ...answer,
-          })
-        )
-        return { success: true, studentAnswers: serializedStudentAnswers }
+        return {
+          success: true,
+          studentAnswerImages: result.studentAnswerImages ?? [],
+        }
       } catch (err) {
-        console.error("Error fetching answer sheets:", err)
+        console.error("Error fetching student answer images:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error",

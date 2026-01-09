@@ -50,7 +50,7 @@ function ScoringMainViewContent() {
   )
 
   /** データローダーフック */
-  const { loading, project, pageImages, cropRegions, currentUserId } =
+  const { loading, project, studentAnswerImages, cropRegions, currentUserId } =
     useScoringDataLoader(projectId)
 
   /** 設定管理フック */
@@ -77,7 +77,7 @@ function ScoringMainViewContent() {
   const {
     /** 個別の状態 */
     gradingMode,
-    selectedPageImageIds,
+    selectedStudentAnswerImageIds,
     currentStudentIndex,
     currentCropRegionId,
     showKeyboardHelp,
@@ -100,12 +100,20 @@ function ScoringMainViewContent() {
 
   /** 現在の答案と設問 */
   const currentAnswerSheet = useMemo(() => {
-    if (gradingMode === "individual" && selectedPageImageIds.size > 0) {
-      const selectedAnswerId = Array.from(selectedPageImageIds)[0]
-      return pageImages.find((sheet) => sheet.id === selectedAnswerId)
+    if (
+      gradingMode === "individual" &&
+      selectedStudentAnswerImageIds.size > 0
+    ) {
+      const selectedAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
+      return studentAnswerImages.find((sheet) => sheet.id === selectedAnswerId)
     }
-    return pageImages[currentStudentIndex]
-  }, [gradingMode, selectedPageImageIds, pageImages, currentStudentIndex])
+    return studentAnswerImages[currentStudentIndex]
+  }, [
+    gradingMode,
+    selectedStudentAnswerImageIds,
+    studentAnswerImages,
+    currentStudentIndex,
+  ])
 
   const currentCropRegion = cropRegions.find(
     (r) => r.id === currentCropRegionId
@@ -114,8 +122,8 @@ function ScoringMainViewContent() {
   /** Effect処理フック */
   useScoringEffects({
     gradingMode,
-    selectedPageImageIds,
-    pageImages,
+    selectedStudentAnswerImageIds,
+    studentAnswerImages,
     cropRegions,
     currentCropRegionId,
     setSelectedPageImageIds,
@@ -126,8 +134,8 @@ function ScoringMainViewContent() {
   /** 生徒・答案管理フック */
   const { students, handleStudentChange, handleIndividualNextStudent } =
     useStudentAnswerManagement({
-      pageImages,
-      selectedPageImageIds,
+      studentAnswerImages,
+      selectedStudentAnswerImageIds,
       gradingMode,
       currentCropRegion,
       setSelectedPageImageIds,
@@ -145,7 +153,7 @@ function ScoringMainViewContent() {
     currentUserId,
     setCurrentUserId: () => {},
     currentCropRegionId,
-    pageImages,
+    studentAnswerImages,
     cropRegions,
   })
 
@@ -171,11 +179,11 @@ function ScoringMainViewContent() {
     handleRefreshFilter,
     handleToggleFilter,
   } = useScoringFilter({
-    pageImages,
+    studentAnswerImages,
     cropRegions,
     currentCropRegionId: currentCropRegionId,
     questionScores,
-    selectedPageImageIds: selectedPageImageIds,
+    selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
     setSelectedPageImageIds: setSelectedPageImageIds,
     project,
     gradingMode,
@@ -198,10 +206,10 @@ function ScoringMainViewContent() {
     handleResetZoom,
     handleGridNavigation,
   } = useScoringNavigation({
-    answerSheetsLength: pageImages.length,
+    answerSheetsLength: studentAnswerImages.length,
     currentCropRegionId: currentCropRegionId,
     setCurrentCropRegionId: setCurrentCropRegionId,
-    selectedPageImageIds: selectedPageImageIds,
+    selectedStudentAnswerImageIds: selectedStudentAnswerImageIds,
     setSelectedPageImageIds: setSelectedPageImageIds,
     layoutDirection: layoutDirection,
     getGridAnswerData,
@@ -211,7 +219,7 @@ function ScoringMainViewContent() {
 
   const { handleBatchScoreWithProgress, handleAutoAdvance } =
     useBatchScoringWithProgress({
-      selectedAnswers: selectedPageImageIds,
+      selectedAnswers: selectedStudentAnswerImageIds,
       gradingMode: gradingMode,
       scoringBehavior: scoringBehavior,
       setRecentlyScoredAnswers,
@@ -249,7 +257,7 @@ function ScoringMainViewContent() {
     handlePartialScoreBackspace,
     handlePartialScoreChange,
   } = usePartialScore({
-    selectedAnswers: selectedPageImageIds,
+    selectedAnswers: selectedStudentAnswerImageIds,
     currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress,
     onAutoAdvance: handleAutoAdvance,
@@ -257,7 +265,7 @@ function ScoringMainViewContent() {
 
   /** コンテキスト値の設定 */
   useContextValue("gradingMode", gradingMode)
-  useContextValue("hasSelectedAnswers", selectedPageImageIds.size > 0)
+  useContextValue("hasSelectedAnswers", selectedStudentAnswerImageIds.size > 0)
   useContextValue("sidePanelVisible", showSidePanel)
   useContextValue("partialScoreModalOpen", showPartialScoreModal)
   useContextValue("modalOpen", showPartialScoreModal || showScoreComparison)
@@ -282,13 +290,15 @@ function ScoringMainViewContent() {
   })
 
   const currentStudentId = useMemo(() => {
-    if (selectedPageImageIds.size > 0) {
-      const selectedAnswerId = Array.from(selectedPageImageIds)[0]
-      const selectedAnswer = pageImages.find((a) => a.id === selectedAnswerId)
+    if (selectedStudentAnswerImageIds.size > 0) {
+      const selectedAnswerId = Array.from(selectedStudentAnswerImageIds)[0]
+      const selectedAnswer = studentAnswerImages.find(
+        (a) => a.id === selectedAnswerId
+      )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedPageImageIds, pageImages])
+  }, [selectedStudentAnswerImageIds, studentAnswerImages])
 
   const questionProgress = calculateQuestionProgress()
 
@@ -296,11 +306,15 @@ function ScoringMainViewContent() {
     return <ScoringLoadingState />
   }
 
-  if (!project || pageImages.length === 0 || cropRegions.length === 0) {
+  if (
+    !project ||
+    studentAnswerImages.length === 0 ||
+    cropRegions.length === 0
+  ) {
     return (
       <ScoringErrorState
         project={project}
-        answerSheetsLength={pageImages.length}
+        answerSheetsLength={studentAnswerImages.length}
         cropRegionsLength={cropRegions.length}
         projectId={projectId}
       />
@@ -342,9 +356,9 @@ function ScoringMainViewContent() {
           filteredScoringDataIds={filteredScoringDataIds}
           selectedScoringDataIds={selectedScoringDataIds}
           currentCropRegion={currentCropRegion}
-          pageImages={pageImages}
+          studentAnswerImages={studentAnswerImages}
           onScoringDataSelect={(dataId, isSelected) =>
-            handleAnswerSelect(dataId, isSelected, pageImages)
+            handleAnswerSelect(dataId, isSelected, studentAnswerImages)
           }
           onScoringDataReplace={handleReplaceSelection}
           layoutDirection={layoutDirection}
@@ -370,8 +384,8 @@ function ScoringMainViewContent() {
             onPrevQuestion={handlePrevQuestion}
             onNextQuestion={handleNextQuestion}
             questionProgress={questionProgress}
-            selectedPageImageIds={selectedPageImageIds}
-            selectedAnswersCount={selectedPageImageIds.size}
+            selectedStudentAnswerImageIds={selectedStudentAnswerImageIds}
+            selectedAnswersCount={selectedStudentAnswerImageIds.size}
             filterSettings={filterSettings}
             onScore={handleBatchScoreWithProgress}
             onToggleFilter={handleToggleFilter}
@@ -379,7 +393,7 @@ function ScoringMainViewContent() {
             partialScoreInput={partialScoreInput}
             layoutDirection={layoutDirection}
             visibleAnswersCount={visibleAnswers.length}
-            totalAnswersCount={pageImages.length}
+            totalAnswersCount={studentAnswerImages.length}
             onLayoutDirectionChange={setLayoutDirection}
             onGridNavigation={handleGridNavigation}
             onRefreshView={handleRefreshFilter}
@@ -392,7 +406,7 @@ function ScoringMainViewContent() {
             onExpandMarginChange={setExpandMargin}
             students={students}
             onStudentChange={handleStudentChange}
-            pageImages={pageImages}
+            studentAnswerImages={studentAnswerImages}
             scoringBehavior={scoringBehavior}
             onScoringBehaviorChange={(behavior) => setScoringBehavior(behavior)}
           />

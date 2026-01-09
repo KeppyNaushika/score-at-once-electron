@@ -4,7 +4,7 @@ import PartialScoreModal from "@/components/projects/07-score-at-once/ScoringMai
 import ScoreComparisonModal from "@/components/projects/07-score-at-once/ScoringMain/ScoreComparisonModal"
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 
 /** キーバインディングの型 */
@@ -27,7 +27,7 @@ interface ScoringModalsProps {
   // Score Comparison Modal props
   showScoreComparison: boolean
   onScoreComparisonClose: () => void
-  currentAnswerSheet?: PageImageWithProjectStudents
+  currentAnswerSheet?: StudentAnswerImageWithProjectStudents
 }
 
 export function ScoringModals({

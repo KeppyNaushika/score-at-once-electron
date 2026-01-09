@@ -81,8 +81,33 @@ export function useStudentAnswersData(projectId: string) {
       // Load student answers
       const studentAnswersResult =
         await window.electronAPI.getStudentAnswersByProjectId(projectId)
-      if (studentAnswersResult.success && studentAnswersResult.studentAnswers) {
-        setStudentAnswers(studentAnswersResult.studentAnswers)
+      if (
+        studentAnswersResult.success &&
+        studentAnswersResult.studentAnswerImages
+      ) {
+        // Convert Prisma型をProcessedStudentAnswer型に変換
+        const processedAnswers: ProcessedStudentAnswer[] =
+          studentAnswersResult.studentAnswerImages.map((img) => ({
+            id: img.id,
+            studentId: img.studentId,
+            pageNumber: img.projectPage.pageNumber,
+            originalImagePath: img.imagePath,
+            isAbsent:
+              img.student?.projectStudents?.[0]?.status === "ABSENT" || false,
+            student: img.student
+              ? {
+                  id: img.student.id,
+                  lastName: img.student.lastName,
+                  firstName: img.student.firstName,
+                  lastNameKana: img.student.lastNameKana,
+                  firstNameKana: img.student.firstNameKana,
+                  studentId: img.student.studentId,
+                }
+              : null,
+            projectId: img.projectPage.projectId,
+            status: "ready" as const,
+          }))
+        setStudentAnswers(processedAnswers)
       }
 
       // Load model answer count

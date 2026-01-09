@@ -9,7 +9,7 @@ import { QuestionProgress } from "@/components/projects/07-score-at-once/Scoring
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
 import { Separator } from "@/components/ui/separator"
@@ -66,8 +66,8 @@ interface ScoringSidePanelProps {
     customOrder: number
   }[]
   onStudentChange?: (studentId: string) => void
-  selectedPageImageIds?: Set<string>
-  pageImages?: PageImageWithProjectStudents[]
+  selectedStudentAnswerImageIds?: Set<string>
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[]
   scoringBehavior?: "next-student" | "next-question" | "stay"
   onScoringBehaviorChange?: (
     behavior: "next-student" | "next-question" | "stay"
@@ -103,8 +103,8 @@ export function ScoringSidePanel({
   onExpandMarginChange,
   students,
   onStudentChange,
-  selectedPageImageIds,
-  pageImages,
+  selectedStudentAnswerImageIds,
+  studentAnswerImages,
   scoringBehavior,
   onScoringBehaviorChange,
 }: ScoringSidePanelProps) {
@@ -144,8 +144,8 @@ export function ScoringSidePanel({
             <Separator />
             <IndividualModePanel
               students={students}
-              selectedAnswers={selectedPageImageIds}
-              pageImages={pageImages}
+              selectedAnswers={selectedStudentAnswerImageIds}
+              studentAnswerImages={studentAnswerImages}
               onStudentChange={onStudentChange}
               scoringBehavior={scoringBehavior}
               onScoringBehaviorChange={onScoringBehaviorChange}

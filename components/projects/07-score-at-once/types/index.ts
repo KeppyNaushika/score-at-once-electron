@@ -6,6 +6,10 @@
 /** Prismaから基本型とPayload型をインポート */
 import type { Prisma, QuestionScore } from "@prisma/client"
 
+/** Prisma拡張型をprismaExtensions.tsからインポート・再エクスポート */
+import type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
+export type { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
+
 /** Prisma基本型をエクスポート */
 export type {
   CropRegion,
@@ -27,25 +31,12 @@ export type ScoringStatus =
   | "no_answer"
 
 /**
- * StudentAnswerImageを学生とProjectStudents情報で拡張したPrisma生成型
+ * StudentAnswerImageを学生とProjectStudents情報で拡張した型
+ * StudentAnswerImageWithDetailsのエイリアス（型統一のため）
  * 変数名: studentAnswerImage, studentAnswerImages
  */
 export type StudentAnswerImageWithProjectStudents =
-  Prisma.StudentAnswerImageGetPayload<{
-    include: {
-      student: {
-        include: {
-          projectStudents: true
-        }
-      }
-      projectPage: true
-    }
-  }>
-
-/**
- * @deprecated Use StudentAnswerImageWithProjectStudents instead
- */
-export type PageImageWithProjectStudents = StudentAnswerImageWithProjectStudents
+  StudentAnswerImageWithDetails
 
 /**
  * CropRegionをProjectPage情報で拡張したPrisma生成型
@@ -117,11 +108,11 @@ export function calculateActualScore(
 
 /**
  * 採点データの基本インターフェース
- * QuestionScore + Student + CropRegion + PageImage の結合データから変換されたもの
+ * QuestionScore + Student + CropRegion + StudentAnswerImage の結合データから変換されたもの
  * 注意: 学生データのみを管理し、模範解答は別途管理する
  */
 export interface ScoringData {
-  /** PageImage.id */
+  /** StudentAnswerImage.id */
   id: string
   /** Student.id (UUID) */
   studentId: string

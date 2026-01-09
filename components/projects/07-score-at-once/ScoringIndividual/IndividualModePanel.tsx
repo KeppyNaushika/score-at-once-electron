@@ -1,6 +1,6 @@
 "use client"
 
-import type { PageImageWithProjectStudents } from "@/components/projects/07-score-at-once/types"
+import type { StudentAnswerImageWithProjectStudents } from "@/components/projects/07-score-at-once/types"
 import { useMemo } from "react"
 import {
   ScoringBehaviorSelector,
@@ -19,7 +19,7 @@ interface Student {
 interface IndividualModePanelProps {
   students: Student[]
   selectedAnswers?: Set<string> // TODO: selectedPageImageIdsに統一予定
-  pageImages?: PageImageWithProjectStudents[]
+  studentAnswerImages?: StudentAnswerImageWithProjectStudents[]
   onStudentChange: (studentId: string) => void
   scoringBehavior: ScoringBehavior
   onScoringBehaviorChange: (behavior: ScoringBehavior) => void
@@ -28,7 +28,7 @@ interface IndividualModePanelProps {
 export function IndividualModePanel({
   students,
   selectedAnswers,
-  pageImages,
+  studentAnswerImages,
   onStudentChange,
   scoringBehavior,
   onScoringBehaviorChange,
@@ -37,11 +37,13 @@ export function IndividualModePanel({
   const currentStudentId = useMemo(() => {
     if (selectedAnswers && selectedAnswers.size > 0) {
       const selectedAnswerId = Array.from(selectedAnswers)[0]
-      const selectedAnswer = pageImages?.find((a) => a.id === selectedAnswerId)
+      const selectedAnswer = studentAnswerImages?.find(
+        (a) => a.id === selectedAnswerId
+      )
       return selectedAnswer?.student?.id || ""
     }
     return ""
-  }, [selectedAnswers, pageImages])
+  }, [selectedAnswers, studentAnswerImages])
   return (
     <>
       <StudentAnswerPanel

@@ -1,6 +1,6 @@
 import type {
   CropRegionWithProjectPage,
-  PageImageWithProjectStudents,
+  StudentAnswerImageWithProjectStudents,
   QuestionProgress,
 } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import {
@@ -13,7 +13,7 @@ import {
  */
 export function calculateQuestionProgress(
   cropRegions: CropRegionWithProjectPage[],
-  pageImages: PageImageWithProjectStudents[],
+  pageImages: StudentAnswerImageWithProjectStudents[],
   questionScores: QuestionScore[]
 ): QuestionProgress {
   const progress: QuestionProgress = {}
