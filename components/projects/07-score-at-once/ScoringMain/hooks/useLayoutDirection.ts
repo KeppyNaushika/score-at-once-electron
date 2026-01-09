@@ -24,14 +24,24 @@ export function useLayoutDirection() {
     DEFAULT_LAYOUT_DIRECTION
   )
   const [isLoading, setIsLoading] = useState(true)
-  const initializedRef = useRef(false)
+  const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
+    // 同じユーザーで既に初期化済みならスキップ
+    if (initializedUserIdRef.current === userId) return
+
+    // userIdがundefinedの場合は待機（refは更新しない）
+    if (!userId) {
+      setIsLoading(false)
+      return
+    }
+
+    // 新しいユーザーとして初期化
+    initializedUserIdRef.current = userId
+    setIsLoading(true)
 
     const load = async () => {
-      if (!userId || !window.electronAPI?.settings) {
+      if (!window.electronAPI?.settings) {
         setIsLoading(false)
         return
       }
