@@ -34,7 +34,7 @@ const SELECTION_BORDER_PRESETS = [
 export function DisplaySettingsTab() {
   const { user } = useAuth()
   const userId = user?.id
-  const initializedRef = useRef(false)
+  const initializedUserIdRef = useRef<string | undefined>(undefined)
 
   // 選択枠色の状態
   const [selectionBorderColor, setSelectionBorderColor] = useState(
@@ -51,8 +51,14 @@ export function DisplaySettingsTab() {
 
   // 初期値をロード（カラム別）
   useEffect(() => {
-    if (initializedRef.current || !userId) return
-    initializedRef.current = true
+    // 同じユーザーで既に初期化済みならスキップ
+    if (initializedUserIdRef.current === userId) return
+
+    // userIdがundefinedの場合は待機（refは更新しない）
+    if (!userId) return
+
+    // 新しいユーザーとして初期化
+    initializedUserIdRef.current = userId
 
     const loadSettings = async () => {
       if (window.electronAPI?.settings) {
