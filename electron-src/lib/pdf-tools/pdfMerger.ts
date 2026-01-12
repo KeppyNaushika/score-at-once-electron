@@ -4,9 +4,9 @@
  */
 import * as fs from "fs"
 import * as path from "path"
-import { degrees,PDFDocument } from "pdf-lib"
+import { degrees, PDFDocument } from "pdf-lib"
 
-import type { NUpLayout,RotationDegree } from "@/types/pdfTools.types"
+import type { NUpLayout, RotationDegree } from "@/types/pdfTools.types"
 
 // A4サイズ (ポイント単位: 1pt = 1/72 inch)
 const A4_WIDTH = 595.28 // 210mm

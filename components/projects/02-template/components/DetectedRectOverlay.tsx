@@ -5,7 +5,7 @@
 
 "use client"
 
-import { memo, useCallback,useState } from "react"
+import { memo, useCallback, useState } from "react"
 
 import { OVERLAY_STYLES } from "../constants/detection"
 import { DetectedRect, ImageDimensions } from "../types"

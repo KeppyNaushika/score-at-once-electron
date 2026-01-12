@@ -1,4 +1,4 @@
-import { rectSortingStrategy,SortableContext } from "@dnd-kit/sortable"
+import { rectSortingStrategy, SortableContext } from "@dnd-kit/sortable"
 
 import { EmptyTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/EmptyTableCell"
 import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"

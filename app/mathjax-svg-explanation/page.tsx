@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef,useState } from "react"
+import { useRef, useState } from "react"
 
 /**
  * ステップ結果の型定義
@@ -35,7 +35,7 @@ interface StepResult {
   canvas?: HTMLCanvasElement
   completed?: boolean
 }
-import { ArrowRight,Code, Info, Play } from "lucide-react"
+import { ArrowRight, Code, Info, Play } from "lucide-react"
 
 // Tabs components are available for future use
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

@@ -12,7 +12,7 @@ import type {
 } from "@/types/drawingAnnotation.types"
 
 import { getAbsoluteCoordinates } from "./coordinateUtils"
-import { drawArrowHead,drawWaveLine, drawZigzagLine } from "./lineRendering"
+import { drawArrowHead, drawWaveLine, drawZigzagLine } from "./lineRendering"
 
 /**
  * キャンバス描画パラメータ

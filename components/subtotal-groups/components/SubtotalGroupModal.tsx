@@ -17,8 +17,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical,Plus, Trash2 } from "lucide-react"
-import { useEffect,useState } from "react"
+import { GripVertical, Plus, Trash2 } from "lucide-react"
+import { useEffect, useState } from "react"
 
 import type {
   SubtotalGroup,

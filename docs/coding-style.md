@@ -41,7 +41,7 @@ npm run format      # Prettier --write のみ
 {
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
-    "source.organizeImports": "never"  // ESLintに統一、競合回避
+    "source.organizeImports": "never" // ESLintに統一、競合回避
   },
   "editor.formatOnSave": true
 }
@@ -99,27 +99,27 @@ npx @tailwindcss/upgrade --force
 ```typescript
 // ✅ 良い例: 役割が明確
 const studentCount = students.length
-const isLoading = status === 'loading'
+const isLoading = status === "loading"
 function calculateTotalScore(scores: number[]): number
 
 // ❌ 悪い例: 意味が不明確
 const cnt = students.length
-const flag = status === 'loading'
+const flag = status === "loading"
 function calc(arr: number[]): number
 ```
 
 ### 関数名
 
-| 接頭辞 | 用途 | 例 |
-| ------ | ---- | --- |
-| `get` | 値を取得 | `getStudentById`, `getProjectList` |
-| `set` | 値を設定 | `setCurrentPage`, `setFilter` |
-| `is` / `has` / `can` | 真偽値を返す | `isValid`, `hasPermission`, `canEdit` |
-| `create` | 新規作成 | `createProject`, `createStudent` |
-| `update` | 更新 | `updateScore`, `updateStatus` |
-| `delete` / `remove` | 削除 | `deleteProject`, `removeStudent` |
-| `handle` | イベントハンドラ | `handleClick`, `handleSubmit` |
-| `fetch` | 非同期でデータ取得 | `fetchProjects`, `fetchUserData` |
+| 接頭辞               | 用途               | 例                                    |
+| -------------------- | ------------------ | ------------------------------------- |
+| `get`                | 値を取得           | `getStudentById`, `getProjectList`    |
+| `set`                | 値を設定           | `setCurrentPage`, `setFilter`         |
+| `is` / `has` / `can` | 真偽値を返す       | `isValid`, `hasPermission`, `canEdit` |
+| `create`             | 新規作成           | `createProject`, `createStudent`      |
+| `update`             | 更新               | `updateScore`, `updateStatus`         |
+| `delete` / `remove`  | 削除               | `deleteProject`, `removeStudent`      |
+| `handle`             | イベントハンドラ   | `handleClick`, `handleSubmit`         |
+| `fetch`              | 非同期でデータ取得 | `fetchProjects`, `fetchUserData`      |
 
 ### 変数名
 
@@ -201,8 +201,7 @@ npm run lint:strict
 - ✅ 外部ライブラリとのインターフェース
 - ✅ 汎用的なユーティリティ関数
 
-```typescript
-// トップレベル配置の例
+```
 /hooks/useProject.ts       // 複数画面で使用されるプロジェクト管理
 /types/common.types.ts     // ProjectData, StudentDataなど全体共通型
 /lib/utils.ts              // 日付フォーマット、バリデーション等の汎用関数
@@ -245,12 +244,12 @@ npm run lint:strict
 
 データに関する型は以下の優先順位で選択する。**上位を使えるなら上位を使う。**
 
-| 優先度 | 型の種類 | 説明 | 例 |
-| :---: | -------- | ---- | --- |
-| 1 | **Prisma型** | `@prisma/client` が生成する基本型 | `Student`, `Project`, `CropRegion` |
-| 2 | **Prisma拡張型** | `include` 等で生まれるペイロード型 | `Prisma.StudentGetPayload<{ include: { memberships: true } }>` |
-| 3 | **シリアライズ型** | Decimal→number等、やむを得ず一部を再定義する型 | `SerializedQuestionScore` |
-| 4 | **独自定義型** | 上記で対応できない場合のみ | UI専用の中間状態など |
+| 優先度 | 型の種類           | 説明                                           | 例                                                             |
+| :----: | ------------------ | ---------------------------------------------- | -------------------------------------------------------------- |
+|   1    | **Prisma型**       | `@prisma/client` が生成する基本型              | `Student`, `Project`, `CropRegion`                             |
+|   2    | **Prisma拡張型**   | `include` 等で生まれるペイロード型             | `Prisma.StudentGetPayload<{ include: { memberships: true } }>` |
+|   3    | **シリアライズ型** | Decimal→number等、やむを得ず一部を再定義する型 | `SerializedQuestionScore`                                      |
+|   4    | **独自定義型**     | 上記で対応できない場合のみ                     | UI専用の中間状態など                                           |
 
 ### 独自定義型を使ってよい条件
 
@@ -289,11 +288,11 @@ interface StudentData {
 
 Main process（electron-src）と Renderer process（components, hooks）間のIPC通信では、**同一の型定義を参照すること**。
 
-| 型の種類 | 参照元 |
-| -------- | ------ |
-| Prisma基本型 | `@prisma/client` から直接 import |
+| 型の種類     | 参照元                                   |
+| ------------ | ---------------------------------------- |
+| Prisma基本型 | `@prisma/client` から直接 import         |
 | Prisma拡張型 | `/types/prismaExtensions.ts` から import |
-| 共通型 | `/types/common.types.ts` から import |
+| 共通型       | `/types/common.types.ts` から import     |
 
 ```typescript
 // ✅ OK: Main/Renderer両方で同じ型を参照
@@ -317,11 +316,11 @@ interface ProjectData { ... }  // Renderer独自（微妙に違う可能性）
 
 ### 型定義の配置ルール
 
-| スコープ | 配置場所 | 例 |
-| -------- | -------- | --- |
-| 単一ファイル | ファイル内で宣言 | Props型、ローカルな状態型 |
-| 機能内で共有 | 機能ディレクトリの `types.ts` | `components/projects/07-score-at-once/types.ts` |
-| アプリ全体で共有 | `/types/` ディレクトリ | `types/common.types.ts`, `types/prismaExtensions.ts` |
+| スコープ         | 配置場所                      | 例                                                   |
+| ---------------- | ----------------------------- | ---------------------------------------------------- |
+| 単一ファイル     | ファイル内で宣言              | Props型、ローカルな状態型                            |
+| 機能内で共有     | 機能ディレクトリの `types.ts` | `components/projects/07-score-at-once/types.ts`      |
+| アプリ全体で共有 | `/types/` ディレクトリ        | `types/common.types.ts`, `types/prismaExtensions.ts` |
 
 ### Prisma拡張型の管理
 
@@ -392,11 +391,11 @@ DBに保存しないデータ or どうしても必要？ → Yes → 独自定�
 
 ### 分割対象の基準
 
-| 行数       | 対応         |
-| ---------- | ------------ |
-| 200行未満  | 分割不要     |
-| 200行以上  | 分割を検討   |
-| 500行以上  | 分割を強く推奨 |
+| 行数      | 対応           |
+| --------- | -------------- |
+| 200行未満 | 分割不要       |
+| 200行以上 | 分割を検討     |
+| 500行以上 | 分割を強く推奨 |
 
 ### その他の分割判断基準
 
@@ -455,11 +454,11 @@ function UserProfile() {
 
 ### コンポーネントの分類
 
-| 種類             | 責務                       | 例                          |
-| ---------------- | -------------------------- | --------------------------- |
-| Container        | データ取得・状態管理       | `UserProfileContainer.tsx`  |
-| Presentational   | UI表示のみ                 | `UserProfileView.tsx`       |
-| Hook             | ロジックの再利用           | `useUser.ts`                |
+| 種類           | 責務                 | 例                         |
+| -------------- | -------------------- | -------------------------- |
+| Container      | データ取得・状態管理 | `UserProfileContainer.tsx` |
+| Presentational | UI表示のみ           | `UserProfileView.tsx`      |
+| Hook           | ロジックの再利用     | `useUser.ts`               |
 
 ### Props設計
 
@@ -468,7 +467,7 @@ function UserProfile() {
 interface ButtonProps {
   label: string
   onClick: () => void
-  variant?: 'primary' | 'secondary'
+  variant?: "primary" | "secondary"
   disabled?: boolean
 }
 
@@ -493,7 +492,7 @@ interface ButtonProps {
 // 状態は必要最小限に
 // ✅ 派生値は計算で求める
 const [items, setItems] = useState<Item[]>([])
-const completedCount = items.filter(i => i.completed).length
+const completedCount = items.filter((i) => i.completed).length
 
 // ❌ 派生値を別の状態として持たない
 const [items, setItems] = useState<Item[]>([])
@@ -515,39 +514,39 @@ npm run lint:fix    # 保存時も自動実行される
 ソート後のイメージ：
 
 ```typescript
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react"
 
-import { clsx } from 'clsx'
-import { useForm } from 'react-hook-form'
+import { clsx } from "clsx"
+import { useForm } from "react-hook-form"
 
-import { Button } from '@/components/ui/button'
-import { useProject } from '@/hooks/useProject'
-import type { ProjectData } from '@/types/common.types'
+import { Button } from "@/components/ui/button"
+import { useProject } from "@/hooks/useProject"
+import type { ProjectData } from "@/types/common.types"
 
-import { FeatureHeader } from './components/FeatureHeader'
-import { useFeature } from './hooks/useFeature'
-import type { FeatureProps } from './types'
+import { FeatureHeader } from "./components/FeatureHeader"
+import { useFeature } from "./hooks/useFeature"
+import type { FeatureProps } from "./types"
 ```
 
 > **Note**: グループ間の空行は ESLint が自動挿入する。
 
 ### パスの使い分け
 
-| パス種類   | 使用場面                                 |
-| ---------- | ---------------------------------------- |
-| `@/`       | トップレベルモジュール、別機能からの参照 |
-| `./`       | 同一機能内の参照                         |
-| `../`      | 親ディレクトリへの参照（2階層まで）      |
+| パス種類 | 使用場面                                 |
+| -------- | ---------------------------------------- |
+| `@/`     | トップレベルモジュール、別機能からの参照 |
+| `./`     | 同一機能内の参照                         |
+| `../`    | 親ディレクトリへの参照（2階層まで）      |
 
 ```typescript
 // ✅ トップレベルは絶対パス
-import { useProject } from '@/hooks/useProject'
+import { useProject } from "@/hooks/useProject"
 
 // ✅ 機能内は相対パス
-import { useFeature } from './hooks/useFeature'
+import { useFeature } from "./hooks/useFeature"
 
 // ⚠️ 深い相対パスは避ける
-import { something } from '../../../shared/utils' // → @/を使用
+import { something } from "../../../shared/utils" // → @/を使用
 ```
 
 ### type import
@@ -556,14 +555,14 @@ import { something } from '../../../shared/utils' // → @/を使用
 
 ```typescript
 // ✅ 型のみのインポート
-import type { ProjectData } from '@/types/common.types'
+import type { ProjectData } from "@/types/common.types"
 
 // ✅ 値と型の混在
-import { useProject } from '@/hooks/useProject'
-import type { ProjectData } from '@/types/common.types'
+import { useProject } from "@/hooks/useProject"
+import type { ProjectData } from "@/types/common.types"
 
 // または
-import { useProject, type ProjectData } from '@/hooks/useProject'
+import { useProject, type ProjectData } from "@/hooks/useProject"
 ```
 
 ---
@@ -638,12 +637,12 @@ export async function exportToExcel(
 
 ## 更新履歴
 
-| 日付       | 内容           |
-| ---------- | -------------- |
-| 2025-01-12 | 初版作成       |
-| 2025-01-12 | 型管理方針を改訂（優先順位の明確化、後方互換性の方針追加） |
-| 2025-01-12 | IPC通信における型の一貫性ルールを追加 |
-| 2025-01-12 | フォーマッター・リンターセクションを追加 |
-| 2025-01-12 | eslint-plugin-simple-import-sort を導入 |
-| 2025-01-12 | 命名規則・不要コード削除のセクションを追加 |
+| 日付       | 内容                                                             |
+| ---------- | ---------------------------------------------------------------- |
+| 2025-01-12 | 初版作成                                                         |
+| 2025-01-12 | 型管理方針を改訂（優先順位の明確化、後方互換性の方針追加）       |
+| 2025-01-12 | IPC通信における型の一貫性ルールを追加                            |
+| 2025-01-12 | フォーマッター・リンターセクションを追加                         |
+| 2025-01-12 | eslint-plugin-simple-import-sort を導入                          |
+| 2025-01-12 | 命名規則・不要コード削除のセクションを追加                       |
 | 2025-01-12 | ESLint設定との整合性確認・修正、Tailwind CSSマイグレーション追加 |

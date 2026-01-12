@@ -20,7 +20,7 @@ import {
   SubtotalGroupWithItems,
 } from "@/types/electron"
 
-import { type FillUpdate,useFillHandleDrag } from "../hooks/useFillHandleDrag"
+import { type FillUpdate, useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
 interface QuestionAssignmentMatrixWithFillHandleProps {

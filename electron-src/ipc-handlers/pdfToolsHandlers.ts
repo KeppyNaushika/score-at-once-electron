@@ -12,7 +12,7 @@ import type {
   RotationDegree,
 } from "@/types/pdfTools.types"
 
-import { type MergePageInput,mergePdfs } from "../lib/pdf-tools/pdfMerger"
+import { type MergePageInput, mergePdfs } from "../lib/pdf-tools/pdfMerger"
 import { applyNUp } from "../lib/pdf-tools/pdfNUp"
 import {
   type RotatePageInput,

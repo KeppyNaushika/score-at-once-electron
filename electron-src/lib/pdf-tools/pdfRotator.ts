@@ -2,7 +2,7 @@
  * ページ回転ユーティリティ
  */
 import * as fs from "fs"
-import { degrees,PDFDocument } from "pdf-lib"
+import { degrees, PDFDocument } from "pdf-lib"
 
 import type { RotationDegree } from "@/types/pdfTools.types"
 

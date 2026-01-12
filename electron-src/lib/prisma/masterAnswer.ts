@@ -1,4 +1,4 @@
-import { MasterImage, Prisma,ProjectPage } from "@prisma/client"
+import { MasterImage, Prisma, ProjectPage } from "@prisma/client"
 import fs from "fs/promises"
 import path from "path"
 

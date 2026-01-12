@@ -3,7 +3,7 @@
  * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
  */
 
-import { useCallback, useEffect, useRef,useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { useAuth } from "@/contexts/AuthContext"

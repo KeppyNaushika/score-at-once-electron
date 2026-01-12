@@ -77,7 +77,10 @@ function calculateCategorySummary(
     for (const match of preMatch.byStudentNumber) {
       const decision = getDecision(match.importId)
 
-      if (config.strategy === "by_student_number" || config.strategy === "by_name") {
+      if (
+        config.strategy === "by_student_number" ||
+        config.strategy === "by_name"
+      ) {
         // デフォルトはsame_person
         if (!decision || decision.decisionType === "same_person") {
           linked++
@@ -310,8 +313,9 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
                             情報を更新: {classSummary.updated}クラス
                           </span>
                         )}
-                        {classSummary.updated > 0 &&
-                          classSummary.kept > 0 && <span>/</span>}
+                        {classSummary.updated > 0 && classSummary.kept > 0 && (
+                          <span>/</span>
+                        )}
                         {classSummary.kept > 0 && (
                           <span className="text-gray-500">
                             既存を維持: {classSummary.kept}クラス

@@ -197,12 +197,8 @@ function extractUpdateableItems(
  * 「現在の情報 → インポート後」を視覚的に表示
  */
 export function UpdateConfirmStep({ wizard }: UpdateConfirmStepProps) {
-  const {
-    state,
-    setUpdateDecision,
-    setAllUpdateDecisions,
-    goToNextStep,
-  } = wizard
+  const { state, setUpdateDecision, setAllUpdateDecisions, goToNextStep } =
+    wizard
   const { fileOverviewData, idIntegrationConfig, updateDecisions } = state
 
   // 更新が必要なアイテムを抽出

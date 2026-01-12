@@ -90,7 +90,7 @@ export function PageNavigation({
           onValueChange={onImageChange}
           disabled={isLoading || isSaving}
         >
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-50">
             <SelectValue placeholder="ページを選択" />
           </SelectTrigger>
           <SelectContent>

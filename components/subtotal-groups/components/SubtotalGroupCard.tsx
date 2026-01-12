@@ -1,6 +1,6 @@
 "use client"
 
-import { Calculator,Edit, Trash2 } from "lucide-react"
+import { Calculator, Edit, Trash2 } from "lucide-react"
 
 import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 import { Badge } from "@/components/ui/badge"
