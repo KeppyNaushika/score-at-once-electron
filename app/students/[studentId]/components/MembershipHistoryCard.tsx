@@ -35,7 +35,7 @@ export function MembershipHistoryCard({
             classId: m.class.id,
             student: {
               id: student.id,
-              studentId: student.studentId,
+              studentNumber: student.studentNumber,
               lastName: student.lastName,
               firstName: student.firstName,
               lastNameKana: student.lastNameKana,

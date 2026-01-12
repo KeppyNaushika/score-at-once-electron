@@ -2,7 +2,7 @@ import { useState } from "react"
 
 interface StudentWithMemberships {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -23,7 +23,7 @@ interface StudentWithMemberships {
 }
 
 interface StudentImportRow {
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -41,7 +41,7 @@ interface ValidationResult {
 export function useStudentImport() {
   const [studentData, setStudentData] = useState<StudentImportRow[]>([
     {
-      studentId: "",
+      studentNumber: "",
       lastName: "",
       firstName: "",
       lastNameKana: "",
@@ -69,10 +69,12 @@ export function useStudentImport() {
 
   const markDuplicateStudents = async (data: StudentImportRow[]) => {
     // 既存の生徒データを取得
-    let existingStudentIds: Set<string> = new Set()
+    let existingStudentNumbers: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map((s) => s.studentId))
+      existingStudentNumbers = new Set(
+        existingStudents.map((s) => s.studentNumber)
+      )
     } catch (error) {
       console.warn("既存生徒の取得に失敗しました:", error)
     }
@@ -80,34 +82,38 @@ export function useStudentImport() {
     // 重複フラグを設定
     return data.map((row) => ({
       ...row,
-      isDuplicate: existingStudentIds.has(row.studentId?.trim() || ""),
+      isDuplicate: existingStudentNumbers.has(row.studentNumber?.trim() || ""),
     }))
   }
 
   const validateStudentData = async (data: StudentImportRow[]) => {
     const errors: string[] = []
     const warnings: string[] = []
-    const seenStudentIds = new Set<string>()
+    const seenStudentNumbers = new Set<string>()
     let validCount = 0
 
     // 既存の生徒データを取得
-    let existingStudentIds: Set<string> = new Set()
+    let existingStudentNumbers: Set<string> = new Set()
     try {
       const existingStudents = await window.electronAPI.fetchStudents()
-      existingStudentIds = new Set(existingStudents.map((s) => s.studentId))
+      existingStudentNumbers = new Set(
+        existingStudents.map((s) => s.studentNumber)
+      )
     } catch (error) {
       console.warn("既存生徒の取得に失敗しました:", error)
     }
 
     const filteredData = data.filter(
       (row) =>
-        row.studentId?.trim() || row.lastName?.trim() || row.firstName?.trim()
+        row.studentNumber?.trim() ||
+        row.lastName?.trim() ||
+        row.firstName?.trim()
     )
 
     filteredData.forEach((row, index) => {
       const rowNum = index + 1
 
-      if (!row.studentId?.trim()) {
+      if (!row.studentNumber?.trim()) {
         errors.push(`行${rowNum}: 学籍番号が入力されていません`)
         return
       }
@@ -120,16 +126,18 @@ export function useStudentImport() {
         return
       }
 
-      if (seenStudentIds.has(row.studentId.trim())) {
-        errors.push(`行${rowNum}: 学籍番号「${row.studentId}」が重複しています`)
+      if (seenStudentNumbers.has(row.studentNumber.trim())) {
+        errors.push(
+          `行${rowNum}: 学籍番号「${row.studentNumber}」が重複しています`
+        )
         return
       }
-      seenStudentIds.add(row.studentId.trim())
+      seenStudentNumbers.add(row.studentNumber.trim())
 
       // 既存生徒チェック
-      if (existingStudentIds.has(row.studentId.trim())) {
+      if (existingStudentNumbers.has(row.studentNumber.trim())) {
         warnings.push(
-          `行${rowNum}: 学籍番号「${row.studentId}」は既に登録済みです（上書きされます）`
+          `行${rowNum}: 学籍番号「${row.studentNumber}」は既に登録済みです（上書きされます）`
         )
       }
 
@@ -156,20 +164,22 @@ export function useStudentImport() {
 
       // 既存の生徒データを取得
       const existingStudents = await window.electronAPI.fetchStudents()
-      const existingStudentIds = new Set(
-        existingStudents.map((s) => s.studentId)
+      const existingStudentNumbers = new Set(
+        existingStudents.map((s) => s.studentNumber)
       )
 
       const validStudentData = studentData.filter(
         (row) =>
-          row.studentId?.trim() && row.lastName?.trim() && row.firstName?.trim()
+          row.studentNumber?.trim() &&
+          row.lastName?.trim() &&
+          row.firstName?.trim()
       )
 
       for (const row of validStudentData) {
-        const studentId = row.studentId.trim()
+        const studentNumber = row.studentNumber.trim()
 
         const studentData = {
-          studentId,
+          studentNumber,
           lastName: row.lastName.trim(),
           firstName: row.firstName.trim(),
           lastNameKana: row.lastNameKana?.trim() || "",
@@ -180,9 +190,9 @@ export function useStudentImport() {
         }
 
         // 既存チェック - 上書きまたは新規作成
-        if (existingStudentIds.has(studentId)) {
+        if (existingStudentNumbers.has(studentNumber)) {
           const existingStudent = existingStudents.find(
-            (s) => s.studentId === studentId
+            (s) => s.studentNumber === studentNumber
           )
           if (existingStudent) {
             // 既存生徒を更新

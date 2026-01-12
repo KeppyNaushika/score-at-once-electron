@@ -30,7 +30,7 @@ import type { Prisma } from "@prisma/client"
 
 interface StudentWithMemberships {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -82,7 +82,7 @@ interface ClassWithMemberships {
 // ソート用の型
 interface StudentSortable {
   id: string
-  studentId: string
+  studentNumber: string
   fullName: string
   enrollmentYear: number | null
   original: StudentWithMemberships
@@ -133,7 +133,7 @@ export default function StudentTable() {
       const matchesSearch =
         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fullNameKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId.toLowerCase().includes(searchTerm.toLowerCase())
+        student.studentNumber.toLowerCase().includes(searchTerm.toLowerCase())
 
       if (filterClassId !== "all") {
         const belongsToClass = student.memberships.some(
@@ -164,7 +164,7 @@ export default function StudentTable() {
   const sortableData = useMemo<StudentSortable[]>(() => {
     return filteredStudents.map((student) => ({
       id: student.id,
-      studentId: student.studentId,
+      studentNumber: student.studentNumber,
       fullName: `${student.lastName}${student.firstName}`,
       enrollmentYear: student.enrollmentYear ?? null,
       original: student,
@@ -361,7 +361,7 @@ export default function StudentTable() {
                   className="group cursor-pointer"
                 >
                   <TableCell className="font-mono text-sm">
-                    {student.studentId}
+                    {student.studentNumber}
                   </TableCell>
                   <TableCell className="font-medium">
                     {student.lastName} {student.firstName}

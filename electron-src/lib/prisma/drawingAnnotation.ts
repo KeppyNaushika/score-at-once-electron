@@ -272,7 +272,7 @@ export async function getDrawingAnnotationsByProject(
             student: {
               select: {
                 id: true,
-                studentId: true,
+                studentNumber: true,
                 lastName: true,
                 firstName: true,
               },

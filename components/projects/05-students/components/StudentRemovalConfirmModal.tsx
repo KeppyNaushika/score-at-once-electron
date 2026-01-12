@@ -18,7 +18,7 @@ interface StudentRemovalConfirmModalProps {
   onConfirm: () => void
   studentsToRemove: Array<{
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     className: string
@@ -61,7 +61,7 @@ export default function StudentRemovalConfirmModal({
                 </span>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {student.studentId}
+                    {student.studentNumber}
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
                     {student.className}
@@ -75,7 +75,7 @@ export default function StudentRemovalConfirmModal({
           {hasGradingData && (
             <div className="bg-destructive/10 border-destructive/20 rounded-md border p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 flex-shrink-0" />
+                <AlertTriangle className="text-destructive mt-0.5 h-5 w-5 shrink-0" />
                 <div className="space-y-2">
                   <h4 className="text-destructive font-medium">
                     採点データが存在します
@@ -106,7 +106,7 @@ export default function StudentRemovalConfirmModal({
           {!hasGradingData && (
             <div className="bg-muted/50 rounded-md border p-4">
               <div className="flex items-start gap-3">
-                <Trash2 className="text-muted-foreground mt-0.5 h-5 w-5 flex-shrink-0" />
+                <Trash2 className="text-muted-foreground mt-0.5 h-5 w-5 shrink-0" />
                 <div className="space-y-1">
                   <h4 className="font-medium">プロジェクトから削除</h4>
                   <p className="text-muted-foreground text-sm">

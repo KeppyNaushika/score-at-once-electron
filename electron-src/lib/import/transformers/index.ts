@@ -7,6 +7,7 @@
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
 import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
+import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 import type {
   ArchiveData,
   ArchiveVersion,
@@ -28,7 +29,7 @@ import { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
 const TRANSFORMERS: VersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
   new V1_1_0_to_V1_2_0_Transformer(),
-  // 将来: new V1_2_0_to_V1_3_0_Transformer(),
+  new V1_2_0_to_V1_3_0_Transformer(),
 ]
 
 /**
@@ -229,3 +230,4 @@ export { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
 // 変換器のエクスポート（テスト用）
 export { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 export { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
+export { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"

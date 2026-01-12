@@ -141,7 +141,10 @@ export const getCurrentMembershipsByClassId = async (
         student: true,
         class: true,
       },
-      orderBy: [{ attendanceNumber: "asc" }, { student: { studentId: "asc" } }],
+      orderBy: [
+        { attendanceNumber: "asc" },
+        { student: { studentNumber: "asc" } },
+      ],
     })
   } catch (error) {
     console.error("Failed to fetch current memberships by class ID:", error)
@@ -217,7 +220,7 @@ export const getMembershipsByDateRange = async (
         student: true,
         class: true,
       },
-      orderBy: [{ student: { studentId: "asc" } }, { startDate: "desc" }],
+      orderBy: [{ student: { studentNumber: "asc" } }, { startDate: "desc" }],
     })
   } catch (error) {
     console.error("Failed to fetch memberships by date range:", error)

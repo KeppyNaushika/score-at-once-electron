@@ -16,7 +16,7 @@ export interface StudentMembership {
 // 生徒データの型（実際のデータベース構造に合わせて更新）
 export interface Student {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -44,7 +44,7 @@ export interface GradingDataInfo {
 
 export interface StudentForRemoval {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   className: string

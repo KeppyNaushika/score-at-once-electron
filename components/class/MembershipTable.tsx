@@ -56,7 +56,7 @@ export default function MembershipTable({
   const sortableData = useMemo<MembershipSortable[]>(() => {
     return memberships.map((m) => ({
       id: m.id,
-      studentId: m.student.studentId,
+      studentId: m.student.studentNumber,
       attendanceNumber: m.attendanceNumber ?? null,
       fullName: `${m.student.lastName}${m.student.firstName}`,
       startDate: m.startDate.toISOString(),
@@ -225,7 +225,7 @@ export default function MembershipTable({
                         />
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {membership.student.studentId}
+                        {membership.student.studentNumber}
                       </TableCell>
                       <TableCell className="tabular-nums">
                         {membership.attendanceNumber || (

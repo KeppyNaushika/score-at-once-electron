@@ -10,7 +10,7 @@ export interface AvailableClass {
 // 利用可能な生徒の型
 export interface AvailableStudent {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string

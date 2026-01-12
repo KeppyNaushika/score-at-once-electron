@@ -69,7 +69,7 @@ function ValidationMessages({
 
 interface StudentWithMemberships {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string

@@ -8,7 +8,8 @@
 | --------------- | ----------- | --------------- | --------------------------- |
 | 1.0.0           | v0.2.x      | v0.2.21-alpha.0 | schema-v1.0.0-v0.2.x.prisma |
 | 1.1.0           | v0.3.x      | v0.3.2-beta.0   | schema-v1.1.0-v0.3.x.prisma |
-| 1.2.0           | v0.4.x      | (current)       | schema-v1.2.0-v0.4.x.prisma |
+| 1.2.0           | v0.4.x      | v0.4.5-alpha.0  | schema-v1.2.0-v0.4.x.prisma |
+| 1.3.0           | v0.5.x      | (current)       | schema-v1.3.0-v0.5.x.prisma |
 
 ## バージョン間の主な変更点
 
@@ -74,6 +75,14 @@
 - `ProjectPage`
   - `pageImages` → `masterImages` + `studentAnswerImages` に変更
 
+### v1.2.0 → v1.3.0 (v0.4.x → v0.5.x)
+
+#### 変更されたテーブル
+
+- `Student`
+  - `studentId` → `studentNumber` にリネーム
+  - 学籍番号フィールド名の明確化（FK の studentId との混同を防ぐ）
+
 ## インポート時の変換ロジック
 
 ### v1.0.0 アーカイブのインポート
@@ -91,10 +100,14 @@
 3. `createdByUserId` → `userId` にリネーム
 4. `studentId`/`userId` が null のスコアはスキップ
 
+### v1.2.0 アーカイブのインポート
+
+1. `Student.studentId` → `Student.studentNumber` にリネーム
+
 ## 連鎖変換パターン
 
 ```
-1.0.0 → 1.1.0 → 1.2.0
+1.0.0 → 1.1.0 → 1.2.0 → 1.3.0
 ```
 
 各変換器は「次のバージョンへの変換」のみを担当し、

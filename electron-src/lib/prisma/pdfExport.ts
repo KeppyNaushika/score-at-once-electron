@@ -43,7 +43,7 @@ interface StudentAnswerData {
     firstName: string
     lastNameKana: string | null
     firstNameKana: string | null
-    studentId: string | null
+    studentNumber: string | null
     projectStudents: Array<{ customOrder: number | null; status: string }>
   } | null
   projectId: string
@@ -186,7 +186,7 @@ export async function getPdfExportData(options: {
               firstName: img.student.firstName,
               lastNameKana: img.student.lastNameKana,
               firstNameKana: img.student.firstNameKana,
-              studentId: img.student.studentId,
+              studentNumber: img.student.studentNumber,
               projectStudents: img.student.projectStudents,
             }
           : null,

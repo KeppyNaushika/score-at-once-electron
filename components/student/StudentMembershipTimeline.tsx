@@ -23,7 +23,7 @@ interface Membership {
   notes?: string | null
   student: {
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     lastNameKana: string

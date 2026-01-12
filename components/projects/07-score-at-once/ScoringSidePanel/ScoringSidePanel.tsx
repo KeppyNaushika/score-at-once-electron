@@ -1,16 +1,16 @@
 "use client"
 
+import { QuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import { IndividualModePanel } from "@/components/projects/07-score-at-once/ScoringIndividual/IndividualModePanel"
 import NavigationControls from "@/components/projects/07-score-at-once/ScoringSidePanel/NavigationControls"
 import ProjectProgressCard from "@/components/projects/07-score-at-once/ScoringSidePanel/ProjectProgressCard"
 import QuestionNavigator from "@/components/projects/07-score-at-once/ScoringSidePanel/QuestionNavigator"
 import ScoringToolbar from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringToolbar"
-import { QuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,
-  StudentAnswerImageWithProjectStudents,
   ScoringStatus,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import { Separator } from "@/components/ui/separator"
 
@@ -60,7 +60,7 @@ interface ScoringSidePanelProps {
   // Individual mode props
   students?: {
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     customOrder: number

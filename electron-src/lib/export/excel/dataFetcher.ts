@@ -227,7 +227,7 @@ async function buildScoringData(
       return {
         studentId: student.id,
         studentName: `${student.lastName} ${student.firstName}`,
-        studentNumber: student.studentId,
+        studentNumber: student.studentNumber,
         grade: student.grade,
         className: student.className,
         attendanceNumber: student.attendanceNumber,

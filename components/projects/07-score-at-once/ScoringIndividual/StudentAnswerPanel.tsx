@@ -1,5 +1,6 @@
 "use client"
 
+import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -8,12 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Users } from "lucide-react"
 
 interface Student {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   customOrder: number
@@ -72,14 +72,14 @@ export function StudentAnswerPanel({
           <SelectTrigger className="flex-1">
             <SelectValue>
               {currentStudent
-                ? `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentId})`
+                ? `${currentStudent.lastName} ${currentStudent.firstName} (${currentStudent.studentNumber})`
                 : "生徒を選択"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {sortedStudents.map((student) => (
               <SelectItem key={student.id} value={student.id}>
-                {student.lastName} {student.firstName} ({student.studentId})
+                {student.lastName} {student.firstName} ({student.studentNumber})
               </SelectItem>
             ))}
           </SelectContent>

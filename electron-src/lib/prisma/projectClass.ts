@@ -66,7 +66,7 @@ export const getProjectClasses = async (
               },
               orderBy: [
                 { attendanceNumber: "asc" },
-                { student: { studentId: "asc" } },
+                { student: { studentNumber: "asc" } },
               ],
             },
           },
@@ -102,7 +102,7 @@ export const getAdministeredClasses = async (
               },
               orderBy: [
                 { attendanceNumber: "asc" },
-                { student: { studentId: "asc" } },
+                { student: { studentNumber: "asc" } },
               ],
             },
           },
@@ -138,7 +138,7 @@ export const getStatisticsClasses = async (
               },
               orderBy: [
                 { attendanceNumber: "asc" },
-                { student: { studentId: "asc" } },
+                { student: { studentNumber: "asc" } },
               ],
             },
           },

@@ -31,7 +31,7 @@ export function StudentInfoCard({
               <p className="text-muted-foreground flex items-center gap-2">
                 <span>学籍番号</span>
                 <span className="bg-muted/50 rounded-lg px-2.5 py-1 font-mono text-sm">
-                  {student.studentId}
+                  {student.studentNumber}
                 </span>
               </p>
               {student.enrollmentYear && (

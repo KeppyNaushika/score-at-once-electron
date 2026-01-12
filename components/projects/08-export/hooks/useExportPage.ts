@@ -250,7 +250,7 @@ export function useExportPage() {
       searchTerm === "" ||
       student.lastName.includes(searchTerm) ||
       student.firstName.includes(searchTerm) ||
-      student.studentId.includes(searchTerm)
+      student.studentNumber.includes(searchTerm)
 
     const matchesClass =
       selectedClasses.length === 0 ||

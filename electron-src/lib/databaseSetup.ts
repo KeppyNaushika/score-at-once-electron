@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
 import {
-  getDatabasePath,
   createSharedPrismaClient,
+  getDatabasePath,
 } from "./prisma/databaseInitializer"
 
 /**
@@ -96,7 +96,7 @@ export class DatabaseSetup {
       // サンプル生徒の作成
       const sampleStudents = [
         {
-          studentId: "STU001",
+          studentNumber: "STU001",
           lastName: "山田",
           firstName: "太郎",
           lastNameKana: "ヤマダ",
@@ -104,7 +104,7 @@ export class DatabaseSetup {
           enrollmentYear: new Date().getFullYear(),
         },
         {
-          studentId: "STU002",
+          studentNumber: "STU002",
           lastName: "佐藤",
           firstName: "花子",
           lastNameKana: "サトウ",
@@ -112,7 +112,7 @@ export class DatabaseSetup {
           enrollmentYear: new Date().getFullYear(),
         },
         {
-          studentId: "STU003",
+          studentNumber: "STU003",
           lastName: "田中",
           firstName: "次郎",
           lastNameKana: "タナカ",
@@ -123,7 +123,7 @@ export class DatabaseSetup {
 
       for (const [index, studentData] of sampleStudents.entries()) {
         const student = await this.prisma.student.upsert({
-          where: { studentId: studentData.studentId },
+          where: { studentNumber: studentData.studentNumber },
           update: {},
           create: studentData,
         })

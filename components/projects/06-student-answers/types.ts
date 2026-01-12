@@ -18,7 +18,7 @@ export interface UnifiedStudent {
   firstName: string
   lastNameKana: string
   firstNameKana: string
-  studentId: string
+  studentNumber: string
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
   customOrder?: number | null // 🚨 必須: 受験生徒順序
@@ -111,7 +111,7 @@ export interface ExistingStudentAnswer {
     id: string
     lastName: string
     firstName: string
-    studentId: string
+    studentNumber: string
   }
 }
 

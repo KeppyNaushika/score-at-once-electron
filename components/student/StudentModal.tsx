@@ -17,7 +17,7 @@ import { useEffect, useState } from "react"
 // StudentModalに必要な最小限のフィールド（createdAt/updatedAtは不要）
 interface StudentForEdit {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -58,7 +58,7 @@ export default function StudentModal({
       }
 
       if (studentToEdit) {
-        setStudentId(studentToEdit.studentId)
+        setStudentId(studentToEdit.studentNumber)
         setLastName(studentToEdit.lastName)
         setFirstName(studentToEdit.firstName)
         setLastNameKana(studentToEdit.lastNameKana)
@@ -106,7 +106,7 @@ export default function StudentModal({
     }
 
     const studentData = {
-      studentId: studentId.trim(),
+      studentNumber: studentId.trim(),
       lastName: lastName.trim(),
       firstName: firstName.trim(),
       lastNameKana: lastNameKana.trim(),

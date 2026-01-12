@@ -36,7 +36,7 @@ interface StudentClassMembershipModalProps {
   classId?: string
   availableStudents: Array<{
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     lastNameKana: string
@@ -178,13 +178,13 @@ export default function StudentClassMembershipModal({
                       return (
                         fullName.includes(searchTerm) ||
                         fullNameKana.includes(searchTerm) ||
-                        student.studentId.toLowerCase().includes(searchTerm)
+                        student.studentNumber.toLowerCase().includes(searchTerm)
                       )
                     })
                     .map((student) => (
                       <SelectItem key={student.id} value={student.id}>
                         {student.lastName} {student.firstName} (
-                        {student.studentId})
+                        {student.studentNumber})
                       </SelectItem>
                     ))}
                 </SelectContent>

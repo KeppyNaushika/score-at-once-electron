@@ -143,7 +143,7 @@ export default function ClassStudentImportModal({
           const attendanceNumber = row.attendanceNumber.trim()
 
           const students = await window.electronAPI.fetchStudents()
-          const student = students.find((s) => s.studentId === studentId)
+          const student = students.find((s) => s.studentNumber === studentId)
 
           if (student) {
             // 既存のメンバーシップをチェック

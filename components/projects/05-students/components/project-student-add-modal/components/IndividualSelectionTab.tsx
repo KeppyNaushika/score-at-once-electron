@@ -1,5 +1,9 @@
 "use client"
 
+import type {
+  AvailableClass,
+  AvailableStudent,
+} from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 import {
   Card,
   CardContent,
@@ -18,10 +22,6 @@ import {
 } from "@/components/ui/select"
 import { TabsContent } from "@/components/ui/tabs"
 import { Search } from "lucide-react"
-import type {
-  AvailableClass,
-  AvailableStudent,
-} from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 
 interface IndividualSelectionTabProps {
   availableClasses: AvailableClass[]
@@ -114,7 +114,7 @@ export function IndividualSelectionTab({
                             {student.lastName} {student.firstName}
                           </div>
                           <div className="text-muted-foreground text-sm">
-                            {student.studentId}
+                            {student.studentNumber}
                           </div>
                         </label>
                         <div className="text-right">

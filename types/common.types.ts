@@ -213,7 +213,7 @@ export interface CropRegionUpdateData {
  */
 export interface StudentData {
   id: string
-  studentId: string
+  studentNumber: string
   name: string
   furigana?: string
   admissionYear?: number
