@@ -18,7 +18,9 @@ build/
 *.pem
 
 # IDE設定
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 *.swp
 *.swo
