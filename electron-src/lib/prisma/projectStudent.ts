@@ -12,7 +12,7 @@ export async function getStudentsForProject(projectId: string) {
       where: { projectId },
       orderBy: [
         { customOrder: "asc" }, // カスタム順序を優先
-        { student: { studentId: "asc" } }, // 学籍番号順をフォールバック
+        { student: { studentNumber: "asc" } }, // 学籍番号順をフォールバック
       ],
       include: {
         student: {

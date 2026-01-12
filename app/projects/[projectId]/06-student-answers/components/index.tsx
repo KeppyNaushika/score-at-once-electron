@@ -4,14 +4,14 @@
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/StudentAnswerUpload"
+import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { ConfirmChangesModal } from "@/components/projects/06-student-answers/student-answer-table/components/ConfirmChangesModal"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/projects/06-student-answers/types"
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
-import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Eye, Grid3X3 } from "lucide-react"
 
 // Types
@@ -23,7 +23,7 @@ export interface StudentData {
   firstName: string
   lastNameKana: string
   firstNameKana: string
-  studentId: string
+  studentNumber: string
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
   customOrder?: number | null

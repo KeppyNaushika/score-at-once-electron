@@ -124,7 +124,7 @@ export default function StudentDetailPage() {
           availableStudents={[
             {
               id: student.id,
-              studentId: student.studentId,
+              studentNumber: student.studentNumber,
               lastName: student.lastName,
               firstName: student.firstName,
               lastNameKana: student.lastNameKana,

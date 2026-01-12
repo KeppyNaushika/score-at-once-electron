@@ -22,7 +22,7 @@ export const fetchClasses = async (): Promise<ClassWithStudents[]> => {
           orderBy: [
             { endDate: "asc" }, // null values first (current memberships)
             { attendanceNumber: "asc" },
-            { student: { studentId: "asc" } },
+            { student: { studentNumber: "asc" } },
           ],
         },
       },
@@ -47,7 +47,7 @@ export const createClass = async (
           orderBy: [
             { endDate: "asc" }, // null values first (current memberships)
             { attendanceNumber: "asc" },
-            { student: { studentId: "asc" } },
+            { student: { studentNumber: "asc" } },
           ],
         },
       },
@@ -74,7 +74,7 @@ export const updateClass = async (
           orderBy: [
             { endDate: "asc" }, // null values first (current memberships)
             { attendanceNumber: "asc" },
-            { student: { studentId: "asc" } },
+            { student: { studentNumber: "asc" } },
           ],
         },
       },

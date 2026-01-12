@@ -74,7 +74,7 @@ export const StudentTableRow = ({
       <TableCell className="text-center font-medium">
         {student.memberships[0]?.attendanceNumber || "-"}
       </TableCell>
-      <TableCell className="font-mono">{student.studentId}</TableCell>
+      <TableCell className="font-mono">{student.studentNumber}</TableCell>
       <TableCell className="font-medium">
         {student.lastName} {student.firstName}
       </TableCell>

@@ -3,6 +3,10 @@ import { FilePreviewCell } from "@/components/projects/06-student-answers/studen
 import { SortableTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/SortableTableCell"
 import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
 import type { DisabledReason } from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
+import type {
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/components/projects/06-student-answers/types"
 import {
   Table,
   TableBody,
@@ -10,10 +14,6 @@ import {
   TableRow,
   TableHeader as UITableHeader,
 } from "@/components/ui/table"
-import type {
-  UnifiedFile,
-  UnifiedStudent,
-} from "@/components/projects/06-student-answers/types"
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 
 interface TableContentProps {
@@ -146,7 +146,7 @@ export function TableContent({
                     {sortedStudents[studentIndex].firstName}
                   </div>
                   <div className="text-xs text-gray-500">
-                    {sortedStudents[studentIndex].studentId}
+                    {sortedStudents[studentIndex].studentNumber}
                   </div>
                 </div>
               </TableHead>

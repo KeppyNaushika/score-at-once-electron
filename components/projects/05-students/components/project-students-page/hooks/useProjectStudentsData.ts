@@ -202,7 +202,7 @@ export function useProjectStudentsData({
       const matchesSearch =
         fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.studentId.includes(searchTerm)
+        student.studentNumber.includes(searchTerm)
 
       const matchesStatus =
         statusFilter === "all" || student.status === statusFilter
@@ -286,7 +286,7 @@ export function useProjectStudentsData({
     const matchesSearch =
       fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.studentId.includes(searchTerm)
+      student.studentNumber.includes(searchTerm)
 
     const matchesStatus =
       statusFilter === "all" || student.status === statusFilter
@@ -307,7 +307,7 @@ export function useProjectStudentsData({
       const student = students.find((s) => s.id === id)
       return {
         id,
-        studentId: student?.studentId || "",
+        studentNumber: student?.studentNumber || "",
         lastName: student?.lastName || "",
         firstName: student?.firstName || "",
         className: student?.memberships?.[0]?.class.name || "未所属",

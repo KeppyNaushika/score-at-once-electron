@@ -1,6 +1,6 @@
 export interface StudentWithMemberships {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -42,7 +42,7 @@ export interface Membership {
   notes?: string | null
   student: {
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     lastNameKana: string

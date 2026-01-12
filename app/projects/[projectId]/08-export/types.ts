@@ -23,7 +23,7 @@ export type StudentStatus = "participating" | "expected" | "absent"
 // 生徒データの型
 export interface Student {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string

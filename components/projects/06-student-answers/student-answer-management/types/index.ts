@@ -29,7 +29,7 @@ export interface ProcessedStudentAnswer {
     firstName: string
     lastNameKana: string
     firstNameKana: string
-    studentId: string
+    studentNumber: string
   } | null
   projectId: string
   status: "ready"

@@ -81,7 +81,7 @@ export function StudentCell({
           </div>
 
           <div className="text-muted-foreground mb-1 text-xs">
-            {student.studentId}
+            {student.studentNumber}
           </div>
 
           <div className="flex items-center gap-1">

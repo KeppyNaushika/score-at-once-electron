@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react"
 /** 生徒情報（membershipsなし） */
 interface StudentWithMemberships {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -35,7 +35,7 @@ interface Membership {
   studentId?: string // 新規作成時に使用
   student: {
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     firstNameKana: string
@@ -54,7 +54,7 @@ interface RawMembership {
   createdAt?: string | Date
   student: {
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     firstNameKana: string

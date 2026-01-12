@@ -233,7 +233,7 @@ export function useProjectStudentAddModal({
     const matchesSearch =
       fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       fullKana.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.studentId.includes(searchTerm)
+      student.studentNumber.includes(searchTerm)
 
     // 学級フィルタ: 任意の所属履歴に該当学級があるかチェック（endDate問わず）
     const matchesClass =

@@ -288,7 +288,7 @@ export function StudentSelectionCard({
                           </span>
                         )}
                       <span className="text-muted-foreground text-xs">
-                        {student.studentId}
+                        {student.studentNumber}
                       </span>
                     </div>
                   </div>

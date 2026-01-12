@@ -2,14 +2,14 @@
  * Hooks for 06-student-answers page - quick inline version
  */
 
+import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
+import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
   PendingChange,
   ScoringDataOption,
 } from "@/components/projects/06-student-answers/types"
-import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
-import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
-import type { StudentWithMemberships } from "@/types/prismaExtensions"
 import type { ProjectPageWithDetails } from "@/types/electron.d"
+import type { StudentWithMemberships } from "@/types/prismaExtensions"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
 import type { StudentData } from "../components"
@@ -68,7 +68,7 @@ export function useStudentAnswersData(projectId: string) {
             firstName: student.firstName,
             lastNameKana: student.lastNameKana,
             firstNameKana: student.firstNameKana,
-            studentId: student.studentId,
+            studentNumber: student.studentNumber,
             attendanceNumber:
               student.memberships?.[0]?.attendanceNumber || null,
             status: student.status,
@@ -101,7 +101,7 @@ export function useStudentAnswersData(projectId: string) {
                   firstName: img.student.firstName,
                   lastNameKana: img.student.lastNameKana,
                   firstNameKana: img.student.firstNameKana,
-                  studentId: img.student.studentId,
+                  studentNumber: img.student.studentNumber,
                 }
               : null,
             projectId: img.projectPage.projectId,

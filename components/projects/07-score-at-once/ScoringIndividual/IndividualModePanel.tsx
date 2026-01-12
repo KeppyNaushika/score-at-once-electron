@@ -10,7 +10,7 @@ import { StudentAnswerPanel } from "./StudentAnswerPanel"
 
 interface Student {
   id: string
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   customOrder: number

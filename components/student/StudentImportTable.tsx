@@ -4,7 +4,7 @@ import { EditableTable } from "@/components/common/EditableTable"
 import { ColumnDef } from "@tanstack/react-table"
 
 interface StudentImportRow {
-  studentId: string
+  studentNumber: string
   lastName: string
   firstName: string
   lastNameKana: string
@@ -24,9 +24,9 @@ export default function StudentImportTable({
 }: StudentImportTableProps) {
   const columns: ColumnDef<StudentImportRow>[] = [
     {
-      id: "studentId",
+      id: "studentNumber",
       header: "学籍番号",
-      accessorKey: "studentId",
+      accessorKey: "studentNumber",
       size: 100,
       meta: {
         placeholder: "例: 001",
@@ -86,7 +86,7 @@ export default function StudentImportTable({
       onDataChange={onDataChange}
       allowInsertRow={true}
       allowDeleteRow={true}
-      className="min-h-[400px] min-w-[800px]"
+      className="min-h-100 min-w-200"
       getRowProps={(row) => ({
         className: row.original.isDuplicate ? "bg-red-50" : "",
       })}

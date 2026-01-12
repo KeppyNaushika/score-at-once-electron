@@ -18,8 +18,8 @@ import { useCallback, useEffect, useMemo } from "react"
 export interface StudentData {
   /** 生徒ID (UUID) */
   id: string
-  /** 生徒ID（学籍番号） */
-  studentId: string
+  /** 学籍番号 */
+  studentNumber: string
   /** 姓 */
   lastName: string
   /** 名 */
@@ -88,7 +88,7 @@ export function useStudentAnswerManagement(
       if (sheet.student && !uniqueStudents.has(sheet.student.id)) {
         const studentData: StudentData = {
           id: sheet.student.id,
-          studentId: sheet.student.studentId,
+          studentNumber: sheet.student.studentNumber,
           lastName: sheet.student.lastName,
           firstName: sheet.student.firstName,
           customOrder: sheet.student.projectStudents?.[0]?.customOrder || 0,
