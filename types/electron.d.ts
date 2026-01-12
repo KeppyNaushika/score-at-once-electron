@@ -1182,36 +1182,87 @@ export interface MyAPI {
      * プロジェクトをZIPアーカイブとしてエクスポート
      */
     exportProject: (
-      options: import("./project-archive.types").ExportProjectOptions
-    ) => Promise<import("./project-archive.types").ExportProjectResult>
+      options: import("./projectArchive.types").ExportProjectOptions
+    ) => Promise<import("./projectArchive.types").ExportProjectResult>
 
     /**
      * アーカイブファイルを解析してプレビュー情報を取得
      */
     analyzeArchive: (
-      options: import("./project-archive.types").AnalyzeArchiveOptions
-    ) => Promise<import("./project-archive.types").AnalyzeArchiveResult>
+      options: import("./projectArchive.types").AnalyzeArchiveOptions
+    ) => Promise<import("./projectArchive.types").AnalyzeArchiveResult>
 
     /**
      * アーカイブを新規プロジェクトとしてインポート
      */
     importAsNew: (
-      options: import("./project-archive.types").ImportAsNewOptions
-    ) => Promise<import("./project-archive.types").ImportAsNewResult>
+      options: import("./projectArchive.types").ImportAsNewOptions
+    ) => Promise<import("./projectArchive.types").ImportAsNewResult>
+
+    /**
+     * 事前照合を実行（Step 2: ファイル概要表示用）
+     * 全照合方法（ID、学籍番号、氏名、名前）で照合し、結果を返す
+     */
+    preMatch: (options: { archivePath: string }) => Promise<{
+      success: boolean
+      data?: import("./projectArchive.types").FileOverviewData
+      error?: string
+    }>
 
     /**
      * 競合を検出（マージインポート用ドライラン）
      */
     detectConflicts: (
-      options: import("./project-archive.types").DetectConflictsOptions
-    ) => Promise<import("./project-archive.types").ConflictDetectionResult>
+      options: import("./projectArchive.types").DetectConflictsOptions
+    ) => Promise<import("./projectArchive.types").ConflictDetectionResult>
 
     /**
      * マージインポートを実行
      */
     mergeImport: (
-      options: import("./project-archive.types").MergeImportOptions
-    ) => Promise<import("./project-archive.types").MergeImportResult>
+      options: import("./projectArchive.types").MergeImportOptions
+    ) => Promise<import("./projectArchive.types").MergeImportResult>
+
+    /**
+     * ID統合インポートを実行（新しいフロー）
+     *
+     * Step 3で設定したID統合設定を使ってインポートを実行
+     * 2段階処理: マッピング → ID変更
+     * Step 3.5で設定した採点競合解決設定も適用
+     */
+    idIntegrationImport: (options: {
+      archivePath: string
+      preMatchResult: import("./projectArchive.types").FileOverviewData
+      integrationConfig: import("./projectArchive.types").IdIntegrationConfig
+      currentUserId: string
+      scoringConflictConfig?: import("./projectArchive.types").ScoringConflictConfig
+    }) => Promise<{
+      success: boolean
+      projectId?: string
+      summary?: {
+        created: import("./projectArchive.types").ArchiveDataCounts
+        updated: import("./projectArchive.types").ArchiveDataCounts
+        skipped: import("./projectArchive.types").ArchiveDataCounts
+      }
+      warnings?: string[]
+      error?: string
+    }>
+
+    /**
+     * 採点競合を検出（ユーザーの判断に基づく）
+     *
+     * id_integrationステップでユーザーが「同じ人」と判断した生徒を含めて
+     * 採点競合を検出する。scoring_conflictステップ遷移時に呼び出す。
+     */
+    detectScoringConflicts: (options: {
+      archivePath: string
+      preMatchResult: import("./projectArchive.types").FileOverviewData
+      integrationConfig: import("./projectArchive.types").IdIntegrationConfig
+    }) => Promise<{
+      success: boolean
+      data?: import("./projectArchive.types").ScoringConflictData
+      error?: string
+    }>
 
     /**
      * エクスポート保存先選択ダイアログ
