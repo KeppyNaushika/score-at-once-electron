@@ -5,13 +5,22 @@
 import { dialog, ipcMain } from "electron"
 import type {
   ConflictResolutions,
+  FileOverviewData,
+  IdIntegrationConfig,
   MatchingConfig,
+  ScoringConflictConfig,
 } from "../../types/projectArchive.types"
 import {
   exportProject,
   selectExportSavePath,
 } from "../lib/export/project-archive"
-import { detectAllConflicts, executeMergeImport } from "../lib/import/merge"
+import {
+  detectAllConflicts,
+  detectScoringConflictsWithUserDecisions,
+  executeIdIntegrationImport,
+  executeMergeImport,
+  performPreMatching,
+} from "../lib/import/merge"
 import {
   analyzeArchive,
   cleanupTempDir,
@@ -128,6 +137,39 @@ export function registerArchiveHandlers(): void {
     }
   )
 
+  // 事前照合（Step 2: ファイル概要表示用）
+  ipcMain.handle(
+    "archive:preMatch",
+    async (_event, options: { archivePath: string }) => {
+      let tempDir: string | null = null
+
+      try {
+        // アーカイブを展開
+        const extractResult = await extractArchive(options.archivePath)
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
+        }
+        tempDir = extractResult.data.tempDir
+
+        // 事前照合を実行
+        const fileOverviewData = await performPreMatching(extractResult.data)
+
+        return { success: true, data: fileOverviewData }
+      } catch (error) {
+        console.error("Error in archive:preMatch:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "事前照合に失敗しました",
+        }
+      } finally {
+        if (tempDir) {
+          cleanupTempDir(tempDir)
+        }
+      }
+    }
+  )
+
   // 競合検出
   ipcMain.handle(
     "archive:detectConflicts",
@@ -207,6 +249,100 @@ export function registerArchiveHandlers(): void {
             error instanceof Error
               ? error.message
               : "マージインポートに失敗しました",
+        }
+      } finally {
+        if (tempDir) {
+          cleanupTempDir(tempDir)
+        }
+      }
+    }
+  )
+
+  // 採点競合検出（ユーザーの判断に基づく）
+  ipcMain.handle(
+    "archive:detectScoringConflicts",
+    async (
+      _event,
+      options: {
+        archivePath: string
+        preMatchResult: FileOverviewData
+        integrationConfig: IdIntegrationConfig
+      }
+    ) => {
+      let tempDir: string | null = null
+
+      try {
+        // アーカイブを展開
+        const extractResult = await extractArchive(options.archivePath)
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
+        }
+        tempDir = extractResult.data.tempDir
+
+        // 採点競合を検出
+        const scoringConflicts = await detectScoringConflictsWithUserDecisions(
+          extractResult.data,
+          options.preMatchResult,
+          options.integrationConfig
+        )
+
+        return { success: true, data: scoringConflicts }
+      } catch (error) {
+        console.error("Error in archive:detectScoringConflicts:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "採点競合の検出に失敗しました",
+        }
+      } finally {
+        if (tempDir) {
+          cleanupTempDir(tempDir)
+        }
+      }
+    }
+  )
+
+  // ID統合インポート（新しいフロー）
+  ipcMain.handle(
+    "archive:idIntegrationImport",
+    async (
+      _event,
+      options: {
+        archivePath: string
+        preMatchResult: FileOverviewData
+        integrationConfig: IdIntegrationConfig
+        currentUserId: string
+        scoringConflictConfig?: ScoringConflictConfig
+      }
+    ) => {
+      let tempDir: string | null = null
+
+      try {
+        // アーカイブを展開
+        const extractResult = await extractArchive(options.archivePath)
+        if (!extractResult.success || !extractResult.data) {
+          return { success: false, error: extractResult.error }
+        }
+        tempDir = extractResult.data.tempDir
+
+        // ID統合インポートを実行
+        const result = await executeIdIntegrationImport(
+          extractResult.data,
+          options.preMatchResult,
+          options.integrationConfig,
+          options.currentUserId,
+          options.scoringConflictConfig
+        )
+
+        return result
+      } catch (error) {
+        console.error("Error in archive:idIntegrationImport:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : "インポートに失敗しました",
         }
       } finally {
         if (tempDir) {
