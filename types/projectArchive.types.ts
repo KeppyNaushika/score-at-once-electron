@@ -52,12 +52,18 @@ export interface ArchiveDataCounts {
 
 /**
  * マッチング方法
+ *
+ * 照合の流れ:
+ * 1. まずUUIDで自動照合（同じPCでエクスポート/インポートした場合）
+ * 2. UUIDが一致しない場合、以下の二次照合方法で照合
+ *    - "none": 二次照合しない（全て新規登録）
+ *    - その他: 指定されたフィールドで照合
  */
-export type StudentMatchingMethod = "uuid" | "studentId" | "name"
-export type ClassMatchingMethod = "uuid" | "name"
-export type UserMatchingMethod = "uuid" | "username"
-export type ProjectMatchingMethod = "uuid" | "always_new"
-export type SubtotalGroupMatchingMethod = "uuid" | "name"
+export type StudentMatchingMethod = "studentNumber" | "name" | "none"
+export type ClassMatchingMethod = "name" | "none"
+export type UserMatchingMethod = "username" | "none"
+export type ProjectMatchingMethod = "always_new"
+export type SubtotalGroupMatchingMethod = "name" | "none"
 
 /**
  * マッチング設定
@@ -74,11 +80,167 @@ export interface MatchingConfig {
  * デフォルトのマッチング設定
  */
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
-  student: "studentId",
+  student: "studentNumber",
   class: "name",
   user: "username",
   project: "always_new",
   subtotalGroup: "name",
+}
+
+// =============================================================================
+// Step 2: ファイル概要説明 用の型
+// =============================================================================
+
+/**
+ * 事前照合の結果（カテゴリ別）
+ * Step 2 で「自動で紐づく」「判断が必要」の件数を表示するために使用
+ */
+export interface PreMatchingResult {
+  /** ID一致（同じパソコンで作ったデータ） */
+  byId: MatchedItem[]
+  /** 学籍番号一致（生徒のみ） */
+  byStudentNumber?: MatchedItem[]
+  /** 氏名/名前一致 */
+  byName?: MatchedItem[]
+  /** どれにも一致しない */
+  noMatch: ImportItem[]
+}
+
+/**
+ * 照合でマッチしたアイテム
+ */
+export interface MatchedItem {
+  /** インポートデータのID */
+  importId: string
+  /** 既存データのID */
+  existingId: string
+  /** インポートデータ */
+  importData: Record<string, unknown>
+  /** 既存データ */
+  existingData: Record<string, unknown>
+  /** 表示用ラベル（例: "山田太郎（001）"） */
+  displayLabel: string
+  /** 一致理由（例: "学籍番号が一致"） */
+  matchReason: string
+}
+
+/**
+ * インポートデータ（マッチしなかったもの含む）
+ */
+export interface ImportItem {
+  /** インポートデータのID */
+  importId: string
+  /** インポートデータ */
+  importData: Record<string, unknown>
+  /** 表示用ラベル */
+  displayLabel: string
+}
+
+/**
+ * プロジェクトの事前照合結果
+ */
+export interface ProjectPreMatchingResult {
+  /** ID一致（同じパソコンで作ったプロジェクト） */
+  isIdMatch: boolean
+  /** インポートデータのプロジェクトID */
+  importProjectId: string
+  /** 既存プロジェクトID（ID一致の場合） */
+  existingProjectId?: string
+  /** インポートデータ */
+  importData: Record<string, unknown>
+  /** 既存データ（ID一致の場合） */
+  existingData?: Record<string, unknown>
+  /** 表示用ラベル（プロジェクト名） */
+  displayLabel: string
+}
+
+/**
+ * ファイル概要データ（Step 2 表示用）
+ */
+export interface FileOverviewData {
+  /** 生徒の照合結果 */
+  student: PreMatchingResult
+  /** 学級の照合結果 */
+  class: PreMatchingResult
+  /** 小計グループの照合結果 */
+  subtotalGroup: PreMatchingResult
+  /** プロジェクトの照合結果（ID一致 = 同じPCでマージ可能） */
+  project?: ProjectPreMatchingResult
+  /** 採点結果の競合（Step 3.5 表示用、プロジェクトID一致時のみ） */
+  scoringConflicts?: ScoringConflictData
+}
+
+// =============================================================================
+// Step 3: データの統合（ID選択）用の型
+// =============================================================================
+
+/**
+ * 紐づけ方法の選択（Step 3 の最初の選択）
+ *
+ * UI表現:
+ * - by_student_number: "学籍番号で紐づける (n件)"
+ * - by_name: "氏名で紐づける (n件)"
+ * - individual: "1人ずつ設定する"
+ * - all_new: "全員を新しい生徒として追加する"
+ */
+export type StudentMatchingStrategy =
+  | "by_student_number"
+  | "by_name"
+  | "individual"
+  | "all_new"
+
+export type ClassMatchingStrategy = "by_name" | "individual" | "all_new"
+
+export type SubtotalGroupMatchingStrategy = "by_name" | "individual" | "all_new"
+
+/**
+ * ID選択（同一人物と判定した場合）
+ *
+ * UI表現:
+ * - use_import_id: "書き出したPCに合わせる" → 既存データのIDを.scoreのIDに変更
+ * - use_existing_id: "このPCに合わせる" → .scoreのIDを既存IDにマッピング
+ */
+export type IdChoice = "use_import_id" | "use_existing_id"
+
+/**
+ * 個別のID統合決定
+ *
+ * 3つのケース:
+ * 1. same_person + idChoice: 同一人物としてIDを選択
+ * 2. create_new: 新しい生徒/学級として登録
+ * 3. skip: インポートしない
+ */
+export interface IdIntegrationDecision {
+  /** インポートデータのID */
+  importId: string
+  /** 決定タイプ */
+  decisionType: "same_person" | "create_new" | "skip"
+  /** 同一人物の場合の既存データID */
+  existingId?: string
+  /** 同一人物の場合のID選択 */
+  idChoice?: IdChoice
+}
+
+/**
+ * カテゴリ別のID統合設定
+ */
+export interface CategoryIdIntegrationConfig {
+  /** 紐づけ方法 */
+  strategy:
+    | StudentMatchingStrategy
+    | ClassMatchingStrategy
+    | SubtotalGroupMatchingStrategy
+  /** 個別の決定（strategyがindividualの場合、またはstrategy適用後の個別調整） */
+  decisions: IdIntegrationDecision[]
+}
+
+/**
+ * 全カテゴリのID統合設定
+ */
+export interface IdIntegrationConfig {
+  student: CategoryIdIntegrationConfig
+  class: CategoryIdIntegrationConfig
+  subtotalGroup: CategoryIdIntegrationConfig
 }
 
 // =============================================================================
@@ -124,6 +286,89 @@ export interface ConflictItem {
   displayLabel?: string
   /** 詳細情報 */
   details?: string
+}
+
+// =============================================================================
+// Enhanced UI Types (先生向けUI用の拡張型)
+// =============================================================================
+
+/**
+ * 変更されるフィールドの情報
+ * UI表示例: 「氏名カナ: ヤマダ → ヤマダタロウ」
+ */
+export interface FieldChange {
+  /** 内部フィールド名（例: "firstNameKana"） */
+  field: string
+  /** UI表示用ラベル（例: "氏名カナ"） */
+  fieldLabel: string
+  /** 現在の値 */
+  currentValue: unknown
+  /** インポート後の値 */
+  newValue: unknown
+}
+
+/**
+ * 確認が必要な生徒/学級の詳細情報
+ * Step4「生徒・学級の確認」で使用
+ */
+export interface MatchingCandidate extends ConflictItem {
+  /** 変更されるフィールド一覧 */
+  fieldChanges: FieldChange[]
+  /** インポートデータの方が新しいか */
+  isImportNewer: boolean
+  /** インポートデータの最終更新日 */
+  importUpdatedAt: string
+  /** 既存データの最終更新日 */
+  existingUpdatedAt: string
+  /** 一致と判断した理由（例: "学籍番号と氏名が一致"） */
+  matchReason: string
+}
+
+/**
+ * ユーザーの照合判断結果
+ * 「同じ人」「別の人」「スキップ」
+ */
+export type MatchingDecisionType = "same_person" | "different_person" | "skip"
+
+export interface MatchingDecision {
+  /** アイテムID */
+  itemId: string
+  /** 判断結果 */
+  decision: MatchingDecisionType
+}
+
+/**
+ * 更新するかどうかの選択結果
+ */
+export interface UpdateDecision {
+  /** アイテムID */
+  itemId: string
+  /** 情報を更新するか */
+  shouldUpdate: boolean
+}
+
+/**
+ * カテゴリ別の照合サマリー（先生向け表示用）
+ */
+export interface CategoryMatchingSummary {
+  /** カテゴリ */
+  category: ConflictCategory
+  /** 自動で紐づく件数 */
+  autoMatched: number
+  /** 新しく登録される件数 */
+  newItems: number
+  /** 確認が必要な件数 */
+  needsConfirmation: number
+  /** 学籍番号重複などの問題がある件数 */
+  hasConflict: number
+  /** 自動で紐づくアイテムのリスト */
+  autoMatchedItems: Array<{ id: string; displayLabel: string }>
+  /** 新規登録されるアイテムのリスト */
+  newItemsList: Array<{ id: string; displayLabel: string }>
+  /** 確認が必要なアイテムのリスト */
+  confirmationItems: MatchingCandidate[]
+  /** 問題があるアイテムのリスト */
+  conflictItems: MatchingCandidate[]
 }
 
 /**
@@ -418,7 +663,7 @@ export interface ArchiveProjectData {
 export interface ArchiveStudentsData {
   students: Array<{
     id: string
-    studentId: string
+    studentNumber: string
     lastName: string
     firstName: string
     lastNameKana: string
@@ -546,14 +791,32 @@ export interface ArchiveScoresData {
 // =============================================================================
 
 /**
- * ウィザードのステップ
+ * ウィザードのステップ（先生向けの表現）
+ *
+ * フロー: file_select → file_overview → id_integration → scoring_conflict → update_confirm → final_confirm → execute
+ *
+ * Step 2 (file_overview): ファイルの概要説明（ID一致数、判断必要数を表示）
+ * Step 3 (id_integration): データの統合（レコードのIDをどうするか決める）
+ * Step 3.5 (scoring_conflict): 採点結果の競合解決（同じ生徒×設問で異なる採点がある場合）
+ * Step 4 (update_confirm): データの更新（ID以外のカラムをどうするか決める）
  */
 export type ImportWizardStep =
   | "file_select" // Step 1: ファイル選択
-  | "mode_select" // Step 2: モード選択
-  | "matching_config" // Step 3: マッチング設定
-  | "conflict_resolve" // Step 4: 競合解決
-  | "execute" // Step 5: 実行
+  | "file_overview" // Step 2: ファイルの概要説明
+  | "id_integration" // Step 3: データの統合（ID選択）
+  | "scoring_conflict" // Step 3.5: 採点結果の競合解決
+  | "update_confirm" // Step 4: 情報の更新確認（情報を上書きするか）
+  | "final_confirm" // Step 5: 最終確認（サマリー表示）
+  | "execute" // Step 6: 実行中/完了
+
+/**
+ * デフォルトのID統合設定
+ */
+export const DEFAULT_ID_INTEGRATION_CONFIG: IdIntegrationConfig = {
+  student: { strategy: "by_student_number", decisions: [] },
+  class: { strategy: "by_name", decisions: [] },
+  subtotalGroup: { strategy: "by_name", decisions: [] },
+}
 
 /**
  * ウィザードの状態
@@ -565,18 +828,32 @@ export interface ImportWizardState {
   archivePath: string | null
   /** 解析されたマニフェスト */
   manifest: ArchiveManifest | null
-  /** インポートモード */
-  mode: ImportMode | null
-  /** マッチング設定 */
+  /** 事前照合結果（Step 2 表示用） */
+  fileOverviewData: FileOverviewData | null
+  /** ID統合設定（Step 3 で設定） */
+  idIntegrationConfig: IdIntegrationConfig
+  /** 採点結果の競合解決設定（Step 3.5 で設定） */
+  scoringConflictConfig: ScoringConflictConfig
+  /** マッチング設定（照合方法の選択）- 後方互換用 */
   matchingConfig: MatchingConfig
-  /** 競合検出結果 */
-  conflictDetectionResult: ConflictDetectionResult | null
-  /** 競合解決設定 */
-  conflictResolutions: ConflictResolutions
   /** 処理中フラグ */
   isProcessing: boolean
   /** エラーメッセージ */
   error: string | null
+  /** カテゴリ別照合サマリー（先生向け表示用） */
+  matchingSummaries: CategoryMatchingSummary[]
+  /** ユーザーの照合判断（アイテムID -> 判断結果） */
+  matchingDecisions: Record<string, MatchingDecisionType>
+  /** ユーザーの更新判断（アイテムID -> 更新するか） */
+  updateDecisions: Record<string, boolean>
+}
+
+/**
+ * デフォルトの採点結果競合解決設定
+ */
+export const DEFAULT_SCORING_CONFLICT_CONFIG: ScoringConflictConfig = {
+  strategy: "newer_wins",
+  manualResolutions: {},
 }
 
 /**
@@ -586,10 +863,88 @@ export const INITIAL_WIZARD_STATE: ImportWizardState = {
   currentStep: "file_select",
   archivePath: null,
   manifest: null,
-  mode: null,
+  fileOverviewData: null,
+  idIntegrationConfig: DEFAULT_ID_INTEGRATION_CONFIG,
+  scoringConflictConfig: DEFAULT_SCORING_CONFLICT_CONFIG,
   matchingConfig: DEFAULT_MATCHING_CONFIG,
-  conflictDetectionResult: null,
-  conflictResolutions: {},
   isProcessing: false,
   error: null,
+  matchingSummaries: [],
+  matchingDecisions: {},
+  updateDecisions: {},
+}
+
+// =============================================================================
+// Step 3.5: 採点結果の競合解決 用の型
+// =============================================================================
+
+/**
+ * 採点結果の競合解決方針
+ *
+ * UI表現（先生向け）:
+ * - import_wins: "すべてファイルの採点を使う"
+ * - existing_wins: "すべてこのPCの採点を使う"
+ * - newer_wins: "新しい方（最終更新日時）を使う"
+ * - manual: "競合している採点を1つずつ確認する"
+ */
+export type ScoringConflictResolutionStrategy =
+  | "import_wins"
+  | "existing_wins"
+  | "newer_wins"
+  | "manual"
+
+/**
+ * 採点結果の競合（1件分）
+ */
+export interface ScoringConflict {
+  /** インポートデータのQuestionScore ID */
+  importScoreId: string
+  /** 既存データのQuestionScore ID */
+  existingScoreId: string
+  /** 生徒名（表示用） */
+  studentName: string
+  /** 生徒ID */
+  studentId: string
+  /** 設問ラベル（例: "問1"） */
+  questionLabel: string
+  /** CropRegion ID */
+  cropRegionId: string
+  /** インポートデータの採点結果 */
+  importScore: {
+    status: string
+    partialScore: number | null
+    updatedAt: string
+  }
+  /** 既存データの採点結果 */
+  existingScore: {
+    status: string
+    partialScore: number | null
+    updatedAt: string
+  }
+  /** 配点（表示用） */
+  maxPoints: number | null
+  /** 個別選択結果（manualの場合） */
+  resolution?: "import" | "existing"
+}
+
+/**
+ * 採点結果の競合検出結果
+ */
+export interface ScoringConflictData {
+  /** 競合の件数 */
+  conflictCount: number
+  /** 競合しなかった件数（新規追加） */
+  newCount: number
+  /** 競合の詳細リスト */
+  conflicts: ScoringConflict[]
+}
+
+/**
+ * 採点結果の競合解決設定
+ */
+export interface ScoringConflictConfig {
+  /** 解決方針 */
+  strategy: ScoringConflictResolutionStrategy
+  /** 個別選択結果（strategyがmanualの場合） */
+  manualResolutions: Record<string, "import" | "existing">
 }
