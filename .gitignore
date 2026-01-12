@@ -54,6 +54,7 @@ data/
 **/*_scored.pdf
 **/*_results.xlsx
 **/*_backup.*
+backups
 
 # ビルド出力・テスト
 temp-test/
