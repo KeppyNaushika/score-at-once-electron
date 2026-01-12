@@ -176,6 +176,7 @@ export const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
             value={drawingColor}
             onChange={(e) => onColorChange(e.target.value)}
             disabled={readOnly}
+            title="カスタム色を選択"
             className="h-6 w-8 cursor-pointer rounded border border-gray-300 disabled:cursor-not-allowed"
           />
         </div>

@@ -70,6 +70,7 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
               onChange={(e) =>
                 handleChange("lineExtension", parseInt(e.target.value))
               }
+              title="線の延長"
               className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
@@ -91,6 +92,7 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
               onChange={(e) =>
                 handleChange("minWidth", parseFloat(e.target.value))
               }
+              title="最小幅"
               className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
@@ -112,6 +114,7 @@ export const DetectionSettingsPanel = memo(function DetectionSettingsPanel({
               onChange={(e) =>
                 handleChange("minHeight", parseFloat(e.target.value))
               }
+              title="最小高さ"
               className="h-1.5 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
             />
           </div>
