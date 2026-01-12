@@ -15,11 +15,7 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+import { Collapsible, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { PreMatchingResult } from "@/types/projectArchive.types"
 
