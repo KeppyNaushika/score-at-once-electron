@@ -133,7 +133,7 @@ CREATE TABLE "classes" (
 -- CreateTable
 CREATE TABLE "Student" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "studentId" TEXT NOT NULL,
+    "studentNumber" TEXT NOT NULL,
     "lastName" TEXT NOT NULL,
     "firstName" TEXT NOT NULL,
     "lastNameKana" TEXT NOT NULL,
@@ -441,7 +441,7 @@ CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 CREATE UNIQUE INDEX "classes_name_key" ON "classes"("name");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Student_studentId_key" ON "Student"("studentId");
+CREATE UNIQUE INDEX "Student_studentNumber_key" ON "Student"("studentNumber");
 
 -- CreateIndex
 CREATE INDEX "StudentClassMembership_studentId_idx" ON "StudentClassMembership"("studentId");
