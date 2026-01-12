@@ -3,7 +3,7 @@
  * @description マウスダウン、移動、アップイベントの処理を行う
  */
 
-import { useCallback, useRef,useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import type { DrawingTool } from "@/hooks/useDrawingAnnotations"
 import type {

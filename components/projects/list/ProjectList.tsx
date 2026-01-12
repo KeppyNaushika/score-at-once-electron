@@ -44,8 +44,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { SortDirection,useTableSort } from "@/hooks/useTableSort"
-import { isValidProject,ProjectWithDetails } from "@/types/common.types"
+import { SortDirection, useTableSort } from "@/hooks/useTableSort"
+import { isValidProject, ProjectWithDetails } from "@/types/common.types"
 import { getProjectStatus } from "@/utils/projectStatus"
 
 interface ProjectSortable {

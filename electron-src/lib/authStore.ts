@@ -1,5 +1,5 @@
 import { app } from "electron"
-import { existsSync, readFileSync, unlinkSync,writeFileSync } from "fs"
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs"
 import { join } from "path"
 
 interface AuthData {

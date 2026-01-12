@@ -20,7 +20,7 @@ export function TableHeaderRow({
   return (
     <TableHeader className="bg-background sticky top-0 z-10">
       <TableRow>
-        <TableHead className="w-[100px]">
+        <TableHead className="w-25">
           <div className="flex items-center gap-2">
             <GripVertical className="text-muted-foreground h-4 w-4" />
             <Checkbox
@@ -32,8 +32,8 @@ export function TableHeaderRow({
             />
           </div>
         </TableHead>
-        <TableHead className="w-[80px]">出席番号</TableHead>
-        <TableHead className="w-[100px]">学籍番号</TableHead>
+        <TableHead className="w-20">出席番号</TableHead>
+        <TableHead className="w-25">学籍番号</TableHead>
         <TableHead>氏名</TableHead>
         <TableHead>ふりがな</TableHead>
         <TableHead>学級</TableHead>

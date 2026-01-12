@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronDown, ChevronsUpDown,ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react"
 import * as React from "react"
 
 import type { SortDirection } from "@/hooks/useTableSort"

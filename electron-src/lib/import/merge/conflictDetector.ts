@@ -16,7 +16,7 @@ import type {
   MatchingSummary,
 } from "../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
-import { type MatchResult,performAllMatching } from "./matcher"
+import { type MatchResult, performAllMatching } from "./matcher"
 
 // =============================================================================
 // フィールドラベルマッピング（先生向けUI表示用）

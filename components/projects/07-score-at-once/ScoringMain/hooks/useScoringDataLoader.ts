@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
-import { isValidProject,ProjectWithDetails } from "@/types/common.types"
+import { isValidProject, ProjectWithDetails } from "@/types/common.types"
 import { StudentAnswerImageWithDetails } from "@/types/prismaExtensions"
 
 interface ScoringDataLoaderResult {

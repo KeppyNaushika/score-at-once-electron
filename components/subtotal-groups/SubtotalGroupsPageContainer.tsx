@@ -1,7 +1,7 @@
 "use client"
 
 import { Plus, Search } from "lucide-react"
-import { useCallback,useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { SubtotalGroupCard } from "@/components/subtotal-groups/components/SubtotalGroupCard"

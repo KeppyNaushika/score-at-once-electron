@@ -16,7 +16,7 @@ import {
   StudentAnswersTabsNavigation,
   type StudentAnswerTab,
 } from "./components"
-import { usePendingChanges,useStudentAnswersData } from "./hooks"
+import { usePendingChanges, useStudentAnswersData } from "./hooks"
 
 /**
  * StudentAnswersPage - Main page component for student answer management

@@ -1,7 +1,7 @@
 "use client"
 
 import { FileUp, Loader2 } from "lucide-react"
-import { type DragEvent,useCallback, useState } from "react"
+import { type DragEvent, useCallback, useState } from "react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"

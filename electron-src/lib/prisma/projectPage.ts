@@ -1,4 +1,4 @@
-import type { Prisma,ProjectPage } from "@prisma/client"
+import type { Prisma, ProjectPage } from "@prisma/client"
 
 import prisma from "./client"
 

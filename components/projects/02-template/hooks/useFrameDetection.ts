@@ -2,7 +2,7 @@
  * 採点枠検出フック
  */
 
-import { useCallback, useRef,useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import {
   DEFAULT_DETECTION_MODE,

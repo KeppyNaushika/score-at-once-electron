@@ -1,7 +1,7 @@
 "use client"
 
-import { CropRegion, MasterImage, Prisma,Project } from "@prisma/client"
-import { useCallback, useEffect,useState } from "react"
+import { CropRegion, MasterImage, Prisma, Project } from "@prisma/client"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 export type ProjectWithDetails = Project & {

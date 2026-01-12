@@ -13,7 +13,7 @@ import type {
 
 import { useDrawingCreation } from "./useDrawingCreation"
 import { useElementMovement } from "./useElementMovement"
-import { type ResizeOriginalBounds,useElementResize } from "./useElementResize"
+import { type ResizeOriginalBounds, useElementResize } from "./useElementResize"
 import { useElementSelection } from "./useElementSelection"
 import { useRectangleSelection } from "./useRectangleSelection"
 

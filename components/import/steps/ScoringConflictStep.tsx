@@ -92,7 +92,9 @@ export function ScoringConflictStep({ wizard }: ScoringConflictStepProps) {
       {/* 解決方針の選択 */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">どちらの採点を使いますか？</CardTitle>
+          <CardTitle className="text-base">
+            どちらの採点を使いますか？
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <RadioGroup
@@ -195,8 +197,11 @@ function ManualResolutionPanel({
   wizard,
   conflicts,
 }: ManualResolutionPanelProps) {
-  const { setScoringConflictResolution, setAllScoringConflictResolutions, state } =
-    wizard
+  const {
+    setScoringConflictResolution,
+    setAllScoringConflictResolutions,
+    state,
+  } = wizard
   const { manualResolutions } = state.scoringConflictConfig
 
   // ページネーション
@@ -229,7 +234,9 @@ function ManualResolutionPanel({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAllScoringConflictResolutions(allIds, "existing")}
+              onClick={() =>
+                setAllScoringConflictResolutions(allIds, "existing")
+              }
             >
               全てこのPC
             </Button>
@@ -237,7 +244,7 @@ function ManualResolutionPanel({
         </div>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-75">
           <div className="space-y-3">
             {currentConflicts.map((conflict) => (
               <ConflictCard
@@ -245,7 +252,10 @@ function ManualResolutionPanel({
                 conflict={conflict}
                 resolution={manualResolutions[conflict.importScoreId]}
                 onResolutionChange={(resolution) =>
-                  setScoringConflictResolution(conflict.importScoreId, resolution)
+                  setScoringConflictResolution(
+                    conflict.importScoreId,
+                    resolution
+                  )
                 }
               />
             ))}
@@ -269,7 +279,9 @@ function ManualResolutionPanel({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+              onClick={() =>
+                setCurrentPage((p) => Math.min(totalPages - 1, p + 1))
+              }
               disabled={currentPage === totalPages - 1}
             >
               <ChevronRight className="h-4 w-4" />
@@ -295,8 +307,13 @@ function ConflictCard({
   resolution,
   onResolutionChange,
 }: ConflictCardProps) {
-  const formatScore = (status: string, partialScore: number | null, maxPoints: number | null) => {
-    if (status === "CORRECT") return `正解${maxPoints ? `（${maxPoints}点）` : ""}`
+  const formatScore = (
+    status: string,
+    partialScore: number | null,
+    maxPoints: number | null
+  ) => {
+    if (status === "CORRECT")
+      return `正解${maxPoints ? `（${maxPoints}点）` : ""}`
     if (status === "INCORRECT") return "不正解（0点）"
     if (status === "PARTIAL" && partialScore !== null)
       return `部分点（${partialScore}点）`

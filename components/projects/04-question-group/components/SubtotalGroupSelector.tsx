@@ -2,7 +2,7 @@
 
 import { Calculator, Plus, Search, Trash2 } from "lucide-react"
 import Link from "next/link"
-import { useEffect,useState } from "react"
+import { useEffect, useState } from "react"
 
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
