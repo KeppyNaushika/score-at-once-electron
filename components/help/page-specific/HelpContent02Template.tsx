@@ -1,12 +1,13 @@
 "use client"
 
+import { CheckCircle, Lightbulb, Mouse, Target } from "lucide-react"
+
 import {
   Badge,
   HelpSection,
   StepItem,
   TipItem,
 } from "@/components/help/common/HelpComponents"
-import { CheckCircle, Lightbulb, Mouse, Target } from "lucide-react"
 
 export function HelpContent02Template() {
   return (

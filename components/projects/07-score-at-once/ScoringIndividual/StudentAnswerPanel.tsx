@@ -1,5 +1,7 @@
 "use client"
 
+import { Users } from "lucide-react"
+
 import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Users } from "lucide-react"
 
 interface Student {
   id: string

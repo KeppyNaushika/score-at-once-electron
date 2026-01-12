@@ -1,10 +1,12 @@
 "use client"
 
-import type { StudentAnswerImageWithProjectStudents } from "@/components/projects/07-score-at-once/types"
 import { useMemo } from "react"
+
+import type { StudentAnswerImageWithProjectStudents } from "@/components/projects/07-score-at-once/types"
+
 import {
-  ScoringBehaviorSelector,
   type ScoringBehavior,
+  ScoringBehaviorSelector,
 } from "./ScoringBehaviorSelector"
 import { StudentAnswerPanel } from "./StudentAnswerPanel"
 

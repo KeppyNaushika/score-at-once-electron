@@ -1,5 +1,7 @@
 "use client"
 
+import { Ban, FileX, Upload, X } from "lucide-react"
+
 import type { EmptyTableCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
   ContextMenu,
@@ -9,7 +11,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { Ban, FileX, Upload, X } from "lucide-react"
 
 export function EmptyTableCell({
   student,

@@ -7,8 +7,8 @@ import type {
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import type {
   CropRegionWithProjectPage,
-  StudentAnswerImageWithProjectStudents,
   ScoringData,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
 

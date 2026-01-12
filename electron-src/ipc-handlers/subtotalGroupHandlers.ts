@@ -1,13 +1,14 @@
 import { ipcMain } from "electron"
+
 import {
-  getSubtotalGroups,
-  createSubtotalGroup,
-  updateSubtotalGroup,
-  deleteSubtotalGroup,
-  getAvailableSubtotalGroupsForProject,
-  getActiveSubtotalGroupsForProject,
   addSubtotalGroupToProject,
+  createSubtotalGroup,
+  deleteSubtotalGroup,
+  getActiveSubtotalGroupsForProject,
+  getAvailableSubtotalGroupsForProject,
+  getSubtotalGroups,
   removeSubtotalGroupFromProject,
+  updateSubtotalGroup,
 } from "../lib/prisma/subtotalGroup"
 
 export function setupSubtotalGroupHandlers(): void {

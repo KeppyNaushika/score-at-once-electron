@@ -1,5 +1,15 @@
 "use client"
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  HelpCircle,
+  Link2,
+  UserPlus,
+} from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -16,15 +26,6 @@ import type {
   MatchingCandidate,
   MatchingDecisionType,
 } from "@/types/projectArchive.types"
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronDown,
-  HelpCircle,
-  Link2,
-  UserPlus,
-} from "lucide-react"
-import { useState } from "react"
 
 interface DataMatchingStepProps {
   wizard: UseImportWizardReturn

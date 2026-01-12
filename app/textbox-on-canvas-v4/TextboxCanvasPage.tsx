@@ -16,13 +16,11 @@
 
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { useCallback, useEffect, useState } from "react"
-
-// 型定義
-import type { AnchorDirection } from "./types"
 
 // 分離されたコンポーネントとフック
 import {
@@ -34,6 +32,8 @@ import {
 import { AnchorControlPanel } from "./components/AnchorControlPanel"
 import { SAMPLE_IMAGE_URL } from "./constants"
 import { useCanvasManagement, useTextBoxOperations } from "./hooks"
+// 型定義
+import type { AnchorDirection } from "./types"
 
 /**
  * メインのTextbox Canvas ページ

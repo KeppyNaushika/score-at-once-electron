@@ -6,8 +6,9 @@
  * - selectionBorderColorカラムのみを読み書き
  */
 
-import { useAuth } from "@/contexts/AuthContext"
 import { useEffect, useRef, useState } from "react"
+
+import { useAuth } from "@/contexts/AuthContext"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316" // orange-500
 

@@ -1,12 +1,13 @@
 "use client"
 
+import { Calendar, CheckCircle, Lightbulb, School, Users } from "lucide-react"
+
 import {
   Badge,
   HelpSection,
   StepItem,
   TipItem,
 } from "@/components/help/common/HelpComponents"
-import { Calendar, CheckCircle, Lightbulb, School, Users } from "lucide-react"
 
 export function HelpContentClasses() {
   return (

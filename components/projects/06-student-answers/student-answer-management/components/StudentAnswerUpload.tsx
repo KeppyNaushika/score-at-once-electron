@@ -1,5 +1,7 @@
 "use client"
 
+import { useCallback, useEffect } from "react"
+
 import { FileUploadZone } from "@/components/projects/06-student-answers/student-answer-management/components/FileUploadZone"
 import { useStudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/hooks/useStudentAnswerUpload"
 import type { StudentAnswerUploadProps } from "@/components/projects/06-student-answers/student-answer-management/types"
@@ -10,7 +12,6 @@ import {
 import { StudentAnswerTable } from "@/components/projects/06-student-answers/student-answer-table/components/StudentAnswerTable"
 import type { PlacementStrategy } from "@/components/projects/06-student-answers/types"
 import { PasswordDialog } from "@/components/ui/password-dialog"
-import { useCallback, useEffect } from "react"
 
 export function StudentAnswerUpload({
   projectId,

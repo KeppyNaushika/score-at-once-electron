@@ -1,8 +1,9 @@
 "use client"
 
-import { PasswordDialog } from "@/components/ui/password-dialog"
-import { useMasterAnswers } from "../hooks/useMasterAnswers"
 import type { MasterAnswerManagerProps } from "@/components/projects/01-upload/types"
+import { PasswordDialog } from "@/components/ui/password-dialog"
+
+import { useMasterAnswers } from "../hooks/useMasterAnswers"
 import { FileUploadDropzone } from "./FileUploadDropzone"
 import { MasterAnswerGallery } from "./MasterAnswerGallery"
 

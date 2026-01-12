@@ -1,5 +1,6 @@
-import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"
 import { RefObject } from "react"
+
+import type { GridAnswerItem } from "@/components/projects/07-score-at-once/ScoringGrid/types/gridTypes"
 
 interface UseGridDragSelectionProps {
   gridRef: RefObject<HTMLDivElement | null>

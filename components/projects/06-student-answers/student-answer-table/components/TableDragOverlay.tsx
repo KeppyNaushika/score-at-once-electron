@@ -1,7 +1,8 @@
+import { DragOverlay } from "@dnd-kit/core"
+
 import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"
 import type { PreviewMode } from "@/components/projects/06-student-answers/student-answer-table/types"
 import type { UnifiedFile } from "@/components/projects/06-student-answers/types"
-import { DragOverlay } from "@dnd-kit/core"
 
 interface TableDragOverlayProps {
   activeFile: UnifiedFile | null

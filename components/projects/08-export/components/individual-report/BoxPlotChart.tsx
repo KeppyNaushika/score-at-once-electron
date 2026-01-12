@@ -5,6 +5,8 @@
  * SVGで描画し、印刷時もきれいにスケール
  * renderer側で欠席生徒の除外オプションに基づいて統計を再計算
  */
+import { useMemo } from "react"
+
 import type {
   BoxPlotData,
   StatisticsData,
@@ -12,7 +14,6 @@ import type {
   SubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
-import { useMemo } from "react"
 
 /** 受験状態フィルタ */
 interface BoxPlotIncludeStatuses {

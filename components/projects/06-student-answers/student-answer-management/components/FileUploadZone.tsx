@@ -3,10 +3,10 @@
 import { RefreshCw, Upload } from "lucide-react"
 import { useDropzone } from "react-dropzone"
 
+import type { FileUploadZoneProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import type { FileUploadZoneProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 
 export function FileUploadZone({
   onDrop,

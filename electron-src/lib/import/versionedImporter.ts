@@ -15,18 +15,18 @@ import type {
   ArchiveSubtotalsData,
   ArchiveUsersData,
 } from "../../../types/projectArchive.types"
-import {
-  CURRENT_VERSION,
-  SUPPORTED_VERSIONS,
-  detectArchiveVersion,
-  isSupportedVersion,
-  requiresTransformation,
-  transformToLatest,
-} from "./transformers"
 import type {
   ArchiveData,
   ArchiveVersion,
   ChainTransformResult,
+} from "./transformers"
+import {
+  CURRENT_VERSION,
+  detectArchiveVersion,
+  isSupportedVersion,
+  requiresTransformation,
+  SUPPORTED_VERSIONS,
+  transformToLatest,
 } from "./transformers"
 
 // =============================================================================
@@ -35,10 +35,10 @@ import type {
 
 export {
   CURRENT_VERSION,
-  SUPPORTED_VERSIONS,
   detectArchiveVersion,
   isSupportedVersion,
   requiresTransformation,
+  SUPPORTED_VERSIONS,
 }
 
 export type { ArchiveVersion }

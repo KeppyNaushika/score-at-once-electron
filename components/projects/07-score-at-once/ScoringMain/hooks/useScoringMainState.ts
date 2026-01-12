@@ -1,9 +1,10 @@
+import { useCallback, useRef, useState } from "react"
+
 import type {
   GradingMode,
   StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 import { getModifierKeyLabel } from "@/lib/platformUtils"
-import { useCallback, useRef, useState } from "react"
 
 export function useScoringMainState() {
   /** 採点モード状態 */

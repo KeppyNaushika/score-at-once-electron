@@ -1,5 +1,19 @@
 "use client"
 
+import {
+  Ellipsis,
+  FileText,
+  GripVertical,
+  Hash,
+  ListOrdered,
+  MessageSquare,
+  Pencil,
+  Trash2,
+  Trophy,
+  User,
+} from "lucide-react"
+import type { ComponentType } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,19 +28,6 @@ import {
   CropRegionAreaType,
 } from "@/types/common.types"
 import type { CropRegionWithDetails } from "@/types/electron"
-import {
-  Ellipsis,
-  FileText,
-  GripVertical,
-  Hash,
-  ListOrdered,
-  MessageSquare,
-  Pencil,
-  Trash2,
-  Trophy,
-  User,
-} from "lucide-react"
-import type { ComponentType } from "react"
 
 // AreaTypeの日本語表示マッピング
 const areaTypeToJapanese: Record<string, string> = {

@@ -12,16 +12,18 @@
  * - macOSデッドキー対応
  */
 
-import { useAuth } from "@/contexts/AuthContext"
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from "react"
+
+import { useAuth } from "@/contexts/AuthContext"
+
 import { DEFAULT_KEYBINDINGS } from "../../constants/scoringKeybindings"
 import type {
   CommandHandler,

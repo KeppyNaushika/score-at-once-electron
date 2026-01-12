@@ -1,10 +1,12 @@
 "use client"
 
+import { FileUp, Loader2 } from "lucide-react"
+import { type DragEvent,useCallback, useState } from "react"
+import { toast } from "sonner"
+
 import { cn } from "@/lib/utils"
 import type { ImportedFile } from "@/types/pdfTools.types"
-import { FileUp, Loader2 } from "lucide-react"
-import { useCallback, useState, type DragEvent } from "react"
-import { toast } from "sonner"
+
 import { useImportedFiles } from "./hooks/useImportedFiles"
 
 interface FileDropzoneProps {

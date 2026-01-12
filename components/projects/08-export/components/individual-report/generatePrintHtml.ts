@@ -10,6 +10,7 @@ import type {
   StatisticsData,
   SubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/types"
+
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 
 /** 受験状態フィルタ */

@@ -1,32 +1,33 @@
-import { ipcMain } from "electron"
 import { Prisma } from "@prisma/client"
-import {
-  fetchStudents,
-  createStudent,
-  updateStudent,
-  deleteStudent,
-  getStudentExamResults,
-} from "../lib/prisma/student"
-import {
-  getStudentsForProject,
-  addStudentsToProject,
-  removeStudentsFromProject,
-  updateStudentProjectStatus,
-  getClassesNotInProject,
-  getStudentsNotInProject,
-  updateStudentOrders,
-} from "../lib/prisma/projectStudent"
+import { ipcMain } from "electron"
+
 import { checkGradingDataForStudents } from "../lib/prisma/gradingData"
 import {
+  addStudentsToProject,
+  getClassesNotInProject,
+  getStudentsForProject,
+  getStudentsNotInProject,
+  removeStudentsFromProject,
+  updateStudentOrders,
+  updateStudentProjectStatus,
+} from "../lib/prisma/projectStudent"
+import {
+  createStudent,
+  deleteStudent,
+  fetchStudents,
+  getStudentExamResults,
+  updateStudent,
+} from "../lib/prisma/student"
+import {
+  addStudentToClass,
   createStudentClassMembership,
-  updateStudentClassMembership,
   deleteStudentClassMembership,
-  getCurrentMembershipsByStudentId,
+  endStudentMembership,
   getAllMembershipsByStudentId,
   getCurrentMembershipsByClassId,
-  addStudentToClass,
-  endStudentMembership,
+  getCurrentMembershipsByStudentId,
   getMembershipsByDateRange,
+  updateStudentClassMembership,
 } from "../lib/prisma/studentClassMembership"
 
 export function setupStudentHandlers(): void {

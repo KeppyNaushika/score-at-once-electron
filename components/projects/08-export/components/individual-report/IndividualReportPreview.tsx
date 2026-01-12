@@ -5,12 +5,14 @@
  * HTML/CSSベースでWYSIWYGプレビューと印刷に対応
  * 改ページプレビュー対応（実際の印刷レイアウトをシミュレート）
  */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
 import type {
   IndividualReportData,
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
 import { cn } from "@/lib/utils"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChart } from "./BoxPlotChart"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"

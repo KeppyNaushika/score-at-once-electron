@@ -1,13 +1,15 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { useAuth } from "@/contexts/AuthContext"
 import { Plus, Settings, User as UserIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { UserCreateModal } from "./UserCreateModal"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { useAuth } from "@/contexts/AuthContext"
+
 import { PasscodeModal } from "./PasscodeModal"
+import { UserCreateModal } from "./UserCreateModal"
 
 interface User {
   id: string
@@ -67,7 +69,7 @@ export default function UserSelection() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
           <p className="mt-4 text-lg text-gray-600">読み込み中...</p>
@@ -77,7 +79,7 @@ export default function UserSelection() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100 p-4">
       <div className="w-full max-w-4xl">
         <div className="mb-8 text-center">
           <h1 className="mb-4 text-4xl font-bold text-gray-900">一括採点</h1>
@@ -94,7 +96,7 @@ export default function UserSelection() {
               onClick={() => handleUserSelect(user)}
             >
               <CardContent className="p-6 text-center">
-                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 transition-all duration-200 group-hover:from-blue-600 group-hover:to-purple-700">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600 transition-all duration-200 group-hover:from-blue-600 group-hover:to-purple-700">
                   <UserIcon className="h-10 w-10 text-white" />
                 </div>
                 <h3 className="mb-2 text-xl font-semibold text-gray-900">
@@ -105,7 +107,7 @@ export default function UserSelection() {
                   {user.role || "教師"}
                 </p>
                 <Button
-                  className="mt-4 w-full rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 px-4 py-2 font-medium text-white transition-all duration-200 hover:from-blue-600 hover:to-purple-700"
+                  className="mt-4 w-full rounded-lg bg-linear-to-r from-blue-500 to-purple-600 px-4 py-2 font-medium text-white transition-all duration-200 hover:from-blue-600 hover:to-purple-700"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleUserSelect(user)

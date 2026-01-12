@@ -1,4 +1,5 @@
 import type { Prisma, SubtotalGroup } from "@prisma/client"
+
 import prisma from "./client"
 
 // QuestionGroup を作成 (SubtotalGroup として実装)

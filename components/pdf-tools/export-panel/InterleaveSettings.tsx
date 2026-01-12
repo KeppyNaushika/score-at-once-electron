@@ -1,5 +1,8 @@
 "use client"
 
+import { RotateCw, Settings2 } from "lucide-react"
+import { useEffect, useRef } from "react"
+
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -16,8 +19,6 @@ import type {
   NUpLayout,
   RotationDegree,
 } from "@/types/pdfTools.types"
-import { RotateCw, Settings2 } from "lucide-react"
-import { useEffect, useRef } from "react"
 
 interface InterleaveSettingsProps {
   files: ImportedFile[]

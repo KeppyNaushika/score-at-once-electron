@@ -1,7 +1,6 @@
 "use client"
 
 import { DrawingToolPalette } from "./DrawingToolPalette"
-import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import { useDrawingState } from "./hooks/core/useDrawingState"
 import { useImageCanvas } from "./hooks/core/useImageCanvas"
 import { useImageNavigation } from "./hooks/navigation/useImageNavigation"
@@ -15,6 +14,7 @@ import {
   useTextInputStateNotifier,
   useZoomAndScroll,
 } from "./hooks/view"
+import { RichTextEditorModalV4 } from "./RichTextEditorModalV4"
 import type {
   AnswerIndividualViewProps,
   LineStyle,

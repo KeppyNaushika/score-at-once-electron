@@ -1,5 +1,7 @@
 "use client"
 
+import { Search } from "lucide-react"
+
 import type {
   ClassGroup,
   StudentStatus,
@@ -12,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search } from "lucide-react"
 
 interface TableFiltersProps {
   searchTerm: string

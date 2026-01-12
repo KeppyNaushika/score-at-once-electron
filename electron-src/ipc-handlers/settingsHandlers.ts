@@ -3,32 +3,33 @@
  */
 
 import { ipcMain } from "electron"
+
 import {
-  getUserKeyboardShortcuts,
-  bulkUpsertUserKeyboardShortcuts,
-  resetUserKeyboardShortcuts,
-  getUserScoringPreference,
-  upsertUserScoringPreference,
-  getScoringPreferenceColumn,
-  setScoringPreferenceColumn,
-  type ScoringPreferenceData,
-  type ScoringPreferenceColumnName,
-  type ScoringPreferenceColumns,
-} from "../lib/prisma/userSettings"
-import {
-  getProjectMarkingFormats,
-  bulkUpsertProjectMarkingFormats,
-  getProjectExportSettings,
-  upsertProjectExportSettings,
-  type MarkingFormatData,
-} from "../lib/prisma/projectSettings"
-import {
-  getCropRegionMarkingOverrides,
   bulkUpsertCropRegionMarkingOverrides,
-  resetCropRegionMarkingOverrides,
+  getCropRegionMarkingOverrides,
   getProjectCropRegionMarkingOverrides,
   type MarkingOverrideData,
+  resetCropRegionMarkingOverrides,
 } from "../lib/prisma/cropRegionMarkingOverride"
+import {
+  bulkUpsertProjectMarkingFormats,
+  getProjectExportSettings,
+  getProjectMarkingFormats,
+  type MarkingFormatData,
+  upsertProjectExportSettings,
+} from "../lib/prisma/projectSettings"
+import {
+  bulkUpsertUserKeyboardShortcuts,
+  getScoringPreferenceColumn,
+  getUserKeyboardShortcuts,
+  getUserScoringPreference,
+  resetUserKeyboardShortcuts,
+  type ScoringPreferenceColumnName,
+  type ScoringPreferenceColumns,
+  type ScoringPreferenceData,
+  setScoringPreferenceColumn,
+  upsertUserScoringPreference,
+} from "../lib/prisma/userSettings"
 
 export function registerSettingsHandlers() {
   // =========================================================================

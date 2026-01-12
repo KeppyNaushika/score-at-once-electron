@@ -1,5 +1,18 @@
 "use client"
 
+import {
+  CheckCircle,
+  ChevronDown,
+  FileText,
+  HelpCircle,
+  Layers,
+  Loader2,
+  School,
+  User,
+  Users,
+} from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -9,18 +22,6 @@ import {
 } from "@/components/ui/collapsible"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { PreMatchingResult } from "@/types/projectArchive.types"
-import {
-  CheckCircle,
-  ChevronDown,
-  FileText,
-  HelpCircle,
-  Loader2,
-  Users,
-  School,
-  Layers,
-  User,
-} from "lucide-react"
-import { useState } from "react"
 
 interface FileOverviewStepProps {
   wizard: UseImportWizardReturn

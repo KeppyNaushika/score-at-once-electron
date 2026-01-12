@@ -5,6 +5,8 @@
  * - テキストキャンバス描画
  * - 描画の排他制御
  */
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import type {
   DrawingElement,
@@ -15,7 +17,7 @@ import type {
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react"
+
 import {
   clearSvgCache,
   renderTextElementV4,

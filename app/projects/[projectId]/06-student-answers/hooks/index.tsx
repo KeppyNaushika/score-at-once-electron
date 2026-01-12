@@ -2,6 +2,9 @@
  * Hooks for 06-student-answers page - quick inline version
  */
 
+import { useCallback, useState } from "react"
+import { toast } from "sonner"
+
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
 import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import type {
@@ -10,8 +13,7 @@ import type {
 } from "@/components/projects/06-student-answers/types"
 import type { ProjectPageWithDetails } from "@/types/electron.d"
 import type { StudentWithMemberships } from "@/types/prismaExtensions"
-import { useCallback, useState } from "react"
-import { toast } from "sonner"
+
 import type { StudentData } from "../components"
 
 // APIから返される生徒データの型（StudentWithMembershipsにプロジェクト固有フィールドを追加）

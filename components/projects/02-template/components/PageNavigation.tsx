@@ -1,5 +1,7 @@
 "use client"
 
+import { ChevronLeft, ChevronRight } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -8,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 type MasterImage = {
   id: string
   projectId: string

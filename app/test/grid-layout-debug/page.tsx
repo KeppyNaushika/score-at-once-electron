@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useCallback } from "react"
+import { useCallback,useEffect, useRef, useState } from "react"
 
 type LayoutDirection = "right-down" | "left-down" | "down-right" | "down-left"
 
@@ -146,7 +146,7 @@ function TestImage({
       style={cellStyle}
     >
       <canvas ref={canvasRef} style={canvasStyle} />
-      <div className="flex-shrink-0 truncate text-[10px] whitespace-nowrap text-gray-500">
+      <div className="shrink-0 truncate text-[10px] whitespace-nowrap text-gray-500">
         #{index} C:{dimensions.width.toFixed(0)}x{dimensions.height.toFixed(0)}
       </div>
     </div>

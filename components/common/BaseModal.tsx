@@ -1,5 +1,8 @@
 "use client"
 
+import { AlertTriangle, CheckCircle, Info, X } from "lucide-react"
+import React from "react"
+
 import { Button } from "@/components/ui/button"
 import {
   Modal,
@@ -9,8 +12,6 @@ import {
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal"
-import { AlertTriangle, CheckCircle, Info, X } from "lucide-react"
-import React from "react"
 
 export type ModalVariant =
   | "default"

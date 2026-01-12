@@ -1,7 +1,8 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Plus, Users } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
 
 interface StudentActionButtonsProps {
   selectedStudentsCount: number
@@ -15,7 +16,7 @@ export function StudentActionButtons({
   onAddStudents,
 }: StudentActionButtonsProps) {
   return (
-    <div className="mb-6 flex flex-shrink-0 items-start justify-between">
+    <div className="mb-6 flex shrink-0 items-start justify-between">
       <div className="flex gap-2">
         {selectedStudentsCount > 0 && (
           <Button variant="destructive" onClick={onRemoveStudents}>

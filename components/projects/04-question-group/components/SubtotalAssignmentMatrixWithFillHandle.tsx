@@ -1,5 +1,9 @@
 "use client"
 
+import type { Subtotal } from "@prisma/client"
+import { Calculator, RotateCcw } from "lucide-react"
+import { useEffect, useState } from "react"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,10 +19,8 @@ import {
   CropSubtotalWithRelations,
   SubtotalGroupWithItems,
 } from "@/types/electron"
-import type { Subtotal } from "@prisma/client"
-import { Calculator, RotateCcw } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useFillHandleDrag, type FillUpdate } from "../hooks/useFillHandleDrag"
+
+import { type FillUpdate,useFillHandleDrag } from "../hooks/useFillHandleDrag"
 import { CheckboxCellWithFillHandle } from "./CheckboxCellWithFillHandle"
 
 interface SubtotalAssignmentMatrixWithFillHandleProps {

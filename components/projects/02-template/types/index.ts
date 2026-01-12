@@ -2,8 +2,9 @@
  * 02-template (採点領域作成) 関連の型定義統合ファイル
  */
 
-import { CropRegionArea } from "@/types/common.types"
 import { Project, User } from "@prisma/client"
+
+import { CropRegionArea } from "@/types/common.types"
 
 // ============================================================================
 // Core Type Definitions

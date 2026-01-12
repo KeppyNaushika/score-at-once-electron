@@ -1,9 +1,10 @@
 "use client"
 
-import type { ProjectWithDetails } from "@/types/electron"
 import type { Project } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+
+import type { ProjectWithDetails } from "@/types/electron"
 
 export function useProjectDetail(projectId: string) {
   const [project, setProject] = useState<ProjectWithDetails | null>(null)

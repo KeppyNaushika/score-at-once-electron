@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 import type {
   ProjectWorkflowData,
   WorkflowPhase,
@@ -6,7 +8,6 @@ import type {
 } from "@/components/projects/detail/types"
 import type { ProjectWithDetails } from "@/types/common.types"
 import { getProjectProgress } from "@/utils/projectStatus"
-import { useMemo } from "react"
 
 /**
  * ワークフローデータを生成するカスタムフック

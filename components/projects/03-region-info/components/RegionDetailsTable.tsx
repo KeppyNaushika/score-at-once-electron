@@ -1,12 +1,13 @@
 "use client"
 
+import { Palette } from "lucide-react"
+import { useState } from "react"
+
 import { DeleteConfirmModal } from "@/components/projects/03-region-info/components/DeleteConfirmModal"
 import { RegionTableRow } from "@/components/projects/03-region-info/components/RegionTableRow"
 import { useDragAndDrop } from "@/components/projects/03-region-info/hooks/useDragAndDrop"
 import { useKeyboardNavigation } from "@/components/projects/03-region-info/hooks/useKeyboardNavigation"
 import type { CropRegionWithDetails } from "@/types/electron"
-import { Palette } from "lucide-react"
-import { useState } from "react"
 
 type RegionDetailsTableProps = {
   regions: CropRegionWithDetails[]

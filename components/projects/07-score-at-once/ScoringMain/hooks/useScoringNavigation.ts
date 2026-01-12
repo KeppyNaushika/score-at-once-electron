@@ -1,9 +1,10 @@
+import { useCallback } from "react"
+
 import type {
   CropRegionWithProjectPage,
   LayoutDirection,
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback } from "react"
 
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }

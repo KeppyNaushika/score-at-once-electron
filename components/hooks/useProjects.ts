@@ -1,8 +1,9 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
 import { useAuth } from "@/contexts/AuthContext"
 import type { ProjectWithDetails } from "@/types/electron"
-import { useCallback, useEffect, useState } from "react"
 
 export const useProjects = () => {
   const { user } = useAuth()

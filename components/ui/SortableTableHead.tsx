@@ -1,10 +1,10 @@
 "use client"
 
+import { ChevronDown, ChevronsUpDown,ChevronUp } from "lucide-react"
 import * as React from "react"
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import type { SortDirection } from "@/hooks/useTableSort"
+import { cn } from "@/lib/utils"
 
 interface SortableTableHeadProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
   sortKey: string
@@ -48,7 +48,7 @@ export function SortableTableHead({
         "text-foreground h-12 px-4 text-left align-middle font-medium whitespace-nowrap",
         "bg-card first:rounded-tl-lg last:rounded-tr-lg",
         "hover:bg-muted/60 cursor-pointer transition-colors select-none",
-        "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "[&:has([role=checkbox])]:pr-0 *:[[role=checkbox]]:translate-y-[2px]",
         className
       )}
       onClick={handleClick}

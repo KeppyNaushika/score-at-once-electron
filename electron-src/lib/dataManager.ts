@@ -1,6 +1,6 @@
 import { app } from "electron"
-import * as path from "path"
 import * as fs from "fs/promises"
+import * as path from "path"
 
 // アプリケーションのルートディレクトリ（実行ファイルがある場所）
 export const getAppRootPath = (): string => {

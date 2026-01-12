@@ -1,8 +1,10 @@
 "use client"
 
-import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
+
+import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+
 import { useFrameDetection } from "../hooks/useFrameDetection"
 import { DetectedRect } from "../types"
 import CropRegionList from "./CropRegionList"
@@ -222,9 +224,9 @@ const CropRegionEditor = ({
       </div>
 
       {/* Right Side - Region List with independent scroll */}
-      <div className="bg-background relative flex h-full w-80 flex-shrink-0 flex-col overflow-hidden border-l">
+      <div className="bg-background relative flex h-full w-80 shrink-0 flex-col overflow-hidden border-l">
         {/* 検出モード切替と設定 */}
-        <div className="flex-shrink-0 space-y-3 border-b p-3">
+        <div className="shrink-0 space-y-3 border-b p-3">
           <DetectionModeToggle
             mode={detectionMode}
             onModeChange={setDetectionMode}

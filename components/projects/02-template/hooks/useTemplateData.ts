@@ -1,11 +1,12 @@
-import { CropRegionArea } from "@/types/common.types"
 import { useCallback, useState } from "react"
 import { toast } from "sonner"
+
 import {
   AreaType,
   ImageDimensions,
   InitialDataState,
 } from "@/components/projects/02-template/types"
+import { CropRegionArea } from "@/types/common.types"
 type MasterImage = {
   id: string
   projectId: string

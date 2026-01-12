@@ -1,5 +1,9 @@
 "use client"
 
+import type { StudentClassMembership } from "@prisma/client"
+import { useParams } from "next/navigation"
+import { useState } from "react"
+
 import { CurrentMembershipsCard } from "@/app/students/[studentId]/components/CurrentMembershipsCard"
 import { ExamResultsCard } from "@/app/students/[studentId]/components/ExamResultsCard"
 import {
@@ -13,9 +17,6 @@ import { useStudentDetail } from "@/app/students/[studentId]/hooks/useStudentDet
 import { Membership } from "@/app/students/[studentId]/types"
 import StudentClassMembershipModal from "@/components/student/StudentClassMembershipModal"
 import StudentModal from "@/components/student/StudentModal"
-import type { StudentClassMembership } from "@prisma/client"
-import { useParams } from "next/navigation"
-import { useState } from "react"
 
 export default function StudentDetailPage() {
   const params = useParams()

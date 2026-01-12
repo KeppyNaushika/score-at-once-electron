@@ -1,5 +1,8 @@
 "use client"
 
+import { X as XIcon } from "lucide-react"
+import React, { useState } from "react"
+
 import { useProjects } from "@/components/hooks/useProjects"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,8 +17,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { X as XIcon } from "lucide-react"
-import React, { useState } from "react"
 
 interface CreateProjectWindowProps {
   onClose: () => void
@@ -136,7 +137,7 @@ const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
                   value={currentTagInput}
                   onChange={(e) => setCurrentTagInput(e.target.value)}
                   onKeyDown={handleTagInputKeyDown}
-                  className="flex-grow"
+                  className="grow"
                   placeholder="科目を入力してEnter"
                 />
                 <Button type="button" onClick={handleAddTag} variant="outline">

@@ -1,9 +1,10 @@
 "use client"
 
+import { UserCheck, UserMinus, UserX } from "lucide-react"
+
 import type { StudentCellProps } from "@/components/projects/06-student-answers/student-answer-management/types"
 import { Badge } from "@/components/ui/badge"
 import { TableCell } from "@/components/ui/table"
-import { UserCheck, UserMinus, UserX } from "lucide-react"
 
 export function StudentCell({
   student,

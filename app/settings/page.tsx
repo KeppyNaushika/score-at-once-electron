@@ -1,5 +1,9 @@
 "use client"
 
+import { Keyboard, Monitor, Users } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
+
 import { DisplaySettingsTab } from "@/app/settings/components/DisplaySettingsTab"
 import { KeyboardShortcutSection } from "@/app/settings/components/KeyboardShortcutSection"
 import { UserManagementTab } from "@/app/settings/components/UserManagementTab"
@@ -8,9 +12,6 @@ import { PasscodeEditModal } from "@/components/auth/PasscodeEditModal"
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { UserEditModal } from "@/components/auth/UserEditModal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Keyboard, Monitor, Users } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
 
 interface User {
   id: string

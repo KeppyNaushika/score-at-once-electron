@@ -1,8 +1,9 @@
 "use client"
 
-import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+
+import { useAuth } from "@/contexts/AuthContext"
 
 const Page = () => {
   const { user, isLoading } = useAuth()
@@ -19,7 +20,7 @@ const Page = () => {
   }, [user, isLoading, router])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="flex min-h-screen items-center justify-center bg-linear-to-br from-blue-50 to-indigo-100">
       <div className="space-y-4 text-center">
         <div className="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
         <div className="space-y-2">

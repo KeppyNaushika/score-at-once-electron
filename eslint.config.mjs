@@ -4,6 +4,7 @@ import typescriptParser from "@typescript-eslint/parser"
 import reactPlugin from "eslint-plugin-react"
 import reactHooksPlugin from "eslint-plugin-react-hooks"
 import nextPlugin from "@next/eslint-plugin-next"
+import simpleImportSort from "eslint-plugin-simple-import-sort"
 
 export default [
   {
@@ -91,6 +92,7 @@ export default [
       react: reactPlugin,
       "react-hooks": reactHooksPlugin,
       "@next/next": nextPlugin,
+      "simple-import-sort": simpleImportSort,
     },
     rules: {
       // React
@@ -120,6 +122,10 @@ export default [
       // General
       "no-console": "off",
       "no-undef": "off", // TypeScript handles this
+
+      // Import sorting
+      "simple-import-sort/imports": "error",
+      "simple-import-sort/exports": "error",
     },
     settings: {
       react: {

@@ -3,9 +3,10 @@
  * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
  */
 
-import { useAuth } from "@/contexts/AuthContext"
+import { useCallback, useEffect, useRef,useState } from "react"
+
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useState, useRef } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 /** デフォルト値 */
 const DEFAULT_LAYOUT_DIRECTION: LayoutDirection = "right-down"

@@ -1,7 +1,7 @@
 import type {
   CropRegionWithProjectPage,
-  StudentAnswerImageWithProjectStudents,
   QuestionProgress,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/ScoringData/types/scoringDataTypes"
 import {
   findQuestionScore,

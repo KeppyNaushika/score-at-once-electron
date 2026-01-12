@@ -1,14 +1,15 @@
 import type {
-  PlacementStrategy,
-  UnifiedFile,
-  UnifiedStudent,
-} from "@/components/projects/06-student-answers/types"
-import type {
   DragEndEvent,
   DragStartEvent,
   SensorDescriptor,
   SensorOptions,
 } from "@dnd-kit/core"
+
+import type {
+  PlacementStrategy,
+  UnifiedFile,
+  UnifiedStudent,
+} from "@/components/projects/06-student-answers/types"
 
 // ファイル状態管理用の型定義
 export interface FileState {

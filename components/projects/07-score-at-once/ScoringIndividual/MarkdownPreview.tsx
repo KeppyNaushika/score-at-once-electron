@@ -9,8 +9,9 @@
 
 import React from "react"
 import ReactMarkdown from "react-markdown"
-import remarkMath from "remark-math"
 import rehypeMathjax from "rehype-mathjax/svg"
+import remarkMath from "remark-math"
+
 import { cn } from "@/lib/utils"
 
 interface MarkdownPreviewProps {

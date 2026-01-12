@@ -1,4 +1,5 @@
 import { Prisma, UserProject } from "@prisma/client"
+
 import prisma from "./client"
 
 // Types for UserProject with relations

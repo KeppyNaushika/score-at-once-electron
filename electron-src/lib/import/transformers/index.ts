@@ -5,9 +5,6 @@
  */
 
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
-import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
-import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
-import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 import type {
   ArchiveData,
   ArchiveVersion,
@@ -16,6 +13,9 @@ import type {
   VersionTransformer,
 } from "./types"
 import { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
+import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
+import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
+import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
 
 // =============================================================================
 // Transformer Registry
@@ -224,7 +224,6 @@ export type {
   VersionPair,
   VersionTransformer,
 } from "./types"
-
 export { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
 
 // 変換器のエクスポート（テスト用）

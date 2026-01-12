@@ -1,15 +1,13 @@
 "use client"
 
+import Head from "next/head"
+import { useParams } from "next/navigation"
+import { useCallback, useMemo, useState } from "react"
+
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
+import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
 import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
-import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/ScoringContentArea"
-import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/ScoringHeaderControls"
-import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/ScoringModals"
-import {
-  ScoringErrorState,
-  ScoringLoadingState,
-} from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
 import {
   ShortcutProvider,
   useShortcutContext,
@@ -26,11 +24,14 @@ import { useScoringNavigation } from "@/components/projects/07-score-at-once/Sco
 import { useScoringSettings } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringSettings"
 import { useScoringShortcuts } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useScoringShortcuts"
 import { useStudentAnswerManagement } from "@/components/projects/07-score-at-once/ScoringMain/hooks/useStudentAnswerManagement"
+import { ScoringContentArea } from "@/components/projects/07-score-at-once/ScoringMain/ScoringContentArea"
+import { ScoringHeaderControls } from "@/components/projects/07-score-at-once/ScoringMain/ScoringHeaderControls"
+import { ScoringModals } from "@/components/projects/07-score-at-once/ScoringMain/ScoringModals"
+import {
+  ScoringErrorState,
+  ScoringLoadingState,
+} from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
-import { useContextValue } from "@/components/projects/07-score-at-once/hooks/useContextValue"
-import Head from "next/head"
-import { useParams } from "next/navigation"
-import { useCallback, useMemo, useState } from "react"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {

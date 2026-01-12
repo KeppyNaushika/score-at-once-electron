@@ -2,6 +2,7 @@
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { ImportedFile } from "@/types/pdfTools.types"
+
 import FileDropzone from "./FileDropzone"
 import ImportedFileList from "./ImportedFileList"
 

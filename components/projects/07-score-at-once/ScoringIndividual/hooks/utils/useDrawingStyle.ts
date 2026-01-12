@@ -2,8 +2,9 @@
  * @fileoverview 描画スタイルフック
  * 線種（実線・波線・ジグザグ・二重線）の描画機能を提供
  */
-import type { LineStyle } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import { useCallback } from "react"
+
+import type { LineStyle } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 
 /**
  * 描画スタイルフック

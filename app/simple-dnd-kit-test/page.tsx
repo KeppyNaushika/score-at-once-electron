@@ -1,11 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import {
   closestCenter,
   DndContext,
@@ -28,6 +22,13 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { Trash2 } from "lucide-react"
 import { useState } from "react"
+
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 // アイテム型（recursive-dnd-kanban-board準拠）
 interface SimpleItem {

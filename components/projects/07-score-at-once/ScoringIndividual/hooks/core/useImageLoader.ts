@@ -4,11 +4,13 @@
  * - 複数ページ対応
  * - ファイル存在確認
  */
-import type {
-  StudentAnswerImageWithProjectStudents,
-  ScoringData,
-} from "@/components/projects/07-score-at-once/types"
 import { useEffect, useState } from "react"
+
+import type {
+  ScoringData,
+  StudentAnswerImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types"
+
 import type { ImageLoaderReturn } from "./types"
 
 interface UseImageLoaderProps {

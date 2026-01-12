@@ -1,3 +1,5 @@
+import { useCallback, useState } from "react"
+
 import { useBatchScoring } from "@/components/projects/07-score-at-once/ScoringData/hooks/useBatchScoring"
 import type {
   CropRegionWithProjectPage,
@@ -6,7 +8,6 @@ import type {
 import { loadQuestionScores } from "@/components/projects/07-score-at-once/ScoringData/utils/dataLoader"
 import { calculateQuestionProgress } from "@/components/projects/07-score-at-once/ScoringData/utils/progressCalculator"
 import { type QuestionScore } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useState } from "react"
 
 interface UseScoringDataProps {
   currentUserId: string | null

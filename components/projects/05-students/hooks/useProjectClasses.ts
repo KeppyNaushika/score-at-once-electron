@@ -1,10 +1,11 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
 import type {
   ProjectClassWithClass,
   ProjectClassWithDetails,
 } from "@/types/electron.d"
-import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectClassesOptions {
   projectId: string

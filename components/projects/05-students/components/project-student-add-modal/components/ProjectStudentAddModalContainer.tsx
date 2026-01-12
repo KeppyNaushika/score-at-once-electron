@@ -1,5 +1,11 @@
 "use client"
 
+import { Plus, UserPlus } from "lucide-react"
+
+import { ClassSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/ClassSelectionTab"
+import { IndividualSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/IndividualSelectionTab"
+import { useProjectStudentAddModal } from "@/components/projects/05-students/components/project-student-add-modal/hooks/useProjectStudentAddModal"
+import type { ProjectStudentAddModalProps } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,11 +16,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, UserPlus } from "lucide-react"
-import { ClassSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/ClassSelectionTab"
-import { IndividualSelectionTab } from "@/components/projects/05-students/components/project-student-add-modal/components/IndividualSelectionTab"
-import { useProjectStudentAddModal } from "@/components/projects/05-students/components/project-student-add-modal/hooks/useProjectStudentAddModal"
-import type { ProjectStudentAddModalProps } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 
 export function ProjectStudentAddModalContainer({
   isOpen,

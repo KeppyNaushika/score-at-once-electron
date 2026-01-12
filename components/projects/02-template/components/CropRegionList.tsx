@@ -1,7 +1,5 @@
 "use client"
 
-import type { ComponentType } from "react"
-import { CropRegionArea } from "@/types/common.types"
 import {
   Ellipsis,
   FileText,
@@ -13,6 +11,9 @@ import {
   Trophy,
   User,
 } from "lucide-react"
+import type { ComponentType } from "react"
+
+import { CropRegionArea } from "@/types/common.types"
 
 type CropRegionListProps = {
   areas: CropRegionArea[]
@@ -53,7 +54,7 @@ const CropRegionList = ({
 }: CropRegionListProps) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="bg-background flex-shrink-0 border-b p-4">
+      <div className="bg-background shrink-0 border-b p-4">
         <h3 className="text-lg font-medium">領域一覧 ({areas.length})</h3>
         {areas.length > 0 && (
           <p className="text-muted-foreground mt-1 text-xs">
@@ -96,7 +97,7 @@ const CropRegionList = ({
                 >
                   <div className="mb-1 flex items-center space-x-2">
                     <IconComponent
-                      className={`h-4 w-4 flex-shrink-0 ${
+                      className={`h-4 w-4 shrink-0 ${
                         isSelected
                           ? "text-primary-foreground"
                           : "text-muted-foreground"

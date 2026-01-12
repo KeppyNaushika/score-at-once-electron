@@ -3,13 +3,6 @@
  * @description 既存描画システムにデータベース永続化を統合
  */
 
-import type {
-  DrawingAnnotation,
-  DrawingAnnotationStats,
-  DrawingCreateData,
-  DrawingType,
-  DrawingUpdateData,
-} from "@/types/drawingAnnotation.types"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 // textbox-on-canvas-v3のMathJax処理を統合
@@ -17,6 +10,13 @@ import {
   createMathJaxSVG,
   measureMathJaxContentSize,
 } from "@/app/textbox-on-canvas-v3/utils/mathJaxUtils"
+import type {
+  DrawingAnnotation,
+  DrawingAnnotationStats,
+  DrawingCreateData,
+  DrawingType,
+  DrawingUpdateData,
+} from "@/types/drawingAnnotation.types"
 
 // 既存の描画システム型と互換性を保つため
 import type { DrawingElement } from "../../types/answerIndividualTypes"

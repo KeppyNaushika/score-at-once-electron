@@ -1,4 +1,3 @@
-import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 import {
   AlertTriangle,
   CheckCircle,
@@ -7,6 +6,8 @@ import {
   Minus,
   X,
 } from "lucide-react"
+
+import type { ScoringStatusColors } from "@/lib/scoringStatusColors"
 
 // アイコンとキーバインドの定義（静的）
 export const SCORE_STATUS_ICONS = {

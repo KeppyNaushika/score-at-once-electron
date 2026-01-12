@@ -1,5 +1,9 @@
 "use client"
 
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { useState } from "react"
+
 import { DragOverlayContent } from "@/components/projects/05-students/components/sortable-student-table/components/DragOverlayContent"
 import { SortableTableRow } from "@/components/projects/05-students/components/sortable-student-table/components/SortableTableRow"
 import { TableFilters } from "@/components/projects/05-students/components/sortable-student-table/components/TableFilters"
@@ -18,9 +22,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody } from "@/components/ui/table"
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { useState } from "react"
 
 export function SortableStudentTableContainer(
   props: SortableStudentTableProps

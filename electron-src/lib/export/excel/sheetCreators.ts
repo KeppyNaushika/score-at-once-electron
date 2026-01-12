@@ -1,5 +1,6 @@
 import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
+
 import { buildSubtotalTargetMap } from "../../shared/calculations/subtotalCalculator"
 import { ScoringData } from "../../shared/types/exportTypes"
 import { autoFitColumns } from "../../shared/utilities/excelUtilities"

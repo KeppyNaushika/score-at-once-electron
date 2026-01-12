@@ -1,4 +1,5 @@
 import type { CropRegion, Prisma } from "@prisma/client"
+
 import prisma from "./client"
 
 // CropRegion を作成

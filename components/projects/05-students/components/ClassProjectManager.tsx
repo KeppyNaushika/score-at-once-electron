@@ -1,5 +1,24 @@
 "use client"
 
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { BarChart3, GripVertical, Plus, Trash2, UserPlus } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -19,24 +38,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { AvailableClass, ProjectClassWithClass } from "@/types/electron.d"
-import {
-  DndContext,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { BarChart3, GripVertical, Plus, Trash2, UserPlus } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
 
 interface ClassProjectManagerProps {
   projectId: string

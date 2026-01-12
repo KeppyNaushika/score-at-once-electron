@@ -1,3 +1,11 @@
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
+
 import { DEFAULT_DRAWING_SETTINGS } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
   DrawingActions,
@@ -9,19 +17,12 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react"
 
 // データベース統合フックのインポート
 import {
   convertAnnotationToElement,
-  useDrawingAnnotations,
   type DrawingPersistenceCallbacks,
+  useDrawingAnnotations,
 } from "./useDrawingAnnotations"
 
 /**

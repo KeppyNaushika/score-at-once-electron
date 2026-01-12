@@ -1,5 +1,6 @@
-import type { CropRegionWithDetails } from "@/types/electron"
 import { useRef } from "react"
+
+import type { CropRegionWithDetails } from "@/types/electron"
 
 type UseKeyboardNavigationProps = {
   filteredRegions: CropRegionWithDetails[]

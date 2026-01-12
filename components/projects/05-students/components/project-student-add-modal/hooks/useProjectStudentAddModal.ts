@@ -1,10 +1,11 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
 import type {
   AvailableClass,
   AvailableStudent,
 } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
-import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectStudentAddModalProps {
   isOpen: boolean

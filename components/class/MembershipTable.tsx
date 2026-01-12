@@ -1,5 +1,8 @@
 "use client"
 
+import { Calendar, Edit, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,8 +19,6 @@ import {
 import { Membership } from "@/hooks/useClassManagement"
 import { useTableSort } from "@/hooks/useTableSort"
 import { cn } from "@/lib/utils"
-import { Calendar, Edit, Trash2 } from "lucide-react"
-import { useMemo, useState } from "react"
 
 interface MembershipTableProps {
   memberships: Membership[]

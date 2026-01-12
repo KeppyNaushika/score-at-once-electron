@@ -1,8 +1,5 @@
 "use client"
 
-import type { AnswerCellProps } from "@/components/projects/06-student-answers/student-answer-management/types"
-import { Button } from "@/components/ui/button"
-import { TableCell } from "@/components/ui/table"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import {
@@ -15,6 +12,10 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
+
+import type { AnswerCellProps } from "@/components/projects/06-student-answers/student-answer-management/types"
+import { Button } from "@/components/ui/button"
+import { TableCell } from "@/components/ui/table"
 
 export function AnswerCell({
   student,

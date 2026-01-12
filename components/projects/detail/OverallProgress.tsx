@@ -1,8 +1,8 @@
 "use client"
 
+import type { WorkflowPhase } from "@/components/projects/detail/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import type { WorkflowPhase } from "@/components/projects/detail/types"
 
 interface OverallProgressProps {
   phases: WorkflowPhase[]

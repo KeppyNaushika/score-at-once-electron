@@ -1,6 +1,7 @@
-import { app, protocol, net } from "electron"
-import { initializeApp } from "./appInitializer"
+import { app, net,protocol } from "electron"
 import { pathToFileURL } from "url"
+
+import { initializeApp } from "./appInitializer"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"

@@ -6,6 +6,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+
 import type { TextBox } from "../types"
 import { renderSvgToCanvas } from "../utils/canvasUtils"
 import { convertTextToSvg } from "../utils/textConversionUtils"

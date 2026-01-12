@@ -1,12 +1,13 @@
-import { join } from "path"
+import type { IncomingMessage } from "electron"
 import {
-  BrowserWindow,
   app,
-  Menu,
+  BrowserWindow,
   Event,
+  Menu,
   RenderProcessGoneDetails,
 } from "electron"
-import type { IncomingMessage } from "electron"
+import { join } from "path"
+
 import menu from "./menu"
 
 // Electron公式推奨の環境判定方法

@@ -1,5 +1,16 @@
 "use client"
 
+import {
+  ArrowLeft,
+  Edit,
+  Info,
+  Plus,
+  Trash2,
+  Upload,
+  Users,
+} from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+
 import ClassModal from "@/components/class/ClassModal"
 import ClassStudentImportModal from "@/components/class/ClassStudentImportModal"
 import MembershipTable from "@/components/class/MembershipTable"
@@ -11,17 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { useClassManagement, type Membership } from "@/hooks/useClassManagement"
-import {
-  ArrowLeft,
-  Edit,
-  Info,
-  Plus,
-  Trash2,
-  Upload,
-  Users,
-} from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
+import { type Membership, useClassManagement } from "@/hooks/useClassManagement"
 
 export default function ClassDetailPage() {
   const params = useParams()

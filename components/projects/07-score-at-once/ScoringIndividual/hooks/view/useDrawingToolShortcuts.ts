@@ -2,8 +2,10 @@
  * @fileoverview 描画ツールキーボードショートカットフック
  * 描画ツール切り替えおよび表示制御のキーボードショートカットを定義
  */
-import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
 import { useCallback } from "react"
+
+import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
+
 import type { DrawingTool } from "../../types/answerIndividualTypes"
 
 /** 描画ツールキーボードショートカットフックのパラメータ */

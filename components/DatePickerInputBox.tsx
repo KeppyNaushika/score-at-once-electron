@@ -1,8 +1,9 @@
+import "react-datepicker/dist/react-datepicker.css"
+
 import { ja, type Locale } from "date-fns/locale"
 import dayjs from "dayjs"
 import React from "react"
 import DatePicker from "react-datepicker"
-import "react-datepicker/dist/react-datepicker.css"
 
 const DatePickerInputBox = (props: {
   date: Date | null

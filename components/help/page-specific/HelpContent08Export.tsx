@@ -1,18 +1,19 @@
 "use client"
 
 import {
-  Badge,
-  HelpSection,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
-import {
   CheckCircle,
   Download,
   FileSpreadsheet,
   FileText,
   Lightbulb,
 } from "lucide-react"
+
+import {
+  Badge,
+  HelpSection,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
 
 export function HelpContent08Export() {
   return (

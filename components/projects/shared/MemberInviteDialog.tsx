@@ -1,5 +1,8 @@
 "use client"
 
+import { Crown, Search, Trash2, UserPlus } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -23,8 +26,6 @@ import type {
   UserProjectWithUserAndInviter,
   UserRole,
 } from "@/types/electron.d"
-import { Crown, Search, Trash2, UserPlus } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
 
 interface MemberInviteDialogProps {
   isOpen: boolean

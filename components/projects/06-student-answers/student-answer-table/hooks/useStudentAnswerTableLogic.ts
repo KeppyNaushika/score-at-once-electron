@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useState } from "react"
+
 import { useDisabledState } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDisabledState"
 import { useDragDrop } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDrop"
 import { useNameRegion } from "@/components/projects/06-student-answers/student-answer-table/hooks/useNameRegion"
@@ -8,7 +10,6 @@ import type {
   UploadModalState,
 } from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
 import type { UploadData } from "@/components/projects/06-student-answers/types"
-import { useCallback, useEffect, useState } from "react"
 
 /**
  * StudentAnswerTableのメインロジックを管理するカスタムフック

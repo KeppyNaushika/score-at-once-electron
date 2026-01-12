@@ -1,5 +1,10 @@
 "use client"
 
+import { Edit, PlusCircle, Search, Trash2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+
+import ClassModal from "@/components/class/ClassModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,11 +18,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
-import { Edit, PlusCircle, Search, Trash2 } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
-
-import ClassModal from "@/components/class/ClassModal"
 
 interface ClassWithMemberships {
   id: string

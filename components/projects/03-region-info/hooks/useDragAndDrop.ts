@@ -1,5 +1,6 @@
-import type { CropRegionWithDetails } from "@/types/electron"
 import { useState } from "react"
+
+import type { CropRegionWithDetails } from "@/types/electron"
 
 type DragState = {
   draggedIndex: number | null

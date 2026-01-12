@@ -1,9 +1,11 @@
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+
 import type {
   CropRegionWithProjectPage,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
+
 import { useShortcutContext } from "../contexts/ShortcutProvider"
 
 interface UsePartialScoreProps {

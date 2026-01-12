@@ -3,8 +3,9 @@
  * @description 機能G: ユーザー採点設定の永続化（カラム別楽観的更新）
  */
 
+import { useCallback, useEffect, useRef,useState } from "react"
+
 import { useAuth } from "@/contexts/AuthContext"
-import { useCallback, useEffect, useState, useRef } from "react"
 
 /** デフォルト値 */
 const DEFAULT_SHOW_STUDENT_NAMES = true

@@ -2,6 +2,8 @@
  * Components for 06-student-answers page - quick inline version
  */
 
+import { Eye, Grid3X3 } from "lucide-react"
+
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
 import { StudentAnswerUpload } from "@/components/projects/06-student-answers/student-answer-management/components/StudentAnswerUpload"
 import type { ProcessedStudentAnswer } from "@/components/projects/06-student-answers/student-answer-management/types"
@@ -12,7 +14,6 @@ import type {
   ScoringDataOption,
 } from "@/components/projects/06-student-answers/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Eye, Grid3X3 } from "lucide-react"
 
 // Types
 export type StudentAnswerTab = "new-grid" | "current"

@@ -2,8 +2,9 @@
  * 2-in-1 (Nアップ) ユーティリティ
  * 複数ページを1ページに配置
  */
-import { PDFDocument } from "pdf-lib"
 import * as fs from "fs"
+import { PDFDocument } from "pdf-lib"
+
 import type { NUpLayout, PageOrder } from "@/types/pdfTools.types"
 
 // A4サイズ (ポイント単位: 1pt = 1/72 inch)

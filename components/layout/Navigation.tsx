@@ -1,5 +1,24 @@
 "use client"
 
+import {
+  Calculator,
+  ChevronsLeft,
+  ChevronsRight,
+  FileStack,
+  FlaskConical,
+  Grid2X2,
+  Home,
+  LogIn,
+  LogOut,
+  School,
+  Settings,
+  TestTube2,
+  User,
+  Users,
+} from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -10,24 +29,6 @@ import {
 } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
-import {
-  Calculator,
-  ChevronsLeft,
-  ChevronsRight,
-  FileStack,
-  Grid2X2,
-  Home,
-  LogIn,
-  LogOut,
-  School,
-  Settings,
-  TestTube2,
-  User,
-  Users,
-  FlaskConical,
-} from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 const navItems = [
   { href: "/dashboard", label: "プロジェクト", icon: Home },

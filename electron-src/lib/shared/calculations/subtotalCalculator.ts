@@ -1,9 +1,10 @@
 import type { CropRegion } from "@prisma/client"
+
 import {
-  getCropSubtotalsByCropRegionId,
-  getCropSubtotalsBySubtotalId,
   type CropSubtotalWithCropRegion,
   type CropSubtotalWithSubtotal,
+  getCropSubtotalsByCropRegionId,
+  getCropSubtotalsBySubtotalId,
 } from "../../prisma/cropSubtotal"
 import { calculateActualScore } from "../../prisma/questionScore"
 

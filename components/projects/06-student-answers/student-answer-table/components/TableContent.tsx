@@ -1,3 +1,5 @@
+import { rectSortingStrategy,SortableContext } from "@dnd-kit/sortable"
+
 import { EmptyTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/EmptyTableCell"
 import { FilePreviewCell } from "@/components/projects/06-student-answers/student-answer-table/components/FilePreviewCell"
 import { SortableTableCell } from "@/components/projects/06-student-answers/student-answer-table/components/SortableTableCell"
@@ -11,10 +13,9 @@ import {
   Table,
   TableBody,
   TableHead,
-  TableRow,
   TableHeader as UITableHeader,
+  TableRow,
 } from "@/components/ui/table"
-import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable"
 
 interface TableContentProps {
   tableData: Array<

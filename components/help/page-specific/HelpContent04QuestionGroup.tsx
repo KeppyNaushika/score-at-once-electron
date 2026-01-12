@@ -1,13 +1,6 @@
 "use client"
 
 import {
-  Badge,
-  HelpSection,
-  ShortcutItem,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
-import {
   Calculator,
   CheckCircle,
   Grid3X3,
@@ -15,6 +8,14 @@ import {
   MousePointer,
   Plus,
 } from "lucide-react"
+
+import {
+  Badge,
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
 
 export function HelpContent04QuestionGroup() {
   return (

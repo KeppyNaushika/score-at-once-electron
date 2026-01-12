@@ -1,5 +1,13 @@
 "use client"
 
+import {
+  AlertCircle,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+} from "lucide-react"
+
 import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -16,13 +24,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  AlertCircle,
-  CheckCircle,
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-} from "lucide-react"
+
 import { SidePanelSection } from "./SidePanelSection"
 
 interface QuestionNavigatorProps {

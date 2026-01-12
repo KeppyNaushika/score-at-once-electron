@@ -1,5 +1,7 @@
 "use client"
 
+import { AlertTriangle } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import {
   Modal,
@@ -9,7 +11,6 @@ import {
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal"
-import { AlertTriangle } from "lucide-react"
 
 type DeleteConfirmModalProps = {
   isOpen: boolean

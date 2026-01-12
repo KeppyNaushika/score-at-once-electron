@@ -1,5 +1,7 @@
 "use client"
 
+import { positionLabels } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import type { MarkPosition } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -8,8 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { MarkPosition } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
-import { positionLabels } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 
 interface PositionSettingsSectionProps {
   markPosition: MarkPosition

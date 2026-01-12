@@ -4,12 +4,13 @@
  */
 
 import { ipcMain } from "electron"
-import * as drawingService from "../lib/prisma/drawingAnnotation"
+
 import type {
   DrawingCreateData,
-  DrawingUpdateData,
   DrawingType,
+  DrawingUpdateData,
 } from "../../types/drawingAnnotation.types"
+import * as drawingService from "../lib/prisma/drawingAnnotation"
 
 /**
  * 描画アノテーション関連のIPCハンドラーを設定する

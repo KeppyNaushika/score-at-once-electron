@@ -1,5 +1,6 @@
-import prisma from "./client"
 import type { Prisma } from "@prisma/client"
+
+import prisma from "./client"
 
 /**
  * 小計点グループを全て取得

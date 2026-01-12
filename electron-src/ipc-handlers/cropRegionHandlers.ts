@@ -1,13 +1,14 @@
-import { ipcMain } from "electron"
 import { Prisma } from "@prisma/client"
+import { ipcMain } from "electron"
+
 import {
   createCropRegion as dbCreateCropRegion,
-  updateCropRegion as dbUpdateCropRegion,
+  createManyCropRegions as dbCreateManyCropRegions,
   deleteCropRegion as dbDeleteCropRegion,
+  getCropRegionById as dbGetCropRegionById,
   getCropRegionsByProjectId as dbGetCropRegionsByProjectId,
   getQuestionAnswerRegionsByProjectId as dbGetQuestionAnswerRegionsByProjectId,
-  getCropRegionById as dbGetCropRegionById,
-  createManyCropRegions as dbCreateManyCropRegions,
+  updateCropRegion as dbUpdateCropRegion,
   updateCropRegionOrders as dbUpdateCropRegionOrders,
 } from "../lib/prisma/cropRegion"
 
@@ -60,22 +61,22 @@ function serializeCropRegion<
 }
 
 import {
-  createSubtotal as dbCreateSubtotal,
-  updateSubtotal as dbUpdateSubtotal,
-  deleteSubtotal as dbDeleteSubtotal,
-  getSubtotalsByGroupId as dbGetSubtotalsByGroupId,
-  getSubtotalById as dbGetSubtotalById,
-  createManySubtotals as dbCreateManySubtotals,
-} from "../lib/prisma/subtotal"
-import {
   createCropSubtotal as dbCreateCropSubtotal,
-  deleteCropSubtotal as dbDeleteCropSubtotal,
-  getSubtotalDefinitionsByCropRegionId as dbGetSubtotalDefsByCropRegionId,
-  getCropSubtotalsBySubtotalId as dbGetCropSubtotalsBySubtotalId,
   createManyCropSubtotals as dbCreateManyCropSubtotals,
-  getCropSubtotalsByCropRegionId as dbGetCropSubtotalsByCropRegionId,
+  deleteCropSubtotal as dbDeleteCropSubtotal,
   deleteCropSubtotalsByCropRegionId as dbDeleteCropSubtotalsByCropRegionId,
+  getCropSubtotalsByCropRegionId as dbGetCropSubtotalsByCropRegionId,
+  getCropSubtotalsBySubtotalId as dbGetCropSubtotalsBySubtotalId,
+  getSubtotalDefinitionsByCropRegionId as dbGetSubtotalDefsByCropRegionId,
 } from "../lib/prisma/cropSubtotal"
+import {
+  createManySubtotals as dbCreateManySubtotals,
+  createSubtotal as dbCreateSubtotal,
+  deleteSubtotal as dbDeleteSubtotal,
+  getSubtotalById as dbGetSubtotalById,
+  getSubtotalsByGroupId as dbGetSubtotalsByGroupId,
+  updateSubtotal as dbUpdateSubtotal,
+} from "../lib/prisma/subtotal"
 
 export function setupCropRegionHandlers(): void {
   // --- CropRegion Handlers ---

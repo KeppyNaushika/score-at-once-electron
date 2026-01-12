@@ -14,8 +14,10 @@
 
 "use client"
 
-import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
 import { useMemo } from "react"
+
+import { CropRegionArea, CropRegionAreaType } from "@/types/common.types"
+
 import { useImageCanvasInteraction } from "../hooks/useImageCanvasInteraction"
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts"
 import { useZoomControls } from "../hooks/useZoomControls"

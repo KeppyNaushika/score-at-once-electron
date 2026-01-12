@@ -4,6 +4,7 @@ import { dialog } from "electron"
 import fs from "fs"
 import path from "path"
 import { PageSizes, PDFDocument } from "pdf-lib"
+
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
 import { getCropRegionsByProjectId } from "./cropRegion"

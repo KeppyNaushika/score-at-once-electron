@@ -1,4 +1,5 @@
 import { ipcMain } from "electron"
+
 import { AuthStoreManager } from "../lib/authStore"
 
 export function setupAuthHandlers(): void {

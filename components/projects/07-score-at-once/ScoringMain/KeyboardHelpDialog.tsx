@@ -1,5 +1,8 @@
 "use client"
 
+import { Keyboard } from "lucide-react"
+
+import { KEYBOARD_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,8 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Keyboard } from "lucide-react"
-import { KEYBOARD_SHORTCUTS } from "@/components/projects/07-score-at-once/ScoringMain/constants/keyboardShortcuts"
 
 interface KeyboardHelpDialogProps {
   showKeyboardHelp: boolean

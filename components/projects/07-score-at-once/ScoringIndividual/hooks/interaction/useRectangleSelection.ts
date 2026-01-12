@@ -1,10 +1,11 @@
+import { useCallback } from "react"
+
 import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
-import { useCallback } from "react"
 
 interface UseRectangleSelectionProps {
   currentTool: string

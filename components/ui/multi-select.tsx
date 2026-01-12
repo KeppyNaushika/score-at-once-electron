@@ -1,9 +1,9 @@
 "use client"
 
-import * as React from "react"
 import { Check, ChevronsUpDown, X } from "lucide-react"
+import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Command,
@@ -18,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 
 export interface Option {
   value: string
@@ -90,7 +90,7 @@ export function MultiSelect({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
         <Command>
           <CommandInput placeholder="検索..." />
           <CommandList>

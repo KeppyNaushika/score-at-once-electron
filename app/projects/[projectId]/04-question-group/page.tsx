@@ -1,5 +1,9 @@
 "use client"
 
+import { Calculator } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
@@ -12,9 +16,6 @@ import {
   ProjectSubtotalGroupWithSubtotalGroup,
   SubtotalGroupWithItems,
 } from "@/types/electron"
-import { Calculator } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
 
 export default function SubtotalGroupPage() {
   const params = useParams()

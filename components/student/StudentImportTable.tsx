@@ -1,7 +1,8 @@
 "use client"
 
-import { EditableTable } from "@/components/common/EditableTable"
 import { ColumnDef } from "@tanstack/react-table"
+
+import { EditableTable } from "@/components/common/EditableTable"
 
 interface StudentImportRow {
   studentNumber: string

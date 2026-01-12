@@ -18,6 +18,7 @@ import {
   Minus,
   Plus,
 } from "lucide-react"
+
 import { TEXTBOX_SETTINGS } from "../constants"
 import type { AnchorDirection } from "../types"
 
@@ -157,7 +158,7 @@ export function AnchorControlPanel({
             <Minus className="h-4 w-4" />
           </button>
 
-          <span className="min-w-[2.5rem] text-center font-mono text-sm">
+          <span className="min-w-10 text-center font-mono text-sm">
             {currentTextSize}px
           </span>
 

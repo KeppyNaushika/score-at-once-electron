@@ -2,6 +2,8 @@
  * Mouse event handlers for canvas interactions
  */
 
+import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
+
 import {
   DetectionMode,
   DragSelectionResult,
@@ -9,7 +11,6 @@ import {
   MoveState,
   ResizeState,
 } from "@/components/projects/02-template/types"
-import { MouseEvent as ReactMouseEvent, useCallback, useRef } from "react"
 
 /**
  * Custom hook for handling mouse events on the canvas

@@ -5,10 +5,10 @@
  */
 
 import type {
+  CategoryConflictResolution,
+  ConflictCategory,
   ConflictItem,
   ConflictResolutions,
-  ConflictCategory,
-  CategoryConflictResolution,
 } from "../../../../types/projectArchive.types"
 
 /**

@@ -1,9 +1,10 @@
 "use client"
 
+import { CheckCircle2, FileArchive, Info, Loader2, Upload } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import { CheckCircle2, FileArchive, Info, Loader2, Upload } from "lucide-react"
 
 interface FileSelectStepProps {
   wizard: UseImportWizardReturn

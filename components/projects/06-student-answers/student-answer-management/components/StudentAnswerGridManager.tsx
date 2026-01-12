@@ -1,5 +1,11 @@
 "use client"
 
+import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
+import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
+
 import { GridHeader } from "@/components/projects/06-student-answers/student-answer-management/components/GridHeader"
 import { StudentGridRow } from "@/components/projects/06-student-answers/student-answer-management/components/StudentGridRow"
 import type {
@@ -10,11 +16,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableHeader } from "@/components/ui/table"
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { FileImage, Grid3X3, Upload, Users } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
 
 interface StudentAnswerGridManagerProps {
   projectId: string

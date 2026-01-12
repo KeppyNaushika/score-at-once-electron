@@ -14,12 +14,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
+
 import {
   DragState,
   MoveState,
   ResizeState,
   UseImageCanvasInteractionProps,
 } from "@/components/projects/02-template/types"
+
 import { useCanvasCoordinates } from "./useCanvasCoordinates"
 import { useMouseHandlers } from "./useMouseHandlers"
 

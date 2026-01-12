@@ -54,7 +54,7 @@ export function GridCell({
     answer.studentId === "MASTER" || answer.studentName === "模範解答"
 
   // 基本のセルクラス
-  const cellClasses = ["flex flex-shrink-0 flex-col gap-1 p-2 border-2"]
+  const cellClasses = ["flex shrink-0 flex-col gap-1 p-2 border-2"]
 
   // スタイルを構築
   let cellBgStyle: React.CSSProperties = {}

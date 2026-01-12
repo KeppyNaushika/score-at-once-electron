@@ -1,5 +1,18 @@
 "use client"
 
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Eye,
+  Maximize2,
+  Navigation,
+  RotateCcw,
+  Settings,
+  Sliders,
+} from "lucide-react"
+
 import type { LayoutDirection } from "@/components/projects/07-score-at-once/types"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,18 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
-  Eye,
-  Maximize2,
-  Navigation,
-  RotateCcw,
-  Settings,
-  Sliders,
-} from "lucide-react"
+
 import { SidePanelSection } from "./SidePanelSection"
 
 interface NavigationControlsProps {

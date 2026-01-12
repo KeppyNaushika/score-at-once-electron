@@ -1,5 +1,7 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
+
 import { DragSelectionOverlay } from "@/components/projects/07-score-at-once/ScoringGrid/DragSelectionOverlay"
 import { GridCell } from "@/components/projects/07-score-at-once/ScoringGrid/GridCell"
 import { useAutoScroll } from "@/components/projects/07-score-at-once/ScoringGrid/hooks/useAutoScroll"
@@ -14,7 +16,6 @@ import type {
   ScoringData,
 } from "@/components/projects/07-score-at-once/types"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
-import { useEffect, useRef, useState } from "react"
 
 export interface AnswerGridViewProps {
   /** 統一されたデータ引数 */

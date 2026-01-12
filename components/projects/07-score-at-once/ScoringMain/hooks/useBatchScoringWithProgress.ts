@@ -1,10 +1,11 @@
+import { useCallback } from "react"
+
+import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
 import type {
   GradingMode,
   ScoringData,
   ScoringStatus,
 } from "@/components/projects/07-score-at-once/types"
-import type { ScoringBehavior } from "@/components/projects/07-score-at-once/ScoringIndividual/ScoringBehaviorSelector"
-import { useCallback } from "react"
 
 /** ScoringDataに選択状態を追加した型 */
 type ScoringDataWithSelection = ScoringData & { isSelected: boolean }

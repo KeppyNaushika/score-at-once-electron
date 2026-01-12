@@ -1,5 +1,15 @@
 "use client"
 
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Clock,
+} from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -10,15 +20,6 @@ import type {
   ScoringConflict,
   ScoringConflictResolutionStrategy,
 } from "@/types/projectArchive.types"
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  Clock,
-} from "lucide-react"
-import { useState } from "react"
 
 interface ScoringConflictStepProps {
   wizard: UseImportWizardReturn
