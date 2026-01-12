@@ -4,9 +4,9 @@
  * インポートデータをデータベースに作成
  */
 
+import type { PrismaClient } from "@prisma/client"
 import * as fs from "fs"
 import * as path from "path"
-import type { PrismaClient } from "@prisma/client"
 import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import prisma from "../../prisma/client"
@@ -21,37 +21,39 @@ type TransactionClient = Omit<
 >
 
 /**
- * 重複しないstudentIdを生成
+ * 重複しないstudentNumberを生成
  *
- * 既存のstudentIdがある場合は `_1`, `_2` のようなサフィックスを付与して
+ * 既存のstudentNumberがある場合は `_1`, `_2` のようなサフィックスを付与して
  * 一意性を保証する
  *
  * @param tx - Prismaトランザクションクライアント
- * @param originalStudentId - 元のstudentId
- * @returns 一意なstudentId
+ * @param originalStudentNumber - 元のstudentNumber
+ * @returns 一意なstudentNumber
  */
-async function generateUniqueStudentId(
+async function generateUniqueStudentNumber(
   tx: TransactionClient,
-  originalStudentId: string
+  originalStudentNumber: string
 ): Promise<string> {
   const existing = await tx.student.findUnique({
-    where: { studentId: originalStudentId },
+    where: { studentNumber: originalStudentNumber },
   })
 
   if (!existing) {
-    return originalStudentId
+    return originalStudentNumber
   }
 
   // サフィックスを付けて重複を回避
   let suffix = 1
-  let newStudentId = `${originalStudentId}_${suffix}`
+  let newStudentNumber = `${originalStudentNumber}_${suffix}`
 
-  while (await tx.student.findUnique({ where: { studentId: newStudentId } })) {
+  while (
+    await tx.student.findUnique({ where: { studentNumber: newStudentNumber } })
+  ) {
     suffix++
-    newStudentId = `${originalStudentId}_${suffix}`
+    newStudentNumber = `${originalStudentNumber}_${suffix}`
   }
 
-  return newStudentId
+  return newStudentNumber
 }
 
 /**
@@ -124,23 +126,23 @@ export async function createImportedData(
   try {
     // トランザクションで全データを作成
     await prisma.$transaction(async (tx) => {
-      // 1. 生徒を作成（重複するstudentIdはサフィックスを付与）
+      // 1. 生徒を作成（重複する出席番号はサフィックスを付与）
       for (const student of data.studentsData.students) {
-        const uniqueStudentId = await generateUniqueStudentId(
+        const uniqueStudentNumber = await generateUniqueStudentNumber(
           tx,
-          student.studentId
+          student.studentNumber
         )
 
-        if (uniqueStudentId !== student.studentId) {
+        if (uniqueStudentNumber !== student.studentNumber) {
           warnings.push(
-            `生徒「${student.lastName} ${student.firstName}」のstudentIdを「${student.studentId}」から「${uniqueStudentId}」に変更しました`
+            `生徒「${student.lastName} ${student.firstName}」の出席番号を「${student.studentNumber}」から「${uniqueStudentNumber}」に変更しました`
           )
         }
 
         await tx.student.create({
           data: {
             id: remapIdRequired(student.id, mappings.student),
-            studentId: uniqueStudentId,
+            studentNumber: uniqueStudentNumber,
             lastName: student.lastName,
             firstName: student.firstName,
             lastNameKana: student.lastNameKana,

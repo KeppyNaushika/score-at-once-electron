@@ -625,6 +625,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("archive:analyzeArchive", options),
     importAsNew: (options: { archivePath: string; currentUserId: string }) =>
       ipcRenderer.invoke("archive:importAsNew", options),
+    preMatch: (options: { archivePath: string }) =>
+      ipcRenderer.invoke("archive:preMatch", options),
     detectConflicts: (options: {
       archivePath: string
       matchingConfig: import("../types/projectArchive.types").MatchingConfig
@@ -635,6 +637,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
       conflictResolutions: import("../types/projectArchive.types").ConflictResolutions
       currentUserId: string
     }) => ipcRenderer.invoke("archive:mergeImport", options),
+    idIntegrationImport: (options: {
+      archivePath: string
+      preMatchResult: import("../types/projectArchive.types").FileOverviewData
+      integrationConfig: import("../types/projectArchive.types").IdIntegrationConfig
+      currentUserId: string
+    }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
     selectExportSavePath: (options: { projectName?: string }) =>
       ipcRenderer.invoke("archive:selectExportSavePath", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
