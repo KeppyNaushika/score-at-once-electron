@@ -1,9 +1,10 @@
 "use client"
 
-import ConfirmationModal from "@/components/common/ConfirmationModal"
 import { Project } from "@prisma/client"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+
+import ConfirmationModal from "@/components/common/ConfirmationModal"
 
 interface DeleteProjectModalProps {
   project: Project & {

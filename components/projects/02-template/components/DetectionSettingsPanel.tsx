@@ -5,6 +5,7 @@
 "use client"
 
 import { memo, useCallback } from "react"
+
 import { DetectionSettings } from "../types"
 
 interface DetectionSettingsPanelProps {

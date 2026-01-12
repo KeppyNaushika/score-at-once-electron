@@ -1,5 +1,16 @@
 "use client"
 
+import {
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  MessageSquare,
+  Save,
+  Users,
+  X,
+} from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,16 +29,6 @@ import type {
   QuestionScoreComparisonResult,
   QuestionScoreWithUser,
 } from "@/types/electron.d"
-import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  MessageSquare,
-  Save,
-  Users,
-  X,
-} from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
 
 interface ScoreComparisonModalProps {
   isOpen: boolean

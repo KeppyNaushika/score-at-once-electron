@@ -1,13 +1,14 @@
 // import { checkForAutoFinalization } from "@/components/projects/07-score-at-once/hooks/scoring-data/utils/auto-finalization"
-import type {
-  CropRegionWithProjectPage,
-  StudentAnswerImageWithProjectStudents,
-  QuestionScore,
-  ScoringStatus,
-} from "@/components/projects/07-score-at-once/types"
-import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
 import { toast } from "sonner"
+
+import type {
+  CropRegionWithProjectPage,
+  QuestionScore,
+  ScoringStatus,
+  StudentAnswerImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types"
+import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
 
 interface UseBatchScoringProps {
   studentAnswerImages: StudentAnswerImageWithProjectStudents[]

@@ -1,25 +1,26 @@
 "use client"
 
-import { cn } from "@/lib/utils"
-import type { OutputPage } from "@/types/pdfTools.types"
 import {
-  DndContext,
   closestCenter,
+  DndContext,
+  DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent,
 } from "@dnd-kit/core"
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  rectSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import type { OutputPage } from "@/types/pdfTools.types"
 
 interface OutputPreviewProps {
   pages: OutputPage[]
@@ -121,7 +122,7 @@ function SortablePageItem({ page, index, disabled }: SortablePageItemProps) {
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative aspect-[3/4] cursor-grab overflow-hidden rounded-lg border-2 bg-white shadow-sm transition-all",
+        "group relative aspect-3/4 cursor-grab overflow-hidden rounded-lg border-2 bg-white shadow-sm transition-all",
         isDragging ? "z-50 opacity-50 shadow-lg" : "hover:border-primary/50",
         disabled && "cursor-not-allowed opacity-50"
       )}

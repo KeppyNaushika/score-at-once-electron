@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef, useState } from "react"
+
 import type { FileState } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
 import { buildDnDArrayFromFileStates } from "@/components/projects/06-student-answers/student-answer-table/utils/dragDropUtils"
 import type {
@@ -5,7 +7,6 @@ import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/components/projects/06-student-answers/types"
-import { useCallback, useEffect, useRef, useState } from "react"
 
 interface UseDragDropStateParams {
   files: UnifiedFile[]

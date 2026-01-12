@@ -1,21 +1,14 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Settings } from "lucide-react"
+
 import { StatusDisplaySection } from "@/components/projects/08-export/components/scoring-mark-settings/components/StatusDisplaySection"
+import {
+  defaultConfig,
+  defaultPartialScoreConfig,
+  defaultSummaryScoreConfig,
+  positionLabels,
+} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import type {
   MarkPosition,
   ScoreTextConfig,
@@ -23,12 +16,20 @@ import type {
   ScoringStatus,
   TextAlignment,
 } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
-  defaultConfig,
-  defaultPartialScoreConfig,
-  defaultSummaryScoreConfig,
-  positionLabels,
-} from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface ScoringMarkSettingsContainerProps {
   config: ScoringMarkConfig

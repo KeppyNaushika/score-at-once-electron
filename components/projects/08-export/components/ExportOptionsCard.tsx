@@ -1,5 +1,7 @@
 "use client"
 
+import { Download } from "lucide-react"
+
 import {
   ExportOptions,
   IndividualReportOptions,
@@ -13,7 +15,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Download } from "lucide-react"
 
 export type ExportTabType =
   | "scored-answers"

@@ -1,5 +1,7 @@
 "use client"
 
+import { Search } from "lucide-react"
+
 import type {
   AvailableClass,
   AvailableStudent,
@@ -21,7 +23,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { TabsContent } from "@/components/ui/tabs"
-import { Search } from "lucide-react"
 
 interface IndividualSelectionTabProps {
   availableClasses: AvailableClass[]

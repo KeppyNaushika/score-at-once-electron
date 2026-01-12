@@ -1,5 +1,10 @@
 "use client"
 
+import { DragEndEvent } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
+
 import {
   CropRegion,
   ProjectPage,
@@ -8,10 +13,6 @@ import {
 import { useFileProcessing } from "@/components/projects/06-student-answers/student-answer-management/hooks/useFileProcessing"
 import { useStudentManagement } from "@/components/projects/06-student-answers/student-answer-management/hooks/useStudentManagement"
 import type { UploadStudentAnswerFileData } from "@/types/electron"
-import { DragEndEvent } from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
-import { useCallback, useEffect, useState } from "react"
-import { toast } from "sonner"
 
 export function useStudentAnswerUploadMain({
   projectId,

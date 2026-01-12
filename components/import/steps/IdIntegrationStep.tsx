@@ -1,5 +1,8 @@
 "use client"
 
+import { Layers, Loader2, School, Settings, Users } from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -20,8 +23,6 @@ import type {
   StudentMatchingStrategy,
   SubtotalGroupMatchingStrategy,
 } from "@/types/projectArchive.types"
-import { Layers, Loader2, School, Settings, Users } from "lucide-react"
-import { useState } from "react"
 
 interface IdIntegrationStepProps {
   wizard: UseImportWizardReturn

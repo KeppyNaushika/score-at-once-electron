@@ -6,6 +6,7 @@ import type {
   IndividualReportData,
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
+
 import type {
   BarChartData,
   ChartConfig,

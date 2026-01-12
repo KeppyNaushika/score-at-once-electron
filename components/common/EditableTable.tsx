@@ -1,13 +1,14 @@
 "use client"
 "use no memo"
 
-import { Button } from "@/components/ui/button"
 import type { CellContext, ColumnDef, Row } from "@tanstack/react-table"
 import { flexRender, getCoreRowModel } from "@tanstack/react-table"
 import type { TableOptions, TableOptionsResolved } from "@tanstack/table-core"
 import { createTable } from "@tanstack/table-core"
 import { Plus, Trash2 } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
+import { Button } from "@/components/ui/button"
 
 interface EditableTableProps<T> {
   data: T[]

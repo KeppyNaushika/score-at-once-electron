@@ -1,5 +1,15 @@
 "use client"
 
+import {
+  AlertTriangle,
+  FileX,
+  HelpCircle,
+  Info,
+  Trash2,
+  Users,
+} from "lucide-react"
+
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,15 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import {
-  AlertTriangle,
-  Trash2,
-  FileX,
-  Users,
-  Info,
-  HelpCircle,
-} from "lucide-react"
 
 interface ConfirmationItem {
   id: string
@@ -95,7 +96,7 @@ export default function ConfirmationModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-125">
         <DialogHeader>
           <div className="flex items-center space-x-3">
             <div className={`rounded-full bg-gray-100 p-2 ${styles.icon}`}>

@@ -6,6 +6,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+
 import type { TextBox } from "../types"
 import { convertTextToSvg } from "../utils/textConversionUtils"
 

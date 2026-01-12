@@ -1,5 +1,8 @@
 "use client"
 
+import type { Prisma } from "@prisma/client"
+import { useEffect, useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,8 +14,6 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Prisma } from "@prisma/client"
-import { useEffect, useState } from "react"
 
 // StudentModalに必要な最小限のフィールド（createdAt/updatedAtは不要）
 interface StudentForEdit {

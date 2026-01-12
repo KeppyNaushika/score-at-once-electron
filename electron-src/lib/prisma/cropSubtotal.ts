@@ -1,4 +1,5 @@
-import type { Prisma, CropSubtotal } from "@prisma/client"
+import type { CropSubtotal,Prisma } from "@prisma/client"
+
 import prisma from "./client"
 
 // CropSubtotal を作成

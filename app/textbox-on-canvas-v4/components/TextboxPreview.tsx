@@ -6,6 +6,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+
 import type { TextBox } from "../types"
 import {
   parseTextWithMath,

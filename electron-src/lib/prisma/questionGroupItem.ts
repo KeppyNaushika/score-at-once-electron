@@ -1,4 +1,5 @@
 import type { Prisma, Subtotal } from "@prisma/client"
+
 import prisma from "./client"
 
 // QuestionGroupItem を作成 (Subtotal として実装)

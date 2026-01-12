@@ -1,4 +1,5 @@
-import type { ProjectPage, Prisma } from "@prisma/client"
+import type { Prisma,ProjectPage } from "@prisma/client"
+
 import prisma from "./client"
 
 // ProjectPage を作成

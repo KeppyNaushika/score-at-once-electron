@@ -1,7 +1,5 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
 import {
   closestCenter,
   DndContext,
@@ -22,6 +20,9 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical } from "lucide-react"
 import { useCallback, useState } from "react"
+
+import { Badge } from "@/components/ui/badge"
+import { Card } from "@/components/ui/card"
 
 interface AvailableClass {
   id: string

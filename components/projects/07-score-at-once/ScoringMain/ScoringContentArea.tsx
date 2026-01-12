@@ -7,9 +7,9 @@ import type {
   GradingMode,
   LayoutDirection,
   MasterGridItem,
-  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringData,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 
 interface ScoringContentAreaProps {

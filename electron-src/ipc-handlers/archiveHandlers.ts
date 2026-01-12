@@ -3,6 +3,7 @@
  */
 
 import { dialog, ipcMain } from "electron"
+
 import type {
   ConflictResolutions,
   FileOverviewData,

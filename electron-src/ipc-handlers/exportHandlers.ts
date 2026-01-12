@@ -1,4 +1,5 @@
 import { BrowserWindow, dialog, ipcMain } from "electron"
+
 import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 import {
   fetchIndividualReportData,

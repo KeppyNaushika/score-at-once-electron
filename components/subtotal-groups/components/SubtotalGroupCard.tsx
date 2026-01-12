@@ -1,10 +1,11 @@
 "use client"
 
+import { Calculator,Edit, Trash2 } from "lucide-react"
+
+import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Edit, Trash2, Calculator } from "lucide-react"
-import type { SubtotalGroup } from "@/components/subtotal-groups/types/subtotalGroupTypes"
 
 interface SubtotalGroupCardProps {
   group: SubtotalGroup

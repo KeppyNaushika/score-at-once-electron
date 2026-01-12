@@ -1,5 +1,8 @@
 "use client"
 
+import { ChevronDown, FileText, Loader2, Search } from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -14,8 +17,6 @@ import type {
   ClassMatchingMethod,
   StudentMatchingMethod,
 } from "@/types/projectArchive.types"
-import { ChevronDown, FileText, Loader2, Search } from "lucide-react"
-import { useState } from "react"
 
 interface MatchingSettingsStepProps {
   wizard: UseImportWizardReturn

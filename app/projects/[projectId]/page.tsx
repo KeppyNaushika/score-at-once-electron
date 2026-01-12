@@ -1,20 +1,21 @@
 "use client"
 
+import type { Project } from "@prisma/client"
+import Head from "next/head"
+import { useParams, useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "sonner"
+
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import { useWorkflowData } from "@/components/projects/detail/hooks/useWorkflowData"
 import OverallProgress from "@/components/projects/detail/OverallProgress"
 import PhaseCard from "@/components/projects/detail/PhaseCard"
 import ProjectHeader from "@/components/projects/detail/ProjectHeader"
 import QuickStats from "@/components/projects/detail/QuickStats"
 import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
-import { useProjectDetail } from "@/hooks/useProjectDetail"
-import { useWorkflowData } from "@/components/projects/detail/hooks/useWorkflowData"
 import { useAuth } from "@/contexts/AuthContext"
-import type { Project } from "@prisma/client"
-import Head from "next/head"
-import { useParams, useRouter } from "next/navigation"
-import { useState } from "react"
-import { toast } from "sonner"
+import { useProjectDetail } from "@/hooks/useProjectDetail"
 
 export default function ProjectDetailPage() {
   const params = useParams()

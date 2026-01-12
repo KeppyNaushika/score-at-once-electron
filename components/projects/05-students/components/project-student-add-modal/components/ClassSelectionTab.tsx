@@ -1,5 +1,6 @@
 "use client"
 
+import type { AvailableClass } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 import SortableClassList from "@/components/projects/05-students/components/SortableClassList"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TabsContent } from "@/components/ui/tabs"
-import type { AvailableClass } from "@/components/projects/05-students/components/project-student-add-modal/types/projectStudentAddTypes"
 
 interface ClassSelectionTabProps {
   availableClasses: AvailableClass[]

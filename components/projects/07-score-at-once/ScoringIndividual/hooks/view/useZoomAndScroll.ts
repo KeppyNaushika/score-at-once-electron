@@ -2,8 +2,10 @@
  * @fileoverview ズーム・スクロール操作フック
  * ズームイン/アウト、全体表示、設問表示などの画面位置制御ロジックを提供
  */
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useCallback } from "react"
+
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
+
 import { ZOOM_SETTINGS } from "../../constants/drawingConstants"
 
 /** ズーム・スクロール操作フックのパラメータ */

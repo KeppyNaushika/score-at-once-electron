@@ -1,12 +1,14 @@
 "use client"
 
+import { FileUp, Loader2, Upload, X } from "lucide-react"
+import React, { useCallback, useRef, useState } from "react"
+
+import type { FileUploadDropzoneProps } from "@/components/projects/01-upload/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
-import { FileUp, Loader2, Upload, X } from "lucide-react"
-import React, { useCallback, useRef, useState } from "react"
-import type { FileUploadDropzoneProps } from "@/components/projects/01-upload/types"
+
 import { isValidMasterImageFile } from "../utils/fileValidation"
 
 /**

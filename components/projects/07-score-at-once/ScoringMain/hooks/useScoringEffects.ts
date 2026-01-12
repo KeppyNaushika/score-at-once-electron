@@ -7,12 +7,13 @@
  * - 設問変更時の選択更新
  */
 
+import { useEffect, useLayoutEffect, useRef } from "react"
+
 import type {
   CropRegionWithProjectPage,
   GradingMode,
   StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
-import { useEffect, useLayoutEffect, useRef } from "react"
 
 /**
  * useScoringEffectsの入力パラメータ

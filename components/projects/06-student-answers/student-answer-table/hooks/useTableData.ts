@@ -1,3 +1,5 @@
+import { useCallback, useMemo } from "react"
+
 import { useTableDataGeneration } from "@/components/projects/06-student-answers/student-answer-table/hooks/useTableDataGeneration"
 import type { ExtendedDisabledState } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
@@ -13,7 +15,6 @@ import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/components/projects/06-student-answers/types"
-import { useCallback, useMemo } from "react"
 
 interface UseTableDataParams {
   files: UnifiedFile[]

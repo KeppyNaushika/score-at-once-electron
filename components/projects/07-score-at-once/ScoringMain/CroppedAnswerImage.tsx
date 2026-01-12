@@ -1,7 +1,8 @@
 "use client"
 
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useEffect, useRef, useState } from "react"
+
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 
 /**
  * 画像表示について：

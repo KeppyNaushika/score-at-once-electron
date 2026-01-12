@@ -1,10 +1,11 @@
 "use client"
 
+import { PanelRightClose, PanelRightOpen } from "lucide-react"
+
 import GradingModeToggle from "@/components/projects/07-score-at-once/ScoringMain/GradingModeToggle"
 import { KeyboardHelpDialog } from "@/components/projects/07-score-at-once/ScoringMain/KeyboardHelpDialog"
 import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
-import { PanelRightClose, PanelRightOpen } from "lucide-react"
 
 interface ScoringHeaderControlsProps {
   gradingMode: GradingMode

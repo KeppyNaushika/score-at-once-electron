@@ -1,21 +1,22 @@
 "use client"
 
+import { Plus, Users } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
+import { useState } from "react"
+
 import LoadingSpinner from "@/components/common/LoadingSpinner"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
 import { ClassProjectManager } from "@/components/projects/05-students/components/ClassProjectManager"
-import ProjectStudentAddModal from "@/components/projects/05-students/components/ProjectStudentAddModal"
-import SortableStudentTable from "@/components/projects/05-students/components/SortableStudentTable"
-import StudentRemovalConfirmModal from "@/components/projects/05-students/components/StudentRemovalConfirmModal"
 import { ClassStatisticsCards } from "@/components/projects/05-students/components/project-students-page/components/ClassStatisticsCards"
 import { StudentStatisticsCards } from "@/components/projects/05-students/components/project-students-page/components/StudentStatisticsCards"
 import { useProjectStudentsData } from "@/components/projects/05-students/components/project-students-page/hooks/useProjectStudentsData"
+import ProjectStudentAddModal from "@/components/projects/05-students/components/ProjectStudentAddModal"
+import SortableStudentTable from "@/components/projects/05-students/components/SortableStudentTable"
+import StudentRemovalConfirmModal from "@/components/projects/05-students/components/StudentRemovalConfirmModal"
 import { useProjectClasses } from "@/components/projects/05-students/hooks/useProjectClasses"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, Users } from "lucide-react"
-import { useParams, useRouter } from "next/navigation"
-import { useState } from "react"
 
 export default function StudentsPage() {
   const params = useParams()

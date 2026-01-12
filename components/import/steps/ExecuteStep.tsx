@@ -1,10 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ImportAsNewResult } from "@/types/projectArchive.types"
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,6 +8,12 @@ import {
   XCircle,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Progress } from "@/components/ui/progress"
+import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
+import type { ImportAsNewResult } from "@/types/projectArchive.types"
 
 interface ExecuteStepProps {
   wizard: UseImportWizardReturn

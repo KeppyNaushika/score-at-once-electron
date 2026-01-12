@@ -1,5 +1,8 @@
 "use client"
 
+import { closestCenter, DndContext } from "@dnd-kit/core"
+import { FileImage } from "lucide-react"
+
 import { TableContent } from "@/components/projects/06-student-answers/student-answer-table/components/TableContent"
 import { TableDragOverlay } from "@/components/projects/06-student-answers/student-answer-table/components/TableDragOverlay"
 import { TableHeader } from "@/components/projects/06-student-answers/student-answer-table/components/TableHeader"
@@ -7,8 +10,6 @@ import { UploadModalWrapper } from "@/components/projects/06-student-answers/stu
 import { useStudentAnswerTableLogic } from "@/components/projects/06-student-answers/student-answer-table/hooks/useStudentAnswerTableLogic"
 import type { StudentAnswerTableProps } from "@/components/projects/06-student-answers/student-answer-table/types/localTypes"
 import { Card, CardContent } from "@/components/ui/card"
-import { closestCenter, DndContext } from "@dnd-kit/core"
-import { FileImage } from "lucide-react"
 
 export function StudentAnswerTable(props: StudentAnswerTableProps) {
   const {

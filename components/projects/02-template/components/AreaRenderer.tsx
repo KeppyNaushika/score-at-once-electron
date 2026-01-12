@@ -1,6 +1,5 @@
 "use client"
 
-import { CropRegionArea } from "@/types/common.types"
 import {
   MouseEvent as ReactMouseEvent,
   RefObject,
@@ -9,6 +8,8 @@ import {
   useMemo,
   useState,
 } from "react"
+
+import { CropRegionArea } from "@/types/common.types"
 
 interface AreaRendererProps {
   areas: CropRegionArea[]

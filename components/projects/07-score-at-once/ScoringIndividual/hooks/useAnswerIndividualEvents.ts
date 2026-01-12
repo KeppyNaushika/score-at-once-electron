@@ -1,3 +1,5 @@
+import { useCallback } from "react"
+
 import type {
   DrawingElement,
   DrawingTool,
@@ -6,7 +8,7 @@ import type {
   RectangleEditMode,
   SelectionRectangle,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
-import { useCallback } from "react"
+
 import { useCanvasInteraction } from "./interaction/useCanvasInteraction"
 import { useHandTool } from "./interaction/useHandTool"
 import { useKeyboard } from "./interaction/useKeyboard"

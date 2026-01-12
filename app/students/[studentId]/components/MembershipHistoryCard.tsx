@@ -1,12 +1,13 @@
 "use client"
 
+import { Clock } from "lucide-react"
+
 import {
   Membership,
   StudentWithMemberships,
 } from "@/app/students/[studentId]/types"
 import StudentMembershipTimeline from "@/components/student/StudentMembershipTimeline"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Clock } from "lucide-react"
 
 interface MembershipHistoryCardProps {
   student: StudentWithMemberships

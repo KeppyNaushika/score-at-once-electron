@@ -3,8 +3,8 @@
  * @description 全プレビューコンポーネントの統一インターフェース
  */
 
+export { AnchorControlPanel } from "./AnchorControlPanel"
 export { TextboxCanvasPreview } from "./TextboxCanvasPreview"
 export { TextboxImagePreview } from "./TextboxImagePreview"
 export { TextboxPreview } from "./TextboxPreview"
 export { TextboxSvgPreview } from "./TextboxSvgPreview"
-export { AnchorControlPanel } from "./AnchorControlPanel"

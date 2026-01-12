@@ -1,8 +1,9 @@
 "use client"
 
+import type { MasterAnswerGalleryProps } from "@/components/projects/01-upload/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import type { MasterAnswerGalleryProps } from "@/components/projects/01-upload/types"
+
 import { MasterAnswerCard } from "./MasterAnswerCard"
 
 /**

@@ -1,5 +1,9 @@
 "use client"
 
+import type { Subtotal } from "@prisma/client"
+import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
+import { useState } from "react"
+
 import { QuestionGroupItemList } from "@/components/projects/04-question-group/components/QuestionGroupItemList"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,9 +18,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubtotalGroupWithItems } from "@/types/electron"
-import type { Subtotal } from "@prisma/client"
-import { Edit, List, Plus, Settings, Trash2 } from "lucide-react"
-import { useState } from "react"
 
 interface QuestionGroupManagementProps {
   subtotalGroups: SubtotalGroupWithItems[]

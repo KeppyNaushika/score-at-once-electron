@@ -1,11 +1,12 @@
 "use client"
 
+import Image from "next/image"
+
+import { statusLabels } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+import type { ScoringStatus } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
+import { getMarkImagePath } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import Image from "next/image"
-import type { ScoringStatus } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
-import { statusLabels } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
-import { getMarkImagePath } from "@/components/projects/08-export/components/scoring-mark-settings/utils/scoringMarkUtils"
 
 interface StatusDisplaySectionProps {
   showMarkForStatus: Record<ScoringStatus, boolean>

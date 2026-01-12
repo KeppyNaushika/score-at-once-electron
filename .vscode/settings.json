@@ -2,7 +2,7 @@
   "eslint.workingDirectories": ["."],
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit",
-    "source.organizeImports": "explicit"
+    "source.organizeImports": "never"
   },
   "eslint.format.enable": false,
   "eslint.validate": [

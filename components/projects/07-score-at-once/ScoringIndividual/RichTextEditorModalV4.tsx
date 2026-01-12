@@ -1,16 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import {
   AlignCenter,
   AlignLeft,
@@ -25,13 +14,25 @@ import {
   UnfoldVertical,
 } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
-import { COLOR_PALETTE } from "./constants/drawingConstants"
+
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Separator } from "@/components/ui/separator"
+import { Textarea } from "@/components/ui/textarea"
 
 // V4統合: textbox-on-canvas-v4の機能をインポート
 import type {
   AnchorDirection,
   TextBox,
 } from "../../../../app/textbox-on-canvas-v4/types"
+import { COLOR_PALETTE } from "./constants/drawingConstants"
 import { EnhancedCanvasPreview } from "./EnhancedCanvasPreview"
 
 interface RichTextEditorModalV4Props {

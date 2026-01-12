@@ -4,10 +4,10 @@
  */
 
 import type {
-  Point,
-  TextBox,
   CoordinateConversionOptions,
   CoordinateConversionUtils,
+  Point,
+  TextBox,
 } from "../types"
 
 /**

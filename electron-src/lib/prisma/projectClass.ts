@@ -1,5 +1,7 @@
-import type { StudentClassInfo } from "@/types/electron.d"
 import { Prisma, ProjectClass } from "@prisma/client"
+
+import type { StudentClassInfo } from "@/types/electron.d"
+
 import prisma from "./client"
 
 /**

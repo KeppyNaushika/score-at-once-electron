@@ -126,6 +126,9 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Auto-fix linting issues
+        run: npm run lint:fix
+
       - name: Run linting and type checks
         run: npm run check-all
 

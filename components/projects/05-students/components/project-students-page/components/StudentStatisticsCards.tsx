@@ -19,7 +19,7 @@ export function StudentStatisticsCards({
   const absentStudents = students.filter((s) => s.status === "absent").length
 
   return (
-    <div className="flex flex-shrink-0 flex-wrap items-center gap-4">
+    <div className="flex shrink-0 flex-wrap items-center gap-4">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-gray-600">総生徒数</span>
         <span className="rounded-md border bg-white px-3 text-lg font-bold text-gray-900 shadow-sm">

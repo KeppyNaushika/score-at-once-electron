@@ -1,5 +1,7 @@
 "use client"
 
+import { AlertCircle, Upload } from "lucide-react"
+
 import StudentImportTable from "@/components/student/StudentImportTable"
 import { Button } from "@/components/ui/button"
 import {
@@ -11,7 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useStudentImport } from "@/hooks/useStudentImport"
-import { AlertCircle, Upload } from "lucide-react"
 
 function ValidationMessages({
   validation,

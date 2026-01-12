@@ -1,5 +1,10 @@
 "use client"
 
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { Ban, Trash2, Upload, X } from "lucide-react"
+import { useEffect, useState } from "react"
+
 import { DeleteConfirmationModal } from "@/components/projects/06-student-answers/student-answer-table/components/DeleteConfirmationModal"
 import type { SortableTableCellProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import {
@@ -10,10 +15,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { TableCell } from "@/components/ui/table"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { Ban, Trash2, Upload, X } from "lucide-react"
-import { useEffect, useState } from "react"
 
 export function SortableTableCell({
   id,

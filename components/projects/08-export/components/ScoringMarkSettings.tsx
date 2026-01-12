@@ -4,21 +4,20 @@ import { ScoringMarkSettingsContainer } from "@/components/projects/08-export/co
 import type { ScoringMarkConfig } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 // Re-export types for backward compatibility
-export type {
-  ScoringStatus,
-  MarkPosition,
-  TextAlignment,
-  PageSize,
-  PageOrientation,
-  ScoringMarkConfig,
-  ScoreTextConfig,
-} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
-
 export {
-  defaultConfig as defaultScoringMarkConfig,
   defaultPartialScoreConfig,
+  defaultConfig as defaultScoringMarkConfig,
   defaultSummaryScoreConfig,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
+export type {
+  MarkPosition,
+  PageOrientation,
+  PageSize,
+  ScoreTextConfig,
+  ScoringMarkConfig,
+  ScoringStatus,
+  TextAlignment,
+} from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 interface ScoringMarkSettingsProps {
   config: ScoringMarkConfig

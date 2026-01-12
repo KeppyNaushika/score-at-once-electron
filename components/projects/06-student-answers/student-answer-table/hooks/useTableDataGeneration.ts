@@ -1,3 +1,5 @@
+import { useMemo } from "react"
+
 import type {
   CellData,
   ExtendedDisabledState,
@@ -8,7 +10,6 @@ import type {
   UnifiedFile,
   UnifiedStudent,
 } from "@/components/projects/06-student-answers/types"
-import { useMemo } from "react"
 
 interface UseTableDataGenerationParams {
   files: UnifiedFile[]

@@ -6,13 +6,14 @@
  * - 列数=1: グループを縦に積み重ね（横並びにしない）
  * - 列数>1: グループを横に並べ、ドント方式で列を配分
  */
+import { Fragment, useMemo } from "react"
+
 import type {
   IndividualReportData,
   SubtotalGroupSelection,
   SubtotalTableColumns,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { SubtotalScore } from "@/electron-src/lib/shared/types/exportTypes"
-import { Fragment, useMemo } from "react"
 
 interface SubtotalTablePreviewProps {
   report: IndividualReportData

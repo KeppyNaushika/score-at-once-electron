@@ -1,12 +1,13 @@
 "use client"
 
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
+
 import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
 
 export function SortableTableRow({
   student,

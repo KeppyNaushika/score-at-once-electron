@@ -1,18 +1,19 @@
 "use client"
 
 import {
-  HelpSection,
-  ShortcutItem,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
-import {
   BarChart3,
   CheckCircle,
   Keyboard,
   Lightbulb,
   Settings,
 } from "lucide-react"
+
+import {
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
 
 export function HelpContent07Scoring() {
   return (

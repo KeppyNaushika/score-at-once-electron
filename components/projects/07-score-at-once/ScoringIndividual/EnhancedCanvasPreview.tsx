@@ -6,10 +6,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+
 import type { TextBox } from "../../../../app/textbox-on-canvas-v4/types"
 import {
-  renderSvgToCanvas,
   drawBackgroundImage,
+  renderSvgToCanvas,
 } from "../../../../app/textbox-on-canvas-v4/utils/canvasUtils"
 import { convertTextToSvg } from "../../../../app/textbox-on-canvas-v4/utils/textConversionUtils"
 

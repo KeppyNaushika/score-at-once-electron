@@ -1,25 +1,26 @@
 "use client"
 
-import { useAuth } from "@/contexts/AuthContext"
+import { RotateCcw } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+
+import { Button } from "@/components/ui/button"
 import { ColorPicker } from "@/components/ui/color-picker"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useAuth } from "@/contexts/AuthContext"
 import {
+  applyScoringColorPreset,
+  getCurrentPresetId,
   getScoringStatusColors,
   loadScoringStatusColors,
   saveScoringStatusColors,
-  applyScoringColorPreset,
-  getCurrentPresetId,
   SCORING_COLOR_PRESETS,
   SCORING_STATUS_LABELS,
   SCORING_STATUS_ORDER,
   type ScoringStatusColors,
   type ScoringStatusType,
 } from "@/lib/scoringStatusColors"
-import { RotateCcw } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const DEFAULT_SELECTION_BORDER_COLOR = "#F97316"
 const SELECTION_BORDER_PRESETS = [

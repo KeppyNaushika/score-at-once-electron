@@ -1,9 +1,10 @@
 "use client"
 
-import { cn } from "@/lib/utils"
 import { Loader2, UploadCloud } from "lucide-react"
 import React from "react"
 import { useDropzone } from "react-dropzone"
+
+import { cn } from "@/lib/utils"
 
 interface FileUploadDropzoneProps {
   onFilesSelected: (files: File[]) => void
@@ -51,7 +52,7 @@ const FileUploadDropzone = React.memo(
         )}
       >
         <input {...getInputProps()} disabled={disabled || isUploading} />
-        <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+        <div className="mx-auto flex max-w-105 flex-col items-center justify-center text-center">
           {isUploading ? (
             <div>
               <Loader2 className="text-primary mx-auto h-10 w-10 animate-spin" />

@@ -1,5 +1,8 @@
 "use client"
 
+import type { Subtotal } from "@prisma/client"
+import { BarChart3, Calculator } from "lucide-react"
+
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -11,8 +14,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SubtotalGroupWithItems } from "@/types/electron"
-import type { Subtotal } from "@prisma/client"
-import { BarChart3, Calculator } from "lucide-react"
 
 interface SubtotalData {
   [subtotalGroupId: string]: {

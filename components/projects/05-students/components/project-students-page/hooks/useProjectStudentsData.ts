@@ -1,5 +1,7 @@
 "use client"
 
+import { useCallback, useEffect, useState } from "react"
+
 import type {
   ClassGroup,
   GradingDataInfo,
@@ -8,7 +10,6 @@ import type {
   StudentMembership,
   StudentStatus,
 } from "@/components/projects/05-students/components/project-students-page/types/projectStudentsTypes"
-import { useCallback, useEffect, useState } from "react"
 
 interface UseProjectStudentsDataProps {
   projectId: string

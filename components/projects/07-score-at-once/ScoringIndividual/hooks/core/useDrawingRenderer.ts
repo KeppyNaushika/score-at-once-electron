@@ -4,10 +4,12 @@
  * - 線種別描画（矢印、波線、ジグザグ等）
  * - アノテーション変換
  */
+import { useCallback } from "react"
+
 import { getTextPositionFromAnchor } from "@/app/textbox-on-canvas-v4/utils/canvasUtils"
 import type { DrawingElement } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
 import type { DrawingAnnotationWithQuestionScore } from "@/types/drawingAnnotation.types"
-import { useCallback } from "react"
+
 import { renderTextElementV4 } from "../../utils/canvasTextRendererV4"
 
 interface UseDrawingRendererReturn {

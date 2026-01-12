@@ -1,10 +1,5 @@
 "use client"
 
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
 import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 import {
   Crop,
@@ -15,6 +10,13 @@ import {
   ZoomOut,
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
+
 import { EllipseToolPopover } from "./EllipseToolPopover"
 import { LineToolPopover } from "./LineToolPopover"
 import { RectangleToolPopover } from "./RectangleToolPopover"

@@ -1,10 +1,11 @@
 "use client"
 
+import { ChevronLeft, PanelRightClose, PanelRightOpen } from "lucide-react"
+
 import GradingModeToggle from "@/components/projects/07-score-at-once/ScoringMain/GradingModeToggle"
 import ScoringKeyboardHelp from "@/components/projects/07-score-at-once/ScoringMain/ScoringKeyboardHelp"
 import type { GradingMode } from "@/components/projects/07-score-at-once/types"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, PanelRightClose, PanelRightOpen } from "lucide-react"
 
 interface ScoringProject {
   examName: string

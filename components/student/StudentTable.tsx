@@ -1,5 +1,12 @@
 "use client"
 
+import type { Prisma } from "@prisma/client"
+import { Edit, PlusCircle, Search, Trash2, Upload } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
+
+import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
+import StudentModal from "@/components/student/StudentModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -20,13 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/useTableSort"
-import { Edit, PlusCircle, Search, Trash2, Upload } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useState } from "react"
-
-import SpreadsheetImportModal from "@/components/student/SpreadsheetImportModal"
-import StudentModal from "@/components/student/StudentModal"
-import type { Prisma } from "@prisma/client"
 
 interface StudentWithMemberships {
   id: string

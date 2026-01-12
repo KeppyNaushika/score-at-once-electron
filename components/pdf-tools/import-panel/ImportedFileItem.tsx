@@ -1,5 +1,14 @@
 "use client"
 
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  RotateCw,
+  Trash2,
+} from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -19,14 +28,6 @@ import type {
   NUpLayout,
   RotationDegree,
 } from "@/types/pdfTools.types"
-import {
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  RotateCw,
-  Trash2,
-} from "lucide-react"
-import { useState } from "react"
 
 interface ImportedFileItemProps {
   file: ImportedFile
@@ -178,7 +179,7 @@ export default function ImportedFileItem({
                     type="button"
                     onClick={() => handlePageToggle(pageNumber)}
                     className={cn(
-                      "relative aspect-[3/4] overflow-hidden rounded border-2 transition-all",
+                      "relative aspect-3/4 overflow-hidden rounded border-2 transition-all",
                       isSelected
                         ? "border-primary ring-primary/20 ring-2"
                         : "border-muted hover:border-muted-foreground/50"

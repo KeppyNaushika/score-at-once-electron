@@ -1,5 +1,9 @@
 "use client"
 
+import { Info } from "lucide-react"
+import { usePathname } from "next/navigation"
+import React, { useState } from "react"
+
 import { HelpContent01Upload as UploadHelpContent } from "@/components/help/page-specific/HelpContent01Upload"
 import { HelpContent02Template as TemplateHelpContent } from "@/components/help/page-specific/HelpContent02Template"
 import { HelpContent03RegionInfo as RegionInfoHelpContent } from "@/components/help/page-specific/HelpContent03RegionInfo"
@@ -8,8 +12,8 @@ import { HelpContent05Students as StudentsHelpContent } from "@/components/help/
 import { HelpContent06StudentAnswers as StudentAnswersHelpContent } from "@/components/help/page-specific/HelpContent06StudentAnswers"
 import { HelpContent07Scoring as ScoringHelpContent } from "@/components/help/page-specific/HelpContent07Scoring"
 import { HelpContent08Export as ExportHelpContent } from "@/components/help/page-specific/HelpContent08Export"
-import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { HelpContentClasses as ClassesHelpContent } from "@/components/help/page-specific/HelpContentClasses"
+import { HelpContentSubtotalGroups as SubtotalGroupsHelpContent } from "@/components/help/page-specific/HelpContentSubtotalGroups"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
@@ -19,9 +23,6 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
-import { Info } from "lucide-react"
-import { usePathname } from "next/navigation"
-import React, { useState } from "react"
 
 // ページごとのヘルプコンポーネント
 const pageHelpComponents: {

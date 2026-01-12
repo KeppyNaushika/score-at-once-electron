@@ -1,8 +1,5 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { WorkflowPhase } from "@/components/projects/detail/types"
 import {
   BarChart3,
   Calculator,
@@ -16,6 +13,10 @@ import {
   Users,
 } from "lucide-react"
 import Link from "next/link"
+
+import type { WorkflowPhase } from "@/components/projects/detail/types"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 interface PhaseCardProps {
   phase: WorkflowPhase

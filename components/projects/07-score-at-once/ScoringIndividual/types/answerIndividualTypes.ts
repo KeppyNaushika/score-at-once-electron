@@ -1,9 +1,9 @@
 // Prisma型をインポート
 import type {
   CropRegionWithProjectPage,
-  StudentAnswerImageWithProjectStudents,
   QuestionScore,
   ScoringData,
+  StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
 
 // 線種の型定義

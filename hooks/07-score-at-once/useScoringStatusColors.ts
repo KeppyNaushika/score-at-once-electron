@@ -1,5 +1,6 @@
-import { useAuth } from "@/contexts/AuthContext"
 import { useEffect, useRef, useState } from "react"
+
+import { useAuth } from "@/contexts/AuthContext"
 import {
   getScoringStatusColors,
   loadScoringStatusColors,

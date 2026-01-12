@@ -4,6 +4,7 @@
  * - 2つの答案の配置交換（採点情報込み）
  */
 import type { QuestionScore } from "@prisma/client"
+
 import prisma from "../client"
 
 /**

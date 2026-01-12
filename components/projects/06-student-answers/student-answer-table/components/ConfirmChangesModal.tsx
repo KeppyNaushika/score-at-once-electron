@@ -1,5 +1,8 @@
 "use client"
 
+import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
+import { useState } from "react"
+
 import type {
   PendingChange,
   ScoringDataOption,
@@ -15,8 +18,6 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { AlertTriangle, FileEdit, Loader2 } from "lucide-react"
-import { useState } from "react"
 
 interface ConfirmChangesModalProps {
   isOpen: boolean

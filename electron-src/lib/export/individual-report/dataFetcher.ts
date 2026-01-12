@@ -3,6 +3,7 @@
  */
 
 import type { CropRegion, QuestionScore } from "@prisma/client"
+
 import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
 import { getQuestionScoresForProject } from "../../prisma/questionScore"
 import { getActiveSubtotalGroupsForProject } from "../../prisma/subtotalGroup"

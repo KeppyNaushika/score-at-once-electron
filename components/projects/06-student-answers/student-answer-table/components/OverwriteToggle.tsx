@@ -1,8 +1,9 @@
 "use client"
 
+import { AlertTriangle } from "lucide-react"
+
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { AlertTriangle } from "lucide-react"
 
 interface OverwriteToggleProps {
   allowOverwrite: boolean

@@ -1,10 +1,11 @@
 "use client"
 
+import { AlertCircle, CheckCircle, Info } from "lucide-react"
+import React from "react"
+
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { AlertCircle, CheckCircle, Info } from "lucide-react"
-import React from "react"
 
 interface ValidationResult {
   valid: number

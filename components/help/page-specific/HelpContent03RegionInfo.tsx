@@ -1,13 +1,6 @@
 "use client"
 
 import {
-  Badge,
-  HelpSection,
-  ShortcutItem,
-  StepItem,
-  TipItem,
-} from "@/components/help/common/HelpComponents"
-import {
   CheckCircle,
   Edit,
   Keyboard,
@@ -15,6 +8,14 @@ import {
   Settings,
   Table,
 } from "lucide-react"
+
+import {
+  Badge,
+  HelpSection,
+  ShortcutItem,
+  StepItem,
+  TipItem,
+} from "@/components/help/common/HelpComponents"
 
 export function HelpContent03RegionInfo() {
   return (

@@ -8,6 +8,7 @@ import {
   Minus,
   X,
 } from "lucide-react"
+
 import {
   getScoringStatusColors,
   SCORING_STATUS_LABELS,

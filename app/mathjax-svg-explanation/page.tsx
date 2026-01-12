@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useRef,useState } from "react"
 
 /**
  * ステップ結果の型定義
@@ -35,13 +35,14 @@ interface StepResult {
   canvas?: HTMLCanvasElement
   completed?: boolean
 }
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowRight,Code, Info, Play } from "lucide-react"
+
 // Tabs components are available for future use
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Info, Play, Code, ArrowRight } from "lucide-react"
 
 export default function MathJaxSVGExplanation() {
   const [currentStep, setCurrentStep] = useState(0)

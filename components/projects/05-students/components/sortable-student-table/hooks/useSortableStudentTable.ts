@@ -1,9 +1,5 @@
 "use client"
 
-import type {
-  Student,
-  StudentStatus,
-} from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 import {
   DragEndEvent,
   DragStartEvent,
@@ -14,6 +10,11 @@ import {
 } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
+
+import type {
+  Student,
+  StudentStatus,
+} from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 
 interface UseSortableStudentTableProps {
   filteredStudents: Student[]

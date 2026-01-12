@@ -1,5 +1,9 @@
 "use client"
 
+import { useDroppable } from "@dnd-kit/core"
+import { FileText, Trash2, Upload } from "lucide-react"
+import { useState } from "react"
+
 import type { TableHeaderProps } from "@/components/projects/06-student-answers/student-answer-table/types"
 import { Button } from "@/components/ui/button"
 import { CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,9 +13,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
-import { useDroppable } from "@dnd-kit/core"
-import { FileText, Trash2, Upload } from "lucide-react"
-import { useState } from "react"
+
 import { OverwriteToggle } from "./OverwriteToggle"
 import { PlacementStrategySelector } from "./PlacementStrategySelector"
 import { PreviewModeToggle } from "./PreviewModeToggle"

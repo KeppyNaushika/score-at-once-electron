@@ -1,5 +1,8 @@
 "use client"
 
+import { AlertCircle, Check, ChevronLeft, X } from "lucide-react"
+import { useEffect } from "react"
+
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -10,8 +13,7 @@ import {
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 import { cn } from "@/lib/utils"
 import type { ImportWizardStep } from "@/types/projectArchive.types"
-import { AlertCircle, Check, ChevronLeft, X } from "lucide-react"
-import { useEffect } from "react"
+
 import { ExecuteStep } from "./steps/ExecuteStep"
 import { FileOverviewStep } from "./steps/FileOverviewStep"
 import { FileSelectStep } from "./steps/FileSelectStep"

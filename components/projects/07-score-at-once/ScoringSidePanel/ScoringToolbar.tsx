@@ -1,5 +1,16 @@
 "use client"
 
+import {
+  AlertTriangle,
+  CheckCircle,
+  Circle,
+  Clock,
+  Minus,
+  RefreshCw,
+  Target,
+  X,
+} from "lucide-react"
+
 import { useCommand } from "@/components/projects/07-score-at-once/hooks/useCommand"
 import { useKeyBindings } from "@/components/projects/07-score-at-once/hooks/useKeyBindings"
 import type { ScoringStatus } from "@/components/projects/07-score-at-once/types"
@@ -13,16 +24,7 @@ import {
 } from "@/components/ui/tooltip"
 import { useScoringStatusColors } from "@/hooks/07-score-at-once/useScoringStatusColors"
 import type { ScoringStatusType } from "@/lib/scoringStatusColors"
-import {
-  AlertTriangle,
-  CheckCircle,
-  Circle,
-  Clock,
-  Minus,
-  RefreshCw,
-  Target,
-  X,
-} from "lucide-react"
+
 import { SidePanelSection } from "./SidePanelSection"
 
 interface ScoringToolbarProps {

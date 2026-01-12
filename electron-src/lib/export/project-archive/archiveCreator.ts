@@ -8,6 +8,7 @@ import archiver from "archiver"
 import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
+
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import { CURRENT_VERSION } from "../../import/transformers/types"

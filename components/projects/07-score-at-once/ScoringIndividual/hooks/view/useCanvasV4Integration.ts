@@ -2,8 +2,10 @@
  * @fileoverview Canvas初期化およびV4統合フック
  * キャンバスサイズ計算、アスペクト比、V4テキスト統合のロジックを提供
  */
-import type { ScoringData } from "@/components/projects/07-score-at-once/types"
 import { useCallback, useMemo } from "react"
+
+import type { ScoringData } from "@/components/projects/07-score-at-once/types"
+
 import type { DrawingElement } from "../../types/answerIndividualTypes"
 import { useTextboxV4Integration } from "../text/useTextboxIntegration"
 

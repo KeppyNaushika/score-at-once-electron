@@ -1,15 +1,16 @@
 import { ipcMain } from "electron"
+
 import {
-  getQuestionScoresForProject,
-  getQuestionScoresForStudent,
   createQuestionScore,
-  updateQuestionScore,
+  CreateQuestionScoreData,
   deleteQuestionScore,
-  getQuestionScoreComparison,
   finalizeQuestionScore,
   getAnswerSheetProgress,
   getProjectProgress,
-  CreateQuestionScoreData,
+  getQuestionScoreComparison,
+  getQuestionScoresForProject,
+  getQuestionScoresForStudent,
+  updateQuestionScore,
   UpdateQuestionScoreData,
 } from "../lib/prisma/questionScore"
 import { initializeScoringRecords } from "../lib/prisma/scoringInitializer"

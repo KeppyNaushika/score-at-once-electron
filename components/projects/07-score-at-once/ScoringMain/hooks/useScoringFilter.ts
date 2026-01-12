@@ -1,14 +1,3 @@
-import type {
-  CropRegionWithProjectPage,
-  GradingMode,
-  MasterGridItem,
-  StudentAnswerImageWithProjectStudents,
-  QuestionScore,
-  ScoringData,
-  ScoringStatus,
-} from "@/components/projects/07-score-at-once/types"
-import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
-import type { ProjectWithDetails } from "@/types/common.types"
 import {
   useCallback,
   useEffect,
@@ -17,6 +6,18 @@ import {
   useRef,
   useState,
 } from "react"
+
+import type {
+  CropRegionWithProjectPage,
+  GradingMode,
+  MasterGridItem,
+  QuestionScore,
+  ScoringData,
+  ScoringStatus,
+  StudentAnswerImageWithProjectStudents,
+} from "@/components/projects/07-score-at-once/types"
+import { findQuestionScore } from "@/components/projects/07-score-at-once/types"
+import type { ProjectWithDetails } from "@/types/common.types"
 
 const areArraysEqual = (a: string[], b: string[]) => {
   if (a.length !== b.length) {

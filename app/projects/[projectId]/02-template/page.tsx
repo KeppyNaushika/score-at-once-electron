@@ -1,22 +1,22 @@
 "use client"
 
-import { usePageHelp } from "@/components/help/usePageHelp"
-import PageHeader from "@/components/layout/PageHeader"
-import CropRegionEditor from "@/components/projects/02-template/components/CropRegionEditor"
-import { Button } from "@/components/ui/button"
 import { useParams, useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 
+import { usePageHelp } from "@/components/help/usePageHelp"
+import PageHeader from "@/components/layout/PageHeader"
+import CropRegionEditor from "@/components/projects/02-template/components/CropRegionEditor"
+import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
+import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
+import { useCropRegionSave } from "@/components/projects/02-template/hooks/useCropRegionSave"
+import { useTemplateData } from "@/components/projects/02-template/hooks/useTemplateData"
 // Refactored imports
 import {
   AreaType,
   RegionCoordinates,
 } from "@/components/projects/02-template/types"
 import { canProceedToNextStep } from "@/components/projects/02-template/utils/templateActions"
-import { PageNavigation } from "@/components/projects/02-template/components/PageNavigation"
-import { TemplateStatus } from "@/components/projects/02-template/components/TemplateStatus"
-import { useCropRegionSave } from "@/components/projects/02-template/hooks/useCropRegionSave"
-import { useTemplateData } from "@/components/projects/02-template/hooks/useTemplateData"
+import { Button } from "@/components/ui/button"
 import { CropRegionArea } from "@/types/common.types"
 
 export default function TemplateStepPage() {

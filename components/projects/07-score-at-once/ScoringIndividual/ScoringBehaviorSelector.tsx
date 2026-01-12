@@ -1,9 +1,10 @@
 "use client"
 
+import { Settings } from "lucide-react"
+
 import { SidePanelSection } from "@/components/projects/07-score-at-once/ScoringSidePanel/SidePanelSection"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Settings } from "lucide-react"
 
 export type ScoringBehavior = "next-student" | "next-question" | "stay"
 

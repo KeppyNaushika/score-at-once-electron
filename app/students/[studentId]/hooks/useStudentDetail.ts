@@ -1,11 +1,12 @@
+import type { Student, StudentClassMembership } from "@prisma/client"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
+
 import {
   ClassWithMemberships,
   Membership,
   StudentWithMemberships,
 } from "@/app/students/[studentId]/types"
-import type { Student, StudentClassMembership } from "@prisma/client"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
 
 export function useStudentDetail(studentId: string) {
   const router = useRouter()

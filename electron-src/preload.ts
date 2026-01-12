@@ -1,6 +1,7 @@
 import type { DrawingAnnotation } from "@prisma/client"
 import { Prisma } from "@prisma/client"
-import { contextBridge, ipcRenderer, IpcRenderer, webUtils } from "electron"
+import { contextBridge, IpcRenderer, ipcRenderer, webUtils } from "electron"
+
 import {
   CropRegionCreateData,
   CropRegionUpdateData,

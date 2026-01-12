@@ -1,5 +1,6 @@
 import { User } from "@prisma/client"
 import bcrypt from "bcrypt"
+
 import prisma from "./client"
 
 export const fetchUsers = async (): Promise<User[]> => {

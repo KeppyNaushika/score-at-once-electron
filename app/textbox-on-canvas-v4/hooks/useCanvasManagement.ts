@@ -6,6 +6,7 @@
 "use client"
 
 import { useCallback, useRef, useState } from "react"
+
 import type { AnchorDirection, DragState, TextBox } from "../types"
 import {
   drawAnchor,

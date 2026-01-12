@@ -1,4 +1,5 @@
 import { Class, Prisma } from "@prisma/client"
+
 import prisma from "./client"
 
 type ClassWithStudents = Prisma.ClassGetPayload<{

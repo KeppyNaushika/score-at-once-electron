@@ -1,9 +1,10 @@
 "use client"
 
+import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
+
+import type { TextAlignment } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 import { Label } from "@/components/ui/label"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { AlignCenter, AlignLeft, AlignRight } from "lucide-react"
-import type { TextAlignment } from "@/components/projects/08-export/components/scoring-mark-settings/types/scoringMarkTypes"
 
 interface TextAlignmentSectionProps {
   scoreAlignment: TextAlignment

@@ -5,12 +5,13 @@
  * 個別表示用のナビゲーション関数を提供
  */
 
+import { useCallback, useEffect, useMemo } from "react"
+
 import type {
   CropRegionWithProjectPage,
   GradingMode,
   StudentAnswerImageWithProjectStudents,
 } from "@/components/projects/07-score-at-once/types"
-import { useCallback, useEffect, useMemo } from "react"
 
 /**
  * 生徒データの型定義（UIコンポーネント用）

@@ -1,5 +1,7 @@
 "use client"
 
+import { BookOpen, Calendar, Clock, Edit, PlusCircle } from "lucide-react"
+
 import {
   Membership,
   StudentWithMemberships,
@@ -7,7 +9,6 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Calendar, Clock, Edit, PlusCircle } from "lucide-react"
 
 interface CurrentMembershipsCardProps {
   student: StudentWithMemberships

@@ -1,8 +1,8 @@
-import { delimiter, join } from "path"
 import { app } from "electron"
 import type { Server } from "http"
 import type { IncomingMessage, ServerResponse } from "http"
 import type { NextServer } from "next/dist/server/next"
+import { delimiter, join } from "path"
 
 // Electron公式推奨の環境判定方法
 const isDev = !app.isPackaged

@@ -1,5 +1,8 @@
 "use client"
 
+import { RectangleHorizontal } from "lucide-react"
+import { useState } from "react"
+
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import {
@@ -8,8 +11,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
-import { RectangleHorizontal } from "lucide-react"
-import { useState } from "react"
+
 import { COLOR_PALETTE } from "./constants/drawingConstants"
 import type { DrawingTool } from "./types/answerIndividualTypes"
 

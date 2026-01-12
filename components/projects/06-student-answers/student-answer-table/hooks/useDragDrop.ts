@@ -1,10 +1,11 @@
+import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
+
 import { useDragDropHandlers } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDropHandlers"
 import { useDragDropState } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDropState"
 import type {
   UseDragDropParams,
   UseDragDropReturn,
 } from "@/components/projects/06-student-answers/student-answer-table/types/dragDropTypes"
-import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 
 /**
  * ドラッグ&ドロップ機能を提供するメインフック（リファクタリング版）

@@ -2,8 +2,9 @@
  * @fileoverview 設問変更時自動スクロールフック
  * 設問が変更されたとき、選択設問を画面内で中央寄せ表示する
  */
-import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 import { useEffect } from "react"
+
+import type { CropRegionWithProjectPage } from "@/components/projects/07-score-at-once/types"
 
 /** 設問変更時自動スクロールフックのパラメータ */
 export interface UseQuestionAutoScrollParams {

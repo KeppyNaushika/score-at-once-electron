@@ -1,11 +1,12 @@
 "use client"
 
+import { CheckCircle, Lightbulb, Settings, Users, Workflow } from "lucide-react"
+
 import {
   HelpSection,
   StepItem,
   TipItem,
 } from "@/components/help/common/HelpComponents"
-import { CheckCircle, Lightbulb, Settings, Users, Workflow } from "lucide-react"
 
 export function HelpContentSubtotalGroups() {
   return (

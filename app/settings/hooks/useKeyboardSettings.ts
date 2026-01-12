@@ -1,8 +1,9 @@
-import { useAuth } from "@/contexts/AuthContext"
-import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoringKeybindings"
-import { getModifierKeyLabel } from "@/lib/platformUtils"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+
+import { DEFAULT_KEYBINDINGS } from "@/components/projects/07-score-at-once/constants/scoringKeybindings"
+import { useAuth } from "@/contexts/AuthContext"
+import { getModifierKeyLabel } from "@/lib/platformUtils"
 
 export function useKeyboardSettings() {
   const { user } = useAuth()

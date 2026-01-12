@@ -1,10 +1,11 @@
+import { useCallback } from "react"
+
 import { DRAWING_TOLERANCES } from "@/components/projects/07-score-at-once/ScoringIndividual/constants/drawingConstants"
 import type {
   DrawingElement,
   LineEditMode,
   RectangleEditMode,
 } from "@/components/projects/07-score-at-once/ScoringIndividual/types/answerIndividualTypes"
-import { useCallback } from "react"
 
 export function useEditModeUtils() {
   // 線の編集モード判定（開始点、終了点、移動）- PowerPointスタイル

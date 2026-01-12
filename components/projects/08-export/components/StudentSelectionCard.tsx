@@ -1,5 +1,17 @@
 "use client"
 
+import {
+  Check,
+  CheckSquare,
+  Eye,
+  Search,
+  Square,
+  UserCheck,
+  Users,
+  UserX,
+} from "lucide-react"
+import { useState } from "react"
+
 import { Student } from "@/app/projects/[projectId]/08-export/types"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -22,17 +34,7 @@ import type {
   IndividualReportData,
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
-import {
-  Check,
-  CheckSquare,
-  Eye,
-  Search,
-  Square,
-  UserCheck,
-  Users,
-  UserX,
-} from "lucide-react"
-import { useState } from "react"
+
 import type { ExportTabType } from "./ExportOptionsCard"
 import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
 

@@ -1,7 +1,8 @@
 "use client"
 
-import { EditableTable } from "@/components/common/EditableTable"
 import { ColumnDef } from "@tanstack/react-table"
+
+import { EditableTable } from "@/components/common/EditableTable"
 
 interface ClassStudentImportRow {
   studentId: string
@@ -65,7 +66,7 @@ export default function ClassStudentImportTable({
       onDataChange={onDataChange}
       allowInsertRow={true}
       allowDeleteRow={true}
-      className="min-w-[650px]"
+      className="min-w-162.5"
     />
   )
 }

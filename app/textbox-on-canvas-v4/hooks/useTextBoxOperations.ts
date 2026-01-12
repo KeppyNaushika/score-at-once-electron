@@ -6,6 +6,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
+
 import { TEXTBOX_SETTINGS } from "../constants"
 import type { AnchorDirection, DragState, TextBox } from "../types"
 import { isAnchorClicked } from "../utils/canvasUtils"
