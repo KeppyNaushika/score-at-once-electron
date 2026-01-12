@@ -12,11 +12,13 @@ import { cn } from "@/lib/utils"
 import type { ImportWizardStep } from "@/types/projectArchive.types"
 import { AlertCircle, Check, ChevronLeft, X } from "lucide-react"
 import { useEffect } from "react"
-import { ConflictResolveStep } from "./steps/ConflictResolveStep"
 import { ExecuteStep } from "./steps/ExecuteStep"
+import { FileOverviewStep } from "./steps/FileOverviewStep"
 import { FileSelectStep } from "./steps/FileSelectStep"
-import { MatchingConfigStep } from "./steps/MatchingConfigStep"
-import { ModeSelectStep } from "./steps/ModeSelectStep"
+import { FinalConfirmStep } from "./steps/FinalConfirmStep"
+import { IdIntegrationStep } from "./steps/IdIntegrationStep"
+import { ScoringConflictStep } from "./steps/ScoringConflictStep"
+import { UpdateConfirmStep } from "./steps/UpdateConfirmStep"
 
 interface ImportWizardModalProps {
   isOpen: boolean
@@ -26,17 +28,21 @@ interface ImportWizardModalProps {
 
 const STEP_TITLES: Record<ImportWizardStep, string> = {
   file_select: "ファイル選択",
-  mode_select: "インポートモード",
-  matching_config: "マッチング設定",
-  conflict_resolve: "競合解決",
+  file_overview: "内容確認",
+  id_integration: "紐づけ",
+  scoring_conflict: "採点",
+  update_confirm: "更新",
+  final_confirm: "確認",
   execute: "実行",
 }
 
 const STEP_ORDER: ImportWizardStep[] = [
   "file_select",
-  "mode_select",
-  "matching_config",
-  "conflict_resolve",
+  "file_overview",
+  "id_integration",
+  "scoring_conflict",
+  "update_confirm",
+  "final_confirm",
   "execute",
 ]
 
@@ -61,13 +67,7 @@ export function ImportWizardModal({
     }
   }
 
-  // 新規作成モードの場合のステップ調整
-  const effectiveSteps: ImportWizardStep[] =
-    state.mode === "new"
-      ? ["file_select", "mode_select", "execute"]
-      : STEP_ORDER
-
-  const effectiveStepIndex = effectiveSteps.indexOf(state.currentStep)
+  const currentStepIndex = STEP_ORDER.indexOf(state.currentStep)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
@@ -82,10 +82,9 @@ export function ImportWizardModal({
 
           {/* ステップインジケーター */}
           <div className="flex items-center justify-center pt-4">
-            {effectiveSteps.map((step, index) => {
+            {STEP_ORDER.map((step, index) => {
               const isActive = step === state.currentStep
-              const isCompleted =
-                effectiveSteps.indexOf(step) < effectiveStepIndex
+              const isCompleted = index < currentStepIndex
 
               return (
                 <div key={step} className="flex items-center">
@@ -97,7 +96,7 @@ export function ImportWizardModal({
                       )}
                     />
                   )}
-                  <div className="flex w-24 flex-col items-center gap-y-3">
+                  <div className="flex w-20 flex-col items-center gap-y-2">
                     <div
                       className={cn(
                         "flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-all",
@@ -155,14 +154,23 @@ export function ImportWizardModal({
           {state.currentStep === "file_select" && (
             <FileSelectStep wizard={wizard} />
           )}
-          {state.currentStep === "mode_select" && (
-            <ModeSelectStep wizard={wizard} />
+          {state.currentStep === "file_overview" && (
+            <FileOverviewStep wizard={wizard} />
           )}
-          {state.currentStep === "matching_config" && (
-            <MatchingConfigStep wizard={wizard} />
+          {state.currentStep === "id_integration" && (
+            <IdIntegrationStep wizard={wizard} />
           )}
-          {state.currentStep === "conflict_resolve" && (
-            <ConflictResolveStep wizard={wizard} />
+          {state.currentStep === "scoring_conflict" && (
+            <ScoringConflictStep wizard={wizard} />
+          )}
+          {state.currentStep === "update_confirm" && (
+            <UpdateConfirmStep wizard={wizard} />
+          )}
+          {state.currentStep === "final_confirm" && (
+            <FinalConfirmStep
+              wizard={wizard}
+              onExecute={() => wizard.goToNextStep()}
+            />
           )}
           {state.currentStep === "execute" && (
             <ExecuteStep
