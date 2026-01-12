@@ -10,6 +10,7 @@ import * as fs from "fs"
 import * as path from "path"
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
+import { CURRENT_VERSION } from "../../import/transformers/types"
 import type { CollectedData } from "./dataCollector"
 
 /**
@@ -72,7 +73,7 @@ function createManifest(
   exportedBy?: string
 ): ArchiveManifest {
   return {
-    version: "1.2.0", // v0.4.0: userId/studentId非NULL化
+    version: CURRENT_VERSION,
     schemaVersion: getSchemaVersion(),
     appVersion: getAppVersion(),
     exportedAt: new Date().toISOString(),

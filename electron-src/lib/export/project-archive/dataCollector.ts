@@ -316,7 +316,7 @@ export async function collectProjectData(
     const studentsData: ArchiveStudentsData = {
       students: students.map((s) => ({
         id: s.id,
-        studentId: s.studentId,
+        studentNumber: s.studentNumber,
         lastName: s.lastName,
         firstName: s.firstName,
         lastNameKana: s.lastNameKana,

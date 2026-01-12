@@ -5,15 +5,139 @@
  */
 
 import type {
-  ConflictCategory,
-  ConflictItem,
-  MatchingSummary,
   CategoryMatchingResult,
+  CategoryMatchingSummary,
+  ConflictCategory,
   ConflictDetectionResult,
+  ConflictItem,
+  FieldChange,
+  MatchingCandidate,
   MatchingConfig,
+  MatchingSummary,
 } from "../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
 import { performAllMatching, type MatchResult } from "./matcher"
+
+// =============================================================================
+// フィールドラベルマッピング（先生向けUI表示用）
+// =============================================================================
+
+/**
+ * カテゴリ別のフィールドラベル
+ * 技術的なフィールド名を先生が理解できる日本語に変換
+ */
+const FIELD_LABELS: Record<ConflictCategory, Record<string, string>> = {
+  Student: {
+    studentNumber: "学籍番号",
+    lastName: "姓",
+    firstName: "名",
+    lastNameKana: "姓カナ",
+    firstNameKana: "名カナ",
+    enrollmentYear: "入学年度",
+  },
+  Class: {
+    name: "学級名",
+    classCode: "学級コード",
+    grade: "学年",
+    description: "説明",
+    isVisible: "表示",
+  },
+  User: {
+    username: "ユーザー名",
+    name: "氏名",
+    role: "役割",
+  },
+  SubtotalGroup: {
+    name: "グループ名",
+  },
+  Project: {
+    examName: "試験名",
+    examDate: "試験日",
+    subject: "教科",
+    description: "説明",
+  },
+  QuestionScore: {
+    partialScore: "得点",
+    status: "採点状態",
+  },
+  DrawingAnnotation: {
+    type: "種類",
+    text: "テキスト",
+    color: "色",
+  },
+}
+
+/**
+ * マッチング理由の生成（先生向け表示用）
+ */
+function generateMatchReason(
+  category: ConflictCategory,
+  matchMethod: string
+): string {
+  switch (category) {
+    case "Student":
+      if (matchMethod === "studentNumber") return "学籍番号が一致"
+      if (matchMethod === "name") return "氏名が一致"
+      return "学籍番号と氏名が一致"
+    case "Class":
+      if (matchMethod === "name") return "学級名が一致"
+      return "学級コードが一致"
+    case "User":
+      return "ユーザー名が一致"
+    case "SubtotalGroup":
+      return "グループ名が一致"
+    default:
+      return "データが一致"
+  }
+}
+
+// =============================================================================
+// 差分計算関数
+// =============================================================================
+
+/**
+ * 2つのデータ間のフィールド差分を計算
+ */
+export function calculateFieldChanges(
+  importData: Record<string, unknown>,
+  existingData: Record<string, unknown>,
+  category: ConflictCategory
+): FieldChange[] {
+  const changes: FieldChange[] = []
+  const labels = FIELD_LABELS[category] || {}
+  const excludeKeys = ["id", "createdAt", "updatedAt"]
+
+  for (const [field, label] of Object.entries(labels)) {
+    if (excludeKeys.includes(field)) continue
+
+    const importValue = importData[field]
+    const existingValue = existingData[field]
+
+    // 値が異なる場合のみ差分として追加
+    if (JSON.stringify(importValue) !== JSON.stringify(existingValue)) {
+      changes.push({
+        field,
+        fieldLabel: label,
+        currentValue: existingValue,
+        newValue: importValue,
+      })
+    }
+  }
+
+  return changes
+}
+
+/**
+ * 日付を比較して新しい方を判定
+ */
+function isImportDataNewer(
+  importUpdatedAt: string,
+  existingUpdatedAt: string
+): boolean {
+  const importDate = new Date(importUpdatedAt)
+  const existingDate = new Date(existingUpdatedAt)
+  return importDate > existingDate
+}
 
 /**
  * 2つの値が異なるかどうかを比較
@@ -121,6 +245,96 @@ function createIdMapping<T extends { id: string }>(
   return mapping
 }
 
+// =============================================================================
+// 先生向けUI用のサマリー生成
+// =============================================================================
+
+/**
+ * カテゴリ別の照合サマリーを生成（先生向けUI用）
+ *
+ * マッチング結果を以下のカテゴリに分類:
+ * - autoMatched: 自動で紐づく（IDが完全一致 or データが同一）
+ * - newItems: 新しく登録する（既存に該当なし）
+ * - needsConfirmation: 確認が必要（マッチしたが差異あり）
+ * - hasConflict: 問題あり（学籍番号重複など）
+ */
+export function createCategoryMatchingSummary<
+  T extends { id: string; updatedAt?: string },
+>(
+  results: MatchResult<T>[],
+  category: ConflictCategory,
+  labelGenerator: (data: T) => string,
+  matchMethod: string
+): CategoryMatchingSummary {
+  const autoMatchedItems: Array<{ id: string; displayLabel: string }> = []
+  const newItemsList: Array<{ id: string; displayLabel: string }> = []
+  const confirmationItems: MatchingCandidate[] = []
+  const conflictItems: MatchingCandidate[] = []
+
+  for (const result of results) {
+    const displayLabel = labelGenerator(result.importData)
+
+    if (!result.existingData) {
+      // 新規アイテム
+      newItemsList.push({
+        id: result.importData.id,
+        displayLabel,
+      })
+    } else {
+      const importObj = result.importData as unknown as Record<string, unknown>
+      const existingObj = result.existingData as unknown as Record<
+        string,
+        unknown
+      >
+
+      // データに差異があるかチェック
+      if (hasDataDifference(importObj, existingObj)) {
+        // 差異がある場合は確認が必要
+        const fieldChanges = calculateFieldChanges(
+          importObj,
+          existingObj,
+          category
+        )
+        const importUpdatedAt = (importObj.updatedAt as string) || ""
+        const existingUpdatedAt = (existingObj.updatedAt as string) || ""
+
+        const candidate: MatchingCandidate = {
+          id: `${category}-${result.importData.id}`,
+          category,
+          importData: importObj,
+          existingData: existingObj,
+          displayLabel,
+          fieldChanges,
+          isImportNewer: isImportDataNewer(importUpdatedAt, existingUpdatedAt),
+          importUpdatedAt,
+          existingUpdatedAt,
+          matchReason: generateMatchReason(category, matchMethod),
+        }
+
+        confirmationItems.push(candidate)
+      } else {
+        // 差異なし - 自動で紐づく
+        autoMatchedItems.push({
+          id: result.importData.id,
+          displayLabel,
+        })
+      }
+    }
+  }
+
+  return {
+    category,
+    autoMatched: autoMatchedItems.length,
+    newItems: newItemsList.length,
+    needsConfirmation: confirmationItems.length,
+    hasConflict: conflictItems.length,
+    autoMatchedItems,
+    newItemsList,
+    confirmationItems,
+    conflictItems,
+  }
+}
+
 /**
  * 全カテゴリの競合を検出
  */
@@ -141,7 +355,7 @@ export async function detectAllConflicts(
     const studentConflicts = createConflictItems(
       matchResults.students,
       "Student",
-      (s) => `${s.lastName} ${s.firstName} (${s.studentId})`
+      (s) => `${s.lastName} ${s.firstName} (${s.studentNumber})`
     )
     results.push({
       category: "Student",

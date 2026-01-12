@@ -5,9 +5,10 @@
  */
 
 import type { ArchiveManifest } from "../../../../types/projectArchive.types"
+import { CURRENT_VERSION } from "../transformers/types"
 
-/** 現在のアーカイブ形式バージョン */
-export const CURRENT_ARCHIVE_VERSION = "1.2.0"
+/** 現在のアーカイブ形式バージョン (transformers/types.tsから参照) */
+export const CURRENT_ARCHIVE_VERSION = CURRENT_VERSION
 
 /** 対応可能な最小バージョン (v0.2.z 互換) */
 export const MIN_SUPPORTED_VERSION = "1.0.0"

@@ -7,18 +7,18 @@
 import { randomUUID } from "crypto"
 import * as fs from "fs"
 import * as path from "path"
-import prisma from "../../prisma/client"
-import { getDataDirectory } from "../../dataManager"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
 import type {
-  MatchingConfig,
-  ConflictResolutions,
   ArchiveDataCounts,
+  ConflictResolutions,
+  MatchingConfig,
   MergeImportResult,
 } from "../../../../types/projectArchive.types"
-import { performAllMatching } from "./matcher"
-import { resolveConflict } from "./conflictResolver"
+import { getDataDirectory } from "../../dataManager"
+import prisma from "../../prisma/client"
+import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
 import { detectAllConflicts } from "./conflictDetector"
+import { resolveConflict } from "./conflictResolver"
+import { performAllMatching } from "./matcher"
 
 /** マージ操作のカウンター */
 interface MergeCounts {
@@ -46,7 +46,7 @@ function createEmptyCounts(): ArchiveDataCounts {
  * マージインポートを実行
  *
  * 既存データとのマッチングを行い、競合解決設定に基づいてデータをマージする。
- * ユニーク制約のあるフィールド（studentId, name, username）は
+ * ユニーク制約のあるフィールド（studentNumber, name, username）は
  * マッチング方法に関わらず既存チェックを行い、重複を回避する。
  *
  * @param data - 展開されたアーカイブデータ
@@ -106,16 +106,16 @@ export async function executeMergeImport(
         const importStudent = result.importData
 
         if (!result.existingData) {
-          // マッチングで見つからなかった場合でも、studentIdで既存チェック
-          const existingByStudentId = await tx.student.findUnique({
-            where: { studentId: importStudent.studentId },
+          // マッチングで見つからなかった場合でも、studentNumberで既存チェック
+          const existingByStudentNumber = await tx.student.findUnique({
+            where: { studentNumber: importStudent.studentNumber },
           })
 
-          if (existingByStudentId) {
-            // studentIdで既存データが見つかった場合は再利用
-            idMappings.student[importStudent.id] = existingByStudentId.id
+          if (existingByStudentNumber) {
+            // studentNumberで既存データが見つかった場合は再利用
+            idMappings.student[importStudent.id] = existingByStudentNumber.id
             warnings.push(
-              `生徒「${importStudent.lastName} ${importStudent.firstName}」(studentId: ${importStudent.studentId}) は既存データを使用します`
+              `生徒「${importStudent.lastName} ${importStudent.firstName}」(出席番号: ${importStudent.studentNumber}) は既存データを使用します`
             )
           } else {
             // 新規作成
@@ -123,7 +123,7 @@ export async function executeMergeImport(
             await tx.student.create({
               data: {
                 id: newId,
-                studentId: importStudent.studentId,
+                studentNumber: importStudent.studentNumber,
                 lastName: importStudent.lastName,
                 firstName: importStudent.firstName,
                 lastNameKana: importStudent.lastNameKana,
@@ -150,7 +150,7 @@ export async function executeMergeImport(
               await tx.student.update({
                 where: { id: result.existingData.id },
                 data: {
-                  studentId: importStudent.studentId,
+                  studentNumber: importStudent.studentNumber,
                   lastName: importStudent.lastName,
                   firstName: importStudent.firstName,
                   lastNameKana: importStudent.lastNameKana,
