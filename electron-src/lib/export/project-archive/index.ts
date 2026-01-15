@@ -92,33 +92,6 @@ export async function exportProject(
   }
 }
 
-/**
- * エクスポート保存先選択ダイアログを表示
- */
-export async function selectExportSavePath(options: {
-  projectName?: string
-}): Promise<{
-  success: boolean
-  filePath?: string
-  canceled?: boolean
-}> {
-  const defaultFileName = generateExportFileName(
-    options.projectName || "project"
-  )
-
-  const result = await dialog.showSaveDialog({
-    title: "プロジェクトをエクスポート",
-    defaultPath: defaultFileName,
-    filters: [{ name: "一括採点プロジェクトデータ", extensions: ["score"] }],
-  })
-
-  if (result.canceled) {
-    return { success: true, canceled: true }
-  }
-
-  return { success: true, filePath: result.filePath }
-}
-
 // Re-export types
 export * from "./archiveCreator"
 export * from "./dataCollector"

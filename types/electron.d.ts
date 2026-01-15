@@ -1193,13 +1193,6 @@ export interface MyAPI {
     ) => Promise<import("./projectArchive.types").AnalyzeArchiveResult>
 
     /**
-     * アーカイブを新規プロジェクトとしてインポート
-     */
-    importAsNew: (
-      options: import("./projectArchive.types").ImportAsNewOptions
-    ) => Promise<import("./projectArchive.types").ImportAsNewResult>
-
-    /**
      * 事前照合を実行（Step 2: ファイル概要表示用）
      * 全照合方法（ID、学籍番号、氏名、名前）で照合し、結果を返す
      */
@@ -1215,13 +1208,6 @@ export interface MyAPI {
     detectConflicts: (
       options: import("./projectArchive.types").DetectConflictsOptions
     ) => Promise<import("./projectArchive.types").ConflictDetectionResult>
-
-    /**
-     * マージインポートを実行
-     */
-    mergeImport: (
-      options: import("./projectArchive.types").MergeImportOptions
-    ) => Promise<import("./projectArchive.types").MergeImportResult>
 
     /**
      * ID統合インポートを実行（新しいフロー）
@@ -1261,16 +1247,6 @@ export interface MyAPI {
     }) => Promise<{
       success: boolean
       data?: import("./projectArchive.types").ScoringConflictData
-      error?: string
-    }>
-
-    /**
-     * エクスポート保存先選択ダイアログ
-     */
-    selectExportSavePath: (options: { projectName?: string }) => Promise<{
-      success: boolean
-      filePath?: string
-      canceled?: boolean
       error?: string
     }>
 

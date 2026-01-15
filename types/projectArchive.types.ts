@@ -503,56 +503,6 @@ export interface DetectConflictsOptions {
   matchingConfig: MatchingConfig
 }
 
-/**
- * 新規作成インポートオプション
- */
-export interface ImportAsNewOptions {
-  archivePath: string
-  /** 現在ログインしているユーザーID（このユーザーのデータとしてインポート） */
-  currentUserId: string
-}
-
-/**
- * 新規作成インポート結果
- */
-export interface ImportAsNewResult {
-  success: boolean
-  projectId?: string
-  /** インポートされた件数 */
-  importedCounts?: ArchiveDataCounts
-  /** 警告メッセージ */
-  warnings?: string[]
-  error?: string
-}
-
-/**
- * マージインポートオプション
- */
-export interface MergeImportOptions {
-  archivePath: string
-  matchingConfig: MatchingConfig
-  conflictResolutions: ConflictResolutions
-  /** 現在ログインしているユーザーID（このユーザーをプロジェクトのOWNERとして追加） */
-  currentUserId: string
-}
-
-/**
- * マージインポート結果
- */
-export interface MergeImportResult {
-  success: boolean
-  projectId?: string
-  /** インポートサマリー */
-  summary?: {
-    created: ArchiveDataCounts
-    updated: ArchiveDataCounts
-    skipped: ArchiveDataCounts
-  }
-  /** 警告メッセージ */
-  warnings?: string[]
-  error?: string
-}
-
 // =============================================================================
 // Archive Data Structures (JSON files in archive)
 // =============================================================================
