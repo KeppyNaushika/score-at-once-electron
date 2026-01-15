@@ -600,7 +600,9 @@ function process(a, b, c, d) { ... }
 
 ### JSDoc
 
-公開APIや複雑な関数には JSDoc を使用。
+**トップレベルの関数（他のファイルから export される関数）には必ず JSDoc を書く。**
+
+複雑な関数や、使い方が分かりにくい関数には特に丁寧に書く。
 
 ```typescript
 /**
