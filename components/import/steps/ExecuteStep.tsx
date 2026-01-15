@@ -13,7 +13,20 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ImportAsNewResult } from "@/types/projectArchive.types"
+import type { ArchiveDataCounts } from "@/types/projectArchive.types"
+
+/** idIntegrationImport の戻り値の型 */
+interface IdIntegrationImportResult {
+  success: boolean
+  projectId?: string
+  summary?: {
+    created: ArchiveDataCounts
+    updated: ArchiveDataCounts
+    skipped: ArchiveDataCounts
+  }
+  warnings?: string[]
+  error?: string
+}
 
 interface ExecuteStepProps {
   wizard: UseImportWizardReturn
@@ -23,7 +36,7 @@ interface ExecuteStepProps {
 
 export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   const { executeImport } = wizard
-  const [result, setResult] = useState<ImportAsNewResult | null>(null)
+  const [result, setResult] = useState<IdIntegrationImportResult | null>(null)
   const [isExecuting, setIsExecuting] = useState(false)
   const hasStarted = useRef(false)
 
@@ -86,7 +99,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         </div>
 
         {/* 結果サマリー */}
-        {"importedCounts" in result && result.importedCounts && (
+        {result.summary && (
           <Card className="mb-6 w-full max-w-md border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
             <CardContent className="p-5">
               <h4 className="mb-4 text-sm font-medium text-green-800 dark:text-green-200">
@@ -95,7 +108,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.importedCounts.students}
+                    {result.summary.created.students}
                   </div>
                   <div className="text-xs text-green-600/80 dark:text-green-400/80">
                     生徒
@@ -103,7 +116,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.importedCounts.pages}
+                    {result.summary.created.pages}
                   </div>
                   <div className="text-xs text-green-600/80 dark:text-green-400/80">
                     ページ
@@ -111,7 +124,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.importedCounts.scores}
+                    {result.summary.created.scores}
                   </div>
                   <div className="text-xs text-green-600/80 dark:text-green-400/80">
                     採点結果
