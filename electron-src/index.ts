@@ -1,7 +1,9 @@
 import { app, net, protocol } from "electron"
+import * as path from "path"
 import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
+import { getAbsolutePathFromData } from "./lib/dataManager"
 import { setupAllIPCHandlers } from "./ipc-handlers"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
@@ -69,6 +71,11 @@ app.on("ready", async () => {
         // Windowsの場合、先頭の/を削除（/C:/path → C:/path）
         if (process.platform === "win32" && filePath.startsWith("/")) {
           filePath = filePath.slice(1)
+        }
+
+        // 相対パスの場合はデータディレクトリからの絶対パスに変換
+        if (!path.isAbsolute(filePath)) {
+          filePath = getAbsolutePathFromData(filePath)
         }
 
         const fileUrl = pathToFileURL(filePath).href
