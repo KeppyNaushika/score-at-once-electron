@@ -9,7 +9,7 @@ import type {
   AnalyzeArchiveOptions,
   AnalyzeArchiveResult,
 } from "../../../../types/projectArchive.types"
-import { cleanupTempDir, extractArchive, readManifestOnly } from "./archiveExtractor"
+import { readManifestOnly } from "./archiveExtractor"
 import { validateManifest } from "./manifestValidator"
 
 /**

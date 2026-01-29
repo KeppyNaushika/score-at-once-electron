@@ -20,7 +20,10 @@ async function startDev() {
   console.log("Starting Next.js...")
 
   // Start Next.js
-  const nextProcess = spawn("npx", ["next", "dev"], { stdio: "inherit", shell: true })
+  const nextProcess = spawn("npx", ["next", "dev"], {
+    stdio: "inherit",
+    shell: true,
+  })
 
   // Wait for Next.js to be ready
   console.log("Waiting for Next.js to start...")
@@ -29,7 +32,10 @@ async function startDev() {
   console.log("Starting Electron...")
 
   // Start Electron
-  const electronProcess = spawn("npx", ["electron", "."], { stdio: "inherit", shell: true })
+  const electronProcess = spawn("npx", ["electron", "."], {
+    stdio: "inherit",
+    shell: true,
+  })
 
   // Handle cleanup
   process.on("SIGINT", () => {

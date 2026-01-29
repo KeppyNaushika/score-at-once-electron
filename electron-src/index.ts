@@ -3,8 +3,8 @@ import * as path from "path"
 import { pathToFileURL } from "url"
 
 import { initializeApp } from "./appInitializer"
-import { getAbsolutePathFromData } from "./lib/dataManager"
 import { setupAllIPCHandlers } from "./ipc-handlers"
+import { getAbsolutePathFromData } from "./lib/dataManager"
 import { startEmbeddedNextServer } from "./nextServerEmbedded"
 import { createMainWindow, setupWindowEvents } from "./windowManager"
 
