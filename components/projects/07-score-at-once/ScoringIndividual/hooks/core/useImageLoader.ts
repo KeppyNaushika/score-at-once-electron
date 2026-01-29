@@ -59,7 +59,11 @@ export function useImageLoader({
         }))
       } else {
         // 単一ページ表示：ScoringDataのimageUrlを使用（Grid Viewと同じ）
-        const imagePath = currentScoringData.imageUrl.replace("appimg://", "")
+        // appimg:// または appimg:/// の両方に対応
+        const imagePath = currentScoringData.imageUrl.replace(
+          /^appimg:\/\/\/?/,
+          ""
+        )
         imagesToLoad = [{ path: imagePath, pageNumber: 1 }]
       }
 
@@ -77,12 +81,12 @@ export function useImageLoader({
             reject(error)
           }
 
-          // ファイル存在確認して読み込み（appimg://プロトコル使用）
+          // ファイル存在確認して読み込み（appimg:///プロトコル使用）
           window.electronAPI
             .checkFileExists(imageInfo.path)
             .then((result) => {
               if (result.success && result.exists) {
-                img.src = `appimg://${result.path}`
+                img.src = `appimg:///${result.path}`
               } else {
                 console.warn(`File does not exist: ${imageInfo.path}`)
                 reject(new Error(`File not found: ${imageInfo.path}`))
@@ -90,7 +94,7 @@ export function useImageLoader({
             })
             .catch((error) => {
               console.error("Error checking file existence:", error)
-              img.src = `appimg://${imageInfo.path}` // フォールバック
+              img.src = `appimg:///${imageInfo.path}` // フォールバック
             })
         })
       })
