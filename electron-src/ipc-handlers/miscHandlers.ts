@@ -482,8 +482,9 @@ export function setupMiscHandlers(): void {
     async (_event, relativePath: string) => {
       try {
         // パスを適切にエンコード
+        // appimg:/// (スラッシュ3つ) にすることで、URLパース時にpathname全体が取得できる
         const encodedPath = encodeURI(relativePath)
-        const result = `appimg://${encodedPath}`
+        const result = `appimg:///${encodedPath}`
 
         return result
       } catch (err) {
@@ -683,8 +684,8 @@ export function setupMiscHandlers(): void {
 
       const fullPath = path.join(publicDir, assetPath)
 
-      // appimg:// プロトコルを使用してパスを返す（webSecurity有効時のローカルファイルアクセス用）
-      return { success: true, path: `appimg://${fullPath}` }
+      // appimg:/// プロトコルを使用してパスを返す（webSecurity有効時のローカルファイルアクセス用）
+      return { success: true, path: `appimg:///${fullPath}` }
     } catch (err) {
       return {
         success: false,

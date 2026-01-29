@@ -64,14 +64,11 @@ app.on("ready", async () => {
     // appimg:///path/to/file → file:///path/to/file としてローカルファイルを読み込む
     protocol.handle("appimg", (request) => {
       try {
-        const url = new URL(request.url)
-        // pathnameをデコード（日本語やスペースを含むパス対応）
-        let filePath = decodeURIComponent(url.pathname)
-
-        // Windowsの場合、先頭の/を削除（/C:/path → C:/path）
-        if (process.platform === "win32" && filePath.startsWith("/")) {
-          filePath = filePath.slice(1)
-        }
+        // new URL() を使わず文字列操作でパスを抽出
+        // appimg://projects/... や appimg:///projects/... の両方に対応
+        let filePath = decodeURIComponent(
+          request.url.replace(/^appimg:\/\/\/?/, "")
+        )
 
         // 相対パスの場合はデータディレクトリからの絶対パスに変換
         if (!path.isAbsolute(filePath)) {

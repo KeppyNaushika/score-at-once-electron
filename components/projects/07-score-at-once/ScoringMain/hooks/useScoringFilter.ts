@@ -143,7 +143,7 @@ export function useScoringFilter({
             studentId: "",
             studentName: "不明",
             imageUrl: pageImage.imagePath
-              ? `appimg://${pageImage.imagePath}`
+              ? `appimg:///${pageImage.imagePath}`
               : "",
             currentScore: undefined,
             maxScore: currentCropRegion.points ?? 0,
@@ -164,7 +164,7 @@ export function useScoringFilter({
           studentId: pageImage.studentId,
           studentName: `${pageImage.student?.lastName ?? ""} ${pageImage.student?.firstName ?? ""}`,
           imageUrl: pageImage.imagePath
-            ? `appimg://${pageImage.imagePath}`
+            ? `appimg:///${pageImage.imagePath}`
             : "",
           currentScore:
             score?.partialScore !== undefined && score?.partialScore !== null
@@ -541,7 +541,7 @@ export function useScoringFilter({
       id: `master-${currentCropRegion.id}`,
       studentId: "MASTER",
       studentName: "模範解答",
-      imageUrl: masterImagePath ? `appimg://${masterImagePath}` : "",
+      imageUrl: masterImagePath ? `appimg:///${masterImagePath}` : "",
       maxScore: currentCropRegion.points || 0,
       status: "master",
       questionRegion: currentCropRegion,
