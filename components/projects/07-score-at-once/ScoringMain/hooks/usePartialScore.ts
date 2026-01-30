@@ -17,14 +17,12 @@ interface UsePartialScoreProps {
     partialScore?: number | null,
     selectedAnswers?: Set<string>
   ) => void
-  onAutoAdvance?: () => void // 自動進行コールバック
 }
 
 export function usePartialScore({
   selectedAnswers,
   currentCropRegion,
   onBatchScore,
-  onAutoAdvance,
 }: UsePartialScoreProps) {
   const { setContextValue } = useShortcutContext()
   // 部分点入力モーダル用状態
@@ -133,12 +131,6 @@ export function usePartialScore({
       blurActiveElement()
       setContextValue("inputFocus", false)
 
-      // 自動進行（300ms後に実行）
-      if (onAutoAdvance) {
-        setTimeout(() => {
-          onAutoAdvance()
-        }, 300)
-      }
     },
     [
       showPartialScoreModal,
@@ -146,7 +138,6 @@ export function usePartialScore({
       partialScoreInput,
       currentCropRegion,
       onBatchScore,
-      onAutoAdvance,
       blurActiveElement,
       setContextValue,
     ]
