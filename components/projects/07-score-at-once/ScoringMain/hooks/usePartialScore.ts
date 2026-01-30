@@ -50,6 +50,9 @@ export function usePartialScore({
       if (!showPartialScoreModal) {
         setPartialScoreInput("")
         setShowPartialScoreModal(true)
+        // useEffect遅延を回避するため同期的にコンテキストを更新
+        setContextValue("partialScoreModalOpen", true)
+        setContextValue("modalOpen", true)
       }
 
       const currentInput = partialScoreInput || ""
@@ -96,6 +99,7 @@ export function usePartialScore({
       partialScoreInput,
       showPartialScoreModal,
       showExceedsMaxPointsToast,
+      setContextValue,
     ]
   )
 
@@ -128,9 +132,11 @@ export function usePartialScore({
       // モーダルを閉じる
       setPartialScoreInput("")
       setShowPartialScoreModal(false)
+      // useEffect遅延を回避するため同期的にコンテキストを更新
+      setContextValue("partialScoreModalOpen", false)
+      setContextValue("modalOpen", false)
       blurActiveElement()
       setContextValue("inputFocus", false)
-
     },
     [
       showPartialScoreModal,
@@ -147,6 +153,9 @@ export function usePartialScore({
   const handlePartialScoreCancel = useCallback(() => {
     setPartialScoreInput("")
     setShowPartialScoreModal(false)
+    // useEffect遅延を回避するため同期的にコンテキストを更新
+    setContextValue("partialScoreModalOpen", false)
+    setContextValue("modalOpen", false)
     blurActiveElement()
     setContextValue("inputFocus", false)
   }, [blurActiveElement, setContextValue])

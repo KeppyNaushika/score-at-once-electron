@@ -37,6 +37,9 @@ export interface CommandHandler {
   /** コマンドID（例: "scoring.correct"） */
   commandId: string
 
+  /** 各useCommand呼び出しを一意に識別するID */
+  registrationId: string
+
   /** コマンド実行時のハンドラー関数 */
   handler: () => void
 
@@ -87,7 +90,7 @@ export interface ShortcutContextValue {
   registerCommand: (command: CommandHandler) => void
 
   /** コマンドを解除する関数 */
-  unregisterCommand: (commandId: string) => void
+  unregisterCommand: (commandId: string, registrationId: string) => void
 
   /** 現在のキーバインディング */
   keyBindings: KeyBinding
