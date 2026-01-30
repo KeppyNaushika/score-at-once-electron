@@ -219,16 +219,16 @@ function ScoringMainViewContent() {
   })
 
   const { handleBatchScoreWithProgress } = useBatchScoringWithProgress({
-      selectedAnswers: selectedStudentAnswerImageIds,
-      gradingMode: gradingMode,
-      scoringBehavior: scoringBehavior,
-      setRecentlyScoredAnswers,
-      handleBatchScore,
-      getGridAnswerData,
-      setSelectedAnswers: setSelectedPageImageIds,
-      handleNextStudent: handleIndividualNextStudent,
-      handleNextQuestion,
-    })
+    selectedAnswers: selectedStudentAnswerImageIds,
+    gradingMode: gradingMode,
+    scoringBehavior: scoringBehavior,
+    setRecentlyScoredAnswers,
+    handleBatchScore,
+    getGridAnswerData,
+    setSelectedAnswers: setSelectedPageImageIds,
+    handleNextStudent: handleIndividualNextStudent,
+    handleNextQuestion,
+  })
 
   /** 採点アクションフック */
   const {

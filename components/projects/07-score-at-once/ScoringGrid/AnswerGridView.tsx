@@ -206,8 +206,7 @@ export default function AnswerGridView({
             ? "minmax(200px, max-content)"
             : undefined,
           gridAutoFlow: isColumnLayout ? "column" : "row",
-          direction:
-            layoutDirection === "down-left" ? "rtl" : "ltr",
+          direction: layoutDirection === "down-left" ? "rtl" : "ltr",
           width: isColumnLayout ? "max-content" : "100%",
           // 列レイアウト時は高さを100%にして、行ごとに均等分割
           height: isColumnLayout ? "100%" : "max-content",
