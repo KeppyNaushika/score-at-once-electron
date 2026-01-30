@@ -86,7 +86,9 @@ export function useImageLoader({
             .checkFileExists(imageInfo.path)
             .then((result) => {
               if (result.success && result.exists) {
-                img.src = `appimg:///${result.path}`
+                // 相対パスを使用（appimg:// プロトコルハンドラー内で絶対パスに変換される）
+                // 絶対パスを使うと appimg:////Users/... となりURL正規化でパスが壊れる
+                img.src = `appimg:///${imageInfo.path}`
               } else {
                 console.warn(`File does not exist: ${imageInfo.path}`)
                 reject(new Error(`File not found: ${imageInfo.path}`))
