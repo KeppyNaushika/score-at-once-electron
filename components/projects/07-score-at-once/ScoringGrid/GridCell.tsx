@@ -101,6 +101,9 @@ export function GridCell({
       maxHeight: calculatedCellHeight,
       overflow: "hidden",
     }),
+    ...(layoutDirection === "down-left" && {
+      direction: "ltr" as const,
+    }),
     ...cellBgStyle,
   }
 
