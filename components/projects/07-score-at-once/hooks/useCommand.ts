@@ -15,7 +15,7 @@
  * ```
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef } from "react"
 
 import type {
   CommandHandler,
@@ -81,6 +81,10 @@ export function useCommand(
 ) {
   const { registerCommand, unregisterCommand } = useShortcutContext()
 
+  // 一意のregistrationIdを生成（useIdで安定化）
+  const reactId = useId()
+  const registrationIdRef = useRef(`${commandId}::${reactId}`)
+
   // handlerの最新版をrefで保持（無限ループ回避）
   const handlerRef = useRef(handler)
   useEffect(() => {
@@ -104,9 +108,12 @@ export function useCommand(
   const when = options.when || "true"
 
   useEffect(() => {
+    const registrationId = registrationIdRef.current
+
     // コマンドオブジェクトを作成
     const command: CommandHandler = {
       commandId,
+      registrationId,
       handler: stableHandler,
       when,
       metadata: stableMetadata,
@@ -117,7 +124,7 @@ export function useCommand(
 
     // アンマウント時に解除
     return () => {
-      unregisterCommand(commandId)
+      unregisterCommand(commandId, registrationId)
     }
   }, [
     commandId,

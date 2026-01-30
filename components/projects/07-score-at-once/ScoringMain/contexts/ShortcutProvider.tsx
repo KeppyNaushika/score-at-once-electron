@@ -212,8 +212,9 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
     hasSelectedAnswers: false,
   })
 
-  // コマンドレジストリ（commandId -> CommandHandler）
-  const [commands, setCommands] = useState<Map<string, CommandHandler>>(
+  // コマンドレジストリ（commandId -> CommandHandler[]）
+  // 同一commandIdに異なるwhen句を持つ複数ハンドラーを共存させる
+  const [commands, setCommands] = useState<Map<string, CommandHandler[]>>(
     new Map()
   )
 
@@ -268,29 +269,36 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   const registerCommand = useCallback((command: CommandHandler) => {
     setCommands((prev) => {
       const next = new Map(prev)
-
-      // 重複登録の警告（開発環境のみ）
-      if (
-        process.env.NODE_ENV === "development" &&
-        next.has(command.commandId)
-      ) {
-        console.warn(
-          `[ShortcutProvider] Command "${command.commandId}" is already registered. Overwriting.`
-        )
-      }
-
-      next.set(command.commandId, command)
+      const existing = next.get(command.commandId) || []
+      // 同じregistrationIdのハンドラーを置換、それ以外は保持
+      const filtered = existing.filter(
+        (h) => h.registrationId !== command.registrationId
+      )
+      next.set(command.commandId, [...filtered, command])
       return next
     })
   }, [])
 
-  const unregisterCommand = useCallback((commandId: string) => {
-    setCommands((prev) => {
-      const next = new Map(prev)
-      next.delete(commandId)
-      return next
-    })
-  }, [])
+  const unregisterCommand = useCallback(
+    (commandId: string, registrationId: string) => {
+      setCommands((prev) => {
+        const next = new Map(prev)
+        const existing = next.get(commandId)
+        if (existing) {
+          const filtered = existing.filter(
+            (h) => h.registrationId !== registrationId
+          )
+          if (filtered.length === 0) {
+            next.delete(commandId)
+          } else {
+            next.set(commandId, filtered)
+          }
+        }
+        return next
+      })
+    },
+    []
+  )
 
   // ============================================
   // キーバインディングの管理
@@ -332,7 +340,7 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
   // ============================================
 
   const getAllCommands = useCallback(() => {
-    return Array.from(commands.values())
+    return Array.from(commands.values()).flat()
   }, [commands])
 
   // ============================================
@@ -407,39 +415,36 @@ export function ShortcutProvider({ children }: ShortcutProviderProps) {
       // ============================================
       // 重要: より具体的な条件を持つコマンドを優先
       // ============================================
+      // 全候補ハンドラーを収集（同一commandIdに複数ハンドラーが存在しうる）
+      const candidates: CommandHandler[] = []
+      for (const commandId of commandIds) {
+        const handlers = commands.get(commandId) || []
+        candidates.push(...handlers)
+      }
+
       // when句の複雑さ（&&の数）でソート（降順）
       // より複雑な条件 = より具体的な状況 = 優先度が高い
-      const sortedCommandIds = commandIds.sort((a, b) => {
-        const commandA = commands.get(a)
-        const commandB = commands.get(b)
-        if (!commandA || !commandB) return 0
-
-        const complexityA = (commandA.when.match(/&&/g) || []).length
-        const complexityB = (commandB.when.match(/&&/g) || []).length
-
-        return complexityB - complexityA // 降順（複雑な方が先）
+      candidates.sort((a, b) => {
+        const complexityA = (a.when.match(/&&/g) || []).length
+        const complexityB = (b.when.match(/&&/g) || []).length
+        return complexityB - complexityA
       })
 
-      // 複数のコマンドがある場合、when句が真になる最初のコマンドを実行
-      for (const commandId of sortedCommandIds) {
-        const command = commands.get(commandId)
-        if (!command) {
-          // コマンドが登録されていない（コンポーネントがアンマウント済み）
-          continue
-        }
-
-        // when句を評価
-        const shouldExecute = evaluateWhenClause(command.when, context)
+      // 複数のハンドラーがある場合、when句が真になる最初のものを実行
+      for (const candidate of candidates) {
+        const shouldExecute = evaluateWhenClause(candidate.when, context)
 
         if (shouldExecute) {
-          // 実行条件を満たす最初のコマンドを実行
           event.preventDefault()
           event.stopPropagation()
 
           try {
-            command.handler()
+            candidate.handler()
           } catch (error) {
-            console.error(`Failed to execute command "${commandId}":`, error)
+            console.error(
+              `Failed to execute command "${candidate.commandId}":`,
+              error
+            )
           }
 
           // 最初にマッチしたコマンドのみ実行（VSCodeと同じ動作）
