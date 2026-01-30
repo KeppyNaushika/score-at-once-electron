@@ -218,8 +218,7 @@ function ScoringMainViewContent() {
     cropRegions: cropRegions,
   })
 
-  const { handleBatchScoreWithProgress, handleAutoAdvance } =
-    useBatchScoringWithProgress({
+  const { handleBatchScoreWithProgress } = useBatchScoringWithProgress({
       selectedAnswers: selectedStudentAnswerImageIds,
       gradingMode: gradingMode,
       scoringBehavior: scoringBehavior,
@@ -227,7 +226,6 @@ function ScoringMainViewContent() {
       handleBatchScore,
       getGridAnswerData,
       setSelectedAnswers: setSelectedPageImageIds,
-      handleGridNavigation,
       handleNextStudent: handleIndividualNextStudent,
       handleNextQuestion,
     })
@@ -261,7 +259,6 @@ function ScoringMainViewContent() {
     selectedAnswers: selectedStudentAnswerImageIds,
     currentCropRegion,
     onBatchScore: handleBatchScoreWithProgress,
-    onAutoAdvance: handleAutoAdvance,
   })
 
   /** コンテキスト値の設定 */

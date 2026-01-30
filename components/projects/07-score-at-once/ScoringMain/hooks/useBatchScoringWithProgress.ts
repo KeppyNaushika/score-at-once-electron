@@ -25,7 +25,6 @@ interface UseBatchScoringWithProgressParams {
   ) => Promise<void>
   getGridAnswerData: () => ScoringDataWithSelection[]
   setSelectedAnswers: (answers: Set<string>) => void
-  handleGridNavigation: (direction: string) => void
   handleNextStudent: () => void
   handleNextQuestion: () => void
 }
@@ -38,7 +37,6 @@ export function useBatchScoringWithProgress({
   handleBatchScore,
   getGridAnswerData,
   setSelectedAnswers,
-  handleGridNavigation,
   handleNextStudent,
   handleNextQuestion,
 }: UseBatchScoringWithProgressParams) {
@@ -133,30 +131,7 @@ export function useBatchScoringWithProgress({
     ]
   )
 
-  // 自動進行関数
-  const handleAutoAdvance = useCallback(() => {
-    if (gradingMode === "grid") {
-      // グリッドモードでは次の答案に移動
-      handleGridNavigation("d")
-    } else {
-      // 個別モードではscoringBehaviorに従って移動
-      if (scoringBehavior === "next-student") {
-        handleNextStudent()
-      } else if (scoringBehavior === "next-question") {
-        handleNextQuestion()
-      }
-      // "stay"の場合は何もしない
-    }
-  }, [
-    gradingMode,
-    scoringBehavior,
-    handleGridNavigation,
-    handleNextStudent,
-    handleNextQuestion,
-  ])
-
   return {
     handleBatchScoreWithProgress,
-    handleAutoAdvance,
   }
 }
