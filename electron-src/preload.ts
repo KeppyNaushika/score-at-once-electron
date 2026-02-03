@@ -635,6 +635,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       preMatchResult: import("../types/projectArchive.types").FileOverviewData
       integrationConfig: import("../types/projectArchive.types").IdIntegrationConfig
       currentUserId: string
+      scoringConflictConfig?: import("../types/projectArchive.types").ScoringConflictConfig
+      updateDecisions?: import("../types/projectArchive.types").UpdateDecisions
     }) => ipcRenderer.invoke("archive:idIntegrationImport", options),
     detectScoringConflicts: (options: {
       archivePath: string

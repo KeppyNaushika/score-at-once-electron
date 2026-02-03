@@ -26,9 +26,8 @@ interface IdIntegrationStepProps {
  * - 同一人物の場合のID選択（このPCに合わせる / 書き出したPCに合わせる）
  */
 export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
-  const { state, detectScoringConflicts, updateIdIntegrationConfig } = wizard
+  const { state, goToNextStep, updateIdIntegrationConfig } = wizard
   const [activeTab, setActiveTab] = useState<CategoryType>("student")
-  const [isProcessing, setIsProcessing] = useState(false)
 
   // 判断が必要なデータがあるかチェック
   const hasStudentDecisions =
@@ -48,13 +47,6 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
   const canSkip =
     !hasStudentDecisions && !hasClassDecisions && !hasSubtotalGroupDecisions
 
-  const handleNext = async () => {
-    setIsProcessing(true)
-    // 採点競合検出を実行してscoring_conflictステップへ進む
-    await detectScoringConflicts()
-    setIsProcessing(false)
-  }
-
   if (canSkip) {
     return (
       <div className="flex h-full flex-col items-center justify-center">
@@ -68,7 +60,15 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
           同じパソコンで作成されたデータのため、
           すべての生徒・学級・小計グループが自動的に紐づけられました。
         </p>
-        <Button onClick={handleNext} size="lg" className="px-8">
+        <Button
+          onClick={goToNextStep}
+          disabled={state.isProcessing}
+          size="lg"
+          className="px-8"
+        >
+          {state.isProcessing && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
           次へ
         </Button>
       </div>
@@ -161,19 +161,15 @@ export function IdIntegrationStep({ wizard }: IdIntegrationStepProps) {
       {/* 次へボタン */}
       <div className="mt-6 flex justify-center">
         <Button
-          onClick={handleNext}
-          disabled={isProcessing}
+          onClick={goToNextStep}
+          disabled={state.isProcessing}
           size="lg"
-          className="gap-2 px-8"
+          className="px-8"
         >
-          {isProcessing ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              処理中...
-            </>
-          ) : (
-            "次へ"
+          {state.isProcessing && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
+          次へ
         </Button>
       </div>
     </div>

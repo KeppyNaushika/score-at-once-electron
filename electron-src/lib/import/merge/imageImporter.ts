@@ -2,7 +2,6 @@
  * 画像インポート処理
  */
 
-import { randomUUID } from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -100,13 +99,18 @@ async function createMasterImageRecords(
     const filename = path.basename(img.imagePath)
     const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-    await prisma.masterImage.create({
-      data: {
-        id: randomUUID(),
-        projectPageId: newProjectPageId,
-        imagePath: newImagePath,
-      },
+    const existingById = await prisma.masterImage.findUnique({
+      where: { id: img.id },
     })
+    if (!existingById) {
+      await prisma.masterImage.create({
+        data: {
+          id: img.id,
+          projectPageId: newProjectPageId,
+          imagePath: newImagePath,
+        },
+      })
+    }
   }
 }
 
@@ -141,14 +145,19 @@ async function createStudentAnswerImageRecords(
         "/"
       )
 
-    await prisma.studentAnswerImage.create({
-      data: {
-        id: randomUUID(),
-        projectPageId: newProjectPageId,
-        studentId: newStudentId,
-        imagePath: newImagePath,
-      },
+    const existingById = await prisma.studentAnswerImage.findUnique({
+      where: { id: img.id },
     })
+    if (!existingById) {
+      await prisma.studentAnswerImage.create({
+        data: {
+          id: img.id,
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+          imagePath: newImagePath,
+        },
+      })
+    }
   }
 }
 
@@ -175,13 +184,18 @@ async function createLegacyImageRecords(
 
       const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-      await prisma.masterImage.create({
-        data: {
-          id: randomUUID(),
-          projectPageId: newProjectPageId,
-          imagePath: newImagePath,
-        },
+      const existingById = await prisma.masterImage.findUnique({
+        where: { id: img.id },
       })
+      if (!existingById) {
+        await prisma.masterImage.create({
+          data: {
+            id: img.id,
+            projectPageId: newProjectPageId,
+            imagePath: newImagePath,
+          },
+        })
+      }
     } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
       const newStudentId = idMappings.student[img.studentId]
       if (!newStudentId) continue
@@ -204,14 +218,19 @@ async function createLegacyImageRecords(
           "/"
         )
 
-      await prisma.studentAnswerImage.create({
-        data: {
-          id: randomUUID(),
-          projectPageId: newProjectPageId,
-          studentId: newStudentId,
-          imagePath: newImagePath,
-        },
+      const existingById = await prisma.studentAnswerImage.findUnique({
+        where: { id: img.id },
       })
+      if (!existingById) {
+        await prisma.studentAnswerImage.create({
+          data: {
+            id: img.id,
+            projectPageId: newProjectPageId,
+            studentId: newStudentId,
+            imagePath: newImagePath,
+          },
+        })
+      }
     }
   }
 }

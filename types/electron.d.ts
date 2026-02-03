@@ -1222,6 +1222,7 @@ export interface MyAPI {
       integrationConfig: import("./projectArchive.types").IdIntegrationConfig
       currentUserId: string
       scoringConflictConfig?: import("./projectArchive.types").ScoringConflictConfig
+      updateDecisions?: import("./projectArchive.types").UpdateDecisions
     }) => Promise<{
       success: boolean
       projectId?: string
@@ -1229,6 +1230,7 @@ export interface MyAPI {
         created: import("./projectArchive.types").ArchiveDataCounts
         updated: import("./projectArchive.types").ArchiveDataCounts
         skipped: import("./projectArchive.types").ArchiveDataCounts
+        unchanged: import("./projectArchive.types").ArchiveDataCounts
       }
       warnings?: string[]
       error?: string

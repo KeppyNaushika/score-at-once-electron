@@ -87,6 +87,18 @@ export function ClassIntegrationPanel({
           byName={overview.byName ?? []}
           noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
+          onBatchIdChoice={(idChoice) => {
+            const items = (overview.byName ?? []).map((item) => ({
+              importId: item.importId,
+              existingId: item.existingId,
+            }))
+            wizard.batchUpdateIdIntegrationDecisions(
+              "class",
+              items,
+              "same_person",
+              idChoice
+            )
+          }}
         />
       )}
     </div>

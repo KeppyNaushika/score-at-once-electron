@@ -23,6 +23,7 @@ interface IdIntegrationImportResult {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
     skipped: ArchiveDataCounts
+    unchanged: ArchiveDataCounts
   }
   warnings?: string[]
   error?: string
@@ -105,29 +106,37 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
               <h4 className="mb-4 text-sm font-medium text-green-800 dark:text-green-200">
                 インポート結果
               </h4>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.summary.created.students}
-                  </div>
-                  <div className="text-xs text-green-600/80 dark:text-green-400/80">
-                    生徒
-                  </div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {result.summary.created.pages}
-                  </div>
-                  <div className="text-xs text-green-600/80 dark:text-green-400/80">
-                    ページ
-                  </div>
-                </div>
+              <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                     {result.summary.created.scores}
                   </div>
                   <div className="text-xs text-green-600/80 dark:text-green-400/80">
-                    採点結果
+                    新規追加
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {result.summary.updated.scores}
+                  </div>
+                  <div className="text-xs text-purple-600/80 dark:text-purple-400/80">
+                    上書き
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">
+                    {result.summary.unchanged.scores}
+                  </div>
+                  <div className="text-xs text-gray-500/80 dark:text-gray-400/80">
+                    変更なし
+                  </div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-400 dark:text-gray-500">
+                    {result.summary.skipped.scores}
+                  </div>
+                  <div className="text-xs text-gray-400/80 dark:text-gray-500/80">
+                    スキップ
                   </div>
                 </div>
               </div>

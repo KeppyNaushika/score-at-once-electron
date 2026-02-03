@@ -2,12 +2,11 @@
  * 小計グループのID統合処理
  */
 
-import { randomUUID } from "crypto"
-
 import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
+  UpdateDecisions,
 } from "../../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
 import type {
@@ -28,7 +27,8 @@ export async function processSubtotalGroupIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  updateDecisions?: UpdateDecisions
 ): Promise<void> {
   const groupPreMatch = preMatchResult.subtotalGroup
 
@@ -58,15 +58,22 @@ export async function processSubtotalGroupIdIntegration(
           `小計グループ「${importGroup.name}」は既存データを使用します`
         )
       } else {
-        const newId = randomUUID()
-        await tx.subtotalGroup.create({
-          data: {
-            id: newId,
-            name: importGroup.name,
-          },
+        // scoreファイルのIDをそのまま使用（存在チェック付き）
+        const existingById = await tx.subtotalGroup.findUnique({
+          where: { id: importId },
         })
-        idMappings.subtotalGroup[importId] = newId
-        counts.created.subtotalGroups++
+        if (existingById) {
+          idMappings.subtotalGroup[importId] = importId
+        } else {
+          await tx.subtotalGroup.create({
+            data: {
+              id: importId,
+              name: importGroup.name,
+            },
+          })
+          idMappings.subtotalGroup[importId] = importId
+          counts.created.subtotalGroups++
+        }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
@@ -78,6 +85,40 @@ export async function processSubtotalGroupIdIntegration(
       }
 
       idMappings.subtotalGroup[importId] = existingId
+
+      // フィールド更新処理
+      const updateKey = `subtotalGroup:${importId}`
+      const fieldDecisions = updateDecisions?.[updateKey]
+      if (fieldDecisions && importGroup) {
+        const updateData: Record<string, unknown> = {}
+        const fieldMap: Record<string, unknown> = {
+          name: importGroup.name,
+        }
+        for (const [field, strategy] of Object.entries(fieldDecisions)) {
+          if (strategy === "use_import" && field in fieldMap) {
+            updateData[field] = fieldMap[field]
+          } else if (strategy === "use_newer" && field in fieldMap) {
+            const importUpdatedAt = importGroup.updatedAt
+              ? new Date(importGroup.updatedAt)
+              : null
+            if (importUpdatedAt) {
+              const existing = await tx.subtotalGroup.findUnique({
+                where: { id: existingId },
+              })
+              if (existing && importUpdatedAt > existing.updatedAt) {
+                updateData[field] = fieldMap[field]
+              }
+            }
+          }
+        }
+        if (Object.keys(updateData).length > 0) {
+          await tx.subtotalGroup.update({
+            where: { id: existingId },
+            data: updateData,
+          })
+          counts.updated.subtotalGroups++
+        }
+      }
 
       if (decision.idChoice === "use_import_id") {
         idChangeTargets.push({

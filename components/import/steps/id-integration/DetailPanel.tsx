@@ -1,10 +1,11 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 import { MatchedItemRow } from "./MatchedItemRow"
 import { NoMatchItemRow } from "./NoMatchItemRow"
-import type { DetailPanelProps, EntityType } from "./types"
+import type { DecisionType, DetailPanelProps, EntityType } from "./types"
 
 /** エンティティごとのタイトル */
 const PANEL_TITLES: Record<EntityType, string> = {
@@ -22,6 +23,7 @@ export function DetailPanel({
   byName,
   noMatch,
   showIndividualMessage,
+  onBatchIdChoice,
 }: DetailPanelProps) {
   const { updateIdIntegrationDecision } = wizard
 
@@ -41,22 +43,53 @@ export function DetailPanel({
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
+          {/* 一括設定ボタン */}
+          {byName.length > 0 && onBatchIdChoice && (
+            <div className="bg-muted/30 mb-4 flex items-center gap-2 rounded-lg border p-3">
+              <span className="text-sm font-medium">一括設定:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBatchIdChoice("use_existing_id")}
+              >
+                すべてこのPCのIDを使う
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBatchIdChoice("use_import_id")}
+              >
+                すべてファイルのIDを使う
+              </Button>
+            </div>
+          )}
+
           {/* マッチしたアイテム */}
-          {byName.map((item) => (
-            <MatchedItemRow
-              key={item.importId}
-              item={item}
-              entityType={entityType}
-              onDecisionChange={(decision, idChoice) =>
-                updateIdIntegrationDecision(entityType, item.importId, {
-                  importId: item.importId,
-                  decisionType: decision,
-                  existingId: item.existingId,
-                  idChoice,
-                })
-              }
-            />
-          ))}
+          {byName.map((item) => {
+            const currentConfig = wizard.state.idIntegrationConfig[entityType]
+            const itemDecision = currentConfig.decisions.find(
+              (d) => d.importId === item.importId
+            )
+            return (
+              <MatchedItemRow
+                key={item.importId}
+                item={item}
+                entityType={entityType}
+                currentDecision={
+                  itemDecision?.decisionType as DecisionType | undefined
+                }
+                currentIdChoice={itemDecision?.idChoice}
+                onDecisionChange={(decision, idChoice) =>
+                  updateIdIntegrationDecision(entityType, item.importId, {
+                    importId: item.importId,
+                    decisionType: decision,
+                    existingId: item.existingId,
+                    idChoice,
+                  })
+                }
+              />
+            )
+          })}
 
           {/* マッチしなかったアイテム */}
           {noMatch.map((item) => (

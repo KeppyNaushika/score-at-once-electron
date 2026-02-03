@@ -7,12 +7,14 @@ import type {
   CategoryIdIntegrationConfig,
   CategoryMatchingSummary,
   FileOverviewData,
+  IdChoice,
   IdIntegrationConfig,
   IdIntegrationDecision,
   ImportWizardState,
   MatchingConfig,
   MatchingDecisionType,
   ScoringConflictResolutionStrategy,
+  UpdateStrategy,
 } from "@/types/projectArchive.types"
 
 import { initialState, STEP_ORDER } from "./constants"
@@ -177,6 +179,41 @@ export function useImportWizard() {
     []
   )
 
+  // ID統合決定を一括更新（一括ID選択用）
+  const batchUpdateIdIntegrationDecisions = useCallback(
+    (
+      category: keyof IdIntegrationConfig,
+      items: Array<{ importId: string; existingId: string }>,
+      decisionType: "same_person" | "create_new" | "skip",
+      idChoice?: IdChoice
+    ) => {
+      setState((prev) => {
+        const currentConfig = prev.idIntegrationConfig[category]
+        const newDecisions = items.map((item) => ({
+          importId: item.importId,
+          decisionType,
+          existingId: item.existingId,
+          idChoice,
+        }))
+        const targetIds = new Set(items.map((i) => i.importId))
+        const otherDecisions = currentConfig.decisions.filter(
+          (d) => !targetIds.has(d.importId)
+        )
+        return {
+          ...prev,
+          idIntegrationConfig: {
+            ...prev.idIntegrationConfig,
+            [category]: {
+              ...currentConfig,
+              decisions: [...otherDecisions, ...newDecisions],
+            },
+          },
+        }
+      })
+    },
+    []
+  )
+
   // マッチング設定更新（後方互換用）
   const updateMatchingConfig = useCallback(
     <K extends keyof MatchingConfig>(key: K, value: MatchingConfig[K]) => {
@@ -292,27 +329,35 @@ export function useImportWizard() {
     []
   )
 
-  // 更新判断を設定
-  const setUpdateDecision = useCallback(
-    (itemId: string, shouldUpdate: boolean) => {
+  // フィールド単位の更新決定を設定
+  const setFieldUpdateDecision = useCallback(
+    (itemKey: string, field: string, strategy: UpdateStrategy) => {
       setState((prev) => ({
         ...prev,
         updateDecisions: {
           ...prev.updateDecisions,
-          [itemId]: shouldUpdate,
+          [itemKey]: {
+            ...prev.updateDecisions[itemKey],
+            [field]: strategy,
+          },
         },
       }))
     },
     []
   )
 
-  // 複数の更新判断を一括設定
-  const setAllUpdateDecisions = useCallback(
-    (itemIds: string[], shouldUpdate: boolean) => {
+  // カテゴリ一括の更新戦略を設定
+  const setBulkUpdateStrategy = useCallback(
+    (itemKeys: string[], fields: string[], strategy: UpdateStrategy) => {
       setState((prev) => {
         const newDecisions = { ...prev.updateDecisions }
-        for (const itemId of itemIds) {
-          newDecisions[itemId] = shouldUpdate
+        for (const key of itemKeys) {
+          const existing = newDecisions[key] || {}
+          const updated = { ...existing }
+          for (const field of fields) {
+            updated[field] = strategy
+          }
+          newDecisions[key] = updated
         }
         return {
           ...prev,
@@ -376,9 +421,9 @@ export function useImportWizard() {
     []
   )
 
-  // 採点競合を検出（id_integrationからscoring_conflictへの遷移時に呼び出す）
-  const detectScoringConflicts = useCallback(async () => {
-    if (!state.archivePath || !state.fileOverviewData) return false
+  // 採点競合検出（id_integration → update_confirm 遷移時に実行）
+  const detectAndAdvanceToUpdateConfirm = useCallback(async () => {
+    if (!state.archivePath || !state.fileOverviewData) return
 
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
 
@@ -389,47 +434,48 @@ export function useImportWizard() {
         integrationConfig: state.idIntegrationConfig,
       })
 
-      if (!result.success) {
+      if (result.success && result.data) {
+        setState((prev) => ({
+          ...prev,
+          fileOverviewData: prev.fileOverviewData
+            ? { ...prev.fileOverviewData, scoringConflicts: result.data! }
+            : prev.fileOverviewData,
+          isProcessing: false,
+          currentStep: "update_confirm",
+        }))
+      } else {
         setState((prev) => ({
           ...prev,
           isProcessing: false,
-          error: result.error || "採点競合の検出に失敗しました",
+          currentStep: "update_confirm",
         }))
-        return false
       }
-
-      // 検出結果をfileOverviewDataに保存してステップを進める
-      setState((prev) => ({
-        ...prev,
-        fileOverviewData: prev.fileOverviewData
-          ? {
-              ...prev.fileOverviewData,
-              scoringConflicts: result.data,
-            }
-          : null,
-        isProcessing: false,
-        currentStep: "scoring_conflict",
-      }))
-
-      return true
     } catch (error) {
       setState((prev) => ({
         ...prev,
         isProcessing: false,
-        error: error instanceof Error ? error.message : "エラーが発生しました",
+        error:
+          error instanceof Error
+            ? error.message
+            : "採点競合の検出中にエラーが発生しました",
       }))
-      return false
     }
   }, [state.archivePath, state.fileOverviewData, state.idIntegrationConfig])
 
   // 次のステップへ進む
   const goToNextStep = useCallback(() => {
+    // id_integration → update_confirm は採点競合検出を挟む
+    if (state.currentStep === "id_integration") {
+      detectAndAdvanceToUpdateConfirm()
+      return
+    }
+
     setState((prev) => {
       const currentIndex = STEP_ORDER.indexOf(prev.currentStep)
       if (currentIndex < 0 || currentIndex >= STEP_ORDER.length - 1) return prev
       return { ...prev, currentStep: STEP_ORDER[currentIndex + 1] }
     })
-  }, [])
+  }, [state.currentStep, detectAndAdvanceToUpdateConfirm])
 
   // ステップを戻る
   const goBack = useCallback(() => {
@@ -468,6 +514,7 @@ export function useImportWizard() {
         integrationConfig: state.idIntegrationConfig,
         currentUserId: user.id,
         scoringConflictConfig: state.scoringConflictConfig,
+        updateDecisions: state.updateDecisions,
       })
 
       setState((prev) => ({ ...prev, isProcessing: false }))
@@ -493,6 +540,8 @@ export function useImportWizard() {
     state.archivePath,
     state.fileOverviewData,
     state.idIntegrationConfig,
+    state.scoringConflictConfig,
+    state.updateDecisions,
     user?.id,
   ])
 
@@ -512,16 +561,17 @@ export function useImportWizard() {
     performPreMatching,
     updateIdIntegrationConfig,
     updateIdIntegrationDecision,
+    batchUpdateIdIntegrationDecisions,
     updateMatchingConfig,
     performMatching,
     setMatchingDecision,
     setAllMatchingDecisions,
-    setUpdateDecision,
-    setAllUpdateDecisions,
+    setFieldUpdateDecision,
+    setBulkUpdateStrategy,
     setScoringConflictStrategy,
     setScoringConflictResolution,
     setAllScoringConflictResolutions,
-    detectScoringConflicts,
+
     goToNextStep,
     goBack,
     executeImport,

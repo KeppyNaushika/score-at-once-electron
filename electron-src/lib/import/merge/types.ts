@@ -37,6 +37,7 @@ export interface ImportCounts {
   created: ArchiveDataCounts
   updated: ArchiveDataCounts
   skipped: ArchiveDataCounts
+  unchanged: ArchiveDataCounts
 }
 
 /** Prismaトランザクション型 */

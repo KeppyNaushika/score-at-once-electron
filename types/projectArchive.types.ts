@@ -743,18 +743,16 @@ export interface ArchiveScoresData {
 /**
  * ウィザードのステップ（先生向けの表現）
  *
- * フロー: file_select → file_overview → id_integration → scoring_conflict → update_confirm → final_confirm → execute
+ * フロー: file_select → file_overview → id_integration → update_confirm → final_confirm → execute
  *
  * Step 2 (file_overview): ファイルの概要説明（ID一致数、判断必要数を表示）
  * Step 3 (id_integration): データの統合（レコードのIDをどうするか決める）
- * Step 3.5 (scoring_conflict): 採点結果の競合解決（同じ生徒×設問で異なる採点がある場合）
  * Step 4 (update_confirm): データの更新（ID以外のカラムをどうするか決める）
  */
 export type ImportWizardStep =
   | "file_select" // Step 1: ファイル選択
   | "file_overview" // Step 2: ファイルの概要説明
   | "id_integration" // Step 3: データの統合（ID選択）
-  | "scoring_conflict" // Step 3.5: 採点結果の競合解決
   | "update_confirm" // Step 4: 情報の更新確認（情報を上書きするか）
   | "final_confirm" // Step 5: 最終確認（サマリー表示）
   | "execute" // Step 6: 実行中/完了
@@ -794,8 +792,8 @@ export interface ImportWizardState {
   matchingSummaries: CategoryMatchingSummary[]
   /** ユーザーの照合判断（アイテムID -> 判断結果） */
   matchingDecisions: Record<string, MatchingDecisionType>
-  /** ユーザーの更新判断（アイテムID -> 更新するか） */
-  updateDecisions: Record<string, boolean>
+  /** ユーザーの更新判断（`${category}:${importId}` -> フィールドごとの戦略） */
+  updateDecisions: UpdateDecisions
 }
 
 /**
@@ -823,6 +821,30 @@ export const INITIAL_WIZARD_STATE: ImportWizardState = {
   matchingDecisions: {},
   updateDecisions: {},
 }
+
+// =============================================================================
+// Step 4: データ更新 用の型
+// =============================================================================
+
+/**
+ * フィールド更新戦略
+ * - keep_existing: このPCの値を維持
+ * - use_import: ファイルの値で上書き
+ * - use_newer: updatedAtを比較して新しい方を採用
+ */
+export type UpdateStrategy = "keep_existing" | "use_import" | "use_newer"
+
+/**
+ * フィールド単位の更新決定
+ * key: フィールド名, value: 更新戦略
+ */
+export type FieldUpdateDecision = Record<string, UpdateStrategy>
+
+/**
+ * 全アイテムの更新決定
+ * key: `${category}:${importId}`, value: フィールドごとの戦略
+ */
+export type UpdateDecisions = Record<string, FieldUpdateDecision>
 
 // =============================================================================
 // Step 3.5: 採点結果の競合解決 用の型
@@ -881,10 +903,12 @@ export interface ScoringConflict {
  * 採点結果の競合検出結果
  */
 export interface ScoringConflictData {
-  /** 競合の件数 */
+  /** 競合の件数（データが異なるもの） */
   conflictCount: number
   /** 競合しなかった件数（新規追加） */
   newCount: number
+  /** 既存と同一の件数（変更なし） */
+  unchangedCount: number
   /** 競合の詳細リスト */
   conflicts: ScoringConflict[]
 }

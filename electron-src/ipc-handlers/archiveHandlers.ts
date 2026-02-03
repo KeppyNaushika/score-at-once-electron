@@ -9,6 +9,7 @@ import type {
   IdIntegrationConfig,
   MatchingConfig,
   ScoringConflictConfig,
+  UpdateDecisions,
 } from "../../types/projectArchive.types"
 import { exportProject } from "../lib/export/project-archive"
 import {
@@ -226,6 +227,7 @@ export function registerArchiveHandlers(): void {
         integrationConfig: IdIntegrationConfig
         currentUserId: string
         scoringConflictConfig?: ScoringConflictConfig
+        updateDecisions?: UpdateDecisions
       }
     ) => {
       let tempDir: string | null = null
@@ -244,7 +246,8 @@ export function registerArchiveHandlers(): void {
           options.preMatchResult,
           options.integrationConfig,
           options.currentUserId,
-          options.scoringConflictConfig
+          options.scoringConflictConfig,
+          options.updateDecisions
         )
 
         return result
