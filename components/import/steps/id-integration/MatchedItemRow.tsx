@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import {
   Select,
@@ -20,10 +20,24 @@ import { ENTITY_LABELS } from "./types"
 export function MatchedItemRow({
   item,
   entityType,
+  currentDecision,
+  currentIdChoice,
   onDecisionChange,
 }: MatchedItemRowProps) {
-  const [decision, setDecision] = useState<DecisionType>("same_person")
-  const [idChoice, setIdChoice] = useState<IdChoice>("use_existing_id")
+  const [decision, setDecision] = useState<DecisionType>(
+    currentDecision ?? "same_person"
+  )
+  const [idChoice, setIdChoice] = useState<IdChoice>(
+    currentIdChoice ?? "use_existing_id"
+  )
+
+  useEffect(() => {
+    if (currentDecision !== undefined) setDecision(currentDecision)
+  }, [currentDecision])
+
+  useEffect(() => {
+    if (currentIdChoice !== undefined) setIdChoice(currentIdChoice)
+  }, [currentIdChoice])
 
   const labels = ENTITY_LABELS[entityType]
 
@@ -74,10 +88,10 @@ export function MatchedItemRow({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="use_existing_id">
-                  このPCに合わせる
+                  このPCのIDを使う
                 </SelectItem>
                 <SelectItem value="use_import_id">
-                  書き出したPCに合わせる
+                  ファイルのIDを使う
                 </SelectItem>
               </SelectContent>
             </Select>

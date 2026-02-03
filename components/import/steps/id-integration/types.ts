@@ -80,12 +80,15 @@ export interface DetailPanelProps {
   byName: MatchedItem[]
   noMatch: Array<{ importId: string; displayLabel: string }>
   showIndividualMessage: boolean
+  onBatchIdChoice?: (idChoice: IdChoice) => void
 }
 
 /** マッチしたアイテム行のProps */
 export interface MatchedItemRowProps {
   item: MatchedItem
   entityType: EntityType
+  currentDecision?: DecisionType
+  currentIdChoice?: IdChoice
   onDecisionChange: (decision: DecisionType, idChoice?: IdChoice) => void
 }
 

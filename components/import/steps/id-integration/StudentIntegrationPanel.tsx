@@ -110,6 +110,18 @@ export function StudentIntegrationPanel({
           byName={getDisplayItems()}
           noMatch={overview.noMatch}
           showIndividualMessage={strategy === "individual"}
+          onBatchIdChoice={(idChoice) => {
+            const items = getDisplayItems().map((item) => ({
+              importId: item.importId,
+              existingId: item.existingId,
+            }))
+            wizard.batchUpdateIdIntegrationDecisions(
+              "student",
+              items,
+              "same_person",
+              idChoice
+            )
+          }}
         />
       )}
     </div>

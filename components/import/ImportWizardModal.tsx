@@ -19,7 +19,6 @@ import { FileOverviewStep } from "./steps/FileOverviewStep"
 import { FileSelectStep } from "./steps/FileSelectStep"
 import { FinalConfirmStep } from "./steps/FinalConfirmStep"
 import { IdIntegrationStep } from "./steps/IdIntegrationStep"
-import { ScoringConflictStep } from "./steps/ScoringConflictStep"
 import { UpdateConfirmStep } from "./steps/UpdateConfirmStep"
 
 interface ImportWizardModalProps {
@@ -32,7 +31,6 @@ const STEP_TITLES: Record<ImportWizardStep, string> = {
   file_select: "ファイル選択",
   file_overview: "内容確認",
   id_integration: "紐づけ",
-  scoring_conflict: "採点",
   update_confirm: "更新",
   final_confirm: "確認",
   execute: "実行",
@@ -42,7 +40,6 @@ const STEP_ORDER: ImportWizardStep[] = [
   "file_select",
   "file_overview",
   "id_integration",
-  "scoring_conflict",
   "update_confirm",
   "final_confirm",
   "execute",
@@ -73,7 +70,7 @@ export function ImportWizardModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="flex max-h-[90vh] min-w-2xl flex-col gap-0 p-0">
+      <DialogContent className="flex max-h-[90vh] min-w-4xl flex-col gap-0 p-0">
         {/* ヘッダー */}
         <DialogHeader className="bg-muted/30 border-b px-6 py-4">
           <div className="flex items-center justify-between">
@@ -162,9 +159,7 @@ export function ImportWizardModal({
           {state.currentStep === "id_integration" && (
             <IdIntegrationStep wizard={wizard} />
           )}
-          {state.currentStep === "scoring_conflict" && (
-            <ScoringConflictStep wizard={wizard} />
-          )}
+
           {state.currentStep === "update_confirm" && (
             <UpdateConfirmStep wizard={wizard} />
           )}

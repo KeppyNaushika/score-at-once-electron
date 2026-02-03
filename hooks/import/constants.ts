@@ -40,13 +40,12 @@ export const initialState: ImportWizardState = {
 
 /**
  * ステップの順序
- * file_select → file_overview → id_integration → scoring_conflict → update_confirm → final_confirm → execute
+ * file_select → file_overview → id_integration → update_confirm → final_confirm → execute
  */
 export const STEP_ORDER: ImportWizardStep[] = [
   "file_select",
   "file_overview",
   "id_integration",
-  "scoring_conflict",
   "update_confirm",
   "final_confirm",
   "execute",

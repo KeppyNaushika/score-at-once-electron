@@ -18,6 +18,10 @@ import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
   CategoryIdIntegrationConfig,
   PreMatchingResult,
+  ScoringConflict,
+  ScoringConflictConfig,
+  ScoringConflictData,
+  UpdateDecisions,
 } from "@/types/projectArchive.types"
 
 interface FinalConfirmStepProps {
@@ -25,49 +29,57 @@ interface FinalConfirmStepProps {
   onExecute: () => void
 }
 
+/** 統一サマリー型 */
+interface CategorySummary {
+  unchanged: number
+  updated: number
+  newCount: number
+  skipped: number
+  idChangeToImport: number
+}
+
+// =============================================================================
+// カテゴリ別サマリー計算
+// =============================================================================
+
 /**
- * カテゴリ別のサマリーを計算
+ * 生徒/学級/小計グループのサマリーを計算
  */
 function calculateCategorySummary(
   preMatch: PreMatchingResult,
   config: CategoryIdIntegrationConfig,
-  updateDecisions: Record<string, boolean>
-): {
-  linked: number
-  new: number
-  skipped: number
-  idChangeToImport: number
-  updated: number
-  kept: number
-} {
-  let linked = 0
+  updateDecisions: UpdateDecisions,
+  category: string
+): CategorySummary {
   let newCount = 0
   let skipped = 0
   let idChangeToImport = 0
   let updated = 0
   let kept = 0
 
-  // 更新判断を集計するヘルパー
-  const countUpdateDecision = (importId: string) => {
-    const decision = updateDecisions[importId]
-    if (decision === true) {
-      updated++
-    } else if (decision === false) {
+  const countUpdateDecision = (importId: string, category: string) => {
+    const key = `${category}:${importId}`
+    const fieldDecisions = updateDecisions[key]
+    if (fieldDecisions && Object.keys(fieldDecisions).length > 0) {
+      const hasUpdate = Object.values(fieldDecisions).some(
+        (s) => s === "use_import" || s === "use_newer"
+      )
+      if (hasUpdate) {
+        updated++
+      } else {
+        kept++
+      }
+    } else {
+      // フィールド変更がないならkept
       kept++
     }
-    // undefinedの場合はデフォルトでupdated（チェックボックスのデフォルトがtrue）
-    else {
-      updated++
-    }
   }
 
-  // ID一致（自動で紐づく）
+  // ID一致
   for (const match of preMatch.byId) {
-    linked++
-    countUpdateDecision(match.importId)
+    countUpdateDecision(match.importId, category)
   }
 
-  // 個別の決定を確認するヘルパー関数
   const getDecision = (importId: string) => {
     return config.decisions.find((d) => d.importId === importId)
   }
@@ -81,10 +93,8 @@ function calculateCategorySummary(
         config.strategy === "by_student_number" ||
         config.strategy === "by_name"
       ) {
-        // デフォルトはsame_person
         if (!decision || decision.decisionType === "same_person") {
-          linked++
-          countUpdateDecision(match.importId)
+          countUpdateDecision(match.importId, category)
           if (decision?.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -100,10 +110,8 @@ function calculateCategorySummary(
           skipped++
         }
       } else {
-        // individual
         if (decision?.decisionType === "same_person") {
-          linked++
-          countUpdateDecision(match.importId)
+          countUpdateDecision(match.importId, category)
           if (decision.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -119,7 +127,6 @@ function calculateCategorySummary(
   // 名前一致
   if (preMatch.byName) {
     for (const match of preMatch.byName) {
-      // byStudentNumberで既に処理済みの場合はスキップ
       const alreadyProcessed = preMatch.byStudentNumber?.some(
         (m) => m.importId === match.importId
       )
@@ -129,8 +136,7 @@ function calculateCategorySummary(
 
       if (config.strategy === "by_name") {
         if (!decision || decision.decisionType === "same_person") {
-          linked++
-          countUpdateDecision(match.importId)
+          countUpdateDecision(match.importId, category)
           if (decision?.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -146,10 +152,8 @@ function calculateCategorySummary(
           skipped++
         }
       } else {
-        // individual or by_student_number
         if (decision?.decisionType === "same_person") {
-          linked++
-          countUpdateDecision(match.importId)
+          countUpdateDecision(match.importId, category)
           if (decision.idChoice === "use_import_id") {
             idChangeToImport++
           }
@@ -162,37 +166,135 @@ function calculateCategorySummary(
     }
   }
 
-  // どれにも一致しない
+  // 一致なし
   for (const item of preMatch.noMatch) {
     const decision = getDecision(item.importId)
-
     if (decision?.decisionType === "skip") {
       skipped++
     } else {
-      // デフォルトは新規作成
       newCount++
     }
   }
 
-  return { linked, new: newCount, skipped, idChangeToImport, updated, kept }
+  return {
+    unchanged: kept,
+    updated,
+    newCount,
+    skipped,
+    idChangeToImport,
+  }
+}
+
+// =============================================================================
+// 採点データサマリー計算
+// =============================================================================
+
+/**
+ * 採点データの予測サマリーを計算
+ */
+function calculateScoringSummary(
+  scoringConflicts: ScoringConflictData | undefined,
+  scoringConflictConfig: ScoringConflictConfig,
+  totalScoresInArchive: number
+): Omit<CategorySummary, "idChangeToImport"> {
+  if (!scoringConflicts) {
+    return {
+      unchanged: 0,
+      updated: 0,
+      newCount: totalScoresInArchive,
+      skipped: 0,
+    }
+  }
+
+  let updated = 0
+  let skipped = 0
+
+  // conflicts にはデータが異なるもののみ含まれる
+  for (const conflict of scoringConflicts.conflicts) {
+    const resolution = simulateScoringResolution(
+      conflict,
+      scoringConflictConfig
+    )
+    if (resolution === "import") {
+      updated++
+    } else {
+      skipped++
+    }
+  }
+
+  // unchangedCount はバックエンドで計算される。未設定の場合はフォールバック計算
+  const unchangedCount =
+    scoringConflicts.unchangedCount ??
+    totalScoresInArchive -
+      scoringConflicts.newCount -
+      scoringConflicts.conflictCount
+
+  return {
+    unchanged: Math.max(0, unchangedCount),
+    updated,
+    newCount: scoringConflicts.newCount,
+    skipped,
+  }
 }
 
 /**
+ * 採点競合の解決結果をフロントエンドで予測
+ * (scoringConflictResolver.ts と同じロジック)
+ */
+function simulateScoringResolution(
+  conflict: ScoringConflict,
+  config: ScoringConflictConfig
+): "import" | "existing" {
+  const strategy = config.strategy ?? "newer_wins"
+
+  switch (strategy) {
+    case "import_wins":
+      return "import"
+    case "existing_wins":
+      return "existing"
+    case "newer_wins":
+      return resolveByTimestamp(conflict)
+    case "manual": {
+      const manual = config.manualResolutions?.[conflict.importScoreId]
+      if (manual) return manual
+      return resolveByTimestamp(conflict)
+    }
+    default:
+      return resolveByTimestamp(conflict)
+  }
+}
+
+function resolveByTimestamp(conflict: ScoringConflict): "import" | "existing" {
+  return new Date(conflict.importScore.updatedAt) >
+    new Date(conflict.existingScore.updatedAt)
+    ? "import"
+    : "existing"
+}
+
+// =============================================================================
+// メインコンポーネント
+// =============================================================================
+
+/**
  * 最終確認ステップ
- *
- * インポート内容のサマリーを表示し、実行の確認を行う
  */
 export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
   const { state, goBack } = wizard
-  const { fileOverviewData, idIntegrationConfig, manifest, updateDecisions } =
-    state
+  const {
+    fileOverviewData,
+    idIntegrationConfig,
+    manifest,
+    updateDecisions,
+    scoringConflictConfig,
+  } = state
 
   // サマリーを計算
   const studentSummary = fileOverviewData
     ? calculateCategorySummary(
         fileOverviewData.student,
         idIntegrationConfig.student,
-        updateDecisions
+        updateDecisions,
+        "student"
       )
     : null
 
@@ -200,7 +302,8 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     ? calculateCategorySummary(
         fileOverviewData.class,
         idIntegrationConfig.class,
-        updateDecisions
+        updateDecisions,
+        "class"
       )
     : null
 
@@ -208,9 +311,17 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
     ? calculateCategorySummary(
         fileOverviewData.subtotalGroup,
         idIntegrationConfig.subtotalGroup,
-        updateDecisions
+        updateDecisions,
+        "subtotalGroup"
       )
     : null
+
+  const totalScoresInArchive = manifest?.counts.scores ?? 0
+  const scoringSummary = calculateScoringSummary(
+    fileOverviewData?.scoringConflicts,
+    scoringConflictConfig,
+    totalScoresInArchive
+  )
 
   return (
     <div className="flex h-full flex-col items-center justify-center py-8">
@@ -224,210 +335,56 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       </div>
 
       {/* サマリー */}
-      <div className="mb-8 w-full max-w-md space-y-4">
+      <div className="mb-8 w-full max-w-lg space-y-4">
         {/* 生徒 */}
         {studentSummary && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Users className="text-muted-foreground h-5 w-5" />
-                <h4 className="font-medium">生徒</h4>
-              </div>
-              <ul className="space-y-1 text-sm">
-                {studentSummary.linked > 0 && (
-                  <>
-                    <li className="text-muted-foreground flex items-center gap-2">
-                      <span className="text-green-500">•</span>
-                      既存データと紐づけ: {studentSummary.linked}名
-                      {studentSummary.idChangeToImport > 0 && (
-                        <span className="text-xs text-amber-600">
-                          （{studentSummary.idChangeToImport}名のIDを変更）
-                        </span>
-                      )}
-                    </li>
-                    {(studentSummary.updated > 0 ||
-                      studentSummary.kept > 0) && (
-                      <li className="text-muted-foreground ml-4 flex items-center gap-2 text-xs">
-                        {studentSummary.updated > 0 && (
-                          <span className="text-purple-500">
-                            情報を更新: {studentSummary.updated}名
-                          </span>
-                        )}
-                        {studentSummary.updated > 0 &&
-                          studentSummary.kept > 0 && <span>/</span>}
-                        {studentSummary.kept > 0 && (
-                          <span className="text-gray-500">
-                            既存を維持: {studentSummary.kept}名
-                          </span>
-                        )}
-                      </li>
-                    )}
-                  </>
-                )}
-                {studentSummary.new > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    新しく登録: {studentSummary.new}名
-                  </li>
-                )}
-                {studentSummary.skipped > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-gray-400">•</span>
-                    スキップ: {studentSummary.skipped}名
-                  </li>
-                )}
-                {studentSummary.linked === 0 &&
-                  studentSummary.new === 0 &&
-                  studentSummary.skipped === 0 && (
-                    <li className="text-muted-foreground">データなし</li>
-                  )}
-              </ul>
-            </CardContent>
-          </Card>
+          <SummaryCard
+            icon={<Users className="h-5 w-5" />}
+            title="生徒"
+            unit="名"
+            summary={studentSummary}
+          />
         )}
 
         {/* 学級 */}
         {classSummary && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <GraduationCap className="text-muted-foreground h-5 w-5" />
-                <h4 className="font-medium">学級</h4>
-              </div>
-              <ul className="space-y-1 text-sm">
-                {classSummary.linked > 0 && (
-                  <>
-                    <li className="text-muted-foreground flex items-center gap-2">
-                      <span className="text-green-500">•</span>
-                      既存データと紐づけ: {classSummary.linked}クラス
-                      {classSummary.idChangeToImport > 0 && (
-                        <span className="text-xs text-amber-600">
-                          （{classSummary.idChangeToImport}クラスのIDを変更）
-                        </span>
-                      )}
-                    </li>
-                    {(classSummary.updated > 0 || classSummary.kept > 0) && (
-                      <li className="text-muted-foreground ml-4 flex items-center gap-2 text-xs">
-                        {classSummary.updated > 0 && (
-                          <span className="text-purple-500">
-                            情報を更新: {classSummary.updated}クラス
-                          </span>
-                        )}
-                        {classSummary.updated > 0 && classSummary.kept > 0 && (
-                          <span>/</span>
-                        )}
-                        {classSummary.kept > 0 && (
-                          <span className="text-gray-500">
-                            既存を維持: {classSummary.kept}クラス
-                          </span>
-                        )}
-                      </li>
-                    )}
-                  </>
-                )}
-                {classSummary.new > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    新しく登録: {classSummary.new}クラス
-                  </li>
-                )}
-                {classSummary.skipped > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-gray-400">•</span>
-                    スキップ: {classSummary.skipped}クラス
-                  </li>
-                )}
-                {classSummary.linked === 0 &&
-                  classSummary.new === 0 &&
-                  classSummary.skipped === 0 && (
-                    <li className="text-muted-foreground">データなし</li>
-                  )}
-              </ul>
-            </CardContent>
-          </Card>
+          <SummaryCard
+            icon={<GraduationCap className="h-5 w-5" />}
+            title="学級"
+            unit="クラス"
+            summary={classSummary}
+          />
         )}
 
         {/* 小計グループ */}
         {subtotalGroupSummary && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Layers className="text-muted-foreground h-5 w-5" />
-                <h4 className="font-medium">小計グループ</h4>
-              </div>
-              <ul className="space-y-1 text-sm">
-                {subtotalGroupSummary.linked > 0 && (
-                  <>
-                    <li className="text-muted-foreground flex items-center gap-2">
-                      <span className="text-green-500">•</span>
-                      既存データと紐づけ: {subtotalGroupSummary.linked}グループ
-                      {subtotalGroupSummary.idChangeToImport > 0 && (
-                        <span className="text-xs text-amber-600">
-                          （{subtotalGroupSummary.idChangeToImport}
-                          グループのIDを変更）
-                        </span>
-                      )}
-                    </li>
-                    {(subtotalGroupSummary.updated > 0 ||
-                      subtotalGroupSummary.kept > 0) && (
-                      <li className="text-muted-foreground ml-4 flex items-center gap-2 text-xs">
-                        {subtotalGroupSummary.updated > 0 && (
-                          <span className="text-purple-500">
-                            情報を更新: {subtotalGroupSummary.updated}グループ
-                          </span>
-                        )}
-                        {subtotalGroupSummary.updated > 0 &&
-                          subtotalGroupSummary.kept > 0 && <span>/</span>}
-                        {subtotalGroupSummary.kept > 0 && (
-                          <span className="text-gray-500">
-                            既存を維持: {subtotalGroupSummary.kept}グループ
-                          </span>
-                        )}
-                      </li>
-                    )}
-                  </>
-                )}
-                {subtotalGroupSummary.new > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-blue-500">•</span>
-                    新しく登録: {subtotalGroupSummary.new}グループ
-                  </li>
-                )}
-                {subtotalGroupSummary.skipped > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <span className="text-gray-400">•</span>
-                    スキップ: {subtotalGroupSummary.skipped}グループ
-                  </li>
-                )}
-                {subtotalGroupSummary.linked === 0 &&
-                  subtotalGroupSummary.new === 0 &&
-                  subtotalGroupSummary.skipped === 0 && (
-                    <li className="text-muted-foreground">データなし</li>
-                  )}
-              </ul>
-            </CardContent>
-          </Card>
+          <SummaryCard
+            icon={<Layers className="h-5 w-5" />}
+            title="小計グループ"
+            unit="グループ"
+            summary={subtotalGroupSummary}
+          />
         )}
 
         {/* 採点データ */}
-        {manifest && (
+        <ScoringSummaryCard
+          scoringSummary={scoringSummary}
+          totalScores={manifest?.counts.scores ?? 0}
+        />
+
+        {/* 書き込み（アノテーション） */}
+        {manifest && manifest.counts.annotations > 0 && (
           <Card>
             <CardContent className="p-4">
               <div className="mb-3 flex items-center gap-2">
-                <ClipboardCheck className="text-muted-foreground h-5 w-5" />
-                <h4 className="font-medium">採点データ</h4>
+                <Pencil className="text-muted-foreground h-5 w-5" />
+                <h4 className="font-medium">書き込み</h4>
               </div>
-              <ul className="space-y-1 text-sm">
+              <ul className="text-sm">
                 <li className="text-muted-foreground flex items-center gap-2">
-                  <span className="text-blue-500">•</span>
-                  採点結果: {manifest.counts.scores}件
+                  <span className="text-blue-500">●</span>
+                  新規追加: {manifest.counts.annotations}件
                 </li>
-                {manifest.counts.annotations > 0 && (
-                  <li className="text-muted-foreground flex items-center gap-2">
-                    <Pencil className="h-3 w-3" />
-                    書き込み: {manifest.counts.annotations}件
-                  </li>
-                )}
               </ul>
             </CardContent>
           </Card>
@@ -435,7 +392,7 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
       </div>
 
       {/* 警告 */}
-      <Card className="mb-8 w-full max-w-md border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+      <Card className="mb-8 w-full max-w-lg border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
         <CardContent className="flex items-start gap-3 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-sm text-amber-700 dark:text-amber-300">
@@ -456,5 +413,150 @@ export function FinalConfirmStep({ wizard, onExecute }: FinalConfirmStepProps) {
         </Button>
       </div>
     </div>
+  )
+}
+
+// =============================================================================
+// サブコンポーネント
+// =============================================================================
+
+interface SummaryCardProps {
+  icon: React.ReactNode
+  title: string
+  unit: string
+  summary: CategorySummary
+}
+
+/**
+ * 生徒/学級/小計グループ用のサマリーカード
+ */
+function SummaryCard({ icon, title, unit, summary }: SummaryCardProps) {
+  const hasAny =
+    summary.unchanged > 0 ||
+    summary.updated > 0 ||
+    summary.newCount > 0 ||
+    summary.skipped > 0
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-muted-foreground">{icon}</span>
+          <h4 className="font-medium">{title}</h4>
+        </div>
+        <ul className="space-y-1 text-sm">
+          {!hasAny && <li className="text-muted-foreground">データなし</li>}
+          {summary.unchanged > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-green-500">●</span>
+              既存と一致（変更なし）: {summary.unchanged}
+              {unit}
+            </li>
+          )}
+          {summary.updated > 0 && (
+            <>
+              <li className="text-muted-foreground flex items-center gap-2">
+                <span className="text-purple-500">●</span>
+                読み込んだデータで更新: {summary.updated}
+                {unit}
+              </li>
+              {summary.idChangeToImport > 0 && (
+                <li className="text-muted-foreground ml-6 flex items-center gap-2 text-xs">
+                  <span className="text-amber-500">└</span>
+                  うち{summary.idChangeToImport}
+                  {unit}のIDを変更
+                </li>
+              )}
+            </>
+          )}
+          {summary.unchanged > 0 &&
+            summary.updated === 0 &&
+            summary.idChangeToImport > 0 && (
+              <li className="text-muted-foreground ml-6 flex items-center gap-2 text-xs">
+                <span className="text-amber-500">└</span>
+                うち{summary.idChangeToImport}
+                {unit}のIDを変更
+              </li>
+            )}
+          {summary.newCount > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-blue-500">●</span>
+              新規追加: {summary.newCount}
+              {unit}
+            </li>
+          )}
+          {summary.skipped > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-gray-400">●</span>
+              インポートしない: {summary.skipped}
+              {unit}
+            </li>
+          )}
+        </ul>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface ScoringSummaryCardProps {
+  scoringSummary: Omit<CategorySummary, "idChangeToImport">
+  totalScores: number
+}
+
+/**
+ * 採点データ用のサマリーカード
+ */
+function ScoringSummaryCard({
+  scoringSummary,
+  totalScores,
+}: ScoringSummaryCardProps) {
+  const total =
+    scoringSummary.unchanged +
+    scoringSummary.updated +
+    scoringSummary.newCount +
+    scoringSummary.skipped
+  if (total === 0 && totalScores === 0) return null
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="mb-3 flex items-center gap-2">
+          <ClipboardCheck className="text-muted-foreground h-5 w-5" />
+          <h4 className="font-medium">採点データ</h4>
+        </div>
+        <ul className="space-y-1 text-sm">
+          {scoringSummary.unchanged > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-green-500">●</span>
+              既存と一致（変更なし）: {scoringSummary.unchanged}件
+            </li>
+          )}
+          {scoringSummary.updated > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-purple-500">●</span>
+              読み込んだ採点で上書き: {scoringSummary.updated}件
+            </li>
+          )}
+          {scoringSummary.newCount > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-blue-500">●</span>
+              新規追加: {scoringSummary.newCount}件
+            </li>
+          )}
+          {scoringSummary.skipped > 0 && (
+            <li className="text-muted-foreground flex items-center gap-2">
+              <span className="text-gray-400">●</span>
+              既存の採点を維持: {scoringSummary.skipped}件
+            </li>
+          )}
+          {scoringSummary.unchanged === 0 &&
+            scoringSummary.updated === 0 &&
+            scoringSummary.newCount === 0 &&
+            scoringSummary.skipped === 0 && (
+              <li className="text-muted-foreground">データなし</li>
+            )}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }

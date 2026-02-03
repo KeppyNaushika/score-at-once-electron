@@ -2,12 +2,11 @@
  * 学級のID統合処理
  */
 
-import { randomUUID } from "crypto"
-
 import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
+  UpdateDecisions,
 } from "../../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
 import type {
@@ -28,7 +27,8 @@ export async function processClassIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  updateDecisions?: UpdateDecisions
 ): Promise<void> {
   const classPreMatch = preMatchResult.class
 
@@ -54,18 +54,25 @@ export async function processClassIdIntegration(
         idMappings.class[importId] = existingByName.id
         warnings.push(`学級「${importClass.name}」は既存データを使用します`)
       } else {
-        const newId = randomUUID()
-        await tx.class.create({
-          data: {
-            id: newId,
-            name: importClass.name,
-            classCode: importClass.classCode,
-            grade: importClass.grade,
-            description: importClass.description,
-          },
+        // scoreファイルのIDをそのまま使用（存在チェック付き）
+        const existingById = await tx.class.findUnique({
+          where: { id: importId },
         })
-        idMappings.class[importId] = newId
-        counts.created.classes++
+        if (existingById) {
+          idMappings.class[importId] = importId
+        } else {
+          await tx.class.create({
+            data: {
+              id: importId,
+              name: importClass.name,
+              classCode: importClass.classCode,
+              grade: importClass.grade,
+              description: importClass.description,
+            },
+          })
+          idMappings.class[importId] = importId
+          counts.created.classes++
+        }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
@@ -75,6 +82,43 @@ export async function processClassIdIntegration(
       }
 
       idMappings.class[importId] = existingId
+
+      // フィールド更新処理
+      const updateKey = `class:${importId}`
+      const fieldDecisions = updateDecisions?.[updateKey]
+      if (fieldDecisions && importClass) {
+        const updateData: Record<string, unknown> = {}
+        const fieldMap: Record<string, unknown> = {
+          name: importClass.name,
+          classCode: importClass.classCode,
+          grade: importClass.grade,
+          description: importClass.description,
+        }
+        for (const [field, strategy] of Object.entries(fieldDecisions)) {
+          if (strategy === "use_import" && field in fieldMap) {
+            updateData[field] = fieldMap[field]
+          } else if (strategy === "use_newer" && field in fieldMap) {
+            const importUpdatedAt = importClass.updatedAt
+              ? new Date(importClass.updatedAt)
+              : null
+            if (importUpdatedAt) {
+              const existing = await tx.class.findUnique({
+                where: { id: existingId },
+              })
+              if (existing && importUpdatedAt > existing.updatedAt) {
+                updateData[field] = fieldMap[field]
+              }
+            }
+          }
+        }
+        if (Object.keys(updateData).length > 0) {
+          await tx.class.update({
+            where: { id: existingId },
+            data: updateData,
+          })
+          counts.updated.classes++
+        }
+      }
 
       if (decision.idChoice === "use_import_id") {
         idChangeTargets.push({

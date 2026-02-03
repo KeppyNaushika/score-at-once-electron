@@ -29,6 +29,7 @@ export async function detectScoringConflicts(
 ): Promise<ScoringConflictData> {
   const conflicts: ScoringConflict[] = []
   let newCount = 0
+  let unchangedCount = 0
 
   // マッピングされた既存のCropRegion IDリスト
   const existingCropRegionIds = Object.values(cropRegionIdMapping)
@@ -37,6 +38,7 @@ export async function detectScoringConflicts(
     return {
       conflictCount: 0,
       newCount: importData.scoresData.questionScores.length,
+      unchangedCount: 0,
       conflicts: [],
     }
   }
@@ -94,7 +96,7 @@ export async function detectScoringConflicts(
       continue
     }
 
-    // 既存と値が異なる場合は競合
+    // 既存と値を比較
     const importPartialScore = importScore.partialScore
       ? parseFloat(importScore.partialScore)
       : null
@@ -102,10 +104,15 @@ export async function detectScoringConflicts(
       ? Number(existingScore.partialScore)
       : null
 
-    if (
-      importScore.status !== existingScore.status ||
-      importPartialScore !== existingPartialScore
-    ) {
+    const isIdentical =
+      importScore.status === existingScore.status &&
+      importPartialScore === existingPartialScore
+
+    if (isIdentical) {
+      // データが同一 — 変更なし
+      unchangedCount++
+    } else {
+      // データが異なる — 競合として記録
       const student = studentMap.get(mappedStudentId)
       const cropRegion = cropRegionMap.get(mappedCropRegionId)
 
@@ -131,12 +138,12 @@ export async function detectScoringConflicts(
         maxPoints: cropRegion?.points ?? null,
       })
     }
-    // 値が同じ場合は競合なし（既存を維持）
   }
 
   return {
     conflictCount: conflicts.length,
     newCount,
+    unchangedCount,
     conflicts,
   }
 }
@@ -162,6 +169,7 @@ export async function detectScoringConflictsWithUserDecisions(
     return {
       conflictCount: 0,
       newCount: importData.scoresData.questionScores.length,
+      unchangedCount: 0,
       conflicts: [],
     }
   }

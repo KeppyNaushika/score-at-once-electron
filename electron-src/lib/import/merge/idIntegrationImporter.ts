@@ -15,6 +15,7 @@ import type {
   FileOverviewData,
   IdIntegrationConfig,
   ScoringConflictConfig,
+  UpdateDecisions,
 } from "../../../../types/projectArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
@@ -37,6 +38,7 @@ export interface IdIntegrationImportResult {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
     skipped: ArchiveDataCounts
+    unchanged: ArchiveDataCounts
   }
   warnings?: string[]
   error?: string
@@ -50,6 +52,7 @@ export interface IdIntegrationImportResult {
  * @param integrationConfig - ID統合設定（ユーザーの選択）
  * @param currentUserId - 現在ログインしているユーザーID
  * @param scoringConflictConfig - 採点結果の競合解決設定
+ * @param updateDecisions - フィールド更新決定（ユーザーの選択）
  * @returns インポート結果
  */
 export async function executeIdIntegrationImport(
@@ -57,13 +60,15 @@ export async function executeIdIntegrationImport(
   preMatchResult: FileOverviewData,
   integrationConfig: IdIntegrationConfig,
   currentUserId: string,
-  scoringConflictConfig?: ScoringConflictConfig
+  scoringConflictConfig?: ScoringConflictConfig,
+  updateDecisions?: UpdateDecisions
 ): Promise<IdIntegrationImportResult> {
   const warnings: string[] = []
   const counts: ImportCounts = {
     created: createEmptyCounts(),
     updated: createEmptyCounts(),
     skipped: createEmptyCounts(),
+    unchanged: createEmptyCounts(),
   }
 
   const idMappings: IdMappings = {
@@ -102,7 +107,8 @@ export async function executeIdIntegrationImport(
         idChangeTargets,
         counts,
         warnings,
-        tx
+        tx,
+        updateDecisions
       )
 
       // 2. 学級のID統合処理
@@ -114,7 +120,8 @@ export async function executeIdIntegrationImport(
         idChangeTargets,
         counts,
         warnings,
-        tx
+        tx,
+        updateDecisions
       )
 
       // 3. 小計グループのID統合処理
@@ -126,7 +133,8 @@ export async function executeIdIntegrationImport(
         idChangeTargets,
         counts,
         warnings,
-        tx
+        tx,
+        updateDecisions
       )
 
       // 4. 小計のマージ
@@ -249,16 +257,20 @@ async function processSubtotals(
     })
 
     if (!existing) {
-      const newId = randomUUID()
-      await tx.subtotal.create({
-        data: {
-          id: newId,
-          name: s.name,
-          subtotalGroupId: newGroupId,
-          order: s.order,
-        },
-      })
-      idMappings.subtotal[s.id] = newId
+      const existingById = await tx.subtotal.findUnique({ where: { id: s.id } })
+      if (existingById) {
+        idMappings.subtotal[s.id] = s.id
+      } else {
+        await tx.subtotal.create({
+          data: {
+            id: s.id,
+            name: s.name,
+            subtotalGroupId: newGroupId,
+            order: s.order,
+          },
+        })
+        idMappings.subtotal[s.id] = s.id
+      }
     } else {
       idMappings.subtotal[s.id] = existing.id
     }
@@ -288,18 +300,24 @@ async function processProject(
   }
 
   // プロジェクトID不一致 → 新規作成
-  const newProjectId = randomUUID()
+  const existingById = await tx.project.findUnique({
+    where: { id: project.id },
+  })
+  if (existingById) {
+    idMappings.project[project.id] = project.id
+    return project.id
+  }
   await tx.project.create({
     data: {
-      id: newProjectId,
+      id: project.id,
       examName: project.examName,
       examDate: project.examDate ? new Date(project.examDate) : null,
       subject: project.subject,
       description: project.description,
     },
   })
-  idMappings.project[project.id] = newProjectId
-  return newProjectId
+  idMappings.project[project.id] = project.id
+  return project.id
 }
 
 async function mapExistingProjectPages(
@@ -318,15 +336,21 @@ async function mapExistingProjectPages(
     if (existingPageIds.has(page.id)) {
       idMappings.projectPage[page.id] = page.id
     } else {
-      const newPageId = randomUUID()
-      await tx.projectPage.create({
-        data: {
-          id: newPageId,
-          projectId: newProjectId,
-          pageNumber: page.pageNumber,
-        },
+      const existingById = await tx.projectPage.findUnique({
+        where: { id: page.id },
       })
-      idMappings.projectPage[page.id] = newPageId
+      if (existingById) {
+        idMappings.projectPage[page.id] = page.id
+      } else {
+        await tx.projectPage.create({
+          data: {
+            id: page.id,
+            projectId: newProjectId,
+            pageNumber: page.pageNumber,
+          },
+        })
+        idMappings.projectPage[page.id] = page.id
+      }
       counts.created.pages++
     }
   }
@@ -353,22 +377,28 @@ async function mapExistingCropRegions(
     if (existingRegionIds.has(region.id)) {
       idMappings.cropRegion[region.id] = region.id
     } else {
-      const newRegionId = randomUUID()
-      await tx.cropRegion.create({
-        data: {
-          id: newRegionId,
-          projectPageId: mappedPageId,
-          label: region.label,
-          type: region.type,
-          x: region.x,
-          y: region.y,
-          width: region.width,
-          height: region.height,
-          points: region.points,
-          orderIndex: region.orderIndex,
-        },
+      const existingById = await tx.cropRegion.findUnique({
+        where: { id: region.id },
       })
-      idMappings.cropRegion[region.id] = newRegionId
+      if (existingById) {
+        idMappings.cropRegion[region.id] = region.id
+      } else {
+        await tx.cropRegion.create({
+          data: {
+            id: region.id,
+            projectPageId: mappedPageId,
+            label: region.label,
+            type: region.type,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            points: region.points,
+            orderIndex: region.orderIndex,
+          },
+        })
+        idMappings.cropRegion[region.id] = region.id
+      }
       counts.created.regions++
     }
   }
@@ -424,15 +454,28 @@ async function processProjectSubtotalGroups(
   for (const psg of data.projectData.projectSubtotalGroups) {
     const newGroupId = idMappings.subtotalGroup[psg.subtotalGroupId]
     if (newGroupId) {
-      const newId = randomUUID()
-      await tx.projectSubtotalGroup.create({
-        data: {
-          id: newId,
-          projectId: newProjectId,
-          subtotalGroupId: newGroupId,
-        },
+      const existing = await tx.projectSubtotalGroup.findFirst({
+        where: { projectId: newProjectId, subtotalGroupId: newGroupId },
       })
-      idMappings.projectSubtotalGroup[psg.id] = newId
+      if (existing) {
+        idMappings.projectSubtotalGroup[psg.id] = existing.id
+      } else {
+        const existingById = await tx.projectSubtotalGroup.findUnique({
+          where: { id: psg.id },
+        })
+        if (existingById) {
+          idMappings.projectSubtotalGroup[psg.id] = psg.id
+        } else {
+          await tx.projectSubtotalGroup.create({
+            data: {
+              id: psg.id,
+              projectId: newProjectId,
+              subtotalGroupId: newGroupId,
+            },
+          })
+          idMappings.projectSubtotalGroup[psg.id] = psg.id
+        }
+      }
     }
   }
 }
@@ -457,17 +500,23 @@ async function processProjectStudents(
         }
       }
 
-      const newId = randomUUID()
-      await tx.projectStudent.create({
-        data: {
-          id: newId,
-          projectId: newProjectId,
-          studentId: newStudentId,
-          status: ps.status,
-          customOrder: ps.customOrder,
-        },
+      const existingById = await tx.projectStudent.findUnique({
+        where: { id: ps.id },
       })
-      idMappings.projectStudent[ps.id] = newId
+      if (existingById) {
+        idMappings.projectStudent[ps.id] = ps.id
+      } else {
+        await tx.projectStudent.create({
+          data: {
+            id: ps.id,
+            projectId: newProjectId,
+            studentId: newStudentId,
+            status: ps.status,
+            customOrder: ps.customOrder,
+          },
+        })
+        idMappings.projectStudent[ps.id] = ps.id
+      }
     }
   }
 }
@@ -480,15 +529,21 @@ async function processProjectPages(
   tx: Tx
 ): Promise<void> {
   for (const page of data.projectData.projectPages) {
-    const newId = randomUUID()
-    await tx.projectPage.create({
-      data: {
-        id: newId,
-        projectId: newProjectId,
-        pageNumber: page.pageNumber,
-      },
+    const existingById = await tx.projectPage.findUnique({
+      where: { id: page.id },
     })
-    idMappings.projectPage[page.id] = newId
+    if (existingById) {
+      idMappings.projectPage[page.id] = page.id
+    } else {
+      await tx.projectPage.create({
+        data: {
+          id: page.id,
+          projectId: newProjectId,
+          pageNumber: page.pageNumber,
+        },
+      })
+      idMappings.projectPage[page.id] = page.id
+    }
     counts.created.pages++
   }
 }
@@ -502,22 +557,28 @@ async function processCropRegions(
   for (const region of data.projectData.cropRegions) {
     const newPageId = idMappings.projectPage[region.projectPageId]
     if (newPageId) {
-      const newId = randomUUID()
-      await tx.cropRegion.create({
-        data: {
-          id: newId,
-          projectPageId: newPageId,
-          label: region.label,
-          type: region.type,
-          x: region.x,
-          y: region.y,
-          width: region.width,
-          height: region.height,
-          points: region.points,
-          orderIndex: region.orderIndex,
-        },
+      const existingById = await tx.cropRegion.findUnique({
+        where: { id: region.id },
       })
-      idMappings.cropRegion[region.id] = newId
+      if (existingById) {
+        idMappings.cropRegion[region.id] = region.id
+      } else {
+        await tx.cropRegion.create({
+          data: {
+            id: region.id,
+            projectPageId: newPageId,
+            label: region.label,
+            type: region.type,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            points: region.points,
+            orderIndex: region.orderIndex,
+          },
+        })
+        idMappings.cropRegion[region.id] = region.id
+      }
       counts.created.regions++
     }
   }
@@ -543,16 +604,22 @@ async function processCropSubtotals(
         }
       }
 
-      const newId = randomUUID()
-      await tx.cropSubtotal.create({
-        data: {
-          id: newId,
-          cropRegionId: newRegionId,
-          subtotalId: newSubtotalId,
-          assignmentType: cs.assignmentType,
-        },
+      const existingById = await tx.cropSubtotal.findUnique({
+        where: { id: cs.id },
       })
-      idMappings.cropSubtotal[cs.id] = newId
+      if (existingById) {
+        idMappings.cropSubtotal[cs.id] = cs.id
+      } else {
+        await tx.cropSubtotal.create({
+          data: {
+            id: cs.id,
+            cropRegionId: newRegionId,
+            subtotalId: newSubtotalId,
+            assignmentType: cs.assignmentType,
+          },
+        })
+        idMappings.cropSubtotal[cs.id] = cs.id
+      }
     }
   }
 }
@@ -577,6 +644,18 @@ async function processQuestionScores(
       const conflict = conflictMap.get(qs.id)
 
       if (conflict) {
+        // データが同一なら何もしない
+        const isIdentical =
+          conflict.importScore.status === conflict.existingScore.status &&
+          conflict.importScore.partialScore ===
+            conflict.existingScore.partialScore
+
+        if (isIdentical) {
+          idMappings.questionScore[qs.id] = conflict.existingScoreId
+          counts.unchanged.scores++
+          continue
+        }
+
         const resolution = resolveScoringConflict(
           conflict,
           scoringConflictConfig
@@ -599,18 +678,26 @@ async function processQuestionScores(
         idMappings.questionScore[qs.id] = conflict.existingScoreId
         counts.updated.scores++
       } else {
-        const newId = randomUUID()
-        await tx.questionScore.create({
-          data: {
-            id: newId,
-            cropRegionId: newRegionId,
-            studentId: newStudentId,
-            partialScore: qs.partialScore ? parseFloat(qs.partialScore) : null,
-            status: qs.status,
-            userId: currentUserId,
-          },
+        const existingById = await tx.questionScore.findUnique({
+          where: { id: qs.id },
         })
-        idMappings.questionScore[qs.id] = newId
+        if (existingById) {
+          idMappings.questionScore[qs.id] = qs.id
+        } else {
+          await tx.questionScore.create({
+            data: {
+              id: qs.id,
+              cropRegionId: newRegionId,
+              studentId: newStudentId,
+              partialScore: qs.partialScore
+                ? parseFloat(qs.partialScore)
+                : null,
+              status: qs.status,
+              userId: currentUserId,
+            },
+          })
+          idMappings.questionScore[qs.id] = qs.id
+        }
         counts.created.scores++
       }
     }
@@ -628,34 +715,40 @@ async function processDrawingAnnotations(
     const newScoreId = idMappings.questionScore[da.questionScoreId]
 
     if (newScoreId) {
-      const newId = randomUUID()
-      await tx.drawingAnnotation.create({
-        data: {
-          id: newId,
-          questionScoreId: newScoreId,
-          type: da.type,
-          x: da.x,
-          y: da.y,
-          color: da.color,
-          strokeWidth: da.strokeWidth,
-          width: da.width,
-          height: da.height,
-          endX: da.endX,
-          endY: da.endY,
-          lineStyle: da.lineStyle,
-          text: da.text,
-          fontSize: da.fontSize,
-          textBoxWidth: da.textBoxWidth,
-          textBoxHeight: da.textBoxHeight,
-          horizontalAlign: da.horizontalAlign,
-          verticalAlign: da.verticalAlign,
-          anchorDirection: da.anchorDirection,
-          displayX: da.displayX,
-          displayY: da.displayY,
-          userId: currentUserId,
-        },
+      const existingById = await tx.drawingAnnotation.findUnique({
+        where: { id: da.id },
       })
-      idMappings.drawingAnnotation[da.id] = newId
+      if (existingById) {
+        idMappings.drawingAnnotation[da.id] = da.id
+      } else {
+        await tx.drawingAnnotation.create({
+          data: {
+            id: da.id,
+            questionScoreId: newScoreId,
+            type: da.type,
+            x: da.x,
+            y: da.y,
+            color: da.color,
+            strokeWidth: da.strokeWidth,
+            width: da.width,
+            height: da.height,
+            endX: da.endX,
+            endY: da.endY,
+            lineStyle: da.lineStyle,
+            text: da.text,
+            fontSize: da.fontSize,
+            textBoxWidth: da.textBoxWidth,
+            textBoxHeight: da.textBoxHeight,
+            horizontalAlign: da.horizontalAlign,
+            verticalAlign: da.verticalAlign,
+            anchorDirection: da.anchorDirection,
+            displayX: da.displayX,
+            displayY: da.displayY,
+            userId: currentUserId,
+          },
+        })
+        idMappings.drawingAnnotation[da.id] = da.id
+      }
       counts.created.annotations++
     }
   }
@@ -676,19 +769,25 @@ async function processMemberships(
       })
 
       if (!existing) {
-        const newId = randomUUID()
-        await tx.studentClassMembership.create({
-          data: {
-            id: newId,
-            studentId: newStudentId,
-            classId: newClassId,
-            startDate: new Date(m.startDate),
-            endDate: m.endDate ? new Date(m.endDate) : null,
-            attendanceNumber: m.attendanceNumber,
-            notes: m.notes,
-          },
+        const existingById = await tx.studentClassMembership.findUnique({
+          where: { id: m.id },
         })
-        idMappings.membership[m.id] = newId
+        if (existingById) {
+          idMappings.membership[m.id] = m.id
+        } else {
+          await tx.studentClassMembership.create({
+            data: {
+              id: m.id,
+              studentId: newStudentId,
+              classId: newClassId,
+              startDate: new Date(m.startDate),
+              endDate: m.endDate ? new Date(m.endDate) : null,
+              attendanceNumber: m.attendanceNumber,
+              notes: m.notes,
+            },
+          })
+          idMappings.membership[m.id] = m.id
+        }
       } else {
         idMappings.membership[m.id] = existing.id
       }

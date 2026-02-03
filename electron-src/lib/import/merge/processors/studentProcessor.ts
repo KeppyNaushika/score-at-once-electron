@@ -2,12 +2,11 @@
  * 生徒のID統合処理
  */
 
-import { randomUUID } from "crypto"
-
 import type {
   FileOverviewData,
   IdIntegrationConfig,
   IdIntegrationDecision,
+  UpdateDecisions,
 } from "../../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
 import type {
@@ -28,7 +27,8 @@ export async function processStudentIdIntegration(
   idChangeTargets: IdChangeTarget[],
   counts: ImportCounts,
   warnings: string[],
-  tx: PrismaTransaction
+  tx: PrismaTransaction,
+  updateDecisions?: UpdateDecisions
 ): Promise<void> {
   const studentPreMatch = preMatchResult.student
 
@@ -60,20 +60,27 @@ export async function processStudentIdIntegration(
           `生徒「${importStudent.lastName} ${importStudent.firstName}」は既存データを使用します`
         )
       } else {
-        const newId = randomUUID()
-        await tx.student.create({
-          data: {
-            id: newId,
-            studentNumber: importStudent.studentNumber,
-            lastName: importStudent.lastName,
-            firstName: importStudent.firstName,
-            lastNameKana: importStudent.lastNameKana,
-            firstNameKana: importStudent.firstNameKana,
-            enrollmentYear: importStudent.enrollmentYear,
-          },
+        // scoreファイルのIDをそのまま使用（存在チェック付き）
+        const existingById = await tx.student.findUnique({
+          where: { id: importId },
         })
-        idMappings.student[importId] = newId
-        counts.created.students++
+        if (existingById) {
+          idMappings.student[importId] = importId
+        } else {
+          await tx.student.create({
+            data: {
+              id: importId,
+              studentNumber: importStudent.studentNumber,
+              lastName: importStudent.lastName,
+              firstName: importStudent.firstName,
+              lastNameKana: importStudent.lastNameKana,
+              firstNameKana: importStudent.firstNameKana,
+              enrollmentYear: importStudent.enrollmentYear,
+            },
+          })
+          idMappings.student[importId] = importId
+          counts.created.students++
+        }
       }
     } else if (decision.decisionType === "same_person") {
       const existingId = decision.existingId || defaultExistingId
@@ -85,6 +92,45 @@ export async function processStudentIdIntegration(
       }
 
       idMappings.student[importId] = existingId
+
+      // フィールド更新処理
+      const updateKey = `student:${importId}`
+      const fieldDecisions = updateDecisions?.[updateKey]
+      if (fieldDecisions && importStudent) {
+        const updateData: Record<string, unknown> = {}
+        const fieldMap: Record<string, unknown> = {
+          lastName: importStudent.lastName,
+          firstName: importStudent.firstName,
+          lastNameKana: importStudent.lastNameKana,
+          firstNameKana: importStudent.firstNameKana,
+          studentNumber: importStudent.studentNumber,
+          enrollmentYear: importStudent.enrollmentYear,
+        }
+        for (const [field, strategy] of Object.entries(fieldDecisions)) {
+          if (strategy === "use_import" && field in fieldMap) {
+            updateData[field] = fieldMap[field]
+          } else if (strategy === "use_newer" && field in fieldMap) {
+            const importUpdatedAt = importStudent.updatedAt
+              ? new Date(importStudent.updatedAt)
+              : null
+            if (importUpdatedAt) {
+              const existing = await tx.student.findUnique({
+                where: { id: existingId },
+              })
+              if (existing && importUpdatedAt > existing.updatedAt) {
+                updateData[field] = fieldMap[field]
+              }
+            }
+          }
+        }
+        if (Object.keys(updateData).length > 0) {
+          await tx.student.update({
+            where: { id: existingId },
+            data: updateData,
+          })
+          counts.updated.students++
+        }
+      }
 
       if (decision.idChoice === "use_import_id") {
         // Stage 2でID変更を行う
