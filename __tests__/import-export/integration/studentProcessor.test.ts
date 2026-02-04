@@ -549,7 +549,9 @@ describe("processStudentIdIntegration", () => {
 
       // B5修正: サフィックス付きの学籍番号で新規作成される
       expect(idMappings.student[importId]).toBe(importId)
-      const created = await prisma.student.findUnique({ where: { id: importId } })
+      const created = await prisma.student.findUnique({
+        where: { id: importId },
+      })
       expect(created).not.toBeNull()
       expect(created!.studentNumber).toBe("S001_1") // suffix added
       expect(created!.lastName).toBe("インポート")
@@ -558,7 +560,9 @@ describe("processStudentIdIntegration", () => {
       expect(warnings.length).toBeGreaterThan(0)
       expect(warnings[0]).toContain("重複回避")
       // 既存レコードは変更されない
-      const existing = await prisma.student.findUnique({ where: { id: existingId } })
+      const existing = await prisma.student.findUnique({
+        where: { id: existingId },
+      })
       expect(existing).not.toBeNull()
       expect(existing!.studentNumber).toBe("S001")
     })
