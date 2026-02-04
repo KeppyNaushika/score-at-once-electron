@@ -6,9 +6,8 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { getDataDirectory } from "../../dataManager"
-import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
-import type { IdMappings } from "./types"
+import type { IdMappings, PrismaTransaction } from "./types"
 
 /**
  * 画像ファイルをプロジェクトディレクトリにコピー
@@ -37,7 +36,7 @@ export async function copyImportImages(
 
   for (const srcPath of data.answerSheetPaths) {
     const relativePath = srcPath.substring(
-      srcPath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      srcPath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const destPath = path.join(answerSheetsDir, relativePath)
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
@@ -50,19 +49,21 @@ export async function copyImportImages(
 
 /**
  * 画像レコードを作成（既存レコードがある場合はスキップ）
+ * トランザクション内で実行される。
  */
 export async function createImportImageRecords(
   data: ExtractedArchiveData,
-  idMappings: IdMappings
+  idMappings: IdMappings,
+  tx: PrismaTransaction
 ): Promise<void> {
-  const newProjectId = Object.values(idMappings.project)[0]
+  const newProjectId = idMappings.project[data.projectData.project.id]
 
   // MasterImage レコードの作成
   if (
     data.projectData.masterImages &&
     data.projectData.masterImages.length > 0
   ) {
-    await createMasterImageRecords(data, idMappings, newProjectId)
+    await createMasterImageRecords(data, idMappings, newProjectId, tx)
   }
 
   // StudentAnswerImage レコードの作成
@@ -70,12 +71,12 @@ export async function createImportImageRecords(
     data.projectData.studentAnswerImages &&
     data.projectData.studentAnswerImages.length > 0
   ) {
-    await createStudentAnswerImageRecords(data, idMappings, newProjectId)
+    await createStudentAnswerImageRecords(data, idMappings, newProjectId, tx)
     return
   }
 
   // v1.1.0以前との後方互換性（pageImagesを使用）
-  await createLegacyImageRecords(data, idMappings, newProjectId)
+  await createLegacyImageRecords(data, idMappings, newProjectId, tx)
 }
 
 /**
@@ -84,14 +85,15 @@ export async function createImportImageRecords(
 async function createMasterImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string
+  newProjectId: string,
+  tx: PrismaTransaction
 ): Promise<void> {
   for (const img of data.projectData.masterImages!) {
     const newProjectPageId = idMappings.projectPage[img.projectPageId]
     if (!newProjectPageId) continue
 
     // 既存のMasterImageレコードをチェック
-    const existing = await prisma.masterImage.findFirst({
+    const existing = await tx.masterImage.findFirst({
       where: { projectPageId: newProjectPageId },
     })
     if (existing) continue
@@ -99,11 +101,11 @@ async function createMasterImageRecords(
     const filename = path.basename(img.imagePath)
     const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-    const existingById = await prisma.masterImage.findUnique({
+    const existingById = await tx.masterImage.findUnique({
       where: { id: img.id },
     })
     if (!existingById) {
-      await prisma.masterImage.create({
+      await tx.masterImage.create({
         data: {
           id: img.id,
           projectPageId: newProjectPageId,
@@ -120,7 +122,8 @@ async function createMasterImageRecords(
 async function createStudentAnswerImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string
+  newProjectId: string,
+  tx: PrismaTransaction
 ): Promise<void> {
   for (const img of data.projectData.studentAnswerImages!) {
     const newProjectPageId = idMappings.projectPage[img.projectPageId]
@@ -128,7 +131,7 @@ async function createStudentAnswerImageRecords(
     if (!newProjectPageId || !newStudentId) continue
 
     // 既存のStudentAnswerImageレコードをチェック
-    const existing = await prisma.studentAnswerImage.findFirst({
+    const existing = await tx.studentAnswerImage.findFirst({
       where: {
         projectPageId: newProjectPageId,
         studentId: newStudentId,
@@ -137,7 +140,7 @@ async function createStudentAnswerImageRecords(
     if (existing) continue
 
     const relativePath = img.imagePath.substring(
-      img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+      img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const newImagePath =
       `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
@@ -145,11 +148,11 @@ async function createStudentAnswerImageRecords(
         "/"
       )
 
-    const existingById = await prisma.studentAnswerImage.findUnique({
+    const existingById = await tx.studentAnswerImage.findUnique({
       where: { id: img.id },
     })
     if (!existingById) {
-      await prisma.studentAnswerImage.create({
+      await tx.studentAnswerImage.create({
         data: {
           id: img.id,
           projectPageId: newProjectPageId,
@@ -167,7 +170,8 @@ async function createStudentAnswerImageRecords(
 async function createLegacyImageRecords(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  newProjectId: string
+  newProjectId: string,
+  tx: PrismaTransaction
 ): Promise<void> {
   for (const img of data.projectData.pageImages) {
     const newProjectPageId = idMappings.projectPage[img.projectPageId]
@@ -177,18 +181,18 @@ async function createLegacyImageRecords(
 
     if (img.imageType === "MODEL_ANSWER") {
       // 既存のMasterImageレコードをチェック
-      const existingMaster = await prisma.masterImage.findFirst({
+      const existingMaster = await tx.masterImage.findFirst({
         where: { projectPageId: newProjectPageId },
       })
       if (existingMaster) continue
 
       const newImagePath = `projects/${newProjectId}/master-images/${filename}`
 
-      const existingById = await prisma.masterImage.findUnique({
+      const existingById = await tx.masterImage.findUnique({
         where: { id: img.id },
       })
       if (!existingById) {
-        await prisma.masterImage.create({
+        await tx.masterImage.create({
           data: {
             id: img.id,
             projectPageId: newProjectPageId,
@@ -201,7 +205,7 @@ async function createLegacyImageRecords(
       if (!newStudentId) continue
 
       // 既存のStudentAnswerImageレコードをチェック
-      const existingAnswer = await prisma.studentAnswerImage.findFirst({
+      const existingAnswer = await tx.studentAnswerImage.findFirst({
         where: {
           projectPageId: newProjectPageId,
           studentId: newStudentId,
@@ -210,7 +214,7 @@ async function createLegacyImageRecords(
       if (existingAnswer) continue
 
       const relativePath = img.imagePath.substring(
-        img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
+        img.imagePath.lastIndexOf("answer-sheets") + "answer-sheets".length + 1
       )
       const newImagePath =
         `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
@@ -218,11 +222,11 @@ async function createLegacyImageRecords(
           "/"
         )
 
-      const existingById = await prisma.studentAnswerImage.findUnique({
+      const existingById = await tx.studentAnswerImage.findUnique({
         where: { id: img.id },
       })
       if (!existingById) {
-        await prisma.studentAnswerImage.create({
+        await tx.studentAnswerImage.create({
           data: {
             id: img.id,
             projectPageId: newProjectPageId,

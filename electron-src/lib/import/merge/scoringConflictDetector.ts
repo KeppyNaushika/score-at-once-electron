@@ -194,6 +194,12 @@ export async function detectScoringConflictsWithUserDecisions(
       }
     }
   } else if (studentConfig.strategy === "by_name") {
+    // byStudentNumberのマッチも含める（学籍番号一致はより確実な照合）
+    for (const match of preMatchResult.student.byStudentNumber ?? []) {
+      if (!studentIdMapping[match.importId]) {
+        studentIdMapping[match.importId] = match.existingId
+      }
+    }
     // 氏名一致のものをマッピング
     for (const match of preMatchResult.student.byName ?? []) {
       if (!studentIdMapping[match.importId]) {

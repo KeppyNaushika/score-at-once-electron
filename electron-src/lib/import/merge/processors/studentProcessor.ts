@@ -9,6 +9,7 @@ import type {
   UpdateDecisions,
 } from "../../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
+import { generateUniqueStudentNumber } from "../../project-archive/uniqueNameGenerators"
 import type {
   IdChangeTarget,
   IdMappings,
@@ -49,37 +50,35 @@ export async function processStudentIdIntegration(
     if (!importStudent) return
 
     if (!decision || decision.decisionType === "create_new") {
-      // 新規作成
-      const existingByStudentNumber = await tx.student.findUnique({
-        where: { studentNumber: importStudent.studentNumber },
-      })
+      const uniqueStudentNumber = await generateUniqueStudentNumber(
+        tx,
+        importStudent.studentNumber
+      )
 
-      if (existingByStudentNumber) {
-        idMappings.student[importId] = existingByStudentNumber.id
-        warnings.push(
-          `生徒「${importStudent.lastName} ${importStudent.firstName}」は既存データを使用します`
-        )
+      const existingById = await tx.student.findUnique({
+        where: { id: importId },
+      })
+      if (existingById) {
+        idMappings.student[importId] = importId
       } else {
-        // scoreファイルのIDをそのまま使用（存在チェック付き）
-        const existingById = await tx.student.findUnique({
-          where: { id: importId },
+        await tx.student.create({
+          data: {
+            id: importId,
+            studentNumber: uniqueStudentNumber,
+            lastName: importStudent.lastName,
+            firstName: importStudent.firstName,
+            lastNameKana: importStudent.lastNameKana ?? null,
+            firstNameKana: importStudent.firstNameKana ?? null,
+            enrollmentYear: importStudent.enrollmentYear ?? null,
+          },
         })
-        if (existingById) {
-          idMappings.student[importId] = importId
-        } else {
-          await tx.student.create({
-            data: {
-              id: importId,
-              studentNumber: importStudent.studentNumber,
-              lastName: importStudent.lastName,
-              firstName: importStudent.firstName,
-              lastNameKana: importStudent.lastNameKana,
-              firstNameKana: importStudent.firstNameKana,
-              enrollmentYear: importStudent.enrollmentYear,
-            },
-          })
-          idMappings.student[importId] = importId
-          counts.created.students++
+        idMappings.student[importId] = importId
+        counts.created.students++
+
+        if (uniqueStudentNumber !== importStudent.studentNumber) {
+          warnings.push(
+            `生徒「${importStudent.lastName} ${importStudent.firstName}」の学籍番号を「${uniqueStudentNumber}」として新規作成しました（重複回避）`
+          )
         }
       }
     } else if (decision.decisionType === "same_person") {

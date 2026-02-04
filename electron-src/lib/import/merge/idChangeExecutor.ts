@@ -1,41 +1,40 @@
 /**
- * Stage 2: ID変更処理
+ * ID変更処理
  *
  * 「書き出したPCに合わせる」を選んだ場合、既存IDを.scoreのIDに変更する。
  * FK制約があるため、関連テーブルも連鎖的に更新する。
+ *
+ * UNIQUE制約のあるフィールド（Student.studentNumber, Class.name）は
+ * temp-value方式で回避: 既存レコードのUNIQUEフィールドを一時値に変更してから
+ * 新レコードを作成し、旧レコードを削除する。
  */
 
-import prisma from "../../prisma/client"
-import type { IdChangeTarget, IdMappings } from "./types"
+import type { IdChangeTarget, IdMappings, PrismaTransaction } from "./types"
 
 /**
  * ID変更処理を実行
  *
+ * Stage 1トランザクション内から呼び出される。
+ * エラーが発生した場合はthrowしてトランザクション全体をロールバックする。
+ *
  * @param targets - ID変更対象のリスト
  * @param idMappings - IDマッピング
  * @param warnings - 警告メッセージ
+ * @param tx - Prismaトランザクション
  */
 export async function executeIdChanges(
   targets: IdChangeTarget[],
   idMappings: IdMappings,
-  warnings: string[]
+  warnings: string[],
+  tx: PrismaTransaction
 ): Promise<void> {
   for (const target of targets) {
-    try {
-      await prisma.$transaction(async (tx) => {
-        if (target.category === "student") {
-          await changeStudentId(tx, target, idMappings, warnings)
-        } else if (target.category === "class") {
-          await changeClassId(tx, target, idMappings, warnings)
-        } else if (target.category === "subtotalGroup") {
-          await changeSubtotalGroupId(tx, target, idMappings, warnings)
-        }
-      })
-    } catch (error) {
-      console.error(`Error changing ID for ${target.category}:`, error)
-      warnings.push(
-        `${target.category}のID変更に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`
-      )
+    if (target.category === "student") {
+      await changeStudentId(tx, target, idMappings, warnings)
+    } else if (target.category === "class") {
+      await changeClassId(tx, target, idMappings, warnings)
+    } else if (target.category === "subtotalGroup") {
+      await changeSubtotalGroupId(tx, target, idMappings, warnings)
     }
   }
 }
@@ -44,9 +43,11 @@ export async function executeIdChanges(
  * 生徒IDの変更
  * FK: StudentClassMembership.studentId, ProjectStudent.studentId,
  *     StudentAnswerImage.studentId, QuestionScore.studentId
+ *
+ * temp-value方式: studentNumber（UNIQUE制約）を一時値に変更してから新レコードを作成
  */
 async function changeStudentId(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: PrismaTransaction,
   target: IdChangeTarget,
   idMappings: IdMappings,
   _warnings: string[]
@@ -57,7 +58,14 @@ async function changeStudentId(
 
   if (!existingStudent) return
 
-  // 新しいIDで同じデータを作成
+  // 1. UNIQUE制約のあるstudentNumberを一時値に変更
+  const tempStudentNumber = `__TEMP_${target.existingId}`
+  await tx.student.update({
+    where: { id: target.existingId },
+    data: { studentNumber: tempStudentNumber },
+  })
+
+  // 2. 新しいIDで元のstudentNumberを使ってレコード作成
   await tx.student.create({
     data: {
       id: target.newId,
@@ -72,7 +80,7 @@ async function changeStudentId(
     },
   })
 
-  // FK参照を更新
+  // 3. FK参照を更新
   await tx.studentClassMembership.updateMany({
     where: { studentId: target.existingId },
     data: { studentId: target.newId },
@@ -93,12 +101,12 @@ async function changeStudentId(
     data: { studentId: target.newId },
   })
 
-  // 古いレコードを削除
+  // 4. 古いレコードを削除
   await tx.student.delete({
     where: { id: target.existingId },
   })
 
-  // マッピングを更新
+  // 5. マッピングを更新
   for (const [importId, mappedId] of Object.entries(idMappings.student)) {
     if (mappedId === target.existingId) {
       idMappings.student[importId] = target.newId
@@ -109,9 +117,11 @@ async function changeStudentId(
 /**
  * 学級IDの変更
  * FK: StudentClassMembership.classId, ProjectClass.classId
+ *
+ * temp-value方式: name（UNIQUE制約）を一時値に変更してから新レコードを作成
  */
 async function changeClassId(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: PrismaTransaction,
   target: IdChangeTarget,
   idMappings: IdMappings,
   _warnings: string[]
@@ -122,6 +132,14 @@ async function changeClassId(
 
   if (!existingClass) return
 
+  // 1. UNIQUE制約のあるnameを一時値に変更
+  const tempName = `__TEMP_${target.existingId}`
+  await tx.class.update({
+    where: { id: target.existingId },
+    data: { name: tempName },
+  })
+
+  // 2. 新しいIDで元のnameを使ってレコード作成
   await tx.class.create({
     data: {
       id: target.newId,
@@ -134,6 +152,7 @@ async function changeClassId(
     },
   })
 
+  // 3. FK参照を更新
   await tx.studentClassMembership.updateMany({
     where: { classId: target.existingId },
     data: { classId: target.newId },
@@ -144,10 +163,12 @@ async function changeClassId(
     data: { classId: target.newId },
   })
 
+  // 4. 古いレコードを削除
   await tx.class.delete({
     where: { id: target.existingId },
   })
 
+  // 5. マッピングを更新
   for (const [importId, mappedId] of Object.entries(idMappings.class)) {
     if (mappedId === target.existingId) {
       idMappings.class[importId] = target.newId
@@ -157,10 +178,11 @@ async function changeClassId(
 
 /**
  * 小計グループIDの変更
- * FK: ProjectSubtotalGroup.subtotalGroupId, Subtotal.subtotalGroupId
+ * FK: ProjectSubtotalGroup.subtotalGroupId, Subtotal.subtotalGroupId,
+ *     SubjectSubtotalGroup.subtotalGroupId
  */
 async function changeSubtotalGroupId(
-  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  tx: PrismaTransaction,
   target: IdChangeTarget,
   idMappings: IdMappings,
   _warnings: string[]
@@ -186,6 +208,11 @@ async function changeSubtotalGroupId(
   })
 
   await tx.subtotal.updateMany({
+    where: { subtotalGroupId: target.existingId },
+    data: { subtotalGroupId: target.newId },
+  })
+
+  await tx.subjectSubtotalGroup.updateMany({
     where: { subtotalGroupId: target.existingId },
     data: { subtotalGroupId: target.newId },
   })
