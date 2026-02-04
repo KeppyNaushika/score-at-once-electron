@@ -446,7 +446,9 @@ describe("processClassIdIntegration", () => {
       expect(warnings.length).toBeGreaterThan(0)
       expect(warnings[0]).toContain("重複回避")
       // 既存レコードは変更されない
-      const existing = await prisma.class.findUnique({ where: { id: existingId } })
+      const existing = await prisma.class.findUnique({
+        where: { id: existingId },
+      })
       expect(existing).not.toBeNull()
       expect(existing!.name).toBe("1年A組")
     })
