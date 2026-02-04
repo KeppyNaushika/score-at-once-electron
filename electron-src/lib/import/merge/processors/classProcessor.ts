@@ -9,6 +9,7 @@ import type {
   UpdateDecisions,
 } from "../../../../../types/projectArchive.types"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
+import { generateUniqueClassName } from "../../project-archive/uniqueNameGenerators"
 import type {
   IdChangeTarget,
   IdMappings,
@@ -46,32 +47,30 @@ export async function processClassIdIntegration(
     if (!importClass) return
 
     if (!decision || decision.decisionType === "create_new") {
-      const existingByName = await tx.class.findUnique({
-        where: { name: importClass.name },
-      })
+      const uniqueName = await generateUniqueClassName(tx, importClass.name)
 
-      if (existingByName) {
-        idMappings.class[importId] = existingByName.id
-        warnings.push(`学級「${importClass.name}」は既存データを使用します`)
+      const existingById = await tx.class.findUnique({
+        where: { id: importId },
+      })
+      if (existingById) {
+        idMappings.class[importId] = importId
       } else {
-        // scoreファイルのIDをそのまま使用（存在チェック付き）
-        const existingById = await tx.class.findUnique({
-          where: { id: importId },
+        await tx.class.create({
+          data: {
+            id: importId,
+            name: uniqueName,
+            classCode: importClass.classCode ?? null,
+            grade: importClass.grade ?? null,
+            description: importClass.description ?? null,
+          },
         })
-        if (existingById) {
-          idMappings.class[importId] = importId
-        } else {
-          await tx.class.create({
-            data: {
-              id: importId,
-              name: importClass.name,
-              classCode: importClass.classCode,
-              grade: importClass.grade,
-              description: importClass.description,
-            },
-          })
-          idMappings.class[importId] = importId
-          counts.created.classes++
+        idMappings.class[importId] = importId
+        counts.created.classes++
+
+        if (uniqueName !== importClass.name) {
+          warnings.push(
+            `学級「${importClass.name}」を「${uniqueName}」として新規作成しました（重複回避）`
+          )
         }
       }
     } else if (decision.decisionType === "same_person") {

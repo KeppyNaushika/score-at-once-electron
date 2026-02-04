@@ -97,129 +97,155 @@ export async function executeIdIntegrationImport(
     // ========================================================================
     // Stage 1: マッピングとデータ挿入
     // ========================================================================
-    await prisma.$transaction(async (tx) => {
-      // 1. 生徒のID統合処理
-      await processStudentIdIntegration(
-        data,
-        preMatchResult,
-        integrationConfig.student,
-        idMappings,
-        idChangeTargets,
-        counts,
-        warnings,
-        tx,
-        updateDecisions
-      )
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. 生徒のID統合処理
+        await processStudentIdIntegration(
+          data,
+          preMatchResult,
+          integrationConfig.student,
+          idMappings,
+          idChangeTargets,
+          counts,
+          warnings,
+          tx,
+          updateDecisions
+        )
 
-      // 2. 学級のID統合処理
-      await processClassIdIntegration(
-        data,
-        preMatchResult,
-        integrationConfig.class,
-        idMappings,
-        idChangeTargets,
-        counts,
-        warnings,
-        tx,
-        updateDecisions
-      )
+        // 2. 学級のID統合処理
+        await processClassIdIntegration(
+          data,
+          preMatchResult,
+          integrationConfig.class,
+          idMappings,
+          idChangeTargets,
+          counts,
+          warnings,
+          tx,
+          updateDecisions
+        )
 
-      // 3. 小計グループのID統合処理
-      await processSubtotalGroupIdIntegration(
-        data,
-        preMatchResult,
-        integrationConfig.subtotalGroup,
-        idMappings,
-        idChangeTargets,
-        counts,
-        warnings,
-        tx,
-        updateDecisions
-      )
+        // 3. 小計グループのID統合処理
+        await processSubtotalGroupIdIntegration(
+          data,
+          preMatchResult,
+          integrationConfig.subtotalGroup,
+          idMappings,
+          idChangeTargets,
+          counts,
+          warnings,
+          tx,
+          updateDecisions
+        )
 
-      // 4. 小計のマージ
-      await processSubtotals(data, idMappings, tx)
+        // 4. 小計のマージ
+        await processSubtotals(data, idMappings, tx)
 
-      // 5. プロジェクト処理
-      const isProjectIdMatch = preMatchResult.project?.isIdMatch ?? false
-      const newProjectId = await processProject(
-        data,
-        preMatchResult,
-        idMappings,
-        counts,
-        tx
-      )
+        // 5. プロジェクト処理
+        const isProjectIdMatch = preMatchResult.project?.isIdMatch ?? false
+        const newProjectId = await processProject(
+          data,
+          preMatchResult,
+          idMappings,
+          counts,
+          warnings,
+          tx
+        )
 
-      // 6. UserProject
-      await processUserProject(
-        isProjectIdMatch,
-        newProjectId,
-        currentUserId,
-        tx
-      )
+        // 6. UserProject
+        await processUserProject(
+          isProjectIdMatch,
+          newProjectId,
+          currentUserId,
+          tx
+        )
 
-      // 7. ProjectSubtotalGroup
-      await processProjectSubtotalGroups(data, newProjectId, idMappings, tx)
+        // 7. ProjectSubtotalGroup
+        await processProjectSubtotalGroups(data, newProjectId, idMappings, tx)
 
-      // 8. ProjectStudent
-      await processProjectStudents(
-        data,
-        isProjectIdMatch,
-        newProjectId,
-        idMappings,
-        tx
-      )
+        // 8. ProjectStudent
+        await processProjectStudents(
+          data,
+          isProjectIdMatch,
+          newProjectId,
+          idMappings,
+          tx
+        )
 
-      // 9. ProjectPage（不一致時のみ）
-      if (!isProjectIdMatch) {
-        await processProjectPages(data, newProjectId, idMappings, counts, tx)
-      }
+        // 9. ProjectPage（不一致時のみ）
+        if (!isProjectIdMatch) {
+          await processProjectPages(data, newProjectId, idMappings, counts, tx)
+        }
 
-      // 10. CropRegion（不一致時のみ）
-      if (!isProjectIdMatch) {
-        await processCropRegions(data, idMappings, counts, tx)
-      }
+        // 10. CropRegion（不一致時のみ）
+        if (!isProjectIdMatch) {
+          await processCropRegions(data, idMappings, counts, tx)
+        }
 
-      // 11. CropSubtotal
-      await processCropSubtotals(data, isProjectIdMatch, idMappings, tx)
+        // 10a. ProjectMarkingFormat (v1.4.0+)
+        await processProjectMarkingFormats(data, newProjectId, tx)
 
-      // 12. QuestionScore（競合解決対応）
-      await processQuestionScores(
-        data,
-        preMatchResult,
-        currentUserId,
-        idMappings,
-        counts,
-        scoringConflictConfig,
-        tx
-      )
+        // 10b. ProjectExportSettings (v1.4.0+)
+        await processProjectExportSettings(data, newProjectId, tx)
 
-      // 13. DrawingAnnotation
-      await processDrawingAnnotations(
-        data,
-        currentUserId,
-        idMappings,
-        counts,
-        tx
-      )
+        // 10c. CropRegionMarkingOverride (v1.4.0+)
+        await processCropRegionMarkingOverrides(data, idMappings, tx)
 
-      // 14. 学級所属
-      await processMemberships(data, idMappings, tx)
-    })
+        // 10d. Subject & SubjectSubtotalGroup (v1.4.0+)
+        await processSubjects(data, idMappings, tx)
+
+        // 10e. ProjectClass (v1.1.0+)
+        await processProjectClasses(data, newProjectId, idMappings, tx)
+
+        // 11. CropSubtotal
+        await processCropSubtotals(data, isProjectIdMatch, idMappings, tx)
+
+        // 12. QuestionScore（競合解決対応）
+        await processQuestionScores(
+          data,
+          preMatchResult,
+          currentUserId,
+          idMappings,
+          counts,
+          scoringConflictConfig,
+          tx
+        )
+
+        // 13. DrawingAnnotation
+        await processDrawingAnnotations(
+          data,
+          currentUserId,
+          idMappings,
+          counts,
+          tx
+        )
+
+        // 14. 学級所属
+        await processMemberships(data, idMappings, tx)
+
+        // 15. ID変更処理（「書き出したPCに合わせる」を選んだ場合）
+        if (idChangeTargets.length > 0) {
+          await executeIdChanges(idChangeTargets, idMappings, warnings, tx)
+        }
+
+        // 16. 画像レコード作成（DB操作のみ）
+        await createImportImageRecords(data, idMappings, tx)
+      },
+      { timeout: 60000 }
+    )
 
     // ========================================================================
-    // Stage 2: ID変更処理（「書き出したPCに合わせる」を選んだ場合）
-    // ========================================================================
-    if (idChangeTargets.length > 0) {
-      await executeIdChanges(idChangeTargets, idMappings, warnings)
-    }
-
-    // ========================================================================
-    // 画像ファイルのコピー
+    // 画像ファイルのコピー（ファイルI/O - トランザクション外）
     // ========================================================================
     const newProjectId = idMappings.project[data.projectData.project.id]
-    await copyImportImages(data, newProjectId)
-    await createImportImageRecords(data, idMappings)
+    try {
+      await copyImportImages(data, newProjectId)
+    } catch (copyError) {
+      warnings.push(
+        "画像ファイルのコピーに一部失敗しました。再インポートで修復可能です。"
+      )
+      console.error("Image copy failed:", copyError)
+    }
 
     return {
       success: true,
@@ -282,6 +308,7 @@ async function processProject(
   preMatchResult: FileOverviewData,
   idMappings: IdMappings,
   counts: ImportCounts,
+  warnings: string[],
   tx: Tx
 ): Promise<string> {
   const project = data.projectData.project
@@ -305,6 +332,9 @@ async function processProject(
   })
   if (existingById) {
     idMappings.project[project.id] = project.id
+    warnings.push(
+      `プロジェクトID「${project.id}」は既に使用されています。既存プロジェクトにデータがマージされます。`
+    )
     return project.id
   }
   await tx.project.create({
@@ -335,12 +365,14 @@ async function mapExistingProjectPages(
   for (const page of data.projectData.projectPages) {
     if (existingPageIds.has(page.id)) {
       idMappings.projectPage[page.id] = page.id
+      counts.unchanged.pages++
     } else {
       const existingById = await tx.projectPage.findUnique({
         where: { id: page.id },
       })
       if (existingById) {
         idMappings.projectPage[page.id] = page.id
+        counts.unchanged.pages++
       } else {
         await tx.projectPage.create({
           data: {
@@ -350,8 +382,8 @@ async function mapExistingProjectPages(
           },
         })
         idMappings.projectPage[page.id] = page.id
+        counts.created.pages++
       }
-      counts.created.pages++
     }
   }
 }
@@ -376,12 +408,14 @@ async function mapExistingCropRegions(
 
     if (existingRegionIds.has(region.id)) {
       idMappings.cropRegion[region.id] = region.id
+      counts.unchanged.regions++
     } else {
       const existingById = await tx.cropRegion.findUnique({
         where: { id: region.id },
       })
       if (existingById) {
         idMappings.cropRegion[region.id] = region.id
+        counts.unchanged.regions++
       } else {
         await tx.cropRegion.create({
           data: {
@@ -398,8 +432,8 @@ async function mapExistingCropRegions(
           },
         })
         idMappings.cropRegion[region.id] = region.id
+        counts.created.regions++
       }
-      counts.created.regions++
     }
   }
 }
@@ -534,6 +568,7 @@ async function processProjectPages(
     })
     if (existingById) {
       idMappings.projectPage[page.id] = page.id
+      counts.unchanged.pages++
     } else {
       await tx.projectPage.create({
         data: {
@@ -543,8 +578,8 @@ async function processProjectPages(
         },
       })
       idMappings.projectPage[page.id] = page.id
+      counts.created.pages++
     }
-    counts.created.pages++
   }
 }
 
@@ -562,6 +597,7 @@ async function processCropRegions(
       })
       if (existingById) {
         idMappings.cropRegion[region.id] = region.id
+        counts.unchanged.regions++
       } else {
         await tx.cropRegion.create({
           data: {
@@ -578,8 +614,8 @@ async function processCropRegions(
           },
         })
         idMappings.cropRegion[region.id] = region.id
+        counts.created.regions++
       }
-      counts.created.regions++
     }
   }
 }
@@ -678,27 +714,40 @@ async function processQuestionScores(
         idMappings.questionScore[qs.id] = conflict.existingScoreId
         counts.updated.scores++
       } else {
-        const existingById = await tx.questionScore.findUnique({
-          where: { id: qs.id },
+        // B11 fix: Check for existing score with same cropRegion+student
+        const existingByComposite = await tx.questionScore.findFirst({
+          where: {
+            cropRegionId: newRegionId,
+            studentId: newStudentId,
+          },
         })
-        if (existingById) {
-          idMappings.questionScore[qs.id] = qs.id
+        if (existingByComposite) {
+          idMappings.questionScore[qs.id] = existingByComposite.id
+          counts.unchanged.scores++
         } else {
-          await tx.questionScore.create({
-            data: {
-              id: qs.id,
-              cropRegionId: newRegionId,
-              studentId: newStudentId,
-              partialScore: qs.partialScore
-                ? parseFloat(qs.partialScore)
-                : null,
-              status: qs.status,
-              userId: currentUserId,
-            },
+          const existingById = await tx.questionScore.findUnique({
+            where: { id: qs.id },
           })
-          idMappings.questionScore[qs.id] = qs.id
+          if (existingById) {
+            idMappings.questionScore[qs.id] = qs.id
+            counts.unchanged.scores++
+          } else {
+            await tx.questionScore.create({
+              data: {
+                id: qs.id,
+                cropRegionId: newRegionId,
+                studentId: newStudentId,
+                partialScore: qs.partialScore
+                  ? parseFloat(qs.partialScore)
+                  : null,
+                status: qs.status,
+                userId: currentUserId,
+              },
+            })
+            idMappings.questionScore[qs.id] = qs.id
+            counts.created.scores++
+          }
         }
-        counts.created.scores++
       }
     }
   }
@@ -720,6 +769,7 @@ async function processDrawingAnnotations(
       })
       if (existingById) {
         idMappings.drawingAnnotation[da.id] = da.id
+        counts.unchanged.annotations++
       } else {
         await tx.drawingAnnotation.create({
           data: {
@@ -748,8 +798,8 @@ async function processDrawingAnnotations(
           },
         })
         idMappings.drawingAnnotation[da.id] = da.id
+        counts.created.annotations++
       }
-      counts.created.annotations++
     }
   }
 }
@@ -791,6 +841,185 @@ async function processMemberships(
       } else {
         idMappings.membership[m.id] = existing.id
       }
+    }
+  }
+}
+
+async function processProjectMarkingFormats(
+  data: ExtractedArchiveData,
+  newProjectId: string,
+  tx: Tx
+): Promise<void> {
+  const formats = data.projectData.projectMarkingFormats ?? []
+  for (const fmt of formats) {
+    const existing = await tx.projectMarkingFormat.findFirst({
+      where: { projectId: newProjectId, markType: fmt.markType },
+    })
+    if (existing) continue
+
+    const existingById = await tx.projectMarkingFormat.findUnique({
+      where: { id: fmt.id },
+    })
+    if (!existingById) {
+      await tx.projectMarkingFormat.create({
+        data: {
+          id: fmt.id,
+          projectId: newProjectId,
+          markType: fmt.markType,
+          symbol: fmt.symbol,
+          color: fmt.color,
+          fontSize: fmt.fontSize,
+          strokeWidth: fmt.strokeWidth,
+        },
+      })
+    }
+  }
+}
+
+async function processProjectExportSettings(
+  data: ExtractedArchiveData,
+  newProjectId: string,
+  tx: Tx
+): Promise<void> {
+  const settings = data.projectData.projectExportSettings
+  if (!settings) return
+
+  const existing = await tx.projectExportSettings.findUnique({
+    where: { projectId: newProjectId },
+  })
+  if (existing) return
+
+  const existingById = await tx.projectExportSettings.findUnique({
+    where: { id: settings.id },
+  })
+  if (!existingById) {
+    await tx.projectExportSettings.create({
+      data: {
+        id: settings.id,
+        projectId: newProjectId,
+        settingsJson: settings.settingsJson,
+      },
+    })
+  }
+}
+
+async function processCropRegionMarkingOverrides(
+  data: ExtractedArchiveData,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  const overrides = data.projectData.cropRegionMarkingOverrides ?? []
+  for (const ovr of overrides) {
+    const newCropRegionId = idMappings.cropRegion[ovr.cropRegionId]
+    if (!newCropRegionId) continue
+
+    const existing = await tx.cropRegionMarkingOverride.findFirst({
+      where: { cropRegionId: newCropRegionId, markType: ovr.markType },
+    })
+    if (existing) continue
+
+    const existingById = await tx.cropRegionMarkingOverride.findUnique({
+      where: { id: ovr.id },
+    })
+    if (!existingById) {
+      await tx.cropRegionMarkingOverride.create({
+        data: {
+          id: ovr.id,
+          cropRegionId: newCropRegionId,
+          markType: ovr.markType,
+          symbol: ovr.symbol,
+          color: ovr.color,
+          visible: ovr.visible,
+        },
+      })
+    }
+  }
+}
+
+async function processSubjects(
+  data: ExtractedArchiveData,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  if (!data.subjectsData) return
+  const subjectIdMapping: Record<string, string> = {}
+
+  for (const subj of data.subjectsData.subjects) {
+    const existingByName = await tx.subject.findUnique({
+      where: { name: subj.name },
+    })
+    if (existingByName) {
+      subjectIdMapping[subj.id] = existingByName.id
+      continue
+    }
+
+    const existingById = await tx.subject.findUnique({
+      where: { id: subj.id },
+    })
+    if (existingById) {
+      subjectIdMapping[subj.id] = subj.id
+    } else {
+      await tx.subject.create({
+        data: { id: subj.id, name: subj.name },
+      })
+      subjectIdMapping[subj.id] = subj.id
+    }
+  }
+
+  for (const ssg of data.subjectsData.subjectSubtotalGroups) {
+    const newSubjectId = subjectIdMapping[ssg.subjectId]
+    const newGroupId = idMappings.subtotalGroup[ssg.subtotalGroupId]
+    if (!newSubjectId || !newGroupId) continue
+
+    const existing = await tx.subjectSubtotalGroup.findFirst({
+      where: { subjectId: newSubjectId, subtotalGroupId: newGroupId },
+    })
+    if (existing) continue
+
+    const existingById = await tx.subjectSubtotalGroup.findUnique({
+      where: { id: ssg.id },
+    })
+    if (!existingById) {
+      await tx.subjectSubtotalGroup.create({
+        data: {
+          id: ssg.id,
+          subjectId: newSubjectId,
+          subtotalGroupId: newGroupId,
+        },
+      })
+    }
+  }
+}
+
+async function processProjectClasses(
+  data: ExtractedArchiveData,
+  newProjectId: string,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  for (const pc of data.projectData.projectClasses) {
+    const newClassId = idMappings.class[pc.classId]
+    if (!newClassId) continue
+
+    const existing = await tx.projectClass.findFirst({
+      where: { projectId: newProjectId, classId: newClassId },
+    })
+    if (existing) continue
+
+    const existingById = await tx.projectClass.findUnique({
+      where: { id: pc.id },
+    })
+    if (!existingById) {
+      await tx.projectClass.create({
+        data: {
+          id: pc.id,
+          projectId: newProjectId,
+          classId: newClassId,
+          administered: pc.administered,
+          statistics: pc.statistics,
+          order: pc.order,
+        },
+      })
     }
   }
 }
