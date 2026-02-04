@@ -4,6 +4,8 @@
  * インポートデータをデータベースに作成
  */
 
+import { randomUUID } from "crypto"
+
 import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
 import prisma from "../../prisma/client"
 import type { ExtractedArchiveData } from "./archiveExtractor"
@@ -147,6 +149,63 @@ export async function createImportedData(
         })
       }
 
+      // 6.5. Subject/SubjectSubtotalGroupを作成 (v1.4.0+)
+      const subjectsData = data.subjectsData
+      if (subjectsData) {
+        for (const subject of subjectsData.subjects) {
+          await tx.subject.upsert({
+            where: { name: subject.name },
+            update: {},
+            create: {
+              id: remapIdRequired(subject.id, mappings.subject),
+              name: subject.name,
+            },
+          })
+        }
+
+        for (const ssg of subjectsData.subjectSubtotalGroups) {
+          const newSubjectId = remapId(ssg.subjectId, mappings.subject)
+          const newSubtotalGroupId = remapId(
+            ssg.subtotalGroupId,
+            mappings.subtotalGroup
+          )
+          if (newSubjectId && newSubtotalGroupId) {
+            // subjectのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
+            const originalSubject = subjectsData.subjects.find(
+              (s) => s.id === ssg.subjectId
+            )
+            if (originalSubject) {
+              const actualSubject = await tx.subject.findUnique({
+                where: { name: originalSubject.name },
+              })
+              if (actualSubject) {
+                // 重複チェック
+                const existing = await tx.subjectSubtotalGroup.findUnique({
+                  where: {
+                    subjectId_subtotalGroupId: {
+                      subjectId: actualSubject.id,
+                      subtotalGroupId: newSubtotalGroupId,
+                    },
+                  },
+                })
+                if (!existing) {
+                  await tx.subjectSubtotalGroup.create({
+                    data: {
+                      id: remapIdRequired(
+                        ssg.id,
+                        mappings.subjectSubtotalGroup
+                      ),
+                      subjectId: actualSubject.id,
+                      subtotalGroupId: newSubtotalGroupId,
+                    },
+                  })
+                }
+              }
+            }
+          }
+        }
+      }
+
       // 7. プロジェクトを作成
       const project = data.projectData.project
       await tx.project.create({
@@ -161,8 +220,17 @@ export async function createImportedData(
 
       // 8. UserProjectを作成（現在のログインユーザーのみ）
       // v0.3.0以降: アーカイブ内のUserProjectは無視し、現在のユーザーをOWNERとして作成
+      // UserProjectのIDはuserProject mappingから取得、空の場合は新規UUID
+      const userProjectId =
+        data.projectData.userProjects.length > 0
+          ? remapIdRequired(
+              data.projectData.userProjects[0].id,
+              mappings.userProject
+            )
+          : randomUUID()
       await tx.userProject.create({
         data: {
+          id: userProjectId,
           userId: currentUserId,
           projectId: newProjectId,
           role: "OWNER",
@@ -170,6 +238,33 @@ export async function createImportedData(
           invitedBy: null,
         },
       })
+
+      // 8.5. ProjectMarkingFormatを作成 (v1.4.0+)
+      for (const pmf of data.projectData.projectMarkingFormats || []) {
+        await tx.projectMarkingFormat.create({
+          data: {
+            id: remapIdRequired(pmf.id, mappings.projectMarkingFormat),
+            projectId: newProjectId,
+            markType: pmf.markType,
+            symbol: pmf.symbol,
+            color: pmf.color,
+            fontSize: pmf.fontSize,
+            strokeWidth: pmf.strokeWidth,
+          },
+        })
+      }
+
+      // 8.6. ProjectExportSettingsを作成 (v1.4.0+)
+      const pes = data.projectData.projectExportSettings
+      if (pes) {
+        await tx.projectExportSettings.create({
+          data: {
+            id: remapIdRequired(pes.id, mappings.projectExportSettings),
+            projectId: newProjectId,
+            settingsJson: pes.settingsJson,
+          },
+        })
+      }
 
       // 9. ProjectSubtotalGroupを作成
       for (const psg of data.projectData.projectSubtotalGroups) {
@@ -251,6 +346,23 @@ export async function createImportedData(
             orderIndex: region.orderIndex,
           },
         })
+      }
+
+      // 12.5. CropRegionMarkingOverrideを作成 (v1.4.0+)
+      for (const crmo of data.projectData.cropRegionMarkingOverrides || []) {
+        const newCropRegionId = remapId(crmo.cropRegionId, mappings.cropRegion)
+        if (newCropRegionId) {
+          await tx.cropRegionMarkingOverride.create({
+            data: {
+              id: remapIdRequired(crmo.id, mappings.cropRegionMarkingOverride),
+              cropRegionId: newCropRegionId,
+              markType: crmo.markType,
+              symbol: crmo.symbol,
+              color: crmo.color,
+              visible: crmo.visible,
+            },
+          })
+        }
       }
 
       // 13. CropSubtotalを作成

@@ -16,6 +16,7 @@ import { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
 import { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 import { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 import { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
+import { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"
 
 // =============================================================================
 // Transformer Registry
@@ -30,6 +31,7 @@ const TRANSFORMERS: VersionTransformer[] = [
   new V1_0_0_to_V1_1_0_Transformer(),
   new V1_1_0_to_V1_2_0_Transformer(),
   new V1_2_0_to_V1_3_0_Transformer(),
+  new V1_3_0_to_V1_4_0_Transformer(),
 ]
 
 /**
@@ -230,3 +232,4 @@ export { CURRENT_VERSION, SUPPORTED_VERSIONS } from "./types"
 export { V1_0_0_to_V1_1_0_Transformer } from "./V1_0_0_to_V1_1_0"
 export { V1_1_0_to_V1_2_0_Transformer } from "./V1_1_0_to_V1_2_0"
 export { V1_2_0_to_V1_3_0_Transformer } from "./V1_2_0_to_V1_3_0"
+export { V1_3_0_to_V1_4_0_Transformer } from "./V1_3_0_to_V1_4_0"

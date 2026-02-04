@@ -32,11 +32,13 @@ import {
   ScoringLoadingState,
 } from "@/components/projects/07-score-at-once/ScoringMain/ScoringStates"
 import { ScoringSidePanel } from "@/components/projects/07-score-at-once/ScoringSidePanel/ScoringSidePanel"
+import { useAuth } from "@/contexts/AuthContext"
 
 /** 内部コンポーネント（ShortcutProvider内で使用） */
 function ScoringMainViewContent() {
   const params = useParams()
   const projectId = params.projectId as string
+  const { user: authUser } = useAuth()
   const { helpButton } = usePageHelp()
   const { keyBindings } = useShortcutContext()
 
@@ -52,7 +54,7 @@ function ScoringMainViewContent() {
 
   /** データローダーフック */
   const { loading, project, studentAnswerImages, cropRegions, currentUserId } =
-    useScoringDataLoader(projectId)
+    useScoringDataLoader(projectId, authUser?.id ?? null)
 
   /** 設定管理フック */
   const {

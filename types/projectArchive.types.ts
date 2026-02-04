@@ -605,6 +605,37 @@ export interface ArchiveProjectData {
     createdAt: string
     updatedAt: string
   }>
+  /** v1.4.0+ 採点マーク設定 */
+  projectMarkingFormats?: Array<{
+    id: string
+    projectId: string
+    markType: string
+    symbol: string
+    color: string
+    fontSize: number | null
+    strokeWidth: number | null
+    createdAt: string
+    updatedAt: string
+  }>
+  /** v1.4.0+ エクスポート設定 */
+  projectExportSettings?: {
+    id: string
+    projectId: string
+    settingsJson: string
+    createdAt: string
+    updatedAt: string
+  } | null
+  /** v1.4.0+ 設問別マークオーバーライド */
+  cropRegionMarkingOverrides?: Array<{
+    id: string
+    cropRegionId: string
+    markType: string
+    symbol: string | null
+    color: string | null
+    visible: boolean
+    createdAt: string
+    updatedAt: string
+  }>
 }
 
 /**
@@ -731,6 +762,25 @@ export interface ArchiveScoresData {
     displayX: number
     displayY: number
     userId: string
+    createdAt: string
+    updatedAt: string
+  }>
+}
+
+/**
+ * 教科データ (subjects.json) - v1.4.0+
+ */
+export interface ArchiveSubjectsData {
+  subjects: Array<{
+    id: string
+    name: string
+    createdAt: string
+    updatedAt: string
+  }>
+  subjectSubtotalGroups: Array<{
+    id: string
+    subjectId: string
+    subtotalGroupId: string
     createdAt: string
     updatedAt: string
   }>
