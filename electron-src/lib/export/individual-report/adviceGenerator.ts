@@ -1,38 +1,33 @@
 /**
  * 学習アドバイス生成ロジック
- * 復習問題: 正答率が閾値以上で、生徒が間違えた問題
+ * 復習問題: 正答率が閾値以上で、生徒が正答でなかった問題
  */
 
 import type { ScoreDetail } from "../../shared/types/exportTypes"
 import type { AdviceOptions, AdviceQuestion, LearningAdviceData } from "./types"
 
 /**
- * 生徒が間違えた問題かどうかを判定
+ * 正答以外の問題かどうかを判定
+ * correct以外の全てのステータス（incorrect, partial, no_answer, hold, unscored）が対象
  */
-function isIncorrectAnswer(score: ScoreDetail): boolean {
-  return (
-    score.status === "incorrect" ||
-    score.status === "no_answer" ||
-    (score.status === "partial" &&
-      score.score !== null &&
-      score.score < score.maxScore * 0.5)
-  )
+function isNotCorrectAnswer(score: ScoreDetail): boolean {
+  return score.status !== "correct"
 }
 
 /**
  * 復習問題を抽出
- * 正答率が閾値以上の問題で、生徒が間違えたもの
+ * 正答率が閾値以上の問題で、生徒が正答でなかったもの
  */
 export function findReviewQuestions(
   scores: ScoreDetail[],
   questionCorrectRates: Record<string, number>,
   options: AdviceOptions
 ): AdviceQuestion[] {
-  // 生徒が間違えた問題をフィルタリング
-  const incorrectQuestions = scores.filter(isIncorrectAnswer)
+  // 正答以外の問題をフィルタリング
+  const nonCorrectQuestions = scores.filter(isNotCorrectAnswer)
 
   // 問題データを構築
-  let candidates = incorrectQuestions.map((score) => {
+  let candidates = nonCorrectQuestions.map((score) => {
     const correctRate = questionCorrectRates[score.questionId] ?? 0
     return {
       questionId: score.questionId,
