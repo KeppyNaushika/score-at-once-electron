@@ -11,6 +11,7 @@ import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
 import { setupScoringHandlers } from "./scoringHandlers"
 import { registerSettingsHandlers } from "./settingsHandlers"
 import { setupStudentHandlers } from "./studentHandlers"
+import { setupSubjectHandlers } from "./subjectHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
 import { setupUserProjectHandlers } from "./userProjectHandlers"
 
@@ -30,4 +31,5 @@ export function setupAllIPCHandlers(): void {
   setupUserProjectHandlers()
   registerSettingsHandlers()
   setupPdfToolsHandlers()
+  setupSubjectHandlers()
 }

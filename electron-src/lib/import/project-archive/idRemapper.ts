@@ -50,6 +50,16 @@ export interface IdMappings {
   questionScore: Record<string, string>
   /** DrawingAnnotation ID: 旧ID -> 新ID */
   drawingAnnotation: Record<string, string>
+  /** ProjectMarkingFormat ID: 旧ID -> 新ID (v1.4.0+) */
+  projectMarkingFormat: Record<string, string>
+  /** ProjectExportSettings ID: 旧ID -> 新ID (v1.4.0+) */
+  projectExportSettings: Record<string, string>
+  /** CropRegionMarkingOverride ID: 旧ID -> 新ID (v1.4.0+) */
+  cropRegionMarkingOverride: Record<string, string>
+  /** Subject ID: 旧ID -> 新ID (v1.4.0+) */
+  subject: Record<string, string>
+  /** SubjectSubtotalGroup ID: 旧ID -> 新ID (v1.4.0+) */
+  subjectSubtotalGroup: Record<string, string>
 }
 
 /**
@@ -81,6 +91,11 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
     cropSubtotal: {},
     questionScore: {},
     drawingAnnotation: {},
+    projectMarkingFormat: {},
+    projectExportSettings: {},
+    cropRegionMarkingOverride: {},
+    subject: {},
+    subjectSubtotalGroup: {},
   }
 
   // プロジェクト
@@ -174,6 +189,35 @@ export function generateNewIdMappings(data: ExtractedArchiveData): IdMappings {
   // DrawingAnnotation
   for (const da of data.scoresData.drawingAnnotations) {
     mappings.drawingAnnotation[da.id] = randomUUID()
+  }
+
+  // v1.4.0+: ProjectMarkingFormat
+  for (const pmf of data.projectData.projectMarkingFormats || []) {
+    mappings.projectMarkingFormat[pmf.id] = randomUUID()
+  }
+
+  // v1.4.0+: ProjectExportSettings
+  if (data.projectData.projectExportSettings) {
+    mappings.projectExportSettings[data.projectData.projectExportSettings.id] =
+      randomUUID()
+  }
+
+  // v1.4.0+: CropRegionMarkingOverride
+  for (const crmo of data.projectData.cropRegionMarkingOverrides || []) {
+    mappings.cropRegionMarkingOverride[crmo.id] = randomUUID()
+  }
+
+  // v1.4.0+: Subject
+  const subjectsData = data.subjectsData
+  if (subjectsData) {
+    for (const subject of subjectsData.subjects) {
+      mappings.subject[subject.id] = randomUUID()
+    }
+
+    // SubjectSubtotalGroup
+    for (const ssg of subjectsData.subjectSubtotalGroups) {
+      mappings.subjectSubtotalGroup[ssg.id] = randomUUID()
+    }
   }
 
   return mappings

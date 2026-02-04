@@ -14,7 +14,8 @@ interface ScoringDataLoaderResult {
 }
 
 export function useScoringDataLoader(
-  projectId: string
+  projectId: string,
+  authUserId: string | null
 ): ScoringDataLoaderResult {
   const [loading, setLoading] = useState(true)
   const [project, setProject] = useState<ProjectWithDetails | null>(null)
@@ -62,13 +63,18 @@ export function useScoringDataLoader(
         // DBレベルでフィルタリング済みなので、順序を保持したまま設定
         setCropRegions(regionsResult as CropRegionWithProjectPage[])
 
-        // ユーザーIDの取得
-        const userData = await window.electronAPI.getCurrentUser()
-        if (userData && userData.id) {
-          setCurrentUserId(userData.id)
+        // ユーザーIDの設定（AuthContextから渡されたIDを優先）
+        if (authUserId) {
+          setCurrentUserId(authUserId)
         } else {
-          console.warn("ユーザーIDが取得できませんでした")
-          setCurrentUserId("default-user")
+          // フォールバック: electronAPI経由で取得
+          const userData = await window.electronAPI.getCurrentUser()
+          if (userData && userData.id) {
+            setCurrentUserId(userData.id)
+          } else {
+            console.warn("ユーザーIDが取得できませんでした")
+            setCurrentUserId("default-user")
+          }
         }
       } catch (error) {
         console.error("データの読み込みに失敗しました:", error)
@@ -81,7 +87,7 @@ export function useScoringDataLoader(
     if (projectId) {
       loadData()
     }
-  }, [projectId])
+  }, [projectId, authUserId])
 
   return {
     loading,

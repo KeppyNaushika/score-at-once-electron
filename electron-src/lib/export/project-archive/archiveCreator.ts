@@ -173,6 +173,9 @@ export async function createArchive(
       archive.append(JSON.stringify(collectedData.scoresData, null, 2), {
         name: "scores.json",
       })
+      archive.append(JSON.stringify(collectedData.subjectsData, null, 2), {
+        name: "subjects.json",
+      })
 
       // 3. マスター画像を追加
       // 注意: relativePathはdataディレクトリからの相対パス（例: projects/{projectId}/master-answers/image.png）

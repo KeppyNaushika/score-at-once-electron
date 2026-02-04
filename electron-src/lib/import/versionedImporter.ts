@@ -12,6 +12,7 @@ import type {
   ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
+  ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
 } from "../../../types/projectArchive.types"
@@ -58,6 +59,8 @@ export interface ExtractedArchiveData {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
+  /** 教科データ (v1.4.0+) */
+  subjectsData?: ArchiveSubjectsData
   tempDir: string
   /** マスター画像のパス一覧 (展開後のフルパス) */
   masterImagePaths: string[]
@@ -73,6 +76,8 @@ export interface TransformedArchiveData extends ExtractedArchiveData {
   originalVersion: ArchiveVersion | "unknown"
   /** 変換時の警告 */
   transformWarnings: string[]
+  /** 教科データ (v1.4.0+、変換後は必須) */
+  subjectsData: ArchiveSubjectsData
 }
 
 // =============================================================================
@@ -100,8 +105,10 @@ export function transformArchiveData(
         `Attempting to process as ${CURRENT_VERSION}.`
     )
 
+    const defaultSubjectsData = { subjects: [], subjectSubtotalGroups: [] }
     return {
       ...data,
+      subjectsData: data.subjectsData ?? defaultSubjectsData,
       originalVersion: "unknown",
       transformWarnings: [
         `アーカイブバージョン ${data.manifest.version} は認識できません。` +
@@ -112,8 +119,10 @@ export function transformArchiveData(
 
   // 変換不要の場合
   if (originalVersion === CURRENT_VERSION) {
+    const defaultSubjectsData = { subjects: [], subjectSubtotalGroups: [] }
     return {
       ...data,
+      subjectsData: data.subjectsData ?? defaultSubjectsData,
       originalVersion,
       transformWarnings: [],
     }
@@ -128,6 +137,7 @@ export function transformArchiveData(
     usersData: data.usersData,
     subtotalsData: data.subtotalsData,
     scoresData: data.scoresData,
+    subjectsData: data.subjectsData,
   }
 
   const result: ChainTransformResult = transformToLatest(archiveData)
@@ -148,6 +158,10 @@ export function transformArchiveData(
     usersData: result.data.usersData,
     subtotalsData: result.data.subtotalsData,
     scoresData: result.data.scoresData,
+    subjectsData: result.data.subjectsData ?? {
+      subjects: [],
+      subjectSubtotalGroups: [],
+    },
     tempDir: data.tempDir,
     masterImagePaths: data.masterImagePaths,
     answerSheetPaths: data.answerSheetPaths,

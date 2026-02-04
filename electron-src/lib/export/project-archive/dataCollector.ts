@@ -10,6 +10,7 @@ import type {
   ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
+  ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
 } from "../../../../types/projectArchive.types"
@@ -25,6 +26,7 @@ export interface CollectedData {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
+  subjectsData: ArchiveSubjectsData
   counts: ArchiveDataCounts
   /** マスター画像の相対パス一覧 */
   masterImagePaths: string[]
@@ -134,6 +136,39 @@ export async function collectProjectData(
     const subtotalGroups = await prisma.subtotalGroup.findMany({
       where: { id: { in: Array.from(subtotalGroupIds) } },
       include: { subtotals: true },
+    })
+
+    // 7.5. ProjectMarkingFormatを取得
+    const projectMarkingFormats = await prisma.projectMarkingFormat.findMany({
+      where: { projectId },
+    })
+
+    // 7.6. ProjectExportSettingsを取得
+    const projectExportSettings = await prisma.projectExportSettings.findUnique(
+      {
+        where: { projectId },
+      }
+    )
+
+    // 7.7. CropRegionMarkingOverrideを取得
+    const cropRegionIds = project.projectPages.flatMap((page) =>
+      page.cropRegions.map((r) => r.id)
+    )
+    const cropRegionMarkingOverrides =
+      await prisma.cropRegionMarkingOverride.findMany({
+        where: { cropRegionId: { in: cropRegionIds } },
+      })
+
+    // 7.8. Subject/SubjectSubtotalGroupを取得（subtotalGroup経由）
+    const subtotalGroupIdArray = Array.from(subtotalGroupIds)
+    const subjectSubtotalGroups = await prisma.subjectSubtotalGroup.findMany({
+      where: { subtotalGroupId: { in: subtotalGroupIdArray } },
+    })
+    const subjectIds = [
+      ...new Set(subjectSubtotalGroups.map((ssg) => ssg.subjectId)),
+    ]
+    const subjects = await prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
     })
 
     // CropSubtotalを収集
@@ -311,6 +346,37 @@ export async function collectProjectData(
         createdAt: pc.createdAt.toISOString(),
         updatedAt: pc.updatedAt.toISOString(),
       })),
+      // v1.4.0+
+      projectMarkingFormats: projectMarkingFormats.map((pmf) => ({
+        id: pmf.id,
+        projectId: pmf.projectId,
+        markType: pmf.markType,
+        symbol: pmf.symbol,
+        color: pmf.color,
+        fontSize: pmf.fontSize,
+        strokeWidth: pmf.strokeWidth,
+        createdAt: pmf.createdAt.toISOString(),
+        updatedAt: pmf.updatedAt.toISOString(),
+      })),
+      projectExportSettings: projectExportSettings
+        ? {
+            id: projectExportSettings.id,
+            projectId: projectExportSettings.projectId,
+            settingsJson: projectExportSettings.settingsJson,
+            createdAt: projectExportSettings.createdAt.toISOString(),
+            updatedAt: projectExportSettings.updatedAt.toISOString(),
+          }
+        : null,
+      cropRegionMarkingOverrides: cropRegionMarkingOverrides.map((crmo) => ({
+        id: crmo.id,
+        cropRegionId: crmo.cropRegionId,
+        markType: crmo.markType,
+        symbol: crmo.symbol,
+        color: crmo.color,
+        visible: crmo.visible,
+        createdAt: crmo.createdAt.toISOString(),
+        updatedAt: crmo.updatedAt.toISOString(),
+      })),
     }
 
     const studentsData: ArchiveStudentsData = {
@@ -394,6 +460,22 @@ export async function collectProjectData(
       drawingAnnotations,
     }
 
+    const subjectsData: ArchiveSubjectsData = {
+      subjects: subjects.map((s) => ({
+        id: s.id,
+        name: s.name,
+        createdAt: s.createdAt.toISOString(),
+        updatedAt: s.updatedAt.toISOString(),
+      })),
+      subjectSubtotalGroups: subjectSubtotalGroups.map((ssg) => ({
+        id: ssg.id,
+        subjectId: ssg.subjectId,
+        subtotalGroupId: ssg.subtotalGroupId,
+        createdAt: ssg.createdAt.toISOString(),
+        updatedAt: ssg.updatedAt.toISOString(),
+      })),
+    }
+
     // 11. 件数を集計
     const counts: ArchiveDataCounts = {
       students: students.length,
@@ -417,6 +499,7 @@ export async function collectProjectData(
         usersData,
         subtotalsData,
         scoresData,
+        subjectsData,
         counts,
         masterImagePaths,
         answerSheetPaths,

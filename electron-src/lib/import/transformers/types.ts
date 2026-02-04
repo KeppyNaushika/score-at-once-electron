@@ -11,6 +11,7 @@ import type {
   ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
+  ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
 } from "../../../../types/projectArchive.types"
@@ -26,11 +27,12 @@ import type {
  * - 1.1.0: v0.3.x (UserProject完全対応, ProjectClass追加, PageImage使用)
  * - 1.2.0: v0.4.x (MasterImage/StudentAnswerImage分離, userId/studentId非NULL)
  * - 1.3.0: v0.5.x (Student.studentId → Student.studentNumber リネーム)
+ * - 1.4.0: v0.5.x (ProjectMarkingFormat, ProjectExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加)
  */
-export type ArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0"
+export type ArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0" | "1.4.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.3.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.4.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -38,6 +40,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.1.0",
   "1.2.0",
   "1.3.0",
+  "1.4.0",
 ] as const
 
 // =============================================================================
@@ -55,6 +58,8 @@ export interface ArchiveData {
   usersData: ArchiveUsersData
   subtotalsData: ArchiveSubtotalsData
   scoresData: ArchiveScoresData
+  /** v1.4.0+ 教科データ */
+  subjectsData?: ArchiveSubjectsData
 }
 
 /**
