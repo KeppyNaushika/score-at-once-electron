@@ -35,7 +35,7 @@ export interface ScoringDataForPdf {
  * 採点マーク設定
  */
 export interface ScoringMarkConfigForPdf {
-  markPosition: string // "center" | "top-left" | "top-right" | "bottom-left" | "bottom-right" etc.
+  markPosition: string
   markSize: number
   useTransparent: boolean
   showPartialScore: boolean
@@ -43,9 +43,18 @@ export interface ScoringMarkConfigForPdf {
   partialScoreSize: number
   partialScoreOffsetX: number
   partialScoreOffsetY: number
-  // 小計・合計点のサイズ設定
-  summaryScoreSize: number
-  // ステータスごとの点数表示設定
+  // 小計点用設定
+  subtotalScorePosition: string
+  subtotalScoreSize: number
+  subtotalScoreOffsetX: number
+  subtotalScoreOffsetY: number
+  // 合計点用設定
+  totalScorePosition: string
+  totalScoreSize: number
+  totalScoreOffsetX: number
+  totalScoreOffsetY: number
+  // ステータスごとの表示設定
+  showMarkForStatus?: Record<string, boolean>
   showScoreForStatus?: Record<string, boolean>
 }
 
@@ -444,24 +453,24 @@ function calculateMarkPosition(
   switch (position) {
     case "top-left":
       return { x: regionX + padding, y: regionY + padding }
-    case "top":
+    case "top-center":
       return { x: regionX + (regionWidth - markSize) / 2, y: regionY + padding }
     case "top-right":
       return {
         x: regionX + regionWidth - markSize - padding,
         y: regionY + padding,
       }
-    case "left":
+    case "middle-left":
       return {
         x: regionX + padding,
         y: regionY + (regionHeight - markSize) / 2,
       }
-    case "center":
+    case "middle-center":
       return {
         x: regionX + (regionWidth - markSize) / 2,
         y: regionY + (regionHeight - markSize) / 2,
       }
-    case "right":
+    case "middle-right":
       return {
         x: regionX + regionWidth - markSize - padding,
         y: regionY + (regionHeight - markSize) / 2,
@@ -471,7 +480,7 @@ function calculateMarkPosition(
         x: regionX + padding,
         y: regionY + regionHeight - markSize - padding,
       }
-    case "bottom":
+    case "bottom-center":
       return {
         x: regionX + (regionWidth - markSize) / 2,
         y: regionY + regionHeight - markSize - padding,
@@ -641,12 +650,18 @@ function drawSubtotalScoreText(
   const regionWidth = subtotalData.width * imageWidth
   const regionHeight = subtotalData.height * imageHeight
 
-  // 小計点領域の中央に表示
-  const x = regionX + regionWidth / 2
-  const y = regionY + regionHeight / 2
+  const { x, y } = calculatePartialScorePosition(
+    regionX,
+    regionY,
+    regionWidth,
+    regionHeight,
+    config.subtotalScorePosition,
+    config.subtotalScoreOffsetX,
+    config.subtotalScoreOffsetY
+  )
 
   ctx.save()
-  ctx.font = `bold ${config.summaryScoreSize}px sans-serif`
+  ctx.font = `bold ${config.subtotalScoreSize}px sans-serif`
   ctx.fillStyle = "#2563eb" // 小計点は青色
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
@@ -669,12 +684,18 @@ function drawTotalScoreText(
   const regionWidth = totalScoreData.width * imageWidth
   const regionHeight = totalScoreData.height * imageHeight
 
-  // 合計点領域の中央に表示
-  const x = regionX + regionWidth / 2
-  const y = regionY + regionHeight / 2
+  const { x, y } = calculatePartialScorePosition(
+    regionX,
+    regionY,
+    regionWidth,
+    regionHeight,
+    config.totalScorePosition,
+    config.totalScoreOffsetX,
+    config.totalScoreOffsetY
+  )
 
   ctx.save()
-  ctx.font = `bold ${config.summaryScoreSize}px sans-serif`
+  ctx.font = `bold ${config.totalScoreSize}px sans-serif`
   ctx.fillStyle = "#2563eb" // 合計点も青色
   ctx.textAlign = "center"
   ctx.textBaseline = "middle"
@@ -739,26 +760,32 @@ export async function renderAnswerSheetToCanvas(
 
   // 2. 各設問に対して採点マークと部分点を描画
   for (const scoringData of scoringDataList) {
-    if (scoringData.status === "unscored") continue
+    // ステータスごとのマーク表示判定
+    const shouldShowMark = config.showMarkForStatus
+      ? (config.showMarkForStatus[scoringData.status] ?? true)
+      : scoringData.status !== "unscored"
+    if (!shouldShowMark) {
+      // マークは非表示でも点数テキストは別途判定するため、マーク描画だけスキップ
+    } else {
+      // 採点マーク画像の取得
+      const markKey =
+        scoringData.status === "pending"
+          ? "hold"
+          : scoringData.status === "no_answer"
+            ? "incorrect"
+            : scoringData.status
+      const markImage = scoringMarkImages.get(markKey)
 
-    // 採点マーク画像の取得
-    const markKey =
-      scoringData.status === "pending"
-        ? "hold"
-        : scoringData.status === "no_answer"
-          ? "incorrect"
-          : scoringData.status
-    const markImage = scoringMarkImages.get(markKey)
-
-    if (markImage) {
-      drawScoringMark(
-        ctx,
-        markImage,
-        scoringData.cropRegion,
-        config,
-        imageWidth,
-        imageHeight
-      )
+      if (markImage) {
+        drawScoringMark(
+          ctx,
+          markImage,
+          scoringData.cropRegion,
+          config,
+          imageWidth,
+          imageHeight
+        )
+      }
     }
 
     // 点数テキストの描画

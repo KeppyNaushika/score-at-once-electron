@@ -70,10 +70,20 @@ export function useExportPage() {
             )
           if (result.success && result.settings) {
             if (result.settings.scoringMarkConfig) {
-              setScoringMarkConfigState({
+              const saved = result.settings
+                .scoringMarkConfig as Partial<ScoringMarkConfig>
+              // 後方互換性: subtotalScore/totalScore がない場合、summaryScore からフォールバック
+              const mergedConfig: ScoringMarkConfig = {
                 ...defaultScoringMarkConfig,
-                ...result.settings.scoringMarkConfig,
-              })
+                ...saved,
+              }
+              if (!saved.subtotalScore && saved.summaryScore) {
+                mergedConfig.subtotalScore = { ...saved.summaryScore }
+              }
+              if (!saved.totalScore && saved.summaryScore) {
+                mergedConfig.totalScore = { ...saved.summaryScore }
+              }
+              setScoringMarkConfigState(mergedConfig)
             }
             if (result.settings.individualReportOptions) {
               setIndividualReportOptionsState({
