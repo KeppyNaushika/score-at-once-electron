@@ -60,8 +60,14 @@ export interface ScoringMarkConfig {
   // 部分点（設問ごとの点数）用設定
   partialScore: ScoreTextConfig
 
-  // 小計・合計点用設定
+  // 小計・合計点用設定（後方互換性のため維持）
   summaryScore: ScoreTextConfig
+
+  // 小計点用設定
+  subtotalScore: ScoreTextConfig
+
+  // 合計点用設定
+  totalScore: ScoreTextConfig
 
   // 透明度設定
   useTransparent: boolean

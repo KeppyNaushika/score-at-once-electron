@@ -116,7 +116,6 @@ export default function ExportMainView() {
 
   /**
    * scoringMarkConfigをScoringMarkConfigForPdf形式に変換
-   * 常にpartialScoreオブジェクトから読み取る（UIが常にpartialScoreに保存するため）
    */
   const getScoringMarkConfigForPdf =
     useCallback((): ScoringMarkConfigForPdf => {
@@ -132,28 +131,45 @@ export default function ExportMainView() {
               offsetY: scoringMarkConfig.scoreOffsetY || 0,
             }
 
-      // 小計・合計点設定を取得（デフォルトは18px）
-      const summaryScoreSize = scoringMarkConfig.summaryScore?.size ?? 18
+      // 小計点設定を取得（subtotalScore → summaryScore → デフォルトの順でフォールバック）
+      const subtotalScoreConfig = scoringMarkConfig.subtotalScore ??
+        scoringMarkConfig.summaryScore ?? {
+          position: "middle-center",
+          size: 18,
+          offsetX: 0,
+          offsetY: 0,
+        }
 
-      console.log("[DEBUG] getScoringMarkConfigForPdf:", {
-        useSeparateScoreSettings: scoringMarkConfig.useSeparateScoreSettings,
-        partialScore: scoringMarkConfig.partialScore,
-        partialScoreConfig,
-        summaryScoreSize,
-      })
+      // 合計点設定を取得（totalScore → summaryScore → デフォルトの順でフォールバック）
+      const totalScoreConfig = scoringMarkConfig.totalScore ??
+        scoringMarkConfig.summaryScore ?? {
+          position: "middle-center",
+          size: 18,
+          offsetX: 0,
+          offsetY: 0,
+        }
 
       return {
         markPosition: scoringMarkConfig.markPosition,
         markSize: scoringMarkConfig.markSize,
         useTransparent: scoringMarkConfig.useTransparent,
-        showPartialScore: true, // 部分点を表示
+        showPartialScore: true,
         partialScorePosition: partialScoreConfig.position || "middle-center",
         partialScoreSize: partialScoreConfig.size || 14,
         partialScoreOffsetX: partialScoreConfig.offsetX || 0,
         partialScoreOffsetY: partialScoreConfig.offsetY || 0,
-        // 小計・合計点のサイズ設定
-        summaryScoreSize,
-        // ステータスごとの点数表示設定
+        // 小計点用設定
+        subtotalScorePosition: subtotalScoreConfig.position || "middle-center",
+        subtotalScoreSize: subtotalScoreConfig.size || 18,
+        subtotalScoreOffsetX: subtotalScoreConfig.offsetX || 0,
+        subtotalScoreOffsetY: subtotalScoreConfig.offsetY || 0,
+        // 合計点用設定
+        totalScorePosition: totalScoreConfig.position || "middle-center",
+        totalScoreSize: totalScoreConfig.size || 18,
+        totalScoreOffsetX: totalScoreConfig.offsetX || 0,
+        totalScoreOffsetY: totalScoreConfig.offsetY || 0,
+        // ステータスごとの表示設定
+        showMarkForStatus: scoringMarkConfig.showMarkForStatus,
         showScoreForStatus: scoringMarkConfig.showScoreForStatus,
       }
     }, [scoringMarkConfig])

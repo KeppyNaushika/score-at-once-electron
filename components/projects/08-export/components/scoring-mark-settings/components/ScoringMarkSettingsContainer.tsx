@@ -6,7 +6,9 @@ import { StatusDisplaySection } from "@/components/projects/08-export/components
 import {
   defaultConfig,
   defaultPartialScoreConfig,
+  defaultSubtotalScoreConfig,
   defaultSummaryScoreConfig,
+  defaultTotalScoreConfig,
   positionLabels,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"
 import type {
@@ -42,8 +44,10 @@ export function ScoringMarkSettingsContainer({
 }: ScoringMarkSettingsContainerProps) {
   const partialScore: ScoreTextConfig =
     config.partialScore || defaultPartialScoreConfig
-  const summaryScore: ScoreTextConfig =
-    config.summaryScore || defaultSummaryScoreConfig
+  const subtotalScore: ScoreTextConfig =
+    config.subtotalScore || defaultSubtotalScoreConfig
+  const totalScore: ScoreTextConfig =
+    config.totalScore || defaultTotalScoreConfig
   const useSeparateSettings = config.useSeparateScoreSettings ?? false
 
   const updateConfig = (updates: Partial<ScoringMarkConfig>) => {
@@ -55,14 +59,20 @@ export function ScoringMarkSettingsContainer({
     updateConfig({ partialScore: { ...partialScore, ...updates } })
   }
 
-  const updateSummaryScore = (updates: Partial<ScoreTextConfig>) => {
-    updateConfig({ summaryScore: { ...summaryScore, ...updates } })
+  const updateSubtotalScore = (updates: Partial<ScoreTextConfig>) => {
+    updateConfig({ subtotalScore: { ...subtotalScore, ...updates } })
   }
 
-  const updateBothScores = (updates: Partial<ScoreTextConfig>) => {
+  const updateTotalScore = (updates: Partial<ScoreTextConfig>) => {
+    updateConfig({ totalScore: { ...totalScore, ...updates } })
+  }
+
+  const updateAllScores = (updates: Partial<ScoreTextConfig>) => {
     updateConfig({
       partialScore: { ...partialScore, ...updates },
-      summaryScore: { ...summaryScore, ...updates },
+      summaryScore: { ...partialScore, ...updates },
+      subtotalScore: { ...subtotalScore, ...updates },
+      totalScore: { ...totalScore, ...updates },
     })
   }
 
@@ -278,23 +288,29 @@ export function ScoringMarkSettingsContainer({
 
         {useSeparateSettings ? (
           <Tabs defaultValue="partial" className="w-full">
-            <TabsList className="grid h-8 w-full grid-cols-2">
+            <TabsList className="grid h-8 w-full grid-cols-3">
               <TabsTrigger value="partial" className="text-xs text-red-600">
-                部分点
+                設問部分点
               </TabsTrigger>
-              <TabsTrigger value="summary" className="text-xs text-blue-600">
-                小計・合計点
+              <TabsTrigger value="subtotal" className="text-xs text-blue-600">
+                小計点
+              </TabsTrigger>
+              <TabsTrigger value="total" className="text-xs text-blue-600">
+                合計点
               </TabsTrigger>
             </TabsList>
             <TabsContent value="partial" className="mt-2">
               {renderScoreSettings(partialScore, updatePartialScore)}
             </TabsContent>
-            <TabsContent value="summary" className="mt-2">
-              {renderScoreSettings(summaryScore, updateSummaryScore)}
+            <TabsContent value="subtotal" className="mt-2">
+              {renderScoreSettings(subtotalScore, updateSubtotalScore)}
+            </TabsContent>
+            <TabsContent value="total" className="mt-2">
+              {renderScoreSettings(totalScore, updateTotalScore)}
             </TabsContent>
           </Tabs>
         ) : (
-          renderScoreSettings(partialScore, updateBothScores)
+          renderScoreSettings(partialScore, updateAllScores)
         )}
       </div>
 

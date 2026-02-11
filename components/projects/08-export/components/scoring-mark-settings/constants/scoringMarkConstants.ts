@@ -14,12 +14,30 @@ export const defaultPartialScoreConfig: ScoreTextConfig = {
   alignment: "center",
 }
 
-// 小計・合計点用デフォルト設定
+// 小計・合計点用デフォルト設定（後方互換性のため維持）
 export const defaultSummaryScoreConfig: ScoreTextConfig = {
   position: "middle-center",
   offsetX: 0,
   offsetY: 0,
   size: 18, // 小計・合計点はやや大きめ
+  alignment: "center",
+}
+
+// 小計点用デフォルト設定
+export const defaultSubtotalScoreConfig: ScoreTextConfig = {
+  position: "middle-center",
+  offsetX: 0,
+  offsetY: 0,
+  size: 18,
+  alignment: "center",
+}
+
+// 合計点用デフォルト設定
+export const defaultTotalScoreConfig: ScoreTextConfig = {
+  position: "middle-center",
+  offsetX: 0,
+  offsetY: 0,
+  size: 18,
   alignment: "center",
 }
 
@@ -56,8 +74,12 @@ export const defaultConfig: ScoringMarkConfig = {
   useSeparateScoreSettings: false,
   // 部分点設定
   partialScore: { ...defaultPartialScoreConfig },
-  // 小計・合計点設定
+  // 小計・合計点設定（後方互換性のため維持）
   summaryScore: { ...defaultSummaryScoreConfig },
+  // 小計点設定
+  subtotalScore: { ...defaultSubtotalScoreConfig },
+  // 合計点設定
+  totalScore: { ...defaultTotalScoreConfig },
   useTransparent: false,
   // PDF設定
   pageSize: "A4",
