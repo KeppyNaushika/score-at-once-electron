@@ -159,6 +159,17 @@ function SingleColumnTable({
                 正答率
               </th>
             )}
+            {options.showScoreRate && (
+              <th
+                style={{
+                  ...headerCellStyle,
+                  textAlign: "center",
+                  width: "15%",
+                }}
+              >
+                得点率
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -170,6 +181,8 @@ function SingleColumnTable({
 
             const correctRate =
               report.statistics.questionCorrectRates[item.questionId] ?? 0
+            const scoreRate =
+              report.statistics.questionScoreRates?.[item.questionId] ?? 0
 
             const { mark, markColor } = getMarkInfo(item.status)
 
@@ -204,6 +217,11 @@ function SingleColumnTable({
                     {Math.round(correctRate)}%
                   </td>
                 )}
+                {options.showScoreRate && (
+                  <td style={{ ...cellStyle, textAlign: "center" }}>
+                    {Math.round(scoreRate)}%
+                  </td>
+                )}
               </tr>
             )
           })}
@@ -231,6 +249,17 @@ function SingleColumnTable({
               <td style={{ ...cellStyle, textAlign: "center" }}>-</td>
             )}
             {options.showCorrectRate && (
+              <td
+                style={{
+                  ...cellStyle,
+                  textAlign: "center",
+                  fontWeight: "bold",
+                }}
+              >
+                -
+              </td>
+            )}
+            {options.showScoreRate && (
               <td
                 style={{
                   ...cellStyle,
@@ -360,6 +389,17 @@ function MultiColumnTable({
                       正答率
                     </th>
                   )}
+                  {options.showScoreRate && (
+                    <th
+                      style={{
+                        ...headerCellStyle,
+                        textAlign: "center",
+                        width: "15%",
+                      }}
+                    >
+                      得点率
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -415,6 +455,16 @@ function MultiColumnTable({
                         <td style={{ ...cellStyle, textAlign: "center" }}>
                           {Math.round(
                             report.statistics.questionCorrectRates[
+                              item.questionId
+                            ] ?? 0
+                          )}
+                          %
+                        </td>
+                      )}
+                      {options.showScoreRate && (
+                        <td style={{ ...cellStyle, textAlign: "center" }}>
+                          {Math.round(
+                            report.statistics.questionScoreRates?.[
                               item.questionId
                             ] ?? 0
                           )}

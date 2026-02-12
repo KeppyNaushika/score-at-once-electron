@@ -520,6 +520,7 @@ export function IndividualReportPreview({
 
 /**
  * 統計サマリーセクション
+ * rawTotalScoresから受験状態フィルタ付きで統計を再計算
  */
 function StatsSummary({
   report,
@@ -530,6 +531,79 @@ function StatsSummary({
   options: IndividualReportOptions
   fontScale: number
 }) {
+  // 受験状態フィルタ付きで統計を再計算（箱ひげ図と共通設定）
+  const filteredStats = useMemo(() => {
+    const statuses = options.boxPlotIncludeStatuses
+
+    const raw = report.statistics.rawTotalScores
+    if (!raw || raw.length === 0) return report.statistics
+
+    const includeAll =
+      statuses.participating && statuses.expected && statuses.absent
+    if (includeAll) return report.statistics
+
+    const filterByStatus = (entries: typeof raw) =>
+      entries.filter((e) => {
+        if (e.status === "participating") return statuses.participating
+        if (e.status === "expected") return statuses.expected
+        if (e.status === "absent") return statuses.absent
+        return true
+      })
+
+    const filteredAll = filterByStatus(raw)
+    const allScores = filteredAll.map((e) => e.totalScore)
+
+    // 学級フィルタ
+    const filteredClass = filteredAll.filter(
+      (e) =>
+        e.className === report.studentInfo.className &&
+        e.grade === report.studentInfo.grade
+    )
+    const classScores = filteredClass.map((e) => e.totalScore)
+
+    const avg = (arr: number[]) =>
+      arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
+    const stdDev = (arr: number[]) => {
+      if (arr.length === 0) return 0
+      const a = avg(arr)
+      return Math.sqrt(arr.reduce((s, v) => s + (v - a) ** 2, 0) / arr.length)
+    }
+    const rank = (score: number, scores: number[]) => {
+      const sorted = [...scores].sort((a, b) => b - a)
+      return sorted.findIndex((s) => s <= score) + 1
+    }
+
+    const overallAvg = avg(allScores)
+    const overallStd = stdDev(allScores)
+    const studentScore = report.scoringData.totalScore
+    const deviation =
+      overallStd === 0
+        ? 50
+        : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
+
+    return {
+      ...report.statistics,
+      overall: {
+        ...report.statistics.overall,
+        average: overallAvg,
+        stdDev: overallStd,
+        total: filteredAll.length,
+      },
+      class: {
+        ...report.statistics.class,
+        average: avg(classScores),
+        stdDev: stdDev(classScores),
+        total: filteredClass.length,
+      },
+      personal: {
+        ...report.statistics.personal,
+        deviation,
+        overallRank: rank(studentScore, allScores),
+        classRank: rank(studentScore, classScores),
+      },
+    }
+  }, [report, options.boxPlotIncludeStatuses])
+
   const items: { label: string; value: string }[] = []
 
   // 得点
@@ -545,13 +619,13 @@ function StatsSummary({
     if (options.showAverage === "class" || options.showAverage === "both") {
       items.push({
         label: "学級平均",
-        value: report.statistics.class.average.toFixed(1),
+        value: filteredStats.class.average.toFixed(1),
       })
     }
     if (options.showAverage === "overall" || options.showAverage === "both") {
       items.push({
         label: "全体平均",
-        value: report.statistics.overall.average.toFixed(1),
+        value: filteredStats.overall.average.toFixed(1),
       })
     }
   }
@@ -560,7 +634,7 @@ function StatsSummary({
   if (options.showDeviation) {
     items.push({
       label: "偏差値",
-      value: report.statistics.personal.deviation.toFixed(1),
+      value: filteredStats.personal.deviation.toFixed(1),
     })
   }
 
@@ -569,13 +643,13 @@ function StatsSummary({
     if (options.rankType === "class" || options.rankType === "both") {
       items.push({
         label: "学級順位",
-        value: `${report.statistics.personal.classRank} / ${report.statistics.class.total}`,
+        value: `${filteredStats.personal.classRank} / ${filteredStats.class.total}`,
       })
     }
     if (options.rankType === "overall" || options.rankType === "both") {
       items.push({
         label: "全体順位",
-        value: `${report.statistics.personal.overallRank} / ${report.statistics.overall.total}`,
+        value: `${filteredStats.personal.overallRank} / ${filteredStats.overall.total}`,
       })
     }
   }

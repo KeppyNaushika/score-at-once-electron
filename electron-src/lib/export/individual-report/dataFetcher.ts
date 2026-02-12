@@ -16,6 +16,7 @@ import { fetchExportData } from "../excel/dataFetcher"
 import { generateLearningAdvice } from "./adviceGenerator"
 import {
   calculateQuestionCorrectRates,
+  calculateQuestionScoreRates,
   calculateStatisticsForStudent,
 } from "./statisticsCalculator"
 import type {
@@ -109,8 +110,9 @@ export async function fetchIndividualReportData(
       })
     )
 
-    // 設問別正答率を計算（全生徒データを使用）
+    // 設問別正答率・得点率を計算（全生徒データを使用）
     const questionCorrectRates = calculateQuestionCorrectRates(allScoringData)
+    const questionScoreRates = calculateQuestionScoreRates(allScoringData)
 
     // 各生徒のレポートデータを構築
     const reports: IndividualReportData[] = selectedScoringData.map(
@@ -138,7 +140,8 @@ export async function fetchIndividualReportData(
           scoringData.totalScore,
           allScoringData,
           classScoringData,
-          questionCorrectRates
+          questionCorrectRates,
+          questionScoreRates
         )
 
         // 学習アドバイス

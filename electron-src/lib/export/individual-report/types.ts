@@ -84,7 +84,7 @@ export interface IndividualReportOptions {
   boxPlotSubtotalGroupSelection: SubtotalGroupSelection // 箱ひげ図用グループ選択
   hideUnassignedSubtotals: boolean // 設問と関連付けのない小計点を非表示
   showGroupSubtotals: boolean // グループごとの合計を表示
-  /** 箱ひげ図に含める受験状態（チェックされた状態のみ統計に含める） */
+  /** 統計に含める受験状態（平均・偏差値・順位・箱ひげ図で共通） */
   boxPlotIncludeStatuses: {
     participating: boolean
     expected: boolean
@@ -96,6 +96,7 @@ export interface IndividualReportOptions {
   questionTableColumns: QuestionTableColumns
   questionTableFontSize: FontSizeOption
   showCorrectRate: boolean // 正答率を表示
+  showScoreRate: boolean // 得点率を表示
 
   // 学習アドバイス
   showLearningAdvice: boolean
@@ -149,6 +150,15 @@ export interface StudentSubtotalScore {
 export interface SubtotalRawScores {
   subtotalId: string
   scores: StudentSubtotalScore[]
+}
+
+/** 生徒ごとの合計点データ（renderer側での統計再計算用） */
+export interface RawTotalScoreEntry {
+  studentId: string
+  totalScore: number
+  status: "participating" | "expected" | "absent"
+  className?: string
+  grade?: string
 }
 
 /** 小計別統計データ */
@@ -207,11 +217,17 @@ export interface StatisticsData {
   // 設問別正答率
   questionCorrectRates: Record<string, number>
 
+  // 設問別得点率
+  questionScoreRates: Record<string, number>
+
   // 小計別統計
   subtotalStatistics: SubtotalStatistics[]
 
   // 小計別生スコア（renderer側でのbox plot再計算用）
   subtotalRawScores: SubtotalRawScores[]
+
+  // 全生徒の合計点データ（renderer側での統計再計算用）
+  rawTotalScores: RawTotalScoreEntry[]
 }
 
 /** 学習アドバイス用問題データ */
@@ -324,6 +340,7 @@ export const DEFAULT_INDIVIDUAL_REPORT_OPTIONS: IndividualReportOptions = {
   questionTableColumns: 1,
   questionTableFontSize: 10,
   showCorrectRate: true,
+  showScoreRate: false,
   showLearningAdvice: true,
   adviceOptions: DEFAULT_ADVICE_OPTIONS,
   showComment: false,
