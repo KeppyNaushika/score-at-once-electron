@@ -35,7 +35,20 @@ describe("FileOverviewStep", () => {
 
   it("FO-2: カテゴリ別統計が正しく表示される", () => {
     const wizard = createMockWizard({
-      manifest: createMockManifest({ counts: { students: 3, classes: 1, users: 1, pages: 2, regions: 4, scores: 12, annotations: 0, subtotalGroups: 1, masterImages: 2, answerSheetImages: 6 } }),
+      manifest: createMockManifest({
+        counts: {
+          students: 3,
+          classes: 1,
+          users: 1,
+          pages: 2,
+          regions: 4,
+          scores: 12,
+          annotations: 0,
+          subtotalGroups: 1,
+          masterImages: 2,
+          answerSheetImages: 6,
+        },
+      }),
       fileOverviewData: createMockFileOverviewData(),
     })
     render(<FileOverviewStep wizard={wizard} />)
@@ -103,6 +116,8 @@ describe("FileOverviewStep", () => {
     })
     render(<FileOverviewStep wizard={wizard} />)
 
-    expect(screen.getByText(/「次へ」を押して照合を開始してください/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/「次へ」を押して照合を開始してください/)
+    ).toBeInTheDocument()
   })
 })

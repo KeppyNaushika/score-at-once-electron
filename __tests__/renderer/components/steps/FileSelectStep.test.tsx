@@ -23,7 +23,9 @@ describe("FileSelectStep", () => {
     const wizard = createMockWizard()
     render(<FileSelectStep wizard={wizard} />)
 
-    expect(screen.getByRole("button", { name: /ファイルを選択/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /ファイルを選択/ })
+    ).toBeInTheDocument()
   })
 
   it("FS-2: ボタンクリックでselectFileが呼ばれる", async () => {

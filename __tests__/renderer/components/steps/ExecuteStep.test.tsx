@@ -49,10 +49,54 @@ describe("ExecuteStep", () => {
       success: true,
       projectId: "test",
       summary: {
-        created: { students: 0, classes: 0, users: 0, pages: 0, regions: 0, scores: 0, annotations: 0, subtotalGroups: 0, masterImages: 0, answerSheetImages: 0 },
-        updated: { students: 0, classes: 0, users: 0, pages: 0, regions: 0, scores: 0, annotations: 0, subtotalGroups: 0, masterImages: 0, answerSheetImages: 0 },
-        skipped: { students: 0, classes: 0, users: 0, pages: 0, regions: 0, scores: 0, annotations: 0, subtotalGroups: 0, masterImages: 0, answerSheetImages: 0 },
-        unchanged: { students: 0, classes: 0, users: 0, pages: 0, regions: 0, scores: 0, annotations: 0, subtotalGroups: 0, masterImages: 0, answerSheetImages: 0 },
+        created: {
+          students: 0,
+          classes: 0,
+          users: 0,
+          pages: 0,
+          regions: 0,
+          scores: 0,
+          annotations: 0,
+          subtotalGroups: 0,
+          masterImages: 0,
+          answerSheetImages: 0,
+        },
+        updated: {
+          students: 0,
+          classes: 0,
+          users: 0,
+          pages: 0,
+          regions: 0,
+          scores: 0,
+          annotations: 0,
+          subtotalGroups: 0,
+          masterImages: 0,
+          answerSheetImages: 0,
+        },
+        skipped: {
+          students: 0,
+          classes: 0,
+          users: 0,
+          pages: 0,
+          regions: 0,
+          scores: 0,
+          annotations: 0,
+          subtotalGroups: 0,
+          masterImages: 0,
+          answerSheetImages: 0,
+        },
+        unchanged: {
+          students: 0,
+          classes: 0,
+          users: 0,
+          pages: 0,
+          regions: 0,
+          scores: 0,
+          annotations: 0,
+          subtotalGroups: 0,
+          masterImages: 0,
+          answerSheetImages: 0,
+        },
       },
       warnings: [],
     })
@@ -97,9 +141,7 @@ describe("ExecuteStep", () => {
     render(<ExecuteStep wizard={wizard} onClose={onClose} />)
 
     await waitFor(() => {
-      expect(
-        screen.getByText("インポートに失敗しました")
-      ).toBeInTheDocument()
+      expect(screen.getByText("インポートに失敗しました")).toBeInTheDocument()
     })
   })
 

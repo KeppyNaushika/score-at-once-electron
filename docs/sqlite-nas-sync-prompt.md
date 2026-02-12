@@ -30,6 +30,7 @@ Sync時:
 ### 1. バリデーション（validate）
 
 対象DBがsync可能かチェックする:
+
 - 指定テーブルが存在するか
 - 指定テーブルのPKが指定カラム（デフォルト: `id`）で、型がTEXT（UUID）か
 - 指定テーブルに `updatedAt` カラムがあるか
@@ -38,7 +39,7 @@ Sync時:
 
 SQLiteレベルでトリガーとテーブルを作成する（冪等）:
 
-#### _changelog テーブル
+#### \_changelog テーブル
 
 ```sql
 CREATE TABLE IF NOT EXISTS _changelog (
@@ -117,7 +118,7 @@ CREATE TABLE IF NOT EXISTS _sync_state (
 );
 ```
 
-#### _changelog の掃除
+#### \_changelog の掃除
 
 ```sql
 -- デフォルト: 7日以上前のエントリを削除
@@ -125,10 +126,11 @@ DELETE FROM _changelog WHERE changedAt < datetime('now', '-{retentionDays} days'
 ```
 
 掃除済みで lastSeenId が見つからない場合のフォールバック:
+
 - updatedAt ベースのフルテーブルスキャンで完全sync
 - 各テーブル: `SELECT * FROM {table} WHERE updatedAt > :lastSyncedAt`
-- _changelog の operation = 'DELETE' に相当する情報がないため、削除は検知不可
-  → 次回以降の _changelog で追跡される
+- \_changelog の operation = 'DELETE' に相当する情報がないため、削除は検知不可
+  → 次回以降の \_changelog で追跡される
 
 ## 公開API設計
 
@@ -192,10 +194,10 @@ export type SyncStatus = {
 }
 
 export type SyncEvent =
-  | 'sync:start'
-  | 'sync:complete'
-  | 'sync:error'
-  | 'sync:conflict'
+  | "sync:start"
+  | "sync:complete"
+  | "sync:error"
+  | "sync:conflict"
 
 /** メインのエントリーポイント */
 export function setupSync(config: SyncConfig): SyncInstance
@@ -238,12 +240,12 @@ export function setupSync(config: SyncConfig): SyncInstance
 
 ### ユニットテスト
 
-- _changelog テーブル・トリガーの作成と動作
-- INSERT / UPDATE / DELETE 時の _changelog 記録
-- Cascade削除時の _changelog 記録
+- \_changelog テーブル・トリガーの作成と動作
+- INSERT / UPDATE / DELETE 時の \_changelog 記録
+- Cascade削除時の \_changelog 記録
 - LWW競合解決ロジック
 - UNIQUE違反時の競合解決ロジック
-- _changelog 掃除とフォールバック
+- \_changelog 掃除とフォールバック
 
 ### 統合テスト
 
@@ -285,9 +287,9 @@ sqlite-nas-sync/
 
 ## 実装上の注意点
 
-### _changelog の肥大化防止
+### \_changelog の肥大化防止
 
-- 同一レコードの連続UPDATE: _changelog には全て記録される（圧縮しない）
+- 同一レコードの連続UPDATE: \_changelog には全て記録される（圧縮しない）
   - sync時に同一recordIdの最新operationだけ処理すれば効率的
   - 掃除（retentionDays）で古いエントリは自動削除
 

@@ -94,33 +94,33 @@ setupSync({
 
 全22モデルで既に `@id @default(uuid())` を使用している。
 
-| モデル | PK定義 |
-|--------|--------|
-| User | `id String @id @default(uuid())` |
-| Class | `id String @id @default(uuid())` |
-| Student | `id String @id @default(uuid())` |
-| Project | `id String @id @default(uuid())` |
-| ProjectStudent | 同上 |
-| ProjectPage | 同上 |
-| MasterImage | 同上 |
-| StudentAnswerImage | 同上 |
-| CropRegion | 同上 |
-| SubtotalGroup | 同上 |
-| Subtotal | 同上 |
-| CropSubtotal | 同上 |
-| UserProject | 同上 |
-| ProjectSubtotalGroup | 同上 |
-| QuestionScore | 同上 |
-| DrawingAnnotation | 同上 |
-| ProjectClass | 同上 |
-| Subject | 同上 |
-| SubjectSubtotalGroup | 同上 |
-| UserKeyboardShortcut | 同上 |
-| UserScoringPreference | 同上 |
-| ProjectMarkingFormat | 同上 |
-| ProjectExportSettings | 同上 |
-| CropRegionMarkingOverride | 同上 |
-| StudentClassMembership | 同上 |
+| モデル                    | PK定義                           |
+| ------------------------- | -------------------------------- |
+| User                      | `id String @id @default(uuid())` |
+| Class                     | `id String @id @default(uuid())` |
+| Student                   | `id String @id @default(uuid())` |
+| Project                   | `id String @id @default(uuid())` |
+| ProjectStudent            | 同上                             |
+| ProjectPage               | 同上                             |
+| MasterImage               | 同上                             |
+| StudentAnswerImage        | 同上                             |
+| CropRegion                | 同上                             |
+| SubtotalGroup             | 同上                             |
+| Subtotal                  | 同上                             |
+| CropSubtotal              | 同上                             |
+| UserProject               | 同上                             |
+| ProjectSubtotalGroup      | 同上                             |
+| QuestionScore             | 同上                             |
+| DrawingAnnotation         | 同上                             |
+| ProjectClass              | 同上                             |
+| Subject                   | 同上                             |
+| SubjectSubtotalGroup      | 同上                             |
+| UserKeyboardShortcut      | 同上                             |
+| UserScoringPreference     | 同上                             |
+| ProjectMarkingFormat      | 同上                             |
+| ProjectExportSettings     | 同上                             |
+| CropRegionMarkingOverride | 同上                             |
+| StudentClassMembership    | 同上                             |
 
 ### 2. 削除追跡：Tombstoneテーブル方式
 
@@ -158,57 +158,57 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 
 #### 全UNIQUE制約の一覧（14個）
 
-| # | モデル | 制約 | 使用箇所数 | sync衝突リスク |
-|---|--------|------|----------|--------------|
-| 1 | User.username | `@unique` | 3 | **高** - 別クライアントで同名ユーザー作成 |
-| 2 | Class.name | `@unique` | 4 | **高** - 別クライアントで同名学級作成 |
-| 3 | Student.studentNumber | `@unique` | 5 | **高** - 同一生徒を別クライアントで登録 |
-| 4 | Subject.name | `@unique` | 2 | **中** - 同名教科の重複 |
-| 5 | UserScoringPreference.userId | `@unique` | 3 | **低** - 1:1リレーション |
-| 6 | ProjectExportSettings.projectId | `@unique` | 2 | **低** - 1:1リレーション |
-| 7 | ProjectStudent @@unique([projectId, studentId]) | 複合 | 1 | **中** |
-| 8 | UserProject @@unique([userId, projectId]) | 複合 | 5 | **低** |
-| 9 | ProjectClass @@unique([projectId, classId]) | 複合 | 3 | **中** |
-| 10 | Subtotal @@unique([subtotalGroupId, name]) | 複合 | 1 | **中** |
-| 11 | UserKeyboardShortcut @@unique([userId, action]) | 複合 | 2 | **低** |
-| 12 | ProjectMarkingFormat @@unique([projectId, markType]) | 複合 | 3 | **低** |
-| 13 | SubjectSubtotalGroup @@unique([subjectId, subtotalGroupId]) | 複合 | 1 | **低** |
-| 14 | CropRegionMarkingOverride @@unique([cropRegionId, markType]) | 複合 | 3 | **低** |
+| #   | モデル                                                       | 制約      | 使用箇所数 | sync衝突リスク                            |
+| --- | ------------------------------------------------------------ | --------- | ---------- | ----------------------------------------- |
+| 1   | User.username                                                | `@unique` | 3          | **高** - 別クライアントで同名ユーザー作成 |
+| 2   | Class.name                                                   | `@unique` | 4          | **高** - 別クライアントで同名学級作成     |
+| 3   | Student.studentNumber                                        | `@unique` | 5          | **高** - 同一生徒を別クライアントで登録   |
+| 4   | Subject.name                                                 | `@unique` | 2          | **中** - 同名教科の重複                   |
+| 5   | UserScoringPreference.userId                                 | `@unique` | 3          | **低** - 1:1リレーション                  |
+| 6   | ProjectExportSettings.projectId                              | `@unique` | 2          | **低** - 1:1リレーション                  |
+| 7   | ProjectStudent @@unique([projectId, studentId])              | 複合      | 1          | **中**                                    |
+| 8   | UserProject @@unique([userId, projectId])                    | 複合      | 5          | **低**                                    |
+| 9   | ProjectClass @@unique([projectId, classId])                  | 複合      | 3          | **中**                                    |
+| 10  | Subtotal @@unique([subtotalGroupId, name])                   | 複合      | 1          | **中**                                    |
+| 11  | UserKeyboardShortcut @@unique([userId, action])              | 複合      | 2          | **低**                                    |
+| 12  | ProjectMarkingFormat @@unique([projectId, markType])         | 複合      | 3          | **低**                                    |
+| 13  | SubjectSubtotalGroup @@unique([subjectId, subtotalGroupId])  | 複合      | 1          | **低**                                    |
+| 14  | CropRegionMarkingOverride @@unique([cropRegionId, markType]) | 複合      | 3          | **低**                                    |
 
 #### UNIQUE制約の分類
 
 **カテゴリA：ビジネスキー（自然キー）**
 
-| 制約 | sync衝突時の意味 |
-|------|----------------|
-| User.username | 同じ人物が別クライアントで登録 → 同一レコードとみなすべき |
-| Student.studentNumber | 同上 |
-| Class.name | 同上 |
-| Subject.name | 同上 |
+| 制約                  | sync衝突時の意味                                          |
+| --------------------- | --------------------------------------------------------- |
+| User.username         | 同じ人物が別クライアントで登録 → 同一レコードとみなすべき |
+| Student.studentNumber | 同上                                                      |
+| Class.name            | 同上                                                      |
+| Subject.name          | 同上                                                      |
 
 → sync時にUNIQUE違反が発生した場合、同一エンティティとみなしてマージ（UPSERTまたはLWW）。
 
 **カテゴリB：1:1リレーション保証**
 
-| 制約 | 理由 |
-|------|------|
-| UserScoringPreference.userId | 1ユーザー1設定 |
+| 制約                            | 理由               |
+| ------------------------------- | ------------------ |
+| UserScoringPreference.userId    | 1ユーザー1設定     |
 | ProjectExportSettings.projectId | 1プロジェクト1設定 |
 
 → 親レコードのsyncに連動。LWWで上書き。
 
 **カテゴリC：多対多の重複防止**
 
-| 制約 | sync衝突シナリオ |
-|------|----------------|
-| ProjectStudent(projectId, studentId) | クライアントA・Bが同時に同じ生徒を追加 |
-| UserProject(userId, projectId) | 同時参加 |
-| ProjectClass(projectId, classId) | 同時追加 |
-| Subtotal(subtotalGroupId, name) | 同名小計の同時作成 |
-| UserKeyboardShortcut(userId, action) | 設定の同時変更 |
-| ProjectMarkingFormat(projectId, markType) | 設定の同時変更 |
-| SubjectSubtotalGroup(subjectId, subtotalGroupId) | 同時追加 |
-| CropRegionMarkingOverride(cropRegionId, markType) | 設定の同時変更 |
+| 制約                                              | sync衝突シナリオ                       |
+| ------------------------------------------------- | -------------------------------------- |
+| ProjectStudent(projectId, studentId)              | クライアントA・Bが同時に同じ生徒を追加 |
+| UserProject(userId, projectId)                    | 同時参加                               |
+| ProjectClass(projectId, classId)                  | 同時追加                               |
+| Subtotal(subtotalGroupId, name)                   | 同名小計の同時作成                     |
+| UserKeyboardShortcut(userId, action)              | 設定の同時変更                         |
+| ProjectMarkingFormat(projectId, markType)         | 設定の同時変更                         |
+| SubjectSubtotalGroup(subjectId, subtotalGroupId)  | 同時追加                               |
+| CropRegionMarkingOverride(cropRegionId, markType) | 設定の同時変更                         |
 
 → sync時にUNIQUE違反が発生した場合、UPSERT（既存レコードを更新）で解決。
 
@@ -216,33 +216,33 @@ SQLite側:  onDelete: Cascade → 子レコード連鎖削除
 
 **upsert操作（16箇所）**
 
-| ファイル | 使用するUNIQUE制約 |
-|---------|-------------------|
-| `databaseSetup.ts:73` | User.username |
-| `databaseSetup.ts:85` | Class.name |
-| `databaseSetup.ts:126` | Student.studentNumber |
-| `userSettings.ts:39,58` | UserKeyboardShortcut(userId, action) |
-| `userSettings.ts:145,207` | UserScoringPreference.userId |
-| `projectSettings.ts:40,62` | ProjectMarkingFormat(projectId, markType) |
-| `projectSettings.ts:111` | ProjectExportSettings.projectId |
-| `projectClass.ts:355` | ProjectClass(projectId, classId) |
+| ファイル                             | 使用するUNIQUE制約                                |
+| ------------------------------------ | ------------------------------------------------- |
+| `databaseSetup.ts:73`                | User.username                                     |
+| `databaseSetup.ts:85`                | Class.name                                        |
+| `databaseSetup.ts:126`               | Student.studentNumber                             |
+| `userSettings.ts:39,58`              | UserKeyboardShortcut(userId, action)              |
+| `userSettings.ts:145,207`            | UserScoringPreference.userId                      |
+| `projectSettings.ts:40,62`           | ProjectMarkingFormat(projectId, markType)         |
+| `projectSettings.ts:111`             | ProjectExportSettings.projectId                   |
+| `projectClass.ts:355`                | ProjectClass(projectId, classId)                  |
 | `cropRegionMarkingOverride.ts:49,76` | CropRegionMarkingOverride(cropRegionId, markType) |
-| `dataCreator.ts:156` | Subject.name |
+| `dataCreator.ts:156`                 | Subject.name                                      |
 
 **findUnique操作（20箇所）**
 
-| ファイル | 使用するUNIQUE制約 |
-|---------|-------------------|
-| `auth.ts:50,99,150` | User.username |
-| `uniqueNameGenerators.ts:29,42` | Student.studentNumber |
-| `uniqueNameGenerators.ts:65,77` | Class.name |
-| `subject.ts:77` | Subject.name |
-| `userSettings.ts:131,184` | UserScoringPreference.userId |
-| `projectSettings.ts:29` | ProjectMarkingFormat(projectId, markType) |
-| `projectSettings.ts:95` | ProjectExportSettings.projectId |
-| `userProject.ts:60,147,191,236` | UserProject(userId, projectId) |
+| ファイル                          | 使用するUNIQUE制約                                |
+| --------------------------------- | ------------------------------------------------- |
+| `auth.ts:50,99,150`               | User.username                                     |
+| `uniqueNameGenerators.ts:29,42`   | Student.studentNumber                             |
+| `uniqueNameGenerators.ts:65,77`   | Class.name                                        |
+| `subject.ts:77`                   | Subject.name                                      |
+| `userSettings.ts:131,184`         | UserScoringPreference.userId                      |
+| `projectSettings.ts:29`           | ProjectMarkingFormat(projectId, markType)         |
+| `projectSettings.ts:95`           | ProjectExportSettings.projectId                   |
+| `userProject.ts:60,147,191,236`   | UserProject(userId, projectId)                    |
 | `cropRegionMarkingOverride.ts:35` | CropRegionMarkingOverride(cropRegionId, markType) |
-| `dataCreator.ts:183` | SubjectSubtotalGroup(subjectId, subtotalGroupId) |
+| `dataCreator.ts:183`              | SubjectSubtotalGroup(subjectId, subtotalGroupId)  |
 
 ### 4. テーブル構造：sync観点での評価
 
@@ -252,16 +252,16 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 
 現在のスキーマを検証した結果:
 
-| テーブル | 判定 | 理由 |
-|---------|------|------|
+| テーブル                              | 判定   | 理由                                        |
+| ------------------------------------- | ------ | ------------------------------------------- |
 | QuestionScore (status + partialScore) | **OK** | 採点行為は一体。部分点→正答上書きは意図通り |
-| Student (名前 + 学籍番号) | **OK** | 生徒マスタは一人の管理者が編集 |
-| CropRegion (座標 + 配点 + ラベル) | **OK** | テンプレート定義は一体で変更 |
-| DrawingAnnotation (各種属性) | **OK** | 1アノテーション = 1変更単位 |
-| ProjectStudent (status + customOrder) | **OK** | 受験生徒一覧画面で同じ管理者が一体で操作 |
-| UserScoringPreference (各種設定) | **OK** | 各ユーザーが自分の設定のみ変更 |
-| UserKeyboardShortcut (action + key) | **OK** | 各ユーザーが自分の設定のみ変更 |
-| ProjectMarkingFormat (各種設定) | **OK** | プロジェクト設定として一体管理 |
+| Student (名前 + 学籍番号)             | **OK** | 生徒マスタは一人の管理者が編集              |
+| CropRegion (座標 + 配点 + ラベル)     | **OK** | テンプレート定義は一体で変更                |
+| DrawingAnnotation (各種属性)          | **OK** | 1アノテーション = 1変更単位                 |
+| ProjectStudent (status + customOrder) | **OK** | 受験生徒一覧画面で同じ管理者が一体で操作    |
+| UserScoringPreference (各種設定)      | **OK** | 各ユーザーが自分の設定のみ変更              |
+| UserKeyboardShortcut (action + key)   | **OK** | 各ユーザーが自分の設定のみ変更              |
+| ProjectMarkingFormat (各種設定)       | **OK** | プロジェクト設定として一体管理              |
 
 ---
 
@@ -269,23 +269,23 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 
 ### リスクなし（sqlite-nas-sync で安全に処理可能）
 
-| シナリオ | 処理 |
-|---------|------|
-| 別々のレコードを同時編集 | 両方反映される |
-| 同じエンティティを別クライアントで作成（UUID異なる、自然キー同一） | UNIQUE制約でsync層が検知 → マージ |
-| 片方だけが削除、もう片方は無関係な作業 | tombstoneでsync |
-| NASコピー中のクラッシュ/ネットワーク断 | リモートDBは読み取り専用なのでローカルに影響なし。次回リトライ |
+| シナリオ                                                           | 処理                                                           |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| 別々のレコードを同時編集                                           | 両方反映される                                                 |
+| 同じエンティティを別クライアントで作成（UUID異なる、自然キー同一） | UNIQUE制約でsync層が検知 → マージ                              |
+| 片方だけが削除、もう片方は無関係な作業                             | tombstoneでsync                                                |
+| NASコピー中のクラッシュ/ネットワーク断                             | リモートDBは読み取り専用なのでローカルに影響なし。次回リトライ |
 
 ### 許容可能なリスク（LWW の特性）
 
-| シナリオ | 結果 | 許容理由 |
-|---------|------|---------|
+| シナリオ                            | 結果             | 許容理由                                             |
+| ----------------------------------- | ---------------- | ---------------------------------------------------- |
 | 同じ行を同時に更新（updatedAt比較） | 後の更新で上書き | 現在のスキーマでは同じ行を独立に変更するケースがない |
 
 ### アプリ層の問題（sqlite-nas-sync の責務外）
 
-| シナリオ | 結果 | 備考 |
-|---------|------|------|
+| シナリオ                                   | 結果         | 備考                                                |
+| ------------------------------------------ | ------------ | --------------------------------------------------- |
 | Delete-Update 競合（削除と更新の同時発生） | 削除側が勝つ | ローカル操作でも同じ問題。アプリのUI/UXで対処すべき |
 
 ---
@@ -296,91 +296,91 @@ LWW（Last-Write-Wins）方式では、行単位で上書きされるため、�
 
 **※ sqlite-nas-sync のトリガーがCascade削除も自動追跡するため、変更不要**
 
-| 親モデル | 子モデル | リレーション |
-|---------|---------|-----------|
-| Student | StudentClassMembership | studentId → id |
-| Class | StudentClassMembership | classId → id |
-| Project | ProjectStudent | projectId → id |
-| Student | ProjectStudent | studentId → id |
-| Project | ProjectPage | projectId → id |
-| ProjectPage | MasterImage | projectPageId → id |
-| ProjectPage | StudentAnswerImage | projectPageId → id |
-| Student | StudentAnswerImage | studentId → id |
-| ProjectPage | CropRegion | projectPageId → id |
-| SubtotalGroup | Subtotal | subtotalGroupId → id |
-| CropRegion | CropSubtotal | cropRegionId → id |
-| Subtotal | CropSubtotal | subtotalId → id |
-| User | UserProject | userId → id |
-| Project | UserProject | projectId → id |
-| Project | ProjectSubtotalGroup | projectId → id |
-| SubtotalGroup | ProjectSubtotalGroup | subtotalGroupId → id |
-| CropRegion | QuestionScore | cropRegionId → id |
-| Student | QuestionScore | studentId → id |
-| QuestionScore | DrawingAnnotation | questionScoreId → id |
-| Project | ProjectClass | projectId → id |
-| Class | ProjectClass | classId → id |
-| Subject | SubjectSubtotalGroup | subjectId → id |
-| SubtotalGroup | SubjectSubtotalGroup | subtotalGroupId → id |
-| User | UserKeyboardShortcut | userId → id |
-| User | UserScoringPreference | userId → id |
-| Project | ProjectMarkingFormat | projectId → id |
-| Project | ProjectExportSettings | projectId → id |
-| CropRegion | CropRegionMarkingOverride | cropRegionId → id |
+| 親モデル      | 子モデル                  | リレーション         |
+| ------------- | ------------------------- | -------------------- |
+| Student       | StudentClassMembership    | studentId → id       |
+| Class         | StudentClassMembership    | classId → id         |
+| Project       | ProjectStudent            | projectId → id       |
+| Student       | ProjectStudent            | studentId → id       |
+| Project       | ProjectPage               | projectId → id       |
+| ProjectPage   | MasterImage               | projectPageId → id   |
+| ProjectPage   | StudentAnswerImage        | projectPageId → id   |
+| Student       | StudentAnswerImage        | studentId → id       |
+| ProjectPage   | CropRegion                | projectPageId → id   |
+| SubtotalGroup | Subtotal                  | subtotalGroupId → id |
+| CropRegion    | CropSubtotal              | cropRegionId → id    |
+| Subtotal      | CropSubtotal              | subtotalId → id      |
+| User          | UserProject               | userId → id          |
+| Project       | UserProject               | projectId → id       |
+| Project       | ProjectSubtotalGroup      | projectId → id       |
+| SubtotalGroup | ProjectSubtotalGroup      | subtotalGroupId → id |
+| CropRegion    | QuestionScore             | cropRegionId → id    |
+| Student       | QuestionScore             | studentId → id       |
+| QuestionScore | DrawingAnnotation         | questionScoreId → id |
+| Project       | ProjectClass              | projectId → id       |
+| Class         | ProjectClass              | classId → id         |
+| Subject       | SubjectSubtotalGroup      | subjectId → id       |
+| SubtotalGroup | SubjectSubtotalGroup      | subtotalGroupId → id |
+| User          | UserKeyboardShortcut      | userId → id          |
+| User          | UserScoringPreference     | userId → id          |
+| Project       | ProjectMarkingFormat      | projectId → id       |
+| Project       | ProjectExportSettings     | projectId → id       |
+| CropRegion    | CropRegionMarkingOverride | cropRegionId → id    |
 
 ### B. 明示的な delete / deleteMany 呼び出し（48箇所）
 
 **※ sqlite-nas-sync のトリガーが自動追跡するため、変更不要**
 
-| ファイル | モデル | 削除の文脈 |
-|---------|--------|----------|
-| `electron-src/lib/prisma/subtotal.ts:37` | Subtotal | 小計項目を単一削除 |
-| `electron-src/lib/prisma/userSettings.ts:78` | UserKeyboardShortcut | ショートカット一括削除（1アクション） |
-| `electron-src/lib/prisma/userSettings.ts:88` | UserKeyboardShortcut | ショートカット一括削除（1ユーザー） |
-| `electron-src/lib/prisma/subjectSubtotalGroup.ts:46` | SubjectSubtotalGroup | 関連付けを単一削除 |
-| `electron-src/lib/prisma/subjectSubtotalGroup.ts:57` | SubjectSubtotalGroup | 関連付けを一括削除（教科削除時） |
-| `electron-src/lib/prisma/questionGroupItem.ts:37` | Subtotal | 設問グループアイテムを削除 |
+| ファイル                                                   | モデル                    | 削除の文脈                               |
+| ---------------------------------------------------------- | ------------------------- | ---------------------------------------- |
+| `electron-src/lib/prisma/subtotal.ts:37`                   | Subtotal                  | 小計項目を単一削除                       |
+| `electron-src/lib/prisma/userSettings.ts:78`               | UserKeyboardShortcut      | ショートカット一括削除（1アクション）    |
+| `electron-src/lib/prisma/userSettings.ts:88`               | UserKeyboardShortcut      | ショートカット一括削除（1ユーザー）      |
+| `electron-src/lib/prisma/subjectSubtotalGroup.ts:46`       | SubjectSubtotalGroup      | 関連付けを単一削除                       |
+| `electron-src/lib/prisma/subjectSubtotalGroup.ts:57`       | SubjectSubtotalGroup      | 関連付けを一括削除（教科削除時）         |
+| `electron-src/lib/prisma/questionGroupItem.ts:37`          | Subtotal                  | 設問グループアイテムを削除               |
 | `electron-src/lib/prisma/cropRegionMarkingOverride.ts:104` | CropRegionMarkingOverride | マーク上書き設定を一括削除（領域削除時） |
-| `electron-src/lib/prisma/cropRegionMarkingOverride.ts:113` | CropRegionMarkingOverride | マーク上書き設定を一括削除（複数領域） |
-| `electron-src/lib/prisma/subject.ts:68` | Subject | 教科を単一削除 |
-| `electron-src/lib/prisma/subtotalDefinition.ts:29` | Subtotal | 小計定義を削除 |
-| `electron-src/lib/prisma/drawingAnnotation.ts:347` | DrawingAnnotation | アノテーションを単一削除 |
-| `electron-src/lib/prisma/drawingAnnotation.ts:367` | DrawingAnnotation | アノテーションを一括削除 |
-| `electron-src/lib/prisma/subtotalGroup.ts:98` | Subtotal | 既存小計を全削除（再作成） |
-| `electron-src/lib/prisma/subtotalGroup.ts:204` | ProjectSubtotalGroup | プロジェクト関連付けを削除 |
-| `electron-src/lib/prisma/subtotalGroup.ts:209` | SubtotalGroup | 小計グループを削除 |
-| `electron-src/lib/prisma/subtotalGroup.ts:386` | ProjectSubtotalGroup | プロジェクト関連付けを削除 |
-| `electron-src/lib/prisma/studentClassMembership.ts:79` | StudentClassMembership | メンバーシップを単一削除 |
-| `electron-src/lib/prisma/studentAnswer/placement.ts:36` | StudentAnswerImage | 答案画像を単一削除 |
-| `electron-src/lib/prisma/student.ts:109` | Student | 生徒を削除 |
-| `electron-src/lib/prisma/student.ts:204` | Class | 学級を削除 |
-| `electron-src/lib/prisma/projectSettings.ts:85` | ProjectMarkingFormat | 採点マーク形式を一括削除 |
-| `electron-src/lib/prisma/projectSettings.ts:119` | ProjectExportSettings | 出力設定を一括削除 |
-| `electron-src/lib/prisma/studentAnswer/crud.ts:168` | StudentAnswerImage | 答案画像を単一削除 |
-| `electron-src/lib/prisma/class.ts:103` | Class | 学級を削除 |
-| `electron-src/lib/prisma/masterAnswer.ts:128` | MasterImage | 模範解答画像を削除 |
-| `electron-src/lib/prisma/masterAnswer.ts:140` | ProjectPage | プロジェクトページを削除 |
-| `electron-src/lib/prisma/masterAnswer.ts:381` | MasterImage | 模範解答画像を一括削除 |
-| `electron-src/lib/prisma/masterAnswer.ts:397` | ProjectPage | 空ページを一括削除 |
-| `electron-src/lib/prisma/questionScore.ts:276` | QuestionScore | 採点を単一削除 |
-| `electron-src/lib/prisma/projectClass.ts:247` | ProjectClass | プロジェクト学級を削除 |
-| `electron-src/lib/prisma/projectClass.ts:264` | ProjectClass | プロジェクト学級を削除（複数） |
-| `electron-src/lib/prisma/projectStudent.ts:117` | ProjectStudent | プロジェクト生徒を一括削除 |
-| `electron-src/lib/prisma/projectStudent.ts:125` | StudentAnswerImage | 答案画像を一括削除 |
-| `electron-src/lib/prisma/project.ts:189` | Project | プロジェクト全体を削除 |
-| `electron-src/lib/prisma/questionGroup.ts:35` | SubtotalGroup | 設問グループを削除 |
-| `electron-src/lib/prisma/cropRegion.ts:86` | CropRegion | 採点領域を削除 |
-| `electron-src/lib/prisma/questionSubtotalAssignment.ts:29` | CropSubtotal | 設問小計を単一削除 |
-| `electron-src/lib/prisma/questionSubtotalAssignment.ts:38` | CropSubtotal | 設問小計を一括削除（複数） |
-| `electron-src/lib/prisma/questionSubtotalAssignment.ts:47` | CropSubtotal | 設問小計を一括削除（すべて） |
-| `electron-src/lib/prisma/projectPage.ts:47` | ProjectPage | プロジェクトページを単一削除 |
-| `electron-src/lib/prisma/cropSubtotal.ts:134` | CropSubtotal | 採点領域小計を単一削除 |
-| `electron-src/lib/prisma/cropSubtotal.ts:143` | CropSubtotal | 採点領域小計を一括削除 |
-| `electron-src/lib/prisma/userProject.ts:205` | UserProject | ユーザープロジェクトを削除 |
-| `electron-src/lib/prisma/gradingData.ts:100` | QuestionScore | 採点結果を一括削除 |
-| `electron-src/lib/prisma/gradingData.ts:112` | StudentAnswerImage | 答案画像を一括削除 |
-| `electron-src/lib/prisma/questionScore.ts:347` | QuestionScore | 採点を一括削除 |
-| `electron-src/lib/prisma/studentAnswer/batch.ts:69` | QuestionScore | 採点結果を一括削除 |
-| `electron-src/lib/prisma/studentAnswer/batch.ts:84` | StudentAnswerImage | 答案画像を一括削除 |
+| `electron-src/lib/prisma/cropRegionMarkingOverride.ts:113` | CropRegionMarkingOverride | マーク上書き設定を一括削除（複数領域）   |
+| `electron-src/lib/prisma/subject.ts:68`                    | Subject                   | 教科を単一削除                           |
+| `electron-src/lib/prisma/subtotalDefinition.ts:29`         | Subtotal                  | 小計定義を削除                           |
+| `electron-src/lib/prisma/drawingAnnotation.ts:347`         | DrawingAnnotation         | アノテーションを単一削除                 |
+| `electron-src/lib/prisma/drawingAnnotation.ts:367`         | DrawingAnnotation         | アノテーションを一括削除                 |
+| `electron-src/lib/prisma/subtotalGroup.ts:98`              | Subtotal                  | 既存小計を全削除（再作成）               |
+| `electron-src/lib/prisma/subtotalGroup.ts:204`             | ProjectSubtotalGroup      | プロジェクト関連付けを削除               |
+| `electron-src/lib/prisma/subtotalGroup.ts:209`             | SubtotalGroup             | 小計グループを削除                       |
+| `electron-src/lib/prisma/subtotalGroup.ts:386`             | ProjectSubtotalGroup      | プロジェクト関連付けを削除               |
+| `electron-src/lib/prisma/studentClassMembership.ts:79`     | StudentClassMembership    | メンバーシップを単一削除                 |
+| `electron-src/lib/prisma/studentAnswer/placement.ts:36`    | StudentAnswerImage        | 答案画像を単一削除                       |
+| `electron-src/lib/prisma/student.ts:109`                   | Student                   | 生徒を削除                               |
+| `electron-src/lib/prisma/student.ts:204`                   | Class                     | 学級を削除                               |
+| `electron-src/lib/prisma/projectSettings.ts:85`            | ProjectMarkingFormat      | 採点マーク形式を一括削除                 |
+| `electron-src/lib/prisma/projectSettings.ts:119`           | ProjectExportSettings     | 出力設定を一括削除                       |
+| `electron-src/lib/prisma/studentAnswer/crud.ts:168`        | StudentAnswerImage        | 答案画像を単一削除                       |
+| `electron-src/lib/prisma/class.ts:103`                     | Class                     | 学級を削除                               |
+| `electron-src/lib/prisma/masterAnswer.ts:128`              | MasterImage               | 模範解答画像を削除                       |
+| `electron-src/lib/prisma/masterAnswer.ts:140`              | ProjectPage               | プロジェクトページを削除                 |
+| `electron-src/lib/prisma/masterAnswer.ts:381`              | MasterImage               | 模範解答画像を一括削除                   |
+| `electron-src/lib/prisma/masterAnswer.ts:397`              | ProjectPage               | 空ページを一括削除                       |
+| `electron-src/lib/prisma/questionScore.ts:276`             | QuestionScore             | 採点を単一削除                           |
+| `electron-src/lib/prisma/projectClass.ts:247`              | ProjectClass              | プロジェクト学級を削除                   |
+| `electron-src/lib/prisma/projectClass.ts:264`              | ProjectClass              | プロジェクト学級を削除（複数）           |
+| `electron-src/lib/prisma/projectStudent.ts:117`            | ProjectStudent            | プロジェクト生徒を一括削除               |
+| `electron-src/lib/prisma/projectStudent.ts:125`            | StudentAnswerImage        | 答案画像を一括削除                       |
+| `electron-src/lib/prisma/project.ts:189`                   | Project                   | プロジェクト全体を削除                   |
+| `electron-src/lib/prisma/questionGroup.ts:35`              | SubtotalGroup             | 設問グループを削除                       |
+| `electron-src/lib/prisma/cropRegion.ts:86`                 | CropRegion                | 採点領域を削除                           |
+| `electron-src/lib/prisma/questionSubtotalAssignment.ts:29` | CropSubtotal              | 設問小計を単一削除                       |
+| `electron-src/lib/prisma/questionSubtotalAssignment.ts:38` | CropSubtotal              | 設問小計を一括削除（複数）               |
+| `electron-src/lib/prisma/questionSubtotalAssignment.ts:47` | CropSubtotal              | 設問小計を一括削除（すべて）             |
+| `electron-src/lib/prisma/projectPage.ts:47`                | ProjectPage               | プロジェクトページを単一削除             |
+| `electron-src/lib/prisma/cropSubtotal.ts:134`              | CropSubtotal              | 採点領域小計を単一削除                   |
+| `electron-src/lib/prisma/cropSubtotal.ts:143`              | CropSubtotal              | 採点領域小計を一括削除                   |
+| `electron-src/lib/prisma/userProject.ts:205`               | UserProject               | ユーザープロジェクトを削除               |
+| `electron-src/lib/prisma/gradingData.ts:100`               | QuestionScore             | 採点結果を一括削除                       |
+| `electron-src/lib/prisma/gradingData.ts:112`               | StudentAnswerImage        | 答案画像を一括削除                       |
+| `electron-src/lib/prisma/questionScore.ts:347`             | QuestionScore             | 採点を一括削除                           |
+| `electron-src/lib/prisma/studentAnswer/batch.ts:69`        | QuestionScore             | 採点結果を一括削除                       |
+| `electron-src/lib/prisma/studentAnswer/batch.ts:84`        | StudentAnswerImage        | 答案画像を一括削除                       |
 
 ### C. Cascade削除の連鎖影響（Project削除時）
 
@@ -420,7 +420,7 @@ Project (DELETE)
 
 Tombstoneテーブル方式を採用したため、Import/Export機能への影響はない。
 
-- エクスポート: 変更不要（_tombstoneテーブルはエクスポート対象外）
+- エクスポート: 変更不要（\_tombstoneテーブルはエクスポート対象外）
 - インポート: 変更不要（既存のIDリマッピング・temp-value方式がそのまま機能）
 
 ### 既知バグ（B1-B11）との関係
@@ -431,17 +431,17 @@ sqlite-nas-sync の導入は既知バグに影響しない。バグ修正は独�
 
 ## 結論：本プロジェクト側で必要な作業
 
-| 項目 | 作業内容 | 工数 |
-|------|---------|------|
-| PK (UUID) | **不要** - 全テーブル対応済み | - |
-| 論理削除 (deletedAt) | **不要** - Tombstoneテーブル方式を採用 | - |
-| UNIQUE制約 | **不要** - 維持。sync層で競合解決 | - |
-| テーブル分割 | **不要** - 現在のスキーマはsync適合 | - |
-| Cascade設定 | **不要** - 維持。トリガーが自動追跡 | - |
-| Import/Export | **不要** - 影響なし | - |
-| sqlite-nas-sync 初期化コード | **必要** - setupSync() 呼び出しの追加 | 小 |
-| sync UIの実装 | **必要** - sync状態表示・手動sync発火ボタン等 | 中 |
-| バージョン更新 | **必要** - v0.4.10 → v0.5.0 | 小 |
+| 項目                         | 作業内容                                      | 工数 |
+| ---------------------------- | --------------------------------------------- | ---- |
+| PK (UUID)                    | **不要** - 全テーブル対応済み                 | -    |
+| 論理削除 (deletedAt)         | **不要** - Tombstoneテーブル方式を採用        | -    |
+| UNIQUE制約                   | **不要** - 維持。sync層で競合解決             | -    |
+| テーブル分割                 | **不要** - 現在のスキーマはsync適合           | -    |
+| Cascade設定                  | **不要** - 維持。トリガーが自動追跡           | -    |
+| Import/Export                | **不要** - 影響なし                           | -    |
+| sqlite-nas-sync 初期化コード | **必要** - setupSync() 呼び出しの追加         | 小   |
+| sync UIの実装                | **必要** - sync状態表示・手動sync発火ボタン等 | 中   |
+| バージョン更新               | **必要** - v0.4.10 → v0.5.0                   | 小   |
 
 **本プロジェクトのスキーマ変更・既存コード変更は不要。**
 主な作業は sqlite-nas-sync ライブラリの開発と、本プロジェクトへの統合（初期化 + UI）のみ。
@@ -450,11 +450,11 @@ sqlite-nas-sync の導入は既知バグに影響しない。バグ修正は独�
 
 ## Sync設計
 
-### 方式: 変更ログ（_changelog）+ 定期sync
+### 方式: 変更ログ（\_changelog）+ 定期sync
 
 #### 変更ログテーブル
 
-tombstone（DELETE追跡のみ）を拡張し、INSERT / UPDATE / DELETE の全操作を記録する `_changelog` テーブルを使用する。これにより tombstone テーブルは不要になり、_changelog に統合される。
+tombstone（DELETE追跡のみ）を拡張し、INSERT / UPDATE / DELETE の全操作を記録する `_changelog` テーブルを使用する。これにより tombstone テーブルは不要になり、\_changelog に統合される。
 
 ```sql
 -- sqlite-nas-sync が自動作成
@@ -499,11 +499,11 @@ END;
 
 #### 方式選定の根拠
 
-| 方式 | 40名規模での評価 |
-|------|----------------|
+| 方式                                | 40名規模での評価                                                             |
+| ----------------------------------- | ---------------------------------------------------------------------------- |
 | タイムスタンプ方式（updatedAt比較） | 変更なしでも全テーブルスキャン必要。40クライアント×22テーブル=880クエリ/sync |
-| **変更ログ方式（_changelog）** | **変更なしなら1クエリで終了。40クライアント×1テーブル=40クエリ/sync** |
-| 差分ファイル方式 | DBが数MB程度なら過剰。実装複雑度に見合わない |
+| **変更ログ方式（\_changelog）**     | **変更なしなら1クエリで終了。40クライアント×1テーブル=40クエリ/sync**        |
+| 差分ファイル方式                    | DBが数MB程度なら過剰。実装複雑度に見合わない                                 |
 
 #### sync時の動作
 
@@ -531,6 +531,7 @@ sync()
 **定期sync（デフォルト30秒間隔、ユーザー設定可能）**
 
 書き込み時syncは不採用:
+
 - 採点中は秒単位でQuestionScoreがINSERT/UPDATEされる
 - 40人が毎書き込みでNASコピーすると帯域を圧迫
 - 一括処理（バッチ操作）との相性も悪い
@@ -546,7 +547,7 @@ NAS読み取り: 40クライアント × 39ファイルオープン / 30秒
 
 一般的な学校NAS（1Gbps）で十分処理可能。
 
-### _changelog の掃除
+### \_changelog の掃除
 
 時間ベースの自動掃除を採用:
 
@@ -555,8 +556,9 @@ DELETE FROM _changelog WHERE changedAt < datetime('now', '-7 days')
 ```
 
 7日以上syncしていないクライアントが復帰した場合:
-- _changelog に lastSeenId 以降のエントリがある → changelog方式（高速）
-- _changelog が掃除済みで lastSeenId が無い → updatedAt方式にフォールバック（遅いが確実）
+
+- \_changelog に lastSeenId 以降のエントリがある → changelog方式（高速）
+- \_changelog が掃除済みで lastSeenId が無い → updatedAt方式にフォールバック（遅いが確実）
 
 changelogはあくまで高速化のための最適化。なくても updatedAt で完全syncできる。
 

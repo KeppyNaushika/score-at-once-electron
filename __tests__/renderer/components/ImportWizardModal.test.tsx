@@ -25,7 +25,12 @@ vi.mock("@/hooks/import/useImportWizard", () => ({
 // useAuth をモック
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: vi.fn(() => ({
-    user: { id: "test-user-id", username: "testuser", name: "テストユーザー", role: "admin" },
+    user: {
+      id: "test-user-id",
+      username: "testuser",
+      name: "テストユーザー",
+      role: "admin",
+    },
     isLoading: false,
     login: vi.fn(),
     quickLogin: vi.fn(),
@@ -49,18 +54,14 @@ describe("ImportWizardModal", () => {
   })
 
   it("IM-1: モーダルが開くとfile_selectステップが表示される", () => {
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getByText("プロジェクトインポート")).toBeInTheDocument()
     expect(screen.getByText("プロジェクトアーカイブを選択")).toBeInTheDocument()
   })
 
   it("IM-2: 戻るボタンがfile_selectで無効化される", () => {
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     const backButton = screen.getByRole("button", { name: /戻る/ })
     expect(backButton).toBeDisabled()
@@ -70,9 +71,7 @@ describe("ImportWizardModal", () => {
     mockWizard = createMockWizard({ isProcessing: true })
     mockUseImportWizard.mockReturnValue(mockWizard)
 
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     const cancelButton = screen.getByRole("button", { name: /キャンセル/ })
     expect(cancelButton).toBeDisabled()
@@ -85,9 +84,7 @@ describe("ImportWizardModal", () => {
     })
     mockUseImportWizard.mockReturnValue(mockWizard)
 
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     const backButton = screen.getByRole("button", { name: /戻る/ })
     expect(backButton).toBeDisabled()
@@ -97,18 +94,14 @@ describe("ImportWizardModal", () => {
     mockWizard = createMockWizard({ error: "テストエラーメッセージ" })
     mockUseImportWizard.mockReturnValue(mockWizard)
 
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getByText("テストエラーメッセージ")).toBeInTheDocument()
     expect(screen.getByText("エラー")).toBeInTheDocument()
   })
 
   it("IM-6: ステップインジケーターが全ステップを表示する", () => {
-    render(
-      <ImportWizardModal isOpen={true} onClose={vi.fn()} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getByText("ファイル選択")).toBeInTheDocument()
     expect(screen.getByText("内容確認")).toBeInTheDocument()
@@ -122,9 +115,7 @@ describe("ImportWizardModal", () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
 
-    render(
-      <ImportWizardModal isOpen={true} onClose={onClose} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={onClose} />)
 
     await user.click(screen.getByRole("button", { name: /キャンセル/ }))
 
@@ -137,9 +128,7 @@ describe("ImportWizardModal", () => {
     mockWizard = createMockWizard({ isProcessing: true })
     mockUseImportWizard.mockReturnValue(mockWizard)
 
-    render(
-      <ImportWizardModal isOpen={true} onClose={onClose} />
-    )
+    render(<ImportWizardModal isOpen={true} onClose={onClose} />)
 
     const cancelButton = screen.getByRole("button", { name: /キャンセル/ })
     // disabled なのでクリックしても何も起きない
