@@ -43,9 +43,9 @@ export default function PdfToolsMainView() {
     )
   }
 
-  const handleOutputPagesChange = (pages: OutputPage[]) => {
+  const handleOutputPagesChange = useCallback((pages: OutputPage[]) => {
     setOutputPages(pages)
-  }
+  }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
