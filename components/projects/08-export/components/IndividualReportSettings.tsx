@@ -118,6 +118,47 @@ export function IndividualReportSettings({
             }}
           />
         </div>
+        {/* 統計に含める受験状態 */}
+        <div className="mt-2 flex flex-col gap-2">
+          <Label className="text-muted-foreground text-xs">
+            統計に含める受験状態
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            <OptionCard
+              label="受験"
+              checked={options.boxPlotIncludeStatuses.participating}
+              onChange={(v) =>
+                updateOption("boxPlotIncludeStatuses", {
+                  ...options.boxPlotIncludeStatuses,
+                  participating: v,
+                })
+              }
+              variant="sub"
+            />
+            <OptionCard
+              label="見込"
+              checked={options.boxPlotIncludeStatuses.expected}
+              onChange={(v) =>
+                updateOption("boxPlotIncludeStatuses", {
+                  ...options.boxPlotIncludeStatuses,
+                  expected: v,
+                })
+              }
+              variant="sub"
+            />
+            <OptionCard
+              label="欠席"
+              checked={options.boxPlotIncludeStatuses.absent}
+              onChange={(v) =>
+                updateOption("boxPlotIncludeStatuses", {
+                  ...options.boxPlotIncludeStatuses,
+                  absent: v,
+                })
+              }
+              variant="sub"
+            />
+          </div>
+        </div>
       </Section>
 
       {/* 小計点関連 */}
@@ -211,47 +252,6 @@ export function IndividualReportSettings({
                     updateOption("boxPlotSubtotalGroupSelection", selection)
                   }
                 />
-                {/* 受験状態フィルタ */}
-                <div className="flex flex-col gap-2">
-                  <Label className="text-muted-foreground text-xs">
-                    統計に含める受験状態
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    <OptionCard
-                      label="受験"
-                      checked={options.boxPlotIncludeStatuses.participating}
-                      onChange={(v) =>
-                        updateOption("boxPlotIncludeStatuses", {
-                          ...options.boxPlotIncludeStatuses,
-                          participating: v,
-                        })
-                      }
-                      variant="sub"
-                    />
-                    <OptionCard
-                      label="見込"
-                      checked={options.boxPlotIncludeStatuses.expected}
-                      onChange={(v) =>
-                        updateOption("boxPlotIncludeStatuses", {
-                          ...options.boxPlotIncludeStatuses,
-                          expected: v,
-                        })
-                      }
-                      variant="sub"
-                    />
-                    <OptionCard
-                      label="欠席"
-                      checked={options.boxPlotIncludeStatuses.absent}
-                      onChange={(v) =>
-                        updateOption("boxPlotIncludeStatuses", {
-                          ...options.boxPlotIncludeStatuses,
-                          absent: v,
-                        })
-                      }
-                      variant="sub"
-                    />
-                  </div>
-                </div>
                 <div className="flex flex-wrap gap-2">
                   <OptionCard
                     label="最小"
@@ -404,9 +404,15 @@ export function IndividualReportSettings({
                     variant="sub"
                   />
                   <OptionCard
-                    label="正答率表示"
+                    label="正答率"
                     checked={options.showCorrectRate}
                     onChange={(v) => updateOption("showCorrectRate", v)}
+                    variant="sub"
+                  />
+                  <OptionCard
+                    label="得点率"
+                    checked={options.showScoreRate ?? false}
+                    onChange={(v) => updateOption("showScoreRate", v)}
                     variant="sub"
                   />
                 </div>

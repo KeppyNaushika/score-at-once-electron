@@ -5,6 +5,7 @@
 import type { ScoringData } from "../../shared/types/exportTypes"
 import type {
   BoxPlotData,
+  RawTotalScoreEntry,
   StatisticsData,
   SubtotalRawScores,
   SubtotalStatistics,
@@ -118,18 +119,42 @@ export function calculateQuestionCorrectRates(
         totalCount++
         if (score.status === "correct") {
           correctCount++
-        } else if (
-          score.status === "partial" &&
-          score.score !== null &&
-          score.maxScore > 0
-        ) {
-          // 部分点の場合は得点率を考慮
-          correctCount += score.score / score.maxScore
         }
       }
     }
 
     rates[questionId] = totalCount > 0 ? (correctCount / totalCount) * 100 : 0
+  }
+
+  return rates
+}
+
+/**
+ * 設問別得点率を計算
+ * 各生徒の得点/配点の平均（部分点を比例的に反映）
+ */
+export function calculateQuestionScoreRates(
+  allScoringData: ScoringData[]
+): Record<string, number> {
+  const rates: Record<string, number> = {}
+
+  if (allScoringData.length === 0) return rates
+
+  const questionIds = allScoringData[0].scores.map((s) => s.questionId)
+
+  for (const questionId of questionIds) {
+    let scoreSum = 0
+    let totalCount = 0
+
+    for (const data of allScoringData) {
+      const score = data.scores.find((s) => s.questionId === questionId)
+      if (score && score.status !== "unscored" && score.maxScore > 0) {
+        totalCount++
+        scoreSum += (score.score ?? 0) / score.maxScore
+      }
+    }
+
+    rates[questionId] = totalCount > 0 ? (scoreSum / totalCount) * 100 : 0
   }
 
   return rates
@@ -232,7 +257,8 @@ export function calculateStatisticsForStudent(
   studentScore: number,
   allScoringData: ScoringData[],
   classScoringData: ScoringData[],
-  questionCorrectRates: Record<string, number>
+  questionCorrectRates: Record<string, number>,
+  questionScoreRates: Record<string, number>
 ): StatisticsData {
   // 全体のスコア配列
   const allScores = allScoringData.map((d) => d.totalScore)
@@ -263,6 +289,15 @@ export function calculateStatisticsForStudent(
   // 小計別生スコア（renderer側でのbox plot再計算用）
   const subtotalRawScores = collectSubtotalRawScores(allScoringData)
 
+  // 全生徒の合計点データ（renderer側での統計再計算用）
+  const rawTotalScores: RawTotalScoreEntry[] = allScoringData.map((d) => ({
+    studentId: d.studentId,
+    totalScore: d.totalScore,
+    status: d.status || ("participating" as const),
+    className: d.className,
+    grade: d.grade,
+  }))
+
   return {
     overall: {
       average: overallAverage,
@@ -282,7 +317,9 @@ export function calculateStatisticsForStudent(
       classRank,
     },
     questionCorrectRates,
+    questionScoreRates,
     subtotalStatistics,
     subtotalRawScores,
+    rawTotalScores,
   }
 }
