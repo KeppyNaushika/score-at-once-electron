@@ -15,7 +15,19 @@ import { cn } from "@/lib/utils"
 
 import { calculateLearningAdvice } from "../../utils/learningAdviceCalculator"
 import { BoxPlotChart } from "./BoxPlotChart"
+import {
+  buildStatsItems,
+  computeFilteredStats,
+  getVisibleSectionIndices,
+} from "./computeReportData"
 import { LearningAdvicePreview } from "./LearningAdvicePreview"
+import {
+  CommentSectionView,
+  HeaderView,
+  SignatureSectionView,
+  StatsSummaryView,
+  StudentInfoView,
+} from "./ReportSectionViews"
 import { ScoreTablePreview } from "./ScoreTablePreview"
 import { SubtotalTablePreview } from "./SubtotalTablePreview"
 
@@ -35,19 +47,12 @@ export interface PageAllocation {
 interface IndividualReportPreviewProps {
   report: IndividualReportData
   options: IndividualReportOptions
-  /** プレビュー表示用のスケール（0.5 = 50%縮小） */
   scale?: number
-  /** 追加のクラス名 */
   className?: string
-  /** 改ページプレビューを表示するか */
   showPageBreaks?: boolean
-  /** ページ振り分けが計算されたときのコールバック */
   onPagesCalculated?: (pages: PageAllocation[]) => void
 }
 
-/**
- * A4サイズの個人成績表プレビュー
- */
 export function IndividualReportPreview({
   report,
   options,
@@ -56,20 +61,16 @@ export function IndividualReportPreview({
   showPageBreaks = true,
   onPagesCalculated,
 }: IndividualReportPreviewProps) {
-  // フォントサイズのスケール（オプションに基づく）
-  const fontScale = getFontScale(options)
+  const fontScale = 1
 
-  // 各セクションのref
   const sectionRefs = useRef<(HTMLDivElement | null)[]>([])
   const [pages, setPages] = useState<PageAllocation[]>([
     { pageIndex: 0, sectionIndices: [] },
   ])
   const [measured, setMeasured] = useState(false)
 
-  // mm to px変換（96dpi基準: 1mm ≈ 3.7795px）
   const mmToPx = useCallback((mm: number) => mm * 3.7795275591, [])
 
-  // 学習アドバイスを動的に計算
   const learningAdvice = useMemo(() => {
     return calculateLearningAdvice(
       report.scoringData.scores,
@@ -82,26 +83,27 @@ export function IndividualReportPreview({
     options.adviceOptions,
   ])
 
-  // 表示されるセクションのインデックスリストを計算
-  const visibleSectionIndices = useMemo(() => {
-    const indices: number[] = [0, 1, 2] // ヘッダー、生徒情報、統計サマリーは常に表示
-    if (options.showSubtotalTable) indices.push(3)
-    if (options.graphOptions.showBoxPlot) indices.push(4)
-    if (options.showQuestionTable) indices.push(5)
-    if (options.showLearningAdvice) indices.push(6)
-    if (options.showComment) indices.push(7)
-    if (options.showSignature) indices.push(8)
-    return indices
-  }, [options])
+  const visibleSectionIndices = useMemo(
+    () => getVisibleSectionIndices(options),
+    [options]
+  )
 
-  // オプションやレポートが変更されたら再測定のためにリセット
+  // 統計サマリーの計算
+  const filteredStats = useMemo(
+    () => computeFilteredStats(report, options.boxPlotIncludeStatuses),
+    [report, options.boxPlotIncludeStatuses]
+  )
+
+  const statsItems = useMemo(
+    () => buildStatsItems(report, filteredStats, options),
+    [report, filteredStats, options]
+  )
+
   useEffect(() => {
     setMeasured(false)
   }, [options, report])
 
-  // セクションを測定してページに振り分け
   useEffect(() => {
-    // まだ測定用レンダリングが完了していない場合はスキップ
     if (measured) return
     if (!showPageBreaks) {
       setPages([{ pageIndex: 0, sectionIndices: [0, 1, 2, 3, 4, 5, 6, 7, 8] }])
@@ -115,20 +117,16 @@ export function IndividualReportPreview({
       let currentPage: PageAllocation = { pageIndex: 0, sectionIndices: [] }
       let currentPageHeight = 0
 
-      // 表示されるセクションのみを測定
       for (const index of visibleSectionIndices) {
         const ref = sectionRefs.current[index]
         if (!ref) continue
 
         const sectionHeight = ref.offsetHeight
 
-        // このセクションを現在のページに追加できるか？
         if (currentPageHeight + sectionHeight <= pageHeightPx) {
-          // 収まる場合は追加
           currentPage.sectionIndices.push(index)
           currentPageHeight += sectionHeight
         } else {
-          // 収まらない場合は新しいページを開始
           if (currentPage.sectionIndices.length > 0) {
             allocatedPages.push(currentPage)
           }
@@ -140,7 +138,6 @@ export function IndividualReportPreview({
         }
       }
 
-      // 最後のページを追加
       if (currentPage.sectionIndices.length > 0) {
         allocatedPages.push(currentPage)
       }
@@ -151,12 +148,9 @@ export function IndividualReportPreview({
           : [{ pageIndex: 0, sectionIndices: [] }]
       setPages(finalPages)
       setMeasured(true)
-
-      // コールバックで通知
       onPagesCalculated?.(finalPages)
     }
 
-    // 少し遅延させてDOMのレンダリング完了を待つ
     const timer = setTimeout(measureAndAllocate, 100)
     return () => clearTimeout(timer)
   }, [
@@ -167,7 +161,6 @@ export function IndividualReportPreview({
     visibleSectionIndices,
   ])
 
-  // セクションのref設定ヘルパー
   const setSectionRef = useCallback(
     (index: number) => (el: HTMLDivElement | null) => {
       sectionRefs.current[index] = el
@@ -175,125 +168,15 @@ export function IndividualReportPreview({
     []
   )
 
-  // 全セクションをレンダリング（測定用）
   const renderSection = (index: number) => {
     switch (index) {
-      case 0: // ヘッダー
-        return (
-          <header
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              marginBottom: "6mm",
-              paddingBottom: "4mm",
-              borderBottom: "2px solid #333",
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  fontSize: `${18 * fontScale}px`,
-                  fontWeight: "bold",
-                  margin: 0,
-                }}
-              >
-                {report.examInfo.examName}
-              </h1>
-              {report.examInfo.subject && (
-                <p
-                  style={{
-                    fontSize: `${12 * fontScale}px`,
-                    color: "#666",
-                    margin: "2mm 0 0 0",
-                  }}
-                >
-                  {report.examInfo.subject}
-                </p>
-              )}
-            </div>
-            <div style={{ textAlign: "right" }}>
-              {report.examInfo.examDate && (
-                <p
-                  style={{
-                    fontSize: `${12 * fontScale}px`,
-                    color: "#666",
-                    margin: 0,
-                  }}
-                >
-                  {formatDate(report.examInfo.examDate)}
-                </p>
-              )}
-              <p
-                style={{
-                  fontSize: `${14 * fontScale}px`,
-                  fontWeight: "bold",
-                  margin: "2mm 0 0 0",
-                }}
-              >
-                個人成績表
-              </p>
-            </div>
-          </header>
-        )
-      case 1: // 生徒情報
-        return (
-          <section
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: "6mm",
-              padding: "4mm",
-              backgroundColor: "#f5f5f5",
-              borderRadius: "2mm",
-            }}
-          >
-            <div>
-              <p
-                style={{
-                  fontSize: `${16 * fontScale}px`,
-                  fontWeight: "bold",
-                  margin: 0,
-                }}
-              >
-                {report.studentInfo.fullName}
-              </p>
-              <p
-                style={{
-                  fontSize: `${11 * fontScale}px`,
-                  color: "#666",
-                  margin: "1mm 0 0 0",
-                }}
-              >
-                {report.studentInfo.studentNumber}
-              </p>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <p
-                style={{
-                  fontSize: `${12 * fontScale}px`,
-                  margin: 0,
-                }}
-              >
-                {report.studentInfo.grade && `${report.studentInfo.grade}年`}
-                {report.studentInfo.className &&
-                  ` ${report.studentInfo.className}`}
-                {report.studentInfo.attendanceNumber != null &&
-                  ` ${report.studentInfo.attendanceNumber}番`}
-              </p>
-            </div>
-          </section>
-        )
-      case 2: // 統計サマリー
-        return (
-          <StatsSummary
-            report={report}
-            options={options}
-            fontScale={fontScale}
-          />
-        )
-      case 3: // 小計点テーブル
+      case 0:
+        return <HeaderView report={report} fontScale={fontScale} />
+      case 1:
+        return <StudentInfoView report={report} fontScale={fontScale} />
+      case 2:
+        return <StatsSummaryView items={statsItems} fontScale={fontScale} />
+      case 3:
         return options.showSubtotalTable ? (
           <SubtotalTablePreview
             report={report}
@@ -305,7 +188,7 @@ export function IndividualReportPreview({
             fontSize={options.subtotalTableFontSize}
           />
         ) : null
-      case 4: // 箱ひげ図
+      case 4:
         return options.graphOptions.showBoxPlot ? (
           <section style={{ marginBottom: "6mm" }}>
             <h2
@@ -338,7 +221,7 @@ export function IndividualReportPreview({
             />
           </section>
         ) : null
-      case 5: // 設問テーブル
+      case 5:
         return options.showQuestionTable ? (
           <ScoreTablePreview
             report={report}
@@ -346,7 +229,7 @@ export function IndividualReportPreview({
             fontScale={fontScale}
           />
         ) : null
-      case 6: // 学習アドバイス
+      case 6:
         return options.showLearningAdvice ? (
           <LearningAdvicePreview
             advice={learningAdvice}
@@ -354,80 +237,13 @@ export function IndividualReportPreview({
             fontScale={fontScale}
           />
         ) : null
-      case 7: // コメント欄
+      case 7:
         return options.showComment ? (
-          <section
-            style={{
-              marginTop: "6mm",
-              padding: "4mm",
-              border: "1px solid #ccc",
-              borderRadius: "2mm",
-            }}
-          >
-            <p
-              style={{
-                fontSize: `${11 * fontScale}px`,
-                fontWeight: "bold",
-                margin: "0 0 2mm 0",
-              }}
-            >
-              コメント:
-            </p>
-            <div
-              style={{
-                minHeight: "20mm",
-                borderBottom: "1px dotted #ccc",
-              }}
-            />
-          </section>
+          <CommentSectionView fontScale={fontScale} />
         ) : null
-      case 8: // 署名欄
+      case 8:
         return options.showSignature ? (
-          <section
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "10mm",
-              marginTop: "6mm",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: `${10 * fontScale}px`,
-                  margin: "0 0 2mm 0",
-                }}
-              >
-                保護者印
-              </p>
-              <div
-                style={{
-                  width: "20mm",
-                  height: "20mm",
-                  border: "1px solid #ccc",
-                  borderRadius: "2mm",
-                }}
-              />
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <p
-                style={{
-                  fontSize: `${10 * fontScale}px`,
-                  margin: "0 0 2mm 0",
-                }}
-              >
-                担任印
-              </p>
-              <div
-                style={{
-                  width: "20mm",
-                  height: "20mm",
-                  border: "1px solid #ccc",
-                  borderRadius: "2mm",
-                }}
-              />
-            </div>
-          </section>
+          <SignatureSectionView fontScale={fontScale} />
         ) : null
       default:
         return null
@@ -463,7 +279,6 @@ export function IndividualReportPreview({
               overflow: "hidden",
             }}
           >
-            {/* ページ番号表示 */}
             <div
               style={{
                 position: "absolute",
@@ -479,7 +294,6 @@ export function IndividualReportPreview({
               {pageIdx + 1} / {pages.length}
             </div>
 
-            {/* セクションをレンダリング */}
             {page.sectionIndices.map((sectionIdx) => (
               <div key={sectionIdx}>{renderSection(sectionIdx)}</div>
             ))}
@@ -508,7 +322,6 @@ export function IndividualReportPreview({
         position: "relative",
       }}
     >
-      {/* 測定用: 表示されるセクションのみを個別のdivでラップ */}
       {visibleSectionIndices.map((index) => (
         <div key={index} ref={setSectionRef(index)}>
           {renderSection(index)}
@@ -516,202 +329,4 @@ export function IndividualReportPreview({
       ))}
     </div>
   )
-}
-
-/**
- * 統計サマリーセクション
- * rawTotalScoresから受験状態フィルタ付きで統計を再計算
- */
-function StatsSummary({
-  report,
-  options,
-  fontScale,
-}: {
-  report: IndividualReportData
-  options: IndividualReportOptions
-  fontScale: number
-}) {
-  // 受験状態フィルタ付きで統計を再計算（箱ひげ図と共通設定）
-  const filteredStats = useMemo(() => {
-    const statuses = options.boxPlotIncludeStatuses
-
-    const raw = report.statistics.rawTotalScores
-    if (!raw || raw.length === 0) return report.statistics
-
-    const includeAll =
-      statuses.participating && statuses.expected && statuses.absent
-    if (includeAll) return report.statistics
-
-    const filterByStatus = (entries: typeof raw) =>
-      entries.filter((e) => {
-        if (e.status === "participating") return statuses.participating
-        if (e.status === "expected") return statuses.expected
-        if (e.status === "absent") return statuses.absent
-        return true
-      })
-
-    const filteredAll = filterByStatus(raw)
-    const allScores = filteredAll.map((e) => e.totalScore)
-
-    // 学級フィルタ
-    const filteredClass = filteredAll.filter(
-      (e) =>
-        e.className === report.studentInfo.className &&
-        e.grade === report.studentInfo.grade
-    )
-    const classScores = filteredClass.map((e) => e.totalScore)
-
-    const avg = (arr: number[]) =>
-      arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
-    const stdDev = (arr: number[]) => {
-      if (arr.length === 0) return 0
-      const a = avg(arr)
-      return Math.sqrt(arr.reduce((s, v) => s + (v - a) ** 2, 0) / arr.length)
-    }
-    const rank = (score: number, scores: number[]) => {
-      const sorted = [...scores].sort((a, b) => b - a)
-      return sorted.findIndex((s) => s <= score) + 1
-    }
-
-    const overallAvg = avg(allScores)
-    const overallStd = stdDev(allScores)
-    const studentScore = report.scoringData.totalScore
-    const deviation =
-      overallStd === 0
-        ? 50
-        : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
-
-    return {
-      ...report.statistics,
-      overall: {
-        ...report.statistics.overall,
-        average: overallAvg,
-        stdDev: overallStd,
-        total: filteredAll.length,
-      },
-      class: {
-        ...report.statistics.class,
-        average: avg(classScores),
-        stdDev: stdDev(classScores),
-        total: filteredClass.length,
-      },
-      personal: {
-        ...report.statistics.personal,
-        deviation,
-        overallRank: rank(studentScore, allScores),
-        classRank: rank(studentScore, classScores),
-      },
-    }
-  }, [report, options.boxPlotIncludeStatuses])
-
-  const items: { label: string; value: string }[] = []
-
-  // 得点
-  if (options.showScore) {
-    items.push({
-      label: "得点",
-      value: `${report.scoringData.totalScore} / ${report.scoringData.totalMaxScore}`,
-    })
-  }
-
-  // 平均点
-  if (options.showAverage !== "none") {
-    if (options.showAverage === "class" || options.showAverage === "both") {
-      items.push({
-        label: "学級平均",
-        value: filteredStats.class.average.toFixed(1),
-      })
-    }
-    if (options.showAverage === "overall" || options.showAverage === "both") {
-      items.push({
-        label: "全体平均",
-        value: filteredStats.overall.average.toFixed(1),
-      })
-    }
-  }
-
-  // 偏差値
-  if (options.showDeviation) {
-    items.push({
-      label: "偏差値",
-      value: filteredStats.personal.deviation.toFixed(1),
-    })
-  }
-
-  // 順位
-  if (options.showRank) {
-    if (options.rankType === "class" || options.rankType === "both") {
-      items.push({
-        label: "学級順位",
-        value: `${filteredStats.personal.classRank} / ${filteredStats.class.total}`,
-      })
-    }
-    if (options.rankType === "overall" || options.rankType === "both") {
-      items.push({
-        label: "全体順位",
-        value: `${filteredStats.personal.overallRank} / ${filteredStats.overall.total}`,
-      })
-    }
-  }
-
-  if (items.length === 0) return null
-
-  return (
-    <section
-      style={{
-        display: "flex",
-        gap: "3mm",
-        marginBottom: "6mm",
-      }}
-    >
-      {items.map((item, index) => (
-        <div
-          key={index}
-          style={{
-            flex: 1,
-            padding: "3mm 2mm",
-            backgroundColor: "#f0f7ff",
-            borderRadius: "2mm",
-            textAlign: "center",
-          }}
-        >
-          <p
-            style={{
-              fontSize: `${10 * fontScale}px`,
-              color: "#666",
-              margin: 0,
-            }}
-          >
-            {item.label}
-          </p>
-          <p
-            style={{
-              fontSize: `${16 * fontScale}px`,
-              fontWeight: "bold",
-              margin: "1mm 0 0 0",
-            }}
-          >
-            {item.value}
-          </p>
-        </div>
-      ))}
-    </section>
-  )
-}
-
-/**
- * フォントサイズのスケールを取得（将来的にオプションから取得）
- */
-function getFontScale(_options: IndividualReportOptions): number {
-  // TODO: オプションからフォントサイズ設定を取得
-  return 1
-}
-
-/**
- * 日付をフォーマット
- */
-function formatDate(date: Date | null): string {
-  if (!date) return ""
-  const d = new Date(date)
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 }

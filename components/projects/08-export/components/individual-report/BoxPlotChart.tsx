@@ -4,22 +4,28 @@
  * 箱ひげ図コンポーネント
  * SVGで描画し、印刷時もきれいにスケール
  * renderer側で欠席生徒の除外オプションに基づいて統計を再計算
+ *
+ * BoxPlotChart: hooks付きラッパー（プレビュー用）
+ * BoxPlotChartView: 純粋ビュー（プレビュー＋PDF出力共用）
  */
 import { useMemo } from "react"
 
 import type {
-  BoxPlotData,
   StatisticsData,
   SubtotalGroupSelection,
-  SubtotalRawScores,
 } from "@/electron-src/lib/export/individual-report/types"
 import type { ScoringData } from "@/electron-src/lib/shared/types/exportTypes"
 
-/** 受験状態フィルタ */
-interface BoxPlotIncludeStatuses {
-  participating: boolean
-  expected: boolean
-  absent: boolean
+import {
+  type BoxPlotIncludeStatuses,
+  type ComputedSubtotalStat,
+  computeFilteredSubtotalStats,
+} from "./computeReportData"
+
+const DEFAULT_INCLUDE_STATUSES: BoxPlotIncludeStatuses = {
+  participating: true,
+  expected: true,
+  absent: true,
 }
 
 interface BoxPlotChartProps {
@@ -41,130 +47,8 @@ interface BoxPlotChartProps {
 }
 
 /**
- * 配列の中央値を計算
+ * hooks付きラッパー（プレビュー用）
  */
-function calculateMedian(sortedValues: number[]): number {
-  const n = sortedValues.length
-  if (n === 0) return 0
-  if (n === 1) return sortedValues[0]
-
-  const mid = Math.floor(n / 2)
-  if (n % 2 === 0) {
-    return (sortedValues[mid - 1] + sortedValues[mid]) / 2
-  } else {
-    return sortedValues[mid]
-  }
-}
-
-/**
- * 配列の平均値を計算
- */
-function calculateAverage(values: number[]): number {
-  if (values.length === 0) return 0
-  return values.reduce((sum, v) => sum + v, 0) / values.length
-}
-
-/**
- * 箱ひげ図データを計算（Tukey法）
- */
-function calculateBoxPlotData(values: number[]): BoxPlotData {
-  if (values.length === 0) {
-    return { min: 0, q1: 0, median: 0, q3: 0, max: 0 }
-  }
-
-  const sorted = [...values].sort((a, b) => a - b)
-  const n = sorted.length
-
-  const min = sorted[0]
-  const max = sorted[n - 1]
-  const median = calculateMedian(sorted)
-
-  const midIndex = Math.floor(n / 2)
-  const lowerHalf = sorted.slice(0, midIndex)
-  const upperHalf = sorted.slice(n % 2 === 0 ? midIndex : midIndex + 1)
-
-  const q1 = calculateMedian(lowerHalf)
-  const q3 = calculateMedian(upperHalf)
-
-  return { min, q1, median, q3, max }
-}
-
-/**
- * 小計ごとの統計データを計算（受験状態フィルタ対応）
- */
-interface ComputedSubtotalStat {
-  subtotalId: string
-  subtotalLabel: string
-  subtotalGroupId: string
-  boxPlot: BoxPlotData
-  average: number
-  maxScore: number
-}
-
-const DEFAULT_INCLUDE_STATUSES: BoxPlotIncludeStatuses = {
-  participating: true,
-  expected: true,
-  absent: true,
-}
-
-function computeSubtotalStats(
-  rawScores: SubtotalRawScores[],
-  subtotalStatistics: StatisticsData["subtotalStatistics"],
-  includeStatuses: BoxPlotIncludeStatuses
-): ComputedSubtotalStat[] {
-  // 全て含める場合は元の統計をそのまま使用
-  const includeAll =
-    includeStatuses.participating &&
-    includeStatuses.expected &&
-    includeStatuses.absent
-
-  return subtotalStatistics.map((stat) => {
-    const rawData = rawScores.find((r) => r.subtotalId === stat.subtotalId)
-
-    if (!rawData || includeAll) {
-      // 生データがないか、全て含める場合は元の統計をそのまま使用
-      return {
-        subtotalId: stat.subtotalId,
-        subtotalLabel: stat.subtotalLabel,
-        subtotalGroupId: stat.subtotalGroupId,
-        boxPlot: stat.boxPlot,
-        average: stat.average,
-        maxScore: stat.maxScore,
-      }
-    }
-
-    // 選択された受験状態のみでスコア配列を作成
-    const filteredScores = rawData.scores
-      .filter((s) => {
-        if (s.status === "participating") return includeStatuses.participating
-        if (s.status === "expected") return includeStatuses.expected
-        if (s.status === "absent") return includeStatuses.absent
-        return true
-      })
-      .map((s) => s.score)
-
-    if (filteredScores.length === 0) {
-      return {
-        subtotalId: stat.subtotalId,
-        subtotalLabel: stat.subtotalLabel,
-        subtotalGroupId: stat.subtotalGroupId,
-        boxPlot: { min: 0, q1: 0, median: 0, q3: 0, max: 0 },
-        average: 0,
-        maxScore: stat.maxScore,
-      }
-    }
-
-    return {
-      subtotalId: stat.subtotalId,
-      subtotalLabel: stat.subtotalLabel,
-      subtotalGroupId: stat.subtotalGroupId,
-      boxPlot: calculateBoxPlotData(filteredScores),
-      average: calculateAverage(filteredScores),
-      maxScore: stat.maxScore,
-    }
-  })
-}
-
 export function BoxPlotChart({
   statistics,
   scoringData,
@@ -184,7 +68,7 @@ export function BoxPlotChart({
 }: BoxPlotChartProps) {
   // renderer側で統計を再計算（受験状態フィルタ対応）
   const computedStats = useMemo(() => {
-    return computeSubtotalStats(
+    return computeFilteredSubtotalStats(
       statistics.subtotalRawScores || [],
       statistics.subtotalStatistics,
       boxPlotIncludeStatuses
@@ -231,10 +115,71 @@ export function BoxPlotChart({
 
   if (subtotalStats.length === 0) return null
 
-  // チャート設定
-  // boxHeight: フォントサイズに基づく（fontSize * 1.8）
-  // itemSpacing: 項目間の間隔
-  // rowHeight: boxHeight + itemSpacing
+  // 各小計の得点を取得
+  const getStudentScore = (subtotalId: string): number => {
+    const subtotal = scoringData.subtotalScores.find(
+      (s) => s.subtotalId === subtotalId
+    )
+    return subtotal?.score ?? 0
+  }
+
+  return (
+    <BoxPlotChartView
+      subtotalStats={subtotalStats}
+      getStudentScore={getStudentScore}
+      fontScale={fontScale}
+      showMin={showMin}
+      showQ1={showQ1}
+      showMedian={showMedian}
+      showQ3={showQ3}
+      showMax={showMax}
+      showAverageLine={showAverageLine}
+      showStudentMarker={showStudentMarker}
+      boxPlotFontSize={boxPlotFontSize}
+      boxPlotItemHeight={boxPlotItemHeight}
+    />
+  )
+}
+
+// ============================
+// BoxPlotChartView（純粋ビュー）
+// ============================
+
+export interface BoxPlotChartViewProps {
+  subtotalStats: ComputedSubtotalStat[]
+  getStudentScore: (subtotalId: string) => number
+  fontScale: number
+  showMin: boolean
+  showQ1: boolean
+  showMedian: boolean
+  showQ3: boolean
+  showMax: boolean
+  showAverageLine: boolean
+  showStudentMarker: boolean
+  boxPlotFontSize: number
+  boxPlotItemHeight: number
+}
+
+/**
+ * 純粋ビューコンポーネント（hooks不使用）
+ * プレビューとPDF出力の両方で使用
+ */
+export function BoxPlotChartView({
+  subtotalStats,
+  getStudentScore,
+  fontScale,
+  showMin,
+  showQ1,
+  showMedian,
+  showQ3,
+  showMax,
+  showAverageLine,
+  showStudentMarker,
+  boxPlotFontSize,
+  boxPlotItemHeight,
+}: BoxPlotChartViewProps) {
+  if (subtotalStats.length === 0) return null
+
   const boxHeight = boxPlotFontSize * 1.8
   const itemSpacing = boxPlotItemHeight
   const rowHeight = boxHeight + itemSpacing
@@ -246,14 +191,6 @@ export function BoxPlotChart({
   const marginRight = 60
   const marginTop = 30
   const plotWidth = chartWidth - marginLeft - marginRight
-
-  // 各小計の得点を取得
-  const getStudentScore = (subtotalId: string): number => {
-    const subtotal = scoringData.subtotalScores.find(
-      (s) => s.subtotalId === subtotalId
-    )
-    return subtotal?.score ?? 0
-  }
 
   return (
     <svg
@@ -324,11 +261,8 @@ export function BoxPlotChart({
       {subtotalStats.map((stat, index) => {
         const y = marginTop + index * rowHeight
         const boxPlot = stat.boxPlot
-
-        // 最大得点 = boxPlot.max（全生徒の最高得点 = 満点の生徒がいれば満点）
         const maxScore = boxPlot.max || 100
 
-        // 得点率に変換
         const toPercent = (score: number) => (score / maxScore) * 100
         const toX = (percent: number) =>
           marginLeft + (percent / 100) * plotWidth
@@ -339,7 +273,6 @@ export function BoxPlotChart({
         const q3X = toX(toPercent(boxPlot.q3))
         const maxX = toX(toPercent(boxPlot.max))
 
-        // 生徒の得点位置
         const studentScore = getStudentScore(stat.subtotalId)
         const studentX = toX(toPercent(studentScore))
 
@@ -361,7 +294,6 @@ export function BoxPlotChart({
             {/* 最小から最も近い表示要素への水平線 */}
             {showMin &&
               (() => {
-                // 最小の次に表示される要素を探す
                 const targetX = showQ1
                   ? q1X
                   : showMedian
@@ -484,7 +416,6 @@ export function BoxPlotChart({
             {/* 最も近い表示要素から最大への水平線 */}
             {showMax &&
               (() => {
-                // 最大の手前に表示される要素を探す
                 const targetX = showQ3
                   ? q3X
                   : showMedian
@@ -551,14 +482,12 @@ export function BoxPlotChart({
           let xOffset = 0
           const legendFontSize = (boxPlotFontSize - 2) * fontScale
 
-          // 範囲ラベルを動的に生成
           const getRangeLabel = (): string | null => {
-            // 塗りつぶしが表示される条件に基づいてラベルを決定
             if (showQ1 && showMedian && showQ3) return "Q1-Q3範囲"
             if (showQ1 && showMedian && !showQ3) return "Q1-中央値範囲"
             if (!showQ1 && showMedian && showQ3) return "中央値-Q3範囲"
             if (showQ1 && !showMedian && showQ3) return "Q1-Q3範囲"
-            return null // 塗りつぶしなし
+            return null
           }
           const rangeLabel = getRangeLabel()
 
