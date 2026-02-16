@@ -30,7 +30,7 @@ export async function exportGradingDataExcel(
     // データが正常に取得できているかチェック
     if (
       !dataResult.questionRegions ||
-      !dataResult.subtotalRegions ||
+      !dataResult.subtotalColumns ||
       !dataResult.scoringData
     ) {
       return { success: false, error: "必要なデータの取得に失敗しました" }
@@ -56,7 +56,7 @@ export async function exportGradingDataExcel(
     await createScoreSheet(
       workbook,
       dataResult.questionRegions,
-      dataResult.subtotalRegions,
+      dataResult.subtotalColumns,
       dataResult.scoringData
     )
 
@@ -64,7 +64,7 @@ export async function exportGradingDataExcel(
     await createResultSheet(
       workbook,
       dataResult.questionRegions,
-      dataResult.subtotalRegions,
+      dataResult.subtotalColumns,
       dataResult.scoringData
     )
 

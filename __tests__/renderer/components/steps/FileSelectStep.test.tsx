@@ -3,16 +3,16 @@
  * FileSelectStep コンポーネントのテスト
  */
 
+// setup.ts を適用
+import "../../setup"
+
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { FileSelectStep } from "@/components/import/steps/FileSelectStep"
 
 import { createMockWizard } from "../../helpers/mockWizard"
-
-// setup.ts を適用
-import "../../setup"
 
 describe("FileSelectStep", () => {
   afterEach(() => {

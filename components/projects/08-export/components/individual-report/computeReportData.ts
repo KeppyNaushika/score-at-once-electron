@@ -64,14 +64,18 @@ export function computeFilteredStats(
     })
 
   const filteredAll = filterByStatus(raw)
-  const allScores = filteredAll.map((e) => e.totalScore)
+  const allScores = filteredAll
+    .map((e) => e.totalScore)
+    .filter((s): s is number => s !== null)
 
   const filteredClass = filteredAll.filter(
     (e) =>
       e.className === report.studentInfo.className &&
       e.grade === report.studentInfo.grade
   )
-  const classScores = filteredClass.map((e) => e.totalScore)
+  const classScores = filteredClass
+    .map((e) => e.totalScore)
+    .filter((s): s is number => s !== null)
 
   const avg = (arr: number[]) =>
     arr.length === 0 ? 0 : arr.reduce((s, v) => s + v, 0) / arr.length
@@ -89,8 +93,10 @@ export function computeFilteredStats(
   const overallStd = stdDevFn(allScores)
   const studentScore = report.scoringData.totalScore
   const deviation =
-    overallStd === 0
-      ? 50
+    studentScore === null || overallStd === 0
+      ? studentScore === null
+        ? 0
+        : 50
       : Math.round(((studentScore - overallAvg) / overallStd) * 10 + 50)
 
   return {
@@ -110,8 +116,8 @@ export function computeFilteredStats(
     personal: {
       ...report.statistics.personal,
       deviation,
-      overallRank: rankFn(studentScore, allScores),
-      classRank: rankFn(studentScore, classScores),
+      overallRank: studentScore !== null ? rankFn(studentScore, allScores) : 0,
+      classRank: studentScore !== null ? rankFn(studentScore, classScores) : 0,
     },
   }
 }
@@ -188,6 +194,7 @@ export function computeFilteredSubtotalStats(
         return true
       })
       .map((s) => s.score)
+      .filter((s): s is number => s !== null)
 
     if (filteredScores.length === 0) {
       return {
@@ -225,10 +232,7 @@ export function filterSubtotalScores(
 ): SubtotalScore[] {
   let scores = subtotalScores
 
-  if (
-    groupSelection?.enabled &&
-    groupSelection.selectedGroupIds.length > 0
-  ) {
+  if (groupSelection?.enabled && groupSelection.selectedGroupIds.length > 0) {
     scores = scores.filter((score) =>
       groupSelection.selectedGroupIds.includes(score.subtotalGroupId)
     )
@@ -254,14 +258,14 @@ export function groupSubtotalData(
     const existing = groupMap.get(groupId)
     if (existing) {
       existing.items.push(score)
-      existing.totalScore += score.score
+      existing.totalScore += score.score ?? 0
       existing.totalMaxScore += score.maxScore
     } else {
       groupMap.set(groupId, {
         groupId,
         groupName: score.subtotalGroupName,
         items: [score],
-        totalScore: score.score,
+        totalScore: score.score ?? 0,
         totalMaxScore: score.maxScore,
       })
     }

@@ -7,7 +7,6 @@ import {
   defaultConfig,
   defaultPartialScoreConfig,
   defaultSubtotalScoreConfig,
-  defaultSummaryScoreConfig,
   defaultTotalScoreConfig,
   positionLabels,
 } from "@/components/projects/08-export/components/scoring-mark-settings/constants/scoringMarkConstants"

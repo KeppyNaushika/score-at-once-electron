@@ -125,8 +125,7 @@ export function StudentInfoView({ report, fontScale }: StudentInfoViewProps) {
           }}
         >
           {report.studentInfo.grade && `${report.studentInfo.grade}年`}
-          {report.studentInfo.className &&
-            ` ${report.studentInfo.className}`}
+          {report.studentInfo.className && ` ${report.studentInfo.className}`}
           {report.studentInfo.attendanceNumber != null &&
             ` ${report.studentInfo.attendanceNumber}番`}
         </p>

@@ -184,7 +184,7 @@ export function calculateSubtotalStatistics(
       const subtotal = data.subtotalScores.find(
         (s) => s.subtotalId === template.subtotalId
       )
-      if (subtotal) {
+      if (subtotal && subtotal.score !== null) {
         scores.push(subtotal.score)
       }
     }
@@ -225,7 +225,7 @@ export function collectSubtotalRawScores(
         const subtotal = data.subtotalScores.find(
           (s) => s.subtotalId === template.subtotalId
         )
-        if (!subtotal) return null
+        if (!subtotal || subtotal.score === null) return null
         return {
           studentId: data.studentId,
           score: subtotal.score,
@@ -254,15 +254,19 @@ export function collectSubtotalRawScores(
  */
 export function calculateStatisticsForStudent(
   studentId: string,
-  studentScore: number,
+  studentScore: number | null,
   allScoringData: ScoringData[],
   classScoringData: ScoringData[],
   questionCorrectRates: Record<string, number>,
   questionScoreRates: Record<string, number>
 ): StatisticsData {
-  // 全体のスコア配列
-  const allScores = allScoringData.map((d) => d.totalScore)
-  const classScores = classScoringData.map((d) => d.totalScore)
+  // 全体のスコア配列（null を除外）
+  const allScores = allScoringData
+    .map((d) => d.totalScore)
+    .filter((s): s is number => s !== null)
+  const classScores = classScoringData
+    .map((d) => d.totalScore)
+    .filter((s): s is number => s !== null)
 
   // 全体統計
   const overallAverage = calculateAverage(allScores)
@@ -274,14 +278,15 @@ export function calculateStatisticsForStudent(
   const classStdDev = calculateStdDev(classScores)
   const classBoxPlot = calculateBoxPlotData(classScores)
 
-  // 個人統計
-  const deviation = calculateDeviation(
-    studentScore,
-    overallAverage,
-    overallStdDev
-  )
-  const overallRank = calculateRank(studentScore, allScores)
-  const classRank = calculateRank(studentScore, classScores)
+  // 個人統計（studentScore === null の場合は deviation=0, rank=0）
+  const deviation =
+    studentScore !== null
+      ? calculateDeviation(studentScore, overallAverage, overallStdDev)
+      : 0
+  const overallRank =
+    studentScore !== null ? calculateRank(studentScore, allScores) : 0
+  const classRank =
+    studentScore !== null ? calculateRank(studentScore, classScores) : 0
 
   // 小計別統計（SubtotalScoreから直接グループ情報を取得）
   const subtotalStatistics = calculateSubtotalStatistics(allScoringData)

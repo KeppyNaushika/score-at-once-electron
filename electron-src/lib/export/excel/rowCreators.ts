@@ -1,23 +1,13 @@
-import type { CropRegion } from "@prisma/client"
 import * as ExcelJS from "exceljs"
 
-import { SubtotalTargetMap } from "../../shared/calculations/subtotalCalculator"
 import { ScoringData } from "../../shared/types/exportTypes"
 import {
   applyCellStyle,
   getExcelColumnLetter,
   getStatusSymbol,
 } from "../../shared/utilities/excelUtilities"
+import type { SubtotalColumn } from "./dataFetcher"
 
-/**
- * データ行を作成する
- *
- * @param worksheet - 対象のワークシート
- * @param scoringData - 採点データ配列
- * @param subtotalRegions - 小計領域配列
- * @param subtotalTargetMap - 小計対象設問マップ
- * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
- */
 /**
  * 順位付きの採点データ型
  */
@@ -26,14 +16,21 @@ type ScoringDataWithRank = ScoringData & {
   rank: number
 }
 
+/**
+ * データ行を作成する
+ *
+ * @param worksheet - 対象のワークシート
+ * @param scoringData - 採点データ配列
+ * @param subtotalColumns - 小計列情報配列（SubtotalGroupから構築）
+ * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
+ */
 export async function createDataRows(
   worksheet: ExcelJS.Worksheet,
   scoringData: ScoringData[],
-  subtotalRegions: CropRegion[],
-  subtotalTargetMap: SubtotalTargetMap,
+  subtotalColumns: SubtotalColumn[],
   isScoreSheet: boolean
 ) {
-  // 事前に順位を計算（総合点の降順でソート）
+  // 事前に順位を計算（総合点の降順でソート、null は最下位扱い）
   const scoringDataWithRank: ScoringDataWithRank[] = scoringData
     .map(
       (student, index): ScoringDataWithRank => ({
@@ -42,11 +39,11 @@ export async function createDataRows(
         rank: 0, // 仮の値、後で正しい順位に更新
       })
     )
-    .sort((a, b) => b.totalScore - a.totalScore)
+    .sort((a, b) => (b.totalScore ?? -1) - (a.totalScore ?? -1))
     .map(
       (student, rank): ScoringDataWithRank => ({
         ...student,
-        rank: rank + 1,
+        rank: student.totalScore !== null ? rank + 1 : 0,
       })
     )
     // 元の順序に戻す
@@ -54,14 +51,13 @@ export async function createDataRows(
 
   for (let i = 0; i < scoringDataWithRank.length; i++) {
     const student = scoringDataWithRank[i]
-    const rowIndex = i + 2 // ヘッダー行を考慮
 
     // 受験状態を最左列（A列）に設定
     const statusText = getStatusText(student.status)
 
     const row = worksheet.addRow([
       statusText, // 受験状態（A列）
-      student.rank, // 順位（B列）- 事前に計算済みの順位を使用
+      student.rank > 0 ? student.rank : "", // 順位（B列）- null totalScore → 空欄
       student.grade || "",
       student.className || "",
       student.attendanceNumber || "",
@@ -69,31 +65,21 @@ export async function createDataRows(
       student.studentName,
     ])
 
-    // 合計点の計算（Excel関数使用）
-    const questionStartColIndex = 9 + subtotalRegions.length // 1つ右にシフト
-    const questionEndColIndex =
-      questionStartColIndex + student.scores.length - 1
-    const questionStartCol = getExcelColumnLetter(questionStartColIndex)
-    const questionEndCol = getExcelColumnLetter(questionEndColIndex)
-    const totalCell = row.getCell("H") // G列からH列に変更
-    totalCell.value = {
-      formula: `SUM(${questionStartCol}${rowIndex}:${questionEndCol}${rowIndex})`,
+    // 合計点の設定（計算済み値を直接出力、null → 空欄）
+    const totalCell = row.getCell("H")
+    if (student.totalScore !== null) {
+      totalCell.value = student.totalScore
+    } else {
+      totalCell.value = ""
     }
     // 合計点を赤色に設定
     totalCell.font = { color: { argb: "FFFF0000" } }
 
-    // 小計点の設定
-    await setSubtotalCells(
-      row,
-      student,
-      subtotalRegions,
-      subtotalTargetMap,
-      rowIndex,
-      isScoreSheet
-    )
+    // 小計点の設定（SubtotalColumn ID紐付け方式）
+    setSubtotalCells(row, student, subtotalColumns, isScoreSheet)
 
     // 設問別データの設定
-    setQuestionCells(row, student, subtotalRegions.length, isScoreSheet)
+    setQuestionCells(row, student, subtotalColumns.length, isScoreSheet)
 
     // 行スタイルの適用
     row.eachCell((cell) => applyCellStyle(cell, "data"))
@@ -101,69 +87,49 @@ export async function createDataRows(
 }
 
 /**
- * 小計点セルを設定する
+ * 小計点セルを設定する（SubtotalColumn ID紐付け方式）
  *
  * @param row - 対象の行
  * @param student - 生徒の採点データ（計算済み小計点を含む）
- * @param subtotalRegions - 小計領域配列
- * @param subtotalTargetMap - 小計対象設問マップ（正誤一覧シートでのみ使用、非推奨）
- * @param rowIndex - 行インデックス（1ベース）
- * @param isScoreSheet - 点数一覧シートかどうか（true: 点数一覧、false: 正誤一覧）
- *
- * 注意: 点数一覧では計算済みの小計点を直接使用、正誤一覧では従来のExcel関数を使用
+ * @param subtotalColumns - 小計列情報配列
+ * @param isScoreSheet - 点数一覧シートかどうか
  */
-async function setSubtotalCells(
+function setSubtotalCells(
   row: ExcelJS.Row,
   student: ScoringData,
-  subtotalRegions: CropRegion[],
-  subtotalTargetMap: SubtotalTargetMap,
-  rowIndex: number,
+  subtotalColumns: SubtotalColumn[],
   isScoreSheet: boolean
 ) {
-  let subtotalColIndex = 9 // 1つ右にシフト
-  const questionStartColIndex = 9 + subtotalRegions.length // 1つ右にシフト
+  let subtotalColIndex = 9
 
-  for (let i = 0; i < subtotalRegions.length; i++) {
+  for (const column of subtotalColumns) {
     const col = getExcelColumnLetter(subtotalColIndex)
-    const subtotalScore = student.subtotalScores[i]
+    const subtotalScore = student.subtotalScores.find(
+      (s) => s.subtotalId === column.subtotalId
+    )
 
-    if (subtotalScore) {
-      if (isScoreSheet) {
-        // 点数一覧：計算済みの小計点を直接使用
-        if (subtotalScore.score !== null && subtotalScore.score !== undefined) {
-          // 採点済みデータがあれば0点でも表示
-          row.getCell(col).value = subtotalScore.score
-        } else {
-          // データがない場合は空欄
-          row.getCell(col).value = ""
-        }
+    if (isScoreSheet) {
+      // 点数一覧：計算済みの小計点を直接使用
+      if (
+        subtotalScore &&
+        subtotalScore.score !== null &&
+        subtotalScore.score !== undefined
+      ) {
+        row.getCell(col).value = subtotalScore.score
       } else {
-        // 正誤一覧：従来のロジックを使用（Excel関数が必要）
-        // NOTE: buildSubtotalTargetMapは非推奨で空のマップを返すため、このロジックは機能しない
-        const targetQuestionIndices =
-          subtotalTargetMap[subtotalScore.subtotalId] || []
-
-        if (targetQuestionIndices.length > 0) {
-          const targetCells = targetQuestionIndices.map((index) => {
-            const questionCol = getExcelColumnLetter(
-              questionStartColIndex + index
-            )
-            return `${questionCol}${rowIndex}`
-          })
-
-          // 正誤一覧：対象設問の正答数
-          const formula = targetCells
-            .map((cell) => `IF(${cell}="○",1,0)`)
-            .join("+")
-          row.getCell(col).value = { formula }
-        } else {
-          // 正誤一覧で対象設問が不明な場合は空欄
-          row.getCell(col).value = ""
-        }
+        row.getCell(col).value = ""
       }
     } else {
-      // データがない場合は空欄
-      row.getCell(col).value = ""
+      // 正誤一覧：計算済みの小計点を直接使用（旧Excel関数方式を廃止）
+      if (
+        subtotalScore &&
+        subtotalScore.score !== null &&
+        subtotalScore.score !== undefined
+      ) {
+        row.getCell(col).value = subtotalScore.score
+      } else {
+        row.getCell(col).value = ""
+      }
     }
     subtotalColIndex++
   }

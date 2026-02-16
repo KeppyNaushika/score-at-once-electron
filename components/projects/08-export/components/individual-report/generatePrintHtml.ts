@@ -201,8 +201,7 @@ function renderSectionElement(
 
       const groupTableDataList = groupedData.map((group) => {
         const allocatedColumns = isHorizontalLayout
-          ? (allocateColumnsDHondt(groupedData, columns).get(group.groupId) ||
-              1)
+          ? allocateColumnsDHondt(groupedData, columns).get(group.groupId) || 1
           : columns
         const columnItems = splitItemsIntoColumns(group.items, allocatedColumns)
         const maxRows = Math.max(...columnItems.map((col) => col.length), 0)

@@ -3,20 +3,20 @@
  * FileOverviewStep コンポーネントのテスト
  */
 
+// setup.ts を適用
+import "../../setup"
+
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { FileOverviewStep } from "@/components/import/steps/FileOverviewStep"
 
-import { createMockWizard } from "../../helpers/mockWizard"
 import {
   createMockFileOverviewData,
   createMockManifest,
 } from "../../helpers/mockData"
-
-// setup.ts を適用
-import "../../setup"
+import { createMockWizard } from "../../helpers/mockWizard"
 
 describe("FileOverviewStep", () => {
   afterEach(() => {
