@@ -3,19 +3,18 @@
  * ImportWizardModal コンポーネントのテスト
  */
 
+// setup.ts を適用
+import "../setup"
+
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useImportWizard } from "@/hooks/import/useImportWizard"
-import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
-import { initialState } from "@/hooks/import/constants"
+import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
+import { useImportWizard } from "@/hooks/import/useImportWizard"
 
 import { createMockWizard } from "../helpers/mockWizard"
-
-// setup.ts を適用
-import "../setup"
 
 // useImportWizard をモック
 vi.mock("@/hooks/import/useImportWizard", () => ({
@@ -123,7 +122,7 @@ describe("ImportWizardModal", () => {
   })
 
   it("IM-8: 処理中にキャンセルボタンクリックでonCloseが呼ばれない", async () => {
-    const user = userEvent.setup()
+    userEvent.setup()
     const onClose = vi.fn()
     mockWizard = createMockWizard({ isProcessing: true })
     mockUseImportWizard.mockReturnValue(mockWizard)

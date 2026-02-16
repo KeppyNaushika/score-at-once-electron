@@ -6,8 +6,8 @@
 
 import { vi } from "vitest"
 
-import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import { initialState } from "@/hooks/import/constants"
+import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type { ImportWizardState } from "@/types/projectArchive.types"
 
 /**

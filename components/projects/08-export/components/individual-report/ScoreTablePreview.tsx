@@ -267,12 +267,13 @@ function SingleColumnTable({
                   fontWeight: "bold",
                 }}
               >
-                {Math.round(
-                  (report.scoringData.totalScore /
-                    report.scoringData.totalMaxScore) *
-                    100
-                )}
-                %
+                {report.scoringData.totalScore !== null
+                  ? `${Math.round(
+                      (report.scoringData.totalScore /
+                        report.scoringData.totalMaxScore) *
+                        100
+                    )}%`
+                  : "-"}
               </td>
             )}
           </tr>
@@ -495,7 +496,7 @@ function MultiColumnTable({
       >
         <span>合計</span>
         <span>
-          {report.scoringData.totalScore}
+          {report.scoringData.totalScore ?? "-"}
           <span
             style={{ fontSize: `${11 * fontScale * 0.8}px`, color: "#666" }}
           >
@@ -503,11 +504,14 @@ function MultiColumnTable({
             / {report.scoringData.totalMaxScore}
           </span>{" "}
           (
-          {Math.round(
-            (report.scoringData.totalScore / report.scoringData.totalMaxScore) *
-              100
-          )}
-          %)
+          {report.scoringData.totalScore !== null
+            ? `${Math.round(
+                (report.scoringData.totalScore /
+                  report.scoringData.totalMaxScore) *
+                  100
+              )}%`
+            : "-"}
+          )
         </span>
       </div>
     </section>

@@ -484,7 +484,7 @@ function drawCharts(
       )
       return {
         label: st.subtotalLabel,
-        value: st.score,
+        value: st.score ?? 0,
         maxValue: st.maxScore,
         average: stats?.average,
       }
@@ -532,7 +532,7 @@ function drawCharts(
     drawBoxPlot(
       ctx,
       reportData.statistics.overall.boxPlot,
-      reportData.scoringData.totalScore,
+      reportData.scoringData.totalScore ?? 0,
       reportData.scoringData.totalMaxScore,
       chartX,
       y,

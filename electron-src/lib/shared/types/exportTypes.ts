@@ -16,7 +16,7 @@ export interface ScoringData {
   attendanceNumber?: number | null
   status?: "participating" | "expected" | "absent"
   scores: ScoreDetail[]
-  totalScore: number
+  totalScore: number | null
   totalMaxScore: number
   subtotalScores: SubtotalScore[]
 }
@@ -30,8 +30,8 @@ export interface SubtotalScore {
   subtotalGroupName: string
   /** 小計点ラベル（Subtotal.name） */
   subtotalLabel: string
-  /** 得点 */
-  score: number
+  /** 得点（全設問unscoredの場合はnull） */
+  score: number | null
   /** 最大点 */
   maxScore: number
   /** QUESTION_ASSIGNMENTが存在するか（設問と関連付けられているか） */

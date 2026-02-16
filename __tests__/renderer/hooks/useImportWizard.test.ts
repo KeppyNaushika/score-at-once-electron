@@ -9,19 +9,18 @@ import { act, renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { useImportWizard } from "@/hooks/import/useImportWizard"
 import { initialState } from "@/hooks/import/constants"
+import { useImportWizard } from "@/hooks/import/useImportWizard"
 
+import {
+  createMockFileOverviewData,
+  createMockScoringConflictData,
+} from "../helpers/mockData"
 import {
   cleanupMockElectronAPI,
   createMockElectronAPI,
   type MockArchive,
 } from "../helpers/mockElectronAPI"
-import {
-  createMockFileOverviewData,
-  createMockManifest,
-  createMockScoringConflictData,
-} from "../helpers/mockData"
 
 // useAuth モック
 vi.mock("@/contexts/AuthContext", () => ({
@@ -756,7 +755,6 @@ describe("useImportWizard", () => {
 
     it("IW-75: 正常実行時にresultを返す", async () => {
       const { result } = renderHook(() => useImportWizard())
-      const hookResult = { result }
       await setupForExecute({ result })
 
       let importResult: unknown

@@ -142,7 +142,7 @@ export interface BoxPlotData {
 /** 生徒ごとの小計点データ（renderer側計算用） */
 export interface StudentSubtotalScore {
   studentId: string
-  score: number
+  score: number | null
   status: "participating" | "expected" | "absent"
 }
 
@@ -155,7 +155,7 @@ export interface SubtotalRawScores {
 /** 生徒ごとの合計点データ（renderer側での統計再計算用） */
 export interface RawTotalScoreEntry {
   studentId: string
-  totalScore: number
+  totalScore: number | null
   status: "participating" | "expected" | "absent"
   className?: string
   grade?: string

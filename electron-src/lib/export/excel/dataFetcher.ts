@@ -24,6 +24,12 @@ import {
   SubtotalScore,
 } from "../../shared/types/exportTypes"
 
+/** SubtotalGroupから構築した小計列情報（Excel出力用） */
+export interface SubtotalColumn {
+  subtotalId: string
+  label: string
+}
+
 /** SubtotalGroup情報（Excel出力用） */
 interface SubtotalGroupData {
   groupId: string
@@ -45,6 +51,7 @@ export interface ExportDataResult {
   selectedStudents?: (Student & { projectStudent?: ProjectStudent })[]
   questionRegions?: CropRegion[]
   subtotalRegions?: CropRegion[]
+  subtotalColumns?: SubtotalColumn[]
   scoringData?: ScoringData[]
 }
 
@@ -153,6 +160,12 @@ export async function fetchExportData(
           }))
         : []
 
+    // SubtotalGroupから小計列情報を構築
+    const subtotalColumns: SubtotalColumn[] = subtotalGroupsData.flatMap(
+      (group) =>
+        group.subtotals.map((s) => ({ subtotalId: s.id, label: s.name }))
+    )
+
     // 採点データの構造化
     const scoringData = await buildScoringData(
       selectedStudents,
@@ -167,6 +180,7 @@ export async function fetchExportData(
       selectedStudents,
       questionRegions,
       subtotalRegions,
+      subtotalColumns,
       scoringData,
     }
   } catch (error) {
@@ -216,10 +230,10 @@ async function buildScoringData(
         questionScores.scores || []
       )
 
-      const totalScore = scores.reduce(
-        (sum, score) => sum + (score.score || 0),
-        0
-      )
+      const allUnscored = scores.every((s) => s.status === "unscored")
+      const totalScore = allUnscored
+        ? null
+        : scores.reduce((sum, score) => sum + (score.score ?? 0), 0)
       const totalMaxScore = scores.reduce(
         (sum, score) => sum + score.maxScore,
         0

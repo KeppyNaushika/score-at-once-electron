@@ -3,6 +3,9 @@
  * ExecuteStep コンポーネントのテスト
  */
 
+// setup.ts を適用
+import "../../setup"
+
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
@@ -10,9 +13,6 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { ExecuteStep } from "@/components/import/steps/ExecuteStep"
 
 import { createMockWizard } from "../../helpers/mockWizard"
-
-// setup.ts を適用
-import "../../setup"
 
 describe("ExecuteStep", () => {
   afterEach(() => {

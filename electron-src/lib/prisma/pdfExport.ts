@@ -83,7 +83,7 @@ export interface PdfExportPageData {
   subtotalData: Array<{
     regionId: string
     label: string
-    score: number
+    score: number | null
     x: number
     y: number
     width: number
@@ -93,7 +93,7 @@ export interface PdfExportPageData {
   // 合計点領域データ
   totalScoreData: Array<{
     regionId: string
-    score: number
+    score: number | null
     maxScore: number
     x: number
     y: number
@@ -354,6 +354,7 @@ export async function getPdfExportData(options: {
         )
         let totalScore = 0
         let totalMaxScore = 0
+        let hasScoredQuestion = false
         for (const region of questionRegions) {
           const score = allScores.find(
             (s) => s.cropRegionId === region.id && s.studentId === student.id
@@ -371,7 +372,10 @@ export async function getPdfExportData(options: {
               },
               maxScore
             )
-            totalScore += actualScore ?? 0
+            if (actualScore !== null) {
+              hasScoredQuestion = true
+              totalScore += actualScore
+            }
           }
         }
 
@@ -381,13 +385,14 @@ export async function getPdfExportData(options: {
         )
 
         // 合計点領域データを構築
+        const finalTotalScore = hasScoredQuestion ? totalScore : null
         const totalScoreData: PdfExportPageData["totalScoreData"] = []
         for (const totalRegion of totalScoreRegions) {
           if (!totalRegion.projectPage) continue
 
           totalScoreData.push({
             regionId: totalRegion.id,
-            score: totalScore,
+            score: finalTotalScore,
             maxScore: totalMaxScore,
             x: totalRegion.x,
             y: totalRegion.y,
@@ -406,7 +411,7 @@ export async function getPdfExportData(options: {
           scoringData,
           subtotalData,
           totalScoreData,
-          totalScore,
+          totalScore: finalTotalScore,
           totalMaxScore,
           annotations,
         })
