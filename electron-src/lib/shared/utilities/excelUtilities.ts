@@ -29,7 +29,7 @@ export function getStatusSymbol(status: string, score?: number): string {
     case "incorrect":
       return "×"
     case "no_answer":
-      return "×"
+      return "-"
     default:
       return "-"
   }
