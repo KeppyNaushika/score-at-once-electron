@@ -116,8 +116,7 @@ export function setupGradeProjectHandlers(): void {
     "grade-project:getExportSettings",
     async (_event, gradeProjectId: string) => {
       try {
-        const settings =
-          await getGradeProjectExportSettings(gradeProjectId)
+        const settings = await getGradeProjectExportSettings(gradeProjectId)
         return { success: true, settings }
       } catch (error) {
         return {

@@ -975,6 +975,28 @@ export interface MyAPI {
             pageNumber: number
           }
         }>
+        subtotalData: Array<{
+          regionId: string
+          label: string
+          score: number | null
+          x: number
+          y: number
+          width: number
+          height: number
+          pageNumber: number
+        }>
+        totalScoreData: Array<{
+          regionId: string
+          score: number | null
+          maxScore: number
+          x: number
+          y: number
+          width: number
+          height: number
+          pageNumber: number
+        }>
+        totalScore: number | null
+        totalMaxScore: number | null
         annotations: Array<{
           id: string
           questionScoreId: string
@@ -1138,6 +1160,55 @@ export interface MyAPI {
       landscape?: boolean
     }) => Promise<{
       success: boolean
+      error?: string
+    }>
+
+    // Excelプレビューデータ取得
+    getExcelPreviewData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+    }) => Promise<{
+      success: boolean
+      questionRegions?: Array<{
+        id: string
+        label: string | null
+        points: number | null
+        orderIndex: number | null
+      }>
+      subtotalColumns?: Array<{
+        subtotalId: string
+        label: string
+      }>
+      scoringData?: Array<{
+        studentId: string
+        studentName: string
+        studentNumber: string
+        grade?: string
+        className?: string
+        attendanceNumber?: number | null
+        status?: "participating" | "expected" | "absent"
+        scores: Array<{
+          questionId: string
+          questionLabel: string
+          score: number | null
+          maxScore: number
+          status:
+            | "unscored"
+            | "correct"
+            | "partial"
+            | "hold"
+            | "incorrect"
+            | "no_answer"
+        }>
+        totalScore: number | null
+        totalMaxScore: number
+        subtotalScores: Array<{
+          subtotalId: string
+          subtotalLabel: string
+          score: number | null
+          maxScore: number
+        }>
+      }>
       error?: string
     }>
 

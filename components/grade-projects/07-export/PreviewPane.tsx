@@ -74,9 +74,7 @@ export function PreviewPane({ html }: PreviewPaneProps) {
             parseFloat(cs.paddingLeft) -
             parseFloat(cs.paddingRight)
           if (availableWidth > 0 && contentSizeRef.current.width > 0) {
-            setScale(
-              Math.min(availableWidth / contentSizeRef.current.width, 1)
-            )
+            setScale(Math.min(availableWidth / contentSizeRef.current.width, 1))
             initializedRef.current = true
           }
         }

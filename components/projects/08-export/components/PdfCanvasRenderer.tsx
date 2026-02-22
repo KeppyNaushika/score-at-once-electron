@@ -45,7 +45,7 @@ export interface PdfExportPageData {
   subtotalData?: Array<{
     regionId: string
     label: string
-    score: number
+    score: number | null
     x: number
     y: number
     width: number
@@ -55,7 +55,7 @@ export interface PdfExportPageData {
   // 合計点領域データ
   totalScoreData?: Array<{
     regionId: string
-    score: number
+    score: number | null
     maxScore: number
     x: number
     y: number
@@ -297,31 +297,33 @@ export function PdfCanvasRenderer({
         userId: a.userId,
       }))
 
-      const subtotalDataForPdf: SubtotalDataForPdf[] = (
-        page.subtotalData || []
-      ).map((st) => ({
-        regionId: st.regionId,
-        label: st.label,
-        score: st.score,
-        x: st.x,
-        y: st.y,
-        width: st.width,
-        height: st.height,
-        pageNumber: st.pageNumber,
-      }))
+      const subtotalDataForPdf: SubtotalDataForPdf[] = (page.subtotalData || [])
+        .filter((st): st is typeof st & { score: number } => st.score != null)
+        .map((st) => ({
+          regionId: st.regionId,
+          label: st.label,
+          score: st.score,
+          x: st.x,
+          y: st.y,
+          width: st.width,
+          height: st.height,
+          pageNumber: st.pageNumber,
+        }))
 
       const totalScoreDataForPdf: TotalScoreDataForPdf[] = (
         page.totalScoreData || []
-      ).map((ts) => ({
-        regionId: ts.regionId,
-        score: ts.score,
-        maxScore: ts.maxScore,
-        x: ts.x,
-        y: ts.y,
-        width: ts.width,
-        height: ts.height,
-        pageNumber: ts.pageNumber,
-      }))
+      )
+        .filter((ts): ts is typeof ts & { score: number } => ts.score != null)
+        .map((ts) => ({
+          regionId: ts.regionId,
+          score: ts.score,
+          maxScore: ts.maxScore,
+          x: ts.x,
+          y: ts.y,
+          width: ts.width,
+          height: ts.height,
+          pageNumber: ts.pageNumber,
+        }))
 
       const blob = await renderAnswerSheetToCanvas(
         canvas,

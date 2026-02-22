@@ -171,6 +171,41 @@ export function useExportPage() {
     [projectId, individualReportOptions]
   )
 
+  // マスター画像の縦横比からPDF用紙の向きを自動設定
+  const orientationInitializedRef = useRef(false)
+  useEffect(() => {
+    if (orientationInitializedRef.current || !projectId) return
+
+    const detectOrientation = async () => {
+      try {
+        const masterImages =
+          await window.electronAPI.getMasterImagesByProjectId(projectId)
+        if (!masterImages || masterImages.length === 0) return
+
+        const firstImage = masterImages[0]
+        const imageUrl = await window.electronAPI.resolveFileProtocolPath(
+          firstImage.imagePath
+        )
+
+        const img = new Image()
+        img.src = imageUrl
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve()
+          img.onerror = () => reject(new Error("画像の読み込みに失敗"))
+        })
+
+        orientationInitializedRef.current = true
+        if (img.naturalWidth > img.naturalHeight) {
+          setExportOptions((prev) => ({ ...prev, pdfOrientation: "landscape" }))
+        }
+      } catch (error) {
+        console.error("用紙方向の自動検出に失敗しました:", error)
+      }
+    }
+
+    detectOrientation()
+  }, [projectId])
+
   // プログレス状態
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)

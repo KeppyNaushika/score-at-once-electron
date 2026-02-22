@@ -110,10 +110,7 @@ export function ExportContainer({ gradeProjectId }: ExportContainerProps) {
               )
             })
             .catch((error: unknown) => {
-              console.error(
-                "成績算出エクスポート設定の保存に失敗:",
-                error
-              )
+              console.error("成績算出エクスポート設定の保存に失敗:", error)
             })
         }
 
