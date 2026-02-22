@@ -3,6 +3,7 @@ import { setupAuthHandlers } from "./authHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
 import { setupDrawingHandlers } from "./drawingHandlers"
 import { setupExportHandlers } from "./exportHandlers"
+import { setupGradeProjectHandlers } from "./gradeProjectHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
 import { setupProjectClassHandlers } from "./projectClassHandlers"
@@ -32,4 +33,5 @@ export function setupAllIPCHandlers(): void {
   registerSettingsHandlers()
   setupPdfToolsHandlers()
   setupSubjectHandlers()
+  setupGradeProjectHandlers()
 }

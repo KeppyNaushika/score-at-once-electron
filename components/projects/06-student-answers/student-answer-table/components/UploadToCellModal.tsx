@@ -196,7 +196,11 @@ export function UploadToCellModal({
                   value={pdfPassword}
                   onChange={(e) => setPdfPassword(e.target.value)}
                   placeholder="PDFのパスワードを入力"
-                  onKeyDown={(e) => e.key === "Enter" && handlePasswordSubmit()}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    !e.nativeEvent.isComposing &&
+                    handlePasswordSubmit()
+                  }
                 />
                 <Button
                   onClick={handlePasswordSubmit}

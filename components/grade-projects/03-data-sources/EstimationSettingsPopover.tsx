@@ -1,0 +1,296 @@
+"use client"
+
+import { useState } from "react"
+
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type {
+  AbsentMethod,
+  EstimationMode,
+  GradeDataSourceWithDetails,
+} from "@/types/gradeProject.types"
+
+const ABSENT_METHOD_LABELS: Record<AbsentMethod, string> = {
+  null: "なし",
+  zero: "0点",
+  average: "平均比率法",
+  regression: "重回帰法",
+}
+
+interface EstimationSettingsPopoverProps {
+  dataSource: GradeDataSourceWithDetails
+  /** 同じGradeProject内の全DataSource（自ソース含む、チェックリスト用） */
+  allDataSources: GradeDataSourceWithDetails[]
+  onUpdate: (
+    id: string,
+    data: {
+      absentMethod?: string
+      absentRatio?: number
+      absentOffset?: number
+      treatExpectedAsMissing?: boolean
+      estimationMode?: string
+      estimationSourceIds?: string[]
+    }
+  ) => Promise<{ success: boolean }>
+}
+
+export function EstimationSettingsPopover({
+  dataSource,
+  allDataSources,
+  onUpdate,
+}: EstimationSettingsPopoverProps) {
+  const [open, setOpen] = useState(false)
+  const [method, setMethod] = useState<AbsentMethod>(dataSource.absentMethod)
+  const [ratio, setRatio] = useState(String(dataSource.absentRatio))
+  const [offset, setOffset] = useState(String(dataSource.absentOffset))
+  const [estimationMode, setEstimationMode] = useState<EstimationMode>(
+    dataSource.estimationMode
+  )
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>(
+    dataSource.estimationSourceIds ?? []
+  )
+  const [treatExpectedAsMissing, setTreatExpectedAsMissing] = useState(
+    dataSource.treatExpectedAsMissing
+  )
+
+  const isExamSource =
+    dataSource.type === "project_total" ||
+    dataSource.type === "subtotal" ||
+    dataSource.type === "crop_region"
+
+  const handleSave = async () => {
+    await onUpdate(dataSource.id, {
+      absentMethod: method,
+      absentRatio: Number(ratio) || 1,
+      absentOffset: Number(offset) || 0,
+      treatExpectedAsMissing,
+      estimationMode,
+      estimationSourceIds: selectedSourceIds,
+    })
+    setOpen(false)
+  }
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      // Popoverを開く時に最新のデータソース値を反映
+      setMethod(dataSource.absentMethod)
+      setRatio(String(dataSource.absentRatio))
+      setOffset(String(dataSource.absentOffset))
+      setEstimationMode(dataSource.estimationMode)
+      setSelectedSourceIds(dataSource.estimationSourceIds ?? [])
+      setTreatExpectedAsMissing(dataSource.treatExpectedAsMissing)
+    }
+    setOpen(newOpen)
+  }
+
+  const toggleSourceId = (id: string) => {
+    setSelectedSourceIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  // トリガーボタンのラベル（propsから直接計算して一括設定の反映に対応）
+  const triggerLabel = (() => {
+    if (dataSource.absentMethod === "null") return null
+    const methodLabel = ABSENT_METHOD_LABELS[dataSource.absentMethod]
+    const sourceCount =
+      dataSource.estimationMode === "selected"
+        ? (dataSource.estimationSourceIds ?? []).length
+        : allDataSources.filter((ds) => ds.id !== dataSource.id).length
+    const modeLabel =
+      dataSource.estimationMode === "selected"
+        ? `選(${sourceCount})`
+        : `全(${sourceCount})`
+    const parts = [methodLabel, modeLabel]
+    if (dataSource.absentRatio !== 1 || dataSource.absentOffset !== 0) {
+      const r = dataSource.absentRatio !== 1 ? `×${dataSource.absentRatio}` : ""
+      const o =
+        dataSource.absentOffset !== 0
+          ? `${dataSource.absentOffset > 0 ? "+" : ""}${dataSource.absentOffset}`
+          : ""
+      parts.push(r + o)
+    }
+    return parts.join(" ")
+  })()
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        {triggerLabel ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 rounded-full border-amber-300 bg-amber-50 px-2 text-xs text-amber-700 hover:bg-amber-100"
+          >
+            {triggerLabel}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-muted-foreground h-6 rounded-full px-2 text-xs"
+          >
+            なし
+          </Button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="start">
+        <div className="space-y-4">
+          <h4 className="text-sm font-medium">欠測時推定設定</h4>
+
+          {/* 推定方法 */}
+          <div className="space-y-1.5">
+            <Label className="text-xs">推定方法</Label>
+            <Select
+              value={method}
+              onValueChange={(v) => setMethod(v as AbsentMethod)}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="null">なし</SelectItem>
+                <SelectItem value="zero">0点</SelectItem>
+                <SelectItem value="average">平均比率法</SelectItem>
+                <SelectItem value="regression">重回帰法</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {method !== "null" && (
+            <>
+              {/* 乗率・加減点 */}
+              {method !== "zero" && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">乗率</Label>
+                    <Input
+                      value={ratio}
+                      onChange={(e) => setRatio(e.target.value)}
+                      className="h-7 text-xs"
+                      type="text"
+                      placeholder="1.0"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs">加減点</Label>
+                    <Input
+                      value={offset}
+                      onChange={(e) => setOffset(e.target.value)}
+                      className="h-7 text-xs"
+                      type="text"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ソース選択（average/regressionのみ） */}
+              {(method === "average" || method === "regression") && (
+                <div className="space-y-2">
+                  <Label className="text-xs">推定に使用するソース</Label>
+                  <RadioGroup
+                    value={estimationMode}
+                    onValueChange={(v) =>
+                      setEstimationMode(v as EstimationMode)
+                    }
+                    className="gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="all" id="mode-all" />
+                      <Label htmlFor="mode-all" className="text-xs font-normal">
+                        自ソース以外の全て
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="selected" id="mode-selected" />
+                      <Label
+                        htmlFor="mode-selected"
+                        className="text-xs font-normal"
+                      >
+                        選択
+                      </Label>
+                    </div>
+                  </RadioGroup>
+
+                  {estimationMode === "selected" && (
+                    <div className="max-h-36 space-y-1 overflow-y-auto rounded border p-2">
+                      {allDataSources.map((ds) => {
+                        const isSelf = ds.id === dataSource.id
+                        return (
+                          <div
+                            key={ds.id}
+                            className={`flex items-center gap-2 ${isSelf ? "opacity-40" : ""}`}
+                          >
+                            <Checkbox
+                              checked={selectedSourceIds.includes(ds.id)}
+                              onCheckedChange={() =>
+                                !isSelf && toggleSourceId(ds.id)
+                              }
+                              disabled={isSelf}
+                              className="h-3.5 w-3.5"
+                            />
+                            <span className="truncate text-xs">{ds.name}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 見込→欠測（試験DSのみ） */}
+              {isExamSource && (
+                <div className="flex items-center gap-2 border-t pt-3">
+                  <Checkbox
+                    checked={treatExpectedAsMissing}
+                    onCheckedChange={(v) =>
+                      setTreatExpectedAsMissing(v === true)
+                    }
+                    id="treat-expected"
+                    className="h-3.5 w-3.5"
+                  />
+                  <Label
+                    htmlFor="treat-expected"
+                    className="text-xs font-normal"
+                  >
+                    受験状態「見込」を欠測とする
+                  </Label>
+                </div>
+              )}
+            </>
+          )}
+
+          <div className="flex justify-end gap-2 border-t pt-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setOpen(false)}
+            >
+              取消
+            </Button>
+            <Button size="sm" className="h-7 text-xs" onClick={handleSave}>
+              適用
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}

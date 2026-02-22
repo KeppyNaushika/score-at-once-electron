@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BarChart3,
   Calculator,
   ChevronsLeft,
   ChevronsRight,
@@ -21,6 +22,7 @@ import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
   TooltipContent,
@@ -30,26 +32,39 @@ import {
 import { useAuth } from "@/contexts/AuthContext"
 import { cn } from "@/lib/utils"
 
-const navItems = [
-  { href: "/dashboard", label: "プロジェクト", icon: Home },
-  { href: "/students", label: "生徒管理", icon: Users },
-  { href: "/classes", label: "学級管理", icon: School },
-  { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
-  { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
-  { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
-  { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
-  { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
-  {
-    href: "/textbox-on-canvas-v4",
-    label: "Textbox Canvas V4",
-    icon: FlaskConical,
-  },
-  {
-    href: "/test/grid-layout-debug",
-    label: "Grid Layout Debug",
-    icon: Grid2X2,
-  },
-  { href: "/settings", label: "設定", icon: Settings },
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+}
+
+const navGroups: NavItem[][] = [
+  [
+    { href: "/dashboard", label: "プロジェクト", icon: Home },
+    { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
+    { href: "/grade-projects", label: "成績算出", icon: BarChart3 },
+  ],
+  [
+    { href: "/students", label: "生徒管理", icon: Users },
+    { href: "/classes", label: "学級管理", icon: School },
+    { href: "/subtotal-groups", label: "小計点管理", icon: Calculator },
+  ],
+  [
+    { href: "/dnd-kit-test", label: "DnD テスト", icon: TestTube2 },
+    { href: "/simple-dnd-kit-test", label: "シンプル DnD", icon: TestTube2 },
+    { href: "/table-dnd-kit-test", label: "テーブル DnD", icon: TestTube2 },
+    {
+      href: "/textbox-on-canvas-v4",
+      label: "Textbox Canvas V4",
+      icon: FlaskConical,
+    },
+    {
+      href: "/test/grid-layout-debug",
+      label: "Grid Layout Debug",
+      icon: Grid2X2,
+    },
+  ],
+  [{ href: "/settings", label: "設定", icon: Settings }],
 ]
 
 interface NavigationProps {
@@ -102,37 +117,44 @@ export default function Navigation({
       <ScrollArea className="flex-1 py-4">
         <TooltipProvider delayDuration={0}>
           <nav className="grid items-start gap-1 px-2">
-            {navItems.map((item) =>
-              isSidebarMinimized ? (
-                <Tooltip key={item.label}>
-                  <TooltipTrigger asChild>
-                    <Link href={item.href} passHref>
+            {navGroups.map((group, groupIndex) => (
+              <div key={groupIndex}>
+                {groupIndex > 0 && <Separator className="my-2" />}
+                {group.map((item) =>
+                  isSidebarMinimized ? (
+                    <Tooltip key={item.label}>
+                      <TooltipTrigger asChild>
+                        <Link href={item.href} passHref>
+                          <Button
+                            variant={
+                              pathname === item.href ? "secondary" : "ghost"
+                            }
+                            size="icon"
+                            className="w-full justify-center"
+                            aria-label={item.label}
+                          >
+                            <item.icon className="h-5 w-5" />
+                          </Button>
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" sideOffset={5}>
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Link key={item.label} href={item.href} passHref>
                       <Button
                         variant={pathname === item.href ? "secondary" : "ghost"}
-                        size="icon"
-                        className="w-full justify-center"
-                        aria-label={item.label}
+                        className="w-full justify-start"
                       >
-                        <item.icon className="h-5 w-5" />
+                        <item.icon className="mr-3 h-5 w-5" />
+                        {item.label}
                       </Button>
                     </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={5}>
-                    {item.label}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Link key={item.label} href={item.href} passHref>
-                  <Button
-                    variant={pathname === item.href ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                  >
-                    <item.icon className="mr-3 h-5 w-5" />
-                    {item.label}
-                  </Button>
-                </Link>
-              )
-            )}
+                  )
+                )}
+              </div>
+            ))}
           </nav>
         </TooltipProvider>
       </ScrollArea>

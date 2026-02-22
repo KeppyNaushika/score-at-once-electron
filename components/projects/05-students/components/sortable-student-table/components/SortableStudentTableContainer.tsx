@@ -1,9 +1,8 @@
 "use client"
 
-import { closestCenter, DndContext, DragOverlay } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useState } from "react"
 
+import { SortableTableProvider } from "@/components/common/sortable-table"
 import { DragOverlayContent } from "@/components/projects/05-students/components/sortable-student-table/components/DragOverlayContent"
 import { SortableTableRow } from "@/components/projects/05-students/components/sortable-student-table/components/SortableTableRow"
 import { TableFilters } from "@/components/projects/05-students/components/sortable-student-table/components/TableFilters"
@@ -23,6 +22,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { Table, TableBody } from "@/components/ui/table"
 
+/**
+ * 生徒テーブルコンテナ
+ *
+ * フィルタ・ドラッグ並び替え・選択・並び順リセットを統合した受験生徒管理テーブル。
+ */
 export function SortableStudentTableContainer(
   props: SortableStudentTableProps
 ) {
@@ -43,7 +47,6 @@ export function SortableStudentTableContainer(
   const {
     sortedStudents,
     activeStudent,
-    sensors,
     handleDragStart,
     handleDragEnd,
     handleStudentToggle,
@@ -86,11 +89,16 @@ export function SortableStudentTableContainer(
 
       {/* テーブル */}
       <div className="min-h-96 rounded-md border">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
+        <SortableTableProvider
+          items={sortedStudents.map((student) => student.id)}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          dragOverlay={
+            <DragOverlayContent
+              activeStudent={activeStudent}
+              selectedStudents={selectedStudents}
+            />
+          }
         >
           <Table>
             <TableHeaderRow
@@ -99,31 +107,20 @@ export function SortableStudentTableContainer(
               onSelectAll={handleSelectAll}
             />
             <TableBody>
-              <SortableContext
-                items={sortedStudents.map((s) => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {sortedStudents.map((student) => (
-                  <SortableTableRow
-                    key={student.id}
-                    student={student}
-                    isSelected={selectedStudents.has(student.id)}
-                    onToggleSelection={(studentId) =>
-                      handleStudentToggle(studentId)
-                    }
-                    onStatusUpdate={onStudentStatusUpdate}
-                  />
-                ))}
-              </SortableContext>
+              {sortedStudents.map((student) => (
+                <SortableTableRow
+                  key={student.id}
+                  student={student}
+                  isSelected={selectedStudents.has(student.id)}
+                  onToggleSelection={(studentId) =>
+                    handleStudentToggle(studentId)
+                  }
+                  onStatusUpdate={onStudentStatusUpdate}
+                />
+              ))}
             </TableBody>
-            <DragOverlay>
-              <DragOverlayContent
-                activeStudent={activeStudent}
-                selectedStudents={selectedStudents}
-              />
-            </DragOverlay>
           </Table>
-        </DndContext>
+        </SortableTableProvider>
       </div>
 
       {/* 並び順リセット確認ダイアログ */}

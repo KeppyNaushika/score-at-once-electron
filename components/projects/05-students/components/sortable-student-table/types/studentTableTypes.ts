@@ -62,5 +62,4 @@ export interface SortableTableRowProps {
   isSelected: boolean
   onToggleSelection: (studentId: string, event?: React.MouseEvent) => void
   onStatusUpdate: (studentId: string, status: StudentStatus) => void
-  isDragging?: boolean
 }
