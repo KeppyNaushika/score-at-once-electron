@@ -1,13 +1,6 @@
 "use client"
 
-import {
-  DragEndEvent,
-  DragStartEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core"
 import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useState } from "react"
 
@@ -45,16 +38,6 @@ export function useSortableStudentTable({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(
     null
-  )
-
-  // センサーの設定（マウスとキーボード対応）
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8, // 8px移動したらドラッグ開始
-      },
-    }),
-    useSensor(KeyboardSensor)
   )
 
   // 生徒の並び順を初期化・更新
@@ -256,7 +239,6 @@ export function useSortableStudentTable({
   return {
     sortedStudents,
     activeStudent,
-    sensors,
     handleDragStart,
     handleDragEnd,
     handleStudentToggle,

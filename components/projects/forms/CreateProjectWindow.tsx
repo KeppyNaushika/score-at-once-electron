@@ -67,7 +67,7 @@ const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
   }
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleAddTag()
     }
@@ -122,7 +122,7 @@ const CreateProjectWindow: React.FC<CreateProjectWindowProps> = ({
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="col-span-3 min-h-[80px]" // クラス名を調整
+              className="col-span-3 min-h-20" // クラス名を調整
               placeholder="プロジェクトの説明（任意）"
             />
           </div>

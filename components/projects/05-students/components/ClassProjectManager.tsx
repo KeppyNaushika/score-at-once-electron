@@ -1,24 +1,14 @@
 "use client"
 
-import {
-  closestCenter,
-  DndContext,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { BarChart3, GripVertical, Plus, Trash2, UserPlus } from "lucide-react"
+import type { DragEndEvent } from "@dnd-kit/core"
+import { BarChart3, Plus, Trash2, UserPlus } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
+import {
+  DragHandle,
+  SortableTableProvider,
+  useSortableRow,
+} from "@/components/common/sortable-table"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -53,74 +43,61 @@ interface ClassProjectManagerProps {
 }
 
 interface SortableClassRowProps {
-  pc: ProjectClassWithClass
+  projectClass: ProjectClassWithClass
   onAdministeredChange: (id: string, checked: boolean) => void
   onStatisticsChange: (id: string, checked: boolean) => void
   onRemove: (id: string) => void
 }
 
 function SortableClassRow({
-  pc,
+  projectClass,
   onAdministeredChange,
   onStatisticsChange,
   onRemove,
 }: SortableClassRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: pc.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
+  const { setNodeRef, style, dragHandleProps } = useSortableRow(projectClass.id)
 
   return (
     <TableRow ref={setNodeRef} style={style}>
       <TableCell>
-        <div
-          {...attributes}
-          {...listeners}
-          className="hover:bg-muted cursor-grab rounded p-1 hover:cursor-grabbing"
-        >
-          <GripVertical className="text-muted-foreground h-4 w-4" />
-        </div>
+        <DragHandle dragHandleProps={dragHandleProps} />
       </TableCell>
       <TableCell className="font-medium">
-        {pc.class.name}
-        {pc.class.classCode && (
+        {projectClass.class.name}
+        {projectClass.class.classCode && (
           <span className="text-muted-foreground ml-2 text-xs">
-            ({pc.class.classCode})
+            ({projectClass.class.classCode})
           </span>
         )}
       </TableCell>
-      <TableCell>{pc.class.grade ? `${pc.class.grade}年` : "-"}</TableCell>
+      <TableCell>
+        {projectClass.class.grade ? `${projectClass.class.grade}年` : "-"}
+      </TableCell>
       <TableCell className="text-center">
-        {pc.class.memberships.length}名
+        {projectClass.class.memberships.length}名
       </TableCell>
       <TableCell className="text-center">
         <Checkbox
-          checked={pc.administered}
+          checked={projectClass.administered}
           onCheckedChange={(checked) =>
-            onAdministeredChange(pc.id, checked === true)
+            onAdministeredChange(projectClass.id, checked === true)
           }
         />
       </TableCell>
       <TableCell className="text-center">
         <Checkbox
-          checked={pc.statistics}
+          checked={projectClass.statistics}
           onCheckedChange={(checked) =>
-            onStatisticsChange(pc.id, checked === true)
+            onStatisticsChange(projectClass.id, checked === true)
           }
         />
       </TableCell>
       <TableCell>
-        <Button variant="ghost" size="icon" onClick={() => onRemove(pc.id)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onRemove(projectClass.id)}
+        >
           <Trash2 className="text-destructive h-4 w-4" />
         </Button>
       </TableCell>
@@ -160,14 +137,6 @@ export function ClassProjectManager({
     setLocalClasses(projectClasses)
   }, [projectClasses])
 
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-
   // 追加可能なクラス一覧を取得
   const fetchAvailableClasses = useCallback(async () => {
     try {
@@ -191,8 +160,12 @@ export function ClassProjectManager({
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      const oldIndex = localClasses.findIndex((pc) => pc.id === active.id)
-      const newIndex = localClasses.findIndex((pc) => pc.id === over.id)
+      const oldIndex = localClasses.findIndex(
+        (projectClass) => projectClass.id === active.id
+      )
+      const newIndex = localClasses.findIndex(
+        (projectClass) => projectClass.id === over.id
+      )
 
       // 楽観的更新
       const newOrder = [...localClasses]
@@ -204,7 +177,7 @@ export function ClassProjectManager({
       try {
         await window.electronAPI.projectClass.reorder({
           projectId,
-          orderedIds: newOrder.map((pc) => pc.id),
+          orderedIds: newOrder.map((projectClass) => projectClass.id),
         })
         onClassesChanged?.()
       } catch (err) {
@@ -276,7 +249,7 @@ export function ClassProjectManager({
   }
 
   const administeredClassCount = localClasses.filter(
-    (pc) => pc.administered
+    (projectClass) => projectClass.administered
   ).length
 
   return (
@@ -299,9 +272,8 @@ export function ClassProjectManager({
         </div>
       ) : (
         <div className="rounded-md border">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
+          <SortableTableProvider
+            items={localClasses.map((projectClass) => projectClass.id)}
             onDragEnd={handleDragEnd}
           >
             <Table>
@@ -326,24 +298,19 @@ export function ClassProjectManager({
                   <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
-              <SortableContext
-                items={localClasses.map((pc) => pc.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <TableBody>
-                  {localClasses.map((pc) => (
-                    <SortableClassRow
-                      key={pc.id}
-                      pc={pc}
-                      onAdministeredChange={handleAdministeredChange}
-                      onStatisticsChange={handleStatisticsChange}
-                      onRemove={handleRemoveClass}
-                    />
-                  ))}
-                </TableBody>
-              </SortableContext>
+              <TableBody>
+                {localClasses.map((projectClass) => (
+                  <SortableClassRow
+                    key={projectClass.id}
+                    projectClass={projectClass}
+                    onAdministeredChange={handleAdministeredChange}
+                    onStatisticsChange={handleStatisticsChange}
+                    onRemove={handleRemoveClass}
+                  />
+                ))}
+              </TableBody>
             </Table>
-          </DndContext>
+          </SortableTableProvider>
         </div>
       )}
 
@@ -376,33 +343,39 @@ export function ClassProjectManager({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {availableClasses.map((cls) => (
+                  {availableClasses.map((availableClass) => (
                     <TableRow
-                      key={cls.id}
+                      key={availableClass.id}
                       className={`cursor-pointer ${
-                        selectedClassIds.has(cls.id) ? "bg-accent" : ""
+                        selectedClassIds.has(availableClass.id)
+                          ? "bg-accent"
+                          : ""
                       }`}
-                      onClick={() => toggleClassSelection(cls.id)}
+                      onClick={() => toggleClassSelection(availableClass.id)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
-                          checked={selectedClassIds.has(cls.id)}
-                          onCheckedChange={() => toggleClassSelection(cls.id)}
+                          checked={selectedClassIds.has(availableClass.id)}
+                          onCheckedChange={() =>
+                            toggleClassSelection(availableClass.id)
+                          }
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {cls.name}
-                        {cls.classCode && (
+                        {availableClass.name}
+                        {availableClass.classCode && (
                           <span className="text-muted-foreground ml-2 text-xs">
-                            ({cls.classCode})
+                            ({availableClass.classCode})
                           </span>
                         )}
                       </TableCell>
                       <TableCell>
-                        {cls.grade ? `${cls.grade}年` : "-"}
+                        {availableClass.grade
+                          ? `${availableClass.grade}年`
+                          : "-"}
                       </TableCell>
                       <TableCell className="text-center">
-                        {cls.studentCount}名
+                        {availableClass.studentCount}名
                       </TableCell>
                     </TableRow>
                   ))}

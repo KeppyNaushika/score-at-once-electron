@@ -34,8 +34,9 @@ model Class {
   isVisible      Boolean                  @default(true)
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
-  memberships    StudentClassMembership[]
-  projectClasses ProjectClass[]
+  memberships         StudentClassMembership[]
+  projectClasses      ProjectClass[]
+  gradeProjectClasses GradeProjectClass[]
 
   @@map("classes")
 }
@@ -53,7 +54,11 @@ model Student {
   studentAnswerImages StudentAnswerImage[]
   projectStudents     ProjectStudent[]
   questionScores      QuestionScore[]
-  memberships         StudentClassMembership[]
+  memberships          StudentClassMembership[]
+  manualScores         ManualScore[]
+  gradeProjectStudents GradeProjectStudent[]
+  gradeOverrides       GradeOverride[]
+  gradeItemExclusions  GradeItemExclusion[]
 }
 
 model StudentClassMembership {
@@ -90,6 +95,7 @@ model Project {
   projectClasses        ProjectClass[]
   markingFormats        ProjectMarkingFormat[]
   exportSettings        ProjectExportSettings?
+  gradeDataSources      GradeDataSource[]
 }
 
 model ProjectStudent {
@@ -163,6 +169,7 @@ model CropRegion {
   cropSubtotals    CropSubtotal[]
   questionScores   QuestionScore[]
   markingOverrides CropRegionMarkingOverride[]
+  gradeDataSources GradeDataSource[]
 }
 
 model SubtotalGroup {
@@ -182,8 +189,9 @@ model Subtotal {
   order           Int            @default(0)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @default(now()) @updatedAt
-  cropSubtotals   CropSubtotal[]
-  subtotalGroup   SubtotalGroup  @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  cropSubtotals    CropSubtotal[]
+  subtotalGroup    SubtotalGroup   @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  gradeDataSources GradeDataSource[]
 
   @@unique([subtotalGroupId, name], map: "sqlite_autoindex_Subtotal_2")
 }
@@ -388,4 +396,208 @@ model CropRegionMarkingOverride {
 
   @@unique([cropRegionId, markType])
   @@index([cropRegionId])
+}
+
+/// 成績算出プロジェクト
+model GradeProject {
+  id            String    @id @default(uuid())
+  name          String
+  description   String?
+  referenceDate DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  gradeItems           GradeItem[]
+  boundarySets         GradeBoundarySet[]
+  gradeProjectClasses  GradeProjectClass[]
+  gradeProjectStudents GradeProjectStudent[]
+  gradeOverrides       GradeOverride[]
+  gradeItemExclusions  GradeItemExclusion[]
+  exportSettings       GradeProjectExportSettings?
+}
+
+/// 評価項目（知識・技能、思考・判断・表現、評定 等）
+model GradeItem {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  name           String
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject        GradeProject        @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  dataSources         GradeDataSource[]
+  boundarySets        GradeBoundarySet[]
+  gradeOverrides      GradeOverride[]
+  gradeItemExclusions GradeItemExclusion[]
+
+  @@index([gradeProjectId])
+}
+
+/// 成績算出プロジェクトの対象学級
+model GradeProjectClass {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  classId        String
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeProjectId, classId])
+  @@index([gradeProjectId])
+  @@index([classId])
+}
+
+/// 成績算出プロジェクトの対象生徒
+model GradeProjectStudent {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  studentId      String
+  customOrder    Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeProjectId, studentId])
+  @@index([gradeProjectId])
+  @@index([studentId])
+  @@index([gradeProjectId, customOrder])
+}
+
+/// 成績データソース（4種: project_total / subtotal / crop_region / manual）
+model GradeDataSource {
+  id            String   @id @default(uuid())
+  gradeItemId   String
+  type          String // "project_total" | "subtotal" | "crop_region" | "manual"
+  examProjectId String?
+  subtotalId    String?
+  cropRegionId  String?
+  name          String
+  maxScore      Decimal
+  weight        Decimal
+  order         Int      @default(0)
+  absentMethod              String   @default("null")
+  absentRatio               Decimal  @default(1.0)
+  absentOffset              Decimal  @default(0)
+  treatExpectedAsMissing    Boolean  @default(false)
+  estimationMode            String   @default("all") // "all" | "selected"
+  estimationSourceIds       String   @default("[]") // JSON array of DataSource IDs
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  examProject  Project?     @relation(fields: [examProjectId], references: [id], onDelete: SetNull)
+  subtotal     Subtotal?    @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
+  cropRegion   CropRegion?  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
+  manualScores ManualScore[]
+
+  @@index([gradeItemId])
+  @@index([examProjectId])
+  @@index([subtotalId])
+  @@index([cropRegionId])
+}
+
+/// 外部成績（手動入力スコア）
+model ManualScore {
+  id                String   @id @default(uuid())
+  gradeDataSourceId String
+  studentId         String
+  score             Decimal?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  gradeDataSource GradeDataSource @relation(fields: [gradeDataSourceId], references: [id], onDelete: Cascade)
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeDataSourceId, studentId])
+  @@index([gradeDataSourceId])
+  @@index([studentId])
+}
+
+/// 評価項目ごとの対象生徒除外設定
+model GradeItemExclusion {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  studentId      String
+  gradeItemId    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeProjectId, studentId, gradeItemId])
+  @@index([gradeProjectId])
+  @@index([studentId])
+  @@index([gradeItemId])
+}
+
+/// 成績境界セット（GradeItemごとまたは総合）
+model GradeBoundarySet {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  targetType     String // "grade_item" | "overall"
+  gradeItemId    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject   @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem?     @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  boundaries   GradeBoundary[]
+
+  @@unique([gradeProjectId, targetType, gradeItemId])
+  @@index([gradeProjectId])
+}
+
+/// 成績ラベルの手動上書き
+model GradeOverride {
+  id             String   @id @default(uuid())
+  gradeProjectId String
+  studentId      String
+  targetType     String // "grade_item" | "overall"
+  gradeItemId    String?
+  overrideLabel  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem    GradeItem?   @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+
+  @@unique([gradeProjectId, studentId, targetType, gradeItemId])
+  @@index([gradeProjectId])
+  @@index([studentId])
+  @@index([gradeItemId])
+}
+
+/// 成績境界（ラベルと閾値）
+model GradeBoundary {
+  id                 String   @id @default(uuid())
+  gradeBoundarySetId String
+  label              String
+  minPercentage      Decimal
+  order              Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  boundarySet GradeBoundarySet @relation(fields: [gradeBoundarySetId], references: [id], onDelete: Cascade)
+
+  @@index([gradeBoundarySetId])
+}
+
+/// 成績算出プロジェクトのエクスポート設定
+model GradeProjectExportSettings {
+  id             String   @id @default(uuid())
+  gradeProjectId String   @unique
+  settingsJson   String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
 }

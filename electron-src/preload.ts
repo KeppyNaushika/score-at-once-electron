@@ -920,6 +920,208 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // =============================================================================
+  // GradeProject（成績算出）
+  // =============================================================================
+  gradeProject: {
+    getAll: () => ipcRenderer.invoke("grade-project:getAll"),
+    getById: (id: string) => ipcRenderer.invoke("grade-project:getById", id),
+    create: (data: {
+      name: string
+      description?: string
+      referenceDate?: string | null
+    }) => ipcRenderer.invoke("grade-project:create", data),
+    update: (
+      id: string,
+      data: {
+        name?: string
+        description?: string
+        referenceDate?: string | null
+      }
+    ) => ipcRenderer.invoke("grade-project:update", id, data),
+    delete: (id: string) => ipcRenderer.invoke("grade-project:delete", id),
+    // 生徒・学級管理
+    getStudents: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getStudents", gradeProjectId),
+    getClasses: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getClasses", gradeProjectId),
+    getAvailableClasses: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getAvailableClasses", gradeProjectId),
+    addStudentsFromClass: (gradeProjectId: string, classId: string) =>
+      ipcRenderer.invoke(
+        "grade-project:addStudentsFromClass",
+        gradeProjectId,
+        classId
+      ),
+    removeClass: (gradeProjectId: string, classId: string) =>
+      ipcRenderer.invoke("grade-project:removeClass", gradeProjectId, classId),
+    updateStudentOrders: (
+      gradeProjectId: string,
+      studentOrders: { studentId: string; customOrder: number }[]
+    ) =>
+      ipcRenderer.invoke(
+        "grade-project:updateStudentOrders",
+        gradeProjectId,
+        studentOrders
+      ),
+    // GradeItem
+    getGradeItems: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getGradeItems", gradeProjectId),
+    createGradeItem: (data: { gradeProjectId: string; name: string }) =>
+      ipcRenderer.invoke("grade-project:createGradeItem", data),
+    updateGradeItem: (id: string, data: { name?: string }) =>
+      ipcRenderer.invoke("grade-project:updateGradeItem", id, data),
+    deleteGradeItem: (id: string) =>
+      ipcRenderer.invoke("grade-project:deleteGradeItem", id),
+    reorderGradeItems: (items: { id: string; order: number }[]) =>
+      ipcRenderer.invoke("grade-project:reorderGradeItems", items),
+    // データソース
+    createDataSource: (data: {
+      gradeItemId: string
+      type: string
+      examProjectId?: string
+      subtotalId?: string
+      cropRegionId?: string
+      name: string
+      maxScore: number
+      weight: number
+      absentMethod?: string
+      absentRatio?: number
+      absentOffset?: number
+      treatExpectedAsMissing?: boolean
+      estimationMode?: string
+      estimationSourceIds?: string[]
+    }) => ipcRenderer.invoke("grade-project:createDataSource", data),
+    updateDataSource: (
+      id: string,
+      data: {
+        name?: string
+        maxScore?: number
+        weight?: number
+        absentMethod?: string
+        absentRatio?: number
+        absentOffset?: number
+        treatExpectedAsMissing?: boolean
+        estimationMode?: string
+        estimationSourceIds?: string[]
+      }
+    ) => ipcRenderer.invoke("grade-project:updateDataSource", id, data),
+    deleteDataSource: (id: string) =>
+      ipcRenderer.invoke("grade-project:deleteDataSource", id),
+    reorderDataSources: (items: { id: string; order: number }[]) =>
+      ipcRenderer.invoke("grade-project:reorderDataSources", items),
+    batchUpdateAbsentPolicy: (
+      dataSourceIds: string[],
+      policy: {
+        absentMethod: string
+        absentRatio: number
+        absentOffset: number
+        treatExpectedAsMissing?: boolean
+        estimationMode?: string
+        estimationSourceIds?: string[]
+      }
+    ) =>
+      ipcRenderer.invoke(
+        "grade-project:batchUpdateAbsentPolicy",
+        dataSourceIds,
+        policy
+      ),
+    getManualScores: (gradeDataSourceId: string) =>
+      ipcRenderer.invoke("grade-project:getManualScores", gradeDataSourceId),
+    batchUpsertManualScores: (
+      scores: {
+        gradeDataSourceId: string
+        studentId: string
+        score: number | null
+      }[]
+    ) => ipcRenderer.invoke("grade-project:batchUpsertManualScores", scores),
+    getBoundarySets: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getBoundarySets", gradeProjectId),
+    upsertBoundarySet: (data: {
+      gradeProjectId: string
+      targetType: string
+      gradeItemId: string | null
+      boundaries: { label: string; minPercentage: number; order: number }[]
+    }) => ipcRenderer.invoke("grade-project:upsertBoundarySet", data),
+    deleteBoundarySet: (id: string) =>
+      ipcRenderer.invoke("grade-project:deleteBoundarySet", id),
+    upsertGradeOverride: (data: {
+      gradeProjectId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+      overrideLabel: string
+    }) => ipcRenderer.invoke("grade-project:upsertGradeOverride", data),
+    deleteGradeOverride: (data: {
+      gradeProjectId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+    }) => ipcRenderer.invoke("grade-project:deleteGradeOverride", data),
+    getGradeItemExclusions: (gradeProjectId: string) =>
+      ipcRenderer.invoke(
+        "grade-project:getGradeItemExclusions",
+        gradeProjectId
+      ),
+    setGradeItemExclusion: (data: {
+      gradeProjectId: string
+      studentId: string
+      gradeItemId: string
+      excluded: boolean
+    }) => ipcRenderer.invoke("grade-project:setGradeItemExclusion", data),
+    batchUpdateGradeItemExclusions: (
+      gradeProjectId: string,
+      updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
+    ) =>
+      ipcRenderer.invoke(
+        "grade-project:batchUpdateGradeItemExclusions",
+        gradeProjectId,
+        updates
+      ),
+    calculateGrades: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:calculateGrades", gradeProjectId),
+    getExamProjectCandidates: () =>
+      ipcRenderer.invoke("grade-project:getExamProjectCandidates"),
+    getProjectSubtotalGroups: (projectId: string) =>
+      ipcRenderer.invoke("grade-project:getProjectSubtotalGroups", projectId),
+    getProjectCropRegions: (projectId: string) =>
+      ipcRenderer.invoke("grade-project:getProjectCropRegions", projectId),
+    calculateSourceMaxScore: (data: {
+      type: string
+      examProjectId?: string
+      subtotalId?: string
+      cropRegionId?: string
+    }) => ipcRenderer.invoke("grade-project:calculateSourceMaxScore", data),
+    exportExcel: (
+      gradeProjectId: string,
+      options?: { studentIds?: string[] }
+    ) =>
+      ipcRenderer.invoke("grade-project:exportExcel", gradeProjectId, options),
+    getExportSettings: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:getExportSettings", gradeProjectId),
+    saveExportSettings: (
+      gradeProjectId: string,
+      settings: Record<string, unknown>
+    ) =>
+      ipcRenderer.invoke(
+        "grade-project:saveExportSettings",
+        gradeProjectId,
+        settings
+      ),
+    exportArchive: (gradeProjectId: string) =>
+      ipcRenderer.invoke("grade-project:exportArchive", gradeProjectId),
+    importArchive: () => ipcRenderer.invoke("grade-project:importArchive"),
+    executeImport: (
+      archiveData: unknown,
+      examProjectMapping?: Record<string, string>
+    ) =>
+      ipcRenderer.invoke(
+        "grade-project:executeImport",
+        archiveData,
+        examProjectMapping
+      ),
+  },
+
+  // =============================================================================
   // Subject（教科）
   // =============================================================================
   subjectGetAll: () => ipcRenderer.invoke("subject:getAll"),

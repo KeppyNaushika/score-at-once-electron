@@ -47,7 +47,7 @@ function EditableCell<T>({
   }
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       inputRef.current?.blur()
     }
     if (e.key === "Tab") {
@@ -152,29 +152,42 @@ export function EditableTable<T extends object>({
     [columns, tableData, setTableData, onDataChange]
   )
 
+  const hasReadOnlyColumns = useMemo(
+    () =>
+      columns.some(
+        (col) => (col.meta as { readOnly?: boolean } | undefined)?.readOnly
+      ),
+    [columns]
+  )
+
   const editableColumns = useMemo(
     () => [
-      ...columns.map((col) => ({
-        ...col,
-        cell: EditableCell,
-      })),
+      ...columns.map((col) => {
+        const meta = col.meta as { readOnly?: boolean } | undefined
+        if (meta?.readOnly) return col // readOnlyカラムは元のセルレンダラーを維持
+        return { ...col, cell: EditableCell }
+      }),
       // 行追加ボタン列
-      {
-        id: "addRow",
-        header: "",
-        cell: ({ row }: { row: Row<T> }) => (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => addRowAfter(row.index)}
-            className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
-            title="この行の下に新しい行を追加"
-          >
-            <Plus className="h-3 w-3" />
-          </Button>
-        ),
-        size: 40,
-      },
+      ...(allowInsertRow
+        ? [
+            {
+              id: "addRow",
+              header: "",
+              cell: ({ row }: { row: Row<T> }) => (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => addRowAfter(row.index)}
+                  className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 hover:text-green-800"
+                  title="この行の下に新しい行を追加"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              ),
+              size: 40,
+            },
+          ]
+        : []),
       ...(allowDeleteRow
         ? [
             {
@@ -195,7 +208,7 @@ export function EditableTable<T extends object>({
           ]
         : []),
     ],
-    [columns, allowDeleteRow, deleteRow, addRowAfter]
+    [columns, allowInsertRow, allowDeleteRow, deleteRow, addRowAfter]
   )
 
   const table = useLocalReactTable({
@@ -204,6 +217,10 @@ export function EditableTable<T extends object>({
     getCoreRowModel: getCoreRowModel(),
     meta: {
       updateData: (rowIndex: number, columnId: string, value: string) => {
+        // readOnlyカラムへの変更を無視
+        const col = columns.find((c) => c.id === columnId)
+        if ((col?.meta as { readOnly?: boolean } | undefined)?.readOnly) return
+
         setTableData((old) => {
           const newData = old.map((row, index) => {
             if (index === rowIndex) {
@@ -256,16 +273,68 @@ export function EditableTable<T extends object>({
 
     if (rows.length === 0) return
 
-    const pastedData = rows.map((row) => {
-      const cells = row.split("\t")
-      return columns.reduce<Record<string, string>>((acc, col, index) => {
-        acc[col.id as string] = cells[index] || ""
-        return acc
-      }, {}) as T
-    })
+    if (hasReadOnlyColumns) {
+      // マージ型ペースト: readOnlyカラムをスキップし、editableカラムのみにデータをマッピング
+      const editableCols = columns.filter(
+        (col) => !(col.meta as { readOnly?: boolean } | undefined)?.readOnly
+      )
 
-    setTableData(pastedData)
-    onDataChange(pastedData)
+      // フォーカスセルの位置を起点にする
+      const activeElement = document.activeElement as HTMLInputElement | null
+      let startRowIndex = 0
+      let startEditableColIndex = 0
+
+      if (activeElement?.closest("td")) {
+        const td = activeElement.closest("td")!
+        const tr = td.closest("tr")!
+        const tbody = tr.closest("tbody")!
+        const allRows = Array.from(tbody.querySelectorAll("tr"))
+        startRowIndex = allRows.indexOf(tr)
+
+        // フォーカスセルのカラムIDを特定
+        const allTds = Array.from(tr.querySelectorAll("td"))
+        const tdIndex = allTds.indexOf(td)
+        const visibleColumns = table.getVisibleLeafColumns()
+        if (tdIndex >= 0 && tdIndex < visibleColumns.length) {
+          const focusedColId = visibleColumns[tdIndex].id
+          const editableIndex = editableCols.findIndex(
+            (c) => c.id === focusedColId
+          )
+          if (editableIndex >= 0) startEditableColIndex = editableIndex
+        }
+      }
+
+      const newData = [...tableData]
+      for (let ri = 0; ri < rows.length; ri++) {
+        const targetRow = startRowIndex + ri
+        if (targetRow >= newData.length) break
+
+        const cells = rows[ri].split("\t")
+        const updatedRow = { ...newData[targetRow] }
+        for (let ci = 0; ci < cells.length; ci++) {
+          const targetCol = startEditableColIndex + ci
+          if (targetCol >= editableCols.length) break
+          const colId = editableCols[targetCol].id as string
+          ;(updatedRow as Record<string, unknown>)[colId] = cells[ci]
+        }
+        newData[targetRow] = updatedRow
+      }
+
+      setTableData(newData)
+      onDataChange(newData)
+    } else {
+      // 全置換型ペースト（後方互換）
+      const pastedData = rows.map((row) => {
+        const cells = row.split("\t")
+        return columns.reduce<Record<string, string>>((acc, col, index) => {
+          acc[col.id as string] = cells[index] || ""
+          return acc
+        }, {}) as T
+      })
+
+      setTableData(pastedData)
+      onDataChange(pastedData)
+    }
   }
 
   return (

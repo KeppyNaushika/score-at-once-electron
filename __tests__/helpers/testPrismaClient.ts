@@ -41,6 +41,16 @@ export async function cleanupTestDatabase(): Promise<void> {
   const prisma = getTestPrismaClient()
 
   // 外部キー制約の依存順序に従い、子テーブルから削除
+  // Grade関連
+  await prisma.manualScore.deleteMany()
+  await prisma.gradeBoundary.deleteMany()
+  await prisma.gradeBoundarySet.deleteMany()
+  await prisma.gradeDataSource.deleteMany()
+  await prisma.gradeItem.deleteMany()
+  await prisma.gradeProjectStudent.deleteMany()
+  await prisma.gradeProjectClass.deleteMany()
+  await prisma.gradeProject.deleteMany()
+  // Score関連
   await prisma.drawingAnnotation.deleteMany()
   await prisma.questionScore.deleteMany()
   await prisma.cropRegionMarkingOverride.deleteMany()

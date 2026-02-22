@@ -1,43 +1,33 @@
 "use client"
 
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, UserCheck, Users, UserX } from "lucide-react"
+import { UserCheck, Users, UserX } from "lucide-react"
 
+import { DragHandle, useSortableRow } from "@/components/common/sortable-table"
 import type { SortableTableRowProps } from "@/components/projects/05-students/components/sortable-student-table/types/studentTableTypes"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TableCell, TableRow } from "@/components/ui/table"
 
+/**
+ * ドラッグ可能な生徒テーブル行
+ *
+ * 共通のuseSortableRowとDragHandleを使用し、チェックボックス選択・受験状態ボタンを表示する。
+ */
 export function SortableTableRow({
   student,
   isSelected,
   onToggleSelection,
   onStatusUpdate,
-  isDragging,
 }: SortableTableRowProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging: isSortableDragging,
-  } = useSortable({
-    id: student.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isSortableDragging ? 0.5 : 1,
-  }
+  const { setNodeRef, style, isDragging, dragHandleProps } = useSortableRow(
+    student.id
+  )
 
   return (
     <TableRow
       ref={setNodeRef}
       style={style}
-      className={`${isSortableDragging ? "bg-muted/50" : ""} ${isDragging ? "shadow-lg" : ""} cursor-pointer`}
+      className={`${isDragging ? "bg-muted/50 shadow-lg" : ""} cursor-pointer`}
       onClick={(event) => {
         if (!event.defaultPrevented) {
           onToggleSelection(student.id, event)
@@ -46,13 +36,7 @@ export function SortableTableRow({
     >
       <TableCell>
         <div className="flex items-center gap-2">
-          <div
-            {...attributes}
-            {...listeners}
-            className="hover:bg-muted cursor-grab rounded p-1 hover:cursor-grabbing"
-          >
-            <GripVertical className="text-muted-foreground h-4 w-4" />
-          </div>
+          <DragHandle dragHandleProps={dragHandleProps} />
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => {

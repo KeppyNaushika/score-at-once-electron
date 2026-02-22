@@ -1708,6 +1708,329 @@ export interface MyAPI {
   }
 
   // =============================================================================
+  // GradeProject（成績算出）
+  // =============================================================================
+
+  gradeProject: {
+    getAll: () => Promise<{
+      success: boolean
+      gradeProjects?: import("./gradeProject.types").GradeProjectWithDetails[]
+      error?: string
+    }>
+    getById: (id: string) => Promise<{
+      success: boolean
+      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      error?: string
+    }>
+    create: (data: {
+      name: string
+      description?: string
+      referenceDate?: string | null
+    }) => Promise<{
+      success: boolean
+      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      error?: string
+    }>
+    update: (
+      id: string,
+      data: {
+        name?: string
+        description?: string
+        referenceDate?: string | null
+      }
+    ) => Promise<{
+      success: boolean
+      gradeProject?: import("./gradeProject.types").GradeProjectWithDetails
+      error?: string
+    }>
+    delete: (id: string) => Promise<{ success: boolean; error?: string }>
+    // 生徒・学級管理
+    getStudents: (gradeProjectId: string) => Promise<{
+      success: boolean
+      students?: Array<{
+        id: string
+        gradeProjectId: string
+        studentId: string
+        customOrder: number | null
+        student: {
+          id: string
+          studentNumber: string
+          lastName: string
+          firstName: string
+          memberships: Array<{
+            classId: string
+            attendanceNumber: number | null
+            class: { id: string; name: string }
+          }>
+        }
+      }>
+      error?: string
+    }>
+    getClasses: (gradeProjectId: string) => Promise<{
+      success: boolean
+      classes?: Array<{
+        id: string
+        classId: string
+        className: string
+        order: number
+        studentCount: number
+      }>
+      error?: string
+    }>
+    getAvailableClasses: (gradeProjectId: string) => Promise<{
+      success: boolean
+      classes?: Array<{
+        id: string
+        name: string
+        studentCount: number
+      }>
+      error?: string
+    }>
+    addStudentsFromClass: (
+      gradeProjectId: string,
+      classId: string
+    ) => Promise<{
+      success: boolean
+      added?: number
+      skipped?: number
+      error?: string
+    }>
+    removeClass: (
+      gradeProjectId: string,
+      classId: string
+    ) => Promise<{
+      success: boolean
+      removedStudents?: number
+      error?: string
+    }>
+    updateStudentOrders: (
+      gradeProjectId: string,
+      studentOrders: { studentId: string; customOrder: number }[]
+    ) => Promise<{ success: boolean; error?: string }>
+    // GradeItem
+    getGradeItems: (gradeProjectId: string) => Promise<{
+      success: boolean
+      gradeItems?: import("./gradeProject.types").GradeItemWithDetails[]
+      error?: string
+    }>
+    createGradeItem: (data: {
+      gradeProjectId: string
+      name: string
+    }) => Promise<{
+      success: boolean
+      gradeItem?: import("./gradeProject.types").GradeItemWithDetails
+      error?: string
+    }>
+    updateGradeItem: (
+      id: string,
+      data: { name?: string }
+    ) => Promise<{
+      success: boolean
+      gradeItem?: import("./gradeProject.types").GradeItemWithDetails
+      error?: string
+    }>
+    deleteGradeItem: (
+      id: string
+    ) => Promise<{ success: boolean; error?: string }>
+    reorderGradeItems: (
+      items: { id: string; order: number }[]
+    ) => Promise<{ success: boolean; error?: string }>
+    // データソース
+    createDataSource: (data: {
+      gradeItemId: string
+      type: string
+      examProjectId?: string
+      subtotalId?: string
+      cropRegionId?: string
+      name: string
+      maxScore: number
+      weight: number
+      absentMethod?: string
+      absentRatio?: number
+      absentOffset?: number
+      treatExpectedAsMissing?: boolean
+      estimationMode?: string
+      estimationSourceIds?: string[]
+    }) => Promise<{
+      success: boolean
+      dataSource?: import("./gradeProject.types").GradeDataSourceWithDetails
+      error?: string
+    }>
+    updateDataSource: (
+      id: string,
+      data: {
+        name?: string
+        maxScore?: number
+        weight?: number
+        absentMethod?: string
+        absentRatio?: number
+        absentOffset?: number
+        treatExpectedAsMissing?: boolean
+        estimationMode?: string
+        estimationSourceIds?: string[]
+      }
+    ) => Promise<{
+      success: boolean
+      dataSource?: import("./gradeProject.types").GradeDataSourceWithDetails
+      error?: string
+    }>
+    deleteDataSource: (
+      id: string
+    ) => Promise<{ success: boolean; error?: string }>
+    reorderDataSources: (
+      items: { id: string; order: number }[]
+    ) => Promise<{ success: boolean; error?: string }>
+    batchUpdateAbsentPolicy: (
+      dataSourceIds: string[],
+      policy: {
+        absentMethod: string
+        absentRatio: number
+        absentOffset: number
+        treatExpectedAsMissing?: boolean
+        estimationMode?: string
+        estimationSourceIds?: string[]
+      }
+    ) => Promise<{ success: boolean; error?: string }>
+    getManualScores: (gradeDataSourceId: string) => Promise<{
+      success: boolean
+      manualScores?: import("./gradeProject.types").ManualScoreWithStudent[]
+      error?: string
+    }>
+    batchUpsertManualScores: (
+      scores: {
+        gradeDataSourceId: string
+        studentId: string
+        score: number | null
+      }[]
+    ) => Promise<{ success: boolean; error?: string }>
+    getBoundarySets: (gradeProjectId: string) => Promise<{
+      success: boolean
+      boundarySets?: import("./gradeProject.types").GradeBoundarySetWithDetails[]
+      error?: string
+    }>
+    upsertBoundarySet: (data: {
+      gradeProjectId: string
+      targetType: string
+      gradeItemId: string | null
+      boundaries: { label: string; minPercentage: number; order: number }[]
+    }) => Promise<{
+      success: boolean
+      boundarySet?: import("./gradeProject.types").GradeBoundarySetWithDetails
+      error?: string
+    }>
+    deleteBoundarySet: (
+      id: string
+    ) => Promise<{ success: boolean; error?: string }>
+    upsertGradeOverride: (data: {
+      gradeProjectId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+      overrideLabel: string
+    }) => Promise<{ success: boolean; override?: unknown; error?: string }>
+    deleteGradeOverride: (data: {
+      gradeProjectId: string
+      studentId: string
+      targetType: string
+      gradeItemId: string | null
+    }) => Promise<{ success: boolean; error?: string }>
+    getGradeItemExclusions: (gradeProjectId: string) => Promise<{
+      success: boolean
+      exclusions?: Array<{
+        id: string
+        gradeProjectId: string
+        studentId: string
+        gradeItemId: string
+      }>
+      error?: string
+    }>
+    setGradeItemExclusion: (data: {
+      gradeProjectId: string
+      studentId: string
+      gradeItemId: string
+      excluded: boolean
+    }) => Promise<{ success: boolean; error?: string }>
+    batchUpdateGradeItemExclusions: (
+      gradeProjectId: string,
+      updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
+    ) => Promise<{ success: boolean; error?: string }>
+    calculateGrades: (gradeProjectId: string) => Promise<{
+      success: boolean
+      result?: import("./gradeProject.types").GradeCalculationResult
+      error?: string
+    }>
+    getExamProjectCandidates: () => Promise<{
+      success: boolean
+      projects?: Array<{ id: string; examName: string; examDate: Date | null }>
+      error?: string
+    }>
+    getProjectSubtotalGroups: (projectId: string) => Promise<{
+      success: boolean
+      subtotalGroups?: Array<{
+        id: string
+        name: string
+        subtotals: Array<{ id: string; name: string; order: number }>
+      }>
+      error?: string
+    }>
+    getProjectCropRegions: (projectId: string) => Promise<{
+      success: boolean
+      cropRegions?: Array<{
+        id: string
+        label: string
+        type: string
+        points: number | null
+        orderIndex: number | null
+      }>
+      error?: string
+    }>
+    calculateSourceMaxScore: (data: {
+      type: string
+      examProjectId?: string
+      subtotalId?: string
+      cropRegionId?: string
+    }) => Promise<{ success: boolean; maxScore?: number; error?: string }>
+    exportExcel: (
+      gradeProjectId: string,
+      options?: { studentIds?: string[] }
+    ) => Promise<{
+      success: boolean
+      outputPath?: string
+      error?: string
+    }>
+    getExportSettings: (gradeProjectId: string) => Promise<{
+      success: boolean
+      settings?: Record<string, unknown> | null
+      error?: string
+    }>
+    saveExportSettings: (
+      gradeProjectId: string,
+      settings: Record<string, unknown>
+    ) => Promise<{
+      success: boolean
+      error?: string
+    }>
+    exportArchive: (gradeProjectId: string) => Promise<{
+      success: boolean
+      error?: string
+    }>
+    importArchive: () => Promise<{
+      success: boolean
+      preview?: import("./gradeArchive.types").GradeArchiveImportPreview
+      archiveData?: import("./gradeArchive.types").GradeArchiveData
+      error?: string
+    }>
+    executeImport: (
+      archiveData: import("./gradeArchive.types").GradeArchiveData,
+      examProjectMapping?: Record<string, string>
+    ) => Promise<{
+      success: boolean
+      gradeProjectId?: string
+      error?: string
+    }>
+  }
+
+  // =============================================================================
   // Subject（教科）
   // =============================================================================
 

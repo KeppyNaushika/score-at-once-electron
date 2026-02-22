@@ -134,7 +134,7 @@ const EditProjectWindow = ({
   }
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleAddTag()
     }
@@ -143,7 +143,7 @@ const EditProjectWindow = ({
   const handleEditingTagInputKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) {
       e.preventDefault()
       handleSaveEditedTag()
     }
