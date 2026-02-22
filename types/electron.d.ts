@@ -30,7 +30,6 @@ export type {
   MasterAnswerPayload,
   // ProjectPage/MasterImage/StudentAnswerImage関連
   MasterImageWithDetails,
-  PageImageWithDetails,
   ProjectPageWithDetails,
   ProjectSubtotalGroupWithProject,
   ProjectSubtotalGroupWithSubtotalGroup,
