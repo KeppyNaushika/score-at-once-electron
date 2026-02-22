@@ -233,9 +233,7 @@ export async function deleteGradeProject(id: string) {
 // GradeProjectExportSettings（エクスポート設定）
 // =============================================================================
 
-export async function getGradeProjectExportSettings(
-  gradeProjectId: string
-) {
+export async function getGradeProjectExportSettings(gradeProjectId: string) {
   const settings = await prisma.gradeProjectExportSettings.findUnique({
     where: { gradeProjectId },
   })

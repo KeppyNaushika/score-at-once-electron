@@ -259,7 +259,7 @@ export function IndividualReportTab({
       <Section title="フッター">
         <div className="flex flex-col gap-2">
           <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="text-xs w-6 shrink-0">左</Label>
+            <Label className="w-6 shrink-0 text-xs">左</Label>
             <Input
               value={options.footer.left}
               onChange={(e) =>
@@ -272,7 +272,7 @@ export function IndividualReportTab({
             />
           </div>
           <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="text-xs w-6 shrink-0">中</Label>
+            <Label className="w-6 shrink-0 text-xs">中</Label>
             <Input
               value={options.footer.center}
               onChange={(e) =>
@@ -285,7 +285,7 @@ export function IndividualReportTab({
             />
           </div>
           <div className="bg-muted/50 flex items-center gap-2 rounded-lg border p-2">
-            <Label className="text-xs w-6 shrink-0">右</Label>
+            <Label className="w-6 shrink-0 text-xs">右</Label>
             <Input
               value={options.footer.right}
               onChange={(e) =>

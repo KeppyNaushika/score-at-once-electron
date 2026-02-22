@@ -21,8 +21,10 @@ import {
   type PdfExportPageData,
 } from "@/components/projects/08-export/components/PdfCanvasRenderer"
 import { StudentSelectionCard } from "@/components/projects/08-export/components/StudentSelectionCard"
+import { useExcelPreview } from "@/components/projects/08-export/hooks/useExcelPreview"
 import { useExportPage } from "@/components/projects/08-export/hooks/useExportPage"
 import { useIndividualReportPreview } from "@/components/projects/08-export/hooks/useIndividualReportPreview"
+import { useScoredAnswerPreview } from "@/components/projects/08-export/hooks/useScoredAnswerPreview"
 import type { ScoringMarkConfigForPdf } from "@/components/projects/08-export/utils/pdfCanvasRenderer"
 
 export default function ExportMainView() {
@@ -104,6 +106,20 @@ export default function ExportMainView() {
     enabled: !!project?.id && selectedStudents.size > 0,
   })
 
+  // Excelプレビュー
+  const {
+    previewData: excelPreviewData,
+    isLoading: isExcelPreviewLoading,
+    error: excelPreviewError,
+  } = useExcelPreview({
+    projectId: project?.id || "",
+    selectedStudentIds,
+    enabled:
+      !!project?.id &&
+      selectedStudents.size > 0 &&
+      exportTab === "grading-data",
+  })
+
   // プレビュー用の生徒リスト
   const previewStudentList = useMemo(() => {
     return students
@@ -173,6 +189,29 @@ export default function ExportMainView() {
         showScoreForStatus: scoringMarkConfig.showScoreForStatus,
       }
     }, [scoringMarkConfig])
+
+  // プレビュー用にmemoized configを用意（毎レンダーで新オブジェクト生成→無限ループ防止）
+  const scoringMarkConfigForPdf = useMemo(
+    () => getScoringMarkConfigForPdf(),
+    [getScoringMarkConfigForPdf]
+  )
+
+  // 採点済み答案プレビュー（getScoringMarkConfigForPdfの後に配置）
+  const {
+    previewImageUrls: scoredAnswerPreviewUrls,
+    isLoading: isScoredAnswerPreviewLoading,
+    error: scoredAnswerPreviewError,
+    previewStudentId: scoredAnswerPreviewStudentId,
+    setPreviewStudentId: setScoredAnswerPreviewStudentId,
+  } = useScoredAnswerPreview({
+    projectId: project?.id || "",
+    selectedStudentIds,
+    scoringMarkConfig: scoringMarkConfigForPdf,
+    enabled:
+      !!project?.id &&
+      selectedStudents.size > 0 &&
+      exportTab === "scored-answers",
+  })
 
   /**
    * Canvas描画ベースのPDF出力（ストリーミング処理フロー）
@@ -675,6 +714,18 @@ export default function ExportMainView() {
               onPreviewStudentChange={setPreviewStudentId}
               previewStudentList={previewStudentList}
               individualReportOptions={individualReportOptions}
+              // 採点済み答案プレビュー
+              scoredAnswerPreviewUrls={scoredAnswerPreviewUrls}
+              isScoredAnswerPreviewLoading={isScoredAnswerPreviewLoading}
+              scoredAnswerPreviewError={scoredAnswerPreviewError}
+              scoredAnswerPreviewStudentId={scoredAnswerPreviewStudentId}
+              onScoredAnswerPreviewStudentChange={
+                setScoredAnswerPreviewStudentId
+              }
+              // Excelプレビュー
+              excelPreviewData={excelPreviewData}
+              isExcelPreviewLoading={isExcelPreviewLoading}
+              excelPreviewError={excelPreviewError}
             />
           </div>
 

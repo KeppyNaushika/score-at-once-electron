@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from "electron"
 
+import { fetchExportData } from "../lib/export/excel/dataFetcher"
 import type { GetIndividualReportDataOptions } from "../lib/export/individual-report"
 import {
   fetchIndividualReportData,
@@ -31,6 +32,75 @@ export function setupExportHandlers(): void {
         return await exportGradingDataExcel(options)
       } catch (err) {
         console.error("Error exporting grading data Excel:", err)
+        return {
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
+        }
+      }
+    }
+  )
+
+  // Excelプレビュー用データ取得
+  ipcMain.handle(
+    "export:getExcelPreviewData",
+    async (
+      _event,
+      options: {
+        projectId: string
+        selectedStudentIds: string[]
+      }
+    ) => {
+      try {
+        const result = await fetchExportData(
+          options.projectId,
+          options.selectedStudentIds
+        )
+        if (!result.success) {
+          return { success: false, error: result.error }
+        }
+        // Prismaの Decimal/Date 型はIPC経由でcloneできないため、
+        // プレーンなJSオブジェクトに変換して返す
+        const questionRegions = result.questionRegions?.map((r) => ({
+          id: r.id,
+          label: r.label,
+          points: r.points != null ? Number(r.points) : null,
+          orderIndex: r.orderIndex != null ? Number(r.orderIndex) : null,
+        }))
+
+        const scoringData = result.scoringData?.map((sd) => ({
+          studentId: sd.studentId,
+          studentName: sd.studentName,
+          studentNumber: sd.studentNumber,
+          grade: sd.grade,
+          className: sd.className,
+          attendanceNumber:
+            sd.attendanceNumber != null ? Number(sd.attendanceNumber) : null,
+          status: sd.status,
+          scores: sd.scores.map((s) => ({
+            questionId: s.questionId,
+            questionLabel: s.questionLabel,
+            score: s.score != null ? Number(s.score) : null,
+            maxScore: Number(s.maxScore),
+            status: s.status,
+          })),
+          totalScore: sd.totalScore != null ? Number(sd.totalScore) : null,
+          totalMaxScore: Number(sd.totalMaxScore),
+          subtotalScores: sd.subtotalScores.map((ss) => ({
+            subtotalId: ss.subtotalId,
+            subtotalLabel: ss.subtotalLabel,
+            score: ss.score != null ? Number(ss.score) : null,
+            maxScore: Number(ss.maxScore),
+          })),
+        }))
+
+        return {
+          success: true,
+          questionRegions,
+          subtotalColumns: result.subtotalColumns,
+          scoringData,
+        }
+      } catch (err) {
+        console.error("Error getting Excel preview data:", err)
         return {
           success: false,
           error: err instanceof Error ? err.message : "Unknown error occurred",
@@ -620,17 +690,17 @@ export function setupExportHandlers(): void {
         // レンダリング完了を待つ
         await new Promise((resolve) => setTimeout(resolve, 500))
 
-        // PDFを生成（マージンはインチ単位、5mm ≈ 0.2インチ）
+        // PDFを生成（マージンはCSSの@page marginに任せるため0に設定）
         const pdfBuffer = await win.webContents.printToPDF({
           pageSize: "A4",
           landscape: false,
           printBackground: true,
           margins: {
             marginType: "custom",
-            top: 0.2,
-            bottom: 0.2,
-            left: 0.2,
-            right: 0.2,
+            top: 0,
+            bottom: 0,
+            left: 0,
+            right: 0,
           },
         })
 

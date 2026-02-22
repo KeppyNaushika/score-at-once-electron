@@ -35,8 +35,11 @@ import type {
   IndividualReportOptions,
 } from "@/electron-src/lib/export/individual-report/types"
 
+import type { ExcelPreviewData } from "../hooks/useExcelPreview"
+import { ExcelPreview } from "./ExcelPreview"
 import type { ExportTabType } from "./ExportOptionsCard"
 import { IndividualReportPreview } from "./individual-report/IndividualReportPreview"
+import { ScoredAnswerPreview } from "./ScoredAnswerPreview"
 
 interface StudentSelectionCardProps {
   students: Student[]
@@ -58,6 +61,16 @@ interface StudentSelectionCardProps {
   onPreviewStudentChange?: (studentId: string) => void
   previewStudentList?: Array<{ id: string; name: string }>
   individualReportOptions?: IndividualReportOptions
+  // 採点済み答案プレビュー
+  scoredAnswerPreviewUrls?: string[]
+  isScoredAnswerPreviewLoading?: boolean
+  scoredAnswerPreviewError?: string | null
+  scoredAnswerPreviewStudentId?: string | null
+  onScoredAnswerPreviewStudentChange?: (studentId: string) => void
+  // Excelプレビュー
+  excelPreviewData?: ExcelPreviewData | null
+  isExcelPreviewLoading?: boolean
+  excelPreviewError?: string | null
 }
 
 export function StudentSelectionCard({
@@ -79,6 +92,14 @@ export function StudentSelectionCard({
   onPreviewStudentChange,
   previewStudentList,
   individualReportOptions,
+  scoredAnswerPreviewUrls,
+  isScoredAnswerPreviewLoading,
+  scoredAnswerPreviewError,
+  scoredAnswerPreviewStudentId,
+  onScoredAnswerPreviewStudentChange,
+  excelPreviewData,
+  isExcelPreviewLoading,
+  excelPreviewError,
 }: StudentSelectionCardProps) {
   const [activeTab, setActiveTab] = useState<"selection" | "preview">(
     "selection"
@@ -306,15 +327,24 @@ export function StudentSelectionCard({
         value="preview"
         className="mt-0 flex min-h-0 flex-1 flex-col"
       >
-        {/* 個人成績表の場合のみ生徒選択を表示 */}
-        {previewType === "individual-report" &&
+        {/* 個人成績表・採点済み答案の場合は生徒選択を表示 */}
+        {(previewType === "individual-report" ||
+          previewType === "scored-answers") &&
           previewStudentList &&
           previewStudentList.length > 0 && (
             <div className="mb-2 flex items-center gap-2">
               <Label className="text-sm whitespace-nowrap">生徒:</Label>
               <Select
-                value={previewStudentId || ""}
-                onValueChange={(v) => onPreviewStudentChange?.(v)}
+                value={
+                  previewType === "scored-answers"
+                    ? scoredAnswerPreviewStudentId || ""
+                    : previewStudentId || ""
+                }
+                onValueChange={(v) =>
+                  previewType === "scored-answers"
+                    ? onScoredAnswerPreviewStudentChange?.(v)
+                    : onPreviewStudentChange?.(v)
+                }
               >
                 <SelectTrigger className="h-8 flex-1">
                   <SelectValue placeholder="選択" />
@@ -359,16 +389,35 @@ export function StudentSelectionCard({
                 </p>
               </div>
             )
-          ) : (
-            // 採点済み答案 / Excel は準備中
-            <div className="flex flex-1 items-center justify-center">
-              <p className="text-muted-foreground text-sm">
-                {previewType === "scored-answers"
-                  ? "採点済み答案プレビューは準備中です"
-                  : "Excelプレビューは準備中です"}
-              </p>
-            </div>
-          )}
+          ) : previewType === "scored-answers" ? (
+            // 採点済み答案プレビュー
+            <ScoredAnswerPreview
+              imageUrls={scoredAnswerPreviewUrls || []}
+              isLoading={isScoredAnswerPreviewLoading || false}
+              error={scoredAnswerPreviewError || null}
+            />
+          ) : previewType === "excel" ? (
+            // Excelプレビュー
+            isExcelPreviewLoading ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-muted-foreground text-sm">読み込み中...</p>
+              </div>
+            ) : excelPreviewError ? (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-destructive text-sm">{excelPreviewError}</p>
+              </div>
+            ) : excelPreviewData ? (
+              <ExcelPreview data={excelPreviewData} />
+            ) : (
+              <div className="flex flex-1 items-center justify-center">
+                <p className="text-muted-foreground text-sm">
+                  {selectedStudents.size === 0
+                    ? "生徒を選択してください"
+                    : "データの取得中..."}
+                </p>
+              </div>
+            )
+          ) : null}
         </div>
       </TabsContent>
     </Tabs>

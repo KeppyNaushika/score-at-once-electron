@@ -536,6 +536,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       pageSize?: "A4" | "Letter"
       landscape?: boolean
     }) => ipcRenderer.invoke("export:printMultipleHtmlToPdf", options),
+    // Excelプレビューデータ取得
+    getExcelPreviewData: (options: {
+      projectId: string
+      selectedStudentIds: string[]
+    }) => ipcRenderer.invoke("export:getExcelPreviewData", options),
     // 印刷ダイアログを開く
     openPrintDialog: (options: { html: string; title?: string }) =>
       ipcRenderer.invoke("export:openPrintDialog", options),
