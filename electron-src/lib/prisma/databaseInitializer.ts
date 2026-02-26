@@ -538,6 +538,9 @@ CREATE UNIQUE INDEX "CropRegionMarkingOverride_cropRegionId_markType_key" ON "Cr
 CREATE INDEX "CropRegionMarkingOverride_cropRegionId_idx" ON "CropRegionMarkingOverride"("cropRegionId");
 
 -- CreateIndex (MasterImage/StudentAnswerImage)
+CREATE UNIQUE INDEX "StudentAnswerImage_projectPageId_studentId_key" ON "StudentAnswerImage"("projectPageId", "studentId");
+
+-- CreateIndex
 CREATE INDEX "StudentAnswerImage_projectPageId_idx" ON "StudentAnswerImage"("projectPageId");
 
 -- CreateIndex

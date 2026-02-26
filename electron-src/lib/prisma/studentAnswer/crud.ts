@@ -6,6 +6,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 
 import {
+  getAbsolutePathFromData,
   getAnswerSheetsDirectory,
   getRelativePathFromData,
 } from "../../dataManager"
@@ -22,6 +23,7 @@ export async function uploadStudentAnswers(
     buffer: ArrayBuffer
     studentId?: string
     pageNumber?: number
+    overwrite?: boolean
   }[]
 ) {
   try {
@@ -33,17 +35,6 @@ export async function uploadStudentAnswers(
     const uploadedSheets = []
 
     for (const fileData of filesData) {
-      // ファイル名を正規化
-      const timestamp = Date.now()
-      const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
-      const fileName = `${timestamp}_${sanitizedName}`
-      const filePath = path.join(projectDir, fileName)
-      const relativePath = getRelativePathFromData(filePath)
-
-      // ファイルを保存
-      const buffer = Buffer.from(fileData.buffer)
-      await fs.writeFile(filePath, buffer)
-
       // studentIdが必須
       if (!fileData.studentId) {
         throw new Error(`Student ID is required for file: ${fileData.name}`)
@@ -74,22 +65,56 @@ export async function uploadStudentAnswers(
         },
       })
 
-      // データベースに記録
-      const answerSheet = await prisma.studentAnswerImage.create({
-        data: {
-          projectPageId: projectPage.id,
-          studentId: fileData.studentId,
-          imagePath: relativePath,
-        },
-      })
+      // ファイル名を正規化
+      const timestamp = Date.now()
+      const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
+      const fileName = `${timestamp}_${sanitizedName}`
+      const filePath = path.join(projectDir, fileName)
+      const relativePath = getRelativePathFromData(filePath)
 
-      // 上書きフラグを追加
-      const resultSheet = {
-        ...answerSheet,
-        isOverwrite: !!existingRecord,
+      if (existingRecord) {
+        if (fileData.overwrite) {
+          // ファイルを保存
+          const buffer = Buffer.from(fileData.buffer)
+          await fs.writeFile(filePath, buffer)
+
+          // 古いファイルを削除
+          try {
+            const oldFilePath = getAbsolutePathFromData(
+              existingRecord.imagePath
+            )
+            await fs.unlink(oldFilePath)
+          } catch {
+            // ファイルが存在しない場合は無視
+          }
+
+          // レコードを更新
+          const answerSheet = await prisma.studentAnswerImage.update({
+            where: { id: existingRecord.id },
+            data: { imagePath: relativePath },
+          })
+
+          uploadedSheets.push({ ...answerSheet, isOverwrite: true })
+        } else {
+          // 上書き無効: スキップ（既存レコードをそのまま返す）
+          uploadedSheets.push({ ...existingRecord, isOverwrite: false })
+        }
+      } else {
+        // ファイルを保存
+        const buffer = Buffer.from(fileData.buffer)
+        await fs.writeFile(filePath, buffer)
+
+        // 新規作成
+        const answerSheet = await prisma.studentAnswerImage.create({
+          data: {
+            projectPageId: projectPage.id,
+            studentId: fileData.studentId,
+            imagePath: relativePath,
+          },
+        })
+
+        uploadedSheets.push({ ...answerSheet, isOverwrite: false })
       }
-
-      uploadedSheets.push(resultSheet)
     }
 
     return { success: true, answerSheets: uploadedSheets }
@@ -130,7 +155,18 @@ export async function getStudentAnswersByProjectId(projectId: string) {
       orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
     })
 
-    return { success: true, studentAnswerImages }
+    // 重複除去フォールバック（@@unique制約適用前のデータ対策）
+    const seen = new Map<string, (typeof studentAnswerImages)[0]>()
+    for (const img of studentAnswerImages) {
+      const key = `${img.studentId}-${img.projectPageId}`
+      const existing = seen.get(key)
+      if (!existing || new Date(img.updatedAt) > new Date(existing.updatedAt)) {
+        seen.set(key, img)
+      }
+    }
+    const deduplicated = Array.from(seen.values())
+
+    return { success: true, studentAnswerImages: deduplicated }
   } catch (error) {
     console.error("Error fetching student answer images:", error)
     return {

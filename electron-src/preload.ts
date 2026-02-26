@@ -84,6 +84,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       buffer: ArrayBuffer
       studentId?: string
       pageNumber?: number
+      overwrite?: boolean
     }[]
   ) => ipcRenderer.invoke("upload-answer-sheets", projectId, filesData),
   getStudentAnswersByProjectId: (projectId: string) =>
