@@ -115,14 +115,25 @@ export async function swapStudentAnswerPlacements(
       }
 
       // StudentAnswerImageのstudentIdを交換
+      // @@unique([projectPageId, studentId])制約回避のため一時ID方式で3段階更新
+      const tempStudentId = `__TEMP_SWAP_${Date.now()}`
+
+      // Step 1: file_1 → 一時ID（制約衝突を回避）
       await tx.studentAnswerImage.update({
         where: { id: answerSheetId1 },
-        data: { studentId: answerSheet2.studentId },
+        data: { studentId: tempStudentId },
       })
 
+      // Step 2: file_2 → file_1の元のstudentId
       await tx.studentAnswerImage.update({
         where: { id: answerSheetId2 },
         data: { studentId: answerSheet1.studentId },
+      })
+
+      // Step 3: file_1（一時ID） → file_2の元のstudentId
+      await tx.studentAnswerImage.update({
+        where: { id: answerSheetId1 },
+        data: { studentId: answerSheet2.studentId },
       })
 
       // 更新後の答案情報を取得

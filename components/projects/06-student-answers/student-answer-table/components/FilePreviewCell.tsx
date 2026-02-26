@@ -58,34 +58,33 @@ export function FilePreviewCell({
    *
    * DB保存済みの画像をElectron API経由でBase64として取得し表示する。
    * 依存配列にはfile.idとfile.imagePathのみを含め、fileオブジェクト全体は含めない。
+   * isImageLoadingは依存配列に含めない（含めるとstate変更→cleanup→cancelled=trueで読み込みが完了しない）。
    */
   useEffect(() => {
+    let mounted = true
     const currentFile = fileRef.current
-    if (!imagePreview && currentFile.imagePath && !isImageLoading) {
-      let cancelled = false
-      const frame = requestAnimationFrame(() => {
-        if (cancelled) return
 
-        setIsImageLoading(true)
-        loadStudentAnswerImage(currentFile)
-          .then((dataUrl) => {
-            if (cancelled) return
-            setImagePreview(dataUrl)
-            setIsImageLoading(false)
-          })
-          .catch((error) => {
-            if (cancelled) return
-            console.error("画像読み込みエラー:", error)
-            setIsImageLoading(false)
-          })
-      })
-
-      return () => {
-        cancelled = true
-        cancelAnimationFrame(frame)
-      }
+    if (!imagePreview && currentFile.imagePath) {
+      setIsImageLoading(true)
+      loadStudentAnswerImage(currentFile)
+        .then((dataUrl) => {
+          if (!mounted) return
+          setImagePreview(dataUrl)
+        })
+        .catch((error) => {
+          if (!mounted) return
+          console.error("画像読み込みエラー:", error)
+        })
+        .finally(() => {
+          if (!mounted) return
+          setIsImageLoading(false)
+        })
     }
-  }, [file.id, file.imagePath, imagePreview, isImageLoading])
+
+    return () => {
+      mounted = false
+    }
+  }, [file.id, file.imagePath, imagePreview])
 
   /**
    * 氏名欄プレビューの生成
