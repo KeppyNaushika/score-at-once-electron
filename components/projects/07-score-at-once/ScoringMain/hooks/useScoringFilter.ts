@@ -261,15 +261,7 @@ export function useScoringFilter({
       return
     }
 
-    const runUpdate = () => {
-      updateVisibleAnswers()
-    }
-
-    if (typeof queueMicrotask === "function") {
-      queueMicrotask(runUpdate)
-    } else {
-      Promise.resolve().then(runUpdate)
-    }
+    updateVisibleAnswers()
   }, [
     studentAnswerImages.length,
     cropRegions.length,
