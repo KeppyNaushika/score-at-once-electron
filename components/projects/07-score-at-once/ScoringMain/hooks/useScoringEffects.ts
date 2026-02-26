@@ -113,13 +113,7 @@ export function useScoringEffects(params: UseScoringEffectsParams): void {
     if (gradingMode === "grid") {
       // グリッドモード: 選択をリセット
       setSelectedPageImageIds(new Set())
-      const scheduleIncrement = () =>
-        setQuestionChangeVersion((version) => version + 1)
-      if (typeof queueMicrotask === "function") {
-        queueMicrotask(scheduleIncrement)
-      } else {
-        Promise.resolve().then(scheduleIncrement)
-      }
+      setQuestionChangeVersion((version) => version + 1)
     } else {
       // 個別モード: 現在選択中の生徒の新しい設問ページに対応するpageImageに更新
       const currentSelectedIds = selectedStudentAnswerImageIdsRef.current
