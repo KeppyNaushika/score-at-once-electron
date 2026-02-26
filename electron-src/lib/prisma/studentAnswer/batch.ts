@@ -88,7 +88,21 @@ export async function batchUpdateStudentAnswerPlacements(
         })
       }
 
-      // 各答案を最終位置に移動
+      // @@unique([projectPageId, studentId])制約回避のため2段階更新
+      // Step 1: 全ての対象を一時IDに設定（制約衝突を回避）
+      const tempPrefix = `__TEMP_BATCH_${Date.now()}_`
+      await Promise.all(
+        updateMoves.map((move, index) =>
+          tx.studentAnswerImage.update({
+            where: { id: move.fileId },
+            data: {
+              studentId: `${tempPrefix}${index}`,
+            },
+          })
+        )
+      )
+
+      // Step 2: 最終位置に移動
       await Promise.all(
         updateMoves.map((move) =>
           tx.studentAnswerImage.update({
@@ -194,16 +208,25 @@ export async function swapStudentAnswerPlacementsWithScoring(
       ])
 
       // StudentAnswerImageのstudentIdを交換
-      // 一時的に新しいstudentIdを設定できないため、2段階で更新
-      // ユニーク制約がないので直接交換可能
+      // @@unique([projectPageId, studentId])制約回避のため一時ID方式で3段階更新
+      const tempStudentId = `__TEMP_SWAP_${Date.now()}`
+
+      // Step 1: file_1 → 一時ID
       await tx.studentAnswerImage.update({
         where: { id: answerSheetId1 },
-        data: { studentId: answerSheet2.studentId },
+        data: { studentId: tempStudentId },
       })
 
+      // Step 2: file_2 → file_1の元のstudentId
       await tx.studentAnswerImage.update({
         where: { id: answerSheetId2 },
         data: { studentId: answerSheet1.studentId },
+      })
+
+      // Step 3: file_1（一時ID） → file_2の元のstudentId
+      await tx.studentAnswerImage.update({
+        where: { id: answerSheetId1 },
+        data: { studentId: answerSheet2.studentId },
       })
 
       // 採点データを入れ替えて復元

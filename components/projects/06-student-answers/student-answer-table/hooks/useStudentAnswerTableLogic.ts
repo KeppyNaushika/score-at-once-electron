@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { useDisabledState } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDisabledState"
 import { useDragDrop } from "@/components/projects/06-student-answers/student-answer-table/hooks/useDragDrop"
@@ -104,18 +105,17 @@ export function useStudentAnswerTableLogic({
         const result = await window.electronAPI.deleteStudentAnswer(fileId)
 
         if (result.success) {
-          // 削除成功時はデータを再読み込み
           if (onReloadData) {
-            onReloadData()
+            await onReloadData()
           }
-          // TODO: 成功通知を追加
+          toast.success("答案画像を削除しました")
         } else {
           console.error("答案削除エラー:", result.error)
-          // TODO: エラー通知を追加
+          toast.error(result.error || "答案削除に失敗しました")
         }
       } catch (error) {
         console.error("答案削除例外:", error)
-        // TODO: エラー通知を追加
+        toast.error("答案削除に失敗しました")
       }
     },
     [onReloadData]
@@ -163,7 +163,7 @@ export function useStudentAnswerTableLogic({
             buffer: cell.file.buffer,
             studentId: cell.student.id,
             pageNumber: cell.pageNumber,
-            overwrite: false,
+            overwrite: allowOverwrite,
           })
         }
       })
