@@ -119,6 +119,15 @@ async function createStudentAnswerImageRecords(
     const newStudentId = idMappings.student[img.studentId]
     if (!newProjectPageId || !newStudentId) continue
 
+    // 同一(projectPageId, studentId)の重複チェック
+    const existing = await prisma.studentAnswerImage.findFirst({
+      where: {
+        projectPageId: newProjectPageId,
+        studentId: newStudentId,
+      },
+    })
+    if (existing) continue
+
     const relativePath = img.imagePath.substring(
       img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
     )
@@ -166,6 +175,15 @@ async function createLegacyImageRecords(
     } else if (img.imageType === "STUDENT_ANSWER" && img.studentId) {
       const newStudentId = idMappings.student[img.studentId]
       if (!newStudentId) continue
+
+      // 同一(projectPageId, studentId)の重複チェック
+      const existing = await prisma.studentAnswerImage.findFirst({
+        where: {
+          projectPageId: newProjectPageId,
+          studentId: newStudentId,
+        },
+      })
+      if (existing) continue
 
       const relativePath = img.imagePath.substring(
         img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1

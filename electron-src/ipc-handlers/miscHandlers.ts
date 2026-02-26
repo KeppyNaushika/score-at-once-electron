@@ -198,6 +198,7 @@ export function setupMiscHandlers(): void {
         buffer: ArrayBuffer
         studentId?: string
         pageNumber?: number
+        overwrite?: boolean
       }[]
     ) => {
       try {

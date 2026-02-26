@@ -91,10 +91,28 @@ async function changeStudentId(
     data: { studentId: target.newId },
   })
 
-  await tx.studentAnswerImage.updateMany({
+  // StudentAnswerImage: 重複を回避しつつstudentIdを更新
+  const existingAnswerImages = await tx.studentAnswerImage.findMany({
     where: { studentId: target.existingId },
-    data: { studentId: target.newId },
   })
+  for (const img of existingAnswerImages) {
+    // 移行先のstudentIdで同じprojectPageIdのレコードが既に存在するか確認
+    const duplicate = await tx.studentAnswerImage.findFirst({
+      where: {
+        projectPageId: img.projectPageId,
+        studentId: target.newId,
+      },
+    })
+    if (duplicate) {
+      // 重複する場合は古い方を削除
+      await tx.studentAnswerImage.delete({ where: { id: img.id } })
+    } else {
+      await tx.studentAnswerImage.update({
+        where: { id: img.id },
+        data: { studentId: target.newId },
+      })
+    }
+  }
 
   await tx.questionScore.updateMany({
     where: { studentId: target.existingId },
