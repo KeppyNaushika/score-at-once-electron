@@ -6,15 +6,19 @@ import ImportedFileItem from "./ImportedFileItem"
 
 interface ImportedFileListProps {
   files: ImportedFile[]
+  excludedPages: Set<string>
   onFileRemoved: (fileId: string) => void
   onFileUpdated: (file: ImportedFile) => void
+  onResetExcludedPages: (fileId?: string) => void
   isProcessing: boolean
 }
 
 export default function ImportedFileList({
   files,
+  excludedPages,
   onFileRemoved,
   onFileUpdated,
+  onResetExcludedPages,
   isProcessing,
 }: ImportedFileListProps) {
   if (files.length === 0) {
@@ -31,8 +35,10 @@ export default function ImportedFileList({
         <ImportedFileItem
           key={file.id}
           file={file}
+          excludedPages={excludedPages}
           onRemove={() => onFileRemoved(file.id)}
           onUpdate={onFileUpdated}
+          onResetExcluded={() => onResetExcludedPages(file.id)}
           isProcessing={isProcessing}
         />
       ))}

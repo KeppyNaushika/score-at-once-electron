@@ -4,11 +4,13 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
+  RotateCcw,
   RotateCw,
   Trash2,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -31,18 +33,31 @@ import type {
 
 interface ImportedFileItemProps {
   file: ImportedFile
+  excludedPages: Set<string>
   onRemove: () => void
   onUpdate: (file: ImportedFile) => void
+  onResetExcluded: () => void
   isProcessing: boolean
 }
 
 export default function ImportedFileItem({
   file,
+  excludedPages,
   onRemove,
   onUpdate,
+  onResetExcluded,
   isProcessing,
 }: ImportedFileItemProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  // このファイルの除外ページ数を算出
+  const excludedCount = useMemo(() => {
+    let count = 0
+    for (const key of excludedPages) {
+      if (key.startsWith(`${file.id}:`)) count++
+    }
+    return count
+  }, [excludedPages, file.id])
 
   const handleNUpChange = (value: string) => {
     const enabled = value !== "1in1"
@@ -98,9 +113,33 @@ export default function ImportedFileItem({
             <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{file.name}</p>
-              <p className="text-muted-foreground text-xs">
-                {selectedCount}/{file.pageCount}ページ選択
-              </p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-muted-foreground text-xs">
+                  {selectedCount}/{file.pageCount}ページ選択
+                </p>
+                {excludedCount > 0 && (
+                  <div className="flex items-center gap-0.5">
+                    <Badge
+                      variant="destructive"
+                      className="h-4 px-1 py-0 text-[10px]"
+                    >
+                      削除 {excludedCount}ページ
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4 w-4"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onResetExcluded()
+                      }}
+                      title="削除をリセット"
+                    >
+                      <RotateCcw className="h-2.5 w-2.5" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
             <Button
               variant="ghost"

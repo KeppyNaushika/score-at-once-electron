@@ -22,6 +22,8 @@ export default function PdfToolsMainView() {
     transforms: [],
   })
   const [isProcessing, setIsProcessing] = useState(false)
+  // 出力プレビューから除外されたページ（"fileId:pageNumber" のセット）
+  const [excludedPages, setExcludedPages] = useState<Set<string>>(new Set())
 
   // リサイズ関連の状態
   const [leftPanelWidth, setLeftPanelWidth] = useState(50) // パーセント
@@ -35,6 +37,14 @@ export default function PdfToolsMainView() {
   const handleFileRemoved = (fileId: string) => {
     setImportedFiles((prev) => prev.filter((f) => f.id !== fileId))
     setOutputPages((prev) => prev.filter((p) => p.sourceFileId !== fileId))
+    // ファイル削除時に対応する除外ページもクリア
+    setExcludedPages((prev) => {
+      const next = new Set<string>()
+      for (const key of prev) {
+        if (!key.startsWith(`${fileId}:`)) next.add(key)
+      }
+      return next
+    })
   }
 
   const handleFileUpdated = (updatedFile: ImportedFile) => {
@@ -45,6 +55,36 @@ export default function PdfToolsMainView() {
 
   const handleOutputPagesChange = useCallback((pages: OutputPage[]) => {
     setOutputPages(pages)
+  }, [])
+
+  /** 出力プレビューからページを除外（永続的） */
+  const handlePageExcluded = useCallback((page: OutputPage) => {
+    setExcludedPages((prev) => {
+      const next = new Set(prev)
+      if (page.isNUpCombined && page.combinedPages) {
+        for (const pn of page.combinedPages) {
+          next.add(`${page.sourceFileId}:${pn}`)
+        }
+      } else {
+        next.add(`${page.sourceFileId}:${page.sourcePageNumber}`)
+      }
+      return next
+    })
+  }, [])
+
+  /** 除外ページのリセット（ファイル指定 or 全体） */
+  const handleResetExcludedPages = useCallback((fileId?: string) => {
+    if (fileId) {
+      setExcludedPages((prev) => {
+        const next = new Set<string>()
+        for (const key of prev) {
+          if (!key.startsWith(`${fileId}:`)) next.add(key)
+        }
+        return next
+      })
+    } else {
+      setExcludedPages(new Set())
+    }
   }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -90,9 +130,11 @@ export default function PdfToolsMainView() {
       >
         <ImportPanel
           importedFiles={importedFiles}
+          excludedPages={excludedPages}
           onFilesImported={handleFilesImported}
           onFileRemoved={handleFileRemoved}
           onFileUpdated={handleFileUpdated}
+          onResetExcludedPages={handleResetExcludedPages}
           isProcessing={isProcessing}
         />
       </div>
@@ -112,12 +154,14 @@ export default function PdfToolsMainView() {
         <ExportPanel
           importedFiles={importedFiles}
           outputPages={outputPages}
+          excludedPages={excludedPages}
           exportMode={exportMode}
           interleaveConfig={interleaveConfig}
           isProcessing={isProcessing}
           onExportModeChange={setExportMode}
           onInterleaveConfigChange={setInterleaveConfig}
           onOutputPagesChange={handleOutputPagesChange}
+          onPageExcluded={handlePageExcluded}
           onProcessingChange={setIsProcessing}
         />
       </div>
