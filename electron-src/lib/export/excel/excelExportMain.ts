@@ -7,6 +7,7 @@ import {
 } from "../../shared/types/exportTypes"
 import { fetchExportData } from "./dataFetcher"
 import { saveWorkbook } from "./fileSaver"
+import { createItemAnalysisSheet } from "./itemAnalysisSheetCreator"
 import { createResultSheet, createScoreSheet } from "./sheetCreators"
 
 /**
@@ -65,6 +66,13 @@ export async function exportGradingDataExcel(
       workbook,
       dataResult.questionRegions,
       dataResult.subtotalColumns,
+      dataResult.scoringData
+    )
+
+    // 問題分析シート作成
+    await createItemAnalysisSheet(
+      workbook,
+      dataResult.questionRegions,
       dataResult.scoringData
     )
 
