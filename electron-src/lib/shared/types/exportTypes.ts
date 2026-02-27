@@ -74,6 +74,24 @@ export interface ExportResult {
   }
 }
 
+// 問題分析関連の型定義
+export type DiscriminationLevel =
+  | "good"
+  | "acceptable"
+  | "marginal"
+  | "poor"
+  | "negative"
+  | "insufficient"
+
+export interface ItemAnalysisRow {
+  questionId: string
+  questionLabel: string
+  maxScore: number
+  correctRate: number
+  scoreRate: number
+  discriminationIndex: number | null
+}
+
 // Excel固有の型定義
 export interface ExcelExportOptions extends ExportGradingDataOptions {
   includeScoreSheet?: boolean

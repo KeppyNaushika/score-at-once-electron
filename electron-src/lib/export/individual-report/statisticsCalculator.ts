@@ -2,7 +2,10 @@
  * 個人成績表用統計計算ロジック
  */
 
-import type { ScoringData } from "../../shared/types/exportTypes"
+import type {
+  DiscriminationLevel,
+  ScoringData,
+} from "../../shared/types/exportTypes"
 import type {
   BoxPlotData,
   RawTotalScoreEntry,
@@ -247,6 +250,75 @@ export function collectSubtotalRawScores(
       scores,
     }
   })
+}
+
+/**
+ * 設問別識別係数（補正済み項目合計相関）を計算
+ * corrected item-total correlation: 当該設問を除いた合計点との相関
+ */
+export function calculateDiscriminationIndices(
+  allScoringData: ScoringData[]
+): Record<string, number | null> {
+  const indices: Record<string, number | null> = {}
+
+  if (allScoringData.length === 0) return indices
+
+  const questionIds = allScoringData[0].scores.map((s) => s.questionId)
+
+  for (const questionId of questionIds) {
+    const itemScores: number[] = []
+    const correctedTotals: number[] = []
+
+    for (const data of allScoringData) {
+      const score = data.scores.find((s) => s.questionId === questionId)
+      if (!score || score.status === "unscored" || data.totalScore === null) {
+        continue
+      }
+      const itemScore = score.score ?? 0
+      itemScores.push(itemScore)
+      correctedTotals.push(data.totalScore - itemScore)
+    }
+
+    if (itemScores.length < 3) {
+      indices[questionId] = null
+      continue
+    }
+
+    const itemStdDev = calculateStdDev(itemScores)
+    const totalStdDev = calculateStdDev(correctedTotals)
+
+    if (itemStdDev === 0 || totalStdDev === 0) {
+      indices[questionId] = null
+      continue
+    }
+
+    const itemMean = calculateAverage(itemScores)
+    const totalMean = calculateAverage(correctedTotals)
+    const n = itemScores.length
+
+    let covariance = 0
+    for (let i = 0; i < n; i++) {
+      covariance +=
+        (itemScores[i] - itemMean) * (correctedTotals[i] - totalMean)
+    }
+    covariance /= n
+
+    indices[questionId] = covariance / (itemStdDev * totalStdDev)
+  }
+
+  return indices
+}
+
+/**
+ * 識別係数から判定レベルを返す
+ */
+export function getDiscriminationLevel(r: number | null): DiscriminationLevel {
+  if (r === null) return "insufficient"
+  if (r < 0) return "negative"
+  if (r < 0.2) return "poor"
+  if (r < 0.3) return "marginal"
+  if (r < 0.4) return "acceptable"
+  return "good"
 }
 
 /**
