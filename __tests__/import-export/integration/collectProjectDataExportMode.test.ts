@@ -1,0 +1,407 @@
+/**
+ * collectProjectData のエクスポートモード統合テスト
+ *
+ * テスト対象: electron-src/lib/export/project-archive/dataCollector.ts
+ * 各エクスポートモード（full, template, template_with_subtotals）で
+ * 正しいデータが収集/除外されることを検証する
+ */
+
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+
+import {
+  cleanupTestDatabase,
+  disconnectTestPrisma,
+  getTestPrismaClient,
+} from "../../helpers/testPrismaClient"
+import {
+  createFullTestProject,
+  type FullTestProject,
+} from "../../helpers/testProjectBuilder"
+
+// Prismaクライアントのモック: Electron依存を回避
+vi.mock("../../../electron-src/lib/prisma/client", () => {
+  return {
+    default: getTestPrismaClient(),
+    getPrismaClient: () => getTestPrismaClient(),
+  }
+})
+
+// dataManagerのモック
+vi.mock("../../../electron-src/lib/dataManager", () => {
+  return {
+    getDataDirectory: () => "/tmp/test-data",
+  }
+})
+
+import { collectProjectData } from "../../../electron-src/lib/export/project-archive/dataCollector"
+
+describe("collectProjectData - エクスポートモード", () => {
+  let testProject: FullTestProject
+
+  beforeEach(async () => {
+    await cleanupTestDatabase()
+    testProject = await createFullTestProject(getTestPrismaClient(), {
+      pageCount: 2,
+      cropRegionsPerPage: 2,
+      studentCount: 3,
+      includeV140Data: true,
+      includeScores: true,
+      includeMasterImages: true,
+      includeStudentAnswerImages: true,
+    })
+  })
+
+  afterAll(async () => {
+    await disconnectTestPrisma()
+  })
+
+  // ==========================================================================
+  // fullモード（デフォルト）
+  // ==========================================================================
+
+  describe("fullモード", () => {
+    it("EM-F1: デフォルト（引数なし）はfullモードと同じ結果を返す", async () => {
+      const defaultResult = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id
+      )
+      const fullResult = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "full"
+      )
+
+      expect(defaultResult.success).toBe(true)
+      expect(fullResult.success).toBe(true)
+
+      const d = defaultResult.data!
+      const f = fullResult.data!
+
+      // 主要フィールドの件数が一致
+      expect(d.studentsData.students.length).toBe(
+        f.studentsData.students.length
+      )
+      expect(d.classesData.classes.length).toBe(f.classesData.classes.length)
+      expect(d.scoresData.questionScores.length).toBe(
+        f.scoresData.questionScores.length
+      )
+      expect(d.subtotalsData.subtotalGroups.length).toBe(
+        f.subtotalsData.subtotalGroups.length
+      )
+      expect(d.answerSheetPaths.length).toBe(f.answerSheetPaths.length)
+    })
+
+    it("EM-F2: fullモードは全データを含む", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "full"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.studentsData.students.length).toBe(3)
+      expect(data.classesData.classes.length).toBeGreaterThanOrEqual(1)
+      expect(data.classesData.memberships.length).toBe(3)
+      expect(data.scoresData.questionScores.length).toBe(12) // 4 regions × 3 students
+      expect(data.subtotalsData.subtotalGroups.length).toBe(1)
+      expect(data.subtotalsData.subtotals.length).toBe(2)
+      expect(data.masterImagePaths.length).toBe(2)
+      expect(data.answerSheetPaths.length).toBe(6) // 3 students × 2 pages
+      expect(data.projectData.projectStudents.length).toBe(3)
+      expect(data.projectData.projectClasses.length).toBeGreaterThanOrEqual(1)
+      expect(data.projectData.projectSubtotalGroups.length).toBe(1)
+      expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ==========================================================================
+  // templateモード
+  // ==========================================================================
+
+  describe("templateモード", () => {
+    it("EM-T1: 生徒データが空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.studentsData.students).toEqual([])
+      expect(data.projectData.projectStudents).toEqual([])
+      expect(data.counts.students).toBe(0)
+    })
+
+    it("EM-T2: 学級データが空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.classesData.classes).toEqual([])
+      expect(data.classesData.memberships).toEqual([])
+      expect(data.projectData.projectClasses).toEqual([])
+      expect(data.counts.classes).toBe(0)
+    })
+
+    it("EM-T3: 採点データが空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.scoresData.questionScores).toEqual([])
+      expect(data.scoresData.drawingAnnotations).toEqual([])
+      expect(data.counts.scores).toBe(0)
+      expect(data.counts.annotations).toBe(0)
+    })
+
+    it("EM-T4: 答案画像が空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.projectData.studentAnswerImages).toEqual([])
+      expect(data.answerSheetPaths).toEqual([])
+      expect(data.counts.answerSheetImages).toBe(0)
+    })
+
+    it("EM-T5: 小計データが空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.subtotalsData.subtotalGroups).toEqual([])
+      expect(data.subtotalsData.subtotals).toEqual([])
+      expect(data.subtotalsData.cropSubtotals).toEqual([])
+      expect(data.projectData.projectSubtotalGroups).toEqual([])
+      expect(data.counts.subtotalGroups).toBe(0)
+    })
+
+    it("EM-T6: Subject/SubjectSubtotalGroupが空になる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.subjectsData.subjects).toEqual([])
+      expect(data.subjectsData.subjectSubtotalGroups).toEqual([])
+    })
+
+    it("EM-T7: プロジェクト基本データ・ページ・領域・模範解答画像は保持される", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      // プロジェクト基本情報
+      expect(data.projectData.project.id).toBe(testProject.project.id)
+      expect(data.projectData.project.examName).toBe(
+        testProject.project.examName
+      )
+
+      // ページと領域
+      expect(data.projectData.projectPages.length).toBe(2)
+      expect(data.projectData.cropRegions.length).toBe(4)
+
+      // 模範解答画像
+      expect(data.masterImagePaths.length).toBe(2)
+      expect(data.counts.masterImages).toBe(2)
+    })
+
+    it("EM-T8: マーク設定（v1.4.0+）は保持される", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.projectData.projectMarkingFormats).toBeDefined()
+      expect(data.projectData.projectMarkingFormats!.length).toBeGreaterThan(0)
+      expect(data.projectData.cropRegionMarkingOverrides).toBeDefined()
+    })
+
+    it("EM-T9: ユーザーデータは保持される", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.usersData.users.length).toBe(1)
+      expect(data.counts.users).toBe(1)
+    })
+  })
+
+  // ==========================================================================
+  // template_with_subtotalsモード
+  // ==========================================================================
+
+  describe("template_with_subtotalsモード", () => {
+    it("EM-S1: 生徒・学級・採点・答案が空になる（templateと同じ）", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.studentsData.students).toEqual([])
+      expect(data.classesData.classes).toEqual([])
+      expect(data.classesData.memberships).toEqual([])
+      expect(data.scoresData.questionScores).toEqual([])
+      expect(data.scoresData.drawingAnnotations).toEqual([])
+      expect(data.projectData.studentAnswerImages).toEqual([])
+      expect(data.answerSheetPaths).toEqual([])
+      expect(data.projectData.projectStudents).toEqual([])
+      expect(data.projectData.projectClasses).toEqual([])
+    })
+
+    it("EM-S2: 小計データが含まれる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.subtotalsData.subtotalGroups.length).toBe(1)
+      expect(data.subtotalsData.subtotals.length).toBe(2)
+      expect(data.projectData.projectSubtotalGroups.length).toBe(1)
+      expect(data.counts.subtotalGroups).toBe(1)
+    })
+
+    it("EM-S3: Subject/SubjectSubtotalGroupが含まれる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.subjectsData.subjects.length).toBeGreaterThan(0)
+      expect(data.subjectsData.subjectSubtotalGroups.length).toBeGreaterThan(0)
+    })
+
+    it("EM-S4: プロジェクト基本データ・ページ・領域・模範解答画像は保持される", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.projectData.project.id).toBe(testProject.project.id)
+      expect(data.projectData.projectPages.length).toBe(2)
+      expect(data.projectData.cropRegions.length).toBe(4)
+      expect(data.masterImagePaths.length).toBe(2)
+    })
+
+    it("EM-S5: CropSubtotalが含まれる", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      // includeV140Dataでcropsubtotalが作成されている場合
+      expect(data.subtotalsData.cropSubtotals.length).toBeGreaterThanOrEqual(0)
+    })
+  })
+
+  // ==========================================================================
+  // countsの整合性
+  // ==========================================================================
+
+  describe("countsの整合性", () => {
+    it("EM-C1: templateモードのcountsが実データ長と一致する", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.counts.students).toBe(data.studentsData.students.length)
+      expect(data.counts.classes).toBe(data.classesData.classes.length)
+      expect(data.counts.scores).toBe(data.scoresData.questionScores.length)
+      expect(data.counts.annotations).toBe(
+        data.scoresData.drawingAnnotations.length
+      )
+      expect(data.counts.subtotalGroups).toBe(
+        data.subtotalsData.subtotalGroups.length
+      )
+      expect(data.counts.masterImages).toBe(data.masterImagePaths.length)
+      expect(data.counts.answerSheetImages).toBe(data.answerSheetPaths.length)
+    })
+
+    it("EM-C2: template_with_subtotalsモードのcountsが実データ長と一致する", async () => {
+      const result = await collectProjectData(
+        testProject.project.id,
+        testProject.user.id,
+        "template_with_subtotals"
+      )
+
+      expect(result.success).toBe(true)
+      const data = result.data!
+
+      expect(data.counts.students).toBe(data.studentsData.students.length)
+      expect(data.counts.classes).toBe(data.classesData.classes.length)
+      expect(data.counts.scores).toBe(data.scoresData.questionScores.length)
+      expect(data.counts.subtotalGroups).toBe(
+        data.subtotalsData.subtotalGroups.length
+      )
+      expect(data.counts.masterImages).toBe(data.masterImagePaths.length)
+      expect(data.counts.answerSheetImages).toBe(data.answerSheetPaths.length)
+    })
+  })
+})

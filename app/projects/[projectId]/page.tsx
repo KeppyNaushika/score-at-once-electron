@@ -7,6 +7,7 @@ import { useState } from "react"
 import { toast } from "sonner"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import ExportModeModal from "@/components/projects/detail/ExportModeModal"
 import { useWorkflowData } from "@/components/projects/detail/hooks/useWorkflowData"
 import OverallProgress from "@/components/projects/detail/OverallProgress"
 import PhaseCard from "@/components/projects/detail/PhaseCard"
@@ -16,6 +17,7 @@ import EditProjectWindow from "@/components/projects/forms/EditProjectWindow"
 import DeleteProjectModal from "@/components/projects/shared/DeleteProjectModal"
 import { useAuth } from "@/contexts/AuthContext"
 import { useProjectDetail } from "@/hooks/useProjectDetail"
+import type { ExportMode } from "@/types/projectArchive.types"
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -25,6 +27,7 @@ export default function ProjectDetailPage() {
 
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
 
   const {
@@ -65,7 +68,7 @@ export default function ProjectDetailPage() {
     router.push("/projects")
   }
 
-  const handleExport = async () => {
+  const handleExport = async (exportMode: ExportMode) => {
     if (isExporting) return
 
     if (!user?.id) {
@@ -84,16 +87,20 @@ export default function ProjectDetailPage() {
       const result = await window.electronAPI.archive.exportProject({
         projectId,
         userId: user.id,
+        exportMode,
       })
 
       if (result.success) {
+        setShowExportModal(false)
         toast.success("エクスポート完了", {
           description: `${result.outputPath} に保存しました。`,
         })
       } else {
-        toast.error("エクスポート失敗", {
-          description: result.error || "エクスポートに失敗しました。",
-        })
+        if (result.error !== "キャンセルされました") {
+          toast.error("エクスポート失敗", {
+            description: result.error || "エクスポートに失敗しました。",
+          })
+        }
       }
     } catch (error) {
       toast.error("エクスポート失敗", {
@@ -149,7 +156,7 @@ export default function ProjectDetailPage() {
             project={project}
             onEdit={() => setShowEditModal(true)}
             onDelete={() => setShowDeleteModal(true)}
-            onExport={handleExport}
+            onExport={() => setShowExportModal(true)}
           />
 
           <OverallProgress
@@ -175,6 +182,12 @@ export default function ProjectDetailPage() {
           </div>
 
           {/* Modals */}
+          <ExportModeModal
+            open={showExportModal}
+            onOpenChange={setShowExportModal}
+            onExport={handleExport}
+            isExporting={isExporting}
+          />
           {project && showEditModal && (
             <EditProjectWindow
               projectToEdit={project}

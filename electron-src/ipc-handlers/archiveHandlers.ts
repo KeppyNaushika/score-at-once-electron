@@ -3,8 +3,12 @@
  */
 
 import { dialog, ipcMain } from "electron"
+import * as path from "path"
 
 import type {
+  BulkExportProjectResult,
+  BulkExportProjectsResult,
+  ExportMode,
   FileOverviewData,
   IdIntegrationConfig,
   MatchingConfig,
@@ -12,6 +16,7 @@ import type {
   UpdateDecisions,
 } from "../../types/projectArchive.types"
 import { exportProject } from "../lib/export/project-archive"
+import { generateExportFileName } from "../lib/export/project-archive/archiveCreator"
 import {
   detectAllConflicts,
   detectScoringConflictsWithUserDecisions,
@@ -23,6 +28,69 @@ import {
   cleanupTempDir,
   extractArchive,
 } from "../lib/import/project-archive"
+import { getProjectById } from "../lib/prisma/project"
+
+/**
+ * 一括エクスポートのコアロジック
+ *
+ * ダイアログを含まず、指定されたディレクトリに順次エクスポートする
+ */
+export async function executeBulkExport(
+  projectIds: string[],
+  userId: string,
+  outputDirectory: string,
+  exportMode?: ExportMode
+): Promise<BulkExportProjectsResult> {
+  const results: BulkExportProjectResult[] = []
+
+  // 順次処理（SQLite同時書き込み制限のため）
+  for (const projectId of projectIds) {
+    try {
+      const project = await getProjectById(projectId)
+      if (!project) {
+        results.push({
+          projectId,
+          projectName: projectId,
+          success: false,
+          error: "プロジェクトが見つかりません",
+        })
+        continue
+      }
+
+      const fileName = generateExportFileName(project.examName, exportMode)
+      const outputPath = path.join(outputDirectory, fileName)
+
+      const exportResult = await exportProject({
+        projectId,
+        userId,
+        outputPath,
+        exportMode,
+      })
+
+      results.push({
+        projectId,
+        projectName: project.examName,
+        success: exportResult.success,
+        outputPath: exportResult.outputPath,
+        error: exportResult.error,
+      })
+    } catch (error) {
+      results.push({
+        projectId,
+        projectName: projectId,
+        success: false,
+        error:
+          error instanceof Error ? error.message : "エクスポートに失敗しました",
+      })
+    }
+  }
+
+  return {
+    success: results.some((r) => r.success),
+    results,
+    outputDirectory,
+  }
+}
 
 /**
  * アーカイブ関連のIPCハンドラーを登録
@@ -33,7 +101,12 @@ export function registerArchiveHandlers(): void {
     "archive:exportProject",
     async (
       _event,
-      options: { projectId: string; userId: string; outputPath?: string }
+      options: {
+        projectId: string
+        userId: string
+        outputPath?: string
+        exportMode?: import("../../types/projectArchive.types").ExportMode
+      }
     ) => {
       try {
         return await exportProject(options)
@@ -261,6 +334,48 @@ export function registerArchiveHandlers(): void {
       } finally {
         if (tempDir) {
           cleanupTempDir(tempDir)
+        }
+      }
+    }
+  )
+
+  // 一括エクスポート
+  ipcMain.handle(
+    "archive:bulkExportProjects",
+    async (
+      _event,
+      options: {
+        projectIds: string[]
+        userId: string
+        exportMode?: ExportMode
+      }
+    ): Promise<BulkExportProjectsResult> => {
+      try {
+        // フォルダ選択ダイアログを表示
+        const dialogResult = await dialog.showOpenDialog({
+          title: "一括書き出し先フォルダを選択",
+          properties: ["openDirectory", "createDirectory"],
+        })
+
+        if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+          return { success: false, results: [], error: "canceled" }
+        }
+
+        return await executeBulkExport(
+          options.projectIds,
+          options.userId,
+          dialogResult.filePaths[0],
+          options.exportMode
+        )
+      } catch (error) {
+        console.error("Error in archive:bulkExportProjects:", error)
+        return {
+          success: false,
+          results: [],
+          error:
+            error instanceof Error
+              ? error.message
+              : "一括エクスポートに失敗しました",
         }
       }
     }

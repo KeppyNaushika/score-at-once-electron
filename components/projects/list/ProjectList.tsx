@@ -12,6 +12,7 @@ import {
   Eye,
   FileImage,
   FolderInput,
+  FolderOutput,
   PlayCircle,
   PlusCircle,
   Settings,
@@ -20,14 +21,16 @@ import {
   Users,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useMemo } from "react"
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
+import { toast } from "sonner"
 
 import { useFileActions } from "@/components/hooks/useFileActions"
 import { useProjects } from "@/components/hooks/useProjects"
 import { ImportWizardModal } from "@/components/import/ImportWizardModal"
+import ExportModeModal from "@/components/projects/detail/ExportModeModal"
 import CreateProjectWindow from "@/components/projects/forms/CreateProjectWindow"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,8 +47,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useAuth } from "@/contexts/AuthContext"
 import { SortDirection, useTableSort } from "@/hooks/useTableSort"
 import { isValidProject, ProjectWithDetails } from "@/types/common.types"
+import type { ExportMode } from "@/types/projectArchive.types"
 import { getProjectStatus } from "@/utils/projectStatus"
 
 interface ProjectSortable {
@@ -84,7 +89,13 @@ const SORT_OPTIONS = [
 
 const File = () => {
   const { projects, loadProjects } = useProjects()
+  const { user } = useAuth()
   const [showImportModal, setShowImportModal] = useState(false)
+  const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(
+    new Set()
+  )
+  const [isBulkExporting, setIsBulkExporting] = useState(false)
+  const [showBulkExportModal, setShowBulkExportModal] = useState(false)
 
   const { createProjectModal } = useFileActions()
   const router = useRouter()
@@ -139,6 +150,77 @@ const File = () => {
     router.push(`/projects/${projectId}`)
   }
 
+  const handleToggleSelect = useCallback((projectId: string) => {
+    setSelectedProjectIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(projectId)) {
+        next.delete(projectId)
+      } else {
+        next.add(projectId)
+      }
+      return next
+    })
+  }, [])
+
+  const handleToggleSelectAll = useCallback(() => {
+    setSelectedProjectIds((prev) => {
+      if (prev.size === sortedData.length) {
+        return new Set()
+      }
+      return new Set(sortedData.map((d) => d.id))
+    })
+  }, [sortedData])
+
+  const handleBulkExport = useCallback(
+    async (exportMode: ExportMode) => {
+      if (!user || selectedProjectIds.size === 0) return
+
+      setIsBulkExporting(true)
+      toast("書き出し中...", {
+        description: `${selectedProjectIds.size}件のプロジェクトを書き出しています。`,
+      })
+
+      try {
+        const result = await window.electronAPI.archive.bulkExportProjects({
+          projectIds: Array.from(selectedProjectIds),
+          userId: user.id,
+          exportMode,
+        })
+
+        if (result.error === "canceled") {
+          // フォルダ選択キャンセル時はtoast表示なし
+          return
+        }
+
+        const successCount = result.results.filter((r) => r.success).length
+        const failCount = result.results.filter((r) => !r.success).length
+
+        if (failCount === 0) {
+          toast.success("書き出し完了", {
+            description: `${successCount}件のプロジェクトを書き出しました。`,
+          })
+        } else {
+          toast.warning("一部書き出しに失敗", {
+            description: `${successCount}件成功、${failCount}件失敗`,
+          })
+        }
+
+        setSelectedProjectIds(new Set())
+        setShowBulkExportModal(false)
+      } catch (error) {
+        toast.error("書き出しに失敗しました", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "予期しないエラーが発生しました",
+        })
+      } finally {
+        setIsBulkExporting(false)
+      }
+    },
+    [user, selectedProjectIds]
+  )
+
   return (
     <>
       {createProjectModal.isOpen && (
@@ -151,6 +233,12 @@ const File = () => {
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
         onComplete={handleImportComplete}
+      />
+      <ExportModeModal
+        open={showBulkExportModal}
+        onOpenChange={setShowBulkExportModal}
+        onExport={handleBulkExport}
+        isExporting={isBulkExporting}
       />
       <div className="flex h-full min-w-full flex-col">
         <div className="flex items-center justify-between border-b px-4 py-3">
@@ -171,6 +259,22 @@ const File = () => {
               <FolderInput className="mr-2 h-4 w-4" />
               インポート
             </Button>
+            {selectedProjectIds.size > 0 && (
+              <>
+                <span className="text-muted-foreground ml-2 text-sm">
+                  {selectedProjectIds.size}件選択中
+                </span>
+                <Button
+                  onClick={() => setShowBulkExportModal(true)}
+                  variant="outline"
+                  className="rounded-lg"
+                  disabled={isBulkExporting}
+                >
+                  <FolderOutput className="mr-2 h-4 w-4" />
+                  一括書き出し
+                </Button>
+              </>
+            )}
           </div>
 
           {/* ソート選択 */}
@@ -213,6 +317,16 @@ const File = () => {
             <Table wrapperClassName="h-full">
               <TableHeader className="bg-card sticky top-0 z-10">
                 <TableRow className="hover:bg-transparent">
+                  <TableHead className="w-10 text-center">
+                    <Checkbox
+                      checked={
+                        sortedData.length > 0 &&
+                        selectedProjectIds.size === sortedData.length
+                      }
+                      onCheckedChange={handleToggleSelectAll}
+                      aria-label="全選択"
+                    />
+                  </TableHead>
                   <TableHead>プロジェクト名</TableHead>
                   <TableHead className="w-32 text-center">詳細</TableHead>
                   <TableHead className="w-40 text-center">
@@ -226,6 +340,13 @@ const File = () => {
 
                   return (
                     <TableRow key={project.id} className="group">
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={selectedProjectIds.has(project.id)}
+                          onCheckedChange={() => handleToggleSelect(project.id)}
+                          aria-label={`${project.examName}を選択`}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{project.examName}</div>

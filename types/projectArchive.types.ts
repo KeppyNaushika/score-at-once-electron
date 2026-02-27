@@ -28,6 +28,8 @@ export interface ArchiveManifest {
   exportedBy?: string
   /** データ件数サマリー */
   counts: ArchiveDataCounts
+  /** エクスポートモード（部分エクスポート時に記録） */
+  exportMode?: ExportMode
 }
 
 /**
@@ -450,8 +452,52 @@ export interface ImportOptions {
 }
 
 // =============================================================================
+// Export Mode
+// =============================================================================
+
+/**
+ * エクスポートモード
+ *
+ * - full: 全データ（現行動作）
+ * - template: 模範解答＋領域情報のみ（採点テンプレート）
+ * - template_with_subtotals: テンプレート＋小計設定
+ */
+export type ExportMode = "full" | "template" | "template_with_subtotals"
+
+// =============================================================================
 // IPC API Types
 // =============================================================================
+
+/**
+ * 一括エクスポートオプション
+ */
+export interface BulkExportProjectsOptions {
+  projectIds: string[]
+  userId: string
+  /** エクスポートモード（デフォルト: full） */
+  exportMode?: ExportMode
+}
+
+/**
+ * 一括エクスポートの個別プロジェクト結果
+ */
+export interface BulkExportProjectResult {
+  projectId: string
+  projectName: string
+  success: boolean
+  outputPath?: string
+  error?: string
+}
+
+/**
+ * 一括エクスポート全体の結果
+ */
+export interface BulkExportProjectsResult {
+  success: boolean
+  results: BulkExportProjectResult[]
+  outputDirectory?: string
+  error?: string
+}
 
 /**
  * エクスポートオプション
@@ -461,6 +507,8 @@ export interface ExportProjectOptions {
   /** ログインユーザーID（このユーザーのデータのみエクスポート） */
   userId: string
   outputPath?: string
+  /** エクスポートモード（デフォルト: full） */
+  exportMode?: ExportMode
 }
 
 /**

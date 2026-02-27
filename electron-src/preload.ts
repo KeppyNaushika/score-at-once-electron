@@ -627,6 +627,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       projectId: string
       userId: string
       outputPath?: string
+      exportMode?: import("../types/projectArchive.types").ExportMode
     }) => ipcRenderer.invoke("archive:exportProject", options),
     analyzeArchive: (options: { archivePath: string }) =>
       ipcRenderer.invoke("archive:analyzeArchive", options),
@@ -649,6 +650,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
       preMatchResult: import("../types/projectArchive.types").FileOverviewData
       integrationConfig: import("../types/projectArchive.types").IdIntegrationConfig
     }) => ipcRenderer.invoke("archive:detectScoringConflicts", options),
+    bulkExportProjects: (options: {
+      projectIds: string[]
+      userId: string
+      exportMode?: import("../types/projectArchive.types").ExportMode
+    }) => ipcRenderer.invoke("archive:bulkExportProjects", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
   },
 

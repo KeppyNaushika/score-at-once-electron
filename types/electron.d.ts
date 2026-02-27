@@ -1251,9 +1251,12 @@ export interface MyAPI {
     /**
      * プロジェクトをZIPアーカイブとしてエクスポート
      */
-    exportProject: (
-      options: import("./projectArchive.types").ExportProjectOptions
-    ) => Promise<import("./projectArchive.types").ExportProjectResult>
+    exportProject: (options: {
+      projectId: string
+      userId: string
+      outputPath?: string
+      exportMode?: import("./projectArchive.types").ExportMode
+    }) => Promise<import("./projectArchive.types").ExportProjectResult>
 
     /**
      * アーカイブファイルを解析してプレビュー情報を取得
@@ -1321,6 +1324,14 @@ export interface MyAPI {
       data?: import("./projectArchive.types").ScoringConflictData
       error?: string
     }>
+
+    /**
+     * 複数プロジェクトを一括エクスポート
+     * フォルダ選択ダイアログを表示し、各プロジェクトを個別の.scoreファイルとして保存
+     */
+    bulkExportProjects: (
+      options: import("./projectArchive.types").BulkExportProjectsOptions
+    ) => Promise<import("./projectArchive.types").BulkExportProjectsResult>
 
     /**
      * インポートファイル選択ダイアログ
