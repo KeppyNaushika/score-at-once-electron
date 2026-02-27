@@ -9,7 +9,10 @@ import { app } from "electron"
 import * as fs from "fs"
 import * as path from "path"
 
-import type { ArchiveManifest } from "../../../../types/projectArchive.types"
+import type {
+  ArchiveManifest,
+  ExportMode,
+} from "../../../../types/projectArchive.types"
 import { getDataDirectory } from "../../dataManager"
 import { CURRENT_VERSION } from "../../import/transformers/types"
 import type { CollectedData } from "./dataCollector"
@@ -39,6 +42,8 @@ interface CreateArchiveOptions {
   outputPath: string
   /** エクスポートしたユーザー名 */
   exportedBy?: string
+  /** エクスポートモード */
+  exportMode?: ExportMode
 }
 
 /**
@@ -71,7 +76,8 @@ function createManifest(
   projectId: string,
   projectName: string,
   counts: CollectedData["counts"],
-  exportedBy?: string
+  exportedBy?: string,
+  exportMode?: ExportMode
 ): ArchiveManifest {
   return {
     version: CURRENT_VERSION,
@@ -82,6 +88,7 @@ function createManifest(
     projectName,
     exportedBy,
     counts,
+    ...(exportMode && exportMode !== "full" ? { exportMode } : {}),
   }
 }
 
@@ -104,8 +111,14 @@ function getDataDir(): string {
 export async function createArchive(
   options: CreateArchiveOptions
 ): Promise<{ success: boolean; outputPath?: string; error?: string }> {
-  const { collectedData, projectName, projectId, outputPath, exportedBy } =
-    options
+  const {
+    collectedData,
+    projectName,
+    projectId,
+    outputPath,
+    exportedBy,
+    exportMode,
+  } = options
 
   return new Promise((resolve) => {
     try {
@@ -148,7 +161,8 @@ export async function createArchive(
         projectId,
         projectName,
         collectedData.counts,
-        exportedBy
+        exportedBy,
+        exportMode
       )
       archive.append(JSON.stringify(manifest, null, 2), {
         name: "manifest.json",
@@ -224,7 +238,10 @@ export async function createArchive(
  *
  * フォーマット: {projectName}-yyyy-MM-dd-hh-mm-ss.score
  */
-export function generateExportFileName(projectName: string): string {
+export function generateExportFileName(
+  projectName: string,
+  exportMode?: ExportMode
+): string {
   const sanitizedName = projectName.replace(/[<>:"/\\|?*]/g, "_")
   const now = new Date()
   const timestamp = [
@@ -235,5 +252,13 @@ export function generateExportFileName(projectName: string): string {
     String(now.getMinutes()).padStart(2, "0"),
     String(now.getSeconds()).padStart(2, "0"),
   ].join("-")
-  return `${sanitizedName}-${timestamp}.score`
+
+  const modeSuffix =
+    exportMode === "template"
+      ? "-template"
+      : exportMode === "template_with_subtotals"
+        ? "-template-subtotals"
+        : ""
+
+  return `${sanitizedName}${modeSuffix}-${timestamp}.score`
 }

@@ -23,7 +23,7 @@ import { collectProjectData } from "./dataCollector"
 export async function exportProject(
   options: ExportProjectOptions
 ): Promise<ExportProjectResult> {
-  const { projectId, userId, outputPath } = options
+  const { projectId, userId, outputPath, exportMode = "full" } = options
 
   try {
     // 1. プロジェクト情報を取得
@@ -32,8 +32,12 @@ export async function exportProject(
       return { success: false, error: "プロジェクトが見つかりません" }
     }
 
-    // 2. データを収集（ログインユーザーのデータのみ）
-    const collectResult = await collectProjectData(projectId, userId)
+    // 2. データを収集（ログインユーザーのデータのみ、モードに応じて部分収集）
+    const collectResult = await collectProjectData(
+      projectId,
+      userId,
+      exportMode
+    )
     if (!collectResult.success || !collectResult.data) {
       return { success: false, error: collectResult.error }
     }
@@ -41,7 +45,10 @@ export async function exportProject(
     // 3. 出力先を決定
     let finalOutputPath = outputPath
     if (!finalOutputPath) {
-      const defaultFileName = generateExportFileName(project.examName)
+      const defaultFileName = generateExportFileName(
+        project.examName,
+        exportMode
+      )
       const result = await dialog.showSaveDialog({
         title: "プロジェクトをエクスポート",
         defaultPath: defaultFileName,
@@ -62,6 +69,7 @@ export async function exportProject(
       projectName: project.examName,
       projectId,
       outputPath: finalOutputPath,
+      exportMode,
     })
 
     if (!archiveResult.success) {

@@ -5,6 +5,8 @@ import { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import type { ExcelPreviewData } from "../hooks/useExcelPreview"
+import { useItemAnalysis } from "../hooks/useItemAnalysis"
+import { ItemAnalysisPreview } from "./ItemAnalysisPreview"
 
 function getStatusSymbol(status: string, score?: number | null): string {
   switch (status) {
@@ -43,7 +45,10 @@ interface ExcelPreviewProps {
 }
 
 export function ExcelPreview({ data }: ExcelPreviewProps) {
-  const [sheetTab, setSheetTab] = useState<"scores" | "results">("scores")
+  const [sheetTab, setSheetTab] = useState<
+    "scores" | "results" | "item-analysis"
+  >("scores")
+  const itemAnalysisData = useItemAnalysis(data)
 
   const hasSubtotals = data.headers.subtotalLabels.length > 0
 
@@ -54,12 +59,15 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
         onValueChange={(v) => setSheetTab(v as "scores" | "results")}
         className="flex flex-1 flex-col"
       >
-        <TabsList className="mb-1 grid w-full grid-cols-2">
+        <TabsList className="mb-1 grid w-full grid-cols-3">
           <TabsTrigger value="scores" className="text-xs">
             点数一覧
           </TabsTrigger>
           <TabsTrigger value="results" className="text-xs">
             正誤一覧
+          </TabsTrigger>
+          <TabsTrigger value="item-analysis" className="text-xs">
+            問題分析
           </TabsTrigger>
         </TabsList>
 
@@ -183,6 +191,19 @@ export function ExcelPreview({ data }: ExcelPreviewProps) {
               ))}
             </tbody>
           </table>
+        </TabsContent>
+
+        <TabsContent
+          value="item-analysis"
+          className="mt-0 flex-1 overflow-auto"
+        >
+          {itemAnalysisData ? (
+            <ItemAnalysisPreview data={itemAnalysisData} />
+          ) : (
+            <div className="text-muted-foreground flex h-32 items-center justify-center text-sm">
+              データがありません
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
