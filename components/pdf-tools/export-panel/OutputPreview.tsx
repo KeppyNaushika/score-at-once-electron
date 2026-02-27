@@ -17,7 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { GripVertical } from "lucide-react"
+import { GripVertical, Trash2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { OutputPage } from "@/types/pdfTools.types"
@@ -25,12 +25,14 @@ import type { OutputPage } from "@/types/pdfTools.types"
 interface OutputPreviewProps {
   pages: OutputPage[]
   onPagesChange: (pages: OutputPage[]) => void
+  onDeletePage: (page: OutputPage) => void
   disabled: boolean
 }
 
 export default function OutputPreview({
   pages,
   onPagesChange,
+  onDeletePage,
   disabled,
 }: OutputPreviewProps) {
   const sensors = useSensors(
@@ -50,6 +52,13 @@ export default function OutputPreview({
     if (oldIndex !== -1 && newIndex !== -1) {
       onPagesChange(arrayMove(pages, oldIndex, newIndex))
     }
+  }
+
+  const handleDeletePage = (page: OutputPage) => {
+    // 即座に表示から除去（ドラッグ並び替えの順序を維持）
+    onPagesChange(pages.filter((p) => p.id !== page.id))
+    // 永続的に除外（設定変更による再生成時も反映）
+    onDeletePage(page)
   }
 
   if (pages.length === 0) {
@@ -77,6 +86,7 @@ export default function OutputPreview({
               page={page}
               index={index}
               disabled={disabled}
+              onDelete={() => handleDeletePage(page)}
             />
           ))}
         </div>
@@ -89,9 +99,10 @@ interface SortablePageItemProps {
   page: OutputPage
   index: number
   disabled: boolean
+  onDelete: () => void
 }
 
-function SortablePageItem({ page, index, disabled }: SortablePageItemProps) {
+function SortablePageItem({ page, index, disabled, onDelete }: SortablePageItemProps) {
   const {
     attributes,
     listeners,
@@ -145,6 +156,26 @@ function SortablePageItem({ page, index, disabled }: SortablePageItemProps) {
             </span>
           </div>
         )}
+      </div>
+
+      {/* ホバー時オーバーレイ（削除ボタン） */}
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity",
+          !disabled && "group-hover:opacity-100"
+        )}
+      >
+        <button
+          className="pointer-events-auto rounded-full bg-red-500 p-1.5 text-white shadow-md transition-colors hover:bg-red-600"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          title="削除"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* ドラッグハンドル */}

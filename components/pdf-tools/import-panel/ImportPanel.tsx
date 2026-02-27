@@ -8,17 +8,21 @@ import ImportedFileList from "./ImportedFileList"
 
 interface ImportPanelProps {
   importedFiles: ImportedFile[]
+  excludedPages: Set<string>
   onFilesImported: (files: ImportedFile[]) => void
   onFileRemoved: (fileId: string) => void
   onFileUpdated: (file: ImportedFile) => void
+  onResetExcludedPages: (fileId?: string) => void
   isProcessing: boolean
 }
 
 export default function ImportPanel({
   importedFiles,
+  excludedPages,
   onFilesImported,
   onFileRemoved,
   onFileUpdated,
+  onResetExcludedPages,
   isProcessing,
 }: ImportPanelProps) {
   return (
@@ -38,8 +42,10 @@ export default function ImportPanel({
       <ScrollArea className="flex-1 px-4 pb-4">
         <ImportedFileList
           files={importedFiles}
+          excludedPages={excludedPages}
           onFileRemoved={onFileRemoved}
           onFileUpdated={onFileUpdated}
+          onResetExcludedPages={onResetExcludedPages}
           isProcessing={isProcessing}
         />
       </ScrollArea>

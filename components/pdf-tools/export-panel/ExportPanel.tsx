@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type {
@@ -18,12 +18,14 @@ import OutputPreview from "./OutputPreview"
 interface ExportPanelProps {
   importedFiles: ImportedFile[]
   outputPages: OutputPage[]
+  excludedPages: Set<string>
   exportMode: ExportMode
   interleaveConfig: InterleaveConfig
   isProcessing: boolean
   onExportModeChange: (mode: ExportMode) => void
   onInterleaveConfigChange: (config: InterleaveConfig) => void
   onOutputPagesChange: (pages: OutputPage[]) => void
+  onPageExcluded: (page: OutputPage) => void
   onProcessingChange: (processing: boolean) => void
 }
 
@@ -35,22 +37,31 @@ interface ExportPanelProps {
 export default function ExportPanel({
   importedFiles,
   outputPages,
+  excludedPages,
   exportMode,
   interleaveConfig,
   isProcessing,
   onExportModeChange,
   onInterleaveConfigChange,
   onOutputPagesChange,
+  onPageExcluded,
   onProcessingChange,
 }: ExportPanelProps) {
-  // インポートファイルが変更されたら出力ページを更新
+  // excludedPages の最新値をrefで保持（useEffectの依存配列に入れず、再生成時のみ参照）
+  const excludedPagesRef = useRef(excludedPages)
+  excludedPagesRef.current = excludedPages
+
+  // インポートファイルが変更されたら出力ページを更新（除外ページを反映）
   useEffect(() => {
     const pages = generateOutputPages(
       importedFiles,
       exportMode,
       interleaveConfig
     )
-    onOutputPagesChange(pages)
+    const filtered = pages.filter(
+      (p) => !isPageExcluded(p, excludedPagesRef.current)
+    )
+    onOutputPagesChange(filtered)
   }, [importedFiles, exportMode, interleaveConfig, onOutputPagesChange])
 
   return (
@@ -85,6 +96,7 @@ export default function ExportPanel({
           <OutputPreview
             pages={outputPages}
             onPagesChange={onOutputPagesChange}
+            onDeletePage={onPageExcluded}
             disabled={isProcessing}
           />
         </ScrollArea>
@@ -99,6 +111,18 @@ export default function ExportPanel({
         />
       </div>
     </div>
+  )
+}
+
+/** 除外対象かどうかを判定 */
+function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
+  if (page.isNUpCombined && page.combinedPages) {
+    return page.combinedPages.some((pn) =>
+      excludedPages.has(`${page.sourceFileId}:${pn}`)
+    )
+  }
+  return excludedPages.has(
+    `${page.sourceFileId}:${page.sourcePageNumber}`
   )
 }
 
