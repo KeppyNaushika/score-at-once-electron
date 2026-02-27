@@ -5,6 +5,7 @@ import {
   Calculator,
   ChevronsLeft,
   ChevronsRight,
+  FileEdit,
   FileStack,
   FlaskConical,
   Grid2X2,
@@ -41,6 +42,7 @@ interface NavItem {
 const navGroups: NavItem[][] = [
   [
     { href: "/dashboard", label: "プロジェクト", icon: Home },
+    { href: "/answer-sheet-builder", label: "解答用紙作成", icon: FileEdit },
     { href: "/pdf-tools", label: "PDF加工", icon: FileStack },
     { href: "/grade-projects", label: "成績算出", icon: BarChart3 },
   ],

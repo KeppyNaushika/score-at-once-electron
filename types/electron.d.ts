@@ -1340,6 +1340,18 @@ export interface MyAPI {
       success: boolean
       filePath?: string
       canceled?: boolean
+      /** ファイルの元形式 */
+      sourceFormat?: "score" | "hsz"
+      error?: string
+    }>
+
+    /**
+     * .hszファイルを.score形式に変換
+     */
+    convertHszToScore: (options: { hszPath: string }) => Promise<{
+      success: boolean
+      scorePath?: string
+      originalTitle?: string
       error?: string
     }>
   }
@@ -2157,6 +2169,46 @@ export interface MyAPI {
     updatedAt: Date
   }>
   subjectSubtotalGroupDelete: (id: string) => Promise<void>
+
+  // =============================================================================
+  // Answer Sheet Builder（解答用紙作成）
+  // =============================================================================
+  answerSheetBuilder: {
+    listDefinitions: () => Promise<{
+      success: boolean
+      data?: import("./answerSheetBuilder.types").ASBDefinitionListItem[]
+      error?: string
+    }>
+    loadDefinition: (id: string) => Promise<{
+      success: boolean
+      data?: import("./answerSheetBuilder.types").AnswerSheetDefinition
+      error?: string
+    }>
+    saveDefinition: (
+      definition: import("./answerSheetBuilder.types").AnswerSheetDefinition
+    ) => Promise<{ success: boolean; error?: string }>
+    deleteDefinition: (
+      id: string
+    ) => Promise<{ success: boolean; error?: string }>
+    exportPdf: (
+      args: import("./answerSheetBuilder.types").ASBExportPdfArgs
+    ) => Promise<import("./answerSheetBuilder.types").ASBExportResult>
+    exportPng: (
+      args: import("./answerSheetBuilder.types").ASBExportPngArgs
+    ) => Promise<import("./answerSheetBuilder.types").ASBExportResult>
+    selectSavePath: (options: {
+      type: "pdf" | "png"
+      defaultName?: string
+    }) => Promise<{
+      success: boolean
+      filePath?: string
+      canceled?: boolean
+      error?: string
+    }>
+    convertToProject: (
+      args: import("./answerSheetBuilder.types").ASBConvertToProjectArgs
+    ) => Promise<import("./answerSheetBuilder.types").ASBConvertResult>
+  }
 }
 
 // =============================================================================

@@ -16,7 +16,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    if (!pathname.includes("/score")) {
+    if (
+      !pathname.includes("/score") &&
+      !pathname.includes("/answer-sheet-builder")
+    ) {
       return
     }
 

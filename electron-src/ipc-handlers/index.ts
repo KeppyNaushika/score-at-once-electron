@@ -1,3 +1,4 @@
+import { setupAnswerSheetBuilderHandlers } from "./answerSheetBuilderHandlers"
 import { registerArchiveHandlers } from "./archiveHandlers"
 import { setupAuthHandlers } from "./authHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
@@ -34,4 +35,5 @@ export function setupAllIPCHandlers(): void {
   setupPdfToolsHandlers()
   setupSubjectHandlers()
   setupGradeProjectHandlers()
+  setupAnswerSheetBuilderHandlers()
 }

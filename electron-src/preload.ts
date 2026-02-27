@@ -656,6 +656,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       exportMode?: import("../types/projectArchive.types").ExportMode
     }) => ipcRenderer.invoke("archive:bulkExportProjects", options),
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
+    convertHszToScore: (options: { hszPath: string }) =>
+      ipcRenderer.invoke("archive:convertHszToScore", options),
   },
 
   // ProjectClass
@@ -1155,6 +1157,31 @@ contextBridge.exposeInMainWorld("electronAPI", {
   }) => ipcRenderer.invoke("subjectSubtotalGroup:create", data),
   subjectSubtotalGroupDelete: (id: string) =>
     ipcRenderer.invoke("subjectSubtotalGroup:delete", id),
+
+  // =============================================================================
+  // Answer Sheet Builder（解答用紙作成）
+  // =============================================================================
+  answerSheetBuilder: {
+    listDefinitions: () => ipcRenderer.invoke("asb:list-definitions"),
+    loadDefinition: (id: string) =>
+      ipcRenderer.invoke("asb:load-definition", id),
+    saveDefinition: (
+      definition: import("../types/answerSheetBuilder.types").AnswerSheetDefinition
+    ) => ipcRenderer.invoke("asb:save-definition", definition),
+    deleteDefinition: (id: string) =>
+      ipcRenderer.invoke("asb:delete-definition", id),
+    exportPdf: (
+      args: import("../types/answerSheetBuilder.types").ASBExportPdfArgs
+    ) => ipcRenderer.invoke("asb:export-pdf", args),
+    exportPng: (
+      args: import("../types/answerSheetBuilder.types").ASBExportPngArgs
+    ) => ipcRenderer.invoke("asb:export-png", args),
+    selectSavePath: (options: { type: "pdf" | "png"; defaultName?: string }) =>
+      ipcRenderer.invoke("asb:select-save-path", options),
+    convertToProject: (
+      args: import("../types/answerSheetBuilder.types").ASBConvertToProjectArgs
+    ) => ipcRenderer.invoke("asb:convert-to-project", args),
+  },
 })
 
 process.once("loaded", () => {
