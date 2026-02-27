@@ -17,6 +17,8 @@ import type {
 } from "../../types/projectArchive.types"
 import { exportProject } from "../lib/export/project-archive"
 import { generateExportFileName } from "../lib/export/project-archive/archiveCreator"
+import { convertHszToScore } from "../lib/import/external-formats/hsz"
+import { convertDatToScore } from "../lib/import/external-formats/reattendant"
 import {
   detectAllConflicts,
   detectScoringConflictsWithUserDecisions,
@@ -129,7 +131,23 @@ export function registerArchiveHandlers(): void {
       const result = await dialog.showOpenDialog({
         title: "プロジェクトをインポート",
         filters: [
-          { name: "一括採点プロジェクトデータ", extensions: ["score"] },
+          {
+            name: "対応ファイル (.score, .hsz, .dat)",
+            extensions: ["score", "hsz", "dat"],
+          },
+          {
+            name: "一括採点プロジェクトデータ (.score)",
+            extensions: ["score"],
+          },
+          {
+            name: "百問繚乱™データ（採点情報のみ）(.hsz)",
+            extensions: ["hsz"],
+          },
+          {
+            name: "リアテンダント™データ（採点情報のみ）(.dat)",
+            extensions: ["dat"],
+          },
+          { name: "すべてのファイル", extensions: ["*"] },
         ],
         properties: ["openFile"],
       })
@@ -138,7 +156,29 @@ export function registerArchiveHandlers(): void {
         return { success: true, canceled: true }
       }
 
-      return { success: true, filePath: result.filePaths[0] }
+      const filePath = result.filePaths[0]
+      const ext = path.extname(filePath).toLowerCase()
+
+      // .datファイルはリアテンダント形式かどうかをZIP内のファイルで判定
+      let sourceFormat: "score" | "hsz" | "dat" =
+        ext === ".hsz" ? "hsz" : "score"
+
+      if (ext === ".dat") {
+        try {
+          const AdmZip = (await import("adm-zip")).default
+          const zip = new AdmZip(filePath)
+          const hasVersion = zip
+            .getEntries()
+            .some((e) => e.entryName.endsWith("RealtendantAppVersion.txt"))
+          if (hasVersion) {
+            sourceFormat = "dat"
+          }
+        } catch {
+          // ZIPとして開けない場合は.score扱い（後段でエラーになる）
+        }
+      }
+
+      return { success: true, filePath, sourceFormat }
     } catch (error) {
       console.error("Error in archive:selectImportFile:", error)
       return {
@@ -150,6 +190,44 @@ export function registerArchiveHandlers(): void {
       }
     }
   })
+
+  // .hsz → .score 変換
+  ipcMain.handle(
+    "archive:convertHszToScore",
+    async (_event, options: { hszPath: string }) => {
+      try {
+        return await convertHszToScore(options.hszPath)
+      } catch (error) {
+        console.error("Error in archive:convertHszToScore:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : ".hsz ファイルの変換に失敗しました",
+        }
+      }
+    }
+  )
+
+  // .dat → .score 変換
+  ipcMain.handle(
+    "archive:convertDatToScore",
+    async (_event, options: { datPath: string }) => {
+      try {
+        return await convertDatToScore(options.datPath)
+      } catch (error) {
+        console.error("Error in archive:convertDatToScore:", error)
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : ".dat ファイルの変換に失敗しました",
+        }
+      }
+    }
+  )
 
   // アーカイブ解析（プレビュー用）
   ipcMain.handle(

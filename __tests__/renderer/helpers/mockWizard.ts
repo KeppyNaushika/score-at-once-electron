@@ -32,6 +32,8 @@ export function createMockWizard(
     setScoringConflictStrategy: vi.fn(),
     setScoringConflictResolution: vi.fn(),
     setAllScoringConflictResolutions: vi.fn(),
+    acceptHszDisclaimer: vi.fn().mockResolvedValue(true),
+    dismissHszDisclaimer: vi.fn(),
     goToNextStep: vi.fn(),
     goBack: vi.fn(),
     executeImport: vi.fn().mockResolvedValue({

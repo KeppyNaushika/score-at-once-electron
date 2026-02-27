@@ -69,7 +69,23 @@ export function FileSelectStep({ wizard }: FileSelectStepProps) {
               <CheckCircle2 className="h-4 w-4 text-green-500" />
               一括採点プロジェクトデータ (.score)
             </li>
+            <li className="text-muted-foreground flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              百問繚乱&trade;データ（採点情報のみ）(.hsz)
+            </li>
+            <li className="text-muted-foreground flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              リアテンダント&trade;データ（採点情報のみ）(.dat)
+            </li>
           </ul>
+          <div className="text-muted-foreground/60 mt-3 text-[10px] leading-relaxed">
+            <p>
+              「百問繚乱」は、株式会社シンプルエデュケーションの登録商標または商標です。
+            </p>
+            <p>
+              「リアテンダント」は、大日本印刷株式会社の登録商標または商標です。
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

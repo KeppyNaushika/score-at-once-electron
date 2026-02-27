@@ -34,6 +34,54 @@ export function useImportWizard() {
   const { user } = useAuth()
   const [state, setState] = useState<ImportWizardState>(initialState)
 
+  // アーカイブ解析 → 事前照合 → file_overview遷移（共通処理）
+  const analyzeAndPreMatch = useCallback(async (archivePath: string) => {
+    setState((prev) => ({ ...prev, isProcessing: true, error: null }))
+
+    try {
+      // アーカイブを解析
+      const analyzeResult = await window.electronAPI.archive.analyzeArchive({
+        archivePath,
+      })
+
+      if (!analyzeResult.success) {
+        setState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          error: analyzeResult.error || "アーカイブの解析に失敗しました",
+        }))
+        return false
+      }
+
+      // 事前照合を実行
+      const preMatchResult = await window.electronAPI.archive.preMatch({
+        archivePath,
+      })
+
+      const fileOverviewData: FileOverviewData | null = preMatchResult.success
+        ? (preMatchResult.data ?? null)
+        : null
+
+      setState((prev) => ({
+        ...prev,
+        archivePath,
+        manifest: analyzeResult.manifest!,
+        fileOverviewData,
+        isProcessing: false,
+        currentStep: "file_overview",
+      }))
+
+      return true
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        isProcessing: false,
+        error: error instanceof Error ? error.message : "エラーが発生しました",
+      }))
+      return false
+    }
+  }, [])
+
   // ファイル選択
   const selectFile = useCallback(async () => {
     setState((prev) => ({ ...prev, isProcessing: true, error: null }))
@@ -55,39 +103,20 @@ export function useImportWizard() {
         return false
       }
 
-      // アーカイブを解析
-      const analyzeResult = await window.electronAPI.archive.analyzeArchive({
-        archivePath: result.filePath!,
-      })
-
-      if (!analyzeResult.success) {
+      // .hsz/.datファイルの場合は免責事項モーダルを表示して停止
+      if (result.sourceFormat === "hsz" || result.sourceFormat === "dat") {
         setState((prev) => ({
           ...prev,
           isProcessing: false,
-          error: analyzeResult.error || "アーカイブの解析に失敗しました",
+          sourceFormat: result.sourceFormat as "hsz" | "dat",
+          showHszDisclaimer: true,
+          hszOriginalPath: result.filePath!,
         }))
-        return false
+        return true
       }
 
-      // 事前照合を実行
-      const preMatchResult = await window.electronAPI.archive.preMatch({
-        archivePath: result.filePath!,
-      })
-
-      const fileOverviewData: FileOverviewData | null = preMatchResult.success
-        ? (preMatchResult.data ?? null)
-        : null
-
-      setState((prev) => ({
-        ...prev,
-        archivePath: result.filePath!,
-        manifest: analyzeResult.manifest!,
-        fileOverviewData,
-        isProcessing: false,
-        currentStep: "file_overview",
-      }))
-
-      return true
+      // .scoreファイルの場合は従来通り解析→事前照合
+      return await analyzeAndPreMatch(result.filePath!)
     } catch (error) {
       setState((prev) => ({
         ...prev,
@@ -96,6 +125,65 @@ export function useImportWizard() {
       }))
       return false
     }
+  }, [analyzeAndPreMatch])
+
+  // .hsz免責事項を承認して変換開始
+  const acceptHszDisclaimer = useCallback(async () => {
+    const hszPath = state.hszOriginalPath
+    if (!hszPath) return false
+
+    setState((prev) => ({
+      ...prev,
+      isProcessing: true,
+      showHszDisclaimer: false,
+      error: null,
+    }))
+
+    try {
+      // 外部フォーマット → .score 変換
+      const convertResult =
+        state.sourceFormat === "dat"
+          ? await window.electronAPI.archive.convertDatToScore({
+              datPath: hszPath,
+            })
+          : await window.electronAPI.archive.convertHszToScore({ hszPath })
+
+      if (!convertResult.success || !convertResult.scorePath) {
+        setState((prev) => ({
+          ...prev,
+          isProcessing: false,
+          error:
+            convertResult.error ||
+            `${state.sourceFormat === "dat" ? ".dat" : ".hsz"} ファイルの変換に失敗しました`,
+        }))
+        return false
+      }
+
+      setState((prev) => ({
+        ...prev,
+        hszOriginalTitle: convertResult.originalTitle,
+      }))
+
+      // 変換後の.scoreファイルで解析→事前照合
+      return await analyzeAndPreMatch(convertResult.scorePath)
+    } catch (error) {
+      setState((prev) => ({
+        ...prev,
+        isProcessing: false,
+        error: error instanceof Error ? error.message : "エラーが発生しました",
+      }))
+      return false
+    }
+  }, [state.hszOriginalPath, state.sourceFormat, analyzeAndPreMatch])
+
+  // .hsz免責事項をキャンセル
+  const dismissHszDisclaimer = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      showHszDisclaimer: false,
+      sourceFormat: undefined,
+      hszOriginalPath: undefined,
+    }))
   }, [])
 
   // 事前照合を実行（Step 2で使用）
@@ -571,6 +659,8 @@ export function useImportWizard() {
     setScoringConflictStrategy,
     setScoringConflictResolution,
     setAllScoringConflictResolutions,
+    acceptHszDisclaimer,
+    dismissHszDisclaimer,
 
     goToNextStep,
     goBack,

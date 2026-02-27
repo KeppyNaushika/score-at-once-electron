@@ -658,6 +658,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     selectImportFile: () => ipcRenderer.invoke("archive:selectImportFile"),
     convertHszToScore: (options: { hszPath: string }) =>
       ipcRenderer.invoke("archive:convertHszToScore", options),
+    convertDatToScore: (options: { datPath: string }) =>
+      ipcRenderer.invoke("archive:convertDatToScore", options),
   },
 
   // ProjectClass
@@ -1181,6 +1183,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
     convertToProject: (
       args: import("../types/answerSheetBuilder.types").ASBConvertToProjectArgs
     ) => ipcRenderer.invoke("asb:convert-to-project", args),
+    print: (
+      args: import("../types/answerSheetBuilder.types").ASBPrintArgs
+    ) => ipcRenderer.invoke("asb:print", args),
   },
 })
 
