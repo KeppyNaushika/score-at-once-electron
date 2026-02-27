@@ -36,6 +36,10 @@ export const initialState: ImportWizardState = {
   matchingSummaries: [],
   matchingDecisions: {},
   updateDecisions: {},
+  sourceFormat: undefined,
+  showHszDisclaimer: false,
+  hszOriginalPath: undefined,
+  hszOriginalTitle: undefined,
 }
 
 /**

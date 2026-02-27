@@ -892,6 +892,14 @@ export interface ImportWizardState {
   matchingDecisions: Record<string, MatchingDecisionType>
   /** ユーザーの更新判断（`${category}:${importId}` -> フィールドごとの戦略） */
   updateDecisions: UpdateDecisions
+  /** 外部フォーマットの種別（.hsz/.dat選択時に設定） */
+  sourceFormat?: "score" | "hsz" | "dat"
+  /** .hsz免責事項モーダル表示フラグ */
+  showHszDisclaimer?: boolean
+  /** .hszの元ファイルパス（変換前） */
+  hszOriginalPath?: string
+  /** .hszの元タイトル */
+  hszOriginalTitle?: string
 }
 
 /**
@@ -918,6 +926,10 @@ export const INITIAL_WIZARD_STATE: ImportWizardState = {
   matchingSummaries: [],
   matchingDecisions: {},
   updateDecisions: {},
+  sourceFormat: undefined,
+  showHszDisclaimer: false,
+  hszOriginalPath: undefined,
+  hszOriginalTitle: undefined,
 }
 
 // =============================================================================

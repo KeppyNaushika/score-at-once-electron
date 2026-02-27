@@ -1341,7 +1341,7 @@ export interface MyAPI {
       filePath?: string
       canceled?: boolean
       /** ファイルの元形式 */
-      sourceFormat?: "score" | "hsz"
+      sourceFormat?: "score" | "hsz" | "dat"
       error?: string
     }>
 
@@ -1349,6 +1349,16 @@ export interface MyAPI {
      * .hszファイルを.score形式に変換
      */
     convertHszToScore: (options: { hszPath: string }) => Promise<{
+      success: boolean
+      scorePath?: string
+      originalTitle?: string
+      error?: string
+    }>
+
+    /**
+     * .datファイル（リアテンダント）を.score形式に変換
+     */
+    convertDatToScore: (options: { datPath: string }) => Promise<{
       success: boolean
       scorePath?: string
       originalTitle?: string
@@ -2208,6 +2218,9 @@ export interface MyAPI {
     convertToProject: (
       args: import("./answerSheetBuilder.types").ASBConvertToProjectArgs
     ) => Promise<import("./answerSheetBuilder.types").ASBConvertResult>
+    print: (
+      args: import("./answerSheetBuilder.types").ASBPrintArgs
+    ) => Promise<{ success: boolean; error?: string }>
   }
 }
 
