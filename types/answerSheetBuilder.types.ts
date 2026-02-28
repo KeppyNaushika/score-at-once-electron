@@ -5,6 +5,12 @@
  * 解答用紙のレイアウト定義・計算結果・エクスポート設定。
  */
 
+import type {
+  ComputedOMRBubble,
+  ComputedOMRDigitBox,
+  OMRCellConfig,
+} from "./omr.types"
+
 // =====================
 // 基本型
 // =====================
@@ -13,7 +19,6 @@ export type PaperSize = "A4" | "B4" | "A3" | "B5"
 export type Orientation = "portrait" | "landscape"
 export type LineStyle = "solid" | "dashed" | "dotted"
 export type MajorNumberDisplayMode = "multirow" | "boxed-top"
-export type SubQuestionLayout = "vertical" | "horizontal"
 export type RenderMode = "answer-sheet" | "model-answer"
 export type HorizontalAlign = "left" | "center" | "right"
 export type VerticalAlign = "top" | "middle" | "bottom"
@@ -27,6 +32,8 @@ export interface CellTextElement {
   text: string
   fontSize: number
   fontWeight: "normal" | "bold"
+  fontStyle?: "normal" | "italic"
+  textDecoration?: "none" | "line-through"
   horizontalAlign: HorizontalAlign
   verticalAlign: VerticalAlign
   isMathJax?: boolean
@@ -66,6 +73,10 @@ export interface BranchQuestion {
   textElements: CellTextElement[]
   modelAnswer?: string
   borderStyles?: BorderStyles
+  /** 横配置時の列スパン（デフォルト1） */
+  colSpan?: number
+  /** OMR自動認識設定 */
+  omrConfig?: OMRCellConfig
 }
 
 export interface SubQuestion {
@@ -80,18 +91,63 @@ export interface SubQuestion {
   borderStyles?: BorderStyles
   /** 横配置時の列スパン（デフォルト1） */
   colSpan?: number
+  /** 枝問横配置の行ごとの列数 (例: [3, 2])。空/未定義なら全て縦配置 */
+  branchHorizontalColumnsPerRow?: number[]
+  /** 枝問ごとに配点するか（undefined/true=枝問配点、false=完答） */
+  usesBranchPoints?: boolean
+  /** OMR自動認識設定 */
+  omrConfig?: OMRCellConfig
 }
 
 export interface MajorQuestion {
   id: string
   label: string
-  numberDisplayMode: MajorNumberDisplayMode
   subQuestions: SubQuestion[]
-  spacingBefore: boolean
-  subQuestionLayout: SubQuestionLayout
-  /** 横配置時の行ごとの列数 (例: [3, 4, 2]) */
+  /** 横配置時の行ごとの列数 (例: [3, 4, 2])。空/未定義なら全て縦配置 */
   horizontalColumnsPerRow?: number[]
 }
+
+// =====================
+// レイアウト行（buildLayoutRows用）
+// =====================
+
+export type LayoutRow =
+  | {
+      type: "horizontal"
+      subs: {
+        sub: SubQuestion
+        subIndex: number
+        colStart: number
+        span: number
+      }[]
+      columns: number
+    }
+  | {
+      type: "vertical-sub"
+      sub: SubQuestion
+      subIndex: number
+    }
+
+// =====================
+// 枝問レイアウト行（buildBranchLayoutRows用）
+// =====================
+
+export type BranchLayoutRow =
+  | {
+      type: "horizontal"
+      branches: {
+        branch: BranchQuestion
+        branchIndex: number
+        colStart: number
+        span: number
+      }[]
+      columns: number
+    }
+  | {
+      type: "vertical-branch"
+      branch: BranchQuestion
+      branchIndex: number
+    }
 
 // =====================
 // マージン設定
@@ -133,6 +189,11 @@ export interface BorderConfig {
   subDivider: LineStyle
   branchDivider: LineStyle
   numberColumnDivider: LineStyle
+  outerBorderWidth?: number
+  majorDividerWidth?: number
+  subDividerWidth?: number
+  branchDividerWidth?: number
+  numberColumnDividerWidth?: number
 }
 
 // =====================
@@ -169,11 +230,18 @@ export interface GlobalSettings {
   borderConfig: BorderConfig
   omrMarkers: OMRMarkerConfig
   fonts: FontConfig
+  numberDisplayMode: MajorNumberDisplayMode
 }
 
 // =====================
 // 解答用紙定義（トップレベル）
 // =====================
+
+export interface LabelPresets {
+  major?: string
+  sub?: string
+  branch?: string
+}
 
 export interface AnswerSheetDefinition {
   id: string
@@ -181,8 +249,27 @@ export interface AnswerSheetDefinition {
   settings: GlobalSettings
   majorQuestions: MajorQuestion[]
   renderMode: RenderMode
+  labelPresets?: LabelPresets
   createdAt?: string
   updatedAt?: string
+}
+
+// =====================
+// 原稿用紙グリッド（レイアウト計算結果）
+// =====================
+
+export interface ManuscriptGrid {
+  columns: number
+  rows: number
+  cellSizeMm: number
+  /** グリッド開始X座標（mm） */
+  gridX: number
+  /** グリッド開始Y座標（mm） */
+  gridY: number
+  /** = columns * cellSizeMm */
+  gridWidth: number
+  /** = rows * cellSizeMm */
+  gridHeight: number
 }
 
 // =====================
@@ -212,6 +299,14 @@ export interface ComputedCell {
   modelAnswer?: string
   /** セル種類 */
   cellType: "answer" | "major-number" | "sub-number" | "branch-number"
+  /** このセルが属するページ (0-indexed) */
+  pageIndex: number
+  /** 原稿用紙グリッド情報 */
+  manuscriptGrid?: ManuscriptGrid
+  /** OMRバブル位置（choiceセル用） */
+  omrBubbles?: ComputedOMRBubble[]
+  /** OMR数字欄位置（handwritten-digitセル用） */
+  omrDigitBoxes?: ComputedOMRDigitBox[]
 }
 
 export interface DragInfo {
@@ -237,6 +332,8 @@ export interface ComputedLine {
   x2: number
   y2: number
   style: LineStyle
+  /** 線幅 (mm) */
+  strokeWidth?: number
   /** 線種: outer / major / sub / branch / numberColumn / subHorizontalDivider */
   lineType: string
   /** ドラッグ操作情報（インタラクティブモード用） */
@@ -250,7 +347,12 @@ export interface ComputedNumberLabel {
   width: number
   height: number
   fontSize: number
-  displayMode: MajorNumberDisplayMode | "sub" | "sub-horizontal" | "branch"
+  displayMode:
+    | MajorNumberDisplayMode
+    | "sub"
+    | "sub-horizontal"
+    | "branch"
+    | "branch-horizontal"
 }
 
 export interface ComputedOMRMarker {
@@ -270,6 +372,26 @@ export interface ComputedLayout {
   overflow: boolean
   /** 使用した高さ（mm） */
   contentHeightMm: number
+}
+
+// =====================
+// 複数ページレイアウト
+// =====================
+
+export interface ComputedPageLayout {
+  pageIndex: number
+  cells: ComputedCell[]
+  lines: ComputedLine[]
+  numberLabels: ComputedNumberLabel[]
+  omrMarkerPositions: ComputedOMRMarker[]
+  contentHeightMm: number
+}
+
+export interface ComputedMultiPageLayout {
+  pages: ComputedPageLayout[]
+  totalPages: number
+  pageWidthMm: number
+  pageHeightMm: number
 }
 
 // =====================
@@ -320,8 +442,25 @@ export type AnswerSheetAction =
       }
     }
   | {
+      type: "REORDER_SUB_QUESTIONS"
+      payload: { majorIndex: number; fromIndex: number; toIndex: number }
+    }
+  | {
+      type: "REORDER_BRANCH_QUESTIONS"
+      payload: {
+        majorIndex: number
+        subIndex: number
+        fromIndex: number
+        toIndex: number
+      }
+    }
+  | {
       type: "DELETE_BRANCH_QUESTION"
       payload: { majorIndex: number; subIndex: number; branchIndex: number }
+    }
+  | {
+      type: "SET_LABEL_PRESET"
+      payload: { category: "major" | "sub" | "branch"; preset: string }
     }
 
 // =====================
@@ -345,6 +484,10 @@ export interface ASBConvertToProjectArgs {
   definition: AnswerSheetDefinition
   userId: string
   svgString?: string
+}
+
+export interface ASBPrintArgs {
+  definition: AnswerSheetDefinition
 }
 
 export interface ASBExportResult {

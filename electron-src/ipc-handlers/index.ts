@@ -6,6 +6,7 @@ import { setupDrawingHandlers } from "./drawingHandlers"
 import { setupExportHandlers } from "./exportHandlers"
 import { setupGradeProjectHandlers } from "./gradeProjectHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
+import { setupOMRHandlers } from "./omrHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
 import { setupProjectClassHandlers } from "./projectClassHandlers"
 import { setupProjectHandlers } from "./projectHandlers"
@@ -36,4 +37,5 @@ export function setupAllIPCHandlers(): void {
   setupSubjectHandlers()
   setupGradeProjectHandlers()
   setupAnswerSheetBuilderHandlers()
+  setupOMRHandlers()
 }
