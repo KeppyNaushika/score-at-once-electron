@@ -1,0 +1,150 @@
+/**
+ * 画像ピクセル操作ユーティリティ
+ *
+ * sharpを使ったRAWピクセルバッファ操作。
+ * OMR認識パイプラインの基盤。
+ */
+
+import sharp from "sharp"
+
+import type { BoundingBox, RawImageData } from "../../../types/omr.types"
+
+/**
+ * 画像をRAWピクセルバッファとして読み込む
+ * @param imagePath 画像ファイルパス
+ * @returns RawImageData (RGB 3チャンネル)
+ */
+export async function loadImageRaw(imagePath: string): Promise<RawImageData> {
+  const { data, info } = await sharp(imagePath)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    data,
+    width: info.width,
+    height: info.height,
+    channels: info.channels,
+  }
+}
+
+/**
+ * バッファから画像をRAWピクセルバッファとして読み込む
+ */
+export async function loadImageRawFromBuffer(
+  buffer: Buffer
+): Promise<RawImageData> {
+  const { data, info } = await sharp(buffer)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  return {
+    data,
+    width: info.width,
+    height: info.height,
+    channels: info.channels,
+  }
+}
+
+/**
+ * RAWバッファから矩形領域のピクセルを切り出す
+ * @returns 切り出し領域のRGBバッファ
+ */
+export function extractRegionPixels(
+  rawData: RawImageData,
+  region: BoundingBox
+): Buffer {
+  const { data, width, channels } = rawData
+
+  // 領域をクランプ
+  const x0 = Math.max(0, Math.floor(region.x))
+  const y0 = Math.max(0, Math.floor(region.y))
+  const x1 = Math.min(rawData.width, Math.ceil(region.x + region.width))
+  const y1 = Math.min(rawData.height, Math.ceil(region.y + region.height))
+  const rw = x1 - x0
+  const rh = y1 - y0
+
+  const regionBuf = Buffer.alloc(rw * rh * channels)
+
+  for (let row = 0; row < rh; row++) {
+    const srcOffset = ((y0 + row) * width + x0) * channels
+    const dstOffset = row * rw * channels
+    data.copy(regionBuf, dstOffset, srcOffset, srcOffset + rw * channels)
+  }
+
+  return regionBuf
+}
+
+/**
+ * ピクセルバッファ内の暗いピクセルの比率（塗りつぶし率）を計算
+ *
+ * R値が threshold 未満のピクセルを「暗い」と判定。
+ *
+ * @param pixels RGBピクセルバッファ
+ * @param width 領域幅
+ * @param height 領域高さ
+ * @param channels チャンネル数（通常3）
+ * @param threshold 暗さ閾値（0-255）
+ * @returns 暗いピクセルの比率（0-1）
+ */
+export function computeFillRatio(
+  pixels: Buffer,
+  width: number,
+  height: number,
+  channels: number,
+  threshold: number
+): number {
+  const totalPixels = width * height
+  if (totalPixels === 0) return 0
+
+  let darkCount = 0
+  for (let i = 0; i < totalPixels; i++) {
+    const r = pixels[i * channels]
+    if (r < threshold) {
+      darkCount++
+    }
+  }
+
+  return darkCount / totalPixels
+}
+
+/**
+ * 円形領域のピクセルの塗りつぶし率を計算
+ *
+ * 指定された中心と半径の円内のピクセルのみを対象とする。
+ */
+export function computeCircularFillRatio(
+  rawData: RawImageData,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  threshold: number
+): number {
+  const { data, width, height, channels } = rawData
+  const r2 = radius * radius
+
+  let totalPixels = 0
+  let darkCount = 0
+
+  const x0 = Math.max(0, Math.floor(centerX - radius))
+  const x1 = Math.min(width - 1, Math.ceil(centerX + radius))
+  const y0 = Math.max(0, Math.floor(centerY - radius))
+  const y1 = Math.min(height - 1, Math.ceil(centerY + radius))
+
+  for (let py = y0; py <= y1; py++) {
+    for (let px = x0; px <= x1; px++) {
+      const dx = px - centerX
+      const dy = py - centerY
+      if (dx * dx + dy * dy <= r2) {
+        totalPixels++
+        const idx = (py * width + px) * channels
+        if (data[idx] < threshold) {
+          darkCount++
+        }
+      }
+    }
+  }
+
+  return totalPixels === 0 ? 0 : darkCount / totalPixels
+}

@@ -8,14 +8,16 @@ import fs from "fs"
 import path from "path"
 
 import type { AnswerSheetDefinition } from "../../../types/answerSheetBuilder.types"
+import type { OMRCellConfig, OMRTemplate } from "../../../types/omr.types"
 import {
+  getDataDirectory,
   getMasterAnswersDirectory,
   getRelativePathFromData,
 } from "../dataManager"
 import prisma from "../prisma/client"
 import { createProject } from "../prisma/project"
 import { createProjectPage } from "../prisma/projectPage"
-import { computeLayout } from "./layoutEngine"
+import { computeMultiPageLayout } from "./layoutEngine"
 import { generatePngBuffer } from "./pngGenerator"
 
 export interface ConvertToProjectResult {
@@ -26,6 +28,7 @@ export interface ConvertToProjectResult {
 
 /**
  * 解答用紙定義を採点プロジェクトに変換
+ * 複数ページ対応: ページごとにProjectPage + MasterImage + CropRegionを作成
  */
 export async function convertToProject(
   definition: AnswerSheetDefinition,
@@ -33,79 +36,128 @@ export async function convertToProject(
   svgString?: string
 ): Promise<ConvertToProjectResult> {
   try {
-    // 1. レイアウト計算
-    const layout = computeLayout(definition)
+    // 0. OMR設定を問題定義から抽出
+    const omrCellConfigs: Record<string, OMRCellConfig> = {}
+    definition.majorQuestions.forEach((major, mi) => {
+      major.subQuestions.forEach((sub, si) => {
+        if (sub.omrConfig) {
+          omrCellConfigs[`${mi}-${si}`] = sub.omrConfig
+        }
+        sub.branchQuestions.forEach((branch, bi) => {
+          if (branch.omrConfig) {
+            omrCellConfigs[`${mi}-${si}-${bi}`] = branch.omrConfig
+          }
+        })
+      })
+    })
+
+    // 1. レイアウト計算（複数ページ）
+    const multiLayout = computeMultiPageLayout(definition)
 
     // 2. プロジェクト作成
     const project = await createProject(
       {
         examName: definition.name,
-        description: `解答用紙ビルダーから生成（${definition.settings.paperSize} ${definition.settings.orientation}）`,
+        description: `解答用紙ビルダーから生成（${definition.settings.paperSize} ${definition.settings.orientation}、${multiLayout.totalPages}ページ）`,
       },
       userId
     )
 
-    // 3. PNG生成（模範解答なしの空白解答用紙）
+    // 3. PNG生成（空白解答用紙 + 模範解答、ページごと）
     const answerSheetDef: AnswerSheetDefinition = {
       ...definition,
       renderMode: "answer-sheet",
     }
-    const pngBuffer = await generatePngBuffer(answerSheetDef, 300, svgString)
+    const templateBuffers = await generatePngBuffer(
+      answerSheetDef,
+      300,
+      svgString
+    )
 
-    // 4. 模範解答PNG生成
     const modelAnswerDef: AnswerSheetDefinition = {
       ...definition,
       renderMode: "model-answer",
     }
-    const modelPngBuffer = await generatePngBuffer(modelAnswerDef, 300)
+    const modelBuffers = await generatePngBuffer(modelAnswerDef, 300)
 
-    // 5. 画像ファイル保存
+    // 4. 画像ファイル保存 + DB作成（ページごと）
     const masterDir = getMasterAnswersDirectory(project.id)
     if (!fs.existsSync(masterDir)) {
       fs.mkdirSync(masterDir, { recursive: true })
     }
 
-    const masterImageFileName = `master-${Date.now()}.png`
-    const masterImagePath = path.join(masterDir, masterImageFileName)
-    fs.writeFileSync(masterImagePath, modelPngBuffer)
-    const relativeMasterPath = getRelativePathFromData(masterImagePath)
+    let globalOrderIndex = 0
 
-    // 答案テンプレート画像も保存（空白解答用紙）
-    const templateFileName = `template-${Date.now()}.png`
-    const templatePath = path.join(masterDir, templateFileName)
-    fs.writeFileSync(templatePath, pngBuffer)
+    for (let pi = 0; pi < multiLayout.totalPages; pi++) {
+      const pageLayout = multiLayout.pages[pi]
+      const timestamp = Date.now() + pi
 
-    // 6. ProjectPage作成
-    const projectPage = await createProjectPage({
-      projectId: project.id,
-      pageNumber: 1,
-    })
+      // 模範解答PNG保存
+      const masterImageFileName = `master-${timestamp}.png`
+      const masterImagePath = path.join(masterDir, masterImageFileName)
+      fs.writeFileSync(masterImagePath, modelBuffers[pi])
+      const relativeMasterPath = getRelativePathFromData(masterImagePath)
 
-    // 7. MasterImage作成
-    await prisma.masterImage.create({
-      data: {
-        projectPageId: projectPage.id,
-        imagePath: relativeMasterPath,
-      },
-    })
+      // 答案テンプレートPNG保存
+      const templateFileName = `template-${timestamp}.png`
+      const templatePath = path.join(masterDir, templateFileName)
+      fs.writeFileSync(templatePath, templateBuffers[pi])
 
-    // 8. CropRegion作成（解答セルのみ）
-    const answerCells = layout.cells.filter((c) => c.cellType === "answer")
-    for (let i = 0; i < answerCells.length; i++) {
-      const cell = answerCells[i]
-      await prisma.cropRegion.create({
+      // ProjectPage作成
+      const projectPage = await createProjectPage({
+        projectId: project.id,
+        pageNumber: pi + 1,
+      })
+
+      // MasterImage作成
+      await prisma.masterImage.create({
         data: {
           projectPageId: projectPage.id,
-          label: cell.label,
-          type: "QUESTION_ANSWER",
-          x: cell.normalizedX,
-          y: cell.normalizedY,
-          width: cell.normalizedW,
-          height: cell.normalizedH,
-          points: cell.points,
-          orderIndex: i,
+          imagePath: relativeMasterPath,
         },
       })
+
+      // CropRegion作成（このページの解答セルのみ）
+      const answerCells = pageLayout.cells.filter(
+        (c) => c.cellType === "answer"
+      )
+      for (let i = 0; i < answerCells.length; i++) {
+        const cell = answerCells[i]
+        await prisma.cropRegion.create({
+          data: {
+            projectPageId: projectPage.id,
+            label: cell.label,
+            type: "QUESTION_ANSWER",
+            x: cell.normalizedX,
+            y: cell.normalizedY,
+            width: cell.normalizedW,
+            height: cell.normalizedH,
+            points: cell.points,
+            orderIndex: globalOrderIndex++,
+          },
+        })
+      }
+    }
+
+    // 5. OMRテンプレート保存（OMR設定がある場合）
+    if (Object.keys(omrCellConfigs).length > 0) {
+      const omrTemplate: OMRTemplate = {
+        definitionId: definition.id,
+        cellConfigs: omrCellConfigs,
+        recognitionParams: {
+          colorThreshold: 25,
+          areaThreshold: 0.4,
+        },
+      }
+      const dataDir = getDataDirectory()
+      const projectDir = path.join(dataDir, "projects", project.id)
+      if (!fs.existsSync(projectDir)) {
+        fs.mkdirSync(projectDir, { recursive: true })
+      }
+      fs.writeFileSync(
+        path.join(projectDir, "omr-template.json"),
+        JSON.stringify(omrTemplate, null, 2)
+      )
     }
 
     return { success: true, projectId: project.id }

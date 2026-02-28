@@ -2222,6 +2222,55 @@ export interface MyAPI {
       args: import("./answerSheetBuilder.types").ASBPrintArgs
     ) => Promise<{ success: boolean; error?: string }>
   }
+
+  // =============================================================================
+  // OMR（光学マーク認識）
+  // =============================================================================
+  omr: {
+    detectMarkers: (
+      imagePath: string,
+      colorThreshold?: number
+    ) => Promise<import("./omr.types").MarkerDetectionResult>
+    recognizeSheet: (args: {
+      imagePath: string
+      cells: import("./answerSheetBuilder.types").ComputedCell[]
+      cellConfigs: Record<string, import("./omr.types").OMRCellConfig>
+      expectedCorners: [
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+      ]
+      params: import("./omr.types").OMRRecognitionParams
+      pageIndex?: number
+      studentId?: string
+    }) => Promise<import("./omr.types").OMRSheetResult>
+    batchRecognize: (args: {
+      imagePaths: { path: string; studentId?: string; studentName?: string }[]
+      cells: import("./answerSheetBuilder.types").ComputedCell[]
+      cellConfigs: Record<string, import("./omr.types").OMRCellConfig>
+      expectedCorners: [
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+        import("./omr.types").Point,
+      ]
+      params: import("./omr.types").OMRRecognitionParams
+      pageIndex?: number
+    }) => Promise<import("./omr.types").OMRSheetResult[]>
+    saveTemplate: (
+      projectId: string,
+      template: import("./omr.types").OMRTemplate
+    ) => Promise<{ success: boolean; error?: string }>
+    loadTemplate: (projectId: string) => Promise<{
+      success: boolean
+      template?: import("./omr.types").OMRTemplate
+      error?: string
+    }>
+    onBatchProgress: (
+      callback: (progress: import("./omr.types").OMRBatchProgress) => void
+    ) => () => void
+  }
 }
 
 // =============================================================================

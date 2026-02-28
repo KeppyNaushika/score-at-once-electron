@@ -1163,6 +1163,61 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // =============================================================================
   // Answer Sheet Builder（解答用紙作成）
   // =============================================================================
+  // =============================================================================
+  // OMR（光学マーク認識）
+  // =============================================================================
+  omr: {
+    detectMarkers: (imagePath: string, colorThreshold?: number) =>
+      ipcRenderer.invoke("omr:detect-markers", imagePath, colorThreshold),
+    recognizeSheet: (args: {
+      imagePath: string
+      cells: unknown[]
+      cellConfigs: Record<string, unknown>
+      expectedCorners: [
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+      ]
+      params: { colorThreshold: number; areaThreshold: number }
+      pageIndex?: number
+      studentId?: string
+    }) => ipcRenderer.invoke("omr:recognize-sheet", args),
+    batchRecognize: (args: {
+      imagePaths: { path: string; studentId?: string; studentName?: string }[]
+      cells: unknown[]
+      cellConfigs: Record<string, unknown>
+      expectedCorners: [
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+        { x: number; y: number },
+      ]
+      params: { colorThreshold: number; areaThreshold: number }
+      pageIndex?: number
+    }) => ipcRenderer.invoke("omr:batch-recognize", args),
+    saveTemplate: (projectId: string, template: unknown) =>
+      ipcRenderer.invoke("omr:save-template", projectId, template),
+    loadTemplate: (projectId: string) =>
+      ipcRenderer.invoke("omr:load-template", projectId),
+    onBatchProgress: (
+      callback: (progress: {
+        total: number
+        processed: number
+        succeeded: number
+        failed: number
+        currentStudentName?: string
+      }) => void
+    ) => {
+      ipcRenderer.on("omr:batch-progress", (_event, progress) =>
+        callback(progress)
+      )
+      return () => {
+        ipcRenderer.removeAllListeners("omr:batch-progress")
+      }
+    },
+  },
+
   answerSheetBuilder: {
     listDefinitions: () => ipcRenderer.invoke("asb:list-definitions"),
     loadDefinition: (id: string) =>
@@ -1183,9 +1238,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     convertToProject: (
       args: import("../types/answerSheetBuilder.types").ASBConvertToProjectArgs
     ) => ipcRenderer.invoke("asb:convert-to-project", args),
-    print: (
-      args: import("../types/answerSheetBuilder.types").ASBPrintArgs
-    ) => ipcRenderer.invoke("asb:print", args),
+    print: (args: import("../types/answerSheetBuilder.types").ASBPrintArgs) =>
+      ipcRenderer.invoke("asb:print", args),
   },
 })
 
