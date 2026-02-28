@@ -19,9 +19,8 @@
     "strict": true,
     "target": "ES2022",
     "outDir": "../main",
-    "baseUrl": "../",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["../*"]
     }
   },
   "exclude": ["node_modules", "../node_modules"],
