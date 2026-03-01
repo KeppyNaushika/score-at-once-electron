@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    // "ignoreDeprecations": "6.0",
     "allowJs": true,
     "alwaysStrict": true,
     "esModuleInterop": true,
@@ -18,11 +17,12 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
+    "rootDir": "..",
     "outDir": "../main",
     "paths": {
       "@/*": ["../*"]
     }
   },
   "exclude": ["node_modules", "../node_modules"],
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js"]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "../types/**/*.ts"]
 }
