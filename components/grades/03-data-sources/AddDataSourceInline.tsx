@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type DataSourceType = "project_total" | "subtotal" | "crop_region" | "manual"
+type DataSourceType = "exam_total" | "subtotal" | "crop_region" | "manual"
 
 interface AddDataSourceInlineProps {
   gradeItemId: string
@@ -54,7 +54,7 @@ export function AddDataSourceInline({
   onCreated,
 }: AddDataSourceInlineProps) {
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<DataSourceType>("project_total")
+  const [type, setType] = useState<DataSourceType>("exam_total")
   const [exams, setExams] = useState<ExamOption[]>([])
   const [selectedExamId, setSelectedExamId] = useState("")
   const [subtotalGroups, setSubtotalGroups] = useState<SubtotalGroupOption[]>(
@@ -115,7 +115,7 @@ export function AddDataSourceInline({
       cropRegionId?: string
     } = { type }
 
-    if (type === "project_total") {
+    if (type === "exam_total") {
       data.examId = selectedExamId
     } else if (type === "subtotal") {
       data.examId = selectedExamId
@@ -144,7 +144,7 @@ export function AddDataSourceInline({
     const exam = exams.find((p) => p.id === selectedExamId)
     if (!exam) return
 
-    if (type === "project_total") {
+    if (type === "exam_total") {
       setName(`${exam.examName}(合計)`)
     } else if (type === "subtotal" && selectedSubtotalId) {
       const sg = subtotalGroups.find((g) =>
@@ -202,7 +202,7 @@ export function AddDataSourceInline({
 
   const resetForm = () => {
     setOpen(false)
-    setType("project_total")
+    setType("exam_total")
     setSelectedExamId("")
     setSelectedSubtotalGroupId("")
     setSelectedSubtotalId("")
@@ -251,7 +251,7 @@ export function AddDataSourceInline({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="project_total">全設問合計</SelectItem>
+            <SelectItem value="exam_total">全設問合計</SelectItem>
             <SelectItem value="subtotal">小計点</SelectItem>
             <SelectItem value="crop_region">設問</SelectItem>
             <SelectItem value="manual">外部成績</SelectItem>

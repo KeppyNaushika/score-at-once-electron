@@ -116,7 +116,7 @@ export async function calculateGrades(gradeId: string): Promise<{
         allDataSources
           .filter(
             (ds) =>
-              (ds.type === "project_total" ||
+              (ds.type === "exam_total" ||
                 ds.type === "subtotal" ||
                 ds.type === "crop_region") &&
               ds.examId
@@ -462,7 +462,7 @@ async function getRawScore(
   },
   examDataCache: Map<string, ExamDataCache>
 ): Promise<number | null> {
-  if (ds.type === "project_total" && ds.examId) {
+  if (ds.type === "exam_total" && ds.examId) {
     return calculateExamTotalScore(studentId, ds.examId, examDataCache)
   } else if (ds.type === "subtotal" && ds.subtotalId && ds.examId) {
     const examData = examDataCache.get(ds.examId)
@@ -752,7 +752,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
- * project_total: 試験の全QUESTION_ANSWER CropRegionスコア合計
+ * exam_total: 試験の全QUESTION_ANSWER CropRegionスコア合計
  */
 function calculateExamTotalScore(
   studentId: string,

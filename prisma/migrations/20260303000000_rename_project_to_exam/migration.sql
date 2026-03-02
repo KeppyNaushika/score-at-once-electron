@@ -177,3 +177,10 @@ CREATE INDEX "GradeOverride_gradeId_idx" ON "GradeOverride"("gradeId");
 -- --- GradeExportSettings (was GradeProjectExportSettings) ---
 DROP INDEX IF EXISTS "GradeProjectExportSettings_gradeProjectId_key";
 CREATE UNIQUE INDEX "GradeExportSettings_gradeId_key" ON "GradeExportSettings"("gradeId");
+
+-- =============================================================
+-- Step 4: Rename data values
+-- GradeDataSource.type: "project_total" → "exam_total"
+-- =============================================================
+
+UPDATE "GradeDataSource" SET "type" = 'exam_total' WHERE "type" = 'project_total';

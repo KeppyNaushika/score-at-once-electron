@@ -470,11 +470,11 @@ model GradeStudent {
   @@index([gradeId, customOrder])
 }
 
-/// 成績データソース（4種: project_total / subtotal / crop_region / manual）
+/// 成績データソース（4種: exam_total / subtotal / crop_region / manual）
 model GradeDataSource {
   id                     String   @id @default(uuid())
   gradeItemId            String
-  type                   String // "project_total" | "subtotal" | "crop_region" | "manual"
+  type                   String // "exam_total" | "subtotal" | "crop_region" | "manual"
   examId                 String?
   subtotalId             String?
   cropRegionId           String?

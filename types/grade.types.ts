@@ -43,7 +43,7 @@ export type EstimationMode = "all" | "selected"
 export interface GradeDataSourceWithDetails {
   id: string
   gradeItemId: string
-  type: string // "project_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
   examId: string | null
   subtotalId: string | null
   cropRegionId: string | null

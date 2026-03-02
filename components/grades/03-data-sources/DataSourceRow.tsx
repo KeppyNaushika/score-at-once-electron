@@ -11,7 +11,7 @@ import type { GradeDataSourceWithDetails } from "@/types/grade.types"
 import { EstimationSettingsPopover } from "./EstimationSettingsPopover"
 
 const TYPE_LABELS: Record<string, string> = {
-  project_total: "合計",
+  exam_total: "合計",
   subtotal: "小計",
   crop_region: "設問",
   manual: "外部",

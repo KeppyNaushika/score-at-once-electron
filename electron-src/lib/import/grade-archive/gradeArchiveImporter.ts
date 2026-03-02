@@ -135,10 +135,15 @@ export async function importGradeArchive(
         })
 
         for (const dsData of giData.dataSources) {
+          // 旧アーカイブ互換: project_total → exam_total
+          if (dsData.type === "project_total") {
+            dsData.type = "exam_total"
+          }
+
           let examId: string | null = null
           if (
             dsData.examName &&
-            (dsData.type === "project_total" ||
+            (dsData.type === "exam_total" ||
               dsData.type === "subtotal" ||
               dsData.type === "crop_region")
           ) {

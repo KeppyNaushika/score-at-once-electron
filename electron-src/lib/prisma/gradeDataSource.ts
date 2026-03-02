@@ -39,7 +39,7 @@ export async function getDataSourcesByGradeItemId(gradeItemId: string) {
  */
 export async function createDataSource(data: {
   gradeItemId: string
-  type: string // "project_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
   examId?: string
   subtotalId?: string
   cropRegionId?: string
@@ -324,7 +324,7 @@ export async function calculateSourceMaxScore(data: {
   cropRegionId?: string
 }): Promise<{ success: boolean; maxScore?: number; error?: string }> {
   try {
-    if (data.type === "project_total" && data.examId) {
+    if (data.type === "exam_total" && data.examId) {
       // 試験の全QUESTION_ANSWER CropRegionのpoints合計
       const pages = await prisma.examPage.findMany({
         where: { examId: data.examId },
