@@ -102,7 +102,12 @@ interface SortablePageItemProps {
   onDelete: () => void
 }
 
-function SortablePageItem({ page, index, disabled, onDelete }: SortablePageItemProps) {
+function SortablePageItem({
+  page,
+  index,
+  disabled,
+  onDelete,
+}: SortablePageItemProps) {
   const {
     attributes,
     listeners,

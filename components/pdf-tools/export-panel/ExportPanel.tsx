@@ -121,9 +121,7 @@ function isPageExcluded(page: OutputPage, excludedPages: Set<string>): boolean {
       excludedPages.has(`${page.sourceFileId}:${pn}`)
     )
   }
-  return excludedPages.has(
-    `${page.sourceFileId}:${page.sourcePageNumber}`
-  )
+  return excludedPages.has(`${page.sourceFileId}:${page.sourcePageNumber}`)
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client"
 
-import { FileImage, FileText } from "lucide-react"
+import { FileImage, FileText, Printer } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -27,7 +27,8 @@ export function ExportDialog({
   onOpenChange,
   definition,
 }: ExportDialogProps) {
-  const { exportPdf, exportPng, isExporting } = useAnswerSheetExport()
+  const { exportPdf, exportPng, printSheet, isExporting } =
+    useAnswerSheetExport()
   const [dpi, setDpi] = useState(300)
 
   return (
@@ -86,6 +87,24 @@ export function ExportDialog({
               />
             </div>
           </div>
+
+          <Button
+            variant="outline"
+            className="h-12 w-full justify-start gap-3"
+            disabled={isExporting}
+            onClick={() => {
+              printSheet(definition)
+              onOpenChange(false)
+            }}
+          >
+            <Printer className="h-5 w-5 text-green-500" />
+            <div className="text-left">
+              <div className="text-sm font-medium">印刷</div>
+              <div className="text-muted-foreground text-xs">
+                システム印刷ダイアログを表示
+              </div>
+            </div>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

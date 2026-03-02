@@ -40,6 +40,9 @@ export function OMRMarkerSettings({
               max={15}
               step={0.5}
               onChange={(e) => onUpdate({ sizeMm: Number(e.target.value) })}
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
             />
           </div>
           <div>
@@ -54,6 +57,9 @@ export function OMRMarkerSettings({
               max={20}
               step={0.5}
               onChange={(e) => onUpdate({ offsetMm: Number(e.target.value) })}
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
             />
           </div>
         </div>

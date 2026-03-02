@@ -1,6 +1,5 @@
 "use client"
 
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -11,11 +10,13 @@ import {
 } from "@/components/ui/select"
 import type {
   GlobalSettings,
+  MajorNumberDisplayMode,
   Orientation,
   PaperSize,
 } from "@/types/answerSheetBuilder.types"
 
 import { PAPER_SIZE_OPTIONS } from "../../constants"
+import { SliderWithInput } from "./SliderWithInput"
 
 interface GlobalSettingsFormProps {
   settings: GlobalSettings
@@ -30,8 +31,8 @@ export function GlobalSettingsForm({
     <div className="space-y-4">
       <h3 className="text-muted-foreground text-sm font-semibold">用紙設定</h3>
 
-      {/* 用紙サイズ・向き */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* 用紙サイズ・向き・大問番号表示 */}
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <Label className="text-xs">用紙サイズ</Label>
           <Select
@@ -65,191 +66,156 @@ export function GlobalSettingsForm({
             </SelectContent>
           </Select>
         </div>
-      </div>
-
-      {/* マージン */}
-      <div>
-        <Label className="text-xs">余白 (mm)</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {(["top", "bottom", "left", "right"] as const).map((side) => (
-            <div key={side}>
-              <Label className="text-muted-foreground text-[10px]">
-                {side === "top"
-                  ? "上"
-                  : side === "bottom"
-                    ? "下"
-                    : side === "left"
-                      ? "左"
-                      : "右"}
-              </Label>
-              <Input
-                type="number"
-                className="h-7 text-xs"
-                value={settings.margins[side]}
-                min={0}
-                max={50}
-                onChange={(e) =>
-                  onUpdate({
-                    margins: {
-                      ...settings.margins,
-                      [side]: Number(e.target.value),
-                    },
-                  })
-                }
-              />
-            </div>
-          ))}
+        <div>
+          <Label className="text-xs">大問番号</Label>
+          <Select
+            value={settings.numberDisplayMode}
+            onValueChange={(v) =>
+              onUpdate({ numberDisplayMode: v as MajorNumberDisplayMode })
+            }
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="multirow">結合</SelectItem>
+              <SelectItem value="boxed-top">四角</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
+      {/* マージン */}
+      <div className="space-y-2">
+        <Label className="text-xs">余白 (mm)</Label>
+        {(
+          [
+            ["top", "上"],
+            ["bottom", "下"],
+            ["left", "左"],
+            ["right", "右"],
+          ] as const
+        ).map(([side, label]) => (
+          <SliderWithInput
+            key={side}
+            label={label}
+            value={settings.margins[side]}
+            min={0}
+            max={50}
+            step={1}
+            onChange={(v) =>
+              onUpdate({ margins: { ...settings.margins, [side]: v } })
+            }
+          />
+        ))}
+      </div>
+
       {/* 行高さ */}
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs">基本行高さ (mm)</Label>
-        <Input
-          type="number"
-          className="h-8 text-xs"
+        <SliderWithInput
+          label=""
           value={settings.baseRowHeight}
           min={5}
           max={50}
           step={1}
-          onChange={(e) => onUpdate({ baseRowHeight: Number(e.target.value) })}
+          onChange={(v) => onUpdate({ baseRowHeight: v })}
         />
       </div>
 
       {/* 列幅 */}
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs">列幅 (mm)</Label>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              大問番号
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={settings.columnWidths.majorNumber}
-              min={5}
-              max={30}
-              onChange={(e) =>
-                onUpdate({
-                  columnWidths: {
-                    ...settings.columnWidths,
-                    majorNumber: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </div>
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              小問番号
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={settings.columnWidths.subNumber}
-              min={5}
-              max={30}
-              onChange={(e) =>
-                onUpdate({
-                  columnWidths: {
-                    ...settings.columnWidths,
-                    subNumber: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </div>
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              枝問番号
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={settings.columnWidths.branchNumber}
-              min={5}
-              max={30}
-              onChange={(e) =>
-                onUpdate({
-                  columnWidths: {
-                    ...settings.columnWidths,
-                    branchNumber: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </div>
-        </div>
+        <SliderWithInput
+          label="大問番号"
+          value={settings.columnWidths.majorNumber}
+          min={5}
+          max={30}
+          step={1}
+          onChange={(v) =>
+            onUpdate({
+              columnWidths: { ...settings.columnWidths, majorNumber: v },
+            })
+          }
+        />
+        <SliderWithInput
+          label="小問番号"
+          value={settings.columnWidths.subNumber}
+          min={5}
+          max={30}
+          step={1}
+          onChange={(v) =>
+            onUpdate({
+              columnWidths: { ...settings.columnWidths, subNumber: v },
+            })
+          }
+        />
+        <SliderWithInput
+          label="枝問番号"
+          value={settings.columnWidths.branchNumber}
+          min={5}
+          max={30}
+          step={1}
+          onChange={(v) =>
+            onUpdate({
+              columnWidths: { ...settings.columnWidths, branchNumber: v },
+            })
+          }
+        />
       </div>
 
-      {/* 大問間スペーシング */}
-      <div>
-        <Label className="text-xs">大問間スペース (mm)</Label>
-        <Input
-          type="number"
-          className="h-8 text-xs"
+      {/* スペーシング */}
+      <div className="space-y-2">
+        <Label className="text-xs">スペーシング (mm)</Label>
+        <SliderWithInput
+          label="大問間"
           value={settings.spacing.majorQuestionSpacing}
           min={0}
           max={20}
-          onChange={(e) =>
+          step={1}
+          onChange={(v) =>
             onUpdate({
-              spacing: {
-                ...settings.spacing,
-                majorQuestionSpacing: Number(e.target.value),
-              },
+              spacing: { ...settings.spacing, majorQuestionSpacing: v },
+            })
+          }
+        />
+        <SliderWithInput
+          label="ヘッダー"
+          value={settings.spacing.headerHeight}
+          min={0}
+          max={50}
+          step={1}
+          onChange={(v) =>
+            onUpdate({
+              spacing: { ...settings.spacing, headerHeight: v },
             })
           }
         />
       </div>
 
       {/* フォントサイズ */}
-      <div>
+      <div className="space-y-2">
         <Label className="text-xs">フォントサイズ (pt)</Label>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              テキスト
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={settings.fonts.defaultSize}
-              min={6}
-              max={24}
-              step={0.5}
-              onChange={(e) =>
-                onUpdate({
-                  fonts: {
-                    ...settings.fonts,
-                    defaultSize: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </div>
-          <div>
-            <Label className="text-muted-foreground text-[10px]">
-              設問番号
-            </Label>
-            <Input
-              type="number"
-              className="h-7 text-xs"
-              value={settings.fonts.numberSize}
-              min={6}
-              max={24}
-              step={0.5}
-              onChange={(e) =>
-                onUpdate({
-                  fonts: {
-                    ...settings.fonts,
-                    numberSize: Number(e.target.value),
-                  },
-                })
-              }
-            />
-          </div>
-        </div>
+        <SliderWithInput
+          label="テキスト"
+          value={settings.fonts.defaultSize}
+          min={6}
+          max={24}
+          step={0.5}
+          onChange={(v) =>
+            onUpdate({ fonts: { ...settings.fonts, defaultSize: v } })
+          }
+        />
+        <SliderWithInput
+          label="設問番号"
+          value={settings.fonts.numberSize}
+          min={6}
+          max={24}
+          step={0.5}
+          onChange={(v) =>
+            onUpdate({ fonts: { ...settings.fonts, numberSize: v } })
+          }
+        />
       </div>
     </div>
   )

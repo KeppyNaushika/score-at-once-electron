@@ -13,11 +13,11 @@ export function ModelAnswerEditor({ value, onChange }: ModelAnswerEditorProps) {
     <div className="space-y-1">
       <Label className="text-xs">模範解答</Label>
       <Textarea
-        className="min-h-[2rem] resize-none text-xs"
+        className="min-h-8 resize-none text-xs"
         rows={2}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="模範解答（模範解答モードで表示）"
+        placeholder="模範解答"
       />
     </div>
   )

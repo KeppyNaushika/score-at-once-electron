@@ -153,42 +153,20 @@ export function AnswerSheetSVGRenderer({
       })}
 
       {/* 番号ラベル */}
-      {numberLabels.map((label, i) => {
-        // 横配置時の小問ラベル: セル内左側に配置
-        if (
-          label.displayMode === "sub-horizontal" ||
-          label.displayMode === "branch-horizontal"
-        ) {
-          return (
-            <text
-              key={`label-${i}`}
-              x={label.x + 1}
-              y={label.y + label.height / 2}
-              fontSize={label.fontSize}
-              fontFamily="'Noto Sans JP', sans-serif"
-              textAnchor="start"
-              dominantBaseline="central"
-              fill="#000"
-            >
-              {label.text}
-            </text>
-          )
-        }
-        return (
-          <text
-            key={`label-${i}`}
-            x={label.x + label.width / 2}
-            y={label.y + label.height / 2}
-            fontSize={label.fontSize}
-            fontFamily="'Noto Sans JP', sans-serif"
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill="#000"
-          >
-            {label.text}
-          </text>
-        )
-      })}
+      {numberLabels.map((label, i) => (
+        <text
+          key={`label-${i}`}
+          x={label.x + label.width / 2}
+          y={label.y + label.height / 2}
+          fontSize={label.fontSize}
+          fontFamily="'Noto Sans JP', sans-serif"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fill="#000"
+        >
+          {label.text}
+        </text>
+      ))}
 
       {/* 模範解答テキスト */}
       {renderMode === "model-answer" &&

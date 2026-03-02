@@ -5,6 +5,7 @@ import { useRef, useState } from "react"
 import type {
   AnswerSheetAction,
   ComputedLayout,
+  ComputedMultiPageLayout,
   RenderMode,
 } from "@/types/answerSheetBuilder.types"
 
@@ -14,6 +15,7 @@ import { PreviewToolbar } from "./PreviewToolbar"
 
 interface AnswerSheetPreviewProps {
   layout: ComputedLayout
+  multiPageLayout: ComputedMultiPageLayout
   renderMode: RenderMode
   onRenderModeChange: (mode: RenderMode) => void
   dispatch: (action: AnswerSheetAction) => void
@@ -22,6 +24,7 @@ interface AnswerSheetPreviewProps {
 
 export function AnswerSheetPreview({
   layout,
+  multiPageLayout,
   renderMode,
   onRenderModeChange,
   dispatch,
@@ -29,6 +32,7 @@ export function AnswerSheetPreview({
 }: AnswerSheetPreviewProps) {
   const [zoom, setZoom] = useState(100)
   const [interactive, setInteractive] = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
   const svgRef = useRef<SVGSVGElement>(null)
 
   const {
@@ -40,7 +44,17 @@ export function AnswerSheetPreview({
     cursor,
   } = usePreviewDragInteraction(layout, interactive, dispatch, baseRowHeight)
 
+  const { totalPages } = multiPageLayout
+  const currentPageLayout =
+    totalPages > 1 ? multiPageLayout.pages[currentPage] : undefined
+
   const pageInfo = `${layout.pageWidthMm}×${layout.pageHeightMm}mm`
+
+  const handlePageChange = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page)
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -52,6 +66,9 @@ export function AnswerSheetPreview({
         pageInfo={pageInfo}
         interactive={interactive}
         onInteractiveChange={setInteractive}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
       />
       <div className="flex-1 overflow-auto bg-gray-100 p-4 dark:bg-gray-900">
         <div
@@ -78,6 +95,7 @@ export function AnswerSheetPreview({
           >
             <AnswerSheetSVGRenderer
               layout={layout}
+              pageLayout={currentPageLayout}
               renderMode={renderMode}
               interactive={interactive}
               hoveredDragInfo={hoveredDragInfo}

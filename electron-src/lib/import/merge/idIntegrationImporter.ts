@@ -139,7 +139,13 @@ export async function executeIdIntegrationImport(
         )
 
         // 4. 小計のマージ
-        await processSubtotals(data, idMappings, tx)
+        await processSubtotals(
+          data,
+          idMappings,
+          warnings,
+          tx,
+          integrationConfig.subtotalMappings
+        )
 
         // 5. プロジェクト処理
         const isProjectIdMatch = preMatchResult.project?.isIdMatch ?? false
@@ -198,7 +204,13 @@ export async function executeIdIntegrationImport(
         await processProjectClasses(data, newProjectId, idMappings, tx)
 
         // 11. CropSubtotal
-        await processCropSubtotals(data, isProjectIdMatch, idMappings, tx)
+        await processCropSubtotals(
+          data,
+          isProjectIdMatch,
+          idMappings,
+          warnings,
+          tx
+        )
 
         // 12. QuestionScore（競合解決対応）
         await processQuestionScores(
@@ -272,12 +284,41 @@ type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 async function processSubtotals(
   data: ExtractedArchiveData,
   idMappings: IdMappings,
-  tx: Tx
+  warnings: string[],
+  tx: Tx,
+  subtotalMappings?: Record<string, string>
 ): Promise<void> {
+  // スキップされた小計をグループ別に集計
+  const skippedByGroup: Record<string, string[]> = {}
+
   for (const s of data.subtotalsData.subtotals) {
     const newGroupId = idMappings.subtotalGroup[s.subtotalGroupId]
-    if (!newGroupId) continue
+    if (!newGroupId) {
+      // グループがスキップされた → 配下の小計もスキップ
+      const groupName =
+        data.subtotalsData.subtotalGroups.find(
+          (g) => g.id === s.subtotalGroupId
+        )?.name ?? s.subtotalGroupId
+      if (!skippedByGroup[groupName]) skippedByGroup[groupName] = []
+      skippedByGroup[groupName].push(s.name)
+      continue
+    }
 
+    // 1. 明示的なマッピングがあれば使う
+    const explicitTarget = subtotalMappings?.[s.id]
+    if (explicitTarget && explicitTarget !== "__new__") {
+      // 既存の小計項目に直接結びつけ
+      idMappings.subtotal[s.id] = explicitTarget
+      continue
+    }
+
+    // 2. "__new__" の場合は新規作成を強制
+    if (explicitTarget === "__new__") {
+      await createNewSubtotal(s, newGroupId, idMappings, tx)
+      continue
+    }
+
+    // 3. マッピング未設定（デフォルト動作: 従来の名前ベース自動マッチ）
     const existing = await tx.subtotal.findFirst({
       where: { subtotalGroupId: newGroupId, name: s.name },
     })
@@ -301,6 +342,56 @@ async function processSubtotals(
       idMappings.subtotal[s.id] = existing.id
     }
   }
+
+  // スキップされた小計の警告を出力
+  for (const [groupName, subtotalNames] of Object.entries(skippedByGroup)) {
+    warnings.push(
+      `小計グループ「${groupName}」がスキップされたため、配下の小計項目（${subtotalNames.join("、")}）もスキップされました`
+    )
+  }
+}
+
+/**
+ * 小計項目を新規作成（名前重複時はサフィックス付き）
+ */
+async function createNewSubtotal(
+  s: ExtractedArchiveData["subtotalsData"]["subtotals"][0],
+  newGroupId: string,
+  idMappings: IdMappings,
+  tx: Tx
+): Promise<void> {
+  // 同名の小計が既にあるかチェック
+  const existingWithName = await tx.subtotal.findFirst({
+    where: { subtotalGroupId: newGroupId, name: s.name },
+  })
+
+  let finalName = s.name
+  if (existingWithName) {
+    // サフィックス付きで新規作成
+    for (let i = 2; i <= 100; i++) {
+      const candidate = `${s.name} (${i})`
+      const dup = await tx.subtotal.findFirst({
+        where: { subtotalGroupId: newGroupId, name: candidate },
+      })
+      if (!dup) {
+        finalName = candidate
+        break
+      }
+    }
+  }
+
+  const existingById = await tx.subtotal.findUnique({ where: { id: s.id } })
+  const newId = existingById ? randomUUID() : s.id
+
+  await tx.subtotal.create({
+    data: {
+      id: newId,
+      name: finalName,
+      subtotalGroupId: newGroupId,
+      order: s.order,
+    },
+  })
+  idMappings.subtotal[s.id] = newId
 }
 
 async function processProject(
@@ -624,8 +715,11 @@ async function processCropSubtotals(
   data: ExtractedArchiveData,
   isProjectIdMatch: boolean,
   idMappings: IdMappings,
+  warnings: string[],
   tx: Tx
 ): Promise<void> {
+  let skippedCount = 0
+
   for (const cs of data.subtotalsData.cropSubtotals) {
     const newRegionId = idMappings.cropRegion[cs.cropRegionId]
     const newSubtotalId = idMappings.subtotal[cs.subtotalId]
@@ -656,7 +750,15 @@ async function processCropSubtotals(
         })
         idMappings.cropSubtotal[cs.id] = cs.id
       }
+    } else {
+      skippedCount++
     }
+  }
+
+  if (skippedCount > 0) {
+    warnings.push(
+      `${skippedCount}件の設問-小計の紐づけがスキップされました（関連データがインポートされなかったため）`
+    )
   }
 }
 

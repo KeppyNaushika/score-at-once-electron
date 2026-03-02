@@ -1,17 +1,23 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  ArrowDownToLine,
+  ArrowUpToLine,
+  Bold,
+  Italic,
+  Plus,
+  Strikethrough,
+  Trash2,
+  UnfoldVertical,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Toggle } from "@/components/ui/toggle"
 import type {
   CellTextElement,
   HorizontalAlign,
@@ -19,6 +25,31 @@ import type {
 } from "@/types/answerSheetBuilder.types"
 
 import { generateId } from "../../constants"
+
+const H_ALIGNS: HorizontalAlign[] = ["left", "center", "right"]
+const V_ALIGNS: VerticalAlign[] = ["top", "middle", "bottom"]
+
+const H_ALIGN_ICON: Record<HorizontalAlign, LucideIcon> = {
+  left: AlignLeft,
+  center: AlignCenter,
+  right: AlignRight,
+}
+const H_ALIGN_TITLE: Record<HorizontalAlign, string> = {
+  left: "左揃え",
+  center: "中央揃え",
+  right: "右揃え",
+}
+
+const V_ALIGN_ICON: Record<VerticalAlign, LucideIcon> = {
+  top: ArrowUpToLine,
+  middle: UnfoldVertical,
+  bottom: ArrowDownToLine,
+}
+const V_ALIGN_TITLE: Record<VerticalAlign, string> = {
+  top: "上揃え",
+  middle: "中央",
+  bottom: "下揃え",
+}
 
 interface TextElementEditorProps {
   textElements: CellTextElement[]
@@ -58,7 +89,7 @@ export function TextElementEditor({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs">テキスト要素</Label>
+        <span className="text-xs">テキスト要素</span>
         <Button
           variant="ghost"
           size="sm"
@@ -71,89 +102,101 @@ export function TextElementEditor({
       </div>
 
       {textElements.map((el, i) => (
-        <div key={el.id} className="space-y-1.5 rounded border p-2">
-          {/* テキスト入力 */}
+        <div key={el.id} className="space-y-1 rounded border p-1.5">
+          {/* Row 1: テキスト + 削除 */}
           <div className="flex items-center gap-1">
             <Input
-              className="h-7 flex-1 text-xs"
+              className="h-7 min-w-0 flex-1 text-xs"
               value={el.text}
               onChange={(e) => handleChange(i, { text: e.target.value })}
-              placeholder="テキスト（LaTeX可: $x^2$）"
+              placeholder="テキスト"
             />
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive h-6 w-6 flex-shrink-0"
+              className="text-muted-foreground hover:text-destructive h-7 w-7 shrink-0"
               onClick={() => handleRemove(i)}
             >
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
 
-          {/* スタイル設定 */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <div className="flex items-center gap-1">
-              <Label className="text-muted-foreground text-[10px] whitespace-nowrap">
-                サイズ
-              </Label>
-              <Input
-                type="number"
-                className="h-6 w-12 text-xs"
-                value={el.fontSize}
-                min={6}
-                max={24}
-                step={0.5}
-                onChange={(e) =>
-                  handleChange(i, { fontSize: Number(e.target.value) })
-                }
-              />
-            </div>
-            <Select
-              value={el.fontWeight}
-              onValueChange={(v) =>
+          {/* Row 2: 書式ツールバー */}
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              className="h-7 w-14 shrink-0 text-center text-xs"
+              value={el.fontSize}
+              min={6}
+              max={24}
+              step={0.5}
+              onChange={(e) =>
+                handleChange(i, { fontSize: Number(e.target.value) })
+              }
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
+              title="フォントサイズ"
+            />
+
+            <Toggle
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 min-w-0 p-0"
+              pressed={el.fontWeight === "bold"}
+              onPressedChange={(pressed) =>
+                handleChange(i, { fontWeight: pressed ? "bold" : "normal" })
+              }
+              title="太字"
+            >
+              <Bold className="h-3.5 w-3.5" />
+            </Toggle>
+
+            <Toggle
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 min-w-0 p-0"
+              pressed={el.fontStyle === "italic"}
+              onPressedChange={(pressed) =>
                 handleChange(i, {
-                  fontWeight: v as "normal" | "bold",
+                  fontStyle: pressed ? "italic" : "normal",
                 })
               }
+              title="斜体"
             >
-              <SelectTrigger className="h-6 w-16 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="normal">通常</SelectItem>
-                <SelectItem value="bold">太字</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={el.horizontalAlign}
-              onValueChange={(v) =>
-                handleChange(i, { horizontalAlign: v as HorizontalAlign })
+              <Italic className="h-3.5 w-3.5" />
+            </Toggle>
+
+            <Toggle
+              variant="outline"
+              size="sm"
+              className="h-7 w-7 min-w-0 p-0"
+              pressed={el.textDecoration === "line-through"}
+              onPressedChange={(pressed) =>
+                handleChange(i, {
+                  textDecoration: pressed ? "line-through" : "none",
+                })
               }
+              title="取り消し線"
             >
-              <SelectTrigger className="h-6 w-14 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">左</SelectItem>
-                <SelectItem value="center">中央</SelectItem>
-                <SelectItem value="right">右</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={el.verticalAlign}
-              onValueChange={(v) =>
-                handleChange(i, { verticalAlign: v as VerticalAlign })
-              }
-            >
-              <SelectTrigger className="h-6 w-14 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="top">上</SelectItem>
-                <SelectItem value="middle">中</SelectItem>
-                <SelectItem value="bottom">下</SelectItem>
-              </SelectContent>
-            </Select>
+              <Strikethrough className="h-3.5 w-3.5" />
+            </Toggle>
+
+            <CycleButton
+              values={H_ALIGNS}
+              current={el.horizontalAlign}
+              icons={H_ALIGN_ICON}
+              titles={H_ALIGN_TITLE}
+              onChange={(v) => handleChange(i, { horizontalAlign: v })}
+            />
+
+            <CycleButton
+              values={V_ALIGNS}
+              current={el.verticalAlign}
+              icons={V_ALIGN_ICON}
+              titles={V_ALIGN_TITLE}
+              onChange={(v) => handleChange(i, { verticalAlign: v })}
+            />
           </div>
         </div>
       ))}
@@ -164,5 +207,40 @@ export function TextElementEditor({
         </p>
       )}
     </div>
+  )
+}
+
+/** クリックで次の値にサイクルするボタン */
+function CycleButton<T extends string>({
+  values,
+  current,
+  icons,
+  titles,
+  onChange,
+}: {
+  values: T[]
+  current: T
+  icons: Record<T, LucideIcon>
+  titles: Record<T, string>
+  onChange: (v: T) => void
+}) {
+  const idx = values.indexOf(current)
+  const Icon: LucideIcon = icons[current]
+
+  const handleClick = () => {
+    const next = values[(idx + 1) % values.length]
+    onChange(next)
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      className="h-7 w-7 min-w-0 p-0"
+      onClick={handleClick}
+      title={titles[current]}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </Button>
   )
 }

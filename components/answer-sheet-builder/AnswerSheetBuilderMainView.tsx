@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { RenderMode } from "@/types/answerSheetBuilder.types"
 
 import { ExportDialog } from "./components/export/ExportDialog"
@@ -18,7 +19,10 @@ import { OMRMarkerSettings } from "./components/form/OMRMarkerSettings"
 import { QuestionListEditor } from "./components/form/QuestionListEditor"
 import { AnswerSheetPreview } from "./components/preview/AnswerSheetPreview"
 import { useAnswerSheetDefinition } from "./hooks/useAnswerSheetDefinition"
-import { useAnswerSheetLayout } from "./hooks/useAnswerSheetLayout"
+import {
+  useAnswerSheetLayout,
+  useMultiPageLayout,
+} from "./hooks/useAnswerSheetLayout"
 import { useUndoRedoShortcuts } from "./hooks/useUndoRedoShortcuts"
 
 export function AnswerSheetBuilderMainView() {
@@ -36,6 +40,10 @@ export function AnswerSheetBuilderMainView() {
     addBranchQuestion,
     updateBranchQuestion,
     deleteBranchQuestion,
+    reorderMajorQuestions,
+    reorderSubQuestions,
+    reorderBranchQuestions,
+    setLabelPreset,
     canUndo,
     canRedo,
     undo,
@@ -43,17 +51,17 @@ export function AnswerSheetBuilderMainView() {
   } = useAnswerSheetDefinition()
 
   const layout = useAnswerSheetLayout(definition)
+  const multiPageLayout = useMultiPageLayout(definition)
 
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
 
-  // 問題統計
-  const totalQuestions = layout.cells.filter(
-    (c) => c.cellType === "answer"
-  ).length
-  const totalPoints = layout.cells
+  // 問題統計（全ページのセルから集計）
+  const allCells = multiPageLayout.pages.flatMap((p) => p.cells)
+  const totalQuestions = allCells.filter((c) => c.cellType === "answer").length
+  const totalPoints = allCells
     .filter((c) => c.cellType === "answer")
     .reduce((sum, c) => sum + c.points, 0)
 
@@ -79,9 +87,9 @@ export function AnswerSheetBuilderMainView() {
   }, [definition])
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-screen">
       {/* 左パネル: フォーム */}
-      <div className="flex w-1/2 max-w-2xl flex-shrink-0 flex-col border-r">
+      <div className="flex w-1/2 max-w-2xl shrink-0 flex-col overflow-hidden border-r">
         {/* 名前入力 */}
         <div className="border-b p-3">
           <Input
@@ -144,70 +152,111 @@ export function AnswerSheetBuilderMainView() {
           </Button>
         </div>
 
-        {/* フォーム本体 */}
-        <ScrollArea className="flex-1">
-          <div className="space-y-4 p-3">
-            <GlobalSettingsForm
-              settings={definition.settings}
-              onUpdate={updateSettings}
-            />
+        {/* タブ付きフォーム本体 */}
+        <Tabs defaultValue="questions" className="flex min-h-0 flex-1 flex-col">
+          <TabsList className="mx-3 mt-2 w-auto">
+            <TabsTrigger value="questions" className="text-xs">
+              問題構成
+            </TabsTrigger>
+            <TabsTrigger value="paper" className="text-xs">
+              用紙設定
+            </TabsTrigger>
+            <TabsTrigger value="lines" className="text-xs">
+              罫線
+            </TabsTrigger>
+            <TabsTrigger value="omr" className="text-xs">
+              OMR
+            </TabsTrigger>
+          </TabsList>
 
-            <Separator />
+          <TabsContent value="questions" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                <QuestionListEditor
+                  majorQuestions={definition.majorQuestions}
+                  labelPresets={definition.labelPresets}
+                  onSetLabelPreset={setLabelPreset}
+                  onAddMajor={addMajorQuestion}
+                  onUpdateMajor={updateMajorQuestion}
+                  onDeleteMajor={deleteMajorQuestion}
+                  onReorderMajor={reorderMajorQuestions}
+                  onAddSub={addSubQuestion}
+                  onUpdateSub={updateSubQuestion}
+                  onDeleteSub={deleteSubQuestion}
+                  onReorderSub={reorderSubQuestions}
+                  onAddBranch={addBranchQuestion}
+                  onUpdateBranch={updateBranchQuestion}
+                  onDeleteBranch={deleteBranchQuestion}
+                  onReorderBranch={reorderBranchQuestions}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
-            <LineStylePicker
-              borderConfig={definition.settings.borderConfig}
-              onUpdate={(borderConfig) =>
-                updateSettings({
-                  borderConfig: {
-                    ...definition.settings.borderConfig,
-                    ...borderConfig,
-                  },
-                })
-              }
-            />
+          <TabsContent value="paper" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                <GlobalSettingsForm
+                  settings={definition.settings}
+                  onUpdate={updateSettings}
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
-            <Separator />
+          <TabsContent value="lines" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                <LineStylePicker
+                  borderConfig={definition.settings.borderConfig}
+                  onUpdate={(borderConfig) =>
+                    updateSettings({
+                      borderConfig: {
+                        ...definition.settings.borderConfig,
+                        ...borderConfig,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
 
-            <OMRMarkerSettings
-              config={definition.settings.omrMarkers}
-              onUpdate={(omrMarkers) =>
-                updateSettings({
-                  omrMarkers: {
-                    ...definition.settings.omrMarkers,
-                    ...omrMarkers,
-                  },
-                })
-              }
-            />
-
-            <Separator />
-
-            <QuestionListEditor
-              majorQuestions={definition.majorQuestions}
-              onAddMajor={addMajorQuestion}
-              onUpdateMajor={updateMajorQuestion}
-              onDeleteMajor={deleteMajorQuestion}
-              onAddSub={addSubQuestion}
-              onUpdateSub={updateSubQuestion}
-              onDeleteSub={deleteSubQuestion}
-              onAddBranch={addBranchQuestion}
-              onUpdateBranch={updateBranchQuestion}
-              onDeleteBranch={deleteBranchQuestion}
-            />
-          </div>
-        </ScrollArea>
+          <TabsContent value="omr" className="min-h-0 flex-1">
+            <ScrollArea className="h-full">
+              <div className="p-3">
+                <OMRMarkerSettings
+                  config={definition.settings.omrMarkers}
+                  onUpdate={(omrMarkers) =>
+                    updateSettings({
+                      omrMarkers: {
+                        ...definition.settings.omrMarkers,
+                        ...omrMarkers,
+                      },
+                    })
+                  }
+                />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
 
         {/* フッター統計 */}
         <div className="text-muted-foreground flex justify-between border-t p-2 text-xs">
-          <span>{totalQuestions}問</span>
+          <span>
+            {totalQuestions}問
+            {multiPageLayout.totalPages > 1 &&
+              ` / ${multiPageLayout.totalPages}ページ`}
+          </span>
           <span>合計 {totalPoints}点</span>
         </div>
       </div>
 
       {/* 右パネル: プレビュー */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <AnswerSheetPreview
           layout={layout}
+          multiPageLayout={multiPageLayout}
           renderMode={definition.renderMode}
           onRenderModeChange={handleRenderModeChange}
           dispatch={dispatch}

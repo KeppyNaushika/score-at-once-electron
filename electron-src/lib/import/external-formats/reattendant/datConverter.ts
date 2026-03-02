@@ -160,8 +160,7 @@ export async function convertDatToScore(
     const masterImageEntries = entries
       .filter(
         (e) =>
-          e.entryName.includes("/Correct/abc_m") &&
-          e.entryName.endsWith(".png")
+          e.entryName.includes("/Correct/abc_m") && e.entryName.endsWith(".png")
       )
       .sort((a, b) => a.entryName.localeCompare(b.entryName))
 
@@ -229,9 +228,7 @@ export async function convertDatToScore(
       ? JSON.parse(questionsEntry.getData().toString("utf8"))
       : []
 
-    const anglesEntry = entries.find((e) =>
-      e.entryName.endsWith("angles.json")
-    )
+    const anglesEntry = entries.find((e) => e.entryName.endsWith("angles.json"))
     const angles: DatAngle[] = anglesEntry
       ? JSON.parse(anglesEntry.getData().toString("utf8"))
       : []
@@ -280,8 +277,7 @@ export async function convertDatToScore(
 
     // 13. プロジェクトデータ構築
     const subjectName =
-      DAT_SUBJECT_MAP[workbook.subject_id] ||
-      `教科${workbook.subject_id}`
+      DAT_SUBJECT_MAP[workbook.subject_id] || `教科${workbook.subject_id}`
     const projectTitle = `${contents.contents_name} ${workbook.workbook_name}`
 
     const projectData = {
@@ -443,9 +439,7 @@ function extractScoreAreasFromAbcXml(
   // TotalScoreArea, LargeQuestionScoreArea, AngleScoreArea は全て自己閉じタグ
 
   // TotalScoreArea
-  const totalMatches = abcXml.matchAll(
-    /<TotalScoreArea\s+([^/]*?)\/>/g
-  )
+  const totalMatches = abcXml.matchAll(/<TotalScoreArea\s+([^/]*?)\/>/g)
   for (const match of totalMatches) {
     const attrs = parseXmlAttributes(match[1])
     const page = parseInt(attrs.Page || "1", 10)
@@ -462,9 +456,7 @@ function extractScoreAreasFromAbcXml(
   }
 
   // LargeQuestionScoreArea（大問小計）
-  const largeMatches = abcXml.matchAll(
-    /<LargeQuestionScoreArea\s+([^/]*?)\/>/g
-  )
+  const largeMatches = abcXml.matchAll(/<LargeQuestionScoreArea\s+([^/]*?)\/>/g)
   for (const match of largeMatches) {
     const attrs = parseXmlAttributes(match[1])
     if (attrs.Visible === "false") continue
@@ -486,9 +478,7 @@ function extractScoreAreasFromAbcXml(
   }
 
   // AngleScoreArea（観点別得点）
-  const angleMatches = abcXml.matchAll(
-    /<AngleScoreArea\s+([^/]*?)\/>/g
-  )
+  const angleMatches = abcXml.matchAll(/<AngleScoreArea\s+([^/]*?)\/>/g)
   let angleIndex = 0
   for (const match of angleMatches) {
     const attrs = parseXmlAttributes(match[1])

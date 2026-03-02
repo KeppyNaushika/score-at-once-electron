@@ -87,6 +87,7 @@ export function DetailPanel({
                     idChoice,
                   })
                 }
+                wizard={entityType === "subtotalGroup" ? wizard : undefined}
               />
             )
           })}

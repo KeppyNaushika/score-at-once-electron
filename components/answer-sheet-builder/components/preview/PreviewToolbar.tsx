@@ -1,6 +1,6 @@
 "use client"
 
-import { Minus, Move, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Minus, Move, Plus } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -20,6 +20,9 @@ interface PreviewToolbarProps {
   pageInfo: string
   interactive?: boolean
   onInteractiveChange?: (interactive: boolean) => void
+  currentPage?: number
+  totalPages?: number
+  onPageChange?: (page: number) => void
 }
 
 const ZOOM_STEPS = [50, 75, 100, 125, 150, 200]
@@ -32,6 +35,9 @@ export function PreviewToolbar({
   pageInfo,
   interactive,
   onInteractiveChange,
+  currentPage,
+  totalPages,
+  onPageChange,
 }: PreviewToolbarProps) {
   const zoomIn = () => {
     const nextIdx = ZOOM_STEPS.findIndex((s) => s > zoom)
@@ -68,7 +74,7 @@ export function PreviewToolbar({
         </Button>
       </div>
 
-      {/* 調整トグル + ページ情報 */}
+      {/* 調整トグル + ページナビゲーション + ページ情報 */}
       <div className="flex items-center gap-2">
         {onInteractiveChange && (
           <Button
@@ -82,6 +88,34 @@ export function PreviewToolbar({
             調整
           </Button>
         )}
+        {totalPages != null &&
+          totalPages > 1 &&
+          onPageChange &&
+          currentPage != null && (
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 0}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <span className="min-w-12 text-center text-xs">
+                {currentPage + 1}/{totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         <span className="text-muted-foreground text-xs">{pageInfo}</span>
       </div>
 

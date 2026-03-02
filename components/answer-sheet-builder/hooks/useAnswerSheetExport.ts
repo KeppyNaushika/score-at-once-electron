@@ -86,5 +86,31 @@ export function useAnswerSheetExport() {
     []
   )
 
-  return { exportPdf, exportPng, isExporting }
+  const printSheet = useCallback(async (definition: AnswerSheetDefinition) => {
+    const api = window.electronAPI?.answerSheetBuilder
+    if (!api) {
+      toast.error("Electron APIが利用できません")
+      return
+    }
+
+    try {
+      setIsExporting(true)
+
+      const result = await api.print({ definition })
+
+      if (result.success) {
+        toast.success("印刷を開始しました")
+      } else if (result.error) {
+        toast.error(`印刷エラー: ${result.error}`)
+      }
+    } catch (error) {
+      toast.error(
+        `印刷エラー: ${error instanceof Error ? error.message : "不明なエラー"}`
+      )
+    } finally {
+      setIsExporting(false)
+    }
+  }, [])
+
+  return { exportPdf, exportPng, printSheet, isExporting }
 }
