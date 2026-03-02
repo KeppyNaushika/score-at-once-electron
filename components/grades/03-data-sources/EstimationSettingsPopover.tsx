@@ -69,7 +69,7 @@ export function EstimationSettingsPopover({
   )
 
   const isExamSource =
-    dataSource.type === "project_total" ||
+    dataSource.type === "exam_total" ||
     dataSource.type === "subtotal" ||
     dataSource.type === "crop_region"
 

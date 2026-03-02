@@ -114,7 +114,7 @@ export async function collectGradeArchiveData(
   const examRefs = allDataSources
     .filter(
       (ds) =>
-        (ds.type === "project_total" ||
+        (ds.type === "exam_total" ||
           ds.type === "subtotal" ||
           ds.type === "crop_region") &&
         ds.exam

@@ -57,7 +57,7 @@ export interface ArchiveGradeItem {
 }
 
 export interface ArchiveDataSource {
-  type: string // "project_total" | "subtotal" | "crop_region" | "manual"
+  type: string // "exam_total" | "subtotal" | "crop_region" | "manual"
   name: string
   maxScore: number
   weight: number
