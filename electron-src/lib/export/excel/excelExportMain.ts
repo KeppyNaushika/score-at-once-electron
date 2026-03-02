@@ -13,17 +13,17 @@ import { createResultSheet, createScoreSheet } from "./sheetCreators"
 /**
  * Excel出力のメイン処理
  *
- * @param options - 出力オプション（プロジェクトID、選択生徒ID配列、出力パス）
+ * @param options - 出力オプション（試験ID、選択生徒ID配列、出力パス）
  * @returns 出力結果（成功/失敗、出力パス、エラーメッセージ）
  */
 export async function exportGradingDataExcel(
   options: ExportGradingDataOptions
 ): Promise<ExportResult> {
   try {
-    const { projectId, selectedStudentIds } = options
+    const { examId, selectedStudentIds } = options
 
     // データの取得
-    const dataResult = await fetchExportData(projectId, selectedStudentIds)
+    const dataResult = await fetchExportData(examId, selectedStudentIds)
     if (!dataResult.success) {
       return { success: false, error: dataResult.error }
     }
@@ -77,11 +77,11 @@ export async function exportGradingDataExcel(
     )
 
     // ファイル保存
-    const projectName = dataResult.project?.examName
+    const examName = dataResult.exam?.examName
     const saveResult = await saveWorkbook(
       workbook,
       options.outputPath,
-      projectName
+      examName
     )
     if (!saveResult.success) {
       return { success: false, error: saveResult.error }

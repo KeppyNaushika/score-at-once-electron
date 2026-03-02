@@ -15,6 +15,7 @@ export default [
       "**/.next/**",
       "**/out/**",
       "**/public/**",
+      "**/scripts/**",
     ],
   },
   js.configs.recommended,

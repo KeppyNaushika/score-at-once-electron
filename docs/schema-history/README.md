@@ -17,29 +17,29 @@
 
 #### 追加されたテーブル
 
-- `ProjectClass` - プロジェクトと学級の関連付け
+- `ExamClass` - 試験と学級の関連付け
 - `Subject` - 教科マスター
 - `SubjectSubtotalGroup` - 教科と小計グループの関連
 - `UserKeyboardShortcut` - ユーザー別キーボードショートカット
 - `UserScoringPreference` - ユーザー別採点設定
-- `ProjectMarkingFormat` - プロジェクト別採点マーク設定
-- `ProjectExportSettings` - プロジェクト別エクスポート設定
+- `ExamMarkingFormat` - 試験別採点マーク設定
+- `ExamExportSettings` - 試験別エクスポート設定
 - `CropRegionMarkingOverride` - 領域別マーク上書き設定
 
 #### 変更されたテーブル
 
-- `UserProject`
+- `UserExam`
   - `invitedAt` フィールド追加
   - `invitedBy` フィールド追加
-  - `@@unique([userId, projectId])` 制約追加
+  - `@@unique([userId, examId])` 制約追加
 
 - `User`
-  - `invitedUserProjects` リレーション追加
+  - `invitedUserExams` リレーション追加
   - `keyboardShortcuts` リレーション追加
   - `scoringPreference` リレーション追加
 
 - `Class`
-  - `projectClasses` リレーション追加
+  - `examClasses` リレーション追加
 
 - `SubtotalGroup`
   - `subjectSubtotalGroups` リレーション追加
@@ -72,7 +72,7 @@
 - `Student`
   - `pageImages` → `studentAnswerImages` に変更
 
-- `ProjectPage`
+- `ExamPage`
   - `pageImages` → `masterImages` + `studentAnswerImages` に変更
 
 ### v1.2.0 → v1.3.0 (v0.4.x → v0.5.x)
@@ -87,9 +87,9 @@
 
 ### v1.0.0 アーカイブのインポート
 
-1. `UserProject.invitedAt` = `createdAt` で補完
-2. `UserProject.invitedBy` = null で補完
-3. `projectClasses` = 空配列で初期化
+1. `UserExam.invitedAt` = `createdAt` で補完
+2. `UserExam.invitedBy` = null で補完
+3. `examClasses` = 空配列で初期化
 
 ### v1.1.0 アーカイブのインポート
 

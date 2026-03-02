@@ -257,7 +257,7 @@ export interface IndividualReportData {
 
 /** 個人成績表データ取得オプション */
 export interface GetIndividualReportDataOptions {
-  projectId: string
+  examId: string
   selectedStudentIds: string[]
   options: IndividualReportOptions
 }

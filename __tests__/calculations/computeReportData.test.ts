@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest"
 import {
   computeFilteredStats,
   groupSubtotalData,
-} from "@/components/projects/08-export/components/individual-report/computeReportData"
+} from "@/components/exams/08-export/components/individual-report/computeReportData"
 import type {
   IndividualReportData,
   StatisticsData,

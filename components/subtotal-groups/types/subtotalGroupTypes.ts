@@ -4,7 +4,7 @@ export interface SubtotalGroup {
   createdAt: Date
   updatedAt: Date
   subtotals: Subtotal[]
-  projectSubtotalGroups?: ProjectSubtotalGroup[]
+  examSubtotalGroups?: ExamSubtotalGroup[]
 }
 
 export interface Subtotal {
@@ -17,9 +17,9 @@ export interface Subtotal {
   cropRegionSubtotals?: CropRegionSubtotal[]
 }
 
-export interface ProjectSubtotalGroup {
+export interface ExamSubtotalGroup {
   id: string
-  projectId: string
+  examId: string
   subtotalGroupId: string
   createdAt: Date
   updatedAt: Date

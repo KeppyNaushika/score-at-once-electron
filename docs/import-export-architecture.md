@@ -18,17 +18,17 @@
 
 ## 概要
 
-本システムは、Electronベースの採点アプリケーションにおけるプロジェクトデータの可搬性を実現するインポート/エクスポート機能である。複数PCでの協調採点を想定し、`.score`拡張子のZIPアーカイブを介してプロジェクトデータを安全に受け渡す。
+本システムは、Electronベースの採点アプリケーションにおける試験データの可搬性を実現するインポート/エクスポート機能である。複数PCでの協調採点を想定し、`.score`拡張子のZIPアーカイブを介して試験データを安全に受け渡す。
 
 ### 主要な2つのフロー
 
-1. **エクスポート**: `Project` → `dataCollector.ts` → `archiveCreator.ts` → `.score`ファイル (ZIP)
+1. **エクスポート**: `Exam` → `dataCollector.ts` → `archiveCreator.ts` → `.score`ファイル (ZIP)
 2. **インポート**: `.score`ファイル → `archiveExtractor.ts` → `matcher.ts` → `idIntegrationImporter.ts` → DB
 
 ```mermaid
 flowchart LR
     subgraph エクスポート
-        A[Project DB] --> B[dataCollector]
+        A[Exam DB] --> B[dataCollector]
         B --> C[archiveCreator]
         C --> D[".score ファイル"]
     end
@@ -62,7 +62,7 @@ flowchart LR
 ```
 archive.score (ZIP)
 ├── manifest.json           # メタデータ (バージョン、件数、エクスポート情報)
-├── project.json            # プロジェクト本体 + ページ + 領域 + 画像参照
+├── exam.json            # 試験本体 + ページ + 領域 + 画像参照
 ├── students.json           # 生徒データ
 ├── classes.json            # 学級データ + 学級所属 (membership)
 ├── users.json              # ユーザーデータ (パスワード除外)
@@ -87,30 +87,30 @@ interface ArchiveManifest {
   schemaVersion: string // Prismaマイグレーション名
   appVersion: string // アプリバージョン
   exportedAt: string // ISO 8601 日時
-  projectId: string // プロジェクトID
-  projectName: string // プロジェクト名
+  examId: string // 試験ID
+  examName: string // 試験名
   exportedBy?: string // エクスポートしたユーザー名
   counts: ArchiveDataCounts // 各データの件数
 }
 ```
 
-### project.json の主要フィールド (v1.4.0)
+### exam.json の主要フィールド (v1.4.0)
 
-| フィールド                   | 説明                                                            |
-| ---------------------------- | --------------------------------------------------------------- |
-| `project`                    | プロジェクト基本情報 (examName, examDate, subject, description) |
-| `projectPages`               | ページ一覧 (id, projectId, pageNumber)                          |
-| `cropRegions`                | 採点領域一覧 (座標、ラベル、配点等)                             |
-| `masterImages`               | 模範解答画像レコード (v1.2.0+)                                  |
-| `studentAnswerImages`        | 答案画像レコード (v1.2.0+)                                      |
-| `pageImages`                 | レガシー画像レコード (v1.1.0以前との後方互換性、空配列)         |
-| `projectStudents`            | プロジェクト-生徒紐づけ                                         |
-| `userProjects`               | 空配列 (v0.3.0+、インポート時に現在のユーザーで再作成)          |
-| `projectSubtotalGroups`      | プロジェクト-小計グループ紐づけ                                 |
-| `projectClasses`             | プロジェクト-学級紐づけ                                         |
-| `projectMarkingFormats`      | 採点マーク設定 (v1.4.0+)                                        |
-| `projectExportSettings`      | エクスポート設定 (v1.4.0+)                                      |
-| `cropRegionMarkingOverrides` | 領域別マーク上書き設定 (v1.4.0+)                                |
+| フィールド                   | 説明                                                    |
+| ---------------------------- | ------------------------------------------------------- |
+| `exam`                       | 試験基本情報 (examName, examDate, subject, description) |
+| `examPages`                  | ページ一覧 (id, examId, pageNumber)                     |
+| `cropRegions`                | 採点領域一覧 (座標、ラベル、配点等)                     |
+| `masterImages`               | 模範解答画像レコード (v1.2.0+)                          |
+| `studentAnswerImages`        | 答案画像レコード (v1.2.0+)                              |
+| `pageImages`                 | レガシー画像レコード (v1.1.0以前との後方互換性、空配列) |
+| `examStudents`               | 試験-生徒紐づけ                                         |
+| `userExams`                  | 空配列 (v0.3.0+、インポート時に現在のユーザーで再作成)  |
+| `examSubtotalGroups`         | 試験-小計グループ紐づけ                                 |
+| `examClasses`                | 試験-学級紐づけ                                         |
+| `examMarkingFormats`         | 採点マーク設定 (v1.4.0+)                                |
+| `examExportSettings`         | エクスポート設定 (v1.4.0+)                              |
+| `cropRegionMarkingOverrides` | 領域別マーク上書き設定 (v1.4.0+)                        |
 
 ---
 
@@ -120,8 +120,8 @@ interface ArchiveManifest {
 
 ```mermaid
 flowchart TD
-    A[exportProject 呼び出し] --> B[getProjectById<br/>プロジェクト存在確認]
-    B --> C[collectProjectData<br/>全データ収集]
+    A[exportExam 呼び出し] --> B[getExamById<br/>試験存在確認]
+    B --> C[collectExamData<br/>全データ収集]
     C --> D{出力先指定あり?}
     D -->|No| E[dialog.showSaveDialog<br/>ファイル選択ダイアログ]
     D -->|Yes| F[createArchive<br/>ZIP作成]
@@ -131,43 +131,43 @@ flowchart TD
 
 ### dataCollector.ts の処理詳細
 
-`collectProjectData(projectId, userId)` は以下の順序でデータを収集する。
+`collectExamData(examId, userId)` は以下の順序でデータを収集する。
 
-| 手順 | 処理                                   | 備考                                                                     |
-| ---- | -------------------------------------- | ------------------------------------------------------------------------ |
-| 1    | Prisma `project.findUnique` + includes | projectPages, cropRegions, questionScores, drawingAnnotations を一括取得 |
-| 2    | 関連する生徒IDを収集                   | projectStudents, studentAnswerImages, questionScores から                |
-| 3    | 生徒データを取得                       | `student.findMany`                                                       |
-| 4    | 学級と所属を取得                       | StudentClassMembership 経由                                              |
-| 5    | 現在ユーザーのみ取得                   | **パスワード除外** (`select` で passcode を除外)                         |
-| 6    | (欠番)                                 | -                                                                        |
-| 7    | 小計グループ・小計を取得               | projectSubtotalGroups 経由                                               |
-| 7.5  | ProjectMarkingFormat 取得              | v1.4.0+                                                                  |
-| 7.6  | ProjectExportSettings 取得             | v1.4.0+                                                                  |
-| 7.7  | CropRegionMarkingOverride 取得         | v1.4.0+                                                                  |
-| 7.8  | Subject / SubjectSubtotalGroup 取得    | v1.4.0+                                                                  |
-| 8    | 画像パスを収集                         | masterImages, studentAnswerImages                                        |
-| 9    | QuestionScore / DrawingAnnotation 収集 | **ログインユーザーのデータのみ** (v0.3.0+)                               |
-| 10   | データを整形                           | 全データをJSON化可能な構造に変換                                         |
-| 11   | 件数を集計                             | ArchiveDataCounts                                                        |
+| 手順 | 処理                                   | 備考                                                                  |
+| ---- | -------------------------------------- | --------------------------------------------------------------------- |
+| 1    | Prisma `exam.findUnique` + includes    | examPages, cropRegions, questionScores, drawingAnnotations を一括取得 |
+| 2    | 関連する生徒IDを収集                   | examStudents, studentAnswerImages, questionScores から                |
+| 3    | 生徒データを取得                       | `student.findMany`                                                    |
+| 4    | 学級と所属を取得                       | StudentClassMembership 経由                                           |
+| 5    | 現在ユーザーのみ取得                   | **パスワード除外** (`select` で passcode を除外)                      |
+| 6    | (欠番)                                 | -                                                                     |
+| 7    | 小計グループ・小計を取得               | examSubtotalGroups 経由                                               |
+| 7.5  | ExamMarkingFormat 取得                 | v1.4.0+                                                               |
+| 7.6  | ExamExportSettings 取得                | v1.4.0+                                                               |
+| 7.7  | CropRegionMarkingOverride 取得         | v1.4.0+                                                               |
+| 7.8  | Subject / SubjectSubtotalGroup 取得    | v1.4.0+                                                               |
+| 8    | 画像パスを収集                         | masterImages, studentAnswerImages                                     |
+| 9    | QuestionScore / DrawingAnnotation 収集 | **ログインユーザーのデータのみ** (v0.3.0+)                            |
+| 10   | データを整形                           | 全データをJSON化可能な構造に変換                                      |
+| 11   | 件数を集計                             | ArchiveDataCounts                                                     |
 
 ### エクスポートの重要ルール
 
 - **ユーザーフィルタリング**: `userId` に一致するQuestionScoreとDrawingAnnotationのみ収集。他ユーザーの採点データはエクスポートされない。
 - **UUIDの保持**: IDのリマッピングは行わず、そのままエクスポート。
 - **パスワード除外**: ユーザーデータからパスコードを除外してセキュリティを確保。
-- **UserProjectは空配列**: v0.3.0以降、UserProjectはエクスポートせず、インポート時に現在のユーザーで再作成。
+- **UserExamは空配列**: v0.3.0以降、UserExamはエクスポートせず、インポート時に現在のユーザーで再作成。
 
 ### archiveCreator.ts の処理
 
 1. ZIPストリーム (archiver) を作成
 2. `manifest.json` を追加
-3. 各JSONデータファイル (project, students, classes, users, subtotals, scores, subjects) を追加
+3. 各JSONデータファイル (exam, students, classes, users, subtotals, scores, subjects) を追加
 4. マスター画像を `master-images/` 配下に追加
 5. 答案画像を `answer-sheets/` 配下に追加
 6. `archive.finalize()` でZIPを完了
 
-ファイル名のデフォルト形式: `{projectName}-yyyy-MM-dd-hh-mm-ss.score`
+ファイル名のデフォルト形式: `{examName}-yyyy-MM-dd-hh-mm-ss.score`
 
 ---
 
@@ -193,11 +193,11 @@ flowchart TD
         J --> K[processClassIdIntegration]
         K --> L[processSubtotalGroupIdIntegration]
         L --> M[processSubtotals]
-        M --> N[processProject]
-        N --> O[processUserProject]
-        O --> P[processProjectSubtotalGroups]
-        P --> Q[processProjectStudents]
-        Q --> R[processProjectPages]
+        M --> N[processExam]
+        N --> O[processUserExam]
+        O --> P[processExamSubtotalGroups]
+        P --> Q[processExamStudents]
+        Q --> R[processExamPages]
         R --> S[processCropRegions]
         S --> T[processCropSubtotals]
         T --> U[processQuestionScores]
@@ -222,22 +222,22 @@ flowchart TD
 
 `prisma.$transaction` 内で以下の処理を順次実行する。
 
-| 順序 | 関数                                | 処理内容                                               |
-| ---- | ----------------------------------- | ------------------------------------------------------ |
-| 1    | `processStudentIdIntegration`       | 生徒のID照合 + 新規作成/既存紐づけ                     |
-| 2    | `processClassIdIntegration`         | 学級のID照合 + 新規作成/既存紐づけ                     |
-| 3    | `processSubtotalGroupIdIntegration` | 小計グループのID照合 + 新規作成/既存紐づけ             |
-| 4    | `processSubtotals`                  | 小計のマージ (名前+グループで重複チェック)             |
-| 5    | `processProject`                    | プロジェクト作成 or 既存マージ判定                     |
-| 6    | `processUserProject`                | 現在のユーザーをプロジェクトに紐づけ (OWNER or MEMBER) |
-| 7    | `processProjectSubtotalGroups`      | プロジェクト-小計グループ紐づけ                        |
-| 8    | `processProjectStudents`            | プロジェクト-生徒紐づけ                                |
-| 9    | `processProjectPages`               | ページ作成 (プロジェクトID不一致時のみ)                |
-| 10   | `processCropRegions`                | 採点領域作成 (プロジェクトID不一致時のみ)              |
-| 11   | `processCropSubtotals`              | 領域-小計紐づけ                                        |
-| 12   | `processQuestionScores`             | 採点データ挿入 (競合解決対応)                          |
-| 13   | `processDrawingAnnotations`         | 描画アノテーション挿入                                 |
-| 14   | `processMemberships`                | 学級所属紐づけ                                         |
+| 順序 | 関数                                | 処理内容                                       |
+| ---- | ----------------------------------- | ---------------------------------------------- |
+| 1    | `processStudentIdIntegration`       | 生徒のID照合 + 新規作成/既存紐づけ             |
+| 2    | `processClassIdIntegration`         | 学級のID照合 + 新規作成/既存紐づけ             |
+| 3    | `processSubtotalGroupIdIntegration` | 小計グループのID照合 + 新規作成/既存紐づけ     |
+| 4    | `processSubtotals`                  | 小計のマージ (名前+グループで重複チェック)     |
+| 5    | `processExam`                       | 試験作成 or 既存マージ判定                     |
+| 6    | `processUserExam`                   | 現在のユーザーを試験に紐づけ (OWNER or MEMBER) |
+| 7    | `processExamSubtotalGroups`         | 試験-小計グループ紐づけ                        |
+| 8    | `processExamStudents`               | 試験-生徒紐づけ                                |
+| 9    | `processExamPages`                  | ページ作成 (試験ID不一致時のみ)                |
+| 10   | `processCropRegions`                | 採点領域作成 (試験ID不一致時のみ)              |
+| 11   | `processCropSubtotals`              | 領域-小計紐づけ                                |
+| 12   | `processQuestionScores`             | 採点データ挿入 (競合解決対応)                  |
+| 13   | `processDrawingAnnotations`         | 描画アノテーション挿入                         |
+| 14   | `processMemberships`                | 学級所属紐づけ                                 |
 
 ### Stage 2: ID変更処理
 
@@ -256,10 +256,10 @@ flowchart TD
 
 Stage 1/Stage 2の後、トランザクション外で実行される。
 
-| 関数                       | 処理                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------- |
-| `copyImportImages`         | 一時ディレクトリからプロジェクトディレクトリへファイルコピー (既存ファイルはスキップ) |
-| `createImportImageRecords` | MasterImage / StudentAnswerImage のDBレコード作成                                     |
+| 関数                       | 処理                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `copyImportImages`         | 一時ディレクトリから試験ディレクトリへファイルコピー (既存ファイルはスキップ) |
+| `createImportImageRecords` | MasterImage / StudentAnswerImage のDBレコード作成                             |
 
 ---
 
@@ -275,14 +275,14 @@ interface IdMappings {
   class: Record<string, string> // 学級
   subtotalGroup: Record<string, string> // 小計グループ
   subtotal: Record<string, string> // 小計
-  project: Record<string, string> // プロジェクト
-  projectPage: Record<string, string> // ページ
+  exam: Record<string, string> // 試験
+  examPage: Record<string, string> // ページ
   cropRegion: Record<string, string> // 採点領域
   masterImage: Record<string, string> // 模範画像
   studentAnswerImage: Record<string, string> // 答案画像
-  projectStudent: Record<string, string> // プロジェクト-生徒
-  userProject: Record<string, string> // ユーザー-プロジェクト
-  projectSubtotalGroup: Record<string, string> // プロジェクト-小計グループ
+  examStudent: Record<string, string> // 試験-生徒
+  userExam: Record<string, string> // ユーザー-試験
+  examSubtotalGroup: Record<string, string> // 試験-小計グループ
   cropSubtotal: Record<string, string> // 領域-小計
   questionScore: Record<string, string> // 採点結果
   drawingAnnotation: Record<string, string> // 描画アノテーション
@@ -320,7 +320,7 @@ flowchart TD
 | 学級 (Class)                 | id       | name, classCode                   |
 | 小計グループ (SubtotalGroup) | id       | name                              |
 | ユーザー (User)              | id       | username                          |
-| プロジェクト (Project)       | id       | (なし - ID一致のみ)               |
+| 試験 (Exam)                  | id       | (なし - ID一致のみ)               |
 
 ### マッチング戦略 (ユーザー選択)
 
@@ -337,7 +337,7 @@ flowchart TD
 
 ### 競合検出の仕組み
 
-同じプロジェクト (ID一致) で同じ生徒 x 同じ採点領域に対して、既存DBとインポートデータの両方に採点結果が存在する場合に競合が発生する。
+同じ試験 (ID一致) で同じ生徒 x 同じ採点領域に対して、既存DBとインポートデータの両方に採点結果が存在する場合に競合が発生する。
 
 ```typescript
 // 競合のキー
@@ -381,13 +381,13 @@ flowchart TD
 
 ### バージョン履歴
 
-| バージョン | アプリバージョン | 主な変更                                                                                                  |
-| ---------- | ---------------- | --------------------------------------------------------------------------------------------------------- |
-| `1.0.0`    | v0.2.x           | 初期形式。UserProject.invitedAt/invitedBy なし、PageImage使用                                             |
-| `1.1.0`    | v0.3.x           | UserProject完全対応、ProjectClass追加                                                                     |
-| `1.2.0`    | v0.4.x           | MasterImage/StudentAnswerImage分離、userId/studentId非NULL化                                              |
-| `1.3.0`    | v0.5.x           | Student.studentId → Student.studentNumber リネーム                                                        |
-| `1.4.0`    | v0.5.x           | ProjectMarkingFormat, ProjectExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加 |
+| バージョン | アプリバージョン | 主な変更                                                                                            |
+| ---------- | ---------------- | --------------------------------------------------------------------------------------------------- |
+| `1.0.0`    | v0.2.x           | 初期形式。UserExam.invitedAt/invitedBy なし、PageImage使用                                          |
+| `1.1.0`    | v0.3.x           | UserExam完全対応、ExamClass追加                                                                     |
+| `1.2.0`    | v0.4.x           | MasterImage/StudentAnswerImage分離、userId/studentId非NULL化                                        |
+| `1.3.0`    | v0.5.x           | Student.studentId → Student.studentNumber リネーム                                                  |
+| `1.4.0`    | v0.5.x           | ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加 |
 
 ### 変換器インターフェース
 
@@ -447,8 +447,8 @@ flowchart LR
 ```mermaid
 flowchart TD
     subgraph "Prisma DB"
-        DB_P[Project]
-        DB_PP[ProjectPage]
+        DB_P[Exam]
+        DB_PP[ExamPage]
         DB_CR[CropRegion]
         DB_QS[QuestionScore]
         DB_DA[DrawingAnnotation]
@@ -458,14 +458,14 @@ flowchart TD
         DB_SG[SubtotalGroup]
         DB_MI[MasterImage]
         DB_SAI[StudentAnswerImage]
-        DB_PMF[ProjectMarkingFormat]
-        DB_PES[ProjectExportSettings]
+        DB_PMF[ExamMarkingFormat]
+        DB_PES[ExamExportSettings]
         DB_CRMO[CropRegionMarkingOverride]
         DB_SUB[Subject]
     end
 
     subgraph "dataCollector.ts"
-        DC[collectProjectData]
+        DC[collectExamData]
         DC -->|"userId フィルタ"| FILTER["ログインユーザーの<br/>QS/DA のみ"]
         DC -->|"passcode 除外"| SEC["セキュリティ"]
     end
@@ -489,7 +489,7 @@ flowchart TD
     subgraph "archiveCreator.ts"
         AC[createArchive]
         AC --> MF[manifest.json]
-        AC --> PJ[project.json]
+        AC --> PJ[exam.json]
         AC --> SJ[students.json]
         AC --> CJ[classes.json]
         AC --> UJ[users.json]
@@ -534,22 +534,22 @@ flowchart TD
 
 ### エクスポート関連
 
-| ファイルパス                                                | 責務                                                                               |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `electron-src/lib/export/project-archive/index.ts`          | エクスポートのエントリーポイント。ダイアログ表示、データ収集、アーカイブ作成の統合 |
-| `electron-src/lib/export/project-archive/dataCollector.ts`  | Prisma経由で全プロジェクトデータを収集。ユーザーフィルタリング、パスワード除外     |
-| `electron-src/lib/export/project-archive/archiveCreator.ts` | ZIPアーカイブの作成。JSON + 画像ファイルのパッケージング                           |
+| ファイルパス                                             | 責務                                                                               |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `electron-src/lib/export/exam-archive/index.ts`          | エクスポートのエントリーポイント。ダイアログ表示、データ収集、アーカイブ作成の統合 |
+| `electron-src/lib/export/exam-archive/dataCollector.ts`  | Prisma経由で全試験データを収集。ユーザーフィルタリング、パスワード除外             |
+| `electron-src/lib/export/exam-archive/archiveCreator.ts` | ZIPアーカイブの作成。JSON + 画像ファイルのパッケージング                           |
 
 ### インポート関連 - アーカイブ展開
 
-| ファイルパス                                                      | 責務                                        |
-| ----------------------------------------------------------------- | ------------------------------------------- |
-| `electron-src/lib/import/project-archive/archiveExtractor.ts`     | ZIP展開、JSON読み込み、一時ディレクトリ管理 |
-| `electron-src/lib/import/project-archive/manifestValidator.ts`    | マニフェストのバリデーション                |
-| `electron-src/lib/import/project-archive/imageHandler.ts`         | 画像ファイルの処理                          |
-| `electron-src/lib/import/project-archive/dataCreator.ts`          | データ作成ヘルパー                          |
-| `electron-src/lib/import/project-archive/idRemapper.ts`           | IDリマッピングユーティリティ                |
-| `electron-src/lib/import/project-archive/uniqueNameGenerators.ts` | 重複名の自動生成                            |
+| ファイルパス                                                   | 責務                                        |
+| -------------------------------------------------------------- | ------------------------------------------- |
+| `electron-src/lib/import/exam-archive/archiveExtractor.ts`     | ZIP展開、JSON読み込み、一時ディレクトリ管理 |
+| `electron-src/lib/import/exam-archive/manifestValidator.ts`    | マニフェストのバリデーション                |
+| `electron-src/lib/import/exam-archive/imageHandler.ts`         | 画像ファイルの処理                          |
+| `electron-src/lib/import/exam-archive/dataCreator.ts`          | データ作成ヘルパー                          |
+| `electron-src/lib/import/exam-archive/idRemapper.ts`           | IDリマッピングユーティリティ                |
+| `electron-src/lib/import/exam-archive/uniqueNameGenerators.ts` | 重複名の自動生成                            |
 
 ### インポート関連 - バージョン変換
 
@@ -647,8 +647,8 @@ if (idChangeTargets.length > 0) {
 
 ```typescript
 // L220-222: トランザクション外
-const newProjectId = idMappings.project[data.projectData.project.id]
-await copyImportImages(data, newProjectId)
+const newExamId = idMappings.exam[data.examData.exam.id]
+await copyImportImages(data, newExamId)
 await createImportImageRecords(data, idMappings)
 ```
 
@@ -664,14 +664,14 @@ await createImportImageRecords(data, idMappings)
 
 | データ                      |           エクスポート           | インポート |
 | --------------------------- | :------------------------------: | :--------: |
-| `ProjectMarkingFormat`      | dataCollector.ts L142-144 で収集 |   未処理   |
-| `ProjectExportSettings`     | dataCollector.ts L147-151 で収集 |   未処理   |
+| `ExamMarkingFormat`         | dataCollector.ts L142-144 で収集 |   未処理   |
+| `ExamExportSettings`        | dataCollector.ts L147-151 で収集 |   未処理   |
 | `CropRegionMarkingOverride` | dataCollector.ts L157-159 で収集 |   未処理   |
 | `Subject`                   | dataCollector.ts L170-172 で収集 |   未処理   |
 | `SubjectSubtotalGroup`      | dataCollector.ts L164-166 で収集 |   未処理   |
-| `ProjectClass`              | dataCollector.ts L339-348 で収集 |   未処理   |
+| `ExamClass`                 | dataCollector.ts L339-348 で収集 |   未処理   |
 
-**影響**: インポート後のプロジェクトで採点マーク設定、エクスポート設定、教科紐づけ、学級紐づけが失われる。
+**影響**: インポート後の試験で採点マーク設定、エクスポート設定、教科紐づけ、学級紐づけが失われる。
 
 ---
 
@@ -728,12 +728,12 @@ if (!decision || decision.decisionType === "create_new") {
 **問題**: `counts.created.pages++` がページが既に存在する場合 (`existingById`) にもインクリメントされる。同様に `counts.created.regions++` も同じ問題がある。
 
 ```typescript
-// L531-548: processProjectPages
+// L531-548: processExamPages
 if (existingById) {
-  idMappings.projectPage[page.id] = page.id  // 既存なのに...
+  idMappings.examPage[page.id] = page.id  // 既存なのに...
 } else {
-  await tx.projectPage.create({ ... })
-  idMappings.projectPage[page.id] = page.id
+  await tx.examPage.create({ ... })
+  idMappings.examPage[page.id] = page.id
 }
 counts.created.pages++  // L547: 既存でもカウントされる
 ```
@@ -742,25 +742,25 @@ counts.created.pages++  // L547: 既存でもカウントされる
 
 ---
 
-#### B7: processProject のフォールスルー
+#### B7: processExam のフォールスルー
 
 **ファイル**: `idIntegrationImporter.ts:303-309`
 
-**問題**: プロジェクトIDが事前照合で一致しないが、同じIDのプロジェクトがDBに存在する場合、IDマッピングのみ設定してデータの適切な関連付けが行われない。
+**問題**: 試験IDが事前照合で一致しないが、同じIDの試験がDBに存在する場合、IDマッピングのみ設定してデータの適切な関連付けが行われない。
 
 ```typescript
 // L302-309
-const existingById = await tx.project.findUnique({
-  where: { id: project.id },
+const existingById = await tx.exam.findUnique({
+  where: { id: exam.id },
 })
 if (existingById) {
-  // IDをマッピングするだけで、プロジェクトデータの更新もマージもしない
-  idMappings.project[project.id] = project.id
-  return project.id
+  // IDをマッピングするだけで、試験データの更新もマージもしない
+  idMappings.exam[exam.id] = exam.id
+  return exam.id
 }
 ```
 
-**影響**: 同一IDのプロジェクトが別のコンテキストで存在する場合、データが中途半端にマージされる可能性がある。
+**影響**: 同一IDの試験が別のコンテキストで存在する場合、データが中途半端にマージされる可能性がある。
 
 ---
 
@@ -768,14 +768,14 @@ if (existingById) {
 
 **ファイル**: `imageImporter.ts:58`
 
-**問題**: `Object.values(idMappings.project)[0]` で最初の値を取得しているが、`idMappings.project` に複数のエントリがある場合 (理論上は1つだが保証されない)、意図しないプロジェクトIDが選択される可能性がある。
+**問題**: `Object.values(idMappings.exam)[0]` で最初の値を取得しているが、`idMappings.exam` に複数のエントリがある場合 (理論上は1つだが保証されない)、意図しない試験IDが選択される可能性がある。
 
 ```typescript
 // L58: 最初の値を盲目的に使用
-const newProjectId = Object.values(idMappings.project)[0]
+const newExamId = Object.values(idMappings.exam)[0]
 ```
 
-**影響**: 複数プロジェクトのマッピングが存在する場合、誤ったプロジェクトに画像が紐づけられる。
+**影響**: 複数試験のマッピングが存在する場合、誤った試験に画像が紐づけられる。
 
 ---
 
@@ -847,8 +847,8 @@ if (existingById) {
 
 | データ                    | v1.0.0 | v1.1.0 | v1.2.0 | v1.3.0 | v1.4.0 |
 | ------------------------- | :----: | :----: | :----: | :----: | :----: |
-| Project 基本情報          |   o    |   o    |   o    |   o    |   o    |
-| ProjectPage               |   o    |   o    |   o    |   o    |   o    |
+| Exam 基本情報             |   o    |   o    |   o    |   o    |   o    |
+| ExamPage                  |   o    |   o    |   o    |   o    |   o    |
 | CropRegion                |   o    |   o    |   o    |   o    |   o    |
 | PageImage (レガシー)      |   o    |   o    |   -    |   -    |   -    |
 | MasterImage               |   -    |   -    |   o    |   o    |   o    |
@@ -857,15 +857,15 @@ if (existingById) {
 | Class                     |   o    |   o    |   o    |   o    |   o    |
 | StudentClassMembership    |   o    |   o    |   o    |   o    |   o    |
 | User (パスワード除外)     |   o    |   o    |   o    |   o    |   o    |
-| UserProject               |   o    | 空配列 | 空配列 | 空配列 | 空配列 |
+| UserExam                  |   o    | 空配列 | 空配列 | 空配列 | 空配列 |
 | SubtotalGroup / Subtotal  |   o    |   o    |   o    |   o    |   o    |
 | CropSubtotal              |   o    |   o    |   o    |   o    |   o    |
 | QuestionScore             |   o    |   o    |   o    |   o    |   o    |
 | DrawingAnnotation         |   o    |   o    |   o    |   o    |   o    |
-| ProjectClass              |   -    |   o    |   o    |   o    |   o    |
-| ProjectSubtotalGroup      |   o    |   o    |   o    |   o    |   o    |
-| ProjectMarkingFormat      |   -    |   -    |   -    |   -    |   o    |
-| ProjectExportSettings     |   -    |   -    |   -    |   -    |   o    |
+| ExamClass                 |   -    |   o    |   o    |   o    |   o    |
+| ExamSubtotalGroup         |   o    |   o    |   o    |   o    |   o    |
+| ExamMarkingFormat         |   -    |   -    |   -    |   -    |   o    |
+| ExamExportSettings        |   -    |   -    |   -    |   -    |   o    |
 | CropRegionMarkingOverride |   -    |   -    |   -    |   -    |   o    |
 | Subject                   |   -    |   -    |   -    |   -    |   o    |
 | SubjectSubtotalGroup      |   -    |   -    |   -    |   -    |   o    |

@@ -107,7 +107,7 @@ export async function deleteCropRegionMarkingOverride(
 }
 
 /**
- * 設問の全オーバーライド設定を削除（プロジェクト設定に戻す）
+ * 設問の全オーバーライド設定を削除（試験設定に戻す）
  */
 export async function resetCropRegionMarkingOverrides(cropRegionId: string) {
   return prisma.cropRegionMarkingOverride.deleteMany({
@@ -116,14 +116,14 @@ export async function resetCropRegionMarkingOverrides(cropRegionId: string) {
 }
 
 /**
- * プロジェクト内の全設問のオーバーライド設定を取得
+ * 試験内の全設問のオーバーライド設定を取得
  */
-export async function getProjectCropRegionMarkingOverrides(projectId: string) {
+export async function getExamCropRegionMarkingOverrides(examId: string) {
   return prisma.cropRegionMarkingOverride.findMany({
     where: {
       cropRegion: {
-        projectPage: {
-          projectId,
+        examPage: {
+          examId,
         },
       },
     },

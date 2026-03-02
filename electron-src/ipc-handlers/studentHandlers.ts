@@ -1,16 +1,16 @@
 import { Prisma } from "@prisma/client"
 import { ipcMain } from "electron"
 
-import { checkGradingDataForStudents } from "../lib/prisma/gradingData"
 import {
-  addStudentsToProject,
-  getClassesNotInProject,
-  getStudentsForProject,
-  getStudentsNotInProject,
-  removeStudentsFromProject,
+  addStudentsToExam,
+  getClassesNotInExam,
+  getStudentsForExam,
+  getStudentsNotInExam,
+  removeStudentsFromExam,
+  updateStudentExamStatus,
   updateStudentOrders,
-  updateStudentProjectStatus,
-} from "../lib/prisma/projectStudent"
+} from "../lib/prisma/examStudent"
+import { checkGradingDataForStudents } from "../lib/prisma/gradingData"
 import {
   createStudent,
   deleteStudent,
@@ -205,89 +205,80 @@ export function setupStudentHandlers(): void {
     }
   )
 
-  // Project-Student relationship handlers
+  // Exam-Student relationship handlers
+  ipcMain.handle("get-students-for-exam", async (_event, examId: string) => {
+    try {
+      return await getStudentsForExam(examId)
+    } catch (err) {
+      console.error("Error getting students for exam:", err)
+      throw err
+    }
+  })
+
   ipcMain.handle(
-    "get-students-for-project",
-    async (_event, projectId: string) => {
+    "add-students-to-exam",
+    async (_event, examId: string, studentIds: string[]) => {
       try {
-        return await getStudentsForProject(projectId)
+        return await addStudentsToExam(examId, studentIds)
       } catch (err) {
-        console.error("Error getting students for project:", err)
+        console.error("Error adding students to exam:", err)
         throw err
       }
     }
   )
 
   ipcMain.handle(
-    "add-students-to-project",
-    async (_event, projectId: string, studentIds: string[]) => {
+    "remove-students-from-exam",
+    async (_event, examId: string, studentIds: string[]) => {
       try {
-        return await addStudentsToProject(projectId, studentIds)
+        return await removeStudentsFromExam(examId, studentIds)
       } catch (err) {
-        console.error("Error adding students to project:", err)
+        console.error("Error removing students from exam:", err)
         throw err
       }
     }
   )
 
   ipcMain.handle(
-    "remove-students-from-project",
-    async (_event, projectId: string, studentIds: string[]) => {
-      try {
-        return await removeStudentsFromProject(projectId, studentIds)
-      } catch (err) {
-        console.error("Error removing students from project:", err)
-        throw err
-      }
-    }
-  )
-
-  ipcMain.handle(
-    "update-student-project-status",
+    "update-student-exam-status",
     async (
       _event,
-      projectId: string,
+      examId: string,
       studentId: string,
       status: "participating" | "expected" | "absent"
     ) => {
       try {
-        return await updateStudentProjectStatus(projectId, studentId, status)
+        return await updateStudentExamStatus(examId, studentId, status)
       } catch (err) {
-        console.error("Error updating student project status:", err)
+        console.error("Error updating student exam status:", err)
         throw err
       }
     }
   )
 
-  ipcMain.handle(
-    "get-classes-not-in-project",
-    async (_event, projectId: string) => {
-      try {
-        return await getClassesNotInProject(projectId)
-      } catch (err) {
-        console.error("Error getting classes not in project:", err)
-        throw err
-      }
+  ipcMain.handle("get-classes-not-in-exam", async (_event, examId: string) => {
+    try {
+      return await getClassesNotInExam(examId)
+    } catch (err) {
+      console.error("Error getting classes not in exam:", err)
+      throw err
     }
-  )
+  })
 
-  ipcMain.handle(
-    "get-students-not-in-project",
-    async (_event, projectId: string) => {
-      try {
-        return await getStudentsNotInProject(projectId)
-      } catch (err) {
-        console.error("Error getting students not in project:", err)
-        throw err
-      }
+  ipcMain.handle("get-students-not-in-exam", async (_event, examId: string) => {
+    try {
+      return await getStudentsNotInExam(examId)
+    } catch (err) {
+      console.error("Error getting students not in exam:", err)
+      throw err
     }
-  )
+  })
 
   ipcMain.handle(
     "check-grading-data-for-students",
-    async (_event, projectId: string, studentIds: string[]) => {
+    async (_event, examId: string, studentIds: string[]) => {
       try {
-        const result = await checkGradingDataForStudents(projectId, studentIds)
+        const result = await checkGradingDataForStudents(examId, studentIds)
         return { success: true, ...result }
       } catch (err) {
         console.error("Error checking grading data for students:", err)
@@ -303,11 +294,11 @@ export function setupStudentHandlers(): void {
     "update-student-orders",
     async (
       _event,
-      projectId: string,
+      examId: string,
       studentOrders: { studentId: string; customOrder: number }[]
     ) => {
       try {
-        return await updateStudentOrders(projectId, studentOrders)
+        return await updateStudentOrders(examId, studentOrders)
       } catch (err) {
         console.error("Error updating student orders:", err)
         throw err

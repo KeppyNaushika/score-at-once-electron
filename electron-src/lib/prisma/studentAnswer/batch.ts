@@ -32,9 +32,9 @@ export async function batchUpdateStudentAnswerPlacements(
             select: {
               id: true,
               studentId: true,
-              projectPage: {
+              examPage: {
                 select: {
-                  projectId: true,
+                  examId: true,
                   pageNumber: true,
                 },
               },
@@ -88,7 +88,7 @@ export async function batchUpdateStudentAnswerPlacements(
         })
       }
 
-      // @@unique([projectPageId, studentId])制約回避のため2段階更新
+      // @@unique([examPageId, studentId])制約回避のため2段階更新
       // Step 1: 全ての対象を一時IDに設定（制約衝突を回避）
       const tempPrefix = `__TEMP_BATCH_${Date.now()}_`
       await Promise.all(
@@ -161,10 +161,10 @@ export async function swapStudentAnswerPlacementsWithScoring(
           where: { id: answerSheetId1 },
           select: {
             studentId: true,
-            projectPage: {
+            examPage: {
               select: {
                 pageNumber: true,
-                projectId: true,
+                examId: true,
               },
             },
           },
@@ -173,10 +173,10 @@ export async function swapStudentAnswerPlacementsWithScoring(
           where: { id: answerSheetId2 },
           select: {
             studentId: true,
-            projectPage: {
+            examPage: {
               select: {
                 pageNumber: true,
-                projectId: true,
+                examId: true,
               },
             },
           },
@@ -208,7 +208,7 @@ export async function swapStudentAnswerPlacementsWithScoring(
       ])
 
       // StudentAnswerImageのstudentIdを交換
-      // @@unique([projectPageId, studentId])制約回避のため一時ID方式で3段階更新
+      // @@unique([examPageId, studentId])制約回避のため一時ID方式で3段階更新
       const tempStudentId = `__TEMP_SWAP_${Date.now()}`
 
       // Step 1: file_1 → 一時ID
@@ -261,15 +261,15 @@ export async function swapStudentAnswerPlacementsWithScoring(
           include: {
             student: {
               include: {
-                projectStudents: {
-                  where: { projectId: answerSheet1.projectPage.projectId },
+                examStudents: {
+                  where: { examId: answerSheet1.examPage.examId },
                   select: { customOrder: true },
                 },
               },
             },
-            projectPage: {
+            examPage: {
               include: {
-                project: true,
+                exam: true,
               },
             },
           },
@@ -279,15 +279,15 @@ export async function swapStudentAnswerPlacementsWithScoring(
           include: {
             student: {
               include: {
-                projectStudents: {
-                  where: { projectId: answerSheet2.projectPage.projectId },
+                examStudents: {
+                  where: { examId: answerSheet2.examPage.examId },
                   select: { customOrder: true },
                 },
               },
             },
-            projectPage: {
+            examPage: {
               include: {
-                project: true,
+                exam: true,
               },
             },
           },

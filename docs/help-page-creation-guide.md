@@ -65,7 +65,7 @@
 1. **実際のPageHeaderタイトル確認**
 
    ```bash
-   grep -r "PageHeader.*title" app/projects/[projectId]/[page]/
+   grep -r "PageHeader.*title" app/exams/[examId]/[page]/
    ```
 
 2. **主要コンポーネントの機能分析**
@@ -93,7 +93,7 @@
 
 ```bash
 # 1. ページタイトルの確認
-grep -rn "title=" app/projects/[projectId]/[page]/
+grep -rn "title=" app/exams/[examId]/[page]/
 
 # 2. メインコンポーネントの詳細読み取り
 read [メインページファイル]
@@ -105,7 +105,7 @@ glob utils/*[page]*
 glob types/*[page]*
 
 # 4. 制限事項・バリデーションの確認
-grep -r "maxFileSize\|validation\|limit" components/projects/[page]/
+grep -r "maxFileSize\|validation\|limit" components/exams/[page]/
 ```
 
 ### STEP 3: デザインパターンの標準化

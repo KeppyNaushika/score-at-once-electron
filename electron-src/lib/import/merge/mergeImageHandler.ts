@@ -8,23 +8,23 @@ import * as path from "path"
 
 import { getDataDirectory } from "../../dataManager"
 import prisma from "../../prisma/client"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 
 /**
- * 画像ファイルをプロジェクトディレクトリにコピー
+ * 画像ファイルを試験ディレクトリにコピー
  *
  * @param data - 展開されたアーカイブデータ
- * @param newProjectId - 新規プロジェクトID
+ * @param newExamId - 新規試験ID
  */
 export async function copyMergeImages(
   data: ExtractedArchiveData,
-  newProjectId: string
+  newExamId: string
 ): Promise<void> {
   const dataDir = getDataDirectory()
-  const projectDir = path.join(dataDir, "projects", newProjectId)
+  const examDir = path.join(dataDir, "exams", newExamId)
 
-  const masterImagesDir = path.join(projectDir, "master-images")
-  const answerSheetsDir = path.join(projectDir, "answer-sheets")
+  const masterImagesDir = path.join(examDir, "master-images")
+  const answerSheetsDir = path.join(examDir, "answer-sheets")
   fs.mkdirSync(masterImagesDir, { recursive: true })
   fs.mkdirSync(answerSheetsDir, { recursive: true })
 
@@ -59,26 +59,23 @@ export async function createMergeImageRecords(
   data: ExtractedArchiveData,
   idMappings: Record<string, Record<string, string>>
 ): Promise<void> {
-  const newProjectId = Object.values(idMappings.project)[0]
+  const newExamId = Object.values(idMappings.exam)[0]
 
   // v1.2.0+ 形式: masterImages と studentAnswerImages が存在する場合
-  if (
-    data.projectData.masterImages &&
-    data.projectData.masterImages.length > 0
-  ) {
-    await createMasterImageRecords(data, idMappings, newProjectId)
+  if (data.examData.masterImages && data.examData.masterImages.length > 0) {
+    await createMasterImageRecords(data, idMappings, newExamId)
   }
 
   if (
-    data.projectData.studentAnswerImages &&
-    data.projectData.studentAnswerImages.length > 0
+    data.examData.studentAnswerImages &&
+    data.examData.studentAnswerImages.length > 0
   ) {
-    await createStudentAnswerImageRecords(data, idMappings, newProjectId)
+    await createStudentAnswerImageRecords(data, idMappings, newExamId)
     return
   }
 
   // v1.1.0以前: pageImages から変換（後方互換性）
-  await createLegacyImageRecords(data, idMappings, newProjectId)
+  await createLegacyImageRecords(data, idMappings, newExamId)
 }
 
 /**
@@ -87,19 +84,19 @@ export async function createMergeImageRecords(
 async function createMasterImageRecords(
   data: ExtractedArchiveData,
   idMappings: Record<string, Record<string, string>>,
-  newProjectId: string
+  newExamId: string
 ): Promise<void> {
-  for (const img of data.projectData.masterImages!) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
-    if (!newProjectPageId) continue
+  for (const img of data.examData.masterImages!) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
+    if (!newExamPageId) continue
 
     const filename = path.basename(img.imagePath)
-    const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+    const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
     await prisma.masterImage.create({
       data: {
         id: randomUUID(),
-        projectPageId: newProjectPageId,
+        examPageId: newExamPageId,
         imagePath: newImagePath,
       },
     })
@@ -112,17 +109,17 @@ async function createMasterImageRecords(
 async function createStudentAnswerImageRecords(
   data: ExtractedArchiveData,
   idMappings: Record<string, Record<string, string>>,
-  newProjectId: string
+  newExamId: string
 ): Promise<void> {
-  for (const img of data.projectData.studentAnswerImages!) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
+  for (const img of data.examData.studentAnswerImages!) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
     const newStudentId = idMappings.student[img.studentId]
-    if (!newProjectPageId || !newStudentId) continue
+    if (!newExamPageId || !newStudentId) continue
 
-    // 同一(projectPageId, studentId)の重複チェック
+    // 同一(examPageId, studentId)の重複チェック
     const existing = await prisma.studentAnswerImage.findFirst({
       where: {
-        projectPageId: newProjectPageId,
+        examPageId: newExamPageId,
         studentId: newStudentId,
       },
     })
@@ -132,15 +129,12 @@ async function createStudentAnswerImageRecords(
       img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
     )
     const newImagePath =
-      `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
-        /\\/g,
-        "/"
-      )
+      `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
     await prisma.studentAnswerImage.create({
       data: {
         id: randomUUID(),
-        projectPageId: newProjectPageId,
+        examPageId: newExamPageId,
         studentId: newStudentId,
         imagePath: newImagePath,
       },
@@ -154,21 +148,21 @@ async function createStudentAnswerImageRecords(
 async function createLegacyImageRecords(
   data: ExtractedArchiveData,
   idMappings: Record<string, Record<string, string>>,
-  newProjectId: string
+  newExamId: string
 ): Promise<void> {
-  for (const img of data.projectData.pageImages) {
-    const newProjectPageId = idMappings.projectPage[img.projectPageId]
-    if (!newProjectPageId) continue
+  for (const img of data.examData.pageImages) {
+    const newExamPageId = idMappings.examPage[img.examPageId]
+    if (!newExamPageId) continue
 
     const filename = path.basename(img.imagePath)
 
     if (img.imageType === "MODEL_ANSWER") {
-      const newImagePath = `projects/${newProjectId}/master-images/${filename}`
+      const newImagePath = `exams/${newExamId}/master-images/${filename}`
 
       await prisma.masterImage.create({
         data: {
           id: randomUUID(),
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           imagePath: newImagePath,
         },
       })
@@ -176,10 +170,10 @@ async function createLegacyImageRecords(
       const newStudentId = idMappings.student[img.studentId]
       if (!newStudentId) continue
 
-      // 同一(projectPageId, studentId)の重複チェック
+      // 同一(examPageId, studentId)の重複チェック
       const existing = await prisma.studentAnswerImage.findFirst({
         where: {
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           studentId: newStudentId,
         },
       })
@@ -189,15 +183,12 @@ async function createLegacyImageRecords(
         img.imagePath.indexOf("answer-sheets") + "answer-sheets".length + 1
       )
       const newImagePath =
-        `projects/${newProjectId}/answer-sheets/${relativePath}`.replace(
-          /\\/g,
-          "/"
-        )
+        `exams/${newExamId}/answer-sheets/${relativePath}`.replace(/\\/g, "/")
 
       await prisma.studentAnswerImage.create({
         data: {
           id: randomUUID(),
-          projectPageId: newProjectPageId,
+          examPageId: newExamPageId,
           studentId: newStudentId,
           imagePath: newImagePath,
         },

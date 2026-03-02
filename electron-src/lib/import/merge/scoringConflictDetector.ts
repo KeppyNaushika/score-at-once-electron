@@ -7,9 +7,9 @@ import type {
   IdIntegrationConfig,
   ScoringConflict,
   ScoringConflictData,
-} from "../../../../types/projectArchive.types"
+} from "../../../../types/examArchive.types"
 import prisma from "../../prisma/client"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 
 /**
  * 採点結果の競合を検出
@@ -34,7 +34,7 @@ export async function detectScoringConflicts(
   // マッピングされた既存のCropRegion IDリスト
   const existingCropRegionIds = Object.values(cropRegionIdMapping)
   if (existingCropRegionIds.length === 0) {
-    // 全て新規プロジェクトの場合、競合なし
+    // 全て新規試験の場合、競合なし
     return {
       conflictCount: 0,
       newCount: importData.scoresData.questionScores.length,
@@ -164,8 +164,8 @@ export async function detectScoringConflictsWithUserDecisions(
   preMatchResult: FileOverviewData,
   integrationConfig: IdIntegrationConfig
 ): Promise<ScoringConflictData> {
-  // プロジェクトIDが一致しない場合、競合なし
-  if (!preMatchResult.project?.isIdMatch) {
+  // 試験IDが一致しない場合、競合なし
+  if (!preMatchResult.exam?.isIdMatch) {
     return {
       conflictCount: 0,
       newCount: importData.scoresData.questionScores.length,
@@ -221,18 +221,18 @@ export async function detectScoringConflictsWithUserDecisions(
     }
   }
 
-  // CropRegionマッピングを構築（プロジェクトID一致時はID一致でマッピング）
+  // CropRegionマッピングを構築（試験ID一致時はID一致でマッピング）
   const cropRegionIdMapping: Record<string, string> = {}
   const existingCropRegions = await prisma.cropRegion.findMany({
     where: {
-      projectPage: {
-        projectId: preMatchResult.project.existingProjectId!,
+      examPage: {
+        examId: preMatchResult.exam.existingExamId!,
       },
     },
   })
   const existingCropRegionIds = new Set(existingCropRegions.map((r) => r.id))
 
-  for (const region of importData.projectData.cropRegions) {
+  for (const region of importData.examData.cropRegions) {
     if (existingCropRegionIds.has(region.id)) {
       cropRegionIdMapping[region.id] = region.id
     }

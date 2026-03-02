@@ -1,9 +1,9 @@
 "use client"
 
 import ProtectedRoute from "@/components/auth/ProtectedRoute"
+import Exams from "@/components/exams/list/ExamList"
 import { usePageHelp } from "@/components/help/usePageHelp"
 import PageHeader from "@/components/layout/PageHeader"
-import Projects from "@/components/projects/list/ProjectList"
 
 export default function DashboardPage() {
   const { helpButton } = usePageHelp()
@@ -13,7 +13,7 @@ export default function DashboardPage() {
       <div className="flex h-full flex-col">
         <PageHeader title="ダッシュボード" helpButton={helpButton} />
         <div className="flex-1 overflow-hidden">
-          <Projects />
+          <Exams />
         </div>
       </div>
     </ProtectedRoute>

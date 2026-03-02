@@ -70,7 +70,7 @@ export function HelpContentClasses() {
             </div>
             <div className="rounded-lg bg-blue-50 p-4">
               <p className="text-sm text-blue-800">
-                それぞれの学級で異なる生徒管理と プロジェクト運用が可能です。
+                それぞれの学級で異なる生徒管理と 試験運用が可能です。
               </p>
             </div>
           </div>

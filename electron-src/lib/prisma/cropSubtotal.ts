@@ -10,8 +10,8 @@ export const createCropSubtotal = async (
   const cropRegion = await prisma.cropRegion.findUnique({
     where: { id: data.cropRegionId },
     include: {
-      projectPage: {
-        select: { projectId: true },
+      examPage: {
+        select: { examId: true },
       },
     },
   })
@@ -25,9 +25,9 @@ export const createCropSubtotal = async (
     include: {
       subtotalGroup: {
         include: {
-          projectSubtotalGroups: {
+          examSubtotalGroups: {
             where: {
-              projectId: cropRegion.projectPage.projectId,
+              examId: cropRegion.examPage.examId,
             },
           },
         },
@@ -39,13 +39,13 @@ export const createCropSubtotal = async (
     throw new Error("指定された小計項目が見つかりません")
   }
 
-  // 小計項目がプロジェクトで有効化されているかチェック
-  const isSubtotalActiveInProject =
-    subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+  // 小計項目が試験で有効化されているかチェック
+  const isSubtotalActiveInExam =
+    subtotal.subtotalGroup.examSubtotalGroups.length > 0
 
-  if (!isSubtotalActiveInProject) {
+  if (!isSubtotalActiveInExam) {
     throw new Error(
-      `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、このプロジェクトで有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
+      `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、この試験で有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
     )
   }
 
@@ -67,8 +67,8 @@ export const createManyCropSubtotals = async (
     const cropRegion = await prisma.cropRegion.findUnique({
       where: { id: item.cropRegionId },
       include: {
-        projectPage: {
-          select: { projectId: true },
+        examPage: {
+          select: { examId: true },
         },
       },
     })
@@ -84,9 +84,9 @@ export const createManyCropSubtotals = async (
       include: {
         subtotalGroup: {
           include: {
-            projectSubtotalGroups: {
+            examSubtotalGroups: {
               where: {
-                projectId: cropRegion.projectPage.projectId,
+                examId: cropRegion.examPage.examId,
               },
             },
           },
@@ -98,13 +98,13 @@ export const createManyCropSubtotals = async (
       throw new Error(`指定された小計項目が見つかりません: ${item.subtotalId}`)
     }
 
-    // 小計項目がプロジェクトで有効化されているかチェック
-    const isSubtotalActiveInProject =
-      subtotal.subtotalGroup.projectSubtotalGroups.length > 0
+    // 小計項目が試験で有効化されているかチェック
+    const isSubtotalActiveInExam =
+      subtotal.subtotalGroup.examSubtotalGroups.length > 0
 
-    if (!isSubtotalActiveInProject) {
+    if (!isSubtotalActiveInExam) {
       throw new Error(
-        `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、このプロジェクトで有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
+        `小計項目「${subtotal.name}」（グループ：${subtotal.subtotalGroup.name}）は、この試験で有効化されていません。先に04-question-groupページで小計点グループを追加してください。`
       )
     }
   }
@@ -166,7 +166,7 @@ export const getCropSubtotalsBySubtotalId = async (subtotalId: string) => {
     include: {
       cropRegion: {
         include: {
-          projectPage: true,
+          examPage: true,
         },
       },
     },
@@ -218,7 +218,7 @@ export const getCropSubtotalById = async (id: string) => {
     include: {
       cropRegion: {
         include: {
-          projectPage: true,
+          examPage: true,
         },
       },
       subtotal: {
@@ -234,7 +234,7 @@ export type CropSubtotalWithDetails = Prisma.CropSubtotalGetPayload<{
   include: {
     cropRegion: {
       include: {
-        projectPage: true
+        examPage: true
       }
     }
     subtotal: {
@@ -261,7 +261,7 @@ export type CropSubtotalWithCropRegion = Prisma.CropSubtotalGetPayload<{
   include: {
     cropRegion: {
       include: {
-        projectPage: true
+        examPage: true
       }
     }
   }

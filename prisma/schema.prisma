@@ -19,24 +19,24 @@ model User {
   passcodeType        String?                @default("none")
   drawingAnnotations  DrawingAnnotation[]
   questionScores      QuestionScore[]
-  userProjects        UserProject[]
-  invitedUserProjects UserProject[]          @relation("InvitedByUser")
+  userExams           UserExam[]
+  invitedUserExams    UserExam[]             @relation("InvitedByUser")
   keyboardShortcuts   UserKeyboardShortcut[]
   scoringPreference   UserScoringPreference?
 }
 
 model Class {
-  id             String                   @id @default(uuid())
-  name           String                   @unique
-  classCode      String?
-  grade          Int?
-  description    String?
-  isVisible      Boolean                  @default(true)
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
+  id                  String                   @id @default(uuid())
+  name                String                   @unique
+  classCode           String?
+  grade               Int?
+  description         String?
+  isVisible           Boolean                  @default(true)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
   memberships         StudentClassMembership[]
-  projectClasses      ProjectClass[]
-  gradeProjectClasses GradeProjectClass[]
+  examClasses         ExamClass[]
+  gradeClasses        GradeClass[]
 
   @@map("classes")
 }
@@ -52,13 +52,13 @@ model Student {
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   studentAnswerImages StudentAnswerImage[]
-  projectStudents     ProjectStudent[]
+  examStudents        ExamStudent[]
   questionScores      QuestionScore[]
-  memberships          StudentClassMembership[]
-  manualScores         ManualScore[]
-  gradeProjectStudents GradeProjectStudent[]
-  gradeOverrides       GradeOverride[]
-  gradeItemExclusions  GradeItemExclusion[]
+  memberships         StudentClassMembership[]
+  manualScores        ManualScore[]
+  gradeStudents       GradeStudent[]
+  gradeOverrides      GradeOverride[]
+  gradeItemExclusions GradeItemExclusion[]
 }
 
 model StudentClassMembership {
@@ -80,82 +80,82 @@ model StudentClassMembership {
   @@index([startDate, endDate])
 }
 
-model Project {
-  id                    String                 @id @default(uuid())
-  examName              String
-  examDate              DateTime?
-  subject               String?
-  description           String?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @default(now()) @updatedAt
-  projectPages          ProjectPage[]
-  projectStudents       ProjectStudent[]
-  projectSubtotalGroups ProjectSubtotalGroup[]
-  userProjects          UserProject[]
-  projectClasses        ProjectClass[]
-  markingFormats        ProjectMarkingFormat[]
-  exportSettings        ProjectExportSettings?
-  gradeDataSources      GradeDataSource[]
+model Exam {
+  id                 String               @id @default(uuid())
+  examName           String
+  examDate           DateTime?
+  subject            String?
+  description        String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @default(now()) @updatedAt
+  examPages          ExamPage[]
+  examStudents       ExamStudent[]
+  examSubtotalGroups ExamSubtotalGroup[]
+  userExams          UserExam[]
+  examClasses        ExamClass[]
+  markingFormats     ExamMarkingFormat[]
+  exportSettings     ExamExportSettings?
+  gradeDataSources   GradeDataSource[]
 }
 
-model ProjectStudent {
+model ExamStudent {
   id          String   @id @default(uuid())
-  projectId   String
+  examId      String
   studentId   String
   status      String   @default("PARTICIPATING")
   customOrder Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, studentId])
-  @@index([projectId])
+  @@unique([examId, studentId])
+  @@index([examId])
   @@index([studentId])
-  @@index([projectId, customOrder])
+  @@index([examId, customOrder])
 }
 
-model ProjectPage {
+model ExamPage {
   id                  String               @id @default(uuid())
-  projectId           String
+  examId              String
   pageNumber          Int
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @default(now()) @updatedAt
   cropRegions         CropRegion[]
   masterImages        MasterImage[]
   studentAnswerImages StudentAnswerImage[]
-  project             Project              @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  exam                Exam                 @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// 模範解答画像
 model MasterImage {
-  id            String      @id @default(uuid())
-  projectPageId String
-  imagePath     String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @default(now()) @updatedAt
-  projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         String   @id @default(uuid())
+  examPageId String
+  imagePath  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  examPage   ExamPage @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// 答案画像
 model StudentAnswerImage {
-  id            String      @id @default(uuid())
-  projectPageId String
-  studentId     String
-  imagePath     String
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @default(now()) @updatedAt
-  projectPage   ProjectPage @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         String   @id @default(uuid())
+  examPageId String
+  studentId  String
+  imagePath  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+  examPage   ExamPage @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([projectPageId, studentId])
-  @@index([projectPageId])
+  @@unique([examPageId, studentId])
+  @@index([examPageId])
   @@index([studentId])
 }
 
 model CropRegion {
   id               String                      @id @default(uuid())
-  projectPageId    String
+  examPageId       String
   label            String
   type             String
   x                Float
@@ -166,7 +166,7 @@ model CropRegion {
   orderIndex       Int?
   createdAt        DateTime                    @default(now())
   updatedAt        DateTime                    @default(now()) @updatedAt
-  projectPage      ProjectPage                 @relation(fields: [projectPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  examPage         ExamPage                    @relation(fields: [examPageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   cropSubtotals    CropSubtotal[]
   questionScores   QuestionScore[]
   markingOverrides CropRegionMarkingOverride[]
@@ -178,20 +178,20 @@ model SubtotalGroup {
   name                  String
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @default(now()) @updatedAt
-  projectSubtotalGroups ProjectSubtotalGroup[]
+  examSubtotalGroups    ExamSubtotalGroup[]
   subtotals             Subtotal[]
   subjectSubtotalGroups SubjectSubtotalGroup[]
 }
 
 model Subtotal {
-  id              String         @id @default(uuid())
-  name            String
-  subtotalGroupId String
-  order           Int            @default(0)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @default(now()) @updatedAt
+  id               String            @id @default(uuid())
+  name             String
+  subtotalGroupId  String
+  order            Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
   cropSubtotals    CropSubtotal[]
-  subtotalGroup    SubtotalGroup   @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subtotalGroup    SubtotalGroup     @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   gradeDataSources GradeDataSource[]
 
   @@unique([subtotalGroupId, name], map: "sqlite_autoindex_Subtotal_2")
@@ -208,30 +208,30 @@ model CropSubtotal {
   subtotal       Subtotal   @relation(fields: [subtotalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
-model UserProject {
+model UserExam {
   id        String   @id @default(uuid())
   userId    String
-  projectId String
+  examId    String
   role      String   @default("GRADER") // "OWNER" | "GRADER"
   invitedAt DateTime @default(now())
-  invitedBy String? // Null for OWNER (project creator)
+  invitedBy String? // Null for OWNER (exam creator)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  exam      Exam     @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   inviter   User?    @relation("InvitedByUser", fields: [invitedBy], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
-  @@unique([userId, projectId])
-  @@index([projectId])
+  @@unique([userId, examId])
+  @@index([examId])
 }
 
-model ProjectSubtotalGroup {
+model ExamSubtotalGroup {
   id              String        @id @default(uuid())
-  projectId       String
+  examId          String
   subtotalGroupId String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @default(now()) @updatedAt
-  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  exam            Exam          @relation(fields: [examId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   subtotalGroup   SubtotalGroup @relation(fields: [subtotalGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -283,9 +283,9 @@ model DrawingAnnotation {
   @@index([createdAt])
 }
 
-model ProjectClass {
+model ExamClass {
   id           String   @id @default(uuid())
-  projectId    String
+  examId       String
   classId      String
   administered Boolean  @default(false) // 学級・出席番号表示の対象
   statistics   Boolean  @default(false) // 統計集計の対象
@@ -293,11 +293,11 @@ model ProjectClass {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  exam  Exam  @relation(fields: [examId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, classId])
-  @@index([projectId])
+  @@unique([examId, classId])
+  @@index([examId])
   @@index([classId])
 }
 
@@ -356,9 +356,9 @@ model UserScoringPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model ProjectMarkingFormat {
+model ExamMarkingFormat {
   id          String   @id @default(uuid())
-  projectId   String
+  examId      String
   markType    String
   symbol      String
   color       String
@@ -367,20 +367,20 @@ model ProjectMarkingFormat {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 
-  @@unique([projectId, markType])
-  @@index([projectId])
+  @@unique([examId, markType])
+  @@index([examId])
 }
 
-model ProjectExportSettings {
+model ExamExportSettings {
   id           String   @id @default(uuid())
-  projectId    String   @unique
+  examId       String   @unique
   settingsJson String // JSON形式で保存
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 }
 
 model CropRegionMarkingOverride {
@@ -400,7 +400,7 @@ model CropRegionMarkingOverride {
 }
 
 /// 成績算出プロジェクト
-model GradeProject {
+model Grade {
   id            String    @id @default(uuid())
   name          String
   description   String?
@@ -408,97 +408,97 @@ model GradeProject {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  gradeItems           GradeItem[]
-  boundarySets         GradeBoundarySet[]
-  gradeProjectClasses  GradeProjectClass[]
-  gradeProjectStudents GradeProjectStudent[]
-  gradeOverrides       GradeOverride[]
-  gradeItemExclusions  GradeItemExclusion[]
-  exportSettings       GradeProjectExportSettings?
+  gradeItems          GradeItem[]
+  boundarySets        GradeBoundarySet[]
+  gradeClasses        GradeClass[]
+  gradeStudents       GradeStudent[]
+  gradeOverrides      GradeOverride[]
+  gradeItemExclusions GradeItemExclusion[]
+  exportSettings      GradeExportSettings?
 }
 
 /// 評価項目（知識・技能、思考・判断・表現、評定 等）
 model GradeItem {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  name           String
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id        String   @id @default(uuid())
+  gradeId   String
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  gradeProject        GradeProject        @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  grade               Grade              @relation(fields: [gradeId], references: [id], onDelete: Cascade)
   dataSources         GradeDataSource[]
   boundarySets        GradeBoundarySet[]
   gradeOverrides      GradeOverride[]
   gradeItemExclusions GradeItemExclusion[]
 
-  @@index([gradeProjectId])
+  @@index([gradeId])
 }
 
 /// 成績算出プロジェクトの対象学級
-model GradeProjectClass {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  classId        String
-  order          Int      @default(0)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model GradeClass {
+  id        String   @id @default(uuid())
+  gradeId   String
+  classId   String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
-  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  class Class @relation(fields: [classId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeProjectId, classId])
-  @@index([gradeProjectId])
+  @@unique([gradeId, classId])
+  @@index([gradeId])
   @@index([classId])
 }
 
 /// 成績算出プロジェクトの対象生徒
-model GradeProjectStudent {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  studentId      String
-  customOrder    Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model GradeStudent {
+  id          String   @id @default(uuid())
+  gradeId     String
+  studentId   String
+  customOrder Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
-  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grade   Grade   @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeProjectId, studentId])
-  @@index([gradeProjectId])
+  @@unique([gradeId, studentId])
+  @@index([gradeId])
   @@index([studentId])
-  @@index([gradeProjectId, customOrder])
+  @@index([gradeId, customOrder])
 }
 
 /// 成績データソース（4種: project_total / subtotal / crop_region / manual）
 model GradeDataSource {
-  id            String   @id @default(uuid())
-  gradeItemId   String
-  type          String // "project_total" | "subtotal" | "crop_region" | "manual"
-  examProjectId String?
-  subtotalId    String?
-  cropRegionId  String?
-  name          String
-  maxScore      Decimal
-  weight        Decimal
-  order         Int      @default(0)
-  absentMethod              String   @default("null")
-  absentRatio               Decimal  @default(1.0)
-  absentOffset              Decimal  @default(0)
-  treatExpectedAsMissing    Boolean  @default(false)
-  estimationMode            String   @default("all") // "all" | "selected"
-  estimationSourceIds       String   @default("[]") // JSON array of DataSource IDs
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  gradeItemId            String
+  type                   String // "project_total" | "subtotal" | "crop_region" | "manual"
+  examId                 String?
+  subtotalId             String?
+  cropRegionId           String?
+  name                   String
+  maxScore               Decimal
+  weight                 Decimal
+  order                  Int      @default(0)
+  absentMethod           String   @default("null")
+  absentRatio            Decimal  @default(1.0)
+  absentOffset           Decimal  @default(0)
+  treatExpectedAsMissing Boolean  @default(false)
+  estimationMode         String   @default("all") // "all" | "selected"
+  estimationSourceIds    String   @default("[]") // JSON array of DataSource IDs
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  examProject  Project?     @relation(fields: [examProjectId], references: [id], onDelete: SetNull)
+  exam         Exam?        @relation(fields: [examId], references: [id], onDelete: SetNull)
   subtotal     Subtotal?    @relation(fields: [subtotalId], references: [id], onDelete: Cascade)
   cropRegion   CropRegion?  @relation(fields: [cropRegionId], references: [id], onDelete: Cascade)
   manualScores ManualScore[]
 
   @@index([gradeItemId])
-  @@index([examProjectId])
+  @@index([examId])
   @@index([subtotalId])
   @@index([cropRegionId])
 }
@@ -522,57 +522,57 @@ model ManualScore {
 
 /// 評価項目ごとの対象生徒除外設定
 model GradeItemExclusion {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  studentId      String
-  gradeItemId    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(uuid())
+  gradeId     String
+  studentId   String
+  gradeItemId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
-  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem    GradeItem    @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  grade     Grade     @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem GradeItem @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeProjectId, studentId, gradeItemId])
-  @@index([gradeProjectId])
+  @@unique([gradeId, studentId, gradeItemId])
+  @@index([gradeId])
   @@index([studentId])
   @@index([gradeItemId])
 }
 
 /// 成績境界セット（GradeItemごとまたは総合）
 model GradeBoundarySet {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  targetType     String // "grade_item" | "overall"
-  gradeItemId    String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id          String   @id @default(uuid())
+  gradeId     String
+  targetType  String // "grade_item" | "overall"
+  gradeItemId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  gradeProject GradeProject   @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
-  gradeItem    GradeItem?     @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
-  boundaries   GradeBoundary[]
+  grade      Grade          @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  gradeItem  GradeItem?     @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  boundaries GradeBoundary[]
 
-  @@unique([gradeProjectId, targetType, gradeItemId])
-  @@index([gradeProjectId])
+  @@unique([gradeId, targetType, gradeItemId])
+  @@index([gradeId])
 }
 
 /// 成績ラベルの手動上書き
 model GradeOverride {
-  id             String   @id @default(uuid())
-  gradeProjectId String
-  studentId      String
-  targetType     String // "grade_item" | "overall"
-  gradeItemId    String?
-  overrideLabel  String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id            String   @id @default(uuid())
+  gradeId       String
+  studentId     String
+  targetType    String // "grade_item" | "overall"
+  gradeItemId   String?
+  overrideLabel String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
-  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  gradeItem    GradeItem?   @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
+  grade     Grade      @relation(fields: [gradeId], references: [id], onDelete: Cascade)
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  gradeItem GradeItem? @relation(fields: [gradeItemId], references: [id], onDelete: Cascade)
 
-  @@unique([gradeProjectId, studentId, targetType, gradeItemId])
-  @@index([gradeProjectId])
+  @@unique([gradeId, studentId, targetType, gradeItemId])
+  @@index([gradeId])
   @@index([studentId])
   @@index([gradeItemId])
 }
@@ -593,12 +593,12 @@ model GradeBoundary {
 }
 
 /// 成績算出プロジェクトのエクスポート設定
-model GradeProjectExportSettings {
-  id             String   @id @default(uuid())
-  gradeProjectId String   @unique
-  settingsJson   String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+model GradeExportSettings {
+  id           String   @id @default(uuid())
+  gradeId      String   @unique
+  settingsJson String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  gradeProject GradeProject @relation(fields: [gradeProjectId], references: [id], onDelete: Cascade)
+  grade Grade @relation(fields: [gradeId], references: [id], onDelete: Cascade)
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import type { SubtotalInfo } from "@/types/projectArchive.types"
+import type { SubtotalInfo } from "@/types/examArchive.types"
 
 interface SubtotalPreviewProps {
   importSubtotals?: SubtotalInfo[]

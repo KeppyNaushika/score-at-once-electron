@@ -70,7 +70,7 @@ export default function DataManagementSettings({
   const confirmDataDeletion = async () => {
     const confirmed = confirm(
       "すべてのデータを完全に削除しますか？\n\n" +
-        "・すべてのプロジェクト\n" +
+        "・すべての試験\n" +
         "・すべての答案画像\n" +
         "・すべての採点データ\n" +
         "・データベース\n\n" +
@@ -139,7 +139,7 @@ export default function DataManagementSettings({
               </Button>
             </div>
             <p className="text-muted-foreground mt-1 text-xs">
-              すべてのプロジェクトデータがここに保存されます
+              すべての試験データがここに保存されます
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export default function DataManagementSettings({
             </Button>
 
             <p className="text-muted-foreground text-xs">
-              ※この操作ですべてのプロジェクト、答案画像、採点データが削除されます。
+              ※この操作ですべての試験、答案画像、採点データが削除されます。
               <br />
               削除されたデータは復元できません。
             </p>

@@ -16,7 +16,7 @@ import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
 import type {
   ClassMatchingMethod,
   StudentMatchingMethod,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 interface MatchingSettingsStepProps {
   wizard: UseImportWizardReturn
@@ -56,7 +56,7 @@ export function MatchingSettingsStep({ wizard }: MatchingSettingsStepProps) {
           <CardContent className="flex items-center gap-3 p-4">
             <FileText className="text-muted-foreground h-5 w-5" />
             <div className="flex-1">
-              <p className="font-medium">{state.manifest.projectName}</p>
+              <p className="font-medium">{state.manifest.examName}</p>
               <p className="text-muted-foreground text-sm">
                 生徒 {state.manifest.counts.students}名 ・ 採点結果{" "}
                 {state.manifest.counts.scores}件

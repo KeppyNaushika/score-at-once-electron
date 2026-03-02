@@ -11,8 +11,8 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { RenderMode } from "@/types/answerSheetBuilder.types"
 
+import { ExamIntegrationDialog } from "./components/export/ExamIntegrationDialog"
 import { ExportDialog } from "./components/export/ExportDialog"
-import { ProjectIntegrationDialog } from "./components/export/ProjectIntegrationDialog"
 import { GlobalSettingsForm } from "./components/form/GlobalSettingsForm"
 import { LineStylePicker } from "./components/form/LineStylePicker"
 import { OMRMarkerSettings } from "./components/form/OMRMarkerSettings"
@@ -56,7 +56,7 @@ export function AnswerSheetBuilderMainView() {
   useUndoRedoShortcuts({ undo, redo, canUndo, canRedo })
 
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
-  const [projectDialogOpen, setProjectDialogOpen] = useState(false)
+  const [examDialogOpen, setExamDialogOpen] = useState(false)
 
   // 問題統計（全ページのセルから集計）
   const allCells = multiPageLayout.pages.flatMap((p) => p.cells)
@@ -145,7 +145,7 @@ export function AnswerSheetBuilderMainView() {
             variant="ghost"
             size="sm"
             className="h-7 text-xs"
-            onClick={() => setProjectDialogOpen(true)}
+            onClick={() => setExamDialogOpen(true)}
           >
             <FolderOpen className="mr-1 h-3 w-3" />
             変換
@@ -270,9 +270,9 @@ export function AnswerSheetBuilderMainView() {
         onOpenChange={setExportDialogOpen}
         definition={definition}
       />
-      <ProjectIntegrationDialog
-        open={projectDialogOpen}
-        onOpenChange={setProjectDialogOpen}
+      <ExamIntegrationDialog
+        open={examDialogOpen}
+        onOpenChange={setExamDialogOpen}
         definition={definition}
         totalQuestions={totalQuestions}
         totalPoints={totalPoints}

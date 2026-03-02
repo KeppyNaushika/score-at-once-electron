@@ -54,10 +54,10 @@ export function usePageHelp() {
     if (pathname.includes("subtotal-groups")) {
       return "subtotal-groups"
     }
-    if (pathname.includes("/classes") && !pathname.includes("projects")) {
+    if (pathname.includes("/classes") && !pathname.includes("exams")) {
       return "classes"
     }
-    if (pathname.includes("/students") && !pathname.includes("projects")) {
+    if (pathname.includes("/students") && !pathname.includes("exams")) {
       return "students"
     }
 

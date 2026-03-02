@@ -4,8 +4,8 @@
  * アプリバージョン: v0.2.x → v0.3.x
  *
  * 主な変更点:
- * - UserProject: invitedAt, invitedBy フィールド追加
- * - ProjectClass テーブル追加
+ * - UserExam: invitedAt, invitedBy フィールド追加
+ * - ExamClass テーブル追加
  * - その他新規テーブル追加（インポート時は空で初期化）
  *
  * @see docs/schema-history/README.md
@@ -19,24 +19,24 @@ import type {
 } from "./types"
 
 /**
- * v1.0.0 の UserProject 形式
+ * v1.0.0 の UserExam 形式
  */
-interface V1_0_0_UserProject {
+interface V1_0_0_UserExam {
   id: string
   userId: string
-  projectId: string
+  examId: string
   role?: string // v0.2.20では存在するが、それ以前はない場合がある
   createdAt: string
   updatedAt: string
 }
 
 /**
- * v1.1.0 の UserProject 形式
+ * v1.1.0 の UserExam 形式
  */
-interface V1_1_0_UserProject {
+interface V1_1_0_UserExam {
   id: string
   userId: string
-  projectId: string
+  examId: string
   role: string
   invitedAt: string
   invitedBy: string | null
@@ -54,18 +54,18 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
   transform(data: ArchiveData): TransformResult {
     const warnings: string[] = []
 
-    // UserProject の変換
-    const transformedUserProjects = this.transformUserProjects(
-      data.projectData.userProjects as unknown as V1_0_0_UserProject[]
+    // UserExam の変換
+    const transformedUserExams = this.transformUserExams(
+      data.examData.userExams as unknown as V1_0_0_UserExam[]
     )
 
-    // projectClasses が存在しない場合は空配列で初期化
-    const projectClasses = data.projectData.projectClasses ?? []
+    // examClasses が存在しない場合は空配列で初期化
+    const examClasses = data.examData.examClasses ?? []
 
     // 警告メッセージを追加
     warnings.push(
       `アーカイブはv0.2.x形式(archive v${this.fromVersion})で作成されています。` +
-        `UserProject.invitedAt/invitedByはデフォルト値で補完されました。`
+        `UserExam.invitedAt/invitedByはデフォルト値で補完されました。`
     )
 
     return {
@@ -75,11 +75,11 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
           ...data.manifest,
           version: this.toVersion,
         },
-        projectData: {
-          ...data.projectData,
-          userProjects:
-            transformedUserProjects as unknown as typeof data.projectData.userProjects,
-          projectClasses,
+        examData: {
+          ...data.examData,
+          userExams:
+            transformedUserExams as unknown as typeof data.examData.userExams,
+          examClasses,
         },
       },
       warnings,
@@ -87,12 +87,10 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
   }
 
   /**
-   * UserProject を v1.1.0 形式に変換
+   * UserExam を v1.1.0 形式に変換
    */
-  private transformUserProjects(
-    userProjects: V1_0_0_UserProject[]
-  ): V1_1_0_UserProject[] {
-    return userProjects.map((up, index) => {
+  private transformUserExams(userExams: V1_0_0_UserExam[]): V1_1_0_UserExam[] {
+    return userExams.map((up, index) => {
       // roleが存在する場合は保持、なければデフォルト値を設定
       // 最初のユーザーはOWNER、それ以外はGRADER
       const role = up.role ?? (index === 0 ? "OWNER" : "GRADER")
@@ -101,7 +99,7 @@ export class V1_0_0_to_V1_1_0_Transformer implements VersionTransformer {
         ...up,
         role,
         invitedAt: up.createdAt, // createdAtで代用
-        invitedBy: index === 0 ? null : (userProjects[0]?.userId ?? null),
+        invitedBy: index === 0 ? null : (userExams[0]?.userId ?? null),
       }
     })
   }

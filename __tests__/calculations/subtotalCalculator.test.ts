@@ -47,7 +47,7 @@ function createCropRegion(
     y: 0,
     width: 100,
     height: 50,
-    projectPageId: "page1",
+    examPageId: "page1",
     orderIndex: 0,
     points: 10,
     createdAt: new Date(),

@@ -8,14 +8,14 @@
 
 import type {
   ArchiveClassesData,
+  ArchiveExamData,
   ArchiveManifest,
-  ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
-} from "../../../types/projectArchive.types"
+} from "../../../types/examArchive.types"
 import type {
   ArchiveData,
   ArchiveVersion,
@@ -53,7 +53,7 @@ export type { ArchiveVersion }
  */
 export interface ExtractedArchiveData {
   manifest: ArchiveManifest
-  projectData: ArchiveProjectData
+  examData: ArchiveExamData
   studentsData: ArchiveStudentsData
   classesData: ArchiveClassesData
   usersData: ArchiveUsersData
@@ -131,7 +131,7 @@ export function transformArchiveData(
   // 連鎖変換を実行
   const archiveData: ArchiveData = {
     manifest: data.manifest,
-    projectData: data.projectData,
+    examData: data.examData,
     studentsData: data.studentsData,
     classesData: data.classesData,
     usersData: data.usersData,
@@ -152,7 +152,7 @@ export function transformArchiveData(
 
   return {
     manifest: result.data.manifest,
-    projectData: result.data.projectData,
+    examData: result.data.examData,
     studentsData: result.data.studentsData,
     classesData: result.data.classesData,
     usersData: result.data.usersData,

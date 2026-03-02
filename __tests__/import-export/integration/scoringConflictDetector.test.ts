@@ -8,7 +8,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  createArchiveProjectData,
+  createArchiveExamData,
   createArchiveScoresData,
   createArchiveStudentsData,
   createExtractedArchiveData,
@@ -41,38 +41,38 @@ import {
 const prisma = getTestPrismaClient()
 
 /**
- * テスト用のプロジェクト・ページ・CropRegionをDBに作成するヘルパー
+ * テスト用の試験・ページ・CropRegionをDBに作成するヘルパー
  */
-async function createProjectWithCropRegions(options: {
-  projectId: string
+async function createExamWithCropRegions(options: {
+  examId: string
   cropRegionIds: string[]
   userId: string
 }): Promise<{ pageId: string }> {
-  const { projectId, cropRegionIds, userId } = options
+  const { examId, cropRegionIds, userId } = options
 
-  await prisma.project.create({
-    data: { id: projectId, examName: "テスト試験" },
+  await prisma.exam.create({
+    data: { id: examId, examName: "テスト試験" },
   })
 
-  await prisma.userProject.create({
+  await prisma.userExam.create({
     data: {
       id: generateId(),
       userId,
-      projectId,
+      examId,
       role: "owner",
     },
   })
 
   const pageId = generateId()
-  await prisma.projectPage.create({
-    data: { id: pageId, projectId, pageNumber: 1 },
+  await prisma.examPage.create({
+    data: { id: pageId, examId, pageNumber: 1 },
   })
 
   for (let i = 0; i < cropRegionIds.length; i++) {
     await prisma.cropRegion.create({
       data: {
         id: cropRegionIds[i],
-        projectPageId: pageId,
+        examPageId: pageId,
         label: `問${i + 1}`,
         type: "QUESTION",
         x: 0,
@@ -103,12 +103,12 @@ describe("detectScoringConflicts", () => {
   describe("競合なし（全て新規）", () => {
     it("既存のスコアがない場合、全てnewCountとして扱う", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const studentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -165,12 +165,12 @@ describe("detectScoringConflicts", () => {
   describe("競合検出", () => {
     it("同じ生徒×CropRegionで異なるstatusのスコアがある場合、競合として検出する", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const studentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -244,12 +244,12 @@ describe("detectScoringConflicts", () => {
 
     it("partialScoreのみ異なる場合も競合として検出する", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const studentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -309,12 +309,12 @@ describe("detectScoringConflicts", () => {
   describe("同一スコア（unchanged）", () => {
     it("statusとpartialScoreが同一の場合、unchangedとしてカウントする", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const studentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -392,12 +392,12 @@ describe("detectScoringConflicts", () => {
 
     it("studentIdMappingにないスコアは新規として扱う", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const unmappedStudentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -430,15 +430,15 @@ describe("detectScoringConflicts", () => {
   describe("複数スコアの混合", () => {
     it("新規・同一・競合が混在する場合、それぞれ正しくカウントされる", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegion1 = generateId()
       const cropRegion2 = generateId()
       const cropRegion3 = generateId()
       const student1 = generateId()
       const student2 = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegion1, cropRegion2, cropRegion3],
         userId: user.id,
       })
@@ -542,10 +542,10 @@ describe("detectScoringConflictsWithUserDecisions", () => {
   })
 
   // =========================================================================
-  // プロジェクトIDが不一致の場合
+  // 試験IDが不一致の場合
   // =========================================================================
-  describe("プロジェクトID不一致", () => {
-    it("プロジェクトIDが一致しない場合、全て新規として扱い競合なし", async () => {
+  describe("試験ID不一致", () => {
+    it("試験IDが一致しない場合、全て新規として扱い競合なし", async () => {
       const importData = createExtractedArchiveData({
         scoresData: createArchiveScoresData([
           {
@@ -559,9 +559,9 @@ describe("detectScoringConflictsWithUserDecisions", () => {
 
       // isIdMatch = false
       const preMatchResult = createFileOverviewData({
-        project: {
+        exam: {
           isIdMatch: false,
-          importProjectId: generateId(),
+          importExamId: generateId(),
           importData: {},
           displayLabel: "テスト",
         },
@@ -582,17 +582,17 @@ describe("detectScoringConflictsWithUserDecisions", () => {
   })
 
   // =========================================================================
-  // プロジェクトIDが一致する場合の競合検出
+  // 試験IDが一致する場合の競合検出
   // =========================================================================
-  describe("プロジェクトID一致時の競合検出", () => {
+  describe("試験ID一致時の競合検出", () => {
     it("ID一致の生徒と既存CropRegionで異なるスコアがある場合、競合を検出する", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const studentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -622,14 +622,14 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       })
 
       // インポートデータ（異なるスコア）
-      const projectData = createArchiveProjectData({
-        projectId,
+      const examData = createArchiveExamData({
+        examId,
         cropRegionsPerPage: 0,
       })
-      projectData.cropRegions = [
+      examData.cropRegions = [
         {
           id: cropRegionId,
-          projectPageId: projectData.projectPages[0]?.id ?? generateId(),
+          examPageId: examData.examPages[0]?.id ?? generateId(),
           label: "問1",
           type: "QUESTION",
           x: 0,
@@ -644,7 +644,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       ]
 
       const importData = createExtractedArchiveData({
-        projectData,
+        examData,
         studentsData: createArchiveStudentsData([
           {
             id: studentId,
@@ -671,10 +671,10 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           ],
           noMatch: [],
         }),
-        project: {
+        exam: {
           isIdMatch: true,
-          importProjectId: projectId,
-          existingProjectId: projectId,
+          importExamId: examId,
+          existingExamId: examId,
           importData: {},
           existingData: {},
           displayLabel: "テスト試験",
@@ -703,13 +703,13 @@ describe("detectScoringConflictsWithUserDecisions", () => {
   describe("by_student_number戦略", () => {
     it("学籍番号一致の生徒もマッピングに含めて競合検出する", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const existingStudentId = generateId()
       const importStudentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -738,14 +738,14 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         },
       })
 
-      const projectData = createArchiveProjectData({
-        projectId,
+      const examData = createArchiveExamData({
+        examId,
         cropRegionsPerPage: 0,
       })
-      projectData.cropRegions = [
+      examData.cropRegions = [
         {
           id: cropRegionId,
-          projectPageId: projectData.projectPages[0]?.id ?? generateId(),
+          examPageId: examData.examPages[0]?.id ?? generateId(),
           label: "問1",
           type: "QUESTION",
           x: 0,
@@ -760,7 +760,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       ]
 
       const importData = createExtractedArchiveData({
-        projectData,
+        examData,
         studentsData: createArchiveStudentsData([
           {
             id: importStudentId,
@@ -791,10 +791,10 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           ],
           noMatch: [],
         }),
-        project: {
+        exam: {
           isIdMatch: true,
-          importProjectId: projectId,
-          existingProjectId: projectId,
+          importExamId: examId,
+          existingExamId: examId,
           importData: {},
           existingData: {},
           displayLabel: "テスト試験",
@@ -822,13 +822,13 @@ describe("detectScoringConflictsWithUserDecisions", () => {
   describe("決定によるマッピング除外", () => {
     it("create_new決定の生徒はマッピングから除外され、新規として扱われる", async () => {
       const user = await createTestUser()
-      const projectId = generateId()
+      const examId = generateId()
       const cropRegionId = generateId()
       const existingStudentId = generateId()
       const importStudentId = generateId()
 
-      await createProjectWithCropRegions({
-        projectId,
+      await createExamWithCropRegions({
+        examId,
         cropRegionIds: [cropRegionId],
         userId: user.id,
       })
@@ -856,14 +856,14 @@ describe("detectScoringConflictsWithUserDecisions", () => {
         },
       })
 
-      const projectData = createArchiveProjectData({
-        projectId,
+      const examData = createArchiveExamData({
+        examId,
         cropRegionsPerPage: 0,
       })
-      projectData.cropRegions = [
+      examData.cropRegions = [
         {
           id: cropRegionId,
-          projectPageId: projectData.projectPages[0]?.id ?? generateId(),
+          examPageId: examData.examPages[0]?.id ?? generateId(),
           label: "問1",
           type: "QUESTION",
           x: 0,
@@ -878,7 +878,7 @@ describe("detectScoringConflictsWithUserDecisions", () => {
       ]
 
       const importData = createExtractedArchiveData({
-        projectData,
+        examData,
         studentsData: createArchiveStudentsData([
           {
             id: importStudentId,
@@ -909,10 +909,10 @@ describe("detectScoringConflictsWithUserDecisions", () => {
           ],
           noMatch: [],
         }),
-        project: {
+        exam: {
           isIdMatch: true,
-          importProjectId: projectId,
-          existingProjectId: projectId,
+          importExamId: examId,
+          existingExamId: examId,
           importData: {},
           existingData: {},
           displayLabel: "テスト試験",

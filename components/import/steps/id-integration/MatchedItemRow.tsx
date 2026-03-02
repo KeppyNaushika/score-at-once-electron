@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { IdChoice } from "@/types/projectArchive.types"
+import type { IdChoice } from "@/types/examArchive.types"
 
 import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
 import { SubtotalPreview } from "./SubtotalPreview"

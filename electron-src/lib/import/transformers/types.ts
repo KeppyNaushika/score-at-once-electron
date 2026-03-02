@@ -7,14 +7,14 @@
 
 import type {
   ArchiveClassesData,
+  ArchiveExamData,
   ArchiveManifest,
-  ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
-} from "../../../../types/projectArchive.types"
+} from "../../../../types/examArchive.types"
 
 // =============================================================================
 // Archive Version Types
@@ -23,16 +23,23 @@ import type {
 /**
  * サポートされているアーカイブバージョン
  *
- * - 1.0.0: v0.2.x (UserProject.invitedAt/invitedBy なし, PageImage使用)
- * - 1.1.0: v0.3.x (UserProject完全対応, ProjectClass追加, PageImage使用)
+ * - 1.0.0: v0.2.x (UserExam.invitedAt/invitedBy なし, PageImage使用)
+ * - 1.1.0: v0.3.x (UserExam完全対応, ExamClass追加, PageImage使用)
  * - 1.2.0: v0.4.x (MasterImage/StudentAnswerImage分離, userId/studentId非NULL)
  * - 1.3.0: v0.5.x (Student.studentId → Student.studentNumber リネーム)
- * - 1.4.0: v0.5.x (ProjectMarkingFormat, ProjectExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加)
+ * - 1.4.0: v0.5.x (ExamMarkingFormat, ExamExportSettings, CropRegionMarkingOverride, Subject, SubjectSubtotalGroup追加)
+ * - 1.5.0: v0.6.x (Project→Exam, GradeProject→Grade リネーム、DBスキーマ変更)
  */
-export type ArchiveVersion = "1.0.0" | "1.1.0" | "1.2.0" | "1.3.0" | "1.4.0"
+export type ArchiveVersion =
+  | "1.0.0"
+  | "1.1.0"
+  | "1.2.0"
+  | "1.3.0"
+  | "1.4.0"
+  | "1.5.0"
 
 /** 現在の最新バージョン */
-export const CURRENT_VERSION: ArchiveVersion = "1.4.0"
+export const CURRENT_VERSION: ArchiveVersion = "1.5.0"
 
 /** サポートされている全バージョン（古い順） */
 export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
@@ -41,6 +48,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
   "1.2.0",
   "1.3.0",
   "1.4.0",
+  "1.5.0",
 ] as const
 
 // =============================================================================
@@ -52,7 +60,7 @@ export const SUPPORTED_VERSIONS: readonly ArchiveVersion[] = [
  */
 export interface ArchiveData {
   manifest: ArchiveManifest
-  projectData: ArchiveProjectData
+  examData: ArchiveExamData
   studentsData: ArchiveStudentsData
   classesData: ArchiveClassesData
   usersData: ArchiveUsersData

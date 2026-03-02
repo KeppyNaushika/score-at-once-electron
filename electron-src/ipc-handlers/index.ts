@@ -3,23 +3,23 @@ import { registerArchiveHandlers } from "./archiveHandlers"
 import { setupAuthHandlers } from "./authHandlers"
 import { setupCropRegionHandlers } from "./cropRegionHandlers"
 import { setupDrawingHandlers } from "./drawingHandlers"
+import { setupExamClassHandlers } from "./examClassHandlers"
+import { setupExamHandlers } from "./examHandlers"
 import { setupExportHandlers } from "./exportHandlers"
-import { setupGradeProjectHandlers } from "./gradeProjectHandlers"
+import { setupGradeHandlers } from "./gradeHandlers"
 import { setupMiscHandlers } from "./miscHandlers"
 import { setupOMRHandlers } from "./omrHandlers"
 import { setupPdfToolsHandlers } from "./pdfToolsHandlers"
-import { setupProjectClassHandlers } from "./projectClassHandlers"
-import { setupProjectHandlers } from "./projectHandlers"
 import { setupQuestionGroupHandlers } from "./questionGroupHandlers"
 import { setupScoringHandlers } from "./scoringHandlers"
 import { registerSettingsHandlers } from "./settingsHandlers"
 import { setupStudentHandlers } from "./studentHandlers"
 import { setupSubjectHandlers } from "./subjectHandlers"
 import { setupSubtotalGroupHandlers } from "./subtotalGroupHandlers"
-import { setupUserProjectHandlers } from "./userProjectHandlers"
+import { setupUserExamHandlers } from "./userExamHandlers"
 
 export function setupAllIPCHandlers(): void {
-  setupProjectHandlers()
+  setupExamHandlers()
   setupStudentHandlers()
   setupCropRegionHandlers()
   setupScoringHandlers()
@@ -30,12 +30,12 @@ export function setupAllIPCHandlers(): void {
   setupSubtotalGroupHandlers()
   setupDrawingHandlers()
   registerArchiveHandlers()
-  setupProjectClassHandlers()
-  setupUserProjectHandlers()
+  setupExamClassHandlers()
+  setupUserExamHandlers()
   registerSettingsHandlers()
   setupPdfToolsHandlers()
   setupSubjectHandlers()
-  setupGradeProjectHandlers()
+  setupGradeHandlers()
   setupAnswerSheetBuilderHandlers()
   setupOMRHandlers()
 }

@@ -12,7 +12,7 @@
  *   part1+part2+part3 → label
  *   allot          → points
  *   kind           → type (HSZ_KIND_TO_CROP_TYPE経由)
- *   page           → projectPageId (UUID経由)
+ *   page           → examPageId (UUID経由)
  *   correct_N.png  → master-images/ (模範解答画像)
  */
 
@@ -56,7 +56,7 @@ export async function convertHszToScore(
     const { sheets, sheet_pages, sheet_fields } = dbInfo
 
     // 3. UUID生成
-    const projectId = generateUuid()
+    const examId = generateUuid()
     const now = new Date().toISOString()
 
     // ページ番号 → UUID マッピング
@@ -65,10 +65,10 @@ export async function convertHszToScore(
       pageUuidMap.set(sp.page, generateUuid())
     }
 
-    // 4. ProjectPages 生成
-    const projectPages = sheet_pages.map((sp) => ({
+    // 4. ExamPages 生成
+    const examPages = sheet_pages.map((sp) => ({
       id: pageUuidMap.get(sp.page)!,
-      projectId,
+      examId,
       pageNumber: sp.page + 1, // Score at Onceは1始まり
       createdAt: now,
       updatedAt: now,
@@ -77,7 +77,7 @@ export async function convertHszToScore(
     // 5. MasterImages 生成
     const masterImages: Array<{
       id: string
-      projectPageId: string
+      examPageId: string
       imagePath: string
       createdAt: string
       updatedAt: string
@@ -89,7 +89,7 @@ export async function convertHszToScore(
       if (imgEntry) {
         masterImages.push({
           id: generateUuid(),
-          projectPageId: pageUuidMap.get(sp.page)!,
+          examPageId: pageUuidMap.get(sp.page)!,
           imagePath: imgFileName,
           createdAt: now,
           updatedAt: now,
@@ -123,17 +123,17 @@ export async function convertHszToScore(
       regionToCropIds,
       scorePCropIdByPart1,
       scoreRCropIdByRegion,
-      projectId,
+      examId,
       now
     )
 
-    // 8. プロジェクトデータ構築
+    // 8. 試験データ構築
     const subjectName =
       HSZ_SUBJECT_MAP[sheets.subject_id] || `教科${sheets.subject_id}`
 
-    const projectData = {
-      project: {
-        id: projectId,
+    const examData = {
+      exam: {
+        id: examId,
         examName: sheets.title_name,
         examDate: null,
         subject: subjectName,
@@ -141,17 +141,17 @@ export async function convertHszToScore(
         createdAt: now,
         updatedAt: now,
       },
-      projectPages,
+      examPages,
       cropRegions,
       pageImages: [], // v1.2.0以降は使用しない
       masterImages,
       studentAnswerImages: [],
-      projectStudents: [],
-      userProjects: [],
-      projectSubtotalGroups: subtotalData.projectSubtotalGroups,
-      projectClasses: [],
-      projectMarkingFormats: [],
-      projectExportSettings: null,
+      examStudents: [],
+      userExams: [],
+      examSubtotalGroups: subtotalData.examSubtotalGroups,
+      examClasses: [],
+      examMarkingFormats: [],
+      examExportSettings: null,
       cropRegionMarkingOverrides: [],
     }
 
@@ -162,14 +162,14 @@ export async function convertHszToScore(
       appVersion: "0.0.0",
       exportedAt: now,
       sourceDbId: `hsz:${sheets.id}`,
-      projectId,
-      projectName: sheets.title_name,
+      examId,
+      examName: sheets.title_name,
       exportMode: "template_with_subtotals",
       counts: {
         students: 0,
         classes: 0,
         users: 0,
-        pages: projectPages.length,
+        pages: examPages.length,
         regions: cropRegions.length,
         scores: 0,
         annotations: 0,
@@ -188,8 +188,8 @@ export async function convertHszToScore(
       Buffer.from(JSON.stringify(manifest, null, 2))
     )
     scoreZip.addFile(
-      "project.json",
-      Buffer.from(JSON.stringify(projectData, null, 2))
+      "exam.json",
+      Buffer.from(JSON.stringify(examData, null, 2))
     )
     scoreZip.addFile(
       "students.json",
@@ -265,7 +265,7 @@ export async function convertHszToScore(
 interface HszCropRegionsResult {
   regions: Array<{
     id: string
-    projectPageId: string
+    examPageId: string
     label: string
     type: string
     x: number
@@ -316,8 +316,8 @@ function convertFieldsToCropRegions(
     if (!cropType) continue
 
     // ページのUUIDを取得
-    const projectPageId = pageUuidMap.get(field.page)
-    if (!projectPageId) continue
+    const examPageId = pageUuidMap.get(field.page)
+    if (!examPageId) continue
 
     // ページの画像サイズを取得（正規化用）
     const imageSize = pageImageSizeMap.get(field.page)
@@ -331,7 +331,7 @@ function convertFieldsToCropRegions(
     // ピクセル座標 → 正規化座標（0-1）に変換
     regions.push({
       id,
-      projectPageId,
+      examPageId,
       label,
       type: cropType,
       x: field.rim.l / imageSize.w,
@@ -412,7 +412,7 @@ function buildLabel(field: HszSheetField): string {
   }
 }
 
-/** SubtotalGroup/Subtotal/CropSubtotal/ProjectSubtotalGroup の生成結果 */
+/** SubtotalGroup/Subtotal/CropSubtotal/ExamSubtotalGroup の生成結果 */
 interface HszSubtotalResult {
   subtotalGroups: Array<{
     id: string
@@ -436,9 +436,9 @@ interface HszSubtotalResult {
     createdAt: string
     updatedAt: string
   }>
-  projectSubtotalGroups: Array<{
+  examSubtotalGroups: Array<{
     id: string
-    projectId: string
+    examId: string
     subtotalGroupId: string
   }>
 }
@@ -459,13 +459,13 @@ function generateHszSubtotalData(
   regionToCropIds: Map<string, string[]>,
   scorePCropIdByPart1: Map<string, string>,
   scoreRCropIdByRegion: Map<string, string>,
-  projectId: string,
+  examId: string,
   now: string
 ): HszSubtotalResult {
   const subtotalGroups: HszSubtotalResult["subtotalGroups"] = []
   const subtotals: HszSubtotalResult["subtotals"] = []
   const cropSubtotals: HszSubtotalResult["cropSubtotals"] = []
-  const projectSubtotalGroups: HszSubtotalResult["projectSubtotalGroups"] = []
+  const examSubtotalGroups: HszSubtotalResult["examSubtotalGroups"] = []
 
   // ========================================
   // 1. 「大問」SubtotalGroup
@@ -479,9 +479,9 @@ function generateHszSubtotalData(
       createdAt: now,
       updatedAt: now,
     })
-    projectSubtotalGroups.push({
+    examSubtotalGroups.push({
       id: generateUuid(),
-      projectId,
+      examId,
       subtotalGroupId: daimonGroupId,
     })
 
@@ -551,9 +551,9 @@ function generateHszSubtotalData(
       createdAt: now,
       updatedAt: now,
     })
-    projectSubtotalGroups.push({
+    examSubtotalGroups.push({
       id: generateUuid(),
-      projectId,
+      examId,
       subtotalGroupId: kantenGroupId,
     })
 
@@ -611,7 +611,7 @@ function generateHszSubtotalData(
     }
   }
 
-  return { subtotalGroups, subtotals, cropSubtotals, projectSubtotalGroups }
+  return { subtotalGroups, subtotals, cropSubtotals, examSubtotalGroups }
 }
 
 /**

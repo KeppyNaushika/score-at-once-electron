@@ -8,10 +8,10 @@ export interface GradingDataInfo {
 }
 
 /**
- * 指定された生徒が特定のプロジェクトで採点データを持っているかチェック
+ * 指定された生徒が特定の試験で採点データを持っているかチェック
  */
 export const checkGradingDataForStudent = async (
-  projectId: string,
+  examId: string,
   studentId: string
 ): Promise<GradingDataInfo> => {
   try {
@@ -19,8 +19,8 @@ export const checkGradingDataForStudent = async (
     const answerSheetCount = await prisma.studentAnswerImage.count({
       where: {
         studentId,
-        projectPage: {
-          projectId,
+        examPage: {
+          examId,
         },
       },
     })
@@ -30,8 +30,8 @@ export const checkGradingDataForStudent = async (
       where: {
         studentId,
         cropRegion: {
-          projectPage: {
-            projectId,
+          examPage: {
+            examId,
           },
         },
       },
@@ -56,7 +56,7 @@ export const checkGradingDataForStudent = async (
  * 複数の生徒について採点データをまとめてチェック
  */
 export const checkGradingDataForStudents = async (
-  projectId: string,
+  examId: string,
   studentIds: string[]
 ): Promise<{
   hasAnyData: boolean
@@ -69,7 +69,7 @@ export const checkGradingDataForStudents = async (
 
     // 各生徒について採点データをチェック
     for (const studentId of studentIds) {
-      const gradingInfo = await checkGradingDataForStudent(projectId, studentId)
+      const gradingInfo = await checkGradingDataForStudent(examId, studentId)
       studentData[studentId] = gradingInfo
       totalGradingItems += gradingInfo.totalGradingItems
     }
@@ -91,7 +91,7 @@ export const checkGradingDataForStudents = async (
  * 生徒の採点データを完全に削除
  */
 export const deleteAllGradingDataForStudent = async (
-  projectId: string,
+  examId: string,
   studentId: string
 ): Promise<void> => {
   try {
@@ -101,8 +101,8 @@ export const deleteAllGradingDataForStudent = async (
         where: {
           studentId,
           cropRegion: {
-            projectPage: {
-              projectId,
+            examPage: {
+              examId,
             },
           },
         },
@@ -112,8 +112,8 @@ export const deleteAllGradingDataForStudent = async (
       await tx.studentAnswerImage.deleteMany({
         where: {
           studentId,
-          projectPage: {
-            projectId,
+          examPage: {
+            examId,
           },
         },
       })

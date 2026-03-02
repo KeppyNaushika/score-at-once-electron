@@ -135,7 +135,7 @@ export function setupOMRHandlers(): void {
   )
 
   // ────────────────────────────────────────
-  // バッチ認識（プロジェクト全答案）
+  // バッチ認識（試験全答案）
   // ────────────────────────────────────────
   ipcMain.handle(
     "omr:batch-recognize",
@@ -271,16 +271,16 @@ export function setupOMRHandlers(): void {
     "omr:save-template",
     async (
       _event,
-      projectId: string,
+      examId: string,
       template: OMRTemplate
     ): Promise<{ success: boolean; error?: string }> => {
       try {
         const dataDir = getDataDirectory()
-        const projectDir = path.join(dataDir, "projects", projectId)
-        if (!fs.existsSync(projectDir)) {
-          fs.mkdirSync(projectDir, { recursive: true })
+        const examDir = path.join(dataDir, "exams", examId)
+        if (!fs.existsSync(examDir)) {
+          fs.mkdirSync(examDir, { recursive: true })
         }
-        const templatePath = path.join(projectDir, "omr-template.json")
+        const templatePath = path.join(examDir, "omr-template.json")
         fs.writeFileSync(templatePath, JSON.stringify(template, null, 2))
         return { success: true }
       } catch (error) {
@@ -302,7 +302,7 @@ export function setupOMRHandlers(): void {
     "omr:load-template",
     async (
       _event,
-      projectId: string
+      examId: string
     ): Promise<{
       success: boolean
       template?: OMRTemplate
@@ -312,8 +312,8 @@ export function setupOMRHandlers(): void {
         const dataDir = getDataDirectory()
         const templatePath = path.join(
           dataDir,
-          "projects",
-          projectId,
+          "exams",
+          examId,
           "omr-template.json"
         )
         if (!fs.existsSync(templatePath)) {

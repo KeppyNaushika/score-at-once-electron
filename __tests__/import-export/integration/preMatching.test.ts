@@ -9,7 +9,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createArchiveClassesData,
-  createArchiveProjectData,
+  createArchiveExamData,
   createArchiveStudentsData,
   createArchiveSubtotalsData,
   createExtractedArchiveData,
@@ -243,37 +243,37 @@ describe("preMatching", () => {
     )
   })
 
-  // PM-7: プロジェクトID一致
-  it("PM-7: プロジェクトID一致時にisIdMatch=trueとなる", async () => {
-    const projectId = generateId()
+  // PM-7: 試験ID一致
+  it("PM-7: 試験ID一致時にisIdMatch=trueとなる", async () => {
+    const examId = generateId()
 
-    // 既存プロジェクト作成
-    await prisma.project.create({
-      data: { id: projectId, examName: "既存試験" },
+    // 既存試験作成
+    await prisma.exam.create({
+      data: { id: examId, examName: "既存試験" },
     })
 
     const data = createExtractedArchiveData({
-      projectData: createArchiveProjectData({ projectId }),
+      examData: createArchiveExamData({ examId }),
     })
 
     const result = await performPreMatching(data)
 
-    expect(result.project).toBeDefined()
-    expect(result.project!.isIdMatch).toBe(true)
-    expect(result.project!.existingProjectId).toBe(projectId)
+    expect(result.exam).toBeDefined()
+    expect(result.exam!.isIdMatch).toBe(true)
+    expect(result.exam!.existingExamId).toBe(examId)
   })
 
-  // PM-8: プロジェクトID不一致
-  it("PM-8: プロジェクトID不一致時にisIdMatch=falseとなる", async () => {
+  // PM-8: 試験ID不一致
+  it("PM-8: 試験ID不一致時にisIdMatch=falseとなる", async () => {
     const data = createExtractedArchiveData({
-      projectData: createArchiveProjectData({ projectId: generateId() }),
+      examData: createArchiveExamData({ examId: generateId() }),
     })
 
     const result = await performPreMatching(data)
 
-    expect(result.project).toBeDefined()
-    expect(result.project!.isIdMatch).toBe(false)
-    expect(result.project!.existingProjectId).toBeUndefined()
+    expect(result.exam).toBeDefined()
+    expect(result.exam!.isIdMatch).toBe(false)
+    expect(result.exam!.existingExamId).toBeUndefined()
   })
 
   // PM-9: 混合シナリオ（byId+byName+noMatch）

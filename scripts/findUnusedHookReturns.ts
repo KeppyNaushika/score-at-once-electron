@@ -259,7 +259,7 @@ function extractHookUsages(
  * メイン処理
  */
 function main() {
-  const projectRoot = process.cwd()
+  const examRoot = process.cwd()
 
   // テストディレクトリを除外
   const excludeDirs = [
@@ -273,7 +273,7 @@ function main() {
     "app/test-",
   ]
 
-  const allFiles = getTypeScriptFiles(projectRoot)
+  const allFiles = getTypeScriptFiles(examRoot)
   const files = allFiles.filter(
     (f) => !excludeDirs.some((dir) => f.includes(`/${dir}`))
   )
@@ -362,7 +362,7 @@ function main() {
   console.log("─".repeat(80))
 
   for (const report of reports) {
-    const relativePath = path.relative(projectRoot, report.hookFilePath)
+    const relativePath = path.relative(examRoot, report.hookFilePath)
     console.log(`\n🪝 ${report.hookName}`)
     console.log(`   📄 ${relativePath}`)
     console.log(`   📊 使用箇所: ${report.usageCount} 件`)

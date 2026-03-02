@@ -9,7 +9,7 @@ import type {
   MatchedItem,
   StudentMatchingStrategy,
   SubtotalGroupMatchingStrategy,
-} from "@/types/projectArchive.types"
+} from "@/types/examArchive.types"
 
 export type CategoryType = "student" | "class" | "subtotalGroup"
 

@@ -8,17 +8,17 @@ import AdmZip from "adm-zip"
 import * as fs from "fs"
 import * as path from "path"
 
-import type { CollectedData } from "../../electron-src/lib/export/project-archive/dataCollector"
+import type { CollectedData } from "../../electron-src/lib/export/exam-archive/dataCollector"
 import type {
   ArchiveClassesData,
+  ArchiveExamData,
   ArchiveManifest,
-  ArchiveProjectData,
   ArchiveScoresData,
   ArchiveStudentsData,
   ArchiveSubjectsData,
   ArchiveSubtotalsData,
   ArchiveUsersData,
-} from "../../types/projectArchive.types"
+} from "../../types/examArchive.types"
 
 /**
  * テスト用アーカイブを作成
@@ -26,8 +26,8 @@ import type {
 export function createTestArchive(
   collectedData: CollectedData,
   outputPath: string,
-  projectId: string,
-  projectName: string,
+  examId: string,
+  examName: string,
   options: {
     version?: string
     masterImageFiles?: Array<{ archivePath: string; content: Buffer }>
@@ -47,16 +47,16 @@ export function createTestArchive(
     schemaVersion: "test",
     appVersion: "0.5.0-test",
     exportedAt: new Date().toISOString(),
-    projectId,
-    projectName,
+    examId,
+    examName,
     counts: collectedData.counts,
   }
   zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)))
 
   // JSONデータ
   zip.addFile(
-    "project.json",
-    Buffer.from(JSON.stringify(collectedData.projectData, null, 2))
+    "exam.json",
+    Buffer.from(JSON.stringify(collectedData.examData, null, 2))
   )
   zip.addFile(
     "students.json",
@@ -103,7 +103,7 @@ export function createTestArchive(
  */
 export function verifyArchiveContents(archivePath: string): {
   manifest: ArchiveManifest
-  projectData: ArchiveProjectData
+  examData: ArchiveExamData
   studentsData: ArchiveStudentsData
   classesData: ArchiveClassesData
   usersData: ArchiveUsersData
@@ -123,8 +123,8 @@ export function verifyArchiveContents(archivePath: string): {
   const manifest = readJson<ArchiveManifest>("manifest.json")
   if (!manifest) throw new Error("manifest.json not found in archive")
 
-  const projectData = readJson<ArchiveProjectData>("project.json")
-  if (!projectData) throw new Error("project.json not found in archive")
+  const examData = readJson<ArchiveExamData>("exam.json")
+  if (!examData) throw new Error("exam.json not found in archive")
 
   const studentsData = readJson<ArchiveStudentsData>("students.json")
   if (!studentsData) throw new Error("students.json not found in archive")
@@ -155,7 +155,7 @@ export function verifyArchiveContents(archivePath: string): {
 
   return {
     manifest,
-    projectData,
+    examData,
     studentsData,
     classesData,
     usersData,
@@ -171,37 +171,37 @@ export function verifyArchiveContents(archivePath: string): {
  */
 export function createMinimalCollectedData(
   overrides: {
-    projectId?: string
-    projectName?: string
+    examId?: string
+    examName?: string
     studentCount?: number
     pageCount?: number
   } = {}
 ): CollectedData {
-  const projectId = overrides.projectId ?? "test-project-id"
+  const examId = overrides.examId ?? "test-exam-id"
   const now = new Date().toISOString()
 
   return {
-    projectData: {
-      project: {
-        id: projectId,
-        examName: overrides.projectName ?? "テスト試験",
+    examData: {
+      exam: {
+        id: examId,
+        examName: overrides.examName ?? "テスト試験",
         examDate: now,
         subject: "数学",
         description: null,
         createdAt: now,
         updatedAt: now,
       },
-      projectPages: [],
+      examPages: [],
       cropRegions: [],
       pageImages: [],
       masterImages: [],
       studentAnswerImages: [],
-      projectStudents: [],
-      userProjects: [],
-      projectSubtotalGroups: [],
-      projectClasses: [],
-      projectMarkingFormats: [],
-      projectExportSettings: null,
+      examStudents: [],
+      userExams: [],
+      examSubtotalGroups: [],
+      examClasses: [],
+      examMarkingFormats: [],
+      examExportSettings: null,
       cropRegionMarkingOverrides: [],
     },
     studentsData: { students: [] },

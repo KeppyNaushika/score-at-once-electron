@@ -44,19 +44,19 @@ export const getDataDirectory = (): string => {
   return dataPath
 }
 
-// プロジェクトディレクトリのパス
-export const getProjectDirectory = (projectId: string): string => {
-  return path.join(getDataDirectory(), "projects", projectId)
+// 試験ディレクトリのパス
+export const getExamDirectory = (examId: string): string => {
+  return path.join(getDataDirectory(), "exams", examId)
 }
 
 // 答案保存ディレクトリのパス
-export const getAnswerSheetsDirectory = (projectId: string): string => {
-  return path.join(getProjectDirectory(projectId), "answer-sheets")
+export const getAnswerSheetsDirectory = (examId: string): string => {
+  return path.join(getExamDirectory(examId), "answer-sheets")
 }
 
 // マスター解答保存ディレクトリのパス
-export const getMasterAnswersDirectory = (projectId: string): string => {
-  return path.join(getProjectDirectory(projectId), "master-answers")
+export const getMasterAnswersDirectory = (examId: string): string => {
+  return path.join(getExamDirectory(examId), "master-answers")
 }
 
 // 出力ディレクトリのパス
@@ -77,10 +77,10 @@ export const initializeDataDirectory = async (): Promise<void> => {
     await fs.mkdir(dataDir, { recursive: true, mode: 0o755 })
 
     // サブディレクトリの作成
-    const projectsDir = path.join(dataDir, "projects")
+    const examsDir = path.join(dataDir, "exams")
     const exportsDir = getExportsDirectory()
 
-    await fs.mkdir(projectsDir, { recursive: true, mode: 0o755 })
+    await fs.mkdir(examsDir, { recursive: true, mode: 0o755 })
     await fs.mkdir(exportsDir, { recursive: true, mode: 0o755 })
   } catch (error) {
     console.error("Failed to initialize data directory:", error)
@@ -94,6 +94,53 @@ export const initializeDataDirectory = async (): Promise<void> => {
   }
 }
 
+// data/projects/ → data/exams/ マイグレーション（v0.6.x リネーム対応）
+export const migrateProjectsToExams = async (): Promise<boolean> => {
+  const dataDir = getDataDirectory()
+  const oldProjectsDir = path.join(dataDir, "projects")
+  const newExamsDir = path.join(dataDir, "exams")
+
+  try {
+    await fs.access(oldProjectsDir)
+  } catch {
+    // data/projects/ が存在しない場合はスキップ
+    return false
+  }
+
+  try {
+    // data/exams/ を作成
+    await fs.mkdir(newExamsDir, { recursive: true })
+
+    // 各試験ディレクトリをコピー
+    const examDirs = await fs.readdir(oldProjectsDir)
+    for (const dir of examDirs) {
+      const oldPath = path.join(oldProjectsDir, dir)
+      const newPath = path.join(newExamsDir, dir)
+
+      // 移行先に既にある場合はスキップ
+      try {
+        await fs.access(newPath)
+        console.log(`Skipping already migrated exam directory: ${dir}`)
+        continue
+      } catch {
+        // 存在しないのでコピー
+      }
+
+      await copyDirectory(oldPath, newPath)
+    }
+
+    // 旧ディレクトリを削除
+    await fs.rm(oldProjectsDir, { recursive: true, force: true })
+    console.log(
+      `Successfully migrated data/projects/ → data/exams/ (${examDirs.length} directories)`
+    )
+    return true
+  } catch (error) {
+    console.error("Failed to migrate projects to exams:", error)
+    return false
+  }
+}
+
 // ApplicationSupportからの移行処理
 export const migrateFromApplicationSupport = async (): Promise<boolean> => {
   const oldDataPath = path.join(app.getPath("userData"))
@@ -101,28 +148,28 @@ export const migrateFromApplicationSupport = async (): Promise<boolean> => {
 
   try {
     // 旧データの存在確認
-    const oldProjectsPath = path.join(oldDataPath, "projects")
+    const oldExamsPath = path.join(oldDataPath, "exams")
     const oldDbPath = path.join(oldDataPath, "database.db")
 
     let hasMigrated = false
 
-    // プロジェクトフォルダの移行
+    // 試験フォルダの移行
     try {
-      await fs.access(oldProjectsPath)
+      await fs.access(oldExamsPath)
 
-      const newProjectsPath = path.join(newDataPath, "projects")
-      await fs.mkdir(newProjectsPath, { recursive: true })
+      const newExamsPath = path.join(newDataPath, "exams")
+      await fs.mkdir(newExamsPath, { recursive: true })
 
-      // プロジェクトフォルダをコピー
-      const projectDirs = await fs.readdir(oldProjectsPath)
-      for (const projectDir of projectDirs) {
-        const oldPath = path.join(oldProjectsPath, projectDir)
-        const newPath = path.join(newProjectsPath, projectDir)
+      // 試験フォルダをコピー
+      const examDirs = await fs.readdir(oldExamsPath)
+      for (const examDir of examDirs) {
+        const oldPath = path.join(oldExamsPath, examDir)
+        const newPath = path.join(newExamsPath, examDir)
         await copyDirectory(oldPath, newPath)
       }
 
       // 旧フォルダを削除
-      await fs.rm(oldProjectsPath, { recursive: true, force: true })
+      await fs.rm(oldExamsPath, { recursive: true, force: true })
       hasMigrated = true
     } catch {
       // 旧データが存在しない場合はスキップ

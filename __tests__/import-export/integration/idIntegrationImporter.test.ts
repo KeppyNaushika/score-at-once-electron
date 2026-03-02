@@ -9,7 +9,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createArchiveClassesData,
-  createArchiveProjectData,
+  createArchiveExamData,
   createArchiveScoresData,
   createArchiveStudentsData,
   createArchiveSubtotalsData,
@@ -70,7 +70,7 @@ describe("executeIdIntegrationImport", () => {
    */
   function createBasicTestData(
     overrides: {
-      projectId?: string
+      examId?: string
       studentId?: string
       studentNumber?: string
       classId?: string
@@ -79,7 +79,7 @@ describe("executeIdIntegrationImport", () => {
       groupName?: string
     } = {}
   ) {
-    const projectId = overrides.projectId ?? generateId()
+    const examId = overrides.examId ?? generateId()
     const studentId = overrides.studentId ?? generateId()
     const classId = overrides.classId ?? generateId()
     const groupId = overrides.groupId ?? generateId()
@@ -87,17 +87,17 @@ describe("executeIdIntegrationImport", () => {
     const className = overrides.className ?? `Class_${Date.now()}`
     const groupName = overrides.groupName ?? `Group_${Date.now()}`
 
-    const projectData = createArchiveProjectData({
-      projectId,
+    const examData = createArchiveExamData({
+      examId,
       pageCount: 1,
       cropRegionsPerPage: 1,
     })
 
-    // ProjectStudentを追加
-    projectData.projectStudents = [
+    // ExamStudentを追加
+    examData.examStudents = [
       {
         id: generateId(),
-        projectId,
+        examId,
         studentId,
         status: "PARTICIPATING",
         customOrder: null,
@@ -106,11 +106,11 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    // ProjectClassを追加
-    projectData.projectClasses = [
+    // ExamClassを追加
+    examData.examClasses = [
       {
         id: generateId(),
-        projectId,
+        examId,
         classId,
         administered: true,
         statistics: true,
@@ -120,11 +120,11 @@ describe("executeIdIntegrationImport", () => {
       },
     ]
 
-    // ProjectSubtotalGroupを追加
-    projectData.projectSubtotalGroups = [
+    // ExamSubtotalGroupを追加
+    examData.examSubtotalGroups = [
       {
         id: generateId(),
-        projectId,
+        examId,
         subtotalGroupId: groupId,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -139,11 +139,11 @@ describe("executeIdIntegrationImport", () => {
       },
     ])
 
-    const regionId = projectData.cropRegions[0].id
+    const regionId = examData.cropRegions[0].id
     const scoreId = generateId()
 
     const data = createExtractedArchiveData({
-      projectData,
+      examData,
       studentsData: createArchiveStudentsData([
         { id: studentId, studentNumber, lastName: "テスト", firstName: "太郎" },
       ]),
@@ -173,7 +173,7 @@ describe("executeIdIntegrationImport", () => {
 
     return {
       data,
-      projectId,
+      examId,
       studentId,
       classId,
       groupId,
@@ -187,7 +187,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-1: 新規インポート: 全エンティティ作成
   it("II-1: 新規インポートで全エンティティが作成される", async () => {
-    const { data, projectId } = createBasicTestData()
+    const { data, examId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -211,9 +211,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -229,18 +229,18 @@ describe("executeIdIntegrationImport", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.projectId).toBeDefined()
+    expect(result.examId).toBeDefined()
 
-    // DBにプロジェクトが存在
-    const project = await prisma.project.findUnique({
-      where: { id: result.projectId! },
+    // DBに試験が存在
+    const exam = await prisma.exam.findUnique({
+      where: { id: result.examId! },
     })
-    expect(project).not.toBeNull()
+    expect(exam).not.toBeNull()
   })
 
   // II-2: 新規インポート: 全IDマッピング確認（summaryで確認）
   it("II-2: 新規インポートでエンティティが作成される", async () => {
-    const { data, projectId } = createBasicTestData()
+    const { data, examId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -264,9 +264,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -286,7 +286,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-3: 新規インポート: countsの正確性
   it("II-3: countsがcreated > 0を示す", async () => {
-    const { data, projectId } = createBasicTestData()
+    const { data, examId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -310,9 +310,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -332,9 +332,8 @@ describe("executeIdIntegrationImport", () => {
   })
 
   // II-4: 同一PCリインポート: スコアunchanged
-  it("II-4: 同一プロジェクト再インポートでスコアがunchangedとなる", async () => {
-    const { data, projectId, studentId, classId, groupId } =
-      createBasicTestData()
+  it("II-4: 同一試験再インポートでスコアがunchangedとなる", async () => {
+    const { data, examId, studentId, classId, groupId } = createBasicTestData()
 
     // 先に全データをDBに作成しておく
     const preMatch1 = createFileOverviewData({
@@ -359,9 +358,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -374,7 +373,7 @@ describe("executeIdIntegrationImport", () => {
       currentUser.id
     )
 
-    // 2回目: 同一プロジェクトとしてリインポート
+    // 2回目: 同一試験としてリインポート
     const preMatch2 = createFileOverviewData({
       student: createPreMatchingResult({
         byId: [
@@ -387,10 +386,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -412,7 +411,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-5: 同一PCリインポート+スコア更新: newer_wins
   it("II-5: newer_wins戦略でスコア競合が解決される", async () => {
-    const { data, projectId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
       createBasicTestData()
 
     // まず初回インポート
@@ -438,9 +437,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -492,10 +491,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -524,7 +523,7 @@ describe("executeIdIntegrationImport", () => {
   // II-6: import_wins戦略
   it("II-6: import_wins戦略でインポート側が優先される", async () => {
     // この戦略のテストは II-5 と同様の構造
-    const { data, projectId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
       createBasicTestData()
 
     const preMatch1 = createFileOverviewData({
@@ -549,9 +548,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -600,10 +599,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -630,7 +629,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-7: existing_wins戦略
   it("II-7: existing_wins戦略で既存側が優先される", async () => {
-    const { data, projectId, studentId, scoreId, regionId, classId, groupId } =
+    const { data, examId, studentId, scoreId, regionId, classId, groupId } =
       createBasicTestData()
 
     const preMatch1 = createFileOverviewData({
@@ -655,9 +654,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -706,10 +705,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -756,7 +755,7 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const { data, projectId, studentId } = createBasicTestData({
+    const { data, examId, studentId } = createBasicTestData({
       studentNumber,
     })
 
@@ -783,9 +782,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -830,7 +829,7 @@ describe("executeIdIntegrationImport", () => {
       },
     })
 
-    const { data, projectId, studentId } = createBasicTestData()
+    const { data, examId, studentId } = createBasicTestData()
     data.studentsData.students[0].lastName = "氏名"
     data.studentsData.students[0].firstName = "一致"
 
@@ -857,9 +856,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -891,7 +890,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-10: 別PCインポート: create_new決定
   it("II-10: create_new決定で新規生徒が作成される", async () => {
-    const { data, projectId, studentId } = createBasicTestData()
+    const { data, examId, studentId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -920,9 +919,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -951,15 +950,15 @@ describe("executeIdIntegrationImport", () => {
     expect(result.summary!.created.students).toBeGreaterThanOrEqual(0) // studentProcessor creates via separate count
   })
 
-  // II-12: v1.4.0: ProjectMarkingFormat作成
-  it("II-12: v1.4.0のProjectMarkingFormatが作成される", async () => {
-    const { data, projectId } = createBasicTestData()
+  // II-12: v1.4.0: ExamMarkingFormat作成
+  it("II-12: v1.4.0のExamMarkingFormatが作成される", async () => {
+    const { data, examId } = createBasicTestData()
 
     // v1.4.0データを追加
-    data.projectData.projectMarkingFormats = [
+    data.examData.examMarkingFormats = [
       {
         id: generateId(),
-        projectId,
+        examId,
         markType: "correct",
         symbol: "○",
         color: "#00ff00",
@@ -992,9 +991,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1009,20 +1008,20 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const formats = await prisma.projectMarkingFormat.findMany({
-      where: { projectId: result.projectId! },
+    const formats = await prisma.examMarkingFormat.findMany({
+      where: { examId: result.examId! },
     })
     expect(formats.length).toBe(1)
     expect(formats[0].markType).toBe("correct")
   })
 
-  // II-13: v1.4.0: ProjectExportSettings作成
-  it("II-13: v1.4.0のProjectExportSettingsが作成される", async () => {
-    const { data, projectId } = createBasicTestData()
+  // II-13: v1.4.0: ExamExportSettings作成
+  it("II-13: v1.4.0のExamExportSettingsが作成される", async () => {
+    const { data, examId } = createBasicTestData()
 
-    data.projectData.projectExportSettings = {
+    data.examData.examExportSettings = {
       id: generateId(),
-      projectId,
+      examId,
       settingsJson: JSON.stringify({ includeImages: true }),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -1050,9 +1049,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1067,8 +1066,8 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const settings = await prisma.projectExportSettings.findUnique({
-      where: { projectId: result.projectId! },
+    const settings = await prisma.examExportSettings.findUnique({
+      where: { examId: result.examId! },
     })
     expect(settings).not.toBeNull()
     expect(settings!.settingsJson).toContain("includeImages")
@@ -1076,9 +1075,9 @@ describe("executeIdIntegrationImport", () => {
 
   // II-14: v1.4.0: CropRegionMarkingOverride作成
   it("II-14: v1.4.0のCropRegionMarkingOverrideが作成される", async () => {
-    const { data, projectId, regionId } = createBasicTestData()
+    const { data, examId, regionId } = createBasicTestData()
 
-    data.projectData.cropRegionMarkingOverrides = [
+    data.examData.cropRegionMarkingOverrides = [
       {
         id: generateId(),
         cropRegionId: regionId,
@@ -1113,9 +1112,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1139,7 +1138,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-15: v1.4.0: Subject/SubjectSubtotalGroup作成
   it("II-15: v1.4.0のSubject/SubjectSubtotalGroupが作成される", async () => {
-    const { data, projectId, groupId } = createBasicTestData()
+    const { data, examId, groupId } = createBasicTestData()
 
     const subjectId = generateId()
     data.subjectsData = {
@@ -1184,9 +1183,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1214,7 +1213,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-16: QuestionScore重複回避 (B11)
   it("II-16: 同じcropRegion+studentのQuestionScoreが重複作成されない (B11 fix)", async () => {
-    const { data, projectId, studentId, regionId, classId, groupId } =
+    const { data, examId, studentId, regionId, classId, groupId } =
       createBasicTestData()
 
     // 初回インポート
@@ -1240,9 +1239,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1271,10 +1270,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -1299,8 +1298,7 @@ describe("executeIdIntegrationImport", () => {
 
   // II-17: メンバーシップの冪等性
   it("II-17: メンバーシップが冪等にインポートされる", async () => {
-    const { data, projectId, studentId, classId, groupId } =
-      createBasicTestData()
+    const { data, examId, studentId, classId, groupId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -1324,9 +1322,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1352,10 +1350,10 @@ describe("executeIdIntegrationImport", () => {
       subtotalGroup: createPreMatchingResult({
         byId: [createMatchedItem({ importId: groupId, existingId: groupId })],
       }),
-      project: {
+      exam: {
         isIdMatch: true,
-        importProjectId: projectId,
-        existingProjectId: projectId,
+        importExamId: examId,
+        existingExamId: examId,
         importData: {},
         existingData: {},
         displayLabel: "テスト",
@@ -1378,9 +1376,9 @@ describe("executeIdIntegrationImport", () => {
     expect(memberships.length).toBe(1)
   })
 
-  // II-18: ProjectClassesの正しいマッピング
-  it("II-18: ProjectClassesが正しく作成される", async () => {
-    const { data, projectId, classId } = createBasicTestData()
+  // II-18: ExamClassesの正しいマッピング
+  it("II-18: ExamClassesが正しく作成される", async () => {
+    const { data, examId, classId } = createBasicTestData()
 
     const preMatch = createFileOverviewData({
       student: createPreMatchingResult({
@@ -1404,9 +1402,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1421,20 +1419,20 @@ describe("executeIdIntegrationImport", () => {
 
     expect(result.success).toBe(true)
 
-    const projectClasses = await prisma.projectClass.findMany({
-      where: { projectId: result.projectId! },
+    const examClasses = await prisma.examClass.findMany({
+      where: { examId: result.examId! },
     })
-    expect(projectClasses.length).toBe(1)
-    expect(projectClasses[0].classId).toBe(classId)
-    expect(projectClasses[0].administered).toBe(true)
+    expect(examClasses.length).toBe(1)
+    expect(examClasses[0].classId).toBe(classId)
+    expect(examClasses[0].administered).toBe(true)
   })
 
   // II-19: トランザクションエラー時の全ロールバック
   it("II-19: トランザクションエラー時に全変更がロールバックされる", async () => {
     const beforeStudents = await prisma.student.count()
-    const beforeProjects = await prisma.project.count()
+    const beforeExams = await prisma.exam.count()
 
-    const { data, projectId } = createBasicTestData()
+    const { data, examId } = createBasicTestData()
 
     // subtotalのnameをnull（NOT NULL違反）にして制約エラーを引き起こす
     // subtotals処理で失敗させるために不正なsubtotalGroupIdを設定
@@ -1451,7 +1449,7 @@ describe("executeIdIntegrationImport", () => {
 
     // QuestionScoreにnullのstudentIdを与えてFK制約違反を起こす
     // → 実際にはidMappingsでスキップされてしまう
-    // 代わりに: UserProject作成でUNIQUE制約違反を起こす
+    // 代わりに: UserExam作成でUNIQUE制約違反を起こす
     // currentUserIdに存在しないUserIDを渡す
     const fakeUserId = "non-existent-user-id-for-rollback-test"
 
@@ -1477,9 +1475,9 @@ describe("executeIdIntegrationImport", () => {
           displayLabel: g.name,
         })),
       }),
-      project: {
+      exam: {
         isIdMatch: false,
-        importProjectId: projectId,
+        importExamId: examId,
         importData: {},
         displayLabel: "テスト",
       },
@@ -1497,8 +1495,8 @@ describe("executeIdIntegrationImport", () => {
 
     // DBが変更されていない（トランザクションがロールバック）
     const afterStudents = await prisma.student.count()
-    const afterProjects = await prisma.project.count()
+    const afterExams = await prisma.exam.count()
     expect(afterStudents).toBe(beforeStudents)
-    expect(afterProjects).toBe(beforeProjects)
+    expect(afterExams).toBe(beforeExams)
   })
 })

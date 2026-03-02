@@ -6,9 +6,9 @@ import {
   deleteQuestionScore,
   finalizeQuestionScore,
   getAnswerSheetProgress,
-  getProjectProgress,
+  getExamProgress,
   getQuestionScoreComparison,
-  getQuestionScoresForProject,
+  getQuestionScoresForExam,
   getQuestionScoresForStudent,
   updateQuestionScore,
   UpdateQuestionScoreData,
@@ -43,10 +43,10 @@ function serializeScore(score: {
 export function setupScoringHandlers(): void {
   // QuestionScore 関連のハンドラー
   ipcMain.handle(
-    "get-question-scores-for-project",
-    async (_event, projectId: string, userId?: string) => {
+    "get-question-scores-for-exam",
+    async (_event, examId: string, userId?: string) => {
       try {
-        const result = await getQuestionScoresForProject(projectId, userId)
+        const result = await getQuestionScoresForExam(examId, userId)
 
         if (!result.success) {
           return result
@@ -55,7 +55,7 @@ export function setupScoringHandlers(): void {
         const scores = result.scores?.map(serializeScore) || []
         return { success: true, scores }
       } catch (err) {
-        console.error("Error getting question scores for project:", err)
+        console.error("Error getting question scores for exam:", err)
         throw err
       }
     }
@@ -187,11 +187,11 @@ export function setupScoringHandlers(): void {
     }
   )
 
-  ipcMain.handle("get-project-progress", async (_event, projectId: string) => {
+  ipcMain.handle("get-exam-progress", async (_event, examId: string) => {
     try {
-      return await getProjectProgress(projectId)
+      return await getExamProgress(examId)
     } catch (err) {
-      console.error("Error getting project progress:", err)
+      console.error("Error getting exam progress:", err)
       throw err
     }
   })
@@ -199,9 +199,9 @@ export function setupScoringHandlers(): void {
   // Scoring initialization handler
   ipcMain.handle(
     "initialize-scoring-records",
-    async (_event, projectId: string) => {
+    async (_event, examId: string) => {
       try {
-        return await initializeScoringRecords(projectId)
+        return await initializeScoringRecords(examId)
       } catch (err) {
         console.error("Error initializing scoring records:", err)
         throw err

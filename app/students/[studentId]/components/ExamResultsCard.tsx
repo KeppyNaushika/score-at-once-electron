@@ -18,7 +18,7 @@ import {
 import { useTableSort } from "@/hooks/useTableSort"
 
 interface ExamResult {
-  projectId: string
+  examId: string
   examName: string
   examDate: Date | null
   subject: string | null
@@ -30,7 +30,7 @@ interface ExamResult {
 }
 
 interface ExamResultSortable {
-  projectId: string
+  examId: string
   examName: string
   subject: string | null
   examDate: string | null
@@ -64,7 +64,7 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
   // ソート用のデータ変換
   const sortableData = useMemo<ExamResultSortable[]>(() => {
     return results.map((result) => ({
-      projectId: result.projectId,
+      examId: result.examId,
       examName: result.examName,
       subject: result.subject,
       examDate: result.examDate
@@ -213,12 +213,10 @@ export function ExamResultsCard({ studentId }: ExamResultsCardProps) {
               <TableBody>
                 {sortedData.map(({ original: result }) => (
                   <TableRow
-                    key={result.projectId}
+                    key={result.examId}
                     className="group cursor-pointer"
                     onClick={() =>
-                      router.push(
-                        `/projects/${result.projectId}/07-score-at-once`
-                      )
+                      router.push(`/exams/${result.examId}/07-score-at-once`)
                     }
                   >
                     <TableCell className="font-medium">

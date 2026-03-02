@@ -460,7 +460,7 @@ export interface ASBExportPngArgs {
   svgString?: string
 }
 
-export interface ASBConvertToProjectArgs {
+export interface ASBConvertToExamArgs {
   definition: AnswerSheetDefinition
   userId: string
   svgString?: string
@@ -478,7 +478,7 @@ export interface ASBExportResult {
 
 export interface ASBConvertResult {
   success: boolean
-  projectId?: string
+  examId?: string
   error?: string
 }
 

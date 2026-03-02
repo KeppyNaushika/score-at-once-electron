@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { useImportWizard } from "@/hooks/import/useImportWizard"
 import { cn } from "@/lib/utils"
-import type { ImportWizardStep } from "@/types/projectArchive.types"
+import type { ImportWizardStep } from "@/types/examArchive.types"
 
 import { HszDisclaimerModal } from "./HszDisclaimerModal"
 import { ExecuteStep } from "./steps/ExecuteStep"
@@ -25,7 +25,7 @@ import { UpdateConfirmStep } from "./steps/UpdateConfirmStep"
 interface ImportWizardModalProps {
   isOpen: boolean
   onClose: () => void
-  onComplete?: (projectId: string) => void
+  onComplete?: (examId: string) => void
 }
 
 const STEP_TITLES: Record<ImportWizardStep, string> = {
@@ -78,7 +78,7 @@ export function ImportWizardModal({
           <DialogHeader className="bg-muted/30 border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl font-semibold">
-                プロジェクトインポート
+                試験インポート
               </DialogTitle>
             </div>
 

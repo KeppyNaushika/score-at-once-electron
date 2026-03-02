@@ -8,7 +8,7 @@ import { vi } from "vitest"
 
 import { initialState } from "@/hooks/import/constants"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ImportWizardState } from "@/types/projectArchive.types"
+import type { ImportWizardState } from "@/types/examArchive.types"
 
 /**
  * モック化された UseImportWizardReturn を作成する
@@ -40,7 +40,7 @@ export function createMockWizard(
     goBack: vi.fn(),
     executeImport: vi.fn().mockResolvedValue({
       success: true,
-      projectId: "mock-project-id",
+      examId: "mock-exam-id",
       summary: {
         created: {
           students: 1,

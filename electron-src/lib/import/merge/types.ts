@@ -2,7 +2,7 @@
  * ID統合インポート共通型定義
  */
 
-import type { ArchiveDataCounts } from "../../../../types/projectArchive.types"
+import type { ArchiveDataCounts } from "../../../../types/examArchive.types"
 import type prisma from "../../prisma/client"
 
 /** IDマッピング */
@@ -11,14 +11,14 @@ export interface IdMappings {
   class: Record<string, string>
   subtotalGroup: Record<string, string>
   subtotal: Record<string, string>
-  project: Record<string, string>
-  projectPage: Record<string, string>
+  exam: Record<string, string>
+  examPage: Record<string, string>
   cropRegion: Record<string, string>
   masterImage: Record<string, string>
   studentAnswerImage: Record<string, string>
-  projectStudent: Record<string, string>
-  userProject: Record<string, string>
-  projectSubtotalGroup: Record<string, string>
+  examStudent: Record<string, string>
+  userExam: Record<string, string>
+  examSubtotalGroup: Record<string, string>
   cropSubtotal: Record<string, string>
   questionScore: Record<string, string>
   drawingAnnotation: Record<string, string>

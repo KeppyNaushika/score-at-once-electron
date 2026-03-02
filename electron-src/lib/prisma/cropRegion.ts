@@ -6,18 +6,18 @@ import prisma from "./client"
 export const createCropRegion = async (
   data: Prisma.CropRegionUncheckedCreateInput
 ) => {
-  if (!data.projectPageId) {
-    throw new Error("projectPageId is required to create a crop region.")
+  if (!data.examPageId) {
+    throw new Error("examPageId is required to create a crop region.")
   }
 
-  const projectPage = await prisma.projectPage.findUnique({
-    where: { id: data.projectPageId },
-    select: { projectId: true },
+  const examPage = await prisma.examPage.findUnique({
+    where: { id: data.examPageId },
+    select: { examId: true },
   })
 
-  if (!projectPage) {
+  if (!examPage) {
     throw new Error(
-      `Project page not found for crop region creation (id: ${data.projectPageId}).`
+      `Exam page not found for crop region creation (id: ${data.examPageId}).`
     )
   }
 
@@ -27,8 +27,8 @@ export const createCropRegion = async (
     const maxOrder = await prisma.cropRegion.aggregate({
       _max: { orderIndex: true },
       where: {
-        projectPage: {
-          projectId: projectPage.projectId,
+        examPage: {
+          examId: examPage.examId,
         },
       },
     })
@@ -43,7 +43,7 @@ export const createCropRegion = async (
       orderIndex,
     },
     include: {
-      projectPage: true,
+      examPage: true,
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -71,7 +71,7 @@ export const updateCropRegion = async (
     where: { id },
     data,
     include: {
-      projectPage: true,
+      examPage: true,
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -88,16 +88,16 @@ export const deleteCropRegion = async (id: string) => {
   })
 }
 
-// プロジェクトIDで CropRegion を取得
-export const getCropRegionsByProjectId = async (projectId: string) => {
+// 試験IDで CropRegion を取得
+export const getCropRegionsByExamId = async (examId: string) => {
   const regions = await prisma.cropRegion.findMany({
     where: {
-      projectPage: {
-        projectId: projectId,
+      examPage: {
+        examId: examId,
       },
     },
     include: {
-      projectPage: true, // projectPage情報を追加
+      examPage: true, // examPage情報を追加
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -107,7 +107,7 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
     },
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
-      { projectPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
+      { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
       { y: "asc" }, // Y座標（フォールバック）
       { x: "asc" }, // X座標（フォールバック）
     ],
@@ -131,12 +131,12 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
     // 更新後のデータを再取得
     return await prisma.cropRegion.findMany({
       where: {
-        projectPage: {
-          projectId: projectId,
+        examPage: {
+          examId: examId,
         },
       },
       include: {
-        projectPage: true,
+        examPage: true,
         cropSubtotals: {
           include: {
             subtotal: true,
@@ -146,7 +146,7 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
       },
       orderBy: [
         { orderIndex: "asc" },
-        { projectPage: { pageNumber: "asc" } },
+        { examPage: { pageNumber: "asc" } },
         { y: "asc" },
         { x: "asc" },
       ],
@@ -157,21 +157,19 @@ export const getCropRegionsByProjectId = async (projectId: string) => {
 }
 
 /**
- * プロジェクトのQUESTION_ANSWER型領域のみを順序付きで取得（採点画面専用）
+ * 試験のQUESTION_ANSWER型領域のみを順序付きで取得（採点画面専用）
  * フィルタリングを DB レベルで行うことで正しい順序を保持
  */
-export const getQuestionAnswerRegionsByProjectId = async (
-  projectId: string
-) => {
+export const getQuestionAnswerRegionsByExamId = async (examId: string) => {
   const regions = await prisma.cropRegion.findMany({
     where: {
-      projectPage: {
-        projectId: projectId,
+      examPage: {
+        examId: examId,
       },
       type: "QUESTION_ANSWER", // DB レベルでフィルタリング
     },
     include: {
-      projectPage: true,
+      examPage: true,
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -181,7 +179,7 @@ export const getQuestionAnswerRegionsByProjectId = async (
     },
     orderBy: [
       { orderIndex: "asc" }, // 手動順序（最優先）
-      { projectPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
+      { examPage: { pageNumber: "asc" } }, // ページ順（フォールバック）
       { y: "asc" }, // Y座標（フォールバック）
       { x: "asc" }, // X座標（フォールバック）
     ],
@@ -214,7 +212,7 @@ export const getCropRegionById = async (id: string) => {
   return prisma.cropRegion.findUnique({
     where: { id },
     include: {
-      projectPage: true,
+      examPage: true,
       cropSubtotals: {
         include: {
           subtotal: true,
@@ -241,7 +239,7 @@ export const updateCropRegionOrders = async (
 
 export type CropRegionWithDetails = Prisma.CropRegionGetPayload<{
   include: {
-    projectPage: true
+    examPage: true
     cropSubtotals: {
       include: {
         subtotal: true

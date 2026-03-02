@@ -17,22 +17,22 @@ function sanitizeFileName(name: string): string {
  *
  * @param workbook - 保存するワークブック
  * @param outputPath - 出力パス（省略可能）
- * @param projectName - プロジェクト名（省略可能）
+ * @param examName - 試験名（省略可能）
  * @returns 保存結果
  */
 export async function saveWorkbook(
   workbook: ExcelJS.Workbook,
   outputPath?: string,
-  projectName?: string
+  examName?: string
 ): Promise<ExportResult> {
   try {
     let finalOutputPath = outputPath
 
     if (!finalOutputPath) {
       const dateStr = new Date().toISOString().slice(0, 10)
-      const safeProjectName = projectName ? sanitizeFileName(projectName) : null
-      const fileName = safeProjectName
-        ? `採点結果_${safeProjectName}_${dateStr}.xlsx`
+      const safeExamName = examName ? sanitizeFileName(examName) : null
+      const fileName = safeExamName
+        ? `採点結果_${safeExamName}_${dateStr}.xlsx`
         : `採点結果_${dateStr}.xlsx`
 
       const result = await dialog.showSaveDialog({

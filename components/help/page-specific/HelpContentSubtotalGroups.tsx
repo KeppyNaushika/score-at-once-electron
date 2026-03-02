@@ -17,7 +17,7 @@ export function HelpContentSubtotalGroups() {
           小計点グループ管理 - 使い方
         </h2>
         <p className="text-muted-foreground">
-          複数のプロジェクトで再利用できる小計項目グループを作成・管理しましょう。
+          複数の試験で再利用できる小計項目グループを作成・管理しましょう。
         </p>
       </div>
 
@@ -45,7 +45,7 @@ export function HelpContentSubtotalGroups() {
           <StepItem
             number={4}
             title="保存・利用"
-            description="保存後、プロジェクトの04-question-groupページで利用可能"
+            description="保存後、試験の04-question-groupページで利用可能"
           />
         </div>
         <TipItem type="info">
@@ -58,13 +58,13 @@ export function HelpContentSubtotalGroups() {
       <div className="grid gap-6 lg:grid-cols-2">
         <HelpSection
           icon={<Workflow className="h-5 w-5 text-blue-600" />}
-          title="プロジェクトでの利用"
+          title="試験での利用"
         >
           <div className="space-y-2">
             <StepItem
               number={1}
-              title="プロジェクトページに移動"
-              description="各プロジェクトの「04-question-group」ページに移動"
+              title="試験ページに移動"
+              description="各試験の「04-question-group」ページに移動"
             />
             <StepItem
               number={2}
@@ -83,7 +83,7 @@ export function HelpContentSubtotalGroups() {
             />
           </div>
           <TipItem type="info">
-            同一グループを複数プロジェクトで同時利用可能です。
+            同一グループを複数試験で同時利用可能です。
           </TipItem>
         </HelpSection>
 
@@ -135,7 +135,7 @@ export function HelpContentSubtotalGroups() {
 
             <TipItem type="info">
               <strong>編集の影響範囲：</strong>
-              グループ編集は利用中の全プロジェクトに影響します。採点済みデータにも注意が必要です。
+              グループ編集は利用中の全試験に影響します。採点済みデータにも注意が必要です。
             </TipItem>
 
             <TipItem type="info">

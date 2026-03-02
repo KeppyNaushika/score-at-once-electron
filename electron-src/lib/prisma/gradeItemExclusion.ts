@@ -5,18 +5,18 @@
 import prisma from "./client"
 
 /**
- * プロジェクトの全除外設定を取得
+ * 試験の全除外設定を取得
  */
-export async function getGradeItemExclusions(gradeProjectId: string) {
+export async function getGradeItemExclusions(gradeId: string) {
   try {
     const exclusions = await prisma.gradeItemExclusion.findMany({
-      where: { gradeProjectId },
+      where: { gradeId },
     })
     return {
       success: true,
       exclusions: exclusions.map((ex) => ({
         id: ex.id,
-        gradeProjectId: ex.gradeProjectId,
+        gradeId: ex.gradeId,
         studentId: ex.studentId,
         gradeItemId: ex.gradeItemId,
       })),
@@ -34,7 +34,7 @@ export async function getGradeItemExclusions(gradeProjectId: string) {
  * 除外設定の切り替え（excluded=trueで作成、falseで削除）
  */
 export async function setGradeItemExclusion(data: {
-  gradeProjectId: string
+  gradeId: string
   studentId: string
   gradeItemId: string
   excluded: boolean
@@ -43,15 +43,15 @@ export async function setGradeItemExclusion(data: {
     if (data.excluded) {
       await prisma.gradeItemExclusion.upsert({
         where: {
-          gradeProjectId_studentId_gradeItemId: {
-            gradeProjectId: data.gradeProjectId,
+          gradeId_studentId_gradeItemId: {
+            gradeId: data.gradeId,
             studentId: data.studentId,
             gradeItemId: data.gradeItemId,
           },
         },
         update: {},
         create: {
-          gradeProjectId: data.gradeProjectId,
+          gradeId: data.gradeId,
           studentId: data.studentId,
           gradeItemId: data.gradeItemId,
         },
@@ -59,7 +59,7 @@ export async function setGradeItemExclusion(data: {
     } else {
       await prisma.gradeItemExclusion.deleteMany({
         where: {
-          gradeProjectId: data.gradeProjectId,
+          gradeId: data.gradeId,
           studentId: data.studentId,
           gradeItemId: data.gradeItemId,
         },
@@ -79,7 +79,7 @@ export async function setGradeItemExclusion(data: {
  * 一括更新（トランザクション）
  */
 export async function batchUpdateGradeItemExclusions(
-  gradeProjectId: string,
+  gradeId: string,
   updates: { studentId: string; gradeItemId: string; excluded: boolean }[]
 ) {
   try {
@@ -88,15 +88,15 @@ export async function batchUpdateGradeItemExclusions(
         if (update.excluded) {
           await tx.gradeItemExclusion.upsert({
             where: {
-              gradeProjectId_studentId_gradeItemId: {
-                gradeProjectId,
+              gradeId_studentId_gradeItemId: {
+                gradeId,
                 studentId: update.studentId,
                 gradeItemId: update.gradeItemId,
               },
             },
             update: {},
             create: {
-              gradeProjectId,
+              gradeId,
               studentId: update.studentId,
               gradeItemId: update.gradeItemId,
             },
@@ -104,7 +104,7 @@ export async function batchUpdateGradeItemExclusions(
         } else {
           await tx.gradeItemExclusion.deleteMany({
             where: {
-              gradeProjectId,
+              gradeId,
               studentId: update.studentId,
               gradeItemId: update.gradeItemId,
             },

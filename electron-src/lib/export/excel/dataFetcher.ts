@@ -1,19 +1,19 @@
 import type {
   CropRegion,
-  Project,
-  ProjectStudent,
+  Exam,
+  ExamStudent,
   QuestionScore,
   Student,
 } from "@prisma/client"
 
-import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
-import { getProjectById } from "../../prisma/project"
-import { getStudentsForProject } from "../../prisma/projectStudent"
+import { getCropRegionsByExamId } from "../../prisma/cropRegion"
+import { getExamById } from "../../prisma/exam"
+import { getStudentsForExam } from "../../prisma/examStudent"
 import {
   calculateActualScore,
-  getQuestionScoresForProject,
+  getQuestionScoresForExam,
 } from "../../prisma/questionScore"
-import { getActiveSubtotalGroupsForProject } from "../../prisma/subtotalGroup"
+import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
 import {
   calculateSubtotalScoreBySubtotalId,
   QuestionScoreData,
@@ -47,8 +47,8 @@ interface SubtotalGroupData {
 export interface ExportDataResult {
   success: boolean
   error?: string
-  project?: Project
-  selectedStudents?: (Student & { projectStudent?: ProjectStudent })[]
+  exam?: Exam
+  selectedStudents?: (Student & { examStudent?: ExamStudent })[]
   questionRegions?: CropRegion[]
   subtotalRegions?: CropRegion[]
   subtotalColumns?: SubtotalColumn[]
@@ -58,28 +58,28 @@ export interface ExportDataResult {
 /**
  * 出力用データを取得する
  *
- * @param projectId - プロジェクトID
+ * @param examId - 試験ID
  * @param selectedStudentIds - 選択された生徒のID配列
  * @returns 出力用データまたはエラー情報
  */
 export async function fetchExportData(
-  projectId: string,
+  examId: string,
   selectedStudentIds: string[]
 ): Promise<ExportDataResult> {
   try {
     // 基本データの取得
-    const project = await getProjectById(projectId)
-    if (!project) {
-      return { success: false, error: "プロジェクトが見つかりません" }
+    const exam = await getExamById(examId)
+    if (!exam) {
+      return { success: false, error: "試験が見つかりません" }
     }
 
-    const studentsResult = await getStudentsForProject(projectId)
+    const studentsResult = await getStudentsForExam(examId)
     if (!studentsResult.success) {
       return { success: false, error: "生徒データの取得に失敗しました" }
     }
 
-    const cropRegions = await getCropRegionsByProjectId(projectId)
-    const questionScores = await getQuestionScoresForProject(projectId)
+    const cropRegions = await getCropRegionsByExamId(examId)
+    const questionScores = await getQuestionScoresForExam(examId)
 
     // 選択された生徒のフィルタリングとソート
     // 空配列の場合は全生徒を取得（統計計算用）
@@ -145,11 +145,10 @@ export async function fetchExportData(
       .sort(sortByOrderIndex)
 
     // SubtotalGroupsを取得（Subtotal単位の小計点計算用）
-    const subtotalGroupsResult =
-      await getActiveSubtotalGroupsForProject(projectId)
+    const subtotalGroupsResult = await getActiveSubtotalGroupsForExam(examId)
     const subtotalGroupsData: SubtotalGroupData[] =
-      subtotalGroupsResult.success && subtotalGroupsResult.projectSubtotalGroups
-        ? subtotalGroupsResult.projectSubtotalGroups.map((psg) => ({
+      subtotalGroupsResult.success && subtotalGroupsResult.examSubtotalGroups
+        ? subtotalGroupsResult.examSubtotalGroups.map((psg) => ({
             groupId: psg.subtotalGroup.id,
             groupName: psg.subtotalGroup.name,
             subtotals: psg.subtotalGroup.subtotals.map((s) => ({
@@ -176,7 +175,7 @@ export async function fetchExportData(
 
     return {
       success: true,
-      project,
+      exam,
       selectedStudents,
       questionRegions,
       subtotalRegions,

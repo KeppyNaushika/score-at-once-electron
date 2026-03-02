@@ -1,23 +1,23 @@
 import prisma from "./client"
 
 /**
- * プロジェクトの採点レコードを初期化する
+ * 試験の採点レコードを初期化する
  * 全ての答案と採点領域の組み合わせに対して初期の採点レコードを作成
  */
-export const initializeScoringRecords = async (projectId: string) => {
+export const initializeScoringRecords = async (examId: string) => {
   try {
     return await prisma.$transaction(async (tx) => {
-      // プロジェクトの全ての生徒を取得
-      const projectStudents = await tx.projectStudent.findMany({
-        where: { projectId },
+      // 試験の全ての生徒を取得
+      const examStudents = await tx.examStudent.findMany({
+        where: { examId },
         select: { studentId: true },
       })
 
-      // プロジェクトの全ての採点領域を取得
+      // 試験の全ての採点領域を取得
       const questionRegions = await tx.cropRegion.findMany({
         where: {
-          projectPage: {
-            projectId,
+          examPage: {
+            examId,
           },
           type: "QUESTION_ANSWER",
         },
@@ -33,12 +33,12 @@ export const initializeScoringRecords = async (projectId: string) => {
       const scoringRecords = []
 
       // 全ての生徒×採点領域の組み合わせを作成
-      for (const projectStudent of projectStudents) {
+      for (const examStudent of examStudents) {
         for (const region of questionRegions) {
           // 既存レコードをチェック
           const existing = await tx.questionScore.findFirst({
             where: {
-              studentId: projectStudent.studentId,
+              studentId: examStudent.studentId,
               cropRegionId: region.id,
               userId: defaultUser.id,
             },
@@ -46,7 +46,7 @@ export const initializeScoringRecords = async (projectId: string) => {
 
           if (!existing) {
             scoringRecords.push({
-              studentId: projectStudent.studentId,
+              studentId: examStudent.studentId,
               cropRegionId: region.id,
               partialScore: null,
               status: "ungraded",

@@ -2,21 +2,21 @@
  * 成績算出Excel出力用のデータ取得
  */
 
-import type { GradeCalculationResult } from "../../../../types/gradeProject.types"
+import type { GradeCalculationResult } from "../../../../types/grade.types"
 import prisma from "../../prisma/client"
 import { calculateGrades } from "../../shared/calculations/gradeCalculator"
 
 export interface GradeExportData {
   result: GradeCalculationResult
-  projectName: string
+  examName: string
   classNames: string[]
 }
 
 export async function fetchGradeExportData(
-  gradeProjectId: string
+  gradeId: string
 ): Promise<{ success: boolean; data?: GradeExportData; error?: string }> {
   try {
-    const calcResult = await calculateGrades(gradeProjectId)
+    const calcResult = await calculateGrades(gradeId)
     if (!calcResult.success || !calcResult.result) {
       return {
         success: false,
@@ -24,11 +24,11 @@ export async function fetchGradeExportData(
       }
     }
 
-    const gp = await prisma.gradeProject.findUnique({
-      where: { id: gradeProjectId },
+    const gp = await prisma.grade.findUnique({
+      where: { id: gradeId },
       select: {
         name: true,
-        gradeProjectClasses: {
+        gradeClasses: {
           include: { class: { select: { name: true } } },
           orderBy: { order: "asc" },
         },
@@ -39,8 +39,8 @@ export async function fetchGradeExportData(
       success: true,
       data: {
         result: calcResult.result,
-        projectName: gp?.name ?? "",
-        classNames: gp?.gradeProjectClasses.map((c) => c.class.name) ?? [],
+        examName: gp?.name ?? "",
+        classNames: gp?.gradeClasses.map((c) => c.class.name) ?? [],
       },
     }
   } catch (error) {

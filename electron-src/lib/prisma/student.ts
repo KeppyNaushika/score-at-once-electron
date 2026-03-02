@@ -210,7 +210,7 @@ export const deleteClass = async (id: string): Promise<void> => {
 
 // 生徒の試験成績を取得
 export interface StudentExamResult {
-  projectId: string
+  examId: string
   examName: string
   examDate: Date | null
   subject: string | null
@@ -225,13 +225,13 @@ export const getStudentExamResults = async (
   studentId: string
 ): Promise<StudentExamResult[]> => {
   try {
-    // 生徒が参加しているプロジェクトを取得
-    const projectStudents = await prisma.projectStudent.findMany({
+    // 生徒が参加している試験を取得
+    const examStudents = await prisma.examStudent.findMany({
       where: { studentId },
       include: {
-        project: {
+        exam: {
           include: {
-            projectPages: {
+            examPages: {
               include: {
                 cropRegions: {
                   where: { type: "QUESTION_ANSWER" },
@@ -250,14 +250,14 @@ export const getStudentExamResults = async (
 
     const results: StudentExamResult[] = []
 
-    for (const ps of projectStudents) {
-      const project = ps.project
+    for (const ps of examStudents) {
+      const exam = ps.exam
       let totalScore = 0
       let maxScore = 0
       let scoredCount = 0
       let totalQuestions = 0
 
-      for (const page of project.projectPages) {
+      for (const page of exam.examPages) {
         for (const region of page.cropRegions) {
           totalQuestions++
           maxScore += region.points || 0
@@ -283,10 +283,10 @@ export const getStudentExamResults = async (
       }
 
       results.push({
-        projectId: project.id,
-        examName: project.examName,
-        examDate: project.examDate,
-        subject: project.subject,
+        examId: exam.id,
+        examName: exam.examName,
+        examDate: exam.examDate,
+        subject: exam.subject,
         totalScore,
         maxScore,
         scoredCount,

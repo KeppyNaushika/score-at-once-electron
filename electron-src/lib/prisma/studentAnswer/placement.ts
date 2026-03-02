@@ -14,13 +14,13 @@ export async function updateStudentAnswerPlacement(
   _pageNumber: number
 ) {
   try {
-    // まず現在の答案情報を取得してprojectIdを確認
+    // まず現在の答案情報を取得してexamIdを確認
     const currentAnswerSheet = await prisma.studentAnswerImage.findUnique({
       where: { id: answerSheetId },
       select: {
-        projectPage: {
+        examPage: {
           select: {
-            projectId: true,
+            examId: true,
           },
         },
       },
@@ -47,15 +47,15 @@ export async function updateStudentAnswerPlacement(
       include: {
         student: {
           include: {
-            projectStudents: {
-              where: { projectId: currentAnswerSheet.projectPage.projectId },
+            examStudents: {
+              where: { examId: currentAnswerSheet.examPage.examId },
               select: { customOrder: true },
             },
           },
         },
-        projectPage: {
+        examPage: {
           include: {
-            project: true,
+            exam: true,
           },
         },
       },
@@ -88,10 +88,10 @@ export async function swapStudentAnswerPlacements(
           where: { id: answerSheetId1 },
           select: {
             studentId: true,
-            projectPage: {
+            examPage: {
               select: {
                 pageNumber: true,
-                projectId: true,
+                examId: true,
               },
             },
           },
@@ -100,10 +100,10 @@ export async function swapStudentAnswerPlacements(
           where: { id: answerSheetId2 },
           select: {
             studentId: true,
-            projectPage: {
+            examPage: {
               select: {
                 pageNumber: true,
-                projectId: true,
+                examId: true,
               },
             },
           },
@@ -115,7 +115,7 @@ export async function swapStudentAnswerPlacements(
       }
 
       // StudentAnswerImageのstudentIdを交換
-      // @@unique([projectPageId, studentId])制約回避のため一時ID方式で3段階更新
+      // @@unique([examPageId, studentId])制約回避のため一時ID方式で3段階更新
       const tempStudentId = `__TEMP_SWAP_${Date.now()}`
 
       // Step 1: file_1 → 一時ID（制約衝突を回避）
@@ -143,15 +143,15 @@ export async function swapStudentAnswerPlacements(
           include: {
             student: {
               include: {
-                projectStudents: {
-                  where: { projectId: answerSheet1.projectPage.projectId },
+                examStudents: {
+                  where: { examId: answerSheet1.examPage.examId },
                   select: { customOrder: true },
                 },
               },
             },
-            projectPage: {
+            examPage: {
               include: {
-                project: true,
+                exam: true,
               },
             },
           },
@@ -161,15 +161,15 @@ export async function swapStudentAnswerPlacements(
           include: {
             student: {
               include: {
-                projectStudents: {
-                  where: { projectId: answerSheet2.projectPage.projectId },
+                examStudents: {
+                  where: { examId: answerSheet2.examPage.examId },
                   select: { customOrder: true },
                 },
               },
             },
-            projectPage: {
+            examPage: {
               include: {
-                project: true,
+                exam: true,
               },
             },
           },

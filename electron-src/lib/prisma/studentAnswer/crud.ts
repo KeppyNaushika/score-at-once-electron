@@ -16,7 +16,7 @@ import prisma from "../client"
  * 答案画像のアップロード
  */
 export async function uploadStudentAnswers(
-  projectId: string,
+  examId: string,
   filesData: {
     name: string
     type: string
@@ -27,10 +27,10 @@ export async function uploadStudentAnswers(
   }[]
 ) {
   try {
-    const projectDir = getAnswerSheetsDirectory(projectId)
+    const examDir = getAnswerSheetsDirectory(examId)
 
-    // プロジェクトディレクトリを作成
-    await fs.mkdir(projectDir, { recursive: true })
+    // 試験ディレクトリを作成
+    await fs.mkdir(examDir, { recursive: true })
 
     const uploadedSheets = []
 
@@ -40,18 +40,18 @@ export async function uploadStudentAnswers(
         throw new Error(`Student ID is required for file: ${fileData.name}`)
       }
 
-      // Find or create the appropriate ProjectPage for this pageNumber
-      let projectPage = await prisma.projectPage.findFirst({
+      // Find or create the appropriate ExamPage for this pageNumber
+      let examPage = await prisma.examPage.findFirst({
         where: {
-          projectId: projectId,
+          examId: examId,
           pageNumber: fileData.pageNumber || 1,
         },
       })
 
-      if (!projectPage) {
-        projectPage = await prisma.projectPage.create({
+      if (!examPage) {
+        examPage = await prisma.examPage.create({
           data: {
-            projectId: projectId,
+            examId: examId,
             pageNumber: fileData.pageNumber || 1,
           },
         })
@@ -60,7 +60,7 @@ export async function uploadStudentAnswers(
       // 既存レコードの確認
       const existingRecord = await prisma.studentAnswerImage.findFirst({
         where: {
-          projectPageId: projectPage.id,
+          examPageId: examPage.id,
           studentId: fileData.studentId,
         },
       })
@@ -69,7 +69,7 @@ export async function uploadStudentAnswers(
       const timestamp = Date.now()
       const sanitizedName = fileData.name.replace(/[^a-zA-Z0-9\-_.]/g, "_")
       const fileName = `${timestamp}_${sanitizedName}`
-      const filePath = path.join(projectDir, fileName)
+      const filePath = path.join(examDir, fileName)
       const relativePath = getRelativePathFromData(filePath)
 
       if (existingRecord) {
@@ -107,7 +107,7 @@ export async function uploadStudentAnswers(
         // 新規作成
         const answerSheet = await prisma.studentAnswerImage.create({
           data: {
-            projectPageId: projectPage.id,
+            examPageId: examPage.id,
             studentId: fileData.studentId,
             imagePath: relativePath,
           },
@@ -131,34 +131,34 @@ export async function uploadStudentAnswers(
 }
 
 /**
- * プロジェクトの答案一覧を取得
- * Prismaの型をそのまま返す（StudentAnswerImageWithProjectStudents互換）
+ * 試験の答案一覧を取得
+ * Prismaの型をそのまま返す（StudentAnswerImageWithExamStudents互換）
  */
-export async function getStudentAnswersByProjectId(projectId: string) {
+export async function getStudentAnswersByExamId(examId: string) {
   try {
     const studentAnswerImages = await prisma.studentAnswerImage.findMany({
       where: {
-        projectPage: {
-          projectId: projectId,
+        examPage: {
+          examId: examId,
         },
       },
       include: {
         student: {
           include: {
-            projectStudents: {
-              where: { projectId },
+            examStudents: {
+              where: { examId },
             },
           },
         },
-        projectPage: true,
+        examPage: true,
       },
-      orderBy: [{ studentId: "asc" }, { projectPage: { pageNumber: "asc" } }],
+      orderBy: [{ studentId: "asc" }, { examPage: { pageNumber: "asc" } }],
     })
 
     // 重複除去フォールバック（@@unique制約適用前のデータ対策）
     const seen = new Map<string, (typeof studentAnswerImages)[0]>()
     for (const img of studentAnswerImages) {
-      const key = `${img.studentId}-${img.projectPageId}`
+      const key = `${img.studentId}-${img.examPageId}`
       const existing = seen.get(key)
       if (!existing || new Date(img.updatedAt) > new Date(existing.updatedAt)) {
         seen.set(key, img)
@@ -229,9 +229,9 @@ export async function associateStudentAnswerWithStudent(
       data: { studentId },
       include: {
         student: true,
-        projectPage: {
+        examPage: {
           include: {
-            project: true,
+            exam: true,
           },
         },
       },
@@ -259,11 +259,11 @@ export async function getStudentAnswerById(answerSheetId: string) {
       where: { id: answerSheetId },
       include: {
         student: true,
-        projectPage: {
+        examPage: {
           include: {
-            project: {
+            exam: {
               include: {
-                projectPages: {
+                examPages: {
                   include: {
                     cropRegions: true,
                   },

@@ -13,12 +13,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import type { UseImportWizardReturn } from "@/hooks/import/useImportWizard"
-import type { ArchiveDataCounts } from "@/types/projectArchive.types"
+import type { ArchiveDataCounts } from "@/types/examArchive.types"
 
 /** idIntegrationImport の戻り値の型 */
 interface IdIntegrationImportResult {
   success: boolean
-  projectId?: string
+  examId?: string
   summary?: {
     created: ArchiveDataCounts
     updated: ArchiveDataCounts
@@ -31,7 +31,7 @@ interface IdIntegrationImportResult {
 
 interface ExecuteStepProps {
   wizard: UseImportWizardReturn
-  onComplete?: (projectId: string) => void
+  onComplete?: (examId: string) => void
   onClose: () => void
 }
 
@@ -59,8 +59,8 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
   }, [executeImport])
 
   const handleComplete = () => {
-    if (result?.success && result.projectId && onComplete) {
-      onComplete(result.projectId)
+    if (result?.success && result.examId && onComplete) {
+      onComplete(result.examId)
     }
     onClose()
   }
@@ -95,7 +95,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
             インポートが完了しました
           </h3>
           <p className="text-muted-foreground">
-            プロジェクトが正常にインポートされました。
+            試験が正常にインポートされました。
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export function ExecuteStep({ wizard, onComplete, onClose }: ExecuteStepProps) {
         )}
 
         <Button onClick={handleComplete} size="lg" className="gap-2 px-8">
-          プロジェクトを開く
+          試験を開く
           <ArrowRight className="h-5 w-5" />
         </Button>
       </div>

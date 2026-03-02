@@ -132,7 +132,7 @@ describe("useImportWizard", () => {
       })
 
       expect(result.current.state.manifest).not.toBeNull()
-      expect(result.current.state.manifest?.projectName).toBe("テスト試験")
+      expect(result.current.state.manifest?.examName).toBe("テスト試験")
     })
 
     it("IW-13: ファイル選択成功時にfileOverviewDataが設定される", async () => {
@@ -764,8 +764,8 @@ describe("useImportWizard", () => {
 
       expect(importResult).not.toBeNull()
       expect((importResult as { success: boolean }).success).toBe(true)
-      expect((importResult as { projectId: string }).projectId).toBe(
-        "imported-project-id"
+      expect((importResult as { examId: string }).examId).toBe(
+        "imported-exam-id"
       )
     })
 
@@ -849,7 +849,7 @@ describe("useImportWizard", () => {
       await act(async () => {
         resolveImport!({
           success: true,
-          projectId: "test",
+          examId: "test",
           summary: {},
         })
       })

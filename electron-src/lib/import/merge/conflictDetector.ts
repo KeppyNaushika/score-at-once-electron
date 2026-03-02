@@ -14,8 +14,8 @@ import type {
   MatchingCandidate,
   MatchingConfig,
   MatchingSummary,
-} from "../../../../types/projectArchive.types"
-import type { ExtractedArchiveData } from "../project-archive/archiveExtractor"
+} from "../../../../types/examArchive.types"
+import type { ExtractedArchiveData } from "../exam-archive/archiveExtractor"
 import { type MatchResult, performAllMatching } from "./matcher"
 
 // =============================================================================
@@ -50,7 +50,7 @@ const FIELD_LABELS: Record<ConflictCategory, Record<string, string>> = {
   SubtotalGroup: {
     name: "グループ名",
   },
-  Project: {
+  Exam: {
     examName: "試験名",
     examDate: "試験日",
     subject: "教科",
@@ -403,7 +403,7 @@ export async function detectAllConflicts(
       idMapping: createIdMapping(matchResults.subtotalGroups),
     })
 
-    // プロジェクトは常に新規作成モードのみ（この関数では検出しない）
+    // 試験は常に新規作成モードのみ（この関数では検出しない）
     // QuestionScoreとDrawingAnnotationは生徒・設問のマッチング後に検出
 
     return {

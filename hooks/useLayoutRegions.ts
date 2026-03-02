@@ -22,7 +22,7 @@ export interface CropRegion {
 // 後方互換性のためのエイリアス
 export type LayoutRegion = CropRegion
 
-export function useCropRegions(projectId?: string) {
+export function useCropRegions(examId?: string) {
   const [regions, setRegions] = useState<CropRegion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -31,17 +31,15 @@ export function useCropRegions(projectId?: string) {
 
   const loadRegions = useCallback(
     async (masterImageId?: string) => {
-      if (!projectId) return
+      if (!examId) return
 
       setIsLoading(true)
       try {
         const allRegions =
-          await window.electronAPI.getCropRegionsByProjectId(projectId)
+          await window.electronAPI.getCropRegionsByExamId(examId)
 
         const filteredRegions = masterImageId
-          ? allRegions.filter(
-              (region) => region.projectPage?.id === masterImageId
-            )
+          ? allRegions.filter((region) => region.examPage?.id === masterImageId)
           : allRegions
 
         const formattedRegions: CropRegion[] = filteredRegions.map(
@@ -55,7 +53,7 @@ export function useCropRegions(projectId?: string) {
             label: region.label || "",
             points: region.points ? String(region.points) : null,
             orderIndex: region.orderIndex ?? 1,
-            masterImageId: region.projectPage?.id || "",
+            masterImageId: region.examPage?.id || "",
           })
         )
 
@@ -68,12 +66,12 @@ export function useCropRegions(projectId?: string) {
         setIsLoading(false)
       }
     },
-    [projectId]
+    [examId]
   )
 
   const saveRegions = useCallback(
     async (regionsToSave: CropRegion[]) => {
-      if (!projectId || isSavingRef.current) return
+      if (!examId || isSavingRef.current) return
 
       isSavingRef.current = true
       setIsSaving(true)
@@ -82,7 +80,7 @@ export function useCropRegions(projectId?: string) {
           if (!region.masterImageId) return null
 
           const regionData = {
-            projectPageId: region.masterImageId, // masterImageId is actually projectPageId in the new schema
+            examPageId: region.masterImageId, // masterImageId is actually examPageId in the new schema
             type: region.type as CropRegionAreaType,
             x: region.x,
             y: region.y,
@@ -128,7 +126,7 @@ export function useCropRegions(projectId?: string) {
                 region.orderIndex !== undefined && region.orderIndex !== null
                   ? region.orderIndex
                   : null,
-              masterImageId: region.projectPage?.id || "",
+              masterImageId: region.examPage?.id || "",
             }))
 
           setRegions(formattedRegions)
@@ -143,7 +141,7 @@ export function useCropRegions(projectId?: string) {
         isSavingRef.current = false
       }
     },
-    [projectId]
+    [examId]
   )
 
   const autoSaveRegions = useCallback(

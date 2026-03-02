@@ -4,14 +4,14 @@
 
 import type {
   ArchiveBoundariesData,
-  ArchiveGradeProjectData,
+  ArchiveGradeData,
   ArchiveManualScoresData,
   GradeArchiveData,
   GradeArchiveManifest,
 } from "../../../../types/gradeArchive.types"
 
 // archiver で作った ZIP を展開するために unzipper を使用
-// プロジェクトに unzipper がない場合は adm-zip を使用
+// 試験に unzipper がない場合は adm-zip を使用
 async function extractZip(
   archivePath: string
 ): Promise<Record<string, string>> {
@@ -41,8 +41,8 @@ export async function extractGradeArchive(
     }
 
     const manifest: GradeArchiveManifest = JSON.parse(manifestJson)
-    const gradeProjectData: ArchiveGradeProjectData = JSON.parse(
-      files["grade-project.json"] ?? "{}"
+    const gradeData: ArchiveGradeData = JSON.parse(
+      files["grade-exam.json"] ?? "{}"
     )
     const manualScoresData: ArchiveManualScoresData = JSON.parse(
       files["manual-scores.json"] ?? '{"manualScores":[]}'
@@ -53,7 +53,7 @@ export async function extractGradeArchive(
 
     return {
       success: true,
-      data: { manifest, gradeProjectData, manualScoresData, boundariesData },
+      data: { manifest, gradeData, manualScoresData, boundariesData },
     }
   } catch (error) {
     console.error("Error extracting grade archive:", error)

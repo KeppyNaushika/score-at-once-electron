@@ -2,23 +2,22 @@
 
 import { useState } from "react"
 
-type CreateProjectModal = {
+type CreateExamModal = {
   isOpen: boolean
   open: () => void
   close: () => void
 }
 
 export const useFileActions = () => {
-  const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
-    useState(false)
+  const [isCreateExamModalOpen, setIsCreateExamModalOpen] = useState(false)
 
-  const createProjectModal: CreateProjectModal = {
-    isOpen: isCreateProjectModalOpen,
-    open: () => setIsCreateProjectModalOpen(true),
-    close: () => setIsCreateProjectModalOpen(false),
+  const createExamModal: CreateExamModal = {
+    isOpen: isCreateExamModalOpen,
+    open: () => setIsCreateExamModalOpen(true),
+    close: () => setIsCreateExamModalOpen(false),
   }
 
   return {
-    createProjectModal,
+    createExamModal,
   }
 }

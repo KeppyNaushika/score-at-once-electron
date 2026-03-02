@@ -1,7 +1,7 @@
 // Excel・PDF出力で共通的に使用される型定義
 
 export interface ExportGradingDataOptions {
-  projectId: string
+  examId: string
   selectedStudentIds: string[]
   outputPath?: string
   forceExport?: boolean // 警告を無視して強制実行

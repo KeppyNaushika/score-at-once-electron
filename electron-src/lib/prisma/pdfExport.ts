@@ -7,15 +7,12 @@ import { PageSizes, PDFDocument } from "pdf-lib"
 
 import { getAbsolutePathFromData } from "../dataManager"
 import { calculateSubtotalScoreForStudent } from "../shared/calculations/subtotalCalculator"
-import { getCropRegionsByProjectId } from "./cropRegion"
+import { getCropRegionsByExamId } from "./cropRegion"
 import { getDrawingAnnotationsByQuestionScore } from "./drawingAnnotation"
-import { getProjectById } from "./project"
-import { getStudentsForProject } from "./projectStudent"
-import {
-  calculateActualScore,
-  getQuestionScoresForProject,
-} from "./questionScore"
-import { getStudentAnswersByProjectId } from "./studentAnswer"
+import { getExamById } from "./exam"
+import { getStudentsForExam } from "./examStudent"
+import { calculateActualScore, getQuestionScoresForExam } from "./questionScore"
+import { getStudentAnswersByExamId } from "./studentAnswer"
 
 /**
  * ファイル名として安全でない文字を置換する
@@ -27,14 +24,14 @@ function sanitizeFileName(name: string): string {
 }
 
 /**
- * getStudentAnswersByProjectIdの戻り値の型
+ * getStudentAnswersByExamIdの戻り値の型
  * studentのフィールドはPrismaのスキーマに合わせてnullableを許容
  */
 interface StudentAnswerData {
   id: string
   studentId: string | null
   pageNumber: number
-  projectPageId: string
+  examPageId: string
   imagePath: string
   originalImagePath: string
   isAbsent: boolean
@@ -45,9 +42,9 @@ interface StudentAnswerData {
     lastNameKana: string | null
     firstNameKana: string | null
     studentNumber: string | null
-    projectStudents: Array<{ customOrder: number | null; status: string }>
+    examStudents: Array<{ customOrder: number | null; status: string }>
   } | null
-  projectId: string
+  examId: string
   status: "ready"
 }
 
@@ -128,7 +125,7 @@ export interface PdfExportPageData {
 
 export interface PdfExportData {
   success: boolean
-  projectName?: string
+  examName?: string
   pages?: PdfExportPageData[]
   error?: string
 }
@@ -138,31 +135,31 @@ export interface PdfExportData {
  * レンダラー側でCanvas描画を行うためのデータを提供
  */
 export async function getPdfExportData(options: {
-  projectId: string
+  examId: string
   selectedStudentIds: string[]
 }): Promise<PdfExportData> {
-  const { projectId, selectedStudentIds } = options
+  const { examId, selectedStudentIds } = options
 
   try {
-    // プロジェクト情報を取得
-    const project = await getProjectById(projectId)
-    if (!project) {
-      return { success: false, error: "プロジェクトが見つかりません" }
+    // 試験情報を取得
+    const exam = await getExamById(examId)
+    if (!exam) {
+      return { success: false, error: "試験が見つかりません" }
     }
 
     // 採点領域を取得
-    const cropRegions = await getCropRegionsByProjectId(projectId)
+    const cropRegions = await getCropRegionsByExamId(examId)
 
     // 採点スコアを取得
-    const scoresResult = await getQuestionScoresForProject(projectId)
+    const scoresResult = await getQuestionScoresForExam(examId)
     const allScores = scoresResult.scores || []
 
     // 生徒情報を取得
-    const studentsResult = await getStudentsForProject(projectId)
+    const studentsResult = await getStudentsForExam(examId)
     const allStudents = studentsResult.students || []
 
     // 答案画像を取得
-    const studentAnswersResult = await getStudentAnswersByProjectId(projectId)
+    const studentAnswersResult = await getStudentAnswersByExamId(examId)
     if (
       !studentAnswersResult.success ||
       !studentAnswersResult.studentAnswerImages
@@ -174,12 +171,11 @@ export async function getPdfExportData(options: {
       studentAnswersResult.studentAnswerImages.map((img) => ({
         id: img.id,
         studentId: img.studentId,
-        pageNumber: img.projectPage.pageNumber,
-        projectPageId: img.projectPageId,
+        pageNumber: img.examPage.pageNumber,
+        examPageId: img.examPageId,
         imagePath: img.imagePath,
         originalImagePath: img.imagePath,
-        isAbsent:
-          img.student?.projectStudents?.[0]?.status === "ABSENT" || false,
+        isAbsent: img.student?.examStudents?.[0]?.status === "ABSENT" || false,
         student: img.student
           ? {
               id: img.student.id,
@@ -188,10 +184,10 @@ export async function getPdfExportData(options: {
               lastNameKana: img.student.lastNameKana,
               firstNameKana: img.student.firstNameKana,
               studentNumber: img.student.studentNumber,
-              projectStudents: img.student.projectStudents,
+              examStudents: img.student.examStudents,
             }
           : null,
-        projectId: img.projectPage.projectId,
+        examId: img.examPage.examId,
         status: "ready" as const,
       }))
 
@@ -222,17 +218,15 @@ export async function getPdfExportData(options: {
 
         // このページの採点領域を取得
         const pageRegions = cropRegions.filter(
-          (cr) => cr.projectPage?.pageNumber === pageNumber
+          (cr) => cr.examPage?.pageNumber === pageNumber
         )
 
         // 採点データを構築
         const scoringData = pageRegions
           .map((region) => {
-            // projectPageは必ず存在する（getCropRegionsByProjectIdでincludeしている）
-            if (!region.projectPage) {
-              console.warn(
-                `CropRegion ${region.id} has no projectPage, skipping`
-              )
+            // examPageは必ず存在する（getCropRegionsByExamIdでincludeしている）
+            if (!region.examPage) {
+              console.warn(`CropRegion ${region.id} has no examPage, skipping`)
               return null
             }
             const score = allScores.find(
@@ -253,7 +247,7 @@ export async function getPdfExportData(options: {
                 height: region.height,
                 label: region.label,
                 maxScore: region.points !== null ? Number(region.points) : null,
-                pageNumber: region.projectPage.pageNumber,
+                pageNumber: region.examPage.pageNumber,
               },
             }
           })
@@ -318,7 +312,7 @@ export async function getPdfExportData(options: {
         // 小計点データを計算
         const subtotalData: PdfExportPageData["subtotalData"] = []
         for (const subtotalRegion of subtotalRegions) {
-          if (!subtotalRegion.projectPage) continue
+          if (!subtotalRegion.examPage) continue
 
           // 小計点を計算
           const subtotalResult = await calculateSubtotalScoreForStudent(
@@ -344,7 +338,7 @@ export async function getPdfExportData(options: {
             y: subtotalRegion.y,
             width: subtotalRegion.width,
             height: subtotalRegion.height,
-            pageNumber: subtotalRegion.projectPage.pageNumber,
+            pageNumber: subtotalRegion.examPage.pageNumber,
           })
         }
 
@@ -388,7 +382,7 @@ export async function getPdfExportData(options: {
         const finalTotalScore = hasScoredQuestion ? totalScore : null
         const totalScoreData: PdfExportPageData["totalScoreData"] = []
         for (const totalRegion of totalScoreRegions) {
-          if (!totalRegion.projectPage) continue
+          if (!totalRegion.examPage) continue
 
           totalScoreData.push({
             regionId: totalRegion.id,
@@ -398,7 +392,7 @@ export async function getPdfExportData(options: {
             y: totalRegion.y,
             width: totalRegion.width,
             height: totalRegion.height,
-            pageNumber: totalRegion.projectPage.pageNumber,
+            pageNumber: totalRegion.examPage.pageNumber,
           })
         }
 
@@ -429,7 +423,7 @@ export async function getPdfExportData(options: {
 
     return {
       success: true,
-      projectName: project.examName,
+      examName: exam.examName,
       pages,
     }
   } catch (error) {
@@ -445,7 +439,7 @@ export async function getPdfExportData(options: {
  * Canvas描画済み画像からPDFを作成（バッチ処理版）
  */
 export async function createPdfFromRenderedImages(options: {
-  projectId: string
+  examId: string
   renderedPages: Array<{
     studentId: string
     pageNumber: number
@@ -463,7 +457,7 @@ export async function createPdfFromRenderedImages(options: {
   }) => void
 }): Promise<{ success: boolean; outputPath?: string; error?: string }> {
   const {
-    projectId,
+    examId,
     renderedPages,
     pdfOrientation = "portrait",
     outputPath: providedOutputPath,
@@ -471,17 +465,17 @@ export async function createPdfFromRenderedImages(options: {
   } = options
 
   try {
-    // プロジェクト情報を取得
-    const project = await getProjectById(projectId)
-    if (!project) {
-      return { success: false, error: "プロジェクトが見つかりません" }
+    // 試験情報を取得
+    const exam = await getExamById(examId)
+    if (!exam) {
+      return { success: false, error: "試験が見つかりません" }
     }
 
     // 保存先を決定（事前に指定されている場合はダイアログをスキップ）
     let outputPath = providedOutputPath
     if (!outputPath) {
       const sanitizedExamName = sanitizeFileName(
-        project.examName || "採点済み答案"
+        exam.examName || "採点済み答案"
       )
       const { filePath, canceled } = await dialog.showSaveDialog({
         title: "採点済み答案PDFの保存先",

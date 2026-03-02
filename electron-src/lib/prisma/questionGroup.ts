@@ -37,11 +37,11 @@ export const deleteQuestionGroup = async (id: string) => {
   })
 }
 
-// プロジェクトIDで QuestionGroup を取得
-export const getQuestionGroupsByProjectId = async (projectId: string) => {
-  // ProjectSubtotalGroup経由でSubtotalGroupを取得
-  const projectSubtotalGroups = await prisma.projectSubtotalGroup.findMany({
-    where: { projectId },
+// 試験IDで QuestionGroup を取得
+export const getQuestionGroupsByExamId = async (examId: string) => {
+  // ExamSubtotalGroup経由でSubtotalGroupを取得
+  const examSubtotalGroups = await prisma.examSubtotalGroup.findMany({
+    where: { examId },
     include: {
       subtotalGroup: {
         include: {
@@ -59,10 +59,10 @@ export const getQuestionGroupsByProjectId = async (projectId: string) => {
   })
 
   // SubtotalGroupのリストを返す（互換性のため）
-  return projectSubtotalGroups.map((psg) => ({
+  return examSubtotalGroups.map((psg) => ({
     ...psg.subtotalGroup,
     items: psg.subtotalGroup.subtotals, // 互換性のためitemsという名前でsubtotalsを公開
-    projectId, // 互換性のためprojectIdを追加
+    examId, // 互換性のためexamIdを追加
   }))
 }
 
@@ -76,9 +76,9 @@ export const getQuestionGroupById = async (id: string) => {
           order: "asc",
         },
       },
-      projectSubtotalGroups: {
+      examSubtotalGroups: {
         include: {
-          project: true,
+          exam: true,
         },
       },
     },
@@ -88,11 +88,11 @@ export const getQuestionGroupById = async (id: string) => {
     return null
   }
 
-  // 互換性のためitems, projectを含む形式で返す
+  // 互換性のためitems, examを含む形式で返す
   return {
     ...subtotalGroup,
     items: subtotalGroup.subtotals,
-    project: subtotalGroup.projectSubtotalGroups[0]?.project || null,
+    exam: subtotalGroup.examSubtotalGroups[0]?.exam || null,
   }
 }
 
@@ -110,14 +110,14 @@ export type QuestionGroupWithItems = {
     createdAt: Date
     updatedAt: Date
   }>
-  project?: {
+  exam?: {
     id: string
     name: string
     createdAt: Date
     updatedAt: Date
     tag?: string | null
   } | null
-  projectId?: string
+  examId?: string
 }
 
 export type QuestionGroupPayload = SubtotalGroup

@@ -4,9 +4,9 @@
 
 import type { CropRegion, QuestionScore } from "@prisma/client"
 
-import { getCropRegionsByProjectId } from "../../prisma/cropRegion"
-import { getQuestionScoresForProject } from "../../prisma/questionScore"
-import { getActiveSubtotalGroupsForProject } from "../../prisma/subtotalGroup"
+import { getCropRegionsByExamId } from "../../prisma/cropRegion"
+import { getQuestionScoresForExam } from "../../prisma/questionScore"
+import { getActiveSubtotalGroupsForExam } from "../../prisma/subtotalGroup"
 import {
   calculateSubtotalScoreBySubtotalId,
   type QuestionScoreData,
@@ -36,23 +36,20 @@ import type {
 export async function fetchIndividualReportData(
   options: GetIndividualReportDataOptions
 ): Promise<GetIndividualReportDataResult> {
-  const { projectId, selectedStudentIds, options: reportOptions } = options
+  const { examId, selectedStudentIds, options: reportOptions } = options
 
   try {
     // 全生徒のデータを取得（平均計算等に必要）
-    const allDataResult = await fetchExportData(projectId, [])
-    if (!allDataResult.success || !allDataResult.project) {
+    const allDataResult = await fetchExportData(examId, [])
+    if (!allDataResult.success || !allDataResult.exam) {
       return {
         success: false,
-        error: allDataResult.error || "プロジェクトデータの取得に失敗しました",
+        error: allDataResult.error || "試験データの取得に失敗しました",
       }
     }
 
     // 選択された生徒のデータを取得
-    const selectedDataResult = await fetchExportData(
-      projectId,
-      selectedStudentIds
-    )
+    const selectedDataResult = await fetchExportData(examId, selectedStudentIds)
     if (!selectedDataResult.success || !selectedDataResult.scoringData) {
       return {
         success: false,
@@ -60,26 +57,26 @@ export async function fetchIndividualReportData(
       }
     }
 
-    const project = allDataResult.project
+    const exam = allDataResult.exam
     const allScoringDataFromExcel = allDataResult.scoringData || []
     const selectedScoringDataFromExcel = selectedDataResult.scoringData || []
 
     // 試験情報
     const examInfo: ExamInfoForReport = {
-      examName: project.examName,
-      examDate: project.examDate,
-      subject: project.subject,
+      examName: exam.examName,
+      examDate: exam.examDate,
+      subject: exam.subject,
     }
 
-    // プロジェクトのactiveなSubtotalGroupsとSubtotalsを取得
-    const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(projectId)
+    // 試験のactiveなSubtotalGroupsとSubtotalsを取得
+    const subtotalGroupsData = await getSubtotalGroupsWithSubtotals(examId)
 
     // CropRegionsと採点データを取得
-    const cropRegions = await getCropRegionsByProjectId(projectId)
+    const cropRegions = await getCropRegionsByExamId(examId)
     const questionRegions = cropRegions.filter(
       (r) => r.type === "QUESTION_ANSWER"
     )
-    const questionScoresResult = await getQuestionScoresForProject(projectId)
+    const questionScoresResult = await getQuestionScoresForExam(examId)
     const allQuestionScores = questionScoresResult.success
       ? questionScoresResult.scores || []
       : []
@@ -194,14 +191,14 @@ interface SubtotalGroupData {
 }
 
 async function getSubtotalGroupsWithSubtotals(
-  projectId: string
+  examId: string
 ): Promise<SubtotalGroupData[]> {
-  const result = await getActiveSubtotalGroupsForProject(projectId)
-  if (!result.success || !result.projectSubtotalGroups) {
+  const result = await getActiveSubtotalGroupsForExam(examId)
+  if (!result.success || !result.examSubtotalGroups) {
     return []
   }
 
-  return result.projectSubtotalGroups.map((psg) => ({
+  return result.examSubtotalGroups.map((psg) => ({
     groupId: psg.subtotalGroup.id,
     groupName: psg.subtotalGroup.name,
     subtotals: psg.subtotalGroup.subtotals.map((s) => ({
@@ -294,19 +291,15 @@ function collectWarnings(
 }
 
 /**
- * プロジェクトの小計点グループ一覧を取得（個人成績表用）
+ * 試験の小計点グループ一覧を取得（個人成績表用）
  * CropRegionに依存せず、Subtotal単位で管理
  */
 export async function fetchSubtotalGroupsForReport(
-  projectId: string
+  examId: string
 ): Promise<SubtotalGroupsForReportResult> {
   try {
-    const activeGroupsResult =
-      await getActiveSubtotalGroupsForProject(projectId)
-    if (
-      !activeGroupsResult.success ||
-      !activeGroupsResult.projectSubtotalGroups
-    ) {
+    const activeGroupsResult = await getActiveSubtotalGroupsForExam(examId)
+    if (!activeGroupsResult.success || !activeGroupsResult.examSubtotalGroups) {
       return {
         success: false,
         error: "小計点グループの取得に失敗しました",
@@ -314,7 +307,7 @@ export async function fetchSubtotalGroupsForReport(
     }
 
     const subtotalGroups: SubtotalGroupInfo[] =
-      activeGroupsResult.projectSubtotalGroups.map((psg) => ({
+      activeGroupsResult.examSubtotalGroups.map((psg) => ({
         id: psg.subtotalGroup.id,
         name: psg.subtotalGroup.name,
         subtotalIds: psg.subtotalGroup.subtotals.map((s) => s.id),

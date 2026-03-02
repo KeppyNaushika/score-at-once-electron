@@ -49,7 +49,7 @@ describe("executeIdChanges", () => {
     it("新しいIDでレコードを作成し、FK参照を更新し、古いレコードを削除する", async () => {
       const existingGroupId = generateId()
       const newGroupId = generateId()
-      const projectId = generateId()
+      const examId = generateId()
 
       // 小計グループを作成
       await prisma.subtotalGroup.create({
@@ -59,17 +59,17 @@ describe("executeIdChanges", () => {
         },
       })
 
-      // プロジェクトを作成
-      await prisma.project.create({
-        data: { id: projectId, examName: "テスト" },
+      // 試験を作成
+      await prisma.exam.create({
+        data: { id: examId, examName: "テスト" },
       })
 
-      // ProjectSubtotalGroup
+      // ExamSubtotalGroup
       const psgId = generateId()
-      await prisma.projectSubtotalGroup.create({
+      await prisma.examSubtotalGroup.create({
         data: {
           id: psgId,
-          projectId,
+          examId,
           subtotalGroupId: existingGroupId,
         },
       })
@@ -115,7 +115,7 @@ describe("executeIdChanges", () => {
       expect(oldGroup).toBeNull()
 
       // FK参照が更新されていること
-      const psg = await prisma.projectSubtotalGroup.findUnique({
+      const psg = await prisma.examSubtotalGroup.findUnique({
         where: { id: psgId },
       })
       expect(psg!.subtotalGroupId).toBe(newGroupId)
@@ -165,37 +165,37 @@ describe("executeIdChanges", () => {
       expect(idMappings.subtotalGroup[importId2]).toBe(newGroupId)
     })
 
-    it("複数のFK参照（ProjectSubtotalGroup + Subtotal）が全て更新される", async () => {
+    it("複数のFK参照（ExamSubtotalGroup + Subtotal）が全て更新される", async () => {
       const existingGroupId = generateId()
       const newGroupId = generateId()
-      const project1Id = generateId()
-      const project2Id = generateId()
+      const exam1Id = generateId()
+      const exam2Id = generateId()
 
       await prisma.subtotalGroup.create({
         data: { id: existingGroupId, name: "思考・判断" },
       })
 
-      await prisma.project.create({
-        data: { id: project1Id, examName: "テスト1" },
+      await prisma.exam.create({
+        data: { id: exam1Id, examName: "テスト1" },
       })
-      await prisma.project.create({
-        data: { id: project2Id, examName: "テスト2" },
+      await prisma.exam.create({
+        data: { id: exam2Id, examName: "テスト2" },
       })
 
-      // 複数のProjectSubtotalGroup
+      // 複数のExamSubtotalGroup
       const psg1Id = generateId()
       const psg2Id = generateId()
-      await prisma.projectSubtotalGroup.create({
+      await prisma.examSubtotalGroup.create({
         data: {
           id: psg1Id,
-          projectId: project1Id,
+          examId: exam1Id,
           subtotalGroupId: existingGroupId,
         },
       })
-      await prisma.projectSubtotalGroup.create({
+      await prisma.examSubtotalGroup.create({
         data: {
           id: psg2Id,
-          projectId: project2Id,
+          examId: exam2Id,
           subtotalGroupId: existingGroupId,
         },
       })
@@ -236,10 +236,10 @@ describe("executeIdChanges", () => {
       })
 
       // 全てのFK参照が更新されていること
-      const psg1 = await prisma.projectSubtotalGroup.findUnique({
+      const psg1 = await prisma.examSubtotalGroup.findUnique({
         where: { id: psg1Id },
       })
-      const psg2 = await prisma.projectSubtotalGroup.findUnique({
+      const psg2 = await prisma.examSubtotalGroup.findUnique({
         where: { id: psg2Id },
       })
       expect(psg1!.subtotalGroupId).toBe(newGroupId)
@@ -321,7 +321,7 @@ describe("executeIdChanges", () => {
       const existingClassId = generateId()
       const newClassId = generateId()
       const studentId = generateId()
-      const projectId = generateId()
+      const examId = generateId()
 
       await prisma.class.create({
         data: {
@@ -344,8 +344,8 @@ describe("executeIdChanges", () => {
         },
       })
 
-      await prisma.project.create({
-        data: { id: projectId, examName: "期末テスト" },
+      await prisma.exam.create({
+        data: { id: examId, examName: "期末テスト" },
       })
 
       // FK参照を作成
@@ -354,9 +354,9 @@ describe("executeIdChanges", () => {
         data: { id: membershipId, studentId, classId: existingClassId },
       })
 
-      const projectClassId = generateId()
-      await prisma.projectClass.create({
-        data: { id: projectClassId, projectId, classId: existingClassId },
+      const examClassId = generateId()
+      await prisma.examClass.create({
+        data: { id: examClassId, examId, classId: existingClassId },
       })
 
       const targets: IdChangeTarget[] = [
@@ -390,10 +390,10 @@ describe("executeIdChanges", () => {
       })
       expect(membership!.classId).toBe(newClassId)
 
-      const projectClass = await prisma.projectClass.findFirst({
-        where: { id: projectClassId },
+      const examClass = await prisma.examClass.findFirst({
+        where: { id: examClassId },
       })
-      expect(projectClass!.classId).toBe(newClassId)
+      expect(examClass!.classId).toBe(newClassId)
 
       // マッピングが更新されていること
       expect(idMappings.class["import-class-1"]).toBe(newClassId)

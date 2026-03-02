@@ -65,7 +65,7 @@ app.on("ready", async () => {
     protocol.handle("appimg", (request) => {
       try {
         // new URL() を使わず文字列操作でパスを抽出
-        // appimg://projects/... や appimg:///projects/... の両方に対応
+        // appimg://exams/... や appimg:///exams/... の両方に対応
         let filePath = decodeURIComponent(
           request.url.replace(/^appimg:\/\/\/?/, "")
         )

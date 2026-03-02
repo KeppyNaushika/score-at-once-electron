@@ -1,0 +1,469 @@
+/**
+ * データ作成モジュール
+ *
+ * インポートデータをデータベースに作成
+ */
+
+import { randomUUID } from "crypto"
+
+import type { ArchiveDataCounts } from "../../../../types/examArchive.types"
+import prisma from "../../prisma/client"
+import type { ExtractedArchiveData } from "./archiveExtractor"
+import type { IdMappings } from "./idRemapper"
+import { remapId, remapIdRequired } from "./idRemapper"
+import { copyImages, createImageRecords } from "./imageHandler"
+import {
+  generateUniqueClassName,
+  generateUniqueStudentNumber,
+} from "./uniqueNameGenerators"
+
+/**
+ * データ作成結果
+ */
+export interface DataCreationResult {
+  success: boolean
+  examId?: string
+  counts?: ArchiveDataCounts
+  warnings?: string[]
+  error?: string
+}
+
+/**
+ * 新規作成モードでデータをインポート
+ *
+ * 全てのデータを新規UUIDで作成し、参照関係を維持
+ * v0.3.0以降: userIdは現在ログインしているユーザーで上書き
+ *
+ * @param data - 展開されたアーカイブデータ
+ * @param mappings - IDマッピング
+ * @param currentUserId - 現在ログインしているユーザーID
+ * @returns 作成結果
+ */
+export async function createImportedData(
+  data: ExtractedArchiveData,
+  mappings: IdMappings,
+  currentUserId: string
+): Promise<DataCreationResult> {
+  const warnings: string[] = []
+  const newExamId = remapIdRequired(data.examData.exam.id, mappings.exam)
+
+  try {
+    // トランザクションで全データを作成
+    await prisma.$transaction(async (tx) => {
+      // 1. 生徒を作成（重複する出席番号はサフィックスを付与）
+      for (const student of data.studentsData.students) {
+        const uniqueStudentNumber = await generateUniqueStudentNumber(
+          tx,
+          student.studentNumber
+        )
+
+        if (uniqueStudentNumber !== student.studentNumber) {
+          warnings.push(
+            `生徒「${student.lastName} ${student.firstName}」の出席番号を「${student.studentNumber}」から「${uniqueStudentNumber}」に変更しました`
+          )
+        }
+
+        await tx.student.create({
+          data: {
+            id: remapIdRequired(student.id, mappings.student),
+            studentNumber: uniqueStudentNumber,
+            lastName: student.lastName,
+            firstName: student.firstName,
+            lastNameKana: student.lastNameKana,
+            firstNameKana: student.firstNameKana,
+            enrollmentYear: student.enrollmentYear,
+          },
+        })
+      }
+
+      // 2. 学級を作成（重複する名前はサフィックスを付与）
+      for (const cls of data.classesData.classes) {
+        const uniqueName = await generateUniqueClassName(tx, cls.name)
+
+        if (uniqueName !== cls.name) {
+          warnings.push(
+            `学級名を「${cls.name}」から「${uniqueName}」に変更しました`
+          )
+        }
+
+        await tx.class.create({
+          data: {
+            id: remapIdRequired(cls.id, mappings.class),
+            name: uniqueName,
+            classCode: cls.classCode,
+            grade: cls.grade,
+            description: cls.description,
+            isVisible: cls.isVisible,
+          },
+        })
+      }
+
+      // 3. 学級所属を作成
+      for (const membership of data.classesData.memberships) {
+        const newStudentId = remapId(membership.studentId, mappings.student)
+        const newClassId = remapId(membership.classId, mappings.class)
+
+        if (newStudentId && newClassId) {
+          await tx.studentClassMembership.create({
+            data: {
+              id: remapIdRequired(membership.id, mappings.membership),
+              studentId: newStudentId,
+              classId: newClassId,
+              startDate: new Date(membership.startDate),
+              endDate: membership.endDate ? new Date(membership.endDate) : null,
+              attendanceNumber: membership.attendanceNumber,
+              notes: membership.notes,
+            },
+          })
+        }
+      }
+
+      // 4. ユーザー作成をスキップ
+      // v0.3.0以降: アーカイブ内のユーザーは作成せず、現在のログインユーザーを使用
+
+      // 5. 小計グループを作成
+      for (const sg of data.subtotalsData.subtotalGroups) {
+        await tx.subtotalGroup.create({
+          data: {
+            id: remapIdRequired(sg.id, mappings.subtotalGroup),
+            name: sg.name,
+          },
+        })
+      }
+
+      // 6. 小計を作成
+      for (const s of data.subtotalsData.subtotals) {
+        await tx.subtotal.create({
+          data: {
+            id: remapIdRequired(s.id, mappings.subtotal),
+            name: s.name,
+            subtotalGroupId: remapIdRequired(
+              s.subtotalGroupId,
+              mappings.subtotalGroup
+            ),
+            order: s.order,
+          },
+        })
+      }
+
+      // 6.5. Subject/SubjectSubtotalGroupを作成 (v1.4.0+)
+      const subjectsData = data.subjectsData
+      if (subjectsData) {
+        for (const subject of subjectsData.subjects) {
+          await tx.subject.upsert({
+            where: { name: subject.name },
+            update: {},
+            create: {
+              id: remapIdRequired(subject.id, mappings.subject),
+              name: subject.name,
+            },
+          })
+        }
+
+        for (const ssg of subjectsData.subjectSubtotalGroups) {
+          const newSubjectId = remapId(ssg.subjectId, mappings.subject)
+          const newSubtotalGroupId = remapId(
+            ssg.subtotalGroupId,
+            mappings.subtotalGroup
+          )
+          if (newSubjectId && newSubtotalGroupId) {
+            // subjectのIDがupsertで変わっている可能性があるため、名前で実際のIDを取得
+            const originalSubject = subjectsData.subjects.find(
+              (s) => s.id === ssg.subjectId
+            )
+            if (originalSubject) {
+              const actualSubject = await tx.subject.findUnique({
+                where: { name: originalSubject.name },
+              })
+              if (actualSubject) {
+                // 重複チェック
+                const existing = await tx.subjectSubtotalGroup.findUnique({
+                  where: {
+                    subjectId_subtotalGroupId: {
+                      subjectId: actualSubject.id,
+                      subtotalGroupId: newSubtotalGroupId,
+                    },
+                  },
+                })
+                if (!existing) {
+                  await tx.subjectSubtotalGroup.create({
+                    data: {
+                      id: remapIdRequired(
+                        ssg.id,
+                        mappings.subjectSubtotalGroup
+                      ),
+                      subjectId: actualSubject.id,
+                      subtotalGroupId: newSubtotalGroupId,
+                    },
+                  })
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 7. 試験を作成
+      const exam = data.examData.exam
+      await tx.exam.create({
+        data: {
+          id: newExamId,
+          examName: exam.examName,
+          examDate: exam.examDate ? new Date(exam.examDate) : null,
+          subject: exam.subject,
+          description: exam.description,
+        },
+      })
+
+      // 8. UserExamを作成（現在のログインユーザーのみ）
+      // v0.3.0以降: アーカイブ内のUserExamは無視し、現在のユーザーをOWNERとして作成
+      // UserExamのIDはuserExam mappingから取得、空の場合は新規UUID
+      const userExamId =
+        data.examData.userExams.length > 0
+          ? remapIdRequired(data.examData.userExams[0].id, mappings.userExam)
+          : randomUUID()
+      await tx.userExam.create({
+        data: {
+          id: userExamId,
+          userId: currentUserId,
+          examId: newExamId,
+          role: "OWNER",
+          invitedAt: new Date(),
+          invitedBy: null,
+        },
+      })
+
+      // 8.5. ExamMarkingFormatを作成 (v1.4.0+)
+      for (const pmf of data.examData.examMarkingFormats || []) {
+        await tx.examMarkingFormat.create({
+          data: {
+            id: remapIdRequired(pmf.id, mappings.examMarkingFormat),
+            examId: newExamId,
+            markType: pmf.markType,
+            symbol: pmf.symbol,
+            color: pmf.color,
+            fontSize: pmf.fontSize,
+            strokeWidth: pmf.strokeWidth,
+          },
+        })
+      }
+
+      // 8.6. ExamExportSettingsを作成 (v1.4.0+)
+      const pes = data.examData.examExportSettings
+      if (pes) {
+        await tx.examExportSettings.create({
+          data: {
+            id: remapIdRequired(pes.id, mappings.examExportSettings),
+            examId: newExamId,
+            settingsJson: pes.settingsJson,
+          },
+        })
+      }
+
+      // 9. ExamSubtotalGroupを作成
+      for (const psg of data.examData.examSubtotalGroups) {
+        const newSubtotalGroupId = remapId(
+          psg.subtotalGroupId,
+          mappings.subtotalGroup
+        )
+        if (newSubtotalGroupId) {
+          await tx.examSubtotalGroup.create({
+            data: {
+              id: remapIdRequired(psg.id, mappings.examSubtotalGroup),
+              examId: newExamId,
+              subtotalGroupId: newSubtotalGroupId,
+            },
+          })
+        }
+      }
+
+      // 9.5. ExamClassを作成 (v1.1.0+)
+      for (const pc of data.examData.examClasses || []) {
+        const newClassId = remapId(pc.classId, mappings.class)
+        if (newClassId) {
+          await tx.examClass.create({
+            data: {
+              id: remapIdRequired(pc.id, mappings.examClass),
+              examId: newExamId,
+              classId: newClassId,
+              administered: pc.administered,
+              statistics: pc.statistics,
+              order: pc.order,
+            },
+          })
+        }
+      }
+
+      // 10. ExamStudentを作成
+      for (const ps of data.examData.examStudents) {
+        const newStudentId = remapId(ps.studentId, mappings.student)
+        if (newStudentId) {
+          await tx.examStudent.create({
+            data: {
+              id: remapIdRequired(ps.id, mappings.examStudent),
+              examId: newExamId,
+              studentId: newStudentId,
+              status: ps.status,
+              customOrder: ps.customOrder,
+            },
+          })
+        }
+      }
+
+      // 11. ExamPageを作成
+      for (const page of data.examData.examPages) {
+        await tx.examPage.create({
+          data: {
+            id: remapIdRequired(page.id, mappings.examPage),
+            examId: newExamId,
+            pageNumber: page.pageNumber,
+          },
+        })
+      }
+
+      // 12. CropRegionを作成
+      for (const region of data.examData.cropRegions) {
+        await tx.cropRegion.create({
+          data: {
+            id: remapIdRequired(region.id, mappings.cropRegion),
+            examPageId: remapIdRequired(region.examPageId, mappings.examPage),
+            label: region.label,
+            type: region.type,
+            x: region.x,
+            y: region.y,
+            width: region.width,
+            height: region.height,
+            points: region.points,
+            orderIndex: region.orderIndex,
+          },
+        })
+      }
+
+      // 12.5. CropRegionMarkingOverrideを作成 (v1.4.0+)
+      for (const crmo of data.examData.cropRegionMarkingOverrides || []) {
+        const newCropRegionId = remapId(crmo.cropRegionId, mappings.cropRegion)
+        if (newCropRegionId) {
+          await tx.cropRegionMarkingOverride.create({
+            data: {
+              id: remapIdRequired(crmo.id, mappings.cropRegionMarkingOverride),
+              cropRegionId: newCropRegionId,
+              markType: crmo.markType,
+              symbol: crmo.symbol,
+              color: crmo.color,
+              visible: crmo.visible,
+            },
+          })
+        }
+      }
+
+      // 13. CropSubtotalを作成
+      for (const cs of data.subtotalsData.cropSubtotals) {
+        const newCropRegionId = remapId(cs.cropRegionId, mappings.cropRegion)
+        const newSubtotalId = remapId(cs.subtotalId, mappings.subtotal)
+        if (newCropRegionId && newSubtotalId) {
+          await tx.cropSubtotal.create({
+            data: {
+              id: remapIdRequired(cs.id, mappings.cropSubtotal),
+              cropRegionId: newCropRegionId,
+              subtotalId: newSubtotalId,
+              assignmentType: cs.assignmentType,
+            },
+          })
+        }
+      }
+
+      // 14. QuestionScoreを作成
+      // v0.3.0以降: userIdを現在のログインユーザーで上書き
+      // v0.4.0以降: studentIdは必須フィールド
+      for (const qs of data.scoresData.questionScores) {
+        const newCropRegionId = remapId(qs.cropRegionId, mappings.cropRegion)
+        const newStudentId = remapId(qs.studentId, mappings.student)
+
+        // studentIdは必須フィールド
+        if (newCropRegionId && newStudentId) {
+          await tx.questionScore.create({
+            data: {
+              id: remapIdRequired(qs.id, mappings.questionScore),
+              cropRegionId: newCropRegionId,
+              studentId: newStudentId,
+              partialScore: qs.partialScore
+                ? parseFloat(qs.partialScore)
+                : null,
+              status: qs.status,
+              userId: currentUserId,
+            },
+          })
+        }
+      }
+
+      // 15. DrawingAnnotationを作成
+      // v0.3.0以降: userIdを現在のログインユーザーで上書き
+      for (const da of data.scoresData.drawingAnnotations) {
+        const newQuestionScoreId = remapId(
+          da.questionScoreId,
+          mappings.questionScore
+        )
+
+        if (newQuestionScoreId) {
+          await tx.drawingAnnotation.create({
+            data: {
+              id: remapIdRequired(da.id, mappings.drawingAnnotation),
+              questionScoreId: newQuestionScoreId,
+              type: da.type,
+              x: da.x,
+              y: da.y,
+              color: da.color,
+              strokeWidth: da.strokeWidth,
+              width: da.width,
+              height: da.height,
+              endX: da.endX,
+              endY: da.endY,
+              lineStyle: da.lineStyle,
+              text: da.text,
+              fontSize: da.fontSize,
+              textBoxWidth: da.textBoxWidth,
+              textBoxHeight: da.textBoxHeight,
+              horizontalAlign: da.horizontalAlign,
+              verticalAlign: da.verticalAlign,
+              anchorDirection: da.anchorDirection,
+              displayX: da.displayX,
+              displayY: da.displayY,
+              userId: currentUserId,
+            },
+          })
+        }
+      }
+    })
+
+    // 16. 画像ファイルをコピー
+    await copyImages(data, newExamId)
+
+    // 17. 画像レコードを作成（画像コピー後）
+    await createImageRecords(data, mappings, newExamId)
+
+    return {
+      success: true,
+      examId: newExamId,
+      counts: {
+        students: data.studentsData.students.length,
+        classes: data.classesData.classes.length,
+        users: data.usersData.users.length,
+        pages: data.examData.examPages.length,
+        regions: data.examData.cropRegions.length,
+        scores: data.scoresData.questionScores.length,
+        annotations: data.scoresData.drawingAnnotations.length,
+        subtotalGroups: data.subtotalsData.subtotalGroups.length,
+        masterImages: data.masterImagePaths.length,
+        answerSheetImages: data.answerSheetPaths.length,
+      },
+      warnings: warnings.length > 0 ? warnings : undefined,
+    }
+  } catch (error) {
+    console.error("Error creating imported data:", error)
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "データの作成に失敗しました",
+    }
+  }
+}

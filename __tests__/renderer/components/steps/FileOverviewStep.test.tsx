@@ -23,9 +23,9 @@ describe("FileOverviewStep", () => {
     vi.clearAllMocks()
   })
 
-  it("FO-1: プロジェクト名がmanifestから表示される", () => {
+  it("FO-1: 試験名がmanifestから表示される", () => {
     const wizard = createMockWizard({
-      manifest: createMockManifest({ projectName: "期末テスト" }),
+      manifest: createMockManifest({ examName: "期末テスト" }),
       fileOverviewData: createMockFileOverviewData(),
     })
     render(<FileOverviewStep wizard={wizard} />)
