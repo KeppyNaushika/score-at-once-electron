@@ -2,13 +2,17 @@
  * 解答用紙作成機能のIPCハンドラー
  */
 
-import { dialog, ipcMain } from "electron"
+import { BrowserWindow, dialog, ipcMain } from "electron"
+import fs from "fs"
+import os from "os"
+import path from "path"
 
 import type {
   AnswerSheetDefinition,
   ASBConvertToProjectArgs,
   ASBExportPdfArgs,
   ASBExportPngArgs,
+  ASBPrintArgs,
 } from "../../types/answerSheetBuilder.types"
 import {
   deleteDefinition,
@@ -43,6 +47,78 @@ export function setupAnswerSheetBuilderHandlers(): void {
       const definition = loadDefinition(id)
       if (!definition) {
         return { success: false, error: "定義が見つかりません" }
+      }
+      // マイグレーション: 旧フォーマットからの移行
+      for (const major of definition.majorQuestions) {
+        const raw = major as unknown as Record<string, unknown>
+        // subQuestionLayout → layoutWidth
+        if (raw.subQuestionLayout === "horizontal") {
+          const cols = major.subQuestions.length
+          for (const sub of major.subQuestions) {
+            if (!sub.layoutWidth) {
+              sub.layoutWidth = `1/${cols}`
+            }
+          }
+        }
+        delete raw.subQuestionLayout
+
+        // horizontalColumnsPerRow → layoutWidth/nextPlacement
+        const cpr = raw.horizontalColumnsPerRow as number[] | undefined
+        if (cpr?.length) {
+          let si = 0
+          for (const cols of cpr) {
+            for (let c = 0; c < cols && si < major.subQuestions.length; si++) {
+              const sub = major.subQuestions[si]
+              const span =
+                ((raw as Record<string, unknown>).colSpan as number) ??
+                ((sub as unknown as Record<string, unknown>)
+                  .colSpan as number) ??
+                1
+              if (!sub.layoutWidth) {
+                sub.layoutWidth = `${span}/${cols}`
+              }
+              c += span
+              if (c >= cols && si < major.subQuestions.length - 1) {
+                sub.nextPlacement = "break"
+              }
+              delete (sub as unknown as Record<string, unknown>).colSpan
+            }
+          }
+          delete raw.horizontalColumnsPerRow
+        }
+
+        // branchHorizontalColumnsPerRow → layoutWidth/nextPlacement
+        for (const sub of major.subQuestions) {
+          const subRaw = sub as unknown as Record<string, unknown>
+          const bcpr = subRaw.branchHorizontalColumnsPerRow as
+            | number[]
+            | undefined
+          if (bcpr?.length) {
+            let bi = 0
+            for (const cols of bcpr) {
+              for (
+                let c = 0;
+                c < cols && bi < sub.branchQuestions.length;
+                bi++
+              ) {
+                const branch = sub.branchQuestions[bi]
+                const branchRaw = branch as unknown as Record<string, unknown>
+                const span = (branchRaw.colSpan as number) ?? 1
+                if (!branch.layoutWidth) {
+                  branch.layoutWidth = `${span}/${cols}`
+                }
+                c += span
+                if (c >= cols && bi < sub.branchQuestions.length - 1) {
+                  branch.nextPlacement = "break"
+                }
+                delete branchRaw.colSpan
+              }
+            }
+            delete subRaw.branchHorizontalColumnsPerRow
+          }
+          // Clean up any leftover colSpan
+          delete subRaw.colSpan
+        }
       }
       return { success: true, data: definition }
     } catch (error) {
@@ -175,4 +251,61 @@ export function setupAnswerSheetBuilderHandlers(): void {
       }
     }
   )
+
+  // 印刷
+  ipcMain.handle("asb:print", async (_event, args: ASBPrintArgs) => {
+    let tempPath: string | null = null
+    let printWin: BrowserWindow | null = null
+    try {
+      // 1. 一時PDF生成
+      tempPath = path.join(os.tmpdir(), `asb-print-${Date.now()}.pdf`)
+      await generatePdf(args.definition, tempPath)
+
+      // 2. 隠しBrowserWindowでPDFをロード
+      printWin = new BrowserWindow({
+        show: false,
+        webPreferences: { nodeIntegration: false, contextIsolation: true },
+      })
+      await printWin.loadURL(`file://${tempPath}`)
+
+      // 3. 印刷ダイアログ表示
+      return await new Promise<{ success: boolean; error?: string }>(
+        (resolve) => {
+          printWin!.webContents.print({}, (success, failureReason) => {
+            printWin?.close()
+            printWin = null
+            if (tempPath) {
+              try {
+                fs.unlinkSync(tempPath)
+              } catch {
+                // 一時ファイル削除失敗は無視
+              }
+            }
+            if (success) {
+              resolve({ success: true })
+            } else {
+              resolve({
+                success: false,
+                error: failureReason || "印刷がキャンセルされました",
+              })
+            }
+          })
+        }
+      )
+    } catch (error) {
+      printWin?.close()
+      if (tempPath) {
+        try {
+          fs.unlinkSync(tempPath)
+        } catch {
+          // ignore
+        }
+      }
+      console.error("asb:print error:", error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "印刷に失敗しました",
+      }
+    }
+  })
 }

@@ -2,6 +2,8 @@
  * 小計グループのID統合処理
  */
 
+import { randomUUID } from "crypto"
+
 import type {
   FileOverviewData,
   IdIntegrationConfig,
@@ -53,9 +55,19 @@ export async function processSubtotalGroupIdIntegration(
       })
 
       if (existingByName) {
-        idMappings.subtotalGroup[importId] = existingByName.id
+        // B5修正: create_new の意図を尊重し、サフィックス付きで新規作成
+        const newName = await generateUniqueName(importGroup.name, tx)
+        const newId = randomUUID()
+        await tx.subtotalGroup.create({
+          data: {
+            id: newId,
+            name: newName,
+          },
+        })
+        idMappings.subtotalGroup[importId] = newId
+        counts.created.subtotalGroups++
         warnings.push(
-          `小計グループ「${importGroup.name}」は既存データを使用します`
+          `小計グループ「${importGroup.name}」は同名のグループが存在するため「${newName}」として新規作成しました`
         )
       } else {
         // scoreファイルのIDをそのまま使用（存在チェック付き）
@@ -63,7 +75,16 @@ export async function processSubtotalGroupIdIntegration(
           where: { id: importId },
         })
         if (existingById) {
-          idMappings.subtotalGroup[importId] = importId
+          // IDが衝突する場合は新規IDで作成
+          const newId = randomUUID()
+          await tx.subtotalGroup.create({
+            data: {
+              id: newId,
+              name: importGroup.name,
+            },
+          })
+          idMappings.subtotalGroup[importId] = newId
+          counts.created.subtotalGroups++
         } else {
           await tx.subtotalGroup.create({
             data: {
@@ -179,4 +200,23 @@ export async function processSubtotalGroupIdIntegration(
       undefined
     )
   }
+}
+
+/**
+ * 同名の小計グループが存在する場合にサフィックス付きのユニーク名を生成
+ * 例: "大問" → "大問 (2)", "大問 (2)" → "大問 (3)"
+ */
+async function generateUniqueName(
+  baseName: string,
+  tx: PrismaTransaction
+): Promise<string> {
+  for (let i = 2; i <= 100; i++) {
+    const candidate = `${baseName} (${i})`
+    const existing = await tx.subtotalGroup.findFirst({
+      where: { name: candidate },
+    })
+    if (!existing) return candidate
+  }
+  // フォールバック: ランダム名
+  return `${baseName} (${randomUUID().slice(0, 8)})`
 }

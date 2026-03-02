@@ -109,6 +109,15 @@ export interface PreMatchingResult {
 }
 
 /**
+ * 小計項目の概要情報（プレビュー・マッピング用）
+ */
+export interface SubtotalInfo {
+  id: string
+  name: string
+  order: number
+}
+
+/**
  * 照合でマッチしたアイテム
  */
 export interface MatchedItem {
@@ -124,6 +133,11 @@ export interface MatchedItem {
   displayLabel: string
   /** 一致理由（例: "学籍番号が一致"） */
   matchReason: string
+  /** 追加情報（小計グループの場合、配下の小計項目一覧） */
+  additionalInfo?: {
+    importSubtotals?: SubtotalInfo[]
+    existingSubtotals?: SubtotalInfo[]
+  }
 }
 
 /**
@@ -136,6 +150,10 @@ export interface ImportItem {
   importData: Record<string, unknown>
   /** 表示用ラベル */
   displayLabel: string
+  /** 追加情報（小計グループの場合、配下の小計項目一覧） */
+  additionalInfo?: {
+    importSubtotals?: SubtotalInfo[]
+  }
 }
 
 /**
@@ -243,6 +261,8 @@ export interface IdIntegrationConfig {
   student: CategoryIdIntegrationConfig
   class: CategoryIdIntegrationConfig
   subtotalGroup: CategoryIdIntegrationConfig
+  /** 小計項目の直接マッピング（importSubtotalId → existingSubtotalId | "__new__"） */
+  subtotalMappings?: Record<string, string>
 }
 
 // =============================================================================

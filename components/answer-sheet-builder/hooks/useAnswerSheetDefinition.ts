@@ -9,6 +9,7 @@ import type {
   AnswerSheetDefinition,
   BranchQuestion,
   GlobalSettings,
+  LabelPresets,
   MajorQuestion,
   SubQuestion,
 } from "@/types/answerSheetBuilder.types"
@@ -19,6 +20,7 @@ import {
   createDefaultMajorQuestion,
   createDefaultSubQuestion,
   getCircledNumber,
+  parsePresetLabels,
 } from "../constants"
 import { useUndoableReducer } from "./useUndoableReducer"
 
@@ -43,7 +45,14 @@ function reducer(
       return { ...state, renderMode: action.payload }
 
     case "ADD_MAJOR_QUESTION": {
-      const nextLabel = String(state.majorQuestions.length + 1)
+      const idx = state.majorQuestions.length
+      let nextLabel: string
+      if (state.labelPresets?.major) {
+        const labels = parsePresetLabels(state.labelPresets.major)
+        nextLabel = labels[idx] ?? String(idx + 1)
+      } else {
+        nextLabel = String(idx + 1)
+      }
       return {
         ...state,
         majorQuestions: [
@@ -79,7 +88,14 @@ function reducer(
       const { majorIndex } = action.payload
       const majorQuestions = [...state.majorQuestions]
       const major = { ...majorQuestions[majorIndex] }
-      const nextLabel = getCircledNumber(major.subQuestions.length + 1)
+      const idx = major.subQuestions.length
+      let nextLabel: string
+      if (state.labelPresets?.sub) {
+        const labels = parsePresetLabels(state.labelPresets.sub)
+        nextLabel = labels[idx] ?? getCircledNumber(idx + 1)
+      } else {
+        nextLabel = getCircledNumber(idx + 1)
+      }
       major.subQuestions = [
         ...major.subQuestions,
         createDefaultSubQuestion(nextLabel),
@@ -94,6 +110,21 @@ function reducer(
       const major = { ...majorQuestions[majorIndex] }
       const subs = [...major.subQuestions]
       subs[subIndex] = { ...subs[subIndex], ...data }
+      // goUp/break 相互排他
+      if (data.goUp != null && subIndex > 0) {
+        // goUp をセット → 前の小問の break を解除
+        const prev = subs[subIndex - 1]
+        if (prev.nextPlacement === "break") {
+          subs[subIndex - 1] = { ...prev, nextPlacement: undefined }
+        }
+      }
+      if (data.nextPlacement === "break" && subIndex < subs.length - 1) {
+        // break をセット → 次の小問の goUp を解除
+        const next = subs[subIndex + 1]
+        if (next.goUp != null) {
+          subs[subIndex + 1] = { ...next, goUp: undefined }
+        }
+      }
       major.subQuestions = subs
       majorQuestions[majorIndex] = major
       return { ...state, majorQuestions }
@@ -114,7 +145,8 @@ function reducer(
       const major = { ...majorQuestions[majorIndex] }
       const subs = [...major.subQuestions]
       const sub = { ...subs[subIndex] }
-      const branchLabels = [
+      const idx = sub.branchQuestions.length
+      const defaultBranchLabels = [
         "(ア)",
         "(イ)",
         "(ウ)",
@@ -126,9 +158,13 @@ function reducer(
         "(ケ)",
         "(コ)",
       ]
-      const nextLabel =
-        branchLabels[sub.branchQuestions.length] ??
-        `(${sub.branchQuestions.length + 1})`
+      let nextLabel: string
+      if (state.labelPresets?.branch) {
+        const labels = parsePresetLabels(state.labelPresets.branch)
+        nextLabel = labels[idx] ?? `(${idx + 1})`
+      } else {
+        nextLabel = defaultBranchLabels[idx] ?? `(${idx + 1})`
+      }
       sub.branchQuestions = [
         ...sub.branchQuestions,
         createDefaultBranchQuestion(nextLabel),
@@ -147,6 +183,47 @@ function reducer(
       const sub = { ...subs[subIndex] }
       const branches = [...sub.branchQuestions]
       branches[branchIndex] = { ...branches[branchIndex], ...data }
+      // goUp/break 相互排他
+      if (data.goUp != null && branchIndex > 0) {
+        const prev = branches[branchIndex - 1]
+        if (prev.nextPlacement === "break") {
+          branches[branchIndex - 1] = { ...prev, nextPlacement: undefined }
+        }
+      }
+      if (data.nextPlacement === "break" && branchIndex < branches.length - 1) {
+        const next = branches[branchIndex + 1]
+        if (next.goUp != null) {
+          branches[branchIndex + 1] = { ...next, goUp: undefined }
+        }
+      }
+      sub.branchQuestions = branches
+      subs[subIndex] = sub
+      major.subQuestions = subs
+      majorQuestions[majorIndex] = major
+      return { ...state, majorQuestions }
+    }
+
+    case "REORDER_SUB_QUESTIONS": {
+      const { majorIndex, fromIndex, toIndex } = action.payload
+      const majorQuestions = [...state.majorQuestions]
+      const major = { ...majorQuestions[majorIndex] }
+      const subs = [...major.subQuestions]
+      const [moved] = subs.splice(fromIndex, 1)
+      subs.splice(toIndex, 0, moved)
+      major.subQuestions = subs
+      majorQuestions[majorIndex] = major
+      return { ...state, majorQuestions }
+    }
+
+    case "REORDER_BRANCH_QUESTIONS": {
+      const { majorIndex, subIndex, fromIndex, toIndex } = action.payload
+      const majorQuestions = [...state.majorQuestions]
+      const major = { ...majorQuestions[majorIndex] }
+      const subs = [...major.subQuestions]
+      const sub = { ...subs[subIndex] }
+      const branches = [...sub.branchQuestions]
+      const [moved] = branches.splice(fromIndex, 1)
+      branches.splice(toIndex, 0, moved)
       sub.branchQuestions = branches
       subs[subIndex] = sub
       major.subQuestions = subs
@@ -167,6 +244,41 @@ function reducer(
       major.subQuestions = subs
       majorQuestions[majorIndex] = major
       return { ...state, majorQuestions }
+    }
+
+    case "SET_LABEL_PRESET": {
+      const { category, preset } = action.payload
+      const newPresets: LabelPresets = {
+        ...state.labelPresets,
+        [category]: preset,
+      }
+      const labels = parsePresetLabels(preset)
+      const majorQuestions = state.majorQuestions.map((mq, mi) => {
+        if (category === "major") {
+          return { ...mq, label: labels[mi] ?? mq.label }
+        }
+        if (category === "sub") {
+          return {
+            ...mq,
+            subQuestions: mq.subQuestions.map((sq, si) => ({
+              ...sq,
+              label: labels[si] ?? sq.label,
+            })),
+          }
+        }
+        // branch: 小問ごとに0からリスタート
+        return {
+          ...mq,
+          subQuestions: mq.subQuestions.map((sq) => ({
+            ...sq,
+            branchQuestions: sq.branchQuestions.map((bq, bi) => ({
+              ...bq,
+              label: labels[bi] ?? bq.label,
+            })),
+          })),
+        }
+      })
+      return { ...state, labelPresets: newPresets, majorQuestions }
     }
 
     default:
@@ -268,9 +380,47 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     [dispatch]
   )
 
+  const reorderMajorQuestions = useCallback(
+    (fromIndex: number, toIndex: number) =>
+      dispatch({
+        type: "REORDER_MAJOR_QUESTIONS",
+        payload: { fromIndex, toIndex },
+      }),
+    [dispatch]
+  )
+
+  const reorderSubQuestions = useCallback(
+    (majorIndex: number, fromIndex: number, toIndex: number) =>
+      dispatch({
+        type: "REORDER_SUB_QUESTIONS",
+        payload: { majorIndex, fromIndex, toIndex },
+      }),
+    [dispatch]
+  )
+
+  const reorderBranchQuestions = useCallback(
+    (
+      majorIndex: number,
+      subIndex: number,
+      fromIndex: number,
+      toIndex: number
+    ) =>
+      dispatch({
+        type: "REORDER_BRANCH_QUESTIONS",
+        payload: { majorIndex, subIndex, fromIndex, toIndex },
+      }),
+    [dispatch]
+  )
+
   const setDefinition = useCallback(
     (def: AnswerSheetDefinition) =>
       dispatch({ type: "SET_DEFINITION", payload: def }),
+    [dispatch]
+  )
+
+  const setLabelPreset = useCallback(
+    (category: "major" | "sub" | "branch", preset: string) =>
+      dispatch({ type: "SET_LABEL_PRESET", payload: { category, preset } }),
     [dispatch]
   )
 
@@ -289,6 +439,10 @@ export function useAnswerSheetDefinition(initial?: AnswerSheetDefinition) {
     addBranchQuestion,
     updateBranchQuestion,
     deleteBranchQuestion,
+    reorderMajorQuestions,
+    reorderSubQuestions,
+    reorderBranchQuestions,
+    setLabelPreset,
     canUndo,
     canRedo,
     undo,

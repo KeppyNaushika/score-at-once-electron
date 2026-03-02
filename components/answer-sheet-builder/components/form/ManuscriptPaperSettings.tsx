@@ -35,7 +35,11 @@ export function ManuscriptPaperSettings({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="text-xs">原稿用紙</Label>
-        <Switch checked={current.enabled} onCheckedChange={handleToggle} />
+        <Switch
+          className="scale-75"
+          checked={current.enabled}
+          onCheckedChange={handleToggle}
+        />
       </div>
 
       {current.enabled && (
@@ -51,6 +55,9 @@ export function ManuscriptPaperSettings({
               onChange={(e) =>
                 handleChange({ columns: Number(e.target.value) })
               }
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
             />
           </div>
           <div>
@@ -62,6 +69,9 @@ export function ManuscriptPaperSettings({
               min={1}
               max={20}
               onChange={(e) => handleChange({ rows: Number(e.target.value) })}
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
             />
           </div>
           <div>
@@ -78,6 +88,9 @@ export function ManuscriptPaperSettings({
               onChange={(e) =>
                 handleChange({ cellSizeMm: Number(e.target.value) })
               }
+              onBlur={(e) => {
+                e.target.value = String(Number(e.target.value))
+              }}
             />
           </div>
         </div>

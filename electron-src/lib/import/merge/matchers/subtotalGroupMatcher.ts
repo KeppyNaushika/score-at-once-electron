@@ -7,6 +7,7 @@ import type {
   MatchedItem,
   PreMatchingResult,
   SubtotalGroupMatchingMethod,
+  SubtotalInfo,
 } from "../../../../../types/projectArchive.types"
 import prisma from "../../../prisma/client"
 import type { ExtractedArchiveData } from "../../project-archive/archiveExtractor"
@@ -83,13 +84,28 @@ export async function preMatchSubtotalGroups(
   const existingById = new Map(existingGroups.map((g) => [g.id, g]))
   const existingByName = new Map(existingGroups.map((g) => [g.name, g]))
 
+  // インポートデータからグループ別にSubtotalを収集
+  const importSubtotalsByGroup = buildImportSubtotalsByGroup(importData)
+
+  // 既存グループのSubtotal一覧を一括取得
+  const existingGroupIds = existingGroups.map((g) => g.id)
+  const existingSubtotals =
+    existingGroupIds.length > 0
+      ? await prisma.subtotal.findMany({
+          where: { subtotalGroupId: { in: existingGroupIds } },
+          orderBy: { order: "asc" },
+        })
+      : []
+  const existingSubtotalsByGroup = new Map<string, SubtotalInfo[]>()
+  for (const s of existingSubtotals) {
+    const list = existingSubtotalsByGroup.get(s.subtotalGroupId) ?? []
+    list.push({ id: s.id, name: s.name, order: s.order })
+    existingSubtotalsByGroup.set(s.subtotalGroupId, list)
+  }
+
   for (const importGroup of importData.subtotalsData.subtotalGroups) {
     const displayLabel = importGroup.name
-    const importItem: ImportItem = {
-      importId: importGroup.id,
-      importData: importGroup as unknown as Record<string, unknown>,
-      displayLabel,
-    }
+    const importSubs = importSubtotalsByGroup.get(importGroup.id)
 
     // ID照合
     const idMatch = existingById.get(importGroup.id)
@@ -101,6 +117,10 @@ export async function preMatchSubtotalGroups(
         existingData: idMatch as unknown as Record<string, unknown>,
         displayLabel,
         matchReason: "同じパソコンで作成されたデータ",
+        additionalInfo: {
+          importSubtotals: importSubs,
+          existingSubtotals: existingSubtotalsByGroup.get(idMatch.id),
+        },
       })
       continue
     }
@@ -115,11 +135,22 @@ export async function preMatchSubtotalGroups(
         existingData: nameMatch as unknown as Record<string, unknown>,
         displayLabel,
         matchReason: "グループ名が一致",
+        additionalInfo: {
+          importSubtotals: importSubs,
+          existingSubtotals: existingSubtotalsByGroup.get(nameMatch.id),
+        },
       })
       continue
     }
 
-    noMatch.push(importItem)
+    noMatch.push({
+      importId: importGroup.id,
+      importData: importGroup as unknown as Record<string, unknown>,
+      displayLabel,
+      additionalInfo: {
+        importSubtotals: importSubs,
+      },
+    })
   }
 
   return {
@@ -127,4 +158,23 @@ export async function preMatchSubtotalGroups(
     byName,
     noMatch,
   }
+}
+
+/**
+ * インポートデータからグループ別にSubtotal情報をマップに変換
+ */
+function buildImportSubtotalsByGroup(
+  importData: ExtractedArchiveData
+): Map<string, SubtotalInfo[]> {
+  const map = new Map<string, SubtotalInfo[]>()
+  for (const s of importData.subtotalsData.subtotals) {
+    const list = map.get(s.subtotalGroupId) ?? []
+    list.push({ id: s.id, name: s.name, order: s.order })
+    map.set(s.subtotalGroupId, list)
+  }
+  // order順にソート
+  for (const list of map.values()) {
+    list.sort((a, b) => a.order - b.order)
+  }
+  return map
 }

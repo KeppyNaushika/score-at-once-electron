@@ -7,11 +7,9 @@ import {
   Settings2,
   Trash2,
 } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import type {
   BranchQuestion,
@@ -24,12 +22,54 @@ import { ModelAnswerEditor } from "./ModelAnswerEditor"
 import { OMRCellConfigForm } from "./OMRCellConfigForm"
 import { TextElementEditor } from "./TextElementEditor"
 
+/** 簡易分数パース (例: "1/3" → 0.333) */
+function parseFractionSimple(s: string): number {
+  const m = s.match(/^(\d+)\/(\d+)$/)
+  if (m) return parseInt(m[1]) / parseInt(m[2])
+  const n = parseFloat(s)
+  return isNaN(n) ? 1 : n
+}
+
+/** 各枝問の maxGoUp (= その枝問の goUp 適用前の行インデックス) を計算 */
+function calcBranchMaxGoUps(branches: BranchQuestion[]): number[] {
+  const result: number[] = []
+  let row = 0
+  let curX = 0
+  for (let i = 0; i < branches.length; i++) {
+    const b = branches[i]
+    const w = parseFractionSimple(b.layoutWidth ?? "1")
+
+    // auto-break
+    if (curX > 1e-9 && curX + w > 1 + 1e-9) {
+      row++
+      curX = 0
+    }
+
+    // maxGoUp = goUp 適用前の行インデックス
+    result.push(row)
+
+    // goUp 適用
+    if (b.goUp != null && b.goUp > 0) {
+      row = Math.max(0, row - b.goUp)
+      curX = 0.5
+    }
+
+    curX += w
+
+    if (b.nextPlacement === "break") {
+      row++
+      curX = 0
+    }
+  }
+  return result
+}
+
 interface SubQuestionFormProps {
   sub: SubQuestion
   majorIndex: number
   subIndex: number
   totalSubCount: number
-  isHorizontal?: boolean
+  maxGoUp: number
   onUpdate: (data: Partial<SubQuestion>) => void
   onDelete: () => void
   onMoveUp?: () => void
@@ -42,7 +82,7 @@ interface SubQuestionFormProps {
 
 export function SubQuestionForm({
   sub,
-  isHorizontal,
+  maxGoUp,
   onUpdate,
   onDelete,
   onMoveUp,
@@ -60,6 +100,16 @@ export function SubQuestionForm({
     sub.textElements.length > 0 ||
     !!sub.manuscriptPaper?.enabled
 
+  const branchMaxGoUps = useMemo(
+    () => calcBranchMaxGoUps(sub.branchQuestions),
+    [sub.branchQuestions]
+  )
+
+  const goUpActive = sub.goUp != null
+  const isGoUpInvalid =
+    goUpActive &&
+    (!Number.isInteger(sub.goUp) || sub.goUp! < 1 || sub.goUp! > maxGoUp)
+
   return (
     <div className="border-primary/30 space-y-1 border-l-2 pl-4">
       {/* 小問ヘッダー */}
@@ -71,7 +121,7 @@ export function SubQuestionForm({
               className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
               value={sub.label}
               onChange={(e) => onUpdate({ label: e.target.value })}
-              placeholder=""
+              aria-label="小問番号"
             />
           </div>
           {/* 配点: 枝問なし or 完答モード(usesBranchPoints=false)の時に表示 */}
@@ -80,6 +130,7 @@ export function SubQuestionForm({
               <span className="text-muted-foreground">配点</span>
               <input
                 type="number"
+                aria-label="配点"
                 className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={sub.points}
                 min={0}
@@ -91,47 +142,131 @@ export function SubQuestionForm({
               />
             </div>
           )}
+          {/* 高さ: 枝問なしの時のみ */}
           {!hasBranches && (
-            <>
-              <div className="flex items-center gap-0.5 px-1.5">
-                <span className="text-muted-foreground">高さ</span>
-                <input
-                  type="number"
-                  className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  value={sub.heightMultiplier}
-                  min={1}
-                  max={10}
-                  step={0.5}
-                  onChange={(e) =>
-                    onUpdate({ heightMultiplier: Number(e.target.value) })
-                  }
-                  onBlur={(e) => {
-                    e.target.value = String(Number(e.target.value))
-                  }}
-                />
-              </div>
-              {isHorizontal && (
-                <div className="flex items-center gap-0.5 px-1.5">
-                  <span className="text-muted-foreground">幅</span>
-                  <input
-                    type="number"
-                    className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    value={sub.colSpan ?? 1}
-                    min={1}
-                    max={10}
-                    step={1}
-                    onChange={(e) =>
-                      onUpdate({ colSpan: Number(e.target.value) || 1 })
-                    }
-                    onBlur={(e) => {
-                      e.target.value = String(Number(e.target.value) || 1)
-                    }}
-                  />
-                </div>
-              )}
-            </>
+            <div className="flex items-center gap-0.5 px-1.5">
+              <span className="text-muted-foreground">高さ</span>
+              <input
+                type="number"
+                aria-label="高さ"
+                className="focus:bg-accent/50 w-9 [appearance:textfield] bg-transparent px-0.5 text-center outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                value={sub.heightMultiplier}
+                min={1}
+                max={10}
+                step={0.5}
+                onChange={(e) =>
+                  onUpdate({ heightMultiplier: Number(e.target.value) })
+                }
+                onBlur={(e) => {
+                  e.target.value = String(Number(e.target.value))
+                }}
+              />
+            </div>
           )}
+          {/* 幅 (layoutWidth) */}
+          <div className="flex items-center gap-0.5 px-1.5">
+            <span className="text-muted-foreground">幅</span>
+            <input
+              className="focus:bg-accent/50 w-10 bg-transparent px-0.5 text-center outline-none"
+              value={sub.layoutWidth ?? ""}
+              onChange={(e) => {
+                const v = e.target.value.trim()
+                if (v === "") {
+                  onUpdate({
+                    layoutWidth: undefined,
+                    nextPlacement: undefined,
+                    goUp: undefined,
+                  })
+                } else {
+                  onUpdate({ layoutWidth: v })
+                }
+              }}
+              placeholder="—"
+              aria-label="幅"
+            />
+          </div>
         </div>
+        {/* 改行ボタン */}
+        {sub.layoutWidth && (
+          <Button
+            variant="outline"
+            size="icon"
+            className={`h-7 w-7 text-xs ${sub.nextPlacement === "break" ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"}`}
+            onClick={() => {
+              if (sub.nextPlacement === "break") {
+                onUpdate({ nextPlacement: undefined })
+              } else {
+                onUpdate({ nextPlacement: "break" })
+              }
+            }}
+            title="改行"
+          >
+            ↵
+          </Button>
+        )}
+        {/* 戻るボタン（自分自身をN行上に配置） */}
+        {sub.layoutWidth && (
+          <div className="inline-flex items-center gap-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className={`h-7 w-7 text-xs ${goUpActive && sub.goUp! > 0 ? "bg-primary/10 text-primary border-primary/50 hover:bg-primary/20" : "text-muted-foreground"} ${goUpActive ? "rounded-r-none" : ""}`}
+              onClick={() => {
+                if (goUpActive) {
+                  onUpdate({ goUp: undefined })
+                } else {
+                  onUpdate({ goUp: Math.min(1, maxGoUp) })
+                }
+              }}
+              disabled={!goUpActive && maxGoUp < 1}
+              title={
+                maxGoUp < 1
+                  ? "戻れる行がありません"
+                  : `N行上に戻して配置 (最大${maxGoUp})`
+              }
+            >
+              ↑
+            </Button>
+            {goUpActive && (
+              <input
+                type="number"
+                aria-label="戻り行数"
+                className={`border-primary/50 h-7 w-8 [appearance:textfield] rounded-r-md border border-l-0 px-0.5 text-center text-xs outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${isGoUpInvalid ? "bg-red-100 dark:bg-red-900/30" : "bg-transparent"}`}
+                value={sub.goUp || ""}
+                min={1}
+                max={maxGoUp}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === "") {
+                    onUpdate({ goUp: 0 })
+                  } else {
+                    onUpdate({ goUp: Number(v) })
+                  }
+                }}
+                onBlur={() => {
+                  if (
+                    sub.goUp == null ||
+                    !Number.isInteger(sub.goUp) ||
+                    sub.goUp < 1 ||
+                    sub.goUp > maxGoUp
+                  ) {
+                    onUpdate({ goUp: undefined })
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                    e.preventDefault()
+                    const cur = sub.goUp ?? 0
+                    const next = e.key === "ArrowUp" ? cur + 1 : cur - 1
+                    if (next >= 1 && next <= maxGoUp) {
+                      onUpdate({ goUp: next })
+                    }
+                  }
+                }}
+              />
+            )}
+          </div>
+        )}
 
         {/* 枝問配点スイッチ（枝問がある場合のみ） */}
         {hasBranches && (
@@ -228,36 +363,6 @@ export function SubQuestionForm({
         </div>
       )}
 
-      {/* 枝問横配置設定 */}
-      {hasBranches && (
-        <div className="flex items-center gap-1.5 pl-1">
-          <Label className="text-muted-foreground text-xs whitespace-nowrap">
-            枝問横配置
-          </Label>
-          <Input
-            className="h-7 w-24 text-xs"
-            value={sub.branchHorizontalColumnsPerRow?.join(",") ?? ""}
-            onChange={(e) => {
-              const val = e.target.value.trim()
-              if (val === "") {
-                onUpdate({ branchHorizontalColumnsPerRow: undefined })
-              } else {
-                const nums = val
-                  .split(",")
-                  .map((s) => parseInt(s.trim(), 10))
-                  .filter((n) => !isNaN(n) && n > 0)
-                onUpdate({
-                  branchHorizontalColumnsPerRow:
-                    nums.length > 0 ? nums : undefined,
-                })
-              }
-            }}
-            placeholder="空欄=縦"
-            title="枝問の横配置列数をコンマ区切りで指定。例:「3」→3列1行。空欄→全て縦配置。"
-          />
-        </div>
-      )}
-
       {/* 枝問リスト */}
       {hasBranches && (
         <div className="space-y-0.5">
@@ -267,8 +372,8 @@ export function SubQuestionForm({
               branch={branch}
               branchIndex={bi}
               totalBranchCount={sub.branchQuestions.length}
-              isHorizontal={!!sub.branchHorizontalColumnsPerRow?.length}
               showPoints={sub.usesBranchPoints !== false}
+              maxGoUp={branchMaxGoUps[bi]}
               onUpdate={(data) => onUpdateBranch(bi, data)}
               onDelete={() => onDeleteBranch(bi)}
               onMoveUp={bi > 0 ? () => onReorderBranch(bi, bi - 1) : undefined}

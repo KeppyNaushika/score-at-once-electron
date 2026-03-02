@@ -90,6 +90,8 @@ export interface MatchedItemRowProps {
   currentDecision?: DecisionType
   currentIdChoice?: IdChoice
   onDecisionChange: (decision: DecisionType, idChoice?: IdChoice) => void
+  /** wizardインスタンス（subtotalGroupのマッピングエディタ用） */
+  wizard?: UseImportWizardReturn
 }
 
 /** マッチしなかったアイテム行のProps */

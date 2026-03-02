@@ -85,23 +85,11 @@ export function renderSvgString(
 
   // 番号ラベル
   for (const label of layout.numberLabels) {
-    if (
-      label.displayMode === "sub-horizontal" ||
-      label.displayMode === "branch-horizontal"
-    ) {
-      // 横配置時の小問ラベル: セル内左側に配置
-      const lx = label.x + 1
-      const ly = label.y + label.height / 2
-      parts.push(
-        `<text x="${lx}" y="${ly}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="start" dominant-baseline="central">${escapeXml(label.text)}</text>`
-      )
-    } else {
-      const cx = label.x + label.width / 2
-      const cy = label.y + label.height / 2
-      parts.push(
-        `<text x="${cx}" y="${cy}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central">${escapeXml(label.text)}</text>`
-      )
-    }
+    const cx = label.x + label.width / 2
+    const cy = label.y + label.height / 2
+    parts.push(
+      `<text x="${cx}" y="${cy}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central">${escapeXml(label.text)}</text>`
+    )
   }
 
   // 模範解答モード: セル内にmodelAnswerテキストを表示
@@ -208,22 +196,11 @@ export function renderPageSvgString(
   }
 
   for (const label of pageLayout.numberLabels) {
-    if (
-      label.displayMode === "sub-horizontal" ||
-      label.displayMode === "branch-horizontal"
-    ) {
-      const lx = label.x + 1
-      const ly = label.y + label.height / 2
-      parts.push(
-        `<text x="${lx}" y="${ly}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="start" dominant-baseline="central">${escapeXml(label.text)}</text>`
-      )
-    } else {
-      const cx = label.x + label.width / 2
-      const cy = label.y + label.height / 2
-      parts.push(
-        `<text x="${cx}" y="${cy}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central">${escapeXml(label.text)}</text>`
-      )
-    }
+    const cx = label.x + label.width / 2
+    const cy = label.y + label.height / 2
+    parts.push(
+      `<text x="${cx}" y="${cy}" font-size="${label.fontSize}" font-family="'Noto Sans JP', sans-serif" text-anchor="middle" dominant-baseline="central">${escapeXml(label.text)}</text>`
+    )
   }
 
   if (renderMode === "model-answer") {

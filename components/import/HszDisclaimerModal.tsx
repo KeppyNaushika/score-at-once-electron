@@ -112,7 +112,9 @@ export function HszDisclaimerModal({ wizard }: HszDisclaimerModalProps) {
                   本機能による読み込み結果の正確性・完全性について、いかなる保証も行いません。読み込み後のデータについては、必ずご自身で内容をご確認ください。
                 </li>
                 <li>
-                  <span className="font-medium">データ形式の変更について：</span>
+                  <span className="font-medium">
+                    データ形式の変更について：
+                  </span>
                   ソフトウェアの更新等によりデータ形式が変更された場合、本機能が正常に動作しなくなる可能性があります。
                 </li>
                 <li>
@@ -141,7 +143,7 @@ export function HszDisclaimerModal({ wizard }: HszDisclaimerModalProps) {
           </div>
 
           {/* 同意チェックボックス */}
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 select-none has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50 dark:has-[:checked]:bg-amber-950/20">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border p-3 select-none has-checked:border-amber-400 has-checked:bg-amber-50 dark:has-checked:bg-amber-950/20">
             <Checkbox
               checked={agreed}
               onCheckedChange={(checked) => setAgreed(checked === true)}

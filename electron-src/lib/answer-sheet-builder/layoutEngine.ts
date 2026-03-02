@@ -8,7 +8,7 @@
 import type {
   AnswerSheetDefinition,
   BorderConfig,
-  BranchLayoutRow,
+  BranchGridCell,
   BranchQuestion,
   ComputedCell,
   ComputedLayout,
@@ -18,10 +18,12 @@ import type {
   ComputedOMRMarker,
   ComputedPageLayout,
   GlobalSettings,
-  LayoutRow,
+  GridCell,
   LineStyle,
   MajorQuestion,
   ManuscriptGrid,
+  NextPlacement,
+  SubGridCell,
   SubQuestion,
 } from "../../../types/answerSheetBuilder.types"
 import type {
@@ -189,13 +191,23 @@ export function computeLayout(
   const lines: ComputedLine[] = []
   const numberLabels: ComputedNumberLabel[] = []
 
+  // 各行の右端X座標を追跡（ステップ外枠描画用）
+  const rowRightEdges: { yTop: number; yBottom: number; rightX: number }[] = []
+
   let currentY = margins.top + spacing.headerHeight
 
   // 各大問を処理
   majorQuestions.forEach((major, mi) => {
     // 大問前スペーシング
     if (mi > 0) {
+      // 大問間スペーシングのrightX追跡
+      const spacingTop = currentY
       currentY += spacing.majorQuestionSpacing
+      rowRightEdges.push({
+        yTop: spacingTop,
+        yBottom: currentY,
+        rightX: contentRight,
+      })
     }
 
     const majorStartY = currentY
@@ -225,78 +237,122 @@ export function computeLayout(
       })
     }
 
-    // buildLayoutRows で統一的にレイアウト行を生成
-    const layoutRows = buildLayoutRows(
-      major.subQuestions,
-      major.horizontalColumnsPerRow
-    )
     const horizontalAreaX = majorNumX + majorNumWidth
     const horizontalAreaWidth = contentRight - horizontalAreaX
+    const subIsHorizontal = isGridHorizontal(major.subQuestions)
 
-    layoutRows.forEach((row, ri) => {
-      if (row.type === "horizontal") {
-        const rowMaxH = Math.max(
-          ...row.subs.map((s) => s.sub.heightMultiplier),
-          1
-        )
-        const rowHeight = rowMaxH * baseRowHeight
-        const unitWidth = horizontalAreaWidth / row.columns
+    if (subIsHorizontal) {
+      const gridCells = buildSubGridLayout(major.subQuestions)
 
-        row.subs.forEach((entry) => {
-          const cellX = horizontalAreaX + entry.colStart * unitWidth
-          const cellWidth = entry.span * unitWidth
+      for (const gc of gridCells) {
+        const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
+        const cellWidth = gc.width * horizontalAreaWidth
+        const cellY = majorStartY + gc.y * baseRowHeight
+        const cellHeight = gc.height * baseRowHeight
+        const sub = gc.item
+        const hasBranches = sub.branchQuestions.length > 0
 
-          numberLabels.push({
-            text: entry.sub.label,
-            x: cellX,
-            y: currentY,
-            width: cellWidth,
-            height: rowHeight,
-            fontSize: settings.fonts.numberSize,
-            displayMode: "sub-horizontal",
-          })
-
-          cells.push(
-            createCell(
-              [mi, entry.subIndex],
-              cellX,
-              currentY,
-              cellWidth,
-              rowHeight,
-              paper,
-              `${major.label}-${entry.sub.label}`,
-              entry.sub.points,
-              entry.sub.textElements,
-              entry.sub.modelAnswer,
-              "answer",
-              0,
-              computeManuscriptGrid(entry.sub, cellX, currentY, cellWidth),
-              entry.sub.omrConfig
-            )
-          )
-
-          const cellRight = cellX + cellWidth
-          if (Math.abs(cellRight - contentRight) > 0.01) {
-            lines.push({
-              x1: cellRight,
-              y1: currentY,
-              x2: cellRight,
-              y2: currentY + rowHeight,
-              style: settings.borderConfig.subDivider,
-              strokeWidth: getLineWidth(
-                "subHorizontalDivider",
-                settings.borderConfig
-              ),
-              lineType: "subHorizontalDivider",
-            })
-          }
+        numberLabels.push({
+          text: sub.label,
+          x: cellX,
+          y: cellY,
+          width: subNumWidth,
+          height: cellHeight,
+          fontSize: settings.fonts.numberSize,
+          displayMode: "sub-horizontal",
         })
 
-        currentY += rowHeight
-      } else {
-        // vertical-sub
-        const sub = row.sub
-        const si = row.subIndex
+        if (hasBranches) {
+          // 枝問をセル内でレンダリング（セル幅からsubNumWidthを引いた残りが枝問の全幅）
+          const cellBranchNumX = cellX + subNumWidth
+          const cellBranchNumWidth = branchNumWidth
+          const cellAnswerX = cellBranchNumX + cellBranchNumWidth
+          const cellAnswerWidth = cellWidth - subNumWidth - cellBranchNumWidth
+          const cellRight = cellX + cellWidth
+          renderBranchQuestions(
+            sub,
+            mi,
+            gc.itemIndex,
+            major.label,
+            cellY,
+            0,
+            cellX,
+            subNumWidth,
+            cellBranchNumX,
+            cellBranchNumWidth,
+            cellAnswerX,
+            cellAnswerWidth,
+            cellRight,
+            baseRowHeight,
+            paper,
+            settings,
+            cells,
+            lines,
+            numberLabels,
+            rowRightEdges
+          )
+        } else {
+          cells.push(
+            createCell(
+              [mi, gc.itemIndex],
+              cellX + subNumWidth,
+              cellY,
+              cellWidth - subNumWidth,
+              cellHeight,
+              paper,
+              `${major.label}-${sub.label}`,
+              sub.points,
+              sub.textElements,
+              sub.modelAnswer,
+              "answer",
+              0,
+              computeManuscriptGrid(
+                sub,
+                cellX + subNumWidth,
+                cellY,
+                cellWidth - subNumWidth
+              ),
+              sub.omrConfig
+            )
+          )
+        }
+
+        lines.push({
+          x1: cellX + subNumWidth,
+          y1: cellY,
+          x2: cellX + subNumWidth,
+          y2: cellY + cellHeight,
+          style: settings.borderConfig.numberColumnDivider,
+          strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+          lineType: "numberColumn",
+        })
+      }
+
+      // rowRightEdges: Y区間ごとの右端X座標を計算
+      for (const edge of computeGridRowRightEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )) {
+        rowRightEdges.push(edge)
+      }
+
+      renderGridDividerLines(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight,
+        settings,
+        lines,
+        "sub"
+      )
+
+      currentY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+    } else {
+      major.subQuestions.forEach((sub, si) => {
         const subStartY = currentY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
@@ -312,127 +368,28 @@ export function computeLayout(
         })
 
         if (hasBranches) {
-          const branchRows = buildBranchLayoutRows(
-            sub.branchQuestions,
-            sub.branchHorizontalColumnsPerRow
+          renderBranchQuestions(
+            sub,
+            mi,
+            si,
+            major.label,
+            subStartY,
+            0,
+            subNumX,
+            subNumWidth,
+            branchNumX,
+            branchNumWidth,
+            answerX,
+            answerWidth,
+            contentRight,
+            baseRowHeight,
+            paper,
+            settings,
+            cells,
+            lines,
+            numberLabels,
+            rowRightEdges
           )
-          const branchAreaX = subNumX + subNumWidth
-          const branchAreaWidth = contentRight - branchAreaX
-          let branchY = subStartY
-
-          branchRows.forEach((bRow, bri) => {
-            if (bRow.type === "horizontal") {
-              const rowMaxH = Math.max(
-                ...bRow.branches.map((b) => b.branch.heightMultiplier),
-                1
-              )
-              const bRowHeight = rowMaxH * baseRowHeight
-              const unitWidth = branchAreaWidth / bRow.columns
-
-              bRow.branches.forEach((entry) => {
-                const cellX = branchAreaX + entry.colStart * unitWidth
-                const cellWidth = entry.span * unitWidth
-
-                numberLabels.push({
-                  text: entry.branch.label,
-                  x: cellX,
-                  y: branchY,
-                  width: cellWidth,
-                  height: bRowHeight,
-                  fontSize: settings.fonts.numberSize - 1,
-                  displayMode: "branch-horizontal",
-                })
-
-                cells.push(
-                  createCell(
-                    [mi, si, entry.branchIndex],
-                    cellX,
-                    branchY,
-                    cellWidth,
-                    bRowHeight,
-                    paper,
-                    `${major.label}-${sub.label}-${entry.branch.label}`,
-                    entry.branch.points,
-                    entry.branch.textElements,
-                    entry.branch.modelAnswer,
-                    "answer",
-                    0,
-                    undefined,
-                    entry.branch.omrConfig
-                  )
-                )
-
-                // 列間の垂直区切り線
-                const cellRight = cellX + cellWidth
-                if (Math.abs(cellRight - contentRight) > 0.01) {
-                  lines.push({
-                    x1: cellRight,
-                    y1: branchY,
-                    x2: cellRight,
-                    y2: branchY + bRowHeight,
-                    style: settings.borderConfig.branchDivider,
-                    strokeWidth: getLineWidth("branch", settings.borderConfig),
-                    lineType: "branch",
-                  })
-                }
-              })
-
-              branchY += bRowHeight
-            } else {
-              // vertical-branch
-              const branch = bRow.branch
-              const branchHeight = branch.heightMultiplier * baseRowHeight
-
-              numberLabels.push({
-                text: branch.label,
-                x: branchNumX,
-                y: branchY,
-                width: branchNumWidth,
-                height: branchHeight,
-                fontSize: settings.fonts.numberSize - 1,
-                displayMode: "branch",
-              })
-
-              cells.push(
-                createCell(
-                  [mi, si, bRow.branchIndex],
-                  answerX,
-                  branchY,
-                  answerWidth,
-                  branchHeight,
-                  paper,
-                  `${major.label}-${sub.label}-${branch.label}`,
-                  branch.points,
-                  branch.textElements,
-                  branch.modelAnswer,
-                  "answer",
-                  0,
-                  undefined,
-                  branch.omrConfig
-                )
-              )
-
-              branchY += branchHeight
-            }
-
-            // 枝問行間の区切り線
-            if (bri < branchRows.length - 1) {
-              const nextBRow = branchRows[bri + 1]
-              const lineX =
-                bRow.type === "horizontal" || nextBRow.type === "horizontal"
-                  ? branchAreaX
-                  : branchNumX
-              lines.push({
-                x1: lineX,
-                y1: branchY,
-                x2: contentRight,
-                y2: branchY,
-                style: settings.borderConfig.branchDivider,
-                strokeWidth: getLineWidth("branch", settings.borderConfig),
-                lineType: "branch",
-              })
-            }
-          })
         } else {
           cells.push(
             createCell(
@@ -454,28 +411,17 @@ export function computeLayout(
           )
         }
 
-        currentY += subHeight
-      }
+        rowRightEdges.push({
+          yTop: subStartY,
+          yBottom: subStartY + subHeight,
+          rightX: contentRight,
+        })
 
-      // 行間の区切り線（最後の行以外）
-      if (ri < layoutRows.length - 1) {
-        const nextRow = layoutRows[ri + 1]
-        if (row.type === "horizontal" && nextRow.type === "horizontal") {
+        currentY += subHeight
+
+        if (si < major.subQuestions.length - 1) {
           lines.push({
-            x1: horizontalAreaX,
-            y1: currentY,
-            x2: contentRight,
-            y2: currentY,
-            style: settings.borderConfig.subDivider,
-            strokeWidth: getLineWidth(
-              "subHorizontalDivider",
-              settings.borderConfig
-            ),
-            lineType: "subHorizontalDivider",
-          })
-        } else {
-          lines.push({
-            x1: row.type === "horizontal" ? horizontalAreaX : subNumX,
+            x1: subNumX,
             y1: currentY,
             x2: contentRight,
             y2: currentY,
@@ -484,8 +430,8 @@ export function computeLayout(
             lineType: "sub",
           })
         }
-      }
-    })
+      })
+    }
 
     // 大問の区切り線（最後以外）
     if (mi < majorQuestions.length - 1) {
@@ -503,19 +449,19 @@ export function computeLayout(
 
   const contentBottom = currentY
 
-  // 外枠線
-  addOuterBorderLines(
+  // 外枠線（ステップ形状対応）
+  addSteppedBorderLines(
     lines,
     contentLeft,
     margins.top + spacing.headerHeight,
     contentRight,
     contentBottom,
     settings.borderConfig.outerBorder,
-    settings.borderConfig
+    settings.borderConfig,
+    rowRightEdges
   )
 
   // vertical-sub 行のY範囲を収集（小問番号列セグメント化用）
-  // branchVerticalRanges: vertical-sub 行内の vertical-branch 行のY範囲（枝問番号列用）
   const verticalRanges: { top: number; bottom: number }[] = []
   const branchVerticalRanges: { top: number; bottom: number }[] = []
   {
@@ -525,50 +471,23 @@ export function computeLayout(
       if (mi2 > 0) {
         trackY += spacing.majorQuestionSpacing
       }
-      const rows = buildLayoutRows(mq.subQuestions, mq.horizontalColumnsPerRow)
-      let segStart: number | null = null
-      for (const r of rows) {
-        if (r.type === "vertical-sub") {
-          if (segStart === null) segStart = trackY
-          // 枝問番号列のセグメント: vertical-branch行のみ
-          if (r.sub.branchQuestions.length > 0) {
-            const bRows = buildBranchLayoutRows(
-              r.sub.branchQuestions,
-              r.sub.branchHorizontalColumnsPerRow
-            )
-            let bTrackY = trackY
-            let bSegStart: number | null = null
-            for (const br of bRows) {
-              if (br.type === "vertical-branch") {
-                if (bSegStart === null) bSegStart = bTrackY
-                bTrackY += br.branch.heightMultiplier * baseRowHeight
-              } else {
-                if (bSegStart !== null) {
-                  branchVerticalRanges.push({ top: bSegStart, bottom: bTrackY })
-                  bSegStart = null
-                }
-                const maxH = Math.max(
-                  ...br.branches.map((b) => b.branch.heightMultiplier),
-                  1
-                )
-                bTrackY += maxH * baseRowHeight
-              }
-            }
-            if (bSegStart !== null) {
-              branchVerticalRanges.push({ top: bSegStart, bottom: bTrackY })
+
+      if (isGridHorizontal(mq.subQuestions)) {
+        const gridCells = buildSubGridLayout(mq.subQuestions)
+        trackY += gridTotalHeight(gridCells) * baseRowHeight
+      } else {
+        const segStart = trackY
+        for (const sub of mq.subQuestions) {
+          if (sub.branchQuestions.length > 0) {
+            if (!isGridHorizontal(sub.branchQuestions)) {
+              branchVerticalRanges.push({
+                top: trackY,
+                bottom: trackY + computeSubHeight(sub, baseRowHeight),
+              })
             }
           }
-          trackY += computeSubHeight(r.sub, baseRowHeight)
-        } else {
-          if (segStart !== null) {
-            verticalRanges.push({ top: segStart, bottom: trackY })
-            segStart = null
-          }
-          const maxH = Math.max(...r.subs.map((s) => s.sub.heightMultiplier), 1)
-          trackY += maxH * baseRowHeight
+          trackY += computeSubHeight(sub, baseRowHeight)
         }
-      }
-      if (segStart !== null) {
         verticalRanges.push({ top: segStart, bottom: trackY })
       }
     }
@@ -629,164 +548,251 @@ export function computeLayout(
 // ヘルパー関数
 // =====================
 
-/**
- * 小問を LayoutRow[] に変換する。
- * - columnsPerRow が空/undefined → 全て vertical-sub
- * - 配列の各要素を順に消費して横配置行を生成
- * - 枝問2つ以上の小問は横配置行から抽出して独立 vertical-sub 行にする
- * - 配列を使い切った残りは全て vertical-sub
- */
-function buildLayoutRows(
-  subQuestions: SubQuestion[],
-  columnsPerRow: number[] | undefined
-): LayoutRow[] {
-  if (!columnsPerRow || columnsPerRow.length === 0) {
-    return subQuestions.map((sub, si) => ({
-      type: "vertical-sub" as const,
-      sub,
-      subIndex: si,
-    }))
-  }
+/** 分数文字列 (e.g. "1/4", "3/4") を 0〜1 の数値に変換 */
+export function parseFraction(s: string): number {
+  const m = s.match(/^(\d+)\/(\d+)$/)
+  if (m) return parseInt(m[1]) / parseInt(m[2])
+  const n = parseFloat(s)
+  return isNaN(n) ? 1 : n
+}
 
-  const rows: LayoutRow[] = []
-  let si = 0
-  let specIdx = 0
-
-  while (si < subQuestions.length && specIdx < columnsPerRow.length) {
-    const rowSpec = columnsPerRow[specIdx]
-    specIdx++
-
-    // この rowSpec 分の小問を消費
-    let consumed = 0
-    let batch: {
-      sub: SubQuestion
-      subIndex: number
-      colStart: number
-      span: number
-    }[] = []
-    let batchCols = 0
-
-    const flushBatch = () => {
-      if (batch.length > 0) {
-        rows.push({ type: "horizontal", subs: batch, columns: batchCols })
-        batch = []
-        batchCols = 0
-      }
-    }
-
-    while (consumed < rowSpec && si < subQuestions.length) {
-      const sub = subQuestions[si]
-      const span = sub.colSpan ?? 1
-
-      // 枝問2つ以上 → 横配置行から抽出
-      if (sub.branchQuestions.length >= 2) {
-        flushBatch()
-        rows.push({ type: "vertical-sub", sub, subIndex: si })
-        si++
-        consumed += span
-        continue
-      }
-
-      batch.push({ sub, subIndex: si, colStart: batchCols, span })
-      batchCols += span
-      si++
-      consumed += span
-    }
-
-    flushBatch()
-  }
-
-  // 配列を使い切った残り → 全て vertical-sub
-  while (si < subQuestions.length) {
-    rows.push({
-      type: "vertical-sub",
-      sub: subQuestions[si],
-      subIndex: si,
-    })
-    si++
-  }
-
-  return rows
+interface RowTrack {
+  y: number
+  rightX: number
+  maxH: number
 }
 
 /**
- * 枝問を BranchLayoutRow[] に変換する。
- * - columnsPerRow が空/undefined → 全て vertical-branch
- * - 配列の各要素を順に消費して横配置行を生成
- * - 配列を使い切った残りは全て vertical-branch
+ * 汎用グリッドレイアウトビルダー
+ * layoutWidth を持つ要素が1つでもあれば横配置モード。
  */
-function buildBranchLayoutRows(
-  branchQuestions: BranchQuestion[],
-  columnsPerRow: number[] | undefined
-): BranchLayoutRow[] {
-  if (!columnsPerRow || columnsPerRow.length === 0) {
-    return branchQuestions.map((branch, bi) => ({
-      type: "vertical-branch" as const,
-      branch,
-      branchIndex: bi,
-    }))
-  }
-
-  const rows: BranchLayoutRow[] = []
-  let bi = 0
-  let specIdx = 0
-
-  while (bi < branchQuestions.length && specIdx < columnsPerRow.length) {
-    const rowSpec = columnsPerRow[specIdx]
-    specIdx++
-
-    let consumed = 0
-    const batch: {
-      branch: BranchQuestion
-      branchIndex: number
-      colStart: number
-      span: number
-    }[] = []
-    let batchCols = 0
-
-    while (consumed < rowSpec && bi < branchQuestions.length) {
-      const branch = branchQuestions[bi]
-      const span = branch.colSpan ?? 1
-      batch.push({ branch, branchIndex: bi, colStart: batchCols, span })
-      batchCols += span
-      bi++
-      consumed += span
-    }
-
-    if (batch.length > 0) {
-      rows.push({ type: "horizontal", branches: batch, columns: batchCols })
-    }
-  }
-
-  // 配列を使い切った残り → 全て vertical-branch
-  while (bi < branchQuestions.length) {
-    rows.push({
-      type: "vertical-branch",
-      branch: branchQuestions[bi],
-      branchIndex: bi,
+export function buildGridLayout<
+  T extends {
+    layoutWidth?: string
+    nextPlacement?: NextPlacement
+    goUp?: number
+    heightMultiplier: number
+  },
+>(items: T[]): GridCell<T>[] {
+  const isHorizontal = items.some((item) => item.layoutWidth != null)
+  if (!isHorizontal) {
+    let y = 0
+    return items.map((item, i) => {
+      const cell: GridCell<T> = {
+        item,
+        itemIndex: i,
+        x: 0,
+        y,
+        width: 1,
+        height: item.heightMultiplier,
+      }
+      y += item.heightMultiplier
+      return cell
     })
-    bi++
   }
 
-  return rows
+  const cells: GridCell<T>[] = []
+  const rows: RowTrack[] = [{ y: 0, rightX: 0, maxH: 0 }]
+  let curRowIdx = 0
+  let curX = 0
+  let blockLeftX = 0
+  let lastCellBottom = 0 // 最後に配置したセルの下端Y（goUpブロック内の行スキップ用）
+
+  /** 次の行に進む。既存行の再利用 → ブロック内中間行の作成 → ブロック脱出 の順で試行。 */
+  function advanceRow(nextW: number) {
+    let advanced = false
+
+    if (blockLeftX + nextW <= 1 + 1e-9) {
+      // 幅的にブロック内に収まる → lastCellBottom に一致する既存行を探す
+      for (let r = 0; r < rows.length; r++) {
+        if (Math.abs(rows[r].y - lastCellBottom) < 1e-9) {
+          curRowIdx = r
+          curX = blockLeftX
+          advanced = true
+          break
+        }
+      }
+    }
+
+    if (!advanced) {
+      // グリッド全体の下端を計算
+      let gridBottom = 0
+      for (const r of rows) {
+        gridBottom = Math.max(gridBottom, r.y + r.maxH)
+      }
+
+      if (
+        blockLeftX > 1e-9 &&
+        blockLeftX + nextW <= 1 + 1e-9 &&
+        lastCellBottom < gridBottom - 1e-9
+      ) {
+        // goUpブロック内でグリッド高さ内に収まる → 中間行を作成
+        curRowIdx = rows.length
+        rows.push({ y: lastCellBottom, rightX: 0, maxH: 0 })
+        curX = blockLeftX
+      } else {
+        // goUpブロックを抜ける or 幅超過 → 新しい行を末尾に追加
+        const newY = Math.max(gridBottom, lastCellBottom)
+        curRowIdx = rows.length
+        rows.push({ y: newY, rightX: 0, maxH: 0 })
+        curX = 0
+        blockLeftX = 0
+      }
+    }
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]
+    const w = parseFraction(item.layoutWidth ?? "1")
+    const h = item.heightMultiplier
+
+    // goUp: この要素自身をN行上に戻して配置
+    if (item.goUp != null && item.goUp > 0) {
+      const targetIdx = Math.max(0, curRowIdx - item.goUp)
+      let maxRightX = 0
+      for (let r = targetIdx; r <= curRowIdx; r++) {
+        maxRightX = Math.max(maxRightX, rows[r].rightX)
+      }
+      curRowIdx = targetIdx
+      curX = maxRightX
+      blockLeftX = maxRightX
+
+      // goUp先に空きがない場合、全行の末尾に新しい行を追加
+      if (curX + w > 1 + 1e-9) {
+        const lastRow = rows[rows.length - 1]
+        const newY = Math.max(lastRow.y + lastRow.maxH, lastCellBottom)
+        curRowIdx = rows.length
+        rows.push({ y: newY, rightX: 0, maxH: 0 })
+        curX = 0
+        blockLeftX = 0
+      }
+    }
+
+    // 配置前チェック: この項目を置くと1を超える場合、先に改行
+    if (curX > blockLeftX + 1e-9 && curX + w > 1 + 1e-9) {
+      advanceRow(w)
+    }
+
+    cells.push({
+      item,
+      itemIndex: i,
+      x: curX,
+      y: rows[curRowIdx].y,
+      width: w,
+      height: h,
+    })
+
+    lastCellBottom = rows[curRowIdx].y + h
+    rows[curRowIdx].rightX = Math.max(rows[curRowIdx].rightX, curX + w)
+    rows[curRowIdx].maxH = Math.max(rows[curRowIdx].maxH, h)
+
+    const np = item.nextPlacement ?? "inline"
+    if (np === "inline") {
+      curX += w
+    } else if (np === "break") {
+      if (blockLeftX > 1e-9) {
+        // goUpブロック内の break → ブロック残幅で既存行を検索
+        advanceRow(1 - blockLeftX)
+      } else {
+        // 通常の break → 新しい行を追加
+        const lastRow = rows[rows.length - 1]
+        const newY = lastRow.y + lastRow.maxH
+        curRowIdx = rows.length
+        rows.push({ y: newY, rightX: 0, maxH: 0 })
+        curX = 0
+        blockLeftX = 0
+      }
+    }
+  }
+  return cells
+}
+
+function buildSubGridLayout(subQuestions: SubQuestion[]): SubGridCell[] {
+  // 枝問がある小問は、枝問レイアウトの要求高さで heightMultiplier を上書き
+  const adjusted = subQuestions.map((sub) => {
+    if (sub.branchQuestions.length === 0) return sub
+    const branchCells = buildBranchGridLayout(sub.branchQuestions)
+    const branchHeight = gridTotalHeight(branchCells)
+    if (branchHeight !== sub.heightMultiplier) {
+      return { ...sub, heightMultiplier: branchHeight }
+    }
+    return sub
+  })
+  return buildGridLayout(adjusted)
+}
+
+function buildBranchGridLayout(
+  branchQuestions: BranchQuestion[]
+): BranchGridCell[] {
+  return buildGridLayout(branchQuestions)
+}
+
+export function isGridHorizontal<T extends { layoutWidth?: string }>(
+  items: T[]
+): boolean {
+  return items.some((item) => item.layoutWidth != null)
+}
+
+export function gridTotalHeight<T>(cells: GridCell<T>[]): number {
+  if (cells.length === 0) return 0
+  return Math.max(...cells.map((c) => c.y + c.height))
+}
+
+/** グリッドセルからY区間ごとの右端X座標を計算（ステップ外枠描画用） */
+function computeGridRowRightEdges<T>(
+  gridCells: GridCell<T>[],
+  areaStartY: number,
+  areaX: number,
+  areaWidth: number,
+  baseRowHeight: number
+): { yTop: number; yBottom: number; rightX: number }[] {
+  // 全セルのY境界を収集
+  const ySet = new Set<number>()
+  const absCells: { y: number; yEnd: number; rightX: number }[] = []
+  for (const gc of gridCells) {
+    const cellY = areaStartY + gc.y * baseRowHeight
+    const cellYEnd = cellY + gc.height * baseRowHeight
+    const cellRightX = areaX + (gc.x + gc.width) * areaWidth
+    ySet.add(cellY)
+    ySet.add(cellYEnd)
+    absCells.push({ y: cellY, yEnd: cellYEnd, rightX: cellRightX })
+  }
+
+  const sortedYs = Array.from(ySet).sort((a, b) => a - b)
+  const result: { yTop: number; yBottom: number; rightX: number }[] = []
+
+  for (let i = 0; i < sortedYs.length - 1; i++) {
+    const yTop = sortedYs[i]
+    const yBottom = sortedYs[i + 1]
+    const midY = (yTop + yBottom) / 2
+
+    let maxRightX = 0
+    for (const cell of absCells) {
+      if (cell.y <= midY + 1e-9 && cell.yEnd >= midY - 1e-9) {
+        maxRightX = Math.max(maxRightX, cell.rightX)
+      }
+    }
+
+    if (maxRightX > 0) {
+      // 前の区間と同じrightXなら結合
+      if (
+        result.length > 0 &&
+        Math.abs(result[result.length - 1].rightX - maxRightX) < 0.01
+      ) {
+        result[result.length - 1].yBottom = yBottom
+      } else {
+        result.push({ yTop, yBottom, rightX: maxRightX })
+      }
+    }
+  }
+
+  return result
 }
 
 function computeSubHeight(sub: SubQuestion, baseRowHeight: number): number {
   if (sub.branchQuestions.length > 0) {
-    const branchRows = buildBranchLayoutRows(
-      sub.branchQuestions,
-      sub.branchHorizontalColumnsPerRow
-    )
-    return branchRows.reduce((sum, row) => {
-      if (row.type === "horizontal") {
-        const maxH = Math.max(
-          ...row.branches.map((b) => b.branch.heightMultiplier),
-          1
-        )
-        return sum + maxH * baseRowHeight
-      }
-      return sum + row.branch.heightMultiplier * baseRowHeight
-    }, 0)
+    const branchCells = buildBranchGridLayout(sub.branchQuestions)
+    return gridTotalHeight(branchCells) * baseRowHeight
   }
   if (sub.manuscriptPaper?.enabled) {
     return sub.manuscriptPaper.rows * sub.manuscriptPaper.cellSizeMm
@@ -798,17 +804,221 @@ function computeMajorHeight(
   major: MajorQuestion,
   baseRowHeight: number
 ): number {
-  const layoutRows = buildLayoutRows(
-    major.subQuestions,
-    major.horizontalColumnsPerRow
+  if (isGridHorizontal(major.subQuestions)) {
+    const gridCells = buildSubGridLayout(major.subQuestions)
+    return gridTotalHeight(gridCells) * baseRowHeight
+  }
+  return major.subQuestions.reduce(
+    (sum, sub) => sum + computeSubHeight(sub, baseRowHeight),
+    0
   )
-  return layoutRows.reduce((sum, row) => {
-    if (row.type === "horizontal") {
-      const maxH = Math.max(...row.subs.map((s) => s.sub.heightMultiplier), 1)
-      return sum + maxH * baseRowHeight
+}
+
+/** グリッドセル間の区切り線を描画 */
+function renderGridDividerLines<
+  T extends {
+    layoutWidth?: string
+    nextPlacement?: NextPlacement
+    heightMultiplier: number
+  },
+>(
+  gridCells: GridCell<T>[],
+  areaStartY: number,
+  areaX: number,
+  areaWidth: number,
+  baseRowHeight: number,
+  settings: GlobalSettings,
+  lines: ComputedLine[],
+  level: "sub" | "branch"
+) {
+  const lineType = level === "sub" ? "subHorizontalDivider" : "branch"
+  const divStyle =
+    level === "sub"
+      ? settings.borderConfig.subDivider
+      : settings.borderConfig.branchDivider
+  const divSw = getLineWidth(lineType, settings.borderConfig)
+
+  for (let i = 0; i < gridCells.length; i++) {
+    const a = gridCells[i]
+    for (let j = i + 1; j < gridCells.length; j++) {
+      const b = gridCells[j]
+
+      const aRight = a.x + a.width
+      const bLeft = b.x
+      if (Math.abs(aRight - bLeft) < 1e-9) {
+        const overlapTop = Math.max(a.y, b.y)
+        const overlapBottom = Math.min(a.y + a.height, b.y + b.height)
+        if (overlapBottom > overlapTop + 1e-9) {
+          const lineX = areaX + aRight * areaWidth
+          lines.push({
+            x1: lineX,
+            y1: areaStartY + overlapTop * baseRowHeight,
+            x2: lineX,
+            y2: areaStartY + overlapBottom * baseRowHeight,
+            style: divStyle,
+            lineType,
+            strokeWidth: divSw,
+          })
+        }
+      }
+
+      const aBottom = a.y + a.height
+      const bTop = b.y
+      if (Math.abs(aBottom - bTop) < 1e-9) {
+        const overlapLeft = Math.max(a.x, b.x)
+        const overlapRight = Math.min(a.x + a.width, b.x + b.width)
+        if (overlapRight > overlapLeft + 1e-9) {
+          const lineY = areaStartY + aBottom * baseRowHeight
+          lines.push({
+            x1: areaX + overlapLeft * areaWidth,
+            y1: lineY,
+            x2: areaX + overlapRight * areaWidth,
+            y2: lineY,
+            style: divStyle,
+            lineType,
+            strokeWidth: divSw,
+          })
+        }
+      }
     }
-    return sum + computeSubHeight(row.sub, baseRowHeight)
-  }, 0)
+  }
+}
+
+/** 枝問の描画（横配置・縦配置両対応） */
+function renderBranchQuestions(
+  sub: SubQuestion,
+  mi: number,
+  si: number,
+  majorLabel: string,
+  subStartY: number,
+  pageIndex: number,
+  subNumX: number,
+  subNumWidth: number,
+  branchNumX: number,
+  branchNumWidth: number,
+  answerX: number,
+  answerWidth: number,
+  contentRight: number,
+  baseRowHeight: number,
+  paper: { width: number; height: number },
+  settings: GlobalSettings,
+  cells: ComputedCell[],
+  lines: ComputedLine[],
+  numberLabels: ComputedNumberLabel[],
+  _rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
+) {
+  const branchIsHorizontal = isGridHorizontal(sub.branchQuestions)
+
+  if (branchIsHorizontal) {
+    const branchAreaX = subNumX + subNumWidth
+    const branchAreaWidth = contentRight - branchAreaX
+    const branchCells = buildBranchGridLayout(sub.branchQuestions)
+
+    for (const gc of branchCells) {
+      const cellX = branchAreaX + gc.x * branchAreaWidth
+      const cellWidth = gc.width * branchAreaWidth
+      const cellY = subStartY + gc.y * baseRowHeight
+      const cellHeight = gc.height * baseRowHeight
+
+      numberLabels.push({
+        text: gc.item.label,
+        x: cellX,
+        y: cellY,
+        width: branchNumWidth,
+        height: cellHeight,
+        fontSize: settings.fonts.numberSize - 1,
+        displayMode: "branch-horizontal",
+      })
+
+      cells.push(
+        createCell(
+          [mi, si, gc.itemIndex],
+          cellX + branchNumWidth,
+          cellY,
+          cellWidth - branchNumWidth,
+          cellHeight,
+          paper,
+          `${majorLabel}-${sub.label}-${gc.item.label}`,
+          gc.item.points,
+          gc.item.textElements,
+          gc.item.modelAnswer,
+          "answer",
+          pageIndex,
+          undefined,
+          gc.item.omrConfig
+        )
+      )
+
+      lines.push({
+        x1: cellX + branchNumWidth,
+        y1: cellY,
+        x2: cellX + branchNumWidth,
+        y2: cellY + cellHeight,
+        style: settings.borderConfig.numberColumnDivider,
+        lineType: "numberColumn",
+        strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+      })
+    }
+
+    renderGridDividerLines(
+      branchCells,
+      subStartY,
+      branchAreaX,
+      branchAreaWidth,
+      baseRowHeight,
+      settings,
+      lines,
+      "branch"
+    )
+  } else {
+    let branchY = subStartY
+    sub.branchQuestions.forEach((branch, bi) => {
+      const branchHeight = branch.heightMultiplier * baseRowHeight
+
+      numberLabels.push({
+        text: branch.label,
+        x: branchNumX,
+        y: branchY,
+        width: branchNumWidth,
+        height: branchHeight,
+        fontSize: settings.fonts.numberSize - 1,
+        displayMode: "branch",
+      })
+
+      cells.push(
+        createCell(
+          [mi, si, bi],
+          answerX,
+          branchY,
+          answerWidth,
+          branchHeight,
+          paper,
+          `${majorLabel}-${sub.label}-${branch.label}`,
+          branch.points,
+          branch.textElements,
+          branch.modelAnswer,
+          "answer",
+          pageIndex,
+          undefined,
+          branch.omrConfig
+        )
+      )
+
+      if (bi < sub.branchQuestions.length - 1) {
+        lines.push({
+          x1: branchNumX,
+          y1: branchY + branchHeight,
+          x2: contentRight,
+          y2: branchY + branchHeight,
+          style: settings.borderConfig.branchDivider,
+          lineType: "branch",
+          strokeWidth: getLineWidth("branch", settings.borderConfig),
+        })
+      }
+
+      branchY += branchHeight
+    })
+  }
 }
 
 function createCell(
@@ -947,6 +1157,132 @@ function addOuterBorderLines(
   })
 }
 
+/**
+ * ステップ外枠描画: partial行がある場合、右辺と下辺をL字型に凹ませる。
+ * 全行がcontentRightまで到達している場合は通常の矩形外枠を描画。
+ */
+function addSteppedBorderLines(
+  lines: ComputedLine[],
+  contentLeft: number,
+  contentTop: number,
+  contentRight: number,
+  contentBottom: number,
+  style: LineStyle,
+  borderConfig: BorderConfig,
+  rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
+): void {
+  const sw = getLineWidth("outer", borderConfig)
+
+  // 全行がcontentRightに到達しているか確認
+  const hasPartialRow = rowRightEdges.some(
+    (r) => Math.abs(r.rightX - contentRight) > 0.01
+  )
+
+  if (!hasPartialRow) {
+    addOuterBorderLines(
+      lines,
+      contentLeft,
+      contentTop,
+      contentRight,
+      contentBottom,
+      style,
+      borderConfig
+    )
+    return
+  }
+
+  if (rowRightEdges.length === 0) {
+    addOuterBorderLines(
+      lines,
+      contentLeft,
+      contentTop,
+      contentRight,
+      contentBottom,
+      style,
+      borderConfig
+    )
+    return
+  }
+
+  // 上辺: 最初の行のrightXまで
+  const topRightX = rowRightEdges[0].rightX
+  lines.push({
+    x1: contentLeft,
+    y1: contentTop,
+    x2: topRightX,
+    y2: contentTop,
+    style,
+    strokeWidth: sw,
+    lineType: "outer",
+  })
+
+  // 左辺: 常にフル高
+  lines.push({
+    x1: contentLeft,
+    y1: contentTop,
+    x2: contentLeft,
+    y2: contentBottom,
+    style,
+    strokeWidth: sw,
+    lineType: "outer",
+  })
+
+  // 右辺 + 下辺: ステップ描画
+  let curY = contentTop
+  let curRightX = topRightX
+
+  for (let i = 1; i < rowRightEdges.length; i++) {
+    const edge = rowRightEdges[i]
+
+    if (Math.abs(edge.rightX - curRightX) > 0.01) {
+      // 垂直線: curRightX で curY → edge.yTop
+      lines.push({
+        x1: curRightX,
+        y1: curY,
+        x2: curRightX,
+        y2: edge.yTop,
+        style,
+        strokeWidth: sw,
+        lineType: "outer",
+      })
+      // 水平線: curRightX → edge.rightX at edge.yTop
+      lines.push({
+        x1: Math.min(curRightX, edge.rightX),
+        y1: edge.yTop,
+        x2: Math.max(curRightX, edge.rightX),
+        y2: edge.yTop,
+        style,
+        strokeWidth: sw,
+        lineType: "outer",
+      })
+      curY = edge.yTop
+      curRightX = edge.rightX
+    }
+  }
+
+  // 最後の行の下端まで右辺を描画
+  lines.push({
+    x1: curRightX,
+    y1: curY,
+    x2: curRightX,
+    y2: contentBottom,
+    style,
+    strokeWidth: sw,
+    lineType: "outer",
+  })
+
+  // 下辺: contentBottom で curRightX → contentLeft
+  lines.push({
+    x1: contentLeft,
+    y1: contentBottom,
+    x2: curRightX,
+    y2: contentBottom,
+    style,
+    strokeWidth: sw,
+    lineType: "outer",
+  })
+}
+
 function addNumberColumnLines(
   lines: ComputedLine[],
   x: number,
@@ -1033,6 +1369,8 @@ export function computeMultiPageLayout(
     verticalRanges: { top: number; bottom: number }[]
     /** vertical-branch行のY範囲（枝問番号列用） */
     branchVerticalRanges: { top: number; bottom: number }[]
+    /** 各行の右端X座標（ステップ外枠描画用） */
+    rowRightEdges: { yTop: number; yBottom: number; rightX: number }[]
     contentBottomY: number
   }
 
@@ -1043,6 +1381,7 @@ export function computeMultiPageLayout(
       numberLabels: [],
       verticalRanges: [],
       branchVerticalRanges: [],
+      rowRightEdges: [],
       contentBottomY: contentTop,
     }
   }
@@ -1089,87 +1428,121 @@ export function computeMultiPageLayout(
       })
     }
 
-    const layoutRows = buildLayoutRows(
-      major.subQuestions,
-      major.horizontalColumnsPerRow
-    )
     const horizontalAreaX = majorNumX + majorNumWidth
     const horizontalAreaWidth = contentRight - horizontalAreaX
+    const subIsHorizontal = isGridHorizontal(major.subQuestions)
 
-    let vertSegStart: number | null = null
+    if (subIsHorizontal) {
+      const gridCells = buildSubGridLayout(major.subQuestions)
+      for (const gc of gridCells) {
+        const cellX = horizontalAreaX + gc.x * horizontalAreaWidth
+        const cellWidth = gc.width * horizontalAreaWidth
+        const cellY = majorStartY + gc.y * baseRowHeight
+        const cellHeight = gc.height * baseRowHeight
+        const sub = gc.item
+        const hasBranches = sub.branchQuestions.length > 0
 
-    layoutRows.forEach((row, ri) => {
-      if (row.type === "horizontal") {
-        // vertical-sub セグメントをフラッシュ
-        if (vertSegStart !== null) {
-          page.verticalRanges.push({ top: vertSegStart, bottom: localY })
-          vertSegStart = null
-        }
-
-        const rowMaxH = Math.max(
-          ...row.subs.map((s) => s.sub.heightMultiplier),
-          1
-        )
-        const rowHeight = rowMaxH * baseRowHeight
-        const unitWidth = horizontalAreaWidth / row.columns
-
-        row.subs.forEach((entry) => {
-          const cellX = horizontalAreaX + entry.colStart * unitWidth
-          const cellWidth = entry.span * unitWidth
-
-          page.numberLabels.push({
-            text: entry.sub.label,
-            x: cellX,
-            y: localY,
-            width: cellWidth,
-            height: rowHeight,
-            fontSize: settings.fonts.numberSize,
-            displayMode: "sub-horizontal",
-          })
-
-          page.cells.push(
-            createCell(
-              [mi, entry.subIndex],
-              cellX,
-              localY,
-              cellWidth,
-              rowHeight,
-              paper,
-              `${major.label}-${entry.sub.label}`,
-              entry.sub.points,
-              entry.sub.textElements,
-              entry.sub.modelAnswer,
-              "answer",
-              pageIdx,
-              computeManuscriptGrid(entry.sub, cellX, localY, cellWidth),
-              entry.sub.omrConfig
-            )
-          )
-
-          const cellRight = cellX + cellWidth
-          if (Math.abs(cellRight - contentRight) > 0.01) {
-            page.lines.push({
-              x1: cellRight,
-              y1: localY,
-              x2: cellRight,
-              y2: localY + rowHeight,
-              style: settings.borderConfig.subDivider,
-              strokeWidth: getLineWidth(
-                "subHorizontalDivider",
-                settings.borderConfig
-              ),
-              lineType: "subHorizontalDivider",
-            })
-          }
+        page.numberLabels.push({
+          text: sub.label,
+          x: cellX,
+          y: cellY,
+          width: subNumWidth,
+          height: cellHeight,
+          fontSize: settings.fonts.numberSize,
+          displayMode: "sub-horizontal",
         })
 
-        localY += rowHeight
-      } else {
-        // vertical-sub
-        if (vertSegStart === null) vertSegStart = localY
+        if (hasBranches) {
+          const cellBranchNumX = cellX + subNumWidth
+          const cellBranchNumWidth = branchNumWidth
+          const cellAnswerX = cellBranchNumX + cellBranchNumWidth
+          const cellAnswerWidth = cellWidth - subNumWidth - cellBranchNumWidth
+          const cellRight = cellX + cellWidth
+          renderBranchQuestions(
+            sub,
+            mi,
+            gc.itemIndex,
+            major.label,
+            cellY,
+            pageIdx,
+            cellX,
+            subNumWidth,
+            cellBranchNumX,
+            cellBranchNumWidth,
+            cellAnswerX,
+            cellAnswerWidth,
+            cellRight,
+            baseRowHeight,
+            paper,
+            settings,
+            page.cells,
+            page.lines,
+            page.numberLabels,
+            page.rowRightEdges
+          )
+        } else {
+          page.cells.push(
+            createCell(
+              [mi, gc.itemIndex],
+              cellX + subNumWidth,
+              cellY,
+              cellWidth - subNumWidth,
+              cellHeight,
+              paper,
+              `${major.label}-${sub.label}`,
+              sub.points,
+              sub.textElements,
+              sub.modelAnswer,
+              "answer",
+              pageIdx,
+              computeManuscriptGrid(
+                sub,
+                cellX + subNumWidth,
+                cellY,
+                cellWidth - subNumWidth
+              ),
+              sub.omrConfig
+            )
+          )
+        }
 
-        const sub = row.sub
-        const si = row.subIndex
+        page.lines.push({
+          x1: cellX + subNumWidth,
+          y1: cellY,
+          x2: cellX + subNumWidth,
+          y2: cellY + cellHeight,
+          style: settings.borderConfig.numberColumnDivider,
+          strokeWidth: getLineWidth("numberColumn", settings.borderConfig),
+          lineType: "numberColumn",
+        })
+      }
+
+      // rowRightEdges: Y区間ごとの右端X座標を計算
+      for (const edge of computeGridRowRightEdges(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight
+      )) {
+        page.rowRightEdges.push(edge)
+      }
+
+      renderGridDividerLines(
+        gridCells,
+        majorStartY,
+        horizontalAreaX,
+        horizontalAreaWidth,
+        baseRowHeight,
+        settings,
+        page.lines,
+        "sub"
+      )
+
+      localY = majorStartY + gridTotalHeight(gridCells) * baseRowHeight
+    } else {
+      const vertSegStart = localY
+      major.subQuestions.forEach((sub, si) => {
         const subStartY = localY
         const hasBranches = sub.branchQuestions.length > 0
         const subHeight = computeSubHeight(sub, baseRowHeight)
@@ -1185,143 +1558,33 @@ export function computeMultiPageLayout(
         })
 
         if (hasBranches) {
-          const branchRows = buildBranchLayoutRows(
-            sub.branchQuestions,
-            sub.branchHorizontalColumnsPerRow
+          renderBranchQuestions(
+            sub,
+            mi,
+            si,
+            major.label,
+            subStartY,
+            pageIdx,
+            subNumX,
+            subNumWidth,
+            branchNumX,
+            branchNumWidth,
+            answerX,
+            answerWidth,
+            contentRight,
+            baseRowHeight,
+            paper,
+            settings,
+            page.cells,
+            page.lines,
+            page.numberLabels,
+            page.rowRightEdges
           )
-          const branchAreaX = subNumX + subNumWidth
-          const branchAreaWidth = contentRight - branchAreaX
-          let branchY = subStartY
-          let bVertSegStart: number | null = null
 
-          branchRows.forEach((bRow, bri) => {
-            if (bRow.type === "horizontal") {
-              // branchVerticalRanges セグメントをフラッシュ
-              if (bVertSegStart !== null) {
-                page.branchVerticalRanges.push({
-                  top: bVertSegStart,
-                  bottom: branchY,
-                })
-                bVertSegStart = null
-              }
-
-              const rowMaxH = Math.max(
-                ...bRow.branches.map((b) => b.branch.heightMultiplier),
-                1
-              )
-              const bRowHeight = rowMaxH * baseRowHeight
-              const unitWidth = branchAreaWidth / bRow.columns
-
-              bRow.branches.forEach((entry) => {
-                const cellX = branchAreaX + entry.colStart * unitWidth
-                const cellWidth = entry.span * unitWidth
-
-                page.numberLabels.push({
-                  text: entry.branch.label,
-                  x: cellX,
-                  y: branchY,
-                  width: cellWidth,
-                  height: bRowHeight,
-                  fontSize: settings.fonts.numberSize - 1,
-                  displayMode: "branch-horizontal",
-                })
-
-                page.cells.push(
-                  createCell(
-                    [mi, si, entry.branchIndex],
-                    cellX,
-                    branchY,
-                    cellWidth,
-                    bRowHeight,
-                    paper,
-                    `${major.label}-${sub.label}-${entry.branch.label}`,
-                    entry.branch.points,
-                    entry.branch.textElements,
-                    entry.branch.modelAnswer,
-                    "answer",
-                    pageIdx,
-                    undefined,
-                    entry.branch.omrConfig
-                  )
-                )
-
-                const cellRight = cellX + cellWidth
-                if (Math.abs(cellRight - contentRight) > 0.01) {
-                  page.lines.push({
-                    x1: cellRight,
-                    y1: branchY,
-                    x2: cellRight,
-                    y2: branchY + bRowHeight,
-                    style: settings.borderConfig.branchDivider,
-                    strokeWidth: getLineWidth("branch", settings.borderConfig),
-                    lineType: "branch",
-                  })
-                }
-              })
-
-              branchY += bRowHeight
-            } else {
-              if (bVertSegStart === null) bVertSegStart = branchY
-
-              const branch = bRow.branch
-              const branchHeight = branch.heightMultiplier * baseRowHeight
-
-              page.numberLabels.push({
-                text: branch.label,
-                x: branchNumX,
-                y: branchY,
-                width: branchNumWidth,
-                height: branchHeight,
-                fontSize: settings.fonts.numberSize - 1,
-                displayMode: "branch",
-              })
-
-              page.cells.push(
-                createCell(
-                  [mi, si, bRow.branchIndex],
-                  answerX,
-                  branchY,
-                  answerWidth,
-                  branchHeight,
-                  paper,
-                  `${major.label}-${sub.label}-${branch.label}`,
-                  branch.points,
-                  branch.textElements,
-                  branch.modelAnswer,
-                  "answer",
-                  pageIdx,
-                  undefined,
-                  branch.omrConfig
-                )
-              )
-
-              branchY += branchHeight
-            }
-
-            // 枝問行間の区切り線
-            if (bri < branchRows.length - 1) {
-              const nextBRow = branchRows[bri + 1]
-              const lineX =
-                bRow.type === "horizontal" || nextBRow.type === "horizontal"
-                  ? branchAreaX
-                  : branchNumX
-              page.lines.push({
-                x1: lineX,
-                y1: branchY,
-                x2: contentRight,
-                y2: branchY,
-                style: settings.borderConfig.branchDivider,
-                strokeWidth: getLineWidth("branch", settings.borderConfig),
-                lineType: "branch",
-              })
-            }
-          })
-
-          // 残りの branchVerticalRanges セグメントをフラッシュ
-          if (bVertSegStart !== null) {
+          if (!isGridHorizontal(sub.branchQuestions)) {
             page.branchVerticalRanges.push({
-              top: bVertSegStart,
-              bottom: branchY,
+              top: subStartY,
+              bottom: subStartY + subHeight,
             })
           }
         } else {
@@ -1345,28 +1608,17 @@ export function computeMultiPageLayout(
           )
         }
 
-        localY += subHeight
-      }
+        page.rowRightEdges.push({
+          yTop: subStartY,
+          yBottom: subStartY + subHeight,
+          rightX: contentRight,
+        })
 
-      // 行間の区切り線（最後の行以外）
-      if (ri < layoutRows.length - 1) {
-        const nextRow = layoutRows[ri + 1]
-        if (row.type === "horizontal" && nextRow.type === "horizontal") {
+        localY += subHeight
+
+        if (si < major.subQuestions.length - 1) {
           page.lines.push({
-            x1: horizontalAreaX,
-            y1: localY,
-            x2: contentRight,
-            y2: localY,
-            style: settings.borderConfig.subDivider,
-            strokeWidth: getLineWidth(
-              "subHorizontalDivider",
-              settings.borderConfig
-            ),
-            lineType: "subHorizontalDivider",
-          })
-        } else {
-          page.lines.push({
-            x1: row.type === "horizontal" ? horizontalAreaX : subNumX,
+            x1: subNumX,
             y1: localY,
             x2: contentRight,
             y2: localY,
@@ -1375,11 +1627,8 @@ export function computeMultiPageLayout(
             lineType: "sub",
           })
         }
-      }
-    })
+      })
 
-    // 残りの vertical-sub セグメントをフラッシュ
-    if (vertSegStart !== null) {
       page.verticalRanges.push({ top: vertSegStart, bottom: localY })
     }
 
@@ -1405,7 +1654,16 @@ export function computeMultiPageLayout(
       pagesData.push(newPageData())
       currentY = contentTop
     } else {
-      currentY += spacingHeight
+      if (spacingHeight > 0) {
+        // 大問間スペーシングのrightX追跡
+        const spacingTop = currentY
+        currentY += spacingHeight
+        pagesData[currentPageIdx].rowRightEdges.push({
+          yTop: spacingTop,
+          yBottom: currentY,
+          rightX: contentRight,
+        })
+      }
     }
 
     currentY = layoutMajorOnPage(
@@ -1449,14 +1707,16 @@ export function computeMultiPageLayout(
       pd.lines.pop()
     }
 
-    // 外枠線
-    addOuterBorderLines(
+    // 外枠線（ステップ形状対応）
+    addSteppedBorderLines(
       pd.lines,
       contentLeft,
       contentTop,
       contentRight,
       pageContentBottom,
-      settings.borderConfig.outerBorder
+      settings.borderConfig.outerBorder,
+      settings.borderConfig,
+      pd.rowRightEdges
     )
 
     // 大問番号列の縦線（全高）

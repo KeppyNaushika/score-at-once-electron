@@ -1,5 +1,7 @@
 "use client"
 
+import { Info } from "lucide-react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup } from "@/components/ui/radio-group"
 import type { SubtotalGroupMatchingStrategy } from "@/types/projectArchive.types"
@@ -19,6 +21,8 @@ export function SubtotalGroupIntegrationPanel({
   const overview = state.fileOverviewData?.subtotalGroup
   const strategy = state.idIntegrationConfig.subtotalGroup
     .strategy as SubtotalGroupMatchingStrategy
+  const isExternalFormat =
+    state.sourceFormat === "hsz" || state.sourceFormat === "dat"
 
   if (!overview) return null
 
@@ -40,6 +44,16 @@ export function SubtotalGroupIntegrationPanel({
 
   return (
     <div className="space-y-4">
+      {/* 外部フォーマット時の推奨バナー */}
+      {isExternalFormat && (
+        <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+          <p className="text-sm text-blue-700 dark:text-blue-300">
+            他社フォーマットからのインポートです。「大問」「観点」等の同名グループが既に存在する場合、「グループ名で紐づける」の使用をおすすめします。
+          </p>
+        </div>
+      )}
+
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">

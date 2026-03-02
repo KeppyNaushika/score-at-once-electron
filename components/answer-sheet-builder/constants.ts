@@ -39,9 +39,15 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     subDivider: "solid",
     branchDivider: "dashed",
     numberColumnDivider: "solid",
+    outerBorderWidth: 0.7,
+    majorDividerWidth: 0.5,
+    subDividerWidth: 0.4,
+    branchDividerWidth: 0.3,
+    numberColumnDividerWidth: 0.4,
   },
   omrMarkers: { enabled: false, sizeMm: 5, offsetMm: 3 },
   fonts: { family: "Noto Sans JP", defaultSize: 6, numberSize: 6 },
+  numberDisplayMode: "multirow",
 }
 
 // =====================
@@ -66,7 +72,7 @@ export function createDefaultBranchQuestion(label?: string): BranchQuestion {
 export function createDefaultSubQuestion(label?: string): SubQuestion {
   return {
     id: generateId(),
-    label: label ?? "①",
+    label: label ?? "(1)",
     branchQuestions: [],
     heightMultiplier: 1,
     points: 1,
@@ -78,10 +84,7 @@ export function createDefaultMajorQuestion(label?: string): MajorQuestion {
   return {
     id: generateId(),
     label: label ?? "1",
-    numberDisplayMode: "multirow",
     subQuestions: [createDefaultSubQuestion()],
-    spacingBefore: false,
-    subQuestionLayout: "vertical",
   }
 }
 
@@ -107,24 +110,75 @@ export const PAPER_SIZE_OPTIONS: { value: PaperSize; label: string }[] = [
 ]
 
 // =====================
-// 小問番号プリセット
+// プリセット用ヘルパー
 // =====================
 
+/** 丸数字番号を取得（1〜50対応） */
+export function getCircledNumber(n: number): string {
+  if (n >= 1 && n <= 20) return String.fromCodePoint(0x245f + n)
+  if (n >= 21 && n <= 35) return String.fromCodePoint(0x3250 + n - 20)
+  if (n >= 36 && n <= 50) return String.fromCodePoint(0x32b0 + n - 35)
+  return `(${n})`
+}
+
+/** 漢数字（1〜99） */
+function kanjiNumber(n: number): string {
+  const d = ["", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+  if (n >= 1 && n <= 9) return d[n]
+  if (n === 10) return "十"
+  const tens = Math.floor(n / 10)
+  const ones = n % 10
+  if (tens === 1) return `十${d[ones]}`
+  return `${d[tens]}十${ones > 0 ? d[ones] : ""}`
+}
+
+/** 全角数字変換 */
+function toFullWidth(n: number): string {
+  return String(n).replace(/\d/g, (c) =>
+    String.fromCodePoint(c.charCodeAt(0) + 0xfee0)
+  )
+}
+
+/** プリセット文字列を個別ラベル配列にパースする */
+export function parsePresetLabels(preset: string): string[] {
+  // 括弧付き: "(x)", "[x]", "〔x〕"
+  const bracketMatches = preset.match(/(?:\([^)]+\)|\[[^\]]+\]|〔[^〕]+〕)/g)
+  if (bracketMatches) return bracketMatches
+  // カンマ区切り: "1,2,3,..."
+  if (preset.includes(",")) return preset.split(",")
+  // 丸数字や単文字: "①②③..." or "abcdefghij"
+  return [...preset]
+}
+
+// =====================
+// プリセット定数（~50対応）
+// =====================
+
+const N = 50
+const KATAKANA =
+  "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン"
+
+export const MAJOR_QUESTION_LABEL_PRESETS = [
+  Array.from({ length: N }, (_, i) => String(i + 1)).join(","),
+  "ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫ",
+  Array.from({ length: N }, (_, i) => kanjiNumber(i + 1)).join(","),
+  Array.from({ length: N }, (_, i) => `[${i + 1}]`).join(""),
+]
+
 export const SUB_QUESTION_LABEL_PRESETS = [
-  "①②③④⑤⑥⑦⑧⑨⑩",
-  "(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)",
-  "abcdefghij",
+  Array.from({ length: N }, (_, i) => `(${i + 1})`).join(""),
+  Array.from({ length: N }, (_, i) => getCircledNumber(i + 1)).join(""),
+  Array.from({ length: N }, (_, i) => `〔問${toFullWidth(i + 1)}〕`).join(""),
+  "abcdefghijklmnopqrstuvwxyz",
 ]
 
 export const BRANCH_QUESTION_LABEL_PRESETS = [
-  "(ア)(イ)(ウ)(エ)(オ)(カ)(キ)(ク)(ケ)(コ)",
-  "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)",
-  "(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)",
+  Array.from({ length: KATAKANA.length }, (_, i) => `(${KATAKANA[i]})`).join(
+    ""
+  ),
+  Array.from({ length: 26 }, (_, i) => `(${String.fromCharCode(97 + i)})`).join(
+    ""
+  ),
+  Array.from({ length: N }, (_, i) => `(${i + 1})`).join(""),
+  Array.from({ length: N }, (_, i) => getCircledNumber(i + 1)).join(""),
 ]
-
-/** 丸数字番号を取得 */
-export function getCircledNumber(n: number): string {
-  const circledNumbers = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
-  if (n >= 1 && n <= 20) return circledNumbers[n - 1]
-  return `(${n})`
-}

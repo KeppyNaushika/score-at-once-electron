@@ -1,37 +1,78 @@
 "use client"
 
-import { ChevronDown, ChevronRight, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Plus,
+  Trash2,
+} from "lucide-react"
+import { useMemo, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import type {
   BranchQuestion,
-  MajorNumberDisplayMode,
   MajorQuestion,
   SubQuestion,
-  SubQuestionLayout,
 } from "@/types/answerSheetBuilder.types"
 
 import { SubQuestionForm } from "./SubQuestionForm"
 
+/** 簡易分数パース (例: "1/3" → 0.333) */
+function parseFractionSimple(s: string): number {
+  const m = s.match(/^(\d+)\/(\d+)$/)
+  if (m) return parseInt(m[1]) / parseInt(m[2])
+  const n = parseFloat(s)
+  return isNaN(n) ? 1 : n
+}
+
+/** 各小問の maxGoUp (= その小問の goUp 適用前の行インデックス) を計算 */
+function calcSubMaxGoUps(subs: SubQuestion[]): number[] {
+  const result: number[] = []
+  let row = 0
+  let curX = 0
+  for (let i = 0; i < subs.length; i++) {
+    const s = subs[i]
+    const w = parseFractionSimple(s.layoutWidth ?? "1")
+
+    // auto-break: 前の要素の配置結果で現在行に収まらない場合
+    if (curX > 1e-9 && curX + w > 1 + 1e-9) {
+      row++
+      curX = 0
+    }
+
+    // maxGoUp = goUp 適用前の行インデックス
+    result.push(row)
+
+    // goUp 適用
+    if (s.goUp != null && s.goUp > 0) {
+      row = Math.max(0, row - s.goUp)
+      curX = 0.5
+    }
+
+    curX += w
+
+    if (s.nextPlacement === "break") {
+      row++
+      curX = 0
+    }
+  }
+  return result
+}
+
 interface MajorQuestionFormProps {
   major: MajorQuestion
   majorIndex: number
+  totalMajorCount: number
   onUpdate: (data: Partial<MajorQuestion>) => void
   onDelete: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
   onAddSub: () => void
   onUpdateSub: (subIndex: number, data: Partial<SubQuestion>) => void
   onDeleteSub: (subIndex: number) => void
+  onReorderSub: (fromIndex: number, toIndex: number) => void
   onAddBranch: (subIndex: number) => void
   onUpdateBranch: (
     subIndex: number,
@@ -39,6 +80,11 @@ interface MajorQuestionFormProps {
     data: Partial<BranchQuestion>
   ) => void
   onDeleteBranch: (subIndex: number, branchIndex: number) => void
+  onReorderBranch: (
+    subIndex: number,
+    fromIndex: number,
+    toIndex: number
+  ) => void
 }
 
 export function MajorQuestionForm({
@@ -46,148 +92,124 @@ export function MajorQuestionForm({
   majorIndex,
   onUpdate,
   onDelete,
+  onMoveUp,
+  onMoveDown,
   onAddSub,
   onUpdateSub,
   onDeleteSub,
+  onReorderSub,
   onAddBranch,
   onUpdateBranch,
   onDeleteBranch,
+  onReorderBranch,
 }: MajorQuestionFormProps) {
   const [isOpen, setIsOpen] = useState(true)
 
+  const subMaxGoUps = useMemo(
+    () => calcSubMaxGoUps(major.subQuestions),
+    [major.subQuestions]
+  )
+
   return (
-    <div className="space-y-2 rounded-md border p-3">
-      {/* 大問ヘッダー */}
-      <div className="space-y-1.5">
-        {/* 1行目: 開閉・ラベル・表示モード・間隔 */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 flex-shrink-0"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </Button>
-          <span className="text-muted-foreground text-xs font-medium whitespace-nowrap">
-            大問 {majorIndex + 1}
-          </span>
-          <Input
-            className="h-7 w-16 text-xs"
-            value={major.label}
-            onChange={(e) => onUpdate({ label: e.target.value })}
-            placeholder="番号"
-          />
-          <Select
-            value={major.numberDisplayMode}
-            onValueChange={(v) =>
-              onUpdate({ numberDisplayMode: v as MajorNumberDisplayMode })
-            }
-          >
-            <SelectTrigger className="h-7 w-24 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="multirow">結合</SelectItem>
-              <SelectItem value="boxed-top">四角</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={major.subQuestionLayout ?? "vertical"}
-            onValueChange={(v) =>
-              onUpdate({ subQuestionLayout: v as SubQuestionLayout })
-            }
-          >
-            <SelectTrigger className="h-7 w-20 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="vertical">縦</SelectItem>
-              <SelectItem value="horizontal">横</SelectItem>
-            </SelectContent>
-          </Select>
-          {(major.subQuestionLayout ?? "vertical") === "horizontal" && (
-            <div className="flex items-center gap-1">
-              <Label className="text-muted-foreground text-[10px] whitespace-nowrap">
-                列数/行
-              </Label>
-              <Input
-                className="h-7 w-20 text-xs"
-                value={
-                  major.horizontalColumnsPerRow
-                    ? major.horizontalColumnsPerRow.join(",")
-                    : ""
-                }
-                onChange={(e) => {
-                  const val = e.target.value.trim()
-                  if (val === "") {
-                    onUpdate({ horizontalColumnsPerRow: undefined })
-                  } else {
-                    const nums = val
-                      .split(",")
-                      .map((s) => parseInt(s.trim(), 10))
-                      .filter((n) => !isNaN(n) && n > 0)
-                    if (nums.length > 0) {
-                      onUpdate({ horizontalColumnsPerRow: nums })
-                    }
-                  }
-                }}
-                placeholder="3,4,2"
-              />
-            </div>
+    <div className="bg-muted/30 rounded-lg border">
+      {/* ── ヘッダーバー ── */}
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 shrink-0"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
           )}
-          <div className="flex items-center gap-1.5">
-            <Label className="text-muted-foreground text-[10px]">間隔</Label>
-            <Switch
-              checked={major.spacingBefore}
-              onCheckedChange={(v) => onUpdate({ spacingBefore: v })}
-            />
-          </div>
-          <div className="ml-auto flex gap-1">
+        </Button>
+        <span className="bg-primary/10 text-primary rounded px-2 py-0.5 text-xs font-semibold whitespace-nowrap">
+          大問 {majorIndex + 1}
+        </span>
+        <Input
+          className="h-7 w-20 text-xs"
+          value={major.label}
+          onChange={(e) => onUpdate({ label: e.target.value })}
+          placeholder=""
+        />
+        <div className="ml-auto flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={onAddSub}
+            title="小問を追加"
+          >
+            <Plus className="mr-1 h-3 w-3" />
+            小問
+          </Button>
+          <div className="inline-flex items-center rounded-md border">
             <Button
-              variant="outline"
-              size="sm"
-              className="h-6 px-2 text-xs"
-              onClick={onAddSub}
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground h-7 w-7 rounded-r-none"
+              onClick={onMoveUp}
+              disabled={!onMoveUp}
+              title="上へ移動"
             >
-              <Plus className="mr-1 h-3 w-3" />
-              小問
+              <ChevronUp className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive h-6 w-6"
-              onClick={onDelete}
+              className="text-muted-foreground h-7 w-7 rounded-l-none border-l"
+              onClick={onMoveDown}
+              disabled={!onMoveDown}
+              title="下へ移動"
             >
-              <Trash2 className="h-3 w-3" />
+              <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-destructive h-7 w-7"
+            onClick={onDelete}
+            title="大問を削除"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
-      {/* 小問リスト */}
+      {/* ── 展開コンテンツ ── */}
       {isOpen && (
-        <div className="space-y-2">
-          {major.subQuestions.map((sub, si) => (
-            <SubQuestionForm
-              key={sub.id}
-              sub={sub}
-              majorIndex={majorIndex}
-              subIndex={si}
-              isHorizontalLayout={
-                (major.subQuestionLayout ?? "vertical") === "horizontal"
-              }
-              onUpdate={(data) => onUpdateSub(si, data)}
-              onDelete={() => onDeleteSub(si)}
-              onAddBranch={() => onAddBranch(si)}
-              onUpdateBranch={(bi, data) => onUpdateBranch(si, bi, data)}
-              onDeleteBranch={(bi) => onDeleteBranch(si, bi)}
-            />
-          ))}
+        <div className="space-y-3 border-t px-3 pt-2 pb-3">
+          {/* 小問リスト */}
+          {major.subQuestions.length > 0 && (
+            <div className="space-y-2 pl-2">
+              {major.subQuestions.map((sub, si) => (
+                <SubQuestionForm
+                  key={sub.id}
+                  sub={sub}
+                  majorIndex={majorIndex}
+                  subIndex={si}
+                  totalSubCount={major.subQuestions.length}
+                  maxGoUp={subMaxGoUps[si]}
+                  onUpdate={(data) => onUpdateSub(si, data)}
+                  onDelete={() => onDeleteSub(si)}
+                  onMoveUp={si > 0 ? () => onReorderSub(si, si - 1) : undefined}
+                  onMoveDown={
+                    si < major.subQuestions.length - 1
+                      ? () => onReorderSub(si, si + 1)
+                      : undefined
+                  }
+                  onAddBranch={() => onAddBranch(si)}
+                  onUpdateBranch={(bi, data) => onUpdateBranch(si, bi, data)}
+                  onDeleteBranch={(bi) => onDeleteBranch(si, bi)}
+                  onReorderBranch={(from, to) => onReorderBranch(si, from, to)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

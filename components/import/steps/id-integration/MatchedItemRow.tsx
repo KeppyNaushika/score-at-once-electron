@@ -1,5 +1,6 @@
 "use client"
 
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import {
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/select"
 import type { IdChoice } from "@/types/projectArchive.types"
 
+import { SubtotalMappingEditor } from "./SubtotalMappingEditor"
+import { SubtotalPreview } from "./SubtotalPreview"
 import type { DecisionType, MatchedItemRowProps } from "./types"
 import { ENTITY_LABELS } from "./types"
 
@@ -23,6 +26,7 @@ export function MatchedItemRow({
   currentDecision,
   currentIdChoice,
   onDecisionChange,
+  wizard,
 }: MatchedItemRowProps) {
   const [decision, setDecision] = useState<DecisionType>(
     currentDecision ?? "same_person"
@@ -39,7 +43,17 @@ export function MatchedItemRow({
     if (currentIdChoice !== undefined) setIdChoice(currentIdChoice)
   }, [currentIdChoice])
 
+  const [showPreview, setShowPreview] = useState(false)
+
   const labels = ENTITY_LABELS[entityType]
+  const hasSubtotalPreview =
+    entityType === "subtotalGroup" && item.additionalInfo
+  const showMappingEditor =
+    entityType === "subtotalGroup" &&
+    decision === "same_person" &&
+    wizard &&
+    item.additionalInfo?.importSubtotals?.length &&
+    item.additionalInfo?.existingSubtotals?.length
 
   const handleDecisionChange = (value: string) => {
     const newDecision = value as DecisionType
@@ -59,11 +73,36 @@ export function MatchedItemRow({
   return (
     <div className="rounded-lg border p-3">
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-medium">{item.displayLabel}</span>
+        <div className="flex items-center gap-1">
+          <span className="font-medium">{item.displayLabel}</span>
+          {hasSubtotalPreview && (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-foreground ml-1 inline-flex items-center gap-0.5 text-xs"
+              onClick={() => setShowPreview((v) => !v)}
+            >
+              {showPreview ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              小計項目
+            </button>
+          )}
+        </div>
         <span className="text-muted-foreground text-xs">
           {item.matchReason}
         </span>
       </div>
+
+      {/* 小計項目プレビュー */}
+      {hasSubtotalPreview && showPreview && (
+        <SubtotalPreview
+          importSubtotals={item.additionalInfo?.importSubtotals}
+          existingSubtotals={item.additionalInfo?.existingSubtotals}
+        />
+      )}
+
       <div className="flex flex-col gap-2">
         <Select value={decision} onValueChange={handleDecisionChange}>
           <SelectTrigger className="w-full">
@@ -96,6 +135,15 @@ export function MatchedItemRow({
               </SelectContent>
             </Select>
           </div>
+        )}
+
+        {/* 小計項目マッピングエディタ（subtotalGroup + same_person の場合） */}
+        {showMappingEditor && (
+          <SubtotalMappingEditor
+            wizard={wizard}
+            importSubtotals={item.additionalInfo!.importSubtotals!}
+            existingSubtotals={item.additionalInfo!.existingSubtotals!}
+          />
         )}
       </div>
     </div>

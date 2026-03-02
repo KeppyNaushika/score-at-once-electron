@@ -110,7 +110,12 @@ export async function convertHszToScore(
       regionToCropIds,
       scorePCropIdByPart1,
       scoreRCropIdByRegion,
-    } = convertFieldsToCropRegions(sheet_fields, pageUuidMap, pageImageSizeMap, now)
+    } = convertFieldsToCropRegions(
+      sheet_fields,
+      pageUuidMap,
+      pageImageSizeMap,
+      now
+    )
 
     // 7. SubtotalGroup / Subtotal / CropSubtotal 生成
     const subtotalData = generateHszSubtotalData(

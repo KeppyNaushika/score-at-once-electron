@@ -8,7 +8,6 @@ import type {
   CategoryMatchingSummary,
   FileOverviewData,
   IdChoice,
-  IdIntegrationConfig,
   IdIntegrationDecision,
   ImportWizardState,
   MatchingConfig,
@@ -162,6 +161,11 @@ export function useImportWizard() {
       setState((prev) => ({
         ...prev,
         hszOriginalTitle: convertResult.originalTitle,
+        // 外部フォーマット時は小計グループ戦略を by_name にデフォルト設定
+        idIntegrationConfig: {
+          ...prev.idIntegrationConfig,
+          subtotalGroup: { strategy: "by_name", decisions: [] },
+        },
       }))
 
       // 変換後の.scoreファイルで解析→事前照合
@@ -223,10 +227,13 @@ export function useImportWizard() {
     }
   }, [state.archivePath])
 
+  /** カテゴリキーの型（subtotalMappingsを除く） */
+  type IdIntegrationCategoryKey = "student" | "class" | "subtotalGroup"
+
   // ID統合設定を更新
   const updateIdIntegrationConfig = useCallback(
-    <K extends keyof IdIntegrationConfig>(
-      category: K,
+    (
+      category: IdIntegrationCategoryKey,
       config: CategoryIdIntegrationConfig
     ) => {
       setState((prev) => ({
@@ -243,7 +250,7 @@ export function useImportWizard() {
   // 個別のID統合決定を更新
   const updateIdIntegrationDecision = useCallback(
     (
-      category: keyof IdIntegrationConfig,
+      category: IdIntegrationCategoryKey,
       importId: string,
       decision: IdIntegrationDecision
     ) => {
@@ -270,7 +277,7 @@ export function useImportWizard() {
   // ID統合決定を一括更新（一括ID選択用）
   const batchUpdateIdIntegrationDecisions = useCallback(
     (
-      category: keyof IdIntegrationConfig,
+      category: IdIntegrationCategoryKey,
       items: Array<{ importId: string; existingId: string }>,
       decisionType: "same_person" | "create_new" | "skip",
       idChoice?: IdChoice
@@ -487,6 +494,43 @@ export function useImportWizard() {
     []
   )
 
+  // 小計項目の直接マッピングを更新
+  const updateSubtotalMapping = useCallback(
+    (importSubtotalId: string, targetId: string) => {
+      setState((prev) => ({
+        ...prev,
+        idIntegrationConfig: {
+          ...prev.idIntegrationConfig,
+          subtotalMappings: {
+            ...prev.idIntegrationConfig.subtotalMappings,
+            [importSubtotalId]: targetId,
+          },
+        },
+      }))
+    },
+    []
+  )
+
+  // 小計項目の直接マッピングを一括クリア（グループ変更時など）
+  const clearSubtotalMappings = useCallback((importSubtotalIds: string[]) => {
+    setState((prev) => {
+      const currentMappings = { ...prev.idIntegrationConfig.subtotalMappings }
+      for (const id of importSubtotalIds) {
+        delete currentMappings[id]
+      }
+      return {
+        ...prev,
+        idIntegrationConfig: {
+          ...prev.idIntegrationConfig,
+          subtotalMappings:
+            Object.keys(currentMappings).length > 0
+              ? currentMappings
+              : undefined,
+        },
+      }
+    })
+  }, [])
+
   // 複数の採点競合を一括解決
   const setAllScoringConflictResolutions = useCallback(
     (conflictIds: string[], resolution: "import" | "existing") => {
@@ -661,6 +705,8 @@ export function useImportWizard() {
     setAllScoringConflictResolutions,
     acceptHszDisclaimer,
     dismissHszDisclaimer,
+    updateSubtotalMapping,
+    clearSubtotalMappings,
 
     goToNextStep,
     goBack,

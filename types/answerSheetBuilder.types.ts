@@ -65,6 +65,8 @@ export interface ManuscriptPaperConfig {
 // 3階層問題構造
 // =====================
 
+export type NextPlacement = "inline" | "break"
+
 export interface BranchQuestion {
   id: string
   label: string
@@ -73,8 +75,12 @@ export interface BranchQuestion {
   textElements: CellTextElement[]
   modelAnswer?: string
   borderStyles?: BorderStyles
-  /** 横配置時の列スパン（デフォルト1） */
-  colSpan?: number
+  /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
+  layoutWidth?: string
+  /** 次の要素の配置方法。デフォルト "inline" */
+  nextPlacement?: NextPlacement
+  /** この要素自身をN行上に戻して配置する。未指定 = 戻らない */
+  goUp?: number
   /** OMR自動認識設定 */
   omrConfig?: OMRCellConfig
 }
@@ -89,10 +95,12 @@ export interface SubQuestion {
   manuscriptPaper?: ManuscriptPaperConfig
   modelAnswer?: string
   borderStyles?: BorderStyles
-  /** 横配置時の列スパン（デフォルト1） */
-  colSpan?: number
-  /** 枝問横配置の行ごとの列数 (例: [3, 2])。空/未定義なら全て縦配置 */
-  branchHorizontalColumnsPerRow?: number[]
+  /** 幅の分数表記 (例: "1/4", "1/3", "1/2")。未指定 = 全幅（縦配置） */
+  layoutWidth?: string
+  /** 次の要素の配置方法。デフォルト "inline" */
+  nextPlacement?: NextPlacement
+  /** この要素自身をN行上に戻して配置する。未指定 = 戻らない */
+  goUp?: number
   /** 枝問ごとに配点するか（undefined/true=枝問配点、false=完答） */
   usesBranchPoints?: boolean
   /** OMR自動認識設定 */
@@ -103,51 +111,23 @@ export interface MajorQuestion {
   id: string
   label: string
   subQuestions: SubQuestion[]
-  /** 横配置時の行ごとの列数 (例: [3, 4, 2])。空/未定義なら全て縦配置 */
-  horizontalColumnsPerRow?: number[]
 }
 
 // =====================
-// レイアウト行（buildLayoutRows用）
+// グリッドセル（buildGridLayout用）
 // =====================
 
-export type LayoutRow =
-  | {
-      type: "horizontal"
-      subs: {
-        sub: SubQuestion
-        subIndex: number
-        colStart: number
-        span: number
-      }[]
-      columns: number
-    }
-  | {
-      type: "vertical-sub"
-      sub: SubQuestion
-      subIndex: number
-    }
+export interface GridCell<T> {
+  item: T
+  itemIndex: number
+  x: number // 0〜1 の相対X座標
+  y: number // baseRowHeight 単位のY座標
+  width: number // 0〜1 の相対幅
+  height: number // baseRowHeight 単位の高さ
+}
 
-// =====================
-// 枝問レイアウト行（buildBranchLayoutRows用）
-// =====================
-
-export type BranchLayoutRow =
-  | {
-      type: "horizontal"
-      branches: {
-        branch: BranchQuestion
-        branchIndex: number
-        colStart: number
-        span: number
-      }[]
-      columns: number
-    }
-  | {
-      type: "vertical-branch"
-      branch: BranchQuestion
-      branchIndex: number
-    }
+export type SubGridCell = GridCell<SubQuestion>
+export type BranchGridCell = GridCell<BranchQuestion>
 
 // =====================
 // マージン設定

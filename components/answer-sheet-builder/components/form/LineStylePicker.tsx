@@ -1,13 +1,9 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import { Slider } from "@/components/ui/slider"
+import { cn } from "@/lib/utils"
 import type { BorderConfig, LineStyle } from "@/types/answerSheetBuilder.types"
 
 interface LineStylePickerProps {
@@ -15,19 +11,155 @@ interface LineStylePickerProps {
   onUpdate: (config: Partial<BorderConfig>) => void
 }
 
-const LINE_STYLE_OPTIONS: { value: LineStyle; label: string }[] = [
-  { value: "solid", label: "実線" },
-  { value: "dashed", label: "破線" },
-  { value: "dotted", label: "点線" },
+const LINE_STYLES: { value: LineStyle; title: string }[] = [
+  { value: "solid", title: "実線" },
+  { value: "dashed", title: "破線" },
+  { value: "dotted", title: "点線" },
 ]
 
-const BORDER_FIELDS: { key: keyof BorderConfig; label: string }[] = [
-  { key: "outerBorder", label: "外枠" },
-  { key: "majorDivider", label: "大問区切" },
-  { key: "subDivider", label: "小問区切" },
-  { key: "branchDivider", label: "枝問区切" },
-  { key: "numberColumnDivider", label: "番号列" },
+const BORDER_FIELDS: {
+  styleKey: keyof BorderConfig
+  widthKey: keyof BorderConfig
+  label: string
+  defaultWidth: number
+}[] = [
+  {
+    styleKey: "outerBorder",
+    widthKey: "outerBorderWidth",
+    label: "外枠",
+    defaultWidth: 0.7,
+  },
+  {
+    styleKey: "majorDivider",
+    widthKey: "majorDividerWidth",
+    label: "大問",
+    defaultWidth: 0.5,
+  },
+  {
+    styleKey: "subDivider",
+    widthKey: "subDividerWidth",
+    label: "小問",
+    defaultWidth: 0.4,
+  },
+  {
+    styleKey: "branchDivider",
+    widthKey: "branchDividerWidth",
+    label: "枝問",
+    defaultWidth: 0.3,
+  },
+  {
+    styleKey: "numberColumnDivider",
+    widthKey: "numberColumnDividerWidth",
+    label: "番号列",
+    defaultWidth: 0.4,
+  },
 ]
+
+function LineIcon({ style }: { style: LineStyle }) {
+  const sw = 1.5
+  const lineLen = 18 // x2 - x1 = 19 - 1
+
+  let dashProps: {
+    strokeDasharray?: string
+    strokeDashoffset?: number
+  } = {}
+  if (style === "dashed") {
+    const dash = sw * 3
+    const gap = sw * 1
+    const period = dash + gap
+    const offset = ((lineLen / 2) % period) - dash / 2
+    dashProps = { strokeDasharray: `${dash} ${gap}`, strokeDashoffset: offset }
+  } else if (style === "dotted") {
+    const dash = sw * 1
+    const gap = sw * 1
+    const period = dash + gap
+    const offset = ((lineLen / 2) % period) - dash / 2
+    dashProps = { strokeDasharray: `${dash} ${gap}`, strokeDashoffset: offset }
+  }
+
+  return (
+    <svg width="20" height="10" viewBox="0 0 20 10" className="block">
+      <line
+        x1="1"
+        y1="5"
+        x2="19"
+        y2="5"
+        stroke="currentColor"
+        strokeWidth={sw}
+        {...dashProps}
+      />
+    </svg>
+  )
+}
+
+function EditableValue({
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  value: number
+  min: number
+  max: number
+  step: number
+  onChange: (v: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [editing])
+
+  const handleChange = useCallback(
+    (raw: string) => {
+      setEditValue(raw)
+      const parsed = parseFloat(raw)
+      if (!isNaN(parsed) && parsed >= min && parsed <= max) {
+        onChange(parsed)
+      }
+    },
+    [min, max, onChange]
+  )
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        aria-label="線の太さ"
+        className="border-input bg-background box-border h-5 w-8 shrink-0 rounded border text-center text-[10px] outline-none"
+        value={editValue}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={() => setEditing(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === "Escape") setEditing(false)
+        }}
+      />
+    )
+  }
+
+  return (
+    <span
+      className="text-muted-foreground inline-flex h-5 w-8 shrink-0 cursor-pointer items-center justify-end text-[10px] select-none hover:underline"
+      onDoubleClick={() => {
+        setEditValue(value.toFixed(1))
+        setEditing(true)
+      }}
+      title="ダブルクリックで直接入力"
+    >
+      {value.toFixed(1)}
+    </span>
+  )
+}
 
 export function LineStylePicker({
   borderConfig,
@@ -35,33 +167,53 @@ export function LineStylePicker({
 }: LineStylePickerProps) {
   return (
     <div className="space-y-3">
-      <h3 className="text-muted-foreground text-sm font-semibold">
-        罫線スタイル
-      </h3>
-      <div className="grid grid-cols-2 gap-2">
-        {BORDER_FIELDS.map((field) => (
-          <div key={field.key}>
-            <Label className="text-muted-foreground text-[10px]">
+      {BORDER_FIELDS.map((field) => {
+        const width =
+          (borderConfig[field.widthKey] as number | undefined) ??
+          field.defaultWidth
+        return (
+          <div key={field.styleKey} className="flex min-h-6 items-center gap-2">
+            <span className="text-muted-foreground w-8 shrink-0 text-[10px]">
               {field.label}
-            </Label>
-            <Select
-              value={borderConfig[field.key]}
-              onValueChange={(v) => onUpdate({ [field.key]: v as LineStyle })}
-            >
-              <SelectTrigger className="h-7 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {LINE_STYLE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            </span>
+            <div className="border-input flex shrink-0 rounded-md border">
+              {LINE_STYLES.map((ls) => (
+                <button
+                  key={ls.value}
+                  type="button"
+                  title={ls.title}
+                  className={cn(
+                    "hover:bg-accent flex h-6 w-7 items-center justify-center transition-colors first:rounded-l-md last:rounded-r-md",
+                    borderConfig[field.styleKey] === ls.value
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground"
+                  )}
+                  onClick={() =>
+                    onUpdate({ [field.styleKey]: ls.value as LineStyle })
+                  }
+                >
+                  <LineIcon style={ls.value} />
+                </button>
+              ))}
+            </div>
+            <Slider
+              className="min-w-12 flex-1"
+              value={[width]}
+              min={0.1}
+              max={1.5}
+              step={0.1}
+              onValueChange={([v]) => onUpdate({ [field.widthKey]: v })}
+            />
+            <EditableValue
+              value={width}
+              min={0.1}
+              max={1.5}
+              step={0.1}
+              onChange={(v) => onUpdate({ [field.widthKey]: v })}
+            />
           </div>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
